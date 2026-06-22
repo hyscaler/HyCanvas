@@ -1,0 +1,61 @@
+# Contributing to HyCanvas
+
+Thanks for your interest in improving HyCanvas. This guide covers how to set up,
+make changes, and submit them.
+
+## Project layout
+
+The frontend and shared packages are an npm-workspaces monorepo; the backend is a
+standalone Go module under `backend/`. See `README.md` for the full layout and the
+tech stack, and `docs/roadmap/` for specs of work that is not yet built.
+
+## Prerequisites
+
+- Node 24 (see `.nvmrc`) for the frontend and `@hc/*` packages.
+- Go 1.25 for the backend.
+- PostgreSQL (object storage is optional; the backend falls back to local files).
+
+## Setup
+
+```bash
+cp .env.example .env        # then set DATABASE_URL and a strong JWT_SECRET
+npm install
+npm run build:packages      # build the @hc/* libraries once
+npm run db:migrate          # apply migrations
+npm run dev                 # backend on :8005, frontend on :3000
+```
+
+`JWT_SECRET` is required (the API refuses to start without it). Generate one with
+`openssl rand -hex 32`.
+
+## Making changes
+
+- Match the style and patterns of the surrounding code. TypeScript is strict; Go
+  is the backend language.
+- For shipped features, the code is the reference. For roadmap areas, read the
+  relevant `docs/roadmap/` spec first.
+- After editing any `packages/*` source, run `npm run build:packages` so the
+  frontend picks up the change.
+
+## Before opening a pull request
+
+Run the checks locally and make sure they pass:
+
+```bash
+npm run lint            # vet the Go backend, lint the frontend
+npm run test            # package + Go backend tests
+npm run build:dist      # full production build into a single binary
+```
+
+Keep pull requests focused, describe what changed and why, and reference any
+related issue. Do not commit secrets; `.env` is gitignored and must stay that way.
+
+## License of contributions
+
+HyCanvas is distributed under the Elastic License 2.0 (see `LICENSE`). By
+submitting a contribution, you agree that it is licensed under the same terms and
+that you have the right to submit it.
+
+## Reporting security issues
+
+Please do not open public issues for vulnerabilities. See `SECURITY.md`.

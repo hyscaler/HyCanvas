@@ -1,0 +1,100 @@
+name: Docker Build and Push
+
+# Publishes the single self-contained HyCanvas image to Docker Hub.
+# Trigger by pushing (or merging) to one of the publish branches:
+#   docker/build/latest      -> tags :latest      (+ :<version>-<sha>)
+#   docker/build/development  -> tags :development (+ :<version>-<sha>)
+#
+# Requires two repository secrets: DOCKER_USERNAME and DOCKER_PASSWORD
+# (a Docker Hub access token, not the account password).
+
+on:
+  push:
+    branches:
+      - docker/build/latest
+      - docker/build/development
+
+permissions:
+  contents: read
+
+env:
+  DOCKER_IMAGE: hycanvas/hycanvas
+  PLATFORMS: linux/amd64,linux/arm64
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64,amd64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        run: |
+          case "${{ github.ref_name }}" in
+            docker/build/latest) DOCKER_TAG="latest" ;;
+            docker/build/development) DOCKER_TAG="development" ;;
+            *) DOCKER_TAG="manual" ;;
+          esac
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          VERSION=$(grep -m1 '"version"' package.json | cut -d'"' -f4)
+          echo "docker_tag=${DOCKER_TAG}" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: ${{ env.PLATFORMS }}
+          push: true
+          build-args: |
+            VERSION=${{ steps.meta.outputs.version }}-${{ steps.meta.outputs.short_sha }}
+          tags: |
+            ${{ env.DOCKER_IMAGE }}:${{ steps.meta.outputs.docker_tag }}
+            ${{ env.DOCKER_IMAGE }}:${{ steps.meta.outputs.version }}-${{ steps.meta.outputs.short_sha }}
+          cache-from: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache-${{ steps.meta.outputs.docker_tag }}
+          cache-to: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache-${{ steps.meta.outputs.docker_tag }},mode=max
+
+      - name: Update Docker Hub description
+        if: github.ref_name == 'docker/build/latest'
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          repository: ${{ env.DOCKER_IMAGE }}
+          readme-filepath: ./docker/README.md
+          short-description: "Free, AI-native visual design platform in one self-contained image"
+
+      - name: Summary
+        run: |
+          {
+            echo "## Docker build summary"
+            echo ""
+            echo "**Image**: \`${{ env.DOCKER_IMAGE }}\`"
+            echo "**Branch**: \`${{ github.ref_name }}\`"
+            echo "**Platforms**: \`${{ env.PLATFORMS }}\`"
+            echo "**Tags**:"
+            echo "- \`${{ steps.meta.outputs.docker_tag }}\`"
+            echo "- \`${{ steps.meta.outputs.version }}-${{ steps.meta.outputs.short_sha }}\`"
+            echo ""
+            echo "Pull:"
+            echo '```bash'
+            echo "docker pull ${{ env.DOCKER_IMAGE }}:${{ steps.meta.outputs.docker_tag }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

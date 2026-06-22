@@ -1,0 +1,1469 @@
+// @hc/sdk - typed client for the HyCanvas REST API (served under /api/v1).
+// Used by the web app (cookie auth, credentials: "include") and by third-party
+// integrators (bearer token). See docs 15/04/11/36.
+
+import type { Color, DesignFile } from "@hc/schema";
+import type { AccessMode, Capability, HomeItem, Membership, User, Workspace, WorkspaceRole } from "@hc/authz";
+import type { BrandLintViolation } from "@hc/brandkit";
+
+// Re-export the shared domain types so the SDK is a single import surface for
+// consumers (the web app imports User/Workspace/HomeItem etc. from here).
+export type { DesignFile } from "@hc/schema";
+export type { HomeItem, Membership, User, Workspace, WorkspaceKind, WorkspaceRole } from "@hc/authz";
+// Sharing + permissions vocabulary lives in @hc/authz so client and
+// server share it verbatim.
+export type { AccessMode, Capability } from "@hc/authz";
+// Brand-governance violation + applyable-fix model lives in
+// @hc/brandkit so the editor's live lint and the SDK gate share one shape.
+export type { BrandLintViolation, BrandLintFix } from "@hc/brandkit";
+
+/** Owner-safe view of a background job returned by GET /jobs/:id. */
+export interface JobStatusView<R = unknown> {
+  id: string;
+  name: string;
+  status: "queued" | "active" | "completed" | "failed";
+  result?: R;
+  error?: string;
+  attempts: number;
+  maxAttempts: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Result payload of a completed video export job. */
+export interface VideoExportResult {
+  key: string;
+  url: string;
+  sizeBytes: number;
+  frames: number;
+  width: number;
+  height: number;
+  fps: number;
+  hasAudio: boolean;
+}
+
+/** Result payload of a completed doc export job. */
+export interface DocExportResult {
+  key: string;
+  url: string;
+  sizeBytes: number;
+  format: "docx" | "pdf";
+}
+
+/** Result payload of a completed whiteboard-to-deck conversion. */
+export interface WhiteboardToDeckResult {
+  designId: string;
+  slides: number;
+}
+
+export interface ClientOptions {
+  /** Base URL of the API, e.g. "http://localhost:8005/api" or "/api". */
+  baseUrl: string;
+  /** Optional bearer token for non-browser/programmatic use. */
+  token?: string;
+  /** Send cookies with requests (web app uses "include" for httpOnly auth). */
+  credentials?: RequestCredentials;
+  /** Override fetch (Node before global fetch, tests, etc.). */
+  fetch?: typeof fetch;
+}
+
+export interface WorkspaceWithRole extends Workspace {
+  role: WorkspaceRole;
+}
+
+export interface DesignRecord {
+  id: string;
+  workspaceId: string;
+  title: string;
+  schemaVersion: number;
+  currentSnapshotId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  purgeAfter: string | null;
+}
+
+/** A version's author, resolved for the history time machine. */
+export interface VersionAuthor {
+  id: string;
+  name: string;
+}
+
+export interface VersionEntry {
+  id: string;
+  designId: string;
+  snapshotId: string;
+  label: string | null;
+  authorId: string | null;
+  /** Resolved author (id + display name); null when unknown (FR-9). */
+  author?: VersionAuthor | null;
+  /** The underlying snapshot kind, so the panel can highlight named checkpoints
+   *  and restores. */
+  kind?: SnapshotKind;
+  createdAt: string;
+}
+
+/** One paginated page of a design's version history. */
+export interface VersionPage {
+  items: VersionEntry[];
+  nextCursor?: string;
+}
+
+/** A design branched from another design's history point. */
+export interface BranchEntry {
+  id: string;
+  title: string;
+  sourceDesignId: string | null;
+  sourceVersionId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SessionInfo {
+  id: string;
+  device: string | null;
+  ip: string | null;
+  createdAt: string;
+  lastSeenAt: string;
+}
+
+/** TOTP enrollment material: the otpauth URL plus the raw secret. */
+export interface MfaEnrollment {
+  otpauthUrl: string;
+  secret: string;
+}
+
+/**
+ * The result of a password login: either a completed sign-in (`user`), or an
+ * MFA challenge (`mfaRequired`) that must be redeemed via `verifyMfa`.
+ */
+export type LoginResult =
+  | { user: User; mfaRequired?: false }
+  | { mfaRequired: true; mfaToken: string };
+
+/** A recorded dev-mail message (returned by the dev-only outbox route). */
+export interface OutboxMessage {
+  to: string;
+  subject: string;
+  text: string;
+  link?: string;
+  sentAt?: string;
+}
+
+export type SnapshotKind = "auto" | "checkpoint" | "named" | "restore" | "branch";
+
+export interface TemplateSummary {
+  id: string;
+  title: string;
+  categories: string[];
+  previewUrls: string[];
+  format: { width: number; height: number; unit: string };
+}
+
+export type TemplateVisibility = "private" | "workspace" | "public";
+
+export interface TemplateListFilter {
+  q?: string;
+  category?: string;
+  collection?: string;
+  workspaceId?: string;
+}
+
+export interface SaveAsTemplateInput {
+  workspaceId: string;
+  /** Provide one of designId or file. */
+  designId?: string;
+  file?: DesignFile;
+  title: string;
+  category?: string;
+  tags?: string[];
+  thumbnail?: string;
+  visibility?: TemplateVisibility;
+  collectionId?: string;
+}
+
+// --- bulk create + data autofill ----------------
+
+/** A fillable field a dataset can map onto. `nodeId` is the stable key; `label`
+ *  is the human name used to auto-match dataset columns. */
+export interface FillableFieldSummary {
+  nodeId: string;
+  kind: "text" | "image" | "color";
+  label: string;
+  hint?: string;
+  constraints?: { maxChars?: number; aspect?: number; required?: boolean };
+}
+
+/** One row of fill values, keyed by field nodeId. */
+export type FillRowValues = Record<string, { text?: string; imageUrl?: string }>;
+
+export interface BulkCreateInput {
+  workspaceId: string;
+  /** Provide exactly one base source. */
+  sourceTemplateId?: string;
+  sourceDesignId?: string;
+  /** Dataset rows, each a flat map of field nodeId -> string value. */
+  rows: Array<Record<string, string>>;
+  /** Naming pattern with `{field}` placeholders (label or nodeId). */
+  titlePattern?: string;
+}
+
+export interface BulkCreateResult {
+  created: Array<{ id: string; title: string }>;
+  truncated: boolean;
+  requestedRows: number;
+  skipped: Array<{ row: number; reason: string }>;
+}
+
+export interface TemplateCollectionSummary {
+  id: string;
+  workspaceId: string;
+  name: string;
+}
+
+export interface StockAssetSummary {
+  id: string;
+  kind: string;
+  title: string;
+  previewUrl: string;
+  sourceUrl: string;
+  format: string;
+  width?: number;
+  height?: number;
+  category?: string;
+  collectionIds?: string[];
+  /** Whether the current user has favorited this asset. */
+  favorited?: boolean;
+  /** Inline SVG markup for vector kinds (icons), for editable vector insertion. */
+  svg?: string;
+}
+
+export interface StockCollectionSummary {
+  id: string;
+  title: string;
+  description?: string;
+  kind?: string;
+  trending?: boolean;
+  seasonal?: boolean;
+  assetIds: string[];
+}
+
+export interface MiniAppSummary {
+  id: string;
+  name: string;
+  icon: string;
+  builtIn: boolean;
+  scopes: string[];
+  entry: string;
+}
+
+export interface AiConfigView {
+  provider: string;
+  model: string | null;
+  imageModel: string | null;
+  baseUrl: string | null;
+  hasKey: boolean;
+}
+
+// Org AI governance policy: provider allow/block lists + monthly token
+// cap, enforced server-side before each AI call.
+export interface AiPolicy {
+  allowedProviders?: string[];
+  blockedProviders?: string[];
+  monthlyTokenCap?: number;
+}
+
+// --- sharing + permissions --------------------------------------
+
+/** A per-design access grant for a member (by user id) or invitee (by email). */
+export interface ShareGrant {
+  id: string;
+  designId: string;
+  principal: { kind: "user" | "email"; id: string };
+  mode: AccessMode;
+  roleId?: string | null;
+  invitedBy?: string | null;
+  createdAt: string;
+}
+
+/** A share link. `token` is the URL secret; the password is never returned. */
+export interface ShareLinkView {
+  id: string;
+  designId: string;
+  token: string;
+  mode: AccessMode;
+  hasPassword: boolean;
+  expiresAt?: string | null;
+  disabled: boolean;
+  requireSignin: boolean;
+  createdAt: string;
+}
+
+/** A named capability set assignable at workspace or design scope. */
+export interface CustomRoleView {
+  id: string;
+  workspaceId: string;
+  designId?: string | null;
+  name: string;
+  capabilities: Capability[];
+  scope: "workspace" | "design";
+  createdAt: string;
+}
+
+/** The caller's resolved access to a design (mode + capability set). */
+export interface DesignAccessView {
+  mode: AccessMode;
+  capabilities: Capability[];
+}
+
+/** Everything the Share dialog needs: the caller's access plus grants/links/roles. */
+export interface DesignSharingView {
+  myAccess: DesignAccessView;
+  grants: ShareGrant[];
+  links: ShareLinkView[];
+  customRoles: CustomRoleView[];
+}
+
+/** The result of resolving a share link by token. */
+export interface ResolvedLink {
+  designId: string;
+  mode: AccessMode;
+}
+
+// --- comments + tasks ------------------------------------
+
+/** Where a comment is pinned on a design. `orphaned` is set on read
+ *  when an element anchor's node no longer exists (the pin hides, the thread
+ *  still lists). */
+export interface CommentAnchor {
+  kind: "design" | "page" | "element" | "region" | "video";
+  pageId?: string;
+  nodeId?: string;
+  x?: number;
+  y?: number;
+  w?: number;
+  h?: number;
+  timeMs?: number;
+  orphaned?: boolean;
+}
+
+export type TaskStatus = "open" | "in_progress" | "done";
+
+/** The task facet of a comment once converted to a task. */
+export interface CommentTask {
+  assigneeId: string | null;
+  status: TaskStatus;
+  dueAt: string | null;
+}
+
+/** A reaction bucket: an emoji and the user ids who reacted with it. */
+export interface CommentReaction {
+  emoji: string;
+  userIds: string[];
+}
+
+/** A single comment (thread root or reply). Replies nest under their root in
+ *  {@link CommentThread}. `mentions` are recorded @mention user ids (FR-3). */
+export interface Comment {
+  id: string;
+  designId: string;
+  parentId: string | null;
+  authorId: string | null;
+  authorName: string;
+  anchor: CommentAnchor;
+  body: string;
+  mentions: string[];
+  reactions: CommentReaction[];
+  resolved: boolean;
+  resolvedById?: string | null;
+  task?: CommentTask | null;
+  editedAt?: string | null;
+  createdAt: string;
+}
+
+/** A thread: a root comment plus its replies in creation order. */
+export interface CommentThread extends Comment {
+  replies: Comment[];
+}
+
+/** A person who can be @mentioned or assigned on a design. */
+export interface MentionablePerson {
+  id: string;
+  name: string;
+  email?: string | null;
+}
+
+/** A task in the assignee's "my tasks" view, carrying its design for deep-link. */
+export interface MyTask extends Comment {
+  designTitle: string;
+}
+
+/** Filters for {@link HyCanvasClient.listComments}. */
+export type CommentFilter = "open" | "resolved" | "mine" | "assigned" | "all";
+
+// --- approval workflows ----------------------------------
+
+/** Whether one approver suffices or all must approve. */
+export type ApprovalPolicy = "any" | "all";
+/** Lifecycle of an approval; 'approved' locks the design (FR-11). */
+export type ApprovalStatus = "pending" | "approved" | "rejected" | "reopened";
+export type ApprovalDecisionKind = "approve" | "reject";
+
+/** A requester/approver identity for the banner. */
+export interface ApprovalPerson {
+  id: string;
+  name: string;
+}
+
+/** One approver's recorded verdict. */
+export interface ApprovalDecisionView {
+  approverId: string;
+  approverName: string;
+  decision: ApprovalDecisionKind;
+  note?: string | null;
+  decidedAt: string;
+}
+
+/** What the calling user may do on the current approval (server-computed). */
+export interface ApprovalActions {
+  canRequest: boolean;
+  canDecide: boolean;
+  canReopen: boolean;
+}
+
+/** One approval workflow. */
+export interface ApprovalView {
+  id: string;
+  designId: string;
+  requester: ApprovalPerson;
+  policy: ApprovalPolicy;
+  status: ApprovalStatus;
+  approvers: ApprovalPerson[];
+  decisions: ApprovalDecisionView[];
+  approvedCount: number;
+  approverCount: number;
+  createdAt: string;
+  decidedAt?: string | null;
+}
+
+/** A design's current approval state + the caller's allowed actions (FR-10,
+ *  FR-11), returned by GET /v1/designs/:id/approval. `locked` is the derived
+ *  approval-lock state (an active approved approval). */
+export interface DesignApprovalView {
+  approval: ApprovalView | null;
+  locked: boolean;
+  actions: ApprovalActions;
+}
+
+// --- activity, notifications, insights -------------------
+
+/** Every activity-feed item type. `edit` items are folded in
+ *  from the version history at read time; the rest are stored activity events. */
+export type ActivityType =
+  | "edit" | "comment" | "resolve" | "reply" | "reaction"
+  | "share" | "link_change" | "role_change"
+  | "task_assign" | "task_status"
+  | "approval_request" | "approval_decision" | "reopen";
+
+/** A single attributed feed item with a rendered human summary (FR-12). */
+export interface ActivityItem {
+  id: string;
+  designId: string;
+  type: ActivityType;
+  actorId: string | null;
+  actorName: string | null;
+  summary: string;
+  payload: Record<string, unknown> | null;
+  createdAt: string;
+  source: "activity" | "version";
+}
+
+/** A page of activity items, newest-first, with an opaque cursor (FR-12). */
+export interface ActivityPage {
+  items: ActivityItem[];
+  nextCursor?: string;
+}
+
+/** Notification types the center aggregates. */
+export type NotificationType =
+  | "mention" | "reply" | "task_assign"
+  | "share" | "approval_request" | "approval_decision";
+
+/** An in-app notification for the bell/center (FR-13). */
+export interface NotificationView {
+  id: string;
+  type: NotificationType;
+  designId: string | null;
+  text: string;
+  link: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface NotificationPage {
+  items: NotificationView[];
+  nextCursor?: string;
+}
+
+/** Per-user notification-channel preference (FR-13). `emailTypes` are delivered
+ *  by email and `pushTypes` by web push, each in addition to always-on in-app. */
+export interface NotificationPrefView {
+  emailTypes: NotificationType[];
+  pushTypes: NotificationType[];
+}
+
+/** Aggregated engagement insights for a design. */
+export interface DesignInsights {
+  uniqueViewers: number;
+  uniqueAnonViewers: number;
+  totalViews: number;
+  views: { date: string; count: number }[];
+  avgTimeMs: number;
+  perPage: { pageId: string; engagementMs: number }[];
+}
+
+export interface UploadedAsset {
+  id: string;
+  workspaceId: string;
+  kind: string;
+  filename: string | null;
+  mimeType: string | null;
+  byteSize: number | null;
+  folderId: string | null;
+  tags: string[];
+  url: string;
+  /** Optional client-generated downscaled preview (data URL); grid falls back to url. */
+  thumbnail: string | null;
+  createdAt: string;
+}
+
+export interface AssetFolder {
+  id: string;
+  workspaceId: string;
+  name: string;
+  parentId: string | null;
+  createdAt: string;
+}
+
+export interface StorageUsageView {
+  usedBytes: number;
+  quotaBytes: number;
+}
+
+/** Filters for {@link HyCanvasClient.listAssets}. `folderId: null` = root. */
+export interface AssetListFilter {
+  folderId?: string | null;
+  tag?: string;
+  q?: string;
+}
+
+// --- brand kits + controls ---------------------------------------
+
+/** A named brand swatch within a palette; `value` is a canonical sRGB Color. */
+export interface BrandSwatch {
+  id: string;
+  role: string;
+  name?: string;
+  value: Color;
+}
+export interface BrandPalette {
+  id: string;
+  name: string;
+  colors: BrandSwatch[];
+}
+export interface BrandFont {
+  id: string;
+  role: string;
+  fontFamily: string;
+  fontAssetId?: string | null;
+  defaultStyle?: { weight?: number; size?: number; tracking?: number };
+}
+export interface BrandLogo {
+  id: string;
+  label: string;
+  assetId: string;
+  variants?: { dark?: string; light?: string };
+  clearSpaceRatio?: number;
+  minSizePx?: number;
+}
+export interface BrandVoice {
+  tone: string[];
+  doSay: string[];
+  dontSay: string[];
+  sampleCopy?: string;
+  modelProfileId?: string;
+}
+export interface BrandCollection {
+  id: string;
+  kind: "photos" | "graphics" | "icons";
+  assetIds: string[];
+}
+/** Brand controls: lock colors/fonts, restrict templates (FR-4, FR-5), and the
+ *  slice-B pre-export/publish lint strictness (FR-8). `lintPolicy` is 'off'
+ *  (never lint), 'warn' (surface violations), or 'block' (gate export). */
+export interface BrandControls {
+  lockColors: boolean;
+  lockFonts: boolean;
+  restrictTemplates: boolean;
+  lintPolicy: "off" | "warn" | "block";
+}
+/** A workspace brand kit. `version` is the current version
+ *  number, incremented on every write and recorded in {@link BrandKitVersion}. */
+export interface BrandKit {
+  id: string;
+  workspaceId: string;
+  name: string;
+  /** Current version number (FR-9); incremented on every write. */
+  version: number;
+  isDefault: boolean;
+  palettes: BrandPalette[];
+  fonts: BrandFont[];
+  logos: BrandLogo[];
+  voice: BrandVoice | null;
+  collections: BrandCollection[];
+  controls: BrandControls;
+  createdAt: string;
+  updatedAt: string;
+}
+/** One versioned snapshot of a kit's state. `snapshot` is the full
+ *  BrandKit at that version, so restore can rebuild it exactly. */
+export interface BrandKitVersion {
+  id: string;
+  brandKitId: string;
+  version: number;
+  snapshot: BrandKit;
+  authorId: string | null;
+  createdAt: string;
+}
+/** A brand-template editable field descriptor: a node a filler may
+ *  populate, with a label and optional fill constraints. Mirrors the @hc/templates
+ *  FillableField shape; informational at the brand layer. */
+export interface BrandEditableField {
+  nodeId: string;
+  kind?: "text" | "image" | "color";
+  label: string;
+  hint?: string;
+  constraints?: { maxChars?: number; aspect?: number; required?: boolean };
+}
+/** The design's active resolved brand + whether the caller may manage it
+ *. `kit` is null when no brand is assigned/default. */
+export interface ResolvedBrand {
+  kit: BrandKit | null;
+  canManage: boolean;
+  /** The pinned kit version this design references, or null when it tracks the
+   *  latest (FR-10). Null + a kit means "track latest". */
+  pinnedVersion?: number | null;
+  /** Brand-template locked-region node ids the design carries (FR-6, AC-4); the
+   *  editor gates structural mutation of these for non-manage-brand users. */
+  lockedRegions: string[];
+  /** Brand-template editable fields the design carries (FR-6): the nodes a
+   *  filler may populate. Informational; empty when none are marked. */
+  editableFields?: BrandEditableField[];
+}
+/** Whether a tracked kit advanced past what a design reflects,
+ *  with a summary of what changed, so the editor can prompt "Brand updated -
+ *  review" rather than silently mutating the design. */
+export interface BrandUpdateSummary {
+  /** True when the design TRACKS the kit (not pinned) and the kit advanced. */
+  hasUpdate: boolean;
+  /** The version the design currently reflects; null when tracking with no record. */
+  designVersion: number | null;
+  /** The kit's current (latest) version. */
+  latestVersion: number;
+  /** Whether the design pins a specific version (true) or tracks latest. */
+  pinned: boolean;
+  /** Human-readable diffs of what changed (palette/font counts, controls). */
+  changes: string[];
+}
+/** The brand gate decision for a design's pre-export/publish check (FR-8). */
+export interface BrandLintResult {
+  policy: "off" | "warn" | "block";
+  blocked: boolean;
+  violations: BrandLintViolation[];
+}
+/** Patch for {@link HyCanvasClient.updateBrandKit}. */
+export interface BrandKitPatch {
+  name?: string;
+  isDefault?: boolean;
+  palettes?: BrandPalette[];
+  fonts?: BrandFont[];
+  logos?: BrandLogo[];
+  voice?: BrandVoice | null;
+  collections?: BrandCollection[];
+  controls?: Partial<BrandControls>;
+}
+
+/** Thrown on a non-2xx response; carries the status and parsed problem body. */
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    public path: string,
+    public body: unknown,
+  ) {
+    super(`HyCanvas API ${status} on ${path}`);
+    this.name = "ApiError";
+  }
+}
+
+export class HyCanvasClient {
+  private readonly baseUrl: string;
+  private token?: string;
+  private readonly credentials: RequestCredentials;
+  private readonly fetchImpl: typeof fetch;
+  // De-duped in-flight refresh: concurrent 401s share one refresh, then retry.
+  private refreshing: Promise<boolean> | null = null;
+
+  constructor(opts: ClientOptions) {
+    this.baseUrl = opts.baseUrl.replace(/\/$/, "");
+    this.token = opts.token;
+    this.credentials = opts.credentials ?? "same-origin";
+    // Wrap fetch so the global is always called as a bare function, never as a
+    // method of this client. Browsers brand-check fetch's receiver and throw
+    // "TypeError: Illegal invocation" if `this` isn't the Window/Worker global,
+    // which would surface as a thrown error with no request ever sent. (Node's
+    // fetch has no such check, so this only bit in the browser.)
+    const impl = opts.fetch ?? fetch;
+    this.fetchImpl = (input: RequestInfo | URL, init?: RequestInit) => impl(input, init);
+  }
+
+  /** Set/clear the bearer token (no-op for cookie auth). */
+  setToken(token?: string): void {
+    this.token = token;
+  }
+
+  private async request<T>(method: string, path: string, body?: unknown, retried = false): Promise<T> {
+    const headers: Record<string, string> = {};
+    if (body !== undefined) headers["content-type"] = "application/json";
+    if (this.token) headers.authorization = `Bearer ${this.token}`;
+    const res = await this.fetchImpl(`${this.baseUrl}${path}`, {
+      method,
+      headers,
+      credentials: this.credentials,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    // Cookie-auth sessions: the short-lived access token expires well before the
+    // refresh token. On a 401, transparently refresh once (using the refresh
+    // cookie) and retry the original request, so callers never see a spurious
+    // auth failure mid-session. Auth endpoints are excluded to avoid loops (a
+    // 401 from login/refresh is a real failure).
+    if (res.status === 401 && !retried && !path.startsWith("/v1/auth/")) {
+      if (await this.tryRefresh()) return this.request<T>(method, path, body, true);
+    }
+    if (!res.ok) {
+      let parsed: unknown = undefined;
+      try {
+        parsed = await res.json();
+      } catch {
+        /* non-JSON error body */
+      }
+      throw new ApiError(res.status, path, parsed);
+    }
+    if (res.status === 204) return undefined as T;
+    const text = await res.text();
+    return (text ? JSON.parse(text) : undefined) as T;
+  }
+
+  /** Refresh the session once, de-duping concurrent callers. Resolves true when
+   *  a new access cookie was minted (caller may retry). */
+  private tryRefresh(): Promise<boolean> {
+    if (!this.refreshing) {
+      this.refreshing = this.fetchImpl(`${this.baseUrl}/v1/auth/refresh`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        credentials: this.credentials,
+        body: "{}",
+      })
+        .then((r) => r.ok)
+        .catch(() => false)
+        .finally(() => {
+          this.refreshing = null;
+        });
+    }
+    return this.refreshing;
+  }
+
+  // --- health --------------------------------------------------------------
+  health(): Promise<{ status: string }> {
+    return this.request("GET", "/healthz");
+  }
+
+  // --- auth -------------------------------------------------------
+  signup(input: { email: string; password: string; name?: string }): Promise<{ user: User; workspace: Workspace }> {
+    return this.request("POST", "/v1/auth/signup", input);
+  }
+  /**
+   * Sign in with email + password. If the account has MFA enabled the server
+   * returns `{ mfaRequired: true, mfaToken }` and sets no session cookie; the
+   * client must then call `verifyMfa(mfaToken, code)` to finish signing in.
+   */
+  login(input: { email: string; password: string }): Promise<LoginResult> {
+    return this.request("POST", "/v1/auth/login", input);
+  }
+
+  // --- MFA: TOTP + recovery codes ----------------------------
+  /** Begin TOTP enrollment; returns the otpauth URL (for a QR) and raw secret. */
+  enrollMfa(): Promise<MfaEnrollment> {
+    return this.request("POST", "/v1/auth/mfa/enroll", {});
+  }
+  /** Confirm enrollment with a code; returns the one-time recovery codes. */
+  confirmMfa(code: string): Promise<{ recoveryCodes: string[] }> {
+    return this.request("POST", "/v1/auth/mfa/confirm", { code });
+  }
+  /** Disable MFA after proving a current TOTP code or an unused recovery code. */
+  disableMfa(code: string): Promise<void> {
+    return this.request("POST", "/v1/auth/mfa/disable", { code });
+  }
+  /** Finish an MFA-gated login; sets the session cookies like login. */
+  verifyMfa(mfaToken: string, code: string): Promise<{ user: User }> {
+    return this.request("POST", "/v1/auth/mfa/verify", { mfaToken, code });
+  }
+  refresh(): Promise<{ ok: boolean }> {
+    return this.request("POST", "/v1/auth/refresh", {});
+  }
+  logout(all = false): Promise<void> {
+    return this.request("POST", "/v1/auth/logout", { all });
+  }
+  me(): Promise<User> {
+    return this.request("GET", "/v1/me");
+  }
+  sessions(): Promise<SessionInfo[]> {
+    return this.request("GET", "/v1/auth/sessions");
+  }
+
+  // --- account data portability -----------------------------
+  /** Download a full export of the user's data (profile, workspaces, designs). */
+  exportAccount(): Promise<unknown> {
+    return this.request("GET", "/v1/account/export");
+  }
+  /**
+   * Permanently delete the account after re-authentication. Always requires the
+   * current password; `code` is a TOTP or recovery code when MFA is enabled.
+   */
+  deleteAccount(input: { password: string; code?: string }): Promise<void> {
+    return this.request("DELETE", "/v1/account", input);
+  }
+
+  // --- email flows -------------------------------------------
+  /** Request (or re-send) an email-verification link. Always resolves. */
+  requestEmailVerification(email: string): Promise<void> {
+    return this.request("POST", "/v1/auth/verify-email/request", { email });
+  }
+  /** Verify an email with the token from the link; returns the updated user. */
+  verifyEmail(token: string): Promise<{ user: User }> {
+    return this.request("POST", "/v1/auth/verify-email", { token });
+  }
+  /** Request a password-reset link. Always resolves (no account enumeration). */
+  requestPasswordReset(email: string): Promise<void> {
+    return this.request("POST", "/v1/auth/password-reset/request", { email });
+  }
+  /** Set a new password using the token from the reset link. */
+  resetPassword(token: string, password: string): Promise<void> {
+    return this.request("POST", "/v1/auth/password-reset", { token, password });
+  }
+  /** Request a passwordless sign-in link. Always resolves (no enumeration). */
+  requestMagicLink(email: string): Promise<void> {
+    return this.request("POST", "/v1/auth/magic-link/request", { email });
+  }
+  /** Complete a magic-link sign-in; sets the session cookies like login. */
+  magicLink(token: string): Promise<{ user: User }> {
+    return this.request("POST", "/v1/auth/magic-link", { token });
+  }
+  /** Enabled social sign-in providers (empty unless configured server-side).
+   *  The login UI renders a button per entry; start the flow by navigating the
+   *  browser to `${baseUrl}/v1/auth/{id}/start`. */
+  authProviders(): Promise<{ id: string; label: string }[]> {
+    return this.request<{ providers: { id: string; label: string }[] }>("GET", "/v1/auth/providers").then((r) => r.providers);
+  }
+  /** Dev-only: read the in-memory mail outbox (404/403 in production). */
+  devOutbox(): Promise<OutboxMessage[]> {
+    return this.request("GET", "/v1/auth/dev/outbox");
+  }
+
+  // --- workspaces -------------------------------------------------
+  listWorkspaces(): Promise<WorkspaceWithRole[]> {
+    return this.request("GET", "/v1/workspaces");
+  }
+  createWorkspace(input: { name: string; kind?: Workspace["kind"] }): Promise<Workspace> {
+    return this.request("POST", "/v1/workspaces", input);
+  }
+  workspaceMembers(workspaceId: string): Promise<Membership[]> {
+    return this.request("GET", `/v1/workspaces/${workspaceId}/members`);
+  }
+  invite(workspaceId: string, input: { email: string; role?: WorkspaceRole }): Promise<{ invitation: unknown; token: string }> {
+    return this.request("POST", `/v1/workspaces/${workspaceId}/invitations`, input);
+  }
+  acceptInvitation(token: string): Promise<Membership> {
+    return this.request("POST", `/v1/invitations/${encodeURIComponent(token)}/accept`, {});
+  }
+
+  // --- home + search ----------------------------------------------
+  home(workspaceId: string, section: "recent" | "favorites" | "shared" = "recent"): Promise<HomeItem[]> {
+    return this.request("GET", `/v1/workspaces/${workspaceId}/home?section=${section}`);
+  }
+  search(workspaceId: string, q?: string, type?: HomeItem["kind"] | HomeItem["kind"][]): Promise<HomeItem[]> {
+    const params = new URLSearchParams({ workspaceId });
+    if (q) params.set("q", q);
+    if (type) params.set("type", Array.isArray(type) ? type.join(",") : type);
+    return this.request("GET", `/v1/search?${params.toString()}`);
+  }
+  /** Star/unstar a design for the current user; returns the resulting state. */
+  toggleFavorite(designId: string, on: boolean): Promise<{ starred: boolean }> {
+    return this.request(on ? "POST" : "DELETE", `/v1/designs/${designId}/favorite`);
+  }
+
+  // --- designs ----------------------------------------------------
+  createDesign(input: { workspaceId: string; title?: string; from?: DesignFile }): Promise<DesignRecord> {
+    return this.request("POST", "/v1/designs", input);
+  }
+  getDesign(id: string): Promise<DesignRecord & { recovered?: boolean }> {
+    return this.request("GET", `/v1/designs/${id}`);
+  }
+  renameDesign(id: string, title: string): Promise<DesignRecord> {
+    return this.request("PATCH", `/v1/designs/${id}`, { title });
+  }
+  getDesignFile(id: string): Promise<DesignFile> {
+    return this.request("GET", `/v1/designs/${id}/file`);
+  }
+  saveSnapshot(id: string, input: { file: DesignFile; label?: string; kind?: SnapshotKind }): Promise<DesignRecord> {
+    return this.request("POST", `/v1/designs/${id}/snapshots`, input);
+  }
+  /** A page of a design's version history, newest first. Each
+   *  entry carries its resolved author, kind, label, and timestamp. Pass the
+   *  returned `nextCursor` to lazy-load older pages. */
+  listVersions(id: string, cursor?: string): Promise<VersionPage> {
+    return this.request("GET", `/v1/designs/${id}/versions${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`);
+  }
+  /** A historical version's DesignFile for READ-ONLY preview. Does
+   *  not mutate the live design; the time machine loads it into the canvas under
+   *  a preview banner. */
+  versionFile(id: string, versionId: string): Promise<DesignFile> {
+    return this.request("GET", `/v1/designs/${id}/versions/${versionId}/file`);
+  }
+  /** Restore a prior version as a NEW snapshot (kind 'restore'), making it the
+   *  current state without discarding anything. Distinct from
+   *  {@link restoreDesign}, which un-trashes a soft-deleted design. */
+  restoreVersion(id: string, versionId: string): Promise<VersionEntry> {
+    return this.request("POST", `/v1/designs/${id}/versions/${versionId}/restore`, {});
+  }
+  /** Create a new design branched from a history point.
+   *  Returns the new design; the source is left untouched. */
+  branchFromVersion(id: string, versionId: string, name?: string): Promise<DesignRecord> {
+    return this.request("POST", `/v1/designs/${id}/versions/${versionId}/branch`, name ? { title: name } : {});
+  }
+  /** Designs branched off this design, for the branch switcher. */
+  listBranches(id: string): Promise<BranchEntry[]> {
+    return this.request("GET", `/v1/designs/${id}/branches`);
+  }
+  deleteDesign(id: string, purge = false): Promise<void> {
+    return this.request("DELETE", `/v1/designs/${id}${purge ? "?purge=true" : ""}`);
+  }
+  restoreDesign(id: string): Promise<void> {
+    return this.request("POST", `/v1/designs/${id}/restore`, {});
+  }
+  listTrash(workspaceId: string): Promise<DesignRecord[]> {
+    return this.request("GET", `/v1/workspaces/${workspaceId}/trash`);
+  }
+
+  // --- sharing + permissions --------------------------------------
+  /** The caller's resolved access (mode + capabilities) to a design (FR-7). */
+  designAccess(designId: string): Promise<DesignAccessView> {
+    return this.request("GET", `/v1/designs/${designId}/access`);
+  }
+  /** The full Share dialog payload: the caller's access plus grants, links, and
+   *  in-scope custom roles (FR-5). */
+  designSharing(designId: string): Promise<DesignSharingView> {
+    return this.request("GET", `/v1/designs/${designId}/sharing`);
+  }
+  /** Grant a member (by user id) or invitee (by email) access at a mode (FR-5). */
+  addGrant(designId: string, input: { principal: { kind: "user" | "email"; id: string }; mode: AccessMode; roleId?: string }): Promise<ShareGrant> {
+    return this.request("POST", `/v1/designs/${designId}/grants`, input);
+  }
+  updateGrant(grantId: string, patch: { mode?: AccessMode; roleId?: string | null }): Promise<ShareGrant> {
+    return this.request("PATCH", `/v1/grants/${grantId}`, patch);
+  }
+  removeGrant(grantId: string): Promise<void> {
+    return this.request("DELETE", `/v1/grants/${grantId}`);
+  }
+  /** Create a share link at an access mode, optionally password-protected and/or
+   *  expiring (FR-5, FR-6). */
+  createShareLink(designId: string, input: { mode: AccessMode; password?: string; expiresAt?: string; requireSignin?: boolean }): Promise<ShareLinkView> {
+    return this.request("POST", `/v1/designs/${designId}/links`, input);
+  }
+  updateShareLink(linkId: string, patch: { mode?: AccessMode; disabled?: boolean; expiresAt?: string | null }): Promise<ShareLinkView> {
+    return this.request("PATCH", `/v1/links/${linkId}`, patch);
+  }
+  /** Rotate a link's token: the old URL stops working (FR-6). */
+  rotateShareLink(linkId: string): Promise<ShareLinkView> {
+    return this.request("POST", `/v1/links/${linkId}/rotate`, {});
+  }
+  /** PUBLIC: resolve a share link by token (FR-6, FR-15). No account needed for a
+   *  view/comment link. Throws ApiError 404 (missing/disabled), 410 (expired), or
+   *  403 (wrong password / sign-in required). */
+  resolveShareLink(token: string, password?: string): Promise<ResolvedLink> {
+    return this.request("POST", `/v1/links/${encodeURIComponent(token)}/resolve`, password ? { password } : {});
+  }
+  /** PUBLIC: resolve a link and fetch the design file for a read-only open
+   *  (FR-15). Backs anonymous view/comment landing. Same denial semantics as
+   *  resolveShareLink. */
+  resolveShareLinkFile(token: string, password?: string): Promise<ResolvedLink & { file: DesignFile }> {
+    return this.request("POST", `/v1/links/${encodeURIComponent(token)}/file`, password ? { password } : {});
+  }
+  /** List the workspace's custom roles (requires manage-roles, FR-8). */
+  listCustomRoles(workspaceId: string): Promise<CustomRoleView[]> {
+    return this.request("GET", `/v1/workspaces/${workspaceId}/roles`);
+  }
+  createCustomRole(workspaceId: string, input: { name: string; capabilities: Capability[]; designId?: string }): Promise<CustomRoleView> {
+    return this.request("POST", `/v1/workspaces/${workspaceId}/roles`, input);
+  }
+  updateCustomRole(roleId: string, patch: { name?: string; capabilities?: Capability[] }): Promise<CustomRoleView> {
+    return this.request("PATCH", `/v1/roles/${roleId}`, patch);
+  }
+  deleteCustomRole(roleId: string): Promise<void> {
+    return this.request("DELETE", `/v1/roles/${roleId}`);
+  }
+  /** Assign a custom role to a member on a design at a mode floor (FR-8). */
+  assignCustomRole(designId: string, input: { targetUserId: string; roleId: string; mode?: AccessMode }): Promise<ShareGrant> {
+    return this.request("POST", `/v1/designs/${designId}/role-assignments`, input);
+  }
+
+  // --- comments + tasks -----------------------------------
+  /** Comment threads for a design (roots with replies, reactions, task info).
+   *  Requires the `view` capability; filter narrows open/resolved/mine/assigned. */
+  listComments(designId: string, filter: CommentFilter = "all"): Promise<CommentThread[]> {
+    return this.request("GET", `/v1/designs/${designId}/comments?filter=${filter}`);
+  }
+  /** People who can be @mentioned or assigned on a design (FR-3, FR-4). */
+  mentionablePeople(designId: string): Promise<MentionablePerson[]> {
+    return this.request("GET", `/v1/designs/${designId}/mentionable`);
+  }
+  /** Create a comment at an anchor, optionally @mentioning people (FR-1, FR-3).
+   *  Requires the `comment` capability (a view/comment user can comment). */
+  createComment(designId: string, input: { anchor: CommentAnchor; body: string; mentions?: string[] }): Promise<Comment> {
+    return this.request("POST", `/v1/designs/${designId}/comments`, input);
+  }
+  /** Reply to a thread root (FR-2). */
+  replyComment(commentId: string, input: { body: string; mentions?: string[] }): Promise<Comment> {
+    return this.request("POST", `/v1/comments/${commentId}/replies`, input);
+  }
+  /** Edit a comment's body (author or admin override, FR-2). */
+  editComment(commentId: string, input: { body: string; mentions?: string[] }): Promise<Comment> {
+    return this.request("PATCH", `/v1/comments/${commentId}`, input);
+  }
+  /** Resolve or reopen a thread (FR-2). */
+  resolveComment(commentId: string, resolved: boolean): Promise<Comment> {
+    return this.request("POST", `/v1/comments/${commentId}/resolve`, { resolved });
+  }
+  /** Delete a comment (author or `delete` capability, FR-2). */
+  deleteComment(commentId: string): Promise<void> {
+    return this.request("DELETE", `/v1/comments/${commentId}`);
+  }
+  /** Toggle an emoji reaction for the current user on a comment (FR-2). */
+  reactComment(commentId: string, emoji: string): Promise<Comment> {
+    return this.request("POST", `/v1/comments/${commentId}/reactions`, { emoji });
+  }
+  /** Convert a comment to a task or update its task fields (FR-4). Pass status
+   *  null with no assignee to clear the task. */
+  setCommentTask(commentId: string, input: { assigneeId?: string | null; status?: TaskStatus | null; dueAt?: string | null }): Promise<Comment> {
+    return this.request("PUT", `/v1/comments/${commentId}/task`, input);
+  }
+  /** Tasks assigned to the current user across their designs (FR-4). */
+  myTasks(status?: TaskStatus): Promise<MyTask[]> {
+    return this.request("GET", `/v1/me/tasks${status ? `?status=${status}` : ""}`);
+  }
+  /** Comments that @mention the current user across their designs (FR-3). */
+  myMentions(): Promise<MyTask[]> {
+    return this.request("GET", "/v1/me/mentions");
+  }
+
+  // --- approval workflows ---------------------------------
+  /** The design's current approval state + the caller's allowed actions (FR-10,
+   *  FR-11). `locked` reflects whether the design is approval-locked. */
+  designApproval(designId: string): Promise<DesignApprovalView> {
+    return this.request("GET", `/v1/designs/${designId}/approval`);
+  }
+  /** Request approval from one or more approvers under an any/all policy (FR-10).
+   *  Requires the `share` or `edit` capability; rejects if one is already active. */
+  requestApproval(designId: string, input: { approverIds: string[]; policy: ApprovalPolicy }): Promise<DesignApprovalView> {
+    return this.request("POST", `/v1/designs/${designId}/approvals`, input);
+  }
+  /** Record this approver's decision (FR-10). On grant the design locks (FR-11).
+   *  Requires the `approve` capability and being a selected approver. */
+  decideApproval(approvalId: string, input: { decision: ApprovalDecisionKind; note?: string }): Promise<DesignApprovalView> {
+    return this.request("POST", `/v1/approvals/${approvalId}/decide`, input);
+  }
+  /** Reopen an approved+locked design (FR-11): clears the lock, restores edit.
+   *  By owner/admin or a selected approver. */
+  reopenApproval(approvalId: string): Promise<DesignApprovalView> {
+    return this.request("POST", `/v1/approvals/${approvalId}/reopen`, {});
+  }
+
+  // --- activity log --------------------------------
+  /** The merged, newest-first activity feed for a design (edits folded in from
+   *  version history). `type` narrows to one activity type; `cursor` pages. */
+  designActivity(designId: string, opts: { type?: ActivityType; cursor?: string } = {}): Promise<ActivityPage> {
+    const params = new URLSearchParams();
+    if (opts.type) params.set("type", opts.type);
+    if (opts.cursor) params.set("cursor", opts.cursor);
+    const qs = params.toString();
+    return this.request("GET", `/v1/designs/${designId}/activity${qs ? `?${qs}` : ""}`);
+  }
+
+  // --- notifications center ------------------------
+  /** The caller's notifications, newest-first, paginated. */
+  notifications(opts: { unread?: boolean; cursor?: string } = {}): Promise<NotificationPage> {
+    const params = new URLSearchParams();
+    if (opts.unread) params.set("unread", "true");
+    if (opts.cursor) params.set("cursor", opts.cursor);
+    const qs = params.toString();
+    return this.request("GET", `/v1/notifications${qs ? `?${qs}` : ""}`);
+  }
+  /** The caller's unread notification count (for the bell badge). */
+  unreadNotificationCount(): Promise<{ count: number }> {
+    return this.request("GET", "/v1/notifications/unread-count");
+  }
+  markNotificationRead(id: string): Promise<void> {
+    return this.request("POST", `/v1/notifications/${id}/read`, {});
+  }
+  markAllNotificationsRead(): Promise<void> {
+    return this.request("POST", "/v1/notifications/read-all", {});
+  }
+  /** The caller's notification channel preferences: email + web push (FR-13). */
+  notificationPrefs(): Promise<NotificationPrefView> {
+    return this.request("GET", "/v1/me/notification-prefs");
+  }
+  /** Update the email and/or web-push notification type sets (FR-13). Pass only
+   *  the channel(s) you are changing; an omitted channel is left untouched. The
+   *  back-compat string-array overload updates the email channel. */
+  setNotificationPrefs(
+    input: NotificationType[] | { emailTypes?: NotificationType[]; pushTypes?: NotificationType[] },
+  ): Promise<NotificationPrefView> {
+    const body = Array.isArray(input) ? { emailTypes: input } : input;
+    return this.request("PUT", "/v1/me/notification-prefs", body);
+  }
+
+  // --- web push ---------------------------------------------
+  /** The public VAPID key to subscribe with, or null when web push is not
+   *  configured server-side (the device toggle is hidden then). */
+  pushVapidPublicKey(): Promise<{ key: string | null }> {
+    return this.request("GET", "/v1/push/vapid-public-key");
+  }
+  /** Register this device's browser push subscription for the current user. */
+  pushSubscribe(input: { endpoint: string; keys: { p256dh: string; auth: string } }): Promise<void> {
+    return this.request("POST", "/v1/push/subscribe", input);
+  }
+  /** Remove a device's push subscription by endpoint. */
+  pushUnsubscribe(endpoint: string): Promise<void> {
+    return this.request("POST", "/v1/push/unsubscribe", { endpoint });
+  }
+
+  // --- engagement insights -------------------------
+  /** Record a view-session heartbeat for an authenticated viewer (FR-14). */
+  viewBeat(designId: string, input: { sessionId: string; pageId?: string | null; ms: number }): Promise<void> {
+    return this.request("POST", `/v1/designs/${designId}/view-beat`, input);
+  }
+  /** PUBLIC: record an anonymous (share-link) view-session heartbeat (FR-14,
+   *  FR-15). Validated by the link token; no account needed. */
+  sharedViewBeat(token: string, input: { anonId: string; sessionId: string; pageId?: string | null; ms: number; password?: string }): Promise<void> {
+    return this.request("POST", `/v1/shared/${encodeURIComponent(token)}/view-beat`, input);
+  }
+  /** Aggregated engagement insights for a design (FR-14), member/owner only. */
+  designInsights(designId: string): Promise<DesignInsights> {
+    return this.request("GET", `/v1/designs/${designId}/insights`);
+  }
+
+  // --- templates --------------------------------------------------
+  /** List templates. Accepts a keyword string (back-compat) or a filter. */
+  listTemplates(filter?: string | TemplateListFilter): Promise<TemplateSummary[]> {
+    const f: TemplateListFilter = typeof filter === "string" ? { q: filter } : filter ?? {};
+    const params = new URLSearchParams();
+    if (f.q) params.set("q", f.q);
+    if (f.category) params.set("category", f.category);
+    if (f.collection) params.set("collection", f.collection);
+    if (f.workspaceId) params.set("workspaceId", f.workspaceId);
+    const qs = params.toString();
+    return this.request("GET", `/v1/templates${qs ? `?${qs}` : ""}`);
+  }
+  getTemplateFile(id: string): Promise<DesignFile> {
+    return this.request("GET", `/v1/templates/${id}/file`);
+  }
+  /** A template's declared fillable fields, for the bulk-create mapping UI. */
+  templateFillableFields(id: string): Promise<FillableFieldSummary[]> {
+    return this.request("GET", `/v1/templates/${id}/fillable-fields`);
+  }
+  /** A design's declared fillable fields. */
+  designFillableFields(id: string): Promise<FillableFieldSummary[]> {
+    return this.request("GET", `/v1/designs/${id}/fillable-fields`);
+  }
+  /** Data merge / bulk create: one design per dataset row from a template or
+   *  base design. Synchronous + batched; the result reports the
+   *  created designs, a truncated flag (when the dataset exceeded the cap), and
+   *  any rows skipped for failing field validation. */
+  bulkCreate(input: BulkCreateInput): Promise<BulkCreateResult> {
+    return this.request("POST", "/v1/designs/bulk-create", input);
+  }
+  /** Poll a background job (export, video render, bulk create, ...) by id. Only
+   *  visible to the user that enqueued it (job-status contract). */
+  getJob<R = unknown>(jobId: string): Promise<JobStatusView<R>> {
+    return this.request("GET", `/v1/jobs/${jobId}`);
+  }
+  /** Enqueue an MP4 render of a design's video timeline. Poll the
+   *  returned jobId via getJob, then download from videoExportDownloadUrl. */
+  startVideoExport(designId: string): Promise<{ jobId: string }> {
+    return this.request("POST", `/v1/designs/${designId}/export/video`);
+  }
+  /** The authenticated download URL for a completed video export (cookie auth). */
+  videoExportDownloadUrl(designId: string, jobId: string): string {
+    return `${this.baseUrl}/v1/designs/${designId}/export/video/${jobId}/download`;
+  }
+  /** Enqueue a DOCX or PDF render of a doc design. Poll via getJob,
+   *  then download from docExportDownloadUrl. */
+  startDocExport(designId: string, format: "docx" | "pdf"): Promise<{ jobId: string }> {
+    return this.request("POST", `/v1/designs/${designId}/export/doc`, { format });
+  }
+  /** The authenticated download URL for a completed doc export (cookie auth). */
+  docExportDownloadUrl(designId: string, jobId: string): string {
+    return `${this.baseUrl}/v1/designs/${designId}/export/doc/${jobId}/download`;
+  }
+  /** Convert a whiteboard design into a presentation deck. Poll via
+   *  getJob; the result carries the new design id to open. */
+  convertWhiteboardToDeck(designId: string): Promise<{ jobId: string }> {
+    return this.request("POST", `/v1/designs/${designId}/convert/whiteboard-to-deck`);
+  }
+  /** Autofill a single existing design from one row of values. */
+  autofillDesign(id: string, values: FillRowValues): Promise<{ designId: string }> {
+    return this.request("POST", `/v1/designs/${id}/autofill`, { values });
+  }
+  applyTemplate(id: string, workspaceId: string): Promise<{ designId: string }> {
+    return this.request("POST", `/v1/templates/${id}/apply`, { workspaceId });
+  }
+  /** Save the current design (by id or inline file) as a template (FR-9). */
+  saveAsTemplate(input: SaveAsTemplateInput): Promise<TemplateSummary> {
+    return this.request("POST", "/v1/templates", input);
+  }
+  assignTemplateCollection(id: string, collectionId: string | null): Promise<TemplateSummary> {
+    return this.request("POST", `/v1/templates/${id}/collection`, { collectionId });
+  }
+  // Collections.
+  listTemplateCollections(workspaceId: string): Promise<TemplateCollectionSummary[]> {
+    return this.request("GET", `/v1/templates/collections?workspaceId=${encodeURIComponent(workspaceId)}`);
+  }
+  createTemplateCollection(workspaceId: string, name: string): Promise<TemplateCollectionSummary> {
+    return this.request("POST", "/v1/templates/collections", { workspaceId, name });
+  }
+  deleteTemplateCollection(id: string): Promise<void> {
+    return this.request("DELETE", `/v1/templates/collections/${id}`);
+  }
+
+  // --- stock catalog ----------------------------------------------
+  stockSearch(
+    q?: string,
+    kind?: string,
+    opts: { category?: string; collection?: string } = {},
+  ): Promise<StockAssetSummary[]> {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (kind) params.set("kind", kind);
+    if (opts.category) params.set("category", opts.category);
+    if (opts.collection) params.set("collection", opts.collection);
+    const qs = params.toString();
+    return this.request("GET", `/v1/stock/search${qs ? `?${qs}` : ""}`);
+  }
+  /** The curated stock collections. */
+  stockCollections(): Promise<StockCollectionSummary[]> {
+    return this.request("GET", "/v1/stock/collections");
+  }
+  /** The current user's favorited stock assets (newest first). */
+  stockFavorites(): Promise<StockAssetSummary[]> {
+    return this.request("GET", "/v1/stock/favorites");
+  }
+  /** Toggle the current user's favorite on a stock asset; returns the new state. */
+  toggleStockFavorite(stockId: string): Promise<{ favorited: boolean }> {
+    return this.request("POST", `/v1/stock/favorites/${stockId}`);
+  }
+  /** The current user's recently-used stock assets (most recent first). */
+  stockRecent(): Promise<StockAssetSummary[]> {
+    return this.request("GET", "/v1/stock/recent");
+  }
+  /** Record a stock asset as recently used (called when it is placed). */
+  recordStockRecent(stockId: string): Promise<{ ok: boolean }> {
+    return this.request("POST", `/v1/stock/recent/${stockId}`);
+  }
+  /** The built-in mini apps + their granted scopes. */
+  listApps(): Promise<MiniAppSummary[]> {
+    return this.request("GET", "/v1/apps");
+  }
+
+  // --- AI (bring-your-own key) -------------------------------------
+  getAiConfig(workspaceId: string): Promise<AiConfigView | null> {
+    return this.request("GET", `/v1/workspaces/${workspaceId}/ai-config`);
+  }
+  setAiConfig(workspaceId: string, input: { provider: string; model?: string; imageModel?: string; baseUrl?: string; apiKey?: string }): Promise<AiConfigView> {
+    return this.request("PUT", `/v1/workspaces/${workspaceId}/ai-config`, input);
+  }
+  getAiPolicy(workspaceId: string): Promise<AiPolicy> {
+    return this.request("GET", `/v1/workspaces/${workspaceId}/ai-policy`);
+  }
+  setAiPolicy(workspaceId: string, input: AiPolicy): Promise<AiPolicy> {
+    return this.request("PUT", `/v1/workspaces/${workspaceId}/ai-policy`, input);
+  }
+  getAiUsage(workspaceId: string): Promise<{ tokensThisMonth: number }> {
+    return this.request("GET", `/v1/workspaces/${workspaceId}/ai-usage`);
+  }
+  aiText(input: { workspaceId: string; prompt: string; system?: string }): Promise<{ text: string }> {
+    return this.request("POST", "/v1/ai/text", input);
+  }
+  aiImage(input: { workspaceId: string; prompt: string; size?: string }): Promise<{ image: string }> {
+    return this.request("POST", "/v1/ai/image", input);
+  }
+  /** Describe an image in words for accessibility alt text (F22 FR-12).
+   *  `imageBase64` is a base64 PNG/JPEG (a leading data: prefix is allowed).
+   *  Needs a vision-capable model; throws ApiError 502 otherwise. */
+  aiDescribeImage(input: { workspaceId: string; imageBase64: string; instruction?: string }): Promise<{ text: string }> {
+    return this.request("POST", "/v1/ai/describe-image", input);
+  }
+  /** Edit an image by prompt, or outpaint it (Magic Expand) when `maskBase64` is
+   *  supplied. `imageBase64`/`maskBase64` are base64 PNGs (a leading data: prefix
+   *  is allowed). Returns the result image as a data URL (or remote URL). */
+  aiEditImage(input: { workspaceId: string; imageBase64: string; prompt: string; maskBase64?: string; size?: string }): Promise<{ image: string }> {
+    return this.request("POST", "/v1/ai/image/edit", input);
+  }
+
+  // --- uploads + asset organization -------------------------------
+  listAssets(workspaceId: string, filter: AssetListFilter = {}): Promise<UploadedAsset[]> {
+    const params = new URLSearchParams();
+    if (filter.folderId !== undefined) params.set("folderId", filter.folderId ?? "root");
+    if (filter.tag) params.set("tag", filter.tag);
+    if (filter.q) params.set("q", filter.q);
+    const qs = params.toString();
+    return this.request("GET", `/v1/workspaces/${workspaceId}/assets${qs ? `?${qs}` : ""}`);
+  }
+  uploadAsset(workspaceId: string, input: { filename: string; dataBase64: string; folderId?: string | null; thumbnail?: string }): Promise<UploadedAsset> {
+    return this.request("POST", `/v1/workspaces/${workspaceId}/assets`, input);
+  }
+  /**
+   * Import an image from a remote URL. The server validates the host (SSRF) and
+   * re-checks the resolved IP (anti-DNS-rebinding) before fetching, then stores
+   * it as an asset. Returns the created asset.
+   */
+  importAssetFromUrl(workspaceId: string, url: string, folderId?: string | null): Promise<UploadedAsset> {
+    return this.request("POST", `/v1/workspaces/${workspaceId}/assets/from-url`, { url, folderId });
+  }
+  /** Rename, move-to-folder, and/or set tags on an asset. */
+  updateAsset(id: string, patch: { filename?: string; folderId?: string | null; tags?: string[] }): Promise<UploadedAsset> {
+    return this.request("PATCH", `/v1/assets/${id}`, patch);
+  }
+  deleteAsset(id: string): Promise<void> {
+    return this.request("DELETE", `/v1/assets/${id}`);
+  }
+  /** Current storage usage + cap for the workspace (FR-11). */
+  assetUsage(workspaceId: string): Promise<StorageUsageView> {
+    return this.request("GET", `/v1/workspaces/${workspaceId}/assets/usage`);
+  }
+
+  // Asset folders.
+  listAssetFolders(workspaceId: string): Promise<AssetFolder[]> {
+    return this.request("GET", `/v1/workspaces/${workspaceId}/asset-folders`);
+  }
+  createAssetFolder(workspaceId: string, input: { name: string; parentId?: string | null }): Promise<AssetFolder> {
+    return this.request("POST", `/v1/workspaces/${workspaceId}/asset-folders`, input);
+  }
+  renameAssetFolder(id: string, name: string): Promise<AssetFolder> {
+    return this.request("PATCH", `/v1/asset-folders/${id}`, { name });
+  }
+  deleteAssetFolder(id: string): Promise<void> {
+    return this.request("DELETE", `/v1/asset-folders/${id}`);
+  }
+
+  // --- brand kits + controls --------------------------------------
+  /** The workspace's brand kits, default first (FR-1). Membership-gated. */
+  listBrandKits(workspaceId: string): Promise<BrandKit[]> {
+    return this.request("GET", `/v1/workspaces/${workspaceId}/brand-kits`);
+  }
+  /** Create a brand kit (FR-1); needs manage-brand. First kit becomes default. */
+  createBrandKit(workspaceId: string, input: { name?: string; isDefault?: boolean } = {}): Promise<BrandKit> {
+    return this.request("POST", `/v1/workspaces/${workspaceId}/brand-kits`, input);
+  }
+  getBrandKit(kitId: string): Promise<BrandKit> {
+    return this.request("GET", `/v1/brand-kits/${kitId}`);
+  }
+  /** Update a kit's metadata, contents, and controls (FR-1, FR-4, FR-5);
+   *  needs manage-brand. */
+  updateBrandKit(kitId: string, patch: BrandKitPatch): Promise<BrandKit> {
+    return this.request("PATCH", `/v1/brand-kits/${kitId}`, patch);
+  }
+  deleteBrandKit(kitId: string): Promise<void> {
+    return this.request("DELETE", `/v1/brand-kits/${kitId}`);
+  }
+  /** Set a kit as the workspace default (FR-2); needs manage-brand. */
+  setDefaultBrandKit(kitId: string): Promise<BrandKit> {
+    return this.request("POST", `/v1/brand-kits/${kitId}/default`, {});
+  }
+  /** The design's active resolved brand + the caller's manage flag (FR-11). */
+  getDesignBrand(designId: string): Promise<ResolvedBrand> {
+    return this.request("GET", `/v1/designs/${designId}/brand`);
+  }
+  /** Assign (or clear, with null) a design's active brand kit (FR-2); needs
+   *  manage-brand. Writes DesignFile.meta.brandKitId server-side. */
+  assignDesignBrand(designId: string, brandKitId: string | null): Promise<ResolvedBrand> {
+    return this.request("POST", `/v1/designs/${designId}/brand`, { brandKitId });
+  }
+
+  // --- brand versioning --------------------------------------
+  /** A kit's version history, newest first (FR-9); needs manage-brand. */
+  listBrandKitVersions(kitId: string): Promise<BrandKitVersion[]> {
+    return this.request("GET", `/v1/brand-kits/${kitId}/versions`);
+  }
+  /** Restore a kit to a prior version (FR-9); needs manage-brand. The prior
+   *  snapshot is written back as a NEW version (history is never destroyed). */
+  restoreBrandKitVersion(kitId: string, version: number): Promise<BrandKit> {
+    return this.request("POST", `/v1/brand-kits/${kitId}/restore`, { version });
+  }
+
+  // --- brand linting -----------------------------------
+  /** Lint a design against its active brand kit (FR-7). Membership-gated.
+   *  Returns every violation found, each with an applyable fix where safe. */
+  brandLint(designId: string): Promise<BrandLintViolation[]> {
+    return this.request("GET", `/v1/designs/${designId}/brand-lint`);
+  }
+  /** The pre-export/publish brand gate for a design (FR-8). `blocked` is true
+   *  under lintPolicy 'block' with any non-info violation, so the export refuses. */
+  brandLintGate(designId: string): Promise<BrandLintResult> {
+    return this.request("GET", `/v1/designs/${designId}/brand-lint/gate`);
+  }
+
+  // --- pin / track ------------------------------------------
+  /** Whether the tracked kit advanced past what the design reflects (FR-10),
+   *  with a change summary, so the editor can prompt to review the update. */
+  brandUpdates(designId: string): Promise<BrandUpdateSummary> {
+    return this.request("GET", `/v1/designs/${designId}/brand-updates`);
+  }
+  /** Pin a design to a specific kit version, or track latest with null (FR-10);
+   *  needs manage-brand. Never mutates the scene graph. */
+  setDesignBrandVersion(designId: string, version: number | null): Promise<ResolvedBrand> {
+    return this.request("POST", `/v1/designs/${designId}/brand-version`, { version });
+  }
+  /** Record the tracked kit's current version as reviewed (FR-10); needs
+   *  manage-brand. Clears the "Brand updated - review" banner until the kit
+   *  advances again. Writes `meta.brandReviewedVersion`; never mutates the scene
+   *  graph. Returns the design's resolved brand. */
+  markBrandReviewed(designId: string): Promise<ResolvedBrand> {
+    return this.request("POST", `/v1/designs/${designId}/brand-reviewed`, {});
+  }
+
+  // --- locked regions + editable fields ----------------
+  /** Mark (or replace, an empty array clears) a design's brand locked-region
+   *  node ids and, optionally, its editable fields (FR-6); needs manage-brand.
+   *  Pass `editableFields` to record which nodes a filler may populate (omit to
+   *  leave them untouched, `[]` to clear). Returns the design's resolved brand
+   *  with the new locked-region + editable-field lists. */
+  setDesignLockedRegions(
+    designId: string,
+    lockedRegions: string[],
+    editableFields?: BrandEditableField[],
+  ): Promise<ResolvedBrand> {
+    return this.request("POST", `/v1/designs/${designId}/brand-locked-regions`, {
+      lockedRegions,
+      ...(editableFields !== undefined ? { editableFields } : {}),
+    });
+  }
+}

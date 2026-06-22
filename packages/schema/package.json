@@ -1,0 +1,25 @@
+{
+  "name": "@hc/schema",
+  "version": "0.1.0",
+  "license": "Elastic-2.0",
+  "private": true,
+  "description": "HyCanvas open design file format: types, JSON Schema, migrations",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "gen:schema": "node scripts/gen-schema.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "ajv": "^8.20.0",
+    "typescript": "^5.7.3",
+    "vitest": "^3.2.6"
+  },
+  "dependencies": {
+    "yjs": "^13.6.31",
+    "zod": "^4.4.3"
+  }
+}

@@ -1,0 +1,27 @@
+HyCanvas
+Copyright (c) 2026 HyScaler
+
+This software is made available under the Elastic License 2.0 (see LICENSE).
+
+This product bundles third-party open-source software, each under its own
+license. Notable runtime and build dependencies include (non-exhaustive):
+
+- Go module dependencies listed in backend/go.mod (e.g. chi, pgx, jose/crypto
+  libraries) - see their respective repositories for license terms.
+- npm dependencies listed in package-lock.json and each workspace's
+  package.json (e.g. Next.js, React, Yjs, Zustand, pdf.js, Zod) - see their
+  respective repositories for license terms.
+- Fonts are loaded at runtime from Google Fonts; none are redistributed in this
+  repository.
+
+Bundled demo content:
+
+- backend/internal/stock/stock.json contains a small demo/sample asset catalog.
+  The photo entries (license type "placeholder") are served via Lorem Picsum and
+  are NOT HyCanvas-owned assets; replace them with your own licensed media before
+  production use. Icon entries are generated vectors and are covered by the
+  project license.
+
+Run a dependency license report (for example `npm ls --all` plus a license
+scanner, and `go-licenses` for the Go module) to produce a full third-party
+attribution list for a distribution.

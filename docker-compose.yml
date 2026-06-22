@@ -1,0 +1,75 @@
+# HyCanvas - one-command self-host stack.
+#
+#   docker compose up --build
+#
+# The Go app applies migrations on boot and serves the whole product (UI + API +
+# realtime) at http://localhost:8005. With the default COMPOSE_PROFILES=bundled
+# (set in .env) it also runs Postgres; in EXTERNAL mode it runs only the app
+# against your managed Postgres (see the Database note below).
+#
+# Database: external if you provide it in .env, bundled otherwise.
+#   - BUNDLED (default): the db container runs, gated by the `bundled` compose
+#     profile (enabled by COMPOSE_PROFILES=bundled in .env). The app's connection
+#     is assembled from the POSTGRES_* credentials in .env.
+#   - EXTERNAL (bring your own managed Postgres): set EXTERNAL_DATABASE_URL in
+#     .env, and set COMPOSE_PROFILES= (empty) so the bundled container does NOT
+#     start. The app then connects to your endpoint.
+# Other secrets (JWT_SECRET, SMTP_*, OIDC_*, AI keys, VAPID_*, ...) always come
+# from .env.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    profiles: ["bundled"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-hycanvas}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-hycanvas}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    # required:false so the app still starts in EXTERNAL mode, where the bundled
+    # db is not started (profile off). In bundled mode it waits for healthy.
+    depends_on:
+      db:
+        condition: service_healthy
+        required: false
+    ports:
+      - "8005:8005"
+    # All app config/secrets (JWT_SECRET, SMTP_*, OIDC_*, OPENAI/ANTHROPIC keys,
+    # VAPID_*, APP_URL, FRONTEND_URL, ...) come from your .env. The file is
+    # optional, but JWT_SECRET is REQUIRED: the app refuses to start without it,
+    # and no default is provided here. Set it in .env (e.g. `openssl rand -hex 32`).
+    env_file:
+      - path: .env
+        required: false
+    # Connection config: use EXTERNAL_DATABASE_URL from .env when set (bring-your-
+    # own managed Postgres); otherwise assemble the bundled-container URL from the
+    # POSTGRES_* credentials with the compose service-name host. (.env's own
+    # DATABASE_URL stays localhost-based for non-docker dev.)
+    environment:
+      NODE_ENV: production
+      PORT: "8005"
+      DB_AUTO_MIGRATE: "true"
+      DATABASE_URL: "${EXTERNAL_DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-hycanvas}?schema=public}"
+      # Storage on the container volume (a host absolute path from .env would not
+      # exist here). Set S3_* in .env to use object storage instead.
+      STORAGE_DRIVER: local
+      LOCAL_STORAGE_PATH: /app/.data/storage
+    volumes:
+      - storage:/app/.data/storage
+
+volumes:
+  pgdata:
+  storage:

@@ -1,0 +1,22 @@
+{
+  "name": "@hc/docs",
+  "version": "0.1.0",
+  "license": "Elastic-2.0",
+  "private": true,
+  "description": "HyCanvas docs: block model, markdown round-trip, doc<->design conversion, and block diff (framework-agnostic)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@hc/schema": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vitest": "^3.2.6"
+  }
+}

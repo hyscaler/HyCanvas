@@ -1,0 +1,22 @@
+{
+  "name": "@hc/timeline",
+  "version": "0.1.0",
+  "license": "Elastic-2.0",
+  "private": true,
+  "description": "HyCanvas timeline: pure, frame-accurate video timeline model and edit operations (trim/split/ripple/speed/transitions/nesting/beat-snap), framework-agnostic (doc 29)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@hc/schema": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vitest": "^3.2.6"
+  }
+}

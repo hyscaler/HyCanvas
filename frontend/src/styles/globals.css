@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+/* HyCanvas design tokens. Light theme is locked for v1 (a dark editor chrome
+   is applied locally, not via prefers-color-scheme). Brand is a violet -> blue
+   gradient identity. The brand font is injected by next/font as --font-sans. */
+@theme inline {
+  --font-sans: var(--font-brand), ui-sans-serif, system-ui, sans-serif;
+
+  --color-brand-50: #f2f1fe;
+  --color-brand-100: #e7e5fd;
+  --color-brand-200: #d2cefb;
+  --color-brand-300: #b3aaf7;
+  --color-brand-400: #8f80f0;
+  --color-brand-500: #7458e8;
+  --color-brand-600: #6238db;
+  --color-brand-700: #5329c0;
+  --color-brand-800: #45249c;
+  --color-brand-900: #39217d;
+
+  --color-accent-400: #5b9bff;
+  --color-accent-500: #2f7bff;
+  --color-accent-600: #1f63e6;
+}
+
+:root {
+  --oc-gradient: linear-gradient(135deg, #7c3aed 0%, #6238db 45%, #2f7bff 100%);
+}
+
+html,
+body {
+  background: #ffffff;
+  color: #18181b;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+/* Brand gradient helpers. */
+.oc-gradient {
+  background-image: var(--oc-gradient);
+}
+.oc-gradient-text {
+  background-image: var(--oc-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Auth showcase: gentle float for the floating design cards + a staggered
+   entrance, and a subtle dotted grid for brand surfaces. */
+@keyframes oc-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.oc-float { animation: oc-float 6s ease-in-out infinite; }
+@keyframes oc-fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.oc-fade-up { animation: oc-fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
+/* Local echo for whiteboard reactions (doc 30 FR-9): the sender's own emoji
+   floats up and fades, so reactions are visible to the actor (and solo). */
+@keyframes oc-reaction-rise {
+  0% { opacity: 0; transform: translateY(8px) scale(0.7); }
+  15% { opacity: 1; transform: translateY(-4px) scale(1.1); }
+  100% { opacity: 0; transform: translateY(-72px) scale(1); }
+}
+.oc-reaction-rise { animation: oc-reaction-rise 2.2s ease-out forwards; }
+.oc-dotgrid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* Thin, modern scrollbars for panels. */
+.oc-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #d4d4d8 transparent;
+}
+
+/* Clean, swatch-style native color inputs used across the editor panels. */
+.oc-color {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+.oc-color::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+.oc-color::-webkit-color-swatch {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+}
+.oc-color::-moz-color-swatch {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+}
+
+/* Respect the OS "reduce motion" setting app-wide: damp transitions/animations
+   and instant scrolling for users who opt out of motion. PresentMode also reads
+   the preference directly to skip slide transitions. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

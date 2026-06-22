@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+bin/
+.next/
+out/
+packages/*/dist/
+
+# Local filesystem storage (used when no S3 is configured)
+.data/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Claude Code local settings (never commit)
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Testing
+coverage/
+
+# Prisma
+prisma/migrations/.migration_lock.toml
+
+# Misc
+*.tsbuildinfo
+.eslintcache
+
+# Frontend export staged into the Go binary at build time (go:embed, -tags embed).
+# Builds that omit the tag (dev, tests, plain build:backend) never reference it, so
+# the directory exists only during a production build and is fully ignored.
+backend/internal/webui/public/

@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [development]
+  pull_request:
+
+jobs:
+  web:
+    name: Packages + frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      # Fresh install rather than `npm ci`: npm's optional-dependency lockfile bug
+      # (npm/cli#4828) makes `npm ci` skip platform-native packages such as
+      # @rollup/rollup-linux-x64-gnu on Linux, breaking vitest. This mirrors the
+      # Dockerfile, which installs the same way.
+      - run: rm -f package-lock.json && npm install --no-audit --no-fund
+      - run: npm run build:packages
+      - run: npm run test:packages
+      - run: npm run lint:frontend
+      - run: npm run build:frontend
+        env:
+          NEXT_PUBLIC_BACKEND_URL: /api
+
+  backend:
+    name: Go backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache-dependency-path: backend/go.sum
+      - run: go vet ./...
+      - run: go build ./...
+      # Database-integration tests skip automatically when DATABASE_URL is unset;
+      # the rest of the suite runs here. To run them in CI, add a postgres service,
+      # set DATABASE_URL + JWT_SECRET, and run `go run ./cmd/migrate` first.
+      - run: go test ./...

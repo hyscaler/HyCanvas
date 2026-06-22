@@ -1,0 +1,419 @@
+// PDF export: a minimal, dependency-free PDF writer that translates a page's
+// scene graph to PDF vector operators. PDF user space is bottom-left/y-up, so
+// the content stream first flips to the design's top-left/y-down space; each
+// node's transform is applied inside a q/Q (save/restore) pair, mirroring the
+// SVG <g> nesting. Text uses the Helvetica base-14 font (no embedding).
+//
+// Fidelity notes (v1, documented degradations vs the editable SVG): gradient
+// fills render as their first stop color, and per-element opacity/alpha is not
+// applied (PDF constant alpha needs an ExtGState; deferred). Vector geometry,
+// colors, transforms, and text position are faithful.
+package render
+
+import (
+	"bytes"
+	"fmt"
+	"math"
+	"strconv"
+	"strings"
+)
+
+// pdfColor is an r,g,b in 0..1, or ok=false for "none".
+type pdfColor struct {
+	r, g, b float64
+	ok      bool
+}
+
+func pdfPaint(fill map[string]any) pdfColor {
+	if fill == nil {
+		return pdfColor{}
+	}
+	switch asStr(fill["type"]) {
+	case "solid":
+		return colorComponents(asObj(fill["color"]))
+	case "gradient":
+		// Degrade to the first stop color.
+		stops := asArr(fill["stops"])
+		if len(stops) > 0 {
+			return colorComponents(asObj(asObj(stops[0])["color"]))
+		}
+	}
+	return pdfColor{}
+}
+
+func colorComponents(color map[string]any) pdfColor {
+	srgb := asObj(color["srgb"])
+	if srgb == nil {
+		return pdfColor{}
+	}
+	return pdfColor{r: asNum(srgb["r"]), g: asNum(srgb["g"]), b: asNum(srgb["b"]), ok: true}
+}
+
+func pn(n float64) string {
+	if math.IsNaN(n) || math.IsInf(n, 0) {
+		return "0"
+	}
+	return strconv.FormatFloat(math.Round(n*1000)/1000, 'f', -1, 64)
+}
+
+// pdfCtx accumulates the page content stream.
+type pdfCtx struct{ buf bytes.Buffer }
+
+func (c *pdfCtx) op(s string) { c.buf.WriteString(s); c.buf.WriteByte('\n') }
+
+// paintAndStroke emits the fill+stroke for the current path using the node's
+// fills[0] and stroke, choosing the right paint operator (f/S/B/n).
+func (c *pdfCtx) paintAndStroke(node map[string]any) {
+	var fills []any = asArr(node["fills"])
+	var fill map[string]any
+	if len(fills) > 0 {
+		fill = asObj(fills[0])
+	}
+	fc := pdfPaint(fill)
+	stroke := asObj(node["stroke"])
+	var sc pdfColor
+	if stroke != nil {
+		sc = pdfPaint(asObj(stroke["fill"]))
+	}
+	if fc.ok {
+		c.op(pn(fc.r) + " " + pn(fc.g) + " " + pn(fc.b) + " rg")
+	}
+	if sc.ok {
+		c.op(pn(sc.r) + " " + pn(sc.g) + " " + pn(sc.b) + " RG")
+		c.op(pn(asNum(stroke["width"])) + " w")
+	}
+	switch {
+	case fc.ok && sc.ok:
+		c.op("B")
+	case fc.ok:
+		c.op("f")
+	case sc.ok:
+		c.op("S")
+	default:
+		c.op("n")
+	}
+}
+
+// emitEllipse approximates an ellipse with four cubic bezier arcs.
+func (c *pdfCtx) emitEllipse(w, h float64) {
+	rx, ry := w/2, h/2
+	cx, cy := w/2, h/2
+	const k = 0.5522847498
+	ox, oy := rx*k, ry*k
+	c.op(pn(cx-rx) + " " + pn(cy) + " m")
+	c.op(pn(cx-rx) + " " + pn(cy+oy) + " " + pn(cx-ox) + " " + pn(cy+ry) + " " + pn(cx) + " " + pn(cy+ry) + " c")
+	c.op(pn(cx+ox) + " " + pn(cy+ry) + " " + pn(cx+rx) + " " + pn(cy+oy) + " " + pn(cx+rx) + " " + pn(cy) + " c")
+	c.op(pn(cx+rx) + " " + pn(cy-oy) + " " + pn(cx+ox) + " " + pn(cy-ry) + " " + pn(cx) + " " + pn(cy-ry) + " c")
+	c.op(pn(cx-ox) + " " + pn(cy-ry) + " " + pn(cx-rx) + " " + pn(cy-oy) + " " + pn(cx-rx) + " " + pn(cy) + " c")
+	c.op("h")
+}
+
+func (c *pdfCtx) emitPolyPoints(pts [][2]float64) {
+	for i, p := range pts {
+		if i == 0 {
+			c.op(pn(p[0]) + " " + pn(p[1]) + " m")
+		} else {
+			c.op(pn(p[0]) + " " + pn(p[1]) + " l")
+		}
+	}
+	c.op("h")
+}
+
+func polygonPoints(w, h float64, sides int) [][2]float64 {
+	if sides < 3 {
+		sides = 3
+	}
+	cx, cy := w/2, h/2
+	out := make([][2]float64, sides)
+	for i := 0; i < sides; i++ {
+		a := -math.Pi/2 + float64(i)*2*math.Pi/float64(sides)
+		out[i] = [2]float64{cx + math.Cos(a)*(w/2), cy + math.Sin(a)*(h/2)}
+	}
+	return out
+}
+
+func starPoints(w, h float64, points int, innerRatio float64) [][2]float64 {
+	if points < 3 {
+		points = 3
+	}
+	inner := math.Max(0.05, math.Min(1, innerRatio))
+	cx, cy := w/2, h/2
+	out := make([][2]float64, points*2)
+	for i := 0; i < points*2; i++ {
+		a := -math.Pi/2 + float64(i)*math.Pi/float64(points)
+		r := 1.0
+		if i%2 != 0 {
+			r = inner
+		}
+		out[i] = [2]float64{cx + math.Cos(a)*(w/2)*r, cy + math.Sin(a)*(h/2)*r}
+	}
+	return out
+}
+
+func (c *pdfCtx) shapeBody(node map[string]any) {
+	w, h := sizeOf(node)
+	switch asStr(node["shape"]) {
+	case "rect":
+		c.op("0 0 " + pn(w) + " " + pn(h) + " re")
+		c.paintAndStroke(node)
+	case "ellipse":
+		c.emitEllipse(w, h)
+		c.paintAndStroke(node)
+	case "polygon":
+		sides := int(asNum(node["sides"]))
+		if sides == 0 {
+			sides = 3
+		}
+		c.emitPolyPoints(polygonPoints(w, h, sides))
+		c.paintAndStroke(node)
+	case "triangle":
+		c.emitPolyPoints(polygonPoints(w, h, 3))
+		c.paintAndStroke(node)
+	case "star":
+		pts := int(asNum(node["sides"]))
+		if pts == 0 {
+			pts = 5
+		}
+		ir := asNum(node["innerRadius"])
+		if ir == 0 {
+			ir = 0.5
+		}
+		c.emitPolyPoints(starPoints(w, h, pts, ir))
+		c.paintAndStroke(node)
+	}
+}
+
+func (c *pdfCtx) pathBody(node map[string]any) {
+	segs := asArr(node["segments"])
+	if len(segs) == 0 {
+		return
+	}
+	closed := asBool(node["closed"])
+	first := asObj(segs[0])
+	c.op(pn(asNum(first["x"])) + " " + pn(asNum(first["y"])) + " m")
+	count := len(segs) - 1
+	if closed {
+		count = len(segs)
+	}
+	for i := 0; i < count; i++ {
+		from := asObj(segs[i])
+		to := asObj(segs[(i+1)%len(segs)])
+		cOut := asObj(from["cOut"])
+		cIn := asObj(to["cIn"])
+		if cOut != nil || cIn != nil {
+			c1x, c1y := asNum(from["x"]), asNum(from["y"])
+			if cOut != nil {
+				c1x, c1y = asNum(cOut["x"]), asNum(cOut["y"])
+			}
+			c2x, c2y := asNum(to["x"]), asNum(to["y"])
+			if cIn != nil {
+				c2x, c2y = asNum(cIn["x"]), asNum(cIn["y"])
+			}
+			c.op(pn(c1x) + " " + pn(c1y) + " " + pn(c2x) + " " + pn(c2y) + " " + pn(asNum(to["x"])) + " " + pn(asNum(to["y"])) + " c")
+		} else {
+			c.op(pn(asNum(to["x"])) + " " + pn(asNum(to["y"])) + " l")
+		}
+	}
+	if closed {
+		c.op("h")
+	}
+	c.paintAndStroke(node)
+}
+
+func (c *pdfCtx) lineBody(node map[string]any) {
+	pts := asArr(node["points"])
+	if len(pts) == 0 {
+		return
+	}
+	for i, p := range pts {
+		po := asObj(p)
+		if i == 0 {
+			c.op(pn(asNum(po["x"])) + " " + pn(asNum(po["y"])) + " m")
+		} else {
+			c.op(pn(asNum(po["x"])) + " " + pn(asNum(po["y"])) + " l")
+		}
+	}
+	stroke := asObj(node["stroke"])
+	if stroke != nil {
+		sc := pdfPaint(asObj(stroke["fill"]))
+		if sc.ok {
+			c.op(pn(sc.r) + " " + pn(sc.g) + " " + pn(sc.b) + " RG")
+			c.op(pn(asNum(stroke["width"])) + " w")
+		}
+	}
+	c.op("S")
+}
+
+func pdfEscapeText(s string) string {
+	r := strings.NewReplacer("\\", "\\\\", "(", "\\(", ")", "\\)", "\r", "", "\n", " ")
+	return r.Replace(s)
+}
+
+// textBody emits text runs. PDF text space is y-up; because the page content is
+// already flipped to y-down, we counter-flip within the text block so glyphs are
+// upright (Tm with negative d).
+func (c *pdfCtx) textBody(node map[string]any) {
+	y := 0.0
+	for _, para := range asArr(node["content"]) {
+		po := asObj(para)
+		lineHeight := 0.0
+		runs := asArr(po["runs"])
+		for _, run := range runs {
+			ro := asObj(run)
+			style := asObj(ro["style"])
+			size := asNum(style["fontSize"])
+			if size == 0 {
+				size = 16
+			}
+			lineHeight = math.Max(lineHeight, size*1.2)
+		}
+		if lineHeight == 0 {
+			lineHeight = 16 * 1.2
+		}
+		y += lineHeight
+		x := 0.0
+		for _, run := range runs {
+			ro := asObj(run)
+			style := asObj(ro["style"])
+			size := asNum(style["fontSize"])
+			if size == 0 {
+				size = 16
+			}
+			fc := pdfPaint(asObj(style["fill"]))
+			if !fc.ok {
+				fc = pdfColor{r: 0, g: 0, b: 0, ok: true}
+			}
+			text := asStr(ro["text"])
+			// Pick a base-14 font from the run's family/style/weight, then use its
+			// real glyph metrics for an accurate advance (FR: faithful text PDF).
+			bold := asNum(style["weight"]) >= 600
+			font := selectFont(asStr(style["fontFamily"]), asStr(style["fontStyle"]), bold, asBool(style["italic"]))
+			ls := asNum(style["letterSpacing"])
+			c.op("BT")
+			c.op(pn(fc.r) + " " + pn(fc.g) + " " + pn(fc.b) + " rg")
+			c.op("/" + font.key + " " + pn(size) + " Tf")
+			if ls != 0 {
+				c.op(pn(ls) + " Tc")
+			}
+			// Tm: counter-flip the y axis (1 0 0 -1) and place the baseline at (x,y).
+			c.op("1 0 0 -1 " + pn(x) + " " + pn(y) + " Tm")
+			c.op("(" + pdfEscapeText(text) + ") Tj")
+			c.op("ET")
+			x += textAdvance(font, text, size, ls)
+		}
+	}
+}
+
+func (c *pdfCtx) emitNode(node map[string]any) {
+	if asBool(node["hidden"]) {
+		return
+	}
+	c.op("q")
+	// Apply the node transform matrix (same a b c d e f as the SVG matrix).
+	a, b, cc, d, e, f := transformMatrix(node)
+	c.op(pn(a) + " " + pn(b) + " " + pn(cc) + " " + pn(d) + " " + pn(e) + " " + pn(f) + " cm")
+	switch asStr(node["type"]) {
+	case "shape":
+		c.shapeBody(node)
+	case "path":
+		c.pathBody(node)
+	case "line":
+		c.lineBody(node)
+	case "text":
+		c.textBody(node)
+	case "group", "frame", "grid":
+		for _, ch := range childrenOf(node) {
+			c.emitNode(asObj(ch))
+		}
+	}
+	c.op("Q")
+}
+
+// transformMatrix returns the 2D affine components (mirrors matrixAttr).
+func transformMatrix(node map[string]any) (a, b, cc, d, e, f float64) {
+	t := asObj(node["transform"])
+	if t == nil {
+		return 1, 0, 0, 1, 0, 0
+	}
+	sx, sy := asNum(t["scaleX"]), asNum(t["scaleY"])
+	if t["scaleX"] == nil {
+		sx = 1
+	}
+	if t["scaleY"] == nil {
+		sy = 1
+	}
+	rot := asNum(t["rotation"]) * math.Pi / 180
+	cos, sin := math.Cos(rot), math.Sin(rot)
+	tanX, tanY := 0.0, 0.0
+	if v, ok := t["skewX"].(float64); ok {
+		tanX = math.Tan(v * math.Pi / 180)
+	}
+	if v, ok := t["skewY"].(float64); ok {
+		tanY = math.Tan(v * math.Pi / 180)
+	}
+	ksa, ksb, ksc, ksd := sx, tanY*sx, tanX*sy, sy
+	return cos*ksa - sin*ksb, sin*ksa + cos*ksb, cos*ksc - sin*ksd, sin*ksc + cos*ksd, asNum(t["x"]), asNum(t["y"])
+}
+
+// ToPDF renders one page of a design to a single-page PDF document.
+func ToPDF(file Design, pageIndex int) ([]byte, error) {
+	pages := asArr(file["pages"])
+	if pageIndex < 0 || pageIndex >= len(pages) {
+		return nil, ErrPageRange
+	}
+	page := asObj(pages[pageIndex])
+	w, h := asNum(page["width"]), asNum(page["height"])
+
+	c := &pdfCtx{}
+	// Flip to design space (top-left origin, y-down).
+	c.op("1 0 0 -1 0 " + pn(h) + " cm")
+	// Background.
+	if bg := asObj(page["background"]); bg != nil {
+		if k := asStr(bg["type"]); k != "pattern" && k != "image" {
+			if fc := pdfPaint(bg); fc.ok {
+				c.op(pn(fc.r) + " " + pn(fc.g) + " " + pn(fc.b) + " rg")
+				c.op("0 0 " + pn(w) + " " + pn(h) + " re")
+				c.op("f")
+			}
+		}
+	}
+	for _, n := range asArr(page["children"]) {
+		c.emitNode(asObj(n))
+	}
+
+	return assemblePDF(c.buf.Bytes(), w, h), nil
+}
+
+// assemblePDF writes a minimal valid single-page PDF registering the base-14
+// font set used by text runs, with a correct xref table.
+func assemblePDF(content []byte, w, h float64) []byte {
+	// Font objects follow the content object (4); font i lives at object 5+i.
+	var fontDict strings.Builder
+	fontObjs := make([]string, len(pdfFontTable))
+	for i, f := range pdfFontTable {
+		fmt.Fprintf(&fontDict, "/%s %d 0 R ", f.key, 5+i)
+		fontObjs[i] = fmt.Sprintf("<< /Type /Font /Subtype /Type1 /BaseFont /%s /Encoding /WinAnsiEncoding >>", f.baseFont)
+	}
+	objs := []string{
+		"<< /Type /Catalog /Pages 2 0 R >>",
+		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+		fmt.Sprintf("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %s %s] /Resources << /Font << %s>> >> /Contents 4 0 R >>", pn(w), pn(h), fontDict.String()),
+		fmt.Sprintf("<< /Length %d >>\nstream\n%s\nendstream", len(content)+1, content),
+	}
+	objs = append(objs, fontObjs...)
+	var out bytes.Buffer
+	out.WriteString("%PDF-1.7\n")
+	offsets := make([]int, len(objs)+1)
+	for i, body := range objs {
+		offsets[i+1] = out.Len()
+		out.WriteString(fmt.Sprintf("%d 0 obj\n%s\nendobj\n", i+1, body))
+	}
+	xrefPos := out.Len()
+	out.WriteString(fmt.Sprintf("xref\n0 %d\n", len(objs)+1))
+	out.WriteString("0000000000 65535 f \n")
+	for i := 1; i <= len(objs); i++ {
+		out.WriteString(fmt.Sprintf("%010d 00000 n \n", offsets[i]))
+	}
+	out.WriteString(fmt.Sprintf("trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n", len(objs)+1, xrefPos))
+	return out.Bytes()
+}

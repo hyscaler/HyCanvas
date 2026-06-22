@@ -1,0 +1,19 @@
+# Build artifacts + deps are produced inside the image, never copied in.
+**/node_modules
+dist
+frontend/.next
+frontend/out
+packages/*/dist
+# Build-staged frontend embed (go:embed); the image rebuilds it fresh in the
+# backend stage, so never copy a stale local copy into the build context.
+backend/internal/webui/public
+.data
+.git
+.github
+*.log
+npm-debug.log*
+.DS_Store
+# Never bake local secrets into the image; env is provided at run time.
+.env
+.env.*
+!.env.example

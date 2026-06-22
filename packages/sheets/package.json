@@ -1,0 +1,23 @@
+{
+  "name": "@hc/sheets",
+  "version": "0.1.0",
+  "license": "Elastic-2.0",
+  "private": true,
+  "description": "HyCanvas sheets: cell model, number/conditional formatting, data tables, and chart binding resolver (framework-agnostic)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@hc/formula": "*",
+    "@hc/schema": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vitest": "^3.2.6"
+  }
+}

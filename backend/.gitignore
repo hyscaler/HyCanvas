@@ -1,0 +1,5 @@
+# Built binaries / test artifacts
+/bin/
+*.out
+*.test
+/tmp/

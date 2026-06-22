@@ -1,0 +1,20 @@
+{
+  "name": "@hc/ui",
+  "version": "0.1.0",
+  "license": "Elastic-2.0",
+  "private": true,
+  "description": "HyCanvas shared UI utilities and components",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

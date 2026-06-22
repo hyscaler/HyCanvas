@@ -1,0 +1,588 @@
+// Package accounts ports the auth/accounts module: user lookup, password login,
+// server-tracked sessions with refresh tokens, and access-token verification with
+// immediate revocation. It reads/writes the SAME tables the NestJS/Prisma backend
+// uses ("User", "Session") so sessions are interchangeable across the migration.
+package accounts
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	"regexp"
+	"strings"
+	"sync"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+
+	"hycanvas/backend/internal/auth/jwt"
+	"hycanvas/backend/internal/auth/secrets"
+)
+
+// AccessTTL matches ACCESS_TTL_SECONDS in the NestJS backend (15 minutes).
+const AccessTTL = 15 * time.Minute
+
+// refreshGrace matches DEFAULT_GRACE_MS in @hc/authz: a just-rotated token may be
+// presented again by a concurrent tab within this window without revoking.
+const refreshGrace = 10 * time.Second
+
+var (
+	ErrInvalidCredentials = errors.New("invalid email or password")
+	ErrMFARequired        = errors.New("mfa required")
+	ErrInvalidRefresh     = errors.New("invalid refresh token")
+	ErrSessionRevoked     = errors.New("session revoked")
+	ErrReuseDetected      = errors.New("refresh token reuse detected; session revoked")
+	ErrEmailTaken         = errors.New("an account with this email already exists")
+	ErrInvalidSignup      = errors.New("a valid email and an 8+ character password are required")
+	ErrForbidden          = errors.New("forbidden")
+	ErrReauth             = errors.New("re-authentication failed")
+	ErrToken              = errors.New("invalid or expired token")
+)
+
+// roleRank mirrors @hc/authz ROLE_RANK (higher = more authority). DB roles are
+// uppercase (OWNER/ADMIN/MEMBER/VIEWER); compared after lowercasing.
+var roleRank = map[string]int{"viewer": 1, "member": 2, "admin": 3, "owner": 4}
+
+// AssertMember enforces that the user is an ACTIVE member of the workspace with
+// at least minRole ("viewer"|"member"|"admin"|"owner"). Reusable by every module
+// that enforces per-workspace isolation. Returns ErrForbidden otherwise.
+func (s *Service) AssertMember(ctx context.Context, userID, workspaceID, minRole string) error {
+	const q = `SELECT role FROM "WorkspaceMember"
+		WHERE "workspaceId" = $1 AND "userId" = $2 AND status = 'ACTIVE'`
+	var role string
+	if err := s.db.QueryRow(ctx, q, workspaceID, userID).Scan(&role); err != nil {
+		return ErrForbidden
+	}
+	if roleRank[strings.ToLower(role)] < roleRank[minRole] {
+		return ErrForbidden
+	}
+	return nil
+}
+
+// MemberWorkspaceIDs returns every workspace the user is an ACTIVE member of
+// (for cross-workspace template/visibility scoping).
+func (s *Service) MemberWorkspaceIDs(ctx context.Context, userID string) ([]string, error) {
+	rows, err := s.db.Query(ctx, `SELECT "workspaceId" FROM "WorkspaceMember" WHERE "userId" = $1 AND status = 'ACTIVE'`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []string{}
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
+}
+
+var emailRe = regexp.MustCompile(`^[^@\s]+@[^@\s]+\.[^@\s]+$`)
+
+// WorkspaceView is the personal-workspace summary returned by signup.
+type WorkspaceView struct {
+	ID      string `json:"id"`
+	Kind    string `json:"kind"`
+	Name    string `json:"name"`
+	Slug    string `json:"slug"`
+	OwnerID string `json:"ownerId"`
+}
+
+// Workspace is the public workspace shape (matches @hc/authz Workspace). Enum
+// columns are stored UPPERCASE in Postgres and returned lowercase here.
+type Workspace struct {
+	ID        string  `json:"id"`
+	Kind      string  `json:"kind"`
+	Name      string  `json:"name"`
+	Slug      string  `json:"slug"`
+	AvatarURL *string `json:"avatarUrl,omitempty"`
+	OwnerID   string  `json:"ownerId"`
+	CreatedAt string  `json:"createdAt"`
+}
+
+// WorkspaceWithRole is a workspace plus the caller's role in it (FR-10).
+type WorkspaceWithRole struct {
+	Workspace
+	Role string `json:"role"`
+}
+
+// ListWorkspaces returns every workspace the user is an ACTIVE member of, with
+// their role, newest first (matches WorkspaceService.listMine, doc 15 FR-10).
+func (s *Service) ListWorkspaces(ctx context.Context, userID string) ([]WorkspaceWithRole, error) {
+	rows, err := s.db.Query(ctx, `
+		SELECT w.id, w.kind, w.name, w.slug, w."avatarUrl", w."ownerId", w."createdAt", m.role
+		FROM "WorkspaceMember" m
+		JOIN "Workspace" w ON w.id = m."workspaceId"
+		WHERE m."userId" = $1 AND m.status = 'ACTIVE'
+		ORDER BY w."createdAt" DESC`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []WorkspaceWithRole{}
+	for rows.Next() {
+		var w WorkspaceWithRole
+		var created time.Time
+		if err := rows.Scan(&w.ID, &w.Kind, &w.Name, &w.Slug, &w.AvatarURL, &w.OwnerID, &created, &w.Role); err != nil {
+			return nil, err
+		}
+		w.Kind = strings.ToLower(w.Kind)
+		w.Role = strings.ToLower(w.Role)
+		w.CreatedAt = created.UTC().Format("2006-01-02T15:04:05.000Z07:00")
+		out = append(out, w)
+	}
+	return out, rows.Err()
+}
+
+// CreateWorkspace creates a team/org/classroom workspace owned by the caller
+// (matches WorkspaceService.create, doc 15 FR-10). Personal workspaces are
+// auto-provisioned at signup, never created here.
+func (s *Service) CreateWorkspace(ctx context.Context, userID, name, kind string) (*Workspace, error) {
+	if name = strings.TrimSpace(name); name == "" {
+		return nil, ErrInvalidSignup
+	}
+	kind = strings.ToLower(strings.TrimSpace(kind))
+	if kind == "" {
+		kind = "team"
+	}
+	if kind == "personal" {
+		return nil, fmt.Errorf("personal workspaces are auto-provisioned, not created")
+	}
+	if kind != "team" && kind != "org" && kind != "classroom" {
+		return nil, fmt.Errorf("invalid workspace kind %q", kind)
+	}
+
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	wsID := uuid.NewString()
+	slug := slugify(name)
+	var created time.Time
+	if err := tx.QueryRow(ctx,
+		`INSERT INTO "Workspace" (id, kind, name, slug, "ownerId", "updatedAt")
+		 VALUES ($1,$2,$3,$4,$5, now()) RETURNING "createdAt"`,
+		wsID, strings.ToUpper(kind), name, slug, userID).Scan(&created); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO "WorkspaceMember" (id, "workspaceId", "userId", role, status, "joinedAt", "updatedAt")
+		 VALUES ($1,$2,$3,'OWNER','ACTIVE', now(), now())`,
+		uuid.NewString(), wsID, userID); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return &Workspace{
+		ID: wsID, Kind: kind, Name: name, Slug: slug, OwnerID: userID,
+		CreatedAt: created.UTC().Format("2006-01-02T15:04:05.000Z07:00"),
+	}, nil
+}
+
+// DBTX is satisfied by *pgxpool.Pool and pgx.Tx, so handlers use the pool and
+// tests can run in a rolled-back transaction. Begin yields a (nested, via
+// savepoint) transaction for multi-statement operations like signup.
+type DBTX interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+	Begin(ctx context.Context) (pgx.Tx, error)
+}
+
+// UserRow is the subset of the User table the auth flow needs.
+type UserRow struct {
+	ID            string
+	Email         string
+	EmailVerified bool
+	Name          string
+	AvatarURL     *string
+	PasswordHash  *string
+	Locale        string
+	Theme         string
+	MFAEnabled    bool
+	CreatedAt     time.Time
+}
+
+// AuthUser is the public-safe user view (matches AuthService.toUser).
+type AuthUser struct {
+	ID            string         `json:"id"`
+	Email         string         `json:"email"`
+	EmailVerified bool           `json:"emailVerified"`
+	Name          string         `json:"name"`
+	AvatarURL     *string        `json:"avatarUrl,omitempty"`
+	Locale        string         `json:"locale"`
+	Theme         string         `json:"theme"`
+	Prefs         map[string]any `json:"prefs"`
+	MFAEnabled    bool           `json:"mfaEnabled"`
+	CreatedAt     string         `json:"createdAt"`
+}
+
+func toUser(u UserRow) AuthUser {
+	return AuthUser{
+		ID:            u.ID,
+		Email:         u.Email,
+		EmailVerified: u.EmailVerified,
+		Name:          u.Name,
+		AvatarURL:     u.AvatarURL,
+		Locale:        u.Locale,
+		Theme:         u.Theme,
+		Prefs:         map[string]any{"accessibility": map[string]any{"reduceMotion": false, "highContrast": false}},
+		MFAEnabled:    u.MFAEnabled,
+		CreatedAt:     u.CreatedAt.UTC().Format("2006-01-02T15:04:05.000Z07:00"),
+	}
+}
+
+// Tokens are the credentials produced by a successful login.
+type Tokens struct {
+	Access    string
+	Refresh   string
+	SessionID string
+}
+
+// Service holds the data handle and signing secret.
+type Service struct {
+	db        DBTX
+	jwtSecret string
+	aiSecret  string // encrypts the MFA TOTP secret at rest (defaults to jwtSecret)
+	// In-memory dev mail outbox: the email channel is a no-op (no SMTP), so sent
+	// verification/reset/magic links are captured here for local/dev testing
+	// (exposed via /auth/dev/outbox outside production).
+	outboxMu sync.Mutex
+	outbox   []OutboxMessage
+}
+
+func NewService(db DBTX, jwtSecret string) *Service {
+	return &Service{db: db, jwtSecret: jwtSecret, aiSecret: jwtSecret}
+}
+
+// WithMFASecret sets the AES key material used to encrypt the TOTP secret at
+// rest (AI_SECRET, falling back to JWT_SECRET), matching the Node ai/crypto
+// resolution so a secret enrolled on either service decrypts on the other.
+func (s *Service) WithMFASecret(secret string) *Service {
+	if secret != "" {
+		s.aiSecret = secret
+	}
+	return s
+}
+
+// findUserByEmail loads a user by lowercased email.
+func (s *Service) findUserByEmail(ctx context.Context, email string) (*UserRow, error) {
+	const q = `SELECT id, email, "emailVerified", name, "avatarUrl", "passwordHash", locale, theme, "mfaEnabled", "createdAt"
+		FROM "User" WHERE email = $1`
+	var u UserRow
+	err := s.db.QueryRow(ctx, q, email).Scan(
+		&u.ID, &u.Email, &u.EmailVerified, &u.Name, &u.AvatarURL, &u.PasswordHash,
+		&u.Locale, &u.Theme, &u.MFAEnabled, &u.CreatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+// findUserByID loads the full user row by id (for issuing a session post-MFA).
+func (s *Service) findUserByID(ctx context.Context, id string) (*UserRow, error) {
+	const q = `SELECT id, email, "emailVerified", name, "avatarUrl", "passwordHash", locale, theme, "mfaEnabled", "createdAt"
+		FROM "User" WHERE id = $1`
+	var u UserRow
+	err := s.db.QueryRow(ctx, q, id).Scan(
+		&u.ID, &u.Email, &u.EmailVerified, &u.Name, &u.AvatarURL, &u.PasswordHash,
+		&u.Locale, &u.Theme, &u.MFAEnabled, &u.CreatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+// GetUserByID loads a user view by id (for /me).
+func (s *Service) GetUserByID(ctx context.Context, id string) (*AuthUser, error) {
+	const q = `SELECT id, email, "emailVerified", name, "avatarUrl", "passwordHash", locale, theme, "mfaEnabled", "createdAt"
+		FROM "User" WHERE id = $1`
+	var u UserRow
+	if err := s.db.QueryRow(ctx, q, id).Scan(
+		&u.ID, &u.Email, &u.EmailVerified, &u.Name, &u.AvatarURL, &u.PasswordHash,
+		&u.Locale, &u.Theme, &u.MFAEnabled, &u.CreatedAt,
+	); err != nil {
+		return nil, err
+	}
+	v := toUser(u)
+	return &v, nil
+}
+
+// Login verifies credentials, creates a server-tracked session with a fresh
+// refresh token, and returns the user view plus tokens. MFA-enabled accounts are
+// rejected here (challenge flow is a later slice).
+// Login authenticates by password. When the account has MFA enabled it returns
+// ErrMFARequired together with a short-lived challenge token (aud "mfa") the
+// client redeems via VerifyMfaLogin; no session is issued in that case.
+func (s *Service) Login(ctx context.Context, email, password, device, ip string) (*AuthUser, *Tokens, string, error) {
+	u, err := s.findUserByEmail(ctx, email)
+	if err != nil || u == nil || u.PasswordHash == nil {
+		return nil, nil, "", ErrInvalidCredentials
+	}
+	if !secrets.VerifyPassword(password, *u.PasswordHash) {
+		return nil, nil, "", ErrInvalidCredentials
+	}
+	if u.MFAEnabled {
+		mfaToken, err := jwt.SignAudience(u.ID, mfaAudience, s.jwtSecret, mfaChallengeTTL)
+		if err != nil {
+			return nil, nil, "", err
+		}
+		return nil, nil, mfaToken, ErrMFARequired
+	}
+
+	v, tokens, err := s.issueSession(ctx, u, device, ip)
+	if err != nil {
+		return nil, nil, "", err
+	}
+	return v, tokens, "", nil
+}
+
+// issueSession creates a session row and signs the access/refresh tokens.
+func (s *Service) issueSession(ctx context.Context, u *UserRow, device, ip string) (*AuthUser, *Tokens, error) {
+	refresh := uuid.NewString() + "." + uuid.NewString()
+	sessionID := uuid.NewString()
+	const ins = `INSERT INTO "Session" (id, "userId", "currentTokenHash", device, ip, "rotatedAt", "createdAt", "lastSeenAt")
+		VALUES ($1, $2, $3, $4, $5, now(), now(), now())`
+	if _, err := s.db.Exec(ctx, ins, sessionID, u.ID, secrets.HashToken(refresh), nullable(device), nullable(ip)); err != nil {
+		return nil, nil, err
+	}
+	access, err := jwt.Sign(u.ID, sessionID, s.jwtSecret, AccessTTL)
+	if err != nil {
+		return nil, nil, err
+	}
+	v := toUser(*u)
+	return &v, &Tokens{Access: access, Refresh: refresh, SessionID: sessionID}, nil
+}
+
+var nonAlnum = regexp.MustCompile(`[^a-z0-9]+`)
+
+func slugify(name string) string {
+	b := nonAlnum.ReplaceAllString(strings.ToLower(name), "-")
+	b = strings.Trim(b, "-")
+	if len(b) > 32 {
+		b = b[:32]
+	}
+	if b == "" {
+		b = "workspace"
+	}
+	return b + "-" + uuid.NewString()[:6]
+}
+
+// Signup creates a user, a password identity, a personal workspace with an owner
+// membership, and an initial session - atomically - mirroring AuthService.signup
+// (FR-1/FR-2). Email verification dispatch is deferred to a later slice.
+func (s *Service) Signup(ctx context.Context, email, password, name string) (*AuthUser, *WorkspaceView, *Tokens, error) {
+	email = strings.ToLower(strings.TrimSpace(email))
+	if !emailRe.MatchString(email) || len(password) < 8 {
+		return nil, nil, nil, ErrInvalidSignup
+	}
+	if name = strings.TrimSpace(name); name == "" {
+		name = strings.SplitN(email, "@", 2)[0]
+	}
+
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var exists int
+	if err := tx.QueryRow(ctx, `SELECT 1 FROM "User" WHERE email = $1`, email).Scan(&exists); err == nil {
+		return nil, nil, nil, ErrEmailTaken
+	}
+
+	hash, err := secrets.HashPassword(password)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	userID := uuid.NewString()
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO "User" (id, email, name, "passwordHash", "updatedAt") VALUES ($1,$2,$3,$4, now())`,
+		userID, email, name, hash); err != nil {
+		return nil, nil, nil, err
+	}
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO "AuthIdentity" (id, "userId", provider, "providerSubject") VALUES ($1,$2,'PASSWORD',$3)`,
+		uuid.NewString(), userID, email); err != nil {
+		return nil, nil, nil, err
+	}
+
+	wsID := uuid.NewString()
+	wsName := name + " Workspace"
+	slug := slugify(name)
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO "Workspace" (id, kind, name, slug, "ownerId", "updatedAt") VALUES ($1,'PERSONAL',$2,$3,$4, now())`,
+		wsID, wsName, slug, userID); err != nil {
+		return nil, nil, nil, err
+	}
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO "WorkspaceMember" (id, "workspaceId", "userId", role, status, "joinedAt", "updatedAt")
+		 VALUES ($1,$2,$3,'OWNER','ACTIVE', now(), now())`,
+		uuid.NewString(), wsID, userID); err != nil {
+		return nil, nil, nil, err
+	}
+
+	refresh := uuid.NewString() + "." + uuid.NewString()
+	sessionID := uuid.NewString()
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO "Session" (id, "userId", "currentTokenHash", "rotatedAt", "createdAt", "lastSeenAt")
+		 VALUES ($1,$2,$3, now(), now(), now())`,
+		sessionID, userID, secrets.HashToken(refresh)); err != nil {
+		return nil, nil, nil, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, nil, nil, err
+	}
+
+	access, err := jwt.Sign(userID, sessionID, s.jwtSecret, AccessTTL)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	user, err := s.GetUserByID(ctx, userID)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	ws := &WorkspaceView{ID: wsID, Kind: "personal", Name: wsName, Slug: slug, OwnerID: userID}
+	return user, ws, &Tokens{Access: access, Refresh: refresh, SessionID: sessionID}, nil
+}
+
+// VerifyAccess validates an access token: it must verify, carry a session id,
+// and that session must be active (not revoked). Returns the user id.
+func (s *Service) VerifyAccess(ctx context.Context, token string) (userID, sessionID string, err error) {
+	claims, err := jwt.Verify(token, s.jwtSecret)
+	if err != nil {
+		return "", "", err
+	}
+	if claims.Sid == "" || claims.Aud != "" {
+		return "", "", errors.New("not an access token")
+	}
+	if !s.isSessionActive(ctx, claims.Sid) {
+		return "", "", errors.New("session revoked")
+	}
+	return claims.Sub, claims.Sid, nil
+}
+
+// Refresh rotates a refresh token (reuse of a stale token revokes the family),
+// mirroring AuthService.refresh + @hc/authz rotateRefresh.
+func (s *Service) Refresh(ctx context.Context, refreshToken string) (*Tokens, error) {
+	presented := secrets.HashToken(refreshToken)
+
+	const sel = `SELECT id, "userId", "currentTokenHash", "previousTokenHash", "rotatedAt", "revokedAt"
+		FROM "Session" WHERE "currentTokenHash" = $1 OR "previousTokenHash" = $1`
+	var (
+		id, userID, currentHash string
+		prevHash                *string
+		rotatedAt               time.Time
+		revokedAt               *time.Time
+	)
+	if err := s.db.QueryRow(ctx, sel, presented).Scan(&id, &userID, &currentHash, &prevHash, &rotatedAt, &revokedAt); err != nil {
+		return nil, ErrInvalidRefresh
+	}
+	if revokedAt != nil {
+		return nil, ErrSessionRevoked
+	}
+
+	revokeFamily := func() error {
+		_, e := s.db.Exec(ctx, `UPDATE "Session" SET "revokedAt" = now() WHERE id = $1`, id)
+		return e
+	}
+
+	switch {
+	case presented == currentHash:
+		// normal rotation
+	case prevHash != nil && presented == *prevHash:
+		if time.Since(rotatedAt) > refreshGrace {
+			if err := revokeFamily(); err != nil {
+				return nil, err
+			}
+			return nil, ErrReuseDetected
+		}
+		// within grace: tolerate (advance the family)
+	default:
+		if err := revokeFamily(); err != nil {
+			return nil, err
+		}
+		return nil, ErrReuseDetected
+	}
+
+	newToken := uuid.NewString() + "." + uuid.NewString()
+	const upd = `UPDATE "Session"
+		SET "currentTokenHash" = $1, "previousTokenHash" = $2, "rotatedAt" = now(), "lastSeenAt" = now()
+		WHERE id = $3`
+	if _, err := s.db.Exec(ctx, upd, secrets.HashToken(newToken), currentHash, id); err != nil {
+		return nil, err
+	}
+	access, err := jwt.Sign(userID, id, s.jwtSecret, AccessTTL)
+	if err != nil {
+		return nil, err
+	}
+	return &Tokens{Access: access, Refresh: newToken, SessionID: id}, nil
+}
+
+func (s *Service) isSessionActive(ctx context.Context, sid string) bool {
+	const q = `SELECT 1 FROM "Session" WHERE id = $1 AND "revokedAt" IS NULL`
+	var one int
+	if err := s.db.QueryRow(ctx, q, sid).Scan(&one); err != nil {
+		return false
+	}
+	return true
+}
+
+// SessionView is one entry in the user's active-session list.
+type SessionView struct {
+	ID         string  `json:"id"`
+	Device     *string `json:"device"`
+	IP         *string `json:"ip"`
+	CreatedAt  string  `json:"createdAt"`
+	LastSeenAt string  `json:"lastSeenAt"`
+}
+
+// ListSessions returns the user's active (non-revoked) sessions, newest first.
+func (s *Service) ListSessions(ctx context.Context, userID string) ([]SessionView, error) {
+	const q = `SELECT id, device, ip, "createdAt", "lastSeenAt" FROM "Session"
+		WHERE "userId" = $1 AND "revokedAt" IS NULL ORDER BY "lastSeenAt" DESC`
+	rows, err := s.db.Query(ctx, q, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []SessionView{}
+	for rows.Next() {
+		var v SessionView
+		var created, seen time.Time
+		if err := rows.Scan(&v.ID, &v.Device, &v.IP, &created, &seen); err != nil {
+			return nil, err
+		}
+		v.CreatedAt = created.UTC().Format("2006-01-02T15:04:05.000Z07:00")
+		v.LastSeenAt = seen.UTC().Format("2006-01-02T15:04:05.000Z07:00")
+		out = append(out, v)
+	}
+	return out, rows.Err()
+}
+
+// Logout revokes a session (immediate, mirrors AuthService.logout).
+func (s *Service) Logout(ctx context.Context, sessionID string) error {
+	if sessionID == "" {
+		return nil
+	}
+	const q = `UPDATE "Session" SET "revokedAt" = now() WHERE id = $1 AND "revokedAt" IS NULL`
+	_, err := s.db.Exec(ctx, q, sessionID)
+	return err
+}
+
+func nullable(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
+}

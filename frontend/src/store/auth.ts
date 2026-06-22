@@ -1,0 +1,147 @@
+// Auth + active-workspace state for the web app. Hydrated from the
+// httpOnly session via GET /me; bootstrap retries once through /auth/refresh so
+// a reload with only a refresh cookie still resolves. The active workspace is
+// persisted per device in localStorage and scopes the dashboard/editor.
+
+import { create } from "zustand";
+import { ApiError, type User, type WorkspaceWithRole } from "@hc/sdk";
+import { oc } from "@/lib/sdk";
+
+type Status = "loading" | "authed" | "anon";
+
+const ACTIVE_KEY = "oc.activeWorkspaceId";
+
+interface AuthState {
+  status: Status;
+  user: User | null;
+  workspaces: WorkspaceWithRole[];
+  activeWorkspaceId: string | null;
+  error: string | null;
+  bootstrap: () => Promise<void>;
+  // Resolves to a challenge token when the account requires a second factor;
+  // the caller then prompts for a code and calls completeMfa to finish.
+  login: (email: string, password: string) => Promise<{ mfaToken: string } | void>;
+  completeMfa: (mfaToken: string, code: string) => Promise<void>;
+  signup: (email: string, password: string, name?: string) => Promise<void>;
+  logout: () => Promise<void>;
+  // Permanently delete the account (FR-17), then drop to the anon state. The
+  // server clears the auth cookies; we clear local state and the active id.
+  deleteAccount: (input: { password: string; code?: string }) => Promise<void>;
+  setActiveWorkspace: (id: string) => void;
+  refreshWorkspaces: () => Promise<void>;
+}
+
+function readActive(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(ACTIVE_KEY);
+}
+
+function writeActive(id: string | null) {
+  if (typeof window === "undefined") return;
+  if (id) window.localStorage.setItem(ACTIVE_KEY, id);
+  else window.localStorage.removeItem(ACTIVE_KEY);
+}
+
+async function loadSession(): Promise<{ user: User; workspaces: WorkspaceWithRole[] }> {
+  const user = await oc.me();
+  const workspaces = await oc.listWorkspaces();
+  return { user, workspaces };
+}
+
+function pickActive(workspaces: WorkspaceWithRole[]): string | null {
+  const saved = readActive();
+  if (saved && workspaces.some((w) => w.id === saved)) return saved;
+  // Default to the personal workspace, else the first.
+  const personal = workspaces.find((w) => w.kind === "personal");
+  return personal?.id ?? workspaces[0]?.id ?? null;
+}
+
+export const useAuth = create<AuthState>((set, get) => ({
+  status: "loading",
+  user: null,
+  workspaces: [],
+  activeWorkspaceId: null,
+  error: null,
+
+  async bootstrap() {
+    try {
+      const { user, workspaces } = await loadSession();
+      set({ status: "authed", user, workspaces, activeWorkspaceId: pickActive(workspaces), error: null });
+    } catch (e) {
+      // A 401 may just mean the access cookie expired; try one refresh.
+      if (e instanceof ApiError && e.status === 401) {
+        try {
+          await oc.refresh();
+          const { user, workspaces } = await loadSession();
+          set({ status: "authed", user, workspaces, activeWorkspaceId: pickActive(workspaces), error: null });
+          return;
+        } catch {
+          /* fall through to anon */
+        }
+      }
+      set({ status: "anon", user: null, workspaces: [], activeWorkspaceId: null });
+    }
+  },
+
+  async login(email, password) {
+    set({ error: null });
+    const res = await oc.login({ email, password });
+    // MFA-gated accounts get a challenge instead of a session: hand the token
+    // back so the form can prompt for a code, then call completeMfa.
+    if ("mfaRequired" in res && res.mfaRequired) return { mfaToken: res.mfaToken };
+    const { user, workspaces } = await loadSession();
+    set({ status: "authed", user, workspaces, activeWorkspaceId: pickActive(workspaces) });
+  },
+
+  async completeMfa(mfaToken, code) {
+    set({ error: null });
+    await oc.verifyMfa(mfaToken, code);
+    const { user, workspaces } = await loadSession();
+    set({ status: "authed", user, workspaces, activeWorkspaceId: pickActive(workspaces) });
+  },
+
+  async signup(email, password, name) {
+    set({ error: null });
+    await oc.signup({ email, password, name });
+    const { user, workspaces } = await loadSession();
+    set({ status: "authed", user, workspaces, activeWorkspaceId: pickActive(workspaces) });
+  },
+
+  async logout() {
+    try {
+      await oc.logout();
+    } catch (e) {
+      // The access token may have expired; refresh once so the server can
+      // actually revoke the session, then retry. Best-effort: local state is
+      // cleared regardless in the finally block.
+      if (e instanceof ApiError && e.status === 401) {
+        try {
+          await oc.refresh();
+          await oc.logout();
+        } catch {
+          /* give up on server revoke; clear locally below */
+        }
+      }
+    } finally {
+      writeActive(null);
+      set({ status: "anon", user: null, workspaces: [], activeWorkspaceId: null });
+    }
+  },
+
+  async deleteAccount(input) {
+    set({ error: null });
+    await oc.deleteAccount(input);
+    writeActive(null);
+    set({ status: "anon", user: null, workspaces: [], activeWorkspaceId: null });
+  },
+
+  setActiveWorkspace(id) {
+    writeActive(id);
+    set({ activeWorkspaceId: id });
+  },
+
+  async refreshWorkspaces() {
+    const workspaces = await oc.listWorkspaces();
+    set({ workspaces, activeWorkspaceId: get().activeWorkspaceId ?? pickActive(workspaces) });
+  },
+}));

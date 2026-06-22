@@ -1,0 +1,24 @@
+{
+  "name": "@hc/print",
+  "version": "0.1.0",
+  "license": "Elastic-2.0",
+  "private": true,
+  "description": "HyCanvas print and mockups core: catalog, print geometry (bleed/trim/safe), print pre-flight, cost quoting, mockup placement, and order state (framework-agnostic, F35)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@hc/schema": "*",
+    "@hc/export": "*",
+    "@hc/color": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vitest": "^3.2.6"
+  }
+}
