@@ -4,7 +4,7 @@ Guidance for working in the HyCanvas repository.
 
 ## What This Project Is
 
-HyCanvas is a free, AI-native visual design platform built to lead on performance, AI quality, collaboration, openness, and accessibility. Everything is free: no tiers, no paywalls, no watermarks. Web-only.
+HyCanvas is a free, self-hostable, AI-native alternative to Canva, built to lead on performance, AI quality, collaboration, openness, and accessibility. Everything is free: no tiers, no paywalls, no watermarks. Web-only.
 
 Current state: the core product is built and runs. A single-player editor, content systems (uploads, stock, templates), accounts and workspaces, document types (presentations, video, whiteboard, docs, sheets), export, brand kits, and a bring-your-own-key AI layer all ship today. The remaining and early-stage work is tracked in `docs/roadmap/`.
 

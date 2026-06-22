@@ -1,6 +1,6 @@
 # HyCanvas
 
-A free, AI-native visual design platform with a focus on performance, AI, collaboration, and openness. Everything is free, with no tiers, paywalls, or watermarks. Web-only.
+HyCanvas is a free, self-hostable, AI-native alternative to Canva. Design anything - social graphics, presentations, videos, whiteboards, docs, and print - with no paywalls or watermarks. Web-only.
 
 The product spans a single-player editor, document types (presentations, video, whiteboard, docs, sheets), export, brand kits, and a bring-your-own-key AI layer. Work not yet built is tracked under `docs/roadmap/`.
 

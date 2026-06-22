@@ -1,6 +1,6 @@
 # Product requirements (north star)
 
-HyCanvas aims to be a best-in-class visual design platform, leading on performance, AI, collaboration, openness, and accessibility, with everything free: no tiers, paywalls, or watermarks. Web-only.
+HyCanvas is a free, self-hostable, AI-native alternative to Canva. It aims to match Canva's breadth and lead on performance, AI, collaboration, openness, and accessibility, with everything free: no tiers, paywalls, or watermarks. Web-only.
 
 This is the forward-looking goal sheet, not a spec of what already exists: the shipped code is the reference for built features. It captures the differentiators we hold ourselves to and the gaps that remain. The full original specification is preserved in git history if a detailed feature-by-feature account is ever needed.
 
