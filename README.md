@@ -71,17 +71,23 @@ The whole product (UI + REST API + realtime WebSocket) runs from one image, with
 
 ### Use the published image (fastest)
 
-Point it at any Postgres and run the prebuilt image (`linux/amd64` and `linux/arm64`):
+The prebuilt image (`linux/amd64` and `linux/arm64`) needs a Postgres it can reach. The simplest setup runs one alongside it on a shared Docker network:
 
 ```bash
-docker run -d --name hycanvas -p 8005:8005 \
-  -e DATABASE_URL="postgresql://user:pass@your-db-host:5432/hycanvas?schema=public" \
+docker network create hycanvas-net
+
+docker run -d --name hycanvas-db --network hycanvas-net \
+  -e POSTGRES_PASSWORD=hycanvas -e POSTGRES_DB=hycanvas \
+  postgres:16
+
+docker run -d --name hycanvas --network hycanvas-net -p 8005:8005 \
+  -e DATABASE_URL="postgresql://postgres:hycanvas@hycanvas-db:5432/hycanvas?schema=public" \
   -e JWT_SECRET="$(openssl rand -hex 32)" \
   -v hycanvas-storage:/app/.data/storage \
   hycanvas/hycanvas:latest
 ```
 
-Then open `http://localhost:8005`. `JWT_SECRET` is required and migrations run on boot.
+Then open `http://localhost:8005`. `JWT_SECRET` is required and migrations run on boot. To use your own Postgres, point `DATABASE_URL` at it and ensure the database exists - and note that `localhost` inside a container is the container itself, so reach a host Postgres via `host.docker.internal` (Docker Desktop).
 
 ### Build from source (app + bundled Postgres)
 
