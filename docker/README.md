@@ -54,9 +54,11 @@ docker compose up
 | `STORAGE_DRIVER` | no | `local` (default) or `s3`. |
 | `LOCAL_STORAGE_PATH` | no | Path for local file storage (default `/app/.data/storage`; mount a volume to persist). |
 | `S3_*` | no | S3-compatible object storage when `STORAGE_DRIVER=s3`. |
-| `APP_URL`, `FRONTEND_URL`, `OIDC_*`, `AI_SECRET`, `VAPID_*` | no | See the repository README. |
+| `APP_URL`, `OIDC_*` (SSO), `AI_SECRET`, `VAPID_*` (web push) | no | See the full setup guide. |
 
 Persist uploads/exports by mounting a volume at `/app/.data/storage`, or use S3.
+
+For every variable, SSO/web-push setup, external Postgres, and production hardening, see the [Docker setup guide](https://github.com/hyscaler/HyCanvas/blob/development/DOCKER_SETUP.md).
 
 ## Tags
 

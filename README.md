@@ -67,7 +67,7 @@ Set real values in `.env` for production: at minimum `NODE_ENV=production`, `DAT
 
 ## Run with Docker (self-host)
 
-The whole product (UI + REST API + realtime WebSocket) runs from one image, with Postgres as a companion service.
+The whole product (UI + REST API + realtime WebSocket) runs from one image, with Postgres as a companion service. For the full environment-variable reference and production options, see [DOCKER_SETUP.md](DOCKER_SETUP.md).
 
 ### Use the published image (fastest)
 
