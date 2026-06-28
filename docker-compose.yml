@@ -71,6 +71,12 @@ services:
       # this to "true" (and point APP_URL at your https origin).
       COOKIE_SECURE: "false"
       DATABASE_URL: "${EXTERNAL_DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-hycanvas}?schema=public}"
+      # Single-instance self-host: no Redis. A REDIS_URL in your .env is for native
+      # dev (host Redis); in the container localhost is not the host and this compose
+      # ships no redis service, so a set-but-unreachable REDIS_URL crash-loops the app
+      # on boot. Force it empty here. For multi-instance, add a redis service and set
+      # REDIS_URL to redis://<service>:6379/0.
+      REDIS_URL: ""
       # Storage on the container volume (a host absolute path from .env would not
       # exist here). Set S3_* in .env to use object storage instead.
       STORAGE_DRIVER: local

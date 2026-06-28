@@ -53,6 +53,10 @@ services:
       # Browser (on the host) reaches the API via the published 8005 port.
       NEXT_PUBLIC_BACKEND_URL: "http://localhost:8005/api"
       APP_URL: "http://localhost:8005"
+      # No Redis in the dev stack: a REDIS_URL from .env points at the container's
+      # own localhost (no redis here) and would crash the app on boot. Force empty;
+      # set it (and add a redis service) only to test multi-instance fan-out.
+      REDIS_URL: ""
       STORAGE_DRIVER: local
       LOCAL_STORAGE_PATH: /app/.data/storage
       # Reliable file-watching for Next.js + tooling over a bind mount.

@@ -55,6 +55,12 @@ services:
       # External managed Postgres when EXTERNAL_DATABASE_URL is set; otherwise the
       # in-network bundled-container URL from the POSTGRES_* credentials.
       DATABASE_URL: "${EXTERNAL_DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-hycanvas}?schema=public}"
+      # Single-instance self-host: no Redis. A REDIS_URL in your .env is for native
+      # dev (host Redis); in the container localhost is not the host and this compose
+      # ships no redis service, so a set-but-unreachable REDIS_URL crash-loops the app
+      # on boot. Force it empty here. For multi-instance, add a redis service and set
+      # REDIS_URL to redis://<service>:6379/0.
+      REDIS_URL: ""
       # Local-file storage on the container volume; set S3_* in .env to use object
       # storage instead.
       STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
