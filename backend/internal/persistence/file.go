@@ -14,7 +14,11 @@ import (
 )
 
 // currentSchemaVersion mirrors @hc/schema CURRENT_SCHEMA_VERSION.
-const currentSchemaVersion = 9
+const currentSchemaVersion = 10
+
+// CurrentSchemaVersion is the exported mirror of currentSchemaVersion for other
+// packages (e.g. convert) so they cannot pin a second, drifting copy.
+const CurrentSchemaVersion = currentSchemaVersion
 
 // DesignFile is the open file format, handled opaquely.
 type DesignFile map[string]any

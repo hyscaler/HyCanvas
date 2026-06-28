@@ -102,6 +102,13 @@ func (s *Service) Create(ctx context.Context, workspaceID, title string, from De
 	}
 	var docKind *string
 	if from != nil {
+		// Validate a client-supplied seed file BEFORE inserting the design row, so a
+		// malformed `from` is rejected (ErrInvalidFile -> 422) without leaving an
+		// orphan design with no snapshot. The probe id satisfies the id check; the
+		// real id is assigned by withID below.
+		if err := validateForWrite(withID(from, "create-probe")); err != nil {
+			return DesignRecord{}, err
+		}
 		if k := docKindOf(from); k != "" {
 			docKind = &k
 		}
@@ -182,6 +189,9 @@ func (s *Service) Snapshot(ctx context.Context, designID, workspaceID string, fi
 		return SnapshotRecord{}, err
 	}
 	stored := withID(file, designID)
+	if err := validateForWrite(stored); err != nil {
+		return SnapshotRecord{}, err // ErrInvalidFile: reject before it persists
+	}
 	buf, err := serialize(stored)
 	if err != nil {
 		return SnapshotRecord{}, err
@@ -469,6 +479,29 @@ func (s *Service) AppendUpdate(ctx context.Context, designID string, update []by
 	}
 	const q = `INSERT INTO "DesignUpdateLog" ("designId", seq, update, "authorId")
 		VALUES ($1, (SELECT COALESCE(MAX(seq),0)+1 FROM "DesignUpdateLog" WHERE "designId" = $1), $2, $3)`
+	_, err := s.db.Exec(ctx, q, designID, update, author)
+	return err
+}
+
+// AppendCheckpoint journals a CRDT FULL-STATE update (client-produced via Yjs
+// encodeStateAsUpdate, since the server has no Go CRDT encoder) as a checkpoint
+// row and atomically compacts the log: every row older than the checkpoint is
+// deleted (doc 16 FR-11). The log then stays bounded - a checkpoint plus the
+// deltas since - and the history scrubber folds checkpoint-then-tail (the full-
+// state row reconstructs the base on the same CRDT identity space before the
+// tail deltas apply). Insert + delete run as one data-modifying CTE, so the
+// checkpoint is never deleted by its own compaction and the two can't interleave.
+func (s *Service) AppendCheckpoint(ctx context.Context, designID string, update []byte, authorID string) error {
+	var author *string
+	if authorID != "" {
+		author = &authorID
+	}
+	const q = `WITH ins AS (
+		INSERT INTO "DesignUpdateLog" ("designId", seq, update, "authorId", "isCheckpoint")
+		VALUES ($1, (SELECT COALESCE(MAX(seq),0)+1 FROM "DesignUpdateLog" WHERE "designId" = $1), $2, $3, true)
+		RETURNING seq
+	)
+	DELETE FROM "DesignUpdateLog" WHERE "designId" = $1 AND seq < (SELECT seq FROM ins)`
 	_, err := s.db.Exec(ctx, q, designID, update, author)
 	return err
 }
