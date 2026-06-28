@@ -4,6 +4,7 @@
 // facilitation session accounting (timer + dot voting). No network, no DOM.
 
 export * from "./routing";
+export * from "./search";
 export * from "./layout";
 export * from "./sticky";
 export * from "./templates";

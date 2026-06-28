@@ -55,6 +55,24 @@ export function evalEasing(easing: Easing, t: number): number {
       return 1 - (1 - x) * (1 - x);
     case "ease-in-out":
       return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+    case "ease-in-cubic":
+      return x * x * x;
+    case "ease-out-cubic":
+      return 1 - Math.pow(1 - x, 3);
+    case "ease-out-back": {
+      // Slight overshoot past 1 then settle (a gentle "back" ease).
+      const c1 = 1.70158, c3 = c1 + 1;
+      return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+    }
+    case "bounce": {
+      // Standard ease-out bounce.
+      const n1 = 7.5625, d1 = 2.75;
+      let t = x;
+      if (t < 1 / d1) return n1 * t * t;
+      if (t < 2 / d1) { t -= 1.5 / d1; return n1 * t * t + 0.75; }
+      if (t < 2.5 / d1) { t -= 2.25 / d1; return n1 * t * t + 0.9375; }
+      t -= 2.625 / d1; return n1 * t * t + 0.984375;
+    }
     case "spring": {
       // Damped oscillation settling to 1; fixed params keep it deterministic.
       if (x >= 1) return 1;
@@ -67,6 +85,36 @@ export function evalEasing(easing: Easing, t: number): number {
     default:
       return x;
   }
+}
+
+/** Evaluate a CSS-style cubic-bezier easing [x1,y1,x2,y2] at progress x in [0,1].
+ *  Solves x(t)=x for t (Newton + bisection fallback), then returns y(t). */
+export function cubicBezierEase(x: number, x1: number, y1: number, x2: number, y2: number): number {
+  const xc = clamp01(x);
+  const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+  const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+  const sampleX = (t: number) => ((ax * t + bx) * t + cx) * t;
+  const sampleDX = (t: number) => (3 * ax * t + 2 * bx) * t + cx;
+  let t = xc;
+  for (let i = 0; i < 8; i++) { // Newton-Raphson
+    const dx = sampleX(t) - xc;
+    if (Math.abs(dx) < 1e-5) break;
+    const d = sampleDX(t);
+    if (Math.abs(d) < 1e-6) break;
+    t -= dx / d;
+  }
+  if (t < 0 || t > 1) { // bisection fallback
+    let lo = 0, hi = 1;
+    t = xc;
+    for (let i = 0; i < 20; i++) { const xv = sampleX(t); if (Math.abs(xv - xc) < 1e-5) break; if (xv < xc) lo = t; else hi = t; t = (lo + hi) / 2; }
+  }
+  return ((ay * t + by) * t + cy) * t;
+}
+
+/** Eased progress for a clip, using its custom cubic-bezier when present, else
+ *  its named easing curve. Single source of truth for clip timing. */
+export function clipEase(clip: { easing: Easing; bezier?: [number, number, number, number] }, t: number): number {
+  return clip.bezier ? cubicBezierEase(t, clip.bezier[0], clip.bezier[1], clip.bezier[2], clip.bezier[3]) : evalEasing(clip.easing, t);
 }
 
 /**
@@ -85,7 +133,7 @@ function clipProgress(clip: AnimationClip, tMs: number): number | null {
 export function entrancePatch(clip: AnimationClip<EntrancePreset>, tMs: number): AnimPatch {
   const raw = clipProgress(clip, tMs);
   // Before the clip starts the element sits in its pre-entrance (off) pose.
-  const e = raw === null ? 0 : evalEasing(clip.easing, raw);
+  const e = raw === null ? 0 : clipEase(clip, raw);
   const inv = 1 - e;
   switch (clip.preset) {
     case "fade":
@@ -100,16 +148,34 @@ export function entrancePatch(clip: AnimationClip<EntrancePreset>, tMs: number):
       return { dx: inv * 24, dy: inv * -24, scale: 0.96 + 0.04 * e, rotate: 0, opacityMul: e };
     case "breathe-in":
       return { dx: 0, dy: 0, scale: 1.12 - 0.12 * e, rotate: 0, opacityMul: e };
+    case "typewriter":
+    case "word-wipe":
+      // Reveal is a content effect (handled in poseDesignAt), so the node itself
+      // stays put and fully opaque; characters/words appear over the clip.
+      return { ...IDENTITY_PATCH };
+    case "tumble":
+      return { dx: 0, dy: inv * 32, scale: 0.7 + 0.3 * e, rotate: -180 * inv, opacityMul: e };
+    case "stomp":
+      return { dx: 0, dy: 0, scale: 1.6 - 0.6 * e, rotate: 0, opacityMul: e };
+    case "zoom-in":
+      return { dx: 0, dy: 0, scale: 0.2 + 0.8 * e, rotate: 0, opacityMul: e };
     default:
       return { ...IDENTITY_PATCH };
   }
+}
+
+/** Eased entrance progress in [0,1] (0 before the clip's delay, 1 after it ends).
+ *  Used by text reveal ("typewriter") to decide how many characters are shown. */
+export function entranceProgress(clip: AnimationClip<EntrancePreset>, tMs: number): number {
+  const raw = clipProgress(clip, tMs);
+  return raw === null ? 0 : clipEase(clip, raw);
 }
 
 /** Exit patch: animates FROM the resting pose TO an off pose (eased 0->1). At
  *  e=0 it is the identity; at e=1 the element is fully gone. */
 export function exitPatch(clip: AnimationClip<ExitPreset>, tMs: number): AnimPatch {
   const raw = clipProgress(clip, tMs);
-  const e = raw === null ? 0 : evalEasing(clip.easing, raw);
+  const e = raw === null ? 0 : clipEase(clip, raw);
   switch (clip.preset) {
     case "fade-out":
       return { dx: 0, dy: 0, scale: 1, rotate: 0, opacityMul: 1 - e };
@@ -119,6 +185,10 @@ export function exitPatch(clip: AnimationClip<ExitPreset>, tMs: number): AnimPat
       return { dx: 0, dy: 0, scale: 1 - 0.4 * e, rotate: 0, opacityMul: 1 - e };
     case "drift-out":
       return { dx: e * 24, dy: e * -24, scale: 1 - 0.04 * e, rotate: 0, opacityMul: 1 - e };
+    case "tumble-out":
+      return { dx: 0, dy: e * 32, scale: 1 - 0.3 * e, rotate: 180 * e, opacityMul: 1 - e };
+    case "zoom-out":
+      return { dx: 0, dy: 0, scale: 1 - 0.8 * e, rotate: 0, opacityMul: 1 - e };
     default:
       return { ...IDENTITY_PATCH };
   }
@@ -155,6 +225,13 @@ export function emphasisPatch(clip: AnimationClip<EmphasisPreset>, tMs: number):
       const s = 1 + 0.1 * Math.sin(p * Math.PI);
       return { dx: 0, dy: 0, scale: s, rotate: 4 * Math.sin(p * TAU * 3), opacityMul: 1 };
     }
+    case "flicker":
+      // Opacity blink, settling to fully visible at the loop ends.
+      return { dx: 0, dy: 0, scale: 1, rotate: 0, opacityMul: 0.4 + 0.6 * Math.abs(Math.sin(p * TAU * 2)) };
+    case "jiggle":
+      return { dx: 5 * Math.sin(p * TAU * 3), dy: 0, scale: 1, rotate: 0, opacityMul: 1 };
+    case "bob":
+      return { dx: 0, dy: -6 * Math.sin(p * Math.PI), scale: 1, rotate: 0, opacityMul: 1 };
     default:
       return { ...IDENTITY_PATCH };
   }

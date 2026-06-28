@@ -8,8 +8,12 @@ import {
   castVote,
   remainingBudget,
   tallyVotes,
+  addSavedView,
+  removeSavedView,
+  stepSavedView,
   type TimerState,
   type VoteSession,
+  type SavedView,
 } from "../session";
 
 describe("timer", () => {
@@ -127,5 +131,34 @@ describe("voting", () => {
     const frozen = JSON.stringify(s);
     castVote(s, "n1", "u1");
     expect(JSON.stringify(s)).toBe(frozen);
+  });
+});
+
+describe("saved views (FR-3)", () => {
+  const v = (id: string, name = id): SavedView => ({ id, name, viewport: { zoom: 1, panX: 0, panY: 0 } });
+
+  it("adds, replaces by id, and removes without mutating the input", () => {
+    const a = [v("a")];
+    const frozen = JSON.stringify(a);
+    const added = addSavedView(a, v("b"));
+    expect(added.map((x) => x.id)).toEqual(["a", "b"]);
+    // Re-saving id "a" replaces it in place (keeps a single entry).
+    const replaced = addSavedView(added, { id: "a", name: "renamed", viewport: { zoom: 2, panX: 5, panY: 5 } });
+    expect(replaced.filter((x) => x.id === "a")).toHaveLength(1);
+    expect(replaced.find((x) => x.id === "a")?.name).toBe("renamed");
+    expect(removeSavedView(replaced, "a").map((x) => x.id)).toEqual(["b"]);
+    expect(JSON.stringify(a)).toBe(frozen); // input untouched
+    expect(addSavedView(undefined, v("z")).map((x) => x.id)).toEqual(["z"]);
+  });
+
+  it("steps the agenda forward/backward with wraparound", () => {
+    const list = [v("a"), v("b"), v("c")];
+    expect(stepSavedView(list, "a", 1)?.id).toBe("b");
+    expect(stepSavedView(list, "c", 1)?.id).toBe("a"); // wrap forward
+    expect(stepSavedView(list, "a", -1)?.id).toBe("c"); // wrap backward
+    expect(stepSavedView(list, null, 1)?.id).toBe("a"); // unknown -> first
+    expect(stepSavedView(list, "gone", -1)?.id).toBe("c"); // unknown -> last on reverse
+    expect(stepSavedView([], "a", 1)).toBeNull();
+    expect(stepSavedView(undefined, null, 1)).toBeNull();
   });
 });

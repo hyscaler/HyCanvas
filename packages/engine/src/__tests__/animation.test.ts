@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import type { AnimationClip, EntrancePreset, ExitPreset, EmphasisPreset } from "@hc/schema";
 import {
   evalEasing,
+  cubicBezierEase,
   entrancePatch,
   exitPatch,
   emphasisPatch,
@@ -30,6 +31,16 @@ describe("evalEasing", () => {
   it("clamps out-of-range progress", () => {
     expect(evalEasing("linear", -1)).toBe(0);
     expect(evalEasing("linear", 2)).toBe(1);
+  });
+
+  it("cubic-bezier: linear control points are the identity; endpoints pinned", () => {
+    expect(cubicBezierEase(0, 0.42, 0, 0.58, 1)).toBeCloseTo(0, 4);
+    expect(cubicBezierEase(1, 0.42, 0, 0.58, 1)).toBeCloseTo(1, 4);
+    // A straight diagonal (0,0,1,1) is the identity.
+    expect(cubicBezierEase(0.5, 1 / 3, 1 / 3, 2 / 3, 2 / 3)).toBeCloseTo(0.5, 3);
+    // ease-in-like curve sits below the diagonal at the midpoint.
+    expect(cubicBezierEase(0.5, 0.42, 0, 0.58, 1)).toBeCloseTo(0.5, 2);
+    expect(cubicBezierEase(0.25, 0.42, 0, 1, 1)).toBeLessThan(0.25);
   });
 
   it("eases as expected at the midpoint", () => {

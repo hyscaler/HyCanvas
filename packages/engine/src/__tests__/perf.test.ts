@@ -1,12 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { createBlankDesign, createNode, type Node } from "@hc/schema";
-import { benchmarkRender } from "../bench";
+import { benchmarkRender, benchmarkSceneBuild } from "../bench";
 
-// Build a design with `n` top-level nodes: a grid of rects/ellipses with fills
-// and strokes, plus periodic text, to exercise the common draw paths.
-function bigDesign(n: number) {
-  const file = createBlankDesign({ title: "Perf", width: 1920, height: 1080 });
-  const page = file.pages[0];
+// `n` top-level nodes: a grid of rects/ellipses with fills and strokes, plus
+// periodic text, to exercise the common draw paths.
+function buildNodes(n: number): Node[] {
   const cols = Math.ceil(Math.sqrt(n));
   const children: Node[] = [];
   for (let i = 0; i < n; i++) {
@@ -28,7 +26,26 @@ function bigDesign(n: number) {
       } as unknown as Partial<Node>));
     }
   }
-  page.children = children;
+  return children;
+}
+
+// A single-page design with `n` top-level nodes.
+function bigDesign(n: number) {
+  const file = createBlankDesign({ title: "Perf", width: 1920, height: 1080 });
+  file.pages[0].children = buildNodes(n);
+  return file;
+}
+
+// A `pageCount`-page design, each page with `nodesPerPage` nodes (the AC-10
+// scale scenario: a large multi-page deck materialized into the one Y.Doc).
+function bigMultiPageDesign(pageCount: number, nodesPerPage: number) {
+  const file = createBlankDesign({ title: "PerfDeck", width: 1920, height: 1080 });
+  const template = file.pages[0];
+  file.pages = Array.from({ length: pageCount }, (_, p) => ({
+    ...structuredClone(template),
+    id: `page-${p}`,
+    children: buildNodes(nodesPerPage),
+  }));
   return file;
 }
 
@@ -52,5 +69,33 @@ describe("render performance", () => {
     // 5x the nodes should not be wildly super-linear (allow generous slack for
     // fixed per-frame overhead and timer noise).
     expect(large.avgMs).toBeLessThan(small.avgMs * 15 + 5);
+  });
+
+  // AC-10 measurement (1000-element page in a 50-page design). HONEST SCOPE: this
+  // measures CPU cost only - scene build + render traversal against a null context
+  // - NOT real GPU paint (there is no rasterizer in Node). So it is a necessary
+  // lower bound (if CPU alone blows the 16ms frame budget, 60fps is impossible),
+  // not sufficient proof; the true paint number needs a browser benchmark.
+  it("measures AC-10: 50-page deck build + current-page frame cost", () => {
+    const PAGES = 50;
+    const NODES = 1000;
+    const file = bigMultiPageDesign(PAGES, NODES);
+
+    // Per-frame cost: the editor paints only the OPEN page, so render one page.
+    const frame = benchmarkRender(file, { frames: 40, warmup: 5, pageIndex: 0 });
+    // Load/scale cost: build every page's scene graph once.
+    const build = benchmarkSceneBuild(file);
+
+    const FRAME_BUDGET_MS = 16; // 60fps
+    /* eslint-disable no-console */
+    console.log(`[perf][AC-10] page render: avg ${frame.avgMs.toFixed(2)}ms/frame (${frame.fps.toFixed(0)} fps, CPU-only) for ${NODES} nodes; ${frame.avgMs < FRAME_BUDGET_MS ? "WITHIN" : "OVER"} the ${FRAME_BUDGET_MS}ms budget`);
+    console.log(`[perf][AC-10] ${PAGES}-page scene build: total ${build.totalMs.toFixed(1)}ms, ${build.perPageMs.toFixed(2)}ms/page (CPU-only, all pages materialized - no subdocuments yet)`);
+    /* eslint-enable no-console */
+
+    expect(frame.nodeCount).toBe(NODES);
+    expect(build.pages).toBe(PAGES);
+    // Regression guards (generous, CI-stable - not strict AC-10 gates):
+    expect(frame.avgMs).toBeLessThan(50);
+    expect(build.totalMs).toBeLessThan(15000);
   });
 });

@@ -10,6 +10,7 @@ import {
   type Node,
 } from "@hc/schema";
 import { pointInLocalShape } from "./hit";
+import { SpatialIndex } from "./spatial";
 import {
   applyToPoint,
   fromTransform,
@@ -28,6 +29,17 @@ import {
 } from "./math";
 import type { HitOpts, Scene, SceneNode } from "./types";
 
+// A Gaussian blur is visually ~3 standard deviations wide on each side. CSS
+// `filter: blur(r)` uses r directly as the standard deviation, so its halo
+// extends ~3r past the box; `drop-shadow`/`box-shadow` blur (how glow and drop
+// shadows render here) uses std-dev = blur/2, so the halo extends ~1.5x its
+// blur radius. Bounding only by the nominal radius (the old behavior) clipped
+// the outer two-thirds of a blur halo, which showed as a sliver vanishing at
+// the viewport edge under culling and as repaint residue from dirty-region
+// invalidation. We bound by the visible extent instead.
+const BLUR_HALO = 3; // filter: blur(r) -> ~3r
+const SHADOW_HALO = 1.5; // drop-shadow blur -> ~1.5 * blur
+
 /** Maximum outward bleed (in local px) a node's effects add to its bounds. */
 export function effectBleed(node: Node): number {
   const effects = node.effects;
@@ -36,10 +48,10 @@ export function effectBleed(node: Node): number {
   for (const e of effects as Effect[]) {
     switch (e.kind) {
       case "blur":
-        bleed = Math.max(bleed, e.radius);
+        bleed = Math.max(bleed, e.radius * BLUR_HALO);
         break;
       case "glow":
-        bleed = Math.max(bleed, e.radius);
+        bleed = Math.max(bleed, e.radius * SHADOW_HALO);
         break;
       case "outline":
         bleed = Math.max(bleed, e.width);
@@ -47,8 +59,8 @@ export function effectBleed(node: Node): number {
       case "shadow":
         bleed = Math.max(
           bleed,
-          Math.abs(e.offsetX) + e.blur + e.spread,
-          Math.abs(e.offsetY) + e.blur + e.spread,
+          Math.abs(e.offsetX) + e.blur * SHADOW_HALO + e.spread,
+          Math.abs(e.offsetY) + e.blur * SHADOW_HALO + e.spread,
         );
         break;
       default:
@@ -58,13 +70,22 @@ export function effectBleed(node: Node): number {
   return bleed;
 }
 
+/** Half a centered stroke bleeds outward past the node's geometric box, so a
+ *  thick-stroked shape/line/path paints past `node.size`. Strokes are not in
+ *  `node.effects`, so this is bounded separately and added to the effect bleed.
+ */
+function strokeBleed(node: Node): number {
+  const w = (node as { stroke?: { width?: number } }).stroke?.width;
+  return typeof w === "number" && w > 0 ? w / 2 : 0;
+}
+
 function localBox(node: Node): Rect {
   return { x: 0, y: 0, width: node.size.width, height: node.size.height };
 }
 
 /** Page-space AABB of a node under `world`, grown by its (transformed) bleed. */
 function computeWorldBounds(node: Node, world: Mat2D): Rect {
-  const inflated = rectInflate(localBox(node), effectBleed(node));
+  const inflated = rectInflate(localBox(node), effectBleed(node) + strokeBleed(node));
   return transformRect(world, inflated);
 }
 
@@ -180,14 +201,37 @@ function resolveConnectorEndpoint(ep: ConnEnd, boxes: Record<string, HitBox>, to
   return ep.point ?? { x: 0, y: 0 };
 }
 
+/** Visit each point with axis-aligned segments (engine mirror of the same helper
+ *  in render2d.ts) so an elbow route through waypoints hit-tests where it draws. */
+function orthogonalChain(points: Point[]): Point[] {
+  if (points.length === 0) return [];
+  const out: Point[] = [points[0]];
+  for (let i = 1; i < points.length; i++) {
+    const p = out[out.length - 1];
+    const q = points[i];
+    if (p.x !== q.x && p.y !== q.y) out.push({ x: q.x, y: p.y });
+    out.push(q);
+  }
+  return out;
+}
+
 /** The connector's routed polyline in page space (straight/elbow; curved is
- *  approximated by its elbow polyline for hit-testing). */
+ *  approximated by its elbow polyline for hit-testing). Mirrors render2d's
+ *  drawConnector, including user waypoints (FR-8), so the clickable line and the
+ *  selection bounds match exactly what is drawn. */
 function connectorPolyline(
-  conn: { route: string; start: ConnEnd; end: ConnEnd },
+  conn: { route: string; start: ConnEnd; end: ConnEnd; waypoints?: Point[] },
   boxes: Record<string, HitBox>,
 ): Point[] {
   const a = resolveConnectorEndpoint(conn.start, boxes, connectorEndRefCenter(conn.end, boxes));
   const b = resolveConnectorEndpoint(conn.end, boxes, connectorEndRefCenter(conn.start, boxes));
+  // User waypoints: route through them (elbow stays orthogonal), matching the
+  // renderer. Curved+waypoints draws as a polyline, so the hit polyline matches.
+  const wps = conn.waypoints && conn.waypoints.length > 0 ? conn.waypoints : null;
+  if (wps) {
+    const through = [a, ...wps, b];
+    return conn.route === "elbow" ? orthogonalChain(through) : through;
+  }
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   if (conn.route === "straight" || (dx === 0 && dy === 0)) return [a, b];
@@ -218,6 +262,9 @@ class SceneImpl implements Scene {
   private index = new Map<string, SceneNode>();
   private assetIndex = new Map<string, Set<string>>();
   private dirty: Rect | null = null;
+  // Lazily built over the scene's selectable leaves; a scene is rebuilt on doc
+  // edits (getScene cache invalidates on rev), so the static index is fine.
+  private spatial: SpatialIndex | null = null;
 
   constructor(file: DesignFile, pageIndex: number) {
     this.file = file;
@@ -270,9 +317,10 @@ class SceneImpl implements Scene {
       start?: ConnEnd;
       end?: ConnEnd;
       stroke?: { width?: number };
+      waypoints?: Point[];
     };
     if (!conn.start || !conn.end) return false;
-    const pts = connectorPolyline({ route: conn.route, start: conn.start, end: conn.end }, this.boxMap());
+    const pts = connectorPolyline({ route: conn.route, start: conn.start, end: conn.end, waypoints: conn.waypoints }, this.boxMap());
     const tol = Math.max(6, (conn.stroke?.width ?? 2) / 2 + 5);
     for (let i = 0; i < pts.length - 1; i++) {
       if (distToSegment(point, pts[i], pts[i + 1]) <= tol) return true;
@@ -292,9 +340,9 @@ class SceneImpl implements Scene {
   connectorBounds(nodeId: string): Rect | null {
     const sn = this.index.get(nodeId);
     if (!sn || sn.node.type !== "connector") return null;
-    const conn = sn.node as unknown as { route: string; start?: ConnEnd; end?: ConnEnd };
+    const conn = sn.node as unknown as { route: string; start?: ConnEnd; end?: ConnEnd; waypoints?: Point[] };
     if (!conn.start || !conn.end) return null;
-    const pts = connectorPolyline({ route: conn.route, start: conn.start, end: conn.end }, this.boxMap());
+    const pts = connectorPolyline({ route: conn.route, start: conn.start, end: conn.end, waypoints: conn.waypoints }, this.boxMap());
     if (pts.length === 0) return null;
     let minX = Infinity;
     let minY = Infinity;
@@ -359,6 +407,23 @@ class SceneImpl implements Scene {
     };
 
     return visit(this.root);
+  }
+
+  queryViewport(rect: Rect): Node[] {
+    if (!this.spatial) {
+      const idx = new SpatialIndex();
+      for (const sn of this.index.values()) {
+        if (sn === this.root || isContainer(sn.node)) continue; // selectable leaves only
+        idx.insert(sn.node.id, sn.worldBounds);
+      }
+      this.spatial = idx;
+    }
+    const out: Node[] = [];
+    for (const id of this.spatial.queryRect(rect)) {
+      const sn = this.index.get(id);
+      if (sn && !sn.node.hidden) out.push(sn.node);
+    }
+    return out;
   }
 
   hitTestRect(rect: Rect, mode: "intersect" | "contain"): Node[] {

@@ -93,6 +93,16 @@ const NODE_DEFAULTS: { [K in Exclude<NodeType, "model3d">]: () => object } = {
     fontScale: 1,
     autoSize: true,
   }),
+  // F30 board nodes.
+  ink: () => ({
+    points: [],
+    smoothing: 0.5,
+    brush: { width: 4, opacity: 1, color: BLACK, mode: "pen" },
+  }),
+  mindmap: () => ({ rootId: "", branches: [], direction: "radial" }),
+  boardview: () => ({ view: "kanban", columns: [], cards: [] }),
+  diagramcode: () => ({ lang: "mermaid", source: "" }),
+  stamp: () => ({ kind: "emoji", glyph: "👍" }),
 };
 
 /**

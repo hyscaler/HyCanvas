@@ -328,6 +328,73 @@ describe("v8 -> v9 per-range hyperlinks (CharStyle.link)", () => {
   });
 });
 
+describe("v9 -> v10 whiteboard board node types (F30)", () => {
+  it("opens a legacy v9 board unchanged and validates at v10", () => {
+    const v9 = { ...createBlankDesign(), schemaVersion: 9 } as unknown as DesignFile & { pages: { children: unknown[] }[]; meta: Record<string, unknown> };
+    v9.meta = { kind: "whiteboard" };
+    v9.pages[0].children = [
+      createNode("sticky", { id: "s1", text: "old note" }) as unknown,
+      createNode("frame", { id: "f1" }) as unknown,
+      createNode("connector", { id: "c1" }) as unknown,
+    ];
+    const out = migrate(v9 as unknown as DesignFile);
+    expect(out.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(validate(out)).toEqual({ ok: true });
+  });
+
+  it("validates the new board node types as defaults", () => {
+    const design = createBlankDesign();
+    design.pages[0].children = [
+      createNode("ink", { id: "ink-1" }),
+      createNode("mindmap", { id: "mm-1" }),
+      createNode("boardview", { id: "bv-1" }),
+      createNode("diagramcode", { id: "dc-1" }),
+      createNode("stamp", { id: "st-1" }),
+    ];
+    expect(validate(design)).toEqual({ ok: true });
+  });
+
+  it("accepts the additive optional fields on connector/sticky/frame", () => {
+    const design = createBlankDesign();
+    design.pages[0].children = [
+      createNode("connector", {
+        id: "c",
+        label: { text: "approves", position: 0.5 },
+        waypoints: [{ x: 20, y: 20 }, { x: 40, y: 60 }],
+        jumpOver: true,
+        start: { attach: { nodeId: "a", anchor: "right", port: "e0" } },
+        end: { point: { x: 120, y: 0 } },
+      }),
+      createNode("sticky", { id: "s", text: "by me", authorId: "user-7", shape: "circle" }),
+      createNode("frame", { id: "f", header: { title: "Ideas" }, collapsed: true }),
+      createNode("ink", {
+        id: "k",
+        points: [{ x: 0, y: 0, p: 0.3, t: 0 }, { x: 5, y: 8, p: 0.7, t: 16 }],
+        smoothing: 0.8,
+        brush: { width: 6, opacity: 0.4, color: { srgb: { r: 1, g: 0.9, b: 0, a: 1 } }, mode: "highlighter" },
+      }),
+    ];
+    expect(validate(design)).toEqual({ ok: true });
+  });
+
+  it("preserves a newer-than-v10 board node losslessly (UnknownNode round-trip)", () => {
+    const design = createBlankDesign() as unknown as DesignFile & { pages: { children: unknown[] }[] };
+    const future = {
+      id: "future-1",
+      type: "hologram", // a node type a newer client wrote
+      transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+      size: { width: 50, height: 50 },
+      opacity: 1,
+      blendMode: "normal",
+      depth: 3,
+    };
+    design.pages[0].children = [future];
+    expect(validate(design as unknown as DesignFile)).toEqual({ ok: true });
+    const round = toDesignFile(fromDesignFile(design as unknown as DesignFile));
+    expect(round.pages[0].children[0]).toEqual(future);
+  });
+});
+
 describe("v4 -> v5 image effects/adjustments migration (F24)", () => {
   it("opens a legacy v4 file unchanged in shape and validates at v5", () => {
     // A v4 file with an existing adjustment effect (the only kinds that existed

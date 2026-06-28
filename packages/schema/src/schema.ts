@@ -16,8 +16,15 @@ import { z } from "zod";
  *  v6: animation/interactivity (typed NodeAnimation, Interaction, PageTransition,
  *      ImageMotion; legacy single `animations[0]` lifts into `animation.entrance`).
  *  v7: chart styling (title/legend/axes/value-labels/per-series color) and table
- *      cell+header+border formatting (F27); all additive, older files open as-is. */
-export const CURRENT_SCHEMA_VERSION = 9;
+ *      cell+header+border formatting (F27); all additive, older files open as-is.
+ *  v8: whiteboard (F30) sticky node + free-form `meta.kind` document markers
+ *      (whiteboard/doc/sheet/video); additive, older files open as-is.
+ *  v9: per-range hyperlinks (CharStyle.link); additive, runs may omit it.
+ *  v10: whiteboard board node types (F30) - ink, mindmap, boardview, diagramcode,
+ *      stamp - plus additive optional fields on ConnectorNode (label/waypoints/
+ *      jumpOver, EndPoint.attach.port), StickyNode (authorId/shape), and FrameNode
+ *      (header/collapsed). All additive: older files omit them and open as-is. */
+export const CURRENT_SCHEMA_VERSION = 10;
 
 /** Maximum container nesting depth; guards traversal against stack overflow (FR-4). */
 export const MAX_NESTING_DEPTH = 32;
@@ -327,25 +334,34 @@ export const ElementLinkSchema = z.object({
 // lifts the legacy single-entry `animations[0]` shape into `animation.entrance`.
 
 /** Named easing curves shared by the playback engine (engine `evalEasing`). */
-export type Easing = "linear" | "ease-in" | "ease-out" | "ease-in-out" | "spring";
-export const EasingSchema = z.enum(["linear", "ease-in", "ease-out", "ease-in-out", "spring"]);
+export type Easing = "linear" | "ease-in" | "ease-out" | "ease-in-out" | "spring" | "ease-in-cubic" | "ease-out-cubic" | "ease-out-back" | "bounce";
+export const EasingSchema = z.enum(["linear", "ease-in", "ease-out", "ease-in-out", "spring", "ease-in-cubic", "ease-out-cubic", "ease-out-back", "bounce"]);
 
-export type EntrancePreset = "fade" | "rise" | "pan" | "pop" | "drift" | "breathe-in";
-export type ExitPreset = "fade-out" | "sink" | "pop-out" | "drift-out";
-export type EmphasisPreset = "pulse" | "wiggle" | "spin" | "breathe" | "tada";
+export type EntrancePreset = "fade" | "rise" | "pan" | "pop" | "drift" | "breathe-in" | "typewriter" | "word-wipe" | "tumble" | "stomp" | "zoom-in";
+export type ExitPreset = "fade-out" | "sink" | "pop-out" | "drift-out" | "tumble-out" | "zoom-out";
+export type EmphasisPreset = "pulse" | "wiggle" | "spin" | "breathe" | "tada" | "flicker" | "jiggle" | "bob";
 /** Any animation preset across the three triggers (used by the timeline). */
 export type AnimationPreset = EntrancePreset | ExitPreset | EmphasisPreset;
 
-export const EntrancePresetSchema = z.enum(["fade", "rise", "pan", "pop", "drift", "breathe-in"]);
-export const ExitPresetSchema = z.enum(["fade-out", "sink", "pop-out", "drift-out"]);
-export const EmphasisPresetSchema = z.enum(["pulse", "wiggle", "spin", "breathe", "tada"]);
+export const EntrancePresetSchema = z.enum(["fade", "rise", "pan", "pop", "drift", "breathe-in", "typewriter", "word-wipe", "tumble", "stomp", "zoom-in"]);
+export const ExitPresetSchema = z.enum(["fade-out", "sink", "pop-out", "drift-out", "tumble-out", "zoom-out"]);
+export const EmphasisPresetSchema = z.enum(["pulse", "wiggle", "spin", "breathe", "tada", "flicker", "jiggle", "bob"]);
 
+/** How a clip's start is timed relative to the preceding animated sibling
+ *  (entrance sequencing): an explicit delay, together with the previous element,
+ *  or after the previous element finishes. */
+export type AnimationStartMode = "delay" | "with-previous" | "after-previous";
 /** A single element animation clip: a preset plus timing + easing. */
 export interface AnimationClip<P extends string = AnimationPreset> {
   preset: P;
   durationMs: number;
   delayMs: number;
   easing: Easing;
+  /** Entrance sequencing across siblings (default "delay"). */
+  startMode?: AnimationStartMode;
+  /** Optional custom cubic-bezier timing [x1,y1,x2,y2] (CSS-style). When present
+   *  it overrides `easing`, enabling a freeform curve editor. */
+  bezier?: [number, number, number, number];
 }
 function animationClipSchema<P extends string>(preset: z.ZodType<P>) {
   return z.object({
@@ -353,6 +369,8 @@ function animationClipSchema<P extends string>(preset: z.ZodType<P>) {
     durationMs: z.number().nonnegative(),
     delayMs: z.number().nonnegative(),
     easing: EasingSchema,
+    startMode: z.enum(["delay", "with-previous", "after-previous"]).optional(),
+    bezier: z.tuple([z.number(), z.number(), z.number(), z.number()]).optional(),
   });
 }
 
@@ -437,12 +455,12 @@ export const InteractionSchema = z.object({
 
 /** Per-page slide transition, applied when advancing to this page (FR-6). */
 export interface PageTransition {
-  type: "none" | "fade" | "slide" | "push" | "dissolve" | "morph-lite";
+  type: "none" | "fade" | "slide" | "push" | "dissolve" | "morph-lite" | "wipe" | "flip" | "zoom" | "morph";
   direction?: "left" | "right" | "up" | "down";
   durationMs: number;
 }
 export const PageTransitionSchema = z.object({
-  type: z.enum(["none", "fade", "slide", "push", "dissolve", "morph-lite"]),
+  type: z.enum(["none", "fade", "slide", "push", "dissolve", "morph-lite", "wipe", "flip", "zoom", "morph"]),
   direction: z.enum(["left", "right", "up", "down"]).optional(),
   durationMs: z.number().nonnegative(),
 });
@@ -577,7 +595,8 @@ export type NodeType =
   | "group" | "frame" | "grid" | "video" | "audio" | "table" | "chart"
   | "embed" | "qr" | "model3d"
   | "connector" | "mask" | "boolean" // (additive)
-  | "sticky"; // (additive)
+  | "sticky" // (additive)
+  | "ink" | "mindmap" | "boardview" | "diagramcode" | "stamp"; // F30 (additive)
 
 // Node types with a concrete schema today. `model3d` is reserved/deferred
 // (Section 2), so it is intentionally absent here and is validated by its base
@@ -586,6 +605,7 @@ export const KNOWN_NODE_TYPES: readonly NodeType[] = [
   "text", "image", "shape", "line", "path", "icon", "sticker",
   "group", "frame", "grid", "video", "audio", "table", "chart",
   "embed", "qr", "connector", "mask", "boolean", "sticky",
+  "ink", "mindmap", "boardview", "diagramcode", "stamp",
 ] as const;
 
 const KNOWN_NODE_TYPE_SET = new Set<string>(KNOWN_NODE_TYPES);
@@ -1019,6 +1039,19 @@ export const AutoLayoutSchema = z.object({
   align: z.enum(["start", "center", "end", "stretch"]),
 });
 
+// A board section header: a title-bar slot turning a plain layout/clip frame
+// into a named, colored region (FR-12). Additive and optional.
+export interface FrameHeader {
+  title: string;
+  fill?: Fill;
+  textColor?: Color;
+}
+export const FrameHeaderSchema = z.object({
+  title: z.string(),
+  fill: FillSchema.optional(),
+  textColor: ColorSchema.optional(),
+});
+
 export interface FrameNode extends NodeBase {
   type: "frame";
   children: Node[];
@@ -1028,6 +1061,10 @@ export interface FrameNode extends NodeBase {
   fills?: Fill[];
   cornerRadius?: CornerRadius;
   autoLayout?: AutoLayout;
+  // Board-section semantics (F30 FR-12): a header title-bar and a collapse
+  // state so a frame can act as a FigJam Section / Mural Area. Additive.
+  header?: FrameHeader;
+  collapsed?: boolean;
 }
 export const FrameNodeSchema = z.object({
   ...nodeBaseFields,
@@ -1041,6 +1078,8 @@ export const FrameNodeSchema = z.object({
   fills: z.array(FillSchema).optional(),
   cornerRadius: CornerRadiusSchema.optional(),
   autoLayout: AutoLayoutSchema.optional(),
+  header: FrameHeaderSchema.optional(),
+  collapsed: z.boolean().optional(),
 });
 
 export interface GridCell {
@@ -1348,11 +1387,24 @@ const CapSchema = z.object({ kind: z.enum(["none", "arrow", "triangle", "dot"]),
 
 export interface EndPoint {
   point?: { x: number; y: number };
-  attach?: { nodeId: string; anchor: string };
+  // `anchor` stays an opaque string; the optional `port` names a per-side slot
+  // so multiple connectors on one node do not stack on a single midpoint (F30
+  // FR-8). Purely additive: older files omit it.
+  attach?: { nodeId: string; anchor: string; port?: string };
 }
 const EndPointSchema = z.object({
   point: z.object({ x: unit, y: unit }).optional(),
-  attach: z.object({ nodeId: z.string(), anchor: z.string() }).optional(),
+  attach: z.object({ nodeId: z.string(), anchor: z.string(), port: z.string().optional() }).optional(),
+});
+
+// A text label riding a connector, positioned 0..1 along its path (F30 FR-8).
+export interface ConnectorLabel {
+  text: string;
+  position?: number;
+}
+const ConnectorLabelSchema = z.object({
+  text: z.string(),
+  position: z.number().min(0).max(1).optional(),
 });
 
 export interface ConnectorNode extends NodeBase {
@@ -1363,6 +1415,11 @@ export interface ConnectorNode extends NodeBase {
   stroke: Stroke;
   startCap?: Cap;
   endCap?: Cap;
+  // Diagramming enrichments (F30 FR-8), all additive: a label, draggable
+  // multi-bend waypoints, and a jump-over hop at line crossings.
+  label?: ConnectorLabel;
+  waypoints?: { x: number; y: number }[];
+  jumpOver?: boolean;
 }
 export const ConnectorNodeSchema = z.object({
   ...nodeBaseFields,
@@ -1373,6 +1430,9 @@ export const ConnectorNodeSchema = z.object({
   stroke: StrokeSchema,
   startCap: CapSchema.optional(),
   endCap: CapSchema.optional(),
+  label: ConnectorLabelSchema.optional(),
+  waypoints: z.array(z.object({ x: unit, y: unit })).optional(),
+  jumpOver: z.boolean().optional(),
 });
 
 export interface MaskNode extends NodeBase {
@@ -1424,6 +1484,10 @@ export interface StickyNode extends NodeBase {
   fontScale: number;
   autoSize: boolean;
   frameId?: string;
+  // Author attribution for color-by-author / sort-by-author (F30), and a
+  // non-square silhouette. Both additive and optional.
+  authorId?: string;
+  shape?: "square" | "rectangle" | "circle";
 }
 export const StickyNodeSchema = z.object({
   ...nodeBaseFields,
@@ -1436,6 +1500,146 @@ export const StickyNodeSchema = z.object({
   fontScale: z.number().positive(),
   autoSize: z.boolean(),
   frameId: z.string().optional(),
+  authorId: z.string().optional(),
+  shape: z.enum(["square", "rectangle", "circle"]).optional(),
+});
+
+// --- F30 board node types (additive) --------------------------------
+// Each is a board-native scene node: older files never contain them, newer
+// clients preserve them via UnknownNode, so the v9 -> v10 bump is additive.
+
+// Ink/draw stroke: a raw point stream with optional pressure (`p`) and time
+// (`t`) samples, distinct from PathNode's bezier anchors and decimated/smoothed
+// for performance (FR-5). `mode` selects pen / marker / highlighter rendering.
+export interface InkPoint {
+  x: number;
+  y: number;
+  p?: number;
+  t?: number;
+}
+export interface InkNode extends NodeBase {
+  type: "ink";
+  points: InkPoint[];
+  smoothing: number;
+  seed?: number;
+  brush: { width: number; opacity: number; color: Color; mode: "pen" | "marker" | "highlighter" };
+}
+const InkPointSchema = z.object({
+  x: unit,
+  y: unit,
+  p: z.number().min(0).max(1).optional(),
+  t: z.number().optional(),
+});
+export const InkNodeSchema = z.object({
+  ...nodeBaseFields,
+  type: z.literal("ink"),
+  points: z.array(InkPointSchema),
+  smoothing: channel,
+  seed: z.number().optional(),
+  brush: z.object({
+    width: z.number().positive(),
+    opacity: channel,
+    color: ColorSchema,
+    mode: z.enum(["pen", "marker", "highlighter"]),
+  }),
+});
+
+// Mind-map node capturing parent/child branch topology so radial/balanced
+// layout is first-class (FR-11), rather than inferred from connectors.
+export interface MindMapBranch {
+  id: string;
+  parentId: string | null;
+  label: string;
+  childIds: string[];
+}
+export interface MindMapNode extends NodeBase {
+  type: "mindmap";
+  rootId: string;
+  branches: MindMapBranch[];
+  direction: "radial" | "right" | "balanced";
+}
+const MindMapBranchSchema = z.object({
+  id: z.string(),
+  parentId: z.string().nullable(),
+  label: z.string(),
+  childIds: z.array(z.string()),
+});
+export const MindMapNodeSchema = z.object({
+  ...nodeBaseFields,
+  type: z.literal("mindmap"),
+  rootId: z.string(),
+  branches: z.array(MindMapBranchSchema),
+  direction: z.enum(["radial", "right", "balanced"]),
+});
+
+// Kanban / multi-view dataset node: columns + cards rendered as a board widget
+// (kanban now, table/timeline later) over one dataset.
+export interface BoardViewColumn {
+  id: string;
+  title: string;
+  cardIds: string[];
+}
+export interface BoardViewCard {
+  id: string;
+  title: string;
+  tags?: string[];
+  estimate?: number;
+}
+export interface BoardViewNode extends NodeBase {
+  type: "boardview";
+  view: "kanban" | "table" | "timeline";
+  columns: BoardViewColumn[];
+  cards: BoardViewCard[];
+}
+const BoardViewColumnSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  cardIds: z.array(z.string()),
+});
+const BoardViewCardSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  tags: z.array(z.string()).optional(),
+  estimate: z.number().optional(),
+});
+export const BoardViewNodeSchema = z.object({
+  ...nodeBaseFields,
+  type: z.literal("boardview"),
+  view: z.enum(["kanban", "table", "timeline"]),
+  columns: z.array(BoardViewColumnSchema),
+  cards: z.array(BoardViewCardSchema),
+});
+
+// Diagram-as-code node: the source text is the source of truth, with the ids of
+// the materialized child nodes recorded so it can re-flow on source edit (FR-9).
+export interface DiagramCodeNode extends NodeBase {
+  type: "diagramcode";
+  lang: "mermaid" | "plantuml" | "dot";
+  source: string;
+  materializedIds?: string[];
+}
+export const DiagramCodeNodeSchema = z.object({
+  ...nodeBaseFields,
+  type: z.literal("diagramcode"),
+  lang: z.enum(["mermaid", "plantuml", "dot"]),
+  source: z.string(),
+  materializedIds: z.array(z.string()).optional(),
+});
+
+// Emoji-stamp / vote-marker placed primitive (FR-21), distinct from asset-id
+// stickers; `kind: "vote"` backs dot-vote placement.
+export interface StampNode extends NodeBase {
+  type: "stamp";
+  kind: "emoji" | "vote";
+  glyph: string;
+  authorId?: string;
+}
+export const StampNodeSchema = z.object({
+  ...nodeBaseFields,
+  type: z.literal("stamp"),
+  kind: z.enum(["emoji", "vote"]),
+  glyph: z.string(),
+  authorId: z.string().optional(),
 });
 
 // Forward-compat placeholder for node types written by a newer client (FR-3).
@@ -1457,11 +1661,12 @@ export type KnownNode =
   | TextNode | ImageNode | ShapeNode | LineNode | PathNode | IconNode
   | StickerNode | GroupNode | FrameNode | GridNode | VideoNode | AudioNode
   | TableNode | ChartNode | EmbedNode | QRNode
-  | ConnectorNode | MaskNode | BooleanNode | StickyNode;
+  | ConnectorNode | MaskNode | BooleanNode | StickyNode
+  | InkNode | MindMapNode | BoardViewNode | DiagramCodeNode | StampNode;
 
 export type Node = KnownNode | UnknownNode;
 
-/** Per-type schemas for the 16 known node types, keyed by discriminator. */
+/** Per-type schemas for every known node type, keyed by discriminator. */
 export const KNOWN_NODE_SCHEMAS = {
   text: TextNodeSchema,
   image: ImageNodeSchema,
@@ -1483,6 +1688,11 @@ export const KNOWN_NODE_SCHEMAS = {
   mask: MaskNodeSchema,
   boolean: BooleanNodeSchema,
   sticky: StickyNodeSchema,
+  ink: InkNodeSchema,
+  mindmap: MindMapNodeSchema,
+  boardview: BoardViewNodeSchema,
+  diagramcode: DiagramCodeNodeSchema,
+  stamp: StampNodeSchema,
 } as const;
 
 /** Discriminated union of all known node types (precise per-branch errors). */
@@ -1492,6 +1702,7 @@ export const KnownNodeSchema = z.discriminatedUnion("type", [
   FrameNodeSchema, GridNodeSchema, VideoNodeSchema, AudioNodeSchema,
   TableNodeSchema, ChartNodeSchema, EmbedNodeSchema, QRNodeSchema,
   ConnectorNodeSchema, MaskNodeSchema, BooleanNodeSchema, StickyNodeSchema,
+  InkNodeSchema, MindMapNodeSchema, BoardViewNodeSchema, DiagramCodeNodeSchema, StampNodeSchema,
 ]);
 
 /** Full recursive node schema (known types + unknown passthrough). */

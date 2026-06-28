@@ -45,14 +45,33 @@ type FontLike = Pick<CharStyle, "fontFamily" | "fontStyle" | "fontSize"> & {
   case?: CharStyle["case"];
 };
 
-/** A Canvas2D `font` string (e.g. `italic small-caps 600 24px "Inter", ...`). */
+// Map a variable-font width axis (wdth, ~50..200 where 100 is normal) to the
+// nearest CSS font-stretch keyword, which the Canvas2D `font` shorthand accepts
+// and the browser applies to a variable font's wdth axis. Static fonts ignore it.
+function widthKeyword(wdth: number): string {
+  const stops: [number, string][] = [
+    [50, "ultra-condensed"], [62.5, "extra-condensed"], [75, "condensed"],
+    [87.5, "semi-condensed"], [100, "normal"], [112.5, "semi-expanded"],
+    [125, "expanded"], [150, "extra-expanded"], [200, "ultra-expanded"],
+  ];
+  let best = stops[4];
+  for (const s of stops) if (Math.abs(s[0] - wdth) < Math.abs(best[0] - wdth)) best = s;
+  return best[1];
+}
+
+/** A Canvas2D `font` string (e.g. `italic small-caps 600 condensed 24px "Inter"`).
+ *  Applies variable-font axes that Canvas2D can express: wght (weight), wdth
+ *  (font-stretch keyword), and ital/slnt (italic). Other axes need the GPU path. */
 export function canvasFontString(style: FontLike): string {
   const size = style.fontSize;
   const weight = style.axes?.wght ?? weightFromFontStyle(style.fontStyle);
-  const italic = /italic|oblique/i.test(style.fontStyle ?? "") ? "italic " : "";
+  const italicByAxis = (style.axes?.ital ?? 0) >= 0.5 || (style.axes?.slnt ?? 0) < 0;
+  const italic = italicByAxis || /italic|oblique/i.test(style.fontStyle ?? "") ? "italic " : "";
   // Small caps render via the font-variant slot of the canvas `font` shorthand.
   const variant = style.case === "smallcaps" ? "small-caps " : "";
-  return `${italic}${variant}${weight} ${size}px ${fontFamilyStack(style.fontFamily)}`;
+  const wdth = style.axes?.wdth;
+  const stretch = typeof wdth === "number" && wdth !== 100 ? `${widthKeyword(wdth)} ` : "";
+  return `${italic}${variant}${weight} ${stretch}${size}px ${fontFamilyStack(style.fontFamily)}`;
 }
 
 /** Resolve a line advance in px from a CharStyle lineHeight (default 1.2x). */

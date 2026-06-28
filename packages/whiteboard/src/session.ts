@@ -24,11 +24,33 @@ export interface VoteSession {
   votes: Vote[];
 }
 
+/** A saved viewport bookmark (FR-3): named region a facilitator can recall or
+ *  step through as an agenda, and the target of a shareable deep-link (FR-34). */
+export interface SavedView {
+  id: string;
+  name: string;
+  viewport: { zoom: number; panX: number; panY: number };
+}
+
 export interface WhiteboardMeta {
   kind: "whiteboard";
   grid: { size: number; snap: boolean };
+  /** Legacy client-side dot-vote, used as the offline fallback. Saved+connected
+   *  boards use the server-authoritative session pointed to by `voteSessionId`. */
   vote?: VoteSession;
+  /** The active server-authoritative vote session id (FR-19), synced via the CRDT
+   *  so every client fetches the same tally over REST. Absent when no round runs. */
+  voteSessionId?: string;
   timer?: TimerState;
+  /** Saved viewport bookmarks for named-view recall + agenda step-through (FR-3). */
+  views?: SavedView[];
+  /** Private-mode round (FR-15): while `active` and not `revealed`, each client
+   *  hides OTHER participants' contributions created since `startedAt`. Cooperative
+   *  (nodes still sync; peers filter them at render), gated to the facilitator;
+   *  `startedAt` (server-synced) keys each round so a new round recaptures the
+   *  baseline. A determined client could read the raw CRDT, so this is an
+   *  anti-groupthink affordance, not a hard secrecy boundary. */
+  privateMode?: { active: boolean; revealed: boolean; startedAt: number };
 }
 
 // --- timer (FR-7) -----------------------------------------------------------
@@ -125,4 +147,44 @@ export function tallyVotes(session: VoteSession): Record<string, number> {
     tally[v.nodeId] = (tally[v.nodeId] ?? 0) + 1;
   }
   return tally;
+}
+
+// --- saved views (FR-3) -----------------------------------------------------
+
+/** Add a saved view, returning a new array (input untouched). Re-saving under an
+ *  existing id replaces that entry IN PLACE (keeping its position); a new id is
+ *  appended. */
+export function addSavedView(views: SavedView[] | undefined, view: SavedView): SavedView[] {
+  const list = views ?? [];
+  if (list.some((v) => v.id === view.id)) {
+    return list.map((v) => (v.id === view.id ? view : v));
+  }
+  return [...list, view];
+}
+
+/** Remove a saved view by id, returning a new array. */
+export function removeSavedView(views: SavedView[] | undefined, id: string): SavedView[] {
+  return (views ?? []).filter((v) => v.id !== id);
+}
+
+/** True while a private round should hide other participants' new contributions
+ *  (FR-15): active and not yet revealed. */
+export function privateModeHiding(pm: WhiteboardMeta["privateMode"]): boolean {
+  return !!pm && pm.active && !pm.revealed;
+}
+
+/** The saved view following `currentId` in order, wrapping around; the first view
+ *  when `currentId` is unknown/absent. Returns null when there are no views. Used
+ *  to step a saved-view agenda forward (`dir` 1) or backward (-1). */
+export function stepSavedView(
+  views: SavedView[] | undefined,
+  currentId: string | null,
+  dir: 1 | -1,
+): SavedView | null {
+  const list = views ?? [];
+  if (list.length === 0) return null;
+  const idx = list.findIndex((v) => v.id === currentId);
+  if (idx < 0) return dir === 1 ? list[0] : list[list.length - 1];
+  const next = (idx + dir + list.length) % list.length;
+  return list[next];
 }

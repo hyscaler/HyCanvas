@@ -110,6 +110,25 @@ export interface RoutableConnector {
   route: "straight" | "elbow" | "curved";
   start: EndPoint;
   end: EndPoint;
+  /** Optional user-placed bend points the route must visit, in order (FR-8). */
+  waypoints?: Point[];
+}
+
+/**
+ * Visit each point with orthogonal (axis-aligned) segments, inserting an L-bend
+ * (horizontal-first) between any two points that are not already aligned. Used
+ * to route an elbow connector through user waypoints.
+ */
+function orthogonalChain(points: Point[]): Point[] {
+  if (points.length === 0) return [];
+  const out: Point[] = [points[0]];
+  for (let i = 1; i < points.length; i++) {
+    const p = out[out.length - 1];
+    const q = points[i];
+    if (p.x !== q.x && p.y !== q.y) out.push({ x: q.x, y: p.y });
+    out.push(q);
+  }
+  return out;
 }
 
 /**
@@ -128,6 +147,16 @@ export function routeConnector(
   const endRef = endpointReference(conn.end, boxes);
   const a = resolveEndpoint(conn.start, boxes, endRef);
   const b = resolveEndpoint(conn.end, boxes, startRef);
+
+  // User waypoints (FR-8): the route visits each in order. Straight and curved
+  // pass through them directly as a polyline (curved is NOT spline-smoothed once
+  // waypoints are present, so the rendered line and the hit-test polyline stay
+  // identical); elbow routes orthogonally between consecutive points.
+  const wps = conn.waypoints ?? [];
+  if (wps.length > 0) {
+    const through = [a, ...wps, b];
+    return conn.route === "elbow" ? orthogonalChain(through) : through;
+  }
 
   if (conn.route === "straight") {
     return [a, b];

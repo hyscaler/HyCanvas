@@ -100,6 +100,18 @@ export function pointInLocalShape(node: Node, p: Point, precise: boolean): boole
       }
       return false;
     }
+    case "ink": {
+      // Hit along the point stream within half the brush width (plus a small
+      // tolerance), so a thin stroke is still clickable but its mostly-empty
+      // bounding box is not.
+      const pts = (node as { points?: Point[] }).points ?? [];
+      const half = Math.max(3, ((node as { brush?: { width?: number } }).brush?.width ?? 1) / 2 + 2);
+      if (pts.length === 1) return distToSegment(p, pts[0], pts[0]) <= half;
+      for (let i = 0; i < pts.length - 1; i++) {
+        if (distToSegment(p, pts[i], pts[i + 1]) <= half) return true;
+      }
+      return false;
+    }
     default:
       return inBox(p, w, h);
   }

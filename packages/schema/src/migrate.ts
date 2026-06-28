@@ -275,6 +275,13 @@ export const migrations: Record<number, Migration> = {
   // runs simply omit the optional `link`, so they stay structurally valid v9 and
   // always open. Bump the version so newer readers know runs may carry a link.
   8: (file: AnyObj) => ({ ...file, schemaVersion: 9 }),
+  // v9 -> v10: whiteboard board node types (F30) - ink, mindmap, boardview,
+  // diagramcode, stamp - plus additive optional fields on ConnectorNode
+  // (label/waypoints/jumpOver, EndPoint.attach.port), StickyNode (authorId/shape),
+  // and FrameNode (header/collapsed). All additive: a v9 file contains none of the
+  // new node types and omits the new fields, so it stays structurally valid v10
+  // and always opens. Bump the version so newer readers know it may carry them.
+  9: (file: AnyObj) => ({ ...file, schemaVersion: 10 }),
 };
 
 export class MigrationError extends Error {

@@ -31,10 +31,11 @@ export {
 } from "./effects";
 export { duotoneCanvas, clearDuotoneCache } from "./duotone";
 export { createScene, effectBleed } from "./scene";
+export { SpatialIndex } from "./spatial";
 export { pointInLocalShape } from "./hit";
 export { renderScene, bumpTextLayout, blendToComposite, type Render2DOptions } from "./render2d";
 export { benchmarkRender, createNullContext, type BenchResult, type BenchOptions } from "./bench";
-export { poseDesignAt, pageAnimationDuration } from "./pose";
+export { poseDesignAt, pageAnimationDuration, sequenceStarts, revealEntranceText } from "./pose";
 export {
   mountRenderer,
   render,

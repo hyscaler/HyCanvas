@@ -15,6 +15,7 @@ import {
   type Color,
   type Fill,
   type ImageNode,
+  type InkNode,
   type Node,
   type ShapeNode,
   type TableNode,
@@ -50,6 +51,13 @@ export interface Render2DOptions {
   /** Skip drawing this node (and its subtree). Used to hide a text node while it
    *  is being edited in the live HTML overlay, so the two don't double up. */
   skipNodeId?: string;
+  /** Skip drawing these nodes (and their subtrees). Per-client visual hide that
+   *  does not touch the document, used by whiteboard private mode to hide other
+   *  participants' new contributions until reveal (FR-15). */
+  hiddenIds?: ReadonlySet<string>;
+  /** Viewport culling + sub-pixel LOD (FR-27); default on. Set false to force a
+   *  full paint of every node (e.g. off-screen thumbnail/export of a whole page). */
+  cull?: boolean;
 }
 
 /** Absolute page-space box of a node, keyed by node id. Used to resolve
@@ -123,8 +131,51 @@ function drawCover(ctx: CanvasLike, img: { width?: number; height?: number; natu
   if (ctx.drawImage) ctx.drawImage(img as unknown as CanvasImageSource, (w - dw) / 2, (h - dh) / 2, dw, dh);
 }
 
+/** Paint a pattern fill (tiled image) clipped to the current shape path. Returns
+ *  true when it handled the fill (asset ready or a placeholder was drawn). */
+function paintPattern(
+  ctx: CanvasLike,
+  pat: { assetId: string; scale: number; rotation?: number; repeat: "tile" | "mirror" | "no-repeat" },
+  w: number,
+  h: number,
+  assets?: AssetProvider,
+): boolean {
+  if (!ctx.createPattern) return false;
+  const status = assets ? assets.status(pat.assetId) : "loading";
+  const img = status === "ready" ? assets?.image(pat.assetId) : null;
+  if (!img) {
+    placeholderBox(ctx, w, h, status === "missing" ? MISSING_FILL : undefined, status === "missing" ? MISSING_STROKE : undefined);
+    return true;
+  }
+  // Canvas2D has no native mirror repetition; "mirror" falls back to tiling.
+  const repetition = pat.repeat === "no-repeat" ? "no-repeat" : "repeat";
+  const pattern = ctx.createPattern(img, repetition);
+  if (!pattern) return false;
+  const s = pat.scale > 0 ? pat.scale : 1;
+  const rot = ((pat.rotation ?? 0) * Math.PI) / 180;
+  // Scale/rotate the pattern space where supported (browser + node-canvas).
+  if (pattern.setTransform && typeof DOMMatrix !== "undefined") {
+    const cos = Math.cos(rot), sin = Math.sin(rot);
+    try { pattern.setTransform(new DOMMatrix([cos * s, sin * s, -sin * s, cos * s, 0, 0])); } catch { /* unsupported: native scale */ }
+  }
+  ctx.fillStyle = pattern;
+  ctx.fillRect(0, 0, w, h);
+  return true;
+}
+
 function drawShape(ctx: CanvasLike, node: ShapeNode, assets?: AssetProvider): void {
   const { width: w, height: h } = node.size;
+  // Pattern fill (tiled image): clip to the shape outline, then tile the asset.
+  const patFill = node.fills.find((f) => f.type === "pattern") as { assetId: string; scale: number; rotation?: number; repeat: "tile" | "mirror" | "no-repeat" } | undefined;
+  if (patFill && ctx.save && ctx.restore && ctx.clip && ctx.createPattern) {
+    ctx.save();
+    shapePath(ctx, node);
+    ctx.clip();
+    paintPattern(ctx, patFill, w, h, assets);
+    ctx.restore();
+    if (node.stroke) { shapePath(ctx, node); setStroke(ctx, node.stroke.width, resolveFill(ctx, node.stroke.fill, w, h)); }
+    return;
+  }
   // Image fill (Canva-style): clip to the shape outline and cover-draw the image.
   const imgFill = node.fills.find((f) => f.type === "image") as { source: { assetId: string } } | undefined;
   if (imgFill && ctx.save && ctx.restore && ctx.clip) {
@@ -400,6 +451,8 @@ function drawConnector(
     stroke: { fill: import("@hc/schema").Fill; width: number };
     startCap?: { kind: string; size: number };
     endCap?: { kind: string; size: number };
+    waypoints?: { x: number; y: number }[];
+    label?: { text: string; position?: number };
   };
   const startRef = connectorEndRef(conn.start, boxes);
   const endRef = connectorEndRef(conn.end, boxes);
@@ -408,9 +461,16 @@ function drawConnector(
 
   // Build the routed polyline in page space.
   let pts: { x: number; y: number }[];
+  let curved = false;
   const dx = b.x - a.x;
   const dy = b.y - a.y;
-  if (conn.route === "straight" || (dx === 0 && dy === 0)) {
+  const wps = conn.waypoints && conn.waypoints.length > 0 ? conn.waypoints : null;
+  if (wps) {
+    // User waypoints (FR-8): visit each in order. Elbow keeps every leg
+    // axis-aligned; straight/curved pass through directly (drawn as a polyline).
+    const through = [a, ...wps, b];
+    pts = conn.route === "elbow" ? orthogonalChain(through) : through;
+  } else if (conn.route === "straight" || (dx === 0 && dy === 0)) {
     pts = [a, b];
   } else if (Math.abs(dx) >= Math.abs(dy)) {
     if (dy === 0) pts = [a, b];
@@ -419,8 +479,9 @@ function drawConnector(
     if (dx === 0) pts = [a, b];
     else { const midY = a.y + dy / 2; pts = [a, { x: a.x, y: midY }, { x: b.x, y: midY }, b]; }
   }
-  // For a curved route, collapse to endpoints + midpoint and draw a quadratic.
-  const curved = conn.route === "curved" && pts.length > 2;
+  // For a curved route with no explicit waypoints, draw a single quadratic
+  // through the midpoint (the long-standing smooth look).
+  if (!wps) curved = conn.route === "curved" && pts.length > 2;
 
   // Shift page-space points into the connector node's local space.
   const lx = (p: { x: number; y: number }) => p.x - origin.x;
@@ -444,6 +505,144 @@ function drawConnector(
   const endNeighbor = pts[pts.length - 2] ?? a;
   if (conn.startCap) drawCap(ctx, conn.startCap, { x: lx(startNeighbor), y: ly(startNeighbor) }, { x: lx(a), y: ly(a) }, width, color);
   if (conn.endCap) drawCap(ctx, conn.endCap, { x: lx(endNeighbor), y: ly(endNeighbor) }, { x: lx(b), y: ly(b) }, width, color);
+
+  // Connector label (FR-8): a small chip with the text, anchored at a fraction
+  // along the polyline so it stays attached as the route re-flows.
+  if (conn.label && conn.label.text) {
+    const t = Math.max(0, Math.min(1, conn.label.position ?? 0.5));
+    const at = pointAlong(pts, t);
+    const cx = lx(at);
+    const cy = ly(at);
+    ctx.font = "12px system-ui, sans-serif";
+    const tw = ctx.measureText ? ctx.measureText(conn.label.text).width : conn.label.text.length * 7;
+    const padX = 5;
+    const chipW = tw + padX * 2;
+    const chipH = 18;
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    if (ctx.roundRect) {
+      ctx.beginPath();
+      ctx.roundRect(cx - chipW / 2, cy - chipH / 2, chipW, chipH, 4);
+      ctx.fill();
+    } else {
+      ctx.fillRect(cx - chipW / 2, cy - chipH / 2, chipW, chipH);
+    }
+    ctx.fillStyle = "#334155";
+    ctx.textAlign = "center";
+    ctx.fillText(conn.label.text, cx, cy + 4);
+  }
+}
+
+/** Visit each point with axis-aligned segments, inserting an L-bend between any
+ *  two that are not already aligned (engine mirror of @hc/whiteboard routing). */
+function orthogonalChain(points: { x: number; y: number }[]): { x: number; y: number }[] {
+  if (points.length === 0) return [];
+  const out = [points[0]];
+  for (let i = 1; i < points.length; i++) {
+    const p = out[out.length - 1];
+    const q = points[i];
+    if (p.x !== q.x && p.y !== q.y) out.push({ x: q.x, y: p.y });
+    out.push(q);
+  }
+  return out;
+}
+
+/** The point at fraction `t` (0..1) of a polyline's arc length. */
+function pointAlong(pts: { x: number; y: number }[], t: number): { x: number; y: number } {
+  if (pts.length === 0) return { x: 0, y: 0 };
+  if (pts.length === 1) return pts[0];
+  let total = 0;
+  const segLen: number[] = [];
+  for (let i = 1; i < pts.length; i++) {
+    const d = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+    segLen.push(d);
+    total += d;
+  }
+  if (total === 0) return pts[0];
+  let target = t * total;
+  for (let i = 0; i < segLen.length; i++) {
+    if (target <= segLen[i] || i === segLen.length - 1) {
+      const f = segLen[i] === 0 ? 0 : target / segLen[i];
+      return { x: pts[i].x + (pts[i + 1].x - pts[i].x) * f, y: pts[i].y + (pts[i + 1].y - pts[i].y) * f };
+    }
+    target -= segLen[i];
+  }
+  return pts[pts.length - 1];
+}
+
+/** Draw an ink stroke as a variable-width filled ribbon (FR-5). Pen width
+ *  responds to per-point pressure; marker keeps a flat nib; highlighter is
+ *  semi-transparent and multiplies onto the content beneath it. A fill ribbon
+ *  (rather than a stroked polyline) gives round, pressure-shaped edges without
+ *  needing lineCap/arc, which the partial CanvasLike does not guarantee. */
+function drawInk(ctx: CanvasLike, node: InkNode): void {
+  const pts = node.points;
+  if (pts.length === 0) return;
+  const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+  const baseR = Math.max(0.5, node.brush.width / 2);
+  const isPen = node.brush.mode === "pen";
+  const radiusAt = (i: number): number => {
+    if (!isPen) return baseR; // marker / highlighter: flat, constant nib
+    const pr = pts[i].p;
+    return baseR * (typeof pr === "number" ? 0.35 + 0.65 * clamp01(pr) : 1);
+  };
+  const dot = (x: number, y: number, r: number) => {
+    if (ctx.ellipse) {
+      ctx.beginPath();
+      ctx.ellipse(x, y, r, r, 0, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+  };
+
+  // Snapshot and restore the specific properties we touch (rather than ctx.save,
+  // which the dirty-tile renderer counts per node), matching the chart/legend draw
+  // style. brush opacity composes with the node opacity the caller already applied.
+  const prevAlpha = ctx.globalAlpha;
+  const prevComp = ctx.globalCompositeOperation;
+  const prevFill = ctx.fillStyle;
+  const done = () => {
+    ctx.globalAlpha = prevAlpha;
+    ctx.globalCompositeOperation = prevComp;
+    ctx.fillStyle = prevFill;
+  };
+  ctx.globalAlpha = prevAlpha * clamp01(node.brush.opacity);
+  if (node.brush.mode === "highlighter") ctx.globalCompositeOperation = "multiply";
+  ctx.fillStyle = colorToCss(node.brush.color);
+
+  if (pts.length === 1) {
+    dot(pts[0].x, pts[0].y, radiusAt(0));
+    done();
+    return;
+  }
+
+  // Offset each point along its central-difference normal to build the two ribbon
+  // edges, then fill the closed outline (left forward, right backward).
+  const n = pts.length;
+  const left: { x: number; y: number }[] = [];
+  const right: { x: number; y: number }[] = [];
+  for (let i = 0; i < n; i++) {
+    const prev = pts[Math.max(0, i - 1)];
+    const next = pts[Math.min(n - 1, i + 1)];
+    const len = Math.hypot(next.x - prev.x, next.y - prev.y) || 1;
+    const nx = -(next.y - prev.y) / len; // tangent rotated 90deg
+    const ny = (next.x - prev.x) / len;
+    const r = radiusAt(i);
+    left.push({ x: pts[i].x + nx * r, y: pts[i].y + ny * r });
+    right.push({ x: pts[i].x - nx * r, y: pts[i].y - ny * r });
+  }
+  ctx.beginPath();
+  ctx.moveTo(left[0].x, left[0].y);
+  for (let i = 1; i < n; i++) ctx.lineTo(left[i].x, left[i].y);
+  for (let i = n - 1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
+  ctx.closePath();
+  ctx.fill();
+  // Round end caps for pen/marker; highlighter keeps flat (chisel) ends.
+  if (node.brush.mode !== "highlighter") {
+    dot(pts[0].x, pts[0].y, radiusAt(0));
+    dot(pts[n - 1].x, pts[n - 1].y, radiusAt(n - 1));
+  }
+  done();
 }
 
 function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, boxes?: BoxMap, origin?: { x: number; y: number }): void {
@@ -558,11 +757,16 @@ function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, bo
         // Justify: spread slack across the line's whitespace segments, but never
         // on the last line of a paragraph (or a list line), matching print/CSS.
         const lastOfPara = li === lines.length - 1 || lines[li + 1].paragraph !== line.paragraph;
+        // Column-aware origin/width: when the line carries a column (multi-column
+        // text), align within that column; otherwise use the full content box, so
+        // single-column layout is numerically unchanged.
+        const colLeft = pad.l + (line.colLeft ?? 0);
+        const colW = line.colWidth ?? contentW;
         let justifyExtra = 0;
         if (line.align === "justify" && !lastOfPara && !line.marker) {
           // Stretch spaces, not tabs (tabs are positional and keep their stops).
           const ws = line.segments.filter((s) => isWs(s.text) && !isTabRun(s.text)).length;
-          const slack = (w - pad.r) - (pad.l + line.x) - lineWidth;
+          const slack = (colLeft + colW) - (colLeft + line.x) - lineWidth;
           if (ws > 0 && slack > 0) justifyExtra = slack / ws;
         }
         // Start x for the whole line, honoring alignment + the line's indent.
@@ -570,10 +774,10 @@ function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, bo
         // away from its bullet), so use the indent for list lines.
         const startX =
           line.marker || align === "left"
-            ? pad.l + line.x
+            ? colLeft + line.x
             : align === "center"
-              ? pad.l + (contentW - lineWidth) / 2
-              : w - pad.r - lineWidth;
+              ? colLeft + (colW - lineWidth) / 2
+              : colLeft + colW - lineWidth;
         // Per-line background highlight: a rounded rect hugging this line's
         // visible text (trailing whitespace trimmed), sized to the line's font.
         if (hl && hlFill) {
@@ -801,6 +1005,10 @@ function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, bo
       // when a connected node moves. Drawn in the connector's local space.
       drawConnector(ctx, node, boxes ?? {}, origin ?? { x: 0, y: 0 });
       break;
+    case "ink":
+      // Board-native ink stroke (pen/marker/highlighter) drawn in local space.
+      drawInk(ctx, node);
+      break;
     case "frame": {
       const hasFill = !!node.fills && node.fills.length > 0;
       if (hasFill) {
@@ -939,6 +1147,9 @@ function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, bo
       }
       break;
     }
+    case "stamp":
+      drawStamp(ctx, node, w, h);
+      break;
     case "group":
     case "grid":
     case "audio":
@@ -946,6 +1157,22 @@ function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, bo
     default:
       placeholderBox(ctx, w, h);
   }
+}
+
+/** Draw an emoji / vote stamp (FR-21): the glyph centered and scaled to the node
+ *  box. Emoji render via the platform emoji font; a vote marker is just its
+ *  glyph (e.g. a dot). Pure local-space, like the other leaf renderers. */
+function drawStamp(ctx: CanvasLike, node: Node, w: number, h: number): void {
+  const s = node as unknown as { glyph?: string };
+  const glyph = s.glyph || "👍";
+  const fs = Math.max(4, Math.min(w, h) * 0.82);
+  ctx.font = `${fs}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", system-ui, sans-serif`;
+  if ("textAlign" in ctx) (ctx as { textAlign: string }).textAlign = "center";
+  if ("textBaseline" in ctx) (ctx as { textBaseline: string }).textBaseline = "middle";
+  ctx.fillStyle = "#0f172a";
+  ctx.fillText(glyph, w / 2, h / 2);
+  // Restore the engine's default baseline so later glyph draws are unaffected.
+  if ("textBaseline" in ctx) (ctx as { textBaseline: string }).textBaseline = "alphabetic";
 }
 
 /** Draw a QR code from its precomputed module matrix, with a quiet-zone margin. */
@@ -1478,10 +1705,21 @@ function paint(
   parentAlpha: number,
   opts: Render2DOptions,
   boxes: BoxMap,
+  cull: { x: number; y: number; w: number; h: number; zoom: number } | null,
 ): void {
   const node = sn.node;
-  if (node.hidden || node.id === opts.skipNodeId) return;
+  if (node.hidden || node.id === opts.skipNodeId || opts.hiddenIds?.has(node.id)) return;
   const { width: w, height: h } = node.size;
+
+  // Viewport culling + LOD (FR-27): skip leaf nodes fully outside the viewport,
+  // and sub-pixel leaves when zoomed out, so render cost tracks visible detail.
+  // Containers always descend (their own box may not bound overflowing children);
+  // connectors route beyond their own box, so neither is culled here.
+  if (cull && !isContainer(node) && node.type !== "connector") {
+    const b = sn.worldBounds;
+    const offscreen = b.x > cull.x + cull.w || b.x + b.width < cull.x || b.y > cull.y + cull.h || b.y + b.height < cull.y;
+    if (offscreen || Math.max(b.width, b.height) * cull.zoom < 0.5) return;
+  }
 
   ctx.save();
   const m = fromTransform(node.transform);
@@ -1549,7 +1787,7 @@ function paint(
   }
 
   if (sn.children) {
-    for (const child of sn.children) paint(ctx, child, alpha, opts, boxes);
+    for (const child of sn.children) paint(ctx, child, alpha, opts, boxes, cull);
   }
 
   ctx.restore();
@@ -1605,7 +1843,14 @@ export function renderScene(
   const boxes: BoxMap = {};
   buildBoxMap(scene.root, boxes);
 
+  // Page-space viewport rect for culling: pan is the top-left page point, and
+  // width/zoom is the visible page span. Disabled (null) when opts.cull === false.
+  const cull =
+    opts.cull === false
+      ? null
+      : { x: viewport.panX, y: viewport.panY, w: viewport.width / viewport.zoom, h: viewport.height / viewport.zoom, zoom: viewport.zoom };
+
   if (scene.root.children) {
-    for (const child of scene.root.children) paint(ctx, child, 1, opts, boxes);
+    for (const child of scene.root.children) paint(ctx, child, 1, opts, boxes, cull);
   }
 }

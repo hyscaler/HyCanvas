@@ -66,26 +66,45 @@ export interface BenchOptions {
   frames?: number;
   /** Untimed warmup frames to prime caches/JIT (default 5). */
   warmup?: number;
+  /** Which page to render (default 0). The editor paints one page per frame. */
+  pageIndex?: number;
   /** Monotonic clock; defaults to performance.now / Date.now. */
   now?: () => number;
+}
+
+/** Scene-build (load) cost for a multi-page design: builds every page's scene
+ *  graph once and reports the total + per-page mean. This is the SCALE/load
+ *  number (a 50-page design materializes every page into the one Y.Doc today, no
+ *  subdocuments), distinct from the per-frame render cost which only touches the
+ *  open page. Like benchmarkRender it measures CPU only (no rasterizer). */
+export function benchmarkSceneBuild(file: DesignFile, opts: { now?: () => number } = {}): { pages: number; totalMs: number; perPageMs: number } {
+  const now = opts.now ?? defaultNow;
+  const pages = file.pages.length;
+  const t0 = now();
+  for (let i = 0; i < pages; i++) createScene(file, i);
+  const totalMs = now() - t0;
+  return { pages, totalMs, perPageMs: totalMs / Math.max(1, pages) };
 }
 
 const defaultNow: () => number =
   typeof performance !== "undefined" ? () => performance.now() : () => Date.now();
 
-/** Render `file` repeatedly against a null context and report frame timings. */
+/** Render `file` repeatedly against a null context and report frame timings.
+ *  Benches the page at `opts.pageIndex` (default 0); the editor only paints the
+ *  current page per frame, so this is the 60fps-relevant per-frame cost. */
 export function benchmarkRender(file: DesignFile, opts: BenchOptions = {}): BenchResult {
   const frames = opts.frames ?? 60;
   const warmup = opts.warmup ?? 5;
   const now = opts.now ?? defaultNow;
-  const page = file.pages[0];
+  const pageIndex = opts.pageIndex ?? 0;
+  const page = file.pages[pageIndex];
   const viewport: Viewport = {
     zoom: 1, panX: 0, panY: 0, dpr: 1,
     width: page?.width ?? 1920, height: page?.height ?? 1080,
     ...opts.viewport,
   };
   const ctx = createNullContext();
-  const scene = createScene(file, 0);
+  const scene = createScene(file, pageIndex);
 
   for (let i = 0; i < warmup; i++) renderScene(scene, ctx, viewport);
 

@@ -31,6 +31,21 @@ describe("poseDesignAt", () => {
     expect(file.pages[0].children[0].opacity).toBe(1);
   });
 
+  it("reveals text progressively for a typewriter entrance", () => {
+    const t = createNode("text", {
+      transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+      size: { width: 200, height: 40 },
+      content: [{ runs: [{ text: "HELLO", style: {} }], style: {} }],
+    } as unknown as Partial<Node>) as Node;
+    (t as unknown as { animation: unknown }).animation = { entrance: { preset: "typewriter", durationMs: 1000, delayMs: 0, easing: "linear" } };
+    const file = designWith(t);
+    const chars = (n: Node) => (n as unknown as { content: { runs: { text: string }[] }[] }).content[0].runs[0].text;
+    expect(chars(poseDesignAt(file, 0, 0).pages[0].children[0])).toBe("");      // nothing yet
+    expect(chars(poseDesignAt(file, 0, 600).pages[0].children[0])).toBe("HEL"); // 60% of 5 -> 3
+    expect(chars(poseDesignAt(file, 0, 1000).pages[0].children[0])).toBe("HELLO"); // full at end
+    expect(chars(file.pages[0].children[0])).toBe("HELLO"); // source untouched
+  });
+
   it("interpolates a custom keyframe track", () => {
     const n = shapeAt(10);
     (n as unknown as { animation: unknown }).animation = {

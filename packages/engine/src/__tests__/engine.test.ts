@@ -229,12 +229,37 @@ describe("scene graph and bounds", () => {
     const b = createScene(design).getBounds("a")!;
     expect(b).toMatchObject({ x: 100, y: 100, width: 50, height: 40 });
 
+    // A blur halo is ~3 standard deviations wide and `filter: blur(r)` uses r as
+    // the std-dev, so a radius-8 blur bleeds ~24px past the box on each side.
     const blurred = n("shape", { id: "b", effects: [{ kind: "blur", radius: 8 }], transform: { x: 100, y: 100, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: 50, height: 40 } });
-    expect(effectBleed(blurred)).toBe(8);
+    expect(effectBleed(blurred)).toBe(24);
     design.pages[0].children = [blurred];
     const bb = createScene(design).getBounds("b")!;
-    expect(bb.x).toBe(92);
-    expect(bb.width).toBe(66);
+    expect(bb.x).toBe(76);
+    expect(bb.width).toBe(98);
+  });
+
+  it("bounds include a glow's halo, a drop shadow's offset+blur, and a centered stroke's half-width (FR-27 culling)", () => {
+    const design = createBlankDesign();
+    // glow radius 10 renders as drop-shadow blur -> ~1.5 * radius = 15px halo.
+    const glow = n("shape", { id: "g", effects: [{ kind: "glow", color: { srgb: { r: 1, g: 1, b: 1, a: 1 } }, radius: 10 }], transform: { x: 100, y: 100, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: 50, height: 50 } });
+    design.pages[0].children = [glow];
+    const gb = createScene(design).getBounds("g")!;
+    expect(gb.x).toBe(85); // 100 - 15
+    expect(gb.width).toBe(80); // 50 + 2*15
+
+    // drop shadow: |offset| + 1.5*blur + spread on the offset side.
+    const shadow = n("shape", { id: "s", effects: [{ kind: "shadow", type: "drop", color: { srgb: { r: 0, g: 0, b: 0, a: 0.5 } }, offsetX: 4, offsetY: 0, blur: 6, spread: 0 }], transform: { x: 100, y: 100, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: 50, height: 50 } });
+    design.pages[0].children = [shadow];
+    const sb = createScene(design).getBounds("s")!;
+    expect(sb.width).toBe(76); // 50 + 2*(4 + 1.5*6) = 50 + 26
+
+    // a centered stroke bleeds out half its width even with no effects.
+    const stroked = n("shape", { id: "k", stroke: { fill: { type: "solid", color: { srgb: { r: 0, g: 0, b: 0, a: 1 } } }, width: 8, align: "center", cap: "round", join: "round" }, transform: { x: 100, y: 100, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: 50, height: 50 } });
+    design.pages[0].children = [stroked];
+    const kb = createScene(design).getBounds("k")!;
+    expect(kb.x).toBe(96); // 100 - 8/2
+    expect(kb.width).toBe(58); // 50 + 2*4
   });
 });
 
@@ -307,6 +332,27 @@ describe("hit-testing (FR-6, FR-7)", () => {
     expect(s.connectorBounds("a")).toBeNull(); // non-connector
   });
 
+  it("hit-tests and bounds a connector along its WAYPOINT route, not the un-bent line (FR-8)", () => {
+    const s = sceneWith([
+      n("connector", {
+        id: "wc",
+        route: "straight",
+        start: { point: { x: 100, y: 100 } },
+        end: { point: { x: 300, y: 100 } },
+        waypoints: [{ x: 200, y: 200 }], // a downward V via the bend
+        transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+        stroke: { fill: { type: "solid", color: { srgb: { r: 0, g: 0, b: 0, a: 1 } } }, width: 3, align: "center", cap: "round", join: "round" },
+      } as Partial<Node>),
+    ]);
+    // A click near the bend hits; the midpoint of the un-bent a->b line (200,100)
+    // is ~70px off the actual route and must NOT hit (proving waypoints are honored).
+    expect(s.hitTest({ x: 200, y: 197 })?.id).toBe("wc");
+    expect(s.hitTest({ x: 200, y: 100 })).toBeNull();
+    // Bounds enclose the bend (y reaches 200), not just the endpoints' y=100.
+    const cb = s.connectorBounds("wc")!;
+    expect(cb.y + cb.height).toBeCloseTo(200);
+  });
+
   it("skips locked nodes by default", () => {
     const s = sceneWith([
       n("shape", { id: "l", locked: true, transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: 50, height: 50 } }),
@@ -377,6 +423,113 @@ describe("Canvas2D render path (FR-1, FR-2, FR-5, AC-1)", () => {
     const ctx = new RecordingCtx();
     renderScene(createScene(d), ctx, defaultViewport(800, 600));
     expect(ctx.ops.some((o) => o.op === "fillRect")).toBe(true);
+  });
+
+  it("culls off-screen leaf nodes; cull:false paints them all (FR-27)", () => {
+    const d = createBlankDesign();
+    d.pages[0].background = undefined;
+    d.pages[0].children = [
+      n("shape", { id: "in", transform: { x: 10, y: 10, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: 50, height: 50 } }),
+      n("shape", { id: "far", transform: { x: 100000, y: 100000, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: 50, height: 50 } }),
+    ];
+    const scene = createScene(d);
+    const vp = defaultViewport(800, 600); // page rect 0..800 x 0..600 at zoom 1
+    const culled = new RecordingCtx();
+    renderScene(scene, culled, vp);
+    expect(culled.saves).toBe(1); // only the in-view shape painted
+    const all = new RecordingCtx();
+    renderScene(scene, all, vp, { cull: false });
+    expect(all.saves).toBe(2); // culling off -> both painted
+  });
+
+  it("skips nodes in opts.hiddenIds (private-mode visual hide, FR-15)", () => {
+    const d = createBlankDesign();
+    d.pages[0].background = undefined;
+    d.pages[0].children = [
+      n("shape", { id: "mine", transform: { x: 10, y: 10, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: 50, height: 50 } }),
+      n("shape", { id: "theirs", transform: { x: 80, y: 10, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: 50, height: 50 } }),
+    ];
+    const ctx = new RecordingCtx();
+    renderScene(createScene(d), ctx, defaultViewport(800, 600), { hiddenIds: new Set(["theirs"]) });
+    expect(ctx.saves).toBe(1); // the hidden node is not painted; the other is
+  });
+
+  it("queryViewport returns only leaves intersecting the rect (FR-27)", () => {
+    const d = createBlankDesign();
+    d.pages[0].children = [
+      n("shape", { id: "in", transform: { x: 10, y: 10, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: 50, height: 50 } }),
+      n("shape", { id: "far", transform: { x: 5000, y: 5000, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: 50, height: 50 } }),
+    ];
+    const scene = createScene(d);
+    expect(scene.queryViewport({ x: 0, y: 0, width: 800, height: 600 }).map((nn) => nn.id)).toEqual(["in"]);
+  });
+
+  it("draws an emoji/vote stamp's glyph centered (FR-21)", () => {
+    const d = createBlankDesign();
+    d.pages[0].background = undefined;
+    d.pages[0].children = [
+      n("stamp", {
+        id: "st",
+        transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+        size: { width: 40, height: 40 },
+        kind: "vote",
+        glyph: "🔥",
+      } as unknown as Partial<Node>),
+    ];
+    const ctx = new RecordingCtx();
+    renderScene(createScene(d), ctx, defaultViewport(800, 600));
+    expect(ctx.ops.some((o) => o.op === "fillText" && o.text === "🔥")).toBe(true);
+  });
+
+  it("draws an ink stroke as a filled ribbon and multiplies a highlighter (FR-5)", () => {
+    const d = createBlankDesign();
+    d.pages[0].background = undefined;
+    const pen = n("ink", {
+      id: "ink-pen",
+      transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+      points: [{ x: 0, y: 0, p: 0.2 }, { x: 20, y: 10, p: 0.9 }, { x: 40, y: 5, p: 0.5 }],
+      smoothing: 0.5,
+      brush: { width: 8, opacity: 1, color: { srgb: { r: 0, g: 0, b: 0, a: 1 } }, mode: "pen" },
+    });
+    const hl = n("ink", {
+      id: "ink-hl",
+      transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+      points: [{ x: 0, y: 0 }, { x: 30, y: 0 }],
+      smoothing: 0.5,
+      brush: { width: 16, opacity: 0.4, color: { srgb: { r: 1, g: 0.9, b: 0, a: 1 } }, mode: "highlighter" },
+    });
+    d.pages[0].children = [pen, hl];
+    const ctx = new RecordingCtx();
+    expect(() => renderScene(createScene(d), ctx, defaultViewport(800, 600))).not.toThrow();
+    // The ribbon is filled, and the highlighter fill ran under "multiply" at <1 alpha.
+    expect(ctx.ops.some((o) => o.op === "fill")).toBe(true);
+    const hlFill = ctx.ops.find((o) => o.op === "fill" && o.comp === "multiply");
+    expect(hlFill).toBeTruthy();
+    expect(hlFill!.alpha).toBeCloseTo(0.4, 6);
+    // The composite op is restored afterwards (no leak to later nodes).
+    expect(ctx.globalCompositeOperation).toBe("source-over");
+    expect(ctx.saves).toBe(ctx.restores);
+  });
+
+  it("routes a connector through waypoints and draws its label (FR-8)", () => {
+    const d = createBlankDesign();
+    d.pages[0].background = undefined;
+    const conn = n("connector", {
+      id: "cn",
+      transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+      route: "straight",
+      start: { point: { x: 0, y: 0 } },
+      end: { point: { x: 200, y: 0 } },
+      waypoints: [{ x: 60, y: 40 }, { x: 120, y: -30 }],
+      label: { text: "approves", position: 0.5 },
+    });
+    d.pages[0].children = [conn];
+    const ctx = new RecordingCtx();
+    renderScene(createScene(d), ctx, defaultViewport(800, 600));
+    // The polyline visited both waypoints (3 segments => at least 3 lineTo).
+    expect(ctx.ops.filter((o) => o.op === "lineTo").length).toBeGreaterThanOrEqual(3);
+    // The label text was drawn along the route.
+    expect(ctx.ops.some((o) => o.op === "fillText" && o.text === "approves")).toBe(true);
   });
 
   it("multiplies opacity through nesting and applies blend mode", () => {

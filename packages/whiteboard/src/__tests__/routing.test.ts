@@ -122,4 +122,43 @@ describe("routeConnector", () => {
     expect(a).toEqual(b);
     expect(JSON.stringify(conn)).toBe(frozen);
   });
+
+  it("straight/curved route through waypoints in order (FR-8)", () => {
+    const pts = routeConnector(
+      {
+        route: "straight",
+        start: { point: { x: 0, y: 0 } },
+        end: { point: { x: 100, y: 0 } },
+        waypoints: [{ x: 30, y: 40 }, { x: 60, y: -20 }],
+      },
+      {},
+    );
+    expect(pts).toEqual([
+      { x: 0, y: 0 },
+      { x: 30, y: 40 },
+      { x: 60, y: -20 },
+      { x: 100, y: 0 },
+    ]);
+  });
+
+  it("elbow waypoints stay orthogonal through every bend (FR-8)", () => {
+    const pts = routeConnector(
+      {
+        route: "elbow",
+        start: { point: { x: 0, y: 0 } },
+        end: { point: { x: 100, y: 60 } },
+        waypoints: [{ x: 40, y: 30 }],
+      },
+      {},
+    );
+    for (let i = 1; i < pts.length; i++) {
+      const horiz = pts[i].y === pts[i - 1].y;
+      const vert = pts[i].x === pts[i - 1].x;
+      expect(horiz || vert).toBe(true);
+    }
+    expect(pts[0]).toEqual({ x: 0, y: 0 });
+    expect(pts[pts.length - 1]).toEqual({ x: 100, y: 60 });
+    // The waypoint is visited.
+    expect(pts.some((p) => p.x === 40 && p.y === 30)).toBe(true);
+  });
 });

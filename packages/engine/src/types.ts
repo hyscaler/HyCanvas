@@ -55,6 +55,10 @@ export interface Scene {
   getSceneNode(nodeId: string): SceneNode | null;
   /** Node ids that reference a given asset (for region-invalidation, FR-11). */
   nodesUsingAsset(assetId: string): string[];
+  /** Selectable leaf nodes whose page-space AABB intersects `rect`, via a spatial
+   *  index (F30 FR-27). Sublinear; powers presence interest-management and the AI
+   *  agent's off-screen context. Excludes the page root and containers. */
+  queryViewport(rect: Rect): Node[];
 }
 
 export type RenderContextKind = "2d" | "webgl2" | "webgpu";
@@ -130,11 +134,14 @@ export interface CanvasLike {
     r1: number,
   ): CanvasGradientLike;
   createConicGradient?(startAngle: number, x: number, y: number): CanvasGradientLike;
+  /** Optional tiling pattern from an image (browser + node canvas); used for
+   *  pattern fills. Repetition is "repeat" | "repeat-x" | "repeat-y" | "no-repeat". */
+  createPattern?(image: unknown, repetition: string | null): CanvasPatternLike | null;
   /** Optional text measurement (browser/Node canvas); used for line wrapping. */
   measureText?(text: string): { width: number };
   globalAlpha: number;
   globalCompositeOperation: string;
-  fillStyle: string | CanvasGradientLike;
+  fillStyle: string | CanvasGradientLike | CanvasPatternLike;
   strokeStyle: string | CanvasGradientLike;
   lineWidth: number;
   font: string;
@@ -152,6 +159,12 @@ export interface CanvasLike {
 
 export interface CanvasGradientLike {
   addColorStop(offset: number, color: string): void;
+}
+
+export interface CanvasPatternLike {
+  /** Apply a transform (scale/rotation) to the pattern space; optional because
+   *  some headless canvases lack it (then the pattern tiles at native scale). */
+  setTransform?(matrix: unknown): void;
 }
 
 export type AssetStatus = "ready" | "loading" | "missing";
