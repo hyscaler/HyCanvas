@@ -71,6 +71,32 @@ export interface WorkspaceWithRole extends Workspace {
   role: WorkspaceRole;
 }
 
+/** A workspace member as shown in the roster (richer than authz Membership: it
+ *  joins the user's profile so the UI can render names/emails). */
+export interface WorkspaceMemberView {
+  userId: string;
+  email: string;
+  name: string;
+  avatarUrl?: string;
+  role: WorkspaceRole;
+  status: "invited" | "active" | "suspended";
+  joinedAt?: string;
+}
+
+/** A pending or accepted workspace invitation. `workspaceName` is populated for
+ *  the invitee's own view (the in-app accept/decline surface). */
+export interface WorkspaceInvitation {
+  id: string;
+  workspaceId: string;
+  workspaceName?: string;
+  email: string;
+  role: WorkspaceRole;
+  invitedBy: string;
+  expiresAt: string;
+  acceptedAt?: string | null;
+  createdAt: string;
+}
+
 export interface DesignRecord {
   id: string;
   workspaceId: string;
@@ -107,6 +133,29 @@ export interface VersionEntry {
 export interface VersionPage {
   items: VersionEntry[];
   nextCursor?: string;
+}
+
+/** One journaled realtime update from the CRDT history log (FR-9): a base64
+ *  y-protocols update frame the client folds into an ephemeral Y.Doc to scrub
+ *  history, plus its author and timestamp. */
+export interface DesignUpdateEntry {
+  seq: number;
+  authorId?: string | null;
+  /** Resolved author display name; empty when unknown. */
+  authorName?: string;
+  /** base64-encoded y-protocols sync update (message type 2). */
+  update: string;
+  createdAt: string;
+  /** True for a full-state checkpoint row that begins a compacted log: fold from
+   *  it as the base, then apply the tail deltas (FR-11). */
+  isCheckpoint?: boolean;
+}
+
+/** A forward-paginated, ascending-seq slice of the CRDT update log. */
+export interface DesignUpdatePage {
+  items: DesignUpdateEntry[];
+  /** Pass back as `afterSeq` to fetch the next page; absent when exhausted. */
+  nextSeq?: number;
 }
 
 /** A design branched from another design's history point. */
@@ -263,6 +312,56 @@ export interface AiConfigView {
   imageModel: string | null;
   baseUrl: string | null;
   hasKey: boolean;
+  /** What the configured provider can do (gates image-dependent features). */
+  capabilities: { text: boolean; image: boolean; describeImage: boolean; editImage: boolean };
+}
+
+// --- AI Creative Studio (F39) views, returned by the orchestration endpoints.
+export type AiStudioDesignType = "deck" | "doc" | "social-set" | "poster";
+export interface AiOutlineItem {
+  title: string;
+  points: string[];
+  visualRole: string;
+}
+export interface AiDesignOutline {
+  title: string;
+  theme: string;
+  pages: AiOutlineItem[];
+}
+export interface AiChartSpec {
+  chartType: string;
+  categories: string[];
+  series: { name: string; values: number[] }[];
+}
+export interface AiPlanStep {
+  action: string;
+  args: Record<string, unknown>;
+}
+export interface AiAssistantReply {
+  reply: string;
+  clarify?: string;
+  plan: AiPlanStep[];
+}
+export interface AiStyleProfile {
+  palette: string[];
+  mood: string;
+  typeFeel: string;
+  composition: string;
+}
+export interface AiSessionView {
+  id: string;
+  workspaceId: string;
+  designId: string;
+  createdAt: string;
+}
+export interface AiTurnView {
+  id: string;
+  sessionId: string;
+  role: "user" | "assistant";
+  text: string;
+  plan?: unknown;
+  provenance?: unknown;
+  createdAt: string;
 }
 
 // Org AI governance policy: provider allow/block lists + monthly token
@@ -275,14 +374,31 @@ export interface AiPolicy {
 
 // --- sharing + permissions --------------------------------------
 
-/** A per-design access grant for a member (by user id) or invitee (by email). */
+/**
+ * A per-design access grant for a member (by user id) or invitee (by email).
+ * For user-kind grants the sharing view also carries the person's display
+ * `name`/`email` so the UI can show who they are rather than a raw id.
+ */
 export interface ShareGrant {
   id: string;
   designId: string;
-  principal: { kind: "user" | "email"; id: string };
+  principal: { kind: "user" | "email"; id: string; name?: string; email?: string };
   mode: AccessMode;
   roleId?: string | null;
   invitedBy?: string | null;
+  /** Display name of the inviter, when resolvable (attribution). */
+  invitedByName?: string;
+  createdAt: string;
+}
+
+/** A pending (or resolved) request to access a design (FR-5 request access). */
+export interface AccessRequestView {
+  id: string;
+  designId: string;
+  requester: { kind: "user" | "email"; id: string; name?: string; email?: string };
+  mode: AccessMode;
+  message?: string;
+  status: "pending" | "granted" | "denied";
   createdAt: string;
 }
 
@@ -319,6 +435,8 @@ export interface DesignAccessView {
 /** Everything the Share dialog needs: the caller's access plus grants/links/roles. */
 export interface DesignSharingView {
   myAccess: DesignAccessView;
+  /** The design's creator, for owner attribution (absent if unknown). */
+  owner?: { kind: "user" | "email"; id: string; name?: string; email?: string };
   grants: ShareGrant[];
   links: ShareLinkView[];
   customRoles: CustomRoleView[];
@@ -455,6 +573,28 @@ export interface DesignApprovalView {
   actions: ApprovalActions;
 }
 
+// --- whiteboard voting (F30 FR-19/FR-20) -----------------
+
+/** A server-authoritative dot-vote round. */
+export interface WhiteboardVoteSession {
+  id: string;
+  designId: string;
+  budgetPerUser: number;
+  anonymous: boolean;
+  revealed: boolean;
+  open: boolean;
+}
+
+/** Standings for one viewer. `counts` is per node id; `mine` is the caller's own
+ *  picks; `voters` (per node) is present only when revealed and not anonymous. */
+export interface WhiteboardVoteTally {
+  session: WhiteboardVoteSession;
+  counts: Record<string, number>;
+  mine: string[];
+  remainingBudget: number;
+  voters?: Record<string, string[]>;
+}
+
 // --- activity, notifications, insights -------------------
 
 /** Every activity-feed item type. `edit` items are folded in
@@ -487,7 +627,9 @@ export interface ActivityPage {
 /** Notification types the center aggregates. */
 export type NotificationType =
   | "mention" | "reply" | "task_assign"
-  | "share" | "approval_request" | "approval_decision";
+  | "share" | "approval_request" | "approval_decision"
+  | "access_request" | "access_decision"
+  | "workspace_invite";
 
 /** An in-app notification for the bell/center (FR-13). */
 export interface NotificationView {
@@ -823,6 +965,11 @@ export class HyCanvasClient {
   logout(all = false): Promise<void> {
     return this.request("POST", "/v1/auth/logout", { all });
   }
+  /** Update the signed-in user's profile (name, avatar, locale). Pass
+   *  `avatarUrl: ""` to clear the avatar. Returns the refreshed user. */
+  updateProfile(input: { name?: string; avatarUrl?: string; locale?: string }): Promise<User> {
+    return this.request("PATCH", "/v1/me", input);
+  }
   me(): Promise<User> {
     return this.request("GET", "/v1/me");
   }
@@ -874,6 +1021,17 @@ export class HyCanvasClient {
   authProviders(): Promise<{ id: string; label: string }[]> {
     return this.request<{ providers: { id: string; label: string }[] }>("GET", "/v1/auth/providers").then((r) => r.providers);
   }
+  /** SSO status for the signed-in user: whether an OIDC identity is linked and
+   *  whether SSO is configured at all (so the UI can hide the card when it isn't).
+   *  Start the connect flow by navigating to `${baseUrl}/v1/auth/oidc/link`. */
+  oidcIdentity(): Promise<{ linked: boolean; configured: boolean }> {
+    return this.request("GET", "/v1/auth/oidc/identity");
+  }
+  /** Disconnect the caller's SSO identity. Refused (409) if SSO is their only
+   *  way to sign in (no password set), to avoid locking them out. */
+  disconnectOidc(): Promise<void> {
+    return this.request("DELETE", "/v1/auth/oidc/identity");
+  }
   /** Dev-only: read the in-memory mail outbox (404/403 in production). */
   devOutbox(): Promise<OutboxMessage[]> {
     return this.request("GET", "/v1/auth/dev/outbox");
@@ -886,14 +1044,39 @@ export class HyCanvasClient {
   createWorkspace(input: { name: string; kind?: Workspace["kind"] }): Promise<Workspace> {
     return this.request("POST", "/v1/workspaces", input);
   }
-  workspaceMembers(workspaceId: string): Promise<Membership[]> {
+  /** Permanently delete a team/org/classroom workspace and everything in it
+   *  (owner only; personal workspaces cannot be deleted). */
+  deleteWorkspace(workspaceId: string): Promise<void> {
+    return this.request("DELETE", `/v1/workspaces/${workspaceId}`);
+  }
+  workspaceMembers(workspaceId: string): Promise<WorkspaceMemberView[]> {
     return this.request("GET", `/v1/workspaces/${workspaceId}/members`);
   }
-  invite(workspaceId: string, input: { email: string; role?: WorkspaceRole }): Promise<{ invitation: unknown; token: string }> {
+  invite(workspaceId: string, input: { email: string; role?: WorkspaceRole }): Promise<{ invitation: WorkspaceInvitation; token: string }> {
     return this.request("POST", `/v1/workspaces/${workspaceId}/invitations`, input);
   }
   acceptInvitation(token: string): Promise<Membership> {
     return this.request("POST", `/v1/invitations/${encodeURIComponent(token)}/accept`, {});
+  }
+  /** The signed-in user's own pending invitations (for the in-app accept/decline surface). */
+  myInvitations(): Promise<WorkspaceInvitation[]> {
+    return this.request("GET", "/v1/invitations/mine");
+  }
+  /** Accept (true) or decline (false) one of the caller's invitations by id. */
+  respondToInvitation(invitationId: string, accept: boolean): Promise<Membership | void> {
+    return this.request("POST", `/v1/invitations/${invitationId}/respond`, { accept });
+  }
+  workspaceInvitations(workspaceId: string): Promise<WorkspaceInvitation[]> {
+    return this.request("GET", `/v1/workspaces/${workspaceId}/invitations`);
+  }
+  revokeInvitation(workspaceId: string, invitationId: string): Promise<void> {
+    return this.request("DELETE", `/v1/workspaces/${workspaceId}/invitations/${invitationId}`);
+  }
+  changeMemberRole(workspaceId: string, userId: string, role: WorkspaceRole): Promise<void> {
+    return this.request("PATCH", `/v1/workspaces/${workspaceId}/members/${userId}`, { role });
+  }
+  removeMember(workspaceId: string, userId: string): Promise<void> {
+    return this.request("DELETE", `/v1/workspaces/${workspaceId}/members/${userId}`);
   }
 
   // --- home + search ----------------------------------------------
@@ -938,6 +1121,22 @@ export class HyCanvasClient {
    *  a preview banner. */
   versionFile(id: string, versionId: string): Promise<DesignFile> {
     return this.request("GET", `/v1/designs/${id}/versions/${versionId}/file`);
+  }
+  /** The append-only CRDT update log in ascending seq order (FR-9): the raw
+   *  y-protocols frames the client folds into an ephemeral Y.Doc to scrub
+   *  history. Pass the returned `nextSeq` as `afterSeq` to page forward. */
+  designUpdates(id: string, afterSeq?: number, limit?: number): Promise<DesignUpdatePage> {
+    const q = new URLSearchParams();
+    if (afterSeq) q.set("afterSeq", String(afterSeq));
+    if (limit) q.set("limit", String(limit));
+    const qs = q.toString();
+    return this.request("GET", `/v1/designs/${id}/updates${qs ? `?${qs}` : ""}`);
+  }
+  /** Journal a CRDT full-state checkpoint and compact the update log (FR-11):
+   *  older rows are deleted server-side, so the log stays bounded. `update` is a
+   *  base64 y-protocols update frame from the live Y.Doc (encodeStateAsUpdate). */
+  checkpointDesign(id: string, update: string): Promise<void> {
+    return this.request("POST", `/v1/designs/${id}/updates/checkpoint`, { update });
   }
   /** Restore a prior version as a NEW snapshot (kind 'restore'), making it the
    *  current state without discarding anything. Distinct from
@@ -989,12 +1188,16 @@ export class HyCanvasClient {
   createShareLink(designId: string, input: { mode: AccessMode; password?: string; expiresAt?: string; requireSignin?: boolean }): Promise<ShareLinkView> {
     return this.request("POST", `/v1/designs/${designId}/links`, input);
   }
-  updateShareLink(linkId: string, patch: { mode?: AccessMode; disabled?: boolean; expiresAt?: string | null }): Promise<ShareLinkView> {
+  updateShareLink(linkId: string, patch: { mode?: AccessMode; disabled?: boolean; expiresAt?: string | null; requireSignin?: boolean }): Promise<ShareLinkView> {
     return this.request("PATCH", `/v1/links/${linkId}`, patch);
   }
   /** Rotate a link's token: the old URL stops working (FR-6). */
   rotateShareLink(linkId: string): Promise<ShareLinkView> {
     return this.request("POST", `/v1/links/${linkId}/rotate`, {});
+  }
+  /** Permanently delete a share link; its URL stops resolving (FR-6). */
+  deleteShareLink(linkId: string): Promise<void> {
+    return this.request("DELETE", `/v1/links/${linkId}`);
   }
   /** PUBLIC: resolve a share link by token (FR-6, FR-15). No account needed for a
    *  view/comment link. Throws ApiError 404 (missing/disabled), 410 (expired), or
@@ -1024,6 +1227,23 @@ export class HyCanvasClient {
   /** Assign a custom role to a member on a design at a mode floor (FR-8). */
   assignCustomRole(designId: string, input: { targetUserId: string; roleId: string; mode?: AccessMode }): Promise<ShareGrant> {
     return this.request("POST", `/v1/designs/${designId}/role-assignments`, input);
+  }
+  /** Request access to a design the caller cannot open; notifies its
+   *  owners/admins. Throws ApiError 400 if the caller already has that access. */
+  requestAccess(designId: string, input: { mode?: AccessMode; message?: string } = {}): Promise<AccessRequestView> {
+    return this.request("POST", `/v1/designs/${designId}/access-requests`, input);
+  }
+  /** List pending access requests for a design (requires the `share` capability). */
+  listAccessRequests(designId: string): Promise<AccessRequestView[]> {
+    return this.request("GET", `/v1/designs/${designId}/access-requests`);
+  }
+  /** Approve a pending access request, creating a grant (optionally at a chosen mode). */
+  approveAccessRequest(requestId: string, mode?: AccessMode): Promise<AccessRequestView> {
+    return this.request("POST", `/v1/access-requests/${requestId}/approve`, mode ? { mode } : {});
+  }
+  /** Deny a pending access request. */
+  denyAccessRequest(requestId: string): Promise<AccessRequestView> {
+    return this.request("POST", `/v1/access-requests/${requestId}/deny`, {});
   }
 
   // --- comments + tasks -----------------------------------
@@ -1095,6 +1315,25 @@ export class HyCanvasClient {
    *  By owner/admin or a selected approver. */
   reopenApproval(approvalId: string): Promise<DesignApprovalView> {
     return this.request("POST", `/v1/approvals/${approvalId}/reopen`, {});
+  }
+
+  // --- whiteboard server-authoritative voting (F30 FR-19/FR-20) -------------
+  /** Open a dot-vote round on a board (facilitator/edit only). */
+  openVoteSession(designId: string, input: { budgetPerUser: number; anonymous: boolean }): Promise<WhiteboardVoteSession> {
+    return this.request("POST", `/v1/designs/${designId}/whiteboard/sessions`, input);
+  }
+  /** Close/reopen and/or reveal a vote session (facilitator/edit only). */
+  setVoteSessionState(designId: string, sessionId: string, input: { open: boolean; revealed: boolean }): Promise<WhiteboardVoteSession> {
+    return this.request("POST", `/v1/designs/${designId}/whiteboard/sessions/${sessionId}/state`, input);
+  }
+  /** Current standings for a session (view level; anonymity/reveal enforced server-side). */
+  getVoteTally(designId: string, sessionId: string): Promise<WhiteboardVoteTally> {
+    return this.request("GET", `/v1/designs/${designId}/whiteboard/sessions/${sessionId}`);
+  }
+  /** Toggle the caller's dot-vote on a node (comment level). 409 when closed or
+   *  over budget. Returns the refreshed tally for the caller. */
+  castVote(designId: string, input: { sessionId: string; nodeId: string }): Promise<WhiteboardVoteTally> {
+    return this.request("POST", `/v1/designs/${designId}/whiteboard/votes`, input);
   }
 
   // --- activity log --------------------------------
@@ -1326,6 +1565,55 @@ export class HyCanvasClient {
    *  is allowed). Returns the result image as a data URL (or remote URL). */
   aiEditImage(input: { workspaceId: string; imageBase64: string; prompt: string; maskBase64?: string; size?: string }): Promise<{ image: string }> {
     return this.request("POST", "/v1/ai/image/edit", input);
+  }
+
+  // --- AI Creative Studio (F39): server-side orchestration -----------
+  // These call the AI proxy server-side with schema validation + retry, so the
+  // client gets clean, typed objects (FR-12). The deterministic layout still
+  // happens client-side from the returned outline/specs.
+
+  /** Generate + validate a multi-page design outline (FR-2). */
+  aiOutline(input: { workspaceId: string; designType: AiStudioDesignType; prompt: string; brandClause?: string; pageCount?: number }): Promise<AiDesignOutline> {
+    return this.request("POST", "/v1/ai/outline", input);
+  }
+  /** Generate a polished design as a job (outline + per-page copy). Poll getJob;
+   *  the result is an AiDesignOutline to lay out (FR-1/FR-25). */
+  aiGenerateDesign(input: { workspaceId: string; designType: AiStudioDesignType; prompt: string; brandClause?: string; pageCount?: number }): Promise<{ jobId: string }> {
+    return this.request("POST", "/v1/ai/generate-design", input);
+  }
+  /** Generate N distinct outline options as a job (FR-4). Result: {variations}. */
+  aiVariations(input: { workspaceId: string; designType: AiStudioDesignType; prompt: string; brandClause?: string; count?: number }): Promise<{ jobId: string }> {
+    return this.request("POST", "/v1/ai/variations", input);
+  }
+  /** Validate a chart spec from a data description (FR-21). */
+  aiChart(input: { workspaceId: string; description: string }): Promise<AiChartSpec> {
+    return this.request("POST", "/v1/ai/chart", input);
+  }
+  /** Run one agentic assistant turn: a validated plan or a clarifying question
+   *  (FR-6/7/10). The client executes the plan and re-validates arg types. */
+  aiAssistant(input: { workspaceId: string; designSummary: string; history?: string; message: string }): Promise<AiAssistantReply> {
+    return this.request("POST", "/v1/ai/assistant", input);
+  }
+  /** Extract a style profile from a reference for style transfer (FR-18). */
+  aiStyleProfile(input: { workspaceId: string; referenceText?: string; seedPalette?: string[] }): Promise<AiStyleProfile> {
+    return this.request("POST", "/v1/ai/style-profile", input);
+  }
+  /** AI design-critique suggestions for a posted design summary (FR-15). */
+  aiCritique(input: { workspaceId: string; designSummary: string }): Promise<{ suggestions: string }> {
+    return this.request("POST", "/v1/ai/critique", input);
+  }
+  // Session history (FR-9 / FR-27).
+  listAiSessions(designId: string): Promise<{ sessions: AiSessionView[] }> {
+    return this.request("GET", `/v1/designs/${designId}/ai-sessions`);
+  }
+  createAiSession(designId: string): Promise<AiSessionView> {
+    return this.request("POST", `/v1/designs/${designId}/ai-sessions`);
+  }
+  listAiTurns(designId: string, sessionId: string): Promise<{ turns: AiTurnView[] }> {
+    return this.request("GET", `/v1/designs/${designId}/ai-sessions/${sessionId}/turns`);
+  }
+  appendAiTurn(designId: string, sessionId: string, turn: { role: "user" | "assistant"; text: string; plan?: unknown; provenance?: unknown }): Promise<AiTurnView> {
+    return this.request("POST", `/v1/designs/${designId}/ai-sessions/${sessionId}/turns`, turn);
   }
 
   // --- uploads + asset organization -------------------------------
