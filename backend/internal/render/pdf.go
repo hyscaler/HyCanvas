@@ -57,7 +57,10 @@ func pn(n float64) string {
 }
 
 // pdfCtx accumulates the page content stream.
-type pdfCtx struct{ buf bytes.Buffer }
+type pdfCtx struct {
+	buf   bytes.Buffer
+	boxes map[string]rbox // page node world-boxes, for connector endpoint routing
+}
 
 func (c *pdfCtx) op(s string) { c.buf.WriteString(s); c.buf.WriteByte('\n') }
 
@@ -309,8 +312,13 @@ func (c *pdfCtx) emitNode(node map[string]any) {
 		return
 	}
 	c.op("q")
-	// Apply the node transform matrix (same a b c d e f as the SVG matrix).
+	// Apply the node transform matrix (same a b c d e f as the SVG matrix). A
+	// connector is drawn from connectorPoints in absolute PAGE space, so it must
+	// NOT be re-transformed by its own matrix (mirrors the engine); use identity.
 	a, b, cc, d, e, f := transformMatrix(node)
+	if asStr(node["type"]) == "connector" {
+		a, b, cc, d, e, f = 1, 0, 0, 1, 0, 0
+	}
 	c.op(pn(a) + " " + pn(b) + " " + pn(cc) + " " + pn(d) + " " + pn(e) + " " + pn(f) + " cm")
 	switch asStr(node["type"]) {
 	case "shape":
@@ -321,12 +329,135 @@ func (c *pdfCtx) emitNode(node map[string]any) {
 		c.lineBody(node)
 	case "text":
 		c.textBody(node)
+	case "ink":
+		c.inkBody(node)
+	case "sticky":
+		c.stickyBody(node)
+	case "connector":
+		c.connectorBody(node)
 	case "group", "frame", "grid":
 		for _, ch := range childrenOf(node) {
 			c.emitNode(asObj(ch))
 		}
 	}
 	c.op("Q")
+}
+
+// --- F30 board nodes (PDF has no alpha, so ink opacity is approximated opaque) ---
+
+func (c *pdfCtx) inkBody(node map[string]any) {
+	pts := inkPoints(node)
+	if len(pts) == 0 {
+		return
+	}
+	col, width, _, _ := inkBrush(node)
+	if !col.ok {
+		return
+	}
+	if len(pts) == 1 {
+		c.op(pn(col.r) + " " + pn(col.g) + " " + pn(col.b) + " rg")
+		c.op(pn(pts[0][0]-width/2) + " " + pn(pts[0][1]-width/2) + " " + pn(width) + " " + pn(width) + " re")
+		c.op("f")
+		return
+	}
+	c.op(pn(col.r) + " " + pn(col.g) + " " + pn(col.b) + " RG")
+	c.op(pn(width) + " w")
+	c.op("1 J")
+	c.op("1 j")
+	c.op(pn(pts[0][0]) + " " + pn(pts[0][1]) + " m")
+	for i := 1; i < len(pts); i++ {
+		c.op(pn(pts[i][0]) + " " + pn(pts[i][1]) + " l")
+	}
+	c.op("S")
+}
+
+func (c *pdfCtx) stickyBody(node map[string]any) {
+	w, h := sizeOf(node)
+	if fc := pdfPaint(asObj(node["fill"])); fc.ok {
+		c.op(pn(fc.r) + " " + pn(fc.g) + " " + pn(fc.b) + " rg")
+		c.op("0 0 " + pn(w) + " " + pn(h) + " re")
+		c.op("f")
+	}
+	text := asStr(node["text"])
+	if text == "" {
+		return
+	}
+	fontPx := 20.0
+	if fs := asNum(node["fontScale"]); fs > 0 {
+		fontPx = 20 * fs
+	}
+	pad := 12.0
+	tc := colorComponents(asObj(node["textColor"]))
+	if !tc.ok {
+		tc = pdfColor{ok: true}
+	}
+	fnt := selectFont(asStr(node["fontFamily"]), "", false, false)
+	lineH := fontPx * 1.25
+	lines := wrapStickyLines(text, w-pad*2, fontPx)
+	y := math.Max(pad, (h-float64(len(lines))*lineH)/2) + fontPx
+	for _, ln := range lines {
+		if y > h {
+			break
+		}
+		c.op("BT")
+		c.op(pn(tc.r) + " " + pn(tc.g) + " " + pn(tc.b) + " rg")
+		c.op("/" + fnt.key + " " + pn(fontPx) + " Tf")
+		c.op("1 0 0 -1 " + pn(pad) + " " + pn(y) + " Tm")
+		c.op("(" + pdfEscapeText(ln) + ") Tj")
+		c.op("ET")
+		y += lineH
+	}
+}
+
+func (c *pdfCtx) fillTriangle(tri [][2]float64, col pdfColor) {
+	if len(tri) != 3 {
+		return
+	}
+	c.op(pn(col.r) + " " + pn(col.g) + " " + pn(col.b) + " rg")
+	c.op(pn(tri[0][0]) + " " + pn(tri[0][1]) + " m")
+	c.op(pn(tri[1][0]) + " " + pn(tri[1][1]) + " l")
+	c.op(pn(tri[2][0]) + " " + pn(tri[2][1]) + " l")
+	c.op("h")
+	c.op("f")
+}
+
+func (c *pdfCtx) connectorBody(node map[string]any) {
+	pts := connectorPoints(node, c.boxes)
+	if len(pts) < 2 {
+		return
+	}
+	col := connectorStrokeColor(node)
+	width := connectorStrokeWidth(node)
+	c.op(pn(col.r) + " " + pn(col.g) + " " + pn(col.b) + " RG")
+	c.op(pn(width) + " w")
+	c.op("1 J")
+	c.op("1 j")
+	c.op(pn(pts[0][0]) + " " + pn(pts[0][1]) + " m")
+	for i := 1; i < len(pts); i++ {
+		c.op(pn(pts[i][0]) + " " + pn(pts[i][1]) + " l")
+	}
+	c.op("S")
+	if capIs(node, "endCap", "arrow") {
+		c.fillTriangle(arrowHead(pts[len(pts)-2], pts[len(pts)-1], width), col)
+	}
+	if capIs(node, "startCap", "arrow") {
+		c.fillTriangle(arrowHead(pts[1], pts[0], width), col)
+	}
+	if txt, pos := connectorLabel(node); txt != "" {
+		at := pointAlong(pts, pos)
+		fontPx := 12.0
+		fnt := selectFont("", "", false, false)
+		tw := textAdvance(fnt, txt, fontPx, 0)
+		c.op("1 1 1 rg")
+		c.op(pn(at[0]-tw/2-5) + " " + pn(at[1]-9) + " " + pn(tw+10) + " 18 re")
+		c.op("f")
+		c.op("BT")
+		c.op("0.2 0.255 0.333 rg")
+		c.op("/" + fnt.key + " " + pn(fontPx) + " Tf")
+		c.op("1 0 0 -1 " + pn(at[0]-tw/2) + " " + pn(at[1]+4) + " Tm")
+		c.op("(" + pdfEscapeText(txt) + ") Tj")
+		c.op("ET")
+	}
 }
 
 // transformMatrix returns the 2D affine components (mirrors matrixAttr).
@@ -364,7 +495,7 @@ func ToPDF(file Design, pageIndex int) ([]byte, error) {
 	page := asObj(pages[pageIndex])
 	w, h := asNum(page["width"]), asNum(page["height"])
 
-	c := &pdfCtx{}
+	c := &pdfCtx{boxes: pageBoxMap(page)}
 	// Flip to design space (top-left origin, y-down).
 	c.op("1 0 0 -1 0 " + pn(h) + " cm")
 	// Background.

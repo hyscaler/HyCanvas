@@ -55,6 +55,7 @@ func alphaOf(color map[string]any) float64 {
 type svgCtx struct {
 	defs   []string
 	gradID int
+	boxes  map[string]rbox // page node world-boxes, for connector endpoint routing
 }
 
 type paint struct {
@@ -358,13 +359,124 @@ func imageBody(file Design, node map[string]any) string {
 	return `<image x="0" y="0" width="` + num(w) + `" height="` + num(h) + `" preserveAspectRatio="none" href="` + esc(href) + `"/>`
 }
 
+// --- F30 board nodes --------------------------------------------------------
+
+func (c *svgCtx) inkBody(node map[string]any) string {
+	pts := inkPoints(node)
+	if len(pts) == 0 {
+		return ""
+	}
+	col, width, opacity, mode := inkBrush(node)
+	style := ""
+	if mode == "highlighter" {
+		style = ` style="mix-blend-mode:multiply"`
+	}
+	if len(pts) == 1 {
+		return `<circle cx="` + num(pts[0][0]) + `" cy="` + num(pts[0][1]) + `" r="` + num(width/2) + `" fill="` + pdfRGBString(col) + `" fill-opacity="` + num(opacity) + `"` + style + `/>`
+	}
+	parts := make([]string, len(pts))
+	for i, p := range pts {
+		parts[i] = num(p[0]) + "," + num(p[1])
+	}
+	return `<polyline points="` + strings.Join(parts, " ") + `" fill="none" stroke="` + pdfRGBString(col) + `" stroke-width="` + num(width) + `" stroke-opacity="` + num(opacity) + `" stroke-linecap="round" stroke-linejoin="round"` + style + `/>`
+}
+
+func (c *svgCtx) stickyBody(node map[string]any) string {
+	w, h := sizeOf(node)
+	var b strings.Builder
+	fillP := c.paintOf(asObj(node["fill"]))
+	fo := ""
+	if fillP.opacity < 1 {
+		fo = ` fill-opacity="` + num(fillP.opacity) + `"`
+	}
+	b.WriteString(`<rect x="0" y="0" width="` + num(w) + `" height="` + num(h) + `" rx="2" fill="` + fillP.ref + `"` + fo + `/>`)
+	text := asStr(node["text"])
+	if text != "" {
+		fontPx := 20.0
+		if fs := asNum(node["fontScale"]); fs > 0 {
+			fontPx = 20 * fs
+		}
+		pad := 12.0
+		fill := "rgb(0,0,0)"
+		if tc := colorComponents(asObj(node["textColor"])); tc.ok {
+			fill = pdfRGBString(tc)
+		}
+		family := "sans-serif"
+		if f := asStr(node["fontFamily"]); f != "" {
+			family = f
+		}
+		anchor, tx := "start", pad
+		switch asStr(node["align"]) {
+		case "center":
+			anchor, tx = "middle", w/2
+		case "right":
+			anchor, tx = "end", w-pad
+		}
+		lineH := fontPx * 1.25
+		lines := wrapStickyLines(text, w-pad*2, fontPx)
+		y := math.Max(pad, (h-float64(len(lines))*lineH)/2) + fontPx
+		for _, ln := range lines {
+			if y > h {
+				break
+			}
+			b.WriteString(`<text x="` + num(tx) + `" y="` + num(y) + `" font-family="` + esc(family) + `" font-size="` + num(fontPx) + `" fill="` + fill + `" text-anchor="` + anchor + `">` + esc(ln) + `</text>`)
+			y += lineH
+		}
+	}
+	return b.String()
+}
+
+func svgArrow(from, to [2]float64, width float64, col pdfColor) string {
+	tri := arrowHead(from, to, width)
+	if tri == nil {
+		return ""
+	}
+	pts := num(tri[0][0]) + "," + num(tri[0][1]) + " " + num(tri[1][0]) + "," + num(tri[1][1]) + " " + num(tri[2][0]) + "," + num(tri[2][1])
+	return `<polygon points="` + pts + `" fill="` + pdfRGBString(col) + `"/>`
+}
+
+func (c *svgCtx) connectorBody(node map[string]any) string {
+	pts := connectorPoints(node, c.boxes)
+	if len(pts) < 2 {
+		return ""
+	}
+	col := connectorStrokeColor(node)
+	width := connectorStrokeWidth(node)
+	parts := make([]string, len(pts))
+	for i, p := range pts {
+		parts[i] = num(p[0]) + "," + num(p[1])
+	}
+	var b strings.Builder
+	b.WriteString(`<polyline points="` + strings.Join(parts, " ") + `" fill="none" stroke="` + pdfRGBString(col) + `" stroke-width="` + num(width) + `" stroke-linecap="round" stroke-linejoin="round"/>`)
+	if capIs(node, "endCap", "arrow") {
+		b.WriteString(svgArrow(pts[len(pts)-2], pts[len(pts)-1], width, col))
+	}
+	if capIs(node, "startCap", "arrow") {
+		b.WriteString(svgArrow(pts[1], pts[0], width, col))
+	}
+	if txt, pos := connectorLabel(node); txt != "" {
+		at := pointAlong(pts, pos)
+		tw := float64(len(txt)) * 12 * 0.55
+		b.WriteString(`<rect x="` + num(at[0]-tw/2-5) + `" y="` + num(at[1]-9) + `" width="` + num(tw+10) + `" height="18" rx="4" fill="rgb(255,255,255)" fill-opacity="0.92"/>`)
+		b.WriteString(`<text x="` + num(at[0]) + `" y="` + num(at[1]+4) + `" font-family="sans-serif" font-size="12" fill="rgb(51,65,85)" text-anchor="middle">` + esc(txt) + `</text>`)
+	}
+	return b.String()
+}
+
 func childrenOf(node map[string]any) []any { return asArr(node["children"]) }
 
 func (c *svgCtx) emitNode(file Design, node map[string]any) string {
 	if asBool(node["hidden"]) {
 		return ""
 	}
-	open := `<g data-oc-id="` + esc(asStr(node["id"])) + `" transform="` + matrixAttr(node) + `"`
+	// A connector's body is drawn from connectorPoints in absolute PAGE space, so
+	// it must NOT be re-transformed by the node's own matrix (mirrors the engine,
+	// which cancels the connector world transform). Use identity for connectors.
+	tfm := matrixAttr(node)
+	if asStr(node["type"]) == "connector" {
+		tfm = "matrix(1,0,0,1,0,0)"
+	}
+	open := `<g data-oc-id="` + esc(asStr(node["id"])) + `" transform="` + tfm + `"`
 	if op, ok := node["opacity"].(float64); ok && op < 1 {
 		open += ` opacity="` + num(op) + `"`
 	}
@@ -382,6 +494,12 @@ func (c *svgCtx) emitNode(file Design, node map[string]any) string {
 		body = c.textBody(node)
 	case "image":
 		body = imageBody(file, node)
+	case "ink":
+		body = c.inkBody(node)
+	case "sticky":
+		body = c.stickyBody(node)
+	case "connector":
+		body = c.connectorBody(node)
 	case "group", "frame", "grid":
 		var sb strings.Builder
 		for _, ch := range childrenOf(node) {
@@ -402,7 +520,7 @@ func ToSVG(file Design, pageIndex int) (string, error) {
 	}
 	page := asObj(pages[pageIndex])
 	w, h := asNum(page["width"]), asNum(page["height"])
-	c := &svgCtx{}
+	c := &svgCtx{boxes: pageBoxMap(page)}
 
 	bg := ""
 	if bgFill := asObj(page["background"]); bgFill != nil {

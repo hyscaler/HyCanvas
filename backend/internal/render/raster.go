@@ -4,9 +4,9 @@
 // scale matrix yields the requested output resolution and each node's transform
 // composes onto it.
 //
-// Fidelity notes (v1, documented vs the browser @hc/engine): gradient fills
-// rasterize as their first stop color (flat); shape strokes are not stroked
-// (line nodes are drawn as thick quads); text uses the embedded Go font
+// Fidelity notes (v1, documented vs the browser @hc/engine): linear & radial
+// gradient fills are rasterized (objectBoundingBox, per-pixel); shape strokes are
+// not stroked (line nodes are drawn as thick quads); text uses the embedded Go font
 // (goregular), positioned by translation+scale (rotation not applied to glyphs)
 // - so text is legible and placed but not glyph-identical to the editor. Vector
 // fills, colors, and transforms are faithful.
@@ -72,14 +72,40 @@ func rasterColor(c pdfColor, alpha float64) color.RGBA {
 
 // rctx carries the rasterization target.
 type rctx struct {
-	dst  *image.RGBA
-	w, h int
-	font *opentype.Font
+	dst   *image.RGBA
+	w, h  int
+	font  *opentype.Font
+	boxes map[string]rbox // page node world-boxes, for connector endpoint routing
+	base  mat             // output-scale matrix (page->device), for page-space connectors
+}
+
+func avgScale(m mat) float64 { return (math.Hypot(m.a, m.b) + math.Hypot(m.c, m.d)) / 2 }
+
+// fillDot fills a small octagon at a device point (round-ish stroke join/cap).
+func (rc *rctx) fillDot(cx, cy, r float64, col color.RGBA) {
+	if r <= 0 || col.A == 0 {
+		return
+	}
+	pts := make([][2]float64, 8)
+	for i := 0; i < 8; i++ {
+		a := float64(i) * math.Pi / 4
+		pts[i] = [2]float64{cx + math.Cos(a)*r, cy + math.Sin(a)*r}
+	}
+	rc.fillPath(pts, col)
 }
 
 // fillPath rasterizes a closed polygon (device-space points) with a flat color.
 func (rc *rctx) fillPath(pts [][2]float64, col color.RGBA) {
-	if col.A == 0 || len(pts) < 2 {
+	if col.A == 0 {
+		return
+	}
+	rc.fillPathSrc(pts, image.NewUniform(col))
+}
+
+// fillPathSrc rasterizes a closed polygon using an arbitrary paint source (flat
+// color or gradient), sampled under the path's coverage mask.
+func (rc *rctx) fillPathSrc(pts [][2]float64, src image.Image) {
+	if len(pts) < 2 {
 		return
 	}
 	r := vector.NewRasterizer(rc.w, rc.h)
@@ -88,7 +114,25 @@ func (rc *rctx) fillPath(pts [][2]float64, col color.RGBA) {
 		r.LineTo(float32(p[0]), float32(p[1]))
 	}
 	r.ClosePath()
-	r.Draw(rc.dst, rc.dst.Bounds(), image.NewUniform(col), image.Point{})
+	r.Draw(rc.dst, rc.dst.Bounds(), src, image.Point{})
+}
+
+func firstFill(node map[string]any) map[string]any {
+	fills := asArr(node["fills"])
+	if len(fills) == 0 {
+		return nil
+	}
+	return asObj(fills[0])
+}
+
+// fillPolyPaint fills a device-space polygon with a fill that may be a gradient
+// (linear/radial) or a solid color; an unusable fill draws nothing.
+func (rc *rctx) fillPolyPaint(pts [][2]float64, fill map[string]any) {
+	if g := parseGradient(fill); g.ok {
+		rc.fillPathSrc(pts, g.source(bboxOf(pts), rc.dst.Bounds()))
+		return
+	}
+	rc.fillPath(pts, rasterColor(pdfPaint(fill), 1))
 }
 
 // fillCubic rasterizes a path of cubic segments (device-space) with a flat color.
@@ -97,13 +141,19 @@ func (rc *rctx) fillBeziers(start [2]float64, cubics [][3][2]float64, col color.
 	if col.A == 0 {
 		return
 	}
+	rc.fillBeziersSrc(start, cubics, image.NewUniform(col))
+}
+
+// fillBeziersSrc rasterizes a closed cubic path with an arbitrary paint source
+// (flat color or gradient), sampled under the path's coverage mask.
+func (rc *rctx) fillBeziersSrc(start [2]float64, cubics [][3][2]float64, src image.Image) {
 	r := vector.NewRasterizer(rc.w, rc.h)
 	r.MoveTo(float32(start[0]), float32(start[1]))
 	for _, c := range cubics {
 		r.CubeTo(float32(c[0][0]), float32(c[0][1]), float32(c[1][0]), float32(c[1][1]), float32(c[2][0]), float32(c[2][1]))
 	}
 	r.ClosePath()
-	r.Draw(rc.dst, rc.dst.Bounds(), image.NewUniform(col), image.Point{})
+	r.Draw(rc.dst, rc.dst.Bounds(), src, image.Point{})
 }
 
 func transformPts(m mat, pts [][2]float64) [][2]float64 {
@@ -125,20 +175,20 @@ func fillColorOf(node map[string]any) pdfColor {
 
 func (rc *rctx) rasterShape(m mat, node map[string]any) {
 	w, h := sizeOf(node)
-	col := rasterColor(fillColorOf(node), 1)
+	fill := firstFill(node)
 	switch asStr(node["shape"]) {
 	case "rect":
-		rc.fillPath(transformPts(m, [][2]float64{{0, 0}, {w, 0}, {w, h}, {0, h}}), col)
+		rc.fillPolyPaint(transformPts(m, [][2]float64{{0, 0}, {w, 0}, {w, h}, {0, h}}), fill)
 	case "ellipse":
-		rc.rasterEllipse(m, w, h, col)
+		rc.rasterEllipse(m, w, h, fill)
 	case "polygon":
 		sides := int(asNum(node["sides"]))
 		if sides == 0 {
 			sides = 3
 		}
-		rc.fillPath(transformPts(m, polygonPoints(w, h, sides)), col)
+		rc.fillPolyPaint(transformPts(m, polygonPoints(w, h, sides)), fill)
 	case "triangle":
-		rc.fillPath(transformPts(m, polygonPoints(w, h, 3)), col)
+		rc.fillPolyPaint(transformPts(m, polygonPoints(w, h, 3)), fill)
 	case "star":
 		pts := int(asNum(node["sides"]))
 		if pts == 0 {
@@ -148,11 +198,11 @@ func (rc *rctx) rasterShape(m mat, node map[string]any) {
 		if ir == 0 {
 			ir = 0.5
 		}
-		rc.fillPath(transformPts(m, starPoints(w, h, pts, ir)), col)
+		rc.fillPolyPaint(transformPts(m, starPoints(w, h, pts, ir)), fill)
 	}
 }
 
-func (rc *rctx) rasterEllipse(m mat, w, h float64, col color.RGBA) {
+func (rc *rctx) rasterEllipse(m mat, w, h float64, fill map[string]any) {
 	rx, ry, cx, cy := w/2, h/2, w/2, h/2
 	const k = 0.5522847498
 	ox, oy := rx*k, ry*k
@@ -164,7 +214,17 @@ func (rc *rctx) rasterEllipse(m mat, w, h float64, col color.RGBA) {
 		{tp(cx+rx, cy-oy), tp(cx+ox, cy-ry), tp(cx, cy-ry)},
 		{tp(cx-ox, cy-ry), tp(cx-rx, cy-oy), tp(cx-rx, cy)},
 	}
-	rc.fillBeziers(start, cubics, col)
+	// Gradient-fill the ellipse like the polygon shapes (its bounding box drives
+	// the gradient extent); otherwise a flat color.
+	if g := parseGradient(fill); g.ok {
+		pts := [][2]float64{start}
+		for _, c := range cubics {
+			pts = append(pts, c[0], c[1], c[2])
+		}
+		rc.fillBeziersSrc(start, cubics, g.source(bboxOf(pts), rc.dst.Bounds()))
+		return
+	}
+	rc.fillBeziers(start, cubics, rasterColor(pdfPaint(fill), 1))
 }
 
 func (rc *rctx) rasterPath(m mat, node map[string]any) {
@@ -308,9 +368,145 @@ func (rc *rctx) rasterNode(m mat, node map[string]any) {
 		rc.rasterLine(cm, node)
 	case "text":
 		rc.rasterText(cm, node)
+	case "ink":
+		rc.rasterInk(cm, node)
+	case "sticky":
+		rc.rasterSticky(cm, node)
+	case "connector":
+		rc.rasterConnector(node)
 	case "group", "frame", "grid":
 		for _, ch := range childrenOf(node) {
 			rc.rasterNode(cm, asObj(ch))
+		}
+	}
+}
+
+// rasterInk fills the ink stroke as a single variable-offset ribbon (one fill, so
+// a semi-transparent marker/highlighter does not double-darken at joins), mirror-
+// ing the engine's drawInk.
+func (rc *rctx) rasterInk(m mat, node map[string]any) {
+	pts := transformPts(m, inkPoints(node))
+	if len(pts) == 0 {
+		return
+	}
+	col, width, opacity, mode := inkBrush(node)
+	c := rasterColor(col, opacity)
+	if c.A == 0 {
+		return
+	}
+	hw := math.Max(0.5, width*avgScale(m)/2)
+	if len(pts) == 1 {
+		rc.fillDot(pts[0][0], pts[0][1], hw, c)
+		return
+	}
+	n := len(pts)
+	left := make([][2]float64, n)
+	right := make([][2]float64, n)
+	for i := 0; i < n; i++ {
+		prev := pts[max(0, i-1)]
+		next := pts[min(n-1, i+1)]
+		length := math.Hypot(next[0]-prev[0], next[1]-prev[1])
+		if length == 0 {
+			length = 1
+		}
+		nx := -(next[1] - prev[1]) / length
+		ny := (next[0] - prev[0]) / length
+		left[i] = [2]float64{pts[i][0] + nx*hw, pts[i][1] + ny*hw}
+		right[i] = [2]float64{pts[i][0] - nx*hw, pts[i][1] - ny*hw}
+	}
+	poly := make([][2]float64, 0, n*2)
+	poly = append(poly, left...)
+	for i := n - 1; i >= 0; i-- {
+		poly = append(poly, right[i])
+	}
+	rc.fillPath(poly, c)
+	// Round end caps for pen/marker (the engine does the same); highlighter keeps
+	// flat chisel ends. Skipped for translucent ink to avoid double-darkening tips.
+	if mode != "highlighter" && opacity >= 1 {
+		rc.fillDot(pts[0][0], pts[0][1], hw, c)
+		rc.fillDot(pts[n-1][0], pts[n-1][1], hw, c)
+	}
+}
+
+func (rc *rctx) rasterSticky(m mat, node map[string]any) {
+	w, h := sizeOf(node)
+	rc.fillPath(transformPts(m, [][2]float64{{0, 0}, {w, 0}, {w, h}, {0, h}}), rasterColor(pdfPaint(asObj(node["fill"])), 1))
+	text := asStr(node["text"])
+	if text == "" {
+		return
+	}
+	fontPx := 20.0
+	if fs := asNum(node["fontScale"]); fs > 0 {
+		fontPx = 20 * fs
+	}
+	pad := 12.0
+	tc := colorComponents(asObj(node["textColor"]))
+	if !tc.ok {
+		tc = pdfColor{ok: true}
+	}
+	face, err := opentype.NewFace(rc.font, &opentype.FaceOptions{Size: fontPx * avgScale(m), DPI: 72, Hinting: font.HintingFull})
+	if err != nil {
+		return
+	}
+	defer face.Close()
+	lineH := fontPx * 1.25
+	lines := wrapStickyLines(text, w-pad*2, fontPx)
+	// Vertically center the text block in the card, matching the editor.
+	y := math.Max(pad, (h-float64(len(lines))*lineH)/2) + fontPx
+	for _, ln := range lines {
+		if y > h {
+			break
+		}
+		dx, dy := m.apply(pad, y)
+		d := &font.Drawer{Dst: rc.dst, Src: image.NewUniform(rasterColor(tc, 1)), Face: face, Dot: fixed.P(int(math.Round(dx)), int(math.Round(dy)))}
+		d.DrawString(ln)
+		y += lineH
+	}
+}
+
+// rasterConnector draws the connector in PAGE space via the output-scale matrix
+// (rc.base) - NOT the node's accumulated transform - because connectorPoints
+// already returns absolute page coordinates (matching the engine, which cancels
+// the connector's world transform). This keeps the line on its endpoints even if
+// the connector is grouped/transformed.
+func (rc *rctx) rasterConnector(node map[string]any) {
+	pts := transformPts(rc.base, connectorPoints(node, rc.boxes))
+	if len(pts) < 2 {
+		return
+	}
+	col := rasterColor(connectorStrokeColor(node), 1)
+	if col.A == 0 {
+		return
+	}
+	dw := connectorStrokeWidth(node) * avgScale(rc.base)
+	hw := math.Max(0.5, dw/2)
+	for i := 0; i < len(pts)-1; i++ {
+		x0, y0, x1, y1 := pts[i][0], pts[i][1], pts[i+1][0], pts[i+1][1]
+		dx, dy := x1-x0, y1-y0
+		length := math.Hypot(dx, dy)
+		if length == 0 {
+			continue
+		}
+		nx, ny := -dy/length*hw, dx/length*hw
+		rc.fillPath([][2]float64{{x0 + nx, y0 + ny}, {x1 + nx, y1 + ny}, {x1 - nx, y1 - ny}, {x0 - nx, y0 - ny}}, col)
+		rc.fillDot(x1, y1, hw, col) // round the joins (opaque, no double-darken)
+	}
+	if capIs(node, "endCap", "arrow") {
+		rc.fillPath(arrowHead(pts[len(pts)-2], pts[len(pts)-1], dw), col)
+	}
+	if capIs(node, "startCap", "arrow") {
+		rc.fillPath(arrowHead(pts[1], pts[0], dw), col)
+	}
+	if txt, pos := connectorLabel(node); txt != "" {
+		at := pointAlong(pts, pos)
+		fontPx := 12.0
+		face, err := opentype.NewFace(rc.font, &opentype.FaceOptions{Size: fontPx * avgScale(rc.base), DPI: 72, Hinting: font.HintingFull})
+		if err == nil {
+			defer face.Close()
+			tw := float64(len(txt)) * fontPx * avgScale(rc.base) * 0.55
+			rc.fillPath([][2]float64{{at[0] - tw/2 - 5, at[1] - 9}, {at[0] + tw/2 + 5, at[1] - 9}, {at[0] + tw/2 + 5, at[1] + 9}, {at[0] - tw/2 - 5, at[1] + 9}}, color.RGBA{R: 255, G: 255, B: 255, A: 235})
+			d := &font.Drawer{Dst: rc.dst, Src: image.NewUniform(color.RGBA{R: 51, G: 65, B: 85, A: 255}), Face: face, Dot: fixed.P(int(math.Round(at[0]-tw/2)), int(math.Round(at[1]+4)))}
+			d.DrawString(txt)
 		}
 	}
 }
@@ -339,19 +535,19 @@ func ToRaster(file Design, pageIndex int, scale float64) (*image.RGBA, error) {
 		return nil, err
 	}
 	dst := image.NewRGBA(image.Rect(0, 0, pw, ph))
-	rc := &rctx{dst: dst, w: pw, h: ph, font: fnt}
+	rc := &rctx{dst: dst, w: pw, h: ph, font: fnt, boxes: pageBoxMap(page)}
 	base := matScale(scale)
+	rc.base = base
 
-	// Background: opaque white default if none, else the page fill (flat).
-	bgCol := color.RGBA{R: 255, G: 255, B: 255, A: 255}
+	// Background: opaque white default, then the page fill over it (solid or
+	// gradient). Pattern/image backgrounds are not rasterized (left white).
+	fullPage := [][2]float64{{0, 0}, {float64(pw), 0}, {float64(pw), float64(ph)}, {0, float64(ph)}}
+	rc.fillPath(fullPage, color.RGBA{R: 255, G: 255, B: 255, A: 255})
 	if bg := asObj(page["background"]); bg != nil {
 		if k := asStr(bg["type"]); k != "pattern" && k != "image" {
-			if c := pdfPaint(bg); c.ok {
-				bgCol = rasterColor(c, 1)
-			}
+			rc.fillPolyPaint(fullPage, bg)
 		}
 	}
-	rc.fillPath([][2]float64{{0, 0}, {float64(pw), 0}, {float64(pw), float64(ph)}, {0, float64(ph)}}, bgCol)
 
 	for _, n := range asArr(page["children"]) {
 		rc.rasterNode(base, asObj(n))

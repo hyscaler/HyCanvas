@@ -56,6 +56,105 @@ func TestToJPEG(t *testing.T) {
 	}
 }
 
+func TestRasterLinearGradientBackground(t *testing.T) {
+	// A vertical (angle 90) red->blue gradient page background should render as a
+	// real gradient: red near the top, blue near the bottom, not a flat color.
+	col := func(r, g, b float64) map[string]any {
+		return map[string]any{"srgb": map[string]any{"r": r, "g": g, "b": b, "a": 1.0}}
+	}
+	design := Design{"pages": []any{map[string]any{
+		"width": 100.0, "height": 100.0,
+		"background": map[string]any{
+			"type": "gradient", "gradient": "linear", "angle": 90.0,
+			"stops": []any{
+				map[string]any{"position": 0.0, "color": col(1, 0, 0)},
+				map[string]any{"position": 1.0, "color": col(0, 0, 1)},
+			},
+		},
+		"children": []any{},
+	}}}
+	img, err := ToRaster(design, 0, 1)
+	if err != nil {
+		t.Fatalf("ToRaster: %v", err)
+	}
+	tr, _, tb, _ := img.At(50, 3).RGBA()
+	br, _, bb, _ := img.At(50, 96).RGBA()
+	if tr>>8 < 200 || tb>>8 > 60 {
+		t.Fatalf("expected red near top, got r=%d b=%d", tr>>8, tb>>8)
+	}
+	if bb>>8 < 200 || br>>8 > 60 {
+		t.Fatalf("expected blue near bottom, got r=%d b=%d", br>>8, bb>>8)
+	}
+}
+
+func TestRasterEllipseGradient(t *testing.T) {
+	// A gradient-filled ellipse must rasterize as a real gradient (not the flat
+	// first stop), matching the other shapes and the SVG/editor output.
+	col := func(r, g, b float64) map[string]any {
+		return map[string]any{"srgb": map[string]any{"r": r, "g": g, "b": b, "a": 1.0}}
+	}
+	design := Design{"pages": []any{map[string]any{
+		"width": 100.0, "height": 100.0,
+		"children": []any{map[string]any{
+			"type": "shape", "shape": "ellipse",
+			"transform": map[string]any{"x": 0.0, "y": 0.0, "scaleX": 1.0, "scaleY": 1.0, "rotation": 0.0},
+			"size": map[string]any{"width": 100.0, "height": 100.0},
+			"fills": []any{map[string]any{
+				"type": "gradient", "gradient": "linear", "angle": 90.0,
+				"stops": []any{
+					map[string]any{"position": 0.0, "color": col(1, 0, 0)},
+					map[string]any{"position": 1.0, "color": col(0, 0, 1)},
+				},
+			}},
+		}},
+	}}}
+	img, err := ToRaster(design, 0, 1)
+	if err != nil {
+		t.Fatalf("ToRaster: %v", err)
+	}
+	// Center column is fully inside the ellipse: red near top, blue near bottom.
+	tr, _, tb, _ := img.At(50, 12).RGBA()
+	br, _, bb, _ := img.At(50, 88).RGBA()
+	if tr>>8 < 180 || tb>>8 > 80 {
+		t.Fatalf("expected red-ish near top of ellipse, got r=%d b=%d", tr>>8, tb>>8)
+	}
+	if bb>>8 < 180 || br>>8 > 80 {
+		t.Fatalf("expected blue-ish near bottom of ellipse, got r=%d b=%d", br>>8, bb>>8)
+	}
+}
+
+func TestRasterGradientStopAlpha(t *testing.T) {
+	// A vertical gradient from opaque red to fully transparent red, over the white
+	// page base, must fade from red (top) to white (bottom) - per-stop alpha is honored.
+	col := func(r, g, b, a float64) map[string]any {
+		return map[string]any{"srgb": map[string]any{"r": r, "g": g, "b": b, "a": a}}
+	}
+	design := Design{"pages": []any{map[string]any{
+		"width": 100.0, "height": 100.0,
+		"background": map[string]any{
+			"type": "gradient", "gradient": "linear", "angle": 90.0,
+			"stops": []any{
+				map[string]any{"position": 0.0, "color": col(1, 0, 0, 1)},
+				map[string]any{"position": 1.0, "color": col(1, 0, 0, 0)},
+			},
+		},
+		"children": []any{},
+	}}}
+	img, err := ToRaster(design, 0, 1)
+	if err != nil {
+		t.Fatalf("ToRaster: %v", err)
+	}
+	tr, tg, tb, _ := img.At(50, 3).RGBA()
+	br, bg, bb, _ := img.At(50, 97).RGBA()
+	if tr>>8 < 200 || tg>>8 > 60 || tb>>8 > 60 {
+		t.Fatalf("expected opaque red near top, got r=%d g=%d b=%d", tr>>8, tg>>8, tb>>8)
+	}
+	// Transparent-red stop over white => near white (all channels high).
+	if br>>8 < 220 || bg>>8 < 220 || bb>>8 < 220 {
+		t.Fatalf("expected ~white (transparent stop over white) near bottom, got r=%d g=%d b=%d", br>>8, bg>>8, bb>>8)
+	}
+}
+
 func TestRasterPageRange(t *testing.T) {
 	if _, err := ToPNG(sampleDesign(), 7, 1); err != ErrPageRange {
 		t.Fatalf("out-of-range page should error, got %v", err)
