@@ -126,6 +126,19 @@ func notificationText(typ, actor, designTitle string, p map[string]any) string {
 			return who + " shared a design with you (" + mode + ")"
 		}
 		return who + " shared a design with you"
+	case "workspace_invite":
+		ws := pstr(p, "workspaceName")
+		role := pstr(p, "role")
+		msg := who + " invited you to join"
+		if ws != "" {
+			msg += ` "` + ws + `"`
+		} else {
+			msg += " a workspace"
+		}
+		if role != "" {
+			msg += " as " + role
+		}
+		return msg
 	case "approval_request":
 		return who + " requested your approval" + on
 	case "approval_decision":
@@ -136,6 +149,22 @@ func notificationText(typ, actor, designTitle string, p map[string]any) string {
 			return who + " rejected your design" + on
 		}
 		return who + " responded to your approval request" + on
+	case "access_request":
+		if mode := pstr(p, "mode"); mode != "" {
+			return who + " requested " + mode + " access" + on
+		}
+		return who + " requested access" + on
+	case "access_decision":
+		switch pstr(p, "decision") {
+		case "approve":
+			if mode := pstr(p, "mode"); mode != "" {
+				return who + " granted your access request (" + mode + ")" + on
+			}
+			return who + " granted your access request" + on
+		case "deny":
+			return who + " declined your access request" + on
+		}
+		return who + " responded to your access request" + on
 	default:
 		return who + " sent you a notification"
 	}

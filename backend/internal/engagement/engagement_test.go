@@ -193,7 +193,7 @@ func TestEngagement_DB(t *testing.T) {
 
 	// Prefs: defaults then a narrowing update.
 	prefs, err := svc.GetPrefs(ctx, owner.ID)
-	if err != nil || len(prefs.EmailTypes) != 6 {
+	if err != nil || len(prefs.EmailTypes) != len(defaultEmailTypes()) {
 		t.Fatalf("default prefs wrong: %+v err=%v", prefs, err)
 	}
 	updated, err := svc.SetPrefs(ctx, owner.ID, SetPrefsInput{EmailTypes: []string{"mention", "bogus"}, EmailTypesSet: true})

@@ -268,6 +268,14 @@ func notificationView(n NotificationRow) NotificationView {
 	link := "/dashboard"
 	if n.DesignID != nil {
 		link = "/editor?id=" + *n.DesignID
+		// An access request is actioned in the Share dialog's pending-requests
+		// inbox, so deep-link straight into it (otherwise the owner lands on the
+		// editor and has to open Share manually to find the request).
+		if n.Type == "access_request" {
+			link += "&share=requests"
+		}
+	} else if n.Type == "workspace_invite" {
+		link = "/accept-invite" // the in-app accept/decline surface
 	}
 	return NotificationView{
 		ID: n.ID, Type: n.Type, DesignID: n.DesignID,

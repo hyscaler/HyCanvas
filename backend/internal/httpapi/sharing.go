@@ -26,12 +26,19 @@ func mountSharing(api chi.Router, sh *sharing.Service, acct *accounts.Service) {
 		r.Delete("/grants/{gid}", removeGrantHandler(sh))
 		r.Post("/designs/{id}/links", createLinkHandler(sh))
 		r.Patch("/links/{lid}", updateLinkHandler(sh))
+		r.Delete("/links/{lid}", deleteLinkHandler(sh))
 		r.Post("/links/{lid}/rotate", rotateLinkHandler(sh))
 		r.Get("/workspaces/{wid}/roles", listRolesHandler(sh))
 		r.Post("/workspaces/{wid}/roles", createRoleHandler(sh))
 		r.Patch("/roles/{rid}", updateRoleHandler(sh))
 		r.Delete("/roles/{rid}", deleteRoleHandler(sh))
 		r.Post("/designs/{id}/role-assignments", assignRoleHandler(sh))
+		// Request access: any signed-in user may ask; listing/adjudicating is
+		// capability-gated inside the service.
+		r.Post("/designs/{id}/access-requests", requestAccessHandler(sh))
+		r.Get("/designs/{id}/access-requests", listAccessRequestsHandler(sh))
+		r.Post("/access-requests/{rid}/approve", resolveAccessRequestHandler(sh, true))
+		r.Post("/access-requests/{rid}/deny", resolveAccessRequestHandler(sh, false))
 	})
 	// Public (no auth guard): resolve a share link by token (FR-6, FR-15).
 	api.Post("/links/{token}/resolve", resolveLinkHandler(sh, acct))
@@ -183,6 +190,9 @@ func updateLinkHandler(sh *sharing.Service) http.HandlerFunc {
 			in.ExpiresSet = true
 			_ = json.Unmarshal(v, &in.ExpiresAt) // nil for JSON null -> clear
 		}
+		if v, ok := raw["requireSignin"]; ok {
+			_ = json.Unmarshal(v, &in.RequireSignin)
+		}
 		u := userFrom(r.Context())
 		l, err := sh.UpdateLink(r.Context(), chi.URLParam(r, "lid"), u.ID, in)
 		if err != nil {
@@ -190,6 +200,17 @@ func updateLinkHandler(sh *sharing.Service) http.HandlerFunc {
 			return
 		}
 		writeJSON(w, http.StatusOK, l)
+	}
+}
+
+func deleteLinkHandler(sh *sharing.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		u := userFrom(r.Context())
+		if err := sh.DeleteLink(r.Context(), chi.URLParam(r, "lid"), u.ID); err != nil {
+			sharingProblem(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 	}
 }
 
@@ -287,6 +308,54 @@ func assignRoleHandler(sh *sharing.Service) http.HandlerFunc {
 			return
 		}
 		writeJSON(w, http.StatusCreated, g)
+	}
+}
+
+func requestAccessHandler(sh *sharing.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Mode    string `json:"mode"`
+			Message string `json:"message"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		if body.Mode == "" {
+			body.Mode = "view"
+		}
+		u := userFrom(r.Context())
+		v, err := sh.RequestAccess(r.Context(), chi.URLParam(r, "id"), u.ID, body.Mode, body.Message)
+		if err != nil {
+			sharingProblem(w, r, err)
+			return
+		}
+		writeJSON(w, http.StatusCreated, v)
+	}
+}
+
+func listAccessRequestsHandler(sh *sharing.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		u := userFrom(r.Context())
+		list, err := sh.ListAccessRequests(r.Context(), chi.URLParam(r, "id"), u.ID)
+		if err != nil {
+			sharingProblem(w, r, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, list)
+	}
+}
+
+func resolveAccessRequestHandler(sh *sharing.Service, approve bool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Mode *string `json:"mode"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		u := userFrom(r.Context())
+		v, err := sh.ResolveAccessRequest(r.Context(), chi.URLParam(r, "rid"), u.ID, approve, body.Mode)
+		if err != nil {
+			sharingProblem(w, r, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, v)
 	}
 }
 

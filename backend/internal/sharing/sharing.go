@@ -17,6 +17,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"net/mail"
 	"strings"
 	"time"
 
@@ -58,6 +59,14 @@ type Files interface {
 	LoadFileForDesign(ctx context.Context, designID string) (any, error)
 }
 
+// Mailer sends a "a design was shared with you" email to an invited address
+// (used when a grant targets an email rather than an existing user). Optional
+// (attached via WithMailer); nil = no email (the in-app notification still fires
+// for existing users). Best-effort; never blocks the mutation.
+type Mailer interface {
+	SendDesignShare(email, designID string)
+}
+
 // Errors map to RFC 7807 statuses at the HTTP layer.
 var (
 	ErrForbidden     = errors.New("forbidden")
@@ -85,11 +94,19 @@ type Service struct {
 	engagement Engagement
 	locks      ApprovalLock
 	files      Files
+	mailer     Mailer
 }
 
 // NewService wires the sharing service. engagement and locks may be nil.
 func NewService(db DBTX, persist Persistence, engagement Engagement, locks ApprovalLock) *Service {
 	return &Service{db: db, persist: persist, engagement: engagement, locks: locks}
+}
+
+// WithMailer attaches the share-email sender (an email-targeted grant emails the
+// invitee). Nil-safe; returns the service for chaining.
+func (s *Service) WithMailer(m Mailer) *Service {
+	s.mailer = m
+	return s
 }
 
 // WithFiles attaches the design-file loader, enabling the public link-file route
@@ -159,21 +176,26 @@ type RoleRow struct {
 	CreatedAt    time.Time
 }
 
-// Principal identifies a grant target (a user id or an email).
+// Principal identifies a grant target (a user id or an email). Name and Email
+// are display-only and populated for user-kind grants in the sharing view so the
+// UI can show a person's name instead of an opaque id.
 type Principal struct {
-	Kind string `json:"kind"` // "user" | "email"
-	ID   string `json:"id"`
+	Kind  string `json:"kind"` // "user" | "email"
+	ID    string `json:"id"`
+	Name  string `json:"name,omitempty"`
+	Email string `json:"email,omitempty"`
 }
 
 // ShareGrant is the API view of a grant.
 type ShareGrant struct {
-	ID        string           `json:"id"`
-	DesignID  string           `json:"designId"`
-	Principal Principal        `json:"principal"`
-	Mode      authz.AccessMode `json:"mode"`
-	RoleID    *string          `json:"roleId"`
-	InvitedBy *string          `json:"invitedBy"`
-	CreatedAt string           `json:"createdAt"`
+	ID            string           `json:"id"`
+	DesignID      string           `json:"designId"`
+	Principal     Principal        `json:"principal"`
+	Mode          authz.AccessMode `json:"mode"`
+	RoleID        *string          `json:"roleId"`
+	InvitedBy     *string          `json:"invitedBy"`
+	InvitedByName string           `json:"invitedByName,omitempty"`
+	CreatedAt     string           `json:"createdAt"`
 }
 
 // ShareLinkView is the API view of a share link (token included; never the hash).
@@ -206,9 +228,11 @@ type DesignAccessView struct {
 	Capabilities []authz.Capability `json:"capabilities"`
 }
 
-// DesignSharingView is the Share dialog payload.
+// DesignSharingView is the Share dialog payload. Owner is the design's creator
+// (nil if unknown), enriched with a display name for attribution.
 type DesignSharingView struct {
 	MyAccess    DesignAccessView `json:"myAccess"`
+	Owner       *Principal       `json:"owner,omitempty"`
 	Grants      []ShareGrant     `json:"grants"`
 	Links       []ShareLinkView  `json:"links"`
 	CustomRoles []CustomRoleView `json:"customRoles"`
@@ -274,6 +298,23 @@ func (s *Service) userEmail(ctx context.Context, userID string) string {
 		return ""
 	}
 	return email
+}
+
+// userExists reports whether a user id resolves to an account (guards grants
+// against typo'd or otherwise unknown ids that would otherwise dangle).
+func (s *Service) userExists(ctx context.Context, userID string) bool {
+	var one int
+	return s.db.QueryRow(ctx, `SELECT 1 FROM "User" WHERE id = $1`, userID).Scan(&one) == nil
+}
+
+// userIDByEmail returns the account that owns an email address, if any, so an
+// email-targeted grant to an existing user can also reach them in-app.
+func (s *Service) userIDByEmail(ctx context.Context, email string) (string, bool) {
+	var id string
+	if err := s.db.QueryRow(ctx, `SELECT id FROM "User" WHERE lower(email) = $1`, email).Scan(&id); err != nil {
+		return "", false
+	}
+	return id, true
 }
 
 func (s *Service) isApprovalLocked(ctx context.Context, designID string) (bool, error) {
@@ -394,6 +435,27 @@ func (s *Service) assertCanManageRoles(ctx context.Context, workspaceID, userID 
 	return nil
 }
 
+// assertCanAssignRole gates attaching a custom role to a grant. Because a custom
+// role can carry capabilities beyond the caller's own (manage-roles, delete,
+// etc.), assigning one requires the stronger `manage-roles` capability rather
+// than mere `share`, and the role must belong to the design's workspace. This
+// mirrors AssignRole and prevents a share-only caller escalating a principal by
+// way of a powerful custom role through AddGrant/UpdateGrant.
+func (s *Service) assertCanAssignRole(ctx context.Context, designID, userID, roleID string) error {
+	workspaceID, err := s.workspaceOf(ctx, designID)
+	if err != nil {
+		return ErrNotFound
+	}
+	if err := s.assertCanManageRoles(ctx, workspaceID, userID); err != nil {
+		return err
+	}
+	role, err := s.getCustomRole(ctx, roleID)
+	if err != nil || role.WorkspaceID != workspaceID {
+		return ErrNotFound
+	}
+	return nil
+}
+
 // --- views ---------------------------------------------------------------
 
 func grantView(g GrantRow) ShareGrant {
@@ -459,9 +521,21 @@ func (s *Service) GetSharing(ctx context.Context, designID, userID string) (Desi
 	if err != nil {
 		return DesignSharingView{}, err
 	}
-	out := DesignSharingView{MyAccess: myAccess}
+	// Initialize as empty (non-nil) slices so they marshal to JSON [] rather than
+	// null when a design has no grants/links/roles; the SDK types them as arrays
+	// and the Share dialog reads `.length` directly.
+	out := DesignSharingView{MyAccess: myAccess, Grants: []ShareGrant{}, Links: []ShareLinkView{}, CustomRoles: []CustomRoleView{}}
 	for _, g := range grants {
 		out.Grants = append(out.Grants, grantView(g))
+	}
+	s.enrichGrants(ctx, out.Grants)
+	// Owner attribution: the design's creator, enriched for display.
+	if creator, ok := s.designCreator(ctx, designID); ok {
+		owner := Principal{Kind: "user", ID: creator}
+		if name, email, found := s.userInfo(ctx, creator); found {
+			owner.Name, owner.Email = name, email
+		}
+		out.Owner = &owner
 	}
 	for _, l := range links {
 		out.Links = append(out.Links, linkView(l))
@@ -470,6 +544,72 @@ func (s *Service) GetSharing(ctx context.Context, designID, userID string) (Desi
 		out.CustomRoles = append(out.CustomRoles, roleView(r))
 	}
 	return out, nil
+}
+
+// enrichGrants fills the display name/email on user-kind grant principals and
+// the inviter's display name, with a single batched User lookup so the Share
+// dialog shows people instead of raw ids. Best-effort: a failure leaves ids.
+func (s *Service) enrichGrants(ctx context.Context, grants []ShareGrant) {
+	want := map[string]bool{}
+	for _, g := range grants {
+		if g.Principal.Kind == "user" && g.Principal.ID != "" {
+			want[g.Principal.ID] = true
+		}
+		if g.InvitedBy != nil && *g.InvitedBy != "" {
+			want[*g.InvitedBy] = true
+		}
+	}
+	if len(want) == 0 {
+		return
+	}
+	ids := make([]string, 0, len(want))
+	for id := range want {
+		ids = append(ids, id)
+	}
+	rows, err := s.db.Query(ctx, `SELECT id::text, name, email FROM "User" WHERE id::text = ANY($1)`, ids)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+	type info struct{ name, email string }
+	byID := map[string]info{}
+	for rows.Next() {
+		var id, name, email string
+		if err := rows.Scan(&id, &name, &email); err != nil {
+			return
+		}
+		byID[id] = info{name, email}
+	}
+	for i := range grants {
+		if grants[i].Principal.Kind == "user" {
+			if v, ok := byID[grants[i].Principal.ID]; ok {
+				grants[i].Principal.Name = v.name
+				grants[i].Principal.Email = v.email
+			}
+		}
+		if grants[i].InvitedBy != nil {
+			if v, ok := byID[*grants[i].InvitedBy]; ok {
+				grants[i].InvitedByName = v.name
+			}
+		}
+	}
+}
+
+// userInfo returns a user's display name + email (best-effort).
+func (s *Service) userInfo(ctx context.Context, userID string) (name, email string, ok bool) {
+	if err := s.db.QueryRow(ctx, `SELECT name, email FROM "User" WHERE id = $1`, userID).Scan(&name, &email); err != nil {
+		return "", "", false
+	}
+	return name, email, true
+}
+
+// designCreator returns the design's creator id, if the column is set.
+func (s *Service) designCreator(ctx context.Context, designID string) (string, bool) {
+	var id *string
+	if err := s.db.QueryRow(ctx, `SELECT "createdById"::text FROM "Design" WHERE id = $1`, designID).Scan(&id); err != nil || id == nil || *id == "" {
+		return "", false
+	}
+	return *id, true
 }
 
 // ListDesignGrants returns the raw grant rows (helper for the comments module).
@@ -495,26 +635,79 @@ func (s *Service) AddGrant(ctx context.Context, designID, userID string, in AddG
 	if err != nil {
 		return ShareGrant{}, err
 	}
-	if strings.TrimSpace(in.Principal.ID) == "" {
+	id := strings.TrimSpace(in.Principal.ID)
+	if id == "" {
 		return ShareGrant{}, ErrBadRequest
 	}
-	var uid, email *string
-	if in.Principal.Kind == "user" {
-		v := in.Principal.ID
-		uid = &v
-	} else {
-		v := strings.ToLower(strings.TrimSpace(in.Principal.ID))
-		email = &v
+	// Attaching a custom role escalates beyond a plain mode, so it needs
+	// manage-roles, not just share.
+	if in.RoleID != nil {
+		if err := s.assertCanAssignRole(ctx, designID, userID, *in.RoleID); err != nil {
+			return ShareGrant{}, err
+		}
 	}
+
+	var uid, email *string
+	// recipientUserID is the account a grant resolves to (used for the in-app
+	// notification): the target user id directly, or the account that owns an
+	// invited email, if any.
+	var recipientUserID string
+	if in.Principal.Kind == "user" {
+		if id == userID {
+			return ShareGrant{}, ErrBadRequest // no self-invite
+		}
+		if !s.userExists(ctx, id) {
+			return ShareGrant{}, ErrBadRequest // unknown user id (typo / cross-instance)
+		}
+		uid = &id
+		recipientUserID = id
+	} else {
+		addr := strings.ToLower(id)
+		if !isValidEmail(addr) {
+			return ShareGrant{}, ErrBadRequest
+		}
+		if addr == strings.ToLower(s.userEmail(ctx, userID)) {
+			return ShareGrant{}, ErrBadRequest // no self-invite
+		}
+		email = &addr
+		if owner, ok := s.userIDByEmail(ctx, addr); ok {
+			recipientUserID = owner
+		}
+	}
+
+	// Re-inviting the same principal updates their access in place rather than
+	// failing on the (designId,userId)/(designId,email) unique constraint.
+	if existing, ferr := s.findGrantForPrincipal(ctx, designID, uid, email); ferr == nil {
+		row, err := s.updateGrant(ctx, existing.ID, &mode, in.RoleID, in.RoleID != nil)
+		if err != nil {
+			return ShareGrant{}, err
+		}
+		s.emit(ctx, designID, userID, "share", map[string]any{"op": "changed", "mode": string(mode), "principalKind": in.Principal.Kind})
+		return grantView(row), nil
+	}
+
 	row, err := s.createGrant(ctx, GrantRow{DesignID: designID, UserID: uid, Email: email, Mode: mode, RoleID: in.RoleID, InvitedBy: &userID})
 	if err != nil {
 		return ShareGrant{}, err
 	}
 	s.emit(ctx, designID, userID, "share", map[string]any{"op": "added", "mode": string(mode), "principalKind": in.Principal.Kind})
-	if row.UserID != nil {
-		s.notify(ctx, userID, *row.UserID, "share", designID, map[string]any{"mode": string(mode)})
+	switch {
+	case recipientUserID != "":
+		// The invitee has an account (by id, or by the invited email matching an
+		// existing user): reach them in-app.
+		s.notify(ctx, userID, recipientUserID, "share", designID, map[string]any{"mode": string(mode)})
+	case email != nil && s.mailer != nil:
+		// Email targets an address with no account yet: email them a link.
+		s.mailer.SendDesignShare(*email, designID)
 	}
 	return grantView(row), nil
+}
+
+// isValidEmail does a lightweight RFC-5322 well-formedness check; the address is
+// already lowercased/trimmed by the caller.
+func isValidEmail(s string) bool {
+	addr, err := mail.ParseAddress(s)
+	return err == nil && addr.Address == s
 }
 
 func (s *Service) UpdateGrant(ctx context.Context, grantID, userID string, mode *string, roleID *string, roleSet bool) (ShareGrant, error) {
@@ -524,6 +717,13 @@ func (s *Service) UpdateGrant(ctx context.Context, grantID, userID string, mode 
 	}
 	if err := s.assertCanShare(ctx, grant.DesignID, userID); err != nil {
 		return ShareGrant{}, err
+	}
+	// Setting a custom role escalates beyond a plain mode, so it needs
+	// manage-roles; clearing a role (roleSet with nil) stays share-gated.
+	if roleSet && roleID != nil {
+		if err := s.assertCanAssignRole(ctx, grant.DesignID, userID, *roleID); err != nil {
+			return ShareGrant{}, err
+		}
 	}
 	var newMode *authz.AccessMode
 	if mode != nil {
@@ -608,10 +808,11 @@ func (s *Service) CreateLink(ctx context.Context, designID, userID string, in Cr
 // UpdateLinkInput patches a link. expiresSet distinguishes "clear" (Expires nil
 // + set) from "leave unchanged".
 type UpdateLinkInput struct {
-	Mode       *string
-	Disabled   *bool
-	ExpiresAt  *string
-	ExpiresSet bool
+	Mode          *string
+	Disabled      *bool
+	ExpiresAt     *string
+	ExpiresSet    bool
+	RequireSignin *bool
 }
 
 func (s *Service) UpdateLink(ctx context.Context, linkID, userID string, in UpdateLinkInput) (ShareLinkView, error) {
@@ -639,7 +840,7 @@ func (s *Service) UpdateLink(ctx context.Context, linkID, userID string, in Upda
 		}
 		expiresAt = &t
 	}
-	row, err := s.updateLink(ctx, linkID, linkPatch{mode: newMode, disabled: in.Disabled, expiresAt: expiresAt, expiresSet: expiresSet})
+	row, err := s.updateLink(ctx, linkID, linkPatch{mode: newMode, disabled: in.Disabled, expiresAt: expiresAt, expiresSet: expiresSet, requireSignin: in.RequireSignin})
 	if err != nil {
 		return ShareLinkView{}, err
 	}
@@ -670,6 +871,22 @@ func (s *Service) RotateLink(ctx context.Context, linkID, userID string) (ShareL
 	}
 	s.emit(ctx, link.DesignID, userID, "link_change", map[string]any{"op": "rotated"})
 	return linkView(row), nil
+}
+
+// DeleteLink permanently removes a share link; its URL stops resolving (FR-6).
+func (s *Service) DeleteLink(ctx context.Context, linkID, userID string) error {
+	link, err := s.getLink(ctx, linkID)
+	if err != nil {
+		return err
+	}
+	if err := s.assertCanShare(ctx, link.DesignID, userID); err != nil {
+		return err
+	}
+	if err := s.deleteLink(ctx, linkID); err != nil {
+		return err
+	}
+	s.emit(ctx, link.DesignID, userID, "link_change", map[string]any{"op": "deleted"})
+	return nil
 }
 
 // ResolveLinkOpts carries the optional password and signed-in user for a

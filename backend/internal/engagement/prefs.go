@@ -3,7 +3,7 @@
 package engagement
 
 // notificationTypes is every notification type the center supports (FR-13).
-var notificationTypes = []string{"mention", "reply", "task_assign", "share", "approval_request", "approval_decision"}
+var notificationTypes = []string{"mention", "reply", "task_assign", "share", "approval_request", "approval_decision", "workspace_invite", "access_request", "access_decision"}
 
 var notificationTypeSet = func() map[string]bool {
 	m := map[string]bool{}
@@ -29,7 +29,7 @@ var activityTypeSet = func() map[string]bool {
 // defaultEmailTypes returns the email-channel defaults when a user has no stored
 // preference: mentions, replies, assignments, shares, and approvals.
 func defaultEmailTypes() []string {
-	return []string{"mention", "reply", "task_assign", "share", "approval_request", "approval_decision"}
+	return []string{"mention", "reply", "task_assign", "share", "approval_request", "approval_decision", "access_request", "access_decision"}
 }
 
 // defaultPushTypes mirrors the email defaults for the web-push channel.

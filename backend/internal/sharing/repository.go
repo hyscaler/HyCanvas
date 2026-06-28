@@ -28,8 +28,19 @@ func scanGrant(row pgx.Row) (GrantRow, error) {
 const grantCols = `id, "designId", "userId", email, mode, "roleId", "invitedBy", "createdAt"`
 
 func (s *Service) createGrant(ctx context.Context, in GrantRow) (GrantRow, error) {
-	const q = `INSERT INTO "DesignGrant" (id,"designId","userId",email,mode,"roleId","invitedBy")
-		VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING ` + grantCols
+	// A grant carries exactly one of userId/email; target the matching unique
+	// index so a concurrent insert for the same principal updates in place rather
+	// than failing the constraint (a raw 500). roleId is preserved on conflict
+	// unless a new one is supplied, so a racing link/auto grant cannot wipe it.
+	conflict := `("designId","userId")`
+	if in.UserID == nil {
+		conflict = `("designId",email)`
+	}
+	q := `INSERT INTO "DesignGrant" (id,"designId","userId",email,mode,"roleId","invitedBy")
+		VALUES ($1,$2,$3,$4,$5,$6,$7)
+		ON CONFLICT ` + conflict + ` DO UPDATE
+		SET mode = EXCLUDED.mode, "roleId" = COALESCE(EXCLUDED."roleId", "DesignGrant"."roleId")
+		RETURNING ` + grantCols
 	return scanGrant(s.db.QueryRow(ctx, q, uuid.NewString(), in.DesignID, in.UserID, in.Email, string(in.Mode), in.RoleID, in.InvitedBy))
 }
 
@@ -100,6 +111,26 @@ func (s *Service) deleteGrant(ctx context.Context, id string) error {
 	return err
 }
 
+// findGrantForPrincipal locates an existing grant on a design for the given
+// principal (by user id or email), used to make re-inviting update access in
+// place rather than fail the unique constraint. Returns ErrNotFound if absent.
+func (s *Service) findGrantForPrincipal(ctx context.Context, designID string, uid, email *string) (GrantRow, error) {
+	var row pgx.Row
+	switch {
+	case uid != nil:
+		row = s.db.QueryRow(ctx, `SELECT `+grantCols+` FROM "DesignGrant" WHERE "designId" = $1 AND "userId" = $2`, designID, *uid)
+	case email != nil:
+		row = s.db.QueryRow(ctx, `SELECT `+grantCols+` FROM "DesignGrant" WHERE "designId" = $1 AND email = $2`, designID, *email)
+	default:
+		return GrantRow{}, ErrNotFound
+	}
+	g, err := scanGrant(row)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return GrantRow{}, ErrNotFound
+	}
+	return g, err
+}
+
 // --- links ---------------------------------------------------------------
 
 func scanLink(row pgx.Row) (LinkRow, error) {
@@ -152,11 +183,12 @@ func (s *Service) listLinksForDesign(ctx context.Context, designID string) ([]Li
 }
 
 type linkPatch struct {
-	mode       *authz.AccessMode
-	disabled   *bool
-	expiresAt  *time.Time
-	expiresSet bool
-	token      *string
+	mode          *authz.AccessMode
+	disabled      *bool
+	expiresAt     *time.Time
+	expiresSet    bool
+	token         *string
+	requireSignin *bool
 }
 
 func (s *Service) updateLink(ctx context.Context, id string, p linkPatch) (LinkRow, error) {
@@ -169,13 +201,19 @@ func (s *Service) updateLink(ctx context.Context, id string, p linkPatch) (LinkR
 		SET mode = COALESCE($2, mode),
 		    disabled = COALESCE($3, disabled),
 		    "expiresAt" = CASE WHEN $5 THEN $4 ELSE "expiresAt" END,
-		    token = COALESCE($6, token)
+		    token = COALESCE($6, token),
+		    "requireSignin" = COALESCE($7, "requireSignin")
 		WHERE id = $1 RETURNING ` + linkCols
-	l, err := scanLink(s.db.QueryRow(ctx, q, id, modeStr, p.disabled, p.expiresAt, p.expiresSet, p.token))
+	l, err := scanLink(s.db.QueryRow(ctx, q, id, modeStr, p.disabled, p.expiresAt, p.expiresSet, p.token, p.requireSignin))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return LinkRow{}, ErrNotFound
 	}
 	return l, err
+}
+
+func (s *Service) deleteLink(ctx context.Context, id string) error {
+	_, err := s.db.Exec(ctx, `DELETE FROM "ShareLink" WHERE id = $1`, id)
+	return err
 }
 
 // --- custom roles --------------------------------------------------------

@@ -11,10 +11,10 @@
 // grant the design becomes approval-LOCKED, which sharing.Resolve honors by
 // capping every editor to comment/view (FR-11); reopen clears it.
 //
-// Deferred vs the Node original: the live RealtimeService.refreshRoles call
-// (F16 AC-9) and engagement activity/notifications (slice D) are optional hooks
-// (nil-safe), since realtime stays on the TS service and engagement is not yet
-// ported.
+// Live hooks (both nil-safe): the realtime RoleRefresher (F16 AC-9) is wired to
+// the Go realtime hub, so granting/reopening an approval lock pushes a live role
+// frame that flips active editors to read-only (and back) without a reconnect;
+// engagement activity/notifications (slice D) mirror approval events into the feed.
 package approvals
 
 import (
