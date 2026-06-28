@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"hycanvas/backend/internal/platform/brand"
+
 	"github.com/google/uuid"
 
 	"hycanvas/backend/internal/auth/secrets"
@@ -23,11 +25,19 @@ const (
 	magicTTL  = 15 * time.Minute
 )
 
-// OutboxMessage is a captured outbound mail (dev-only inspection).
+// OutboxMessage is a captured outbound mail (dev-only inspection). To/Subject/
+// Link are the core; the remaining fields are optional branded-email copy used by
+// the shared template (generic fallbacks apply when they are empty).
 type OutboxMessage struct {
 	To      string `json:"to"`
 	Subject string `json:"subject"`
 	Link    string `json:"link"`
+
+	Heading   string `json:"heading,omitempty"`
+	Intro     string `json:"intro,omitempty"`
+	CTALabel  string `json:"ctaLabel,omitempty"`
+	Preheader string `json:"preheader,omitempty"`
+	Footnote  string `json:"footnote,omitempty"`
 }
 
 func (s *Service) appURL() string {
@@ -81,8 +91,35 @@ func (s *Service) sendVerificationToken(ctx context.Context, userID, email, kind
 		uuid.NewString(), userID, kind, secrets.HashToken(raw), time.Now().Add(ttlFor(kind))); err != nil {
 		return "", err
 	}
-	s.deliver(OutboxMessage{To: email, Subject: subjectFor(kind), Link: s.linkFor(kind, raw)})
+	msg := OutboxMessage{To: email, Subject: subjectFor(kind), Link: s.linkFor(kind, raw)}
+	applyKindContent(&msg, kind)
+	s.deliver(msg)
 	return raw, nil
+}
+
+// applyKindContent fills the branded-email copy (heading, intro, CTA, footnote,
+// preheader) for an auth email by kind. Footnote expiry windows mirror ttlFor.
+func applyKindContent(m *OutboxMessage, kind string) {
+	switch kind {
+	case "reset":
+		m.Heading = "Reset your password"
+		m.Intro = "We received a request to reset the password for your " + brand.Name + " account. Choose a new password with the button below."
+		m.CTALabel = "Reset password"
+		m.Preheader = "Reset your " + brand.Name + " password."
+		m.Footnote = "This link expires in 1 hour and can be used once. If you didn't request a reset, you can ignore this email and your password stays the same."
+	case "magic":
+		m.Heading = "Your sign-in link"
+		m.Intro = "Use the button below to securely sign in to " + brand.Name + ". No password required."
+		m.CTALabel = "Sign in to " + brand.Name
+		m.Preheader = "Your secure " + brand.Name + " sign-in link."
+		m.Footnote = "This link expires in 15 minutes and can be used once. If you didn't request it, you can safely ignore this email."
+	default: // verify
+		m.Heading = "Confirm your email address"
+		m.Intro = "Welcome to " + brand.Name + ". Confirm this email address to activate your account and start designing."
+		m.CTALabel = "Verify email"
+		m.Preheader = "Confirm your email to activate your " + brand.Name + " account."
+		m.Footnote = "This link expires in 24 hours. If you didn't create a " + brand.Name + " account, you can ignore this email."
+	}
 }
 
 // usableToken resolves a raw token to its row id + user id if it exists, is the
@@ -130,7 +167,27 @@ func (s *Service) VerifyEmail(ctx context.Context, raw string) (*AuthUser, error
 	if _, err := s.db.Exec(ctx, `UPDATE "User" SET "emailVerified" = true, "updatedAt" = now() WHERE id = $1`, userID); err != nil {
 		return nil, err
 	}
-	return s.GetUserByID(ctx, userID)
+	u, err := s.GetUserByID(ctx, userID)
+	if err == nil && u != nil {
+		// The account is now active: welcome them. Best-effort, never blocks verify.
+		s.sendWelcomeEmail(u.Email)
+	}
+	return u, err
+}
+
+// sendWelcomeEmail sends the branded welcome once an account is activated (email
+// verified). It carries no token; the button just opens the app. Best-effort.
+func (s *Service) sendWelcomeEmail(email string) {
+	s.deliver(OutboxMessage{
+		To:        email,
+		Subject:   "Welcome to " + brand.Name,
+		Link:      s.appURL(),
+		Heading:   "Welcome to " + brand.Name,
+		Intro:     "Your account is ready. Create your first design, presentation, or whiteboard, it's all free, with no watermarks or paywalls.",
+		CTALabel:  "Start designing",
+		Preheader: "Your " + brand.Name + " account is ready. Start creating.",
+		Footnote:  "Tip: open the AI assistant in the editor to generate a whole design from a prompt.",
+	})
 }
 
 // RequestPasswordReset sends a reset link; silent for unknown accounts.

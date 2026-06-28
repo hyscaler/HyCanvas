@@ -9,6 +9,7 @@ package accounts
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"hycanvas/backend/internal/auth/secrets"
+	"hycanvas/backend/internal/platform/brand"
 )
 
 // Notifier creates an in-app notification (the dashboard bell). Satisfied by the
@@ -206,7 +208,7 @@ func (s *Service) Invite(ctx context.Context, callerID, workspaceID, email, role
 		id, workspaceID, email, strings.ToUpper(role), secrets.HashToken(raw), callerID, expires); err != nil {
 		return Invitation{}, "", err
 	}
-	s.sendInvitationEmail(email, raw)
+	s.sendInvitationEmail(email, raw, wsName, role)
 	// In-app dashboard notification (the bell) for an invitee who already has an
 	// account; a brand-new email only gets the invite email. Best-effort, nil-safe.
 	if existing != nil && s.notifier != nil {
@@ -220,23 +222,50 @@ func (s *Service) Invite(ctx context.Context, callerID, workspaceID, email, role
 	}, raw, nil
 }
 
-// sendInvitationEmail captures the accept link in the dev outbox (no SMTP wired;
-// mirrors sendVerificationToken).
-func (s *Service) sendInvitationEmail(email, raw string) {
+// sendInvitationEmail sends (or, with no SMTP, captures) the branded workspace
+// invitation, personalized with the workspace name and granted role.
+func (s *Service) sendInvitationEmail(email, raw, wsName, role string) {
 	link := s.appURL() + "/accept-invite?token=" + raw
-	s.deliver(OutboxMessage{To: email, Subject: "You've been invited to a HyCanvas workspace", Link: link})
+	ws := strings.TrimSpace(wsName)
+	if ws == "" {
+		ws = "a workspace"
+	}
+	intro := fmt.Sprintf("You've been invited to collaborate in %s on %s", ws, brand.Name)
+	if r := strings.ToLower(strings.TrimSpace(role)); r != "" {
+		intro += fmt.Sprintf(" as %s", r)
+	}
+	intro += ". Accept the invitation to start working together."
+	s.deliver(OutboxMessage{
+		To:        email,
+		Subject:   "You've been invited to a " + brand.Name + " workspace",
+		Link:      link,
+		Heading:   "You're invited to collaborate",
+		Intro:     intro,
+		CTALabel:  "Accept invitation",
+		Preheader: fmt.Sprintf("Join %s on %s.", ws, brand.Name),
+		Footnote:  "If you weren't expecting this invitation, you can safely ignore this email.",
+	})
 }
 
-// SendDesignShare emails an invited address a link to a design that was shared
-// with them (satisfies sharing.Mailer). Captured in the dev outbox; the invitee
-// signs in with this email to gain the granted access. Best-effort.
+// SendDesignShare sends (or captures) the branded "a design was shared with you"
+// email (satisfies sharing.Mailer). The invitee signs in with this email address
+// to gain the granted access. Best-effort.
 func (s *Service) SendDesignShare(email, designID string) {
 	email = strings.ToLower(strings.TrimSpace(email))
 	if !emailRe.MatchString(email) {
 		return
 	}
 	link := s.appURL() + "/editor?id=" + designID
-	s.deliver(OutboxMessage{To: email, Subject: "A design was shared with you on HyCanvas", Link: link})
+	s.deliver(OutboxMessage{
+		To:        email,
+		Subject:   "A design was shared with you on " + brand.Name,
+		Link:      link,
+		Heading:   "A design was shared with you",
+		Intro:     "Someone shared a design with you on " + brand.Name + ". Open it to view or edit; sign in with this email address to access it.",
+		CTALabel:  "Open design",
+		Preheader: "You now have access to a shared design on " + brand.Name + ".",
+		Footnote:  "If you don't recognize this, you can ignore this email; the design stays private.",
+	})
 }
 
 // AcceptInvitation validates a raw invitation token for the signed-in caller and

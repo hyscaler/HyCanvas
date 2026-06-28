@@ -1,6 +1,6 @@
 // Transactional email delivery. When SMTP is configured (env), account emails
-// (verification, password reset, magic link, workspace invite, design share) are
-// sent for real; otherwise they fall back to the in-memory dev outbox so local
+// (verification, welcome, password reset, magic link, workspace invite, design
+// share) are sent for real; otherwise they fall back to the in-memory dev outbox so local
 // flows stay testable with no SMTP server. All sends are best-effort and async,
 // so a slow mail server never adds latency to the request that triggered it.
 package accounts
@@ -8,14 +8,29 @@ package accounts
 import (
 	"crypto/tls"
 	"fmt"
-	"html"
 	"log/slog"
+	"mime/quotedprintable"
 	"net"
 	"net/smtp"
 	"os"
 	"strings"
 	"time"
 )
+
+// qp quoted-printable-encodes a body part: it soft-wraps long lines (well under
+// the RFC 5321 998-octet limit) and escapes special bytes, so a single long
+// HTML line is never rejected, folded, or corrupted by a strict MTA.
+func qp(s string) string {
+	var buf strings.Builder
+	w := quotedprintable.NewWriter(&buf)
+	_, _ = w.Write([]byte(s))
+	_ = w.Close()
+	return buf.String()
+}
+
+// mimeBoundary separates the plain-text and HTML parts of the multipart message.
+// A fixed, unlikely-to-collide token is fine: our bodies never contain it.
+const mimeBoundary = "=_hycanvas_alt_8f3a9c2b1d7e"
 
 // smtpSender holds resolved SMTP settings. nil => unconfigured (dev outbox).
 type smtpSender struct {
@@ -65,7 +80,7 @@ func smtpFromEnv() *smtpSender {
 // header strips CR/LF so a header value can't inject extra headers.
 func header(v string) string { return strings.NewReplacer("\r", "", "\n", "").Replace(v) }
 
-func (m *smtpSender) message(to, subject, htmlBody string) []byte {
+func (m *smtpSender) message(to, subject, htmlBody, textBody string) []byte {
 	fromHeader := m.from
 	if m.fromName != "" {
 		fromHeader = fmt.Sprintf("%s <%s>", header(m.fromName), m.from)
@@ -76,15 +91,25 @@ func (m *smtpSender) message(to, subject, htmlBody string) []byte {
 	b.WriteString("Subject: " + header(subject) + "\r\n")
 	b.WriteString("Date: " + time.Now().Format(time.RFC1123Z) + "\r\n")
 	b.WriteString("MIME-Version: 1.0\r\n")
-	b.WriteString("Content-Type: text/html; charset=UTF-8\r\n\r\n")
-	b.WriteString(htmlBody)
+	b.WriteString("Content-Type: multipart/alternative; boundary=\"" + mimeBoundary + "\"\r\n\r\n")
+	// Plain text first (least capable client), HTML last (the preferred part).
+	// Both are quoted-printable so long HTML lines stay within the 998-octet limit.
+	b.WriteString("--" + mimeBoundary + "\r\n")
+	b.WriteString("Content-Type: text/plain; charset=UTF-8\r\n")
+	b.WriteString("Content-Transfer-Encoding: quoted-printable\r\n\r\n")
+	b.WriteString(qp(textBody) + "\r\n")
+	b.WriteString("--" + mimeBoundary + "\r\n")
+	b.WriteString("Content-Type: text/html; charset=UTF-8\r\n")
+	b.WriteString("Content-Transfer-Encoding: quoted-printable\r\n\r\n")
+	b.WriteString(qp(htmlBody) + "\r\n")
+	b.WriteString("--" + mimeBoundary + "--\r\n")
 	return []byte(b.String())
 }
 
 // send delivers one message synchronously (callers run it in a goroutine).
-func (m *smtpSender) send(to, subject, htmlBody string) error {
+func (m *smtpSender) send(to, subject, htmlBody, textBody string) error {
 	addr := net.JoinHostPort(m.host, m.port)
-	msg := m.message(to, subject, htmlBody)
+	msg := m.message(to, subject, htmlBody, textBody)
 	var auth smtp.Auth
 	if m.username != "" {
 		auth = smtp.PlainAuth("", m.username, m.password, m.host)
@@ -133,11 +158,12 @@ func (m *smtpSender) send(to, subject, htmlBody string) error {
 // path. Preserves the prior behavior exactly when SMTP is unset (tests + dev).
 func (s *Service) deliver(msg OutboxMessage) {
 	if s.smtp != nil {
-		body := emailBody(msg.Subject, msg.Link)
-		sender, m := s.smtp, msg
+		c := contentFrom(msg)
+		htmlBody, textBody := renderHTML(c), renderText(c)
+		sender, to, subj := s.smtp, msg.To, msg.Subject
 		go func() {
-			if err := sender.send(m.To, m.Subject, body); err != nil {
-				slog.Warn("email send failed", "to", m.To, "subject", m.Subject, "err", err)
+			if err := sender.send(to, subj, htmlBody, textBody); err != nil {
+				slog.Warn("email send failed", "to", to, "subject", subj, "err", err)
 			}
 		}()
 		return
@@ -145,17 +171,4 @@ func (s *Service) deliver(msg OutboxMessage) {
 	s.outboxMu.Lock()
 	s.outbox = append(s.outbox, msg)
 	s.outboxMu.Unlock()
-}
-
-// emailBody renders a minimal branded HTML email around a single call-to-action
-// link. The subject doubles as the headline.
-func emailBody(subject, link string) string {
-	esc := html.EscapeString(subject)
-	safeLink := html.EscapeString(link)
-	return `<div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#1f2937">` +
-		`<h2 style="font-size:18px;font-weight:700;margin:0 0 12px">` + esc + `</h2>` +
-		`<p style="font-size:14px;line-height:1.5;margin:0 0 20px;color:#4b5563">Use the button below to continue. This link is single-use and expires.</p>` +
-		`<p style="margin:0 0 20px"><a href="` + safeLink + `" style="display:inline-block;background:#6238db;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:10px 20px;border-radius:10px">Open HyCanvas</a></p>` +
-		`<p style="font-size:12px;line-height:1.5;color:#9ca3af;margin:0">If the button doesn't work, paste this link into your browser:<br><a href="` + safeLink + `" style="color:#6238db;word-break:break-all">` + safeLink + `</a></p>` +
-		`</div>`
 }
