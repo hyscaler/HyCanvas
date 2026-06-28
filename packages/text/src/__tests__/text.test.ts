@@ -192,6 +192,24 @@ describe("layout + auto-fit (FR-11, FR-12)", () => {
     expect(line.width).toBeGreaterThan(120);
   });
 
+  it("flows into multiple columns (each tagged with its column left/width)", () => {
+    const many = Array.from({ length: 12 }, (_, i) => createParagraph(`line ${i}`, { fontSize: 16 }));
+    const node = textNode(many, { width: 400, height: 60, columns: { count: 2, gutter: 20 } } as Partial<TextNode["box"]>);
+    const lines = layoutText(node).lines;
+    const cols = new Set(lines.map((l) => l.colLeft ?? 0));
+    expect(cols.size).toBe(2); // content spilled into a second column
+    // The second column is offset to the right; each column is narrower than full.
+    const lefts = [...cols].sort((a, b) => a - b);
+    expect(lefts[0]).toBe(0);
+    expect(lefts[1]).toBeGreaterThan(0);
+    expect(lines[0].colWidth!).toBeLessThan(400);
+  });
+
+  it("single column leaves colLeft/colWidth unset (unchanged layout)", () => {
+    const node = textNode([createParagraph("hello world", { fontSize: 16 })], { width: 400, height: 100 });
+    expect(layoutText(node).lines[0].colLeft).toBeUndefined();
+  });
+
   it("autoWidth does not wrap", () => {
     const node = textNode([createParagraph("aaaa aaaa aaaa aaaa", { fontSize: 20 })], { mode: "autoWidth", width: 100 });
     expect(layoutText(node).lines.length).toBe(1);

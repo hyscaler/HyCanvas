@@ -4,6 +4,7 @@ import {
   clamp01,
   cmykToRgb,
   color,
+  colorHarmony,
   contrastRatio,
   CVD_MATRICES,
   extractPalette,
@@ -26,6 +27,28 @@ import {
 
 const BLACK: Color = { srgb: { r: 0, g: 0, b: 0, a: 1 } };
 const WHITE: Color = { srgb: { r: 1, g: 1, b: 1, a: 1 } };
+
+describe("color harmony", () => {
+  const RED = fromHex("#ff0000")!;
+  it("complementary returns the base plus the opposite hue (~cyan)", () => {
+    const [base, comp] = colorHarmony(RED, "complementary");
+    expect(toHex(base)).toBe("#ff0000");
+    expect(toHex(comp)).toBe("#00ffff");
+  });
+  it("triadic returns three colors", () => {
+    expect(colorHarmony(RED, "triadic")).toHaveLength(3);
+  });
+  it("analogous and split-complementary return three; tetradic four", () => {
+    expect(colorHarmony(RED, "analogous")).toHaveLength(3);
+    expect(colorHarmony(RED, "split-complementary")).toHaveLength(3);
+    expect(colorHarmony(RED, "tetradic")).toHaveLength(4);
+  });
+  it("monochromatic varies lightness around the base", () => {
+    const mono = colorHarmony(RED, "monochromatic");
+    expect(mono).toHaveLength(5);
+    expect(toHex(mono[0])).not.toBe(toHex(mono[4]));
+  });
+});
 
 describe("AC-2: HEX round trip and parsing", () => {
   it("parses #rrggbb and reformats it", () => {

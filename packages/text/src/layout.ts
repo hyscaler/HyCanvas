@@ -50,6 +50,10 @@ export interface LineBox {
   x: number;
   /** List marker drawn in the gutter on the paragraph's first line, if any. */
   marker?: { text: string; style: CharStyle; x: number };
+  /** Multi-column flow: the left origin of this line's column relative to the
+   *  content box, and the column's width. Absent for single-column layout. */
+  colLeft?: number;
+  colWidth?: number;
 }
 export interface LayoutResult {
   lines: LineBox[];
@@ -85,7 +89,14 @@ export function layoutText(node: TextNode, opts: LayoutOptions = {}): LayoutResu
   const measure = opts.measure ?? approximateMeasure;
   const pad = node.box.padding ?? { t: 0, r: 0, b: 0, l: 0 };
   const wrap = node.box.mode !== "autoWidth";
-  const boxWidth = Math.max(0, node.box.width - pad.l - pad.r);
+  const fullWidth = Math.max(0, node.box.width - pad.l - pad.r);
+  // Multi-column flow: wrap to one column's width, then reflow lines into columns
+  // (a post-process below). Single column keeps the full content width.
+  const colSpec = (node.box as { columns?: { count: number; gutter: number } }).columns;
+  const cols = wrap && colSpec && colSpec.count > 1 ? Math.floor(colSpec.count) : 1;
+  const gutter = cols > 1 ? Math.max(0, colSpec!.gutter) : 0;
+  const colW = cols > 1 ? Math.max(0, (fullWidth - gutter * (cols - 1)) / cols) : fullWidth;
+  const boxWidth = colW;
 
   const lines: LineBox[] = [];
   let y = pad.t;
@@ -163,6 +174,25 @@ export function layoutText(node: TextNode, opts: LayoutOptions = {}): LayoutResu
     flush();
     y += ps.spaceAfter ?? 0;
   });
+
+  // Multi-column reflow: lines were stacked at column width; distribute them
+  // across `cols` columns by height, resetting each column to the top and
+  // tagging the line with its column's left origin + width.
+  if (cols > 1) {
+    const contentH = Math.max(1, node.box.height - pad.t - pad.b);
+    let col = 0;
+    let shift = 0; // subtracted from y so each new column restarts at pad.t
+    for (const ln of lines) {
+      const localY = ln.y - shift;
+      if (col < cols - 1 && localY > pad.t && localY + ln.height > pad.t + contentH) {
+        col++;
+        shift = ln.y - pad.t;
+      }
+      ln.y -= shift;
+      ln.colLeft = col * (colW + gutter);
+      ln.colWidth = colW;
+    }
+  }
 
   return {
     lines,
