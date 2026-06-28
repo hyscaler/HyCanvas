@@ -81,3 +81,27 @@ func (t *lockTable) snapshot() LockMap {
 	}
 	return out
 }
+
+// replace swaps the table to a new map (used when reconciling from the cross-
+// instance LockStore, which is the authority when one is configured). Returns
+// whether the map actually changed, so callers only rebroadcast on a real diff.
+func (t *lockTable) replace(m LockMap) bool {
+	if len(m) == len(t.locks) {
+		same := true
+		for k, v := range m {
+			if cur, ok := t.locks[k]; !ok || cur != v {
+				same = false
+				break
+			}
+		}
+		if same {
+			return false
+		}
+	}
+	next := make(map[string]LockHolder, len(m))
+	for k, v := range m {
+		next[k] = v
+	}
+	t.locks = next
+	return true
+}

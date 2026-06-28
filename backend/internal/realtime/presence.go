@@ -23,11 +23,9 @@ const maxChatLen = 200
 
 var allowedReactions = map[string]bool{"👍": true, "❤️": true, "😂": true, "🎉": true, "👀": true, "✅": true}
 
-// presencePalette is the stable per-user color palette (AC-1).
-var presencePalette = []string{
-	"#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4",
-	"#3b82f6", "#8b5cf6", "#ec4899", "#14b8a6", "#a855f7",
-}
+// presencePalette is defined in presence_palette_gen.go (generated from
+// frontend/src/theme.config.mjs via scripts/gen-theme.mjs), single-sourced with
+// the frontend so a rebrand updates both. colorForUser hashes a user id into it.
 
 // colorForUser returns a stable palette color for a user id (FNV-1a hash).
 func colorForUser(userID string) string {
@@ -75,11 +73,8 @@ func sanitizePresence(raw map[string]any) PresenceState {
 		out["selection"] = ids
 	}
 	if v, ok := raw["viewport"].(map[string]any); ok {
-		z, okz := numeric(v["zoom"])
-		px, okx := numeric(v["panX"])
-		py, oky := numeric(v["panY"])
-		if okz && okx && oky {
-			out["viewport"] = map[string]any{"zoom": z, "panX": px, "panY": py}
+		if vp := sanitizeViewport(v); vp != nil {
+			out["viewport"] = vp
 		}
 	}
 	if v, ok := raw["following"]; ok {
@@ -110,7 +105,34 @@ func sanitizePresence(raw map[string]any) PresenceState {
 			out["chat"] = str
 		}
 	}
+	// Laser pointer (F30 FR-17): an ephemeral {x,y,at} position, age-gated by the
+	// client like a reaction and never persisted. Coerced like the cursor + at.
+	if v, ok := raw["laser"]; ok {
+		if v == nil {
+			out["laser"] = nil
+		} else if c, ok := v.(map[string]any); ok {
+			x, okx := numeric(c["x"])
+			y, oky := numeric(c["y"])
+			at, okAt := numeric(c["at"])
+			if okx && oky && okAt {
+				out["laser"] = map[string]any{"x": x, "y": y, "at": at}
+			}
+		}
+	}
 	return out
+}
+
+// sanitizeViewport coerces an untrusted {zoom,panX,panY} map to numeric-only, or
+// nil if any field is missing/non-numeric. Shared by presence and the
+// facilitator spotlight frame (FR-14), which carries a target viewport.
+func sanitizeViewport(v map[string]any) map[string]any {
+	z, okz := numeric(v["zoom"])
+	px, okx := numeric(v["panX"])
+	py, oky := numeric(v["panY"])
+	if okz && okx && oky {
+		return map[string]any{"zoom": z, "panX": px, "panY": py}
+	}
+	return nil
 }
 
 func numeric(v any) (float64, bool) {

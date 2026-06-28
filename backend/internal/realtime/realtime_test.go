@@ -36,6 +36,17 @@ func TestSanitizePresence(t *testing.T) {
 	if _, ok := out2["reaction"]; ok {
 		t.Fatal("non-palette reaction should be dropped")
 	}
+	// A well-formed laser pointer passes; null clears; a malformed one is dropped.
+	laser := sanitizePresence(map[string]any{"laser": map[string]any{"x": 5.0, "y": 6.0, "at": 9.0}})
+	if m, ok := laser["laser"].(map[string]any); !ok || m["x"] != 5.0 || m["at"] != 9.0 {
+		t.Fatalf("valid laser should pass through: %v", laser["laser"])
+	}
+	if cleared := sanitizePresence(map[string]any{"laser": nil}); cleared["laser"] != nil {
+		t.Fatal("null laser should clear")
+	}
+	if bad := sanitizePresence(map[string]any{"laser": map[string]any{"x": 5.0}}); func() bool { _, ok := bad["laser"]; return ok }() {
+		t.Fatal("laser missing y/at should be dropped")
+	}
 }
 
 func TestColorStable(t *testing.T) {
@@ -67,6 +78,221 @@ func TestLockTable(t *testing.T) {
 	}
 	if !tbl.releaseAll("a") || len(tbl.snapshot()) != 0 {
 		t.Fatalf("releaseAll should clear a's remaining locks: %v", tbl.snapshot())
+	}
+}
+
+func TestLockHeartbeatSweep(t *testing.T) {
+	hub := NewHub(nil)
+	a := hub.Join(PeerIdentity{ClientID: "a", UserID: "ua", Role: RoleEditor}, "d1", 1000)
+	b := hub.Join(PeerIdentity{ClientID: "b", UserID: "ub", Role: RoleEditor}, "d1", 1000)
+
+	hub.HandleLock(a, []string{"n1"})
+	hub.HandleLock(b, []string{"n2"})
+	if got := len(hub.rooms["d1"].locks.snapshot()); got != 2 {
+		t.Fatalf("expected 2 locks held, got %d", got)
+	}
+
+	now := time.Now().UnixMilli()
+	ttl := lockHeartbeatTTL.Milliseconds()
+	// Both fresh: a sweep changes nothing.
+	a.lastSeenMs.Store(now)
+	b.lastSeenMs.Store(now)
+	if c := hub.sweepStaleLocks(now, ttl); c != 0 {
+		t.Fatalf("fresh holders must not be swept, got %d rooms changed", c)
+	}
+	if got := len(hub.rooms["d1"].locks.snapshot()); got != 2 {
+		t.Fatalf("locks should be intact, got %d", got)
+	}
+
+	// b goes stale (no frame past the TTL); its lock is released, a's is kept.
+	b.lastSeenMs.Store(now - ttl - 1)
+	if c := hub.sweepStaleLocks(now, ttl); c != 1 {
+		t.Fatalf("expected 1 room swept, got %d", c)
+	}
+	snap := hub.rooms["d1"].locks.snapshot()
+	if _, held := snap["n2"]; held {
+		t.Errorf("stale holder b's lock should be released: %v", snap)
+	}
+	if _, held := snap["n1"]; !held {
+		t.Errorf("fresh holder a's lock should remain: %v", snap)
+	}
+	// The release broadcast a fresh lock map to the live peers.
+	if !drains(a.send, "locks") {
+		t.Error("expected a 'locks' broadcast after the stale-lock sweep")
+	}
+}
+
+func TestSpotlightFacilitatorOnly(t *testing.T) {
+	hub := NewHub(nil)
+	fac := hub.Join(PeerIdentity{ClientID: "f", UserID: "uf", Name: "Fac", Role: RoleEditor}, "d1", 1000)
+	peer := hub.Join(PeerIdentity{ClientID: "p", UserID: "up", Name: "Peer", Role: RoleEditor}, "d1", 1000)
+	viewer := hub.Join(PeerIdentity{ClientID: "v", UserID: "uv", Name: "Viewer", Role: RoleViewer}, "d1", 1000)
+
+	// An editor (facilitator proxy) summon fans out to peers, carrying the sender's
+	// name + the target viewport, but never echoes back to the sender.
+	hub.HandleSpotlight(fac, "summon", map[string]any{"zoom": 1.0, "panX": 10.0, "panY": 20.0})
+	if got := drainFrame(peer.send, "spotlight"); got == nil {
+		t.Fatal("peer should receive the spotlight frame")
+	} else {
+		if got["from"] != "f" || got["name"] != "Fac" || got["mode"] != "summon" {
+			t.Errorf("spotlight frame should stamp sender + mode: %v", got)
+		}
+		if vp, _ := got["viewport"].(map[string]any); vp == nil || vp["panX"] != 10.0 {
+			t.Errorf("spotlight summon should carry the viewport: %v", got)
+		}
+	}
+	if drains(fac.send, "spotlight") {
+		t.Error("the sender should NOT receive its own spotlight frame")
+	}
+
+	// A viewer cannot drive others: their spotlight frame is dropped.
+	hub.HandleSpotlight(viewer, "start", nil)
+	if drains(peer.send, "spotlight") {
+		t.Error("a viewer's spotlight frame must be dropped")
+	}
+
+	// An unknown mode is rejected before any fan-out.
+	hub.HandleSpotlight(fac, "bogus", nil)
+	if drains(peer.send, "spotlight") {
+		t.Error("an unknown spotlight mode must be dropped")
+	}
+}
+
+func TestModerateKickBanGating(t *testing.T) {
+	hub := NewHub(nil)
+	fac := hub.Join(PeerIdentity{ClientID: "f", UserID: "uf", Name: "Fac", Role: RoleEditor}, "d1", 1000)
+	guest := hub.Join(PeerIdentity{ClientID: "g", UserID: "ug", Name: "Guest", Role: RoleEditor}, "d1", 1000)
+	viewer := hub.Join(PeerIdentity{ClientID: "v", UserID: "uv", Name: "Viewer", Role: RoleViewer}, "d1", 1000)
+
+	// Track whether the guest's connection was force-disconnected.
+	kicked := false
+	guest.cancel = func() { kicked = true }
+
+	// A viewer cannot moderate: the guest is not kicked or banned.
+	hub.HandleModerate(viewer, "kick", "ug")
+	if kicked || hub.IsBanned("d1", "ug") {
+		t.Fatal("a viewer must not be able to moderate")
+	}
+
+	// An editor (facilitator) bans the guest: force-disconnected + banned + notified.
+	hub.HandleModerate(fac, "ban", "ug")
+	if !kicked {
+		t.Error("ban should force-disconnect the target's connection")
+	}
+	if !hub.IsBanned("d1", "ug") {
+		t.Error("ban should mark the user banned (refused on rejoin)")
+	}
+	if !drains(guest.send, "moderated") {
+		t.Error("the moderated user should receive a 'moderated' notice")
+	}
+
+	// A facilitator cannot moderate themselves.
+	hub.HandleModerate(fac, "kick", "uf")
+
+	// A banned user is refused at the join boundary (joinConn returns nil).
+	if c := hub.joinConn(PeerIdentity{ClientID: "g2", UserID: "ug", Role: RoleEditor}, "d1", 1000, func() {}); c != nil {
+		t.Error("a banned user's join must be refused (joinConn should return nil)")
+	}
+	// Unban clears the ban so the user can rejoin.
+	hub.HandleModerate(fac, "unban", "ug")
+	if hub.IsBanned("d1", "ug") {
+		t.Error("unban should clear the ban")
+	}
+	if c := hub.joinConn(PeerIdentity{ClientID: "g3", UserID: "ug", Role: RoleEditor}, "d1", 1000, func() {}); c == nil {
+		t.Error("after unban, the user should be able to rejoin")
+	}
+}
+
+func TestFacilitatorClaimHandoffAndProtect(t *testing.T) {
+	hub := NewHub(nil)
+	a := hub.Join(PeerIdentity{ClientID: "a", UserID: "ua", Name: "A", Role: RoleEditor}, "d1", 1000)
+	b := hub.Join(PeerIdentity{ClientID: "b", UserID: "ub", Name: "B", Role: RoleEditor}, "d1", 1000)
+	v := hub.Join(PeerIdentity{ClientID: "vv", UserID: "uv", Name: "V", Role: RoleViewer}, "d1", 1000)
+	lr := hub.rooms["d1"]
+
+	// A viewer cannot claim the facilitator role.
+	hub.HandleFacilitator(v, "claim", "")
+	if lr.facilitator != "" {
+		t.Fatal("a viewer must not become facilitator")
+	}
+	// Editor A claims it.
+	hub.HandleFacilitator(a, "claim", "")
+	if lr.facilitator != "a" {
+		t.Fatalf("A should be facilitator, got %q", lr.facilitator)
+	}
+	// B cannot claim while A holds it.
+	hub.HandleFacilitator(b, "claim", "")
+	if lr.facilitator != "a" {
+		t.Error("B must not steal the facilitator role")
+	}
+	// A non-facilitator cannot release the role.
+	hub.HandleFacilitator(b, "release", "")
+	if lr.facilitator != "a" {
+		t.Error("a non-facilitator must not release the role")
+	}
+	// Handoff to a viewer is rejected (would wedge the protected set); A stays.
+	hub.HandleFacilitator(a, "handoff", "vv")
+	if lr.facilitator != "a" {
+		t.Error("handoff to a viewer must be rejected")
+	}
+	// Handoff to an absent client is rejected.
+	hub.HandleFacilitator(a, "handoff", "ghost")
+	if lr.facilitator != "a" {
+		t.Error("handoff to an absent target must be rejected")
+	}
+	// Only the facilitator (A) protects nodes; gated to the facilitator.
+	hub.HandleProtect(b, "protect", []string{"n1"})
+	if lr.protected["n1"] {
+		t.Error("a non-facilitator must not protect nodes")
+	}
+	hub.HandleProtect(a, "protect", []string{"n1", "n2"})
+	if !lr.protected["n1"] || !lr.protected["n2"] {
+		t.Errorf("facilitator protect failed: %v", lr.protected)
+	}
+	// A hands off to B; now B owns protected locks.
+	hub.HandleFacilitator(a, "handoff", "b")
+	if lr.facilitator != "b" {
+		t.Fatalf("handoff should make B facilitator, got %q", lr.facilitator)
+	}
+	hub.HandleProtect(a, "unprotect", []string{"n1"})
+	if !lr.protected["n1"] {
+		t.Error("after handoff, A (no longer facilitator) must not unprotect")
+	}
+	hub.HandleProtect(b, "unprotect", []string{"n1"})
+	if lr.protected["n1"] {
+		t.Error("the new facilitator B should be able to unprotect")
+	}
+	_ = v
+}
+
+// drainFrame returns the first queued frame on ch with t==want (or nil), draining
+// any frames scanned before it.
+func drainFrame(ch chan []byte, want string) map[string]any {
+	for {
+		select {
+		case b := <-ch:
+			var m map[string]any
+			if json.Unmarshal(b, &m) == nil && m["t"] == want {
+				return m
+			}
+		default:
+			return nil
+		}
+	}
+}
+
+// drains reports whether any queued frame on ch has t==want (non-blocking).
+func drains(ch chan []byte, want string) bool {
+	for {
+		select {
+		case b := <-ch:
+			var m map[string]any
+			if json.Unmarshal(b, &m) == nil && m["t"] == want {
+				return true
+			}
+		default:
+			return false
+		}
 	}
 }
 

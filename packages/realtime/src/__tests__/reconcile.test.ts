@@ -303,6 +303,59 @@ describe("reorder", () => {
     expect(out.pages[0].children.map((c) => c.id)).toEqual(["group-1", "node-4"]);
     expect(out).toEqual(file);
   });
+
+  // The move/intention primitive: a reorder is now a property edit on the
+  // existing node Y.Map (__ord rank), never a delete + reinsert. This is the
+  // scenario the old delete+reinsert path lost: one client reorders a node WHILE
+  // another edits that same node's content. With ranks, node-1 is never
+  // tombstoned, so B's concurrent transform edit survives the merge.
+  it("concurrent reorder + content edit of the moved node keeps BOTH", () => {
+    const A = docFrom(richDesign());
+    const B = forkDoc(A);
+    const aUpdates: Uint8Array[] = [];
+    const bUpdates: Uint8Array[] = [];
+    A.on("update", (u: Uint8Array, origin: unknown) => { if (origin === LOCAL_ORIGIN) aUpdates.push(u); });
+    B.on("update", (u: Uint8Array, origin: unknown) => { if (origin === LOCAL_ORIGIN) bUpdates.push(u); });
+
+    // A reorders so node-1 moves to the end: [group-1, node-4, node-1].
+    const fileA = richDesign();
+    const k = fileA.pages[0].children;
+    fileA.pages[0].children = [k[1], k[2], k[0]];
+    reconcile(fileA, A);
+
+    // B (no reorder) moves node-1's x and drops its opacity, concurrently.
+    const fileB = richDesign();
+    (fileB.pages[0].children[0] as unknown as { transform: { x: number } }).transform.x = 777;
+    (fileB.pages[0].children[0] as unknown as { opacity: number }).opacity = 0.25;
+    reconcile(fileB, B);
+
+    for (const u of aUpdates) Y.applyUpdate(B, u);
+    for (const u of bUpdates) Y.applyUpdate(A, u);
+
+    const merged = fromDoc(A);
+    expect(fromDoc(B)).toEqual(merged); // both converge
+
+    // A's reorder won (node-1 last) AND B's content edit on node-1 survived.
+    expect(merged.pages[0].children.map((c) => c.id)).toEqual(["group-1", "node-4", "node-1"]);
+    const n1 = merged.pages[0].children[2] as unknown as { transform: { x: number }; opacity: number };
+    expect(n1.transform.x).toBe(777);
+    expect(n1.opacity).toBe(0.25);
+  });
+
+  // Reordering must not leave __ord (the synthetic rank) in the projected file:
+  // round-trip fidelity holds after a reorder.
+  it("reorder leaves no __ord key in the projected DesignFile", () => {
+    const file = richDesign();
+    const ydoc = docFrom(file);
+    const kids = file.pages[0].children;
+    file.pages[0].children = [kids[2], kids[0], kids[1]];
+    reconcile(file, ydoc);
+    const out = fromDoc(ydoc);
+    for (const c of out.pages[0].children) {
+      expect(Object.prototype.hasOwnProperty.call(c, "__ord")).toBe(false);
+    }
+    expect(out).toEqual(file);
+  });
 });
 
 describe("viewer gate (FR-13)", () => {

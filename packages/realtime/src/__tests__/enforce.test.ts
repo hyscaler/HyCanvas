@@ -214,6 +214,27 @@ describe("restoreNodes (snapshot-and-correct)", () => {
     expect(nodeJson(fromDoc(doc), "locked-1")!.name).toBe("Locked rect");
   });
 
+  // reinsertNode (above) rebuilds a fresh Y.Map via reconcileNodeMap, which does
+  // NOT assign an __ord rank, so the re-inserted node is unranked among ranked
+  // siblings. yToJson must sort it to the END (append, best-effort), not jump it
+  // to the FRONT (which would corrupt the z-order of the very locked node
+  // enforcement just restored). Regression for the slice-3 x slice-5 interaction.
+  it("re-inserts a deleted node at the END, not the front (rank fallback)", () => {
+    const doc = docFrom(sampleFile());
+    // Delete the FIRST top-level child, then restore it.
+    const snap = snapshotNodes(doc, ["locked-1"]);
+    const file = fromDoc(doc);
+    file.pages[0].children = (file.pages[0].children as unknown[]).filter(
+      (c) => (c as { id: string }).id !== "locked-1",
+    ) as never;
+    reconcile(file, doc);
+    expect(restoreNodes(doc, snap)).toEqual(["locked-1"]);
+
+    const ids = (fromDoc(doc).pages[0].children as { id: string }[]).map((c) => c.id);
+    expect(ids[ids.length - 1]).toBe("locked-1"); // trailing, not leading
+    expect(ids[0]).not.toBe("locked-1");
+  });
+
   it("stamps the corrective transaction with the SERVER origin", () => {
     const doc = docFrom(sampleFile());
     const snap = snapshotNodes(doc, ["locked-1"]);
