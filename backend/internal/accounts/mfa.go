@@ -35,6 +35,13 @@ var (
 	ErrMFAChallenge = errors.New("invalid or expired mfa challenge")
 )
 
+// mfaChallengeToken mints the short-lived (aud "mfa") challenge token a caller
+// redeems via VerifyMfaLogin. Shared by the password and SSO login paths so both
+// enforce the second factor identically.
+func (s *Service) mfaChallengeToken(userID string) (string, error) {
+	return jwt.SignAudience(userID, mfaAudience, s.jwtSecret, mfaChallengeTTL)
+}
+
 // packSecret encrypts a TOTP secret to the "cipher.iv.tag" column form.
 func (s *Service) packSecret(plain string) (string, error) {
 	nonce := make([]byte, 12)

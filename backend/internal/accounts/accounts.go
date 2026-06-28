@@ -186,6 +186,29 @@ func (s *Service) CreateWorkspace(ctx context.Context, userID, name, kind string
 	}, nil
 }
 
+// DeleteWorkspace permanently deletes a team/org/classroom workspace. Owner only;
+// every workspace-scoped row (members, invitations, designs, assets, brand kits,
+// custom roles, AI config) cascades via ON DELETE CASCADE. Personal workspaces
+// are auto-provisioned per user and cannot be deleted.
+func (s *Service) DeleteWorkspace(ctx context.Context, userID, workspaceID string) error {
+	// Owner-gate first (also hides existence from non-members: a missing
+	// workspace has no membership row, so this returns ErrForbidden).
+	if err := s.AssertMember(ctx, userID, workspaceID, "owner"); err != nil {
+		return err
+	}
+	var kind string
+	if err := s.db.QueryRow(ctx, `SELECT kind FROM "Workspace" WHERE id = $1`, workspaceID).Scan(&kind); err != nil {
+		return ErrNotFound
+	}
+	if strings.EqualFold(kind, "PERSONAL") {
+		return ErrBadRequest
+	}
+	if _, err := s.db.Exec(ctx, `DELETE FROM "Workspace" WHERE id = $1`, workspaceID); err != nil {
+		return err
+	}
+	return nil
+}
+
 // DBTX is satisfied by *pgxpool.Pool and pgx.Tx, so handlers use the pool and
 // tests can run in a rolled-back transaction. Begin yields a (nested, via
 // savepoint) transaction for multi-statement operations like signup.
@@ -251,15 +274,29 @@ type Service struct {
 	db        DBTX
 	jwtSecret string
 	aiSecret  string // encrypts the MFA TOTP secret at rest (defaults to jwtSecret)
-	// In-memory dev mail outbox: the email channel is a no-op (no SMTP), so sent
-	// verification/reset/magic links are captured here for local/dev testing
-	// (exposed via /auth/dev/outbox outside production).
+	// In-memory dev mail outbox: when SMTP is unconfigured the email channel falls
+	// back to capturing sent verification/reset/magic/invite links here for
+	// local/dev testing (exposed via /auth/dev/outbox outside production).
 	outboxMu sync.Mutex
 	outbox   []OutboxMessage
+	// smtp sends real email when configured (env-gated); nil/unconfigured => the
+	// dev outbox above is used instead.
+	smtp *smtpSender
+	// notifier raises in-app notifications (the dashboard bell) for invitees who
+	// already have an account; optional, wired post-construction to avoid an
+	// accounts<->engagement import cycle.
+	notifier Notifier
 }
 
 func NewService(db DBTX, jwtSecret string) *Service {
-	return &Service{db: db, jwtSecret: jwtSecret, aiSecret: jwtSecret}
+	return &Service{db: db, jwtSecret: jwtSecret, aiSecret: jwtSecret, smtp: smtpFromEnv()}
+}
+
+// WithNotifier wires the in-app notifier (the engagement emitter). Nil-safe;
+// returns the service. Set once at boot, before serving.
+func (s *Service) WithNotifier(n Notifier) *Service {
+	s.notifier = n
+	return s
 }
 
 // WithMFASecret sets the AES key material used to encrypt the TOTP secret at
@@ -317,6 +354,48 @@ func (s *Service) GetUserByID(ctx context.Context, id string) (*AuthUser, error)
 	return &v, nil
 }
 
+// UpdateProfileInput patches the caller's own profile; nil fields are left
+// unchanged. AvatarURL set to "" clears the avatar.
+type UpdateProfileInput struct {
+	Name      *string
+	AvatarURL *string
+	Locale    *string
+}
+
+// UpdateProfile updates the caller's display name, avatar, and/or locale and
+// returns the refreshed user view. A blank name is rejected.
+func (s *Service) UpdateProfile(ctx context.Context, userID string, in UpdateProfileInput) (*AuthUser, error) {
+	var name, locale *string
+	if in.Name != nil {
+		n := strings.TrimSpace(*in.Name)
+		if n == "" {
+			return nil, ErrInvalidSignup
+		}
+		name = &n
+	}
+	if in.Locale != nil {
+		if l := strings.TrimSpace(*in.Locale); l != "" {
+			locale = &l
+		}
+	}
+	var avatar *string
+	avatarSet := in.AvatarURL != nil
+	if avatarSet {
+		a := strings.TrimSpace(*in.AvatarURL)
+		avatar = &a
+	}
+	const q = `UPDATE "User"
+		SET name = COALESCE($2, name),
+		    locale = COALESCE($3, locale),
+		    "avatarUrl" = CASE WHEN $5 THEN NULLIF($4, '') ELSE "avatarUrl" END,
+		    "updatedAt" = now()
+		WHERE id = $1`
+	if _, err := s.db.Exec(ctx, q, userID, name, locale, avatar, avatarSet); err != nil {
+		return nil, err
+	}
+	return s.GetUserByID(ctx, userID)
+}
+
 // Login verifies credentials, creates a server-tracked session with a fresh
 // refresh token, and returns the user view plus tokens. MFA-enabled accounts are
 // rejected here (challenge flow is a later slice).
@@ -332,7 +411,7 @@ func (s *Service) Login(ctx context.Context, email, password, device, ip string)
 		return nil, nil, "", ErrInvalidCredentials
 	}
 	if u.MFAEnabled {
-		mfaToken, err := jwt.SignAudience(u.ID, mfaAudience, s.jwtSecret, mfaChallengeTTL)
+		mfaToken, err := s.mfaChallengeToken(u.ID)
 		if err != nil {
 			return nil, nil, "", err
 		}

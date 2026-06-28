@@ -46,7 +46,41 @@ func mountAuth(api chi.Router, svc *accounts.Service, secure bool) {
 		r.Get("/dev/outbox", devOutboxHandler(svc, secure))
 	})
 	api.With(requireAuth(svc)).Get("/me", meHandler(svc))
+	api.With(requireAuth(svc)).Patch("/me", updateMeHandler(svc))
 	api.With(requireAuth(svc)).Get("/auth/sessions", sessionsHandler(svc))
+}
+
+// updateMeHandler patches the caller's profile (name, avatarUrl, locale). Absent
+// fields are left unchanged; avatarUrl "" clears the avatar.
+func updateMeHandler(svc *accounts.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var raw map[string]json.RawMessage
+		if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
+			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			return
+		}
+		var in accounts.UpdateProfileInput
+		if v, ok := raw["name"]; ok {
+			_ = json.Unmarshal(v, &in.Name)
+		}
+		if v, ok := raw["avatarUrl"]; ok {
+			_ = json.Unmarshal(v, &in.AvatarURL)
+		}
+		if v, ok := raw["locale"]; ok {
+			_ = json.Unmarshal(v, &in.Locale)
+		}
+		u := userFrom(r.Context())
+		view, err := svc.UpdateProfile(r.Context(), u.ID, in)
+		if err != nil {
+			if errors.Is(err, accounts.ErrInvalidSignup) {
+				Problem(w, r, http.StatusBadRequest, "Bad Request", "name cannot be empty")
+				return
+			}
+			Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "could not update profile")
+			return
+		}
+		writeJSON(w, http.StatusOK, view)
+	}
 }
 
 func sessionsHandler(svc *accounts.Service) http.HandlerFunc {

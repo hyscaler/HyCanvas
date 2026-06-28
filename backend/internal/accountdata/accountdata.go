@@ -52,11 +52,12 @@ type exportDesign struct {
 
 // Export is the downloadable account bundle.
 type Export struct {
-	Format     string            `json:"format"`
-	ExportedAt string            `json:"exportedAt"`
-	Profile    map[string]any    `json:"profile"`
-	Workspaces []exportWorkspace `json:"workspaces"`
-	Designs    []exportDesign    `json:"designs"`
+	Format      string                `json:"format"`
+	ExportedAt  string                `json:"exportedAt"`
+	Profile     map[string]any        `json:"profile"`
+	Workspaces  []exportWorkspace     `json:"workspaces"`
+	Designs     []exportDesign        `json:"designs"`
+	Invitations []accounts.Invitation `json:"invitations"`
 }
 
 func iso(t time.Time) string { return t.UTC().Format("2006-01-02T15:04:05.000Z07:00") }
@@ -75,7 +76,7 @@ func (s *Service) Export(ctx context.Context, userID string) (*Export, error) {
 			"name": user.Name, "avatarUrl": user.AvatarURL, "locale": user.Locale,
 			"theme": user.Theme, "mfaEnabled": user.MFAEnabled, "createdAt": user.CreatedAt,
 		},
-		Workspaces: []exportWorkspace{}, Designs: []exportDesign{},
+		Workspaces: []exportWorkspace{}, Designs: []exportDesign{}, Invitations: []accounts.Invitation{},
 	}
 
 	rows, err := s.db.Query(ctx,
@@ -116,6 +117,11 @@ func (s *Service) Export(ctx context.Context, userID string) (*Export, error) {
 				CreatedAt: rec.CreatedAt, UpdatedAt: rec.UpdatedAt, File: loaded.File,
 			})
 		}
+	}
+	// Workspace invitations sent to this user's email (pending + accepted), for
+	// data portability.
+	if invs, err := s.acct.InvitationsForUser(ctx, user.Email); err == nil {
+		out.Invitations = invs
 	}
 	return out, nil
 }
@@ -176,6 +182,10 @@ func (s *Service) Delete(ctx context.Context, userID, password, code string) err
 		`DELETE FROM "Favorite" WHERE "userId" = $1`,
 		`DELETE FROM "VerificationToken" WHERE "userId" = $1`,
 		`DELETE FROM "MfaRecoveryCode" WHERE "userId" = $1`,
+		// Invitations this user sent (invitedById -> User is ON DELETE RESTRICT, so
+		// they must go before the User row, or the delete fails). Invitations in
+		// purged sole-member workspaces are already gone via the workspace cascade.
+		`DELETE FROM "Invitation" WHERE "invitedById" = $1`,
 		`DELETE FROM "AuthIdentity" WHERE "userId" = $1`,
 		`DELETE FROM "User" WHERE id = $1`,
 	} {
