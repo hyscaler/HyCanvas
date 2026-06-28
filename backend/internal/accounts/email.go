@@ -81,10 +81,7 @@ func (s *Service) sendVerificationToken(ctx context.Context, userID, email, kind
 		uuid.NewString(), userID, kind, secrets.HashToken(raw), time.Now().Add(ttlFor(kind))); err != nil {
 		return "", err
 	}
-	link := s.linkFor(kind, raw)
-	s.outboxMu.Lock()
-	s.outbox = append(s.outbox, OutboxMessage{To: email, Subject: subjectFor(kind), Link: link})
-	s.outboxMu.Unlock()
+	s.deliver(OutboxMessage{To: email, Subject: subjectFor(kind), Link: s.linkFor(kind, raw)})
 	return raw, nil
 }
 

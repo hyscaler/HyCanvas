@@ -65,13 +65,21 @@ func TestOIDCFlow(t *testing.T) {
 	if u.Query().Get("code_challenge_method") != "S256" || u.Query().Get("client_id") != "client-1" {
 		t.Fatalf("auth url params wrong: %s", authURL)
 	}
-	state, verifier, ok := svc.ParseStateCookie(cookie)
-	if !ok || state != u.Query().Get("state") || verifier == "" {
+	state, verifier, link, ok := svc.ParseStateCookie(cookie)
+	if !ok || state != u.Query().Get("state") || verifier == "" || link != "" {
 		t.Fatalf("state cookie round-trip failed")
 	}
 	// Tampered cookie rejected.
-	if _, _, ok := svc.ParseStateCookie(cookie + "x"); ok {
+	if _, _, _, ok := svc.ParseStateCookie(cookie + "x"); ok {
 		t.Fatal("tampered cookie should be rejected")
+	}
+	// A link-flow cookie round-trips the linking user id.
+	_, lcookie, lerr := svc.LinkURL("user-42")
+	if lerr != nil {
+		t.Fatalf("LinkURL: %v", lerr)
+	}
+	if _, _, linkUser, ok := svc.ParseStateCookie(lcookie); !ok || linkUser != "user-42" {
+		t.Fatalf("link cookie should carry the user id, got %q ok=%v", linkUser, ok)
 	}
 
 	profile, err := svc.Exchange(context.Background(), "good-code", verifier)
