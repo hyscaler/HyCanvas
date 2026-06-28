@@ -61,11 +61,12 @@ type ConfigInput struct {
 
 // ConfigView is the public config (never includes the key).
 type ConfigView struct {
-	Provider   string  `json:"provider"`
-	Model      *string `json:"model"`
-	ImageModel *string `json:"imageModel"`
-	BaseURL    *string `json:"baseUrl"`
-	HasKey     bool    `json:"hasKey"`
+	Provider     string       `json:"provider"`
+	Model        *string      `json:"model"`
+	ImageModel   *string      `json:"imageModel"`
+	BaseURL      *string      `json:"baseUrl"`
+	HasKey       bool         `json:"hasKey"`
+	Capabilities Capabilities `json:"capabilities"`
 }
 
 type configRow struct {
@@ -93,9 +94,17 @@ func (s *Service) getRow(ctx context.Context, workspaceID string) (*configRow, e
 }
 
 func toConfigView(r *configRow) *ConfigView {
+	// Surface the provider's capabilities so the UI can gate features (e.g. only
+	// offer image generation on an image-capable provider). Unknown/custom
+	// providers fall back to the permissive default (same as ResolveRoute).
+	caps := Capabilities{Text: true, Image: true, DescribeImage: true, EditImage: true}
+	if p := PresetFor(r.provider); p != nil {
+		caps = p.Capabilities
+	}
 	return &ConfigView{
 		Provider: r.provider, Model: r.model, ImageModel: r.imageModel, BaseURL: r.baseURL,
-		HasKey: r.keyCipher != nil && *r.keyCipher != "",
+		HasKey:       r.keyCipher != nil && *r.keyCipher != "",
+		Capabilities: caps,
 	}
 }
 
@@ -108,7 +117,7 @@ func (s *Service) GetConfig(ctx context.Context, workspaceID string) (*ConfigVie
 	return toConfigView(r), nil
 }
 
-var providerSet = map[string]bool{"openai": true, "anthropic": true, "custom": true}
+var providerSet = map[string]bool{"openai": true, "anthropic": true, "deepseek": true, "custom": true}
 
 // SetConfig upserts the workspace's provider config. A new apiKey is encrypted;
 // changing the provider without a new key clears the stored key (so an old
@@ -179,9 +188,22 @@ func (s *Service) callConfig(ctx context.Context, workspaceID string) (CallConfi
 	if err != nil {
 		return CallConfig{}, ErrBadRequest
 	}
+	// The registry is the single source of per-provider defaults: when the stored
+	// base URL or model is empty, fall back to the provider's preset so a built-in
+	// provider (e.g. DeepSeek) routes to its own endpoint/model instead of the
+	// OpenAI-compatible defaults baked into the transport.
+	baseURL, model := deref(r.baseURL), deref(r.model)
+	if p := PresetFor(r.provider); p != nil {
+		if baseURL == "" {
+			baseURL = p.BaseURL
+		}
+		if model == "" {
+			model = p.DefaultModel
+		}
+	}
 	return CallConfig{
 		Provider: Provider(r.provider), APIKey: key,
-		BaseURL: deref(r.baseURL), Model: deref(r.model), ImageModel: deref(r.imageModel),
+		BaseURL: baseURL, Model: model, ImageModel: deref(r.imageModel),
 	}, nil
 }
 
@@ -242,6 +264,11 @@ func (s *Service) DescribeImage(ctx context.Context, workspaceID, imageBase64, i
 	cfg, err := s.callConfig(ctx, workspaceID)
 	if err != nil {
 		return "", err
+	}
+	// Vision describe is unsupported on text-only providers (e.g. DeepSeek); fail
+	// fast with a 400 instead of POSTing an image payload that will be rejected.
+	if !ResolveRoute(string(cfg.Provider), cfg.Model, cfg.ImageModel, FeatureDescribeImage).Supported {
+		return "", ErrBadRequest
 	}
 	mime := "image/png"
 	if m := dataURLMime.FindStringSubmatch(imageBase64); m != nil {

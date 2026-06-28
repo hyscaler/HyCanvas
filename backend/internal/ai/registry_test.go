@@ -18,6 +18,33 @@ func TestPresetRegistry(t *testing.T) {
 	}
 }
 
+func TestDeepSeekPreset(t *testing.T) {
+	p := PresetFor("deepseek")
+	if p == nil {
+		t.Fatal("deepseek preset must exist")
+	}
+	if p.BaseURL != "https://api.deepseek.com/v1" || p.DefaultModel != "deepseek-chat" {
+		t.Fatalf("deepseek defaults wrong: %+v", p)
+	}
+	// DeepSeek is OpenAI-compatible text-only: no image/vision/edit.
+	if !p.Capabilities.Text || p.Capabilities.Image || p.Capabilities.DescribeImage || p.Capabilities.EditImage {
+		t.Fatalf("deepseek capabilities wrong: %+v", p.Capabilities)
+	}
+	// Image-ish features are unsupported; text resolves to the default model.
+	if ResolveRoute("deepseek", "", "", FeatureImage).Supported {
+		t.Fatal("deepseek image should be unsupported")
+	}
+	if r := ResolveRoute("deepseek", "", "", FeatureText); !r.Supported || r.Model != "deepseek-chat" {
+		t.Fatalf("deepseek text route: %+v", r)
+	}
+	// A DeepSeek call (resolved with the preset base URL) routes to DeepSeek, not
+	// the OpenAI default baked into the OpenAI-compatible transport path.
+	req := buildTextRequest(CallConfig{Provider: ProviderDeepSeek, APIKey: "k", BaseURL: p.BaseURL, Model: p.DefaultModel}, "hi", "")
+	if req.url != "https://api.deepseek.com/v1/chat/completions" || req.headers["authorization"] != "Bearer k" {
+		t.Fatalf("deepseek request wrong: %+v", req)
+	}
+}
+
 func TestResolveRoute(t *testing.T) {
 	// Text feature uses the text model (config override wins over preset default).
 	r := ResolveRoute("openai", "gpt-4o", "", FeatureText)
