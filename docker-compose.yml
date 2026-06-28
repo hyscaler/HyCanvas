@@ -1,11 +1,17 @@
-# HyCanvas - one-command self-host stack.
+# HyCanvas - one-command self-host stack (PUBLISHED IMAGE).
 #
-#   docker compose up --build
+#   cp .env.example .env   # set JWT_SECRET
+#   docker compose up -d
 #
-# The Go app applies migrations on boot and serves the whole product (UI + API +
-# realtime) at http://localhost:8005. With the default COMPOSE_PROFILES=bundled
-# (set in .env) it also runs Postgres; in EXTERNAL mode it runs only the app
-# against your managed Postgres (see the Database note below).
+# Pulls the published hycanvas/hycanvas image and runs it with a bundled Postgres,
+# serving the whole product (UI + API + realtime) at http://localhost:8005; the Go
+# app applies migrations on boot. Update later with `docker compose pull && docker
+# compose up -d`. To BUILD from source instead, use docker-compose.prod.yml; for
+# local development with hot reload, use docker-compose.dev.yml.
+#
+# With the default COMPOSE_PROFILES=bundled (set in .env) it also runs Postgres;
+# in EXTERNAL mode it runs only the app against your managed Postgres (see the
+# Database note below).
 #
 # Database: external if you provide it in .env, bundled otherwise.
 #   - BUNDLED (default): the db container runs, gated by the `bundled` compose
@@ -35,9 +41,7 @@ services:
       retries: 12
 
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: hycanvas/hycanvas:latest
     restart: unless-stopped
     # required:false so the app still starts in EXTERNAL mode, where the bundled
     # db is not started (profile off). In bundled mode it waits for healthy.
@@ -62,6 +66,10 @@ services:
       NODE_ENV: production
       PORT: "8005"
       DB_AUTO_MIGRATE: "true"
+      # Served over plain http://localhost here, so cookies must NOT be Secure or
+      # the browser drops the session and login fails. Behind a TLS proxy, set
+      # this to "true" (and point APP_URL at your https origin).
+      COOKIE_SECURE: "false"
       DATABASE_URL: "${EXTERNAL_DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-hycanvas}?schema=public}"
       # Storage on the container volume (a host absolute path from .env would not
       # exist here). Set S3_* in .env to use object storage instead.

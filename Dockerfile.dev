@@ -1,0 +1,38 @@
+# HyCanvas - DEVELOPMENT image. Runs the Go backend via air live-reload (:8005)
+# and the Next.js dev server (:3000) together with hot reload, against an external
+# Postgres (see docker-compose.dev.yml). The source tree is bind-mounted at run
+# time; the entrypoint installs deps, builds the @hc/* packages, applies
+# migrations, then starts the backend (air) and frontend (next dev) under
+# concurrently. This is NOT a production image - prod is the embedded
+# single-binary build in `Dockerfile`.
+
+FROM golang:1.25-bookworm
+
+# Node 24 (frontend dev server + npm-workspace tooling), ffmpeg (video export),
+# and db client tools used by the entrypoint's readiness wait + migrations.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      ca-certificates curl gnupg ffmpeg netcat-openbsd postgresql-client \
+ && mkdir -p /etc/apt/keyrings \
+ && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+      | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+ && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_24.x nodistro main" \
+      > /etc/apt/sources.list.d/nodesource.list \
+ && apt-get update && apt-get install -y --no-install-recommends nodejs \
+ && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Go live-reload for the dev backend (rebuilds + restarts on source changes).
+# Installed into /go/bin, which is on PATH in the golang base image.
+RUN go install github.com/air-verse/air@latest
+
+WORKDIR /app
+
+# The entrypoint installs/builds against the bind-mounted source on each start
+# (idempotent once the named node_modules volume is warm).
+COPY docker/entrypoint-dev.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# 8005 = backend (REST /api/v1 + realtime /realtime); 3000 = Next.js dev server.
+EXPOSE 8005 3000
+
+ENTRYPOINT ["/entrypoint.sh"]

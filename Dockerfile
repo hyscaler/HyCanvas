@@ -41,8 +41,9 @@ FROM debian:bookworm-slim AS runtime
 WORKDIR /app
 
 # ffmpeg: video export. ca-certificates: outbound TLS (AI providers, SSO).
+# curl: container healthcheck against /healthz.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ffmpeg ca-certificates \
+ && apt-get install -y --no-install-recommends ffmpeg ca-certificates curl \
  && rm -rf /var/lib/apt/lists/*
 
 COPY --from=backend /out/hycanvas /app/hycanvas
@@ -55,5 +56,9 @@ ENV PORT=8005 \
 EXPOSE 8005
 # Persist uploads/exports/snapshots when using the local storage driver.
 VOLUME ["/app/.data/storage"]
+
+# The Go binary serves /healthz once its HTTP listener is up.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD curl -fsS "http://localhost:${PORT}/healthz" || exit 1
 
 ENTRYPOINT ["/app/hycanvas"]

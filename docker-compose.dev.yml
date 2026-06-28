@@ -1,0 +1,81 @@
+# HyCanvas - LOCAL DEVELOPMENT stack (hot reload).
+#
+#   docker compose -f docker-compose.dev.yml up --build
+#
+# Runs Postgres plus one app container that serves the Go backend on :8005 and
+# the Next.js dev server on :3000, both with live reload against your working
+# tree (bind-mounted). Open http://localhost:3000 (the UI calls the API on
+# :8005). For the production single-image build, use docker-compose.yml /
+# docker-compose.prod.yml instead.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-hycanvas}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - pgdata_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-hycanvas}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    working_dir: /app
+    depends_on:
+      db:
+        condition: service_healthy
+    # Optional: pull OIDC/SMTP/S3/etc. from your local .env. The `environment`
+    # block below takes precedence over the file (and over the .env values the
+    # npm scripts load), so the Docker DB host/port and a dev secret always win.
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: development
+      PORT: "8005"
+      DB_AUTO_MIGRATE: "true"
+      # In-network DB URL (overrides any localhost DATABASE_URL from .env).
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-hycanvas}?schema=public"
+      # Dev-only secret so the stack starts with zero setup. NEVER use in prod.
+      JWT_SECRET: "${JWT_SECRET:-dev-insecure-jwt-secret-change-me}"
+      # The backend serves the API only in dev; the frontend runs as `next dev`.
+      PUBLIC_DIR: ""
+      FRONTEND_URL: "http://localhost:3000"
+      # Browser (on the host) reaches the API via the published 8005 port.
+      NEXT_PUBLIC_BACKEND_URL: "http://localhost:8005/api"
+      APP_URL: "http://localhost:8005"
+      STORAGE_DRIVER: local
+      LOCAL_STORAGE_PATH: /app/.data/storage
+      # Reliable file-watching for Next.js + tooling over a bind mount.
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "8005:8005" # backend: REST /api/v1 + realtime /realtime
+      - "3000:3000" # frontend: Next.js dev server
+    volumes:
+      - .:/app
+      # Keep container-built (linux) deps + package dist out of the host mount.
+      - node_modules:/app/node_modules
+      - frontend_node_modules:/app/frontend/node_modules
+      # Cache Go modules/builds across restarts for fast `go run`.
+      - go_mod:/go/pkg/mod
+      - go_build:/root/.cache/go-build
+      - dev_storage:/app/.data/storage
+    restart: unless-stopped
+
+volumes:
+  pgdata_dev:
+  node_modules:
+  frontend_node_modules:
+  go_mod:
+  go_build:
+  dev_storage:

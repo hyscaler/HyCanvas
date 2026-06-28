@@ -8,6 +8,7 @@ This guide covers the two ways to run it and documents every environment variabl
 
 - [Option A: published image + your own Postgres](#option-a-published-image)
 - [Option B: docker compose (bundled or external Postgres)](#option-b-docker-compose)
+- [Option C: local development with hot reload](#option-c-local-development)
 - [Networking: the localhost gotcha](#networking-the-localhost-gotcha)
 - [Persistence and volumes](#persistence-and-volumes)
 - [Environment variable reference](#environment-variable-reference)
@@ -42,15 +43,40 @@ From a checkout of the repository:
 
 ```bash
 cp .env.example .env     # set JWT_SECRET at minimum
-docker compose up        # add --build to rebuild the image from source
+docker compose up -d     # pulls the published image + bundled Postgres
 ```
 
-This serves everything at http://localhost:8005, with Postgres as a companion service. Stop with `docker compose down` (add `-v` to also drop the data volumes).
+This serves everything at http://localhost:8005, with Postgres as a companion service. Update later with `docker compose pull && docker compose up -d`. Stop with `docker compose down` (add `-v` to also drop the data volumes).
 
 Compose chooses the database from `.env`:
 
 - BUNDLED (default): `COMPOSE_PROFILES=bundled` runs the `db` container and assembles the connection URL from `POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB`. The `.env` `DATABASE_URL` (localhost-based) is ignored inside compose.
 - EXTERNAL (bring your own managed Postgres): set `EXTERNAL_DATABASE_URL` and `COMPOSE_PROFILES=` (empty) so the bundled container does not start.
+
+There are three compose files:
+
+| File | Use |
+| --- | --- |
+| `docker-compose.yml` | The default. `docker compose up -d` pulls the published `hycanvas/hycanvas` image and runs it with bundled Postgres. |
+| `docker-compose.prod.yml` | Build YOUR source instead of the published image, plus a container healthcheck (`/healthz`) and restart policy. Run with `docker compose -f docker-compose.prod.yml up --build -d`. |
+| `docker-compose.dev.yml` | Local development with hot reload (see Option C). |
+
+## Option C: local development
+
+For day-to-day development in containers (no local Go or Node toolchain needed), use the dev stack. It runs Postgres plus one app container that serves the Go backend and the Next.js dev server with live reload against your working tree (bind-mounted).
+
+```bash
+cp .env.example .env      # optional: add OIDC/SMTP/S3 keys; a dev JWT_SECRET is provided
+docker compose -f docker-compose.dev.yml up --build
+```
+
+Then open http://localhost:3000 (the UI), which calls the API on http://localhost:8005. What the container does on start (`docker/entrypoint-dev.sh`): wait for Postgres, `npm install`, `npm run build:packages` (the `@hc/*` libraries are consumed from their compiled `dist/`), apply migrations, then start the Go backend on `:8005` (via `air`, which rebuilds and restarts it on `.go` changes) and the Next.js dev server on `:3000`.
+
+Notes:
+- This image (`Dockerfile.dev`) carries both Go and Node and is for development only; it is not the production artifact. Production is the embedded single binary built by `Dockerfile`.
+- The working tree is bind-mounted, so edits on the host hot-reload in the container: the frontend via `next dev`, the backend via `air` (a brief rebuild on each `.go` save). Dependencies (`node_modules`) and Go module/build caches live in named volumes so they survive restarts and never clash with host-platform binaries.
+- The `environment:` block in `docker-compose.dev.yml` points `DATABASE_URL` at the `db` service and supplies a dev-only `JWT_SECRET`; these take precedence over any localhost values in your `.env`.
+- If a frontend native dependency (lightningcss/swc) ever mismatches the container architecture, reset the deps volumes: `docker compose -f docker-compose.dev.yml down` then `docker volume rm open-canva_frontend_node_modules open-canva_node_modules`, and `up --build` again. (A full reset including the database and storage is `docker compose -f docker-compose.dev.yml down -v`.)
 
 ## Networking: the localhost gotcha
 
@@ -81,6 +107,7 @@ Postgres data persists in its own volume (the `pgdata` volume under compose, or 
 | `DATABASE_URL` | - | Postgres connection string. Required when running the image directly. Under compose it is assembled from `POSTGRES_*` instead. |
 | `PORT` | `8005` | Port the binary listens on (UI + API + realtime). `GO_API_PORT` is an accepted alias. |
 | `NODE_ENV` | `development` | `production` marks session cookies Secure, requires https AI provider base URLs, and disables the dev mail outbox and permissive localhost CORS. Set `production` for real deployments. |
+| `COOKIE_SECURE` | follows `NODE_ENV` | Force the session-cookie `Secure` flag. Over plain http (localhost / LAN / a VPS before TLS) it MUST be `false` or the browser drops the cookie and login fails; set `true` only when served over https. The compose files default it to `false` for the http://localhost quick start. |
 | `DB_AUTO_MIGRATE` | `true` | Apply pending SQL migrations on boot. Set `false` to manage migrations out of band. |
 | `APP_URL` | - | Public base URL of the app, used to build links in outbound email (verify email, password reset, magic link). |
 | `AI_SECRET` | falls back to `JWT_SECRET` | AES-256-GCM key encrypting secrets at rest: per-workspace AI provider keys and MFA TOTP secrets. Set a dedicated value to rotate it independently of `JWT_SECRET`. |

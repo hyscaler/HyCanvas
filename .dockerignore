@@ -13,6 +13,12 @@ backend/internal/webui/public
 *.log
 npm-debug.log*
 .DS_Store
+# Docker meta-files are not consumed by any build's COPY (the Dockerfile is read
+# by the builder directly), so keep them out of the context. NB: do NOT ignore the
+# `docker/` dir - Dockerfile.dev copies docker/entrypoint-dev.sh from it.
+Dockerfile*
+docker-compose*.yml
+
 # Never bake local secrets into the image; env is provided at run time.
 .env
 .env.*

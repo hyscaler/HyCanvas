@@ -1,0 +1,73 @@
+# HyCanvas - PRODUCTION stack (build from source).
+#
+#   docker compose -f docker-compose.prod.yml up --build -d
+#
+# Builds the single self-contained image (Dockerfile: Go binary with the frontend
+# embedded), runs Postgres, applies migrations on boot, and serves the whole
+# product at http://localhost:8005 with a container healthcheck and restart
+# policy. Use this when you want to run YOUR source rather than the published
+# image; `docker-compose.yml` is the default and pulls the published image
+# instead. JWT_SECRET is REQUIRED - set it in .env (e.g. `openssl rand -hex 32`).
+#
+# Database: bundled by default; for a managed Postgres set EXTERNAL_DATABASE_URL
+# and COMPOSE_PROFILES="" (empty) so the bundled `db` container does not start.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    profiles: ["bundled"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-hycanvas}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-hycanvas}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    # required:false so the app still starts in EXTERNAL mode (bundled db off).
+    depends_on:
+      db:
+        condition: service_healthy
+        required: false
+    ports:
+      - "${APP_PORT:-8005}:8005"
+    # Secrets/config (JWT_SECRET, AI_SECRET, OIDC_*, VAPID_*, SMTP_*, S3_*, ...)
+    # come from .env; the explicit values below win over it for the Docker wiring.
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: "8005"
+      DB_AUTO_MIGRATE: "true"
+      # Plain http://localhost by default, so cookies must not be Secure or login
+      # fails. Set "true" once you serve over https / a TLS reverse proxy.
+      COOKIE_SECURE: "false"
+      # External managed Postgres when EXTERNAL_DATABASE_URL is set; otherwise the
+      # in-network bundled-container URL from the POSTGRES_* credentials.
+      DATABASE_URL: "${EXTERNAL_DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-hycanvas}?schema=public}"
+      # Local-file storage on the container volume; set S3_* in .env to use object
+      # storage instead.
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+      LOCAL_STORAGE_PATH: /app/.data/storage
+    volumes:
+      - storage:/app/.data/storage
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8005/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  pgdata:
+  storage:

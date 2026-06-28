@@ -2,9 +2,69 @@
 
 A free, self-hostable, AI-native alternative to Canva: design anything, with no paywalls or watermarks. Shipped as a single self-contained image - one Go binary serves the web UI, the REST API, and the realtime WebSocket on one port, runs its database migrations on boot, and includes ffmpeg for video export. Postgres is the only external dependency.
 
-## Quick start (self-contained: app + Postgres)
+## Quick start (Docker Compose, recommended)
 
-HyCanvas needs a Postgres it can reach over the network. The simplest way is to run one alongside it on a shared Docker network:
+Create a `docker-compose.yml`, this pulls the published image and runs it with a bundled Postgres:
+
+```yaml
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: hycanvas
+      POSTGRES_PASSWORD: change-this-password
+      POSTGRES_DB: hycanvas
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hycanvas -d hycanvas"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  app:
+    image: hycanvas/hycanvas:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8005:8005"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://hycanvas:change-this-password@db:5432/hycanvas?schema=public
+      JWT_SECRET: change-me   # REQUIRED - generate with: openssl rand -hex 32
+      # http://localhost quick start: cookies can't be Secure over http. Behind a
+      # TLS reverse proxy, set this "true" (and APP_URL to your https origin).
+      COOKIE_SECURE: "false"
+    volumes:
+      - storage:/app/.data/storage
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  storage:
+```
+
+```bash
+docker compose up -d
+```
+
+Then open http://localhost:8005. `JWT_SECRET` is required (the app refuses to start without it); the app applies database migrations automatically on boot. Update later with `docker compose pull && docker compose up -d`.
+
+> The HyCanvas repository ships an equivalent `docker-compose.yml` (it reads `JWT_SECRET` and `POSTGRES_*` from a `.env` instead of inlining them). From a clone: `cp .env.example .env`, set `JWT_SECRET`, then `docker compose up -d`.
+
+### Using your own Postgres
+
+Point `DATABASE_URL` at your server and drop the bundled `db` service. Make sure the target database exists (HyCanvas creates its tables, not the database). `localhost` inside a container is the container itself, not your host, to reach a Postgres on the host with Docker Desktop use `host.docker.internal`:
+
+```
+DATABASE_URL: postgresql://user:pass@host.docker.internal:5432/hycanvas?schema=public
+```
+
+### Alternative: docker run
+
+If you prefer not to use Compose:
 
 ```bash
 docker network create hycanvas-net
@@ -18,29 +78,6 @@ docker run -d --name hycanvas --network hycanvas-net -p 8005:8005 \
   -e JWT_SECRET="$(openssl rand -hex 32)" \
   -v hycanvas-storage:/app/.data/storage \
   hycanvas/hycanvas:latest
-```
-
-Then open http://localhost:8005.
-
-`JWT_SECRET` is required (the app refuses to start without it). The app applies database migrations automatically on boot (`DB_AUTO_MIGRATE=true`).
-
-### Using your own Postgres
-
-Set `DATABASE_URL` to your server and make sure the target database exists (HyCanvas creates its tables, not the database). Note that `localhost` inside a container refers to the container itself, not your host - to reach a Postgres running on the host machine with Docker Desktop, use `host.docker.internal`:
-
-```bash
--e DATABASE_URL="postgresql://user:pass@host.docker.internal:5432/hycanvas?schema=public"
-```
-
-## With Docker Compose (app + Postgres)
-
-The repository ships a `docker-compose.yml` that runs HyCanvas plus a bundled Postgres:
-
-```bash
-git clone https://github.com/hyscaler/HyCanvas.git
-cd HyCanvas
-cp .env.example .env   # set JWT_SECRET (and POSTGRES_* if you like)
-docker compose up
 ```
 
 ## Environment variables

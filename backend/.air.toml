@@ -1,0 +1,23 @@
+# Live-reload config for the dev Docker container (used by `air` in the backend
+# dir; see Dockerfile.dev / docker/entrypoint-dev.sh). It rebuilds and restarts
+# the API on .go changes. Native (non-Docker) dev uses `npm run dev` (go run) and
+# does not need this file. The built binary reads all config from the process
+# env (PORT, PUBLIC_DIR, DATABASE_URL, ...), which compose provides in the
+# container, so no extra flags are needed here.
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/api ./cmd/api"
+  bin = "./tmp/api"
+  delay = 800
+  include_ext = ["go"]
+  exclude_dir = ["tmp", "internal/webui/public"]
+  stop_on_error = true
+  # fsnotify is unreliable on Docker bind mounts (macOS/Windows), so poll for
+  # changes - this is what makes backend live-reload actually fire in-container.
+  poll = true
+  poll_interval = 500
+
+[misc]
+  clean_on_exit = true

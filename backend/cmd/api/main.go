@@ -20,6 +20,7 @@ import (
 	"hycanvas/backend/internal/accountdata"
 	"hycanvas/backend/internal/accounts"
 	"hycanvas/backend/internal/ai"
+	"hycanvas/backend/internal/aistudio"
 	"hycanvas/backend/internal/approvals"
 	"hycanvas/backend/internal/brand"
 	"hycanvas/backend/internal/bulkcreate"
@@ -41,6 +42,7 @@ import (
 	"hycanvas/backend/internal/storage"
 	"hycanvas/backend/internal/templates"
 	"hycanvas/backend/internal/uploads"
+	"hycanvas/backend/internal/whiteboard"
 )
 
 // localhostOriginRE matches http(s)://localhost or 127.0.0.1 with an optional
@@ -109,19 +111,61 @@ func main() {
 	// the mutation services can hold it without forming a construction cycle.
 	pushSvc := push.NewService(pool)
 	emitter := engagement.NewEmitter(pool, acct, titles).WithPush(pushAdapter{pushSvc})
+	// Wire the emitter back into accounts so a workspace invite raises an in-app
+	// notification (the dashboard bell) for an invitee who already has an account.
+	acct.WithNotifier(emitter)
 	// The lock checker derives approval-lock state from the Approval table with
 	// no service dependency, so wiring it into sharing forms no import cycle.
 	lockChecker := approvals.NewLockChecker(pool)
-	sharingSvc := sharing.NewService(pool, persist, emitter, lockChecker).WithFiles(titles)
-	// Realtime role refresh stays on the TS service (realtime is not ported), so
-	// the RoleRefresher hook is nil here.
-	approvalsSvc := approvals.NewService(pool, sharingSvc, acct, nil, emitter)
+	sharingSvc := sharing.NewService(pool, persist, emitter, lockChecker).WithFiles(titles).WithMailer(acct)
 	// Realtime collaboration relay (opaque Yjs blob broadcast + presence + locks);
-	// it journals editor updates to the DesignUpdateLog via persistence.
-	rtHub := realtime.NewHub(persist)
+	// it journals editor updates to the DesignUpdateLog via persistence. The role
+	// resolver lets the hub live-downgrade editors when an approval lock engages.
+	rtHub := realtime.NewHub(persist).WithRoleResolver(
+		func(ctx context.Context, designID, userID string) (string, error) {
+			return sharingSvc.ResolveGatewayRole(ctx, designID, userID, nil)
+		})
+	// Approvals push a live role refresh to connected clients on lock/unlock via
+	// the realtime hub (F16 AC-9).
+	approvalsSvc := approvals.NewService(pool, sharingSvc, acct, rtHub, emitter)
+	// Horizontal scaling (optional): when REDIS_URL is set, fan relay/awareness
+	// frames out across gateway instances via Redis pub/sub so clients on
+	// different instances converge (roadmap doc 16, section 8). Unset = single
+	// instance, in-memory only. A set-but-unreachable Redis fails loudly rather
+	// than silently degrading to a split brain.
+	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" {
+		coord, err := realtime.NewRedisCoordinator(context.Background(), redisURL)
+		if err != nil {
+			slog.Error("realtime: redis coordinator init failed", "err", err)
+			os.Exit(1)
+		}
+		rtHub = rtHub.WithCoordinator(coord)
+		// Cross-instance lock authority (FR-8): the same Redis backs a compare-and-
+		// swap lock store so two instances cannot grant the same node and a crashed
+		// instance's locks auto-expire. Without it locks stay instance-local.
+		lockStore, err := realtime.NewRedisLockStore(context.Background(), redisURL)
+		if err != nil {
+			slog.Error("realtime: redis lock store init failed", "err", err)
+			os.Exit(1)
+		}
+		rtHub = rtHub.WithLockStore(lockStore)
+		slog.Info("realtime: horizontal fan-out + cross-instance lock authority enabled (redis)")
+	}
+	// Background lifecycle for the realtime fan-out pumps + lock sweeper; cancelled
+	// on shutdown so the goroutines (and any Redis subscription) tear down cleanly.
+	rtCtx, rtCancel := context.WithCancel(context.Background())
+	defer rtCancel()
+	rtHub.StartCoordinator(rtCtx)
+	// Periodically release collaborative locks held by stalled/zombie sockets
+	// (FR-8 heartbeat timeout), so a node never stays locked by a dead client.
+	rtHub.StartSweeper(rtCtx)
 	// Comments: the realtime hub broadcasts comment-changed signals; the emitter
 	// records activity + notifications. The persistence-titles adapter exposes lookups.
 	commentsSvc := comments.NewService(pool, sharingSvc, acct, titles, rtHub, emitter).WithFiles(titles)
+	// Server-authoritative whiteboard voting (F30 FR-19): sharing resolves the
+	// caller's design access; the realtime hub broadcasts vote-changed so clients
+	// refetch the tally over REST.
+	whiteboardSvc := whiteboard.NewService(whiteboard.NewRepo(pool), sharingSvc, rtHub)
 	// Engagement read side (activity feed, notifications, insights). The version
 	// loader folds version-history edits into the activity feed (FR-12).
 	engagementSvc := engagement.NewService(pool, sharingSvc, acct, titles).WithVersions(titles)
@@ -138,6 +182,9 @@ func main() {
 		aiSecret = cfg.JWTSecret
 	}
 	aiSvc := ai.NewService(pool, aiSecret, os.Getenv("NODE_ENV") != "production")
+	// AI Creative Studio (F39): server-side orchestration on top of the AI proxy
+	// (schema validation + retry) plus persisted assistant sessions/provenance.
+	aiStudioSvc := aistudio.NewService(pool, aiSvc)
 	// Uploads: base64 upload + magic-byte sniff + quota + folders, over the same
 	// storage driver as Node (shared blobs).
 	uploadsSvc := uploads.NewService(pool, store, acct)
@@ -157,7 +204,15 @@ func main() {
 	oidcSvc := oidc.NewService(cfg.JWTSecret)
 	// In-memory job registry for inline export/convert/bulk work (no Redis queue).
 	jobRegistry := jobs.NewRegistry()
+	// Session cookies are Secure in production by default. COOKIE_SECURE overrides
+	// that explicitly: a production self-host served over plain http (e.g. a
+	// localhost/LAN/VPS quick start before TLS is set up) must set it "false" or
+	// the browser drops the Secure cookie and login silently fails. Behind a TLS
+	// reverse proxy, leave it on (or set "true").
 	secureCookies := os.Getenv("NODE_ENV") == "production"
+	if v := os.Getenv("COOKIE_SECURE"); v != "" {
+		secureCookies = v == "true" || v == "1"
+	}
 
 	// CORS: allow the configured frontend origin always, and any localhost origin
 	// outside production (dev runs the frontend on :3000 against the API on :8005
@@ -187,9 +242,11 @@ func main() {
 			Sharing:     sharingSvc,
 			Approvals:   approvalsSvc,
 			Comments:    commentsSvc,
+			Whiteboard:  whiteboardSvc,
 			Engagement:  engagementSvc,
 			Brand:       brandSvc,
 			AI:          aiSvc,
+			AIStudio:    aiStudioSvc,
 			Uploads:     uploadsSvc,
 			Realtime:    rtHub,
 			Templates:   templatesSvc,
@@ -225,6 +282,15 @@ func main() {
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		logger.Error("shutdown error", "err", err)
+	}
+	// Tear down the realtime fan-out pumps + sweeper, then release the coordinator
+	// (closes the Redis pool; no-op for the single-instance default).
+	rtCancel()
+	if err := rtHub.CloseCoordinator(); err != nil {
+		logger.Error("realtime coordinator close error", "err", err)
+	}
+	if err := rtHub.CloseLockStore(); err != nil {
+		logger.Error("realtime lock store close error", "err", err)
 	}
 }
 
