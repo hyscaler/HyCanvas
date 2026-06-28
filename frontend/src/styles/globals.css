@@ -1,29 +1,54 @@
 @import "tailwindcss";
 
 /* HyCanvas design tokens. Light theme is locked for v1 (a dark editor chrome
-   is applied locally, not via prefers-color-scheme). Brand is a violet -> blue
-   gradient identity. The brand font is injected by next/font as --font-sans. */
+   is applied locally, not via prefers-color-scheme). The brand/accent tokens
+   and the identity gradient below are GENERATED from the single source
+   src/theme.config.mjs by scripts/gen-theme.mjs (npm run gen:theme); edit colors
+   there, not here. The brand font is injected by next/font as --font-sans. */
 @theme inline {
   --font-sans: var(--font-brand), ui-sans-serif, system-ui, sans-serif;
 
-  --color-brand-50: #f2f1fe;
-  --color-brand-100: #e7e5fd;
-  --color-brand-200: #d2cefb;
-  --color-brand-300: #b3aaf7;
-  --color-brand-400: #8f80f0;
-  --color-brand-500: #7458e8;
-  --color-brand-600: #6238db;
-  --color-brand-700: #5329c0;
-  --color-brand-800: #45249c;
-  --color-brand-900: #39217d;
+  /* THEME:colors:start (generated from src/theme.config.mjs - do not edit by hand) */
+  --color-brand-50: #FBEFF7;
+  --color-brand-100: #F6DDEE;
+  --color-brand-200: #EDBBDC;
+  --color-brand-300: #E195C7;
+  --color-brand-400: #CF67A8;
+  --color-brand-500: #B73E88;
+  --color-brand-600: #9B2C72;
+  --color-brand-700: #7E2059;
+  --color-brand-800: #681A49;
+  --color-brand-900: #54163B;
+  --color-brand-950: #3E1030;
 
-  --color-accent-400: #5b9bff;
-  --color-accent-500: #2f7bff;
-  --color-accent-600: #1f63e6;
+  --color-accent-50: #FCEAF4;
+  --color-accent-100: #FAD5E9;
+  --color-accent-200: #F4AFD3;
+  --color-accent-300: #EE8FC2;
+  --color-accent-400: #E07AB8;
+  --color-accent-500: #D6409A;
+  --color-accent-600: #B82F80;
+  --color-accent-700: #8E2563;
+  --color-accent-800: #6B1C4A;
+  --color-accent-900: #4F1537;
+  --color-accent-950: #350D24;
+  /* THEME:colors:end */
 }
 
 :root {
-  --oc-gradient: linear-gradient(135deg, #7c3aed 0%, #6238db 45%, #2f7bff 100%);
+  /* THEME:root:start (generated from src/theme.config.mjs - do not edit by hand) */
+  --oc-brand-start: #6D1E50;
+  --oc-brand-mid: var(--color-brand-600);
+  --oc-brand-end: #C84B9A;
+  --oc-gradient: linear-gradient(135deg, var(--oc-brand-start) 0%, var(--oc-brand-mid) 45%, var(--oc-brand-end) 100%);
+
+  --color-selection: #2563eb;
+  --color-guide-subtle: #3b82f6;
+  --color-guide-active: #06b6d4;
+  --color-guide-conflict: #f43f5e;
+  --color-pen-preview: #a855f7;
+  --color-ruler: #9ca3af;
+  /* THEME:root:end */
 }
 
 html,

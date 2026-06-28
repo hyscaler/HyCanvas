@@ -6,7 +6,9 @@
   "description": "HyCanvas frontend (Next.js, Pages Router)",
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node ../scripts/gen-theme.mjs",
     "build": "cross-env NODE_ENV=production next build",
+    "prebuild:dist": "node ../scripts/gen-theme.mjs",
     "build:dist": "cross-env NODE_ENV=production BUILD_DIST=true next build",
     "start": "next start",
     "lint": "eslint",
