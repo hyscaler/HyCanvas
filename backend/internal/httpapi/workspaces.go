@@ -10,12 +10,25 @@ import (
 )
 
 // mountWorkspaces attaches the workspace collection routes (doc 15 FR-10):
-// GET /api/v1/workspaces (the caller's workspaces with role) and
-// POST /api/v1/workspaces (create a team/org/classroom). Both require auth.
+// GET /api/v1/workspaces (the caller's workspaces with role),
+// POST /api/v1/workspaces (create a team/org/classroom), and
+// DELETE /api/v1/workspaces/{id} (owner-only, cascades). All require auth.
 // Membership/invitation sub-resources are handled elsewhere.
 func mountWorkspaces(api chi.Router, svc *accounts.Service) {
 	api.With(requireAuth(svc)).Get("/workspaces", listWorkspacesHandler(svc))
 	api.With(requireAuth(svc)).Post("/workspaces", createWorkspaceHandler(svc))
+	api.With(requireAuth(svc)).Delete("/workspaces/{id}", deleteWorkspaceHandler(svc))
+}
+
+func deleteWorkspaceHandler(svc *accounts.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		u := userFrom(r.Context())
+		if err := svc.DeleteWorkspace(r.Context(), u.ID, chi.URLParam(r, "id")); err != nil {
+			membersProblem(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}
 }
 
 func listWorkspacesHandler(svc *accounts.Service) http.HandlerFunc {

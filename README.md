@@ -69,41 +69,42 @@ Set real values in `.env` for production: at minimum `NODE_ENV=production`, `DAT
 
 The whole product (UI + REST API + realtime WebSocket) runs from one image, with Postgres as a companion service. For the full environment-variable reference and production options, see [DOCKER_SETUP.md](DOCKER_SETUP.md).
 
-### Use the published image (fastest)
+### Run the published image (fastest)
 
-The prebuilt image (`linux/amd64` and `linux/arm64`) needs a Postgres it can reach. The simplest setup runs one alongside it on a shared Docker network:
-
-```bash
-docker network create hycanvas-net
-
-docker run -d --name hycanvas-db --network hycanvas-net \
-  -e POSTGRES_PASSWORD=hycanvas -e POSTGRES_DB=hycanvas \
-  postgres:16
-
-docker run -d --name hycanvas --network hycanvas-net -p 8005:8005 \
-  -e DATABASE_URL="postgresql://postgres:hycanvas@hycanvas-db:5432/hycanvas?schema=public" \
-  -e JWT_SECRET="$(openssl rand -hex 32)" \
-  -v hycanvas-storage:/app/.data/storage \
-  hycanvas/hycanvas:latest
-```
-
-Then open `http://localhost:8005`. `JWT_SECRET` is required and migrations run on boot. To use your own Postgres, point `DATABASE_URL` at it and ensure the database exists - and note that `localhost` inside a container is the container itself, so reach a host Postgres via `host.docker.internal` (Docker Desktop).
-
-### Build from source (app + bundled Postgres)
-
-From a clean checkout:
+The repo ships a `docker-compose.yml` that pulls the prebuilt image (`linux/amd64` and `linux/arm64`) and runs it with a bundled Postgres:
 
 ```bash
-docker compose up --build
+cp .env.example .env   # set JWT_SECRET (and POSTGRES_* if you like)
+docker compose up -d
 ```
 
-This builds the app image, starts Postgres, applies database migrations on boot, and serves everything at `http://localhost:8005`. Stop with `docker compose down` (add `-v` to also drop the data volumes).
+Then open `http://localhost:8005`. `JWT_SECRET` is required and migrations run on boot. Update later with `docker compose pull && docker compose up -d`. You don't even need a checkout, the same compose (and a `docker run` alternative) is in [docker/README.md](docker/README.md), runnable anywhere.
+
+### Build from source
+
+To run your own source instead of the published image, use the build variant (it builds `Dockerfile` and adds a container healthcheck + restart policy):
+
+```bash
+docker compose -f docker-compose.prod.yml up --build -d
+```
+
+Both serve everything at `http://localhost:8005`. Stop with `docker compose down` (add `-v` to also drop the data volumes).
 
 Notes:
 - ffmpeg (for video export) is bundled in the image; no host install needed.
 - Local-file storage persists in the `storage` volume at `/app/.data/storage`. To use object storage instead, set the `S3_*` variables on the `app` service.
-- Override secrets/config (notably `JWT_SECRET`, and optionally `AI_SECRET`, `OIDC_*`, `VAPID_*`) via the `app` service `environment` in `docker-compose.yml`.
-- To point the app at an external Postgres, set `COMPOSE_PROFILES` accordingly and supply `DATABASE_URL`, or build the image alone: `docker build -t hycanvas .` then `docker run -p 8005:8005 -e DATABASE_URL=... -e JWT_SECRET=... hycanvas`.
+- Secrets/config (notably `JWT_SECRET`, and optionally `AI_SECRET`, `OIDC_*`, `VAPID_*`) come from your `.env`.
+- To point the app at an external Postgres, set `EXTERNAL_DATABASE_URL` and `COMPOSE_PROFILES=` (empty) so the bundled `db` container does not start.
+
+### Develop in Docker (hot reload)
+
+To work on the code in containers, with no local Go or Node toolchain, use the dev stack. It runs the Go backend on `:8005` and the Next.js dev server on `:3000` with live reload against your working tree:
+
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+
+Open `http://localhost:3000`. See [DOCKER_SETUP.md](DOCKER_SETUP.md#option-c-local-development) for details.
 
 ## Environment Variables
 
@@ -134,6 +135,7 @@ All configuration is read from the root `.env` (copy `.env.example`). The most i
 | `npm run dev` | Run the Go backend and the frontend together with hot reload. |
 | `npm run build:packages` | Build the `@hc/*` libraries (needed before dev on a fresh checkout). |
 | `npm run build` | Build packages, the Go binary, and the frontend. |
+| `npm run gen:theme` | Regenerate color tokens from `frontend/src/theme.config.mjs` (the frontend build runs this automatically). |
 | `npm run db:migrate` | Apply SQL migrations (Go migrator). The server also migrates on boot. |
 | `npm run lint` | Vet the Go backend and lint the frontend. |
 | `npm run test` | Run the package and Go backend tests. |
@@ -149,9 +151,15 @@ To add or edit a built-in template, edit `seed.json`, then rebuild/restart the b
 
 - Development: restart `npm run dev` (it runs the backend via `go run`, which recompiles each start).
 - Production (native): `npm run build:dist` then `npm run start:dist:only` (or `npm run deploy`).
-- Docker: `docker compose up --build`.
+- Docker: rebuild from source with `docker compose -f docker-compose.prod.yml up --build` (the default `docker compose up` pulls the published image and won't include local edits).
 
 User-saved templates (Save as template) are stored in the database and need no rebuild.
+
+## Branding and theming
+
+The app's color identity lives in one file: `frontend/src/theme.config.mjs` (the brand and accent scales, the identity gradient, the editor canvas-overlay colors, and the collaborator presence palette). To rebrand, edit that file and run `npm run gen:theme`. The generator rewrites the Tailwind CSS tokens, the typed canvas-overlay constants, and the Go presence palette, so one change propagates across the UI chrome, the gradient, the logo, the favicon/theme-color, the canvas overlays, and presence colors. `npm run gen:theme:check` (run as part of `npm run lint`) fails if the committed generated files drift from the source.
+
+This product/app accent is intentionally separate from the per-workspace Brand Kit, which themes design content rather than the app shell.
 
 ## Conventions
 

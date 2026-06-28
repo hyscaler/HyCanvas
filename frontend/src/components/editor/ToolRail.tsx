@@ -20,9 +20,11 @@ const TOOLS: { id: Tool; icon: typeof Shapes; label: string }[] = [
   { id: "layers", icon: Layers, label: "Layers" },
 ];
 
-export function ToolRail({ workspaceId, overlay = false }: { workspaceId: string | null; overlay?: boolean }) {
-  // null = panel collapsed. Clicking the active tab toggles it closed.
-  const [active, setActive] = useState<Tool | null>("elements");
+export function ToolRail({ workspaceId, overlay = false, defaultCollapsed = false }: { workspaceId: string | null; overlay?: boolean; defaultCollapsed?: boolean }) {
+  // null = panel collapsed (just the icon rail shows). Clicking the active tab
+  // toggles it closed. Boards open with the panel collapsed for a canvas-first
+  // start; the icon rail stays so any tool is one click away.
+  const [active, setActive] = useState<Tool | null>(defaultCollapsed ? null : "elements");
 
   // On narrow screens the slide-out panel floats over the canvas (absolute,
   // positioned just right of the rail) instead of consuming layout width, so the

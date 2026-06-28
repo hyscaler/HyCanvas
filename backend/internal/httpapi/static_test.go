@@ -27,6 +27,7 @@ func TestStaticServingFS(t *testing.T) {
 	}
 	write("index.html", "<html>shell</html>")
 	write("editor/index.html", "<html>editor</html>")
+	write("404.html", "<html>notfound</html>")
 	write("_next/static/app.js", "console.log(1)")
 
 	r := chi.NewRouter()
@@ -52,8 +53,8 @@ func TestStaticServingFS(t *testing.T) {
 	if code, _ := get("/_next/static/app.js"); code != 200 {
 		t.Fatalf("fs /_next asset: %d", code)
 	}
-	if code, body := get("/unknown/route"); code != 200 || body != "<html>shell</html>" {
-		t.Fatalf("fs spa fallback: %d %q", code, body)
+	if code, body := get("/unknown/route"); code != 404 || body != "<html>notfound</html>" {
+		t.Fatalf("fs 404 fallback: %d %q", code, body)
 	}
 }
 
@@ -103,6 +104,7 @@ func TestStaticServing(t *testing.T) {
 	must("index.html", "<html>shell</html>")
 	must("dashboard.html", "<html>dashboard</html>")
 	must("editor/index.html", "<html>editor</html>") // trailingSlash export
+	must("404.html", "<html>notfound</html>")
 	must("_next/static/app.js", "console.log(1)")
 
 	r := chi.NewRouter()
@@ -142,9 +144,9 @@ func TestStaticServing(t *testing.T) {
 	if code, _, cc := get("/_next/static/app.js"); code != 200 || cc == "" {
 		t.Fatalf("/_next asset: %d cache=%q", code, cc)
 	}
-	// Client-routed unknown path falls back to the shell (SPA).
-	if code, body, _ := get("/editor/abc123"); code != 200 || body != "<html>shell</html>" {
-		t.Fatalf("spa fallback: %d %q", code, body)
+	// Genuinely unknown path serves the exported 404 page with a 404 status.
+	if code, body, _ := get("/editor/abc123"); code != 404 || body != "<html>notfound</html>" {
+		t.Fatalf("404 fallback: %d %q", code, body)
 	}
 	// Unmatched API path is a JSON 404, never the shell.
 	if code, body, _ := get("/api/v1/does-not-exist"); code != 404 || body == "<html>shell</html>" {

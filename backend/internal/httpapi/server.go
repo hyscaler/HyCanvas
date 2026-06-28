@@ -18,6 +18,7 @@ import (
 	"hycanvas/backend/internal/accountdata"
 	"hycanvas/backend/internal/accounts"
 	"hycanvas/backend/internal/ai"
+	"hycanvas/backend/internal/aistudio"
 	"hycanvas/backend/internal/approvals"
 	"hycanvas/backend/internal/brand"
 	"hycanvas/backend/internal/bulkcreate"
@@ -36,6 +37,7 @@ import (
 	"hycanvas/backend/internal/templates"
 	"hycanvas/backend/internal/uploads"
 	"hycanvas/backend/internal/webui"
+	"hycanvas/backend/internal/whiteboard"
 )
 
 // Deps holds the collaborators handlers need (extended as modules are ported).
@@ -49,9 +51,11 @@ type Deps struct {
 	Sharing     *sharing.Service
 	Approvals   *approvals.Service
 	Comments    *comments.Service
+	Whiteboard  *whiteboard.Service
 	Engagement  *engagement.Service
 	Brand       *brand.Service
 	AI          *ai.Service
+	AIStudio    *aistudio.Service
 	Uploads     *uploads.Service
 	Realtime    *realtime.Hub
 	Templates   *templates.Service
@@ -111,6 +115,7 @@ func NewRouter(d Deps) http.Handler {
 		if d.Accounts != nil {
 			mountAuth(api, d.Accounts, d.Secure)
 			mountWorkspaces(api, d.Accounts)
+			mountMembers(api, d.Accounts)
 		}
 		if d.Accounts != nil && d.AccountData != nil {
 			mountAccount(api, d.AccountData, d.Accounts, d.Secure)
@@ -119,7 +124,7 @@ func NewRouter(d Deps) http.Handler {
 			mountOIDC(api, d.OIDC, d.Accounts, d.Secure)
 		}
 		if d.Accounts != nil && d.Persistence != nil {
-			mountPersistence(api, d.Persistence, d.Accounts)
+			mountPersistence(api, d.Persistence, d.Accounts, d.Sharing)
 			mountRender(api, d.Persistence, d.Accounts)
 		}
 		if d.Accounts != nil && d.Home != nil {
@@ -149,6 +154,9 @@ func NewRouter(d Deps) http.Handler {
 		if d.Accounts != nil && d.Comments != nil {
 			mountComments(api, d.Comments, d.Accounts)
 		}
+		if d.Accounts != nil && d.Whiteboard != nil {
+			mountWhiteboard(api, d.Whiteboard, d.Accounts)
+		}
 		if d.Accounts != nil && d.Engagement != nil {
 			mountEngagement(api, d.Engagement, d.Accounts)
 		}
@@ -157,6 +165,9 @@ func NewRouter(d Deps) http.Handler {
 		}
 		if d.Accounts != nil && d.Brand != nil && d.Persistence != nil {
 			mountSnapshots(api, d.Persistence, d.Brand, d.Accounts)
+		}
+		if d.Accounts != nil && d.AIStudio != nil && d.Persistence != nil && d.Jobs != nil {
+			mountAIStudio(api, d.AIStudio, d.Accounts, d.Persistence, d.Jobs)
 		}
 		if d.Accounts != nil && d.AI != nil {
 			mountAI(api, d.AI, d.Accounts)

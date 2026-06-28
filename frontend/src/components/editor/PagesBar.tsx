@@ -2,13 +2,24 @@
 // add, duplicate, and delete.
 
 import { useEffect, useRef, useState } from "react";
-import { Plus, Copy, Trash2, Eye, EyeOff } from "lucide-react";
+import { Plus, Copy, Trash2, Eye, EyeOff, ChevronDown } from "lucide-react";
 import { createScene, renderScene, type CanvasLike, type Viewport } from "@hc/engine";
 import { useEditor } from "@/store/editor";
 import { imageAssets } from "@/lib/assetProvider";
 
 const THUMB_W = 80;
 const THUMB_H = 52;
+
+// Preset page sizes offered when adding a page (mirrors the Magic Resize presets).
+const PAGE_SIZE_PRESETS: { label: string; w: number; h: number }[] = [
+  { label: "Instagram Post", w: 1080, h: 1080 },
+  { label: "Instagram Story", w: 1080, h: 1920 },
+  { label: "Presentation 16:9", w: 1920, h: 1080 },
+  { label: "Facebook Post", w: 1200, h: 630 },
+  { label: "Poster", w: 1080, h: 1350 },
+  { label: "A4 Portrait", w: 1240, h: 1754 },
+  { label: "A4 Landscape", w: 1754, h: 1240 },
+];
 
 function PageThumb({ index }: { index: number }) {
   const rev = useEditor((s) => s.rev);
@@ -50,6 +61,8 @@ export function PagesBar() {
   const pages = useEditor.getState().doc.pages;
   const st = useEditor.getState;
   const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [renaming, setRenaming] = useState<number | null>(null);
+  const [sizeMenu, setSizeMenu] = useState(false);
 
   return (
     <div className="oc-scroll flex shrink-0 items-center gap-2 overflow-x-auto border-t border-neutral-200 bg-white px-3 py-2">
@@ -85,7 +98,23 @@ export function PagesBar() {
               </span>
             )}
           </button>
-          <span className="mt-0.5 block text-center text-[10px] text-neutral-400">{i + 1}</span>
+          {renaming === i ? (
+            <input
+              autoFocus
+              defaultValue={p.name ?? `Page ${i + 1}`}
+              onBlur={(e) => { st().setPageName(i, e.target.value.trim() || `Page ${i + 1}`); setRenaming(null); }}
+              onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setRenaming(null); }}
+              className="mt-0.5 block w-full rounded border border-brand-300 px-1 text-center text-[10px] text-neutral-700 outline-none"
+              style={{ width: THUMB_W }}
+            />
+          ) : (
+            <span
+              onDoubleClick={() => setRenaming(i)}
+              title="Double-click to rename"
+              className="mt-0.5 block max-w-full truncate px-1 text-center text-[10px] text-neutral-400"
+              style={{ maxWidth: THUMB_W }}
+            >{p.name ?? i + 1}</span>
+          )}
           <button
             onClick={() => st().setPageHidden(!hidden, i)}
             title={hidden ? "Show slide while presenting" : "Hide slide while presenting"}
@@ -113,14 +142,41 @@ export function PagesBar() {
       >
         <Copy size={16} />
       </button>
-      <button
-        onClick={() => st().addPage()}
-        title="Add page"
-        className="grid shrink-0 place-items-center rounded-md border border-dashed border-neutral-300 text-neutral-500 hover:border-brand-400 hover:text-brand-700"
-        style={{ width: 40, height: THUMB_H }}
-      >
-        <Plus size={18} />
-      </button>
+      <div className="relative flex shrink-0 items-stretch">
+        <button
+          onClick={() => st().addPage()}
+          title="Add page (same size)"
+          className="grid place-items-center rounded-l-md border border-dashed border-neutral-300 text-neutral-500 hover:border-brand-400 hover:text-brand-700"
+          style={{ width: 34, height: THUMB_H }}
+        >
+          <Plus size={18} />
+        </button>
+        <button
+          onClick={() => setSizeMenu((v) => !v)}
+          title="Add page with a preset size"
+          className="grid w-5 place-items-center rounded-r-md border border-l-0 border-dashed border-neutral-300 text-neutral-400 hover:border-brand-400 hover:text-brand-700"
+          style={{ height: THUMB_H }}
+        >
+          <ChevronDown size={12} />
+        </button>
+        {sizeMenu && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setSizeMenu(false)} />
+            <div className="absolute bottom-full left-0 z-20 mb-1 w-44 overflow-hidden rounded-lg border border-neutral-200 bg-white py-1 shadow-lg">
+              {PAGE_SIZE_PRESETS.map((p) => (
+                <button
+                  key={p.label}
+                  onClick={() => { st().addPage({ width: p.w, height: p.h }); setSizeMenu(false); }}
+                  className="flex w-full items-center justify-between px-3 py-1.5 text-left text-xs text-neutral-700 hover:bg-brand-50 hover:text-brand-700"
+                >
+                  <span>{p.label}</span>
+                  <span className="text-[10px] text-neutral-400">{p.w}×{p.h}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
       <span className="ml-1 shrink-0 text-xs text-neutral-400">Page {active + 1} of {pages.length}</span>
     </div>
   );

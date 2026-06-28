@@ -4,8 +4,9 @@
 
 import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
 import { useRouter } from "next/router";
-import { ChevronLeft, Undo2, Redo2, Download, Minus, Plus, Play, MonitorPlay, Ruler, Grid3x3, Magnet, LayoutTemplate, History, Eye, Share2, MessageSquare, ShieldCheck, Activity, BarChart3, MoreHorizontal, Send, Globe, Printer, PanelRightClose, PanelRightOpen, Keyboard, ChevronDown, Check, Info, X, Accessibility } from "lucide-react";
+import { ChevronLeft, Undo2, Redo2, Download, Play, MonitorPlay, Ruler, Grid3x3, Magnet, LayoutTemplate, History, Eye, Share2, MessageSquare, ShieldCheck, Activity, BarChart3, MoreHorizontal, Send, Globe, Printer, PanelRightClose, PanelRightOpen, Keyboard, Info, X, Accessibility, Maximize2, Minimize2 } from "lucide-react";
 import type { AccessMode } from "@hc/sdk";
+import { ApiError } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
 import { useEditor } from "@/store/editor";
 import { useToast } from "@/components/ui/Toast";
@@ -14,10 +15,13 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Spinner } from "@/components/ui/Spinner";
 import { LogoMark } from "@/components/ui/Logo";
 import { Canvas } from "./Canvas";
+import { ZoomControl } from "./ZoomControl";
 import { CommandMenu } from "./CommandMenu";
 import { ShortcutsHelp } from "./ShortcutsHelp";
 import { ExportDialog } from "./ExportDialog";
 import { ShareDialog } from "./ShareDialog";
+import { RequestAccessScreen } from "./RequestAccessScreen";
+import { NotFoundScreen } from "@/components/ui/NotFound";
 import { SaveAsTemplateDialog } from "./SaveAsTemplateDialog";
 import { PublishDialog } from "./PublishDialog";
 import { WebsiteDialog } from "./WebsiteDialog";
@@ -37,13 +41,15 @@ import { ApprovalBanner } from "./ApprovalBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { PromptHost } from "@/components/ui/PromptHost";
 import { useRealtime, getDesignDoc, resyncFromLiveDoc } from "@/lib/useRealtime";
+import { useAutoSnapshot } from "@/lib/useAutoSnapshot";
 import { onCommentChanged, onRoleChanged } from "@/lib/realtime";
 import { useViewBeat } from "@/lib/useViewBeat";
 import { useComments } from "@/store/comments";
 import { useBrand } from "@/store/brand";
 import { usePresence } from "@/store/presence";
+import { useBoardFocus, enterBoardFocus, exitBoardFocus } from "@/store/boardFocus";
 
-type Status = "loading" | "ready" | "error";
+type Status = "loading" | "ready" | "error" | "forbidden" | "notfound";
 
 /**
  * Subscribe to a CSS media query and return whether it currently matches. Uses
@@ -172,79 +178,6 @@ function OverflowMenu({ items }: { items: MenuItem[] }) {
 }
 
 // Fixed zoom levels (page units centred on the viewport) offered by the % menu.
-const ZOOM_PRESETS = [0.25, 0.5, 1, 2];
-
-function ZoomControl() {
-  const zoom = useEditor((s) => s.viewport.zoom);
-  const setViewport = useEditor((s) => s.setViewport);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const by = (f: number) => setViewport({ zoom: Math.min(8, Math.max(0.05, zoom * f)) });
-  // Zoom to an absolute level while keeping the viewport centre fixed, mirroring
-  // the canvas Cmd+/- path so the % presets feel identical to keyboard zoom.
-  const setZoom = (z: number) => {
-    const s = useEditor.getState();
-    const { panX, panY, zoom: cur } = s.viewport;
-    const vs = s.viewportSize;
-    const cx = panX + vs.width / 2 / cur;
-    const cy = panY + vs.height / 2 / cur;
-    s.setViewport({ zoom: z, panX: cx - vs.width / 2 / z, panY: cy - vs.height / 2 / z });
-  };
-  useEffect(() => {
-    if (!menuOpen) return;
-    const onDown = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setMenuOpen(false); };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setMenuOpen(false); };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
-  }, [menuOpen]);
-  const run = (fn: () => void) => { setMenuOpen(false); fn(); };
-  return (
-    <div className="absolute bottom-4 right-4 flex items-center gap-1 rounded-xl border border-neutral-200 bg-white px-1.5 py-1 shadow-md">
-      <IconButton size="sm" aria-label="Zoom out" onClick={() => by(0.8)}><Minus size={16} /></IconButton>
-      <div ref={ref} className="relative">
-        <button
-          onClick={() => setMenuOpen((v) => !v)}
-          title="Zoom level"
-          aria-label="Zoom level"
-          className={`flex w-16 items-center justify-center gap-0.5 rounded-md py-1 text-xs font-semibold ${menuOpen ? "bg-neutral-100 text-neutral-800" : "text-neutral-600 hover:bg-neutral-100"}`}
-        >
-          {Math.round(zoom * 100)}%
-          <ChevronDown size={12} className="text-neutral-400" />
-        </button>
-        {menuOpen && (
-          <div className="absolute bottom-full right-0 z-50 mb-2 w-44 overflow-hidden rounded-xl border border-neutral-200 bg-white py-1 shadow-lg">
-            {ZOOM_PRESETS.map((z) => (
-              <button
-                key={z}
-                onClick={() => run(() => setZoom(z))}
-                className="flex w-full items-center justify-between px-3 py-1.5 text-left text-sm text-neutral-700 hover:bg-neutral-100"
-              >
-                {Math.round(z * 100)}%
-                {Math.abs(zoom - z) < 0.005 && <Check size={14} className="text-brand-600" />}
-              </button>
-            ))}
-            <div className="my-1 h-px bg-neutral-100" />
-            <button onClick={() => run(() => useEditor.getState().fitToScreen())} className="flex w-full items-center px-3 py-1.5 text-left text-sm text-neutral-700 hover:bg-neutral-100">
-              Fit page
-            </button>
-            <button onClick={() => run(() => useEditor.getState().zoomToSelection())} className="flex w-full items-center px-3 py-1.5 text-left text-sm text-neutral-700 hover:bg-neutral-100">
-              Zoom to selection
-            </button>
-          </div>
-        )}
-      </div>
-      <IconButton size="sm" aria-label="Zoom in" onClick={() => by(1.25)}><Plus size={16} /></IconButton>
-      <button onClick={() => useEditor.getState().fitToScreen()} className="ml-1 rounded-md px-2 py-1 text-xs font-medium text-neutral-500 hover:bg-neutral-100" title="Fit page (Shift+1)">
-        Fit
-      </button>
-      <button onClick={() => useEditor.getState().zoomToSelection()} className="rounded-md px-2 py-1 text-xs font-medium text-neutral-500 hover:bg-neutral-100" title="Zoom to selection (Shift+2)">
-        Selection
-      </button>
-    </div>
-  );
-}
-
 // Read-only preview banner: shown over the canvas while viewing a
 // past version, naming who/when. Restore and Branch are driven from the History
 // panel (which owns the selected version); the banner offers a quick Exit back
@@ -309,6 +242,8 @@ export function EditorApp() {
   const savedRev = useEditor((s) => s.savedRev);
   const dirty = rev !== savedRev;
   const [status, setStatus] = useState<Status>("loading");
+  // The design id the caller was denied; drives the "Request access" screen.
+  const [forbiddenId, setForbiddenId] = useState<string | null>(null);
   const [designId, setDesignId] = useState<string | null>(null);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -316,6 +251,9 @@ export function EditorApp() {
   const [exportOpen, setExportOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  // When the Share dialog is opened from an access-request notification deep
+  // link, scroll its pending-requests inbox into view.
+  const [shareFocusRequests, setShareFocusRequests] = useState(false);
   const [templateOpen, setTemplateOpen] = useState(false);
   // Phase 7 distribution flows (publish to social, publish as website, order
   // prints). Each opens a self-contained dialog over the current design.
@@ -324,6 +262,10 @@ export function EditorApp() {
   const [printOpen, setPrintOpen] = useState(false);
   const [a11yOpen, setA11yOpen] = useState(false);
   const [presenting, setPresenting] = useState(false);
+  // Whiteboard focus (full-screen) mode: hides the chrome so only the board
+  // canvas + its floating toolbar remain. Board-only; non-board kinds ignore it.
+  const focus = useBoardFocus((s) => s.focus);
+  const inFocus = focus && docKind === "whiteboard";
   const [historyOpen, setHistoryOpen] = useState(false);
   // Responsive breakpoints (graceful degradation for narrow laptops/tablets;
   // not a mobile redesign). Below lg the left tool panel floats over the canvas
@@ -338,15 +280,31 @@ export function EditorApp() {
   const [propsOpen, setPropsOpen] = useState(
     () => typeof window === "undefined" || window.localStorage.getItem("oc-properties-open") !== "0",
   );
+  // The whiteboard is canvas-first (its tools live on the floating toolbar), so
+  // the Properties panel opens collapsed there by default. It is a separate
+  // persisted preference so toggling it on a board never disturbs the design
+  // editor's panel preference (and vice versa); only "1" opens it.
+  const [boardPropsOpen, setBoardPropsOpen] = useState(
+    () => typeof window !== "undefined" && window.localStorage.getItem("oc-board-properties-open") === "1",
+  );
   // In compact (below lg) the Properties aside defaults collapsed so the canvas
   // keeps usable width, without writing localStorage (which would fight the
   // user's persisted lg+ preference). A per-session flag lets the user open it
   // while compact; the persisted `propsOpen` still governs the lg+ layout.
   const [compactPropsOpen, setCompactPropsOpen] = useState(false);
-  const effectivePropsOpen = isCompact ? compactPropsOpen : propsOpen;
+  const isBoard = docKind === "whiteboard";
+  const effectivePropsOpen = isCompact ? compactPropsOpen : (isBoard ? boardPropsOpen : propsOpen);
   const toggleProps = () => {
     if (isCompact) {
       setCompactPropsOpen((v) => !v);
+      return;
+    }
+    if (isBoard) {
+      setBoardPropsOpen((v) => {
+        const next = !v;
+        try { window.localStorage.setItem("oc-board-properties-open", next ? "1" : "0"); } catch { /* ignore */ }
+        return next;
+      });
       return;
     }
     setPropsOpen((v) => {
@@ -365,6 +323,31 @@ export function EditorApp() {
   useEffect(() => {
     try { window.localStorage.setItem("oc-properties-width", String(panelWidth)); } catch { /* ignore */ }
   }, [panelWidth]);
+
+  // Reconcile focus mode with native browser fullscreen: leaving fullscreen by
+  // any route (Esc, F11, the browser's own UI) drops focus mode too, so the
+  // chrome always comes back together with the OS chrome.
+  useEffect(() => {
+    const onFsChange = () => {
+      if (!document.fullscreenElement) useBoardFocus.getState().setFocus(false);
+    };
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, []);
+
+  // Esc leaves focus mode. With native fullscreen, the browser's own Esc exits
+  // fullscreen and the listener above clears focus; this covers the case where
+  // native fullscreen was denied (focus mode still hides the chrome).
+  useEffect(() => {
+    if (!inFocus) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") exitBoardFocus(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [inFocus]);
+
+  // Focus is a module-level store, so clear it when leaving the editor: every
+  // session starts un-focused, and it can never "stick" into the next design.
+  useEffect(() => () => { exitBoardFocus(); }, []);
   const resizeRef = useRef<{ startX: number; startW: number } | null>(null);
   const onPanelResizeDown = (e: React.PointerEvent) => {
     resizeRef.current = { startX: e.clientX, startW: panelWidth };
@@ -413,7 +396,9 @@ export function EditorApp() {
     else setInsightsOpen(true);
   };
   // The caller's resolved per-design access. Defaults to edit for the
-  // local/unsaved doc; resolved from the backend once a design id is loaded.
+  // local/unsaved doc; a loaded design fails closed to read-only until its
+  // access resolves (so a viewer/comment user never sees an editable surface
+  // whose edits would only fail on save), then takes the resolved mode.
   const [accessMode, setAccessMode] = useState<AccessMode>("edit");
   const [canShare, setCanShare] = useState(false);
   // Approval workflow. canApprove gates the "Request approval"
@@ -441,6 +426,10 @@ export function EditorApp() {
   // Realtime presence: connect only once a real backend design id is loaded
   // (never for the unsaved/local doc). Disconnects on unmount/route change.
   useRealtime(designId);
+
+  // Automatic snapshots (FR-11): idle / interval-cap / tab-hidden, silent, with
+  // the save time surfaced in the status text. Manual Save is unchanged.
+  useAutoSnapshot(designId, () => setSavedAt(new Date().toLocaleTimeString()));
 
   // Engagement instrumentation: record a view + heartbeats while
   // the editor is focused, attributing time to the current page. Only for a
@@ -470,10 +459,13 @@ export function EditorApp() {
         setDesignId(id);
         setWorkspaceId(rec.workspaceId);
         setStatus("ready");
+        // Fail closed: until access resolves, treat a loaded design as
+        // read-only. designAccess success sets the real mode below; a failure
+        // keeps it read-only rather than exposing edit affordances whose writes
+        // the server would reject (the server stays the source of truth).
+        setAccessMode("view");
         // Resolve the caller's per-design access to drive the
-        // read-only/comment banner and gate the Share + Save affordances. Best
-        // effort: a failure leaves the optimistic edit default (the server still
-        // enforces access on write / over the realtime gateway).
+        // read-only/comment banner and gate the Share + Save affordances.
         try {
           const access = await oc.designAccess(id);
           if (cancelled) return;
@@ -494,14 +486,42 @@ export function EditorApp() {
         // active kit + the caller's manage-brand flag for the Brand panel and
         // the locked pickers (FR-4). Best-effort; falls back to no-brand.
         useBrand.getState().setDesign(id, rec.workspaceId);
-      } catch {
-        if (!cancelled) setStatus("error");
+      } catch (e) {
+        if (cancelled) return;
+        // A 403 means the design exists but the caller has no access: offer to
+        // request it. Anything else is a generic open failure.
+        if (e instanceof ApiError && e.status === 403) {
+          setForbiddenId(id);
+          setStatus("forbidden");
+        } else if (e instanceof ApiError && e.status === 404) {
+          // The design id does not exist (or was deleted): show the branded
+          // not-found screen rather than a generic open error.
+          setStatus("notfound");
+        } else {
+          setStatus("error");
+        }
       }
     })();
     return () => {
       cancelled = true;
     };
   }, [router.isReady, router.query.id, loadDoc]);
+
+  // Deep link: an access-request notification routes to
+  // /editor?id=...&share=requests. Once the design is loaded, open the Share
+  // dialog on its pending-requests inbox so the owner can act in one click
+  // instead of having to open Share manually. setState is deferred to a timer
+  // (the codebase's pattern for deep-link-driven state) to keep the effect body
+  // free of synchronous setState.
+  useEffect(() => {
+    if (!router.isReady || !designId) return;
+    if (router.query.share !== "requests") return;
+    const t = setTimeout(() => {
+      setShareOpen(true);
+      setShareFocusRequests(true);
+    }, 0);
+    return () => clearTimeout(t);
+  }, [router.isReady, router.query.share, designId]);
 
   // Live comment updates: refetch threads/pins when a peer
   // posts/resolves/reacts over the realtime room. Clients without a socket still
@@ -611,6 +631,7 @@ export function EditorApp() {
   const save = useCallback(async () => {
     if (!designId) return;
     setSaving(true);
+    useEditor.getState().setManualSaving(true); // auto-snapshot yields while this runs
     try {
       // When realtime is live, snapshot the shared Y.Doc (the source of truth
       // for collaborative edits); otherwise fall back to the local store doc.
@@ -625,6 +646,7 @@ export function EditorApp() {
     } catch {
       if (mounted.current) toast.error("Save failed.");
     } finally {
+      useEditor.getState().setManualSaving(false); // always clear, even if unmounted
       if (mounted.current) setSaving(false);
     }
   }, [designId, toast]);
@@ -656,12 +678,28 @@ export function EditorApp() {
       </div>
     );
   }
+  if (status === "notfound") {
+    return (
+      <NotFoundScreen
+        title="Design not found"
+        message="This design doesn't exist or may have been deleted."
+        homeLabel="Back to dashboard"
+        homeHref="/dashboard"
+      />
+    );
+  }
+  if (status === "forbidden" && forbiddenId) {
+    return <RequestAccessScreen designId={forbiddenId} onBack={() => void router.push("/dashboard")} />;
+  }
 
   return (
     <div className="flex h-screen w-screen flex-col bg-neutral-100 text-neutral-900">
       {/* Top bar. flex-nowrap keeps the bar single-line down to ~768px; the
           title input shrinks/truncates and secondary actions live in the
-          OverflowMenu so groups overflow gracefully instead of wrapping. */}
+          OverflowMenu so groups overflow gracefully instead of wrapping. In
+          focus (full-screen) mode the whole bar is hidden so only the board
+          canvas + its floating toolbar remain. */}
+      {!inFocus && (
       <header className="flex flex-nowrap items-center gap-3 border-b border-neutral-200 bg-white px-3 py-2">
         <IconButton className="shrink-0" aria-label="Back to dashboard" onClick={() => void router.push("/dashboard")}>
           <ChevronLeft size={20} />
@@ -707,6 +745,11 @@ export function EditorApp() {
                 <MonitorPlay size={18} />
               </IconButton>
             </>
+          )}
+          {docKind === "whiteboard" && (
+            <IconButton size="sm" onClick={enterBoardFocus} title="Focus mode — hide panels (full screen)">
+              <Maximize2 size={18} />
+            </IconButton>
           )}
           {designId && (
             <div className="relative">
@@ -765,12 +808,13 @@ export function EditorApp() {
           </Button>
         </div>
       </header>
+      )}
 
       {/* Very-narrow advisory (below sm): the editor is a complex desktop tool,
           so on small viewports we surface a subtle, dismissible notice. It is a
           slim bar in the layout flow (not an overlay), so it never blocks the
           canvas or any control. */}
-      {isVeryNarrow && !narrowNoticeDismissed && (
+      {isVeryNarrow && !narrowNoticeDismissed && !inFocus && (
         <div className="flex shrink-0 items-center gap-2 border-b border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-900">
           <Info size={14} className="shrink-0 text-amber-600" />
           <span className="min-w-0 flex-1">The editor is optimized for larger screens. Some panels float over the canvas to keep it usable.</span>
@@ -789,7 +833,7 @@ export function EditorApp() {
       <ShortcutsHelp open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
       {shareOpen && designId && (
-        <ShareDialog key={designId} open onClose={() => setShareOpen(false)} designId={designId} />
+        <ShareDialog key={designId} open onClose={() => { setShareOpen(false); setShareFocusRequests(false); }} designId={designId} focusRequests={shareFocusRequests} />
       )}
       <SaveAsTemplateDialog open={templateOpen} onClose={() => setTemplateOpen(false)} designId={designId} workspaceId={workspaceId} />
       {publishOpen && <PublishDialog open onClose={() => setPublishOpen(false)} designId={designId ?? undefined} workspaceId={workspaceId ?? undefined} />}
@@ -804,8 +848,10 @@ export function EditorApp() {
             scene-backed (its surface renders the same Canvas + store), so the
             Elements/Text/Uploads/Stock/Brand/Layers panels apply there too; only
             doc/sheet/video (meta-backed) omit it. */}
-        {(docKind === "design" || docKind === "whiteboard") && (
-          <ToolRail workspaceId={workspaceId} overlay={isCompact} />
+        {(docKind === "design" || docKind === "whiteboard") && !inFocus && (
+          // key by kind so switching surface re-applies its default; boards open
+          // with the slide-out panel collapsed (canvas-first).
+          <ToolRail key={docKind} workspaceId={workspaceId} overlay={isCompact} defaultCollapsed={isBoard} />
         )}
         {docKind !== "design" ? (
           <DocumentSurface kind={docKind} workspaceId={workspaceId ?? undefined} designId={designId ?? undefined} />
@@ -844,7 +890,10 @@ export function EditorApp() {
         {/* Right-side panels are shared across every document kind (they operate
             on the server design by id). Version history replaces the design
             Properties aside; on other kinds it stands alone. The Properties aside
-            itself is design-only (it edits scene-node properties). */}
+            itself is design-only (it edits scene-node properties). All of them are
+            hidden in board focus mode. */}
+        {!inFocus && (
+        <>
         {historyOpen && designId ? (
           <HistoryPanel
             designId={designId}
@@ -915,8 +964,27 @@ export function EditorApp() {
         {insightsOpen && designId && canMember && (
           <InsightsPanel designId={designId} onClose={() => setInsightsOpen(false)} />
         )}
+        </>
+        )}
       </div>
       {docKind === "design" && <PagesBar />}
+
+      {/* Focus-mode exit affordance. In focus mode the chrome is gone, so this
+          floating pill (top-right, above the board's own overlays) is the way
+          back; Esc and leaving native fullscreen also exit. */}
+      {inFocus && (
+        <button
+          type="button"
+          onClick={exitBoardFocus}
+          title="Exit focus mode (Esc)"
+          aria-label="Exit focus mode"
+          className="fixed right-3 top-3 z-[60] flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white/95 px-3 py-1.5 text-xs font-medium text-neutral-700 shadow-lg backdrop-blur hover:bg-neutral-100"
+        >
+          <Minimize2 size={14} />
+          Exit focus
+          <kbd className="ml-0.5 rounded border border-neutral-300 bg-neutral-50 px-1 text-[10px] font-semibold text-neutral-500">Esc</kbd>
+        </button>
+      )}
     </div>
   );
 }

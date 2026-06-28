@@ -20,6 +20,7 @@ import { locate, worldMatrix } from "@hc/editor";
 import { applyToPoint } from "@hc/engine";
 import { useEditor } from "@/store/editor";
 import type { CanvasApi } from "@/lib/useEditorCanvas";
+import { overlay } from "@/lib/theme.generated";
 
 type Seg = { x: number; y: number; cIn?: { x: number; y: number }; cOut?: { x: number; y: number }; corner?: boolean };
 
@@ -180,14 +181,14 @@ export function PathEditor({ api }: { api: CanvasApi }) {
         const selected = selAnchors.includes(i);
         return (
           <g key={i}>
-            {cin && <line x1={a.x} y1={a.y} x2={cin.x} y2={cin.y} stroke="#2563eb" strokeWidth={1} />}
-            {cout && <line x1={a.x} y1={a.y} x2={cout.x} y2={cout.y} stroke="#2563eb" strokeWidth={1} />}
+            {cin && <line x1={a.x} y1={a.y} x2={cin.x} y2={cin.y} stroke={overlay.selection} strokeWidth={1} />}
+            {cout && <line x1={a.x} y1={a.y} x2={cout.x} y2={cout.y} stroke={overlay.selection} strokeWidth={1} />}
             {cin && (
-              <circle cx={cin.x} cy={cin.y} r={4} fill="#fff" stroke="#2563eb" className="pointer-events-auto cursor-move"
+              <circle cx={cin.x} cy={cin.y} r={4} fill="#fff" stroke={overlay.selection} className="pointer-events-auto cursor-move"
                 onPointerDown={(e) => begin(e, i, "in")} />
             )}
             {cout && (
-              <circle cx={cout.x} cy={cout.y} r={4} fill="#fff" stroke="#2563eb" className="pointer-events-auto cursor-move"
+              <circle cx={cout.x} cy={cout.y} r={4} fill="#fff" stroke={overlay.selection} className="pointer-events-auto cursor-move"
                 onPointerDown={(e) => begin(e, i, "out")} />
             )}
             {/* Corner anchors render as a square, smooth anchors as a circle. A
@@ -198,8 +199,8 @@ export function PathEditor({ api }: { api: CanvasApi }) {
                 y={a.y - 4}
                 width={8}
                 height={8}
-                fill={selected ? "#2563eb" : "#fff"}
-                stroke="#2563eb"
+                fill={selected ? overlay.selection : "#fff"}
+                stroke={overlay.selection}
                 strokeWidth={1.5}
                 className="pointer-events-auto cursor-move"
                 onPointerDown={(e) => begin(e, i, "anchor")}
@@ -210,8 +211,8 @@ export function PathEditor({ api }: { api: CanvasApi }) {
                 cx={a.x}
                 cy={a.y}
                 r={5}
-                fill={selected ? "#2563eb" : "#fff"}
-                stroke="#2563eb"
+                fill={selected ? overlay.selection : "#fff"}
+                stroke={overlay.selection}
                 strokeWidth={1.5}
                 className="pointer-events-auto cursor-move"
                 onPointerDown={(e) => begin(e, i, "anchor")}

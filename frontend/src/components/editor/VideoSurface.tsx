@@ -877,7 +877,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
               onClick={doExportVideo}
               disabled={!designId || exporting}
               title={designId ? "Render this timeline to an MP4" : "Save the design first to export"}
-              className="ml-auto inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="ml-auto inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {exporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
               {exporting ? "Exporting…" : "Export MP4"}
@@ -1564,7 +1564,7 @@ function TransportButton(props: {
       onClick={props.onClick}
       className={`grid h-8 w-8 place-items-center rounded ${
         props.accent
-          ? "bg-indigo-600 text-white hover:bg-indigo-500"
+          ? "bg-brand-600 text-white hover:bg-brand-700"
           : "bg-neutral-800 text-neutral-200 hover:bg-neutral-700"
       }`}
     >

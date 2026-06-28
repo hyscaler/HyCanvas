@@ -82,9 +82,12 @@ export function resyncFromLiveDoc(): void {
  * Returns nothing; reads/writes the editor + presence stores directly.
  */
 export function useRealtime(designId: string | null): void {
-  // Track the last viewport we set programmatically (following a peer) so a
-  // genuine user pan/zoom can be told apart and break follow mode.
-  const mirroredViewport = useRef<string | null>(null);
+  // Set true for exactly the duration of a programmatic viewport mirror (following
+  // a peer), so the editor-store subscription can tell that synchronous change
+  // apart from a genuine user pan/zoom that should break follow. A boolean flag
+  // (not a value match) is robust when setViewport CLAMPS the zoom, which would
+  // otherwise make the committed viewport differ from the value we recorded.
+  const mirroring = useRef(false);
 
   // Connect / disconnect on design id change. Slice B: stand up the per-design
   // Y.Doc binding (store bridge), then open the socket carrying both presence
@@ -150,9 +153,8 @@ export function useRealtime(designId: string | null): void {
     // user panned/zoomed -> stop following. Also re-broadcast our viewport.
     const unsubEditor = useEditor.subscribe((s, prev) => {
       if (s.viewport === prev.viewport) return;
-      const key = vpKey(s.viewport);
-      if (mirroredViewport.current === key) {
-        mirroredViewport.current = null; // consume the mirror; not a user move
+      if (mirroring.current) {
+        mirroring.current = false; // consume the mirror; not a user move
       } else if (usePresence.getState().following) {
         usePresence.getState().setFollowing(null); // user moved -> break follow
       }
@@ -164,7 +166,9 @@ export function useRealtime(designId: string | null): void {
     });
 
     function applyMirror(vp: { zoom: number; panX: number; panY: number }) {
-      mirroredViewport.current = vpKey(vp);
+      // Flag the mirror BEFORE setViewport so the synchronous subscription above
+      // recognizes it even when setViewport clamps the zoom to a different value.
+      mirroring.current = true;
       useEditor.getState().setViewport(vp);
     }
 
@@ -174,20 +178,31 @@ export function useRealtime(designId: string | null): void {
     };
   }, [designId]);
 
-  // Esc breaks follow mode (AC-5). Capture phase so it works regardless of focus
-  // and before other Esc handlers clear unrelated state.
+  // Esc breaks follow mode (AC-5) and a forced spotlight (FR-14). Capture phase so
+  // it works regardless of focus and before other Esc handlers clear state.
   useEffect(() => {
     if (!designId) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && usePresence.getState().following) {
-        usePresence.getState().setFollowing(null);
+        usePresence.getState().setFollowing(null); // also clears any active presenter
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [designId]);
-}
 
-function vpKey(v: { zoom: number; panX: number; panY: number }): string {
-  return `${v.zoom}:${v.panX}:${v.panY}`;
+  // Summon (FR-14): when a facilitator's one-shot "bring everyone here" arrives,
+  // snap our viewport to the carried target exactly once (per `at`). This is a
+  // genuine override, so it intentionally does NOT suppress the follow-break
+  // logic: snapping while voluntarily following a peer ends that follow.
+  useEffect(() => {
+    if (!designId) return;
+    let lastAt = 0;
+    return usePresence.subscribe((s) => {
+      const sm = s.summon;
+      if (!sm || sm.at === lastAt) return;
+      lastAt = sm.at;
+      useEditor.getState().setViewport(sm.viewport);
+    });
+  }, [designId]);
 }

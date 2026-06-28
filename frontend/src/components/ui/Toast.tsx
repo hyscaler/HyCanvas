@@ -1,7 +1,7 @@
 // Lightweight toast system: a provider + useToast() hook + a fixed toaster.
 // Replaces alert()/silent failures with branded, auto-dismissing notifications.
 
-import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import { CheckCircle2, AlertCircle, Info, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -48,11 +48,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     [remove],
   );
 
-  const api: ToastApi = {
-    toast,
-    success: (m) => toast(m, "success"),
-    error: (m) => toast(m, "error"),
-  };
+  // Stable identity: `toast` is a useCallback, so memoizing here keeps the whole
+  // api object stable across provider re-renders (e.g. when a toast is added or
+  // auto-dismissed). Without this, every consumer that lists `toast` in an effect
+  // dependency array re-runs the effect on each toast change - which turns a
+  // failing fetch-on-mount (the catch calls toast.error) into an infinite
+  // request loop.
+  const api = useMemo<ToastApi>(
+    () => ({
+      toast,
+      success: (m) => toast(m, "success"),
+      error: (m) => toast(m, "error"),
+    }),
+    [toast],
+  );
 
   return (
     <ToastContext.Provider value={api}>

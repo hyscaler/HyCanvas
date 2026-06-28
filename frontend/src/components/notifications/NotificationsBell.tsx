@@ -17,6 +17,8 @@ import {
   Share2,
   ShieldCheck,
   CheckSquare,
+  UserCheck,
+  UserPlus,
 } from "lucide-react";
 import type { NotificationType, NotificationView } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
@@ -38,6 +40,11 @@ function iconFor(type: NotificationType) {
     case "approval_request":
     case "approval_decision":
       return ShieldCheck;
+    case "access_request":
+    case "access_decision":
+      return UserCheck;
+    case "workspace_invite":
+      return UserPlus;
     default:
       return MessageSquare;
   }
@@ -67,7 +74,15 @@ export function NotificationsBell({ className }: { className?: string }) {
   const [loading, setLoading] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const mounted = useRef(true);
-  useEffect(() => () => { mounted.current = false; }, []);
+  // Set true on mount AND false on unmount: under React StrictMode (dev) the
+  // mount->unmount->remount cycle would otherwise leave this stuck `false` after
+  // the cleanup, freezing every guarded setState (the dropdown hung on "Loading…").
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const refreshCount = useCallback(async () => {
     try {

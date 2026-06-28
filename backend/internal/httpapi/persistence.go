@@ -1,14 +1,18 @@
 package httpapi
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
 	"hycanvas/backend/internal/accounts"
+	"hycanvas/backend/internal/authz"
 	"hycanvas/backend/internal/persistence"
+	"hycanvas/backend/internal/sharing"
 )
 
 // mountPersistence attaches the design save/load lifecycle (doc 04), each route
@@ -17,17 +21,19 @@ import (
 // NOT mounted here: it gates on the brand-lock validateSnapshot check, which is
 // not yet ported, so it stays on the Node service via the reverse proxy (no
 // brand-lock regression).
-func mountPersistence(api chi.Router, p *persistence.Service, acct *accounts.Service) {
+func mountPersistence(api chi.Router, p *persistence.Service, acct *accounts.Service, sh *sharing.Service) {
 	api.With(requireAuth(acct)).Post("/designs", createDesignHandler(p, acct))
-	api.With(requireAuth(acct)).Get("/designs/{id}", getDesignHandler(p, acct))
+	api.With(requireAuth(acct)).Get("/designs/{id}", getDesignHandler(p, acct, sh))
 	api.With(requireAuth(acct)).Patch("/designs/{id}", renameDesignHandler(p, acct))
 	api.With(requireAuth(acct)).Delete("/designs/{id}", deleteDesignHandler(p, acct))
-	api.With(requireAuth(acct)).Get("/designs/{id}/file", designFileHandler(p, acct))
-	api.With(requireAuth(acct)).Get("/designs/{id}/versions", listVersionsHandler(p, acct))
-	api.With(requireAuth(acct)).Get("/designs/{id}/versions/{vid}/file", versionFileHandler(p, acct))
-	api.With(requireAuth(acct)).Get("/designs/{id}/versions/{vid}/diff", diffHandler(p, acct))
+	api.With(requireAuth(acct)).Get("/designs/{id}/file", designFileHandler(p, acct, sh))
+	api.With(requireAuth(acct)).Get("/designs/{id}/versions", listVersionsHandler(p, acct, sh))
+	api.With(requireAuth(acct)).Get("/designs/{id}/versions/{vid}/file", versionFileHandler(p, acct, sh))
+	api.With(requireAuth(acct)).Get("/designs/{id}/versions/{vid}/diff", diffHandler(p, acct, sh))
+	api.With(requireAuth(acct)).Get("/designs/{id}/updates", updateLogHandler(p, acct, sh))
+	api.With(requireAuth(acct)).Post("/designs/{id}/updates/checkpoint", checkpointUpdateLogHandler(p, acct))
 	api.With(requireAuth(acct)).Post("/designs/{id}/versions/{vid}/restore", restoreVersionHandler(p, acct))
-	api.With(requireAuth(acct)).Get("/designs/{id}/branches", branchesHandler(p, acct))
+	api.With(requireAuth(acct)).Get("/designs/{id}/branches", branchesHandler(p, acct, sh))
 	api.With(requireAuth(acct)).Post("/designs/{id}/versions/{vid}/branch", branchHandler(p, acct))
 	api.With(requireAuth(acct)).Post("/designs/{id}/restore", restoreFromTrashHandler(p, acct))
 	api.With(requireAuth(acct)).Get("/workspaces/{wid}/trash", trashHandler(p, acct))
@@ -40,6 +46,8 @@ func persistenceProblem(w http.ResponseWriter, r *http.Request, err error) {
 		Problem(w, r, http.StatusNotFound, "Not Found", "design not found")
 	case errors.Is(err, persistence.ErrNoStorage):
 		Problem(w, r, http.StatusServiceUnavailable, "Service Unavailable", "storage is not configured")
+	case errors.Is(err, persistence.ErrInvalidFile):
+		Problem(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "the design file is structurally invalid")
 	default:
 		Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed")
 	}
@@ -56,6 +64,34 @@ func authorizeDesign(r *http.Request, p *persistence.Service, acct *accounts.Ser
 		return "", errForbidden
 	}
 	return ws, nil
+}
+
+// authorizeDesignRead authorizes a viewer-level read of a design. Workspace
+// members pass via the membership fast path; a non-member is allowed only if a
+// per-design grant (or an active link session recorded as a grant) resolves to
+// at least view access. This is what lets an external recipient open a design
+// shared with them: the membership-only path would reject them. Write paths stay
+// membership-only (authorizeDesign). sh may be nil (sharing disabled), in which
+// case this degrades to membership-only.
+func authorizeDesignRead(r *http.Request, p *persistence.Service, acct *accounts.Service, sh *sharing.Service, designID string) (string, error) {
+	ws, err := p.GetWorkspaceID(r.Context(), designID)
+	if err != nil {
+		return "", persistence.ErrNotFound
+	}
+	u := userFrom(r.Context())
+	if err := acct.AssertMember(r.Context(), u.ID, ws, "viewer"); err == nil {
+		return ws, nil
+	}
+	if sh != nil {
+		if access, aerr := sh.GetAccess(r.Context(), designID, u.ID); aerr == nil {
+			for _, c := range access.Capabilities {
+				if c == authz.CapView {
+					return ws, nil
+				}
+			}
+		}
+	}
+	return "", errForbidden
 }
 
 var errForbidden = errors.New("forbidden")
@@ -85,10 +121,10 @@ func createDesignHandler(p *persistence.Service, acct *accounts.Service) http.Ha
 	}
 }
 
-func getDesignHandler(p *persistence.Service, acct *accounts.Service) http.HandlerFunc {
+func getDesignHandler(p *persistence.Service, acct *accounts.Service, sh *sharing.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
-		ws, err := authorizeDesign(r, p, acct, id, "viewer")
+		ws, err := authorizeDesignRead(r, p, acct, sh, id)
 		if err != nil {
 			authProblem(w, r, err)
 			return
@@ -135,10 +171,10 @@ func renameDesignHandler(p *persistence.Service, acct *accounts.Service) http.Ha
 	}
 }
 
-func designFileHandler(p *persistence.Service, acct *accounts.Service) http.HandlerFunc {
+func designFileHandler(p *persistence.Service, acct *accounts.Service, sh *sharing.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
-		ws, err := authorizeDesign(r, p, acct, id, "viewer")
+		ws, err := authorizeDesignRead(r, p, acct, sh, id)
 		if err != nil {
 			authProblem(w, r, err)
 			return
@@ -152,10 +188,10 @@ func designFileHandler(p *persistence.Service, acct *accounts.Service) http.Hand
 	}
 }
 
-func listVersionsHandler(p *persistence.Service, acct *accounts.Service) http.HandlerFunc {
+func listVersionsHandler(p *persistence.Service, acct *accounts.Service, sh *sharing.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
-		ws, err := authorizeDesign(r, p, acct, id, "viewer")
+		ws, err := authorizeDesignRead(r, p, acct, sh, id)
 		if err != nil {
 			authProblem(w, r, err)
 			return
@@ -169,10 +205,10 @@ func listVersionsHandler(p *persistence.Service, acct *accounts.Service) http.Ha
 	}
 }
 
-func versionFileHandler(p *persistence.Service, acct *accounts.Service) http.HandlerFunc {
+func versionFileHandler(p *persistence.Service, acct *accounts.Service, sh *sharing.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
-		ws, err := authorizeDesign(r, p, acct, id, "viewer")
+		ws, err := authorizeDesignRead(r, p, acct, sh, id)
 		if err != nil {
 			authProblem(w, r, err)
 			return
@@ -186,10 +222,10 @@ func versionFileHandler(p *persistence.Service, acct *accounts.Service) http.Han
 	}
 }
 
-func diffHandler(p *persistence.Service, acct *accounts.Service) http.HandlerFunc {
+func diffHandler(p *persistence.Service, acct *accounts.Service, sh *sharing.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
-		ws, err := authorizeDesign(r, p, acct, id, "viewer")
+		ws, err := authorizeDesignRead(r, p, acct, sh, id)
 		if err != nil {
 			authProblem(w, r, err)
 			return
@@ -200,6 +236,68 @@ func diffHandler(p *persistence.Service, acct *accounts.Service) http.HandlerFun
 			return
 		}
 		writeJSON(w, http.StatusOK, summary)
+	}
+}
+
+// updateLogHandler serves the append-only CRDT update log in seq order so the
+// client can fold frames into an ephemeral Y.Doc and scrub history (FR-9).
+// ?afterSeq= pages forward (0 = start); ?limit= caps the page (server-capped).
+func updateLogHandler(p *persistence.Service, acct *accounts.Service, sh *sharing.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		ws, err := authorizeDesignRead(r, p, acct, sh, id)
+		if err != nil {
+			authProblem(w, r, err)
+			return
+		}
+		afterSeq, _ := strconv.ParseInt(r.URL.Query().Get("afterSeq"), 10, 64)
+		limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+		page, err := p.ListUpdates(r.Context(), id, ws, afterSeq, limit)
+		if err != nil {
+			persistenceProblem(w, r, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, page)
+	}
+}
+
+// checkpointUpdateLogHandler journals a client-produced CRDT full-state update as
+// a checkpoint and compacts the log (FR-11). The body is a base64 y-protocols
+// update frame (the same format the realtime hub journals), produced from the
+// live Y.Doc via encodeStateAsUpdate.
+func checkpointUpdateLogHandler(p *persistence.Service, acct *accounts.Service) http.HandlerFunc {
+	const maxCheckpointBytes = 20 << 20 // mirror the realtime update size cap
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		if _, err := authorizeDesign(r, p, acct, id, "member"); err != nil {
+			authProblem(w, r, err)
+			return
+		}
+		var body struct {
+			Update string `json:"update"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Update == "" {
+			Problem(w, r, http.StatusBadRequest, "Bad Request", "missing update")
+			return
+		}
+		raw, err := base64.StdEncoding.DecodeString(body.Update)
+		if err != nil || len(raw) == 0 || len(raw) > maxCheckpointBytes {
+			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid or oversized update")
+			return
+		}
+		// Mirror the realtime hub's guard: only a y-protocols UPDATE frame (type 2)
+		// may become a checkpoint. Compaction deletes all prior history, so a frame
+		// the scrubber can't fold as a full-state base must never be accepted.
+		if raw[0] != 2 {
+			Problem(w, r, http.StatusBadRequest, "Bad Request", "update is not a y-protocols update frame")
+			return
+		}
+		u := userFrom(r.Context())
+		if err := p.AppendCheckpoint(r.Context(), id, raw, u.ID); err != nil {
+			persistenceProblem(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 	}
 }
 
@@ -221,10 +319,10 @@ func restoreVersionHandler(p *persistence.Service, acct *accounts.Service) http.
 	}
 }
 
-func branchesHandler(p *persistence.Service, acct *accounts.Service) http.HandlerFunc {
+func branchesHandler(p *persistence.Service, acct *accounts.Service, sh *sharing.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
-		ws, err := authorizeDesign(r, p, acct, id, "viewer")
+		ws, err := authorizeDesignRead(r, p, acct, sh, id)
 		if err != nil {
 			authProblem(w, r, err)
 			return

@@ -11,15 +11,22 @@
 // capped number of remote cursors render and the rest collapse into a
 // "+M others" badge (FR-15).
 
+import { useEffect, useRef, useState } from "react";
 import { worldAABB } from "@hc/editor";
 import { useEditor } from "@/store/editor";
 import { usePresence } from "@/store/presence";
 import { serverNow } from "@/lib/realtime";
 import type { CanvasApi } from "@/lib/useEditorCanvas";
+import { presenceFallback } from "@/lib/theme.generated";
 
 // A reaction animates for this long; past it we stop rendering, so a latched or
 // roster-snapshot reaction never replays stale on a late joiner.
 const REACTION_TTL_MS = 2500;
+
+// A laser beam fades over this long after the last position update, so a paused
+// or roster-carried beam disappears on its own (FR-17). Each new position
+// remounts the dot and restarts the CSS fade, like reactions.
+const LASER_TTL_MS = 1200;
 
 // At most this many remote cursors render at once; the overflow collapses into a
 // single "+M others" badge so large rooms stay responsive.
@@ -29,20 +36,85 @@ export function PresenceOverlay({ api }: { api: CanvasApi }) {
   const peers = usePresence((s) => s.peers);
   const locks = usePresence((s) => s.locks);
   const selfClientId = usePresence((s) => s.self?.clientId ?? null);
+  const self = usePresence((s) => s.self);
+  const selfLaser = usePresence((s) => s.selfLaser);
   // Re-render on viewport/document changes so cursors and outlines track pan,
   // zoom, and edits exactly like the gizmo overlay does.
-  useEditor((s) => s.viewport);
+  const viewport = useEditor((s) => s.viewport);
+  const viewportSize = useEditor((s) => s.viewportSize);
   useEditor((s) => s.rev);
+  // Per-owner laser-ink trail buffers (ephemeral; never persisted). Accumulated in
+  // an effect (refs must not be touched during render) and mirrored to state so the
+  // fading comet trail (FR-17) renders. Page-coord samples; projected at draw time.
+  const laserTrailsRef = useRef<Map<string, { x: number; y: number; at: number }[]>>(new Map());
+  const [laserTrails, setLaserTrails] = useState<{ key: string; color: string; samples: { x: number; y: number; at: number }[] }[]>([]);
+
+  // Accumulate each owner's recent laser samples into a bounded ring buffer and
+  // mirror it to state for rendering. Runs after commit (refs are off-limits in
+  // render); fires whenever a laser position changes. The per-`at` guard makes
+  // appends idempotent.
+  useEffect(() => {
+    const t = serverNow();
+    const live = [
+      { key: "self", color: self?.color ?? presenceFallback, laser: selfLaser },
+      ...Object.values(peers).map((p) => ({ key: p.clientId, color: p.color, laser: p.state.laser ?? null })),
+    ].filter((l) => l.laser && t - l.laser.at < LASER_TTL_MS) as { key: string; color: string; laser: { x: number; y: number; at: number } }[];
+    const trails = laserTrailsRef.current;
+    const liveKeys = new Set(live.map((l) => l.key));
+    for (const [k] of trails) if (!liveKeys.has(k)) trails.delete(k);
+    for (const { key, laser } of live) {
+      const buf = trails.get(key) ?? [];
+      if (buf.length === 0 || buf[buf.length - 1].at !== laser.at) buf.push({ x: laser.x, y: laser.y, at: laser.at });
+      trails.set(key, buf.filter((s) => t - s.at < LASER_TTL_MS).slice(-24));
+    }
+    const next = live.map((l) => ({ key: l.key, color: l.color, samples: trails.get(l.key) ?? [] }));
+    // Skip the state write (and its render pass) when nobody is lasering and the
+    // trail was already empty - presence frames arrive constantly otherwise.
+    setLaserTrails((prev) => (prev.length === 0 && next.length === 0 ? prev : next));
+  }, [selfLaser, peers, self]);
 
   const doc = useEditor.getState().doc;
   const list = Object.values(peers);
   // Collaborative locks held by OTHER participants: a tinted badge
   // at the node's top-left corner with the holder's name (title on hover).
   const otherLocks = Object.entries(locks).filter(([, h]) => h.clientId !== selfClientId);
-  if (!list.length && !otherLocks.length) return null;
+  if (!list.length && !otherLocks.length && !selfLaser) return null;
 
-  // Cap the rendered cursors; the rest become a "+M others" badge (FR-15).
-  const shownCursors = list.slice(0, MAX_CURSORS);
+  // Laser beams (FR-17): the local user's own (echoed) plus every peer's, each a
+  // glowing dot in the owner's color, age-gated so a paused/stale beam fades out.
+  const now = serverNow();
+  const lasers = [
+    { key: "self", color: self?.color ?? presenceFallback, laser: selfLaser },
+    ...list.map((peer) => ({ key: peer.clientId, color: peer.color, laser: peer.state.laser ?? null })),
+  ].filter((l) => l.laser && now - l.laser.at < LASER_TTL_MS);
+
+
+  // Interest management + spatial culling (FR-28): with hundreds of cursors we
+  // can't render them all, so prefer the ones whose cursor falls inside the
+  // visible viewport (the relevant, nearby collaborators) and cull the rest.
+  // Peers with no cursor, or cursors far off-screen, sort last and overflow into
+  // the "+M others" badge. The cap then bounds the rendered DOM regardless.
+  const zoom = viewport.zoom || 1;
+  const margin = 80 / zoom; // keep cursors just past the edge visible
+  const viewRect = {
+    x0: viewport.panX - margin,
+    y0: viewport.panY - margin,
+    x1: viewport.panX + viewportSize.width / zoom + margin,
+    y1: viewport.panY + viewportSize.height / zoom + margin,
+  };
+  const inView = (peer: (typeof list)[number]): boolean => {
+    const c = peer.state.cursor;
+    return !!c && c.x >= viewRect.x0 && c.x <= viewRect.x1 && c.y >= viewRect.y0 && c.y <= viewRect.y1;
+  };
+  // Stable order: in-view peers first (then by clientId so the set is steady
+  // frame to frame), so the capped slice tracks who is actually near the user.
+  const ordered = [...list].sort((a, b) => {
+    const ai = inView(a) ? 0 : 1;
+    const bi = inView(b) ? 0 : 1;
+    return ai !== bi ? ai - bi : a.clientId < b.clientId ? -1 : 1;
+  });
+  const shownCursors = ordered.slice(0, MAX_CURSORS).filter(inView);
+  const shownSet = new Set(shownCursors.map((p) => p.clientId));
   const hiddenCount = list.length - shownCursors.length;
 
   return (
@@ -56,7 +128,55 @@ export function PresenceOverlay({ api }: { api: CanvasApi }) {
           15% { opacity: 1; transform: translate(-50%, -8px) scale(1.1); }
           100% { opacity: 0; transform: translate(-50%, -56px) scale(1); }
         }
+        @keyframes oc-laser-fade {
+          0% { opacity: 0.95; }
+          70% { opacity: 0.95; }
+          100% { opacity: 0; }
+        }
       `}</style>
+
+      {/* Laser-ink comet trail (FR-17): the recent path behind each laser, one
+          line segment per consecutive sample, keyed by its `at` so each mounts
+          once and CSS-fades from then (older segments are dimmer). The dot below
+          rides on top. */}
+      <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
+        {laserTrails.flatMap(({ key, color, samples }) =>
+          samples.slice(1).map((s, i) => {
+            const a = api.toScreen(samples[i]); // samples[i] is the point before s
+            const b = api.toScreen(s);
+            return (
+              <line
+                key={`laserink:${key}:${s.at}`}
+                x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                stroke={color} strokeWidth={3} strokeLinecap="round"
+                style={{ animation: "oc-laser-fade 1.2s ease-out forwards" }}
+              />
+            );
+          }),
+        )}
+      </svg>
+
+      {/* Laser beams: a glowing dot at each owner's pointer, keyed by owner + the
+          beam's `at` so each new position remounts and restarts the fade (no JS
+          timer); a paused beam fades out via the CSS animation. Ephemeral, never
+          persisted. */}
+      {lasers.map(({ key, color, laser }) => {
+        const p = api.toScreen(laser!);
+        return (
+          <div
+            key={`laser:${key}:${laser!.at}`}
+            className="absolute h-3.5 w-3.5 rounded-full"
+            style={{
+              left: p.x,
+              top: p.y,
+              transform: "translate(-50%, -50%)",
+              background: color,
+              boxShadow: `0 0 6px 2px ${color}, 0 0 14px 5px ${color}66`,
+              animation: "oc-laser-fade 1.2s ease-out forwards",
+            }}
+          />
+        );
+      })}
 
       {/* Selection outlines (one rect per selected node per peer). */}
       <svg className="absolute inset-0 h-full w-full overflow-visible">
@@ -106,8 +226,9 @@ export function PresenceOverlay({ api }: { api: CanvasApi }) {
 
       {/* Emoji reactions: a one-shot float-up near the sender's
           cursor. Keyed by clientId + reaction `at` so a new ping remounts the
-          element and replays the CSS animation without any JS timer. */}
-      {list.map((peer) => {
+          element and replays the CSS animation without any JS timer. Limited to
+          the shown (in-view) peers so a packed room doesn't flood the DOM. */}
+      {list.filter((peer) => shownSet.has(peer.clientId)).map((peer) => {
         const r = peer.state.reaction;
         const c = peer.state.cursor;
         // Age-gate: only show a reaction within its animation window, so a
@@ -130,8 +251,9 @@ export function PresenceOverlay({ api }: { api: CanvasApi }) {
       })}
 
       {/* Cursor chat bubbles: a small rounded bubble anchored just
-          below/right of the peer's cursor, accented with the peer color. */}
-      {list.map((peer) => {
+          below/right of the peer's cursor, accented with the peer color. Limited
+          to shown (in-view) peers for the same scale reason as reactions. */}
+      {list.filter((peer) => shownSet.has(peer.clientId)).map((peer) => {
         const chat = peer.state.chat;
         const c = peer.state.cursor;
         if (!chat || !chat.trim() || !c) return null;

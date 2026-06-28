@@ -123,6 +123,9 @@ export function useEditorCanvas(canvasRef: RefObject<HTMLCanvasElement | null>):
     const viewBottom = base.panY + (base.height || 0) / z;
     const buf = ((base.height || 0) / z) * 0.5;
     const skipNodeId = useEditor.getState().editingTextId ?? undefined;
+    // Private mode (FR-15): visually hide other participants' new contributions
+    // (empty set unless a private round is hiding, so the common path is free).
+    const hiddenIds = useEditor.getState().privateHiddenIds();
     let drawn = 0;
     for (let i = 0; i < doc.pages.length; i++) {
       const top = offs[i];
@@ -131,7 +134,7 @@ export function useEditorCanvas(canvasRef: RefObject<HTMLCanvasElement | null>):
       const vp: Viewport = { ...base, panY: base.panY - top };
       // Clear the whole canvas once (on the first drawn page), then composite the
       // rest on top so stacked pages don't erase each other.
-      renderScene(getScene(i), ctx as unknown as CanvasLike, vp, { assets: imageAssets, clear: drawn === 0 ? undefined : false, skipNodeId });
+      renderScene(getScene(i), ctx as unknown as CanvasLike, vp, { assets: imageAssets, clear: drawn === 0 ? undefined : false, skipNodeId, hiddenIds });
       drawn++;
     }
     if (drawn === 0) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height); }

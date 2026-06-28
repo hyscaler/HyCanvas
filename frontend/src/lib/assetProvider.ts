@@ -9,7 +9,8 @@ import type { AssetProvider, AssetStatus } from "@hc/engine";
 interface Entry {
   url: string;
   status: AssetStatus;
-  img: HTMLImageElement | null;
+  img: HTMLImageElement | HTMLVideoElement | null;
+  video?: boolean;
 }
 
 class ImageAssetProvider implements AssetProvider {
@@ -37,10 +38,40 @@ class ImageAssetProvider implements AssetProvider {
     img.src = url;
   }
 
-  /** Register every image AssetRef of a design (by id -> url). */
+  /** Register a video asset id -> url as an HTMLVideoElement so the engine can
+   *  draw the current frame via ctx.drawImage. Notifies on load and on seek so
+   *  the canvas repaints when the frame changes (scrubbing/playback). */
+  registerVideo(assetId: string, url: string): void {
+    const existing = this.entries.get(assetId);
+    if (existing && existing.url === url) return;
+    const entry: Entry = { url, status: "loading", img: null, video: true };
+    this.entries.set(assetId, entry);
+    if (typeof window === "undefined") return;
+    const v = document.createElement("video");
+    v.crossOrigin = "anonymous";
+    v.muted = true; // required for programmatic play without a gesture
+    v.playsInline = true;
+    v.preload = "auto";
+    const ready = () => { entry.img = v; entry.status = "ready"; this.notify(assetId); };
+    v.addEventListener("loadeddata", ready);
+    v.addEventListener("seeked", () => this.notify(assetId));
+    v.addEventListener("timeupdate", () => this.notify(assetId));
+    v.addEventListener("error", () => { entry.status = "missing"; this.notify(assetId); });
+    v.src = url;
+  }
+
+  /** The underlying HTMLVideoElement for a video asset (for scrub/play control). */
+  videoEl(assetId: string): HTMLVideoElement | null {
+    const e = this.entries.get(assetId);
+    return e?.video && e.img instanceof HTMLVideoElement ? e.img : null;
+  }
+
+  /** Register every AssetRef of a design (by id -> url); videos load as <video>. */
   registerAll(assets: { id: string; url: string; kind?: string }[]): void {
     for (const a of assets) {
-      if (a.url) this.register(a.id, a.url);
+      if (!a.url) continue;
+      if (a.kind === "video") this.registerVideo(a.id, a.url);
+      else this.register(a.id, a.url);
     }
   }
 

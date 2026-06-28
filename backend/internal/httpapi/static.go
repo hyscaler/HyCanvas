@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"io"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -19,7 +20,9 @@ import (
 //  1. exact file (assets, /_next/*, favicon, ...)
 //  2. <path>.html (per-route export pages without trailingSlash)
 //  3. <path>/index.html (per-route export pages with trailingSlash)
-//  4. index.html (SPA fallback for client-routed paths)
+//  4. 404.html with a real 404 status for genuinely unknown paths (every real
+//     route is statically exported, so an unmatched path is a true Not Found),
+//     falling back to index.html if no 404 page was exported.
 //
 // API and realtime namespaces never fall back to HTML: an unmatched /api/* or
 // /realtime path returns a problem+json 404 so clients see an API error, not the
@@ -71,9 +74,35 @@ func mountStaticFS(r chi.Router, root http.FileSystem) {
 			serveFile(w, req, root, clean+"/index.html")
 			return
 		}
-		// Client-routed path with no exported page: serve the app shell.
+		// Genuinely unknown path: serve the exported 404 page with a real 404
+		// status; fall back to the app shell if no 404 page was exported.
+		if serveNotFound(w, root) {
+			return
+		}
 		serveFile(w, req, root, "/index.html")
 	})
+}
+
+// serveNotFound writes the exported 404.html with a 404 status. Returns false
+// when no 404 page is available, so the caller can fall back to the app shell.
+func serveNotFound(w http.ResponseWriter, root http.FileSystem) bool {
+	f, err := root.Open("/404.html")
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil || info.IsDir() {
+		return false
+	}
+	body, err := io.ReadAll(f)
+	if err != nil {
+		return false
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusNotFound)
+	_, _ = w.Write(body)
+	return true
 }
 
 // apiOnlyNotice is the page served for non-API GET routes when no frontend is

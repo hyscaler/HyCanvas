@@ -65,6 +65,10 @@ Code:
 - Structured JSON logs.
 - `@hc/*` packages are consumed from their built `dist/`, so run `npm run build:packages` after editing package source before the frontend sees the change.
 
+Theming and branding:
+- The product/app accent (the application shell color identity) has ONE source of truth: `frontend/src/theme.config.mjs`. Edit colors there and run `npm run gen:theme`; it regenerates the CSS tokens, the canvas-overlay constants, and the Go presence palette. Never hardcode brand hex or raw `blue/indigo/sky/cyan` accent classes in components.
+- The app accent is global (shipped with the binary) and intentionally INDEPENDENT of the per-workspace Brand Kit. The Brand Kit themes design content only; it must never repaint the app chrome, and an app-accent change must never touch a customer's design colors.
+
 ## Common Commands
 
 Run from the repo root. After cloning, copy `.env.example` to `.env`, then `npm install`.

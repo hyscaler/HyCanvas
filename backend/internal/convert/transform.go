@@ -10,11 +10,9 @@ import (
 	"math"
 
 	"github.com/google/uuid"
-)
 
-// deckSchemaVersion matches CURRENT_SCHEMA_VERSION; the deck is migrated to
-// current on load regardless.
-const deckSchemaVersion = 9
+	"hycanvas/backend/internal/persistence"
+)
 
 type box struct{ x, y, w, h float64 }
 
@@ -235,7 +233,7 @@ func objSlice(arr []any) []map[string]any {
 
 func createBlankDeck(title string, w, h float64) map[string]any {
 	return map[string]any{
-		"format": "hycanvas.design", "schemaVersion": float64(deckSchemaVersion),
+		"format": "hycanvas.design", "schemaVersion": float64(persistence.CurrentSchemaVersion),
 		"id": newID(), "title": title, "unit": "px", "dpi": 96.0,
 		"pages": []any{map[string]any{
 			"id": newID(), "name": "Page 1", "width": w, "height": h,

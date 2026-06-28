@@ -26,10 +26,23 @@
 // exposes the Y.Doc + a "local update" subscription for the transport to encode.
 
 import * as Y from "yjs";
+import * as syncProtocol from "y-protocols/sync";
+import * as encoding from "lib0/encoding";
 import { IndexeddbPersistence } from "y-indexeddb";
 import { reconcile, fromDoc, LOCAL_ORIGIN } from "@hc/realtime";
-import type { DesignFile } from "@hc/schema";
-import { useEditor } from "@/store/editor";
+import { DESIGN_ROOT_KEY, type DesignFile } from "@hc/schema";
+import { useEditor, type CollabUndo } from "@/store/editor";
+
+// base64 of a Uint8Array (browser btoa over a binary string). Chunked so a multi-
+// MB full-state checkpoint doesn't do per-byte string growth on the main thread.
+function bytesToBase64(bytes: Uint8Array): string {
+  const CHUNK = 0x8000; // 32k args max for String.fromCharCode.apply
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK) as unknown as number[]);
+  }
+  return btoa(bin);
+}
 
 // Origin tag stamped on updates we apply from the network, so our own store
 // subscription can tell a remote-driven store change apart from a genuine local
@@ -51,12 +64,35 @@ export class DesignDoc {
   // IndexedDB, so edits made offline survive a reload and merge with the server
   // room on reconnect (Yjs CRDT, no data loss). Null in non-browser/SSR.
   private idb: IndexeddbPersistence | null = null;
+  // F16 per-user collaborative undo: a Yjs UndoManager scoped to THIS client's
+  // edits (LOCAL_ORIGIN). Undo reverts only our own changes and merges cleanly
+  // with concurrent peer edits; registered into the editor store as the active
+  // collab-undo handle while this doc is bound.
+  private readonly undoMgr: Y.UndoManager;
+  private readonly undoHandle: CollabUndo;
 
   constructor(readonly designId: string) {
     this.lastRev = useEditor.getState().rev;
 
+    // Track only LOCAL_ORIGIN transactions (this client's reconciled edits).
+    // Remote-peer updates (REMOTE_ORIGIN) and the manager's own undo/redo apply
+    // under other origins, so they are not tracked and undo never reverts a
+    // teammate's change. Default capture window groups a synchronous batch
+    // (e.g. one runAsTurn) into a single undo step.
+    this.undoMgr = new Y.UndoManager(this.ydoc.getMap(DESIGN_ROOT_KEY), {
+      trackedOrigins: new Set([LOCAL_ORIGIN]),
+    });
+    this.undoHandle = {
+      undo: () => this.undoMgr.undo(),
+      redo: () => this.undoMgr.redo(),
+      canUndo: () => this.undoMgr.canUndo(),
+      canRedo: () => this.undoMgr.canRedo(),
+    };
+    useEditor.getState().setCollabUndo(this.undoHandle);
+
     // Y -> Local: any update not originating from our own reconcile (remote
-    // peer or the initial sync) rebuilds the store doc under the guard.
+    // peer, the initial sync, or an undo/redo applied by the UndoManager)
+    // rebuilds the store doc under the guard.
     this.ydoc.on("update", (_update: Uint8Array, origin: unknown) => {
       if (origin !== LOCAL_ORIGIN) this.applyToStore();
     });
@@ -67,7 +103,10 @@ export class DesignDoc {
     // latter is just restoring already-synced local state, so rebroadcasting
     // would be redundant churn.
     this.ydoc.on("update", (update: Uint8Array, origin: unknown) => {
-      if (origin !== LOCAL_ORIGIN) return;
+      // Fan out our own edits (LOCAL_ORIGIN) AND undo/redo (applied by the
+      // UndoManager under its own origin), so peers converge on undone/redone
+      // state. Remote-origin and IndexedDB-load updates are not re-sent.
+      if (origin !== LOCAL_ORIGIN && origin !== this.undoMgr) return;
       for (const h of this.updateHandlers) h(update);
     });
 
@@ -129,6 +168,21 @@ export class DesignDoc {
     return Y.encodeStateAsUpdate(this.ydoc);
   }
 
+  /** A base64 y-protocols UPDATE frame carrying the full Y.Doc state, in the exact
+   *  format the realtime hub journals (so the history scrubber folds it like any
+   *  other frame). Uploaded as a compaction checkpoint (FR-11): folding it as the
+   *  base reconstructs the doc, then the tail deltas apply on the same CRDT
+   *  identity space. Returns null when the full state exceeds `maxBytes` (the
+   *  server would reject it), so the caller skips the upload instead of looping on
+   *  a doomed request. */
+  checkpointFrame(maxBytes = Infinity): string | null {
+    const state = this.encodeState();
+    if (state.byteLength > maxBytes) return null;
+    const enc = encoding.createEncoder();
+    syncProtocol.writeUpdate(enc, state);
+    return bytesToBase64(encoding.toUint8Array(enc));
+  }
+
   /** Subscribe to outbound updates (local edits) so the transport can broadcast
    *  them. Returns an unsubscribe. */
   onUpdate(handler: (update: Uint8Array) => void): () => void {
@@ -147,6 +201,7 @@ export class DesignDoc {
   seedIfEmpty(file: DesignFile): void {
     if (this.hasState) return;
     reconcile(file, this.ydoc); // LOCAL_ORIGIN: also fans out so peers can sync
+    this.undoMgr.clear(); // the seed is the baseline, not an undoable edit
   }
 
   /**
@@ -160,6 +215,7 @@ export class DesignDoc {
    */
   replaceDoc(file: DesignFile): void {
     reconcile(file, this.ydoc); // LOCAL_ORIGIN: minimal ops, broadcast to peers
+    this.undoMgr.clear(); // a restore is a fresh baseline (forward-only, not undoable)
   }
 
   /** Rebuild the editor store doc from the Y.Doc under the remote guard, without
@@ -188,6 +244,13 @@ export class DesignDoc {
 
   dispose(): void {
     this.disposed = true;
+    // Unregister our collab-undo handle only if it is still the active one (a
+    // newer doc may have replaced it during a route change), then tear down the
+    // manager so the store falls back to the local stack.
+    if (useEditor.getState().collabUndo === this.undoHandle) {
+      useEditor.getState().setCollabUndo(null);
+    }
+    this.undoMgr.destroy();
     this.unsubStore();
     this.updateHandlers.clear();
     // Close the IndexedDB connection (keeps the persisted data for next open).

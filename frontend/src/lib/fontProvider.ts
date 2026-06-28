@@ -39,6 +39,7 @@ class FontProvider {
   async registerCustomFont(family: string, src: string, persist = true): Promise<boolean> {
     if (typeof document === "undefined" || typeof FontFace === "undefined") return false;
     const key = family.toLowerCase();
+    if (this.loaded.has(key) && this.custom.has(key)) return true; // already registered
     try {
       const face = new FontFace(family, `url(${src})`);
       await face.load();
@@ -105,6 +106,17 @@ class FontProvider {
 
   /** Preload every font family referenced by a design's text nodes. */
   ensureForDoc(doc: DesignFile): void {
+    // Cross-device uploaded fonts: register any FontRef that carries a URL (an
+    // uploaded font asset) so the canvas can draw it on this device too. Local
+    // localStorage persistence is skipped (the design is the source of truth).
+    const refs = (doc as unknown as { fonts?: { family?: string; url?: string; source?: string }[] }).fonts;
+    if (Array.isArray(refs)) {
+      for (const f of refs) {
+        if (f.url && f.family && !this.loaded.has(f.family.toLowerCase())) {
+          void this.registerCustomFont(f.family, f.url, false);
+        }
+      }
+    }
     const walk = (nodes: Node[]) => {
       for (const n of nodes) {
         if (n.type === "text") {

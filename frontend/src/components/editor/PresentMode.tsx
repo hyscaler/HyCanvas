@@ -35,6 +35,8 @@ import {
   clipEnd,
   transitionProgress,
   appliedOpacity,
+  sequenceStarts,
+  revealEntranceText,
   type AnimPatch,
   type CanvasLike,
   type Viewport,
@@ -102,6 +104,11 @@ interface Driven {
   baseTransform: Transform;
   anim?: NodeAnimation;
   motion?: ImageMotion;
+  /** Effective entrance start (ms) after cross-element sequencing resolution. */
+  entStart?: number;
+  /** Original text content for a typewriter/word-wipe reveal, restored each frame
+   *  before re-truncating (the reveal helper mutates in place). */
+  baseContent?: unknown;
 }
 
 // One ready-to-render slide: a single-page clone of the design plus its driven
@@ -228,10 +235,22 @@ function buildSlide(doc: DesignFile, pageIndex: number): Slide {
     return { doc: clone, pageIndex, driven, entranceTotal: 0, exitTotal: 0, transition: undefined };
   }
   collectDriven(page.children, driven);
+  // Resolve cross-element sequencing (with/after previous) across top-level
+  // children so the live presentation matches the poser/export.
+  const starts = sequenceStarts(page.children);
   let entranceTotal = 0;
   let exitTotal = 0;
   for (const d of driven) {
-    if (d.anim?.entrance) entranceTotal = Math.max(entranceTotal, clipEnd(d.anim.entrance));
+    const ent = d.anim?.entrance;
+    if (ent) {
+      d.entStart = starts.get(d.node.id) ?? ent.delayMs;
+      entranceTotal = Math.max(entranceTotal, d.entStart + ent.durationMs);
+      // Snapshot the original content so a typewriter/word-wipe reveal can be
+      // re-applied from scratch each frame (the reveal truncates in place).
+      if ((ent.preset === "typewriter" || ent.preset === "word-wipe") && d.node.type === "text") {
+        d.baseContent = structuredClone((d.node as unknown as { content: unknown }).content);
+      }
+    }
     if (d.anim?.exit) exitTotal = Math.max(exitTotal, clipEnd(d.anim.exit));
   }
   return {
@@ -249,7 +268,8 @@ function buildSlide(doc: DesignFile, pageIndex: number): Slide {
 function poseEnter(slide: Slide, tMs: number, reduced: boolean): void {
   for (const d of slide.driven) {
     let patch: AnimPatch | null = null;
-    const ent = d.anim?.entrance;
+    // Effective entrance honors cross-element sequencing (the resolved start).
+    const ent = d.anim?.entrance ? { ...d.anim.entrance, delayMs: d.entStart ?? d.anim.entrance.delayMs } : undefined;
     const emp = d.anim?.emphasis;
     if (ent && tMs <= clipEnd(ent)) {
       patch = reduced ? entrancePatch(ent, clipEnd(ent)) : entrancePatch(ent, tMs);
@@ -257,6 +277,12 @@ function poseEnter(slide: Slide, tMs: number, reduced: boolean): void {
       patch = emphasisPatch(emp, tMs - slide.entranceTotal);
     } else if (ent) {
       patch = entrancePatch(ent, clipEnd(ent)); // settle at resting pose
+    }
+    // Typewriter / word-wipe content reveal: restore the full text, then truncate
+    // for the current time (skip when reduced-motion: show it all at once).
+    if (ent && d.baseContent !== undefined) {
+      (d.node as unknown as { content: unknown }).content = structuredClone(d.baseContent);
+      if (!reduced) revealEntranceText(d.node, ent, tMs);
     }
     // Custom keyframe timeline (F25): composes over the entrance/emphasis pose,
     // playing from when the entrance finishes (loops if the track loops).
@@ -1466,8 +1492,18 @@ function renderTransition(
     c.fillStyle = "#ffffff";
     c.fillRect(0, 0, W, H);
   }
+  // Morph (Magic Move): elements shared by id between the two slides are drawn
+  // tweened on top, so they must NOT appear in the cross-faded buffers. Hide them
+  // in both clones for the buffer draws, then restore.
+  const morph = transition.type === "morph" ? morphPlan(from, to) : null;
+  const restoreHidden: { node: Node; prev: boolean | undefined }[] = [];
+  if (morph) {
+    for (const n of morph.fromNodes.values()) { restoreHidden.push({ node: n, prev: n.hidden }); (n as { hidden?: boolean }).hidden = true; }
+    for (const n of morph.toNodes.values()) { restoreHidden.push({ node: n, prev: n.hidden }); (n as { hidden?: boolean }).hidden = true; }
+  }
   draw(from, ca, vp);
   draw(to, cb, vp);
+  for (const h of restoreHidden) (h.node as { hidden?: boolean }).hidden = h.prev;
 
   destCtx.setTransform(1, 0, 0, 1, 0, 0);
   destCtx.clearRect(0, 0, W, H);
@@ -1516,10 +1552,120 @@ function renderTransition(
       destCtx.globalAlpha = 1;
       break;
     }
+    case "wipe": {
+      // The incoming slide is revealed under a growing clip rect in `dir`.
+      destCtx.drawImage(bufA, 0, 0);
+      destCtx.save();
+      destCtx.beginPath();
+      if (horizontal) {
+        const w = p * W;
+        destCtx.rect(dir === "right" ? W - w : 0, 0, w, H);
+      } else {
+        const h = p * H;
+        destCtx.rect(0, dir === "down" ? H - h : 0, W, h);
+      }
+      destCtx.clip();
+      destCtx.drawImage(bufB, 0, 0);
+      destCtx.restore();
+      break;
+    }
+    case "flip": {
+      // Horizontal card flip: outgoing squashes to a sliver, incoming expands.
+      if (p < 0.5) {
+        const s = 1 - p * 2; // 1 -> 0
+        destCtx.save();
+        destCtx.translate(W / 2, 0);
+        destCtx.scale(s, 1);
+        destCtx.translate(-W / 2, 0);
+        destCtx.drawImage(bufA, 0, 0);
+        destCtx.restore();
+      } else {
+        const s = (p - 0.5) * 2; // 0 -> 1
+        destCtx.save();
+        destCtx.translate(W / 2, 0);
+        destCtx.scale(s, 1);
+        destCtx.translate(-W / 2, 0);
+        destCtx.drawImage(bufB, 0, 0);
+        destCtx.restore();
+      }
+      break;
+    }
+    case "zoom": {
+      // Outgoing holds; incoming zooms up from the center with a fade.
+      destCtx.drawImage(bufA, 0, 0);
+      destCtx.globalAlpha = p;
+      drawScaled(destCtx, bufB, 0.3 + 0.7 * p, W, H);
+      destCtx.globalAlpha = 1;
+      break;
+    }
+    case "morph": {
+      // Magic Move: cross-fade the non-shared content (buffers were drawn with the
+      // shared elements hidden), then render the shared elements tweened from their
+      // outgoing pose to their incoming pose on top, so they glide into place.
+      destCtx.globalAlpha = 1 - p;
+      destCtx.drawImage(bufA, 0, 0);
+      destCtx.globalAlpha = p;
+      destCtx.drawImage(bufB, 0, 0);
+      destCtx.globalAlpha = 1;
+      if (morph && morph.ids.length) {
+        const children = morph.ids.map((id) => lerpNode(morph.fromNodes.get(id)!, morph.toNodes.get(id)!, p));
+        const pages = to.doc.pages.map((pg, i) => (i === to.pageIndex ? { ...pg, children } : pg));
+        const tempDoc = { ...to.doc, pages } as DesignFile;
+        try {
+          renderScene(createScene(tempDoc, to.pageIndex), destCtx as unknown as CanvasLike, vp, { assets: imageAssets });
+        } catch { /* a cross-origin image can throw; skip the morphed layer */ }
+      }
+      break;
+    }
     default: {
       destCtx.drawImage(bufB, 0, 0);
     }
   }
+}
+
+/** Plan a morph: the nodes shared by id between two slides' top-level children,
+ *  indexed for both the outgoing (from) and incoming (to) poses. */
+function morphPlan(from: Slide, to: Slide): { ids: string[]; fromNodes: Map<string, Node>; toNodes: Map<string, Node> } | null {
+  const fromCh = from.doc.pages[from.pageIndex]?.children ?? [];
+  const toCh = to.doc.pages[to.pageIndex]?.children ?? [];
+  // Match shared elements: by id (same node on both slides), then fall back to a
+  // unique name (covers "duplicate slide, then move an element" since duplication
+  // regenerates ids but keeps names). The pairing keys both maps by the to-id.
+  const fromById = new Map(fromCh.map((n) => [n.id, n]));
+  const fromByName = new Map<string, Node[]>();
+  for (const n of fromCh) { if (n.name) (fromByName.get(n.name) ?? fromByName.set(n.name, []).get(n.name)!).push(n); }
+  const toNameCount = new Map<string, number>();
+  for (const n of toCh) if (n.name) toNameCount.set(n.name, (toNameCount.get(n.name) ?? 0) + 1);
+  const ids: string[] = [];
+  const fromNodes = new Map<string, Node>();
+  const toNodes = new Map<string, Node>();
+  for (const tn of toCh) {
+    let match: Node | undefined = fromById.get(tn.id);
+    if (!match && tn.name && toNameCount.get(tn.name) === 1) {
+      const byName = fromByName.get(tn.name);
+      if (byName && byName.length === 1) match = byName[0]; // unique on both sides
+    }
+    if (match) { ids.push(tn.id); fromNodes.set(tn.id, match); toNodes.set(tn.id, tn); }
+  }
+  return ids.length ? { ids, fromNodes, toNodes } : null;
+}
+
+/** Interpolate a node between its outgoing and incoming pose (transform/size/
+ *  opacity) at eased progress `p`; appearance is taken from the destination. */
+function lerpNode(a: Node, b: Node, p: number): Node {
+  const L = (x: number, y: number) => x + (y - x) * p;
+  const ta = a.transform; const tb = b.transform;
+  return {
+    ...b,
+    transform: {
+      ...tb,
+      x: L(ta.x, tb.x), y: L(ta.y, tb.y),
+      scaleX: L(ta.scaleX, tb.scaleX), scaleY: L(ta.scaleY, tb.scaleY),
+      rotation: L(ta.rotation, tb.rotation),
+    },
+    size: { width: L(a.size.width, b.size.width), height: L(a.size.height, b.size.height) },
+    opacity: L(a.opacity, b.opacity),
+  } as Node;
 }
 
 // Draw a buffer scaled about its center into the destination context.

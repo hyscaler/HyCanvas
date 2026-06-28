@@ -13,6 +13,7 @@ import { useAuth } from "@/store/auth";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { CanvasBackdrop } from "@/components/ui/CanvasBackdrop";
 import { Logo } from "@/components/ui/Logo";
 
 // Capability chips that position the breadth of the product on the brand panel.
@@ -26,7 +27,7 @@ function AuthShell({ children }: { children: ReactNode }) {
     <div className="oc-gradient relative grid min-h-screen place-items-center overflow-hidden p-6">
       <div aria-hidden className="oc-dotgrid pointer-events-none absolute inset-0 opacity-50" />
       <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
-      <div aria-hidden className="pointer-events-none absolute -bottom-28 -left-16 h-96 w-96 rounded-full bg-sky-400/20 blur-3xl" />
+      <div aria-hidden className="pointer-events-none absolute -bottom-28 -left-16 h-96 w-96 rounded-full bg-accent-400/20 blur-3xl" />
       <div className="oc-fade-up relative z-10 w-full max-w-sm rounded-2xl bg-white p-8 shadow-2xl ring-1 ring-black/5">
         {children}
       </div>
@@ -49,8 +50,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [error, setError] = useState<string | null>(null);
   // Login can switch to passwordless magic-link mode (only the email is asked).
   const [magic, setMagic] = useState(false);
-  // Second-factor step: set once a password login returns an MFA challenge.
-  const [mfaToken, setMfaToken] = useState<string | null>(null);
+  // Second-factor step: set once a password login returns an MFA challenge. SSO
+  // can also hand one off via /login?mfa=<token> (see mfaToken below).
+  const [mfaTokenState, setMfaToken] = useState<string | null>(null);
   const [mfaCode, setMfaCode] = useState("");
   const [useRecovery, setUseRecovery] = useState(false);
   // Set true once a magic-link redemption has failed, to flip out of the wait
@@ -73,6 +75,10 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   })();
   const magicToken =
     mode === "login" && typeof router.query.token === "string" ? router.query.token : "";
+  // SSO into an MFA-enabled account redirects here with /login?mfa=<challenge>;
+  // treat it exactly like a password login that returned an MFA challenge.
+  const ssoMfaToken = mode === "login" && typeof router.query.mfa === "string" ? router.query.mfa : null;
+  const mfaToken = mfaTokenState ?? ssoMfaToken;
   // While a magic-link token is in the URL and we have not yet failed, show a
   // brief wait screen instead of the form (the redemption effect drives it).
   const redeeming = !!magicToken && !magicFailed;
@@ -116,7 +122,12 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
   // A failed social sign-in bounces back as ?error=sso; surface it (derived, so a
   // later inline error from the form takes precedence).
-  const ssoError = router.query.error === "sso" ? "Couldn't complete social sign-in. Please try again." : null;
+  const ssoError =
+    router.query.error === "sso"
+      ? "Couldn't complete social sign-in. Please try again."
+      : router.query.error === "sso_exists"
+        ? "An account with this email already exists. Sign in with your password, then connect SSO from Settings."
+        : null;
 
   async function sendMagicLink() {
     if (!email) {
@@ -284,7 +295,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         {/* Atmosphere: dotted grid + soft color glows. */}
         <div aria-hidden className="oc-dotgrid pointer-events-none absolute inset-0 opacity-60" />
         <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-28 -left-16 h-96 w-96 rounded-full bg-sky-400/20 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-28 -left-16 h-96 w-96 rounded-full bg-accent-400/20 blur-3xl" />
 
         <Logo variant="light" size={36} className="relative z-10 text-xl" />
 
@@ -313,7 +324,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           {/* Video */}
           <div className="absolute bottom-0 left-24 w-44 rotate-[3deg]">
             <div className="oc-float overflow-hidden rounded-2xl bg-neutral-900 text-white shadow-2xl ring-1 ring-white/10" style={{ animationDelay: "0.6s" }}>
-              <div className="grid h-20 place-items-center bg-gradient-to-br from-indigo-500 to-sky-500">
+              <div className="oc-gradient grid h-20 place-items-center">
                 <span className="grid h-8 w-8 place-items-center rounded-full bg-white/90 text-neutral-900"><Play size={14} className="ml-0.5" fill="currentColor" /></span>
               </div>
               <div className="flex items-center gap-1.5 p-2"><div className="h-1 flex-1 rounded bg-white/30" /><span className="text-[9px] text-white/60">0:12</span></div>
@@ -341,9 +352,10 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         <p className="relative z-10 text-sm text-white/60">Your designs, your data - open format, full export, forever.</p>
       </div>
 
-      {/* Form pane */}
-      <div className="flex flex-1 items-center justify-center px-6 py-12">
-        <div className="w-full max-w-sm">
+      {/* Form pane (with a subtle artist's-desk backdrop, matching accept-invite) */}
+      <div className="relative flex flex-1 items-center justify-center overflow-hidden bg-neutral-50 px-6 py-12">
+        <CanvasBackdrop compact />
+        <div className="relative z-10 w-full max-w-sm">
           <div className="mb-10 lg:hidden">
             <Logo size={32} />
           </div>

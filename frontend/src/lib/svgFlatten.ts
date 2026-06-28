@@ -8,7 +8,7 @@
 // accumulated matrix onto the resulting node's transform. Rotation is preserved;
 // shear is folded into scale/rotation by `decompose` (rare in practice).
 
-import { svgToNodes } from "@hc/stock";
+import { svgToNodes, parseGradients } from "@hc/stock";
 import { decompose, fromTransform, identity, multiply, type Mat2D } from "@hc/engine";
 import type { Node } from "@hc/schema";
 
@@ -50,34 +50,83 @@ export interface FlattenResult {
   approximated: boolean;
 }
 
+// Paint/text properties whose resolved (computed) value we bake onto each leaf so
+// svgToNodes sees the real color even when it came from a <style> CSS class,
+// `currentColor`, or inheritance rather than an inline attribute.
+const COMPUTED_PROPS = [
+  "fill", "fill-opacity", "stroke", "stroke-opacity", "stroke-width", "opacity",
+  "font-family", "font-size", "font-weight", "font-style", "text-anchor",
+];
+
+/** Overwrite the element's inline style with its computed paint/text values, so
+ *  the downstream attribute parser (which lets `style` win) picks them up. */
+function inlineComputedPaint(el: Element): void {
+  const cs = window.getComputedStyle(el);
+  const decls: string[] = [];
+  for (const p of COMPUTED_PROPS) {
+    const v = cs.getPropertyValue(p).trim();
+    if (v && v !== "normal") decls.push(`${p}:${v}`);
+  }
+  if (decls.length) el.setAttribute("style", decls.join(";"));
+}
+
 /** Convert an SVG string to scene nodes with group transforms resolved. */
-export function flattenSvgToNodes(svgText: string): FlattenResult {
+export function flattenSvgToNodes(svgText: string, opts: { fallbackFill?: boolean } = {}): FlattenResult {
   const idGen = () => `svg-${crypto.randomUUID()}`;
+  const fallbackFill = opts.fallbackFill ?? false;
+  // Gradient defs live on the root; parse once and inject into every per-leaf
+  // convert (each leaf's outerHTML does not include <defs>).
+  const gradients = parseGradients(svgText);
   // No DOM (SSR / tests without jsdom): fall back to the flat parser.
-  if (typeof DOMParser === "undefined") {
-    const r = svgToNodes(svgText, idGen);
+  if (typeof DOMParser === "undefined" || typeof document === "undefined" || !document.body) {
+    const r = svgToNodes(svgText, idGen, { fallbackFill, gradients });
     return { nodes: r.nodes, assets: r.assets, approximated: r.approximated };
   }
   const nodes: Node[] = [];
   const assets: { assetId: string; url: string }[] = [];
   let approximated = false;
-  const root = new DOMParser().parseFromString(svgText, "image/svg+xml").documentElement;
 
-  const walk = (el: Element, ctm: Mat2D) => {
+  // Mount the SVG offscreen so the browser resolves CSS (<style> classes,
+  // currentColor, inherited fills) into computed styles we can read per leaf.
+  const host = document.createElement("div");
+  host.setAttribute("aria-hidden", "true");
+  host.style.cssText = "position:fixed;left:-99999px;top:0;width:0;height:0;overflow:hidden;opacity:0;pointer-events:none";
+  host.innerHTML = svgText;
+  const root = host.querySelector("svg");
+  if (!root) {
+    const r = svgToNodes(svgText, idGen, { fallbackFill, gradients });
+    return { nodes: r.nodes, assets: r.assets, approximated: r.approximated };
+  }
+  document.body.appendChild(host);
+
+  // `co` is the accumulated container opacity. CSS `opacity` does not inherit, so
+  // a `<g opacity="0.5">` must be folded onto its leaves manually (each leaf's
+  // own computed opacity is group-independent).
+  const walk = (el: Element, ctm: Mat2D, co: number) => {
     for (const child of Array.from(el.children)) {
       const tag = child.tagName.toLowerCase();
       const m = multiply(ctm, parseTransform(child.getAttribute("transform")));
-      if (CONTAINER.has(tag)) { walk(child, m); continue; }
+      if (CONTAINER.has(tag)) {
+        const go = parseFloat(window.getComputedStyle(child).opacity);
+        walk(child, m, co * (Number.isFinite(go) ? go : 1));
+        continue;
+      }
       if (!LEAF.has(tag)) continue; // skip defs/clipPath/gradients/etc.
-      const r = svgToNodes(child.outerHTML, idGen);
+      inlineComputedPaint(child);
+      const r = svgToNodes(child.outerHTML, idGen, { fallbackFill, gradients });
       approximated = approximated || r.approximated;
       assets.push(...r.assets);
       for (const n of r.nodes) {
         n.transform = decompose(multiply(m, fromTransform(n.transform)));
+        if (co < 1) n.opacity = Math.max(0, Math.min(1, (n.opacity ?? 1) * co));
         nodes.push(n);
       }
     }
   };
-  walk(root, identity());
+  try {
+    walk(root, identity(), 1);
+  } finally {
+    host.remove();
+  }
   return { nodes, assets, approximated };
 }

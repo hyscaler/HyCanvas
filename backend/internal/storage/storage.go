@@ -1,12 +1,9 @@
-// Package storage ports the doc-01 storage abstraction: one driver interface
-// with interchangeable backends. The local-filesystem driver is the zero-config
-// default (objects written under a base directory keyed by their opaque key),
-// matching the NestJS LocalStorageDriver byte-for-byte so the Go service reads
-// and writes the SAME content-addressed blobs as the Node service (shared
-// storage across the strangler split).
-//
-// S3 is deferred: when STORAGE_DRIVER=s3 (or S3_* is configured) the constructor
-// fails loudly rather than silently dropping blobs, exactly like the Node side.
+// Package storage is the doc-01 storage abstraction: one driver interface with
+// interchangeable backends. Two drivers ship: a zero-config local-filesystem
+// driver (the default; objects written under a base directory keyed by their
+// opaque key) and an S3-compatible driver (AWS S3, MinIO, or any S3-API store).
+// The backend is chosen from the environment by NewFromEnv; callers only ever
+// see the Driver interface, so the rest of the app is unaffected by the choice.
 package storage
 
 import (
@@ -48,14 +45,16 @@ func NewLocal(basePath string) (*Local, error) {
 	return &Local{base: abs}, nil
 }
 
-// NewFromEnv selects the driver from the environment, matching the Node
-// resolveStorageDriver logic: STORAGE_DRIVER pins the choice; otherwise S3 is
-// auto-detected when fully configured, else local. S3 is not yet implemented.
+// NewFromEnv selects the driver from the environment: STORAGE_DRIVER pins the
+// choice ("s3" or "local"); when unset, S3 is auto-detected if the core S3_*
+// credentials are present, otherwise local. The S3 constructor validates its
+// config and connectivity, so a misconfigured S3 fails loudly at boot.
 func NewFromEnv() (Driver, error) {
 	driver := os.Getenv("STORAGE_DRIVER")
-	s3Configured := os.Getenv("S3_ENDPOINT") != "" && os.Getenv("S3_ACCESS_KEY_ID") != "" && os.Getenv("S3_SECRET_ACCESS_KEY") != ""
+	cfg := s3ConfigFromEnv()
+	s3Configured := cfg.Endpoint != "" && cfg.AccessKey != "" && cfg.SecretKey != ""
 	if driver == "s3" || (driver == "" && s3Configured) {
-		return nil, errors.New("S3 storage driver is not yet implemented in the Go service; run with local storage (STORAGE_DRIVER=local or leave S3_* unset)")
+		return NewS3(cfg)
 	}
 	path := os.Getenv("LOCAL_STORAGE_PATH")
 	if path == "" {

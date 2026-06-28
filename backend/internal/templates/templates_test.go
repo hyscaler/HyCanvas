@@ -24,8 +24,10 @@ func stripSchema(dsn string) string {
 }
 
 func TestSeedLoads(t *testing.T) {
-	if len(seedEntries) < 10 {
-		t.Fatalf("expected the seed catalog to load, got %d", len(seedEntries))
+	// The built-in catalog is intentionally empty by default. If seed templates
+	// are present, they must be well-formed and findable by id.
+	if len(seedEntries) == 0 {
+		t.Skip("no built-in seed templates")
 	}
 	first := seedEntries[0].toTemplate()
 	if first.ID == "" || first.Title == "" {
@@ -143,17 +145,35 @@ func TestTemplates_DB(t *testing.T) {
 		t.Fatalf("list should include seed templates: %d < %d", len(list), len(seedEntries))
 	}
 
-	// Apply a seed template -> a new design in the workspace.
-	seedID := seedEntries[0].toTemplate().ID
-	designID, err := svc.Apply(ctx, owner.ID, seedID, ws.ID)
-	if err != nil {
-		t.Fatalf("Apply seed: %v", err)
+	// Obtain a design to save as a template. Prefer applying a seed template
+	// (which also exercises Apply); fall back to a directly-created design when
+	// the built-in catalog is empty (the default).
+	var designID string
+	if len(seedEntries) > 0 {
+		seedID := seedEntries[0].toTemplate().ID
+		designID, err = svc.Apply(ctx, owner.ID, seedID, ws.ID)
+		if err != nil {
+			t.Fatalf("Apply seed: %v", err)
+		}
+	} else {
+		design := map[string]any{
+			"id": uuid.NewString(), "schemaVersion": 10, "title": "Source",
+			"format": map[string]any{"width": 100, "height": 100, "unit": "px"},
+			"unit":   "px", "dpi": 96,
+			"pages":  []any{map[string]any{"id": "p1", "name": "Page 1", "width": 100, "height": 100, "children": []any{}}},
+			"assets": []any{}, "fonts": []any{}, "meta": map[string]any{},
+		}
+		rec, cerr := persist.Create(ctx, ws.ID, "Source", persistence.DesignFile(design), nil)
+		if cerr != nil {
+			t.Fatalf("create design: %v", cerr)
+		}
+		designID = rec.ID
 	}
 	if _, err := persist.LoadFile(ctx, designID, ws.ID); err != nil {
-		t.Fatalf("applied design should load: %v", err)
+		t.Fatalf("design should load: %v", err)
 	}
 
-	// Save the applied design as a private template; it then appears in the list.
+	// Save the design as a private template; it then appears in the list.
 	loaded, _ := persist.LoadFile(ctx, designID, ws.ID)
 	saved, err := svc.SaveAsTemplate(ctx, owner.ID, SaveInput{WorkspaceID: ws.ID, File: loaded.File, Title: "My Template", Visibility: "private"})
 	if err != nil {

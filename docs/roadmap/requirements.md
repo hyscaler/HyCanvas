@@ -27,7 +27,7 @@ These are the capabilities not yet complete. Each links to where the work is tra
 - AI media: captions, text-to-speech, music, avatar/lip-sync, image-to-video - [23-ai-media.md](23-ai-media.md).
 - Accessibility (full WCAG 2.2 AA), internationalization (100+ locales, RTL), and the enterprise/operational layer (SSO/SCIM, audit, compliance, CMEK, self-host, observability) - [38-accessibility-i18n-security-compliance-selfhost-nfr.md](38-accessibility-i18n-security-compliance-selfhost-nfr.md).
 - GPU-accelerated (WebGL/WebGPU) rendering path and worker offload for large designs - in progress on the engine; Canvas2D is the shipped path.
-- Editor depth and polish, item by item - [editor-parity-backlog.md](editor-parity-backlog.md).
+- Editor depth and polish, item by item - complete; see the archived record at [../shipped/editor-parity-backlog.md](../shipped/editor-parity-backlog.md).
 - Full PPTX import/export fidelity and the public automation API and apps marketplace remain partial.
 
 Intentionally out of scope: native mobile and desktop apps (HyCanvas is web-only, including mobile browsers).

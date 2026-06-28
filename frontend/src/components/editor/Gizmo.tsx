@@ -5,6 +5,7 @@
 
 import { useRef } from "react";
 import type { Size, Transform } from "@hc/schema";
+import { overlay } from "@/lib/theme.generated";
 import {
   locate,
   parentSpaceDelta,
@@ -30,7 +31,9 @@ import type { CanvasApi } from "@/lib/useEditorCanvas";
 function anyLockedByOther(ids: string[]): boolean {
   const p = usePresence.getState();
   const b = useBrand.getState();
-  return ids.some((id) => p.collabLockedByOther(id) !== null || b.isLockedRegion(id));
+  // collab-lock by another user, brand locked region, OR a facilitator/protected
+  // lock this client doesn't own (FR-16) - all block resize/rotate.
+  return ids.some((id) => p.collabLockedByOther(id) !== null || b.isLockedRegion(id) || p.protectedByOther(id));
 }
 
 const HANDLES: { id: HandleId; fx: number; fy: number }[] = [
@@ -132,12 +135,28 @@ function SelectionGizmo({ api, ids }: { api: CanvasApi; ids: string[] }) {
       const loc = locate(useEditor.getState().doc, id);
       if (loc && !loc.node.locked) before.set(id, { ...loc.node.transform });
     }
+    // Rotation pivot: the box center by default, or the node's chosen rotation
+    // origin (transform.origin, normalized 0..1) when set on a single selection.
+    // Computed from the node's world matrix so it is exact for rotated nodes.
+    let center = { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 };
+    if (ids.length === 1) {
+      const loc = locate(useEditor.getState().doc, ids[0]);
+      const og = loc?.node.transform.origin;
+      if (loc && og) {
+        const m = worldMatrix(useEditor.getState().doc, ids[0]);
+        if (m) {
+          const px = loc.node.size.width * og.x;
+          const py = loc.node.size.height * og.y;
+          center = { x: m.a * px + m.c * py + m.e, y: m.b * px + m.d * py + m.f };
+        }
+      }
+    }
     drag.current = {
       mode,
       fx,
       fy,
       anchor: { x: fx === 1 ? box!.x : box!.x + box!.width, y: fy === 1 ? box!.y : box!.y + box!.height },
-      center: { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 },
+      center,
       startHandle: { x: box!.x + box!.width * fx, y: box!.y + box!.height * fy },
       startAngle: 0,
       before,
@@ -245,20 +264,20 @@ function SelectionGizmo({ api, ids }: { api: CanvasApi; ids: string[] }) {
     <>
       <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
         {outlines.map((pts, k) => (
-          <polygon key={k} points={pts.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke="#2563eb" strokeWidth={1} strokeDasharray="4 3" opacity={0.6} />
+          <polygon key={k} points={pts.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke={overlay.selection} strokeWidth={1} strokeDasharray="4 3" opacity={0.6} />
         ))}
       </svg>
-      <div className="pointer-events-none absolute border-2 border-blue-500" style={{ left: tl.x, top: tl.y, width: br.x - tl.x, height: br.y - tl.y }} />
+      <div className="pointer-events-none absolute border-2 border-[color:var(--color-selection)]" style={{ left: tl.x, top: tl.y, width: br.x - tl.x, height: br.y - tl.y }} />
       <div
         onPointerDown={(e) => begin(e, "rotate", 0.5, 0)}
-        className="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-blue-600 bg-white"
+        className="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[color:var(--color-selection)] bg-white"
         style={{ left: sx(0.5), top: sy(0) - 26, cursor: ROTATE_CURSOR }}
       />
       {handles.map((h) => (
         <div
           key={`${h.fx},${h.fy}`}
           onPointerDown={(e) => begin(e, "resize", h.fx, h.fy)}
-          className="absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-sm border border-blue-600 bg-white"
+          className="absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-sm border border-[color:var(--color-selection)] bg-white"
           style={{ left: sx(h.fx), top: sy(h.fy), cursor: h.cursor }}
         />
       ))}
@@ -283,9 +302,9 @@ function ConnectorSelection({ api, id }: { api: CanvasApi; id: string }) {
   const h = Math.abs(br.y - tl.y) + pad * 2;
   return (
     <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
-      <rect x={x} y={y} width={w} height={h} fill="none" stroke="#2563eb" strokeWidth={1.5} strokeDasharray="5 4" rx={4} />
-      <circle cx={tl.x} cy={tl.y} r={3.5} fill="#fff" stroke="#2563eb" strokeWidth={1.5} />
-      <circle cx={br.x} cy={br.y} r={3.5} fill="#fff" stroke="#2563eb" strokeWidth={1.5} />
+      <rect x={x} y={y} width={w} height={h} fill="none" stroke={overlay.selection} strokeWidth={1.5} strokeDasharray="5 4" rx={4} />
+      <circle cx={tl.x} cy={tl.y} r={3.5} fill="#fff" stroke={overlay.selection} strokeWidth={1.5} />
+      <circle cx={br.x} cy={br.y} r={3.5} fill="#fff" stroke={overlay.selection} strokeWidth={1.5} />
     </svg>
   );
 }
@@ -508,10 +527,10 @@ export function Gizmo({ api }: { api: CanvasApi }) {
             .map((p) => `${p.x},${p.y}`)
             .join(" ")}
           fill="none"
-          stroke="#2563eb"
+          stroke={overlay.selection}
           strokeWidth={1.5}
         />
-        <line x1={rot.x} y1={rot.y} x2={rotPos.x} y2={rotPos.y} stroke="#2563eb" strokeWidth={1.5} />
+        <line x1={rot.x} y1={rot.y} x2={rotPos.x} y2={rotPos.y} stroke={overlay.selection} strokeWidth={1.5} />
       </svg>
       {!locked && (
         <>
@@ -521,14 +540,14 @@ export function Gizmo({ api }: { api: CanvasApi }) {
               <div
                 key={hd.id}
                 onPointerDown={(e) => beginResize(e, hd.id)}
-                className="absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-sm border border-blue-600 bg-white"
+                className="absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-sm border border-[color:var(--color-selection)] bg-white"
                 style={{ left: p.x, top: p.y, cursor: resizeCursor(p, center) }}
               />
             );
           })}
           <div
             onPointerDown={(e) => beginResize(e, "rotate")}
-            className="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-blue-600 bg-white"
+            className="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[color:var(--color-selection)] bg-white"
             style={{ left: rotPos.x, top: rotPos.y, cursor: ROTATE_CURSOR }}
           />
         </>

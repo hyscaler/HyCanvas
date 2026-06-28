@@ -35,8 +35,22 @@ type ServerFrame =
   | { t: "sync"; m: string } // base64 y-protocols sync message (slice B)
   | { t: "locks"; locks: Record<string, LockHolder> } // authoritative collab locks (slice C)
   | { t: "comment"; op: "changed"; designId: string } // comment mutation signal
+  | { t: "vote"; op: "changed"; designId: string } // server-authoritative vote signal (FR-19)
+  | { t: "moderated"; action: "kick" | "ban" | "unban"; designId: string } // you were removed (FR-32)
   | { t: "notify"; designId: string } // new in-app notification for the caller
-  | { t: "role"; role: RealtimeRole; reason?: RoleChangeReason }; // live role change
+  | { t: "role"; role: RealtimeRole; reason?: RoleChangeReason } // live role change
+  | {
+      // Facilitator spotlight / summon / take-control (FR-14). `from`/`name`
+      // identify the driving facilitator; `summon` carries a one-shot target
+      // viewport, `start`/`stop` toggle sustained take-control.
+      t: "spotlight";
+      from: string;
+      name: string;
+      mode: "summon" | "start" | "stop";
+      viewport?: { zoom: number; panX: number; panY: number };
+    }
+  | { t: "facilitator"; clientId: string; name: string } // session facilitator changed (FR-16)
+  | { t: "protected"; nodes: string[] }; // facilitator/protected-lock node set (FR-16)
 
 // Offset (ms) between the server clock and this client's clock, captured from
 // the welcome frame's serverTime. serverNow() applies it so all
@@ -58,6 +72,28 @@ const commentListeners = new Set<(designId: string) => void>();
 export function onCommentChanged(fn: (designId: string) => void): () => void {
   commentListeners.add(fn);
   return () => commentListeners.delete(fn);
+}
+
+// Listeners notified when a `{ t: "vote" }` signal arrives (FR-19): a
+// server-authoritative vote was cast or a session changed, so the board refetches
+// the tally over REST. Module-level so it survives client reconnects.
+const voteListeners = new Set<(designId: string) => void>();
+
+/** Subscribe to live vote-changed signals; returns an unsubscribe. */
+export function onVoteChanged(fn: (designId: string) => void): () => void {
+  voteListeners.add(fn);
+  return () => voteListeners.delete(fn);
+}
+
+// Listeners notified when the server pushes a `{ t: "moderated" }` frame (FR-32):
+// a facilitator kicked or banned this client. The transport stops reconnecting
+// (a ban would otherwise loop); the editor shell surfaces a message.
+const moderatedListeners = new Set<(action: "kick" | "ban" | "unban") => void>();
+
+/** Subscribe to being kicked/banned from the current board; returns an unsubscribe. */
+export function onModerated(fn: (action: "kick" | "ban" | "unban") => void): () => void {
+  moderatedListeners.add(fn);
+  return () => moderatedListeners.delete(fn);
 }
 
 // Listeners notified when the server pushes a `{ t: "role" }` frame (FR-11 /
@@ -118,6 +154,9 @@ export class RealtimeClient {
   private closed = false;
   private attempt = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  // Periodic liveness ping so the server does not sweep our collaborative locks
+  // while we are connected but idle (FR-8 heartbeat; 10s, well inside the 30s TTL).
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 
   // Outbound presence throttle: hold the latest state and flush on a timer.
   private pending: PeerState | null = null;
@@ -171,6 +210,7 @@ export class RealtimeClient {
       // replies with step 2 (the ops we are missing) and its own step 1; on
       // reconnect this re-converges any edits made while offline (FR-6).
       if (this.doc) this.sendSyncStep1();
+      this.startHeartbeat();
     };
 
     ws.onmessage = (ev) => {
@@ -180,12 +220,13 @@ export class RealtimeClient {
 
     ws.onclose = () => {
       this.ws = null;
+      this.stopHeartbeat();
       if (this.closed) return;
       // Drop ephemeral awareness (cursor chat / reaction) so the reconnect
       // re-announce can't replay a stale chat bubble or reaction; chat is set to
       // null so peers clear it. Durable presence (cursor/selection/viewport)
       // re-announces normally.
-      this.local = { ...this.local, chat: null, reaction: undefined };
+      this.local = { ...this.local, chat: null, reaction: undefined, laser: null };
       // A clean roster is rebuilt from the next "roster" frame on reconnect.
       usePresence.getState().reset();
       this.scheduleReconnect();
@@ -195,6 +236,24 @@ export class RealtimeClient {
     ws.onerror = () => {
       if (!this.closed) this.setState("reconnecting");
     };
+  }
+
+  // Liveness ping: keeps our collaborative locks from being swept by the server
+  // while connected but idle (FR-8). Cleared on close/disconnect.
+  private startHeartbeat() {
+    this.stopHeartbeat();
+    this.heartbeatTimer = setInterval(() => {
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify({ t: "heartbeat" }));
+      }
+    }, 10_000);
+  }
+
+  private stopHeartbeat() {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
   }
 
   private scheduleReconnect() {
@@ -242,6 +301,21 @@ export class RealtimeClient {
       case "comment":
         for (const fn of commentListeners) fn(frame.designId);
         break;
+      case "vote":
+        for (const fn of voteListeners) fn(frame.designId);
+        break;
+      case "moderated":
+        // A facilitator removed us. Stop reconnecting (a ban refuses rejoin and
+        // would loop) and let the shell surface it. close() sets closed=true.
+        for (const fn of moderatedListeners) fn(frame.action);
+        this.close();
+        break;
+      case "facilitator":
+        store.setFacilitator(frame.clientId, frame.name);
+        break;
+      case "protected":
+        store.setProtectedNodes(frame.nodes);
+        break;
       case "notify":
         // A new notification landed for us; let the bell refetch its count.
         for (const fn of notifyListeners) fn(frame.designId);
@@ -258,6 +332,21 @@ export class RealtimeClient {
         // syncing immediately with no reconnect. Harmless if already converged.
         if (frame.role === "editor" && this.doc) this.sendSyncStep1();
         break;
+      case "spotlight": {
+        // A facilitator is driving viewports (FR-14). The server already excludes
+        // the sender, but guard defensively against acting on our own frame.
+        if (frame.from === store.selfClientId()) break;
+        if (frame.mode === "start") {
+          store.setPresenter(frame.from, frame.name);
+        } else if (frame.mode === "stop") {
+          if (store.presenter?.clientId === frame.from) store.setFollowing(null);
+        } else if (frame.mode === "summon" && frame.viewport) {
+          // One-shot snap; `at` is stamped on receipt with the server clock so the
+          // banner fades together. useRealtime applies the viewport.
+          store.setSummon({ name: frame.name, viewport: frame.viewport, at: serverNow() });
+        }
+        break;
+      }
       default:
         // Unknown tag; ignore.
         break;
@@ -350,9 +439,46 @@ export class RealtimeClient {
     this.ws.send(JSON.stringify({ t: "unlock", ids }));
   }
 
+  /** Broadcast a facilitator spotlight signal (FR-14): `summon` snaps peers to
+   *  `viewport` once; `start`/`stop` toggle sustained take-control. The server
+   *  drops this unless we are an editor (the facilitator proxy), so a viewer
+   *  calling it is a harmless no-op. */
+  sendSpotlight(
+    mode: "summon" | "start" | "stop",
+    viewport?: { zoom: number; panX: number; panY: number },
+  ) {
+    if (this.ws?.readyState !== WebSocket.OPEN) return;
+    const f: Record<string, unknown> = { t: "spotlight", mode };
+    if (viewport) f.viewport = { zoom: viewport.zoom, panX: viewport.panX, panY: viewport.panY };
+    this.ws.send(JSON.stringify(f));
+  }
+
+  /** Moderate a participant (FR-32): kick (force-disconnect), ban (kick + refuse
+   *  rejoin), or unban. Dropped server-side unless we are an editor, so a viewer
+   *  calling it is a harmless no-op. `userId` targets all of that user's tabs. */
+  sendModerate(action: "kick" | "ban" | "unban", userId: string) {
+    if (!userId || this.ws?.readyState !== WebSocket.OPEN) return;
+    this.ws.send(JSON.stringify({ t: "moderate", action, userId }));
+  }
+
+  /** Claim, release, or hand off the session facilitator role (FR-16). Dropped
+   *  server-side unless we are an editor; handoff targets a peer's clientId. */
+  sendFacilitator(action: "claim" | "release" | "handoff", target?: string) {
+    if (this.ws?.readyState !== WebSocket.OPEN) return;
+    this.ws.send(JSON.stringify({ t: "facilitator", action, target: target ?? "" }));
+  }
+
+  /** Protect/unprotect node ids with a facilitator lock (FR-16). Gated to the
+   *  facilitator (or any editor when none is set) server-side. */
+  sendProtect(action: "protect" | "unprotect", nodes: string[]) {
+    if (!nodes.length || this.ws?.readyState !== WebSocket.OPEN) return;
+    this.ws.send(JSON.stringify({ t: "protect", action, nodes }));
+  }
+
   /** Tear down the connection and stop reconnecting (call on unmount). */
   close() {
     this.closed = true;
+    this.stopHeartbeat();
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     if (this.flushTimer) clearTimeout(this.flushTimer);
     this.reconnectTimer = null;

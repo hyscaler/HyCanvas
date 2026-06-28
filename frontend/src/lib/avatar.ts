@@ -2,7 +2,11 @@
 // from a person's id (or name as a fallback). Shared by the comments panel and
 // the on-canvas comment pins so the same person reads the same everywhere.
 
-export const AVATAR_COLORS = ["#e11d48", "#ea580c", "#d97706", "#16a34a", "#0891b2", "#2563eb", "#7c3aed", "#db2777"];
+import { avatarColors } from "@/lib/theme.generated";
+
+// Single-sourced from theme.config.mjs (a distinct rainbow for telling people
+// apart; not brand colors). Re-exported under the historical name.
+export const AVATAR_COLORS = avatarColors;
 
 /** Up to two uppercase initials from a display name. */
 export function initials(name: string): string {

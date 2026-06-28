@@ -6,21 +6,24 @@ import { useEffect, useRef, useState } from "react";
 import { MousePointer2, PenTool, Pencil, Minus, MoveUpRight, Square, Circle, Type, MessageSquarePlus, Copy, ClipboardPaste, CopyPlus, Trash2, Group, Ungroup, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, FlipHorizontal2, FlipVertical2, Paintbrush, PaintBucket, Lock, LockOpen, Eye, EyeOff, BoxSelect } from "lucide-react";
 import type { CharStyle, Color, Paragraph, TextNode, Transform } from "@hc/schema";
 import { locate, moveTransform, marqueeSelect, parentSpaceDelta, worldMatrix, worldAABB, unionAABB, snap, type EditCommand } from "@hc/editor";
-import { fitStickyFontScale } from "@hc/whiteboard";
+import { fitStickyFontScale, routeConnector } from "@hc/whiteboard";
 import { layoutText } from "@hc/text";
 import { canvasFontString, fontFamilyStack, weightFromFontStyle, type Rect } from "@hc/engine";
 import { useCallbackRef } from "@/lib/useCallbackRef";
+import { overlay } from "@/lib/theme.generated";
 import { useEditorCanvas, type CanvasApi } from "@/lib/useEditorCanvas";
 import { useEditor, OC_CLIP_PREFIX } from "@/store/editor";
 import { commandForEvent } from "@/lib/shortcuts";
 import { Gizmo } from "./Gizmo";
 import { SelectionToolbar } from "./SelectionToolbar";
+import { MiniMap } from "./MiniMap";
 import { PageOverlays } from "./PageOverlays";
 import { PathEditor } from "./PathEditor";
 import { CropOverlay } from "./CropOverlay";
 import { PresenceOverlay } from "./PresenceOverlay";
 import { CommentPins } from "./CommentPins";
 import { getRealtimeClient } from "@/lib/useRealtime";
+import { serverNow } from "@/lib/realtime";
 import { usePresence } from "@/store/presence";
 import { useBrand } from "@/store/brand";
 import { useComments } from "@/store/comments";
@@ -52,18 +55,18 @@ function Ruler({ axis, api, page }: { axis: "x" | "y"; api: CanvasApi; page: { w
   for (let p = 0; p <= dim + 0.5; p += step) {
     if (axis === "x") {
       const s = api.toScreen({ x: p, y: 0 }).x - RULER;
-      ticks.push(<line key={p} x1={s} y1={RULER - 6} x2={s} y2={RULER} stroke="#9ca3af" strokeWidth={1} />);
-      ticks.push(<text key={`t${p}`} x={s + 2} y={9} fontSize={8} fill="#9ca3af">{Math.round(p)}</text>);
+      ticks.push(<line key={p} x1={s} y1={RULER - 6} x2={s} y2={RULER} stroke={overlay.ruler} strokeWidth={1} />);
+      ticks.push(<text key={`t${p}`} x={s + 2} y={9} fontSize={8} fill={overlay.ruler}>{Math.round(p)}</text>);
     } else {
       const s = api.toScreen({ x: 0, y: p }).y - RULER;
-      ticks.push(<line key={p} x1={RULER - 6} y1={s} x2={RULER} y2={s} stroke="#9ca3af" strokeWidth={1} />);
-      ticks.push(<text key={`t${p}`} x={2} y={s + 3} fontSize={8} fill="#9ca3af">{Math.round(p)}</text>);
+      ticks.push(<line key={p} x1={RULER - 6} y1={s} x2={RULER} y2={s} stroke={overlay.ruler} strokeWidth={1} />);
+      ticks.push(<text key={`t${p}`} x={2} y={s + 3} fontSize={8} fill={overlay.ruler}>{Math.round(p)}</text>);
     }
   }
   return <svg className="absolute inset-0 h-full w-full overflow-hidden">{ticks}</svg>;
 }
 
-type ToolName = "select" | "pen" | "pencil" | "line" | "arrow" | "rect" | "ellipse" | "text" | "comment";
+type ToolName = "select" | "pen" | "pencil" | "ink" | "laser" | "eraser" | "line" | "arrow" | "rect" | "ellipse" | "text" | "comment";
 
 // Canvas tool palette (top-left). "sep" draws a divider.
 const TOOLBAR: ({ tool: ToolName; title: string; icon: typeof MousePointer2 } | "sep")[] = [
@@ -561,6 +564,7 @@ function TextEditOverlay({ api, id, onClose }: { api: CanvasApi; id: string; onC
         ref={ref}
         contentEditable
         dir={dir as "ltr" | "rtl" | "auto"}
+        lang={(node as { data?: { lang?: string } }).data?.lang || undefined}
         spellCheck
         suppressContentEditableWarning
         onBlur={commit}
@@ -625,7 +629,7 @@ function TextEditOverlay({ api, id, onClose }: { api: CanvasApi; id: string; onC
           whiteSpace: "pre",
           textAlign: (align === "justify" ? "left" : align) as React.CSSProperties["textAlign"],
           background: "transparent",
-          outline: "2px solid #2563eb",
+          outline: `2px solid ${overlay.selection}`,
           border: "none",
           paddingTop: pad.t * zoom,
           paddingRight: pad.r * zoom,
@@ -686,7 +690,7 @@ function TextEditOverlay({ api, id, onClose }: { api: CanvasApi; id: string; onC
 const STICKY_PAD = 12;
 const STICKY_BASE_FONT = 20;
 
-function StickyEditOverlay({ api, id, onClose }: { api: CanvasApi; id: string; onClose: () => void }) {
+function StickyEditOverlay({ api, id, onClose, onAdvance }: { api: CanvasApi; id: string; onClose: (id: string) => void; onAdvance: (id: string) => void }) {
   useEditor((s) => s.rev);
   useEditor((s) => s.viewport);
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -721,7 +725,7 @@ function StickyEditOverlay({ api, id, onClose }: { api: CanvasApi; id: string; o
   const commit = () => {
     const el = ref.current;
     if (el) useEditor.getState().setStickyText(id, el.value, fitStickyFontScale(el.value, w, h));
-    onClose();
+    onClose(id);
   };
 
   return (
@@ -737,6 +741,14 @@ function StickyEditOverlay({ api, id, onClose }: { api: CanvasApi; id: string; o
         } else if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
           e.preventDefault();
           ref.current?.blur();
+        } else if (e.key === "Tab" && !e.nativeEvent.isComposing) {
+          // Tab commits this note and spawns the next one in flow, moving the
+          // editor to it (F30 sticky speed). The unmount-blur of this textarea is
+          // a no-op because onClose is keyed to the closing sticky id.
+          e.preventDefault();
+          const el = ref.current;
+          if (el) useEditor.getState().setStickyText(id, el.value, fitStickyFontScale(el.value, w, h));
+          onAdvance(id);
         }
       }}
       style={{
@@ -749,7 +761,7 @@ function StickyEditOverlay({ api, id, onClose }: { api: CanvasApi; id: string; o
         boxSizing: "border-box",
         resize: "none",
         border: "none",
-        outline: "2px solid #2563eb",
+        outline: `2px solid ${overlay.selection}`,
         background: "transparent",
         color: srgbCss(node.textColor),
         textAlign: node.align ?? "left",
@@ -831,7 +843,8 @@ function ConnectorDragLayer({
     CONNECTABLE_TYPES.has(selNode.type) &&
     !selNode.locked &&
     !usePresence.getState().collabLockedByOther(selId) &&
-    !useBrand.getState().isLockedRegion(selId);
+    !useBrand.getState().isLockedRegion(selId) &&
+    !usePresence.getState().protectedByOther(selId);
 
   // Keep rendering during a drag even if the selection box updates.
   const sourceId = drag?.fromId ?? (connectable ? selId! : null);
@@ -869,7 +882,17 @@ function ConnectorDragLayer({
   const onNubUp = (e: React.PointerEvent) => {
     (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
     setDrag((cur) => {
-      if (cur?.over) useEditor.getState().connectNodes(cur.fromId, cur.over, cur.anchor, "auto");
+      if (!cur) return null;
+      if (cur.over) {
+        // Released over a node: connect the two (connect-on-hover).
+        useEditor.getState().connectNodes(cur.fromId, cur.over, cur.anchor, "auto");
+      } else {
+        // Released in empty space: spawn a connected shape at the cursor and keep
+        // the chain going (FR-7 spawn-shape-from-handle), but only past a small
+        // drag threshold so an accidental click on a nub does nothing.
+        const moved = Math.hypot(cur.curPage.x - cur.startPage.x, cur.curPage.y - cur.startPage.y);
+        if (moved > 16) useEditor.getState().spawnConnectedShape(cur.fromId, cur.anchor, cur.curPage);
+      }
       return null;
     });
   };
@@ -913,7 +936,7 @@ function ConnectorDragLayer({
             type="button"
             title="Drag to connect to another node"
             aria-label={`Connect from ${m.anchor}`}
-            className="pointer-events-auto absolute h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-indigo-600 shadow ring-1 ring-indigo-300 transition hover:scale-125"
+            className="pointer-events-auto absolute h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-[color:var(--color-selection)] shadow ring-1 ring-[color:var(--color-selection)] transition hover:scale-125"
             style={{ left: s.x + d.x, top: s.y + d.y, touchAction: "none" }}
             onPointerDown={onNubDown(m.anchor, m.p)}
             onPointerMove={onNubMove}
@@ -921,6 +944,160 @@ function ConnectorDragLayer({
           />
         );
       })}
+    </div>
+  );
+}
+
+// Inline editor for a connector's label (F30 FR-8): a small input centered on the
+// connector's routed bounds. Enter/blur commits via the store (undoable); Escape
+// cancels. Reused look from the sticky overlay.
+function ConnectorLabelOverlay({ api, id, onClose }: { api: CanvasApi; id: string; onClose: () => void }) {
+  useEditor((s) => s.rev);
+  useEditor((s) => s.viewport);
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    const n = locate(useEditor.getState().doc, id)?.node as unknown as { label?: { text?: string } } | undefined;
+    if (el) {
+      el.value = n?.label?.text ?? "";
+      el.focus();
+      el.select();
+    }
+  }, [id]);
+  const b = api.scene()?.connectorBounds(id);
+  if (!b) return null;
+  const c = api.toScreen({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
+  const commit = () => {
+    const el = ref.current;
+    if (el) useEditor.getState().setConnectorLabel(id, el.value);
+    onClose();
+  };
+  return (
+    <input
+      ref={ref}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") { e.preventDefault(); onClose(); }
+        else if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); commit(); }
+      }}
+      placeholder="Label"
+      aria-label="Connector label"
+      className="absolute z-30 rounded-md border-2 border-[color:var(--color-selection)] bg-white px-1.5 py-0.5 text-center text-xs text-neutral-800 shadow outline-none"
+      style={{ left: c.x, top: c.y, width: 120, transform: "translate(-50%, -50%)" }}
+    />
+  );
+}
+
+/**
+ * Connector waypoint editor (F30 FR-8). For a single selected connector it shows
+ * a draggable handle at each bend waypoint (drag to move, double-click to remove)
+ * plus a "+" at the routed-line center to add a bend. Each edit commits as one
+ * undo step via the store; the engine re-routes the line on commit.
+ */
+function ConnectorEditLayer({
+  api,
+  clientToPage,
+}: {
+  api: CanvasApi;
+  clientToPage: (clientX: number, clientY: number) => { x: number; y: number };
+}): React.ReactElement | null {
+  const selection = useEditor((s) => s.selection);
+  useEditor((s) => s.rev);
+  useEditor((s) => s.viewport);
+  const [drag, setDrag] = useState<{ index: number; page: { x: number; y: number } } | null>(null);
+
+  const canEdit = usePresence.getState().canEdit() && !useEditor.getState().readonlyPreview();
+  const doc = useEditor.getState().doc;
+  const loc = selection.length === 1 ? locate(doc, selection[0]) : null;
+  if (!canEdit || !loc || loc.node.type !== "connector" || loc.node.locked || usePresence.getState().collabLockedByOther(loc.node.id) || usePresence.getState().protectedByOther(loc.node.id)) {
+    return null;
+  }
+  const conn = loc.node as unknown as {
+    id: string;
+    route: "straight" | "elbow" | "curved";
+    start: { point?: { x: number; y: number }; attach?: { nodeId: string; anchor: string } };
+    end: { point?: { x: number; y: number }; attach?: { nodeId: string; anchor: string } };
+    waypoints?: { x: number; y: number }[];
+  };
+  const wps = conn.waypoints ?? [];
+  const commit = (pts: { x: number; y: number }[]) => useEditor.getState().setConnectorWaypoints(conn.id, pts);
+
+  const onHandleDown = (index: number) => (e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    setDrag({ index, page: wps[index] });
+  };
+  const onHandleMove = (e: React.PointerEvent) => {
+    setDrag((cur) => (cur ? { ...cur, page: clientToPage(e.clientX, e.clientY) } : cur));
+  };
+  const onHandleUp = (e: React.PointerEvent) => {
+    (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+    setDrag((cur) => {
+      if (cur) commit(wps.map((w, i) => (i === cur.index ? cur.page : w)));
+      return null;
+    });
+  };
+  const removeAt = (index: number) => commit(wps.filter((_, i) => i !== index));
+  const addBend = () => {
+    // Place the new bend ON the routed line: the midpoint of its middle segment
+    // (always on the polyline, unlike the bounding-box center for elbow/curved).
+    const boxes: Record<string, { x: number; y: number; width: number; height: number }> = {};
+    for (const ep of [conn.start, conn.end]) {
+      const nid = ep?.attach?.nodeId;
+      if (nid) {
+        const bb = worldAABB(doc, nid);
+        if (bb) boxes[nid] = bb;
+      }
+    }
+    const pts = routeConnector({ route: conn.route, start: conn.start, end: conn.end, waypoints: wps }, boxes);
+    let mid: { x: number; y: number };
+    if (pts.length >= 2) {
+      const s = Math.floor((pts.length - 1) / 2); // middle segment
+      mid = { x: (pts[s].x + pts[s + 1].x) / 2, y: (pts[s].y + pts[s + 1].y) / 2 };
+    } else {
+      const b = api.scene()?.connectorBounds(conn.id);
+      if (!b) return;
+      mid = { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+    }
+    const at = Math.floor(wps.length / 2);
+    commit([...wps.slice(0, at), mid, ...wps.slice(at)]);
+  };
+
+  const bounds = api.scene()?.connectorBounds(conn.id);
+  const addPt = bounds ? api.toScreen({ x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }) : null;
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20">
+      {wps.map((w, i) => {
+        const p = api.toScreen(drag && drag.index === i ? drag.page : w);
+        return (
+          <button
+            key={`wp-${i}`}
+            type="button"
+            title="Drag to bend; double-click to remove"
+            aria-label={`Connector bend ${i + 1}`}
+            className="pointer-events-auto absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-amber-500 shadow ring-1 ring-amber-300 transition hover:scale-125"
+            style={{ left: p.x, top: p.y, touchAction: "none" }}
+            onPointerDown={onHandleDown(i)}
+            onPointerMove={onHandleMove}
+            onPointerUp={onHandleUp}
+            onDoubleClick={(e) => { e.preventDefault(); e.stopPropagation(); removeAt(i); }}
+          />
+        );
+      })}
+      {addPt && !drag && (
+        <button
+          type="button"
+          title="Add a bend"
+          aria-label="Add connector bend"
+          className="pointer-events-auto absolute grid h-4 w-4 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-white bg-amber-400/80 text-[10px] font-bold text-white shadow hover:scale-125"
+          style={{ left: addPt.x, top: addPt.y, touchAction: "none" }}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); addBend(); }}
+        >
+          +
+        </button>
+      )}
     </div>
   );
 }
@@ -940,6 +1117,8 @@ export function Canvas() {
   const editing = useEditor((s) => s.editingTextId);
   const setEditing = (id: string | null) => useEditor.getState().setEditingText(id);
   const [editingSticky, setEditingSticky] = useState<string | null>(null);
+  // Connector whose label is being edited (F30 FR-8); opened by double-click.
+  const [editingConnectorLabel, setEditingConnectorLabel] = useState<string | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
   const [guides, setGuides] = useState<{ x: number[]; y: number[] } | null>(null);
   // Pen rubber-band: cursor position (screen) for the preview from the last anchor.
@@ -948,6 +1127,12 @@ export function Canvas() {
   // polyline drawn live while dragging; fit to a path on release.
   const pencilStroke = useRef<{ x: number; y: number }[] | null>(null);
   const [pencilPreview, setPencilPreview] = useState<{ x: number; y: number }[] | null>(null);
+  // Board ink stroke (F30): captured with optional pen pressure; committed to an
+  // `ink` node on pointer-up. Reuses the pencil preview overlay for the live line.
+  const inkStroke = useRef<{ x: number; y: number; p?: number }[] | null>(null);
+  // Object-eraser drag (F30): true while the eraser pointer is down so move events
+  // keep erasing strokes/objects swept under the cursor.
+  const erasing = useRef(false);
   // Manual guide being dragged (from a ruler = index null, or an existing one).
   const [guideDrag, setGuideDrag] = useState<{ axis: "x" | "y"; index: number | null; pos: number } | null>(null);
   // True while the focusable canvas surface owns keyboard focus. Tracked in a ref
@@ -962,6 +1147,10 @@ export function Canvas() {
   // Active viewport pan gesture (Space-drag or middle-button drag): the screen
   // point where the drag began and the pan offset at that moment.
   const panning = useRef<{ startX: number; startY: number; panX: number; panY: number } | null>(null);
+  // Active pointers by id (for multi-touch), and the live pinch gesture (FR-31):
+  // two-finger pinch-zoom + pan about the fingers' midpoint.
+  const pointers = useRef<Map<number, { clientX: number; clientY: number; type: string }>>(new Map());
+  const pinch = useRef<{ startDist: number; startZoom: number; anchor: { x: number; y: number } } | null>(null);
   // Drives the grab/grabbing cursor while Space is held or a pan is in flight.
   const [spaceCursor, setSpaceCursor] = useState(false);
   // True when the select-tool pointer hovers a draggable node, so the canvas
@@ -970,6 +1159,7 @@ export function Canvas() {
   const [hoverMove, setHoverMove] = useState(false);
   const hoverMoveRef = useRef(false);
   const tool = useEditor((s) => s.tool);
+  const brush = useEditor((s) => s.brush);
   // Whiteboard surface enables drag-to-connect; harmless elsewhere (never shown).
   const isWhiteboard = useEditor((s) => (s.doc.meta as { kind?: string } | undefined)?.kind === "whiteboard");
   const canComment = useComments((s) => s.canComment);
@@ -998,7 +1188,7 @@ export function Canvas() {
     const id = selection[0];
     const n = locate(useEditor.getState().doc, id)?.node;
     if (n?.type !== "path") return false;
-    if (n.locked || usePresence.getState().collabLockedByOther(id) || useBrand.getState().isLockedRegion(id)) return false;
+    if (n.locked || usePresence.getState().collabLockedByOther(id) || useBrand.getState().isLockedRegion(id) || usePresence.getState().protectedByOther(id)) return false;
     if (!usePresence.getState().canEdit() || useEditor.getState().readonlyPreview()) return false;
     return true;
   })();
@@ -1009,9 +1199,28 @@ export function Canvas() {
     lineDraft.current = null;
     drawDraft.current = null;
     pencilStroke.current = null;
+    inkStroke.current = null;
+    erasing.current = false;
     setPenPreview(null);
     setPencilPreview(null);
     useEditor.getState().setTool("select");
+  });
+
+  // Abandon any in-progress single-pointer gesture/draft WITHOUT changing the tool
+  // or committing anything. Used when a pinch takes over (FR-31) and on pointer
+  // cancel, so a leftover finger can't resume a move/marquee/erase/draw afterward.
+  const cancelInteraction = useCallbackRef(() => {
+    gesture.current = { type: "none" };
+    penDraft.current = null;
+    penDragging.current = false;
+    lineDraft.current = null;
+    drawDraft.current = null;
+    pencilStroke.current = null;
+    inkStroke.current = null;
+    erasing.current = false;
+    setPenPreview(null);
+    setPencilPreview(null);
+    setMarquee(null);
   });
 
   function onPenDown(e: React.PointerEvent) {
@@ -1050,12 +1259,21 @@ export function Canvas() {
     // active page's scene + coords) resolves on the right page in continuous scroll.
     const cp = api.pageIndexAt(localPoint(e));
     if (cp >= 0 && cp !== useEditor.getState().activePage) useEditor.getState().setActivePage(cp);
-    const hit = api.scene()?.hitTest(api.toPage(localPoint(e)));
-    if (!hit) return;
+    const page = api.toPage(localPoint(e));
+    const hit = api.scene()?.hitTest(page);
+    if (!hit) {
+      // Empty board canvas: double-click drops a sticky at the cursor and opens
+      // it for immediate typing (F30 sticky speed).
+      if (isWhiteboard && usePresence.getState().canEdit() && !useEditor.getState().readonlyPreview()) {
+        const id = useEditor.getState().addStickyAt(page.x, page.y);
+        setEditingSticky(id);
+      }
+      return;
+    }
     const loc = locate(useEditor.getState().doc, hit.id);
     // Locked (static flag), collab-locked by another user, or a brand locked
     // region for this caller: no edit/crop entry.
-    if (loc?.node.locked || usePresence.getState().collabLockedByOther(hit.id) || useBrand.getState().isLockedRegion(hit.id)) return;
+    if (loc?.node.locked || usePresence.getState().collabLockedByOther(hit.id) || useBrand.getState().isLockedRegion(hit.id) || usePresence.getState().protectedByOther(hit.id)) return;
     // Double-click selects the leaf under the cursor - entering a group to grab a
     // child, and triggering text edit / image crop where applicable.
     useEditor.getState().select([hit.id]);
@@ -1064,6 +1282,9 @@ export function Canvas() {
     } else if (loc?.node.type === "sticky") {
       // Whiteboard sticky: open a plain-text edit overlay.
       setEditingSticky(hit.id);
+    } else if (loc?.node.type === "connector") {
+      // Whiteboard connector: edit its label (F30 FR-8).
+      setEditingConnectorLabel(hit.id);
     } else if (loc?.node.type === "image" && canCrop(loc.node.transform)) {
       useEditor.getState().setCropping(hit.id);
     }
@@ -1143,6 +1364,51 @@ export function Canvas() {
     // selection work right after a click (a11y). Harmless when already focused;
     // overlays that mount later (text/sticky edit) re-focus their own field.
     surfaceRef.current?.focus({ preventScroll: true });
+
+    // --- Touch / stylus input (FR-31) -------------------------------------
+    pointers.current.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY, type: e.pointerType });
+    const touchPts = [...pointers.current.values()].filter((p) => p.type === "touch");
+    const penDown = [...pointers.current.values()].some((p) => p.type === "pen");
+    // Palm rejection: ignore touch contacts while a pen is down (pen draws, the
+    // resting palm/finger does not).
+    if (e.pointerType === "touch" && penDown) {
+      pointers.current.delete(e.pointerId);
+      return;
+    }
+    // Two fingers: pinch-zoom + pan about the fingers' midpoint. Cancels any
+    // single-pointer gesture (move/marquee/erase/draw/pan) so a leftover finger
+    // can't resume it after the pinch ends, and clears the grab cursor.
+    if (touchPts.length >= 2) {
+      const [a, b] = touchPts;
+      const mid = localPoint({ clientX: (a.clientX + b.clientX) / 2, clientY: (a.clientY + b.clientY) / 2 });
+      pinch.current = {
+        startDist: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1,
+        startZoom: useEditor.getState().viewport.zoom,
+        anchor: api.toPage(mid),
+      };
+      panning.current = null;
+      cancelInteraction();
+      setSpaceCursor(false);
+      e.preventDefault();
+      return;
+    }
+    // One finger while a DRAW/create tool is active: pan instead of drawing, so a
+    // finger repositions the board while the pen draws (FR-31). Direct-manipulation
+    // tools (select/comment/eraser/laser) still act on a single finger; two fingers
+    // always navigate.
+    if (e.pointerType === "touch" && touchPts.length === 1) {
+      const dt = useEditor.getState().tool;
+      const drawTool = dt === "pen" || dt === "pencil" || dt === "ink" || dt === "line" || dt === "arrow" || dt === "rect" || dt === "ellipse";
+      if (drawTool) {
+        const vp = useEditor.getState().viewport;
+        const s = localPoint(e);
+        panning.current = { startX: s.x, startY: s.y, panX: vp.panX, panY: vp.panY };
+        setSpaceCursor(true);
+        canvasRef.current?.setPointerCapture(e.pointerId);
+        return;
+      }
+    }
+
     // Viewport pan: middle-button drag (any time) or a left-drag while Space is
     // held. Pans via setViewport, accounting for zoom (screen px / zoom = page
     // px), and works even during a read-only history preview so the user can
@@ -1193,6 +1459,35 @@ export function Canvas() {
       pencilStroke.current = [page];
       setPencilPreview([localPoint(e)]);
       canvasRef.current?.setPointerCapture(e.pointerId);
+      return;
+    }
+    if (t === "ink") {
+      const page = api.toPage(localPoint(e));
+      // Capture pen pressure only for a real stylus; mouse/touch leave it unset so
+      // the stroke renders at full, even width.
+      const p = e.pointerType === "pen" ? e.pressure : undefined;
+      inkStroke.current = [{ ...page, p }];
+      setPencilPreview([localPoint(e)]);
+      canvasRef.current?.setPointerCapture(e.pointerId);
+      return;
+    }
+    if (t === "laser") {
+      // The laser is an ephemeral pointer, not an editing tool: broadcast the
+      // beam and do nothing else (no select/marquee).
+      feedCursor(e);
+      return;
+    }
+    if (t === "eraser") {
+      erasing.current = true;
+      eraseAtPoint(e);
+      canvasRef.current?.setPointerCapture(e.pointerId);
+      return;
+    }
+    if (t === "stamp") {
+      // Drop an emoji/vote stamp at the click point (FR-21), recording the placer
+      // for dot-vote tally. Stay on the tool for rapid repeated stamping.
+      const page = api.toPage(localPoint(e));
+      useEditor.getState().addStampAt(page.x, page.y, usePresence.getState().self?.userId);
       return;
     }
     if (t === "line" || t === "arrow") {
@@ -1247,7 +1542,7 @@ export function Canvas() {
         store.select([next]);
         const loc = locate(store.doc, next);
         const before = new Map<string, Transform>();
-        if (loc && !loc.node.locked && !usePresence.getState().collabLockedByOther(next) && !useBrand.getState().isLockedRegion(next)) {
+        if (loc && !loc.node.locked && !usePresence.getState().collabLockedByOther(next) && !useBrand.getState().isLockedRegion(next) && !usePresence.getState().protectedByOther(next)) {
           before.set(next, { ...loc.node.transform });
         }
         gesture.current = { type: "move", startX: page.x, startY: page.y, before };
@@ -1281,7 +1576,7 @@ export function Canvas() {
         // Exclude statically-locked nodes, collab-locked-by-others,
         // and brand locked regions for this caller from the
         // move set; selection/marquee still work normally.
-        if (loc && !loc.node.locked && !usePresence.getState().collabLockedByOther(id) && !useBrand.getState().isLockedRegion(id)) {
+        if (loc && !loc.node.locked && !usePresence.getState().collabLockedByOther(id) && !useBrand.getState().isLockedRegion(id) && !usePresence.getState().protectedByOther(id)) {
           before.set(id, { ...loc.node.transform });
         }
       }
@@ -1297,16 +1592,35 @@ export function Canvas() {
   // The client throttles outbound frames; identity/selection/viewport are added
   // by the client/store. No-op when realtime is not connected (local doc).
   function feedCursor(e: { clientX: number; clientY: number }) {
+    const store = useEditor.getState();
+    const page = api.toPage(localPoint(e));
+    // Laser tool (FR-17): broadcast an ephemeral, never-persisted laser position
+    // and echo it locally so the sender sees their own beam. Cleared when the
+    // tool is not the laser, so switching tools drops the beam at once.
+    const lasering = store.tool === "laser";
+    const laser = lasering ? { x: page.x, y: page.y, at: serverNow() } : null;
+    usePresence.getState().setSelfLaser(laser);
     const client = getRealtimeClient();
     if (!client) return;
-    const page = api.toPage(localPoint(e));
-    const store = useEditor.getState();
     client.sendPresence({
       cursor: { x: page.x, y: page.y },
       selection: store.selection,
       viewport: store.viewport,
       following: usePresence.getState().following,
+      laser,
     });
+  }
+
+  // Object-eraser (F30 FR-4): remove the whole stroke/object under the cursor.
+  // Hit-test the scene, resolve to the top-level ancestor (so erasing a grouped
+  // child removes the object, not just a leaf), and delete it as one undo step.
+  // Gated like every other board mutation.
+  function eraseAtPoint(e: { clientX: number; clientY: number }) {
+    if (!usePresence.getState().canEdit() || useEditor.getState().readonlyPreview()) return;
+    const hit = api.scene()?.hitTest(api.toPage(localPoint(e)));
+    if (!hit) return;
+    const top = topAncestorId(useEditor.getState().doc, hit.id);
+    if (top) useEditor.getState().eraseNode(top);
   }
 
   function onPointerLeave() {
@@ -1315,16 +1629,37 @@ export function Canvas() {
       hoverMoveRef.current = false;
       setHoverMove(false);
     }
-    // Clear our cursor for peers when the pointer leaves the canvas (FR-5).
+    // Clear our cursor (and any laser beam) for peers when the pointer leaves the
+    // canvas (FR-5/FR-17).
+    usePresence.getState().setSelfLaser(null);
     getRealtimeClient()?.sendPresence({
       cursor: null,
       selection: useEditor.getState().selection,
       viewport: useEditor.getState().viewport,
       following: usePresence.getState().following,
+      laser: null,
     });
   }
 
   function onPointerMove(e: React.PointerEvent) {
+    // Keep the multi-touch tracker current, then drive an active pinch (FR-31):
+    // zoom by the finger-distance ratio and pan so the start page-anchor stays
+    // under the moving midpoint (the wheel-zoom-about-cursor math).
+    if (pointers.current.has(e.pointerId)) {
+      pointers.current.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY, type: e.pointerType });
+    }
+    if (pinch.current) {
+      const touchPts = [...pointers.current.values()].filter((p) => p.type === "touch");
+      if (touchPts.length >= 2) {
+        const [a, b] = touchPts;
+        const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1;
+        const mid = localPoint({ clientX: (a.clientX + b.clientX) / 2, clientY: (a.clientY + b.clientY) / 2 });
+        const zoom = Math.min(64, Math.max(0.02, pinch.current.startZoom * (dist / pinch.current.startDist)));
+        useEditor.getState().setViewport({ zoom, panX: pinch.current.anchor.x - mid.x / zoom, panY: pinch.current.anchor.y - mid.y / zoom });
+        e.preventDefault();
+        return;
+      }
+    }
     feedCursor(e);
     if (panning.current) {
       const s = localPoint(e);
@@ -1353,6 +1688,16 @@ export function Canvas() {
       pencilStroke.current.push(page);
       // Live raw-stroke preview in screen space (no fitting yet).
       setPencilPreview(pencilStroke.current.map((p) => api.toScreen(p)));
+      return;
+    }
+    if (t === "ink" && inkStroke.current) {
+      const page = api.toPage(localPoint(e));
+      inkStroke.current.push({ ...page, p: e.pointerType === "pen" ? e.pressure : undefined });
+      setPencilPreview(inkStroke.current.map((p) => api.toScreen(p)));
+      return;
+    }
+    if (t === "eraser" && erasing.current) {
+      eraseAtPoint(e);
       return;
     }
     if ((t === "line" || t === "arrow") && lineDraft.current) {
@@ -1461,7 +1806,43 @@ export function Canvas() {
     }
   }
 
+  // Pointer cancelled (OS gesture takeover, palm rejection): forget it and tear
+  // down EVERY in-progress interaction (pinch, pan, and any draw/select/erase
+  // draft) and release capture, so nothing is left half-built or stuck (FR-31).
+  function onPointerCancel(e: React.PointerEvent) {
+    pointers.current.delete(e.pointerId);
+    if ([...pointers.current.values()].filter((p) => p.type === "touch").length < 2) pinch.current = null;
+    panning.current = null;
+    cancelInteraction();
+    setSpaceCursor(spaceHeld.current);
+    canvasRef.current?.releasePointerCapture?.(e.pointerId);
+  }
+
   function onPointerUp(e: React.PointerEvent) {
+    // Multi-touch bookkeeping: drop the lifted pointer and end the pinch once
+    // fewer than two fingers remain (FR-31).
+    const wasPinching = !!pinch.current;
+    pointers.current.delete(e.pointerId);
+    if (pinch.current) {
+      const remaining = [...pointers.current.values()].filter((p) => p.type === "touch");
+      if (remaining.length < 2) {
+        pinch.current = null;
+      } else {
+        // A finger lifted but 2+ remain: re-baseline to the current first-two so
+        // the surviving pair doesn't jump (their start distance/zoom/anchor reset).
+        const [a, b] = remaining;
+        const mid = localPoint({ clientX: (a.clientX + b.clientX) / 2, clientY: (a.clientY + b.clientY) / 2 });
+        pinch.current = {
+          startDist: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1,
+          startZoom: useEditor.getState().viewport.zoom,
+          anchor: api.toPage(mid),
+        };
+      }
+    }
+    if (wasPinching) {
+      setSpaceCursor(false);
+      return;
+    }
     if (panning.current) {
       panning.current = null;
       // Keep the grab cursor only if Space is still held; otherwise restore it.
@@ -1483,6 +1864,21 @@ export function Canvas() {
       // Keep the pencil tool active (like the pen tool) so multiple freehand
       // strokes can be drawn without reselecting the tool each time.
       if (stroke && stroke.length >= 2) useEditor.getState().addPencilPath(stroke);
+      canvasRef.current?.releasePointerCapture(e.pointerId);
+      return;
+    }
+    if (t === "ink") {
+      const stroke = inkStroke.current;
+      inkStroke.current = null;
+      setPencilPreview(null);
+      // Commit the stroke as an ink node (one undo step); keep the ink tool active
+      // so consecutive strokes draw without reselecting it.
+      if (stroke && stroke.length >= 1) useEditor.getState().addInkStroke(stroke);
+      canvasRef.current?.releasePointerCapture(e.pointerId);
+      return;
+    }
+    if (t === "eraser") {
+      erasing.current = false;
       canvasRef.current?.releasePointerCapture(e.pointerId);
       return;
     }
@@ -1546,7 +1942,11 @@ export function Canvas() {
         const b = api.toPage({ x: marquee.x + marquee.w, y: marquee.y + marquee.h });
         const rect = { x: a.x, y: a.y, width: b.x - a.x, height: b.y - a.y };
         const ids = marqueeSelect(scene, rect, "intersect");
-        if (e.shiftKey) store.addToSelection(ids);
+        if (e.altKey) {
+          // Alt-marquee subtracts the enclosed nodes from the current selection.
+          const drop = new Set(ids);
+          store.select(useEditor.getState().selection.filter((id) => !drop.has(id)));
+        } else if (e.shiftKey) store.addToSelection(ids);
         else store.select(ids);
       }
     }
@@ -1653,7 +2053,8 @@ export function Canvas() {
           node &&
           !node.locked &&
           !usePresence.getState().collabLockedByOther(id) &&
-          !useBrand.getState().isLockedRegion(id);
+          !useBrand.getState().isLockedRegion(id) &&
+          !usePresence.getState().protectedByOther(id);
         if (reachable && node.type === "text") {
           e.preventDefault();
           setEditing(id);
@@ -1671,7 +2072,14 @@ export function Canvas() {
       } else if (e.key === "Escape" && store.selection.length) {
         e.preventDefault();
         store.clearSelection();
-      } else if (!e.metaKey && !e.ctrlKey && !e.altKey && TOOL_KEYS[e.key.toLowerCase()]) {
+      } else if (
+        !e.metaKey && !e.ctrlKey && !e.altKey && TOOL_KEYS[e.key.toLowerCase()] &&
+        // On a whiteboard, P/L/T are owned by the board surface (P = ink pen,
+        // L = laser, T = add text); skip them here so the design pen/line/text tools
+        // don't double-fire with WhiteboardSurface's own handler (both are window-
+        // level listeners). Read meta.kind live (the effect closure is created once).
+        !((store.doc.meta as { kind?: string } | undefined)?.kind === "whiteboard" && ["p", "l", "t"].includes(e.key.toLowerCase()))
+      ) {
         // Single-key tool shortcuts (Canva-style): V select, P pen, T text,
         // R rectangle, E ellipse, L line, A arrow. A read-only user may still
         // switch tools (the actual draw/mutate is refused at pointer/store level),
@@ -1935,6 +2343,22 @@ export function Canvas() {
           </>
         )}
       </div>
+      {/* Brush options: shown for the pencil and board ink tools. Width / opacity /
+          color feed addPencilPath / addInkStroke via the store's brush settings. */}
+      {(tool === "pencil" || tool === "ink") && (
+        <div className="absolute left-16 top-3 z-10 flex items-center gap-3 rounded-xl border border-neutral-200 bg-white px-3 py-2 shadow-md">
+          <label className="flex items-center gap-1.5 text-[11px] text-neutral-500">
+            Size
+            <input type="range" min={1} max={40} value={brush.width} onChange={(e) => useEditor.getState().setBrush({ width: Number(e.target.value) })} className="w-20 accent-brand-600" />
+            <span className="w-6 text-neutral-400">{brush.width}</span>
+          </label>
+          <label className="flex items-center gap-1.5 text-[11px] text-neutral-500">
+            Opacity
+            <input type="range" min={10} max={100} value={Math.round(brush.opacity * 100)} onChange={(e) => useEditor.getState().setBrush({ opacity: Number(e.target.value) / 100 })} className="w-20 accent-brand-600" />
+          </label>
+          <input type="color" value={brush.colorHex} onChange={(e) => useEditor.getState().setBrush({ colorHex: e.target.value })} className="oc-color h-7 w-8 shrink-0" title="Brush color" />
+        </div>
+      )}
       <canvas
         ref={canvasRef}
         // relative z-0 keeps the canvas above the absolutely-positioned white
@@ -1943,6 +2367,7 @@ export function Canvas() {
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
+        onPointerCancel={onPointerCancel}
         onPointerLeave={onPointerLeave}
         onDoubleClick={onDoubleClick}
       />
@@ -1953,11 +2378,11 @@ export function Canvas() {
         const lines: React.ReactElement[] = [];
         for (let gx = 0; gx <= apg.width + 0.5; gx += gridSize) {
           const sx = api.toScreen({ x: gx, y: 0 }).x;
-          lines.push(<line key={`vg${gx}`} x1={sx} y1={x0.y} x2={sx} y2={x1.y} stroke="#3b82f6" strokeOpacity={0.12} strokeWidth={1} />);
+          lines.push(<line key={`vg${gx}`} x1={sx} y1={x0.y} x2={sx} y2={x1.y} stroke={overlay.guideSubtle} strokeOpacity={0.12} strokeWidth={1} />);
         }
         for (let gy = 0; gy <= apg.height + 0.5; gy += gridSize) {
           const sy = api.toScreen({ x: 0, y: gy }).y;
-          lines.push(<line key={`hg${gy}`} x1={x0.x} y1={sy} x2={x1.x} y2={sy} stroke="#3b82f6" strokeOpacity={0.12} strokeWidth={1} />);
+          lines.push(<line key={`hg${gy}`} x1={x0.x} y1={sy} x2={x1.x} y2={sy} stroke={overlay.guideSubtle} strokeOpacity={0.12} strokeWidth={1} />);
         }
         return <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">{lines}</svg>;
       })()}
@@ -1970,7 +2395,7 @@ export function Canvas() {
           const sx = api.toScreen({ x: gx, y: 0 }).x;
           lines.push(
             <g key={`mgx${i}`}>
-              <line x1={sx} y1={0} x2={sx} y2={vp.height} stroke="#06b6d4" strokeWidth={1} />
+              <line x1={sx} y1={0} x2={sx} y2={vp.height} stroke={overlay.guideActive} strokeWidth={1} />
               <line x1={sx} y1={0} x2={sx} y2={vp.height} stroke="transparent" strokeWidth={7} className="pointer-events-auto cursor-ew-resize" onPointerDown={(e) => beginGuide(e, "x", i)} />
             </g>,
           );
@@ -1979,14 +2404,14 @@ export function Canvas() {
           const sy = api.toScreen({ x: 0, y: gy }).y;
           lines.push(
             <g key={`mgy${i}`}>
-              <line x1={0} y1={sy} x2={vp.width} y2={sy} stroke="#06b6d4" strokeWidth={1} />
+              <line x1={0} y1={sy} x2={vp.width} y2={sy} stroke={overlay.guideActive} strokeWidth={1} />
               <line x1={0} y1={sy} x2={vp.width} y2={sy} stroke="transparent" strokeWidth={7} className="pointer-events-auto cursor-ns-resize" onPointerDown={(e) => beginGuide(e, "y", i)} />
             </g>,
           );
         });
         if (guideDrag) {
-          if (guideDrag.axis === "x") { const sx = api.toScreen({ x: guideDrag.pos, y: 0 }).x; lines.push(<line key="gpv" x1={sx} y1={0} x2={sx} y2={vp.height} stroke="#06b6d4" strokeWidth={1} strokeDasharray="3 3" />); }
-          else { const sy = api.toScreen({ x: 0, y: guideDrag.pos }).y; lines.push(<line key="gph" x1={0} y1={sy} x2={vp.width} y2={sy} stroke="#06b6d4" strokeWidth={1} strokeDasharray="3 3" />); }
+          if (guideDrag.axis === "x") { const sx = api.toScreen({ x: guideDrag.pos, y: 0 }).x; lines.push(<line key="gpv" x1={sx} y1={0} x2={sx} y2={vp.height} stroke={overlay.guideActive} strokeWidth={1} strokeDasharray="3 3" />); }
+          else { const sy = api.toScreen({ x: 0, y: guideDrag.pos }).y; lines.push(<line key="gph" x1={0} y1={sy} x2={vp.width} y2={sy} stroke={overlay.guideActive} strokeWidth={1} strokeDasharray="3 3" />); }
         }
         return lines.length ? <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">{lines}</svg> : null;
       })()}
@@ -2014,7 +2439,7 @@ export function Canvas() {
       )}
       {marquee && (
         <div
-          className="pointer-events-none absolute border border-blue-500 bg-blue-500/10"
+          className="pointer-events-none absolute border border-[color:var(--color-selection)] bg-[color:var(--color-selection)]/10"
           style={{ left: marquee.x, top: marquee.y, width: marquee.w, height: marquee.h }}
         />
       )}
@@ -2025,11 +2450,11 @@ export function Canvas() {
           <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
             {live.x.map((gx, i) => {
               const sx = api.toScreen({ x: gx, y: 0 }).x;
-              return <line key={`gx${i}`} x1={sx} y1={0} x2={sx} y2={vp.height} stroke="#f43f5e" strokeWidth={1} />;
+              return <line key={`gx${i}`} x1={sx} y1={0} x2={sx} y2={vp.height} stroke={overlay.guideConflict} strokeWidth={1} />;
             })}
             {live.y.map((gy, i) => {
               const sy = api.toScreen({ x: 0, y: gy }).y;
-              return <line key={`gy${i}`} x1={0} y1={sy} x2={vp.width} y2={sy} stroke="#f43f5e" strokeWidth={1} />;
+              return <line key={`gy${i}`} x1={0} y1={sy} x2={vp.width} y2={sy} stroke={overlay.guideConflict} strokeWidth={1} />;
             })}
           </svg>
         );
@@ -2043,17 +2468,24 @@ export function Canvas() {
         const a = api.toScreen({ x: segs.transform.x + last.x, y: segs.transform.y + last.y });
         return (
           <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
-            <line x1={a.x} y1={a.y} x2={penPreview.x} y2={penPreview.y} stroke="#a855f7" strokeWidth={1.5} strokeDasharray="4 3" />
+            <line x1={a.x} y1={a.y} x2={penPreview.x} y2={penPreview.y} stroke={overlay.penPreview} strokeWidth={1.5} strokeDasharray="4 3" />
           </svg>
         );
       })()}
-      {tool === "pencil" && pencilPreview && pencilPreview.length > 1 && (
-        <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
+      {(tool === "pencil" || tool === "ink") && pencilPreview && pencilPreview.length > 1 && (
+        <svg
+          className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+          style={{ mixBlendMode: tool === "ink" && brush.mode === "highlighter" ? "multiply" : undefined }}
+        >
           <polyline
             points={pencilPreview.map((p) => `${p.x},${p.y}`).join(" ")}
             fill="none"
-            stroke="#a855f7"
-            strokeWidth={2}
+            // Reflect the actual brush so the live stroke looks like what commits
+            // (color, on-screen width = brush width x zoom, and opacity), instead of
+            // a thin placeholder line that reads as "nothing is being drawn".
+            stroke={brush.colorHex}
+            strokeOpacity={brush.opacity}
+            strokeWidth={Math.max(1, brush.width * (viewport.zoom || 1))}
             strokeLinejoin="round"
             strokeLinecap="round"
           />
@@ -2061,8 +2493,25 @@ export function Canvas() {
       )}
       {cropping ? (
         <CropOverlay api={api} id={cropping} />
+      ) : editingConnectorLabel ? (
+        <ConnectorLabelOverlay api={api} id={editingConnectorLabel} onClose={() => setEditingConnectorLabel(null)} />
       ) : editingSticky ? (
-        <StickyEditOverlay api={api} id={editingSticky} onClose={() => setEditingSticky(null)} />
+        <StickyEditOverlay
+          api={api}
+          id={editingSticky}
+          // Keyed to the closing id so a stale unmount-blur (after Tab advanced to
+          // a new sticky) does not clear the new editor.
+          onClose={(closingId) => setEditingSticky((cur) => (cur === closingId ? null : cur))}
+          onAdvance={(fromId) => {
+            const st = useEditor.getState();
+            const ln = locate(st.doc, fromId)?.node;
+            const gap = 24;
+            const cx = ln ? ln.transform.x + ln.size.width + gap + 90 : 0;
+            const cy = ln ? ln.transform.y + ln.size.height / 2 : 0;
+            const newId = st.addStickyAt(cx, cy);
+            setEditingSticky(newId);
+          }}
+        />
       ) : editing ? (
         <TextEditOverlay api={api} id={editing} onClose={() => setEditing(null)} />
       ) : tool !== "select" ? (
@@ -2076,10 +2525,13 @@ export function Canvas() {
           <Gizmo api={api} />
           <SelectionToolbar api={api} />
           {isWhiteboard && <ConnectorDragLayer api={api} clientToPage={clientToPage} />}
+          {isWhiteboard && <ConnectorEditLayer api={api} clientToPage={clientToPage} />}
         </>
       )}
       {/* Per-page headers (title + tools) for continuous-scroll mode. */}
       <PageOverlays api={api} />
+      {/* Zoom overview: a corner thumbnail with a draggable viewport rectangle. */}
+      <MiniMap />
       {/* Remote collaborators' cursors and selections. */}
       <PresenceOverlay api={api} />
       {/* Comment pins anchored to nodes/regions, tracking pan/zoom. */}
@@ -2107,6 +2559,8 @@ export function Canvas() {
                 editing actions below are gated behind a selection. */}
             {!hasSel && ctxItem(<ClipboardPaste size={15} />, "Paste", () => st.paste(), "⌘V")}
             {!hasSel && ctxItem(<BoxSelect size={15} />, "Select all", () => st.selectAll(), "⌘A")}
+            {!hasSel && ctxItem(<Lock size={15} />, "Lock all on page", () => st.lockAllOnPage(true))}
+            {!hasSel && ctxItem(<LockOpen size={15} />, "Unlock all on page", () => st.lockAllOnPage(false))}
             {hasSel && (
               <>
                 {ctxItem(<Copy size={15} />, "Copy", () => st.copySelection(), "⌘C")}
@@ -2114,6 +2568,7 @@ export function Canvas() {
                 {ctxItem(<CopyPlus size={15} />, "Duplicate", () => st.duplicateSelection(), "⌘D")}
                 {ctxItem(<Trash2 size={15} />, "Delete", () => st.deleteSelection(), "⌫", true)}
                 <div className="my-1 h-px bg-neutral-100" />
+                {ctxItem(<BoxSelect size={15} />, "Select all of type", () => st.selectSameType())}
                 {selection.length > 1 && ctxItem(<Group size={15} />, "Group", () => st.group(), "⌘G")}
                 {isGroup && ctxItem(<Ungroup size={15} />, "Ungroup", () => st.ungroupSelection(), "⇧⌘G")}
                 {ctxItem(<ArrowUp size={15} />, "Bring forward", () => st.orderSelection("forward"), "⌘]")}

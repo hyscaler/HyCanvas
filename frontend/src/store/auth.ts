@@ -29,6 +29,8 @@ interface AuthState {
   deleteAccount: (input: { password: string; code?: string }) => Promise<void>;
   setActiveWorkspace: (id: string) => void;
   refreshWorkspaces: () => Promise<void>;
+  // Replace the cached user after a profile change (no full re-bootstrap).
+  setUser: (user: User) => void;
 }
 
 function readActive(): string | null {
@@ -140,8 +142,17 @@ export const useAuth = create<AuthState>((set, get) => ({
     set({ activeWorkspaceId: id });
   },
 
+  setUser(user) {
+    set({ user });
+  },
+
   async refreshWorkspaces() {
     const workspaces = await oc.listWorkspaces();
-    set({ workspaces, activeWorkspaceId: get().activeWorkspaceId ?? pickActive(workspaces) });
+    // If the active workspace was removed (deleted or left), fall back to a
+    // valid one rather than keeping a dangling id.
+    const cur = get().activeWorkspaceId;
+    const next = cur && workspaces.some((w) => w.id === cur) ? cur : pickActive(workspaces);
+    writeActive(next);
+    set({ workspaces, activeWorkspaceId: next });
   },
 }));

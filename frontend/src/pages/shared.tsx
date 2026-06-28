@@ -78,13 +78,19 @@ export default function SharedLinkPage() {
             // Two distinct 403 reasons, told apart by the problem+json `code`:
             //  - link_signin_required: an anonymous visitor on a sign-in-only
             //    link -> show a "Sign in to continue" CTA back to this link.
-            //  - link_password_required (or unspecified): wrong/needed password
-            //    -> show the password form.
-            if (problemCode(e.body) === "link_signin_required") {
+            //  - link_password_required: wrong/needed password -> password form.
+            // Any other 403 is a real denial, not a missing password, so we must
+            // not strand the visitor on a password form they can't satisfy.
+            const code = problemCode(e.body);
+            if (code === "link_signin_required") {
               setState({ kind: "signin" });
               return;
             }
-            setState({ kind: "password", error: pwd ? "Incorrect password." : undefined });
+            if (code === "link_password_required") {
+              setState({ kind: "password", error: pwd ? "Incorrect password." : undefined });
+              return;
+            }
+            setState({ kind: "denied", reason: "You do not have access to this link." });
             return;
           }
           if (e.status === 410) {
@@ -119,24 +125,39 @@ export default function SharedLinkPage() {
   }
 
   if (state.kind === "viewing") {
+    const designTitle = state.file.title?.trim() || "Shared design";
+    // An anonymous visitor only ever gets a read-only render here, even on a
+    // comment/edit link (commenting/editing need an account). Show "View only"
+    // honestly and offer a sign-in CTA that unlocks what the link grants.
+    const unlock = state.mode === "edit" ? "edit" : state.mode === "comment" ? "comment" : null;
+    const token = typeof router.query.token === "string" ? router.query.token : "";
     return (
       <>
         <Head>
-          <title>Shared design · HyCanvas</title>
+          <title>{designTitle} · HyCanvas</title>
         </Head>
         <div className="min-h-screen bg-neutral-100">
           <header className="flex items-center gap-3 border-b border-neutral-200 bg-white px-4 py-2.5">
             <Logo size={26} />
-            <span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">
-              {state.mode === "comment" ? "Comment access" : "View only"}
-            </span>
-            <Link href="/" className="ml-auto text-sm font-semibold text-brand-700 hover:underline">
-              HyCanvas
-            </Link>
+            <span className="min-w-0 truncate text-sm font-semibold text-neutral-800">{designTitle}</span>
+            <span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">View only</span>
+            <div className="ml-auto flex items-center gap-3">
+              {unlock && (
+                <Link
+                  href={`/login?next=${encodeURIComponent(router.asPath || `/shared?token=${token}`)}`}
+                  className="text-sm font-semibold text-brand-700 hover:underline"
+                >
+                  Sign in to {unlock}
+                </Link>
+              )}
+              <Link href="/" className="text-sm font-semibold text-neutral-500 hover:text-neutral-800 hover:underline">
+                HyCanvas
+              </Link>
+            </div>
           </header>
           <SharedViewer
             doc={state.file}
-            token={typeof router.query.token === "string" ? router.query.token : undefined}
+            token={token || undefined}
             password={password || undefined}
           />
         </div>
@@ -200,8 +221,11 @@ export default function SharedLinkPage() {
               <AlertCircle size={40} className="mx-auto text-red-500" />
               <h1 className="mt-4 text-lg font-bold text-neutral-900">Can&apos;t open this link</h1>
               <p className="mt-1.5 text-sm text-neutral-500">{state.reason}</p>
-              <Link href="/" className="mt-6 inline-block text-sm font-semibold text-brand-700 hover:underline">
-                Go to HyCanvas
+              <Link
+                href={authStatus === "authed" ? "/dashboard" : "/"}
+                className="mt-6 inline-block text-sm font-semibold text-brand-700 hover:underline"
+              >
+                {authStatus === "authed" ? "Go to your dashboard" : "Go to HyCanvas"}
               </Link>
             </>
           )}

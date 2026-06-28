@@ -3,13 +3,14 @@
 // multi-selection edits the shared fields (opacity, blend). Empty shows page info.
 
 import type { ComponentType } from "react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   BlendMode, CharStyle, ChartNode, ChartStyle, Color, DataBinding, DesignFile, Easing, Effect, ElementLink, EmphasisPreset,
   EntrancePreset, ExitPreset, Fill, GradientFill, GradientStop, ImageFit, ImageMotion, ImageNode,
   Interaction, InteractionAction, Keyframe, KeyframeTrack, Node, NodeAnimation, Page, ParagraphStyle,
   TableConditionalRule, TableNode, TextEffect,
 } from "@hc/schema";
+import { colorHarmony, HARMONY_SCHEMES, type HarmonyScheme, extractPalette, toHex } from "@hc/color";
 import { evalExpression, locate } from "@hc/editor";
 import { isLowResolution, computeEffectivePpi } from "@hc/engine";
 import { FONT_CATALOG, type FontCategory } from "@hc/text";
@@ -30,6 +31,7 @@ import { useBrand, colorsLockedFor, fontsLockedFor, brandHexColors, brandFontFam
 import { lockSelection, unlockSelection } from "@/lib/useRealtime";
 import { CollapsibleSection } from "./EditorPanels";
 import { ColorField } from "./ColorField";
+import { imageAssets } from "@/lib/assetProvider";
 import { MagicResizeButton } from "./MagicResizeDialog";
 import { useToast } from "@/components/ui/Toast";
 
@@ -107,6 +109,198 @@ function RecentColors({ onPick }: { onPick: (hex: string) => void }) {
       <span className="text-[10px] uppercase tracking-wide text-neutral-400">Recent</span>
       <div className="flex flex-wrap gap-1.5">
         {recents.map((c) => <Swatch key={c} color={c} onClick={() => onPick(c)} />)}
+      </div>
+    </div>
+  );
+}
+// Color-harmony suggestions derived from the current fill (complementary,
+// analogous, triadic, ...). Picking a swatch applies it. Pure @hc/color math.
+function ColorHarmony({ baseHex, onPick }: { baseHex: string; onPick: (hex: string) => void }) {
+  const [scheme, setScheme] = useState<HarmonyScheme>("complementary");
+  const swatches = colorHarmony(colorFromHex(baseHex), scheme).map((c) => colorHex(c));
+  return (
+    <div className="flex flex-col gap-1">
+      <select value={scheme} onChange={(e) => setScheme(e.target.value as HarmonyScheme)} className="self-start rounded-md border border-neutral-200 bg-white px-1.5 py-0.5 text-[11px] text-neutral-500 outline-none">
+        {HARMONY_SCHEMES.map((s) => <option key={s} value={s}>{s.replace("-", " ")}</option>)}
+      </select>
+      <div className="flex flex-wrap gap-1.5">
+        {swatches.map((c, i) => <Swatch key={`${c}-${i}`} color={c} title={`Apply ${c}`} onClick={() => onPick(c)} />)}
+      </div>
+    </div>
+  );
+}
+// "Pick palette from this photo": samples the selected image's loaded bitmap and
+// extracts its dominant colors (reuses @hc/color extractPalette, as the brand
+// logo flow does). Picked swatches go to recents so they flow into every picker.
+function ImagePalette({ assetId }: { assetId: string }) {
+  const [colors, setColors] = useState<string[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const extract = () => {
+    const img = imageAssets.image(assetId) as (CanvasImageSource & { naturalWidth?: number; naturalHeight?: number; width?: number; height?: number }) | null;
+    if (!img) return;
+    setBusy(true);
+    try {
+      const w = img.naturalWidth || img.width || 0;
+      const h = img.naturalHeight || img.height || 0;
+      if (!w || !h) { setBusy(false); return; }
+      const SAMPLE = 128;
+      const scale = Math.min(1, SAMPLE / Math.max(w, h));
+      const sw = Math.max(1, Math.round(w * scale));
+      const sh = Math.max(1, Math.round(h * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = sw; canvas.height = sh;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, sw, sh);
+        const bmp = ctx.getImageData(0, 0, sw, sh);
+        setColors([...new Set(extractPalette(bmp, 6).map(toHex))]);
+      }
+    } catch { /* tainted canvas (cross-origin without CORS): leave colors null */ }
+    setBusy(false);
+  };
+  return (
+    <div className="flex flex-col gap-1.5">
+      <button onClick={extract} disabled={busy} className="self-start rounded-lg bg-neutral-100 px-2.5 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-200 disabled:opacity-40">
+        {busy ? "Reading…" : colors ? "Re-extract palette" : "Extract palette"}
+      </button>
+      {colors && colors.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {colors.map((c, i) => <Swatch key={`${c}-${i}`} color={c} title={`${c} (added to recent colors)`} onClick={() => rememberColor(c)} />)}
+        </div>
+      )}
+      {colors && colors.length === 0 && <span className="text-[11px] text-neutral-400">Couldn&apos;t read this image (it may be cross-origin).</span>}
+    </div>
+  );
+}
+// Editable chart data grid: rows are categories, columns are series. Edits commit
+// the whole categories+series arrays back through setChart (undoable).
+function ChartDataTable({ node }: { node: ChartNode }) {
+  const id = node.id;
+  const st = useEditor.getState();
+  const cats = node.categories ?? [];
+  const series = node.series ?? [];
+  const commit = (categories: string[], next: { name: string; values: number[]; color?: Color }[]) =>
+    st.setChart(id, { categories, series: next });
+  const setCell = (row: number, col: number, v: number) => {
+    const next = series.map((s, j) => j === col ? { ...s, values: cats.map((_, r) => r === row ? v : (s.values[r] ?? 0)) } : s);
+    commit(cats, next);
+  };
+  const setCat = (row: number, label: string) => commit(cats.map((c, r) => r === row ? label : c), series);
+  const setSeriesName = (col: number, name: string) => commit(cats, series.map((s, j) => j === col ? { ...s, name } : s));
+  const addRow = () => commit([...cats, `Item ${cats.length + 1}`], series.map((s) => ({ ...s, values: [...s.values, 0] })));
+  const removeRow = (row: number) => commit(cats.filter((_, r) => r !== row), series.map((s) => ({ ...s, values: s.values.filter((_, r) => r !== row) })));
+  const addSeries = () => commit(cats, [...series, { name: `Series ${series.length + 1}`, values: cats.map(() => 0) }]);
+  const removeSeries = (col: number) => commit(cats, series.filter((_, j) => j !== col));
+  const cell = "rounded border border-neutral-200 px-1 py-0.5 text-[11px] outline-none focus:border-brand-400";
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[11px] text-neutral-400">Data</span>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-[11px]">
+          <thead>
+            <tr>
+              <th className="p-0.5" />
+              {series.map((s, j) => (
+                <th key={`sh-${j}`} className="p-0.5">
+                  <div className="flex items-center gap-0.5">
+                    <input defaultValue={s.name} key={`sn-${id}-${j}-${s.name}`} onBlur={(e) => setSeriesName(j, e.target.value.trim() || `Series ${j + 1}`)} className={`${cell} w-16`} />
+                    {series.length > 1 && <button onClick={() => removeSeries(j)} className="text-neutral-300 hover:text-red-600" title="Remove series">×</button>}
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {cats.map((c, r) => (
+              <tr key={`row-${r}`}>
+                <td className="p-0.5">
+                  <div className="flex items-center gap-0.5">
+                    <input defaultValue={c} key={`cn-${id}-${r}-${c}`} onBlur={(e) => setCat(r, e.target.value.trim() || `Item ${r + 1}`)} className={`${cell} w-16`} />
+                    {cats.length > 1 && <button onClick={() => removeRow(r)} className="text-neutral-300 hover:text-red-600" title="Remove row">×</button>}
+                  </div>
+                </td>
+                {series.map((s, j) => (
+                  <td key={`c-${r}-${j}`} className="p-0.5">
+                    <input type="number" defaultValue={s.values[r] ?? 0} key={`v-${id}-${r}-${j}-${s.values[r] ?? 0}`} onBlur={(e) => setCell(r, j, Number(e.target.value) || 0)} className={`${cell} w-14`} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex gap-2">
+        <button onClick={addRow} className="text-[11px] text-brand-600 hover:underline">+ Row</button>
+        <button onClick={addSeries} className="text-[11px] text-brand-600 hover:underline">+ Series</button>
+      </div>
+    </div>
+  );
+}
+// Inline video controls on the design canvas: scrub, play/pause (repaints the
+// canvas each frame via the store tick), trim in/out, mute, loop. The actual
+// <video> element lives in the asset provider; the engine draws its current frame.
+function VideoSection({ node }: { node: Node }) {
+  const id = node.id;
+  const v = node as unknown as { assetId: string; trimStartMs?: number; trimEndMs?: number; muted?: boolean; loop?: boolean };
+  const st = useEditor.getState();
+  const [time, setTime] = useState(0);
+  const [, force] = useState(0); // re-render when metadata (duration) loads
+  const [playing, setPlaying] = useState(false);
+  const raf = useRef<number | null>(null);
+  const el = () => imageAssets.videoEl(v.assetId);
+  const dur = el()?.duration || 0; // derived live so no setState-in-effect
+  useEffect(() => {
+    const ve = el();
+    if (!ve) return;
+    const onMeta = () => force((x) => x + 1);
+    ve.addEventListener("loadedmetadata", onMeta);
+    return () => { ve.removeEventListener("loadedmetadata", onMeta); if (raf.current) cancelAnimationFrame(raf.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [v.assetId]);
+  const trimEnd = (v.trimEndMs ?? 0) > 0 ? (v.trimEndMs as number) / 1000 : dur;
+  const trimStart = (v.trimStartMs ?? 0) / 1000;
+  const seek = (sec: number) => { const ve = el(); if (!ve) return; ve.currentTime = sec; setTime(sec); st.tick(); };
+  const stop = () => { const ve = el(); if (ve) ve.pause(); if (raf.current) cancelAnimationFrame(raf.current); raf.current = null; setPlaying(false); };
+  const loop = () => {
+    const ve = el();
+    if (!ve) return;
+    setTime(ve.currentTime);
+    st.tick();
+    if (ve.currentTime >= trimEnd) {
+      if (v.loop) { ve.currentTime = trimStart; } else { stop(); return; }
+    }
+    raf.current = requestAnimationFrame(loop);
+  };
+  const play = () => {
+    const ve = el();
+    if (!ve) return;
+    if (playing) { stop(); return; }
+    if (ve.currentTime < trimStart || ve.currentTime >= trimEnd) ve.currentTime = trimStart;
+    ve.muted = v.muted ?? true;
+    void ve.play();
+    setPlaying(true);
+    raf.current = requestAnimationFrame(loop);
+  };
+  const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+  return (
+    <div className="flex flex-col gap-2.5 border-t border-neutral-100 pt-3.5">
+      <Heading>Video</Heading>
+      {!el() && <p className="text-[11px] text-neutral-400">Loading video…</p>}
+      <div className="flex items-center gap-2">
+        <button onClick={play} className="grid h-8 w-8 place-items-center rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200" title={playing ? "Pause" : "Play"}>{playing ? "❚❚" : "▶"}</button>
+        <input type="range" min={0} max={Math.max(0.1, dur)} step={0.05} value={time} onChange={(e) => seek(Number(e.target.value))} className="flex-1 accent-brand-600" />
+        <span className="w-16 shrink-0 text-right text-[10px] tabular-nums text-neutral-400">{fmt(time)} / {fmt(dur)}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <button onClick={() => st.setVideoProps(id, { trimStartMs: Math.round(time * 1000) })} className="flex-1 rounded-lg bg-neutral-100 px-2 py-1.5 text-[11px] text-neutral-600 hover:bg-neutral-200" title="Trim start to playhead">Set start ({fmt(trimStart)})</button>
+        <button onClick={() => st.setVideoProps(id, { trimEndMs: Math.round(time * 1000) })} className="flex-1 rounded-lg bg-neutral-100 px-2 py-1.5 text-[11px] text-neutral-600 hover:bg-neutral-200" title="Trim end to playhead">Set end ({fmt(trimEnd)})</button>
+        {((v.trimStartMs ?? 0) > 0 || (v.trimEndMs ?? 0) > 0) && (
+          <button onClick={() => st.setVideoProps(id, { trimStartMs: 0, trimEndMs: 0 })} className="rounded-lg bg-neutral-100 px-2 py-1.5 text-[11px] text-neutral-500 hover:bg-neutral-200" title="Clear trim">↺</button>
+        )}
+      </div>
+      <div className="flex items-center gap-4 text-[11px] text-neutral-600">
+        <label className="flex items-center gap-1.5"><input type="checkbox" checked={!!v.muted} onChange={(e) => st.setVideoProps(id, { muted: e.target.checked })} /> Mute</label>
+        <label className="flex items-center gap-1.5"><input type="checkbox" checked={!!v.loop} onChange={(e) => st.setVideoProps(id, { loop: e.target.checked })} /> Loop</label>
       </div>
     </div>
   );
@@ -256,6 +450,30 @@ function GradientEditor({ g, onChange }: { g: GradientFill; onChange: (patch: Pa
       {g.gradient !== "radial" && (
         <Field key={`ga${g.angle ?? 90}`} label="∠" value={g.angle ?? 90} onCommit={(n) => onChange({ angle: n })} />
       )}
+      {/* Center (radial/conic) and radius (radial): the engine reads center/radius
+          to place and size the gradient within the node box. */}
+      {(g.gradient === "radial" || g.gradient === "conic") && (() => {
+        const c = g.center ?? { x: 0.5, y: 0.5 };
+        const setCenter = (patch: Partial<{ x: number; y: number }>) => onChange({ center: { ...c, ...patch } });
+        return (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2">
+              <span className="w-12 shrink-0 text-[11px] text-neutral-400">Center X</span>
+              <input type="range" min={0} max={100} value={Math.round(c.x * 100)} onChange={(e) => setCenter({ x: Number(e.target.value) / 100 })} className="flex-1 accent-brand-600" />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-12 shrink-0 text-[11px] text-neutral-400">Center Y</span>
+              <input type="range" min={0} max={100} value={Math.round(c.y * 100)} onChange={(e) => setCenter({ y: Number(e.target.value) / 100 })} className="flex-1 accent-brand-600" />
+            </div>
+            {g.gradient === "radial" && (
+              <div className="flex items-center gap-2">
+                <span className="w-12 shrink-0 text-[11px] text-neutral-400">Radius</span>
+                <input type="range" min={5} max={150} value={Math.round((g.radius ?? 0.5) * 100)} onChange={(e) => onChange({ radius: Number(e.target.value) / 100 })} className="flex-1 accent-brand-600" />
+              </div>
+            )}
+          </div>
+        );
+      })()}
       <div className="flex flex-wrap gap-1">
         {GRADIENT_PRESETS.map(([a, b], i) => (
           <button
@@ -464,6 +682,32 @@ export function PropertiesPanel() {
           <Field key={`r${single.node.transform.rotation}`} label="∠" value={single.node.transform.rotation} onCommit={(n) => commitGeo({ rotation: n })} />
         </div>
       )}
+      {single && !locked && (() => {
+        // Rotation origin: a 3x3 pivot picker. Default (none) = center; the gizmo
+        // rotates about the chosen point. Clicking the center cell clears it.
+        const id = single.node.id;
+        const og = single.node.transform.origin;
+        const cur = og ?? { x: 0.5, y: 0.5 };
+        return (
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-neutral-400">Rotate around</span>
+            <div className="grid grid-cols-3 gap-0.5 rounded-md border border-neutral-200 p-0.5">
+              {[0, 0.5, 1].flatMap((y) => [0, 0.5, 1].map((x) => {
+                const active = Math.abs(cur.x - x) < 0.01 && Math.abs(cur.y - y) < 0.01;
+                return (
+                  <button
+                    key={`${x},${y}`}
+                    onClick={() => useEditor.getState().setRotationOrigin(id, x === 0.5 && y === 0.5 ? undefined : { x, y })}
+                    className={`h-3.5 w-3.5 rounded-sm transition ${active ? "bg-brand-500" : "bg-neutral-200 hover:bg-neutral-300"}`}
+                    title={`Pivot ${x},${y}`}
+                  />
+                );
+              }))}
+            </div>
+            {og && <button onClick={() => useEditor.getState().setRotationOrigin(id, undefined)} className="text-[11px] text-neutral-400 hover:text-neutral-700" title="Reset to center">↺</button>}
+          </div>
+        );
+      })()}
       {(() => {
         const st = useEditor.getState();
         const multi = selection.length > 1;
@@ -554,6 +798,31 @@ export function PropertiesPanel() {
                 )}
               </div>
             )}
+            {/* Pattern fill (single shape): tile an image across the shape. */}
+            {single && single.node.type === "shape" && !brandSwatches && (() => {
+              const pat = fill?.type === "pattern" ? (fill as unknown as { scale: number; rotation?: number; repeat: string }) : null;
+              return (
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={async () => { const u = await promptText({ title: "Pattern fill", label: "Image URL", placeholder: "https://…", confirmText: "Apply" }); if (u) st.setPatternFill(id, u); }}
+                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium transition ${pat ? "bg-brand-50 text-brand-700" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
+                    >
+                      <ImagePlus size={14} /> {pat ? "Replace pattern" : "Pattern fill"}
+                    </button>
+                    {pat && (
+                      <button onClick={() => st.setPatternFill(id, "")} className="rounded-lg bg-neutral-100 px-2.5 py-1.5 text-xs text-neutral-500 hover:bg-neutral-200" title="Remove pattern fill">Clear</button>
+                    )}
+                  </div>
+                  {pat && (
+                    <div className="flex items-center gap-2">
+                      <span className="w-12 shrink-0 text-[11px] text-neutral-400">Scale</span>
+                      <input type="range" min={10} max={300} value={Math.round((pat.scale ?? 1) * 100)} onChange={(e) => st.setPatternParams(id, { scale: Number(e.target.value) / 100 })} className="flex-1 accent-brand-600" />
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             {brandSwatches ? (
               // Locked to the brand palette (FR-4): swatches only, no freeform.
               <>
@@ -585,9 +854,35 @@ export function PropertiesPanel() {
                   ))}
                 </div>
                 <RecentColors onPick={applySolid} />
+                <ColorHarmony baseHex={baseHex} onPick={(hex) => { rememberColor(hex); applySolid(hex); }} />
               </>
             )}
           </section>
+        );
+      })()}
+      {single && single.node.type === "shape" && (() => {
+        const cur = (single.node as unknown as { shape: string }).shape;
+        const id = single.node.id;
+        return (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[10px] uppercase tracking-wide text-neutral-400">Swap shape</span>
+            <div className="grid grid-cols-5 gap-1.5">
+              {([
+                { k: "rect", label: "▭" },
+                { k: "ellipse", label: "◯" },
+                { k: "triangle", label: "△" },
+                { k: "polygon", label: "⬡" },
+                { k: "star", label: "★" },
+              ] as const).map(({ k, label }) => (
+                <button
+                  key={k}
+                  onClick={() => useEditor.getState().setShapeKind(id, k)}
+                  className={`grid h-8 place-items-center rounded-lg border text-sm transition ${cur === k ? "border-brand-300 bg-brand-50 text-brand-700" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
+                  title={`Make ${k}`}
+                >{label}</button>
+              ))}
+            </div>
+          </div>
         );
       })()}
       {single && (single.node.type === "shape" || single.node.type === "path") && (
@@ -622,6 +917,7 @@ export function PropertiesPanel() {
       {single && single.node.type === "image" && (
         <div className="flex flex-col gap-2.5 border-t border-neutral-100 pt-3.5">
           <Heading>Image</Heading>
+          <ImagePalette assetId={(single.node as unknown as { source: { assetId: string } }).source.assetId} />
           {isLowResolution(single.node as ImageNode, doc) && (
             <div className="rounded-lg bg-amber-50 px-2.5 py-1.5 text-[11px] font-medium text-amber-700" title="The image's resolution is low for its placed size; it may look soft when exported or printed.">
               Low resolution (~{Math.round(computeEffectivePpi(single.node as ImageNode, doc))} PPI). Use a larger image or scale this down.
@@ -907,6 +1203,13 @@ export function PropertiesPanel() {
               {/* Size */}
               <Field key={`fs${cs?.fontSize}`} label="Aa" value={cs?.fontSize ?? 16} onCommit={(n) => setChar({ fontSize: Math.max(1, n) })} />
             </div>
+            {/* Width axis (variable fonts): mapped to a CSS font-stretch keyword the
+                canvas applies to the wdth axis. Static fonts ignore it. */}
+            <div className="flex items-center gap-2">
+              <span className="w-12 shrink-0 text-[11px] text-neutral-400">Width</span>
+              <input type="range" min={50} max={200} step={12.5} value={cs?.axes?.wdth ?? 100} onChange={(e) => setChar({ axes: { ...(cs?.axes ?? {}), wdth: Number(e.target.value) } })} className="flex-1 accent-brand-600" title="Variable-font width (condensed to expanded)" />
+              {(cs?.axes?.wdth ?? 100) !== 100 && <button onClick={() => setChar({ axes: { ...(cs?.axes ?? {}), wdth: 100 } })} className="text-[11px] text-neutral-400 hover:text-neutral-700" title="Reset width">↺</button>}
+            </div>
             <div className="flex flex-wrap items-center gap-1">
               {/* Italic */}
               <button
@@ -1027,6 +1330,30 @@ export function PropertiesPanel() {
                 onChange={(on) => setChar({ features: { ...(cs?.features ?? {}), liga: on ? 1 : 0 } })}
               />
             </label>
+            {/* Per-run hyperlink: applies to the selected text range (clickable in
+                present/preview; the first linked run also makes the node clickable). */}
+            <label className="flex flex-col gap-1 text-[11px] text-neutral-400">
+              Link
+              <input
+                key={`lnk-${id}-${cs?.link ?? ""}`}
+                defaultValue={cs?.link ?? ""}
+                onBlur={(e) => { const v = e.target.value.trim(); setChar({ link: v || undefined }); }}
+                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                placeholder="https://… (select text first)"
+                className={inputCls}
+              />
+            </label>
+            {/* Language tag (BCP-47): drives locale-aware browser spellcheck. */}
+            <label className="flex flex-col gap-1 text-[11px] text-neutral-400">
+              Language
+              <input
+                key={`lang-${id}`}
+                defaultValue={((single.node as unknown as { data?: { lang?: string } }).data?.lang) ?? ""}
+                onBlur={(e) => useEditor.getState().setTextLang(id, e.target.value)}
+                placeholder="e.g. en, es, fr-CA"
+                className={inputCls}
+              />
+            </label>
             {/* Lists */}
             <div className="flex flex-wrap items-center gap-1">
               <span className="mr-1 text-xs text-neutral-400">List</span>
@@ -1064,6 +1391,23 @@ export function PropertiesPanel() {
                 </>
               )}
             </div>
+            {/* Bullet marker style: pick a custom glyph for an unordered list. */}
+            {ps?.list && ps.list.type === "bullet" && (
+              <div className="flex flex-wrap items-center gap-1">
+                <span className="mr-1 text-xs text-neutral-400">Bullet</span>
+                {["•", "◦", "▪", "–", "➤", "✓"].map((m) => {
+                  const on = (ps.list!.marker ?? "•") === m;
+                  return (
+                    <button
+                      key={m}
+                      onClick={() => setPara({ list: { type: "bullet", level: ps.list!.level ?? 0, marker: m } })}
+                      className={`h-8 min-w-[32px] rounded-lg border px-1.5 text-sm transition ${on ? "border-brand-300 bg-brand-50 text-brand-700" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
+                      title={`Bullet ${m}`}
+                    >{m}</button>
+                  );
+                })}
+              </div>
+            )}
             {/* Paragraph spacing */}
             <div className="grid grid-cols-2 gap-2">
               <Field key={`sb${ps?.spaceBefore ?? 0}`} label="⤒" value={ps?.spaceBefore ?? 0} onCommit={(n) => setPara({ spaceBefore: Math.max(0, n) })} />
@@ -1131,6 +1475,34 @@ export function PropertiesPanel() {
                     <input type="range" min={-100} max={100} value={curve} onChange={(e) => useEditor.getState().setCurve(id, (Number(e.target.value) / 100) * 2.5)} className="flex-1 accent-brand-600" />
                     {curve !== 0 && <button onClick={() => useEditor.getState().setCurve(id, 0)} className="text-[11px] text-neutral-400 hover:text-neutral-700" title="Straighten">↺</button>}
                   </div>
+                  {/* Box sizing mode: fixed / grow height / grow width. */}
+                  {(() => {
+                    const mode = (single.node as unknown as { box?: { mode?: "fixed" | "autoHeight" | "autoWidth" } }).box?.mode ?? "fixed";
+                    return (
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-12 shrink-0 text-[11px] text-neutral-400">Box</span>
+                        {([
+                          { m: "fixed", label: "Fixed" },
+                          { m: "autoHeight", label: "Auto H" },
+                          { m: "autoWidth", label: "Auto W" },
+                        ] as const).map(({ m, label }) => (
+                          <button key={m} onClick={() => useEditor.getState().setTextBoxMode(id, m)} className={`flex-1 ${ebtn(mode === m)}`} title={m === "fixed" ? "Fixed size box" : m === "autoHeight" ? "Grow height to fit text" : "Grow width to fit text"}>{label}</button>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                  {/* Columns: flow the text into N columns (engine multi-column). */}
+                  {(() => {
+                    const cols = (single.node as unknown as { box?: { columns?: { count: number } } }).box?.columns?.count ?? 1;
+                    return (
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-12 shrink-0 text-[11px] text-neutral-400">Columns</span>
+                        {[1, 2, 3].map((n) => (
+                          <button key={n} onClick={() => useEditor.getState().setTextColumns(id, n)} className={`flex-1 ${ebtn(cols === n)}`} title={`${n} column${n > 1 ? "s" : ""}`}>{n}</button>
+                        ))}
+                      </div>
+                    );
+                  })()}
                   {/* Vertical align + sub/superscript */}
                   <div className="flex items-center gap-1.5">
                     <span className="w-12 shrink-0 text-[11px] text-neutral-400">Align</span>
@@ -1144,6 +1516,23 @@ export function PropertiesPanel() {
                 </div>
               );
             })()}
+          </div>
+        );
+      })()}
+      {single && single.node.type === "video" && <VideoSection node={single.node} />}
+      {single && single.node.type === "grid" && (() => {
+        const id = single.node.id;
+        const g = single.node as unknown as { rows: number; cols: number; gap: number };
+        const set = (patch: { rows?: number; cols?: number; gap?: number }) => useEditor.getState().setGridLayout(id, patch);
+        return (
+          <div className="flex flex-col gap-2.5 border-t border-neutral-100 pt-3.5">
+            <Heading>Photo grid</Heading>
+            <div className="grid grid-cols-3 gap-2">
+              <Field key={`gr-${g.rows}`} label="Rows" value={g.rows} onCommit={(n) => set({ rows: Math.max(1, Math.min(6, Math.round(n))) })} />
+              <Field key={`gc-${g.cols}`} label="Cols" value={g.cols} onCommit={(n) => set({ cols: Math.max(1, Math.min(6, Math.round(n))) })} />
+              <Field key={`gg-${g.gap}`} label="Gap" value={g.gap} onCommit={(n) => set({ gap: Math.max(0, n) })} />
+            </div>
+            <p className="text-[11px] text-neutral-400">Drag a photo onto a cell to fill it.</p>
           </div>
         );
       })()}
@@ -1203,12 +1592,7 @@ export function PropertiesPanel() {
             <label className="flex flex-col gap-1 text-[11px] text-neutral-400">Title
               <input key={`title-${id}`} defaultValue={style.title ?? ""} placeholder="Chart title" onBlur={(e) => st.setChart(id, { style: { ...style, title: e.target.value.trim() || undefined } })} className={inputCls} />
             </label>
-            <label className="flex flex-col gap-1 text-[11px] text-neutral-400">Categories
-              <input key={`cat-${id}`} defaultValue={(ch.categories ?? []).join(", ")} onBlur={(e) => st.setChart(id, { categories: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })} className={inputCls} />
-            </label>
-            <label className="flex flex-col gap-1 text-[11px] text-neutral-400">Values (series 1)
-              <input key={`val-${id}`} defaultValue={(ch.series?.[0]?.values ?? []).join(", ")} onBlur={(e) => { const nums = e.target.value.split(",").map((s) => Number(s.trim())).filter((n) => !Number.isNaN(n)); const first = ch.series?.[0]; st.setChart(id, { series: [{ name: first?.name ?? "Series 1", values: nums, ...(first?.color ? { color: first.color } : {}) }, ...(ch.series ?? []).slice(1)] }); }} className={inputCls} />
-            </label>
+            <ChartDataTable node={ch} />
             <DataBindingControls node={single.node} />
             <div className="flex items-center justify-between text-[11px] text-neutral-500">
               <span>Legend</span>
@@ -1315,6 +1699,14 @@ export function PropertiesPanel() {
               <span>Text</span>
               <input type="color" value={selCell?.textColor ? colorHex(selCell.textColor) : "#18181b"} onChange={(e) => st.setTableCellStyle(id, sel.row, sel.col, { textColor: colorFromHex(e.target.value) })} className="oc-color h-7 w-8 shrink-0" />
             </div>
+            {/* Merge / split the selected cell (engine renders row/col spans). */}
+            <div className="flex flex-wrap gap-1.5">
+              <button type="button" className={btnCls} onClick={() => st.mergeTableCell(id, sel.row, sel.col, "right")}>Merge →</button>
+              <button type="button" className={btnCls} onClick={() => st.mergeTableCell(id, sel.row, sel.col, "down")}>Merge ↓</button>
+              {selCell && ((selCell.rowSpan ?? 1) > 1 || (selCell.colSpan ?? 1) > 1) && (
+                <button type="button" className={btnCls} onClick={() => st.splitTableCell(id, sel.row, sel.col)}>Split</button>
+              )}
+            </div>
 
             <TableConditional id={id} table={tb} />
             <DataBindingControls node={single.node} />
@@ -1364,18 +1756,25 @@ const EASINGS: { v: Easing; label: string }[] = [
   { v: "ease-out", label: "Ease out" },
   { v: "ease-in-out", label: "Ease in-out" },
   { v: "spring", label: "Spring" },
+  { v: "ease-in-cubic", label: "Ease in (cubic)" },
+  { v: "ease-out-cubic", label: "Ease out (cubic)" },
+  { v: "ease-out-back", label: "Back" },
+  { v: "bounce", label: "Bounce" },
 ];
 const ENTRANCE_PRESETS: { v: EntrancePreset; label: string }[] = [
   { v: "fade", label: "Fade" }, { v: "rise", label: "Rise" }, { v: "pan", label: "Pan" },
   { v: "pop", label: "Pop" }, { v: "drift", label: "Drift" }, { v: "breathe-in", label: "Breathe in" },
+  { v: "tumble", label: "Tumble" }, { v: "stomp", label: "Stomp" }, { v: "zoom-in", label: "Zoom" },
 ];
 const EXIT_PRESETS: { v: ExitPreset; label: string }[] = [
   { v: "fade-out", label: "Fade out" }, { v: "sink", label: "Sink" },
   { v: "pop-out", label: "Pop out" }, { v: "drift-out", label: "Drift out" },
+  { v: "tumble-out", label: "Tumble out" }, { v: "zoom-out", label: "Zoom out" },
 ];
 const EMPHASIS_PRESETS: { v: EmphasisPreset; label: string }[] = [
   { v: "pulse", label: "Pulse" }, { v: "wiggle", label: "Wiggle" }, { v: "spin", label: "Spin" },
   { v: "breathe", label: "Breathe" }, { v: "tada", label: "Tada" },
+  { v: "flicker", label: "Flicker" }, { v: "jiggle", label: "Jiggle" }, { v: "bob", label: "Bob" },
 ];
 
 type AnimTab = "entrance" | "exit" | "emphasis";
@@ -1457,7 +1856,9 @@ function AnimateSection({ node }: { node: Node }) {
   const st = useEditor.getState();
   const id = node.id;
   const anim = (node as { animation?: NodeAnimation }).animation ?? {};
-  const presets = tab === "entrance" ? ENTRANCE_PRESETS : tab === "exit" ? EXIT_PRESETS : EMPHASIS_PRESETS;
+  // Typewriter reveal only makes sense for text, so offer it only there.
+  const entrancePresets = node.type === "text" ? [...ENTRANCE_PRESETS, { v: "typewriter" as EntrancePreset, label: "Typewriter" }, { v: "word-wipe" as EntrancePreset, label: "Word wipe" }] : ENTRANCE_PRESETS;
+  const presets = tab === "entrance" ? entrancePresets : tab === "exit" ? EXIT_PRESETS : EMPHASIS_PRESETS;
   const clip = anim[tab];
   const set = (next: NonNullable<NodeAnimation[AnimTab]> | undefined) => {
     st.setNodeAnimation(id, { ...anim, [tab]: next } as NodeAnimation);
@@ -1470,6 +1871,12 @@ function AnimateSection({ node }: { node: Node }) {
           onClick={() => st.previewNodeAnimation(id)}
           className="rounded-md border border-neutral-200 px-2 py-0.5 text-[11px] font-medium text-neutral-600 transition hover:bg-neutral-100"
         >Preview</button>
+      </div>
+      {/* Magic Animate: one click animates every element on the page with a
+          staggered build-in (no AI; tasteful defaults by element kind). */}
+      <div className="flex gap-1.5">
+        <button onClick={() => st.magicAnimatePage()} className="flex-1 rounded-lg bg-brand-50 px-2 py-1.5 text-[11px] font-medium text-brand-700 transition hover:bg-brand-100">✨ Animate all</button>
+        <button onClick={() => st.magicAnimatePage(true)} className="rounded-lg bg-neutral-100 px-2 py-1.5 text-[11px] text-neutral-500 transition hover:bg-neutral-200" title="Remove animations from all elements on this page">Clear all</button>
       </div>
       <div className="flex rounded-lg bg-neutral-100 p-0.5 text-xs">
         {(["entrance", "exit", "emphasis"] as AnimTab[]).map((t) => (
@@ -1498,9 +1905,42 @@ function AnimateSection({ node }: { node: Node }) {
             <Field key={`${tab}d${clip.durationMs}`} label="Dur" value={clip.durationMs} onCommit={(n) => set({ ...clip, durationMs: Math.max(0, n) })} />
             <Field key={`${tab}l${clip.delayMs}`} label="Delay" value={clip.delayMs} onCommit={(n) => set({ ...clip, delayMs: Math.max(0, n) })} />
           </div>
-          <select value={clip.easing} onChange={(e) => set({ ...clip, easing: e.target.value as Easing })} className={selectCls}>
+          {/* Custom cubic-bezier curve: when enabled it overrides the named easing
+              (4 control values, CSS-style). Picking a named easing clears it. */}
+          {(() => {
+            const bz = (clip as { bezier?: [number, number, number, number] }).bezier;
+            return (
+              <div className="flex flex-col gap-1.5">
+                <label className="flex items-center justify-between text-[11px] text-neutral-500">
+                  <span>Custom curve</span>
+                  <Toggle checked={!!bz} onChange={(on) => set({ ...clip, bezier: on ? [0.42, 0, 0.58, 1] : undefined })} />
+                </label>
+                {bz && (
+                  <div className="grid grid-cols-4 gap-1">
+                    {(["x1", "y1", "x2", "y2"] as const).map((lbl, i) => (
+                      <input key={lbl} type="number" step={0.05} value={bz[i]} title={lbl}
+                        onChange={(e) => { const n = [...bz] as [number, number, number, number]; n[i] = Number(e.target.value); set({ ...clip, bezier: n }); }}
+                        className="rounded border border-neutral-200 px-1 py-0.5 text-[11px] outline-none focus:border-brand-400" />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+          <select value={clip.easing} disabled={!!(clip as { bezier?: unknown }).bezier} onChange={(e) => set({ ...clip, easing: e.target.value as Easing, bezier: undefined })} className={`${selectCls} disabled:opacity-40`}>
             {EASINGS.map((es) => <option key={es.v} value={es.v}>{es.label}</option>)}
           </select>
+          {/* Entrance sequencing across siblings: start with/after the previous
+              animated element (Canva "with/after previous"). */}
+          {tab === "entrance" && (
+            <label className="flex flex-col gap-1 text-[11px] text-neutral-400">Start
+              <select value={(clip as { startMode?: string }).startMode ?? "delay"} onChange={(e) => set({ ...clip, startMode: e.target.value as "delay" | "with-previous" | "after-previous" })} className={selectCls}>
+                <option value="delay">On delay</option>
+                <option value="with-previous">With previous</option>
+                <option value="after-previous">After previous</option>
+              </select>
+            </label>
+          )}
           {tab === "emphasis" && <p className="text-[11px] text-neutral-400">Loops while the slide is shown.</p>}
         </>
       )}
@@ -1639,10 +2079,14 @@ function PageTransitionSection({ page }: { page: Page }) {
         <option value="push">Push</option>
         <option value="dissolve">Dissolve</option>
         <option value="morph-lite">Morph (lite)</option>
+        <option value="morph">Morph (magic move)</option>
+        <option value="wipe">Wipe</option>
+        <option value="flip">Flip</option>
+        <option value="zoom">Zoom</option>
       </select>
       {t && t.type !== "none" && (
         <div className="grid grid-cols-2 gap-2">
-          {(t.type === "slide" || t.type === "push") && (
+          {(t.type === "slide" || t.type === "push" || t.type === "wipe") && (
             <select
               value={t.direction ?? "left"}
               onChange={(e) => st.setPageTransition({ ...t, direction: e.target.value as NonNullable<typeof t.direction> })}

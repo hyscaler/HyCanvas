@@ -17,6 +17,13 @@ export function authStartUrl(providerId: string): string {
   return `${baseUrl}/v1/auth/${providerId}/start`;
 }
 
+/** Full URL to begin connecting an SSO identity to the signed-in account (a
+ *  browser redirect, not a fetch). The backend binds the session user into the
+ *  signed state and returns to /settings?sso=connected|error. */
+export function ssoLinkUrl(): string {
+  return `${baseUrl}/v1/auth/oidc/link`;
+}
+
 /** Resolve a (possibly relative) backend URL to something an <img> can load. */
 export function resolveAssetUrl(url: string): string {
   if (/^https?:\/\//.test(url)) return url;

@@ -14,6 +14,11 @@ import {
   Plus,
   ChevronDown,
   MoreHorizontal,
+  Copy,
+  Pencil,
+  ExternalLink,
+  Settings,
+  LogOut,
   Layers,
   Image as ImageIcon,
   Presentation,
@@ -32,9 +37,10 @@ import {
   BookOpen,
   CheckSquare,
   List,
+  Users,
 } from "lucide-react";
 import { createBlankDesign } from "@hc/schema";
-import type { DesignRecord, HomeItem, MyTask, TaskStatus, TemplateCollectionSummary, TemplateSummary } from "@hc/sdk";
+import type { DesignRecord, HomeItem, MyTask, TaskStatus, TemplateCollectionSummary, TemplateSummary, WorkspaceRole } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
 import { useAuth } from "@/store/auth";
 import { useToast } from "@/components/ui/Toast";
@@ -46,9 +52,30 @@ import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
 import { DesignThumb } from "./DesignThumb";
 import { BulkCreateModal } from "./BulkCreateModal";
+import { MembersPanel } from "./MembersPanel";
 import { VerifyEmailBanner } from "@/components/auth/VerifyEmailBanner";
-import { SecuritySettings } from "@/components/auth/SecuritySettings";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
+import { HeroArt, EmptyArt, RailArt } from "@/components/ui/CanvasBackdrop";
+
+// Time-aware greeting for the dashboard hero band.
+function greetByHour(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+// Faint canvas dot-grid + soft corner blobs behind the main scroll area. Layered
+// CSS backgrounds (no DOM, no z-index) so content cards paint cleanly on top.
+const DASH_BACKDROP: React.CSSProperties = {
+  backgroundImage: [
+    "radial-gradient(rgba(116,88,232,0.06) 1px, transparent 1px)",
+    "radial-gradient(42rem 28rem at 6% -4%, rgba(124,88,232,0.10), transparent 60%)",
+    "radial-gradient(40rem 30rem at 100% 0%, rgba(47,123,255,0.08), transparent 55%)",
+  ].join(", "),
+  backgroundSize: "24px 24px, auto, auto",
+  backgroundRepeat: "repeat, no-repeat, no-repeat",
+};
 
 type Format = { label: string; icon: typeof Plus; w: number; h: number; kind?: string };
 
@@ -119,13 +146,12 @@ export function DashboardApp() {
   const [renameValue, setRenameValue] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<HomeItem | null>(null);
   const [wsModal, setWsModal] = useState(false);
-  const [securityOpen, setSecurityOpen] = useState(false);
   const [sizeOpen, setSizeOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [customW, setCustomW] = useState(1080);
   const [customH, setCustomH] = useState(1080);
   const [wsName, setWsName] = useState("");
-  const [view, setView] = useState<"home" | "favorites" | "templates" | "trash" | "tasks">("home");
+  const [view, setView] = useState<"home" | "favorites" | "templates" | "trash" | "tasks" | "members">("home");
   const [trash, setTrash] = useState<DesignRecord[]>([]);
   const [favorites, setFavorites] = useState<HomeItem[]>([]);
   const [tasks, setTasks] = useState<MyTask[]>([]);
@@ -263,6 +289,9 @@ export function DashboardApp() {
   const effectiveFilter = typeChips.some((c) => c.id === typeFilter) ? typeFilter : "all";
   const visibleItems = effectiveFilter === "all" ? sortedItems : sortedItems.filter((i) => itemKind(i) === effectiveFilter);
 
+  const activeWs = workspaces.find((w) => w.id === activeWorkspaceId);
+  const firstName = user?.name?.trim().split(/\s+/)[0] || user?.email?.split("@")[0] || "there";
+
   const open = (id: string) => router.push({ pathname: "/editor", query: { id } });
 
   // Star/unstar a design; optimistically flip the flag in the open lists, then
@@ -312,6 +341,23 @@ export function DashboardApp() {
       await open(rec.id);
     } catch {
       toast.error("Could not create design.");
+      setBusy(false);
+    }
+  }
+
+  async function duplicate(item: HomeItem) {
+    if (!activeWorkspaceId) return;
+    setBusy(true);
+    try {
+      const file = await oc.getDesignFile(item.id);
+      const title = `${item.title} (copy)`;
+      file.title = title;
+      await oc.createDesign({ workspaceId: activeWorkspaceId, title, from: file });
+      setItems(await load(query));
+      toast.success("Design duplicated.");
+    } catch {
+      toast.error("Could not duplicate the design.");
+    } finally {
       setBusy(false);
     }
   }
@@ -376,7 +422,7 @@ export function DashboardApp() {
         className="h-8 rounded-lg border border-neutral-200 bg-white px-2 text-xs text-neutral-600 outline-none focus:border-brand-400"
       >
         <option value="recent">Last edited</option>
-        <option value="name">Name (A–Z)</option>
+        <option value="name">Name (A-Z)</option>
       </select>
       <div className="flex overflow-hidden rounded-lg border border-neutral-200">
         <button onClick={() => setViewMode("grid")} title="Grid view" className={`grid h-8 w-8 place-items-center ${viewMode === "grid" ? "bg-brand-50 text-brand-700" : "text-neutral-500 hover:bg-neutral-100"}`}><LayoutGrid size={15} /></button>
@@ -390,10 +436,11 @@ export function DashboardApp() {
     <div className="relative">
       <IconButton size="sm" onClick={(e) => { e.stopPropagation(); setMenuFor(menuFor === item.id ? null : item.id); }} aria-label="More"><MoreHorizontal size={16} /></IconButton>
       {menuFor === item.id && (
-        <div className="absolute right-0 z-10 mt-1 w-36 overflow-hidden rounded-xl border border-neutral-200 bg-white py-1 text-sm shadow-lg" onClick={(e) => e.stopPropagation()}>
-          <MenuRow onClick={() => { setMenuFor(null); void open(item.id); }}>Open</MenuRow>
-          <MenuRow onClick={() => { setMenuFor(null); setRenameTarget(item); setRenameValue(item.title); }}>Rename</MenuRow>
-          <MenuRow danger onClick={() => { setMenuFor(null); setDeleteTarget(item); }}>Delete</MenuRow>
+        <div className="absolute right-0 z-30 mt-1 w-36 overflow-hidden rounded-xl border border-neutral-200 bg-white py-1 text-sm shadow-lg" onClick={(e) => e.stopPropagation()}>
+          <MenuRow icon={ExternalLink} onClick={() => { setMenuFor(null); void open(item.id); }}>Open</MenuRow>
+          <MenuRow icon={Copy} onClick={() => { setMenuFor(null); void duplicate(item); }}>Duplicate</MenuRow>
+          <MenuRow icon={Pencil} onClick={() => { setMenuFor(null); setRenameTarget(item); setRenameValue(item.title); }}>Rename</MenuRow>
+          <MenuRow icon={Trash2} danger onClick={() => { setMenuFor(null); setDeleteTarget(item); }}>Delete</MenuRow>
         </div>
       )}
     </div>
@@ -401,8 +448,8 @@ export function DashboardApp() {
 
   // A design as a grid card / a list row. Used across Home + Favorites.
   const renderCard = (item: HomeItem) => (
-    <li key={item.id} className="group relative overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm transition hover:shadow-md">
-      <button onClick={() => void open(item.id)} className="block aspect-[4/3] w-full" title="Open"><DesignThumb designId={item.id} /></button>
+    <li key={item.id} className="group relative rounded-2xl border border-neutral-200 bg-white shadow-sm transition hover:shadow-md">
+      <button onClick={() => void open(item.id)} className="block aspect-[4/3] w-full overflow-hidden rounded-t-2xl" title="Open"><DesignThumb designId={item.id} /></button>
       <FavoriteButton starred={item.starred} onToggle={() => void toggleFavorite(item)} />
       <div className="flex items-center justify-between gap-2 px-3 py-2.5">
         <div className="min-w-0">
@@ -431,13 +478,13 @@ export function DashboardApp() {
     viewMode === "grid" ? (
       <ul className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">{list.map(renderCard)}</ul>
     ) : (
-      <ul className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">{list.map(renderRow)}</ul>
+      <ul className="rounded-2xl border border-neutral-200 bg-white shadow-sm [&>li:first-child]:rounded-t-2xl [&>li:last-child]:rounded-b-2xl">{list.map(renderRow)}</ul>
     );
 
   return (
     <div className="flex h-screen overflow-hidden bg-neutral-50 text-neutral-900" onClick={() => setMenuFor(null)}>
       {/* Left rail: fixed to the viewport; only the main column scrolls. */}
-      <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-neutral-200 bg-white p-4">
+      <aside className="relative flex w-80 shrink-0 flex-col overflow-y-auto border-r border-neutral-200 bg-white p-4">
         <div className="mb-6 px-1">
           <Logo size={32} />
         </div>
@@ -454,13 +501,15 @@ export function DashboardApp() {
           <RailItem icon={Star} label="Favorites" active={view === "favorites"} onClick={() => setView("favorites")} />
           <RailItem icon={CheckSquare} label="My tasks" active={view === "tasks"} onClick={() => setView("tasks")} />
           <RailItem icon={LayoutTemplate} label="Templates" active={view === "templates"} onClick={() => setView("templates")} />
+          <RailItem icon={Users} label="Members" active={view === "members"} onClick={() => setView("members")} />
           <RailItem icon={Trash2} label="Trash" active={view === "trash"} onClick={() => setView("trash")} />
         </nav>
 
+        <RailArt />
       </aside>
 
       {/* Main */}
-      <main className="oc-scroll flex-1 overflow-y-auto">
+      <main className="oc-scroll flex-1 overflow-y-auto" style={DASH_BACKDROP}>
         {/* Header: global search, create, notifications, and the user menu. */}
         <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-neutral-200 bg-white/90 px-6 py-2.5 backdrop-blur">
           <form onSubmit={onSearch} className="relative max-w-lg flex-1">
@@ -480,13 +529,37 @@ export function DashboardApp() {
               onBulk={() => setBulkOpen(true)}
             />
             <NotificationsBell />
-            <UserMenu user={user} onSecurity={() => setSecurityOpen(true)} onSignOut={() => void logout()} />
+            <UserMenu user={user} onSettings={() => void router.push("/settings")} onSignOut={() => void logout()} />
           </div>
         </div>
         <div className="mx-auto max-w-[1600px] px-6 py-8">
           {view === "home" && (
           <>
           <VerifyEmailBanner />
+
+          {/* Flat hero: greeting + workspace + CTAs sit directly on the page's
+              ambient texture (no card frame), with the shared art floating right. */}
+          {!query.trim() && (
+            <section className="relative mb-9 min-h-[8rem]">
+              <HeroArt />
+              <div className="relative max-w-xl">
+                <h1 className="text-2xl font-bold tracking-tight text-neutral-900 sm:text-3xl">
+                  {greetByHour()}, {firstName} <span className="inline-block">👋</span>
+                </h1>
+                <p className="mt-2 text-sm text-neutral-500">
+                  Let’s make something today. Start from a blank canvas or pick up where you left off.
+                </p>
+                <div className="mt-5 flex flex-wrap gap-2.5">
+                  <Button onClick={() => setSizeOpen(true)} disabled={busy || !activeWorkspaceId}>
+                    <Plus size={16} /> Start a design
+                  </Button>
+                  <Button variant="secondary" onClick={() => setView("templates")}>
+                    <LayoutTemplate size={16} /> Browse templates
+                  </Button>
+                </div>
+              </div>
+            </section>
+          )}
 
           {/* Create row: every format together in one wrap. */}
           <section className="mb-10">
@@ -524,14 +597,13 @@ export function DashboardApp() {
                 <Spinner className="text-2xl" />
               </div>
             ) : items.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-neutral-300 bg-white p-16 text-center">
-                <p className="text-sm text-neutral-500">{query.trim() ? "No matching designs." : "No designs yet."}</p>
+              <EmptyState message={query.trim() ? "No matching designs." : "No designs yet."}>
                 {!query.trim() && (
-                  <Button className="mt-4" onClick={() => setSizeOpen(true)}>
+                  <Button onClick={() => setSizeOpen(true)}>
                     <Plus size={18} /> Create your first design
                   </Button>
                 )}
-              </div>
+              </EmptyState>
             ) : (
               itemsList(visibleItems)
             )}
@@ -541,18 +613,19 @@ export function DashboardApp() {
           {templates.length > 0 && !query.trim() && (
             <section className="mt-10">
               <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-neutral-400">Start from a template</h2>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {templates.map((t) => (
                   <button
                     key={t.id}
                     onClick={() => void applyTemplate(t)}
                     disabled={busy}
-                    className="group overflow-hidden rounded-2xl border border-neutral-200 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                    title="Use this template"
+                    className="group overflow-hidden rounded-2xl border border-neutral-200 bg-white text-left shadow-sm transition hover:shadow-md disabled:opacity-60"
                   >
                     <div className="aspect-[4/3] bg-neutral-100">
                       <DesignThumb templateId={t.id} />
                     </div>
-                    <div className="truncate px-3 py-2 text-sm font-medium text-neutral-700">{t.title}</div>
+                    <div className="truncate px-3 py-2.5 text-sm font-semibold text-neutral-800">{t.title}</div>
                   </button>
                 ))}
               </div>
@@ -568,9 +641,7 @@ export function DashboardApp() {
                 {favorites.length > 0 && viewControls()}
               </div>
               {favorites.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-neutral-300 bg-white p-16 text-center text-sm text-neutral-500">
-                  No favorites yet. Tap the star on a design to add it here.
-                </div>
+                <EmptyState message="No favorites yet. Tap the star on a design to add it here." />
               ) : (
                 itemsList(sortedFavorites)
               )}
@@ -579,14 +650,14 @@ export function DashboardApp() {
 
           {view === "templates" && (
             <section>
-              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-neutral-400">Templates</h2>
-              {/* Collection selector + category chips (FR-2). */}
-              <div className="mb-3 flex flex-wrap items-center gap-2">
+              {/* Header row matches Favorites: title left, controls right. */}
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="text-sm font-bold uppercase tracking-wide text-neutral-400">Templates</h2>
                 {collections.length > 0 && (
                   <select
                     value={tplCollection ?? ""}
                     onChange={(e) => setTplCollection(e.target.value || null)}
-                    className="h-8 rounded-full border border-neutral-200 bg-white px-3 text-sm text-neutral-700 outline-none"
+                    className="h-8 rounded-lg border border-neutral-200 bg-white px-2 text-xs text-neutral-600 outline-none focus:border-brand-400"
                   >
                     <option value="">All collections</option>
                     {collections.map((c) => (
@@ -595,11 +666,13 @@ export function DashboardApp() {
                   </select>
                 )}
               </div>
+              {/* Category filter chips (FR-2): flat, bordered, with a tinted active
+                  state consistent with the rail and the grid/list controls. */}
               {templateCategories.length > 0 && (
                 <div className="mb-4 flex flex-wrap gap-2">
                   <button
                     onClick={() => setTplCategory(null)}
-                    className={`rounded-full px-3 py-1 text-sm ${tplCategory === null ? "bg-brand-600 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
+                    className={`rounded-lg border px-3 py-1 text-sm transition ${tplCategory === null ? "border-brand-200 bg-brand-50 text-brand-700" : "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50"}`}
                   >
                     All
                   </button>
@@ -607,7 +680,7 @@ export function DashboardApp() {
                     <button
                       key={c}
                       onClick={() => setTplCategory(c)}
-                      className={`rounded-full px-3 py-1 text-sm capitalize ${tplCategory === c ? "bg-brand-600 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
+                      className={`rounded-lg border px-3 py-1 text-sm capitalize transition ${tplCategory === c ? "border-brand-200 bg-brand-50 text-brand-700" : "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50"}`}
                     >
                       {c}
                     </button>
@@ -615,21 +688,23 @@ export function DashboardApp() {
                 </div>
               )}
               {filteredTemplates.length === 0 ? (
-                <p className="text-sm text-neutral-400">No templates available.</p>
+                <EmptyState message="No templates yet. Open a design and use Save as template to add one here." />
               ) : (
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                <ul className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                   {filteredTemplates.map((t) => (
-                    <button
-                      key={t.id}
-                      onClick={() => void applyTemplate(t)}
-                      disabled={busy}
-                      className="group overflow-hidden rounded-2xl border border-neutral-200 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                    >
-                      <div className="aspect-[4/3] bg-neutral-100"><DesignThumb templateId={t.id} /></div>
-                      <div className="truncate px-3 py-2 text-sm font-medium text-neutral-700">{t.title}</div>
-                    </button>
+                    <li key={t.id} className="group relative rounded-2xl border border-neutral-200 bg-white shadow-sm transition hover:shadow-md">
+                      <button
+                        onClick={() => void applyTemplate(t)}
+                        disabled={busy}
+                        title="Use this template"
+                        className="block w-full text-left disabled:opacity-60"
+                      >
+                        <div className="aspect-[4/3] overflow-hidden rounded-t-2xl bg-neutral-100"><DesignThumb templateId={t.id} /></div>
+                        <div className="truncate px-3 py-2.5 text-sm font-semibold text-neutral-800">{t.title}</div>
+                      </button>
+                    </li>
                   ))}
-                </div>
+                </ul>
               )}
             </section>
           )}
@@ -638,9 +713,7 @@ export function DashboardApp() {
             <section>
               <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-neutral-400">Trash</h2>
               {trash.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-neutral-300 bg-white p-16 text-center text-sm text-neutral-500">
-                  Trash is empty.
-                </div>
+                <EmptyState message="Trash is empty." />
               ) : (
                 <ul className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                   {trash.map((d) => (
@@ -664,9 +737,7 @@ export function DashboardApp() {
             <section>
               <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-neutral-400">My tasks</h2>
               {tasks.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-neutral-300 bg-white p-16 text-center text-sm text-neutral-500">
-                  No tasks assigned to you. Comments converted to tasks and assigned to you show up here.
-                </div>
+                <EmptyState message="No tasks assigned to you. Comments converted to tasks and assigned to you show up here." />
               ) : (
                 <ul className="space-y-2">
                   {tasks.map((t) => {
@@ -700,12 +771,24 @@ export function DashboardApp() {
               )}
             </section>
           )}
+
+          {view === "members" && (
+            <section>
+              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-neutral-400">Members</h2>
+              <MembersPanel
+                workspaceId={activeWorkspaceId}
+                workspaceName={activeWs?.name ?? "this workspace"}
+                workspaceKind={activeWs?.kind ?? "personal"}
+                myRole={(activeWs?.role ?? "viewer") as WorkspaceRole}
+                myUserId={user?.id ?? ""}
+                onExit={() => { setView("home"); void refreshWorkspaces(); }}
+              />
+            </section>
+          )}
         </div>
       </main>
 
       {/* Modals */}
-      <SecuritySettings open={securityOpen} onClose={() => setSecurityOpen(false)} />
-
 
       <Modal open={sizeOpen} onClose={() => setSizeOpen(false)} title="Create a design" width="w-[34rem]">
         <div className="grid grid-cols-2 gap-2">
@@ -821,9 +904,23 @@ function FavoriteButton({ starred, onToggle }: { starred: boolean; onToggle: () 
   );
 }
 
-function MenuRow({ children, onClick, danger }: { children: React.ReactNode; onClick: () => void; danger?: boolean }) {
+// Uniform, flat empty state shared across Home / Favorites / Tasks / Trash: the
+// shared canvas art over a centered message on the ambient background (no card
+// frame), with an optional call to action.
+function EmptyState({ message, children }: { message: string; children?: React.ReactNode }) {
   return (
-    <button onClick={onClick} className={`block w-full px-3 py-1.5 text-left hover:bg-neutral-50 ${danger ? "text-red-600" : "text-neutral-700"}`}>
+    <div className="flex flex-col items-center gap-4 py-20 text-center">
+      <EmptyArt />
+      <p className="max-w-sm text-sm text-neutral-500">{message}</p>
+      {children}
+    </div>
+  );
+}
+
+function MenuRow({ children, onClick, danger, icon: Icon }: { children: React.ReactNode; onClick: () => void; danger?: boolean; icon?: typeof Trash2 }) {
+  return (
+    <button onClick={onClick} className={`flex w-full items-center gap-2.5 px-3 py-1.5 text-left hover:bg-neutral-50 ${danger ? "text-red-600" : "text-neutral-700"}`}>
+      {Icon && <Icon size={15} className={danger ? "text-red-500" : "text-neutral-400"} />}
       {children}
     </button>
   );
@@ -898,7 +995,7 @@ function CreateMenu({ disabled, onPick, onCustom, onBulk }: { disabled?: boolean
 }
 
 /** Header account menu: email, security, sign out. */
-function UserMenu({ user, onSecurity, onSignOut }: { user: { name?: string | null; email?: string | null } | null; onSecurity: () => void; onSignOut: () => void }) {
+function UserMenu({ user, onSettings, onSignOut }: { user: { name?: string | null; email?: string | null } | null; onSettings: () => void; onSignOut: () => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useOutsideClose(ref, open, () => setOpen(false));
@@ -909,10 +1006,13 @@ function UserMenu({ user, onSecurity, onSignOut }: { user: { name?: string | nul
       </button>
       {open && (
         <div className="absolute right-0 z-40 mt-1.5 w-56 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-xl ring-1 ring-black/5">
-          <div className="truncate px-2.5 py-1.5 text-xs text-neutral-500">{user?.email}</div>
+          <div className="px-2.5 py-1.5">
+            {user?.name && <div className="truncate text-sm font-semibold text-neutral-800">{user.name}</div>}
+            <div className="truncate text-xs text-neutral-500">{user?.email}</div>
+          </div>
           <div className="my-1 border-t border-neutral-100" />
-          <button onClick={() => { setOpen(false); onSecurity(); }} className="block w-full rounded-lg px-2.5 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100">Security</button>
-          <button onClick={() => { setOpen(false); onSignOut(); }} className="block w-full rounded-lg px-2.5 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100">Sign out</button>
+          <button onClick={() => { setOpen(false); onSettings(); }} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100"><Settings size={15} className="text-neutral-400" /> Settings</button>
+          <button onClick={() => { setOpen(false); onSignOut(); }} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100"><LogOut size={15} className="text-neutral-400" /> Sign out</button>
         </div>
       )}
     </div>
