@@ -3,18 +3,18 @@
 // are undoable. Uploads/stock images are placed via the image asset provider.
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type FormEvent } from "react";
-import { Square, SquareRoundCorner, Circle, Triangle, Pentagon, Hexagon, Star, Diamond, Octagon, Minus, MoveUpRight, Frame, QrCode, Type, Upload, Search, Table as TableIcon, BarChart3, LineChart, AreaChart, PieChart, Donut, ScatterChart, Radar, Wand2, ImagePlus, Settings2, Trash2, Folder, FolderPlus, Pencil, X, Tag, ChevronLeft, Link as LinkIcon, Mic, Video, CircleStop, Spline, Clock, LayoutGrid, Shapes, Sparkles, Stethoscope, AlignStartVertical, Play, ChevronDown } from "lucide-react";
-import { type ChartType, type Node } from "@hc/schema";
+import { Square, SquareRoundCorner, Circle, Triangle, Pentagon, Hexagon, Star, Diamond, Octagon, Minus, MoveUpRight, Frame, QrCode, Type, Upload, Search, Table as TableIcon, BarChart3, LineChart, AreaChart, PieChart, Donut, ScatterChart, Radar, Wand2, ImagePlus, Settings2, Trash2, Folder, FolderPlus, Pencil, X, Tag, ChevronLeft, Link as LinkIcon, Mic, Video, CircleStop, Spline, Clock, LayoutGrid, Shapes, Sparkles, Stethoscope, AlignStartVertical, Play, ChevronDown, Send, Plus, RotateCcw } from "lucide-react";
+import { type ChartType, type Node, type Fill } from "@hc/schema";
 import { searchFonts, type FontCatalogEntry } from "@hc/text";
-import { toHex } from "@hc/color";
+import { toHex, fromHex } from "@hc/color";
 import { qrModules } from "@/lib/qr";
 import { STICKERS } from "@/lib/stickers";
+import { parseModelJson } from "@/lib/magicDesign";
 import {
-  MagicParseError,
-  parseModelJson,
-  normalizeMagicDesign,
-  type MagicDesignSpec,
-} from "@/lib/magicDesign";
+  normalizeOutline, deckThemes, layoutDeck, groundImagePrompt,
+  type DesignOutline, type DesignType,
+  toolCatalog, assistantSystemPrompt, parseAssistantReply, planMutates, summarizeDesign, type PlanStep,
+} from "@hc/aistudio";
 import { promptText } from "@/lib/promptDialog";
 import { generateAltText } from "@/lib/altText";
 import { fonts } from "@/lib/fontProvider";
@@ -38,9 +38,10 @@ import {
 import { ApiError, type AiConfigView, type AssetFolder, type MiniAppSummary, type StockAssetSummary, type StockCollectionSummary, type StorageUsageView, type UploadedAsset } from "@hc/sdk";
 import { checkAppAction, type AppAction } from "@hc/stock";
 import { oc, resolveAssetUrl, stockProxyUrl } from "@/lib/sdk";
-import type { BrandVoice } from "@hc/sdk";
-import { useEditor } from "@/store/editor";
+import type { BrandVoice, BrandLintViolation } from "@hc/sdk";
+import { useEditor, type BrandFixTarget } from "@/store/editor";
 import { useBrand } from "@/store/brand";
+import { useComments } from "@/store/comments";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
@@ -92,15 +93,17 @@ function afterInsert(toast: ReturnType<typeof useToast>, label: string) {
   toast.success(`Added ${label}`);
 }
 
-export function PanelShell({ title, children }: { title: string; children: React.ReactNode }) {
+export function PanelShell({ title, children, fill }: { title: string; children: React.ReactNode; fill?: boolean }) {
   // Width degrades gracefully on narrow screens (60vw, capped at 16rem) so the
   // slide-out panel does not dominate a small viewport; at lg+ it is the full
   // 18rem (w-72) it has always been. When overlaid on the canvas (below lg, see
   // ToolRail) the narrower width keeps more of the canvas visible behind it.
+  // `fill` makes the panel a non-scrolling flex column so a child (e.g. the AI
+  // chat) can pin its own footer and scroll only its message area.
   return (
-    <div className="oc-scroll flex h-full w-[min(16rem,60vw)] flex-col overflow-y-auto border-r border-neutral-200 bg-white lg:w-72">
+    <div className={`oc-scroll flex h-full w-[min(16rem,60vw)] flex-col border-r border-neutral-200 bg-white lg:w-72 ${fill ? "overflow-hidden" : "overflow-y-auto"}`}>
       <h3 className="px-4 pb-2 pt-4 text-sm font-bold text-neutral-800">{title}</h3>
-      <div className="flex-1 px-4 pb-4">{children}</div>
+      <div className={fill ? "flex min-h-0 flex-1 flex-col px-4 pb-4" : "flex-1 px-4 pb-4"}>{children}</div>
     </div>
   );
 }
@@ -169,6 +172,7 @@ export function ElementsPanel() {
   const insertFrame = (init: Partial<Node>) => { addNode("frame", init); afterInsert(toast, "frame"); };
   const insertTableEl = (rows: number, cols: number) => { insertTable(rows, cols); afterInsert(toast, "table"); };
   const insertChartEl = (type: ChartType, label: string) => { insertChart(type); afterInsert(toast, `${label} chart`); };
+  const insertGridEl = (rows: number, cols: number) => { useEditor.getState().insertPhotoGrid(rows, cols); afterInsert(toast, "photo grid"); };
   // Tiles grouped into collapsible categories so the panel scans cleanly.
   const groups: { title: string; icon: typeof Square; defaultOpen?: boolean; tiles: ElementTile[] }[] = [
     {
@@ -197,6 +201,11 @@ export function ElementsPanel() {
         { label: "Line", icon: Minus, run: () => insertLineNode("Line", { name: "Line", points: [{ x: 0, y: 0 }, { x: 240, y: 0 }], transform: CENTER, size: { width: 240, height: 4 }, stroke: lineStroke("round"), startCap: "none", endCap: "none" } as Partial<Node>) },
         { label: "Arrow", icon: MoveUpRight, run: () => insertLineNode("Arrow", { name: "Arrow", points: [{ x: 0, y: 0 }, { x: 240, y: 0 }], transform: CENTER, size: { width: 240, height: 4 }, stroke: lineStroke("butt"), startCap: "none", endCap: "arrow" } as Partial<Node>) },
         { label: "Frame", icon: Frame, run: () => insertFrame({ name: "Frame", clip: true, transform: CENTER, size: { width: 260, height: 200 }, fills: [FRAME_FILL] } as Partial<Node>) },
+        { label: "Circle frame", icon: Circle, run: () => insertFrame({ name: "Circle frame", clip: true, maskShape: "ellipse", transform: CENTER, size: { width: 240, height: 240 }, fills: [FRAME_FILL] } as Partial<Node>) },
+        { label: "Rounded frame", icon: SquareRoundCorner, run: () => insertFrame({ name: "Rounded frame", clip: true, cornerRadius: { topLeft: 32, topRight: 32, bottomRight: 32, bottomLeft: 32 }, transform: CENTER, size: { width: 260, height: 200 }, fills: [FRAME_FILL] } as Partial<Node>) },
+        { label: "Grid 2x2", icon: LayoutGrid, run: () => insertGridEl(2, 2) },
+        { label: "Grid 3x3", icon: LayoutGrid, run: () => insertGridEl(3, 3) },
+        { label: "Grid 2x3", icon: LayoutGrid, run: () => insertGridEl(2, 3) },
       ],
     },
     {
@@ -222,14 +231,43 @@ export function ElementsPanel() {
       ],
     },
   ];
+  // Recently-used elements: remember the last few inserted tiles (by label) so
+  // they resurface at the top for one-click re-insertion. Tiles are static, so a
+  // label round-trips to its run() via this flat lookup.
+  const tileByLabel = new Map(groups.flatMap((g) => g.tiles.map((t) => [t.label, t] as const)));
+  const [recent, setRecent] = useState<string[]>(() => {
+    if (typeof window === "undefined") return [];
+    try { return JSON.parse(localStorage.getItem("oc:recentElements") || "[]"); } catch { return []; }
+  });
+  const recordRecent = (label: string) => {
+    setRecent((prev) => {
+      const next = [label, ...prev.filter((l) => l !== label)].slice(0, 6);
+      try { localStorage.setItem("oc:recentElements", JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  };
+  const runTile = (t: ElementTile) => { recordRecent(t.label); void t.run(); };
+  const recentTiles = recent.map((l) => tileByLabel.get(l)).filter((t): t is ElementTile => !!t);
   return (
     <PanelShell title="Elements">
       <div className="flex flex-col gap-2.5">
+        {recentTiles.length > 0 && (
+          <CollapsibleSection title="Recently used" icon={Clock} defaultOpen>
+            <div className="grid grid-cols-2 gap-2">
+              {recentTiles.map((t) => (
+                <button key={`recent-${t.label}`} onClick={() => runTile(t)} className="flex aspect-square flex-col items-center justify-center gap-2 rounded-xl bg-neutral-50 text-neutral-600 transition hover:bg-brand-50 hover:text-brand-700">
+                  <t.icon size={26} />
+                  <span className="text-xs font-medium">{t.label}</span>
+                </button>
+              ))}
+            </div>
+          </CollapsibleSection>
+        )}
         {groups.map((g) => (
           <CollapsibleSection key={g.title} title={g.title} icon={g.icon} defaultOpen={g.defaultOpen}>
             <div className="grid grid-cols-2 gap-2">
               {g.tiles.map((t) => (
-                <button key={t.label} onClick={() => void t.run()} className="flex aspect-square flex-col items-center justify-center gap-2 rounded-xl bg-neutral-50 text-neutral-600 transition hover:bg-brand-50 hover:text-brand-700">
+                <button key={t.label} onClick={() => runTile(t)} className="flex aspect-square flex-col items-center justify-center gap-2 rounded-xl bg-neutral-50 text-neutral-600 transition hover:bg-brand-50 hover:text-brand-700">
                   <t.icon size={26} />
                   <span className="text-xs font-medium">{t.label}</span>
                 </button>
@@ -245,6 +283,29 @@ export function ElementsPanel() {
                 key={s.id}
                 onClick={() => { useEditor.getState().addIconSvg(s.svg); afterInsert(toast, s.label.toLowerCase()); }}
                 title={s.label}
+                aria-label={s.label}
+                className="grid aspect-square place-items-center rounded-lg bg-neutral-50 p-1.5 transition hover:bg-brand-50 [&>span>svg]:h-full [&>span>svg]:w-full"
+              >
+                <span className="block h-full w-full" dangerouslySetInnerHTML={{ __html: s.svg }} />
+              </button>
+            ))}
+          </div>
+        </CollapsibleSection>
+        {/* Animated stickers: editable vectors that insert with a looping emphasis
+            animation already applied (play/present to see them move). */}
+        <CollapsibleSection title="Animated" icon={Play} defaultOpen={false}>
+          <div className="grid grid-cols-4 gap-2">
+            {ANIMATED_STICKERS.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => {
+                  const st = useEditor.getState();
+                  st.addIconSvg(s.svg);
+                  const id = st.selection[0];
+                  if (id) st.setNodeAnimation(id, { emphasis: { preset: s.preset, durationMs: 1400, delayMs: 0, easing: "ease-in-out" } });
+                  afterInsert(toast, `${s.label} (animated)`);
+                }}
+                title={`${s.label} (animated)`}
                 aria-label={s.label}
                 className="grid aspect-square place-items-center rounded-lg bg-neutral-50 p-1.5 transition hover:bg-brand-50 [&>span>svg]:h-full [&>span>svg]:w-full"
               >
@@ -326,9 +387,14 @@ export function TextPanel() {
     const family = file.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim() || "Custom font";
     const reader = new FileReader();
     reader.onload = () => {
-      void fonts.registerCustomFont(family, String(reader.result)).then((ok) => {
-        if (ok) { applyFont(family); force(); toast.success(`Added font “${family}”.`); }
-        else toast.error("Couldn't load that font file.");
+      const dataUrl = String(reader.result);
+      void fonts.registerCustomFont(family, dataUrl).then((ok) => {
+        if (ok) {
+          // Embed the font in the design (data URL) so it loads cross-device when
+          // the design is opened elsewhere, not just in this browser's localStorage.
+          useEditor.getState().addDocFont({ id: `font-${crypto.randomUUID()}`, family, url: dataUrl });
+          applyFont(family); force(); toast.success(`Added font “${family}”.`);
+        } else toast.error("Couldn't load that font file.");
       });
     };
     reader.readAsDataURL(file);
@@ -768,15 +834,15 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
               <Upload size={16} /> {selectedFolder ? `Upload to ${selectedFolder.name}` : "Upload images"}
             </Button>
             <p className="mt-2 text-[11px] text-neutral-400">or drop images here</p>
-            <div className="mt-2 flex gap-1">
-              <button onClick={() => void importUrl()} disabled={!workspaceId} title="Import an image from a URL" className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-neutral-200 py-1.5 text-xs font-medium text-neutral-600 hover:border-brand-300 hover:text-brand-700 disabled:opacity-40">
-                <LinkIcon size={13} /> From URL
+            <div className="mt-2.5 grid grid-cols-3 gap-1.5">
+              <button onClick={() => void importUrl()} disabled={!workspaceId} title="Import an image from a URL" className="flex flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-none text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 disabled:opacity-40">
+                <LinkIcon size={15} /> <span className="whitespace-nowrap">From URL</span>
               </button>
-              <button onClick={() => svgRef.current?.click()} title="Import an SVG (e.g. a Canva SVG export) as editable elements" className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-neutral-200 py-1.5 text-xs font-medium text-neutral-600 hover:border-brand-300 hover:text-brand-700">
-                <Upload size={13} /> Import SVG
+              <button onClick={() => svgRef.current?.click()} title="Import an SVG (e.g. a Canva SVG export) as editable elements" className="flex flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-none text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700">
+                <Upload size={15} /> <span className="whitespace-nowrap">Import SVG</span>
               </button>
-              <button onClick={() => pdfRef.current?.click()} title="Import a PDF (e.g. a Canva PDF export) as editable pages (text)" className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-neutral-200 py-1.5 text-xs font-medium text-neutral-600 hover:border-brand-300 hover:text-brand-700">
-                <Upload size={13} /> Import PDF
+              <button onClick={() => pdfRef.current?.click()} title="Import a PDF (e.g. a Canva PDF export) as editable pages (text)" className="flex flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-none text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700">
+                <Upload size={15} /> <span className="whitespace-nowrap">Import PDF</span>
               </button>
             </div>
           </div>
@@ -1141,33 +1207,6 @@ function withBrandVoice(system: string, clause: string): string {
  * tone via transform(), combined with the brand-voice clause when active so the
  * tone shift still respects the brand. Labels stay short for the 2-col grid.
  */
-const TONE_PRESETS: { label: string; system: string }[] = [
-  { label: "Professional", system: "Rewrite the following text in a professional, polished tone." },
-  { label: "Friendly", system: "Rewrite the following text in a warm, friendly tone." },
-  { label: "Bold", system: "Rewrite the following text in a bold, confident tone." },
-  { label: "Playful", system: "Rewrite the following text in a playful, lighthearted tone." },
-  { label: "Concise", system: "Rewrite the following text to be as concise and punchy as possible." },
-  { label: "Persuasive", system: "Rewrite the following text in a persuasive, compelling tone." },
-];
-
-// --- AI image-edit helpers (F20) -----------------------------------------
-
-/** The single selected image node (with its resolved source URL), or null.
- *  Reads the live store state. */
-function selectedImageNode(): { id: string; url: string | null } | null {
-  const st = useEditor.getState();
-  if (st.selection.length !== 1) return null;
-  const loc = locate(st.doc, st.selection[0]);
-  if (!loc || loc.node.type !== "image") return null;
-  const n = loc.node as unknown as { source: { assetId: string } };
-  const ref = st.doc.assets.find((a) => a.id === n.source.assetId);
-  const url = ref?.url ? resolveAssetUrl(ref.url) : null;
-  return { id: st.selection[0], url };
-}
-
-/** Read a (CORS-clean) image URL to a base64 PNG data URL. Fetches the bytes and
- *  re-encodes via a canvas so the payload is always PNG. Throws a friendly error
- *  on CORS / decode failure (the caller surfaces it). */
 async function imageUrlToPngDataUrl(url: string): Promise<string> {
   const img = new Image();
   img.crossOrigin = "anonymous";
@@ -1191,122 +1230,502 @@ async function imageUrlToPngDataUrl(url: string): Promise<string> {
   }
 }
 
-type ExpandDir = "all" | "left" | "right" | "top" | "bottom";
-
-/**
- * Magic Expand mask builder. Loads the source image, then draws it onto a larger
- * canvas with transparent padding on the chosen side(s). The padded canvas IS
- * the mask the model paints into: the original pixels stay opaque, the new
- * transparent border is what gets generated. Returns the padded image as a PNG
- * data URL plus its dimensions (so the node box can grow to match). `amount` is
- * the fraction of the relevant dimension to add per padded side (0..1).
- */
-async function buildExpandedImage(
-  url: string,
-  dir: ExpandDir,
-  amount: number,
-): Promise<{ dataUrl: string; width: number; height: number }> {
-  const img = new Image();
-  img.crossOrigin = "anonymous";
-  await new Promise<void>((res, rej) => {
-    img.onload = () => res();
-    img.onerror = () => rej(new Error("Couldn't read this image (it may block cross-origin access)."));
-    img.src = url;
-  });
-  const sw = img.naturalWidth || 1;
-  const sh = img.naturalHeight || 1;
-  const padX = Math.round(sw * amount);
-  const padY = Math.round(sh * amount);
-  const left = dir === "all" || dir === "left" ? padX : 0;
-  const right = dir === "all" || dir === "right" ? padX : 0;
-  const top = dir === "all" || dir === "top" ? padY : 0;
-  const bottom = dir === "all" || dir === "bottom" ? padY : 0;
-  const width = sw + left + right;
-  const height = sh + top + bottom;
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas is unavailable in this browser.");
-  // Leave the canvas transparent; draw the original at the inset offset so the
-  // padded border stays transparent (the mask the model fills).
-  ctx.drawImage(img, left, top);
-  let dataUrl: string;
-  try {
-    dataUrl = canvas.toDataURL("image/png");
-  } catch {
-    throw new Error("This image can't be expanded because it's loaded cross-origin.");
+/** Extract a small dominant-color palette (hex) from an image URL for F39
+ *  reference-image style transfer (FR-18). Samples at ~128px for speed; returns
+ *  [] if the image can't be read (e.g. cross-origin). */
+async function pollJob<R>(jobId: string, tries = 12): Promise<R> {
+  for (let i = 0; i < tries; i++) {
+    const job = await oc.getJob<R>(jobId);
+    if (job.status === "completed") {
+      if (job.result === undefined) throw new Error("job completed without a result");
+      return job.result;
+    }
+    if (job.status === "failed") throw new Error(job.error || "generation failed");
+    await new Promise((r) => setTimeout(r, 400));
   }
-  return { dataUrl, width, height };
+  throw new Error("generation timed out");
 }
 
-// --- Magic Design (F22 FR-4) ----------------------------------------------
-// Reasons about intent and emits fully editable native nodes (no rasters). The
-// platform exposes only a free-text AI primitive (oc.aiText), so the model is
-// prompted to return STRICT JSON which we parse robustly on the client (strip
-// fences, validate shape, friendly error).
+// True only when the backend orchestration endpoint is genuinely absent (older
+// server / not deployed), so callers fall back to the client free-text path
+// ONLY then - and surface real provider/policy errors (403/502/...) instead of
+// masking them behind a silent retry.
+function endpointUnavailable(e: unknown): boolean {
+  return e instanceof ApiError && (e.status === 404 || e.status === 405 || e.status === 501);
+}
 
-// Flat target-size presets for Magic Design (reuses the Resize preset sizes).
-const DESIGN_SIZE_PRESETS: { label: string; w: number; h: number }[] = [
-  { label: "Instagram Post (1080×1080)", w: 1080, h: 1080 },
-  { label: "Instagram Story (1080×1920)", w: 1080, h: 1920 },
-  { label: "Facebook Post (1200×630)", w: 1200, h: 630 },
-  { label: "Presentation 16:9 (1920×1080)", w: 1920, h: 1080 },
-  { label: "Poster (1080×1350)", w: 1080, h: 1350 },
-  { label: "A4 Document (1240×1754)", w: 1240, h: 1754 },
+// FR-33: cache validated outlines by request signature so re-planning the same
+// brief (or regenerating around it) does not re-pay the model token cost. A
+// "force fresh" re-plan bypasses it. Module-level so it survives panel remounts.
+
+// --- Agentic assistant (F39 Phase 3) ---------------------------------------
+// A conversational surface that decomposes a request into a validated plan of
+// editor actions (the @hc/aistudio tool catalog) and executes them as ONE
+// undoable turn. Tools map onto existing store mutators + @/lib/assist analyzers
+// so every step is a normal, collaborative-safe edit (never raw scene JSON).
+
+const ASSISTANT_CATALOG = toolCatalog();
+
+// Design-creation is the primary intent: one-tap starters that prefill a brief
+// the user completes (the assistant routes these to generateDesign).
+const DESIGN_TYPES: { label: string; prompt: string }[] = [
+  { label: "Poster", prompt: "Create a professional poster about " },
+  { label: "Presentation", prompt: "Create a presentation deck about " },
+  { label: "Social post", prompt: "Create a social media post about " },
+  { label: "Document", prompt: "Create a document about " },
 ];
 
-// The Magic Design system prompt: instructs the model to return a strict JSON
-// design spec with a background and fraction-positioned elements. Kept here so
-// the contract lives next to the parser that validates it.
-function magicDesignSystem(brandClause: string): string {
-  return [
-    "You are an expert graphic designer. Given a design brief and a target canvas, produce one finished, well-balanced layout.",
-    "Output ONLY a single JSON object and nothing else: no prose, no explanation, no markdown, and no code fences.",
-    "Schema: { \"background\": { \"kind\": \"solid\"|\"gradient\", \"color\": \"#rrggbb\", \"color2\"?: \"#rrggbb\", \"angle\"?: number },",
-    "\"elements\": [ { \"kind\": \"heading\"|\"subheading\"|\"body\"|\"accent\", \"text\"?: string, \"color\"?: \"#rrggbb\", \"x\": number, \"y\": number, \"w\": number, \"h\": number, \"fontSize\"?: number } ] }.",
-    "EVERY x, y, w, h is a FRACTION of the page between 0 and 1 (x,y = top-left corner, w,h = size). Never output pixels or values above 1.",
-    "Write real, final copy tailored to the brief - never placeholders like 'Heading here'. Give exactly one heading, an optional subheading, 0-2 short body lines, and 0-3 accent rectangles (solid color blocks) that frame or balance the composition.",
-    "Layout: keep at least a 0.05 margin from every edge; do NOT overlap text elements; align them to a shared left edge or center; place the heading in the upper or central area; size each box so its text fits.",
-    "Color: choose an on-theme palette with strong, legible contrast between text and its background. Omit an element's color to let the app pick a readable one automatically. Keep the total under 10 elements.",
-    brandClause,
-  ].filter(Boolean).join(" ");
+// Secondary one-tap actions (edits on the current design), shown smaller.
+const ASSISTANT_SUGGESTIONS = [
+  "Write a punchy headline",
+  "Add a background image",
+  "Turn this into a bar chart",
+  "Critique this page",
+];
+
+// Contextual follow-ups offered right after a design is generated, so the user
+// can art-direct without retyping the brief.
+const DESIGN_FOLLOWUPS = ["Try another style", "Make it bolder", "Make it more minimal", "Add a matching image"];
+
+interface ChatTurn {
+  role: "user" | "assistant";
+  text: string;
+  steps?: { action: string; ok: boolean }[];
 }
 
-function MagicDesignPanel({ workspaceId, aiReady, voiceClause, brandPalette }: {
+// A generative step's pre-resolved result (text/image/outline), produced by the
+// async resolve pass and consumed by the synchronous apply pass so the whole
+// plan still collapses into one undo turn.
+type ResolvedPayload =
+  | { kind: "text"; text: string; targetId?: string }
+  | { kind: "image"; image: string; targetId?: string }
+  | { kind: "bgimage"; image: string }
+  | { kind: "outline"; outline: DesignOutline; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroImages: { pageIndex: number; url: string }[]; append: boolean };
+
+interface AssistantDeps {
+  workspaceId: string;
+  voiceClause: string;
+  brandPalette: string[];
+  brandFonts: { heading?: string; body?: string };
+  imageCapable: boolean;
+}
+
+// Outline roles that get a generated hero background image (the high-impact
+// pages). Content/agenda/data pages stay on clean themed backgrounds so dense
+// text never sits on a busy photo.
+const HERO_ROLES = new Set(["cover", "quote", "closing"]);
+const MAX_HERO_IMAGES = 6;
+
+/** Flatten a text node's runs into a plain string. */
+function textContentOf(node: unknown): string {
+  return ((node as { content?: { runs: { text: string }[] }[] }).content ?? [])
+    .map((p) => p.runs.map((r) => r.text).join("")).join("\n").trim();
+}
+
+/** Map a free-form design-type hint to a known DesignType (defaults to deck). */
+function normalizeDesignType(v: unknown): DesignType {
+  const s = String(v ?? "").toLowerCase();
+  if (/poster|flyer/.test(s)) return "poster";
+  if (/doc|document|report|article|paper/.test(s)) return "doc";
+  if (/social|post|instagram|story|reel|feed/.test(s)) return "social-set";
+  return "deck";
+}
+
+/** Resolve a design outline for generateDesign: prefer the server job (per-page
+ *  copy polish), fall back to the sync outline endpoint; real provider/policy
+ *  errors surface, a missing endpoint degrades to null. */
+async function fetchAssistantOutline(workspaceId: string, dt: DesignType, prompt: string, brandClause: string, pageCount?: number): Promise<DesignOutline | null> {
+  try {
+    const { jobId } = await oc.aiGenerateDesign({ workspaceId, designType: dt, prompt, brandClause, pageCount });
+    return normalizeOutline(await pollJob<unknown>(jobId));
+  } catch (e) {
+    // pollJob throws plain Errors on a failed / empty / timed-out job - real
+    // failures that must surface, not be silently re-run on the sync path. Only a
+    // genuinely missing endpoint degrades to the synchronous outline fallback.
+    if (!endpointUnavailable(e)) throw e;
+    try {
+      return normalizeOutline(await oc.aiOutline({ workspaceId, designType: dt, prompt, brandClause, pageCount }));
+    } catch (e2) {
+      if (e2 instanceof ApiError && !endpointUnavailable(e2)) throw e2;
+      return null;
+    }
+  }
+}
+
+// Async resolve pass for one plan step: performs any AI/network work BEFORE the
+// synchronous undo turn (mirrors the applyBrand brand-lint prefetch). Pure-sync
+// actions return {} and are applied directly by runPlanStep. A precondition that
+// can't be met (no selection, empty text) returns {error} so the step is skipped
+// with a reason; genuine provider/policy errors throw and surface to the caller.
+async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ payload?: ResolvedPayload; error?: string }> {
+  const a = step.args;
+  const st = useEditor.getState();
+  switch (step.action) {
+    case "writeText": {
+      const system = [
+        "You write copy that goes directly into a single design text box.",
+        "Return ONLY the final text, ready to display: no preamble, no explanation, no markdown, no surrounding quotes, and no list of alternatives - pick the single best option.",
+        "Match the length to the request: a headline or tagline is a few words; a label is 1-3 words; body copy is one to three short sentences.",
+        deps.voiceClause,
+      ].filter(Boolean).join(" ");
+      const { text } = await oc.aiText({ workspaceId: deps.workspaceId, prompt: String(a.prompt), system });
+      if (!text.trim()) return { error: "no text returned" };
+      const sel = st.selection[0];
+      const node = sel ? locate(st.doc, sel)?.node : null;
+      return { payload: { kind: "text", text: text.trim(), targetId: node?.type === "text" ? sel : undefined } };
+    }
+    case "rewriteSelectedText": {
+      const sel = st.selection[0];
+      const node = sel ? locate(st.doc, sel)?.node : null;
+      if (!node || node.type !== "text") return { error: "select a text box first" };
+      const current = textContentOf(node);
+      if (!current) return { error: "that text box is empty" };
+      const system = `${withBrandVoice(String(a.instruction), deps.voiceClause)} Return only the resulting text, with no preamble or quotes.`;
+      const { text } = await oc.aiText({ workspaceId: deps.workspaceId, prompt: current, system });
+      if (!text.trim()) return { error: "no text returned" };
+      return { payload: { kind: "text", text: text.trim(), targetId: sel } };
+    }
+    case "generateImage": {
+      if (!deps.imageCapable) return { error: "this provider can't generate images - connect an image-capable provider (e.g. OpenAI)" };
+      const logo = String(a.style ?? "").toLowerCase().includes("logo");
+      const prompt = logo
+        ? `A clean, modern, flat vector-style logo for: ${String(a.prompt)}. Centered, simple, bold shapes, solid background, no text or lettering unless explicitly requested.`
+        : groundImagePrompt(`${String(a.prompt)}. Well-composed, high detail, professional quality.`, { palette: deps.brandPalette, aspect: "square" });
+      const { image } = await oc.aiImage({ workspaceId: deps.workspaceId, prompt, size: "1024x1024" });
+      if (!image) return { error: "no image returned" };
+      return { payload: { kind: "image", image } };
+    }
+    case "generateBackgroundImage": {
+      if (!deps.imageCapable) return { error: "this provider can't generate images - connect an image-capable provider (e.g. OpenAI)" };
+      const prompt = groundImagePrompt(`${String(a.prompt)}. A full-bleed background image, subtle and uncluttered so text stays readable on top.`, { palette: deps.brandPalette, aspect: "landscape" });
+      const { image } = await oc.aiImage({ workspaceId: deps.workspaceId, prompt, size: "1792x1024" });
+      if (!image) return { error: "no image returned" };
+      return { payload: { kind: "bgimage", image } };
+    }
+    case "editSelectedImage": {
+      if (!deps.imageCapable) return { error: "this provider can't edit images - connect an image-capable provider (e.g. OpenAI)" };
+      const sel = st.selection[0];
+      const node = sel ? locate(st.doc, sel)?.node : null;
+      if (!node || node.type !== "image") return { error: "select an image first" };
+      // An ImageNode carries source.assetId; the actual URL lives on the asset table.
+      const assetId = (node as { source?: { assetId?: string } }).source?.assetId;
+      const ref = assetId ? st.doc.assets.find((aRef) => aRef.id === assetId) : undefined;
+      const url = ref?.url ? resolveAssetUrl(ref.url) : null;
+      if (!url) return { error: "that image has no source" };
+      const imageBase64 = await imageUrlToPngDataUrl(url);
+      const { image } = await oc.aiEditImage({ workspaceId: deps.workspaceId, imageBase64, prompt: String(a.instruction) });
+      if (!image) return { error: "no image returned" };
+      return { payload: { kind: "image", image, targetId: sel } };
+    }
+    case "generateDesign": {
+      const dt = normalizeDesignType(a.designType);
+      const page = st.doc.pages[st.activePage];
+      const size = { width: page?.width ?? 1280, height: page?.height ?? 720 };
+      const brandClause = [deps.voiceClause, deps.brandPalette.length ? `Use this brand palette: ${deps.brandPalette.join(", ")}.` : ""].filter(Boolean).join(" ").trim();
+      const pageCount = typeof a.pageCount === "number" ? a.pageCount : dt === "poster" ? 1 : undefined;
+      const append = String(a.mode ?? "").toLowerCase() === "append";
+      const outline = await fetchAssistantOutline(deps.workspaceId, dt, String(a.prompt), brandClause, pageCount);
+      if (!outline) return { error: "couldn't plan that design" };
+      // Generate a soft hero background image for the high-impact pages so the
+      // result ships WITH imagery (only when the provider supports images).
+      let heroImages: { pageIndex: number; url: string }[] = [];
+      if (deps.imageCapable) {
+        const aspect = size.width >= size.height * 1.2 ? "landscape" : size.height >= size.width * 1.2 ? "portrait" : "square";
+        const sizeStr = aspect === "landscape" ? "1792x1024" : aspect === "portrait" ? "1024x1792" : "1024x1024";
+        const targets = outline.pages
+          .map((p, i) => ({ p, i }))
+          .filter(({ p }) => HERO_ROLES.has(p.visualRole))
+          .slice(0, MAX_HERO_IMAGES);
+        const results = await Promise.all(
+          targets.map(async ({ p, i }) => {
+            try {
+              const prompt = groundImagePrompt(
+                `${outline.title}${p.title ? ` - ${p.title}` : ""}. ${outline.theme ?? ""}. A soft, uncluttered, low-contrast background with generous empty space so overlaid text stays readable. No text, no words, no logos in the image.`,
+                { palette: deps.brandPalette, aspect },
+              );
+              const { image } = await oc.aiImage({ workspaceId: deps.workspaceId, prompt, size: sizeStr });
+              return image ? { pageIndex: i, url: image } : null;
+            } catch {
+              return null;
+            }
+          }),
+        );
+        heroImages = results.filter((x): x is { pageIndex: number; url: string } => !!x);
+      }
+      return { payload: { kind: "outline", outline, size, brandPalette: deps.brandPalette, brandFonts: deps.brandFonts, heroImages, append } };
+    }
+    default:
+      return {};
+  }
+}
+
+// Execute one validated plan step against the editor store. Returns true if it
+// changed (or read) the document successfully. Runs inside runAsTurn so all
+// steps collapse into a single undo entry. Generative steps consume the payload
+// pre-resolved by resolvePlanStep.
+function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; payload?: ResolvedPayload }): boolean {
+  const st = useEditor.getState();
+  const a = step.args;
+  switch (step.action) {
+    case "addPage":
+      st.addPage();
+      return true;
+    case "applyBrand": {
+      // Brand-lint targets are fetched async by the caller (execute) and passed
+      // in, so this stays synchronous inside the one-undo turn.
+      const targets = ctx?.brandTargets ?? [];
+      if (!targets.length) return false;
+      return st.applyBrandFixes(targets) > 0;
+    }
+    case "duplicatePage":
+      st.duplicatePage();
+      return true;
+    case "setPageBackground": {
+      const c = fromHex(String(a.color));
+      if (!c) return false;
+      const c2 = a.color2 ? fromHex(String(a.color2)) : null;
+      if (c2) {
+        const angle = typeof a.angle === "number" ? a.angle : 135;
+        st.setPageBackground({ type: "gradient", gradient: "linear", angle, stops: [{ position: 0, color: c }, { position: 1, color: c2 }] } as Fill);
+      } else {
+        st.setPageBackground({ type: "solid", color: c });
+      }
+      return true;
+    }
+    case "setSelectedText": {
+      const ids = st.selection.filter((id) => locate(st.doc, id)?.node.type === "text");
+      if (!ids.length) return false;
+      ids.forEach((id) => st.setText(id, String(a.text)));
+      return true;
+    }
+    case "recolorSelection": {
+      const c = fromHex(String(a.color));
+      if (!c || !st.selection.length) return false;
+      st.selection.forEach((id) => st.setFills(id, [{ type: "solid", color: c }]));
+      return true;
+    }
+    case "harmonize": {
+      const p = harmonizeProposal(styleSamplesForPage(st.doc, st.activePage));
+      const changes = [...p.fonts, ...p.colors, ...p.radii];
+      return st.applyHarmonize(changes) > 0;
+    }
+    case "tidyLayout": {
+      const page = st.doc.pages[st.activePage];
+      const ids = (page?.children ?? []).map((n) => (n as { id: string }).id);
+      if (ids.length < 2) return false;
+      st.select(ids);
+      st.tidySelection();
+      return true;
+    }
+    case "animatePage":
+      st.magicAnimatePage();
+      return true;
+    case "insertChart": {
+      const series = (a.series as { name: string; values: number[] }[]) ?? [];
+      const categories = (a.categories as string[]) ?? [];
+      if (!series.length || !categories.length) return false;
+      const known = ["bar", "line", "area", "pie", "donut", "scatter", "radar"];
+      const chartType = (known.includes(String(a.chartType)) ? String(a.chartType) : "bar") as ChartType;
+      st.insertChartData({ chartType, categories, series });
+      return true;
+    }
+    case "resizePage":
+      st.setPageSize(Number(a.width), Number(a.height));
+      return true;
+    case "writeText": {
+      if (ctx?.payload?.kind !== "text") return false;
+      const { text, targetId } = ctx.payload;
+      if (targetId) { st.setText(targetId, text); return true; }
+      st.addNode("text", {
+        name: "AI text",
+        transform: { x: 300, y: 320, scaleX: 1, scaleY: 1, rotation: 0 },
+        size: { width: 480, height: 120 },
+        box: { mode: "fixed", width: 480, height: 120, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
+        content: [{ runs: [{ text, style: { fontFamily: "system", fontStyle: "Regular", fontSize: 28, axes: { wght: 400 }, fill: { type: "solid", color: { srgb: { r: 0.1, g: 0.12, b: 0.16, a: 1 } } } } }], style: { align: "left", direction: "auto" } }],
+      } as Partial<Node>);
+      return true;
+    }
+    case "rewriteSelectedText": {
+      if (ctx?.payload?.kind !== "text" || !ctx.payload.targetId) return false;
+      st.setText(ctx.payload.targetId, ctx.payload.text);
+      return true;
+    }
+    case "generateImage": {
+      if (ctx?.payload?.kind !== "image") return false;
+      placeImage(ctx.payload.image);
+      return true;
+    }
+    case "generateBackgroundImage": {
+      if (ctx?.payload?.kind !== "bgimage") return false;
+      st.addPageBackgroundImage(ctx.payload.image);
+      return true;
+    }
+    case "editSelectedImage": {
+      if (ctx?.payload?.kind !== "image" || !ctx.payload.targetId) return false;
+      st.setImageSource(ctx.payload.targetId, ctx.payload.image);
+      return true;
+    }
+    case "generateDesign": {
+      if (ctx?.payload?.kind !== "outline") return false;
+      const { outline, size, brandPalette, brandFonts, heroImages, append } = ctx.payload;
+      const clean: DesignOutline = { ...outline, pages: outline.pages.map((p) => ({ ...p, points: p.points.map((s) => s.trim()).filter(Boolean) })) };
+      const themes = deckThemes({ brandPalette, kicker: clean.title, count: 1, fontHeading: brandFonts.heading, fontBody: brandFonts.body });
+      const deck = layoutDeck(clean, themes[0], size);
+      const base = append ? st.doc.pages.length : 0;
+      const ids = append ? st.appendDeckPages(deck, size) : st.buildDeckFromOutline(deck, size);
+      if (!ids.length) return false;
+      // Drop a generated hero image behind the impact pages (full-bleed, at the
+      // back of the z-order). Applied here inside the one-undo turn.
+      for (const h of heroImages) {
+        st.setActivePage(base + h.pageIndex);
+        st.addPageBackgroundImage(h.url);
+      }
+      st.setActivePage(base); // land on the first new page
+      return true;
+    }
+    case "critique":
+      return true; // read-only; handled by the caller for messaging
+    default:
+      return false;
+  }
+}
+
+function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brandFonts, imageCapable }: {
   workspaceId: string | null;
   aiReady: boolean;
   voiceClause: string;
   brandPalette: string[];
+  brandFonts: { heading?: string; body?: string };
+  imageCapable: boolean;
 }) {
   const toast = useToast();
-  const buildMagicDesign = useEditor((s) => s.buildMagicDesign);
-  const [prompt, setPrompt] = useState("");
-  const [sizeKey, setSizeKey] = useState(DESIGN_SIZE_PRESETS[0].label);
+  const runAsTurn = useEditor((s) => s.runAsTurn);
+  const undo = useEditor((s) => s.undo);
+  const designId = useComments((s) => s.designId); // current design (for persisted history)
+  const [input, setInput] = useState("");
+  const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [busy, setBusy] = useState(false);
+  // FR-8: a plan awaiting confirmation before it mutates the document.
+  const [pending, setPending] = useState<{ plan: PlanStep[]; reply: string } | null>(null);
+  // FR-9/FR-27: persisted session id for this design (created lazily).
+  const sessionRef = useRef<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
-  async function run() {
-    if (!workspaceId || !prompt.trim() || !aiReady) return;
-    const preset = DESIGN_SIZE_PRESETS.find((p) => p.label === sizeKey) ?? DESIGN_SIZE_PRESETS[0];
+  // Restore the most recent persisted session's turns on mount/design change so
+  // the conversation survives reloads (FR-9).
+  useEffect(() => {
+    sessionRef.current = null;
+    if (!designId) return;
+    let cancelled = false;
+    void (async () => {
+      let restored: ChatTurn[] = [];
+      try {
+        const { sessions } = await oc.listAiSessions(designId);
+        if (sessions.length) {
+          const latest = sessions[0];
+          const { turns: persisted } = await oc.listAiTurns(designId, latest.id);
+          if (!cancelled) {
+            sessionRef.current = latest.id;
+            restored = persisted.map((t) => ({ role: t.role, text: t.text }));
+          }
+        }
+      } catch {
+        // history is best-effort; a fresh chat is fine
+      }
+      if (!cancelled) setTurns(restored); // setState after await: allowed by the lint rule
+    })();
+    return () => { cancelled = true; };
+  }, [designId]);
+
+  // Lazily create (and cache) a session, then append a turn. Best-effort: a
+  // persistence failure never blocks the chat.
+  async function ensureSession(): Promise<string | null> {
+    if (!designId) return null;
+    if (sessionRef.current) return sessionRef.current;
+    try {
+      const s = await oc.createAiSession(designId);
+      sessionRef.current = s.id;
+      return s.id;
+    } catch {
+      return null;
+    }
+  }
+  async function persistTurn(role: "user" | "assistant", text: string, plan?: unknown) {
+    if (!designId) return;
+    const sid = await ensureSession();
+    if (!sid) return;
+    try {
+      await oc.appendAiTurn(designId, sid, { role, text, plan, provenance: { feature: "assistant", at: new Date().toISOString() } });
+    } catch {
+      // best-effort
+    }
+  }
+
+  // Execute a validated plan as ONE undo turn, then report per-step status.
+  async function execute(plan: PlanStep[], reply: string) {
+    if (!workspaceId) return;
     setBusy(true);
     try {
-      // Ground the prompt with the target size and (when present) the brand
-      // palette + voice so output is on-brand (FR-4).
-      const brandClause = brandPalette.length
-        ? `Prefer this brand palette where it fits: ${brandPalette.join(", ")}. ${voiceClause}`
-        : voiceClause;
-      const system = magicDesignSystem(brandClause);
-      const userPrompt = `Design brief: ${prompt.trim()}\nTarget canvas: ${preset.w}x${preset.h} px (aspect ${(preset.w / preset.h).toFixed(2)}).`;
-      const { text } = await oc.aiText({ workspaceId, prompt: userPrompt, system });
-      let spec: MagicDesignSpec;
-      try {
-        spec = normalizeMagicDesign(parseModelJson(text));
-      } catch (e) {
-        toast.error(e instanceof MagicParseError ? e.message : "Couldn't read the AI's design. Try again.");
-        return;
+      // Resolve every async prerequisite BEFORE the synchronous undo turn so the
+      // whole plan still collapses into one undo entry: applyBrand needs brand-lint
+      // fix targets (FR-7/FR-16), and the generative tools (writeText, generateImage,
+      // generateDesign, ...) need their AI results pre-fetched.
+      let brandTargets: BrandFixTarget[] = [];
+      if (plan.some((s) => s.action === "applyBrand") && designId) {
+        try {
+          const violations = await oc.brandLint(designId);
+          brandTargets = violations
+            .filter((v: BrandLintViolation) => v.fix && v.nodeId && v.fix.kind !== "restore_logo")
+            .map((v: BrandLintViolation) => ({ nodeId: v.nodeId!, fix: v.fix! }));
+        } catch {
+          // best-effort; the applyBrand step will simply report nothing to fix
+        }
       }
-      const ids = buildMagicDesign(spec, { width: preset.w, height: preset.h });
-      toast.success(`Generated a design with ${ids.length} element${ids.length === 1 ? "" : "s"}.`);
+      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable };
+      const payloads: (ResolvedPayload | undefined)[] = [];
+      const skips: (string | undefined)[] = [];
+      for (let i = 0; i < plan.length; i++) {
+        const r = await resolvePlanStep(plan[i], deps);
+        payloads[i] = r.payload;
+        skips[i] = r.error;
+      }
+
+      const results: { action: string; ok: boolean }[] = [];
+      runAsTurn(() => {
+        plan.forEach((step, i) => {
+          if (skips[i]) { results.push({ action: step.action, ok: false }); return; }
+          let ok = false;
+          try {
+            ok = runPlanStep(step, { brandTargets, payload: payloads[i] });
+          } catch {
+            ok = false;
+          }
+          results.push({ action: step.action, ok });
+        });
+      });
+      // FR-31: auto-describe AI-placed images for accessibility (best-effort,
+      // post-turn so it doesn't add to the one-undo apply; the just-placed image
+      // is the current selection). Only the single-image tools - generateDesign's
+      // hero backgrounds never carried alt text.
+      if (results.some((r, i) => r.ok && (plan[i].action === "generateImage" || plan[i].action === "generateBackgroundImage"))) {
+        void generateAltText(workspaceId).catch(() => {});
+      }
+      // A planned critique step is read-only; surface its actual findings instead
+      // of just a "done" chip.
+      let extra = "";
+      if (plan.some((s) => s.action === "critique")) {
+        const st = useEditor.getState();
+        const issues = critiquePage(st.doc, st.activePage);
+        extra = issues.length ? ` Critique: ${issues.slice(0, 4).map((i) => i.message).join("; ")}${issues.length > 4 ? "…" : ""}` : " Critique: this page looks clean.";
+      }
+      const skipNote = skips.find(Boolean);
+      const done = results.filter((r) => r.ok).length;
+      const text = (reply || "Done.") + extra + (done === 0 && skipNote ? ` (${skipNote})` : "");
+      setTurns((t) => [...t, { role: "assistant", text, steps: results }]);
+      void persistTurn("assistant", text, plan);
+      if (done) toast.success(`Applied ${done} step${done === 1 ? "" : "s"} (one undo reverts the turn).`);
+      else if (!extra) toast.error(skipNote ? `Nothing applied: ${skipNote}.` : "Nothing was applied. Try selecting an element or rephrasing.");
     } catch (e) {
       toast.error(aiErr(e));
     } finally {
@@ -1314,23 +1733,229 @@ function MagicDesignPanel({ workspaceId, aiReady, voiceClause, brandPalette }: {
     }
   }
 
+  async function send(textArg?: string) {
+    const userText = (textArg ?? input).trim();
+    if (!workspaceId || !userText || !aiReady || busy) return;
+    if (!textArg) setInput("");
+    setPending(null);
+    setTurns((t) => [...t, { role: "user", text: userText }]);
+    void persistTurn("user", userText);
+    setBusy(true);
+    try {
+      const st = useEditor.getState();
+      const summaryDoc = {
+        title: st.doc.title,
+        pages: st.doc.pages.map((p) => ({
+          name: p.name,
+          width: p.width,
+          height: p.height,
+          children: (p.children ?? []).map((n) => ({ type: (n as { type: string }).type, name: (n as { name?: string }).name })),
+        })),
+      };
+      const summary = summarizeDesign(summaryDoc, st.activePage, st.selection.length);
+      // Compact history: the last few turns keep refinement context (FR-9).
+      const history = turns.slice(-6).map((t) => `${t.role}: ${t.text}`).join("\n");
+
+      // Prefer the backend orchestrator (server-side validation/retry, FR-12);
+      // fall back to the free-text path. Either way the client re-validates arg
+      // types via parseAssistantReply before anything executes.
+      let res;
+      try {
+        const r = await oc.aiAssistant({ workspaceId, designSummary: summary, history, message: userText });
+        res = parseAssistantReply(r, ASSISTANT_CATALOG);
+      } catch (e) {
+        if (e instanceof ApiError && !endpointUnavailable(e)) throw e; // surface provider/policy errors
+        try {
+          const system = assistantSystemPrompt(ASSISTANT_CATALOG, summary);
+          const { text } = await oc.aiText({ workspaceId, prompt: history ? `${history}\nuser: ${userText}` : userText, system });
+          res = parseAssistantReply(parseModelJson(text), ASSISTANT_CATALOG);
+        } catch (e2) {
+          if (e2 instanceof ApiError) throw e2; // a provider/policy error surfaces via the outer catch
+          setTurns((t) => [...t, { role: "assistant", text: "Sorry, I couldn't understand that. Try rephrasing." }]);
+          return;
+        }
+      }
+
+      if (res.clarify) {
+        setTurns((t) => [...t, { role: "assistant", text: res.clarify! }]);
+        void persistTurn("assistant", res.clarify);
+        return;
+      }
+      if (!res.plan.length) {
+        // A read-only critique request: surface the page critique.
+        if (/\b(critique|review|feedback|improve|issues?)\b/i.test(userText)) {
+          const issues = critiquePage(st.doc, st.activePage);
+          const msg = issues.length ? `${issues.length} issue${issues.length === 1 ? "" : "s"}: ${issues.slice(0, 4).map((i) => i.message).join("; ")}${issues.length > 4 ? "…" : ""}` : "No issues found - this page looks clean.";
+          setTurns((t) => [...t, { role: "assistant", text: msg }]);
+          void persistTurn("assistant", msg);
+          return;
+        }
+        const reply = res.reply || "I couldn't map that to an action.";
+        setTurns((t) => [...t, { role: "assistant", text: reply }]);
+        void persistTurn("assistant", reply);
+        return;
+      }
+
+      // FR-8: a large/destructive plan is previewed and confirmed before it runs;
+      // a single small edit applies immediately. Confirm when the plan is multi-step
+      // and mutating, OR contains a heavy whole-design action (generateDesign
+      // replaces every page).
+      const heavy = res.plan.some((s) => s.action === "generateDesign");
+      if (heavy || (res.plan.length >= 2 && planMutates(res.plan, ASSISTANT_CATALOG))) {
+        setPending({ plan: res.plan, reply: res.reply });
+        setTurns((t) => [...t, { role: "assistant", text: res.reply || "Here's my plan - confirm to apply.", steps: res.plan.map((s) => ({ action: s.action, ok: true })) }]);
+        return;
+      }
+      await execute(res.plan, res.reply);
+    } catch (e) {
+      toast.error(aiErr(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Keep the latest message in view as the thread grows / while thinking.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [turns, busy, pending]);
+
+  // Grow the composer with its content, like a chat app (capped).
+  function autosize(el: HTMLTextAreaElement) {
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
+  }
+  function startNewChat() {
+    setTurns([]);
+    setPending(null);
+    setInput("");
+    sessionRef.current = null; // a fresh session is created on the next send
+  }
+  function startFromType(prompt: string) {
+    setInput(prompt);
+    const el = inputRef.current;
+    if (el) { el.focus(); el.setSelectionRange(prompt.length, prompt.length); }
+  }
+  const canSend = !!input.trim() && !busy && aiReady;
+  const hasApplied = turns.some((t) => t.steps?.some((s) => s.ok));
+  // Show art-direction follow-ups right after a design was generated.
+  const lastTurn = turns[turns.length - 1];
+  const lastWasDesign = lastTurn?.role === "assistant" && !!lastTurn.steps?.some((s) => s.action === "generateDesign" && s.ok);
+  const AssistantAvatar = (
+    <div className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-100 text-brand-700"><Sparkles size={13} /></div>
+  );
+
   return (
-    <div className="flex flex-col gap-2">
-      <p className="text-[11px] text-neutral-400">Auto-design an entire page from your prompt. Replaces the current page (undoable).</p>
-      <textarea
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        rows={3}
-        placeholder="e.g. a bold sale poster for a coffee shop"
-        className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
-      />
-      <select value={sizeKey} onChange={(e) => setSizeKey(e.target.value)} className="rounded border border-neutral-300 px-2 py-1.5 text-xs">
-        {DESIGN_SIZE_PRESETS.map((p) => <option key={p.label} value={p.label}>{p.label}</option>)}
-      </select>
-      <Button block onClick={() => void run()} disabled={busy || !prompt.trim() || !aiReady}>
-        <Wand2 size={15} /> {busy ? "Designing…" : "Generate design"}
-      </Button>
-      {brandPalette.length > 0 && <p className="text-[10px] text-neutral-400">Using your brand palette.</p>}
+    <div className="flex min-h-0 flex-1 flex-col">
+      {/* Thread toolbar: undo the last applied turn + start a new chat. */}
+      {turns.length > 0 && (
+        <div className="flex shrink-0 items-center justify-between pb-1.5">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Assistant</span>
+          <div className="flex items-center gap-1">
+            {hasApplied && (
+              <button onClick={() => { undo(); toast.success("Reverted last turn."); }} disabled={busy} title="Undo the last applied turn" className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 disabled:opacity-40"><RotateCcw size={12} /> Undo</button>
+            )}
+            <button onClick={startNewChat} disabled={busy} title="Start a new chat" className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 disabled:opacity-40"><Plus size={12} /> New</button>
+          </div>
+        </div>
+      )}
+
+      {/* Message thread (the only scrolling region). */}
+      <div ref={scrollRef} className="oc-scroll -mx-1 flex-1 space-y-3 overflow-y-auto px-1 py-1">
+        {turns.length === 0 ? (
+          <div className="flex h-full flex-col items-center justify-center gap-4 px-2 text-center">
+            <div className="grid h-11 w-11 place-items-center rounded-full bg-brand-600 text-white shadow-sm"><Sparkles size={20} /></div>
+            <div>
+              <p className="text-sm font-semibold text-neutral-800">Create a design with AI</p>
+              <p className="mx-auto mt-1 max-w-[16rem] text-xs text-neutral-500">Describe what you want and I&apos;ll design it, or pick a type to start.</p>
+            </div>
+            {/* Primary: design-creation starters. */}
+            <div className="grid w-full max-w-[16rem] grid-cols-2 gap-1.5">
+              {DESIGN_TYPES.map((t) => (
+                <button key={t.label} onClick={() => startFromType(t.prompt)} disabled={!aiReady} className="rounded-lg border border-neutral-200 bg-white px-2 py-2 text-xs font-medium text-neutral-700 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 disabled:opacity-50">{t.label}</button>
+              ))}
+            </div>
+            {/* Secondary: quick edits on the current design. */}
+            <div className="flex flex-wrap justify-center gap-1.5">
+              {ASSISTANT_SUGGESTIONS.map((s) => (
+                <button key={s} onClick={() => { setInput(s); inputRef.current?.focus(); }} disabled={!aiReady} className="rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[11px] text-neutral-500 hover:border-brand-300 hover:text-brand-700 disabled:opacity-50">{s}</button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          turns.map((t, i) =>
+            t.role === "user" ? (
+              <div key={i} className="flex justify-end">
+                <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-brand-600 px-3 py-2 text-sm text-white">{t.text}</div>
+              </div>
+            ) : (
+              <div key={i} className="flex items-start gap-2">
+                {AssistantAvatar}
+                <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-neutral-100 px-3 py-2 text-sm text-neutral-800">
+                  <span className="whitespace-pre-wrap">{t.text}</span>
+                  {t.steps && t.steps.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {t.steps.map((s, j) => (
+                        <span key={j} className={`rounded px-1.5 py-0.5 text-[10px] ${s.ok ? "bg-emerald-100 text-emerald-700" : "bg-neutral-200 text-neutral-500 line-through"}`}>{s.action}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ),
+          )
+        )}
+        {busy && (
+          <div className="flex items-start gap-2">
+            {AssistantAvatar}
+            <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-neutral-100 px-3 py-2.5">
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400 [animation-delay:-0.3s]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400 [animation-delay:-0.15s]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400" />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* FR-8: confirm a large/destructive plan before it mutates the document. */}
+      {pending && (
+        <div className="mt-2 flex shrink-0 items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-800">
+          <span>Apply {pending.plan.length} step{pending.plan.length === 1 ? "" : "s"}?</span>
+          <span className="flex gap-1">
+            <button onClick={() => { const p = pending; setPending(null); void execute(p.plan, p.reply); }} className="rounded bg-amber-600 px-2 py-0.5 font-medium text-white hover:bg-amber-700">Confirm</button>
+            <button onClick={() => { setPending(null); setTurns((t) => [...t, { role: "assistant", text: "Cancelled." }]); }} className="rounded border border-amber-300 px-2 py-0.5 hover:bg-amber-100">Cancel</button>
+          </span>
+        </div>
+      )}
+
+      {/* Art-direction follow-ups, shown right after a design was generated. */}
+      {lastWasDesign && !pending && !busy && (
+        <div className="mt-2 flex shrink-0 flex-wrap gap-1.5">
+          {DESIGN_FOLLOWUPS.map((f) => (
+            <button key={f} onClick={() => void send(f)} className="rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[11px] text-neutral-600 hover:border-brand-300 hover:text-brand-700">{f}</button>
+          ))}
+        </div>
+      )}
+
+      {/* Composer, pinned to the bottom. */}
+      <div className="mt-2 shrink-0">
+        <div className="flex items-end gap-1.5 rounded-2xl border border-neutral-300 bg-white px-2 py-1.5 focus-within:border-brand-400">
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={(e) => { setInput(e.target.value); autosize(e.currentTarget); }}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send(); } }}
+            rows={1}
+            placeholder="Ask anything…"
+            disabled={!aiReady}
+            className="max-h-[140px] flex-1 resize-none bg-transparent py-1 text-sm outline-none placeholder:text-neutral-400 disabled:opacity-50"
+          />
+          <button onClick={() => void send()} disabled={!canSend} title="Send (Enter)" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-600 text-white transition hover:bg-brand-700 disabled:opacity-40">
+            <Send size={15} />
+          </button>
+        </div>
+        <p className="mt-1 px-1 text-[10px] text-neutral-400">Enter to send · Shift+Enter for a new line</p>
+      </div>
     </div>
   );
 }
@@ -1616,11 +2241,18 @@ export function PolishPanel() {
   );
 }
 
+// Default model per built-in provider, shown as a placeholder hint so the user
+// knows what runs when the model field is left blank. The server registry is
+// the source of truth; this only mirrors it for the UI hint.
+const DEFAULT_MODEL_HINT: Record<string, string> = {
+  openai: "gpt-4o-mini",
+  anthropic: "claude-opus-4-8",
+  deepseek: "deepseek-chat",
+};
+
 export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
   const toast = useToast();
-  const addNode = useEditor((s) => s.addNode);
-  // Re-render when selection (or the doc) changes so the image-edit UI shows/hides.
-  const selection = useEditor((s) => s.selection);
+  // Re-render when the doc changes so the brand-voice indicator stays current.
   useEditor((s) => s.rev);
   // The active design's brand voice, already loaded by EditorApp via
   // useBrand.setDesign, so reading it here needs no extra fetch (FR-7).
@@ -1635,32 +2267,26 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
     () => (palettes ?? []).flatMap((p) => p.colors.map((c) => toHex(c.value))),
     [palettes],
   );
+  // Brand fonts by role, passed to studio generation so decks use the brand
+  // type, not the system default (F39 FR-17).
+  const brandFontList = useBrand((s) => s.kit?.fonts ?? null);
+  const brandFonts = useMemo<{ heading?: string; body?: string }>(() => {
+    const fonts = brandFontList ?? [];
+    const byRole = (m: string) => fonts.find((f) => f.role?.toLowerCase().includes(m))?.fontFamily;
+    const heading = byRole("head") ?? byRole("title") ?? fonts[0]?.fontFamily;
+    const body = byRole("body") ?? byRole("text") ?? byRole("para") ?? fonts[fonts.length - 1]?.fontFamily;
+    return { heading, body };
+  }, [brandFontList]);
   // Let the user bypass brand-voice grounding for the very next action.
   const [ignoreVoice, setIgnoreVoice] = useState(false);
   const voiceClause = !ignoreVoice ? brandVoiceClause(brandVoice) : "";
   const [config, setConfig] = useState<AiConfigView | null>(null);
   const [loading, setLoading] = useState(true);
   const [showConfig, setShowConfig] = useState(false);
-  const [prompt, setPrompt] = useState("");
-  const [busy, setBusy] = useState<"text" | "image" | "edit" | "expand" | "alt" | null>(null);
   const [provider, setProvider] = useState("openai");
   const [model, setModel] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [imgSize, setImgSize] = useState("1024x1024");
-  const [logoMode, setLogoMode] = useState(false);
-  // Image-edit state (shown when a single image node is selected).
-  const [editPrompt, setEditPrompt] = useState("");
-  const [expandDir, setExpandDir] = useState<ExpandDir>("all");
-  const [variants, setVariants] = useState<string[]>([]); // Magic Write alternatives (F21 FR)
-  const [expandPct, setExpandPct] = useState(25);
-
-  const imageNode = selection.length === 1 ? selectedImageNode() : null;
-  // Whether a single text box is selected, so the "Edit selected text" tools can
-  // show a hint instead of silently no-op-ing. `rev` is already subscribed, so
-  // reading the live doc here stays current.
-  const textSelected =
-    selection.length === 1 && locate(useEditor.getState().doc, selection[0])?.node.type === "text";
 
   useEffect(() => {
     if (!workspaceId) return;
@@ -1679,7 +2305,10 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
   async function saveConfig() {
     if (!workspaceId) return;
     try {
-      const c = await oc.setAiConfig(workspaceId, { provider, model: model || undefined, baseUrl: baseUrl || undefined, apiKey: apiKey || undefined });
+      // Only a custom endpoint carries a user-supplied base URL; built-in
+      // providers route via the server-side registry, so never persist a stale
+      // base URL left over from a prior "custom" selection.
+      const c = await oc.setAiConfig(workspaceId, { provider, model: model || undefined, baseUrl: provider === "custom" ? (baseUrl || undefined) : undefined, apiKey: apiKey || undefined });
       setConfig(c);
       setApiKey("");
       setShowConfig(false);
@@ -1689,193 +2318,15 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
     }
   }
 
-  async function write() {
-    if (!workspaceId || !prompt.trim()) return;
-    setBusy("text");
-    try {
-      // Constrain the model to clean, display-ready copy: no chat preamble,
-      // markdown, quotes, or lists - that text goes straight into a text box.
-      const system = [
-        "You write copy that goes directly into a single design text box.",
-        "Return ONLY the final text, ready to display: no preamble, no explanation, no markdown, no surrounding quotes, and no list of alternatives - pick the single best option.",
-        "Match the length to the request: a headline or tagline is a few words; a label is 1-3 words; body copy is one to three short sentences.",
-        voiceClause,
-      ].filter(Boolean).join(" ");
-      const { text } = await oc.aiText({ workspaceId, prompt, system });
-      const ed = useEditor.getState();
-      const sel = ed.selection[0];
-      const node = sel ? locate(ed.doc, sel)?.node : null;
-      if (node?.type === "text") {
-        ed.setText(sel, text);
-      } else {
-        addNode("text", {
-          name: "AI text",
-          transform: { x: 300, y: 320, scaleX: 1, scaleY: 1, rotation: 0 },
-          size: { width: 480, height: 120 },
-          box: { mode: "fixed", width: 480, height: 120, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
-          content: [{ runs: [{ text, style: { fontFamily: "system", fontStyle: "Regular", fontSize: 28, axes: { wght: 400 }, fill: { type: "solid", color: { srgb: { r: 0.1, g: 0.12, b: 0.16, a: 1 } } } } }], style: { align: "left", direction: "auto" } }],
-        } as Partial<Node>);
-      }
-      toast.success("Text generated.");
-    } catch (e) {
-      toast.error(aiErr(e));
-    } finally {
-      setBusy(null);
-      setIgnoreVoice(false); // one-shot bypass resets after the action
-    }
-  }
-
-  async function generate() {
-    if (!workspaceId || !prompt.trim()) return;
-    setBusy("image");
-    try {
-      // Logo mode wraps the prompt in a logo-oriented template; otherwise the
-      // prompt is sent verbatim. Both go through the existing text-to-image.
-      const finalPrompt = logoMode
-        ? `A clean, modern, flat vector-style logo for: ${prompt.trim()}. Centered, simple, bold shapes, solid background, no text or lettering unless explicitly requested.`
-        : `${prompt.trim()}. Well-composed, high detail, professional quality.`;
-      const { image } = await oc.aiImage({ workspaceId, prompt: finalPrompt, size: imgSize });
-      if (image) { placeImage(image); toast.success(logoMode ? "Logo added." : "Image added."); }
-      else toast.error("No image returned.");
-    } catch (e) {
-      toast.error(aiErr(e));
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  // Edit the selected image node by prompt: send its current bytes + the edit
-  // prompt, then replace the source with the result (undoable via setImageSource).
-  async function editImagePrompt() {
-    if (!workspaceId || !imageNode || !editPrompt.trim()) return;
-    if (!imageNode.url) { toast.error("This image has no source to edit."); return; }
-    setBusy("edit");
-    try {
-      const imageBase64 = await imageUrlToPngDataUrl(imageNode.url);
-      const { image } = await oc.aiEditImage({ workspaceId, imageBase64, prompt: editPrompt.trim() });
-      if (!image) { toast.error("No image returned."); return; }
-      useEditor.getState().setImageSource(imageNode.id, image);
-      toast.success("Image edited.");
-    } catch (e) {
-      toast.error(aiErr(e));
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  // Magic Expand (outpaint): pad the image onto a larger transparent canvas (the
-  // transparent border is the mask), send image + that padded image as the mask,
-  // then replace the source AND grow the node to the new aspect in one undo step.
-  async function magicExpand() {
-    if (!workspaceId || !imageNode) return;
-    if (!imageNode.url) { toast.error("This image has no source to expand."); return; }
-    setBusy("expand");
-    try {
-      const amount = Math.min(0.9, Math.max(0.05, expandPct / 100));
-      const imageBase64 = await imageUrlToPngDataUrl(imageNode.url);
-      const padded = await buildExpandedImage(imageNode.url, expandDir, amount);
-      const { image } = await oc.aiEditImage({
-        workspaceId,
-        imageBase64,
-        maskBase64: padded.dataUrl,
-        prompt: editPrompt.trim() || "extend the image naturally",
-      });
-      if (!image) { toast.error("No image returned."); return; }
-      useEditor.getState().outpaintImage(imageNode.id, image, padded.width, padded.height);
-      toast.success("Image expanded.");
-    } catch (e) {
-      toast.error(aiErr(e));
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  // AI alt text (F22 FR-12): describe the selected image and write the result to
-  // its accessibility `alt` field (one undo step via setImageAlt).
-  async function altTextSelected() {
-    if (!workspaceId) return;
-    setBusy("alt");
-    try {
-      const ok = await generateAltText(workspaceId);
-      if (ok) toast.success("Alt text written.");
-      else toast.error("Select a single image first.");
-    } catch (e) {
-      toast.error(aiErr(e));
-    } finally {
-      setBusy(null);
-    }
-  }
-  // Bulk: describe every image in the design and write each node's alt field.
-
-  // Magic Write variants: rewrite the SELECTED text node with an instruction.
-  async function transform(label: string, system: string) {
-    if (!workspaceId) return;
-    const ed = useEditor.getState();
-    const sel = ed.selection[0];
-    const node = sel ? locate(ed.doc, sel)?.node : null;
-    if (!node || node.type !== "text") { toast.error("Select a text box first."); return; }
-    const current = (node as unknown as { content: { runs: { text: string }[] }[] }).content
-      .map((p) => p.runs.map((r) => r.text).join("")).join("\n").trim();
-    if (!current) { toast.error("That text box is empty."); return; }
-    setBusy("text");
-    try {
-      const grounded = withBrandVoice(system, voiceClause);
-      const { text } = await oc.aiText({ workspaceId, prompt: current, system: `${grounded} Return only the resulting text, with no preamble or quotes.` });
-      ed.setText(sel, text);
-      toast.success(`${label} done.`);
-    } catch (e) {
-      toast.error(aiErr(e));
-    } finally {
-      setBusy(null);
-      setIgnoreVoice(false); // one-shot bypass resets after the action
-    }
-  }
-  async function translate() {
-    const lang = await promptText({ title: "Translate text", label: "Translate to (language)", placeholder: "e.g. Spanish", confirmText: "Translate" });
-    if (!lang) return;
-    await transform("Translate", `Translate the following text to ${lang}.`);
-  }
-  // Multi-variant (F21 FR): generate several distinct rewrites of the selected
-  // text and let the user pick one. Each variant is an independent grounded call.
-  async function makeVariants() {
-    if (!workspaceId) return;
-    const ed = useEditor.getState();
-    const sel = ed.selection[0];
-    const node = sel ? locate(ed.doc, sel)?.node : null;
-    if (!node || node.type !== "text") { toast.error("Select a text box first."); return; }
-    const current = (node as unknown as { content: { runs: { text: string }[] }[] }).content
-      .map((p) => p.runs.map((r) => r.text).join("")).join("\n").trim();
-    if (!current) { toast.error("That text box is empty."); return; }
-    setBusy("text");
-    setVariants([]);
-    try {
-      const grounded = withBrandVoice("Rewrite the text as a fresh alternative that keeps the same meaning.", voiceClause);
-      const results = await Promise.all(
-        Array.from({ length: 3 }, (_, i) =>
-          oc.aiText({ workspaceId, prompt: current, system: `${grounded} This is variation ${i + 1} of 3; make it clearly distinct from the others. Return only the text, no preamble or quotes.` })
-            .then((r) => r.text.trim())
-            .catch(() => ""),
-        ),
-      );
-      const opts = Array.from(new Set(results.filter(Boolean)));
-      if (!opts.length) { toast.error("Couldn't generate variants."); return; }
-      setVariants(opts);
-    } catch (e) {
-      toast.error(aiErr(e));
-    } finally {
-      setBusy(null);
-      setIgnoreVoice(false);
-    }
-  }
-  function applyVariant(text: string) {
-    const ed = useEditor.getState();
-    const sel = ed.selection[0];
-    if (sel) { ed.setText(sel, text); toast.success("Applied"); }
-    setVariants([]);
-  }
+  // The chat view fills the panel height (input pinned, messages scroll); the
+  // setup/connect view scrolls normally.
+  const chatView = !!workspaceId && !loading && !showConfig && !!config?.hasKey;
+  // Whether the configured provider can generate images (gates AI imagery in
+  // generated designs). DeepSeek/Anthropic are text-only; OpenAI/custom can.
+  const imageCapable = !!config?.capabilities?.image;
 
   return (
-    <PanelShell title="AI">
+    <PanelShell title="AI" fill={chatView}>
       {!workspaceId ? (
         <p className="mt-4 text-center text-xs text-neutral-400">Open a saved design to use AI.</p>
       ) : loading ? (
@@ -1895,9 +2346,10 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
               <select value={provider} onChange={(e) => setProvider(e.target.value)} className="rounded border border-neutral-300 px-2 py-1.5 text-sm">
                 <option value="openai">OpenAI (or compatible)</option>
                 <option value="anthropic">Anthropic</option>
+                <option value="deepseek">DeepSeek</option>
                 <option value="custom">Custom endpoint</option>
               </select>
-              <input value={model} onChange={(e) => setModel(e.target.value)} placeholder="Model (optional)" className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
+              <input value={model} onChange={(e) => setModel(e.target.value)} placeholder={DEFAULT_MODEL_HINT[provider] ? `Model (optional, default ${DEFAULT_MODEL_HINT[provider]})` : "Model (optional)"} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
               {provider === "custom" && (
                 <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="Base URL (https://…/v1)" className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
               )}
@@ -1914,135 +2366,45 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
           </CollapsibleSection>
         </div>
       ) : (
-        <div className="flex flex-col gap-2.5">
+        <div className="flex min-h-0 flex-1 flex-col gap-2">
           {/* Provider status bar with quick access to settings. */}
-          <div className="flex items-center justify-between rounded-lg bg-neutral-50 px-2.5 py-1.5 text-xs">
+          <div className="flex shrink-0 items-center justify-between rounded-lg bg-neutral-50 px-2.5 py-1.5 text-xs">
             <span className="flex items-center gap-1.5 text-neutral-500">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               Provider <span className="font-medium text-neutral-700">{config.provider}</span>
             </span>
             <button onClick={() => setShowConfig(true)} title="AI settings" className="text-neutral-400 hover:text-neutral-700"><Settings2 size={15} /></button>
           </div>
+          {/* Capability nudge: this provider can't generate images, so designs
+              come out text + color only. Point the user at an image-capable one. */}
+          {!imageCapable && (
+            <div className="flex shrink-0 items-start gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-700">
+              <ImagePlus size={12} className="mt-px shrink-0" />
+              <span>This provider is text-only, generated designs won&apos;t include images. Connect an image-capable provider (e.g. OpenAI) for designs with imagery.</span>
+            </div>
+          )}
           {/* Brand-voice grounding indicator (F21 FR-6/FR-7). Shows when the
               design has a voice; lets the user ignore it for the next action. */}
           {brandVoice && brandVoiceClause(brandVoice) && (
-            <div className="flex items-center justify-between gap-2 rounded-lg border border-brand-200 bg-brand-50 px-2.5 py-1.5 text-[11px] text-brand-700">
+            <div className="flex shrink-0 items-center justify-between gap-2 rounded-lg border border-brand-200 bg-brand-50 px-2.5 py-1.5 text-[11px] text-brand-700">
               <span className="flex items-center gap-1.5">
                 <Wand2 size={12} />
-                {ignoreVoice ? "Brand voice off for next action" : `Using brand voice: ${brandVoiceLabel(brandVoice)}`}
+                {ignoreVoice ? "Brand voice off" : `Using brand voice: ${brandVoiceLabel(brandVoice)}`}
               </span>
               <button
                 onClick={() => setIgnoreVoice((v) => !v)}
-                title={ignoreVoice ? "Use the brand voice again" : "Ignore the brand voice for the next writing action"}
+                title={ignoreVoice ? "Use the brand voice in AI writing again" : "Stop grounding AI writing in the brand voice"}
                 className="shrink-0 rounded px-1 font-medium underline-offset-2 hover:underline"
               >
-                {ignoreVoice ? "Use" : "Ignore once"}
+                {ignoreVoice ? "Turn on" : "Turn off"}
               </button>
             </div>
           )}
 
-          {/* Generate from a prompt: the primary entry point. */}
-          <CollapsibleSection title="Magic Write & Media" icon={Wand2} defaultOpen>
-            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={4} placeholder="Describe what you want…" className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
-            <Button block onClick={() => void write()} disabled={!!busy || !prompt.trim()}>
-              <Wand2 size={16} /> {busy === "text" ? "Writing…" : "Magic Write"}
-            </Button>
-            <div className="flex items-center gap-2">
-              <Button className="flex-1" variant="secondary" onClick={() => void generate()} disabled={!!busy || !prompt.trim()}>
-                <ImagePlus size={16} /> {busy === "image" ? "Generating…" : logoMode ? "Generate logo" : "Generate image"}
-              </Button>
-              <select value={imgSize} onChange={(e) => setImgSize(e.target.value)} title="Image size" className="rounded border border-neutral-300 px-1.5 py-2 text-xs">
-                <option value="1024x1024">Square</option>
-                <option value="1024x1792">Portrait</option>
-                <option value="1792x1024">Landscape</option>
-              </select>
-            </div>
-            <label className="flex items-center gap-2 text-xs text-neutral-600">
-              <input type="checkbox" checked={logoMode} onChange={(e) => setLogoMode(e.target.checked)} />
-              Logo mode (vector-style logo)
-            </label>
-            <p className="text-[11px] text-neutral-400">Generate a text box or an image for this page.</p>
-          </CollapsibleSection>
-
-          {/* Edit the selected image (only meaningful when one is selected). */}
-          {imageNode && (
-            <CollapsibleSection title="Edit selected image" icon={ImagePlus} defaultOpen>
-              <textarea value={editPrompt} onChange={(e) => setEditPrompt(e.target.value)} rows={2} placeholder="Describe the edit (or what to add when expanding)…" className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
-              <Button block variant="secondary" onClick={() => void editImagePrompt()} disabled={!!busy || !editPrompt.trim()}>
-                <Wand2 size={16} /> {busy === "edit" ? "Editing…" : "Edit with a prompt"}
-              </Button>
-              {/* AI alt text (F22 FR-12): describe the image for accessibility. */}
-              <Button block variant="secondary" onClick={() => void altTextSelected()} disabled={!!busy}>
-                <Sparkles size={16} /> {busy === "alt" ? "Describing…" : "Generate alt text"}
-              </Button>
-              <div className="flex flex-col gap-1">
-                <span className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">Magic Expand</span>
-                <div className="flex items-center gap-2">
-                  <select value={expandDir} onChange={(e) => setExpandDir(e.target.value as ExpandDir)} title="Direction" className="flex-1 rounded border border-neutral-300 px-1.5 py-1.5 text-xs">
-                    <option value="all">All sides</option>
-                    <option value="left">Left</option>
-                    <option value="right">Right</option>
-                    <option value="top">Top</option>
-                    <option value="bottom">Bottom</option>
-                  </select>
-                  <select value={expandPct} onChange={(e) => setExpandPct(Number(e.target.value))} title="Amount" className="rounded border border-neutral-300 px-1.5 py-1.5 text-xs">
-                    <option value={15}>15%</option>
-                    <option value={25}>25%</option>
-                    <option value={50}>50%</option>
-                  </select>
-                </div>
-                <Button block variant="secondary" onClick={() => void magicExpand()} disabled={!!busy}>
-                  <ImagePlus size={16} /> {busy === "expand" ? "Expanding…" : "Magic Expand"}
-                </Button>
-              </div>
-            </CollapsibleSection>
-          )}
-
-          {/* Rewrite / tone tools that act on the selected text box. */}
-          <CollapsibleSection title="Edit selected text" icon={Type} defaultOpen>
-            {!textSelected && <p className="text-[11px] text-amber-600">Select a text box on the canvas to use these.</p>}
-            <div className="grid grid-cols-2 gap-1">
-              <button disabled={!!busy} onClick={() => void transform("Rewrite", "Rewrite the following text to improve clarity and flow.")} className="rounded bg-neutral-100 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-200 disabled:opacity-50">Rewrite</button>
-              <button disabled={!!busy} onClick={() => void transform("Shorten", "Make the following text shorter and more concise.")} className="rounded bg-neutral-100 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-200 disabled:opacity-50">Shorten</button>
-              <button disabled={!!busy} onClick={() => void transform("Expand", "Expand the following text with more detail.")} className="rounded bg-neutral-100 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-200 disabled:opacity-50">Expand</button>
-              <button disabled={!!busy} onClick={() => void transform("Fix", "Fix the spelling and grammar of the following text.")} className="rounded bg-neutral-100 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-200 disabled:opacity-50">Fix grammar</button>
-              <button disabled={!!busy} onClick={() => void transform("Formal", "Rewrite the following text in a more formal, professional tone.")} className="rounded bg-neutral-100 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-200 disabled:opacity-50">More formal</button>
-              <button disabled={!!busy} onClick={() => void transform("Casual", "Rewrite the following text in a friendlier, more casual tone.")} className="rounded bg-neutral-100 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-200 disabled:opacity-50">More casual</button>
-              <button disabled={!!busy} onClick={() => void translate()} className="col-span-2 rounded bg-neutral-100 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-200 disabled:opacity-50">Translate…</button>
-            </div>
-            {/* Quick tone presets (FR-3). Each rewrites the selected text in that
-                tone, grounded by the brand voice when active. */}
-            <span className="mt-1 text-[11px] uppercase tracking-wide text-neutral-400">Change tone</span>
-            <div className="grid grid-cols-2 gap-1">
-              {TONE_PRESETS.map((t) => (
-                <button key={t.label} disabled={!!busy} onClick={() => void transform(t.label, t.system)} className="rounded bg-neutral-100 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-200 disabled:opacity-50">{t.label}</button>
-              ))}
-            </div>
-            {/* Multi-variant (F21): generate 3 alternatives of the selected text. */}
-            <button disabled={!!busy} onClick={() => void makeVariants()} className="mt-1 rounded bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-200 disabled:opacity-50">
-              {busy === "text" ? "Writing…" : "Suggest variants"}
-            </button>
-            {variants.length > 0 && (
-              <div className="flex flex-col gap-1">
-                <span className="text-[11px] uppercase tracking-wide text-neutral-400">Pick a variant</span>
-                {variants.map((v, i) => (
-                  <button key={i} onClick={() => applyVariant(v)} title={v} className="rounded border border-neutral-200 px-2 py-1 text-left text-xs text-neutral-700 hover:border-brand-300 hover:bg-brand-50">
-                    {v.length > 90 ? `${v.slice(0, 90)}…` : v}
-                  </button>
-                ))}
-                <button onClick={() => setVariants([])} className="self-start text-[10px] text-neutral-400 hover:text-neutral-700">Dismiss</button>
-              </div>
-            )}
-          </CollapsibleSection>
-
-          {/* Whole-design generators and tools (collapsed by default). */}
-          <CollapsibleSection title="Magic Design" icon={Sparkles}>
-            <MagicDesignPanel workspaceId={workspaceId} aiReady voiceClause={voiceClause} brandPalette={brandPalette} />
-          </CollapsibleSection>
-          {/* Assist: deterministic polish tools (FR-8/9/11/14), no AI provider. */}
-          <CollapsibleSection title="Assist (no AI needed)" icon={Stethoscope}>
-            <PolishPanel />
-          </CollapsibleSection>
+          {/* Single conversational surface: one thread plans and applies every
+              capability (write, image, whole-design, restyle, chart, critique).
+              The model routes the intent to the right tool from the catalog. */}
+          <AssistantPanel workspaceId={workspaceId} aiReady voiceClause={voiceClause} brandPalette={brandPalette} brandFonts={brandFonts} imageCapable={imageCapable} />
         </div>
       )}
     </PanelShell>
@@ -2103,6 +2465,41 @@ function StockTile({ a, onPlace, onToggleStar }: { a: StockAssetSummary; onPlace
   );
 }
 
+// Intent search: map a plain-language phrase to a catalog-friendly term before
+// searching (the catalog matches the query as one substring, so this maps
+// "something for a party" -> "celebration"). Deterministic, no AI; the AI studio
+// (F39) is where true semantic search lands. Unknown queries pass through.
+const INTENT_SYNONYMS: { match: RegExp; term: string }[] = [
+  { match: /\b(party|celebrat|birthday|festive)\w*/i, term: "celebration" },
+  { match: /\b(happy|joy|smile|fun)\w*/i, term: "happy" },
+  { match: /\b(love|romance|valentine|heart)\w*/i, term: "heart" },
+  { match: /\b(nature|outdoor|landscape|scenery)\w*/i, term: "nature" },
+  { match: /\b(work|office|business|corporate|meeting)\w*/i, term: "business" },
+  { match: /\b(food|eat|meal|restaurant|cuisine)\w*/i, term: "food" },
+  { match: /\b(tech|computer|digital|device|gadget)\w*/i, term: "technology" },
+  { match: /\b(money|finance|cash|payment|shopping|buy)\w*/i, term: "shopping" },
+  { match: /\b(travel|trip|vacation|holiday|journey)\w*/i, term: "travel" },
+  { match: /\b(arrow|pointer|direction)\w*/i, term: "arrow" },
+];
+function intentQuery(q: string): string {
+  const trimmed = q.trim();
+  if (!trimmed) return "";
+  // Only remap multi-word, intent-like phrases; leave a precise single keyword alone.
+  if (!/\s/.test(trimmed)) return trimmed;
+  for (const { match, term } of INTENT_SYNONYMS) if (match.test(trimmed)) return term;
+  return trimmed;
+}
+
+// Animated stickers: editable-vector graphics paired with a looping emphasis
+// preset, applied to the inserted node so it moves in play/present.
+const ANIMATED_STICKERS: { id: string; label: string; preset: "pulse" | "spin" | "wiggle" | "bob" | "flicker"; svg: string }[] = [
+  { id: "a-star", label: "Spinning star", preset: "spin", svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2 L15 9 L22 9 L16 14 L18 21 L12 17 L6 21 L8 14 L2 9 L9 9 Z" fill="#f5b301"/></svg>' },
+  { id: "a-heart", label: "Pulsing heart", preset: "pulse", svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 21 C 4 14 4 6 9 6 C 11 6 12 8 12 8 C 12 8 13 6 15 6 C 20 6 20 14 12 21 Z" fill="#e0245e"/></svg>' },
+  { id: "a-bell", label: "Wiggling bell", preset: "wiggle", svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 3 C 8 3 7 6 7 10 C 7 14 5 16 5 16 L 19 16 C 19 16 17 14 17 10 C 17 6 16 3 12 3 Z M 10 19 a 2 2 0 0 0 4 0 Z" fill="#6366f1"/></svg>' },
+  { id: "a-dot", label: "Bouncing dot", preset: "bob", svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="#22c55e"/></svg>' },
+  { id: "a-spark", label: "Flickering spark", preset: "flicker", svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2 L13.5 10.5 L22 12 L13.5 13.5 L12 22 L10.5 13.5 L2 12 L10.5 10.5 Z" fill="#f59e0b"/></svg>' },
+];
+
 export function StockPanel() {
   const toast = useToast();
   const [tab, setTab] = useState<StockTab>("browse");
@@ -2141,7 +2538,7 @@ export function StockPanel() {
         let r: StockAssetSummary[];
         if (tab === "favorites") r = await oc.stockFavorites();
         else if (tab === "recents") r = await oc.stockRecent();
-        else r = await oc.stockSearch(debouncedQuery || undefined, kind || undefined, { collection: collection?.id });
+        else r = await oc.stockSearch(intentQuery(debouncedQuery) || undefined, kind || undefined, { collection: collection?.id });
         if (!cancelled) setResults(r);
       } catch {
         if (!cancelled) { setResults([]); setError(true); }

@@ -25,6 +25,7 @@ import {
   type Node,
   type KeyframeTrack,
   type NodeAnimation,
+  type EntrancePreset,
   type NodeType,
   type Page,
   type PageTransition,
@@ -79,15 +80,17 @@ import {
   exitPatch,
   customPatch,
   appliedOpacity,
+  sequenceStarts,
+  revealEntranceText,
   type AnimPatch,
   type Mat2D,
 } from "@hc/engine";
 import { booleanOp, fitCubicBeziers, pathToPolylines, recognizeShape, shapeNodeToParametric, shapeToPath, simplifyPolyline, strokeToOutline, type BooleanOp } from "@hc/geometry";
 import { imageAssets } from "@/lib/assetProvider";
 import type { MagicDesignSpec } from "@/lib/magicDesign";
+import { layoutDesign, type AiDesignSpec, type DeckResult } from "@hc/aistudio";
 import { qrModules } from "@/lib/qr";
 import { frameMaskFor } from "@/lib/maskPath";
-import { svgToNodes } from "@hc/stock";
 import { flattenSvgToNodes } from "@/lib/svgFlatten";
 import { parseCsvMatrix } from "@/lib/csv";
 import { tabularToChart } from "@/lib/magicDesign";
@@ -114,9 +117,11 @@ function lockedRegion(id: string): boolean {
 }
 
 // Combined edit-block gate: a node is uneditable when collab-locked by another
-// user OR a brand locked region for this caller. Used by the single-node guards.
+// user, a brand locked region for this caller, OR under a facilitator/protected
+// lock while this client is not the facilitator (FR-16). Used by the single-node
+// guards at every mutation entry point.
 function editBlocked(id: string): boolean {
-  return lockedByOther(id) || lockedRegion(id);
+  return lockedByOther(id) || lockedRegion(id) || usePresence.getState().protectedByOther(id);
 }
 
 // Map a VectorPath's anchors (and handles) through an affine matrix, so a
@@ -165,7 +170,11 @@ interface UndoEntry {
   redo: () => void;
 }
 
-type Tool = "select" | "pen" | "pencil" | "line" | "arrow" | "rect" | "ellipse" | "text" | "comment";
+type Tool = "select" | "pen" | "pencil" | "ink" | "laser" | "eraser" | "stamp" | "line" | "arrow" | "rect" | "ellipse" | "text" | "comment";
+
+// Shared empty set returned by privateHiddenIds() when nothing is hidden, so the
+// common (no-private-mode) render path allocates nothing.
+const EMPTY_ID_SET: ReadonlySet<string> = new Set<string>();
 
 /** Legacy single-entrance shape kept only so an unmigrated in-memory doc still
  *  reads (the v6 migration lifts it into `node.animation.entrance`). New code
@@ -201,6 +210,17 @@ export type BrandFix =
   | { kind: "restore_logo"; reason: string };
 /** One lint fix bound to the node it corrects. */
 export type BrandFixTarget = { nodeId: string; fix: BrandFix };
+
+/** F16: a per-user collaborative undo handle, supplied by the live CRDT binding
+ *  (a Yjs UndoManager scoped to this client's edits). When present, `undo`/`redo`
+ *  delegate to it so a user only reverts their OWN changes and never clobbers a
+ *  concurrent peer edit; absent (no live doc) the local snapshot stack is used. */
+export type CollabUndo = {
+  undo(): void;
+  redo(): void;
+  canUndo(): boolean;
+  canRedo(): boolean;
+};
 
 /** One style-harmonization change (F22 FR-8), mirroring @/lib/assist's
  *  HarmonizeChange. Kept structurally identical so the panel can pass them
@@ -274,7 +294,15 @@ interface EditorState {
   savedRev: number;
   /** Mark the document as saved (clears the unsaved-changes indicator). */
   markClean(): void;
+  /** True while a manual Save (kind "checkpoint") is in flight, so the automatic
+   *  snapshot path yields instead of firing a redundant concurrent save. */
+  manualSaving: boolean;
+  setManualSaving(v: boolean): void;
   tool: Tool; // active canvas tool (select vs pen)
+  /** Freehand brush settings used by the pencil + board ink tools. `mode` selects
+   *  the ink rendering (pen / marker / highlighter) for the board `ink` tool. */
+  brush: { width: number; colorHex: string; opacity: number; mode: "pen" | "marker" | "highlighter" };
+  setBrush(patch: Partial<{ width: number; colorHex: string; opacity: number; mode: "pen" | "marker" | "highlighter" }>): void;
   playing: boolean; // animation preview running
   cropping: string | null; // id of the image currently in crop mode (UI only)
   editingTextId: string | null; // text node currently in the inline editor (UI only); the renderer skips it so it doesn't double up
@@ -297,6 +325,8 @@ interface EditorState {
   clearSelection(): void;
   /** Select every visible, unlocked top-level node on the active page. */
   selectAll(): void;
+  /** Select every node on the active page sharing the first selection's type. */
+  selectSameType(): void;
 
   // document
   /** Replace the whole document (e.g. after loading from the backend). */
@@ -333,14 +363,24 @@ interface EditorState {
   setViewportSize(width: number, height: number): void;
   /** Fit the active page within the viewport (centered). */
   fitToScreen(): void;
+  /** Page-space AABB of everything on the active page: the union of all node
+   *  bounds with the page rect (the baseline artboard). Drives infinite-canvas
+   *  navigation (fit-all + MiniMap) so it tracks content parked beyond the page
+   *  edge (F30 FR-1), not just the fixed page size. */
+  contentBounds(): { x: number; y: number; width: number; height: number } | null;
   /** Zoom to frame the current selection (falls back to fit). */
   zoomToSelection(): void;
+  /** Select a node and pan the viewport to center it, gently (F30 search jump):
+   *  keeps the current zoom when the node fits, else zooms out to fit, capped so
+   *  a tiny node is not blown up to max zoom. */
+  jumpToNode(id: string): void;
 
   // pages
   /** Switch the active page (clamped); clears selection. */
   setActivePage(index: number): void;
-  /** Add a blank page (same size as the current one) after it, undoable. */
-  addPage(): void;
+  /** Add a blank page after the current one, undoable. Defaults to the current
+   *  page's size; pass a size to add a differently-sized page. */
+  addPage(size?: { width: number; height: number }): void;
   /** Duplicate a page (defaults to active) with fresh node ids after it, undoable. */
   duplicatePage(index?: number): void;
   /** Rename a page (its title in the page list / continuous-scroll header). */
@@ -365,6 +405,33 @@ interface EditorState {
    *  Sets the page size + background and creates text/accent nodes mapped to the
    *  target size, all as ONE undo step. Returns the new node ids. */
   buildMagicDesign(spec: MagicDesignSpec, target: { width: number; height: number }): string[];
+
+  /** F39 AI Creative Studio: build a finished, editable design from a validated
+   *  AiDesignSpec (content + roles + layout intent). The @hc/aistudio layout
+   *  engine owns positions, the type scale, alignment, z-order, and WCAG-readable
+   *  text color, so output is consistent and never overlaps/overflows. Sets the
+   *  page size + background and creates the nodes as ONE undo step. Returns ids. */
+  buildAiDesign(spec: AiDesignSpec, target: { width: number; height: number }): string[];
+
+  /** F39 Phase 2: replace the whole document with a generated multi-page design
+   *  (deck/doc/social set). Each DeckResult page becomes a page sized to target,
+   *  with the engine-laid-out background + nodes. Applied as ONE undo step.
+   *  Returns the new page ids. */
+  buildDeckFromOutline(deck: DeckResult, target: { width: number; height: number }): string[];
+
+  /** F39 FR-4: append generated pages (e.g. one page pulled from a different
+   *  style option) after the last page, as ONE undo step. Returns new page ids. */
+  appendDeckPages(deck: DeckResult, target: { width: number; height: number }): string[];
+
+  /** F39 Phase 3: run `fn` (which calls other store mutators) and collapse every
+   *  undo entry it pushes into ONE undo turn, so an assistant turn reverts with a
+   *  single Cmd+Z (FR-8). Returns the number of entries collapsed. */
+  runAsTurn(fn: () => void): number;
+
+  /** F39 FR-27: record generation provenance (feature, prompt, model, seed) into
+   *  doc.meta.aiProvenance for reproducibility/audit. Metadata only - not an undo
+   *  step. */
+  recordProvenance(entry: { feature: string; prompt?: string; model?: string; seed?: string }): void;
 
   // tools
   setTool(tool: Tool): void;
@@ -400,6 +467,17 @@ interface EditorState {
    *  to two nodes (auto anchors by default) as one undo step; selects + returns
    *  it, or null if the nodes are missing/identical. */
   connectNodes(fromId: string, toId: string, fromAnchor?: string, toAnchor?: string): string | null;
+  /** Set the route style (straight/elbow/curved) on the selected connector(s),
+   *  the board connector style picker (F30 FR-7). One undo step. */
+  setConnectorRoute(route: "straight" | "elbow" | "curved"): void;
+  /** Spawn a new shape at `point` and connect `fromId` to it as one undo step
+   *  (F30 FR-7 spawn-shape-from-handle); selects + returns the new shape id. */
+  spawnConnectedShape(fromId: string, fromAnchor: string, point: { x: number; y: number }): string | null;
+  /** Set (or clear, when blank) a connector's label text (F30 FR-8). One undo step. */
+  setConnectorLabel(id: string, text: string): void;
+  /** Replace a connector's draggable bend waypoints (F30 FR-8). Empty clears them.
+   *  One undo step (used for add/move/remove of bends). */
+  setConnectorWaypoints(id: string, waypoints: { x: number; y: number }[]): void;
   /** Set a node's position + size directly (no undo entry); for live draw drag. */
   setNodeRect(id: string, x: number, y: number, w: number, h: number): void;
   /** Snapshot a path node's geometry for an undoable node-edit gesture. */
@@ -429,6 +507,32 @@ interface EditorState {
    *  bezier-fit them into smooth segments. Returns the new node id (one undo
    *  step), or null if there were too few points. */
   addPencilPath(points: { x: number; y: number }[]): string | null;
+  /** Commit a board ink stroke as a dedicated `ink` node (F30 FR-5): decimate +
+   *  lightly smooth the captured point stream (with optional pressure), using the
+   *  current brush width/color/opacity/mode. One undo step; returns the node id. */
+  addInkStroke(points: { x: number; y: number; p?: number }[]): string | null;
+  /** Drop a sticky note centered on a page point as one undo step; selects and
+   *  returns it (F30 sticky speed: double-click-drop and Tab-to-spawn). */
+  addStickyAt(x: number, y: number): string;
+  /** The active emoji/vote glyph the stamp tool places (FR-21). */
+  stampGlyph: string;
+  setStampGlyph(glyph: string): void;
+  /** Local (per-client, never synced) private-round tracking (FR-15): the baseline
+   *  of node ids that existed when the round started + the ids this client created
+   *  during it. Null when no round is active. */
+  privateRound: { startedAt: number; baseline: Set<string>; mine: Set<string> } | null;
+  /** Reconcile the local private round to the synced `privateMode` meta: capture a
+   *  fresh baseline (current node ids) when a new round starts, clear when it ends. */
+  syncPrivateRound(pm: { active: boolean; revealed: boolean; startedAt: number } | undefined): void;
+  /** Node ids to visually hide right now for private mode: other participants'
+   *  contributions made since the round started (empty unless hiding). */
+  privateHiddenIds(): ReadonlySet<string>;
+  /** Drop an emoji/vote stamp centered on a page point as one undo step (FR-21);
+   *  selects and returns it. `authorId` records who placed it for dot-vote tally. */
+  addStampAt(x: number, y: number, authorId?: string): string;
+  /** Object-eraser (F30 FR-4): remove a top-level node by id as one undo step,
+   *  skipping locked / collab-locked / brand-locked nodes. No-op if not found. */
+  eraseNode(id: string): void;
   /** Combine the selected shapes with a boolean op into one boolean node. */
   booleanSelection(op: BooleanOp): void;
   /** Convert the selected shape/path's stroke into a filled outline node (F26). */
@@ -461,6 +565,9 @@ interface EditorState {
    *  Pass undefined to clear all animation. Clears the legacy `animations`/`link`
    *  slots so the typed model is the single source of truth. */
   setNodeAnimation(id: string, anim: NodeAnimation | undefined): void;
+  /** Magic Animate: apply tasteful, staggered entrance animations to every
+   *  top-level element on the active page in one undoable step (or clear them). */
+  magicAnimatePage(clear?: boolean): void;
   /** Set/clear a node's custom keyframe timeline (F25), preserving presets. */
   setNodeKeyframes(id: string, track: KeyframeTrack | undefined): void;
   /** Set/clear a node's interaction (trigger + action), undoable. Mirrors the
@@ -512,6 +619,11 @@ interface EditorState {
   addTableColumn(id: string, at?: number): void;
   /** Remove the column at index `at`. Undoable; a no-op below 1 column. */
   removeTableColumn(id: string, at: number): void;
+  /** Merge the cell at (row,col) with its right or below neighbor (matching span
+   *  on the shared edge). Undoable. */
+  mergeTableCell(id: string, row: number, col: number, dir: "right" | "down"): void;
+  /** Reset the cell at (row,col) to 1x1, re-adding the cells it covered. Undoable. */
+  splitTableCell(id: string, row: number, col: number): void;
   /** Patch the table's header/border styling, undoable. */
   setTableStyle(id: string, patch: { headerStyle?: TableHeaderStyle; borderStyle?: TableBorderStyle }): void;
   /** Patch a single cell's formatting (align/fill/textColor), undoable. */
@@ -532,8 +644,16 @@ interface EditorState {
   /** Place an image node from a URL, registering it as a design asset. */
   /** Add an image; `at` (page point) centers it there (e.g. a drag-drop), else viewport-centered. */
   addImage(url: string, at?: { x: number; y: number }): void;
+  /** F39 FR-24: place a generated/selected image as a full-page background -
+   *  sized to the active page, at the back of the z-order, as ONE undo step. */
+  addPageBackgroundImage(url: string): void;
   /** Insert an SVG icon as an editable, scaled vector group, viewport-centered. */
   addIconSvg(svg: string): void;
+  /** Insert a photo grid: a grid container whose cells are image frames you can
+   *  drop photos into. Returns the grid node id. */
+  insertPhotoGrid(rows: number, cols: number): string | null;
+  /** Re-lay a grid's cells (rows/cols/gap), preserving any filled cell images. */
+  setGridLayout(id: string, patch: { rows?: number; cols?: number; gap?: number }): void;
   /** Append imported pages (e.g. from a PDF), each sized to the source page with
    *  its editable nodes, and switch to the first new page. Undoable. */
   importPdfPages(pages: { width: number; height: number; nodes: Node[] }[]): void;
@@ -566,6 +686,20 @@ interface EditorState {
   setTextEffect(id: string, effect: TextEffect | null): void;
   /** Set a text node's vertical alignment within its box (top/middle/bottom). */
   setVerticalAlign(id: string, v: "top" | "middle" | "bottom"): void;
+  /** Set a text node's box sizing mode (fixed / auto-height / auto-width). */
+  setTextBoxMode(id: string, mode: "fixed" | "autoHeight" | "autoWidth"): void;
+  /** Set a text node's column count + gutter (1 column clears it). */
+  setTextColumns(id: string, count: number, gutter?: number): void;
+  /** Set a text node's language tag (BCP-47) for locale-aware spellcheck; "" clears. */
+  setTextLang(id: string, lang: string): void;
+  /** Swap a shape node's kind in place, keeping size/fills/stroke/transform. */
+  setShapeKind(id: string, shape: "rect" | "ellipse" | "triangle" | "polygon" | "star"): void;
+  /** Set (or clear, with undefined) a node's rotation pivot, normalized 0..1
+   *  within its box; the gizmo rotates about it. */
+  setRotationOrigin(id: string, origin: { x: number; y: number } | undefined): void;
+  /** Record an uploaded font in the design (cross-device): a FontRef with the
+   *  asset URL so the font loads when the design opens on another device. */
+  addDocFont(ref: { id: string; family: string; url: string }): void;
   /** Curve a text node's baseline along an arc (Canva "Curve"); 0 clears it. */
   setCurve(id: string, curvature: number): void;
   /** Replace all occurrences of `find` with `replace` across every text node in
@@ -602,11 +736,17 @@ interface EditorState {
   outpaintImage(id: string, url: string, width: number, height: number): void;
   /** Rebind a QR node's value and regenerate its module matrix, undoable. */
   setQrValue(id: string, value: string): void;
+  /** Set a video node's trim/volume/loop/mute, undoable. */
+  setVideoProps(id: string, patch: Partial<{ trimStartMs: number; trimEndMs: number; volume: number; muted: boolean; loop: boolean }>): void;
   /** Place an image into a frame (clipped to the frame), undoable. */
   setFrameImage(id: string, url: string): void;
   /** Fill a shape with an image, clipped to its outline (undoable). Pass an
    *  empty url to clear the image fill back to a solid color. */
   setImageFill(id: string, url: string): void;
+  /** Set (or clear, with empty url) a tiled pattern fill on a shape. */
+  setPatternFill(id: string, url: string, opts?: { scale?: number; rotation?: number; repeat?: "tile" | "mirror" | "no-repeat" }): void;
+  /** Adjust an existing pattern fill's scale/rotation/repeat (keeps the asset). */
+  setPatternParams(id: string, patch: { scale?: number; rotation?: number; repeat?: "tile" | "mirror" | "no-repeat" }): void;
   /** Set a frame's mask shape (rectangle/rounded/ellipse), undoable. */
   setFrameShape(id: string, mask: "rect" | "ellipse", radius: number): void;
   /** Convert a shape/path node into an image frame clipped to its outline, undoable. */
@@ -635,6 +775,8 @@ interface EditorState {
   flipSelection(axis: "h" | "v"): void;
   tidySelection(): void;
   setLockedSel(v: boolean): void;
+  /** Lock (or unlock) every top-level element on the active page. */
+  lockAllOnPage(v: boolean): void;
   setHiddenSel(v: boolean): void;
   setOpacitySel(v: number): void;
   setBlendSel(mode: BlendMode): void;
@@ -666,6 +808,12 @@ interface EditorState {
 
   undo(): void;
   redo(): void;
+
+  /** F16 per-user collaborative undo: the live CRDT binding registers a handle
+   *  here while a design is open; `undo`/`redo` delegate to it so a user reverts
+   *  only their own edits. Null = use the local snapshot stack (no live doc). */
+  collabUndo: CollabUndo | null;
+  setCollabUndo(handle: CollabUndo | null): void;
 }
 
 /** Parse a #rrggbb hex string into a schema Color (sRGB, opaque). */
@@ -824,7 +972,9 @@ function normalizeLoadedDoc(file: DesignFile): DesignFile {
     fw = mw > 0 ? Math.round(mw) : 1080;
     fh = mh > 0 ? Math.round(mh) : 1080;
   }
-  let changed = !file.meta;
+  // Guarantee the top-level collections exist so mutations (asset/font imports,
+  // SVG/PDF import, image placement) never hit an undefined array.
+  let changed = !file.meta || !Array.isArray(file.assets) || !Array.isArray(file.fonts);
   const normPages = pages.map((p) => {
     const w = fin(p.width) ? p.width : fw;
     const h = fin(p.height) ? p.height : fh;
@@ -832,10 +982,25 @@ function normalizeLoadedDoc(file: DesignFile): DesignFile {
     changed = true;
     return { ...p, width: w, height: h };
   });
-  return changed ? { ...file, meta: file.meta ?? {}, pages: normPages } : file;
+  return changed
+    ? { ...file, meta: file.meta ?? {}, assets: file.assets ?? [], fonts: file.fonts ?? [], pages: normPages }
+    : file;
+}
+
+/** Guarantee the top-level asset/font arrays exist before a mutation pushes to
+ *  them. Most docs are normalized at load, but one can enter the store via a path
+ *  that skips it (e.g. a raw preview/template file), so asset-placing actions
+ *  guard defensively rather than crash on `doc.assets.push`. */
+function ensureDocArrays(doc: DesignFile): void {
+  if (!Array.isArray(doc.assets)) (doc as { assets: AssetRef[] }).assets = [];
+  if (!Array.isArray(doc.fonts)) (doc as { fonts: DesignFile["fonts"] }).fonts = [];
 }
 
 export const useEditor = create<EditorState>((set, get) => {
+  // Cache for contentBounds(): recomputed only when the scene rev or active page
+  // changes, so panning (which calls it every frame via the MiniMap) is O(1).
+  let cbCache: { rev: number; page: number; bounds: { x: number; y: number; width: number; height: number } | null } | null = null;
+
   // Push an undo entry and apply the forward action immediately.
   const perform = (redo: () => void, undo: () => void) => {
     redo();
@@ -883,7 +1048,10 @@ export const useEditor = create<EditorState>((set, get) => {
     rev: 0,
     savedRev: 0,
     markClean: () => set((s) => ({ savedRev: s.rev })),
+    manualSaving: false,
+    setManualSaving: (v) => set({ manualSaving: v }),
     tool: "select",
+    brush: { width: 3, colorHex: "#1a1f29", opacity: 1, mode: "pen" },
     cropping: null,
     editingTextId: null,
     presenting: false,
@@ -898,6 +1066,7 @@ export const useEditor = create<EditorState>((set, get) => {
     viewportSize: { width: 0, height: 0 },
     undoStack: [],
     redoStack: [],
+    collabUndo: null,
     preview: null,
 
     select: (ids) => {
@@ -921,6 +1090,16 @@ export const useEditor = create<EditorState>((set, get) => {
       const page = get().doc.pages[curPageIndex()];
       if (!page) return;
       set({ selection: page.children.filter((n) => !n.locked && !n.hidden).map((n) => n.id) });
+    },
+    selectSameType: () => {
+      const page = get().doc.pages[curPageIndex()];
+      const sel = get().selection;
+      if (!page || !sel.length) return;
+      // Match against the type of the first selected node (Canva "Select all").
+      const first = page.children.find((n) => n.id === sel[0]);
+      if (!first) return;
+      const type = first.type;
+      set({ selection: page.children.filter((n) => n.type === type && !n.locked && !n.hidden).map((n) => n.id) });
     },
 
     loadDoc: (file) =>
@@ -950,7 +1129,7 @@ export const useEditor = create<EditorState>((set, get) => {
       const liveSelection = preview ? preview.liveSelection : selection;
       set((s) => ({
         preview: { label, live, liveSelection },
-        doc: file,
+        doc: normalizeLoadedDoc(file),
         selection: [],
         snapGuides: null,
         playing: false,
@@ -1126,6 +1305,127 @@ export const useEditor = create<EditorState>((set, get) => {
       );
       return ids;
     },
+    buildAiDesign: (spec, target) => {
+      const doc = get().doc;
+      const idx = curPageIndex();
+      const page = doc.pages[idx];
+      if (!page) return [];
+      const w = Math.max(1, Math.round(target.width));
+      const h = Math.max(1, Math.round(target.height));
+
+      // The @hc/aistudio engine owns geometry, type scale, alignment, z-order and
+      // WCAG-readable color; we just persist its result onto the active page.
+      const { background, nodes } = layoutDesign(spec, { width: w, height: h });
+
+      // Snapshot the whole page once so size + background + every node land as ONE
+      // undo step (mirrors buildMagicDesign / applyBrandFixes' batch pattern).
+      const before = structuredClone({ width: page.width, height: page.height, background: (page as unknown as { background?: Fill }).background, children: page.children });
+      const after = structuredClone({ width: w, height: h, background, children: nodes });
+      const apply = (snap: { width: number; height: number; background?: Fill; children: Node[] }) => {
+        const p = get().doc.pages[curPageIndex()] as unknown as { width: number; height: number; background?: Fill; children: Node[] };
+        if (!p) return;
+        p.width = snap.width;
+        p.height = snap.height;
+        p.background = snap.background;
+        p.children = structuredClone(snap.children);
+      };
+      const ids = nodes.map((n) => n.id);
+      perform(
+        () => { apply(structuredClone(after)); set({ selection: [] }); },
+        () => { apply(before); set({ selection: get().selection.filter((s) => !ids.includes(s)) }); },
+      );
+      return ids;
+    },
+    buildDeckFromOutline: (deck, target) => {
+      const doc = get().doc;
+      if (!deck.pages.length) return [];
+      const w = Math.max(1, Math.round(target.width));
+      const h = Math.max(1, Math.round(target.height));
+
+      // Build fully-formed pages from the engine output. Page ids are stable so
+      // undo/redo can re-key selection cleanly.
+      const newPages = deck.pages.map((p, i) => ({
+        id: `page-${crypto.randomUUID()}`,
+        name: p.name || `Page ${i + 1}`,
+        width: w,
+        height: h,
+        background: p.background,
+        children: structuredClone(p.nodes),
+      }));
+      const pageIds = newPages.map((p) => p.id);
+      const before = structuredClone(doc.pages);
+      const after = structuredClone(newPages);
+      const prevActive = get().activePage;
+      const prevSel = get().selection;
+      const replaceAll = (pages: unknown[], activePage: number, selection: string[]) => {
+        const live = get().doc.pages as unknown as unknown[];
+        live.splice(0, live.length, ...(structuredClone(pages) as unknown[]));
+        set({ activePage: Math.max(0, Math.min(activePage, live.length - 1)), selection });
+      };
+      perform(
+        () => replaceAll(after, 0, []),
+        () => replaceAll(before, prevActive, prevSel), // restore the user's prior view on undo
+      );
+      return pageIds;
+    },
+    appendDeckPages: (deck, target) => {
+      const doc = get().doc;
+      if (!deck.pages.length) return [];
+      const w = Math.max(1, Math.round(target.width));
+      const h = Math.max(1, Math.round(target.height));
+      const base = doc.pages.length;
+      const newPages = deck.pages.map((p, i) => ({
+        id: `page-${crypto.randomUUID()}`,
+        name: p.name || `Page ${base + i + 1}`,
+        width: w,
+        height: h,
+        background: p.background,
+        children: structuredClone(p.nodes),
+      }));
+      const pageIds = newPages.map((p) => p.id);
+      const snapshot = structuredClone(newPages);
+      const prevSel = get().selection;
+      const prevActive = get().activePage;
+      perform(
+        () => {
+          (get().doc.pages as unknown as unknown[]).push(...(structuredClone(snapshot) as unknown[]));
+          set({ activePage: get().doc.pages.length - newPages.length, selection: [] });
+        },
+        () => {
+          const live = get().doc.pages;
+          for (const id of pageIds) {
+            const i = live.findIndex((p) => p.id === id);
+            if (i >= 0) live.splice(i, 1);
+          }
+          set({ activePage: Math.min(prevActive, get().doc.pages.length - 1), selection: prevSel });
+        },
+      );
+      return pageIds;
+    },
+    runAsTurn: (fn) => {
+      const start = get().undoStack.length;
+      fn();
+      const stack = get().undoStack;
+      const added = stack.slice(start);
+      if (added.length <= 1) return added.length;
+      // Collapse: redo replays each entry forward; undo reverses them.
+      const composite: UndoEntry = {
+        redo: () => added.forEach((e) => e.redo()),
+        undo: () => [...added].reverse().forEach((e) => e.undo()),
+      };
+      set({ undoStack: [...stack.slice(0, start), composite] });
+      return added.length;
+    },
+    recordProvenance: (entry) => {
+      const doc = get().doc as unknown as { meta?: Record<string, unknown> };
+      if (!doc.meta) doc.meta = {};
+      const list = Array.isArray(doc.meta.aiProvenance) ? (doc.meta.aiProvenance as unknown[]) : [];
+      list.push({ ...entry, createdAt: new Date().toISOString() });
+      doc.meta.aiProvenance = list.slice(-50); // keep the recent history bounded
+      // Bump rev so the dirty/autosave path flushes this meta write (FR-27); the
+      // entry itself is metadata, not an undoable document edit.
+      get().tick();
+    },
     setPageSize: (width, height) => {
       const page = get().doc.pages[curPageIndex()];
       if (!page) return;
@@ -1147,10 +1447,12 @@ export const useEditor = create<EditorState>((set, get) => {
         () => { page.background = before; },
       );
     },
-    addPage: () => {
+    addPage: (size) => {
       const doc = get().doc;
       const cur = doc.pages[curPageIndex()];
-      const tmpl = createBlankDesign({ width: cur.width, height: cur.height });
+      const w = size && size.width > 0 ? Math.round(size.width) : cur.width;
+      const h = size && size.height > 0 ? Math.round(size.height) : cur.height;
+      const tmpl = createBlankDesign({ width: w, height: h });
       const seed = tmpl.pages[0];
       seed.name = `Page ${doc.pages.length + 1}`;
       seed.background = structuredClone(cur.background) as never;
@@ -1246,12 +1548,39 @@ export const useEditor = create<EditorState>((set, get) => {
       }),
     setViewportSize: (width, height) =>
       set((s) => (s.viewportSize.width === width && s.viewportSize.height === height ? {} : { viewportSize: { width, height } })),
+    contentBounds: () => {
+      const rev = get().rev;
+      const pi = curPageIndex();
+      if (cbCache && cbCache.rev === rev && cbCache.page === pi) return cbCache.bounds;
+      const page = get().doc.pages[pi];
+      if (!page) {
+        cbCache = { rev, page: pi, bounds: null };
+        return null;
+      }
+      const pageRect = { x: 0, y: 0, width: page.width, height: page.height };
+      const ids = page.children.map((c) => c.id);
+      const nodes = ids.length ? unionAABB(get().doc, ids) : null;
+      let bounds: { x: number; y: number; width: number; height: number };
+      if (!nodes) {
+        bounds = pageRect;
+      } else {
+        // Union node bounds with the page rect so fit/overview frame content parked
+        // outside the page edge while still including the artboard as a baseline.
+        const minX = Math.min(nodes.x, pageRect.x);
+        const minY = Math.min(nodes.y, pageRect.y);
+        const maxX = Math.max(nodes.x + nodes.width, pageRect.x + pageRect.width);
+        const maxY = Math.max(nodes.y + nodes.height, pageRect.y + pageRect.height);
+        bounds = { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+      }
+      cbCache = { rev, page: pi, bounds };
+      return bounds;
+    },
     fitToScreen: () => {
       const { width: vw, height: vh } = get().viewportSize;
-      const page = get().doc.pages[curPageIndex()];
-      if (!vw || !vh || !page) return;
-      const zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.min(vw / page.width, vh / page.height) * 0.9));
-      get().setViewport({ zoom, panX: page.width / 2 - vw / 2 / zoom, panY: page.height / 2 - vh / 2 / zoom });
+      const b = get().contentBounds();
+      if (!vw || !vh || !b || b.width <= 0 || b.height <= 0) return;
+      const zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.min(vw / b.width, vh / b.height) * 0.9));
+      get().setViewport({ zoom, panX: b.x + b.width / 2 - vw / 2 / zoom, panY: b.y + b.height / 2 - vh / 2 / zoom });
     },
     zoomToSelection: () => {
       const { doc, selection, viewportSize } = get();
@@ -1262,9 +1591,23 @@ export const useEditor = create<EditorState>((set, get) => {
       const zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.min(vw / b.width, vh / b.height) * 0.8));
       get().setViewport({ zoom, panX: b.x + b.width / 2 - vw / 2 / zoom, panY: b.y + b.height / 2 - vh / 2 / zoom });
     },
+    jumpToNode: (id) => {
+      const { doc, viewportSize } = get();
+      const { width: vw, height: vh } = viewportSize;
+      const b = unionAABB(doc, [id]);
+      if (!b || !vw || !vh) return;
+      set({ selection: [id] });
+      const cur = get().viewport.zoom;
+      // Fit the node at 0.8, but never zoom IN past the current zoom or 1.5x (so a
+      // small note is centered and readable, not magnified to MAX_ZOOM).
+      const fit = Math.min(vw / b.width, vh / b.height) * 0.8;
+      const zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.min(fit, Math.max(cur, 1.5))));
+      get().setViewport({ zoom, panX: b.x + b.width / 2 - vw / 2 / zoom, panY: b.y + b.height / 2 - vh / 2 / zoom });
+    },
 
     setSnapGuides: (g) => set({ snapGuides: g }),
     setTool: (tool) => set({ tool }),
+    setBrush: (patch) => set((s) => ({ brush: { ...s.brush, ...patch } })),
     setCropping: (id) => set({ cropping: id }),
     setEditingText: (id) => set({ editingTextId: id }),
     setPresenting: (on) => set({ presenting: on }),
@@ -1405,6 +1748,7 @@ export const useEditor = create<EditorState>((set, get) => {
         () => { page.children.push(node); set({ selection: [node.id] }); },
         () => { const i = page.children.findIndex((n) => n.id === node.id); if (i >= 0) page.children.splice(i, 1); set({ selection: prev }); },
       );
+      get().privateRound?.mine.add(node.id); // private mode: my own text (FR-15)
       return node.id;
     },
     connectNodes: (fromId, toId, fromAnchor = "auto", toAnchor = "auto") => {
@@ -1433,6 +1777,170 @@ export const useEditor = create<EditorState>((set, get) => {
         () => { const i = page.children.findIndex((n) => n.id === node.id); if (i >= 0) page.children.splice(i, 1); set({ selection: prev }); },
       );
       return node.id;
+    },
+    addStickyAt: (x, y) => {
+      const w = 180;
+      const h = 180;
+      const node = createNode("sticky", {
+        size: { width: w, height: h },
+        transform: { x: x - w / 2, y: y - h / 2, scaleX: 1, scaleY: 1, rotation: 0 },
+      } as Partial<Node>);
+      const page = get().doc.pages[curPageIndex()];
+      const prev = get().selection;
+      perform(
+        () => { page.children.push(node); set({ selection: [node.id] }); },
+        () => { const i = page.children.findIndex((n) => n.id === node.id); if (i >= 0) page.children.splice(i, 1); set({ selection: prev }); },
+      );
+      get().privateRound?.mine.add(node.id); // private mode: this is my own contribution (FR-15)
+      return node.id;
+    },
+    stampGlyph: "👍",
+    setStampGlyph: (glyph) => set({ stampGlyph: glyph }),
+    privateRound: null,
+    syncPrivateRound: (pm) => {
+      const cur = get().privateRound;
+      if (!pm || !pm.active) {
+        if (cur) set({ privateRound: null });
+        return;
+      }
+      if (cur && cur.startedAt === pm.startedAt) return; // same round: keep baseline + mine
+      // New round: snapshot every existing node id (everything from before stays visible).
+      const baseline = new Set<string>();
+      const walk = (nodes: Node[]) => {
+        for (const nd of nodes) {
+          baseline.add(nd.id);
+          const kids = (nd as { children?: Node[] }).children;
+          if (kids) walk(kids);
+        }
+      };
+      for (const pg of get().doc.pages) walk(pg.children);
+      set({ privateRound: { startedAt: pm.startedAt, baseline, mine: new Set() } });
+    },
+    privateHiddenIds: () => {
+      const pr = get().privateRound;
+      const pm = (get().doc.meta as { whiteboard?: { privateMode?: { active?: boolean; revealed?: boolean; startedAt?: number } } } | undefined)
+        ?.whiteboard?.privateMode;
+      // Tie the hide strictly to the captured round's baseline: if the local round
+      // hasn't reconciled to the meta's current round yet, hide nothing (avoids a
+      // one-frame stale-baseline hide when a new round starts).
+      if (!pr || !pm?.active || pm.revealed || pr.startedAt !== pm.startedAt) return EMPTY_ID_SET;
+      // Hide nodes that appeared this round and aren't mine (i.e. others' new work).
+      const hidden = new Set<string>();
+      const walk = (nodes: Node[]) => {
+        for (const nd of nodes) {
+          if (!pr.baseline.has(nd.id) && !pr.mine.has(nd.id)) hidden.add(nd.id);
+          const kids = (nd as { children?: Node[] }).children;
+          if (kids) walk(kids);
+        }
+      };
+      for (const pg of get().doc.pages) walk(pg.children);
+      return hidden;
+    },
+    addStampAt: (x, y, authorId) => {
+      const size = 40;
+      const glyph = get().stampGlyph || "👍";
+      const node = createNode("stamp", {
+        size: { width: size, height: size },
+        transform: { x: x - size / 2, y: y - size / 2, scaleX: 1, scaleY: 1, rotation: 0 },
+        kind: "emoji",
+        glyph,
+        ...(authorId ? { authorId } : {}),
+      } as Partial<Node>);
+      const page = get().doc.pages[curPageIndex()];
+      const prev = get().selection;
+      perform(
+        () => { page.children.push(node); set({ selection: [node.id] }); },
+        () => { const i = page.children.findIndex((n) => n.id === node.id); if (i >= 0) page.children.splice(i, 1); set({ selection: prev }); },
+      );
+      get().privateRound?.mine.add(node.id); // private mode: my own stamp (FR-15)
+      return node.id;
+    },
+    eraseNode: (id) => {
+      const page = get().doc.pages[curPageIndex()];
+      const index = page.children.findIndex((n) => n.id === id);
+      if (index < 0) return;
+      const node = page.children[index];
+      if (node.locked || editBlocked(id)) return;
+      const prev = get().selection;
+      perform(
+        () => {
+          const j = page.children.findIndex((n) => n.id === id);
+          if (j >= 0) page.children.splice(j, 1);
+          set({ selection: prev.filter((s) => s !== id) });
+        },
+        () => { page.children.splice(index, 0, node); set({ selection: prev }); },
+      );
+    },
+    setConnectorLabel: (id, text) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "connector") return;
+      const n = loc.node as unknown as { label?: { text: string; position?: number } };
+      const before = n.label ? { ...n.label } : undefined;
+      const trimmed = text.trim();
+      const after = trimmed ? { text: trimmed, position: before?.position ?? 0.5 } : undefined;
+      perform(
+        () => { if (after) n.label = after; else delete n.label; },
+        () => { if (before) n.label = before; else delete n.label; },
+      );
+    },
+    setConnectorWaypoints: (id, waypoints) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "connector") return;
+      const n = loc.node as unknown as { waypoints?: { x: number; y: number }[] };
+      const before = n.waypoints ? n.waypoints.map((p) => ({ ...p })) : undefined;
+      const after = waypoints.length ? waypoints.map((p) => ({ x: p.x, y: p.y })) : undefined;
+      perform(
+        () => { if (after) n.waypoints = after; else delete n.waypoints; },
+        () => { if (before) n.waypoints = before; else delete n.waypoints; },
+      );
+    },
+    setConnectorRoute: (route) => {
+      const { doc, selection } = get();
+      const conns = selection
+        .map((id) => locate(doc, id)?.node)
+        .filter((n): n is Node => !!n && n.type === "connector") as unknown as { route: string }[];
+      if (conns.length === 0) return;
+      const before = conns.map((n) => n.route);
+      perform(
+        () => { for (const c of conns) c.route = route; },
+        () => { conns.forEach((c, i) => { c.route = before[i]; }); },
+      );
+    },
+    spawnConnectedShape: (fromId, fromAnchor, point) => {
+      const d = get().doc;
+      if (!locate(d, fromId)) return null;
+      // A small rounded card centered on the release point (FigJam-style: drag out
+      // of a node and drop to grow a connected next step).
+      const w = 140;
+      const h = 80;
+      const shape = createNode("shape", {
+        shape: "rect",
+        fills: [{ type: "solid", color: { srgb: { r: 0.96, g: 0.97, b: 0.99, a: 1 } } }],
+        cornerRadius: { topLeft: 10, topRight: 10, bottomRight: 10, bottomLeft: 10 },
+        transform: { x: point.x - w / 2, y: point.y - h / 2, scaleX: 1, scaleY: 1, rotation: 0 },
+        size: { width: w, height: h },
+      } as Partial<Node>);
+      const connector = createNode("connector", {
+        route: "elbow",
+        start: { attach: { nodeId: fromId, anchor: fromAnchor } },
+        end: { attach: { nodeId: shape.id, anchor: "auto" } },
+        transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+        stroke: { fill: { type: "solid", color: { srgb: { r: 0.28, g: 0.33, b: 0.41, a: 1 } } }, width: 3, align: "center", cap: "round", join: "round" },
+        endCap: { kind: "arrow", size: 12 },
+      } as Partial<Node>);
+      const page = get().doc.pages[curPageIndex()];
+      const prev = get().selection;
+      perform(
+        () => { page.children.push(shape, connector); set({ selection: [shape.id] }); },
+        () => {
+          for (const id of [connector.id, shape.id]) {
+            const i = page.children.findIndex((n) => n.id === id);
+            if (i >= 0) page.children.splice(i, 1);
+          }
+          set({ selection: prev });
+        },
+      );
+      return shape.id;
     },
     setNodeRect: (id, x, y, w, h) => {
       const loc = locate(get().doc, id);
@@ -1656,11 +2164,15 @@ export const useEditor = create<EditorState>((set, get) => {
         if (here) seg.cOut = { x: here.c1.x, y: here.c1.y };
         segs.push(seg);
       }
+      const brush = get().brush;
+      const bh = brush.colorHex.replace("#", "");
+      const bn = parseInt(bh.length === 3 ? bh.split("").map((c) => c + c).join("") : bh, 16) || 0;
+      const brushColor = { srgb: { r: ((bn >> 16) & 255) / 255, g: ((bn >> 8) & 255) / 255, b: (bn & 255) / 255, a: Math.max(0, Math.min(1, brush.opacity)) } };
       const node = createNode("path", {
         name: "Pencil",
         segments: segs,
         closed: false,
-        stroke: { fill: { type: "solid", color: { srgb: { r: 0.1, g: 0.12, b: 0.16, a: 1 } } }, width: 3, align: "center", cap: "round", join: "round" },
+        stroke: { fill: { type: "solid", color: brushColor }, width: Math.max(0.5, brush.width), align: "center", cap: "round", join: "round" },
         transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
         size: { width: 1, height: 1 },
       } as Partial<Node>);
@@ -1671,6 +2183,65 @@ export const useEditor = create<EditorState>((set, get) => {
         () => { page.children.push(node); set({ selection: [node.id] }); },
         () => { const i = page.children.findIndex((nn) => nn.id === node.id); if (i >= 0) page.children.splice(i, 1); set({ selection: prev }); },
       );
+      return node.id;
+    },
+
+    addInkStroke: (points) => {
+      if (!points || points.length < 1) return null;
+      const brush = get().brush;
+      // Decimate by distance (keeping pressure), then one light smoothing pass so
+      // the stored stream is bounded but faithful (the heavy-ink mitigation: a
+      // stroke is one array insert, not N rewrites). First/last are always kept.
+      const minDist = 1.2;
+      const kept: { x: number; y: number; p?: number }[] = [points[0]];
+      for (let i = 1; i < points.length; i++) {
+        const last = kept[kept.length - 1];
+        const pt = points[i];
+        if (i === points.length - 1 || Math.hypot(pt.x - last.x, pt.y - last.y) >= minDist) kept.push(pt);
+      }
+      const s = 0.5; // smoothing factor (also recorded on the node)
+      const pts = kept.map((p, i) => {
+        if (i === 0 || i === kept.length - 1) return { x: p.x, y: p.y, p: p.p };
+        const a = kept[i - 1];
+        const b = kept[i + 1];
+        return { x: p.x + ((a.x + b.x) / 2 - p.x) * s, y: p.y + ((a.y + b.y) / 2 - p.y) * s, p: p.p };
+      });
+      // Local-space the points: offset by the bbox origin (padded by the brush
+      // radius) so the node transform carries position and `points` stay small.
+      const width = Math.max(0.5, brush.width);
+      const pad = width / 2 + 2;
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const p of pts) {
+        if (p.x < minX) minX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y > maxY) maxY = p.y;
+      }
+      const ox = minX - pad;
+      const oy = minY - pad;
+      const local = pts.map((p) => {
+        const out: { x: number; y: number; p?: number } = { x: p.x - ox, y: p.y - oy };
+        if (typeof p.p === "number") out.p = Math.max(0, Math.min(1, p.p));
+        return out;
+      });
+      const bh = brush.colorHex.replace("#", "");
+      const bn = parseInt(bh.length === 3 ? bh.split("").map((c) => c + c).join("") : bh, 16) || 0;
+      const brushColor = { srgb: { r: ((bn >> 16) & 255) / 255, g: ((bn >> 8) & 255) / 255, b: (bn & 255) / 255, a: 1 } };
+      const node = createNode("ink", {
+        name: brush.mode === "highlighter" ? "Highlighter" : brush.mode === "marker" ? "Marker" : "Ink",
+        points: local,
+        smoothing: s,
+        brush: { width, opacity: Math.max(0, Math.min(1, brush.opacity)), color: brushColor, mode: brush.mode },
+        transform: { x: ox, y: oy, scaleX: 1, scaleY: 1, rotation: 0 },
+        size: { width: Math.max(1, maxX - minX + pad * 2), height: Math.max(1, maxY - minY + pad * 2) },
+      } as Partial<Node>);
+      const page = get().doc.pages[curPageIndex()];
+      const prev = get().selection;
+      perform(
+        () => { page.children.push(node); set({ selection: [node.id] }); },
+        () => { const i = page.children.findIndex((nn) => nn.id === node.id); if (i >= 0) page.children.splice(i, 1); set({ selection: prev }); },
+      );
+      get().privateRound?.mine.add(node.id); // private mode: my own ink stroke (FR-15)
       return node.id;
     },
 
@@ -1821,6 +2392,29 @@ export const useEditor = create<EditorState>((set, get) => {
         () => { rec.animation = before.animation; rec.animations = before.animations; },
       );
     },
+    magicAnimatePage: (clear) => {
+      const page = get().doc.pages[curPageIndex()];
+      if (!page || !page.children.length) return;
+      // Vary the entrance by node kind for a lively but coherent build-in, and
+      // stagger the delay down the stacking order so elements cascade in.
+      const presetFor = (n: Node): EntrancePreset =>
+        n.type === "text" ? "rise" : n.type === "image" || n.type === "frame" || n.type === "grid" ? "pop" : "fade";
+      const nodes = page.children as Node[];
+      const before = nodes.map((n) => (n as unknown as { animation?: NodeAnimation }).animation);
+      perform(
+        () => {
+          nodes.forEach((n, i) => {
+            const rec = n as unknown as { animation?: NodeAnimation; animations?: unknown[] };
+            if (clear) { rec.animation = undefined; }
+            else {
+              rec.animation = { entrance: { preset: presetFor(n), durationMs: 500, delayMs: Math.min(i * 120, 1500), easing: "ease-out" } };
+              delete rec.animations;
+            }
+          });
+        },
+        () => { nodes.forEach((n, i) => { (n as unknown as { animation?: NodeAnimation }).animation = before[i]; }); },
+      );
+    },
     setNodeKeyframes: (id, track) => {
       const loc = locate(get().doc, id);
       if (!loc || editBlocked(id)) return;
@@ -1928,11 +2522,18 @@ export const useEditor = create<EditorState>((set, get) => {
       // Collect every node carrying a typed animation on the active page, stash
       // its resting opacity/transform, then drive entrance + emphasis through the
       // shared engine patch math. Restore exactly when done or stopped.
-      const animated: { id: string; anim: NodeAnimation; opacity: number; transform: Transform }[] = [];
+      // Resolve cross-element sequencing across the page's top-level children so
+      // the preview matches present mode / export exactly.
+      const starts = sequenceStarts(get().doc.pages[curPageIndex()].children);
+      const animated: { id: string; anim: NodeAnimation; opacity: number; transform: Transform; entStart: number; baseContent?: unknown }[] = [];
       const walk = (nodes: Node[]) => {
         for (const n of nodes) {
           const a = (n as unknown as { animation?: NodeAnimation }).animation;
-          if (a && (a.entrance || a.emphasis)) animated.push({ id: n.id, anim: a, opacity: n.opacity, transform: { ...n.transform } });
+          if (a && (a.entrance || a.emphasis)) {
+            const entStart = a.entrance ? (starts.get(n.id) ?? a.entrance.delayMs) : 0;
+            const reveal = a.entrance && (a.entrance.preset === "typewriter" || a.entrance.preset === "word-wipe") && n.type === "text";
+            animated.push({ id: n.id, anim: a, opacity: n.opacity, transform: { ...n.transform }, entStart, baseContent: reveal ? structuredClone((n as unknown as { content: unknown }).content) : undefined });
+          }
           const kids = (n as unknown as { children?: Node[] }).children;
           if (Array.isArray(kids)) walk(kids);
         }
@@ -1940,14 +2541,18 @@ export const useEditor = create<EditorState>((set, get) => {
       walk(get().doc.pages[curPageIndex()].children);
       if (!animated.length) return;
       set({ playing: true });
-      // Run entrances to completion, then loop emphasis for a short window.
-      const entranceTotal = Math.max(0, ...animated.map((x) => (x.anim.entrance ? x.anim.entrance.delayMs + x.anim.entrance.durationMs : 0)));
+      // Run entrances to completion (honoring sequenced starts), then loop emphasis.
+      const entranceTotal = Math.max(0, ...animated.map((x) => (x.anim.entrance ? x.entStart + x.anim.entrance.durationMs : 0)));
       const hasEmphasis = animated.some((x) => x.anim.emphasis);
       const total = entranceTotal + (hasEmphasis ? 2400 : 200);
       const restore = () => {
         for (const x of animated) {
           const loc = locate(get().doc, x.id);
-          if (loc) { loc.node.opacity = x.opacity; loc.node.transform = x.transform; }
+          if (loc) {
+            loc.node.opacity = x.opacity;
+            loc.node.transform = x.transform;
+            if (x.baseContent !== undefined) (loc.node as unknown as { content: unknown }).content = structuredClone(x.baseContent);
+          }
         }
       };
       const start = performance.now();
@@ -1957,17 +2562,25 @@ export const useEditor = create<EditorState>((set, get) => {
         for (const x of animated) {
           const loc = locate(get().doc, x.id);
           if (!loc) continue;
+          // Effective entrance clip with the sequenced start applied.
+          const ent = x.anim.entrance ? { ...x.anim.entrance, delayMs: x.entStart } : undefined;
+          const entEnd = ent ? ent.delayMs + ent.durationMs : 0;
           // Entrance leads; once it has finished, the resting pose is the base
           // for a looping emphasis. Compose the active patch over the resting node.
           let patch: AnimPatch | null = null;
-          if (x.anim.entrance && t <= x.anim.entrance.delayMs + x.anim.entrance.durationMs) {
-            patch = entrancePatch(x.anim.entrance, t);
+          if (ent && t <= entEnd) {
+            patch = entrancePatch(ent, t);
           } else if (x.anim.emphasis) {
             patch = emphasisPatch(x.anim.emphasis, t - entranceTotal);
-          } else if (x.anim.entrance) {
-            patch = entrancePatch(x.anim.entrance, x.anim.entrance.delayMs + x.anim.entrance.durationMs);
+          } else if (ent) {
+            patch = entrancePatch(ent, entEnd);
           }
           applyPatch(loc.node, x.transform, x.opacity, patch);
+          // Typewriter / word-wipe content reveal: restore full text then truncate.
+          if (ent && x.baseContent !== undefined) {
+            (loc.node as unknown as { content: unknown }).content = structuredClone(x.baseContent);
+            revealEntranceText(loc.node, ent, t);
+          }
         }
         get().tick();
         if (t < total) requestAnimationFrame(step);
@@ -2207,6 +2820,46 @@ export const useEditor = create<EditorState>((set, get) => {
       colWidths.splice(at, 1);
       applyTableShape(id, get, perform, { rows: t.rows, cols: t.cols - 1, colWidths, rowHeights: t.rowHeights, cells });
     },
+    mergeTableCell: (id, row, col, dir) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "table") return;
+      const t = loc.node as unknown as TableNode;
+      const cell = t.cells.find((c) => c.row === row && c.col === col);
+      if (!cell) return;
+      let neighbor: TableCell | undefined;
+      let merged: TableCell;
+      if (dir === "right") {
+        const nCol = col + (cell.colSpan || 1);
+        if (nCol >= t.cols) return;
+        neighbor = t.cells.find((c) => c.row === row && c.col === nCol);
+        if (!neighbor || (neighbor.rowSpan || 1) !== (cell.rowSpan || 1)) return;
+        merged = { ...cell, colSpan: (cell.colSpan || 1) + (neighbor.colSpan || 1) };
+      } else {
+        const nRow = row + (cell.rowSpan || 1);
+        if (nRow >= t.rows) return;
+        neighbor = t.cells.find((c) => c.col === col && c.row === nRow);
+        if (!neighbor || (neighbor.colSpan || 1) !== (cell.colSpan || 1)) return;
+        merged = { ...cell, rowSpan: (cell.rowSpan || 1) + (neighbor.rowSpan || 1) };
+      }
+      const cells = t.cells.filter((c) => c !== neighbor).map((c) => (c === cell ? merged : c));
+      applyTableShape(id, get, perform, { rows: t.rows, cols: t.cols, colWidths: t.colWidths, rowHeights: t.rowHeights, cells });
+    },
+    splitTableCell: (id, row, col) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "table") return;
+      const t = loc.node as unknown as TableNode;
+      const cell = t.cells.find((c) => c.row === row && c.col === col);
+      if (!cell || ((cell.rowSpan || 1) <= 1 && (cell.colSpan || 1) <= 1)) return;
+      const cells = t.cells.map((c) => (c === cell ? { ...c, rowSpan: 1, colSpan: 1 } : c));
+      // Re-add the cells the span used to cover (all but the top-left corner).
+      for (let r = row; r < row + (cell.rowSpan || 1); r++) {
+        for (let cc = col; cc < col + (cell.colSpan || 1); cc++) {
+          if (r === row && cc === col) continue;
+          cells.push({ row: r, col: cc, rowSpan: 1, colSpan: 1, align: "left" as const, content: [{ text: "", fontId: "system", fontSize: 14, weight: r === 0 ? 700 : 400 }] } as unknown as TableCell);
+        }
+      }
+      applyTableShape(id, get, perform, { rows: t.rows, cols: t.cols, colWidths: t.colWidths, rowHeights: t.rowHeights, cells });
+    },
     setTableStyle: (id, patch) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "table") return;
@@ -2270,6 +2923,7 @@ export const useEditor = create<EditorState>((set, get) => {
           set({ selection: prev });
         },
       );
+      { const pr = get().privateRound; if (pr) ids.forEach((id) => pr.mine.add(id)); } // private mode: my paste (FR-15)
     },
     pasteNodes: (incoming) => {
       // Clipboard JSON is user-controlled; keep only node-like objects with a
@@ -2288,6 +2942,7 @@ export const useEditor = create<EditorState>((set, get) => {
           set({ selection: prev });
         },
       );
+      { const pr = get().privateRound; if (pr) ids.forEach((id) => pr.mine.add(id)); } // private mode: my paste (FR-15)
     },
     addTextBox: (text, at) => {
       const node = createNode("text", {
@@ -2305,6 +2960,7 @@ export const useEditor = create<EditorState>((set, get) => {
         () => { page.children.push(node); set({ selection: [node.id] }); },
         () => { const i = page.children.findIndex((n) => n.id === node.id); if (i >= 0) page.children.splice(i, 1); set({ selection: prev }); },
       );
+      get().privateRound?.mine.add(node.id); // private mode: my text (FR-15)
     },
     duplicateSelection: (dx = 24, dy = 24) => {
       const { doc, selection } = get();
@@ -2323,6 +2979,7 @@ export const useEditor = create<EditorState>((set, get) => {
           set({ selection });
         },
       );
+      { const pr = get().privateRound; if (pr) ids.forEach((id) => pr.mine.add(id)); } // private mode: my duplicates (FR-15)
       return ids;
     },
     nudge: (dx, dy) => {
@@ -2382,6 +3039,10 @@ export const useEditor = create<EditorState>((set, get) => {
     tick: () => set((s) => ({ rev: s.rev + 1 })),
     pushApplied: (cmds) => {
       if (cmds.length) registerApplied(set, get, cmds);
+      // Private mode (FR-15): command-based inserts (toolbar create, templates,
+      // paste) are MY contributions this round, so they stay visible to me.
+      const pr = get().privateRound;
+      if (pr) for (const c of cmds) if (c.kind === "insert" && c.node) pr.mine.add(c.node.id);
     },
     pushNodeSnapshot: (id, before) => {
       type Snap = { transform: Transform; size: { width: number; height: number }; box?: unknown; content?: unknown };
@@ -2421,7 +3082,10 @@ export const useEditor = create<EditorState>((set, get) => {
     },
 
     addIconSvg: (svg) => {
-      const { nodes } = svgToNodes(svg, () => `ic-${crypto.randomUUID()}`);
+      // Same resolver as Import SVG (resolves <style> classes, currentColor, and
+      // gradient url() fills), but keeps the catalog default: a shape with no
+      // resolvable fill falls back to black (so a bare monochrome icon still paints).
+      const { nodes } = flattenSvgToNodes(svg, { fallbackFill: true });
       if (!nodes.length) return;
       // The parsed nodes are in the SVG viewBox space (e.g. 0..24); scale the
       // whole group up to a sensible on-canvas size and center it in the view.
@@ -2444,6 +3108,82 @@ export const useEditor = create<EditorState>((set, get) => {
       perform(
         () => { page.children.push(group); set({ selection: [group.id] }); },
         () => { const i = page.children.findIndex((n) => n.id === group.id); if (i >= 0) page.children.splice(i, 1); set({ selection: prev }); },
+      );
+    },
+    insertPhotoGrid: (rows, cols) => {
+      const r = Math.max(1, Math.min(6, Math.round(rows)));
+      const c = Math.max(1, Math.min(6, Math.round(cols)));
+      const page = get().doc.pages[curPageIndex()];
+      if (!page) return null;
+      const gap = 8;
+      // Size the grid to a comfortable square-ish box within the page.
+      const gw = Math.min(page.width * 0.8, 720);
+      const gh = Math.min(page.height * 0.8, 720);
+      const cellW = (gw - gap * (c - 1)) / c;
+      const cellH = (gh - gap * (r - 1)) / r;
+      const children: Node[] = [];
+      const cells: { row: number; col: number; rowSpan: number; colSpan: number; childId: string }[] = [];
+      for (let row = 0; row < r; row++) {
+        for (let col = 0; col < c; col++) {
+          const cell = createNode("frame", {
+            name: "Photo",
+            transform: { x: col * (cellW + gap), y: row * (cellH + gap), scaleX: 1, scaleY: 1, rotation: 0 },
+            size: { width: cellW, height: cellH },
+            clip: true,
+            children: [],
+            maskShape: "rect",
+            fills: [{ type: "solid", color: { srgb: { r: 0.9, g: 0.91, b: 0.93, a: 1 } } }],
+          } as Partial<Node>);
+          children.push(cell);
+          cells.push({ row, col, rowSpan: 1, colSpan: 1, childId: cell.id });
+        }
+      }
+      const grid = createNode("grid", {
+        name: "Photo grid",
+        rows: r, cols: c, gap,
+        cells, children,
+        size: { width: gw, height: gh },
+      } as Partial<Node>);
+      positionInView(grid);
+      const prev = get().selection;
+      perform(
+        () => { page.children.push(grid); set({ selection: [grid.id] }); },
+        () => { const i = page.children.findIndex((n) => n.id === grid.id); if (i >= 0) page.children.splice(i, 1); set({ selection: prev }); },
+      );
+      return grid.id;
+    },
+    setGridLayout: (id, patch) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "grid" || loc.node.locked || editBlocked(id)) return;
+      const g = loc.node as unknown as { rows: number; cols: number; gap: number; size: { width: number; height: number }; cells: { row: number; col: number; rowSpan: number; colSpan: number; childId?: string }[]; children: Node[] };
+      const before = structuredClone({ rows: g.rows, cols: g.cols, gap: g.gap, cells: g.cells, children: g.children });
+      const r = Math.max(1, Math.min(6, Math.round(patch.rows ?? g.rows)));
+      const c = Math.max(1, Math.min(6, Math.round(patch.cols ?? g.cols)));
+      const gap = Math.max(0, patch.gap ?? g.gap);
+      const cellW = (g.size.width - gap * (c - 1)) / c;
+      const cellH = (g.size.height - gap * (r - 1)) / r;
+      // Preserve existing cell frames where the grid keeps that position; create
+      // fresh empty frames for new cells; drop frames outside the new bounds.
+      const old = g.children as Node[];
+      const byPos = new Map<string, Node>();
+      for (const cell of g.cells) if (cell.childId) { const ch = old.find((n) => n.id === cell.childId); if (ch) byPos.set(`${cell.row},${cell.col}`, ch); }
+      const nextChildren: Node[] = [];
+      const nextCells: typeof g.cells = [];
+      for (let row = 0; row < r; row++) {
+        for (let col = 0; col < c; col++) {
+          const keep = byPos.get(`${row},${col}`) as unknown as { id: string; transform: Transform; size: { width: number; height: number } } | undefined;
+          const frame = keep ?? (createNode("frame", {
+            name: "Photo", transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: cellW, height: cellH }, clip: true, children: [], maskShape: "rect", fills: [{ type: "solid", color: { srgb: { r: 0.9, g: 0.91, b: 0.93, a: 1 } } }],
+          } as Partial<Node>) as unknown as { id: string; transform: Transform; size: { width: number; height: number } });
+          frame.transform = { x: col * (cellW + gap), y: row * (cellH + gap), scaleX: 1, scaleY: 1, rotation: 0 };
+          frame.size = { width: cellW, height: cellH };
+          nextChildren.push(frame as unknown as Node);
+          nextCells.push({ row, col, rowSpan: 1, colSpan: 1, childId: frame.id });
+        }
+      }
+      perform(
+        () => { g.rows = r; g.cols = c; g.gap = gap; g.cells = nextCells; g.children = nextChildren; },
+        () => { g.rows = before.rows; g.cols = before.cols; g.gap = before.gap; g.cells = before.cells as never; g.children = before.children as never; },
       );
     },
     importPdfPages: (imported) => {
@@ -2482,6 +3222,7 @@ export const useEditor = create<EditorState>((set, get) => {
       const gx = (page.width - vbW * scale) / 2 - minX * scale;
       const gy = (page.height - vbH * scale) / 2 - minY * scale;
       const doc = get().doc;
+      ensureDocArrays(doc);
       const refs: AssetRef[] = assets.map((a) => ({ id: a.assetId, kind: "image", url: a.url, mime: "image/*", checksum: "" }));
       const group = createNode("group", {
         name: "Imported SVG",
@@ -2514,6 +3255,7 @@ export const useEditor = create<EditorState>((set, get) => {
       if (at) (node as unknown as { transform: Transform }).transform = { x: at.x - 160, y: at.y - 120, scaleX: 1, scaleY: 1, rotation: 0 };
       else positionInView(node);
       const doc = get().doc;
+      ensureDocArrays(doc);
       const page = doc.pages[curPageIndex()];
       // checksum is a real content hash once ingested; placement does
       // not have the bytes, so leave it empty rather than faking it with the id.
@@ -2560,11 +3302,76 @@ export const useEditor = create<EditorState>((set, get) => {
       }
     },
 
+    addPageBackgroundImage: (url) => {
+      const doc = get().doc;
+      ensureDocArrays(doc);
+      const page = doc.pages[curPageIndex()];
+      if (!page) return;
+      const pageId = page.id;
+      const assetId = `asset-${crypto.randomUUID()}`;
+      const node = createNode("image", {
+        name: "Background",
+        source: { assetId, naturalWidth: 0, naturalHeight: 0 },
+        fit: "cover",
+        transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+        size: { width: page.width, height: page.height },
+      } as Partial<Node>);
+      const ref: AssetRef = { id: assetId, kind: "image", url, mime: "image/*", checksum: "" };
+      const prevSelection = get().selection;
+      // Resolve the target page by id from the LIVE doc on each (re)apply, not by
+      // closing over the page object: when this op shares a one-undo turn with a
+      // page-replacing op (buildDeckFromOutline/appendDeckPages re-clone pages on
+      // redo), a captured reference would be orphaned and the image would land in
+      // a page no longer in the document.
+      perform(
+        () => {
+          const live = get().doc.pages.find((p) => p.id === pageId);
+          if (!live) return;
+          get().doc.assets.push(ref);
+          live.children.unshift(node); // back of the z-order
+          set({ selection: [node.id] });
+        },
+        () => {
+          const live = get().doc.pages.find((p) => p.id === pageId);
+          if (live) {
+            const i = live.children.findIndex((n) => n.id === node.id);
+            if (i >= 0) live.children.splice(i, 1);
+          }
+          const assets = get().doc.assets;
+          const ai = assets.findIndex((a) => a.id === assetId);
+          if (ai >= 0) assets.splice(ai, 1);
+          set({ selection: prevSelection });
+        },
+      );
+      // Patch the real natural dimensions once loaded so PPI/fit math is exact;
+      // the box stays at page size (full bleed).
+      if (typeof window !== "undefined") {
+        imageAssets.register(assetId, url);
+        const off = imageAssets.onChange((changed) => {
+          if (changed !== assetId) return;
+          if (imageAssets.status(assetId) === "ready") {
+            const img = imageAssets.image(assetId) as { naturalWidth?: number; naturalHeight?: number } | null;
+            // Resolve via the LIVE doc (not the closed-over page) so the patch
+            // lands even if the active page changed while the image loaded.
+            const loc = locate(get().doc, node.id);
+            const n = loc?.node.type === "image" ? (loc.node as unknown as { source: { naturalWidth: number; naturalHeight: number } }) : undefined;
+            if (img?.naturalWidth && n) {
+              n.source.naturalWidth = img.naturalWidth;
+              n.source.naturalHeight = img.naturalHeight ?? page.height;
+              get().tick();
+            }
+          }
+          off();
+        });
+      }
+    },
+
     setImageSource: (id, url) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "image" || loc.node.locked || editBlocked(id)) return;
       const node = loc.node as unknown as { source: { assetId: string; naturalWidth: number; naturalHeight: number }; crop?: CropRect };
       const doc = get().doc;
+      ensureDocArrays(doc);
       const assetId = `asset-${crypto.randomUUID()}`;
       const ref: AssetRef = { id: assetId, kind: "image", url, mime: "image/*", checksum: "" };
       const beforeSource = { ...node.source };
@@ -2615,6 +3422,7 @@ export const useEditor = create<EditorState>((set, get) => {
         size: { width: number; height: number };
       };
       const doc = get().doc;
+      ensureDocArrays(doc);
       const assetId = `asset-${crypto.randomUUID()}`;
       const ref: AssetRef = { id: assetId, kind: "image", url, mime: "image/png", checksum: "" };
       const beforeSource = { ...node.source };
@@ -2641,6 +3449,22 @@ export const useEditor = create<EditorState>((set, get) => {
         },
       );
       if (typeof window !== "undefined") imageAssets.register(assetId, url);
+    },
+    setVideoProps: (id, patch) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "video" || loc.node.locked || editBlocked(id)) return;
+      const n = loc.node as unknown as { trimStartMs?: number; trimEndMs?: number; volume: number; muted?: boolean; loop?: boolean };
+      const before = { trimStartMs: n.trimStartMs, trimEndMs: n.trimEndMs, volume: n.volume, muted: n.muted, loop: n.loop };
+      perform(
+        () => {
+          if (patch.trimStartMs != null) n.trimStartMs = Math.max(0, patch.trimStartMs);
+          if (patch.trimEndMs != null) n.trimEndMs = Math.max(0, patch.trimEndMs);
+          if (patch.volume != null) n.volume = Math.max(0, Math.min(1, patch.volume));
+          if (patch.muted != null) n.muted = patch.muted;
+          if (patch.loop != null) n.loop = patch.loop;
+        },
+        () => { n.trimStartMs = before.trimStartMs; n.trimEndMs = before.trimEndMs; n.volume = before.volume; n.muted = before.muted; n.loop = before.loop; },
+      );
     },
     setQrValue: (id, value) => {
       const loc = locate(get().doc, id);
@@ -2702,6 +3526,7 @@ export const useEditor = create<EditorState>((set, get) => {
       if (!loc || loc.node.type !== "shape" || loc.node.locked || editBlocked(id)) return;
       const node = loc.node as unknown as { fills?: Fill[] };
       const doc = get().doc;
+      ensureDocArrays(doc);
       const before = node.fills;
       if (!url.trim()) {
         // Clear the image fill back to a neutral solid.
@@ -2729,11 +3554,55 @@ export const useEditor = create<EditorState>((set, get) => {
         });
       }
     },
+    setPatternFill: (id, url, opts) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "shape" || loc.node.locked || editBlocked(id)) return;
+      const node = loc.node as unknown as { fills?: Fill[] };
+      const doc = get().doc;
+      ensureDocArrays(doc);
+      const before = node.fills;
+      if (!url.trim()) {
+        perform(
+          () => { node.fills = [{ type: "solid", color: { srgb: { r: 0.85, g: 0.86, b: 0.88, a: 1 } } }] as Fill[]; },
+          () => { node.fills = before; },
+        );
+        return;
+      }
+      const assetId = `asset-${crypto.randomUUID()}`;
+      const ref: AssetRef = { id: assetId, kind: "image", url, mime: "image/*", checksum: "" };
+      const fill = { type: "pattern", assetId, scale: opts?.scale ?? 1, rotation: opts?.rotation ?? 0, repeat: opts?.repeat ?? "tile" } as unknown as Fill;
+      perform(
+        () => { doc.assets.push(ref); node.fills = [fill]; },
+        () => { node.fills = before; const ai = doc.assets.findIndex((a) => a.id === assetId); if (ai >= 0) doc.assets.splice(ai, 1); },
+      );
+      if (typeof window !== "undefined") {
+        imageAssets.register(assetId, url);
+        const off = imageAssets.onChange((changed) => {
+          if (changed !== assetId) return;
+          if (imageAssets.status(assetId) === "loading") return;
+          get().tick();
+          off();
+        });
+      }
+    },
+    setPatternParams: (id, patch) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "shape" || loc.node.locked || editBlocked(id)) return;
+      const node = loc.node as unknown as { fills?: Fill[] };
+      const cur = node.fills?.[0] as unknown as { type: string; scale: number; rotation?: number; repeat: string } | undefined;
+      if (!cur || cur.type !== "pattern") return;
+      const before = { scale: cur.scale, rotation: cur.rotation, repeat: cur.repeat };
+      perform(
+        () => { if (patch.scale != null) cur.scale = patch.scale; if (patch.rotation != null) cur.rotation = patch.rotation; if (patch.repeat != null) cur.repeat = patch.repeat; },
+        () => { cur.scale = before.scale; cur.rotation = before.rotation; cur.repeat = before.repeat; },
+      );
+    },
     setFrameImage: (id, url) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "frame") return;
       const frame = loc.node as unknown as { size: { width: number; height: number }; children: Node[]; clip?: boolean };
       const doc = get().doc;
+      ensureDocArrays(doc);
       const assetId = `asset-${crypto.randomUUID()}`;
       const ref: AssetRef = { id: assetId, kind: "image", url, mime: "image/*", checksum: "" };
       const child = createNode("image", {
@@ -3129,6 +3998,88 @@ export const useEditor = create<EditorState>((set, get) => {
       );
     },
 
+    setTextBoxMode: (id, mode) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return;
+      const box = (loc.node as unknown as { box: { mode: "fixed" | "autoHeight" | "autoWidth" } }).box;
+      const before = box.mode;
+      if (before === mode) return;
+      perform(
+        () => { box.mode = mode; },
+        () => { box.mode = before; },
+      );
+      // Auto-height reflow recomputes height from content on the next measure pass;
+      // trigger a tick so the box resizes immediately rather than on next edit.
+      get().tick();
+    },
+
+    setShapeKind: (id, shape) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "shape" || loc.node.locked || editBlocked(id)) return;
+      const n = loc.node as unknown as { shape: string; sides?: number; innerRadius?: number; cornerRadius?: unknown };
+      const before = { shape: n.shape, sides: n.sides, innerRadius: n.innerRadius, cornerRadius: n.cornerRadius };
+      if (before.shape === shape) return;
+      perform(
+        () => {
+          n.shape = shape;
+          // Give polygon/star sensible parameters if missing; clear corner radius
+          // when leaving rect so it does not linger as an unused field.
+          if (shape === "polygon") n.sides = n.sides ?? 6;
+          if (shape === "star") { n.sides = n.sides ?? 5; n.innerRadius = n.innerRadius ?? 0.5; }
+          if (shape !== "rect") n.cornerRadius = undefined;
+        },
+        () => { n.shape = before.shape; n.sides = before.sides; n.innerRadius = before.innerRadius; n.cornerRadius = before.cornerRadius; },
+      );
+    },
+
+    setTextLang: (id, lang) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return;
+      const n = loc.node as unknown as { data?: Record<string, unknown> };
+      const before = n.data;
+      const next = { ...(n.data ?? {}) };
+      if (lang.trim()) next.lang = lang.trim(); else delete next.lang;
+      perform(
+        () => { n.data = next; },
+        () => { n.data = before; },
+      );
+    },
+
+    setTextColumns: (id, count, gutter) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return;
+      const box = (loc.node as unknown as { box: { columns?: { count: number; gutter: number } } }).box;
+      const before = box.columns;
+      const n = Math.max(1, Math.min(4, Math.round(count)));
+      const next = n <= 1 ? undefined : { count: n, gutter: Math.max(0, gutter ?? before?.gutter ?? 16) };
+      perform(
+        () => { box.columns = next; },
+        () => { box.columns = before; },
+      );
+      get().tick();
+    },
+
+    addDocFont: (ref) => {
+      const doc = get().doc;
+      ensureDocArrays(doc);
+      const fonts = (doc as unknown as { fonts: { id: string; family: string; source: string; url: string }[] }).fonts;
+      if (fonts.some((f) => f.family.toLowerCase() === ref.family.toLowerCase())) return;
+      // Not an undo-worthy content edit; record it and mark the doc dirty.
+      fonts.push({ id: ref.id, family: ref.family, source: "upload", url: ref.url });
+      set((s) => ({ rev: s.rev + 1, savedRev: -1 }));
+    },
+
+    setRotationOrigin: (id, origin) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.locked || editBlocked(id)) return;
+      const t = loc.node.transform as unknown as { origin?: { x: number; y: number } };
+      const before = t.origin;
+      perform(
+        () => { t.origin = origin; },
+        () => { t.origin = before; },
+      );
+    },
+
     setCurve: (id, curvature) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return;
@@ -3503,6 +4454,14 @@ export const useEditor = create<EditorState>((set, get) => {
       const cmds = selection.map((id) => setLocked(doc, id, v)).filter(Boolean) as EditCommand[];
       if (cmds.length) registerApplied(set, get, cmds);
     },
+    lockAllOnPage: (v) => {
+      const doc = get().doc;
+      const page = doc.pages[curPageIndex()];
+      if (!page) return;
+      const cmds = page.children.map((n) => setLocked(doc, n.id, v)).filter(Boolean) as EditCommand[];
+      if (cmds.length) registerApplied(set, get, cmds);
+      if (v) set({ selection: [] });
+    },
     setHiddenSel: (v) => {
       const { doc, selection } = get();
       const cmds = selection.map((id) => setHidden(doc, id, v)).filter(Boolean) as EditCommand[];
@@ -3769,7 +4728,17 @@ export const useEditor = create<EditorState>((set, get) => {
       if (cmd) registerApplied(set, get, [cmd]);
     },
 
+    setCollabUndo: (handle) => set({ collabUndo: handle }),
     undo: () => {
+      // F16: in a live collaborative session, delegate to the CRDT undo manager
+      // so this client reverts only its OWN edits (the local snapshot stack would
+      // clobber concurrent peer changes). The manager's undo flows back through
+      // the Y -> store bridge, so we do not touch the local stacks here.
+      const cu = get().collabUndo;
+      if (cu) {
+        if (cu.canUndo()) cu.undo();
+        return;
+      }
       const { undoStack } = get();
       if (undoStack.length === 0) return;
       const entry = undoStack[undoStack.length - 1];
@@ -3781,6 +4750,11 @@ export const useEditor = create<EditorState>((set, get) => {
       }));
     },
     redo: () => {
+      const cu = get().collabUndo;
+      if (cu) {
+        if (cu.canRedo()) cu.redo();
+        return;
+      }
       const { redoStack } = get();
       if (redoStack.length === 0) return;
       const entry = redoStack[redoStack.length - 1];
