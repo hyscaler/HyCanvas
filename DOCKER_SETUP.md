@@ -8,6 +8,7 @@ This guide covers the two ways to run it and documents every environment variabl
 
 - [Option A: published image + your own Postgres](#option-a-published-image)
 - [Option B: docker compose (bundled or external Postgres)](#option-b-docker-compose)
+- [Example .env for Docker](#example-env-for-docker)
 - [Option C: local development with hot reload](#option-c-local-development)
 - [Networking: the localhost gotcha](#networking-the-localhost-gotcha)
 - [Persistence and volumes](#persistence-and-volumes)
@@ -60,6 +61,70 @@ There are three compose files:
 | `docker-compose.yml` | The default. `docker compose up -d` pulls the published `hycanvas/hycanvas` image and runs it with bundled Postgres. |
 | `docker-compose.prod.yml` | Build YOUR source instead of the published image, plus a container healthcheck (`/healthz`) and restart policy. Run with `docker compose -f docker-compose.prod.yml up --build -d`. |
 | `docker-compose.dev.yml` | Local development with hot reload (see Option C). |
+
+## Example .env for Docker
+
+`cp .env.example .env`, then set the values below. Under compose you only need `JWT_SECRET` plus the database settings, the compose file already wires the rest (`NODE_ENV`, `COOKIE_SECURE`, `DATABASE_URL`, `REDIS_URL`, `STORAGE_DRIVER`, `DB_AUTO_MIGRATE`, `PORT`) and those override `.env`, so changing them in `.env` has no effect under Docker.
+
+### Bundled Postgres (default)
+
+The compose runs a Postgres container and assembles the connection URL from these credentials:
+
+```
+# Required: signs sessions and encrypts stored secrets. Generate with: openssl rand -hex 32
+JWT_SECRET="replace-with-a-32-byte-random-hex"
+
+# Bundled Postgres credentials (compose provisions the db container and builds
+# DATABASE_URL from them). Use a strong password for any real deployment.
+POSTGRES_USER="hycanvas"
+POSTGRES_PASSWORD="change-this-password"
+POSTGRES_DB="hycanvas"
+COMPOSE_PROFILES="bundled"
+```
+
+That is the complete minimum. `docker compose up -d` then serves the app at http://localhost:8005. (The `.env` `DATABASE_URL` line stays localhost-based for non-Docker dev; compose ignores it.)
+
+### External / managed Postgres
+
+To point the app at your own database instead of the bundled container, set `EXTERNAL_DATABASE_URL` and turn the bundled `db` off by emptying `COMPOSE_PROFILES`:
+
+```
+JWT_SECRET="replace-with-a-32-byte-random-hex"
+
+# Your managed Postgres. The database must already exist (the app creates its
+# own tables, not the database). For a Postgres on the host machine, use
+# host.docker.internal instead of localhost.
+EXTERNAL_DATABASE_URL="postgresql://user:pass@your-db-host:5432/hycanvas?schema=public"
+
+# Empty disables the bundled db container so only the app runs.
+COMPOSE_PROFILES=
+```
+
+### Optional add-ons
+
+All optional; leave unset to disable. These are read straight from `.env` (the compose does not override them). See the [environment variable reference](#environment-variable-reference) for the full list and defaults.
+
+```
+# Public base URL, used in links inside outbound email. Set to your real origin.
+APP_URL="https://canvas.yourdomain.com"
+
+# SSO (generic OIDC). The "Continue with ..." button appears only when all three are set.
+OIDC_ISSUER="https://accounts.google.com"
+OIDC_CLIENT_ID=""
+OIDC_CLIENT_SECRET=""
+
+# Real email (otherwise verify/reset/invite links go to the dev outbox).
+SMTP_HOST="smtp.example.com"
+SMTP_PORT="587"
+SMTP_USERNAME="apikey-or-user"
+SMTP_PASSWORD="..."
+SMTP_FROM="no-reply@yourdomain.com"
+```
+
+Notes:
+- Behind https (a TLS reverse proxy), also set `COOKIE_SECURE: "true"` on the `app` service in the compose (not `.env`, the compose pins it) and point `APP_URL` at your https origin. Over plain http it must stay `false` or login fails.
+- Object storage (S3/MinIO): set the `S3_*` keys in `.env` and change `STORAGE_DRIVER` to `s3` on the `app` service (the default `docker-compose.yml` pins it to `local`).
+- AI providers are configured per workspace inside the app (encrypted in the database), never via env.
 
 ## Option C: local development
 
@@ -122,15 +187,25 @@ Postgres data persists in its own volume (the `pgdata` volume under compose, or 
 | `COMPOSE_PROFILES` | `bundled` | `bundled` runs the Postgres container; empty (with `EXTERNAL_DATABASE_URL` set) runs only the app. |
 | `EXTERNAL_DATABASE_URL` | - | Connection string for a managed Postgres, used when `COMPOSE_PROFILES` is empty. |
 
+### Realtime scaling (optional, Redis)
+
+HyCanvas needs **no Redis** by default: a single instance keeps realtime collaboration (Yjs sync, presence, cursors, locks) in memory and runs background jobs in-process. Redis is only for running **multiple app instances** behind a load balancer, where it fans relay/awareness frames out across instances (pub/sub) and backs a cross-instance lock store.
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `REDIS_URL` | (empty) | Unset/empty = single instance, in-memory (the default). Set to a reachable Redis to enable multi-instance fan-out. A set-but-unreachable value fails loudly on boot (no silent split-brain). |
+
+All three compose files set `REDIS_URL: ""` on the `app` service, so a `REDIS_URL` in your `.env` is intentionally ignored under Docker (the same way `DATABASE_URL` is) and the stack ships no `redis` service. To enable it, add a `redis` service, set `REDIS_URL: "redis://redis:6379/0"` on the `app` service, and run 2+ `app` replicas behind a reverse proxy.
+
 ### Storage and uploads
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `STORAGE_DRIVER` | `local` | `local` filesystem storage. (`s3` is reserved; the Go backend has no S3 driver yet, so keep `local`.) |
+| `STORAGE_DRIVER` | `local` | `local` filesystem storage, or `s3` for S3-compatible object storage (see `S3_*`). Left blank, S3 is used when `S3_ENDPOINT` + credentials are set, else local. Note: the default `docker-compose.yml` pins this to `local`, so set it on the `app` service to use S3 there. |
 | `LOCAL_STORAGE_PATH` | `.data/storage` | Where uploads/exports/snapshots are written. In the image this is `/app/.data/storage` - mount a volume there. Use an absolute path outside Docker. |
 | `BACKEND_PUBLIC_URL` | (relative) | Absolute base URL used to build asset delivery links. Set to your public URL behind a proxy/CDN. |
 | `ASSET_QUOTA_BYTES` | (unset) | Caps per-workspace upload storage in bytes (e.g. `5368709120` = 5 GiB). |
-| `S3_*` | - | Reserved for a future S3/MinIO driver; not yet implemented. |
+| `S3_*` | - | S3-compatible object storage when `STORAGE_DRIVER=s3`: `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_FORCE_PATH_STYLE` (set `true` for MinIO/non-AWS). The bucket is created if missing. |
 
 ### Single sign-on (OIDC, optional)
 
