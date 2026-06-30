@@ -43,14 +43,8 @@ services:
   app:
     image: hycanvas/hycanvas:latest
     restart: unless-stopped
-    # required:false so the app still starts in EXTERNAL mode, where the bundled
-    # db is not started (profile off). In bundled mode it waits for healthy.
-    depends_on:
-      db:
-        condition: service_healthy
-        required: false
     ports:
-      - "8005:8005"
+      - "${APP_PORT}:8005"
     # All app config/secrets (JWT_SECRET, SMTP_*, OIDC_*, OPENAI/ANTHROPIC keys,
     # VAPID_*, APP_URL, FRONTEND_URL, ...) come from your .env. The file is
     # optional, but JWT_SECRET is REQUIRED: the app refuses to start without it,
@@ -81,9 +75,11 @@ services:
       # exist here). Set S3_* in .env to use object storage instead.
       STORAGE_DRIVER: local
       LOCAL_STORAGE_PATH: /app/.data/storage
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
     volumes:
-      - storage:/app/.data/storage
+      - ./data/storage:/app/.data/storage
 
 volumes:
   pgdata:
-  storage:

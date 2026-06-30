@@ -74,11 +74,11 @@ The whole product (UI + REST API + realtime WebSocket) runs from one image, with
 The repo ships a `docker-compose.yml` that pulls the prebuilt image (`linux/amd64` and `linux/arm64`) and runs it with a bundled Postgres:
 
 ```bash
-cp .env.example .env   # set JWT_SECRET (and POSTGRES_* if you like)
+cp .env.example .env   # set JWT_SECRET and APP_PORT (and POSTGRES_* if you like)
 docker compose up -d
 ```
 
-Then open `http://localhost:8005`. `JWT_SECRET` is required and migrations run on boot. Update later with `docker compose pull && docker compose up -d`. You don't even need a checkout, the same compose (and a `docker run` alternative) is in [docker/README.md](docker/README.md), runnable anywhere.
+Then open `http://localhost:<APP_PORT>` (e.g. `http://localhost:8005`). `JWT_SECRET` and `APP_PORT` are required and migrations run on boot. Update later with `docker compose pull && docker compose up -d`. You don't even need a checkout, the same compose (and a `docker run` alternative) is in [docker/README.md](docker/README.md), runnable anywhere.
 
 ### Build from source
 
@@ -88,13 +88,13 @@ To run your own source instead of the published image, use the build variant (it
 docker compose -f docker-compose.prod.yml up --build -d
 ```
 
-Both serve everything at `http://localhost:8005`. Stop with `docker compose down` (add `-v` to also drop the data volumes).
+The build variant serves at `http://localhost:8005`; the published `docker-compose.yml` publishes on the host port you set in `APP_PORT`. Stop with `docker compose down` (add `-v` to drop the bundled Postgres volume).
 
 Notes:
 - ffmpeg (for video export) is bundled in the image; no host install needed.
-- Local-file storage persists in the `storage` volume at `/app/.data/storage`. To use object storage instead, set the `S3_*` variables on the `app` service.
+- Local-file storage persists on the host at `./data/storage` (bind-mounted to `/app/.data/storage`) with the published `docker-compose.yml`, so it survives `docker compose down -v`. To use object storage instead, set the `S3_*` variables on the `app` service.
 - Secrets/config (notably `JWT_SECRET`, and optionally `AI_SECRET`, `OIDC_*`, `VAPID_*`) come from your `.env`.
-- To point the app at an external Postgres, set `EXTERNAL_DATABASE_URL` and `COMPOSE_PROFILES=` (empty) so the bundled `db` container does not start.
+- To point the app at an external Postgres, set `EXTERNAL_DATABASE_URL` and `COMPOSE_PROFILES=` (empty) so the bundled `db` container does not start. For Postgres on the host, use `host.docker.internal` as the host (the published compose maps it via `extra_hosts`).
 
 ### Develop in Docker (hot reload)
 

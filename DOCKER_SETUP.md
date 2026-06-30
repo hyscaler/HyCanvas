@@ -43,11 +43,11 @@ Tags: `latest` (stable), `development` (latest dev build), and `<version>-<sha>`
 From a checkout of the repository:
 
 ```bash
-cp .env.example .env     # set JWT_SECRET at minimum
+cp .env.example .env     # set JWT_SECRET and APP_PORT at minimum
 docker compose up -d     # pulls the published image + bundled Postgres
 ```
 
-This serves everything at http://localhost:8005, with Postgres as a companion service. Update later with `docker compose pull && docker compose up -d`. Stop with `docker compose down` (add `-v` to also drop the data volumes).
+This serves everything at http://localhost:<APP_PORT> (e.g. 8005), with Postgres as a companion service. Update later with `docker compose pull && docker compose up -d`. Stop with `docker compose down` (add `-v` to drop the bundled Postgres volume; local storage lives in the host folder `./data/storage` and is unaffected).
 
 Compose chooses the database from `.env`:
 
@@ -64,7 +64,7 @@ There are three compose files:
 
 ## Example .env for Docker
 
-`cp .env.example .env`, then set the values below. Under compose you only need `JWT_SECRET` plus the database settings, the compose file already wires the rest (`NODE_ENV`, `COOKIE_SECURE`, `DATABASE_URL`, `REDIS_URL`, `STORAGE_DRIVER`, `DB_AUTO_MIGRATE`, `PORT`) and those override `.env`, so changing them in `.env` has no effect under Docker.
+`cp .env.example .env`, then set the values below. Under compose you only need `JWT_SECRET`, `APP_PORT` (the host port to publish on), plus the database settings; the compose file already wires the rest (`NODE_ENV`, `COOKIE_SECURE`, `DATABASE_URL`, `REDIS_URL`, `STORAGE_DRIVER`, `DB_AUTO_MIGRATE`, `PORT`) and those override `.env`, so changing them in `.env` has no effect under Docker.
 
 ### Bundled Postgres (default)
 
@@ -80,9 +80,12 @@ POSTGRES_USER="hycanvas"
 POSTGRES_PASSWORD="change-this-password"
 POSTGRES_DB="hycanvas"
 COMPOSE_PROFILES="bundled"
+
+# Host port the app is published on (maps to the container's :8005).
+APP_PORT=8005
 ```
 
-That is the complete minimum. `docker compose up -d` then serves the app at http://localhost:8005. (The `.env` `DATABASE_URL` line stays localhost-based for non-Docker dev; compose ignores it.)
+That is the complete minimum. `docker compose up -d` then serves the app at http://localhost:8005 (or whatever `APP_PORT` you set). (The `.env` `DATABASE_URL` line stays localhost-based for non-Docker dev; compose ignores it.)
 
 ### External / managed Postgres
 
@@ -152,7 +155,7 @@ Inside a container, `localhost` is the container itself, not your host machine. 
 
 ## Persistence and volumes
 
-With the default local storage driver, uploads, exports, and snapshots are written under `LOCAL_STORAGE_PATH` (`/app/.data/storage` in the image). Mount a named volume there to persist them:
+With the default local storage driver, uploads, exports, and snapshots are written under `LOCAL_STORAGE_PATH` (`/app/.data/storage` in the image). The bundled `docker-compose.yml` bind-mounts that to the host folder `./data/storage` (next to the compose file), so the data persists even across `docker compose down -v`. With `docker run`, mount a volume there to persist them:
 
 ```
 -v hycanvas-storage:/app/.data/storage
