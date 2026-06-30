@@ -87,6 +87,7 @@ import {
 } from "@hc/engine";
 import { booleanOp, fitCubicBeziers, pathToPolylines, recognizeShape, shapeNodeToParametric, shapeToPath, simplifyPolyline, strokeToOutline, type BooleanOp } from "@hc/geometry";
 import { imageAssets } from "@/lib/assetProvider";
+import { pageTop } from "@/lib/pageLayout";
 import type { MagicDesignSpec } from "@/lib/magicDesign";
 import { layoutDesign, type AiDesignSpec, type DeckResult } from "@hc/aistudio";
 import { qrModules } from "@/lib/qr";
@@ -315,6 +316,7 @@ interface EditorState {
   guides: Record<string, { x: number[]; y: number[] }>; // manual guides per page id
   snapGuides: { x: number[]; y: number[] } | null; // transient smart-guide preview (shared by move/resize)
   activePage: number; // index of the page being edited
+  transforming: boolean; // true while an element is being live-moved/resized (fades it so the page shows through)
   undoStack: UndoEntry[];
   redoStack: UndoEntry[];
 
@@ -378,6 +380,9 @@ interface EditorState {
   // pages
   /** Switch the active page (clamped); clears selection. */
   setActivePage(index: number): void;
+  /** Mark a live move/resize gesture active so the canvas fades the selection
+   *  (the page shows through it during the drag). Cleared on gesture end. */
+  setTransforming(v: boolean): void;
   /** Add a blank page after the current one, undoable. Defaults to the current
    *  page's size; pass a size to add a differently-sized page. */
   addPage(size?: { width: number; height: number }): void;
@@ -1022,6 +1027,21 @@ export const useEditor = create<EditorState>((set, get) => {
     return n > 0 ? Math.min(get().activePage, n - 1) : 0;
   };
 
+  // Index of the page whose subtree contains a node id, or -1. Used to scroll the
+  // viewport into the right page's stacked band when jumping to an arbitrary node.
+  const pageIndexOfNode = (doc: DesignFile, id: string): number => {
+    const has = (nodes: Node[]): boolean => {
+      for (const nd of nodes) {
+        if (nd.id === id) return true;
+        const kids = (nd as { children?: Node[] }).children;
+        if (kids && has(kids)) return true;
+      }
+      return false;
+    };
+    for (let i = 0; i < doc.pages.length; i++) if (has(doc.pages[i].children)) return i;
+    return -1;
+  };
+
   // Center a new node in the visible viewport (in page coordinates), clamped to
   // the page artboard, so added elements appear where the user is looking rather
   // than at the page's top-left corner.
@@ -1063,6 +1083,7 @@ export const useEditor = create<EditorState>((set, get) => {
     snapGuides: null,
     playing: false,
     activePage: 0,
+    transforming: false,
     viewportSize: { width: 0, height: 0 },
     undoStack: [],
     redoStack: [],
@@ -1149,6 +1170,7 @@ export const useEditor = create<EditorState>((set, get) => {
       }));
     },
 
+    setTransforming: (v) => set((s) => (s.transforming === v ? {} : { transforming: v })),
     setActivePage: (index) =>
       set((s) => ({
         activePage: Math.max(0, Math.min(index, s.doc.pages.length - 1)),
@@ -1180,6 +1202,24 @@ export const useEditor = create<EditorState>((set, get) => {
       const idx = curPageIndex();
       const src = doc.pages[idx];
       if (!src || !targets.length) return [];
+
+      // A single target resizes THIS page in place (keeps its id; the user stays on
+      // the page they were editing). Multiple targets fan out into copies below (a
+      // social / multi-format set), since one page cannot become many in place.
+      if (targets.length === 1) {
+        const resized = resizePage(src, targets[0]) as Page;
+        resized.id = src.id;
+        resized.name = src.name;
+        const before = structuredClone(src) as Page;
+        const after = structuredClone(resized) as Page;
+        const prevSel = get().selection;
+        perform(
+          () => { doc.pages[idx] = structuredClone(after) as never; set({ activePage: idx, selection: prevSel }); },
+          () => { doc.pages[idx] = structuredClone(before) as never; set({ activePage: idx, selection: prevSel }); },
+        );
+        return [src.id];
+      }
+
       // Build the re-laid-out pages once; clone fresh per (re)do so undo/redo
       // never share a mutated reference, mirroring addPage/duplicatePage.
       const built: Page[] = targets.map((t, i) => {
@@ -1579,8 +1619,11 @@ export const useEditor = create<EditorState>((set, get) => {
       const { width: vw, height: vh } = get().viewportSize;
       const b = get().contentBounds();
       if (!vw || !vh || !b || b.width <= 0 || b.height <= 0) return;
+      // contentBounds is in the active page's LOCAL space (y from 0); shift it into
+      // the page's stacked band so Fit frames the page being viewed, not page 1.
+      const offY = pageTop(get().doc, curPageIndex());
       const zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.min(vw / b.width, vh / b.height) * 0.9));
-      get().setViewport({ zoom, panX: b.x + b.width / 2 - vw / 2 / zoom, panY: b.y + b.height / 2 - vh / 2 / zoom });
+      get().setViewport({ zoom, panX: b.x + b.width / 2 - vw / 2 / zoom, panY: b.y + offY + b.height / 2 - vh / 2 / zoom });
     },
     zoomToSelection: () => {
       const { doc, selection, viewportSize } = get();
@@ -1588,21 +1631,26 @@ export const useEditor = create<EditorState>((set, get) => {
       if (!selection.length) return get().fitToScreen();
       const b = unionAABB(doc, selection);
       if (!b || !vw || !vh) return;
+      const offY = pageTop(doc, curPageIndex());
       const zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.min(vw / b.width, vh / b.height) * 0.8));
-      get().setViewport({ zoom, panX: b.x + b.width / 2 - vw / 2 / zoom, panY: b.y + b.height / 2 - vh / 2 / zoom });
+      get().setViewport({ zoom, panX: b.x + b.width / 2 - vw / 2 / zoom, panY: b.y + offY + b.height / 2 - vh / 2 / zoom });
     },
     jumpToNode: (id) => {
       const { doc, viewportSize } = get();
       const { width: vw, height: vh } = viewportSize;
       const b = unionAABB(doc, [id]);
       if (!b || !vw || !vh) return;
-      set({ selection: [id] });
+      // Activate and offset into the page that holds the node so the jump lands on
+      // it across a multi-page document (not page 1's coordinates).
+      const pi = pageIndexOfNode(doc, id);
+      set({ selection: [id], ...(pi >= 0 ? { activePage: pi } : {}) });
+      const offY = pageTop(doc, pi >= 0 ? pi : curPageIndex());
       const cur = get().viewport.zoom;
       // Fit the node at 0.8, but never zoom IN past the current zoom or 1.5x (so a
       // small note is centered and readable, not magnified to MAX_ZOOM).
       const fit = Math.min(vw / b.width, vh / b.height) * 0.8;
       const zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.min(fit, Math.max(cur, 1.5))));
-      get().setViewport({ zoom, panX: b.x + b.width / 2 - vw / 2 / zoom, panY: b.y + b.height / 2 - vh / 2 / zoom });
+      get().setViewport({ zoom, panX: b.x + b.width / 2 - vw / 2 / zoom, panY: b.y + offY + b.height / 2 - vh / 2 / zoom });
     },
 
     setSnapGuides: (g) => set({ snapGuides: g }),

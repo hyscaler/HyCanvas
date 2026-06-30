@@ -14,10 +14,10 @@ import { useEffect, useRef, type RefObject } from "react";
 import { createScene, type CanvasLike, type Point, type Scene, type Viewport } from "@hc/engine";
 import { pageToScreen, screenToPage } from "@hc/engine";
 import { renderScene } from "@hc/engine";
-import type { DesignFile } from "@hc/schema";
 import { useEditor } from "@/store/editor";
 import { imageAssets } from "@/lib/assetProvider";
 import { fonts } from "@/lib/fontProvider";
+import { PAGE_GAP, pageOffsets } from "@/lib/pageLayout";
 
 export interface CanvasApi {
   scene: () => Scene | null;
@@ -27,20 +27,6 @@ export interface CanvasApi {
   /** Index of the page whose stacked band contains a screen point (for
    *  click-to-activate in continuous-scroll mode). */
   pageIndexAt: (screen: Point) => number;
-}
-
-/** Gap between stacked pages, in page-space units. */
-const PAGE_GAP = 72;
-
-/** Cumulative top offset (page-space Y) of each page in the stack. */
-function pageOffsets(doc: DesignFile): number[] {
-  const offs: number[] = [];
-  let y = 0;
-  for (const p of doc.pages) {
-    offs.push(y);
-    y += p.height + PAGE_GAP;
-  }
-  return offs;
 }
 
 export function useEditorCanvas(canvasRef: RefObject<HTMLCanvasElement | null>): CanvasApi {
@@ -54,6 +40,7 @@ export function useEditorCanvas(canvasRef: RefObject<HTMLCanvasElement | null>):
   const viewport = useEditor((s) => s.viewport);
   const activePage = useEditor((s) => s.activePage);
   const editingTextId = useEditor((s) => s.editingTextId);
+  const transforming = useEditor((s) => s.transforming);
   const docId = useEditor((s) => s.doc.id);
 
   // Re-arm the one-time center+fit when a different document is loaded in place.
@@ -116,6 +103,15 @@ export function useEditorCanvas(canvasRef: RefObject<HTMLCanvasElement | null>):
     const doc = useEditor.getState().doc;
     if (!doc.pages.length) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height); return; }
     const offs = pageOffsets(doc);
+    // Clip each page's content to its artboard so anything dragged past the edge
+    // crops at the page boundary (matching export), making the canvas size always
+    // visible. The whiteboard is an unbounded surface, so it is never clipped.
+    // While an element is being live-moved/resized we DON'T clip (so the whole
+    // element stays visible) and instead fade it, so the page shows through it.
+    const isBoard = (doc.meta as { kind?: string } | undefined)?.kind === "whiteboard";
+    const live = useEditor.getState().transforming;
+    const clipPage = !isBoard && !live;
+    const fadeIds = live ? new Set(useEditor.getState().selection) : undefined;
     // Viewport culling: only draw pages whose stacked band intersects the visible
     // area (plus a half-screen buffer so scrolling reveals neighbors smoothly).
     const z = base.zoom || 1;
@@ -134,7 +130,7 @@ export function useEditorCanvas(canvasRef: RefObject<HTMLCanvasElement | null>):
       const vp: Viewport = { ...base, panY: base.panY - top };
       // Clear the whole canvas once (on the first drawn page), then composite the
       // rest on top so stacked pages don't erase each other.
-      renderScene(getScene(i), ctx as unknown as CanvasLike, vp, { assets: imageAssets, clear: drawn === 0 ? undefined : false, skipNodeId, hiddenIds });
+      renderScene(getScene(i), ctx as unknown as CanvasLike, vp, { assets: imageAssets, clear: drawn === 0 ? undefined : false, skipNodeId, hiddenIds, clipPage, fadeIds });
       drawn++;
     }
     if (drawn === 0) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height); }
@@ -153,10 +149,10 @@ export function useEditorCanvas(canvasRef: RefObject<HTMLCanvasElement | null>):
   useEffect(() => imageAssets.onChange(() => render()), [render]);
   useEffect(() => fonts.onChange(() => render()), [render]);
 
-  // Repaint on viewport, active-page, or text-edit (skip) change.
+  // Repaint on viewport, active-page, text-edit (skip), or live-transform change.
   useEffect(() => {
     render();
-  }, [viewport, activePage, editingTextId, render]);
+  }, [viewport, activePage, editingTextId, transforming, render]);
 
   // Repaint on container resize.
   useEffect(() => {

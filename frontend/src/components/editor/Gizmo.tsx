@@ -165,6 +165,7 @@ function SelectionGizmo({ api, ids }: { api: CanvasApi; ids: string[] }) {
       const c = drag.current.center;
       drag.current.startAngle = Math.atan2(box!.y - c.y, box!.x + box!.width / 2 - c.x); // handle starts at top-center
     }
+    useEditor.getState().setTransforming(true);
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
   }
@@ -226,6 +227,7 @@ function SelectionGizmo({ api, ids }: { api: CanvasApi; ids: string[] }) {
     drag.current = null;
     window.removeEventListener("pointermove", onMove);
     window.removeEventListener("pointerup", onUp);
+    useEditor.getState().setTransforming(false);
     if (!d) return;
     const store = useEditor.getState();
     const nodes: string[] = [];
@@ -375,6 +377,7 @@ export function Gizmo({ api }: { api: CanvasApi }) {
       startContent: loc!.node.type === "text" ? structuredClone((loc!.node as unknown as { content: unknown }).content) : undefined,
       startBox: loc!.node.type === "text" ? structuredClone((loc!.node as unknown as { box: unknown }).box) : undefined,
     };
+    useEditor.getState().setTransforming(true);
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
   }
@@ -484,6 +487,7 @@ export function Gizmo({ api }: { api: CanvasApi }) {
     drag.current = null;
     window.removeEventListener("pointermove", onMove);
     window.removeEventListener("pointerup", onUp);
+    useEditor.getState().setTransforming(false);
     if (!d) return;
     const store = useEditor.getState();
     store.setSnapGuides(null);

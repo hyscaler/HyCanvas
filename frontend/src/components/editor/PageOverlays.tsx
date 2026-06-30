@@ -8,8 +8,7 @@ import { pageToScreen } from "@hc/engine";
 import { useEditor } from "@/store/editor";
 import { promptText } from "@/lib/promptDialog";
 import type { CanvasApi } from "@/lib/useEditorCanvas";
-
-const PAGE_GAP = 72; // must match useEditorCanvas
+import { PAGE_GAP } from "@/lib/pageLayout";
 
 function HdrBtn({ icon: Icon, title, onClick, disabled, danger }: { icon: typeof ChevronUp; title: string; onClick: () => void; disabled?: boolean; danger?: boolean }) {
   return (

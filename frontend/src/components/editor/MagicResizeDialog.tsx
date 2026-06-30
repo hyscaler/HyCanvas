@@ -1,8 +1,8 @@
 // Magic Resize: resize the current page into one or more new
-// sizes at once, smartly re-laying out elements (geometric-mean scaling via
-// @hc/editor resizePage, run by the store's magicResizePages). The user picks
-// any number of size presets (or a custom size); each selected target appends a
-// re-flowed copy of the current page. Pure UI over the existing store action.
+// sizes, smartly re-laying out elements (geometric-mean scaling via @hc/editor
+// resizePage, run by the store's magicResizePages). The user picks any number of
+// size presets (or a custom size): one size resizes the current page in place;
+// several create a re-flowed copy per size. Pure UI over the existing store action.
 
 import { useState } from "react";
 import { Wand2, X } from "lucide-react";
@@ -78,7 +78,8 @@ export function MagicResizeDialog({ open, onClose }: { open: boolean; onClose: (
   const apply = (sizes: { w: number; h: number }[], verb: string) => {
     if (!sizes.length) return;
     const ids = useEditor.getState().magicResizePages(sizes.map((s) => ({ width: s.w, height: s.h })));
-    toast.success(ids.length === 1 ? `${verb} 1 page` : `${verb} ${ids.length} pages`);
+    // A single size resizes the current page in place; multiple create a set.
+    toast.success(sizes.length === 1 ? "Resized this page" : `${verb} ${ids.length} pages`);
     setPicked({});
     onClose();
   };
@@ -109,7 +110,7 @@ export function MagicResizeDialog({ open, onClose }: { open: boolean; onClose: (
         </div>
 
         <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Or pick exact sizes</div>
-        <p className="mb-2 text-xs text-neutral-500">Each adds a copy of this page, re-laid-out to fit.</p>
+        <p className="mb-2 text-xs text-neutral-500">One size resizes this page in place; pick several to add re-laid-out copies.</p>
 
         {GROUPS.map((g) => (
           <div key={g.name} className="mb-3">

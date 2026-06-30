@@ -1787,6 +1787,7 @@ export function Canvas() {
       } else {
         setGuides(null);
       }
+      store.setTransforming(true);
       store.tick();
     } else if (g.type === "marquee") {
       const s = localPoint(e);
@@ -1814,11 +1815,14 @@ export function Canvas() {
     if ([...pointers.current.values()].filter((p) => p.type === "touch").length < 2) pinch.current = null;
     panning.current = null;
     cancelInteraction();
+    useEditor.getState().setTransforming(false);
     setSpaceCursor(spaceHeld.current);
     canvasRef.current?.releasePointerCapture?.(e.pointerId);
   }
 
   function onPointerUp(e: React.PointerEvent) {
+    // End any live-transform fade (a move gesture just ended or never started).
+    useEditor.getState().setTransforming(false);
     // Multi-touch bookkeeping: drop the lifted pointer and end the pinch once
     // fewer than two fingers remain (FR-31).
     const wasPinching = !!pinch.current;
@@ -1964,14 +1968,20 @@ export function Canvas() {
     const vp = store.viewport;
     if (e.ctrlKey || e.metaKey) {
       const screen = localPoint(e);
-      const before = api.toPage(screen);
-      const zoom = Math.min(64, Math.max(0.02, vp.zoom * Math.exp(-e.deltaY * 0.01)));
-      // Keep the page point under the cursor fixed.
-      store.setViewport({
-        zoom,
-        panX: before.x - screen.x / zoom,
-        panY: before.y - screen.y / zoom,
-      });
+      // Gentle, incremental zoom about the cursor (~12% per notch, Canva-like)
+      // instead of one coarse jump. Normalize line/page wheel deltas to pixels and
+      // clamp the step so a single fast notch can't leap 50%->200%.
+      let dy = e.deltaY;
+      if (e.deltaMode === 1) dy *= 16; // lines -> px
+      else if (e.deltaMode === 2) dy *= 100; // pages -> px
+      dy = Math.max(-60, Math.min(60, dy));
+      const z = vp.zoom;
+      const zoom = Math.min(64, Math.max(0.02, z * Math.exp(-dy * 0.0022)));
+      // Keep the GLOBAL stacked page point under the cursor fixed (panX/panY are in
+      // global space; using it directly also stops zoom from jumping off-page).
+      const gx = vp.panX + screen.x / z;
+      const gy = vp.panY + screen.y / z;
+      store.setViewport({ zoom, panX: gx - screen.x / zoom, panY: gy - screen.y / zoom });
     } else {
       store.setViewport({ panX: vp.panX + e.deltaX / vp.zoom, panY: vp.panY + e.deltaY / vp.zoom });
     }
@@ -2371,6 +2381,22 @@ export function Canvas() {
         onPointerLeave={onPointerLeave}
         onDoubleClick={onDoubleClick}
       />
+      {/* Artboard outline: a crisp 1px page edge drawn ON TOP of the canvas so the
+          canvas bounds stay visible even when an element covers or overflows the
+          page (pairs with the engine's faded-overflow ghost, Canva-style). */}
+      {pageFrame && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute z-[1]"
+          style={{
+            left: pageFrame.left,
+            top: pageFrame.top,
+            width: pageFrame.width,
+            height: pageFrame.height,
+            boxShadow: "0 0 0 1px rgba(0,0,0,0.18)",
+          }}
+        />
+      )}
       {/* Grid overlay (page-bounded, subtle, on top of content as a guide). */}
       {showGrid && apg && gridSize > 0 && apg.width / gridSize < 400 && apg.height / gridSize < 400 && (() => {
         const x0 = api.toScreen({ x: 0, y: 0 });

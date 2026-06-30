@@ -6,6 +6,7 @@ import { Plus, Copy, Trash2, Eye, EyeOff, ChevronDown } from "lucide-react";
 import { createScene, renderScene, type CanvasLike, type Viewport } from "@hc/engine";
 import { useEditor } from "@/store/editor";
 import { imageAssets } from "@/lib/assetProvider";
+import { PAGE_GAP } from "@/lib/pageLayout";
 
 const THUMB_W = 80;
 const THUMB_H = 52;
@@ -80,9 +81,9 @@ export function PagesBar() {
               const s = st();
               s.setActivePage(i);
               // Scroll the stacked canvas so this page sits near the top of the
-              // viewport (PAGE_GAP must match useEditorCanvas: 48).
+              // viewport (uses the shared PAGE_GAP so it tracks the renderer).
               let off = 0;
-              for (let k = 0; k < i; k++) off += (s.doc.pages[k]?.height ?? 0) + 72;
+              for (let k = 0; k < i; k++) off += (s.doc.pages[k]?.height ?? 0) + PAGE_GAP;
               s.setViewport({ panY: off - 40 / (s.viewport.zoom || 1) });
             }}
             title={`${p.name ?? `Page ${i + 1}`}${hidden ? " (hidden in present)" : ""}`}

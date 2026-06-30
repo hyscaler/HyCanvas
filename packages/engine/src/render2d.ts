@@ -58,6 +58,15 @@ export interface Render2DOptions {
   /** Viewport culling + sub-pixel LOD (FR-27); default on. Set false to force a
    *  full paint of every node (e.g. off-screen thumbnail/export of a whole page). */
   cull?: boolean;
+  /** Clip page content to the artboard rect so overflow crops at the page edge
+   *  (matches export; keeps the canvas bounds unambiguous while dragging). Off by
+   *  default; the editor enables it for fixed-size pages but not the unbounded
+   *  whiteboard surface. */
+  clipPage?: boolean;
+  /** Node ids to render at reduced opacity (and their subtrees). The editor sets
+   *  this to the element(s) being actively moved/resized so the page shows through
+   *  them during the gesture (Canva-style). */
+  fadeIds?: ReadonlySet<string>;
 }
 
 /** Absolute page-space box of a node, keyed by node id. Used to resolve
@@ -65,6 +74,12 @@ export interface Render2DOptions {
  *  connected node re-routes the connector on the next frame for free. */
 type BoxMap = Record<string, { x: number; y: number; width: number; height: number }>;
 
+// Opacity for the portion of content that overflows the artboard, painted under
+// the crisp clipped pass so off-canvas overflow reads as a faded ghost (Canva-style).
+const GHOST_OVERFLOW_ALPHA = 0.3;
+// Opacity for an element while it is actively being moved/resized, so the page
+// and content behind it show through (Canva-style live-transform translucency).
+const LIVE_TRANSFORM_ALPHA = 0.5;
 const PLACEHOLDER_FILL = "rgba(0, 0, 0, 0.06)";
 const PLACEHOLDER_STROKE = "rgba(0, 0, 0, 0.25)";
 const MISSING_FILL = "rgba(220, 38, 38, 0.10)";
@@ -1725,7 +1740,10 @@ function paint(
   const m = fromTransform(node.transform);
   ctx.transform(m.a, m.b, m.c, m.d, m.e, m.f);
 
-  const alpha = parentAlpha * node.opacity;
+  // Fade an actively transformed element (and its subtree) so the page shows
+  // through it while it is being moved/resized (Canva-style live translucency).
+  const fade = opts.fadeIds && opts.fadeIds.has(node.id) ? LIVE_TRANSFORM_ALPHA : 1;
+  const alpha = parentAlpha * node.opacity * fade;
   ctx.globalAlpha = alpha;
   ctx.globalCompositeOperation = blendToComposite(node.blendMode);
 
@@ -1850,7 +1868,43 @@ export function renderScene(
       ? null
       : { x: viewport.panX, y: viewport.panY, w: viewport.width / viewport.zoom, h: viewport.height / viewport.zoom, zoom: viewport.zoom };
 
-  if (scene.root.children) {
-    for (const child of scene.root.children) paint(ctx, child, 1, opts, boxes, cull);
+  const kids = scene.root.children;
+  if (kids) {
+    const paintChildren = () => {
+      for (const child of kids) paint(ctx, child, 1, opts, boxes, cull);
+    };
+    if (opts.clipPage) {
+      // Canva-style artboard. Content is clipped crisply to the page, but if
+      // anything overflows the edge it is first painted faded underneath, so the
+      // user can see how much extends past the canvas (e.g. dragging an oversized
+      // image). The faded pass runs only when something actually overflows, so a
+      // normal page still paints once. The gizmo/selection lives in the DOM and is
+      // unaffected either way.
+      const eps = 0.5;
+      let overflows = false;
+      for (const id in boxes) {
+        const b = boxes[id];
+        if (b.x < -eps || b.y < -eps || b.x + b.width > page.width + eps || b.y + b.height > page.height + eps) {
+          overflows = true;
+          break;
+        }
+      }
+      if (overflows) {
+        // save/restore isolates the faded pass (globalAlpha + any transient state)
+        // so it cannot bleed into the crisp clipped pass below.
+        ctx.save();
+        ctx.globalAlpha = ctx.globalAlpha * GHOST_OVERFLOW_ALPHA;
+        paintChildren();
+        ctx.restore();
+      }
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, page.width, page.height);
+      ctx.clip();
+      paintChildren();
+      ctx.restore();
+    } else {
+      paintChildren();
+    }
   }
 }
