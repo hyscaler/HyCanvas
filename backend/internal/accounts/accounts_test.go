@@ -41,7 +41,7 @@ func TestLoginFlow_DB(t *testing.T) {
 	}
 	userID := uuid.NewString()
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO "User" (id, email, name, "passwordHash", "updatedAt") VALUES ($1,$2,$3,$4, now())`,
+		`INSERT INTO "users" (id, email, name, "password_hash", "updated_at") VALUES ($1,$2,$3,$4, now())`,
 		userID, email, "Go Test", hash,
 	); err != nil {
 		t.Fatalf("seed user: %v", err)
@@ -144,7 +144,7 @@ func TestRefreshReuseRevokesFamily(t *testing.T) {
 	hash, _ := secrets.HashPassword("pw")
 	userID := uuid.NewString()
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO "User" (id, email, name, "passwordHash", "updatedAt") VALUES ($1,$2,$3,$4, now())`,
+		`INSERT INTO "users" (id, email, name, "password_hash", "updated_at") VALUES ($1,$2,$3,$4, now())`,
 		userID, email, "Reuse Test", hash); err != nil {
 		t.Fatalf("seed: %v", err)
 	}
@@ -158,7 +158,7 @@ func TestRefreshReuseRevokesFamily(t *testing.T) {
 		t.Fatalf("first rotate: %v", err)
 	}
 	// Push rotatedAt into the past so the old (previous) token is beyond grace.
-	if _, err := tx.Exec(ctx, `UPDATE "Session" SET "rotatedAt" = now() - interval '1 minute' WHERE id = $1`, tokens.SessionID); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE "sessions" SET "rotated_at" = now() - interval '1 minute' WHERE id = $1`, tokens.SessionID); err != nil {
 		t.Fatalf("age session: %v", err)
 	}
 	if _, err := svc.Refresh(ctx, oldRefresh); err == nil {
@@ -211,7 +211,7 @@ func TestSignupFlow_DB(t *testing.T) {
 	// Owner membership exists.
 	var role, status string
 	if err := tx.QueryRow(ctx,
-		`SELECT role, status FROM "WorkspaceMember" WHERE "workspaceId"=$1 AND "userId"=$2`,
+		`SELECT role, status FROM "workspace_members" WHERE "workspace_id"=$1 AND "user_id"=$2`,
 		ws.ID, user.ID).Scan(&role, &status); err != nil {
 		t.Fatalf("membership lookup: %v", err)
 	}

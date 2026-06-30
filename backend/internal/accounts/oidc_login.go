@@ -56,9 +56,9 @@ func (s *Service) LinkOidcIdentity(ctx context.Context, userID string, p OidcPro
 	// any other owner means the identity already belongs to a different account.
 	var owner string
 	err := s.db.QueryRow(ctx,
-		`INSERT INTO "AuthIdentity" (id,"userId",provider,"providerSubject") VALUES ($1,$2,'OIDC',$3)
-		 ON CONFLICT (provider,"providerSubject") DO UPDATE SET "userId" = "AuthIdentity"."userId"
-		 RETURNING "userId"`,
+		`INSERT INTO "auth_identities" (id,"user_id",provider,"provider_subject") VALUES ($1,$2,'OIDC',$3)
+		 ON CONFLICT (provider,"provider_subject") DO UPDATE SET "user_id" = "auth_identities"."user_id"
+		 RETURNING "user_id"`,
 		uuid.NewString(), userID, p.Subject).Scan(&owner)
 	if err != nil {
 		return err
@@ -79,14 +79,14 @@ func (s *Service) UnlinkOidcIdentity(ctx context.Context, userID string) error {
 	if u.PasswordHash == nil {
 		return ErrOidcLastFactor
 	}
-	_, err = s.db.Exec(ctx, `DELETE FROM "AuthIdentity" WHERE "userId"=$1 AND provider='OIDC'`, userID)
+	_, err = s.db.Exec(ctx, `DELETE FROM "auth_identities" WHERE "user_id"=$1 AND provider='OIDC'`, userID)
 	return err
 }
 
 // HasOidcIdentity reports whether the user has a linked OIDC identity.
 func (s *Service) HasOidcIdentity(ctx context.Context, userID string) (bool, error) {
 	var n int
-	err := s.db.QueryRow(ctx, `SELECT count(*) FROM "AuthIdentity" WHERE "userId"=$1 AND provider='OIDC'`, userID).Scan(&n)
+	err := s.db.QueryRow(ctx, `SELECT count(*) FROM "auth_identities" WHERE "user_id"=$1 AND provider='OIDC'`, userID).Scan(&n)
 	return n > 0, err
 }
 
@@ -141,7 +141,7 @@ func (s *Service) finishOidcLogin(ctx context.Context, u *UserRow, device, ip st
 func (s *Service) LoginWithOidc(ctx context.Context, p OidcProfile, device, ip string) (*AuthUser, *Tokens, string, error) {
 	// 1) Returning SSO user: an identity already exists for this subject.
 	var existingUserID string
-	err := s.db.QueryRow(ctx, `SELECT "userId" FROM "AuthIdentity" WHERE provider = 'OIDC' AND "providerSubject" = $1`, p.Subject).Scan(&existingUserID)
+	err := s.db.QueryRow(ctx, `SELECT "user_id" FROM "auth_identities" WHERE provider = 'OIDC' AND "provider_subject" = $1`, p.Subject).Scan(&existingUserID)
 	if err == nil && existingUserID != "" {
 		u, err := s.findUserByID(ctx, existingUserID)
 		if err != nil || u == nil {
@@ -173,8 +173,8 @@ func (s *Service) LoginWithOidc(ctx context.Context, p OidcProfile, device, ip s
 			return nil, nil, "", ErrOidcLinkRefused
 		}
 		if _, err := s.db.Exec(ctx,
-			`INSERT INTO "AuthIdentity" (id,"userId",provider,"providerSubject") VALUES ($1,$2,'OIDC',$3)
-			 ON CONFLICT (provider,"providerSubject") DO NOTHING`,
+			`INSERT INTO "auth_identities" (id,"user_id",provider,"provider_subject") VALUES ($1,$2,'OIDC',$3)
+			 ON CONFLICT (provider,"provider_subject") DO NOTHING`,
 			uuid.NewString(), u.ID, p.Subject); err != nil {
 			return nil, nil, "", err
 		}
@@ -194,23 +194,23 @@ func (s *Service) LoginWithOidc(ctx context.Context, p OidcProfile, device, ip s
 
 	userID := uuid.NewString()
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO "User" (id, email, name, "emailVerified", "updatedAt") VALUES ($1,$2,$3,$4, now())`,
+		`INSERT INTO "users" (id, email, name, "email_verified", "updated_at") VALUES ($1,$2,$3,$4, now())`,
 		userID, email, name, p.EmailVerified); err != nil {
 		return nil, nil, "", err
 	}
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO "AuthIdentity" (id,"userId",provider,"providerSubject") VALUES ($1,$2,'OIDC',$3)`,
+		`INSERT INTO "auth_identities" (id,"user_id",provider,"provider_subject") VALUES ($1,$2,'OIDC',$3)`,
 		uuid.NewString(), userID, p.Subject); err != nil {
 		return nil, nil, "", err
 	}
 	wsID := uuid.NewString()
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO "Workspace" (id, kind, name, slug, "ownerId", "updatedAt") VALUES ($1,'PERSONAL',$2,$3,$4, now())`,
+		`INSERT INTO "workspaces" (id, kind, name, slug, "owner_id", "updated_at") VALUES ($1,'PERSONAL',$2,$3,$4, now())`,
 		wsID, name+" Workspace", slugify(name), userID); err != nil {
 		return nil, nil, "", err
 	}
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO "WorkspaceMember" (id, "workspaceId", "userId", role, status, "joinedAt", "updatedAt")
+		`INSERT INTO "workspace_members" (id, "workspace_id", "user_id", role, status, "joined_at", "updated_at")
 		 VALUES ($1,$2,$3,'OWNER','ACTIVE', now(), now())`,
 		uuid.NewString(), wsID, userID); err != nil {
 		return nil, nil, "", err

@@ -37,7 +37,7 @@ const imageTokenCost = 1000
 func currentPeriod() string { return time.Now().UTC().Format("2006-01") }
 
 func (s *Service) loadPolicy(ctx context.Context, workspaceID string) (OrgPolicy, error) {
-	const q = `SELECT "allowedProviders","blockedProviders","monthlyTokenCap" FROM "AiPolicy" WHERE "workspaceId" = $1`
+	const q = `SELECT "allowed_providers","blocked_providers","monthly_token_cap" FROM "ai_policies" WHERE "workspace_id" = $1`
 	var p OrgPolicy
 	err := s.db.QueryRow(ctx, q, workspaceID).Scan(&p.AllowedProviders, &p.BlockedProviders, &p.MonthlyTokenCap)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -50,7 +50,7 @@ func (s *Service) loadPolicy(ctx context.Context, workspaceID string) (OrgPolicy
 }
 
 func (s *Service) loadUsage(ctx context.Context, workspaceID, period string) (Usage, error) {
-	const q = `SELECT "tokens" FROM "AiUsage" WHERE "workspaceId" = $1 AND "period" = $2`
+	const q = `SELECT "tokens" FROM "ai_usages" WHERE "workspace_id" = $1 AND "period" = $2`
 	var u Usage
 	err := s.db.QueryRow(ctx, q, workspaceID, period).Scan(&u.TokensThisMonth)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -63,10 +63,10 @@ func (s *Service) loadUsage(ctx context.Context, workspaceID, period string) (Us
 }
 
 func (s *Service) recordUsage(ctx context.Context, workspaceID, period string, tokens int) error {
-	const q = `INSERT INTO "AiUsage" ("workspaceId","period","tokens","updatedAt")
+	const q = `INSERT INTO "ai_usages" ("workspace_id","period","tokens","updated_at")
 		VALUES ($1,$2,$3,CURRENT_TIMESTAMP)
-		ON CONFLICT ("workspaceId","period")
-		DO UPDATE SET "tokens" = "AiUsage"."tokens" + EXCLUDED."tokens", "updatedAt" = CURRENT_TIMESTAMP`
+		ON CONFLICT ("workspace_id","period")
+		DO UPDATE SET "tokens" = "ai_usages"."tokens" + EXCLUDED."tokens", "updated_at" = CURRENT_TIMESTAMP`
 	_, err := s.db.Exec(ctx, q, workspaceID, period, tokens)
 	return err
 }
@@ -113,13 +113,13 @@ func (s *Service) SetPolicy(ctx context.Context, workspaceID string, p OrgPolicy
 	if p.MonthlyTokenCap < 0 {
 		p.MonthlyTokenCap = 0
 	}
-	const q = `INSERT INTO "AiPolicy" ("workspaceId","allowedProviders","blockedProviders","monthlyTokenCap","updatedAt")
+	const q = `INSERT INTO "ai_policies" ("workspace_id","allowed_providers","blocked_providers","monthly_token_cap","updated_at")
 		VALUES ($1,$2,$3,$4,CURRENT_TIMESTAMP)
-		ON CONFLICT ("workspaceId")
-		DO UPDATE SET "allowedProviders" = EXCLUDED."allowedProviders",
-			"blockedProviders" = EXCLUDED."blockedProviders",
-			"monthlyTokenCap" = EXCLUDED."monthlyTokenCap",
-			"updatedAt" = CURRENT_TIMESTAMP`
+		ON CONFLICT ("workspace_id")
+		DO UPDATE SET "allowed_providers" = EXCLUDED."allowed_providers",
+			"blocked_providers" = EXCLUDED."blocked_providers",
+			"monthly_token_cap" = EXCLUDED."monthly_token_cap",
+			"updated_at" = CURRENT_TIMESTAMP`
 	_, err := s.db.Exec(ctx, q, workspaceID, p.AllowedProviders, p.BlockedProviders, p.MonthlyTokenCap)
 	return err
 }

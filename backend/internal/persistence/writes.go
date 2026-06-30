@@ -477,8 +477,8 @@ func (s *Service) AppendUpdate(ctx context.Context, designID string, update []by
 	if authorID != "" {
 		author = &authorID
 	}
-	const q = `INSERT INTO "DesignUpdateLog" ("designId", seq, update, "authorId")
-		VALUES ($1, (SELECT COALESCE(MAX(seq),0)+1 FROM "DesignUpdateLog" WHERE "designId" = $1), $2, $3)`
+	const q = `INSERT INTO "design_update_logs" ("design_id", seq, update, "author_id")
+		VALUES ($1, (SELECT COALESCE(MAX(seq),0)+1 FROM "design_update_logs" WHERE "design_id" = $1), $2, $3)`
 	_, err := s.db.Exec(ctx, q, designID, update, author)
 	return err
 }
@@ -497,11 +497,11 @@ func (s *Service) AppendCheckpoint(ctx context.Context, designID string, update 
 		author = &authorID
 	}
 	const q = `WITH ins AS (
-		INSERT INTO "DesignUpdateLog" ("designId", seq, update, "authorId", "isCheckpoint")
-		VALUES ($1, (SELECT COALESCE(MAX(seq),0)+1 FROM "DesignUpdateLog" WHERE "designId" = $1), $2, $3, true)
+		INSERT INTO "design_update_logs" ("design_id", seq, update, "author_id", "is_checkpoint")
+		VALUES ($1, (SELECT COALESCE(MAX(seq),0)+1 FROM "design_update_logs" WHERE "design_id" = $1), $2, $3, true)
 		RETURNING seq
 	)
-	DELETE FROM "DesignUpdateLog" WHERE "designId" = $1 AND seq < (SELECT seq FROM ins)`
+	DELETE FROM "design_update_logs" WHERE "design_id" = $1 AND seq < (SELECT seq FROM ins)`
 	_, err := s.db.Exec(ctx, q, designID, update, author)
 	return err
 }

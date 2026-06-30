@@ -87,7 +87,7 @@ func subjectFor(kind string) string {
 func (s *Service) sendVerificationToken(ctx context.Context, userID, email, kind string) (string, error) {
 	raw := uuid.NewString() + "." + uuid.NewString()
 	if _, err := s.db.Exec(ctx,
-		`INSERT INTO "VerificationToken" (id, "userId", kind, "tokenHash", "expiresAt") VALUES ($1,$2,$3,$4,$5)`,
+		`INSERT INTO "verification_tokens" (id, "user_id", kind, "token_hash", "expires_at") VALUES ($1,$2,$3,$4,$5)`,
 		uuid.NewString(), userID, kind, secrets.HashToken(raw), time.Now().Add(ttlFor(kind))); err != nil {
 		return "", err
 	}
@@ -131,7 +131,7 @@ func (s *Service) usableToken(ctx context.Context, raw, kind string) (tokenID, u
 	var consumedAt *time.Time
 	var expiresAt time.Time
 	err := s.db.QueryRow(ctx,
-		`SELECT id, "userId", "consumedAt", "expiresAt" FROM "VerificationToken" WHERE "tokenHash" = $1 AND kind = $2`,
+		`SELECT id, "user_id", "consumed_at", "expires_at" FROM "verification_tokens" WHERE "token_hash" = $1 AND kind = $2`,
 		secrets.HashToken(raw), kind).Scan(&tokenID, &userID, &consumedAt, &expiresAt)
 	if err != nil || consumedAt != nil || !time.Now().Before(expiresAt) {
 		return "", "", false
@@ -140,7 +140,7 @@ func (s *Service) usableToken(ctx context.Context, raw, kind string) (tokenID, u
 }
 
 func (s *Service) consumeToken(ctx context.Context, id string) error {
-	_, err := s.db.Exec(ctx, `UPDATE "VerificationToken" SET "consumedAt" = now() WHERE id = $1`, id)
+	_, err := s.db.Exec(ctx, `UPDATE "verification_tokens" SET "consumed_at" = now() WHERE id = $1`, id)
 	return err
 }
 
@@ -164,7 +164,7 @@ func (s *Service) VerifyEmail(ctx context.Context, raw string) (*AuthUser, error
 	if err := s.consumeToken(ctx, id); err != nil {
 		return nil, err
 	}
-	if _, err := s.db.Exec(ctx, `UPDATE "User" SET "emailVerified" = true, "updatedAt" = now() WHERE id = $1`, userID); err != nil {
+	if _, err := s.db.Exec(ctx, `UPDATE "users" SET "email_verified" = true, "updated_at" = now() WHERE id = $1`, userID); err != nil {
 		return nil, err
 	}
 	u, err := s.GetUserByID(ctx, userID)
@@ -217,10 +217,10 @@ func (s *Service) ResetPassword(ctx context.Context, raw, newPassword string) er
 	if err := s.consumeToken(ctx, id); err != nil {
 		return err
 	}
-	if _, err := s.db.Exec(ctx, `UPDATE "User" SET "passwordHash" = $1, "updatedAt" = now() WHERE id = $2`, hash, userID); err != nil {
+	if _, err := s.db.Exec(ctx, `UPDATE "users" SET "password_hash" = $1, "updated_at" = now() WHERE id = $2`, hash, userID); err != nil {
 		return err
 	}
-	_, err = s.db.Exec(ctx, `DELETE FROM "Session" WHERE "userId" = $1`, userID)
+	_, err = s.db.Exec(ctx, `DELETE FROM "sessions" WHERE "user_id" = $1`, userID)
 	return err
 }
 
@@ -244,7 +244,7 @@ func (s *Service) LoginWithMagicLink(ctx context.Context, raw, device, ip string
 	if err := s.consumeToken(ctx, id); err != nil {
 		return nil, nil, err
 	}
-	if _, err := s.db.Exec(ctx, `UPDATE "User" SET "emailVerified" = true, "updatedAt" = now() WHERE id = $1`, userID); err != nil {
+	if _, err := s.db.Exec(ctx, `UPDATE "users" SET "email_verified" = true, "updated_at" = now() WHERE id = $1`, userID); err != nil {
 		return nil, nil, err
 	}
 	row, err := s.findUserByID(ctx, userID)

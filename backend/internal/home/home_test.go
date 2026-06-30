@@ -39,10 +39,10 @@ func TestHome_DB(t *testing.T) {
 	}
 	d1 := uuid.NewString()
 	d2 := uuid.NewString()
-	if _, err := tx.Exec(ctx, `INSERT INTO "Design" (id,"workspaceId",title,"updatedAt") VALUES ($1,$2,'Alpha', now() - interval '1 hour')`, d1, ws.ID); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO "designs" (id,"workspace_id",title,"updated_at") VALUES ($1,$2,'Alpha', now() - interval '1 hour')`, d1, ws.ID); err != nil {
 		t.Fatalf("design1: %v", err)
 	}
-	if _, err := tx.Exec(ctx, `INSERT INTO "Design" (id,"workspaceId",title,"updatedAt") VALUES ($1,$2,'Beta', now())`, d2, ws.ID); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO "designs" (id,"workspace_id",title,"updated_at") VALUES ($1,$2,'Beta', now())`, d2, ws.ID); err != nil {
 		t.Fatalf("design2: %v", err)
 	}
 

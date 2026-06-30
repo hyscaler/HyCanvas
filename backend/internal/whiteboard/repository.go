@@ -1,5 +1,5 @@
-// SQL access for whiteboard voting against the Prisma-managed tables
-// "WhiteboardVoteSession" and "WhiteboardVote" (quoted identifiers, camelCase
+// SQL access for whiteboard voting against the tables
+// "whiteboard_vote_sessions" and "whiteboard_votes" (quoted identifiers, snake_case
 // columns). Every query is scoped by design id (and session id) so a caller can
 // only ever touch a design they have been granted access to at the HTTP layer.
 package whiteboard
@@ -25,7 +25,7 @@ type Repo struct{ db DBTX }
 // NewRepo builds the repository over a pgx pool/tx.
 func NewRepo(db DBTX) *Repo { return &Repo{db: db} }
 
-const sessionCols = `"id", "designId", "budgetPerUser", "anonymous", "revealed", "open", "createdById"`
+const sessionCols = `"id", "design_id", "budget_per_user", "anonymous", "revealed", "open", "created_by_id"`
 
 func scanSession(row pgx.Row) (SessionRow, error) {
 	var s SessionRow
@@ -34,13 +34,13 @@ func scanSession(row pgx.Row) (SessionRow, error) {
 }
 
 func (r *Repo) CreateSession(ctx context.Context, s SessionRow) (SessionRow, error) {
-	const q = `INSERT INTO "WhiteboardVoteSession" ("id","designId","budgetPerUser","anonymous","revealed","open","createdById")
+	const q = `INSERT INTO "whiteboard_vote_sessions" ("id","design_id","budget_per_user","anonymous","revealed","open","created_by_id")
 		VALUES (gen_random_uuid(),$1,$2,$3,$4,$5,$6) RETURNING ` + sessionCols
 	return scanSession(r.db.QueryRow(ctx, q, s.DesignID, s.BudgetPerUser, s.Anonymous, s.Revealed, s.Open, s.CreatedByID))
 }
 
 func (r *Repo) GetSession(ctx context.Context, designID, sessionID string) (SessionRow, error) {
-	const q = `SELECT ` + sessionCols + ` FROM "WhiteboardVoteSession" WHERE "id" = $1 AND "designId" = $2`
+	const q = `SELECT ` + sessionCols + ` FROM "whiteboard_vote_sessions" WHERE "id" = $1 AND "design_id" = $2`
 	s, err := scanSession(r.db.QueryRow(ctx, q, sessionID, designID))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return SessionRow{}, ErrNotFound
@@ -49,9 +49,9 @@ func (r *Repo) GetSession(ctx context.Context, designID, sessionID string) (Sess
 }
 
 func (r *Repo) SetSessionState(ctx context.Context, designID, sessionID string, open, revealed bool) (SessionRow, error) {
-	const q = `UPDATE "WhiteboardVoteSession"
-		SET "open" = $3, "revealed" = $4, "closedAt" = CASE WHEN $3 THEN NULL ELSE CURRENT_TIMESTAMP END
-		WHERE "id" = $1 AND "designId" = $2 RETURNING ` + sessionCols
+	const q = `UPDATE "whiteboard_vote_sessions"
+		SET "open" = $3, "revealed" = $4, "closed_at" = CASE WHEN $3 THEN NULL ELSE CURRENT_TIMESTAMP END
+		WHERE "id" = $1 AND "design_id" = $2 RETURNING ` + sessionCols
 	s, err := scanSession(r.db.QueryRow(ctx, q, sessionID, designID, open, revealed))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return SessionRow{}, ErrNotFound
@@ -60,14 +60,14 @@ func (r *Repo) SetSessionState(ctx context.Context, designID, sessionID string, 
 }
 
 func (r *Repo) HasVote(ctx context.Context, sessionID, nodeID, userID string) (bool, error) {
-	const q = `SELECT EXISTS(SELECT 1 FROM "WhiteboardVote" WHERE "sessionId" = $1 AND "nodeId" = $2 AND "userId" = $3)`
+	const q = `SELECT EXISTS(SELECT 1 FROM "whiteboard_votes" WHERE "session_id" = $1 AND "node_id" = $2 AND "user_id" = $3)`
 	var exists bool
 	err := r.db.QueryRow(ctx, q, sessionID, nodeID, userID).Scan(&exists)
 	return exists, err
 }
 
 func (r *Repo) CountUserVotes(ctx context.Context, sessionID, userID string) (int, error) {
-	const q = `SELECT COUNT(*) FROM "WhiteboardVote" WHERE "sessionId" = $1 AND "userId" = $2`
+	const q = `SELECT COUNT(*) FROM "whiteboard_votes" WHERE "session_id" = $1 AND "user_id" = $2`
 	var n int
 	err := r.db.QueryRow(ctx, q, sessionID, userID).Scan(&n)
 	return n, err
@@ -80,10 +80,10 @@ func (r *Repo) InsertVote(ctx context.Context, sessionID, designID, nodeID, user
 	//  - ON CONFLICT DO NOTHING keeps the unique (session,node,user) invariant for
 	//    a same-node double-submit.
 	// 0 rows affected means the cast lost the budget race (or duplicated a node).
-	const q = `INSERT INTO "WhiteboardVote" ("id","sessionId","designId","nodeId","userId")
+	const q = `INSERT INTO "whiteboard_votes" ("id","session_id","design_id","node_id","user_id")
 		SELECT gen_random_uuid(), $1, $2, $3, $4
-		WHERE (SELECT COUNT(*) FROM "WhiteboardVote" WHERE "sessionId" = $1 AND "userId" = $4) < $5
-		ON CONFLICT ("sessionId","nodeId","userId") DO NOTHING`
+		WHERE (SELECT COUNT(*) FROM "whiteboard_votes" WHERE "session_id" = $1 AND "user_id" = $4) < $5
+		ON CONFLICT ("session_id","node_id","user_id") DO NOTHING`
 	tag, err := r.db.Exec(ctx, q, sessionID, designID, nodeID, userID, budget)
 	if err != nil {
 		return false, err
@@ -92,13 +92,13 @@ func (r *Repo) InsertVote(ctx context.Context, sessionID, designID, nodeID, user
 }
 
 func (r *Repo) DeleteVote(ctx context.Context, sessionID, nodeID, userID string) error {
-	const q = `DELETE FROM "WhiteboardVote" WHERE "sessionId" = $1 AND "nodeId" = $2 AND "userId" = $3`
+	const q = `DELETE FROM "whiteboard_votes" WHERE "session_id" = $1 AND "node_id" = $2 AND "user_id" = $3`
 	_, err := r.db.Exec(ctx, q, sessionID, nodeID, userID)
 	return err
 }
 
 func (r *Repo) Votes(ctx context.Context, sessionID string) ([]CastRow, error) {
-	const q = `SELECT "nodeId", "userId" FROM "WhiteboardVote" WHERE "sessionId" = $1`
+	const q = `SELECT "node_id", "user_id" FROM "whiteboard_votes" WHERE "session_id" = $1`
 	rows, err := r.db.Query(ctx, q, sessionID)
 	if err != nil {
 		return nil, err

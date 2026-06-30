@@ -1,7 +1,7 @@
 // Package accounts ports the auth/accounts module: user lookup, password login,
 // server-tracked sessions with refresh tokens, and access-token verification with
 // immediate revocation. It reads/writes the SAME tables the NestJS/Prisma backend
-// uses ("User", "Session") so sessions are interchangeable across the migration.
+// uses ("users", "sessions") so sessions are interchangeable across the migration.
 package accounts
 
 import (
@@ -50,8 +50,8 @@ var roleRank = map[string]int{"viewer": 1, "member": 2, "admin": 3, "owner": 4}
 // at least minRole ("viewer"|"member"|"admin"|"owner"). Reusable by every module
 // that enforces per-workspace isolation. Returns ErrForbidden otherwise.
 func (s *Service) AssertMember(ctx context.Context, userID, workspaceID, minRole string) error {
-	const q = `SELECT role FROM "WorkspaceMember"
-		WHERE "workspaceId" = $1 AND "userId" = $2 AND status = 'ACTIVE'`
+	const q = `SELECT role FROM "workspace_members"
+		WHERE "workspace_id" = $1 AND "user_id" = $2 AND status = 'ACTIVE'`
 	var role string
 	if err := s.db.QueryRow(ctx, q, workspaceID, userID).Scan(&role); err != nil {
 		return ErrForbidden
@@ -65,7 +65,7 @@ func (s *Service) AssertMember(ctx context.Context, userID, workspaceID, minRole
 // MemberWorkspaceIDs returns every workspace the user is an ACTIVE member of
 // (for cross-workspace template/visibility scoping).
 func (s *Service) MemberWorkspaceIDs(ctx context.Context, userID string) ([]string, error) {
-	rows, err := s.db.Query(ctx, `SELECT "workspaceId" FROM "WorkspaceMember" WHERE "userId" = $1 AND status = 'ACTIVE'`, userID)
+	rows, err := s.db.Query(ctx, `SELECT "workspace_id" FROM "workspace_members" WHERE "user_id" = $1 AND status = 'ACTIVE'`, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -114,11 +114,11 @@ type WorkspaceWithRole struct {
 // their role, newest first (matches WorkspaceService.listMine, doc 15 FR-10).
 func (s *Service) ListWorkspaces(ctx context.Context, userID string) ([]WorkspaceWithRole, error) {
 	rows, err := s.db.Query(ctx, `
-		SELECT w.id, w.kind, w.name, w.slug, w."avatarUrl", w."ownerId", w."createdAt", m.role
-		FROM "WorkspaceMember" m
-		JOIN "Workspace" w ON w.id = m."workspaceId"
-		WHERE m."userId" = $1 AND m.status = 'ACTIVE'
-		ORDER BY w."createdAt" DESC`, userID)
+		SELECT w.id, w.kind, w.name, w.slug, w."avatar_url", w."owner_id", w."created_at", m.role
+		FROM "workspace_members" m
+		JOIN "workspaces" w ON w.id = m."workspace_id"
+		WHERE m."user_id" = $1 AND m.status = 'ACTIVE'
+		ORDER BY w."created_at" DESC`, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -166,13 +166,13 @@ func (s *Service) CreateWorkspace(ctx context.Context, userID, name, kind string
 	slug := slugify(name)
 	var created time.Time
 	if err := tx.QueryRow(ctx,
-		`INSERT INTO "Workspace" (id, kind, name, slug, "ownerId", "updatedAt")
-		 VALUES ($1,$2,$3,$4,$5, now()) RETURNING "createdAt"`,
+		`INSERT INTO "workspaces" (id, kind, name, slug, "owner_id", "updated_at")
+		 VALUES ($1,$2,$3,$4,$5, now()) RETURNING "created_at"`,
 		wsID, strings.ToUpper(kind), name, slug, userID).Scan(&created); err != nil {
 		return nil, err
 	}
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO "WorkspaceMember" (id, "workspaceId", "userId", role, status, "joinedAt", "updatedAt")
+		`INSERT INTO "workspace_members" (id, "workspace_id", "user_id", role, status, "joined_at", "updated_at")
 		 VALUES ($1,$2,$3,'OWNER','ACTIVE', now(), now())`,
 		uuid.NewString(), wsID, userID); err != nil {
 		return nil, err
@@ -197,13 +197,13 @@ func (s *Service) DeleteWorkspace(ctx context.Context, userID, workspaceID strin
 		return err
 	}
 	var kind string
-	if err := s.db.QueryRow(ctx, `SELECT kind FROM "Workspace" WHERE id = $1`, workspaceID).Scan(&kind); err != nil {
+	if err := s.db.QueryRow(ctx, `SELECT kind FROM "workspaces" WHERE id = $1`, workspaceID).Scan(&kind); err != nil {
 		return ErrNotFound
 	}
 	if strings.EqualFold(kind, "PERSONAL") {
 		return ErrBadRequest
 	}
-	if _, err := s.db.Exec(ctx, `DELETE FROM "Workspace" WHERE id = $1`, workspaceID); err != nil {
+	if _, err := s.db.Exec(ctx, `DELETE FROM "workspaces" WHERE id = $1`, workspaceID); err != nil {
 		return err
 	}
 	return nil
@@ -311,8 +311,8 @@ func (s *Service) WithMFASecret(secret string) *Service {
 
 // findUserByEmail loads a user by lowercased email.
 func (s *Service) findUserByEmail(ctx context.Context, email string) (*UserRow, error) {
-	const q = `SELECT id, email, "emailVerified", name, "avatarUrl", "passwordHash", locale, theme, "mfaEnabled", "createdAt"
-		FROM "User" WHERE email = $1`
+	const q = `SELECT id, email, "email_verified", name, "avatar_url", "password_hash", locale, theme, "mfa_enabled", "created_at"
+		FROM "users" WHERE email = $1`
 	var u UserRow
 	err := s.db.QueryRow(ctx, q, email).Scan(
 		&u.ID, &u.Email, &u.EmailVerified, &u.Name, &u.AvatarURL, &u.PasswordHash,
@@ -326,8 +326,8 @@ func (s *Service) findUserByEmail(ctx context.Context, email string) (*UserRow, 
 
 // findUserByID loads the full user row by id (for issuing a session post-MFA).
 func (s *Service) findUserByID(ctx context.Context, id string) (*UserRow, error) {
-	const q = `SELECT id, email, "emailVerified", name, "avatarUrl", "passwordHash", locale, theme, "mfaEnabled", "createdAt"
-		FROM "User" WHERE id = $1`
+	const q = `SELECT id, email, "email_verified", name, "avatar_url", "password_hash", locale, theme, "mfa_enabled", "created_at"
+		FROM "users" WHERE id = $1`
 	var u UserRow
 	err := s.db.QueryRow(ctx, q, id).Scan(
 		&u.ID, &u.Email, &u.EmailVerified, &u.Name, &u.AvatarURL, &u.PasswordHash,
@@ -341,8 +341,8 @@ func (s *Service) findUserByID(ctx context.Context, id string) (*UserRow, error)
 
 // GetUserByID loads a user view by id (for /me).
 func (s *Service) GetUserByID(ctx context.Context, id string) (*AuthUser, error) {
-	const q = `SELECT id, email, "emailVerified", name, "avatarUrl", "passwordHash", locale, theme, "mfaEnabled", "createdAt"
-		FROM "User" WHERE id = $1`
+	const q = `SELECT id, email, "email_verified", name, "avatar_url", "password_hash", locale, theme, "mfa_enabled", "created_at"
+		FROM "users" WHERE id = $1`
 	var u UserRow
 	if err := s.db.QueryRow(ctx, q, id).Scan(
 		&u.ID, &u.Email, &u.EmailVerified, &u.Name, &u.AvatarURL, &u.PasswordHash,
@@ -384,11 +384,11 @@ func (s *Service) UpdateProfile(ctx context.Context, userID string, in UpdatePro
 		a := strings.TrimSpace(*in.AvatarURL)
 		avatar = &a
 	}
-	const q = `UPDATE "User"
+	const q = `UPDATE "users"
 		SET name = COALESCE($2, name),
 		    locale = COALESCE($3, locale),
-		    "avatarUrl" = CASE WHEN $5 THEN NULLIF($4, '') ELSE "avatarUrl" END,
-		    "updatedAt" = now()
+		    "avatar_url" = CASE WHEN $5 THEN NULLIF($4, '') ELSE "avatar_url" END,
+		    "updated_at" = now()
 		WHERE id = $1`
 	if _, err := s.db.Exec(ctx, q, userID, name, locale, avatar, avatarSet); err != nil {
 		return nil, err
@@ -429,7 +429,7 @@ func (s *Service) Login(ctx context.Context, email, password, device, ip string)
 func (s *Service) issueSession(ctx context.Context, u *UserRow, device, ip string) (*AuthUser, *Tokens, error) {
 	refresh := uuid.NewString() + "." + uuid.NewString()
 	sessionID := uuid.NewString()
-	const ins = `INSERT INTO "Session" (id, "userId", "currentTokenHash", device, ip, "rotatedAt", "createdAt", "lastSeenAt")
+	const ins = `INSERT INTO "sessions" (id, "user_id", "current_token_hash", device, ip, "rotated_at", "created_at", "last_seen_at")
 		VALUES ($1, $2, $3, $4, $5, now(), now(), now())`
 	if _, err := s.db.Exec(ctx, ins, sessionID, u.ID, secrets.HashToken(refresh), nullable(device), nullable(ip)); err != nil {
 		return nil, nil, err
@@ -475,7 +475,7 @@ func (s *Service) Signup(ctx context.Context, email, password, name string) (*Au
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	var exists int
-	if err := tx.QueryRow(ctx, `SELECT 1 FROM "User" WHERE email = $1`, email).Scan(&exists); err == nil {
+	if err := tx.QueryRow(ctx, `SELECT 1 FROM "users" WHERE email = $1`, email).Scan(&exists); err == nil {
 		return nil, nil, nil, ErrEmailTaken
 	}
 
@@ -485,12 +485,12 @@ func (s *Service) Signup(ctx context.Context, email, password, name string) (*Au
 	}
 	userID := uuid.NewString()
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO "User" (id, email, name, "passwordHash", "updatedAt") VALUES ($1,$2,$3,$4, now())`,
+		`INSERT INTO "users" (id, email, name, "password_hash", "updated_at") VALUES ($1,$2,$3,$4, now())`,
 		userID, email, name, hash); err != nil {
 		return nil, nil, nil, err
 	}
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO "AuthIdentity" (id, "userId", provider, "providerSubject") VALUES ($1,$2,'PASSWORD',$3)`,
+		`INSERT INTO "auth_identities" (id, "user_id", provider, "provider_subject") VALUES ($1,$2,'PASSWORD',$3)`,
 		uuid.NewString(), userID, email); err != nil {
 		return nil, nil, nil, err
 	}
@@ -499,12 +499,12 @@ func (s *Service) Signup(ctx context.Context, email, password, name string) (*Au
 	wsName := name + " Workspace"
 	slug := slugify(name)
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO "Workspace" (id, kind, name, slug, "ownerId", "updatedAt") VALUES ($1,'PERSONAL',$2,$3,$4, now())`,
+		`INSERT INTO "workspaces" (id, kind, name, slug, "owner_id", "updated_at") VALUES ($1,'PERSONAL',$2,$3,$4, now())`,
 		wsID, wsName, slug, userID); err != nil {
 		return nil, nil, nil, err
 	}
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO "WorkspaceMember" (id, "workspaceId", "userId", role, status, "joinedAt", "updatedAt")
+		`INSERT INTO "workspace_members" (id, "workspace_id", "user_id", role, status, "joined_at", "updated_at")
 		 VALUES ($1,$2,$3,'OWNER','ACTIVE', now(), now())`,
 		uuid.NewString(), wsID, userID); err != nil {
 		return nil, nil, nil, err
@@ -513,7 +513,7 @@ func (s *Service) Signup(ctx context.Context, email, password, name string) (*Au
 	refresh := uuid.NewString() + "." + uuid.NewString()
 	sessionID := uuid.NewString()
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO "Session" (id, "userId", "currentTokenHash", "rotatedAt", "createdAt", "lastSeenAt")
+		`INSERT INTO "sessions" (id, "user_id", "current_token_hash", "rotated_at", "created_at", "last_seen_at")
 		 VALUES ($1,$2,$3, now(), now(), now())`,
 		sessionID, userID, secrets.HashToken(refresh)); err != nil {
 		return nil, nil, nil, err
@@ -556,8 +556,8 @@ func (s *Service) VerifyAccess(ctx context.Context, token string) (userID, sessi
 func (s *Service) Refresh(ctx context.Context, refreshToken string) (*Tokens, error) {
 	presented := secrets.HashToken(refreshToken)
 
-	const sel = `SELECT id, "userId", "currentTokenHash", "previousTokenHash", "rotatedAt", "revokedAt"
-		FROM "Session" WHERE "currentTokenHash" = $1 OR "previousTokenHash" = $1`
+	const sel = `SELECT id, "user_id", "current_token_hash", "previous_token_hash", "rotated_at", "revoked_at"
+		FROM "sessions" WHERE "current_token_hash" = $1 OR "previous_token_hash" = $1`
 	var (
 		id, userID, currentHash string
 		prevHash                *string
@@ -572,7 +572,7 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string) (*Tokens, er
 	}
 
 	revokeFamily := func() error {
-		_, e := s.db.Exec(ctx, `UPDATE "Session" SET "revokedAt" = now() WHERE id = $1`, id)
+		_, e := s.db.Exec(ctx, `UPDATE "sessions" SET "revoked_at" = now() WHERE id = $1`, id)
 		return e
 	}
 
@@ -595,8 +595,8 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string) (*Tokens, er
 	}
 
 	newToken := uuid.NewString() + "." + uuid.NewString()
-	const upd = `UPDATE "Session"
-		SET "currentTokenHash" = $1, "previousTokenHash" = $2, "rotatedAt" = now(), "lastSeenAt" = now()
+	const upd = `UPDATE "sessions"
+		SET "current_token_hash" = $1, "previous_token_hash" = $2, "rotated_at" = now(), "last_seen_at" = now()
 		WHERE id = $3`
 	if _, err := s.db.Exec(ctx, upd, secrets.HashToken(newToken), currentHash, id); err != nil {
 		return nil, err
@@ -609,7 +609,7 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string) (*Tokens, er
 }
 
 func (s *Service) isSessionActive(ctx context.Context, sid string) bool {
-	const q = `SELECT 1 FROM "Session" WHERE id = $1 AND "revokedAt" IS NULL`
+	const q = `SELECT 1 FROM "sessions" WHERE id = $1 AND "revoked_at" IS NULL`
 	var one int
 	if err := s.db.QueryRow(ctx, q, sid).Scan(&one); err != nil {
 		return false
@@ -628,8 +628,8 @@ type SessionView struct {
 
 // ListSessions returns the user's active (non-revoked) sessions, newest first.
 func (s *Service) ListSessions(ctx context.Context, userID string) ([]SessionView, error) {
-	const q = `SELECT id, device, ip, "createdAt", "lastSeenAt" FROM "Session"
-		WHERE "userId" = $1 AND "revokedAt" IS NULL ORDER BY "lastSeenAt" DESC`
+	const q = `SELECT id, device, ip, "created_at", "last_seen_at" FROM "sessions"
+		WHERE "user_id" = $1 AND "revoked_at" IS NULL ORDER BY "last_seen_at" DESC`
 	rows, err := s.db.Query(ctx, q, userID)
 	if err != nil {
 		return nil, err
@@ -654,7 +654,7 @@ func (s *Service) Logout(ctx context.Context, sessionID string) error {
 	if sessionID == "" {
 		return nil
 	}
-	const q = `UPDATE "Session" SET "revokedAt" = now() WHERE id = $1 AND "revokedAt" IS NULL`
+	const q = `UPDATE "sessions" SET "revoked_at" = now() WHERE id = $1 AND "revoked_at" IS NULL`
 	_, err := s.db.Exec(ctx, q, sessionID)
 	return err
 }

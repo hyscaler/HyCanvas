@@ -1,6 +1,6 @@
-// SQL access for the engagement module, against the Prisma-managed tables
-// "ActivityEvent", "Notification", "NotificationPref", and "DesignView" (quoted
-// identifiers, camelCase columns). payload/perPage are JSONB; type strings are
+// SQL access for the engagement module, against the tables
+// "activity_events", "notifications", "notification_prefs", and "design_views" (quoted
+// identifiers, snake_case columns). payload/perPage are JSONB; type strings are
 // stored verbatim.
 package engagement
 
@@ -41,7 +41,7 @@ func recordActivity(ctx context.Context, db DBTX, designID string, actorID *stri
 		raw, _ = json.Marshal(payload)
 	}
 	_, err := db.Exec(ctx,
-		`INSERT INTO "ActivityEvent" (id,"designId","actorId",type,payload) VALUES ($1,$2,$3,$4,$5)`,
+		`INSERT INTO "activity_events" (id,"design_id","actor_id",type,payload) VALUES ($1,$2,$3,$4,$5)`,
 		uuid.NewString(), designID, actorID, typ, raw)
 	return err
 }
@@ -59,11 +59,11 @@ func scanActivity(row pgx.Row) (ActivityEventRow, error) {
 // listActivity returns newest-first events for a design, optionally filtered by
 // type and windowed by a createdAt cursor (strictly older than before).
 func (s *Service) listActivity(ctx context.Context, designID string, typ string, before *time.Time, limit int) ([]ActivityEventRow, error) {
-	const q = `SELECT id,"designId","actorId",type,payload,"createdAt" FROM "ActivityEvent"
-		WHERE "designId" = $1
+	const q = `SELECT id,"design_id","actor_id",type,payload,"created_at" FROM "activity_events"
+		WHERE "design_id" = $1
 		  AND ($2::text IS NULL OR type = $2)
-		  AND ($3::timestamptz IS NULL OR "createdAt" < $3)
-		ORDER BY "createdAt" DESC LIMIT $4`
+		  AND ($3::timestamptz IS NULL OR "created_at" < $3)
+		ORDER BY "created_at" DESC LIMIT $4`
 	var typPtr *string
 	if typ != "" {
 		typPtr = &typ
@@ -102,7 +102,7 @@ func createNotification(ctx context.Context, db DBTX, userID, typ string, design
 		raw, _ = json.Marshal(payload)
 	}
 	_, err := db.Exec(ctx,
-		`INSERT INTO "Notification" (id,"userId",type,"designId",payload) VALUES ($1,$2,$3,$4,$5)`,
+		`INSERT INTO "notifications" (id,"user_id",type,"design_id",payload) VALUES ($1,$2,$3,$4,$5)`,
 		uuid.NewString(), userID, typ, designID, raw)
 	return err
 }
@@ -117,14 +117,14 @@ func scanNotification(row pgx.Row) (NotificationRow, error) {
 	return n, err
 }
 
-const notificationCols = `id,"userId",type,"designId",payload,"readAt","createdAt"`
+const notificationCols = `id,"user_id",type,"design_id",payload,"read_at","created_at"`
 
 func (s *Service) listNotifications(ctx context.Context, userID string, unreadOnly bool, before *time.Time, limit int) ([]NotificationRow, error) {
-	const q = `SELECT ` + notificationCols + ` FROM "Notification"
-		WHERE "userId" = $1
-		  AND ($2::boolean IS NOT TRUE OR "readAt" IS NULL)
-		  AND ($3::timestamptz IS NULL OR "createdAt" < $3)
-		ORDER BY "createdAt" DESC LIMIT $4`
+	const q = `SELECT ` + notificationCols + ` FROM "notifications"
+		WHERE "user_id" = $1
+		  AND ($2::boolean IS NOT TRUE OR "read_at" IS NULL)
+		  AND ($3::timestamptz IS NULL OR "created_at" < $3)
+		ORDER BY "created_at" DESC LIMIT $4`
 	rows, err := s.db.Query(ctx, q, userID, unreadOnly, before, limit)
 	if err != nil {
 		return nil, err
@@ -142,7 +142,7 @@ func (s *Service) listNotifications(ctx context.Context, userID string, unreadOn
 }
 
 func (s *Service) getNotification(ctx context.Context, id string) (NotificationRow, error) {
-	n, err := scanNotification(s.db.QueryRow(ctx, `SELECT `+notificationCols+` FROM "Notification" WHERE id = $1`, id))
+	n, err := scanNotification(s.db.QueryRow(ctx, `SELECT `+notificationCols+` FROM "notifications" WHERE id = $1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return NotificationRow{}, ErrNotFound
 	}
@@ -150,18 +150,18 @@ func (s *Service) getNotification(ctx context.Context, id string) (NotificationR
 }
 
 func (s *Service) markRead(ctx context.Context, id string, at time.Time) error {
-	_, err := s.db.Exec(ctx, `UPDATE "Notification" SET "readAt" = $2 WHERE id = $1 AND "readAt" IS NULL`, id, at)
+	_, err := s.db.Exec(ctx, `UPDATE "notifications" SET "read_at" = $2 WHERE id = $1 AND "read_at" IS NULL`, id, at)
 	return err
 }
 
 func (s *Service) markAllRead(ctx context.Context, userID string, at time.Time) error {
-	_, err := s.db.Exec(ctx, `UPDATE "Notification" SET "readAt" = $2 WHERE "userId" = $1 AND "readAt" IS NULL`, userID, at)
+	_, err := s.db.Exec(ctx, `UPDATE "notifications" SET "read_at" = $2 WHERE "user_id" = $1 AND "read_at" IS NULL`, userID, at)
 	return err
 }
 
 func (s *Service) unreadCount(ctx context.Context, userID string) (int, error) {
 	var n int
-	err := s.db.QueryRow(ctx, `SELECT count(*) FROM "Notification" WHERE "userId" = $1 AND "readAt" IS NULL`, userID).Scan(&n)
+	err := s.db.QueryRow(ctx, `SELECT count(*) FROM "notifications" WHERE "user_id" = $1 AND "read_at" IS NULL`, userID).Scan(&n)
 	return n, err
 }
 
@@ -172,7 +172,7 @@ func (s *Service) unreadCount(ctx context.Context, userID string) (int, error) {
 func getTypes(ctx context.Context, db DBTX, userID, column string) ([]string, error) {
 	var types []string
 	// column is a fixed identifier chosen by the caller (never user input).
-	q := `SELECT "` + column + `" FROM "NotificationPref" WHERE "userId" = $1`
+	q := `SELECT "` + column + `" FROM "notification_prefs" WHERE "user_id" = $1`
 	err := db.QueryRow(ctx, q, userID).Scan(&types)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
@@ -184,9 +184,9 @@ func getTypes(ctx context.Context, db DBTX, userID, column string) ([]string, er
 }
 
 func setTypes(ctx context.Context, db DBTX, userID, column string, types []string) error {
-	q := `INSERT INTO "NotificationPref" ("userId","` + column + `","updatedAt")
+	q := `INSERT INTO "notification_prefs" ("user_id","` + column + `","updated_at")
 		VALUES ($1,$2,now())
-		ON CONFLICT ("userId") DO UPDATE SET "` + column + `" = EXCLUDED."` + column + `", "updatedAt" = now()`
+		ON CONFLICT ("user_id") DO UPDATE SET "` + column + `" = EXCLUDED."` + column + `", "updated_at" = now()`
 	_, err := db.Exec(ctx, q, userID, types)
 	return err
 }
@@ -222,18 +222,18 @@ func (s *Service) recordViewBeat(ctx context.Context, in ViewBeatInput) error {
 
 	// On conflict, accumulate duration + per-page. jsonb_set with COALESCE adds
 	// deltaMs to the current page's accumulated ms (defaulting missing to 0).
-	const q = `INSERT INTO "DesignView" (id,"designId","viewerId","anonId","sessionId","openedAt","lastSeenAt","durationMs","pageId","perPage")
+	const q = `INSERT INTO "design_views" (id,"design_id","viewer_id","anon_id","session_id","opened_at","last_seen_at","duration_ms","page_id","per_page")
 		VALUES ($1,$2,$3,$4,$5,now(),now(),$6,$7,$8)
-		ON CONFLICT ("designId","sessionId") DO UPDATE SET
-			"lastSeenAt" = now(),
-			"durationMs" = "DesignView"."durationMs" + $6,
-			"pageId" = COALESCE($7, "DesignView"."pageId"),
-			"perPage" = CASE
-				WHEN $7 IS NULL OR $6 = 0 THEN "DesignView"."perPage"
+		ON CONFLICT ("design_id","session_id") DO UPDATE SET
+			"last_seen_at" = now(),
+			"duration_ms" = "design_views"."duration_ms" + $6,
+			"page_id" = COALESCE($7, "design_views"."page_id"),
+			"per_page" = CASE
+				WHEN $7 IS NULL OR $6 = 0 THEN "design_views"."per_page"
 				ELSE jsonb_set(
-					COALESCE("DesignView"."perPage", '{}'::jsonb),
+					COALESCE("design_views"."per_page", '{}'::jsonb),
 					ARRAY[$7::text],
-					to_jsonb(COALESCE(("DesignView"."perPage"->>$7)::int, 0) + $6)
+					to_jsonb(COALESCE(("design_views"."per_page"->>$7)::int, 0) + $6)
 				)
 			END`
 	_, err := s.db.Exec(ctx, q,
@@ -243,8 +243,8 @@ func (s *Service) recordViewBeat(ctx context.Context, in ViewBeatInput) error {
 }
 
 func (s *Service) listViews(ctx context.Context, designID string) ([]DesignViewRow, error) {
-	const q = `SELECT id,"designId","viewerId","anonId","sessionId","openedAt","lastSeenAt","durationMs","pageId","perPage"
-		FROM "DesignView" WHERE "designId" = $1`
+	const q = `SELECT id,"design_id","viewer_id","anon_id","session_id","opened_at","last_seen_at","duration_ms","page_id","per_page"
+		FROM "design_views" WHERE "design_id" = $1`
 	rows, err := s.db.Query(ctx, q, designID)
 	if err != nil {
 		return nil, err

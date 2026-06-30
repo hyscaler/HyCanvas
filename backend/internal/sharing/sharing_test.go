@@ -59,7 +59,7 @@ func TestSharing_DB(t *testing.T) {
 	}
 
 	designID := uuid.NewString()
-	if _, err := tx.Exec(ctx, `INSERT INTO "Design" (id,"workspaceId",title,"updatedAt") VALUES ($1,$2,'Shared',now())`, designID, ws.ID); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO "designs" (id,"workspace_id",title,"updated_at") VALUES ($1,$2,'Shared',now())`, designID, ws.ID); err != nil {
 		t.Fatalf("design: %v", err)
 	}
 
@@ -226,7 +226,7 @@ func TestSharing_Hardening_DB(t *testing.T) {
 	}
 
 	designID := uuid.NewString()
-	if _, err := tx.Exec(ctx, `INSERT INTO "Design" (id,"workspaceId",title,"updatedAt") VALUES ($1,$2,'Shared',now())`, designID, ws.ID); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO "designs" (id,"workspace_id",title,"updated_at") VALUES ($1,$2,'Shared',now())`, designID, ws.ID); err != nil {
 		t.Fatalf("design: %v", err)
 	}
 	svc := NewService(tx, persistence.NewService(tx), nil, nil)
@@ -314,7 +314,7 @@ func TestSharing_AccessRequests_DB(t *testing.T) {
 
 	designID := uuid.NewString()
 	// createdById is set so owner attribution resolves.
-	if _, err := tx.Exec(ctx, `INSERT INTO "Design" (id,"workspaceId",title,"createdById","updatedAt") VALUES ($1,$2,'Shared',$3,now())`, designID, ws.ID, owner.ID); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO "designs" (id,"workspace_id",title,"created_by_id","updated_at") VALUES ($1,$2,'Shared',$3,now())`, designID, ws.ID, owner.ID); err != nil {
 		t.Fatalf("design: %v", err)
 	}
 	svc := NewService(tx, persistence.NewService(tx), nil, nil)
@@ -426,13 +426,13 @@ func TestSharing_RoleAssignAuthz_DB(t *testing.T) {
 	}
 	// Make `member` a MEMBER of the owner's workspace (has share, not manage-roles).
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO "WorkspaceMember" (id,"workspaceId","userId",role,status,"joinedAt","updatedAt") VALUES ($1,$2,$3,'MEMBER','ACTIVE', now(), now())`,
+		`INSERT INTO "workspace_members" (id,"workspace_id","user_id",role,status,"joined_at","updated_at") VALUES ($1,$2,$3,'MEMBER','ACTIVE', now(), now())`,
 		uuid.NewString(), ws.ID, member.ID); err != nil {
 		t.Fatalf("seed member: %v", err)
 	}
 
 	designID := uuid.NewString()
-	if _, err := tx.Exec(ctx, `INSERT INTO "Design" (id,"workspaceId",title,"updatedAt") VALUES ($1,$2,'Shared',now())`, designID, ws.ID); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO "designs" (id,"workspace_id",title,"updated_at") VALUES ($1,$2,'Shared',now())`, designID, ws.ID); err != nil {
 		t.Fatalf("design: %v", err)
 	}
 	svc := NewService(tx, persistence.NewService(tx), nil, nil)

@@ -105,7 +105,7 @@ type UpdateInput struct {
 
 // workspaceRole returns the caller's lowercase active role, or "".
 func (s *Service) workspaceRole(ctx context.Context, userID, workspaceID string) authz.WorkspaceRole {
-	const q = `SELECT role FROM "WorkspaceMember" WHERE "workspaceId" = $1 AND "userId" = $2 AND status = 'ACTIVE'`
+	const q = `SELECT role FROM "workspace_members" WHERE "workspace_id" = $1 AND "user_id" = $2 AND status = 'ACTIVE'`
 	var role string
 	if err := s.db.QueryRow(ctx, q, workspaceID, userID).Scan(&role); err != nil {
 		return ""

@@ -43,13 +43,13 @@ type fakeDB struct {
 }
 
 func (f *fakeDB) QueryRow(_ context.Context, sql string, _ ...any) pgx.Row {
-	if strings.Contains(sql, `"AiPolicy"`) {
+	if strings.Contains(sql, `"ai_policies"`) {
 		if f.policy == nil {
 			return fakeRow{err: pgx.ErrNoRows}
 		}
 		return fakeRow{vals: []any{f.policy.AllowedProviders, f.policy.BlockedProviders, f.policy.MonthlyTokenCap}}
 	}
-	if strings.Contains(sql, `"AiUsage"`) {
+	if strings.Contains(sql, `"ai_usages"`) {
 		if !f.usageRows {
 			return fakeRow{err: pgx.ErrNoRows}
 		}
@@ -107,7 +107,7 @@ func TestRecordUsageUpserts(t *testing.T) {
 	db := &fakeDB{}
 	s := &Service{db: db}
 	s.meter(context.Background(), "ws", 123)
-	if len(db.execSQL) != 1 || !strings.Contains(db.execSQL[0], `"AiUsage"`) {
+	if len(db.execSQL) != 1 || !strings.Contains(db.execSQL[0], `"ai_usages"`) {
 		t.Fatalf("meter should INSERT into AiUsage, got %v", db.execSQL)
 	}
 	// args: workspaceID, period, tokens
@@ -128,7 +128,7 @@ func TestSetPolicyUpsert(t *testing.T) {
 	if err := s.SetPolicy(context.Background(), "ws", OrgPolicy{AllowedProviders: []string{"openai"}, MonthlyTokenCap: 5000}); err != nil {
 		t.Fatalf("SetPolicy: %v", err)
 	}
-	if len(db.execSQL) != 1 || !strings.Contains(db.execSQL[0], `"AiPolicy"`) {
+	if len(db.execSQL) != 1 || !strings.Contains(db.execSQL[0], `"ai_policies"`) {
 		t.Fatalf("SetPolicy should upsert AiPolicy, got %v", db.execSQL)
 	}
 }

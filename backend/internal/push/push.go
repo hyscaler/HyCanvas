@@ -68,15 +68,15 @@ func (s *Service) Subscribe(ctx context.Context, userID, endpoint, p256dh, auth 
 		return errors.New("incomplete subscription")
 	}
 	_, err := s.db.Exec(ctx,
-		`INSERT INTO "PushSubscription" (id,"userId",endpoint,p256dh,auth) VALUES ($1,$2,$3,$4,$5)
-		 ON CONFLICT (endpoint) DO UPDATE SET "userId" = EXCLUDED."userId", p256dh = EXCLUDED.p256dh, auth = EXCLUDED.auth`,
+		`INSERT INTO "push_subscriptions" (id,"user_id",endpoint,p256dh,auth) VALUES ($1,$2,$3,$4,$5)
+		 ON CONFLICT (endpoint) DO UPDATE SET "user_id" = EXCLUDED."user_id", p256dh = EXCLUDED.p256dh, auth = EXCLUDED.auth`,
 		uuid.NewString(), userID, endpoint, p256dh, auth)
 	return err
 }
 
 // Unsubscribe removes a subscription by endpoint.
 func (s *Service) Unsubscribe(ctx context.Context, endpoint string) error {
-	_, err := s.db.Exec(ctx, `DELETE FROM "PushSubscription" WHERE endpoint = $1`, endpoint)
+	_, err := s.db.Exec(ctx, `DELETE FROM "push_subscriptions" WHERE endpoint = $1`, endpoint)
 	return err
 }
 
@@ -90,7 +90,7 @@ func (s *Service) Send(ctx context.Context, userID string, payload Payload) int 
 	if !s.IsEnabled() {
 		return 0
 	}
-	rows, err := s.db.Query(ctx, `SELECT endpoint, p256dh, auth FROM "PushSubscription" WHERE "userId" = $1`, userID)
+	rows, err := s.db.Query(ctx, `SELECT endpoint, p256dh, auth FROM "push_subscriptions" WHERE "user_id" = $1`, userID)
 	if err != nil {
 		return 0
 	}

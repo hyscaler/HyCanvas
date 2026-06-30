@@ -28,7 +28,7 @@ func stripSchema(dsn string) string {
 func addMember(ctx context.Context, t *testing.T, tx pgx.Tx, workspaceID, userID, role string) {
 	t.Helper()
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO "WorkspaceMember" (id,"workspaceId","userId",role,status,"joinedAt","updatedAt")
+		`INSERT INTO "workspace_members" (id,"workspace_id","user_id",role,status,"joined_at","updated_at")
 		 VALUES ($1,$2,$3,$4,'ACTIVE',now(),now())`,
 		uuid.NewString(), workspaceID, userID, role); err != nil {
 		t.Fatalf("addMember(%s): %v", role, err)
@@ -88,7 +88,7 @@ func TestApprovals_DB(t *testing.T) {
 	addMember(ctx, t, tx, ws.ID, approver.ID, "ADMIN")
 
 	designID := uuid.NewString()
-	if _, err := tx.Exec(ctx, `INSERT INTO "Design" (id,"workspaceId",title,"updatedAt") VALUES ($1,$2,'Doc',now())`, designID, ws.ID); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO "designs" (id,"workspace_id",title,"updated_at") VALUES ($1,$2,'Doc',now())`, designID, ws.ID); err != nil {
 		t.Fatalf("design: %v", err)
 	}
 

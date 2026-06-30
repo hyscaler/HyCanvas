@@ -76,7 +76,7 @@ func TestPush_DB(t *testing.T) {
 		t.Fatalf("Subscribe: %v", err)
 	}
 	var count int
-	_ = tx.QueryRow(ctx, `SELECT count(*) FROM "PushSubscription" WHERE "userId" = $1 AND endpoint = $2`, owner.ID, endpoint).Scan(&count)
+	_ = tx.QueryRow(ctx, `SELECT count(*) FROM "push_subscriptions" WHERE "user_id" = $1 AND endpoint = $2`, owner.ID, endpoint).Scan(&count)
 	if count != 1 {
 		t.Fatalf("subscription not stored: %d", count)
 	}
@@ -84,7 +84,7 @@ func TestPush_DB(t *testing.T) {
 	if err := s.Subscribe(ctx, owner.ID, endpoint, "p2", "a2"); err != nil {
 		t.Fatalf("re-subscribe: %v", err)
 	}
-	_ = tx.QueryRow(ctx, `SELECT count(*) FROM "PushSubscription" WHERE endpoint = $1`, endpoint).Scan(&count)
+	_ = tx.QueryRow(ctx, `SELECT count(*) FROM "push_subscriptions" WHERE endpoint = $1`, endpoint).Scan(&count)
 	if count != 1 {
 		t.Fatalf("re-subscribe should upsert, got %d rows", count)
 	}
@@ -96,7 +96,7 @@ func TestPush_DB(t *testing.T) {
 	if err := s.Unsubscribe(ctx, endpoint); err != nil {
 		t.Fatalf("Unsubscribe: %v", err)
 	}
-	_ = tx.QueryRow(ctx, `SELECT count(*) FROM "PushSubscription" WHERE endpoint = $1`, endpoint).Scan(&count)
+	_ = tx.QueryRow(ctx, `SELECT count(*) FROM "push_subscriptions" WHERE endpoint = $1`, endpoint).Scan(&count)
 	if count != 0 {
 		t.Fatalf("unsubscribe should remove the row, got %d", count)
 	}

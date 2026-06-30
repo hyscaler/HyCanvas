@@ -182,7 +182,7 @@ func TestAIStudio_DB(t *testing.T) {
 	// Seed a Design row (FK target) directly.
 	var designID string
 	if err := tx.QueryRow(ctx,
-		`INSERT INTO "Design" ("id","workspaceId","title","updatedAt") VALUES (gen_random_uuid(),$1,'T',CURRENT_TIMESTAMP) RETURNING "id"`,
+		`INSERT INTO "designs" ("id","workspace_id","title","updated_at") VALUES (gen_random_uuid(),$1,'T',CURRENT_TIMESTAMP) RETURNING "id"`,
 		ws).Scan(&designID); err != nil {
 		t.Fatalf("seed design: %v", err)
 	}

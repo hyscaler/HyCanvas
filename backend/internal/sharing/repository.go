@@ -1,5 +1,5 @@
-// SQL access for the sharing module, against the Prisma-managed tables
-// "DesignGrant", "ShareLink", and "CustomRole" (quoted identifiers, camelCase
+// SQL access for the sharing module, against the tables
+// "design_grants", "share_links", and "custom_roles" (quoted identifiers, snake_case
 // columns). Mode/capability strings are stored as-is (lowercase). Capabilities
 // is a Postgres text[] column.
 package sharing
@@ -25,27 +25,27 @@ func scanGrant(row pgx.Row) (GrantRow, error) {
 	return g, err
 }
 
-const grantCols = `id, "designId", "userId", email, mode, "roleId", "invitedBy", "createdAt"`
+const grantCols = `id, "design_id", "user_id", email, mode, "role_id", "invited_by", "created_at"`
 
 func (s *Service) createGrant(ctx context.Context, in GrantRow) (GrantRow, error) {
 	// A grant carries exactly one of userId/email; target the matching unique
 	// index so a concurrent insert for the same principal updates in place rather
 	// than failing the constraint (a raw 500). roleId is preserved on conflict
 	// unless a new one is supplied, so a racing link/auto grant cannot wipe it.
-	conflict := `("designId","userId")`
+	conflict := `("design_id","user_id")`
 	if in.UserID == nil {
-		conflict = `("designId",email)`
+		conflict = `("design_id",email)`
 	}
-	q := `INSERT INTO "DesignGrant" (id,"designId","userId",email,mode,"roleId","invitedBy")
+	q := `INSERT INTO "design_grants" (id,"design_id","user_id",email,mode,"role_id","invited_by")
 		VALUES ($1,$2,$3,$4,$5,$6,$7)
 		ON CONFLICT ` + conflict + ` DO UPDATE
-		SET mode = EXCLUDED.mode, "roleId" = COALESCE(EXCLUDED."roleId", "DesignGrant"."roleId")
+		SET mode = EXCLUDED.mode, "role_id" = COALESCE(EXCLUDED."role_id", "design_grants"."role_id")
 		RETURNING ` + grantCols
 	return scanGrant(s.db.QueryRow(ctx, q, uuid.NewString(), in.DesignID, in.UserID, in.Email, string(in.Mode), in.RoleID, in.InvitedBy))
 }
 
 func (s *Service) getGrant(ctx context.Context, id string) (GrantRow, error) {
-	g, err := scanGrant(s.db.QueryRow(ctx, `SELECT `+grantCols+` FROM "DesignGrant" WHERE id = $1`, id))
+	g, err := scanGrant(s.db.QueryRow(ctx, `SELECT `+grantCols+` FROM "design_grants" WHERE id = $1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return GrantRow{}, ErrNotFound
 	}
@@ -53,7 +53,7 @@ func (s *Service) getGrant(ctx context.Context, id string) (GrantRow, error) {
 }
 
 func (s *Service) listGrantsForDesign(ctx context.Context, designID string) ([]GrantRow, error) {
-	rows, err := s.db.Query(ctx, `SELECT `+grantCols+` FROM "DesignGrant" WHERE "designId" = $1 ORDER BY "createdAt"`, designID)
+	rows, err := s.db.Query(ctx, `SELECT `+grantCols+` FROM "design_grants" WHERE "design_id" = $1 ORDER BY "created_at"`, designID)
 	if err != nil {
 		return nil, err
 	}
@@ -65,8 +65,8 @@ func (s *Service) listGrantsForDesign(ctx context.Context, designID string) ([]G
 // id or any of their verified emails (FR-7).
 func (s *Service) listGrantsForUser(ctx context.Context, designID, userID string, emails []string) ([]GrantRow, error) {
 	rows, err := s.db.Query(ctx,
-		`SELECT `+grantCols+` FROM "DesignGrant"
-		 WHERE "designId" = $1 AND ("userId" = $2 OR email = ANY($3))`,
+		`SELECT `+grantCols+` FROM "design_grants"
+		 WHERE "design_id" = $1 AND ("user_id" = $2 OR email = ANY($3))`,
 		designID, userID, emails)
 	if err != nil {
 		return nil, err
@@ -95,9 +95,9 @@ func (s *Service) updateGrant(ctx context.Context, id string, mode *authz.Access
 	}
 	// COALESCE keeps the column when the patch field is nil; roleSet lets a
 	// caller explicitly clear roleId to NULL.
-	const q = `UPDATE "DesignGrant"
+	const q = `UPDATE "design_grants"
 		SET mode = COALESCE($2, mode),
-		    "roleId" = CASE WHEN $4 THEN $3 ELSE "roleId" END
+		    "role_id" = CASE WHEN $4 THEN $3 ELSE "role_id" END
 		WHERE id = $1 RETURNING ` + grantCols
 	g, err := scanGrant(s.db.QueryRow(ctx, q, id, modeStr, roleID, roleSet))
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -107,7 +107,7 @@ func (s *Service) updateGrant(ctx context.Context, id string, mode *authz.Access
 }
 
 func (s *Service) deleteGrant(ctx context.Context, id string) error {
-	_, err := s.db.Exec(ctx, `DELETE FROM "DesignGrant" WHERE id = $1`, id)
+	_, err := s.db.Exec(ctx, `DELETE FROM "design_grants" WHERE id = $1`, id)
 	return err
 }
 
@@ -118,9 +118,9 @@ func (s *Service) findGrantForPrincipal(ctx context.Context, designID string, ui
 	var row pgx.Row
 	switch {
 	case uid != nil:
-		row = s.db.QueryRow(ctx, `SELECT `+grantCols+` FROM "DesignGrant" WHERE "designId" = $1 AND "userId" = $2`, designID, *uid)
+		row = s.db.QueryRow(ctx, `SELECT `+grantCols+` FROM "design_grants" WHERE "design_id" = $1 AND "user_id" = $2`, designID, *uid)
 	case email != nil:
-		row = s.db.QueryRow(ctx, `SELECT `+grantCols+` FROM "DesignGrant" WHERE "designId" = $1 AND email = $2`, designID, *email)
+		row = s.db.QueryRow(ctx, `SELECT `+grantCols+` FROM "design_grants" WHERE "design_id" = $1 AND email = $2`, designID, *email)
 	default:
 		return GrantRow{}, ErrNotFound
 	}
@@ -141,16 +141,16 @@ func scanLink(row pgx.Row) (LinkRow, error) {
 	return l, err
 }
 
-const linkCols = `id, "designId", token, mode, "passwordHash", "expiresAt", disabled, "requireSignin", "createdById", "createdAt"`
+const linkCols = `id, "design_id", token, mode, "password_hash", "expires_at", disabled, "require_signin", "created_by_id", "created_at"`
 
 func (s *Service) createLink(ctx context.Context, in LinkRow) (LinkRow, error) {
-	const q = `INSERT INTO "ShareLink" (id,"designId",token,mode,"passwordHash","expiresAt","requireSignin","createdById")
+	const q = `INSERT INTO "share_links" (id,"design_id",token,mode,"password_hash","expires_at","require_signin","created_by_id")
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING ` + linkCols
 	return scanLink(s.db.QueryRow(ctx, q, uuid.NewString(), in.DesignID, in.Token, string(in.Mode), in.PasswordHash, in.ExpiresAt, in.RequireSignin, in.CreatedByID))
 }
 
 func (s *Service) getLink(ctx context.Context, id string) (LinkRow, error) {
-	l, err := scanLink(s.db.QueryRow(ctx, `SELECT `+linkCols+` FROM "ShareLink" WHERE id = $1`, id))
+	l, err := scanLink(s.db.QueryRow(ctx, `SELECT `+linkCols+` FROM "share_links" WHERE id = $1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return LinkRow{}, ErrNotFound
 	}
@@ -158,7 +158,7 @@ func (s *Service) getLink(ctx context.Context, id string) (LinkRow, error) {
 }
 
 func (s *Service) getLinkByToken(ctx context.Context, token string) (LinkRow, error) {
-	l, err := scanLink(s.db.QueryRow(ctx, `SELECT `+linkCols+` FROM "ShareLink" WHERE token = $1`, token))
+	l, err := scanLink(s.db.QueryRow(ctx, `SELECT `+linkCols+` FROM "share_links" WHERE token = $1`, token))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return LinkRow{}, ErrNotFound
 	}
@@ -166,7 +166,7 @@ func (s *Service) getLinkByToken(ctx context.Context, token string) (LinkRow, er
 }
 
 func (s *Service) listLinksForDesign(ctx context.Context, designID string) ([]LinkRow, error) {
-	rows, err := s.db.Query(ctx, `SELECT `+linkCols+` FROM "ShareLink" WHERE "designId" = $1 ORDER BY "createdAt"`, designID)
+	rows, err := s.db.Query(ctx, `SELECT `+linkCols+` FROM "share_links" WHERE "design_id" = $1 ORDER BY "created_at"`, designID)
 	if err != nil {
 		return nil, err
 	}
@@ -197,12 +197,12 @@ func (s *Service) updateLink(ctx context.Context, id string, p linkPatch) (LinkR
 		v := string(*p.mode)
 		modeStr = &v
 	}
-	const q = `UPDATE "ShareLink"
+	const q = `UPDATE "share_links"
 		SET mode = COALESCE($2, mode),
 		    disabled = COALESCE($3, disabled),
-		    "expiresAt" = CASE WHEN $5 THEN $4 ELSE "expiresAt" END,
+		    "expires_at" = CASE WHEN $5 THEN $4 ELSE "expires_at" END,
 		    token = COALESCE($6, token),
-		    "requireSignin" = COALESCE($7, "requireSignin")
+		    "require_signin" = COALESCE($7, "require_signin")
 		WHERE id = $1 RETURNING ` + linkCols
 	l, err := scanLink(s.db.QueryRow(ctx, q, id, modeStr, p.disabled, p.expiresAt, p.expiresSet, p.token, p.requireSignin))
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -212,7 +212,7 @@ func (s *Service) updateLink(ctx context.Context, id string, p linkPatch) (LinkR
 }
 
 func (s *Service) deleteLink(ctx context.Context, id string) error {
-	_, err := s.db.Exec(ctx, `DELETE FROM "ShareLink" WHERE id = $1`, id)
+	_, err := s.db.Exec(ctx, `DELETE FROM "share_links" WHERE id = $1`, id)
 	return err
 }
 
@@ -228,7 +228,7 @@ func scanRole(row pgx.Row) (RoleRow, error) {
 	return r, err
 }
 
-const roleCols = `id, "workspaceId", "designId", name, capabilities, "createdAt"`
+const roleCols = `id, "workspace_id", "design_id", name, capabilities, "created_at"`
 
 func capStrings(caps []authz.Capability) []string {
 	out := make([]string, len(caps))
@@ -239,13 +239,13 @@ func capStrings(caps []authz.Capability) []string {
 }
 
 func (s *Service) createCustomRole(ctx context.Context, in RoleRow) (RoleRow, error) {
-	const q = `INSERT INTO "CustomRole" (id,"workspaceId","designId",name,capabilities)
+	const q = `INSERT INTO "custom_roles" (id,"workspace_id","design_id",name,capabilities)
 		VALUES ($1,$2,$3,$4,$5) RETURNING ` + roleCols
 	return scanRole(s.db.QueryRow(ctx, q, uuid.NewString(), in.WorkspaceID, in.DesignID, in.Name, capStrings(in.Capabilities)))
 }
 
 func (s *Service) getCustomRole(ctx context.Context, id string) (RoleRow, error) {
-	r, err := scanRole(s.db.QueryRow(ctx, `SELECT `+roleCols+` FROM "CustomRole" WHERE id = $1`, id))
+	r, err := scanRole(s.db.QueryRow(ctx, `SELECT `+roleCols+` FROM "custom_roles" WHERE id = $1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return RoleRow{}, ErrNotFound
 	}
@@ -253,7 +253,7 @@ func (s *Service) getCustomRole(ctx context.Context, id string) (RoleRow, error)
 }
 
 func (s *Service) listCustomRolesForWorkspace(ctx context.Context, workspaceID string) ([]RoleRow, error) {
-	rows, err := s.db.Query(ctx, `SELECT `+roleCols+` FROM "CustomRole" WHERE "workspaceId" = $1 ORDER BY "createdAt"`, workspaceID)
+	rows, err := s.db.Query(ctx, `SELECT `+roleCols+` FROM "custom_roles" WHERE "workspace_id" = $1 ORDER BY "created_at"`, workspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -265,9 +265,9 @@ func (s *Service) listCustomRolesForWorkspace(ctx context.Context, workspaceID s
 // ones pinned to this design.
 func (s *Service) listCustomRolesForDesign(ctx context.Context, workspaceID, designID string) ([]RoleRow, error) {
 	rows, err := s.db.Query(ctx,
-		`SELECT `+roleCols+` FROM "CustomRole"
-		 WHERE "workspaceId" = $1 AND ("designId" IS NULL OR "designId" = $2)
-		 ORDER BY "createdAt"`,
+		`SELECT `+roleCols+` FROM "custom_roles"
+		 WHERE "workspace_id" = $1 AND ("design_id" IS NULL OR "design_id" = $2)
+		 ORDER BY "created_at"`,
 		workspaceID, designID)
 	if err != nil {
 		return nil, err
@@ -293,7 +293,7 @@ func (s *Service) updateCustomRole(ctx context.Context, id string, name *string,
 	if caps != nil {
 		capArr = capStrings(*caps)
 	}
-	const q = `UPDATE "CustomRole"
+	const q = `UPDATE "custom_roles"
 		SET name = COALESCE($2, name),
 		    capabilities = CASE WHEN $4 THEN $3 ELSE capabilities END
 		WHERE id = $1 RETURNING ` + roleCols
@@ -305,6 +305,6 @@ func (s *Service) updateCustomRole(ctx context.Context, id string, name *string,
 }
 
 func (s *Service) deleteCustomRole(ctx context.Context, id string) error {
-	_, err := s.db.Exec(ctx, `DELETE FROM "CustomRole" WHERE id = $1`, id)
+	_, err := s.db.Exec(ctx, `DELETE FROM "custom_roles" WHERE id = $1`, id)
 	return err
 }

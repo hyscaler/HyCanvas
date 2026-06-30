@@ -314,11 +314,11 @@ type NotificationPrefView struct {
 }
 
 func (s *Service) GetPrefs(ctx context.Context, userID string) (NotificationPrefView, error) {
-	email, err := getTypes(ctx, s.db, userID, "emailTypes")
+	email, err := getTypes(ctx, s.db, userID, "email_types")
 	if err != nil {
 		return NotificationPrefView{}, err
 	}
-	push, err := getTypes(ctx, s.db, userID, "pushTypes")
+	push, err := getTypes(ctx, s.db, userID, "push_types")
 	if err != nil {
 		return NotificationPrefView{}, err
 	}
@@ -341,12 +341,12 @@ type SetPrefsInput struct {
 
 func (s *Service) SetPrefs(ctx context.Context, userID string, in SetPrefsInput) (NotificationPrefView, error) {
 	if in.EmailTypesSet {
-		if err := setTypes(ctx, s.db, userID, "emailTypes", sanitizeTypes(in.EmailTypes)); err != nil {
+		if err := setTypes(ctx, s.db, userID, "email_types", sanitizeTypes(in.EmailTypes)); err != nil {
 			return NotificationPrefView{}, err
 		}
 	}
 	if in.PushTypesSet {
-		if err := setTypes(ctx, s.db, userID, "pushTypes", sanitizeTypes(in.PushTypes)); err != nil {
+		if err := setTypes(ctx, s.db, userID, "push_types", sanitizeTypes(in.PushTypes)); err != nil {
 			return NotificationPrefView{}, err
 		}
 	}

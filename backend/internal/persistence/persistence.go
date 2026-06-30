@@ -70,7 +70,7 @@ const retentionDays = 30
 // pgx.ErrNoRows when the design does not exist.
 func (s *Service) GetWorkspaceID(ctx context.Context, designID string) (string, error) {
 	var ws string
-	err := s.db.QueryRow(ctx, `SELECT "workspaceId" FROM "Design" WHERE id = $1`, designID).Scan(&ws)
+	err := s.db.QueryRow(ctx, `SELECT "workspace_id" FROM "designs" WHERE id = $1`, designID).Scan(&ws)
 	return ws, err
 }
 
@@ -86,9 +86,9 @@ func isoPtr(t *time.Time) *string {
 
 // GetRecord returns the design metadata record.
 func (s *Service) GetRecord(ctx context.Context, designID string) (*DesignRecord, error) {
-	const q = `SELECT id, "workspaceId", title, "schemaVersion", "docKind", "currentSnapshotId",
-		"createdAt", "updatedAt", "deletedAt", "purgeAfter", "sourceDesignId", "sourceVersionId"
-		FROM "Design" WHERE id = $1`
+	const q = `SELECT id, "workspace_id", title, "schema_version", "doc_kind", "current_snapshot_id",
+		"created_at", "updated_at", "deleted_at", "purge_after", "source_design_id", "source_version_id"
+		FROM "designs" WHERE id = $1`
 	var (
 		r                  DesignRecord
 		created, updated   time.Time
@@ -113,10 +113,10 @@ func (s *Service) ListByWorkspace(ctx context.Context, workspaceID string, limit
 	if limit <= 0 || limit > 200 {
 		limit = 50
 	}
-	const q = `SELECT id, "workspaceId", title, "schemaVersion", "docKind", "currentSnapshotId",
-		"createdAt", "updatedAt", "deletedAt", "purgeAfter", "sourceDesignId", "sourceVersionId"
-		FROM "Design" WHERE "workspaceId" = $1 AND "deletedAt" IS NULL
-		ORDER BY "updatedAt" DESC LIMIT $2`
+	const q = `SELECT id, "workspace_id", title, "schema_version", "doc_kind", "current_snapshot_id",
+		"created_at", "updated_at", "deleted_at", "purge_after", "source_design_id", "source_version_id"
+		FROM "designs" WHERE "workspace_id" = $1 AND "deleted_at" IS NULL
+		ORDER BY "updated_at" DESC LIMIT $2`
 	rows, err := s.db.Query(ctx, q, workspaceID, limit)
 	if err != nil {
 		return nil, err

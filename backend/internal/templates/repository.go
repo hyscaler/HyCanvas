@@ -1,5 +1,5 @@
-// SQL access for templates, against the Prisma-managed tables "Template" and
-// "TemplateCollection" (quoted identifiers, camelCase columns). visibility is
+// SQL access for templates, against the tables "templates" and
+// "template_collections" (quoted identifiers, snake_case columns). visibility is
 // stored UPPERCASE (the enum); file/style/attribution are JSONB. The repo
 // enforces the visibility scope (public global; private = owner; workspace =
 // member workspaces) at the query layer.
@@ -45,8 +45,8 @@ type TemplateRow struct {
 	UpdatedAt      time.Time
 }
 
-const tmplCols = `id,"ownerId","workspaceId",title,category,tags,file,thumbnail,visibility,"collectionId",style,
-	'[]'::jsonb,attribution,"createdAt","updatedAt"`
+const tmplCols = `id,"owner_id","workspace_id",title,category,tags,file,thumbnail,visibility,"collection_id",style,
+	'[]'::jsonb,attribution,"created_at","updated_at"`
 
 func scanTemplate(row pgx.Row) (TemplateRow, error) {
 	var t TemplateRow
@@ -58,7 +58,7 @@ func scanTemplate(row pgx.Row) (TemplateRow, error) {
 }
 
 func (s *Service) getRow(ctx context.Context, id string) (TemplateRow, error) {
-	t, err := scanTemplate(s.db.QueryRow(ctx, `SELECT `+tmplCols+` FROM "Template" WHERE id = $1`, id))
+	t, err := scanTemplate(s.db.QueryRow(ctx, `SELECT `+tmplCols+` FROM "templates" WHERE id = $1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return TemplateRow{}, ErrNotFound
 	}
@@ -68,20 +68,20 @@ func (s *Service) getRow(ctx context.Context, id string) (TemplateRow, error) {
 // listRows returns templates the caller may see (public + own private + member
 // workspaces), optionally narrowed to a workspace + collection.
 func (s *Service) listRows(ctx context.Context, userID string, memberWS []string, workspaceID, collectionID string) ([]TemplateRow, error) {
-	q := `SELECT ` + tmplCols + ` FROM "Template"
+	q := `SELECT ` + tmplCols + ` FROM "templates"
 		WHERE (visibility = 'PUBLIC'
-		   OR (visibility = 'PRIVATE' AND "ownerId" = $1)
-		   OR (visibility = 'WORKSPACE' AND "workspaceId" = ANY($2)))`
+		   OR (visibility = 'PRIVATE' AND "owner_id" = $1)
+		   OR (visibility = 'WORKSPACE' AND "workspace_id" = ANY($2)))`
 	args := []any{userID, memberWS}
 	if workspaceID != "" {
 		args = append(args, workspaceID)
-		q += ` AND "workspaceId" = $` + itoa(len(args))
+		q += ` AND "workspace_id" = $` + itoa(len(args))
 	}
 	if collectionID != "" {
 		args = append(args, collectionID)
-		q += ` AND "collectionId" = $` + itoa(len(args))
+		q += ` AND "collection_id" = $` + itoa(len(args))
 	}
-	q += ` ORDER BY "updatedAt" DESC`
+	q += ` ORDER BY "updated_at" DESC`
 	rows, err := s.db.Query(ctx, q, args...)
 	if err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ type createTemplateInput struct {
 }
 
 func (s *Service) createRow(ctx context.Context, in createTemplateInput) (TemplateRow, error) {
-	const q = `INSERT INTO "Template" (id,"ownerId","workspaceId",title,category,tags,file,thumbnail,visibility,"collectionId",style,attribution,"updatedAt")
+	const q = `INSERT INTO "templates" (id,"owner_id","workspace_id",title,category,tags,file,thumbnail,visibility,"collection_id",style,attribution,"updated_at")
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'[]'::jsonb,now()) RETURNING ` + tmplCols
 	if in.tags == nil {
 		in.tags = []string{}
@@ -123,7 +123,7 @@ func (s *Service) createRow(ctx context.Context, in createTemplateInput) (Templa
 }
 
 func (s *Service) setCollection(ctx context.Context, id string, collectionID *string) (TemplateRow, error) {
-	t, err := scanTemplate(s.db.QueryRow(ctx, `UPDATE "Template" SET "collectionId" = $2, "updatedAt" = now() WHERE id = $1 RETURNING `+tmplCols, id, collectionID))
+	t, err := scanTemplate(s.db.QueryRow(ctx, `UPDATE "templates" SET "collection_id" = $2, "updated_at" = now() WHERE id = $1 RETURNING `+tmplCols, id, collectionID))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return TemplateRow{}, ErrNotFound
 	}
@@ -140,7 +140,7 @@ type collectionRow struct {
 
 func (s *Service) getCollection(ctx context.Context, id string) (collectionRow, error) {
 	var c collectionRow
-	err := s.db.QueryRow(ctx, `SELECT id,"workspaceId",name FROM "TemplateCollection" WHERE id = $1`, id).Scan(&c.ID, &c.WorkspaceID, &c.Name)
+	err := s.db.QueryRow(ctx, `SELECT id,"workspace_id",name FROM "template_collections" WHERE id = $1`, id).Scan(&c.ID, &c.WorkspaceID, &c.Name)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return collectionRow{}, ErrNotFound
 	}
@@ -148,7 +148,7 @@ func (s *Service) getCollection(ctx context.Context, id string) (collectionRow, 
 }
 
 func (s *Service) listCollections(ctx context.Context, workspaceID string) ([]collectionRow, error) {
-	rows, err := s.db.Query(ctx, `SELECT id,"workspaceId",name FROM "TemplateCollection" WHERE "workspaceId" = $1 ORDER BY "createdAt"`, workspaceID)
+	rows, err := s.db.Query(ctx, `SELECT id,"workspace_id",name FROM "template_collections" WHERE "workspace_id" = $1 ORDER BY "created_at"`, workspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -166,13 +166,13 @@ func (s *Service) listCollections(ctx context.Context, workspaceID string) ([]co
 
 func (s *Service) createCollection(ctx context.Context, workspaceID, name string) (collectionRow, error) {
 	var c collectionRow
-	err := s.db.QueryRow(ctx, `INSERT INTO "TemplateCollection" (id,"workspaceId",name) VALUES ($1,$2,$3) RETURNING id,"workspaceId",name`,
+	err := s.db.QueryRow(ctx, `INSERT INTO "template_collections" (id,"workspace_id",name) VALUES ($1,$2,$3) RETURNING id,"workspace_id",name`,
 		uuid.NewString(), workspaceID, strings.TrimSpace(name)).Scan(&c.ID, &c.WorkspaceID, &c.Name)
 	return c, err
 }
 
 func (s *Service) deleteCollection(ctx context.Context, id string) error {
-	_, err := s.db.Exec(ctx, `DELETE FROM "TemplateCollection" WHERE id = $1`, id)
+	_, err := s.db.Exec(ctx, `DELETE FROM "template_collections" WHERE id = $1`, id)
 	return err
 }
 

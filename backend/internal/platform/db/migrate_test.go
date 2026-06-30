@@ -50,7 +50,7 @@ func TestMigrate_FreshSchema(t *testing.T) {
 	}
 
 	// Spot-check tables created across the migration set.
-	for _, table := range []string{"User", "Workspace", "Design", "DesignVersion", "Comment", "BrandKit"} {
+	for _, table := range []string{"users", "workspaces", "designs", "design_versions", "comments", "brand_kits"} {
 		var present bool
 		if err := pool.QueryRow(ctx,
 			`SELECT to_regclass($1) IS NOT NULL`, `"`+schema+`"."`+table+`"`).Scan(&present); err != nil {

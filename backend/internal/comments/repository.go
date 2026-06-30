@@ -1,5 +1,5 @@
-// SQL access for comments + tasks, against the Prisma-managed tables "Comment",
-// "CommentReaction", and "CommentMention" (quoted identifiers, camelCase
+// SQL access for comments + tasks, against the tables "comments",
+// "comment_reactions", and "comment_mentions" (quoted identifiers, snake_case
 // columns). The anchor is a JSONB column stored/loaded as the Anchor struct.
 package comments
 
@@ -84,8 +84,8 @@ func parseTime(s string) (time.Time, error) {
 	return time.Time{}, errors.New("invalid time")
 }
 
-const commentCols = `id, "designId", "parentId", "authorId", "authorName", anchor, body,
-	"resolvedAt", "resolvedById", "editedAt", "taskAssigneeId", "taskStatus", "taskDueAt", "createdAt"`
+const commentCols = `id, "design_id", "parent_id", "author_id", "author_name", anchor, body,
+	"resolved_at", "resolved_by_id", "edited_at", "task_assignee_id", "task_status", "task_due_at", "created_at"`
 
 func scanComment(row pgx.Row) (CommentRow, error) {
 	var c CommentRow
@@ -106,13 +106,13 @@ func (s *Service) createComment(ctx context.Context, in CommentRow) (CommentRow,
 	if err != nil {
 		return CommentRow{}, err
 	}
-	const q = `INSERT INTO "Comment" (id,"designId","parentId","authorId","authorName",anchor,body)
+	const q = `INSERT INTO "comments" (id,"design_id","parent_id","author_id","author_name",anchor,body)
 		VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING ` + commentCols
 	return scanComment(s.db.QueryRow(ctx, q, uuid.NewString(), in.DesignID, in.ParentID, in.AuthorID, in.AuthorName, anchorRaw, in.Body))
 }
 
 func (s *Service) getComment(ctx context.Context, id string) (CommentRow, error) {
-	c, err := scanComment(s.db.QueryRow(ctx, `SELECT `+commentCols+` FROM "Comment" WHERE id = $1`, id))
+	c, err := scanComment(s.db.QueryRow(ctx, `SELECT `+commentCols+` FROM "comments" WHERE id = $1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return CommentRow{}, ErrNotFound
 	}
@@ -120,7 +120,7 @@ func (s *Service) getComment(ctx context.Context, id string) (CommentRow, error)
 }
 
 func (s *Service) listCommentsForDesign(ctx context.Context, designID string) ([]CommentRow, error) {
-	rows, err := s.db.Query(ctx, `SELECT `+commentCols+` FROM "Comment" WHERE "designId" = $1 ORDER BY "createdAt"`, designID)
+	rows, err := s.db.Query(ctx, `SELECT `+commentCols+` FROM "comments" WHERE "design_id" = $1 ORDER BY "created_at"`, designID)
 	if err != nil {
 		return nil, err
 	}
@@ -131,10 +131,10 @@ func (s *Service) listCommentsForDesign(ctx context.Context, designID string) ([
 func (s *Service) listTasksForAssignee(ctx context.Context, userID string, status *string) ([]CommentRow, error) {
 	// Root task comments (taskStatus set) assigned to the user, optionally
 	// filtered by status.
-	const q = `SELECT ` + commentCols + ` FROM "Comment"
-		WHERE "taskAssigneeId" = $1 AND "taskStatus" IS NOT NULL
-		  AND ($2::text IS NULL OR "taskStatus" = $2)
-		ORDER BY "createdAt"`
+	const q = `SELECT ` + commentCols + ` FROM "comments"
+		WHERE "task_assignee_id" = $1 AND "task_status" IS NOT NULL
+		  AND ($2::text IS NULL OR "task_status" = $2)
+		ORDER BY "created_at"`
 	rows, err := s.db.Query(ctx, q, userID, status)
 	if err != nil {
 		return nil, err
@@ -183,34 +183,34 @@ func (s *Service) updateComment(ctx context.Context, id string, p commentPatch) 
 	}
 	if p.editedAtSet {
 		now := time.Now()
-		add(`"editedAt" = `, now)
+		add(`"edited_at" = `, now)
 	}
 	if p.resolvedSet {
 		if p.resolved {
 			now := time.Now()
-			add(`"resolvedAt" = `, now)
-			add(`"resolvedById" = `, p.resolvedBy)
+			add(`"resolved_at" = `, now)
+			add(`"resolved_by_id" = `, p.resolvedBy)
 		} else {
-			add(`"resolvedAt" = `, nil)
-			add(`"resolvedById" = `, nil)
+			add(`"resolved_at" = `, nil)
+			add(`"resolved_by_id" = `, nil)
 		}
 	}
 	if p.taskSet {
-		add(`"taskAssigneeId" = `, p.taskAssignee)
-		add(`"taskStatus" = `, p.taskStatus)
-		add(`"taskDueAt" = `, p.taskDueAt)
+		add(`"task_assignee_id" = `, p.taskAssignee)
+		add(`"task_status" = `, p.taskStatus)
+		add(`"task_due_at" = `, p.taskDueAt)
 	}
 	if len(set) == 0 {
 		return nil
 	}
-	q := `UPDATE "Comment" SET ` + join(set, ", ") + ` WHERE id = $1`
+	q := `UPDATE "comments" SET ` + join(set, ", ") + ` WHERE id = $1`
 	_, err := s.db.Exec(ctx, q, args...)
 	return err
 }
 
 func (s *Service) deleteComment(ctx context.Context, id string) error {
 	// Replies/reactions/mentions cascade via the Prisma-defined FKs.
-	_, err := s.db.Exec(ctx, `DELETE FROM "Comment" WHERE id = $1`, id)
+	_, err := s.db.Exec(ctx, `DELETE FROM "comments" WHERE id = $1`, id)
 	return err
 }
 
@@ -220,7 +220,7 @@ func (s *Service) listReactions(ctx context.Context, commentIDs []string) ([]Rea
 	if len(commentIDs) == 0 {
 		return nil, nil
 	}
-	rows, err := s.db.Query(ctx, `SELECT "commentId","userId",emoji FROM "CommentReaction" WHERE "commentId" = ANY($1) ORDER BY "createdAt"`, commentIDs)
+	rows, err := s.db.Query(ctx, `SELECT "comment_id","user_id",emoji FROM "comment_reactions" WHERE "comment_id" = ANY($1) ORDER BY "created_at"`, commentIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -238,7 +238,7 @@ func (s *Service) listReactions(ctx context.Context, commentIDs []string) ([]Rea
 
 func (s *Service) hasReaction(ctx context.Context, commentID, userID, emoji string) (bool, error) {
 	var one int
-	err := s.db.QueryRow(ctx, `SELECT 1 FROM "CommentReaction" WHERE "commentId"=$1 AND "userId"=$2 AND emoji=$3`, commentID, userID, emoji).Scan(&one)
+	err := s.db.QueryRow(ctx, `SELECT 1 FROM "comment_reactions" WHERE "comment_id"=$1 AND "user_id"=$2 AND emoji=$3`, commentID, userID, emoji).Scan(&one)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
@@ -247,14 +247,14 @@ func (s *Service) hasReaction(ctx context.Context, commentID, userID, emoji stri
 
 func (s *Service) addReaction(ctx context.Context, commentID, userID, emoji string) error {
 	_, err := s.db.Exec(ctx,
-		`INSERT INTO "CommentReaction" (id,"commentId","userId",emoji) VALUES ($1,$2,$3,$4)
-		 ON CONFLICT ("commentId","userId",emoji) DO NOTHING`,
+		`INSERT INTO "comment_reactions" (id,"comment_id","user_id",emoji) VALUES ($1,$2,$3,$4)
+		 ON CONFLICT ("comment_id","user_id",emoji) DO NOTHING`,
 		uuid.NewString(), commentID, userID, emoji)
 	return err
 }
 
 func (s *Service) removeReaction(ctx context.Context, commentID, userID, emoji string) error {
-	_, err := s.db.Exec(ctx, `DELETE FROM "CommentReaction" WHERE "commentId"=$1 AND "userId"=$2 AND emoji=$3`, commentID, userID, emoji)
+	_, err := s.db.Exec(ctx, `DELETE FROM "comment_reactions" WHERE "comment_id"=$1 AND "user_id"=$2 AND emoji=$3`, commentID, userID, emoji)
 	return err
 }
 
@@ -264,7 +264,7 @@ func (s *Service) listMentions(ctx context.Context, commentIDs []string) ([]Ment
 	if len(commentIDs) == 0 {
 		return nil, nil
 	}
-	rows, err := s.db.Query(ctx, `SELECT "commentId","userId" FROM "CommentMention" WHERE "commentId" = ANY($1)`, commentIDs)
+	rows, err := s.db.Query(ctx, `SELECT "comment_id","user_id" FROM "comment_mentions" WHERE "comment_id" = ANY($1)`, commentIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -281,7 +281,7 @@ func (s *Service) listMentions(ctx context.Context, commentIDs []string) ([]Ment
 }
 
 func (s *Service) listMentionsForUser(ctx context.Context, userID string) ([]MentionRow, error) {
-	rows, err := s.db.Query(ctx, `SELECT "commentId","userId" FROM "CommentMention" WHERE "userId" = $1 ORDER BY "createdAt" DESC`, userID)
+	rows, err := s.db.Query(ctx, `SELECT "comment_id","user_id" FROM "comment_mentions" WHERE "user_id" = $1 ORDER BY "created_at" DESC`, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -299,13 +299,13 @@ func (s *Service) listMentionsForUser(ctx context.Context, userID string) ([]Men
 
 // setMentions replaces the comment's mention set (idempotent per user).
 func (s *Service) setMentions(ctx context.Context, commentID string, userIDs []string) error {
-	if _, err := s.db.Exec(ctx, `DELETE FROM "CommentMention" WHERE "commentId" = $1`, commentID); err != nil {
+	if _, err := s.db.Exec(ctx, `DELETE FROM "comment_mentions" WHERE "comment_id" = $1`, commentID); err != nil {
 		return err
 	}
 	for _, uid := range userIDs {
 		if _, err := s.db.Exec(ctx,
-			`INSERT INTO "CommentMention" (id,"commentId","userId") VALUES ($1,$2,$3)
-			 ON CONFLICT ("commentId","userId") DO NOTHING`,
+			`INSERT INTO "comment_mentions" (id,"comment_id","user_id") VALUES ($1,$2,$3)
+			 ON CONFLICT ("comment_id","user_id") DO NOTHING`,
 			uuid.NewString(), commentID, uid); err != nil {
 			return err
 		}
@@ -316,7 +316,7 @@ func (s *Service) setMentions(ctx context.Context, commentID string, userIDs []s
 // --- workspace members (for mentionable people) --------------------------
 
 func (s *Service) listWorkspaceMemberIDs(ctx context.Context, workspaceID string) ([]string, error) {
-	rows, err := s.db.Query(ctx, `SELECT "userId" FROM "WorkspaceMember" WHERE "workspaceId" = $1 AND status = 'ACTIVE'`, workspaceID)
+	rows, err := s.db.Query(ctx, `SELECT "user_id" FROM "workspace_members" WHERE "workspace_id" = $1 AND status = 'ACTIVE'`, workspaceID)
 	if err != nil {
 		return nil, err
 	}

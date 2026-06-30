@@ -111,7 +111,7 @@ func TestEngagement_DB(t *testing.T) {
 	}
 
 	designID := uuid.NewString()
-	if _, err := tx.Exec(ctx, `INSERT INTO "Design" (id,"workspaceId",title,"updatedAt") VALUES ($1,$2,'Deck',now())`, designID, ws.ID); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO "designs" (id,"workspace_id",title,"updated_at") VALUES ($1,$2,'Deck',now())`, designID, ws.ID); err != nil {
 		t.Fatalf("design: %v", err)
 	}
 

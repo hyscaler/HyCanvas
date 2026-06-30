@@ -1,6 +1,6 @@
 // Write-side SQL for the persistence lifecycle, against the Prisma-managed
-// tables "Design", "DesignSnapshot", and "DesignVersion" (quoted identifiers,
-// camelCase columns). SnapshotKind is stored UPPERCASE (the enum); the service
+// tables "designs", "design_snapshots", and "design_versions" (quoted identifiers,
+// snake_case columns). SnapshotKind is stored UPPERCASE (the enum); the service
 // uses lowercase.
 package persistence
 
@@ -32,7 +32,7 @@ type designRow struct {
 	SourceVersionID *string
 }
 
-const designCols = `id,"workspaceId",title,"schemaVersion","docKind","currentSnapshotId","createdAt","updatedAt","deletedAt","purgeAfter","sourceDesignId","sourceVersionId"`
+const designCols = `id,"workspace_id",title,"schema_version","doc_kind","current_snapshot_id","created_at","updated_at","deleted_at","purge_after","source_design_id","source_version_id"`
 
 func scanDesign(row pgx.Row) (designRow, error) {
 	var d designRow
@@ -42,7 +42,7 @@ func scanDesign(row pgx.Row) (designRow, error) {
 }
 
 func (s *Service) getDesign(ctx context.Context, id string) (designRow, error) {
-	d, err := scanDesign(s.db.QueryRow(ctx, `SELECT `+designCols+` FROM "Design" WHERE id = $1`, id))
+	d, err := scanDesign(s.db.QueryRow(ctx, `SELECT `+designCols+` FROM "designs" WHERE id = $1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return designRow{}, ErrNotFound
 	}
@@ -60,7 +60,7 @@ type createDesignInput struct {
 }
 
 func (s *Service) createDesign(ctx context.Context, in createDesignInput) (designRow, error) {
-	const q = `INSERT INTO "Design" (id,"workspaceId",title,"schemaVersion","docKind","createdById","sourceDesignId","sourceVersionId","updatedAt")
+	const q = `INSERT INTO "designs" (id,"workspace_id",title,"schema_version","doc_kind","created_by_id","source_design_id","source_version_id","updated_at")
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,now()) RETURNING ` + designCols
 	return scanDesign(s.db.QueryRow(ctx, q, uuid.NewString(), in.workspaceID, in.title, in.schemaVersion, in.docKind, in.createdByID, in.sourceDesignID, in.sourceVersionID))
 }
@@ -75,7 +75,7 @@ type designPatch struct {
 }
 
 func (s *Service) updateDesign(ctx context.Context, id string, p designPatch) (designRow, error) {
-	set := []string{`"updatedAt" = now()`}
+	set := []string{`"updated_at" = now()`}
 	args := []any{id}
 	add := func(col string, v any) {
 		args = append(args, v)
@@ -85,16 +85,16 @@ func (s *Service) updateDesign(ctx context.Context, id string, p designPatch) (d
 		add("title", *p.title)
 	}
 	if p.currentSnapshotID != nil {
-		add(`"currentSnapshotId"`, *p.currentSnapshotID)
+		add(`"current_snapshot_id"`, *p.currentSnapshotID)
 	}
 	if p.schemaVersion != nil {
-		add(`"schemaVersion"`, *p.schemaVersion)
+		add(`"schema_version"`, *p.schemaVersion)
 	}
 	if p.deletedAtSet {
-		add(`"deletedAt"`, p.deletedAt)
-		add(`"purgeAfter"`, p.purgeAfter)
+		add(`"deleted_at"`, p.deletedAt)
+		add(`"purge_after"`, p.purgeAfter)
 	}
-	q := `UPDATE "Design" SET ` + strings.Join(set, ", ") + ` WHERE id = $1 RETURNING ` + designCols
+	q := `UPDATE "designs" SET ` + strings.Join(set, ", ") + ` WHERE id = $1 RETURNING ` + designCols
 	d, err := scanDesign(s.db.QueryRow(ctx, q, args...))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return designRow{}, ErrNotFound
@@ -103,7 +103,7 @@ func (s *Service) updateDesign(ctx context.Context, id string, p designPatch) (d
 }
 
 func (s *Service) listBranchRows(ctx context.Context, sourceDesignID string) ([]designRow, error) {
-	rows, err := s.db.Query(ctx, `SELECT `+designCols+` FROM "Design" WHERE "sourceDesignId" = $1 AND "deletedAt" IS NULL ORDER BY "createdAt"`, sourceDesignID)
+	rows, err := s.db.Query(ctx, `SELECT `+designCols+` FROM "designs" WHERE "source_design_id" = $1 AND "deleted_at" IS NULL ORDER BY "created_at"`, sourceDesignID)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (s *Service) listBranchRows(ctx context.Context, sourceDesignID string) ([]
 }
 
 func (s *Service) listTrashRows(ctx context.Context, workspaceID string) ([]designRow, error) {
-	rows, err := s.db.Query(ctx, `SELECT `+designCols+` FROM "Design" WHERE "workspaceId" = $1 AND "deletedAt" IS NOT NULL ORDER BY "deletedAt" DESC`, workspaceID)
+	rows, err := s.db.Query(ctx, `SELECT `+designCols+` FROM "designs" WHERE "workspace_id" = $1 AND "deleted_at" IS NOT NULL ORDER BY "deleted_at" DESC`, workspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func collectDesigns(rows pgx.Rows) ([]designRow, error) {
 }
 
 func (s *Service) hardDeleteDesign(ctx context.Context, id string) error {
-	_, err := s.db.Exec(ctx, `DELETE FROM "Design" WHERE id = $1`, id)
+	_, err := s.db.Exec(ctx, `DELETE FROM "designs" WHERE id = $1`, id)
 	return err
 }
 
@@ -151,7 +151,7 @@ type snapshotRow struct {
 	CreatedAt     time.Time
 }
 
-const snapshotCols = `id,"designId","blobUrl",checksum,"schemaVersion","sizeBytes",kind,"authorId","createdAt"`
+const snapshotCols = `id,"design_id","blob_url",checksum,"schema_version","size_bytes",kind,"author_id","created_at"`
 
 func scanSnapshot(row pgx.Row) (snapshotRow, error) {
 	var s snapshotRow
@@ -172,13 +172,13 @@ type createSnapshotInput struct {
 }
 
 func (s *Service) createSnapshot(ctx context.Context, in createSnapshotInput) (snapshotRow, error) {
-	const q = `INSERT INTO "DesignSnapshot" (id,"designId","blobUrl",checksum,"schemaVersion","sizeBytes",kind,"authorId")
+	const q = `INSERT INTO "design_snapshots" (id,"design_id","blob_url",checksum,"schema_version","size_bytes",kind,"author_id")
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING ` + snapshotCols
 	return scanSnapshot(s.db.QueryRow(ctx, q, uuid.NewString(), in.designID, in.blobURL, in.checksum, in.schemaVersion, in.sizeBytes, strings.ToUpper(string(in.kind)), in.authorID))
 }
 
 func (s *Service) getSnapshot(ctx context.Context, id string) (snapshotRow, error) {
-	r, err := scanSnapshot(s.db.QueryRow(ctx, `SELECT `+snapshotCols+` FROM "DesignSnapshot" WHERE id = $1`, id))
+	r, err := scanSnapshot(s.db.QueryRow(ctx, `SELECT `+snapshotCols+` FROM "design_snapshots" WHERE id = $1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return snapshotRow{}, ErrNotFound
 	}
@@ -186,7 +186,7 @@ func (s *Service) getSnapshot(ctx context.Context, id string) (snapshotRow, erro
 }
 
 func (s *Service) listSnapshots(ctx context.Context, designID string) ([]snapshotRow, error) {
-	rows, err := s.db.Query(ctx, `SELECT `+snapshotCols+` FROM "DesignSnapshot" WHERE "designId" = $1 ORDER BY "createdAt" DESC`, designID)
+	rows, err := s.db.Query(ctx, `SELECT `+snapshotCols+` FROM "design_snapshots" WHERE "design_id" = $1 ORDER BY "created_at" DESC`, designID)
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +214,7 @@ type versionRow struct {
 	CreatedAt   time.Time
 }
 
-const versionCols = `id,"designId","snapshotId",label,"authorId","diffSummary","createdAt"`
+const versionCols = `id,"design_id","snapshot_id",label,"author_id","diff_summary","created_at"`
 
 func scanVersion(row pgx.Row) (versionRow, error) {
 	var v versionRow
@@ -237,13 +237,13 @@ type createVersionInput struct {
 }
 
 func (s *Service) createVersion(ctx context.Context, in createVersionInput) (versionRow, error) {
-	const q = `INSERT INTO "DesignVersion" (id,"designId","snapshotId",label,"authorId")
+	const q = `INSERT INTO "design_versions" (id,"design_id","snapshot_id",label,"author_id")
 		VALUES ($1,$2,$3,$4,$5) RETURNING ` + versionCols
 	return scanVersion(s.db.QueryRow(ctx, q, uuid.NewString(), in.designID, in.snapshotID, in.label, in.authorID))
 }
 
 func (s *Service) getVersion(ctx context.Context, id string) (versionRow, error) {
-	v, err := scanVersion(s.db.QueryRow(ctx, `SELECT `+versionCols+` FROM "DesignVersion" WHERE id = $1`, id))
+	v, err := scanVersion(s.db.QueryRow(ctx, `SELECT `+versionCols+` FROM "design_versions" WHERE id = $1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return versionRow{}, ErrNotFound
 	}
@@ -252,9 +252,9 @@ func (s *Service) getVersion(ctx context.Context, id string) (versionRow, error)
 
 // listVersionRows returns newest-first versions, windowed by a createdAt cursor.
 func (s *Service) listVersionRows(ctx context.Context, designID string, limit int, cursor *time.Time) ([]versionRow, error) {
-	const q = `SELECT ` + versionCols + ` FROM "DesignVersion"
-		WHERE "designId" = $1 AND ($2::timestamptz IS NULL OR "createdAt" < $2)
-		ORDER BY "createdAt" DESC LIMIT $3`
+	const q = `SELECT ` + versionCols + ` FROM "design_versions"
+		WHERE "design_id" = $1 AND ($2::timestamptz IS NULL OR "created_at" < $2)
+		ORDER BY "created_at" DESC LIMIT $3`
 	rows, err := s.db.Query(ctx, q, designID, cursor, limit)
 	if err != nil {
 		return nil, err
@@ -273,7 +273,7 @@ func (s *Service) listVersionRows(ctx context.Context, designID string, limit in
 
 func (s *Service) setVersionDiff(ctx context.Context, versionID string, d DiffSummary) error {
 	raw, _ := json.Marshal(d)
-	_, err := s.db.Exec(ctx, `UPDATE "DesignVersion" SET "diffSummary" = $2 WHERE id = $1`, versionID, raw)
+	_, err := s.db.Exec(ctx, `UPDATE "design_versions" SET "diff_summary" = $2 WHERE id = $1`, versionID, raw)
 	return err
 }
 
@@ -284,7 +284,7 @@ func (s *Service) getUserNames(ctx context.Context, ids []string) (map[string]st
 	if len(ids) == 0 {
 		return out, nil
 	}
-	rows, err := s.db.Query(ctx, `SELECT id, name FROM "User" WHERE id = ANY($1)`, ids)
+	rows, err := s.db.Query(ctx, `SELECT id, name FROM "users" WHERE id = ANY($1)`, ids)
 	if err != nil {
 		return nil, err
 	}

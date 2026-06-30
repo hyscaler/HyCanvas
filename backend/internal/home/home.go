@@ -63,7 +63,7 @@ func designToItem(d persistence.DesignRecord, starred bool) HomeItem {
 }
 
 func (s *Service) favoriteIDs(ctx context.Context, userID string) (map[string]bool, error) {
-	rows, err := s.db.Query(ctx, `SELECT "designId" FROM "Favorite" WHERE "userId" = $1`, userID)
+	rows, err := s.db.Query(ctx, `SELECT "design_id" FROM "favorites" WHERE "user_id" = $1`, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -138,13 +138,13 @@ func (s *Service) SetFavorite(ctx context.Context, userID, designID string, on b
 		return false, err
 	}
 	if !on {
-		if _, err := s.db.Exec(ctx, `DELETE FROM "Favorite" WHERE "userId"=$1 AND "designId"=$2`, userID, designID); err != nil {
+		if _, err := s.db.Exec(ctx, `DELETE FROM "favorites" WHERE "user_id"=$1 AND "design_id"=$2`, userID, designID); err != nil {
 			return false, err
 		}
 		return false, nil
 	}
 	if _, err := s.db.Exec(ctx,
-		`INSERT INTO "Favorite" (id, "userId", "designId") VALUES ($1,$2,$3) ON CONFLICT ("userId","designId") DO NOTHING`,
+		`INSERT INTO "favorites" (id, "user_id", "design_id") VALUES ($1,$2,$3) ON CONFLICT ("user_id","design_id") DO NOTHING`,
 		uuid.NewString(), userID, designID); err != nil {
 		return false, err
 	}

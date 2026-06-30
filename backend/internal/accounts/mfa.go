@@ -77,7 +77,7 @@ type mfaUser struct {
 }
 
 func (s *Service) getMfaUser(ctx context.Context, userID string) (mfaUser, error) {
-	const q = `SELECT id, email, "mfaEnabled", "mfaSecret" FROM "User" WHERE id = $1`
+	const q = `SELECT id, email, "mfa_enabled", "mfa_secret" FROM "users" WHERE id = $1`
 	var u mfaUser
 	if err := s.db.QueryRow(ctx, q, userID).Scan(&u.ID, &u.Email, &u.MFAEnabled, &u.MFASecret); err != nil {
 		return mfaUser{}, ErrInvalidCredentials
@@ -102,7 +102,7 @@ func (s *Service) BeginMfaEnrollment(ctx context.Context, userID string) (otpaut
 	if err != nil {
 		return "", "", err
 	}
-	if _, err := s.db.Exec(ctx, `UPDATE "User" SET "mfaSecret" = $2, "updatedAt" = now() WHERE id = $1`, userID, packed); err != nil {
+	if _, err := s.db.Exec(ctx, `UPDATE "users" SET "mfa_secret" = $2, "updated_at" = now() WHERE id = $1`, userID, packed); err != nil {
 		return "", "", err
 	}
 	return totp.OtpauthURL(secret, u.Email, mfaIssuer), secret, nil
@@ -125,7 +125,7 @@ func (s *Service) ConfirmMfaEnrollment(ctx context.Context, userID, code string)
 	if secret == "" || !totp.Verify(secret, code, 1, time.Now().UnixMilli()) {
 		return nil, ErrMFAInvalid
 	}
-	if _, err := s.db.Exec(ctx, `UPDATE "User" SET "mfaEnabled" = true, "updatedAt" = now() WHERE id = $1`, userID); err != nil {
+	if _, err := s.db.Exec(ctx, `UPDATE "users" SET "mfa_enabled" = true, "updated_at" = now() WHERE id = $1`, userID); err != nil {
 		return nil, err
 	}
 	codes, err := totp.GenerateRecoveryCodes(10)
@@ -154,7 +154,7 @@ func (s *Service) DisableMfa(ctx context.Context, userID, code string) error {
 	if !s.checkSecondFactor(ctx, u, code) {
 		return ErrMFAInvalid
 	}
-	if _, err := s.db.Exec(ctx, `UPDATE "User" SET "mfaEnabled" = false, "mfaSecret" = NULL, "updatedAt" = now() WHERE id = $1`, userID); err != nil {
+	if _, err := s.db.Exec(ctx, `UPDATE "users" SET "mfa_enabled" = false, "mfa_secret" = NULL, "updated_at" = now() WHERE id = $1`, userID); err != nil {
 		return err
 	}
 	return s.deleteRecoveryCodes(ctx, userID)
@@ -219,11 +219,11 @@ func (s *Service) checkSecondFactor(ctx context.Context, u mfaUser, code string)
 // --- recovery-code repository (MfaRecoveryCode table) --------------------
 
 func (s *Service) replaceRecoveryCodes(ctx context.Context, userID string, hashes []string) error {
-	if _, err := s.db.Exec(ctx, `DELETE FROM "MfaRecoveryCode" WHERE "userId" = $1`, userID); err != nil {
+	if _, err := s.db.Exec(ctx, `DELETE FROM "mfa_recovery_codes" WHERE "user_id" = $1`, userID); err != nil {
 		return err
 	}
 	for _, h := range hashes {
-		if _, err := s.db.Exec(ctx, `INSERT INTO "MfaRecoveryCode" (id,"userId","codeHash") VALUES ($1,$2,$3)`, uuid.NewString(), userID, h); err != nil {
+		if _, err := s.db.Exec(ctx, `INSERT INTO "mfa_recovery_codes" (id,"user_id","code_hash") VALUES ($1,$2,$3)`, uuid.NewString(), userID, h); err != nil {
 			return err
 		}
 	}
@@ -232,7 +232,7 @@ func (s *Service) replaceRecoveryCodes(ctx context.Context, userID string, hashe
 
 func (s *Service) findUnconsumedRecoveryCode(ctx context.Context, userID, hash string) (string, error) {
 	var id string
-	err := s.db.QueryRow(ctx, `SELECT id FROM "MfaRecoveryCode" WHERE "userId" = $1 AND "codeHash" = $2 AND "consumedAt" IS NULL`, userID, hash).Scan(&id)
+	err := s.db.QueryRow(ctx, `SELECT id FROM "mfa_recovery_codes" WHERE "user_id" = $1 AND "code_hash" = $2 AND "consumed_at" IS NULL`, userID, hash).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", nil
 	}
@@ -240,11 +240,11 @@ func (s *Service) findUnconsumedRecoveryCode(ctx context.Context, userID, hash s
 }
 
 func (s *Service) consumeRecoveryCode(ctx context.Context, id string) error {
-	_, err := s.db.Exec(ctx, `UPDATE "MfaRecoveryCode" SET "consumedAt" = now() WHERE id = $1`, id)
+	_, err := s.db.Exec(ctx, `UPDATE "mfa_recovery_codes" SET "consumed_at" = now() WHERE id = $1`, id)
 	return err
 }
 
 func (s *Service) deleteRecoveryCodes(ctx context.Context, userID string) error {
-	_, err := s.db.Exec(ctx, `DELETE FROM "MfaRecoveryCode" WHERE "userId" = $1`, userID)
+	_, err := s.db.Exec(ctx, `DELETE FROM "mfa_recovery_codes" WHERE "user_id" = $1`, userID)
 	return err
 }

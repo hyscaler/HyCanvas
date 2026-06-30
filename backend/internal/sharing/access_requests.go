@@ -16,7 +16,7 @@ import (
 	"hycanvas/backend/internal/authz"
 )
 
-// AccessRequestRow is a row of "AccessRequest".
+// AccessRequestRow is a row of "access_requests".
 type AccessRequestRow struct {
 	ID         string
 	DesignID   string
@@ -40,7 +40,7 @@ type AccessRequestView struct {
 	CreatedAt string           `json:"createdAt"`
 }
 
-const accessReqCols = `id, "designId", "userId", mode, message, status, "resolvedById", "createdAt", "updatedAt"`
+const accessReqCols = `id, "design_id", "user_id", mode, message, status, "resolved_by_id", "created_at", "updated_at"`
 
 func scanAccessReq(row pgx.Row) (AccessRequestRow, error) {
 	var r AccessRequestRow
@@ -65,7 +65,7 @@ func accessReqView(r AccessRequestRow) AccessRequestView {
 
 func (s *Service) findPendingRequest(ctx context.Context, designID, userID string) (AccessRequestRow, error) {
 	r, err := scanAccessReq(s.db.QueryRow(ctx,
-		`SELECT `+accessReqCols+` FROM "AccessRequest" WHERE "designId"=$1 AND "userId"=$2 AND status='pending'`,
+		`SELECT `+accessReqCols+` FROM "access_requests" WHERE "design_id"=$1 AND "user_id"=$2 AND status='pending'`,
 		designID, userID))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return AccessRequestRow{}, ErrNotFound
@@ -74,7 +74,7 @@ func (s *Service) findPendingRequest(ctx context.Context, designID, userID strin
 }
 
 func (s *Service) getAccessRequest(ctx context.Context, id string) (AccessRequestRow, error) {
-	r, err := scanAccessReq(s.db.QueryRow(ctx, `SELECT `+accessReqCols+` FROM "AccessRequest" WHERE id=$1`, id))
+	r, err := scanAccessReq(s.db.QueryRow(ctx, `SELECT `+accessReqCols+` FROM "access_requests" WHERE id=$1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return AccessRequestRow{}, ErrNotFound
 	}
@@ -84,22 +84,22 @@ func (s *Service) getAccessRequest(ctx context.Context, id string) (AccessReques
 func (s *Service) insertAccessRequest(ctx context.Context, designID, userID string, mode authz.AccessMode, message *string) (AccessRequestRow, error) {
 	// Upsert against the pending partial-unique index so a concurrent double
 	// request resolves in place instead of failing the constraint (a raw 500).
-	const q = `INSERT INTO "AccessRequest" (id,"designId","userId",mode,message,status)
+	const q = `INSERT INTO "access_requests" (id,"design_id","user_id",mode,message,status)
 		VALUES ($1,$2,$3,$4,$5,'pending')
-		ON CONFLICT ("designId","userId") WHERE status = 'pending'
-		DO UPDATE SET mode = EXCLUDED.mode, message = EXCLUDED.message, "updatedAt" = now()
+		ON CONFLICT ("design_id","user_id") WHERE status = 'pending'
+		DO UPDATE SET mode = EXCLUDED.mode, message = EXCLUDED.message, "updated_at" = now()
 		RETURNING ` + accessReqCols
 	return scanAccessReq(s.db.QueryRow(ctx, q, uuid.NewString(), designID, userID, string(mode), message))
 }
 
 func (s *Service) refreshAccessRequest(ctx context.Context, id string, mode authz.AccessMode, message *string) (AccessRequestRow, error) {
-	const q = `UPDATE "AccessRequest" SET mode=$2, message=$3, status='pending', "resolvedById"=NULL, "updatedAt"=now()
+	const q = `UPDATE "access_requests" SET mode=$2, message=$3, status='pending', "resolved_by_id"=NULL, "updated_at"=now()
 		WHERE id=$1 RETURNING ` + accessReqCols
 	return scanAccessReq(s.db.QueryRow(ctx, q, id, string(mode), message))
 }
 
 func (s *Service) setAccessRequestStatus(ctx context.Context, id, status, resolvedBy string) (AccessRequestRow, error) {
-	const q = `UPDATE "AccessRequest" SET status=$2, "resolvedById"=$3, "updatedAt"=now()
+	const q = `UPDATE "access_requests" SET status=$2, "resolved_by_id"=$3, "updated_at"=now()
 		WHERE id=$1 RETURNING ` + accessReqCols
 	r, err := scanAccessReq(s.db.QueryRow(ctx, q, id, status, resolvedBy))
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -109,7 +109,7 @@ func (s *Service) setAccessRequestStatus(ctx context.Context, id, status, resolv
 }
 
 func (s *Service) listPendingRequests(ctx context.Context, designID string) ([]AccessRequestRow, error) {
-	rows, err := s.db.Query(ctx, `SELECT `+accessReqCols+` FROM "AccessRequest" WHERE "designId"=$1 AND status='pending' ORDER BY "createdAt"`, designID)
+	rows, err := s.db.Query(ctx, `SELECT `+accessReqCols+` FROM "access_requests" WHERE "design_id"=$1 AND status='pending' ORDER BY "created_at"`, designID)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func (s *Service) listPendingRequests(ctx context.Context, designID string) ([]A
 // people who can adjudicate an access request).
 func (s *Service) ownersAndAdmins(ctx context.Context, workspaceID string) ([]string, error) {
 	rows, err := s.db.Query(ctx,
-		`SELECT "userId"::text FROM "WorkspaceMember" WHERE "workspaceId"=$1 AND status='ACTIVE' AND role IN ('OWNER','ADMIN')`,
+		`SELECT "user_id"::text FROM "workspace_members" WHERE "workspace_id"=$1 AND status='ACTIVE' AND role IN ('OWNER','ADMIN')`,
 		workspaceID)
 	if err != nil {
 		return nil, err

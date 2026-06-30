@@ -32,19 +32,19 @@ func TestDesignReads_DB(t *testing.T) {
 	// Seed an owner user + workspace + a design.
 	userID := uuid.NewString()
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO "User" (id, email, name, "updatedAt") VALUES ($1,$2,'Owner', now())`,
+		`INSERT INTO "users" (id, email, name, "updated_at") VALUES ($1,$2,'Owner', now())`,
 		userID, "p-test+"+uuid.NewString()+"@example.com"); err != nil {
 		t.Fatalf("seed user: %v", err)
 	}
 	wsID := uuid.NewString()
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO "Workspace" (id, kind, name, slug, "ownerId", "updatedAt") VALUES ($1,'PERSONAL','W',$2,$3, now())`,
+		`INSERT INTO "workspaces" (id, kind, name, slug, "owner_id", "updated_at") VALUES ($1,'PERSONAL','W',$2,$3, now())`,
 		wsID, "w-"+uuid.NewString()[:8], userID); err != nil {
 		t.Fatalf("seed workspace: %v", err)
 	}
 	designID := uuid.NewString()
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO "Design" (id, "workspaceId", title, "docKind", "updatedAt") VALUES ($1,$2,'My Design','whiteboard', now())`,
+		`INSERT INTO "designs" (id, "workspace_id", title, "doc_kind", "updated_at") VALUES ($1,$2,'My Design','whiteboard', now())`,
 		designID, wsID); err != nil {
 		t.Fatalf("seed design: %v", err)
 	}

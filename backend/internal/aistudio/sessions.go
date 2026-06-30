@@ -42,7 +42,7 @@ type sessionStore struct {
 }
 
 func (s *sessionStore) createSession(ctx context.Context, workspaceID, designID string) (AiSession, error) {
-	const q = `INSERT INTO "AiSession" ("workspaceId","designId") VALUES ($1,$2) RETURNING "id","createdAt"`
+	const q = `INSERT INTO "ai_sessions" ("workspace_id","design_id") VALUES ($1,$2) RETURNING "id","created_at"`
 	var out AiSession
 	out.WorkspaceID = workspaceID
 	out.DesignID = designID
@@ -51,7 +51,7 @@ func (s *sessionStore) createSession(ctx context.Context, workspaceID, designID 
 }
 
 func (s *sessionStore) listSessions(ctx context.Context, workspaceID, designID string) ([]AiSession, error) {
-	const q = `SELECT "id","workspaceId","designId","createdAt" FROM "AiSession" WHERE "workspaceId"=$1 AND "designId"=$2 ORDER BY "createdAt" DESC`
+	const q = `SELECT "id","workspace_id","design_id","created_at" FROM "ai_sessions" WHERE "workspace_id"=$1 AND "design_id"=$2 ORDER BY "created_at" DESC`
 	rows, err := s.db.Query(ctx, q, workspaceID, designID)
 	if err != nil {
 		return nil, err
@@ -72,7 +72,7 @@ func (s *sessionStore) listSessions(ctx context.Context, workspaceID, designID s
 // it is being accessed through (isolation precise to the design-scoped route, not
 // just the workspace).
 func (s *sessionStore) sessionInScope(ctx context.Context, sessionID, workspaceID, designID string) (bool, error) {
-	const q = `SELECT 1 FROM "AiSession" WHERE "id"=$1 AND "workspaceId"=$2 AND "designId"=$3`
+	const q = `SELECT 1 FROM "ai_sessions" WHERE "id"=$1 AND "workspace_id"=$2 AND "design_id"=$3`
 	var one int
 	err := s.db.QueryRow(ctx, q, sessionID, workspaceID, designID).Scan(&one)
 	if err == pgx.ErrNoRows {
@@ -82,7 +82,7 @@ func (s *sessionStore) sessionInScope(ctx context.Context, sessionID, workspaceI
 }
 
 func (s *sessionStore) appendTurn(ctx context.Context, t AiTurn) (AiTurn, error) {
-	const q = `INSERT INTO "AiTurn" ("sessionId","role","text","plan","provenance") VALUES ($1,$2,$3,$4,$5) RETURNING "id","createdAt"`
+	const q = `INSERT INTO "ai_turns" ("session_id","role","text","plan","provenance") VALUES ($1,$2,$3,$4,$5) RETURNING "id","created_at"`
 	var plan, prov any
 	if len(t.Plan) > 0 {
 		plan = string(t.Plan)
@@ -95,7 +95,7 @@ func (s *sessionStore) appendTurn(ctx context.Context, t AiTurn) (AiTurn, error)
 }
 
 func (s *sessionStore) listTurns(ctx context.Context, sessionID string) ([]AiTurn, error) {
-	const q = `SELECT "id","sessionId","role","text",COALESCE("plan"::text,''),COALESCE("provenance"::text,''),"createdAt" FROM "AiTurn" WHERE "sessionId"=$1 ORDER BY "createdAt" ASC`
+	const q = `SELECT "id","session_id","role","text",COALESCE("plan"::text,''),COALESCE("provenance"::text,''),"created_at" FROM "ai_turns" WHERE "session_id"=$1 ORDER BY "created_at" ASC`
 	rows, err := s.db.Query(ctx, q, sessionID)
 	if err != nil {
 		return nil, err

@@ -15,9 +15,9 @@ func NewLockChecker(db DBTX) *LockChecker { return &LockChecker{db: db} }
 
 // IsApprovalLocked reports whether the design has an active approved approval.
 func (l *LockChecker) IsApprovalLocked(ctx context.Context, designID string) (bool, error) {
-	const q = `SELECT status FROM "Approval"
-		WHERE "designId" = $1 AND status IN ('pending','approved')
-		ORDER BY "createdAt" DESC LIMIT 1`
+	const q = `SELECT status FROM "approvals"
+		WHERE "design_id" = $1 AND status IN ('pending','approved')
+		ORDER BY "created_at" DESC LIMIT 1`
 	var status string
 	if err := l.db.QueryRow(ctx, q, designID).Scan(&status); err != nil {
 		// No active approval (ErrNoRows) -> not locked. Any other error is

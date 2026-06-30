@@ -80,8 +80,8 @@ type configRow struct {
 }
 
 func (s *Service) getRow(ctx context.Context, workspaceID string) (*configRow, error) {
-	const q = `SELECT provider, model, "imageModel", "baseUrl", "keyCipher", "keyIv", "keyTag"
-		FROM "AiConfig" WHERE "workspaceId" = $1`
+	const q = `SELECT provider, model, "image_model", "base_url", "key_cipher", "key_iv", "key_tag"
+		FROM "ai_configs" WHERE "workspace_id" = $1`
 	var r configRow
 	err := s.db.QueryRow(ctx, q, workspaceID).Scan(&r.provider, &r.model, &r.imageModel, &r.baseURL, &r.keyCipher, &r.keyIV, &r.keyTag)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -155,17 +155,17 @@ func (s *Service) SetConfig(ctx context.Context, workspaceID string, in ConfigIn
 
 	// Upsert. When a new key is supplied, write it; when clearing, null it; when
 	// neither, COALESCE keeps the existing key columns.
-	const q = `INSERT INTO "AiConfig" ("workspaceId",provider,model,"imageModel","baseUrl","keyCipher","keyIv","keyTag","updatedAt")
+	const q = `INSERT INTO "ai_configs" ("workspace_id",provider,model,"image_model","base_url","key_cipher","key_iv","key_tag","updated_at")
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,now())
-		ON CONFLICT ("workspaceId") DO UPDATE SET
+		ON CONFLICT ("workspace_id") DO UPDATE SET
 			provider = EXCLUDED.provider,
 			model = EXCLUDED.model,
-			"imageModel" = EXCLUDED."imageModel",
-			"baseUrl" = EXCLUDED."baseUrl",
-			"keyCipher" = CASE WHEN $9 THEN NULL WHEN $6 IS NOT NULL THEN $6 ELSE "AiConfig"."keyCipher" END,
-			"keyIv"     = CASE WHEN $9 THEN NULL WHEN $7 IS NOT NULL THEN $7 ELSE "AiConfig"."keyIv" END,
-			"keyTag"    = CASE WHEN $9 THEN NULL WHEN $8 IS NOT NULL THEN $8 ELSE "AiConfig"."keyTag" END,
-			"updatedAt" = now()`
+			"image_model" = EXCLUDED."image_model",
+			"base_url" = EXCLUDED."base_url",
+			"key_cipher" = CASE WHEN $9 THEN NULL WHEN $6 IS NOT NULL THEN $6 ELSE "ai_configs"."key_cipher" END,
+			"key_iv"     = CASE WHEN $9 THEN NULL WHEN $7 IS NOT NULL THEN $7 ELSE "ai_configs"."key_iv" END,
+			"key_tag"    = CASE WHEN $9 THEN NULL WHEN $8 IS NOT NULL THEN $8 ELSE "ai_configs"."key_tag" END,
+			"updated_at" = now()`
 	if _, err := s.db.Exec(ctx, q, workspaceID, in.Provider, model, imageModel, baseURL, cipher, iv, tag, clearKey); err != nil {
 		return nil, err
 	}

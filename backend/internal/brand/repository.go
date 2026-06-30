@@ -1,5 +1,5 @@
 // SQL access for the brand kit-management module, against the Prisma-managed
-// tables "BrandKit" and "BrandKitVersion" (quoted identifiers, camelCase
+// tables "brand_kits" and "brand_kit_versions" (quoted identifiers, snake_case
 // columns). palettes/fonts/logos/collections/voice/controls are JSONB.
 package brand
 
@@ -40,7 +40,7 @@ type BrandKitRow struct {
 	UpdatedAt   time.Time
 }
 
-const kitCols = `id,"workspaceId",name,version,"isDefault",palettes,fonts,logos,voice,collections,controls,"createdAt","updatedAt"`
+const kitCols = `id,"workspace_id",name,version,"is_default",palettes,fonts,logos,voice,collections,controls,"created_at","updated_at"`
 
 func scanKit(row pgx.Row) (BrandKitRow, error) {
 	var k BrandKitRow
@@ -50,7 +50,7 @@ func scanKit(row pgx.Row) (BrandKitRow, error) {
 }
 
 func (s *Service) requireKit(ctx context.Context, id string) (BrandKitRow, error) {
-	k, err := scanKit(s.db.QueryRow(ctx, `SELECT `+kitCols+` FROM "BrandKit" WHERE id = $1`, id))
+	k, err := scanKit(s.db.QueryRow(ctx, `SELECT `+kitCols+` FROM "brand_kits" WHERE id = $1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return BrandKitRow{}, ErrNotFound
 	}
@@ -59,7 +59,7 @@ func (s *Service) requireKit(ctx context.Context, id string) (BrandKitRow, error
 
 // listForWorkspace returns a workspace's kits, default first then by name.
 func (s *Service) listForWorkspace(ctx context.Context, workspaceID string) ([]BrandKitRow, error) {
-	rows, err := s.db.Query(ctx, `SELECT `+kitCols+` FROM "BrandKit" WHERE "workspaceId" = $1 ORDER BY "isDefault" DESC, name`, workspaceID)
+	rows, err := s.db.Query(ctx, `SELECT `+kitCols+` FROM "brand_kits" WHERE "workspace_id" = $1 ORDER BY "is_default" DESC, name`, workspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -77,19 +77,19 @@ func (s *Service) listForWorkspace(ctx context.Context, workspaceID string) ([]B
 
 func (s *Service) create(ctx context.Context, workspaceID, name string, isDefault bool) (BrandKitRow, error) {
 	// version defaults to 1 and the content columns to '[]'/'{}' per the schema.
-	const q = `INSERT INTO "BrandKit" (id,"workspaceId",name,"isDefault","updatedAt")
+	const q = `INSERT INTO "brand_kits" (id,"workspace_id",name,"is_default","updated_at")
 		VALUES ($1,$2,$3,$4,now()) RETURNING ` + kitCols
 	return scanKit(s.db.QueryRow(ctx, q, uuid.NewString(), workspaceID, name, isDefault))
 }
 
 // clearDefault unsets isDefault on every other kit in the workspace.
 func (s *Service) clearDefault(ctx context.Context, workspaceID, keepID string) error {
-	_, err := s.db.Exec(ctx, `UPDATE "BrandKit" SET "isDefault" = false WHERE "workspaceId" = $1 AND id <> $2`, workspaceID, keepID)
+	_, err := s.db.Exec(ctx, `UPDATE "brand_kits" SET "is_default" = false WHERE "workspace_id" = $1 AND id <> $2`, workspaceID, keepID)
 	return err
 }
 
 func (s *Service) deleteKit(ctx context.Context, id string) error {
-	_, err := s.db.Exec(ctx, `DELETE FROM "BrandKit" WHERE id = $1`, id)
+	_, err := s.db.Exec(ctx, `DELETE FROM "brand_kits" WHERE id = $1`, id)
 	return err
 }
 
@@ -107,7 +107,7 @@ type updatePatch struct {
 }
 
 func (s *Service) update(ctx context.Context, id string, p updatePatch) (BrandKitRow, error) {
-	set := []string{`"updatedAt" = now()`}
+	set := []string{`"updated_at" = now()`}
 	args := []any{id}
 	add := func(col string, val any) {
 		args = append(args, val)
@@ -120,7 +120,7 @@ func (s *Service) update(ctx context.Context, id string, p updatePatch) (BrandKi
 		add("version", p.version)
 	}
 	if p.isDefault != nil {
-		add(`"isDefault"`, *p.isDefault)
+		add(`"is_default"`, *p.isDefault)
 	}
 	if p.palettes != nil {
 		add("palettes", p.palettes)
@@ -140,7 +140,7 @@ func (s *Service) update(ctx context.Context, id string, p updatePatch) (BrandKi
 	if p.controls != nil {
 		add("controls", p.controls)
 	}
-	q := `UPDATE "BrandKit" SET ` + join(set, ", ") + ` WHERE id = $1 RETURNING ` + kitCols
+	q := `UPDATE "brand_kits" SET ` + join(set, ", ") + ` WHERE id = $1 RETURNING ` + kitCols
 	k, err := scanKit(s.db.QueryRow(ctx, q, args...))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return BrandKitRow{}, ErrNotFound
@@ -166,15 +166,15 @@ func (s *Service) appendVersion(ctx context.Context, brandKitID string, version 
 	}
 	// Idempotent on (brandKitId, version): re-recording the same version replaces
 	// its snapshot rather than failing the write.
-	const q = `INSERT INTO "BrandKitVersion" (id,"brandKitId",version,snapshot,"authorId")
+	const q = `INSERT INTO "brand_kit_versions" (id,"brand_kit_id",version,snapshot,"author_id")
 		VALUES ($1,$2,$3,$4,$5)
-		ON CONFLICT ("brandKitId",version) DO UPDATE SET snapshot = EXCLUDED.snapshot, "authorId" = EXCLUDED."authorId"`
+		ON CONFLICT ("brand_kit_id",version) DO UPDATE SET snapshot = EXCLUDED.snapshot, "author_id" = EXCLUDED."author_id"`
 	_, err := s.db.Exec(ctx, q, uuid.NewString(), brandKitID, version, snapshot, author)
 	return err
 }
 
 func (s *Service) listVersions(ctx context.Context, brandKitID string) ([]BrandKitVersion, error) {
-	rows, err := s.db.Query(ctx, `SELECT id,"brandKitId",version,snapshot,"authorId","createdAt" FROM "BrandKitVersion" WHERE "brandKitId" = $1 ORDER BY version DESC`, brandKitID)
+	rows, err := s.db.Query(ctx, `SELECT id,"brand_kit_id",version,snapshot,"author_id","created_at" FROM "brand_kit_versions" WHERE "brand_kit_id" = $1 ORDER BY version DESC`, brandKitID)
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +195,7 @@ func (s *Service) listVersions(ctx context.Context, brandKitID string) ([]BrandK
 func (s *Service) getVersion(ctx context.Context, brandKitID string, version int) (BrandKitVersion, error) {
 	var v BrandKitVersion
 	var created time.Time
-	err := s.db.QueryRow(ctx, `SELECT id,"brandKitId",version,snapshot,"authorId","createdAt" FROM "BrandKitVersion" WHERE "brandKitId" = $1 AND version = $2`, brandKitID, version).
+	err := s.db.QueryRow(ctx, `SELECT id,"brand_kit_id",version,snapshot,"author_id","created_at" FROM "brand_kit_versions" WHERE "brand_kit_id" = $1 AND version = $2`, brandKitID, version).
 		Scan(&v.ID, &v.BrandKitID, &v.Version, &v.Snapshot, &v.AuthorID, &created)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return BrandKitVersion{}, ErrNotFound

@@ -110,7 +110,7 @@ func (e *Emitter) maybePush(ctx context.Context, userID, typ, designID string, p
 	if e.push == nil {
 		return
 	}
-	stored, err := getTypes(ctx, e.db, userID, "pushTypes")
+	stored, err := getTypes(ctx, e.db, userID, "push_types")
 	if err != nil {
 		return
 	}

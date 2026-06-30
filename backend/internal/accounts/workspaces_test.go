@@ -123,12 +123,12 @@ func TestWorkspaces_Delete(t *testing.T) {
 	}
 	// Seed a member and a design so we can prove the cascade.
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO "WorkspaceMember" (id,"workspaceId","userId",role,status,"joinedAt","updatedAt") VALUES ($1,$2,$3,'MEMBER','ACTIVE', now(), now())`,
+		`INSERT INTO "workspace_members" (id,"workspace_id","user_id",role,status,"joined_at","updated_at") VALUES ($1,$2,$3,'MEMBER','ACTIVE', now(), now())`,
 		uuid.NewString(), team.ID, member.ID); err != nil {
 		t.Fatalf("seed member: %v", err)
 	}
 	designID := uuid.NewString()
-	if _, err := tx.Exec(ctx, `INSERT INTO "Design" (id,"workspaceId",title,"updatedAt") VALUES ($1,$2,'D',now())`, designID, team.ID); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO "designs" (id,"workspace_id",title,"updated_at") VALUES ($1,$2,'D',now())`, designID, team.ID); err != nil {
 		t.Fatalf("seed design: %v", err)
 	}
 
@@ -150,8 +150,8 @@ func TestWorkspaces_Delete(t *testing.T) {
 		t.Fatalf("after delete owner should have only personal, got %+v err=%v", list, err)
 	}
 	var designs, members int
-	_ = tx.QueryRow(ctx, `SELECT count(*) FROM "Design" WHERE "workspaceId"=$1`, team.ID).Scan(&designs)
-	_ = tx.QueryRow(ctx, `SELECT count(*) FROM "WorkspaceMember" WHERE "workspaceId"=$1`, team.ID).Scan(&members)
+	_ = tx.QueryRow(ctx, `SELECT count(*) FROM "designs" WHERE "workspace_id"=$1`, team.ID).Scan(&designs)
+	_ = tx.QueryRow(ctx, `SELECT count(*) FROM "workspace_members" WHERE "workspace_id"=$1`, team.ID).Scan(&members)
 	if designs != 0 || members != 0 {
 		t.Fatalf("cascade incomplete: designs=%d members=%d", designs, members)
 	}

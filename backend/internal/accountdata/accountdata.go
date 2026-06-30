@@ -80,9 +80,9 @@ func (s *Service) Export(ctx context.Context, userID string) (*Export, error) {
 	}
 
 	rows, err := s.db.Query(ctx,
-		`SELECT m."workspaceId", m.role, w.kind, w.name, w.slug, w."ownerId"
-		 FROM "WorkspaceMember" m JOIN "Workspace" w ON w.id = m."workspaceId"
-		 WHERE m."userId" = $1 AND m.status = 'ACTIVE'`, userID)
+		`SELECT m."workspace_id", m.role, w.kind, w.name, w.slug, w."owner_id"
+		 FROM "workspace_members" m JOIN "workspaces" w ON w.id = m."workspace_id"
+		 WHERE m."user_id" = $1 AND m.status = 'ACTIVE'`, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func (s *Service) Delete(ctx context.Context, userID, password, code string) err
 	}
 
 	type mem struct{ id, wsID string }
-	rows, err := s.db.Query(ctx, `SELECT id, "workspaceId" FROM "WorkspaceMember" WHERE "userId" = $1`, userID)
+	rows, err := s.db.Query(ctx, `SELECT id, "workspace_id" FROM "workspace_members" WHERE "user_id" = $1`, userID)
 	if err != nil {
 		return err
 	}
@@ -160,34 +160,34 @@ func (s *Service) Delete(ctx context.Context, userID, password, code string) err
 			if err := s.purgeWorkspace(ctx, m.wsID); err != nil {
 				return err
 			}
-			if _, err := s.db.Exec(ctx, `DELETE FROM "Workspace" WHERE id = $1`, m.wsID); err != nil {
+			if _, err := s.db.Exec(ctx, `DELETE FROM "workspaces" WHERE id = $1`, m.wsID); err != nil {
 				return err
 			}
 			continue
 		}
 		var owner string
-		if err := s.db.QueryRow(ctx, `SELECT "ownerId" FROM "Workspace" WHERE id = $1`, m.wsID).Scan(&owner); err == nil && owner == userID {
+		if err := s.db.QueryRow(ctx, `SELECT "owner_id" FROM "workspaces" WHERE id = $1`, m.wsID).Scan(&owner); err == nil && owner == userID {
 			successor := pickSuccessor(others)
-			if _, err := s.db.Exec(ctx, `UPDATE "Workspace" SET "ownerId" = $1, "updatedAt" = now() WHERE id = $2`, successor, m.wsID); err != nil {
+			if _, err := s.db.Exec(ctx, `UPDATE "workspaces" SET "owner_id" = $1, "updated_at" = now() WHERE id = $2`, successor, m.wsID); err != nil {
 				return err
 			}
 		}
-		if _, err := s.db.Exec(ctx, `DELETE FROM "WorkspaceMember" WHERE id = $1`, m.id); err != nil {
+		if _, err := s.db.Exec(ctx, `DELETE FROM "workspace_members" WHERE id = $1`, m.id); err != nil {
 			return err
 		}
 	}
 
 	for _, q := range []string{
-		`DELETE FROM "Session" WHERE "userId" = $1`,
-		`DELETE FROM "Favorite" WHERE "userId" = $1`,
-		`DELETE FROM "VerificationToken" WHERE "userId" = $1`,
-		`DELETE FROM "MfaRecoveryCode" WHERE "userId" = $1`,
+		`DELETE FROM "sessions" WHERE "user_id" = $1`,
+		`DELETE FROM "favorites" WHERE "user_id" = $1`,
+		`DELETE FROM "verification_tokens" WHERE "user_id" = $1`,
+		`DELETE FROM "mfa_recovery_codes" WHERE "user_id" = $1`,
 		// Invitations this user sent (invitedById -> User is ON DELETE RESTRICT, so
 		// they must go before the User row, or the delete fails). Invitations in
 		// purged sole-member workspaces are already gone via the workspace cascade.
-		`DELETE FROM "Invitation" WHERE "invitedById" = $1`,
-		`DELETE FROM "AuthIdentity" WHERE "userId" = $1`,
-		`DELETE FROM "User" WHERE id = $1`,
+		`DELETE FROM "invitations" WHERE "invited_by_id" = $1`,
+		`DELETE FROM "auth_identities" WHERE "user_id" = $1`,
+		`DELETE FROM "users" WHERE id = $1`,
 	} {
 		if _, err := s.db.Exec(ctx, q, userID); err != nil {
 			return err
@@ -203,7 +203,7 @@ type member struct {
 
 func (s *Service) otherMembers(ctx context.Context, workspaceID, excludeUser string) ([]member, error) {
 	rows, err := s.db.Query(ctx,
-		`SELECT "userId", role FROM "WorkspaceMember" WHERE "workspaceId" = $1 AND "userId" <> $2`, workspaceID, excludeUser)
+		`SELECT "user_id", role FROM "workspace_members" WHERE "workspace_id" = $1 AND "user_id" <> $2`, workspaceID, excludeUser)
 	if err != nil {
 		return nil, err
 	}

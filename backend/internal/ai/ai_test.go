@@ -135,7 +135,7 @@ func TestAI_DB(t *testing.T) {
 
 	// The key is encrypted at rest: the stored cipher is not the plaintext.
 	var storedCipher *string
-	if err := tx.QueryRow(ctx, `SELECT "keyCipher" FROM "AiConfig" WHERE "workspaceId" = $1`, ws.ID).Scan(&storedCipher); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT "key_cipher" FROM "ai_configs" WHERE "workspace_id" = $1`, ws.ID).Scan(&storedCipher); err != nil {
 		t.Fatalf("read cipher: %v", err)
 	}
 	if storedCipher == nil || strings.Contains(*storedCipher, "sk-secret") {

@@ -1,5 +1,5 @@
-// SQL access for approvals, against the Prisma-managed tables "Approval",
-// "ApprovalDecision", and "ApprovalEvent" (quoted identifiers, camelCase
+// SQL access for approvals, against the tables "approvals",
+// "approval_decisions", and "approval_events" (quoted identifiers, snake_case
 // columns). Policy/status/decision strings are stored verbatim (lowercase).
 // approverIds is a Postgres text[]/uuid[] column.
 package approvals
@@ -46,7 +46,7 @@ type DecisionRow struct {
 	DecidedAt  time.Time
 }
 
-const approvalCols = `id, "designId", "requesterId", policy, status, "approverIds", "createdAt", "decidedAt"`
+const approvalCols = `id, "design_id", "requester_id", policy, status, "approver_ids", "created_at", "decided_at"`
 
 func scanApproval(row pgx.Row) (ApprovalRow, error) {
 	var a ApprovalRow
@@ -55,13 +55,13 @@ func scanApproval(row pgx.Row) (ApprovalRow, error) {
 }
 
 func (s *Service) createApproval(ctx context.Context, designID, requesterID, policy string, approverIDs []string) (ApprovalRow, error) {
-	const q = `INSERT INTO "Approval" (id,"designId","requesterId",policy,status,"approverIds")
+	const q = `INSERT INTO "approvals" (id,"design_id","requester_id",policy,status,"approver_ids")
 		VALUES ($1,$2,$3,$4,'pending',$5) RETURNING ` + approvalCols
 	return scanApproval(s.db.QueryRow(ctx, q, uuid.NewString(), designID, requesterID, policy, approverIDs))
 }
 
 func (s *Service) getApproval(ctx context.Context, id string) (ApprovalRow, error) {
-	a, err := scanApproval(s.db.QueryRow(ctx, `SELECT `+approvalCols+` FROM "Approval" WHERE id = $1`, id))
+	a, err := scanApproval(s.db.QueryRow(ctx, `SELECT `+approvalCols+` FROM "approvals" WHERE id = $1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ApprovalRow{}, ErrNotFound
 	}
@@ -71,9 +71,9 @@ func (s *Service) getApproval(ctx context.Context, id string) (ApprovalRow, erro
 // getActiveApproval returns the single active (pending|approved) approval for a
 // design, most recent first.
 func (s *Service) getActiveApproval(ctx context.Context, designID string) (*ApprovalRow, error) {
-	const q = `SELECT ` + approvalCols + ` FROM "Approval"
-		WHERE "designId" = $1 AND status IN ('pending','approved')
-		ORDER BY "createdAt" DESC LIMIT 1`
+	const q = `SELECT ` + approvalCols + ` FROM "approvals"
+		WHERE "design_id" = $1 AND status IN ('pending','approved')
+		ORDER BY "created_at" DESC LIMIT 1`
 	a, err := scanApproval(s.db.QueryRow(ctx, q, designID))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
@@ -85,7 +85,7 @@ func (s *Service) getActiveApproval(ctx context.Context, designID string) (*Appr
 }
 
 func (s *Service) getLatestApproval(ctx context.Context, designID string) (*ApprovalRow, error) {
-	const q = `SELECT ` + approvalCols + ` FROM "Approval" WHERE "designId" = $1 ORDER BY "createdAt" DESC LIMIT 1`
+	const q = `SELECT ` + approvalCols + ` FROM "approvals" WHERE "design_id" = $1 ORDER BY "created_at" DESC LIMIT 1`
 	a, err := scanApproval(s.db.QueryRow(ctx, q, designID))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
@@ -102,24 +102,24 @@ func (s *Service) updateApprovalStatus(ctx context.Context, id, status string, s
 		now := time.Now()
 		decidedAt = &now
 	}
-	_, err := s.db.Exec(ctx, `UPDATE "Approval" SET status = $2, "decidedAt" = $3 WHERE id = $1`, id, status, decidedAt)
+	_, err := s.db.Exec(ctx, `UPDATE "approvals" SET status = $2, "decided_at" = $3 WHERE id = $1`, id, status, decidedAt)
 	return err
 }
 
 func (s *Service) upsertDecision(ctx context.Context, approvalID, approverID, decision string, note *string) error {
 	// Idempotent on (approvalId, approverId): a re-decision overwrites the prior.
-	const q = `INSERT INTO "ApprovalDecision" (id,"approvalId","approverId",decision,note)
+	const q = `INSERT INTO "approval_decisions" (id,"approval_id","approver_id",decision,note)
 		VALUES ($1,$2,$3,$4,$5)
-		ON CONFLICT ("approvalId","approverId")
-		DO UPDATE SET decision = EXCLUDED.decision, note = EXCLUDED.note, "decidedAt" = now()`
+		ON CONFLICT ("approval_id","approver_id")
+		DO UPDATE SET decision = EXCLUDED.decision, note = EXCLUDED.note, "decided_at" = now()`
 	_, err := s.db.Exec(ctx, q, uuid.NewString(), approvalID, approverID, decision, note)
 	return err
 }
 
 func (s *Service) listDecisions(ctx context.Context, approvalID string) ([]DecisionRow, error) {
 	rows, err := s.db.Query(ctx,
-		`SELECT id, "approvalId", "approverId", decision, note, "decidedAt"
-		 FROM "ApprovalDecision" WHERE "approvalId" = $1 ORDER BY "decidedAt"`, approvalID)
+		`SELECT id, "approval_id", "approver_id", decision, note, "decided_at"
+		 FROM "approval_decisions" WHERE "approval_id" = $1 ORDER BY "decided_at"`, approvalID)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +141,7 @@ func (s *Service) recordEvent(ctx context.Context, approvalID, designID string, 
 		raw, _ = json.Marshal(payload)
 	}
 	_, err := s.db.Exec(ctx,
-		`INSERT INTO "ApprovalEvent" (id,"approvalId","designId","actorId",type,payload)
+		`INSERT INTO "approval_events" (id,"approval_id","design_id","actor_id",type,payload)
 		 VALUES ($1,$2,$3,$4,$5,$6)`,
 		uuid.NewString(), approvalID, designID, actorID, typ, raw)
 	return err

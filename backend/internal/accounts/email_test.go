@@ -68,7 +68,7 @@ func TestEmailFlows_DB(t *testing.T) {
 		t.Fatalf("VerifyEmail: %v", err)
 	}
 	var verified bool
-	_ = tx.QueryRow(ctx, `SELECT "emailVerified" FROM "User" WHERE id = $1`, user.ID).Scan(&verified)
+	_ = tx.QueryRow(ctx, `SELECT "email_verified" FROM "users" WHERE id = $1`, user.ID).Scan(&verified)
 	if !verified {
 		t.Fatal("email not marked verified")
 	}

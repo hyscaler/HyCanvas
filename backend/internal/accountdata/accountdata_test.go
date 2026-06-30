@@ -80,11 +80,11 @@ func TestAccountData_ExportAndDelete(t *testing.T) {
 	}
 	// The user, their sole-member workspace, and its design are gone.
 	var n int
-	_ = tx.QueryRow(ctx, `SELECT count(*) FROM "User" WHERE id = $1`, owner.ID).Scan(&n)
+	_ = tx.QueryRow(ctx, `SELECT count(*) FROM "users" WHERE id = $1`, owner.ID).Scan(&n)
 	if n != 0 {
 		t.Fatalf("user not deleted: %d", n)
 	}
-	_ = tx.QueryRow(ctx, `SELECT count(*) FROM "Workspace" WHERE id = $1`, ws.ID).Scan(&n)
+	_ = tx.QueryRow(ctx, `SELECT count(*) FROM "workspaces" WHERE id = $1`, ws.ID).Scan(&n)
 	if n != 0 {
 		t.Fatalf("sole-member workspace not deleted: %d", n)
 	}
@@ -113,7 +113,7 @@ func TestAccountData_DeleteSharedWorkspaceTransfersOwnership(t *testing.T) {
 	// A second active member of the team.
 	other, _, _, _ := acct.Signup(ctx, "m+"+uuid.NewString()+"@example.com", "a-strong-password", "Member")
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO "WorkspaceMember" (id,"workspaceId","userId",role,status,"joinedAt","updatedAt") VALUES ($1,$2,$3,'ADMIN','ACTIVE',now(),now())`,
+		`INSERT INTO "workspace_members" (id,"workspace_id","user_id",role,status,"joined_at","updated_at") VALUES ($1,$2,$3,'ADMIN','ACTIVE',now(),now())`,
 		uuid.NewString(), teamWS.ID, other.ID); err != nil {
 		t.Fatalf("add member: %v", err)
 	}
@@ -123,7 +123,7 @@ func TestAccountData_DeleteSharedWorkspaceTransfersOwnership(t *testing.T) {
 	}
 	// Shared workspace survives; ownership moved to the remaining admin.
 	var newOwner string
-	if err := tx.QueryRow(ctx, `SELECT "ownerId" FROM "Workspace" WHERE id = $1`, teamWS.ID).Scan(&newOwner); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT "owner_id" FROM "workspaces" WHERE id = $1`, teamWS.ID).Scan(&newOwner); err != nil {
 		t.Fatalf("workspace should survive: %v", err)
 	}
 	if newOwner != other.ID {

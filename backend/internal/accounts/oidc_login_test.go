@@ -36,7 +36,7 @@ func TestLoginWithOidc_DB(t *testing.T) {
 		t.Fatalf("new-account OIDC login: %v", err)
 	}
 	var wsCount int
-	_ = tx.QueryRow(ctx, `SELECT count(*) FROM "WorkspaceMember" WHERE "userId" = $1 AND role = 'OWNER'`, u1.ID).Scan(&wsCount)
+	_ = tx.QueryRow(ctx, `SELECT count(*) FROM "workspace_members" WHERE "user_id" = $1 AND role = 'OWNER'`, u1.ID).Scan(&wsCount)
 	if wsCount != 1 {
 		t.Fatalf("expected one owner membership, got %d", wsCount)
 	}
@@ -47,7 +47,7 @@ func TestLoginWithOidc_DB(t *testing.T) {
 		t.Fatalf("returning OIDC login should reuse the user: %v", err)
 	}
 	var idCount int
-	_ = tx.QueryRow(ctx, `SELECT count(*) FROM "AuthIdentity" WHERE provider='OIDC' AND "providerSubject"=$1`, sub).Scan(&idCount)
+	_ = tx.QueryRow(ctx, `SELECT count(*) FROM "auth_identities" WHERE provider='OIDC' AND "provider_subject"=$1`, sub).Scan(&idCount)
 	if idCount != 1 {
 		t.Fatalf("expected one OIDC identity, got %d", idCount)
 	}
@@ -88,7 +88,7 @@ func TestLoginWithOidc_DB(t *testing.T) {
 
 	// 7) SSO into an MFA-enabled account returns an MFA challenge, not a session
 	// (the MFA-bypass guard). pwUser is now linked to linkSub from 3b.
-	if _, err := tx.Exec(ctx, `UPDATE "User" SET "mfaEnabled" = true WHERE id = $1`, pwUser.ID); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE "users" SET "mfa_enabled" = true WHERE id = $1`, pwUser.ID); err != nil {
 		t.Fatalf("enable mfa: %v", err)
 	}
 	mfaUser, mfaTokens, mfaTok, err := svc.LoginWithOidc(ctx, OidcProfile{Subject: linkSub, Email: pwEmail, EmailVerified: true}, "d", "ip")
@@ -142,7 +142,7 @@ func TestLinkUnlinkOidc_DB(t *testing.T) {
 		t.Fatalf("create SSO-native other user: %v", err)
 	}
 	var otherSub string
-	_ = tx.QueryRow(ctx, `SELECT "providerSubject" FROM "AuthIdentity" WHERE "userId"=$1 AND provider='OIDC'`, other.ID).Scan(&otherSub)
+	_ = tx.QueryRow(ctx, `SELECT "provider_subject" FROM "auth_identities" WHERE "user_id"=$1 AND provider='OIDC'`, other.ID).Scan(&otherSub)
 	if err := svc.LinkOidcIdentity(ctx, pwUser.ID, OidcProfile{Subject: otherSub}); err != ErrOidcSubjectTaken {
 		t.Fatalf("linking a subject owned by another account should be refused, got %v", err)
 	}

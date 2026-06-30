@@ -97,7 +97,7 @@ type Membership struct {
 func (s *Service) memberRole(ctx context.Context, userID, workspaceID string) (string, bool) {
 	var role string
 	err := s.db.QueryRow(ctx,
-		`SELECT role FROM "WorkspaceMember" WHERE "workspaceId"=$1 AND "userId"=$2 AND status='ACTIVE'`,
+		`SELECT role FROM "workspace_members" WHERE "workspace_id"=$1 AND "user_id"=$2 AND status='ACTIVE'`,
 		workspaceID, userID).Scan(&role)
 	if err != nil {
 		return "", false
@@ -117,7 +117,7 @@ func (s *Service) memberRole(ctx context.Context, userID, workspaceID string) (s
 func lockedRole(ctx context.Context, tx pgx.Tx, userID, workspaceID string) (string, bool) {
 	var role string
 	err := tx.QueryRow(ctx,
-		`SELECT role FROM "WorkspaceMember" WHERE "workspaceId"=$1 AND "userId"=$2 AND status='ACTIVE' FOR UPDATE`,
+		`SELECT role FROM "workspace_members" WHERE "workspace_id"=$1 AND "user_id"=$2 AND status='ACTIVE' FOR UPDATE`,
 		workspaceID, userID).Scan(&role)
 	if err != nil {
 		return "", false
@@ -133,7 +133,7 @@ func lockedRole(ctx context.Context, tx pgx.Tx, userID, workspaceID string) (str
 // with FOR UPDATE, so we lock the rows and count them.
 func lockActiveOwners(ctx context.Context, tx pgx.Tx, workspaceID string) (int, error) {
 	rows, err := tx.Query(ctx,
-		`SELECT 1 FROM "WorkspaceMember" WHERE "workspaceId"=$1 AND role='OWNER' AND status='ACTIVE' FOR UPDATE`,
+		`SELECT 1 FROM "workspace_members" WHERE "workspace_id"=$1 AND role='OWNER' AND status='ACTIVE' FOR UPDATE`,
 		workspaceID)
 	if err != nil {
 		return 0, err
@@ -149,7 +149,7 @@ func lockActiveOwners(ctx context.Context, tx pgx.Tx, workspaceID string) (int, 
 // workspaceMeta returns a workspace's kind (lowercase) and display name, or
 // ErrNotFound.
 func (s *Service) workspaceMeta(ctx context.Context, workspaceID string) (kind, name string, err error) {
-	if e := s.db.QueryRow(ctx, `SELECT kind, name FROM "Workspace" WHERE id=$1`, workspaceID).Scan(&kind, &name); e != nil {
+	if e := s.db.QueryRow(ctx, `SELECT kind, name FROM "workspaces" WHERE id=$1`, workspaceID).Scan(&kind, &name); e != nil {
 		return "", "", ErrNotFound
 	}
 	return strings.ToLower(kind), name, nil
@@ -195,7 +195,7 @@ func (s *Service) Invite(ctx context.Context, callerID, workspaceID, email, role
 	}
 	// Supersede any prior pending invite for the same email (single live token).
 	if _, err := s.db.Exec(ctx,
-		`DELETE FROM "Invitation" WHERE "workspaceId"=$1 AND lower(email)=$2 AND "acceptedAt" IS NULL`,
+		`DELETE FROM "invitations" WHERE "workspace_id"=$1 AND lower(email)=$2 AND "accepted_at" IS NULL`,
 		workspaceID, email); err != nil {
 		return Invitation{}, "", err
 	}
@@ -203,7 +203,7 @@ func (s *Service) Invite(ctx context.Context, callerID, workspaceID, email, role
 	id := uuid.NewString()
 	expires := time.Now().Add(inviteTTL)
 	if _, err := s.db.Exec(ctx,
-		`INSERT INTO "Invitation" (id, "workspaceId", email, role, "tokenHash", "invitedById", "expiresAt")
+		`INSERT INTO "invitations" (id, "workspace_id", email, role, "token_hash", "invited_by_id", "expires_at")
 		 VALUES ($1,$2,$3,$4,$5,$6,$7)`,
 		id, workspaceID, email, strings.ToUpper(role), secrets.HashToken(raw), callerID, expires); err != nil {
 		return Invitation{}, "", err
@@ -274,7 +274,7 @@ func (s *Service) AcceptInvitation(ctx context.Context, callerID, raw string) (M
 	if strings.TrimSpace(raw) == "" {
 		return Membership{}, ErrInviteInvalid
 	}
-	inv, err := s.loadInvitationBy(ctx, `"tokenHash"=$1`, secrets.HashToken(raw))
+	inv, err := s.loadInvitationBy(ctx, `"token_hash"=$1`, secrets.HashToken(raw))
 	if err != nil {
 		return Membership{}, err
 	}
@@ -293,7 +293,7 @@ type invRow struct {
 func (s *Service) loadInvitationBy(ctx context.Context, pred string, arg any) (invRow, error) {
 	var r invRow
 	err := s.db.QueryRow(ctx,
-		`SELECT id, "workspaceId", email, role, "invitedById", "acceptedAt", "expiresAt" FROM "Invitation" WHERE `+pred,
+		`SELECT id, "workspace_id", email, role, "invited_by_id", "accepted_at", "expires_at" FROM "invitations" WHERE `+pred,
 		arg).Scan(&r.id, &r.workspaceID, &r.email, &r.role, &r.invitedBy, &r.acceptedAt, &r.expiresAt)
 	if err != nil {
 		return invRow{}, ErrInviteInvalid
@@ -326,7 +326,7 @@ func (s *Service) activateInvitation(ctx context.Context, callerID string, inv i
 	// Atomically claim the invitation single-use: the conditional update wins for
 	// exactly one of any concurrent accepts (acceptedAt flips once). A loser sees
 	// 0 rows and is rejected, so the invite can never be consumed twice.
-	claim, err := tx.Exec(ctx, `UPDATE "Invitation" SET "acceptedAt"=now() WHERE id=$1 AND "acceptedAt" IS NULL`, inv.id)
+	claim, err := tx.Exec(ctx, `UPDATE "invitations" SET "accepted_at"=now() WHERE id=$1 AND "accepted_at" IS NULL`, inv.id)
 	if err != nil {
 		return Membership{}, err
 	}
@@ -335,11 +335,11 @@ func (s *Service) activateInvitation(ctx context.Context, callerID string, inv i
 	}
 	memberID := uuid.NewString()
 	if err := tx.QueryRow(ctx,
-		`INSERT INTO "WorkspaceMember" (id, "workspaceId", "userId", role, status, "invitedById", "joinedAt", "updatedAt")
+		`INSERT INTO "workspace_members" (id, "workspace_id", "user_id", role, status, "invited_by_id", "joined_at", "updated_at")
 		 VALUES ($1,$2,$3,$4,'ACTIVE',$5, now(), now())
-		 ON CONFLICT ("workspaceId","userId") DO UPDATE
+		 ON CONFLICT ("workspace_id","user_id") DO UPDATE
 		   SET role=EXCLUDED.role, status='ACTIVE',
-		       "joinedAt"=COALESCE("WorkspaceMember"."joinedAt", now()), "updatedAt"=now()
+		       "joined_at"=COALESCE("workspace_members"."joined_at", now()), "updated_at"=now()
 		 RETURNING id`,
 		memberID, inv.workspaceID, callerID, role, inv.invitedBy).Scan(&memberID); err != nil {
 		return Membership{}, err
@@ -364,10 +364,10 @@ func (s *Service) MyInvitations(ctx context.Context, userID string) ([]Invitatio
 	}
 	email := strings.ToLower(strings.TrimSpace(u.Email))
 	rows, err := s.db.Query(ctx,
-		`SELECT i.id, i."workspaceId", i.email, i.role, i."invitedById", i."expiresAt", i."acceptedAt", i."createdAt", w.name
-		 FROM "Invitation" i JOIN "Workspace" w ON w.id = i."workspaceId"
-		 WHERE lower(i.email)=$1 AND i."acceptedAt" IS NULL AND i."expiresAt" > now()
-		 ORDER BY i."createdAt" DESC`, email)
+		`SELECT i.id, i."workspace_id", i.email, i.role, i."invited_by_id", i."expires_at", i."accepted_at", i."created_at", w.name
+		 FROM "invitations" i JOIN "workspaces" w ON w.id = i."workspace_id"
+		 WHERE lower(i.email)=$1 AND i."accepted_at" IS NULL AND i."expires_at" > now()
+		 ORDER BY i."created_at" DESC`, email)
 	if err != nil {
 		return nil, err
 	}
@@ -411,7 +411,7 @@ func (s *Service) RespondToInvitation(ctx context.Context, callerID, invitationI
 		return s.activateInvitation(ctx, callerID, inv)
 	}
 	// Decline: drop the pending invitation (idempotent; already-accepted is left).
-	if _, err := s.db.Exec(ctx, `DELETE FROM "Invitation" WHERE id=$1 AND "acceptedAt" IS NULL`, inv.id); err != nil {
+	if _, err := s.db.Exec(ctx, `DELETE FROM "invitations" WHERE id=$1 AND "accepted_at" IS NULL`, inv.id); err != nil {
 		return Membership{}, err
 	}
 	return Membership{}, nil
@@ -423,9 +423,9 @@ func (s *Service) ListMembers(ctx context.Context, callerID, workspaceID string)
 		return nil, err
 	}
 	rows, err := s.db.Query(ctx,
-		`SELECT u.id, u.email, u.name, u."avatarUrl", m.role, m.status, m."joinedAt"
-		 FROM "WorkspaceMember" m JOIN "User" u ON u.id=m."userId"
-		 WHERE m."workspaceId"=$1 ORDER BY m."createdAt" ASC`, workspaceID)
+		`SELECT u.id, u.email, u.name, u."avatar_url", m.role, m.status, m."joined_at"
+		 FROM "workspace_members" m JOIN "users" u ON u.id=m."user_id"
+		 WHERE m."workspace_id"=$1 ORDER BY m."created_at" ASC`, workspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -452,8 +452,8 @@ func (s *Service) ListInvitations(ctx context.Context, callerID, workspaceID str
 		return nil, err
 	}
 	rows, err := s.db.Query(ctx,
-		`SELECT id, "workspaceId", email, role, "invitedById", "expiresAt", "acceptedAt", "createdAt"
-		 FROM "Invitation" WHERE "workspaceId"=$1 AND "acceptedAt" IS NULL ORDER BY "createdAt" DESC`, workspaceID)
+		`SELECT id, "workspace_id", email, role, "invited_by_id", "expires_at", "accepted_at", "created_at"
+		 FROM "invitations" WHERE "workspace_id"=$1 AND "accepted_at" IS NULL ORDER BY "created_at" DESC`, workspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -481,7 +481,7 @@ func (s *Service) RevokeInvitation(ctx context.Context, callerID, workspaceID, i
 		return err
 	}
 	ct, err := s.db.Exec(ctx,
-		`DELETE FROM "Invitation" WHERE id=$1 AND "workspaceId"=$2 AND "acceptedAt" IS NULL`,
+		`DELETE FROM "invitations" WHERE id=$1 AND "workspace_id"=$2 AND "accepted_at" IS NULL`,
 		invitationID, workspaceID)
 	if err != nil {
 		return err
@@ -540,8 +540,8 @@ func (s *Service) ChangeMemberRole(ctx context.Context, callerID, workspaceID, t
 		}
 	}
 	ct, err := tx.Exec(ctx,
-		`UPDATE "WorkspaceMember" SET role=$1, "updatedAt"=now()
-		 WHERE "workspaceId"=$2 AND "userId"=$3 AND status='ACTIVE'`,
+		`UPDATE "workspace_members" SET role=$1, "updated_at"=now()
+		 WHERE "workspace_id"=$2 AND "user_id"=$3 AND status='ACTIVE'`,
 		strings.ToUpper(newRole), workspaceID, targetUserID)
 	if err != nil {
 		return err
@@ -599,7 +599,7 @@ func (s *Service) RemoveMember(ctx context.Context, callerID, workspaceID, targe
 		}
 	}
 	ct, err := tx.Exec(ctx,
-		`DELETE FROM "WorkspaceMember" WHERE "workspaceId"=$1 AND "userId"=$2`,
+		`DELETE FROM "workspace_members" WHERE "workspace_id"=$1 AND "user_id"=$2`,
 		workspaceID, targetUserID)
 	if err != nil {
 		return err
@@ -615,8 +615,8 @@ func (s *Service) RemoveMember(ctx context.Context, callerID, workspaceID, targe
 func (s *Service) InvitationsForUser(ctx context.Context, email string) ([]Invitation, error) {
 	email = strings.ToLower(strings.TrimSpace(email))
 	rows, err := s.db.Query(ctx,
-		`SELECT id, "workspaceId", email, role, "invitedById", "expiresAt", "acceptedAt", "createdAt"
-		 FROM "Invitation" WHERE lower(email)=$1 ORDER BY "createdAt" DESC`, email)
+		`SELECT id, "workspace_id", email, role, "invited_by_id", "expires_at", "accepted_at", "created_at"
+		 FROM "invitations" WHERE lower(email)=$1 ORDER BY "created_at" DESC`, email)
 	if err != nil {
 		return nil, err
 	}

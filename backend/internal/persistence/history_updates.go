@@ -102,8 +102,8 @@ type updateLogRow struct {
 func (s *Service) listUpdateRows(ctx context.Context, designID string, afterSeq int64, limit int) ([]updateLogRow, error) {
 	// id is the tiebreak so a same-seq pair (possible under the racy MAX(seq)+1
 	// assignment with no unique constraint) folds in a stable, deterministic order.
-	const q = `SELECT seq, update, "blobUrl", "authorId", "createdAt", "isCheckpoint" FROM "DesignUpdateLog"
-		WHERE "designId" = $1 AND seq > $2
+	const q = `SELECT seq, update, "blob_url", "author_id", "created_at", "is_checkpoint" FROM "design_update_logs"
+		WHERE "design_id" = $1 AND seq > $2
 		ORDER BY seq ASC, id ASC LIMIT $3`
 	rows, err := s.db.Query(ctx, q, designID, afterSeq, limit)
 	if err != nil {

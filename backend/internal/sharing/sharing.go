@@ -283,8 +283,8 @@ func (s *Service) workspaceOf(ctx context.Context, designID string) (string, err
 // membershipRole returns the caller's lowercase workspace role, or "" if not an
 // active member.
 func (s *Service) membershipRole(ctx context.Context, userID, workspaceID string) authz.WorkspaceRole {
-	const q = `SELECT role FROM "WorkspaceMember"
-		WHERE "workspaceId" = $1 AND "userId" = $2 AND status = 'ACTIVE'`
+	const q = `SELECT role FROM "workspace_members"
+		WHERE "workspace_id" = $1 AND "user_id" = $2 AND status = 'ACTIVE'`
 	var role string
 	if err := s.db.QueryRow(ctx, q, workspaceID, userID).Scan(&role); err != nil {
 		return ""
@@ -294,7 +294,7 @@ func (s *Service) membershipRole(ctx context.Context, userID, workspaceID string
 
 func (s *Service) userEmail(ctx context.Context, userID string) string {
 	var email string
-	if err := s.db.QueryRow(ctx, `SELECT email FROM "User" WHERE id = $1`, userID).Scan(&email); err != nil {
+	if err := s.db.QueryRow(ctx, `SELECT email FROM "users" WHERE id = $1`, userID).Scan(&email); err != nil {
 		return ""
 	}
 	return email
@@ -304,14 +304,14 @@ func (s *Service) userEmail(ctx context.Context, userID string) string {
 // against typo'd or otherwise unknown ids that would otherwise dangle).
 func (s *Service) userExists(ctx context.Context, userID string) bool {
 	var one int
-	return s.db.QueryRow(ctx, `SELECT 1 FROM "User" WHERE id = $1`, userID).Scan(&one) == nil
+	return s.db.QueryRow(ctx, `SELECT 1 FROM "users" WHERE id = $1`, userID).Scan(&one) == nil
 }
 
 // userIDByEmail returns the account that owns an email address, if any, so an
 // email-targeted grant to an existing user can also reach them in-app.
 func (s *Service) userIDByEmail(ctx context.Context, email string) (string, bool) {
 	var id string
-	if err := s.db.QueryRow(ctx, `SELECT id FROM "User" WHERE lower(email) = $1`, email).Scan(&id); err != nil {
+	if err := s.db.QueryRow(ctx, `SELECT id FROM "users" WHERE lower(email) = $1`, email).Scan(&id); err != nil {
 		return "", false
 	}
 	return id, true
@@ -566,7 +566,7 @@ func (s *Service) enrichGrants(ctx context.Context, grants []ShareGrant) {
 	for id := range want {
 		ids = append(ids, id)
 	}
-	rows, err := s.db.Query(ctx, `SELECT id::text, name, email FROM "User" WHERE id::text = ANY($1)`, ids)
+	rows, err := s.db.Query(ctx, `SELECT id::text, name, email FROM "users" WHERE id::text = ANY($1)`, ids)
 	if err != nil {
 		return
 	}
@@ -597,7 +597,7 @@ func (s *Service) enrichGrants(ctx context.Context, grants []ShareGrant) {
 
 // userInfo returns a user's display name + email (best-effort).
 func (s *Service) userInfo(ctx context.Context, userID string) (name, email string, ok bool) {
-	if err := s.db.QueryRow(ctx, `SELECT name, email FROM "User" WHERE id = $1`, userID).Scan(&name, &email); err != nil {
+	if err := s.db.QueryRow(ctx, `SELECT name, email FROM "users" WHERE id = $1`, userID).Scan(&name, &email); err != nil {
 		return "", "", false
 	}
 	return name, email, true
@@ -606,7 +606,7 @@ func (s *Service) userInfo(ctx context.Context, userID string) (name, email stri
 // designCreator returns the design's creator id, if the column is set.
 func (s *Service) designCreator(ctx context.Context, designID string) (string, bool) {
 	var id *string
-	if err := s.db.QueryRow(ctx, `SELECT "createdById"::text FROM "Design" WHERE id = $1`, designID).Scan(&id); err != nil || id == nil || *id == "" {
+	if err := s.db.QueryRow(ctx, `SELECT "created_by_id"::text FROM "designs" WHERE id = $1`, designID).Scan(&id); err != nil || id == nil || *id == "" {
 		return "", false
 	}
 	return *id, true

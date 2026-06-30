@@ -1,5 +1,5 @@
-// SQL access for the uploads module, against the Prisma-managed tables "Asset"
-// and "AssetFolder" (quoted identifiers, camelCase columns). meta is JSONB; the
+// SQL access for the uploads module, against the tables "assets"
+// and "asset_folders" (quoted identifiers, snake_case columns). meta is JSONB; the
 // mediaKind sub-key carries the fine-grained @hc/media kind.
 package uploads
 
@@ -39,7 +39,7 @@ type assetRow struct {
 	CreatedAt   time.Time
 }
 
-const assetCols = `id,"workspaceId",kind,"storageKey",filename,"mimeType","byteSize",thumbnail,"folderId",tags,meta,"createdAt"`
+const assetCols = `id,"workspace_id",kind,"storage_key",filename,"mime_type","byte_size",thumbnail,"folder_id",tags,meta,"created_at"`
 
 func scanAsset(row pgx.Row) (assetRow, error) {
 	var a assetRow
@@ -71,7 +71,7 @@ type createAssetInput struct {
 
 func (s *Service) createAsset(ctx context.Context, in createAssetInput) (assetRow, error) {
 	meta, _ := json.Marshal(map[string]any{"mediaKind": in.mediaKind})
-	const q = `INSERT INTO "Asset" (id,"workspaceId",kind,"storageKey",filename,"mimeType","byteSize",thumbnail,"folderId",tags,"uploadedById",meta,"updatedAt")
+	const q = `INSERT INTO "assets" (id,"workspace_id",kind,"storage_key",filename,"mime_type","byte_size",thumbnail,"folder_id",tags,"uploaded_by_id",meta,"updated_at")
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,now()) RETURNING ` + assetCols
 	return scanAsset(s.db.QueryRow(ctx, q,
 		uuid.NewString(), in.workspaceID, in.kind, in.storageKey, in.filename, in.mimeType, in.byteSize,
@@ -79,7 +79,7 @@ func (s *Service) createAsset(ctx context.Context, in createAssetInput) (assetRo
 }
 
 func (s *Service) getAsset(ctx context.Context, id string) (assetRow, error) {
-	a, err := scanAsset(s.db.QueryRow(ctx, `SELECT `+assetCols+` FROM "Asset" WHERE id = $1`, id))
+	a, err := scanAsset(s.db.QueryRow(ctx, `SELECT `+assetCols+` FROM "assets" WHERE id = $1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return assetRow{}, ErrNotFound
 	}
@@ -87,7 +87,7 @@ func (s *Service) getAsset(ctx context.Context, id string) (assetRow, error) {
 }
 
 func (s *Service) listByWorkspace(ctx context.Context, workspaceID string) ([]assetRow, error) {
-	rows, err := s.db.Query(ctx, `SELECT `+assetCols+` FROM "Asset" WHERE "workspaceId" = $1 ORDER BY "createdAt" DESC`, workspaceID)
+	rows, err := s.db.Query(ctx, `SELECT `+assetCols+` FROM "assets" WHERE "workspace_id" = $1 ORDER BY "created_at" DESC`, workspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +105,7 @@ func (s *Service) listByWorkspace(ctx context.Context, workspaceID string) ([]as
 
 func (s *Service) usedBytes(ctx context.Context, workspaceID string) (int64, error) {
 	var used int64
-	err := s.db.QueryRow(ctx, `SELECT COALESCE(SUM("byteSize"),0) FROM "Asset" WHERE "workspaceId" = $1`, workspaceID).Scan(&used)
+	err := s.db.QueryRow(ctx, `SELECT COALESCE(SUM("byte_size"),0) FROM "assets" WHERE "workspace_id" = $1`, workspaceID).Scan(&used)
 	return used, err
 }
 
@@ -118,7 +118,7 @@ type assetPatch struct {
 }
 
 func (s *Service) updateAsset(ctx context.Context, id string, p assetPatch) (assetRow, error) {
-	set := []string{`"updatedAt" = now()`}
+	set := []string{`"updated_at" = now()`}
 	args := []any{id}
 	add := func(col string, v any) {
 		args = append(args, v)
@@ -131,9 +131,9 @@ func (s *Service) updateAsset(ctx context.Context, id string, p assetPatch) (ass
 		add("tags", p.tags)
 	}
 	if p.folderSet {
-		add(`"folderId"`, p.folderID)
+		add(`"folder_id"`, p.folderID)
 	}
-	q := `UPDATE "Asset" SET ` + strings.Join(set, ", ") + ` WHERE id = $1 RETURNING ` + assetCols
+	q := `UPDATE "assets" SET ` + strings.Join(set, ", ") + ` WHERE id = $1 RETURNING ` + assetCols
 	a, err := scanAsset(s.db.QueryRow(ctx, q, args...))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return assetRow{}, ErrNotFound
@@ -142,7 +142,7 @@ func (s *Service) updateAsset(ctx context.Context, id string, p assetPatch) (ass
 }
 
 func (s *Service) deleteAsset(ctx context.Context, id string) error {
-	_, err := s.db.Exec(ctx, `DELETE FROM "Asset" WHERE id = $1`, id)
+	_, err := s.db.Exec(ctx, `DELETE FROM "assets" WHERE id = $1`, id)
 	return err
 }
 
@@ -156,7 +156,7 @@ type folderRow struct {
 	CreatedAt   time.Time
 }
 
-const folderCols = `id,"workspaceId",name,"parentId","createdAt"`
+const folderCols = `id,"workspace_id",name,"parent_id","created_at"`
 
 func scanFolder(row pgx.Row) (folderRow, error) {
 	var f folderRow
@@ -165,7 +165,7 @@ func scanFolder(row pgx.Row) (folderRow, error) {
 }
 
 func (s *Service) listFolders(ctx context.Context, workspaceID string) ([]folderRow, error) {
-	rows, err := s.db.Query(ctx, `SELECT `+folderCols+` FROM "AssetFolder" WHERE "workspaceId" = $1 ORDER BY "createdAt"`, workspaceID)
+	rows, err := s.db.Query(ctx, `SELECT `+folderCols+` FROM "asset_folders" WHERE "workspace_id" = $1 ORDER BY "created_at"`, workspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +182,7 @@ func (s *Service) listFolders(ctx context.Context, workspaceID string) ([]folder
 }
 
 func (s *Service) getFolder(ctx context.Context, id string) (folderRow, error) {
-	f, err := scanFolder(s.db.QueryRow(ctx, `SELECT `+folderCols+` FROM "AssetFolder" WHERE id = $1`, id))
+	f, err := scanFolder(s.db.QueryRow(ctx, `SELECT `+folderCols+` FROM "asset_folders" WHERE id = $1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return folderRow{}, ErrNotFound
 	}
@@ -190,12 +190,12 @@ func (s *Service) getFolder(ctx context.Context, id string) (folderRow, error) {
 }
 
 func (s *Service) createFolder(ctx context.Context, workspaceID, name string, parentID *string) (folderRow, error) {
-	const q = `INSERT INTO "AssetFolder" (id,"workspaceId",name,"parentId") VALUES ($1,$2,$3,$4) RETURNING ` + folderCols
+	const q = `INSERT INTO "asset_folders" (id,"workspace_id",name,"parent_id") VALUES ($1,$2,$3,$4) RETURNING ` + folderCols
 	return scanFolder(s.db.QueryRow(ctx, q, uuid.NewString(), workspaceID, name, parentID))
 }
 
 func (s *Service) renameFolder(ctx context.Context, id, name string) (folderRow, error) {
-	f, err := scanFolder(s.db.QueryRow(ctx, `UPDATE "AssetFolder" SET name = $2 WHERE id = $1 RETURNING `+folderCols, id, name))
+	f, err := scanFolder(s.db.QueryRow(ctx, `UPDATE "asset_folders" SET name = $2 WHERE id = $1 RETURNING `+folderCols, id, name))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return folderRow{}, ErrNotFound
 	}
@@ -203,7 +203,7 @@ func (s *Service) renameFolder(ctx context.Context, id, name string) (folderRow,
 }
 
 func (s *Service) deleteFolder(ctx context.Context, id string) error {
-	_, err := s.db.Exec(ctx, `DELETE FROM "AssetFolder" WHERE id = $1`, id)
+	_, err := s.db.Exec(ctx, `DELETE FROM "asset_folders" WHERE id = $1`, id)
 	return err
 }
 
