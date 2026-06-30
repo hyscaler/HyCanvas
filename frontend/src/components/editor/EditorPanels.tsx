@@ -119,6 +119,8 @@ export function CollapsibleSection({
   defaultOpen = false,
   badge,
   right,
+  order,
+  dim = false,
   children,
 }: {
   title: string;
@@ -126,11 +128,16 @@ export function CollapsibleSection({
   defaultOpen?: boolean;
   badge?: string | number;
   right?: React.ReactNode;
+  /** Flex `order` for the section, so the parent panel can float the most
+   *  relevant groups to the top without reordering the JSX. */
+  order?: number;
+  /** Dim + disable the body (e.g. a locked / brand-constrained group). */
+  dim?: boolean;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border-b border-neutral-100 pb-2 last:border-b-0 last:pb-0">
+    <div className="border-b border-neutral-100 pb-2 last:border-b-0 last:pb-0" style={order != null ? { order } : undefined}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -146,7 +153,7 @@ export function CollapsibleSection({
         {right}
         <ChevronDown size={15} className={`shrink-0 text-neutral-300 transition-transform group-hover:text-neutral-400 ${open ? "" : "-rotate-90"}`} />
       </button>
-      {open && <div className="flex flex-col gap-2 px-1 pt-1.5">{children}</div>}
+      {open && <div className={`flex flex-col gap-2 px-1 pt-1.5 ${dim ? "pointer-events-none opacity-50" : ""}`}>{children}</div>}
     </div>
   );
 }

@@ -283,8 +283,7 @@ function VideoSection({ node }: { node: Node }) {
   };
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
   return (
-    <div className="flex flex-col gap-2.5 border-t border-neutral-100 pt-3.5">
-      <Heading>Video</Heading>
+    <Section title="Video" order={ORDER.type}>
       {!el() && <p className="text-[11px] text-neutral-400">Loading video…</p>}
       <div className="flex items-center gap-2">
         <button onClick={play} className="grid h-8 w-8 place-items-center rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200" title={playing ? "Pause" : "Play"}>{playing ? "❚❚" : "▶"}</button>
@@ -302,7 +301,7 @@ function VideoSection({ node }: { node: Node }) {
         <label className="flex items-center gap-1.5"><input type="checkbox" checked={!!v.muted} onChange={(e) => st.setVideoProps(id, { muted: e.target.checked })} /> Mute</label>
         <label className="flex items-center gap-1.5"><input type="checkbox" checked={!!v.loop} onChange={(e) => st.setVideoProps(id, { loop: e.target.checked })} /> Loop</label>
       </div>
-    </div>
+    </Section>
   );
 }
 const chipCls = (active: boolean) => `rounded-md px-2.5 py-1 text-xs font-medium transition ${active ? "bg-white text-brand-700 shadow-sm" : "text-neutral-500 hover:text-neutral-700"}`;
@@ -674,7 +673,7 @@ export function PropertiesPanel() {
         )
       )}
       {single && (
-        <div className={`grid grid-cols-2 gap-2 ${locked ? "pointer-events-none opacity-50" : ""}`}>
+        <div style={{ order: ORDER.position }} className={`grid grid-cols-2 gap-2 ${locked ? "pointer-events-none opacity-50" : ""}`}>
           <Field key={`x${single.node.transform.x}`} label="X" value={single.node.transform.x} onCommit={(n) => commitGeo({ x: n })} />
           <Field key={`y${single.node.transform.y}`} label="Y" value={single.node.transform.y} onCommit={(n) => commitGeo({ y: n })} />
           <Field key={`w${single.node.size.width}`} label="W" value={single.node.size.width} onCommit={(n) => commitGeo({ w: n })} />
@@ -689,7 +688,7 @@ export function PropertiesPanel() {
         const og = single.node.transform.origin;
         const cur = og ?? { x: 0.5, y: 0.5 };
         return (
-          <div className="flex items-center gap-2">
+          <div style={{ order: ORDER.position }} className="flex items-center gap-2">
             <span className="text-[11px] text-neutral-400">Rotate around</span>
             <div className="grid grid-cols-3 gap-0.5 rounded-md border border-neutral-200 p-0.5">
               {[0, 0.5, 1].flatMap((y) => [0, 0.5, 1].map((x) => {
@@ -713,7 +712,7 @@ export function PropertiesPanel() {
         const multi = selection.length > 1;
         const canDistribute = selection.length > 2;
         return (
-          <Section title="Arrange">
+          <Section title="Arrange" order={ORDER.arrange} defaultOpen={false}>
             {/* Align (to page for one object, to selection for many). */}
             <div className="flex gap-1">
               <IconBtn icon={AlignStartVertical} title="Align left" onClick={() => st.alignSelection("left")} />
@@ -771,12 +770,8 @@ export function PropertiesPanel() {
         const applySolid = (hex: string) => { rememberColor(hex); return single ? st.setFillColor(id, hex) : st.setFillColorSel(hex); };
         const applyFills = (fills: Fill[]) => (single ? st.setFills(id, fills) : st.setFillsSel(fills));
         return (
-          <section className={`flex flex-col gap-2.5 border-t border-neutral-100 pt-3.5 ${locked ? "pointer-events-none opacity-50" : ""}`}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <Heading>Fill</Heading>
-                {!single && <span className="rounded-full bg-neutral-100 px-1.5 text-[10px] font-semibold text-neutral-400">{fillNodes.length}</span>}
-              </div>
+          <Section title="Fill" order={ORDER.fill} badge={!single ? fillNodes.length : undefined} dim={locked}>
+            <div className="flex items-center justify-end">
               {!brandSwatches && (
                 <div className="flex gap-1 rounded-lg bg-neutral-100 p-0.5">
                   <button onClick={() => applySolid(baseHex)} className={chipCls(!isGradient && fill?.type !== "image")}>Solid</button>
@@ -857,14 +852,14 @@ export function PropertiesPanel() {
                 <ColorHarmony baseHex={baseHex} onPick={(hex) => { rememberColor(hex); applySolid(hex); }} />
               </>
             )}
-          </section>
+          </Section>
         );
       })()}
       {single && single.node.type === "shape" && (() => {
         const cur = (single.node as unknown as { shape: string }).shape;
         const id = single.node.id;
         return (
-          <div className="flex flex-col gap-1.5">
+          <div style={{ order: ORDER.type }} className="flex flex-col gap-1.5">
             <span className="text-[10px] uppercase tracking-wide text-neutral-400">Swap shape</span>
             <div className="grid grid-cols-5 gap-1.5">
               {([
@@ -887,6 +882,7 @@ export function PropertiesPanel() {
       })()}
       {single && (single.node.type === "shape" || single.node.type === "path") && (
         <button
+          style={{ order: ORDER.type }}
           onClick={() => useEditor.getState().convertToFrame(single.node.id)}
           title="Turn this shape into a frame you can drop an image into"
           className="flex items-center justify-center gap-1.5 rounded-lg border border-neutral-200 px-2 py-2 text-xs font-medium text-neutral-700 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
@@ -898,6 +894,7 @@ export function PropertiesPanel() {
           freehand path as a clean shape. */}
       {single && (single.node.type === "shape" || single.node.type === "path") && (single.node as unknown as { stroke?: unknown }).stroke ? (
         <button
+          style={{ order: ORDER.type }}
           onClick={() => useEditor.getState().strokeToOutlineSelection()}
           title="Convert the stroke into a filled outline shape"
           className="flex items-center justify-center gap-1.5 rounded-lg border border-neutral-200 px-2 py-2 text-xs font-medium text-neutral-700 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
@@ -907,6 +904,7 @@ export function PropertiesPanel() {
       ) : null}
       {single && single.node.type === "path" && (
         <button
+          style={{ order: ORDER.type }}
           onClick={() => useEditor.getState().recognizeSelectedPath()}
           title="Snap this freehand path to a clean shape (rectangle, ellipse, line, polygon)"
           className="flex items-center justify-center gap-1.5 rounded-lg border border-neutral-200 px-2 py-2 text-xs font-medium text-neutral-700 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
@@ -915,8 +913,7 @@ export function PropertiesPanel() {
         </button>
       )}
       {single && single.node.type === "image" && (
-        <div className="flex flex-col gap-2.5 border-t border-neutral-100 pt-3.5">
-          <Heading>Image</Heading>
+        <Section title="Image" order={ORDER.type}>
           <ImagePalette assetId={(single.node as unknown as { source: { assetId: string } }).source.assetId} />
           {isLowResolution(single.node as ImageNode, doc) && (
             <div className="rounded-lg bg-amber-50 px-2.5 py-1.5 text-[11px] font-medium text-amber-700" title="The image's resolution is low for its placed size; it may look soft when exported or printed.">
@@ -986,7 +983,7 @@ export function PropertiesPanel() {
               />
             </label>
           </div>
-        </div>
+        </Section>
       )}
       {single && single.node.type === "image" && (
         <ImageEffectsSection id={single.node.id} node={single.node} />
@@ -1013,11 +1010,7 @@ export function PropertiesPanel() {
         const applyStroke = (s?: StrokeT) => (single ? st.setStroke(id, s as never) : st.setStrokeSel(s as never));
         const dashed = !!stroke?.dash?.length;
         return (
-          <section className={`flex flex-col gap-2.5 border-t border-neutral-100 pt-3.5 ${locked ? "pointer-events-none opacity-50" : ""}`}>
-            <div className="flex items-center gap-1.5">
-              <Heading>Style</Heading>
-              {!single && <span className="rounded-full bg-neutral-100 px-1.5 text-[10px] font-semibold text-neutral-400">{strokeNodes.length}</span>}
-            </div>
+          <Section title="Style" order={ORDER.style} badge={!single ? strokeNodes.length : undefined} dim={locked}>
             <label className="flex items-center justify-between text-sm text-neutral-600">
               <span>Border</span>
               <Toggle
@@ -1123,7 +1116,7 @@ export function PropertiesPanel() {
                 <Toggle checked={hasShadow} onChange={(on) => st.setShadowSel(on)} />
               </label>
             )}
-          </section>
+          </Section>
         );
       })()}
       {single && single.node.type === "text" && (() => {
@@ -1136,8 +1129,7 @@ export function PropertiesPanel() {
         const isItalic = /italic|oblique/i.test(cs?.fontStyle ?? "");
         const lineHeight = typeof cs?.lineHeight === "number" ? cs.lineHeight : 1.2;
         return (
-          <div className="flex flex-col gap-2.5 border-t border-neutral-100 pt-3.5">
-            <Heading>Text</Heading>
+          <Section title="Text" order={ORDER.type}>
             <textarea
               key={`txt-${id}`}
               defaultValue={textOf(single.node)}
@@ -1516,7 +1508,7 @@ export function PropertiesPanel() {
                 </div>
               );
             })()}
-          </div>
+          </Section>
         );
       })()}
       {single && single.node.type === "video" && <VideoSection node={single.node} />}
@@ -1525,23 +1517,21 @@ export function PropertiesPanel() {
         const g = single.node as unknown as { rows: number; cols: number; gap: number };
         const set = (patch: { rows?: number; cols?: number; gap?: number }) => useEditor.getState().setGridLayout(id, patch);
         return (
-          <div className="flex flex-col gap-2.5 border-t border-neutral-100 pt-3.5">
-            <Heading>Photo grid</Heading>
+          <Section title="Photo grid" order={ORDER.type}>
             <div className="grid grid-cols-3 gap-2">
               <Field key={`gr-${g.rows}`} label="Rows" value={g.rows} onCommit={(n) => set({ rows: Math.max(1, Math.min(6, Math.round(n))) })} />
               <Field key={`gc-${g.cols}`} label="Cols" value={g.cols} onCommit={(n) => set({ cols: Math.max(1, Math.min(6, Math.round(n))) })} />
               <Field key={`gg-${g.gap}`} label="Gap" value={g.gap} onCommit={(n) => set({ gap: Math.max(0, n) })} />
             </div>
             <p className="text-[11px] text-neutral-400">Drag a photo onto a cell to fill it.</p>
-          </div>
+          </Section>
         );
       })()}
       {single && single.node.type === "qr" && (() => {
         const id = single.node.id;
         const qr = single.node as unknown as { value: string };
         return (
-          <div className="flex flex-col gap-2.5 border-t border-neutral-100 pt-3.5">
-            <Heading>QR code</Heading>
+          <Section title="QR code" order={ORDER.type}>
             <label className="flex flex-col gap-1 text-[11px] text-neutral-400">
               Links to
               <input
@@ -1553,7 +1543,7 @@ export function PropertiesPanel() {
               />
             </label>
             <p className="text-[11px] text-neutral-400">The code regenerates when you change the value.</p>
-          </div>
+          </Section>
         );
       })()}
       {single && single.node.type === "frame" && (() => {
@@ -1564,15 +1554,14 @@ export function PropertiesPanel() {
         const isRounded = !isEllipse && (fr.cornerRadius?.topLeft ?? 0) > 0;
         const chip = (active: boolean) => `flex-1 rounded-lg border py-1.5 text-xs font-medium transition ${active ? "border-brand-300 bg-brand-50 text-brand-700" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`;
         return (
-          <div className="flex flex-col gap-2.5 border-t border-neutral-100 pt-3.5">
-            <Heading>Frame</Heading>
+          <Section title="Frame" order={ORDER.type}>
             <div className="flex gap-1">
               <button onClick={() => st.setFrameShape(id, "rect", 0)} className={chip(!isEllipse && !isRounded)}>Rectangle</button>
               <button onClick={() => st.setFrameShape(id, "rect", 28)} className={chip(isRounded)}>Rounded</button>
               <button onClick={() => st.setFrameShape(id, "ellipse", 0)} className={chip(isEllipse)}>Circle</button>
             </div>
             <p className="text-[11px] text-neutral-400">Click an image in Uploads to drop it into this frame (clipped to the shape).</p>
-          </div>
+          </Section>
         );
       })()}
       {single && single.node.type === "chart" && (() => {
@@ -1584,8 +1573,7 @@ export function PropertiesPanel() {
         const LABELS: Record<string, string> = { bar: "Bar", barGrouped: "Bar (grouped)", barStacked: "Bar (stacked)", line: "Line", area: "Area", pie: "Pie", donut: "Donut", scatter: "Scatter", radar: "Radar" };
         const legend = style.legend ?? { show: false, position: "bottom" as const };
         return (
-          <div className="flex flex-col gap-2.5 border-t border-neutral-100 pt-3.5">
-            <Heading>Chart</Heading>
+          <Section title="Chart" order={ORDER.type}>
             <select value={ch.chartType} onChange={(e) => st.setChart(id, { chartType: e.target.value as never })} className={selectCls}>
               {TYPES.map((tp) => <option key={tp} value={tp}>{LABELS[tp] ?? tp}</option>)}
             </select>
@@ -1616,7 +1604,7 @@ export function PropertiesPanel() {
                 </div>
               ))}
             </div>
-          </div>
+          </Section>
         );
       })()}
       {single && single.node.type === "table" && (() => {
@@ -1631,8 +1619,7 @@ export function PropertiesPanel() {
         const selCell = tb.cells.find((c) => c.row === sel.row && c.col === sel.col);
         const btnCls = "flex-1 rounded-md border border-neutral-200 bg-white px-2 py-1 text-[11px] text-neutral-700 transition hover:bg-neutral-50 disabled:opacity-40";
         return (
-          <div className="flex flex-col gap-2.5 border-t border-neutral-100 pt-3.5">
-            <Heading>Table data</Heading>
+          <Section title="Table data" order={ORDER.type}>
             <p className="text-[11px] text-neutral-400">One row per line, cells comma-separated.</p>
             <textarea
               key={`tb-${id}-${tb.rows}x${tb.cols}`}
@@ -1710,10 +1697,10 @@ export function PropertiesPanel() {
 
             <TableConditional id={id} table={tb} />
             <DataBindingControls node={single.node} />
-          </div>
+          </Section>
         );
       })()}
-      <Section title="Appearance">
+      <Section title="Appearance" order={ORDER.appearance}>
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between text-sm text-neutral-600">
             <span>Opacity</span>
@@ -1864,9 +1851,8 @@ function AnimateSection({ node }: { node: Node }) {
     st.setNodeAnimation(id, { ...anim, [tab]: next } as NodeAnimation);
   };
   return (
-    <div className="flex flex-col gap-2.5 border-t border-neutral-100 pt-3.5">
-      <div className="flex items-center justify-between">
-        <Heading>Animate</Heading>
+    <Section title="Animate" order={ORDER.interactivity} defaultOpen={false}>
+      <div className="flex items-center justify-end">
         <button
           onClick={() => st.previewNodeAnimation(id)}
           className="rounded-md border border-neutral-200 px-2 py-0.5 text-[11px] font-medium text-neutral-600 transition hover:bg-neutral-100"
@@ -1945,7 +1931,7 @@ function AnimateSection({ node }: { node: Node }) {
         </>
       )}
       <KeyframeEditor node={node} />
-    </div>
+    </Section>
   );
 }
 
@@ -1955,8 +1941,7 @@ function ImageMotionSection({ node }: { node: Node }) {
   const id = node.id;
   const motion = (node as { motion?: ImageMotion }).motion;
   return (
-    <div className="flex flex-col gap-2.5 border-t border-neutral-100 pt-3.5">
-      <Heading>Motion</Heading>
+    <Section title="Motion" order={ORDER.interactivity}>
       <select
         value={motion?.kind ?? "none"}
         onChange={(e) => {
@@ -1981,7 +1966,7 @@ function ImageMotionSection({ node }: { node: Node }) {
         </label>
       )}
       <p className="text-[11px] text-neutral-400">Plays during present mode.</p>
-    </div>
+    </Section>
   );
 }
 
@@ -1996,8 +1981,7 @@ function InteractionSection({ node, doc }: { node: Node; doc: DesignFile }) {
     st.setInteraction(id, { trigger: interaction?.trigger ?? "click", action: next });
   };
   return (
-    <div className="flex flex-col gap-2.5 border-t border-neutral-100 pt-3.5">
-      <Heading>Interaction</Heading>
+    <Section title="Interaction" order={ORDER.interactivity} defaultOpen={false}>
       <div className="grid grid-cols-2 gap-2">
         <select
           value={interaction?.trigger ?? "click"}
@@ -2053,7 +2037,7 @@ function InteractionSection({ node, doc }: { node: Node; doc: DesignFile }) {
           className="w-full rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-sm outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
         />
       )}
-    </div>
+    </Section>
   );
 }
 
@@ -2290,8 +2274,7 @@ function ImageEffectsSection({ id, node }: { id: string; node: Node }) {
     `flex-1 rounded-md py-1 text-xs font-medium transition ${on ? "bg-white text-neutral-800 shadow-sm" : "text-neutral-500 hover:text-neutral-700"}`;
 
   return (
-    <div className="flex flex-col gap-3 border-t border-neutral-100 pt-3.5">
-      <Heading>Image effects</Heading>
+    <Section title="Image effects" order={ORDER.type}>
       <div className="flex gap-0.5 rounded-lg bg-neutral-100 p-0.5">
         <button onClick={() => setTab("filters")} className={tabCls(tab === "filters")}>Filters</button>
         <button onClick={() => setTab("adjust")} className={tabCls(tab === "adjust")}>Adjust</button>
@@ -2414,7 +2397,7 @@ function ImageEffectsSection({ id, node }: { id: string; node: Node }) {
           </div>
         </div>
       )}
-    </div>
+    </Section>
   );
 }
 
@@ -2543,14 +2526,31 @@ function Heading({ children }: { children: React.ReactNode }) {
 
 /** A titled property group. Delegates to the shared collapsible card so every
  *  property group looks and behaves like the other editor panels. Property
- *  groups default open since users expect to see properties immediately. */
-function Section({ title, badge, children }: { title: string; badge?: string | number; children: React.ReactNode }) {
+ *  groups default open since users expect to see properties immediately.
+ *
+ *  `order` floats the most relevant groups to the top for the current selection
+ *  (the panel is a flex column): type-specific groups get a low order so a text
+ *  element shows its text controls first, an image its image controls, etc.,
+ *  with the shared groups (fill, position, arrange, appearance, ...) below. */
+function Section({ title, badge, order, dim, defaultOpen = true, children }: { title: string; badge?: string | number; order?: number; dim?: boolean; defaultOpen?: boolean; children: React.ReactNode }) {
   return (
-    <CollapsibleSection title={title} badge={badge} defaultOpen>
+    <CollapsibleSection title={title} badge={badge} order={order} dim={dim} defaultOpen={defaultOpen}>
       {children}
     </CollapsibleSection>
   );
 }
+
+// Flex `order` buckets for the property groups. Lower = higher in the panel.
+// The selection's type-specific group leads; shared groups follow.
+const ORDER = {
+  type: 1, // type-specific group (text / image / shape / chart / table / ...)
+  fill: 2,
+  style: 3,
+  position: 4,
+  arrange: 5,
+  appearance: 6,
+  interactivity: 7, // animate / motion / interaction
+} as const;
 
 /** A small "locked by brand" hint shown above a constrained picker (FR-4). */
 function BrandLockHint() {
