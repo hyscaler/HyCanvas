@@ -400,6 +400,12 @@ interface EditorState {
   setPageBackground(fill: Fill | undefined): void;
   /** Reorder pages (move page at `from` to index `to`), undoable. */
   movePage(from: number, to: number): void;
+  /** Re-parent top-level nodes from the active page to another page (a cross-page
+   *  drag-drop), converting their coordinates into the destination page's local
+   *  space and appending them as the top layers there. `before` holds each node's
+   *  transform at the drag start, so undo restores the original page + position.
+   *  One undo step. */
+  moveNodesToPage(ids: string[], destIndex: number, before: Map<string, Transform>): void;
   /** Magic Resize (F22 FR-1/FR-2/FR-3): constraint-aware re-layout of the active
    *  page to one or more target sizes, appended as new pages after it, preserving
    *  node ids/z-order/groups. All targets land as ONE undo step. Returns the new
@@ -1195,6 +1201,48 @@ export const useEditor = create<EditorState>((set, get) => {
       perform(
         () => { moveById(pageId, dest); refocus(); },
         () => { moveById(pageId, from); refocus(); },
+      );
+    },
+    moveNodesToPage: (ids, destIndex, before) => {
+      const doc = get().doc;
+      const srcIdx = curPageIndex();
+      const src = doc.pages[srcIdx];
+      const dst = doc.pages[destIndex];
+      if (!src || !dst || destIndex === srcIdx) return;
+      // Only top-level nodes on the source page can cross pages this way.
+      const moving = ids
+        .map((id) => src.children.find((n) => n.id === id))
+        .filter((n): n is Node => !!n);
+      if (!moving.length) return;
+      const movingIds = moving.map((n) => n.id);
+      // Convert source-page-local Y to destination-page-local Y (pages are stacked
+      // vertically and left-aligned at x=0, so only Y shifts).
+      const dy = pageTop(doc, srcIdx) - pageTop(doc, destIndex);
+      // Snapshot the reparented nodes (dest-local, at their final dragged spot) and
+      // the originals (source-local, at drag-start) so undo restores both cleanly.
+      const reparented = moving.map((n) => {
+        const c = structuredClone(n) as Node;
+        c.transform = { ...c.transform, y: c.transform.y + dy };
+        return c;
+      });
+      const originals = moving.map((n) => {
+        const c = structuredClone(n) as Node;
+        const b = before.get(n.id);
+        if (b) c.transform = structuredClone(b);
+        return c;
+      });
+      const prevSel = get().selection;
+      perform(
+        () => {
+          for (const id of movingIds) { const i = src.children.findIndex((n) => n.id === id); if (i >= 0) src.children.splice(i, 1); }
+          dst.children.push(...(structuredClone(reparented) as never[]));
+          set({ activePage: destIndex, selection: movingIds });
+        },
+        () => {
+          for (const id of movingIds) { const i = dst.children.findIndex((n) => n.id === id); if (i >= 0) dst.children.splice(i, 1); }
+          src.children.push(...(structuredClone(originals) as never[]));
+          set({ activePage: srcIdx, selection: prevSel });
+        },
       );
     },
     magicResizePages: (targets) => {

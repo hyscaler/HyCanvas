@@ -1151,6 +1151,12 @@ export function Canvas() {
   // two-finger pinch-zoom + pan about the fingers' midpoint.
   const pointers = useRef<Map<number, { clientX: number; clientY: number; type: string }>>(new Map());
   const pinch = useRef<{ startDist: number; startZoom: number; anchor: { x: number; y: number } } | null>(null);
+  // Coalesce move-drag updates to one apply per animation frame: pointermove can
+  // fire several times per frame (esp. on 120Hz trackpads), and each apply bumps
+  // the store rev (re-rendering the gizmo, panels, and canvas), so processing
+  // every event makes the dragged element and its handles trail the cursor.
+  const moveRaf = useRef<number | null>(null);
+  const movePending = useRef<{ clientX: number; clientY: number; shift: boolean } | null>(null);
   // Drives the grab/grabbing cursor while Space is held or a pan is in flight.
   const [spaceCursor, setSpaceCursor] = useState(false);
   // True when the select-tool pointer hovers a draggable node, so the canvas
@@ -1210,6 +1216,9 @@ export function Canvas() {
   // or committing anything. Used when a pinch takes over (FR-31) and on pointer
   // cancel, so a leftover finger can't resume a move/marquee/erase/draw afterward.
   const cancelInteraction = useCallbackRef(() => {
+    // Drop any queued move frame so a cancelled gesture doesn't apply late.
+    if (moveRaf.current != null) { cancelAnimationFrame(moveRaf.current); moveRaf.current = null; }
+    movePending.current = null;
     gesture.current = { type: "none" };
     penDraft.current = null;
     penDragging.current = false;
@@ -1641,6 +1650,92 @@ export function Canvas() {
     });
   }
 
+  // Apply the current move gesture for a pointer position (page-space) and
+  // shift-state. Extracted so it can run once per animation frame (see moveRaf).
+  const applyMove = useCallbackRef((clientX: number, clientY: number, shift: boolean) => {
+    const g = gesture.current;
+    if (g.type !== "move") return;
+    const page = api.toPage(localPoint({ clientX, clientY }));
+    const dx = page.x - g.startX;
+    const dy = page.y - g.startY;
+    const store = useEditor.getState();
+    const doc = store.doc;
+    for (const [id, start] of g.before) {
+      const loc = locate(doc, id);
+      if (!loc) continue;
+      // Move in the node's parent space so children of transformed groups
+      // track the cursor instead of sliding along the page axes.
+      const pd = parentSpaceDelta(doc, id, dx, dy);
+      const axisLock = shift ? (Math.abs(pd.dx) >= Math.abs(pd.dy) ? "x" : "y") : undefined;
+      loc.node.transform = moveTransform(start, pd.dx, pd.dy, axisLock);
+    }
+    // Snapping (top-level nodes only; Shift or snap-off = free move): grid when
+    // the grid is shown, otherwise smart guides to other objects/page edges
+    // (including page + object centers), plus manual ruler guides on top.
+    const movedIds = [...g.before.keys()];
+    const pageNode = doc.pages[Math.min(store.activePage, doc.pages.length - 1)];
+    const allTop = movedIds.every((id) => locate(doc, id)?.parent == null);
+    if (allTop && store.snapEnabled && !shift && pageNode) {
+      const box = unionAABB(doc, movedIds);
+      if (box) {
+        const zoom = api.viewport().zoom;
+        const threshold = 8 / zoom;
+        let sdx = 0, sdy = 0;
+        const gx2: number[] = [];
+        const gy2: number[] = [];
+        if (showGrid && gridSize > 0) {
+          const tx = Math.round(box.x / gridSize) * gridSize;
+          const ty = Math.round(box.y / gridSize) * gridSize;
+          if (Math.abs(tx - box.x) <= threshold) sdx = tx - box.x;
+          if (Math.abs(ty - box.y) <= threshold) sdy = ty - box.y;
+        } else {
+          const movingSet = new Set(movedIds);
+          const statics = pageNode.children
+            .filter((node) => !movingSet.has(node.id) && !node.hidden)
+            .map((node) => worldAABB(doc, node.id))
+            .filter((b): b is Rect => !!b);
+          const res = snap(box, statics, { threshold, pageRect: { x: 0, y: 0, width: pageNode.width, height: pageNode.height } });
+          sdx = res.dx; sdy = res.dy;
+          gx2.push(...res.guidesX); gy2.push(...res.guidesY);
+        }
+        // Snap edges/center to manual ruler guides.
+        const mg = store.guides[pageNode.id];
+        const nearest = (lines: number[], edges: number[]) => {
+          let best: { d: number; line: number } | null = null;
+          for (const line of lines) for (const ed of edges) {
+            const d = line - ed;
+            if (Math.abs(d) <= threshold && (!best || Math.abs(d) < Math.abs(best.d))) best = { d, line };
+          }
+          return best;
+        };
+        const rx = mg ? nearest(mg.x, [box.x + sdx, box.x + sdx + box.width / 2, box.x + sdx + box.width]) : null;
+        if (rx) { sdx += rx.d; gx2.push(rx.line); }
+        const ry = mg ? nearest(mg.y, [box.y + sdy, box.y + sdy + box.height / 2, box.y + sdy + box.height]) : null;
+        if (ry) { sdy += ry.d; gy2.push(ry.line); }
+        if (sdx !== 0 || sdy !== 0) {
+          for (const id of movedIds) {
+            const loc = locate(doc, id);
+            if (loc) loc.node.transform = { ...loc.node.transform, x: loc.node.transform.x + sdx, y: loc.node.transform.y + sdy };
+          }
+        }
+        setGuides(gx2.length || gy2.length ? { x: gx2, y: gy2 } : null);
+      }
+    } else {
+      setGuides(null);
+    }
+    store.setTransforming(true);
+    store.tick();
+  });
+
+  // Run any queued move immediately (called on pointer up/cancel so the final
+  // cursor position is applied before the gesture is committed to undo).
+  const flushMove = useCallbackRef(() => {
+    if (moveRaf.current != null) { cancelAnimationFrame(moveRaf.current); moveRaf.current = null; }
+    const p = movePending.current;
+    movePending.current = null;
+    if (p) applyMove(p.clientX, p.clientY, p.shift);
+  });
+
   function onPointerMove(e: React.PointerEvent) {
     // Keep the multi-touch tracker current, then drive an active pinch (FR-31):
     // zoom by the finger-distance ratio and pan so the start page-anchor stays
@@ -1719,76 +1814,16 @@ export function Canvas() {
     }
     const g = gesture.current;
     if (g.type === "move") {
-      const page = api.toPage(localPoint(e));
-      const dx = page.x - g.startX;
-      const dy = page.y - g.startY;
-      const store = useEditor.getState();
-      const doc = store.doc;
-      for (const [id, start] of g.before) {
-        const loc = locate(doc, id);
-        if (!loc) continue;
-        // Move in the node's parent space so children of transformed groups
-        // track the cursor instead of sliding along the page axes.
-        const pd = parentSpaceDelta(doc, id, dx, dy);
-        const axisLock = e.shiftKey ? (Math.abs(pd.dx) >= Math.abs(pd.dy) ? "x" : "y") : undefined;
-        loc.node.transform = moveTransform(start, pd.dx, pd.dy, axisLock);
+      // Queue the latest cursor position and process at most once per frame.
+      movePending.current = { clientX: e.clientX, clientY: e.clientY, shift: e.shiftKey };
+      if (moveRaf.current == null) {
+        moveRaf.current = requestAnimationFrame(() => {
+          moveRaf.current = null;
+          const p = movePending.current;
+          movePending.current = null;
+          if (p && gesture.current.type === "move") applyMove(p.clientX, p.clientY, p.shift);
+        });
       }
-      // Snapping (top-level nodes only; Shift or snap-off = free move): grid when
-      // the grid is shown, otherwise smart guides to other objects/page edges,
-      // plus snapping to manual ruler guides on top of either.
-      const movedIds = [...g.before.keys()];
-      const pageNode = doc.pages[Math.min(store.activePage, doc.pages.length - 1)];
-      const allTop = movedIds.every((id) => locate(doc, id)?.parent == null);
-      if (allTop && store.snapEnabled && !e.shiftKey && pageNode) {
-        const box = unionAABB(doc, movedIds);
-        if (box) {
-          const zoom = api.viewport().zoom;
-          const threshold = 8 / zoom;
-          let dx = 0, dy = 0;
-          const gx2: number[] = [];
-          const gy2: number[] = [];
-          if (showGrid && gridSize > 0) {
-            const tx = Math.round(box.x / gridSize) * gridSize;
-            const ty = Math.round(box.y / gridSize) * gridSize;
-            if (Math.abs(tx - box.x) <= threshold) dx = tx - box.x;
-            if (Math.abs(ty - box.y) <= threshold) dy = ty - box.y;
-          } else {
-            const movingSet = new Set(movedIds);
-            const statics = pageNode.children
-              .filter((node) => !movingSet.has(node.id) && !node.hidden)
-              .map((node) => worldAABB(doc, node.id))
-              .filter((b): b is Rect => !!b);
-            const res = snap(box, statics, { threshold, pageRect: { x: 0, y: 0, width: pageNode.width, height: pageNode.height } });
-            dx = res.dx; dy = res.dy;
-            gx2.push(...res.guidesX); gy2.push(...res.guidesY);
-          }
-          // Snap edges/center to manual ruler guides.
-          const mg = store.guides[pageNode.id];
-          const nearest = (lines: number[], edges: number[]) => {
-            let best: { d: number; line: number } | null = null;
-            for (const line of lines) for (const ed of edges) {
-              const d = line - ed;
-              if (Math.abs(d) <= threshold && (!best || Math.abs(d) < Math.abs(best.d))) best = { d, line };
-            }
-            return best;
-          };
-          const rx = mg ? nearest(mg.x, [box.x + dx, box.x + dx + box.width / 2, box.x + dx + box.width]) : null;
-          if (rx) { dx += rx.d; gx2.push(rx.line); }
-          const ry = mg ? nearest(mg.y, [box.y + dy, box.y + dy + box.height / 2, box.y + dy + box.height]) : null;
-          if (ry) { dy += ry.d; gy2.push(ry.line); }
-          if (dx !== 0 || dy !== 0) {
-            for (const id of movedIds) {
-              const loc = locate(doc, id);
-              if (loc) loc.node.transform = { ...loc.node.transform, x: loc.node.transform.x + dx, y: loc.node.transform.y + dy };
-            }
-          }
-          setGuides(gx2.length || gy2.length ? { x: gx2, y: gy2 } : null);
-        }
-      } else {
-        setGuides(null);
-      }
-      store.setTransforming(true);
-      store.tick();
     } else if (g.type === "marquee") {
       const s = localPoint(e);
       setMarquee({
@@ -1821,6 +1856,9 @@ export function Canvas() {
   }
 
   function onPointerUp(e: React.PointerEvent) {
+    // Apply any move frame still queued from the last pointermove, so the commit
+    // below records the exact final position (not one frame behind the cursor).
+    flushMove();
     // End any live-transform fade (a move gesture just ended or never started).
     useEditor.getState().setTransforming(false);
     // Multi-touch bookkeeping: drop the lifted pointer and end the pinch once
@@ -1920,24 +1958,36 @@ export function Canvas() {
     const g = gesture.current;
     const store = useEditor.getState();
     if (g.type === "move") {
-      const after: Transform[] = [];
-      const nodes: string[] = [];
-      let moved = false;
-      for (const [id, start] of g.before) {
-        const loc = locate(store.doc, id);
-        if (!loc) continue;
-        nodes.push(id);
-        after.push(loc.node.transform);
-        if (loc.node.transform.x !== start.x || loc.node.transform.y !== start.y) moved = true;
-      }
-      if (moved && nodes.length) {
-        const cmd: EditCommand = {
-          kind: "transform",
-          nodes,
-          before: nodes.map((id) => g.before.get(id)!),
-          after,
-        };
-        store.pushApplied([cmd]);
+      const movedIds = [...g.before.keys()];
+      // Cross-page drop: if the pointer is released over a DIFFERENT page and the
+      // moved nodes are all top-level, re-parent them into that page (Canva-style
+      // move-to-page) as one undo step, instead of leaving them stranded in the
+      // source page's coordinate space (which would render "under" the other page).
+      const srcIdx = Math.min(store.activePage, store.doc.pages.length - 1);
+      const destIdx = api.pageIndexAt(localPoint(e));
+      const allTop = movedIds.every((id) => locate(store.doc, id)?.parent == null);
+      if (allTop && destIdx >= 0 && destIdx !== srcIdx && movedIds.length) {
+        store.moveNodesToPage(movedIds, destIdx, g.before);
+      } else {
+        const after: Transform[] = [];
+        const nodes: string[] = [];
+        let moved = false;
+        for (const [id, start] of g.before) {
+          const loc = locate(store.doc, id);
+          if (!loc) continue;
+          nodes.push(id);
+          after.push(loc.node.transform);
+          if (loc.node.transform.x !== start.x || loc.node.transform.y !== start.y) moved = true;
+        }
+        if (moved && nodes.length) {
+          const cmd: EditCommand = {
+            kind: "transform",
+            nodes,
+            before: nodes.map((id) => g.before.get(id)!),
+            after,
+          };
+          store.pushApplied([cmd]);
+        }
       }
     } else if (g.type === "marquee" && marquee && (marquee.w > 2 || marquee.h > 2)) {
       const scene = api.scene();
@@ -1997,6 +2047,10 @@ export function Canvas() {
     canvas.addEventListener("wheel", handler, { passive: false });
     return () => canvas.removeEventListener("wheel", handler);
   }, [onWheel]);
+
+  // Cancel any queued move frame if the canvas unmounts mid-drag, so the rAF
+  // can't fire after teardown.
+  useEffect(() => () => { if (moveRaf.current != null) cancelAnimationFrame(moveRaf.current); }, []);
 
   // Keyboard: delete / undo / redo.
   useEffect(() => {
@@ -2225,7 +2279,9 @@ export function Canvas() {
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", up);
       const lp = localPoint(ev);
-      const onRuler = axis === "x" ? lp.y < RULER : lp.x < RULER;
+      // A horizontal guide (axis "y") comes from / returns to the TOP ruler; a
+      // vertical guide (axis "x") comes from / returns to the LEFT ruler.
+      const onRuler = axis === "y" ? lp.y < RULER : lp.x < RULER;
       const pos = toPos(ev);
       const st = useEditor.getState();
       if (index === null) {
@@ -2244,15 +2300,6 @@ export function Canvas() {
 
   // Page artboard rect in screen space (drives the drop-shadow behind the page).
   const apg = useEditor.getState().doc.pages[Math.min(activePage, useEditor.getState().doc.pages.length - 1)];
-  // First-run hint: show a centered, non-interactive prompt while the page has no
-  // nodes, the caller can edit, and we are not in a read-only history preview.
-  // Pointer-events-none keeps the canvas fully usable underneath; it vanishes the
-  // moment any node exists. (rev is already subscribed above, so this re-evaluates.)
-  const showEmptyHint =
-    !!apg &&
-    apg.children.length === 0 &&
-    usePresence.getState().canEdit() &&
-    !useEditor.getState().readonlyPreview();
   const pageTL = api.toScreen({ x: 0, y: 0 });
   const pageFrame = apg
     ? { left: pageTL.x, top: pageTL.y, width: apg.width * viewport.zoom, height: apg.height * viewport.zoom }
@@ -2312,16 +2359,6 @@ export function Canvas() {
             boxShadow: "0 10px 40px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)",
           }}
         />
-      )}
-      {showEmptyHint && (
-        <div className="pointer-events-none absolute inset-0 z-[5] grid place-items-center">
-          <div className="rounded-2xl border border-dashed border-neutral-300 bg-white/70 px-6 py-5 text-center backdrop-blur-sm">
-            <p className="text-sm font-medium text-neutral-700">Start designing</p>
-            <p className="mt-1 text-xs text-neutral-500">
-              Pick a tool from the left, drag to draw, or press Cmd+K.
-            </p>
-          </div>
-        </div>
       )}
       <div className="absolute left-3 top-3 z-10 flex flex-col gap-1 rounded-xl border border-neutral-200 bg-white p-1 shadow-md">
         {TOOLBAR.map((b, i) =>
@@ -2445,19 +2482,22 @@ export function Canvas() {
       {showRulers && apg && (
         <>
           <div className="absolute left-0 top-0 z-10 bg-white" style={{ width: RULER, height: RULER, borderRight: "1px solid #e5e5e5", borderBottom: "1px solid #e5e5e5" }} />
+          {/* Top ruler measures X; dragging DOWN from it pulls a horizontal guide
+              (axis "y"), matching Canva/Figma/Photoshop. */}
           <div
-            className="absolute top-0 z-10 cursor-ew-resize bg-white"
+            className="absolute top-0 z-10 cursor-ns-resize bg-white"
             style={{ left: RULER, right: 0, height: RULER, borderBottom: "1px solid #e5e5e5" }}
-            onPointerDown={(e) => beginGuide(e, "x", null)}
-            title="Drag down to add a vertical guide"
+            onPointerDown={(e) => beginGuide(e, "y", null)}
+            title="Drag down to add a horizontal guide"
           >
             <Ruler axis="x" api={api} page={apg} />
           </div>
+          {/* Left ruler measures Y; dragging RIGHT from it pulls a vertical guide. */}
           <div
-            className="absolute left-0 z-10 cursor-ns-resize bg-white"
+            className="absolute left-0 z-10 cursor-ew-resize bg-white"
             style={{ top: RULER, bottom: 0, width: RULER, borderRight: "1px solid #e5e5e5" }}
-            onPointerDown={(e) => beginGuide(e, "y", null)}
-            title="Drag right to add a horizontal guide"
+            onPointerDown={(e) => beginGuide(e, "x", null)}
+            title="Drag right to add a vertical guide"
           >
             <Ruler axis="y" api={api} page={apg} />
           </div>

@@ -103,14 +103,12 @@ export function useEditorCanvas(canvasRef: RefObject<HTMLCanvasElement | null>):
     const doc = useEditor.getState().doc;
     if (!doc.pages.length) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height); return; }
     const offs = pageOffsets(doc);
-    // Clip each page's content to its artboard so anything dragged past the edge
-    // crops at the page boundary (matching export), making the canvas size always
-    // visible. The whiteboard is an unbounded surface, so it is never clipped.
-    // While an element is being live-moved/resized we DON'T clip (so the whole
-    // element stays visible) and instead fade it, so the page shows through it.
-    const isBoard = (doc.meta as { kind?: string } | undefined)?.kind === "whiteboard";
+    // Pages are self-contained: content is clipped to its own artboard so pages
+    // don't bleed into each other. While dragging, we lift the clip on the edited
+    // Fade the element being dragged/resized so the page shows through it. Content
+    // is never clipped to the page, an element that extends past the edge stays
+    // visible on the pasteboard (Canva-style).
     const live = useEditor.getState().transforming;
-    const clipPage = !isBoard && !live;
     const fadeIds = live ? new Set(useEditor.getState().selection) : undefined;
     // Viewport culling: only draw pages whose stacked band intersects the visible
     // area (plus a half-screen buffer so scrolling reveals neighbors smoothly).
@@ -122,18 +120,34 @@ export function useEditorCanvas(canvasRef: RefObject<HTMLCanvasElement | null>):
     // Private mode (FR-15): visually hide other participants' new contributions
     // (empty set unless a private round is hiding, so the common path is free).
     const hiddenIds = useEditor.getState().privateHiddenIds();
-    let drawn = 0;
+    const activeIdx = Math.max(0, Math.min(useEditor.getState().activePage, doc.pages.length - 1));
+    const visible: number[] = [];
     for (let i = 0; i < doc.pages.length; i++) {
       const top = offs[i];
       const bottom = top + doc.pages[i].height;
       if (bottom < viewTop - buf || top > viewBottom + buf) continue;
-      const vp: Viewport = { ...base, panY: base.panY - top };
-      // Clear the whole canvas once (on the first drawn page), then composite the
-      // rest on top so stacked pages don't erase each other.
-      renderScene(getScene(i), ctx as unknown as CanvasLike, vp, { assets: imageAssets, clear: drawn === 0 ? undefined : false, skipNodeId, hiddenIds, clipPage, fadeIds });
-      drawn++;
+      visible.push(i);
     }
-    if (drawn === 0) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height); }
+    if (visible.length === 0) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    } else {
+      // Two-pass render so no page's content is ever clipped or covered by another
+      // page's background: pass 1 draws every visible page's background (bottom),
+      // pass 2 draws all content on top. Content that overflows a page edge stays
+      // visible on the pasteboard and above neighbouring pages' backgrounds.
+      visible.forEach((i, k) => {
+        const vp: Viewport = { ...base, panY: base.panY - offs[i] };
+        renderScene(getScene(i), ctx as unknown as CanvasLike, vp, { assets: imageAssets, clear: k === 0 ? undefined : false, backgroundOnly: true });
+      });
+      // Content pass. During a drag, draw the active page's content last so the
+      // dragged element sits above other pages' content too.
+      const order = live ? [...visible].sort((a, b) => (a === activeIdx ? 1 : 0) - (b === activeIdx ? 1 : 0)) : visible;
+      for (const i of order) {
+        const vp: Viewport = { ...base, panY: base.panY - offs[i] };
+        renderScene(getScene(i), ctx as unknown as CanvasLike, vp, { assets: imageAssets, clear: false, skipBackground: true, skipNodeId, hiddenIds, fadeIds });
+      }
+    }
   });
 
   // On a doc change, (re)register assets/fonts and repaint. Scenes rebuild lazily

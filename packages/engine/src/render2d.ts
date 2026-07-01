@@ -58,11 +58,13 @@ export interface Render2DOptions {
   /** Viewport culling + sub-pixel LOD (FR-27); default on. Set false to force a
    *  full paint of every node (e.g. off-screen thumbnail/export of a whole page). */
   cull?: boolean;
-  /** Clip page content to the artboard rect so overflow crops at the page edge
-   *  (matches export; keeps the canvas bounds unambiguous while dragging). Off by
-   *  default; the editor enables it for fixed-size pages but not the unbounded
-   *  whiteboard surface. */
-  clipPage?: boolean;
+  /** Draw ONLY the page background (fill), then return. Used by the editor's
+   *  two-pass stacked render: all page backgrounds first, so a later page's
+   *  background never covers an earlier page's overflowing content. */
+  backgroundOnly?: boolean;
+  /** Skip the page background fill and draw only the content. The other half of
+   *  the two-pass render (content composited on top of every background). */
+  skipBackground?: boolean;
   /** Node ids to render at reduced opacity (and their subtrees). The editor sets
    *  this to the element(s) being actively moved/resized so the page shows through
    *  them during the gesture (Canva-style). */
@@ -74,9 +76,6 @@ export interface Render2DOptions {
  *  connected node re-routes the connector on the next frame for free. */
 type BoxMap = Record<string, { x: number; y: number; width: number; height: number }>;
 
-// Opacity for the portion of content that overflows the artboard, painted under
-// the crisp clipped pass so off-canvas overflow reads as a faded ghost (Canva-style).
-const GHOST_OVERFLOW_ALPHA = 0.3;
 // Opacity for an element while it is actively being moved/resized, so the page
 // and content behind it show through (Canva-style live-transform translucency).
 const LIVE_TRANSFORM_ALPHA = 0.5;
@@ -1851,10 +1850,14 @@ export function renderScene(
   if ("filter" in ctx) ctx.filter = "none";
 
   const page = scene.file.pages.find((p) => p.id === scene.activePageId) ?? scene.file.pages[0];
-  if (page.background) {
+  if (!opts.skipBackground && page.background) {
     ctx.fillStyle = resolveFill(ctx, page.background, page.width, page.height);
     ctx.fillRect(0, 0, page.width, page.height);
   }
+  // Background-only pass (two-pass stacked render): the caller draws every page's
+  // background first, then a second pass draws all content on top, so content is
+  // never clipped and never covered by a neighbouring page's background.
+  if (opts.backgroundOnly) return;
 
   // Resolve connector endpoints against the live node boxes so attached
   // connectors re-route when a connected node moves (FR-4).
@@ -1870,41 +1873,10 @@ export function renderScene(
 
   const kids = scene.root.children;
   if (kids) {
-    const paintChildren = () => {
-      for (const child of kids) paint(ctx, child, 1, opts, boxes, cull);
-    };
-    if (opts.clipPage) {
-      // Canva-style artboard. Content is clipped crisply to the page, but if
-      // anything overflows the edge it is first painted faded underneath, so the
-      // user can see how much extends past the canvas (e.g. dragging an oversized
-      // image). The faded pass runs only when something actually overflows, so a
-      // normal page still paints once. The gizmo/selection lives in the DOM and is
-      // unaffected either way.
-      const eps = 0.5;
-      let overflows = false;
-      for (const id in boxes) {
-        const b = boxes[id];
-        if (b.x < -eps || b.y < -eps || b.x + b.width > page.width + eps || b.y + b.height > page.height + eps) {
-          overflows = true;
-          break;
-        }
-      }
-      if (overflows) {
-        // save/restore isolates the faded pass (globalAlpha + any transient state)
-        // so it cannot bleed into the crisp clipped pass below.
-        ctx.save();
-        ctx.globalAlpha = ctx.globalAlpha * GHOST_OVERFLOW_ALPHA;
-        paintChildren();
-        ctx.restore();
-      }
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(0, 0, page.width, page.height);
-      ctx.clip();
-      paintChildren();
-      ctx.restore();
-    } else {
-      paintChildren();
-    }
+    // Content is not clipped to the artboard: an element that extends past the
+    // page edge stays visible on the pasteboard (Canva-style). In the stacked
+    // multi-page view the caller uses the two-pass render (backgrounds first) so
+    // this overflow is never covered by another page's background.
+    for (const child of kids) paint(ctx, child, 1, opts, boxes, cull);
   }
 }
