@@ -65,13 +65,18 @@ const ROTATE_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(
     "</svg>",
 )}") 12 12, grab`;
 
-// The directional resize cursor for a handle, from its on-screen angle relative
-// to the box center. Screen space (y-down), so it stays correct when the node is
-// rotated: the cursor reflects the edge's actual orientation, snapped to the four
-// resize cursors at 45deg increments (matching Canva).
-function resizeCursor(p: { x: number; y: number }, center: { x: number; y: number }): string {
-  const deg = (Math.atan2(p.y - center.y, p.x - center.x) * 180) / Math.PI;
-  const a = ((deg % 180) + 180) % 180; // fold opposite handles together
+// The directional resize cursor for a handle. Derived from the handle's resize
+// direction in the BOX's own axes (fx,fy in 0..1), plus the box's on-screen
+// rotation, so corners always read as a diagonal (nwse/nesw) regardless of the
+// box's aspect ratio, and every handle stays correct when the node is rotated.
+// (Using the angle to the box center instead mislabels corners of a wide, short
+// box, e.g. a text box, as a horizontal ew-resize.) Snapped to the four resize
+// cursors at 45deg increments, matching Canva. `ex` is the box's screen-space
+// x-axis vector (top-right corner minus top-left).
+function resizeCursor(fx: number, fy: number, ex: { x: number; y: number }): string {
+  const baseDeg = (Math.atan2(fy - 0.5, fx - 0.5) * 180) / Math.PI; // outward dir in box space
+  const rotDeg = (Math.atan2(ex.y, ex.x) * 180) / Math.PI; // node's on-screen rotation
+  const a = (((baseDeg + rotDeg) % 180) + 180) % 180; // fold opposite handles together
   if (a < 22.5 || a >= 157.5) return "ew-resize";
   if (a < 67.5) return "nwse-resize";
   if (a < 112.5) return "ns-resize";
@@ -511,10 +516,12 @@ export function Gizmo({ api }: { api: CanvasApi }) {
   }
 
   const rot = corner(0.5, 0);
-  const center = corner(0.5, 0.5); // for rotation-aware resize cursors
   const top = corner(0.5, 0);
   const ne = corner(1, 0);
   const nw = corner(0, 0);
+  // Box's on-screen x-axis (top-left -> top-right), used to make resize cursors
+  // rotation-aware while staying independent of the box's aspect ratio.
+  const exAxis = { x: ne.x - nw.x, y: ne.y - nw.y };
   // Rotate handle sits ~26px outside the top edge along its outward normal.
   const edgeDx = ne.x - nw.x;
   const edgeDy = ne.y - nw.y;
@@ -545,7 +552,7 @@ export function Gizmo({ api }: { api: CanvasApi }) {
                 key={hd.id}
                 onPointerDown={(e) => beginResize(e, hd.id)}
                 className="absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-sm border border-[color:var(--color-selection)] bg-white"
-                style={{ left: p.x, top: p.y, cursor: resizeCursor(p, center) }}
+                style={{ left: p.x, top: p.y, cursor: resizeCursor(hd.fx, hd.fy, exAxis) }}
               />
             );
           })}

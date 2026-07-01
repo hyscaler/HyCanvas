@@ -37,7 +37,7 @@ import {
 } from "@/lib/assist";
 import { ApiError, type AiConfigView, type AssetFolder, type MiniAppSummary, type StockAssetSummary, type StockCollectionSummary, type StorageUsageView, type UploadedAsset } from "@hc/sdk";
 import { checkAppAction, type AppAction } from "@hc/stock";
-import { oc, resolveAssetUrl, stockProxyUrl } from "@/lib/sdk";
+import { oc, resolveAssetUrl, stockProxyUrl, uploadAssetWithProgress } from "@/lib/sdk";
 import type { BrandVoice, BrandLintViolation } from "@hc/sdk";
 import { useEditor, type BrandFixTarget } from "@/store/editor";
 import { useBrand } from "@/store/brand";
@@ -597,6 +597,9 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
   const svgRef = useRef<HTMLInputElement>(null);
   const pdfRef = useRef<HTMLInputElement>(null);
   const [assets, setAssets] = useState<UploadedAsset[]>([]);
+  // In-flight uploads shown as placeholder tiles with a live progress percentage
+  // (Canva-style), replaced by the real asset when each finishes.
+  const [uploading, setUploading] = useState<{ id: string; name: string; preview: string; progress: number; error: boolean }[]>([]);
   const [folders, setFolders] = useState<AssetFolder[]>([]);
   const [usage, setUsage] = useState<StorageUsageView | null>(null);
   const [folderId, setFolderId] = useState<string | null>(null); // null = all assets
@@ -640,18 +643,38 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
     if (!workspaceId) return;
     const imgs = files.filter((f) => f.type.startsWith("image/"));
     if (!imgs.length) { if (files.length) toast.error("Only image files can be uploaded."); return; }
+    // Show a placeholder tile per file immediately, with a live progress %.
+    const items = imgs.map((file) => ({ id: `up-${crypto.randomUUID()}`, name: file.name, preview: URL.createObjectURL(file), progress: 0, error: false, file }));
+    setUploading((cur) => [...items.map((it) => ({ id: it.id, name: it.name, preview: it.preview, progress: it.progress, error: it.error })), ...cur]);
+    const setPct = (id: string, progress: number) => setUploading((cur) => cur.map((u) => (u.id === id ? { ...u, progress } : u)));
+    const remove = (id: string) => setUploading((cur) => {
+      const u = cur.find((x) => x.id === id);
+      if (u) URL.revokeObjectURL(u.preview);
+      return cur.filter((x) => x.id !== id);
+    });
     let ok = 0;
     let overQuota = false;
-    for (const file of imgs) {
+    for (const it of items) {
       try {
-        const dataUrl = await readAsDataUrl(file);
+        const dataUrl = await readAsDataUrl(it.file);
         // Client-side thumbnail for the grid (perf): keeps full bytes server-side
         // but serves a tiny preview. Optional, so a decode failure is non-fatal.
-        const thumbnail = await makeThumbnail(file);
-        await oc.uploadAsset(workspaceId, { filename: file.name, dataBase64: dataUrl.split(",")[1] ?? "", folderId, thumbnail });
+        const thumbnail = await makeThumbnail(it.file);
+        const asset = await uploadAssetWithProgress(
+          workspaceId,
+          { filename: it.file.name, dataBase64: dataUrl.split(",")[1] ?? "", folderId, thumbnail },
+          (pct) => setPct(it.id, pct),
+        );
         ok++;
+        // Drop the placeholder and show the real asset in its place (no flicker).
+        setAssets((cur) => (cur.some((a) => a.id === asset.id) ? cur : [asset, ...cur]));
+        remove(it.id);
       } catch (e) {
         if (e instanceof ApiError && e.status === 413) overQuota = true;
+        else if (typeof e === "object" && e && (e as { status?: number }).status === 413) overQuota = true;
+        // Mark the tile failed, then clear it after a moment so the grid recovers.
+        setUploading((cur) => cur.map((u) => (u.id === it.id ? { ...u, error: true } : u)));
+        setTimeout(() => remove(it.id), 4000);
       }
     }
     if (ok) { toast.success(ok === 1 ? "Uploaded." : `Uploaded ${ok} images.`); await refresh(); }
@@ -918,12 +941,28 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
             </div>
           </div>
 
-          {loading && workspaceId ? (
+          {loading && workspaceId && uploading.length === 0 ? (
             <div className="grid place-items-center py-8 text-neutral-400"><Spinner /></div>
-          ) : assets.length === 0 ? (
+          ) : assets.length === 0 && uploading.length === 0 ? (
             <p className="py-6 text-center text-xs text-neutral-400">{debouncedQuery.trim() ? "No matching uploads." : "No uploads yet."}</p>
           ) : (
             <div className="grid grid-cols-2 gap-2">
+              {uploading.map((u) => (
+                <div key={u.id} className="relative overflow-hidden rounded-lg border border-neutral-200" title={u.error ? `${u.name} failed to upload` : `Uploading ${u.name}`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={u.preview} alt="" className="aspect-square w-full object-cover opacity-40" />
+                  <div className="absolute inset-0 grid place-items-center">
+                    {u.error
+                      ? <span className="text-[11px] font-semibold text-red-600">Failed</span>
+                      : <span className="text-sm font-semibold tabular-nums text-neutral-700">{u.progress}%</span>}
+                  </div>
+                  {!u.error && (
+                    <div className="absolute inset-x-0 bottom-0 h-1 bg-neutral-200">
+                      <div className="h-full bg-brand-600 transition-[width] duration-150 ease-out" style={{ width: `${u.progress}%` }} />
+                    </div>
+                  )}
+                </div>
+              ))}
               {assets.map((a) => (
             <div key={a.id} className="group relative overflow-hidden rounded-lg border border-neutral-200 hover:border-brand-300">
               <button

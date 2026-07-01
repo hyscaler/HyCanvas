@@ -76,8 +76,10 @@ export function MiniMap() {
     useEditor.getState().setViewport({ panX: px - visX / 2, panY: py - visY / 2 });
   };
 
+  // Sits above the zoom control (pinned at bottom-4 right-4) so the two do not
+  // overlap in the bottom-right corner.
   return (
-    <div className="absolute bottom-3 right-3 z-10 overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-md" style={{ width: mw, height: mh }}>
+    <div className="absolute bottom-16 right-4 z-10 overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-md" style={{ width: mw, height: mh }}>
       <canvas
         ref={canvasRef}
         className="block cursor-pointer"
