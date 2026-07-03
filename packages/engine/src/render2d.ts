@@ -69,6 +69,14 @@ export interface Render2DOptions {
    *  this to the element(s) being actively moved/resized so the page shows through
    *  them during the gesture (Canva-style). */
   fadeIds?: ReadonlySet<string>;
+  /** Clip each top-level element to the page rectangle so content that overflows
+   *  the artboard is hidden (Canva-style clean page edges). Off by default so
+   *  export/thumbnail render the full content. `revealIds` are exempt. */
+  clipToPage?: boolean;
+  /** Top-level node ids exempt from `clipToPage`, drawn unclipped so their
+   *  overflow is visible. The editor sets this to the current selection so a
+   *  selected element reveals the parts hidden past the page edge. */
+  revealIds?: ReadonlySet<string>;
 }
 
 /** Absolute page-space box of a node, keyed by node id. Used to resolve
@@ -79,6 +87,10 @@ type BoxMap = Record<string, { x: number; y: number; width: number; height: numb
 // Opacity for an element while it is actively being moved/resized, so the page
 // and content behind it show through (Canva-style live-transform translucency).
 const LIVE_TRANSFORM_ALPHA = 0.5;
+// Opacity for the part of a selected element that spills past the page edge, so
+// the revealed overflow reads as "outside the artboard" while the in-page part
+// stays crisp (Canva-style pasteboard dimming).
+const OVERFLOW_REVEAL_ALPHA = 0.4;
 const PLACEHOLDER_FILL = "rgba(0, 0, 0, 0.06)";
 const PLACEHOLDER_STROKE = "rgba(0, 0, 0, 0.25)";
 const MISSING_FILL = "rgba(220, 38, 38, 0.10)";
@@ -1873,10 +1885,59 @@ export function renderScene(
 
   const kids = scene.root.children;
   if (kids) {
-    // Content is not clipped to the artboard: an element that extends past the
-    // page edge stays visible on the pasteboard (Canva-style). In the stacked
-    // multi-page view the caller uses the two-pass render (backgrounds first) so
-    // this overflow is never covered by another page's background.
-    for (const child of kids) paint(ctx, child, 1, opts, boxes, cull);
+    // Page clipping (Canva-style): each top-level element is clipped to the page
+    // rect so overflow past the artboard edge is hidden, keeping clean page edges.
+    // Selected/transforming nodes (revealIds) draw unclipped so their hidden
+    // overflow reappears while selected. When clipToPage is off (export/thumbnail)
+    // nothing is clipped, so the full content still renders. Clipping is per-node
+    // (not one clip for the whole pass) to preserve z-order between clipped and
+    // revealed elements.
+    const reveal = opts.revealIds;
+    const fade = opts.fadeIds;
+    const pw = page.width, ph = page.height;
+    const OUT = 1e6; // outer bound for the "outside the page" inverse clip
+    const clipToRect = () => { ctx.beginPath(); ctx.rect(0, 0, pw, ph); ctx.clip(); };
+    for (const child of kids) {
+      const n = child.node;
+      if (!opts.clipToPage) {
+        paint(ctx, child, 1, opts, boxes, cull); // unclipped (export/thumbnail/whiteboard)
+        continue;
+      }
+      if (reveal && reveal.has(n.id)) {
+        // Revealed (selected). During an active transform the whole element is
+        // already faded (fadeIds), so draw it once unclipped. Otherwise show the
+        // in-page part crisp and the overflow dimmed, so it reads as off-artboard.
+        if (fade && fade.has(n.id)) {
+          paint(ctx, child, 1, opts, boxes, cull);
+        } else {
+          ctx.save(); clipToRect(); paint(ctx, child, 1, opts, boxes, cull); ctx.restore();
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(-OUT, -OUT, OUT * 2, OUT * 2);
+          ctx.rect(0, 0, pw, ph);
+          ctx.clip("evenodd"); // everything except the page rect
+          paint(ctx, child, OVERFLOW_REVEAL_ALPHA, opts, boxes, cull);
+          ctx.restore();
+        }
+        continue;
+      }
+      // Not revealed: clip overflow to the page (hidden). Fast path: a leaf,
+      // unrotated node whose box is fully in-bounds can't overflow, so skip the
+      // per-node clip entirely (the common case).
+      const b = boxes[n.id];
+      const t = n.transform;
+      // Only skip the clip when the box is a reliable, axis-aligned footprint:
+      // unrotated and un-flipped (negative scale mirrors the box to the other
+      // side of the origin, so buildBoxMap's positive-magnitude box would be
+      // mis-placed and could hide a real overflow).
+      const axisAligned = (t?.rotation ?? 0) === 0 && (t?.scaleX ?? 1) > 0 && (t?.scaleY ?? 1) > 0;
+      const inBounds = !isContainer(n) && axisAligned && !!b &&
+        b.x >= 0 && b.y >= 0 && b.x + b.width <= pw && b.y + b.height <= ph;
+      if (inBounds) {
+        paint(ctx, child, 1, opts, boxes, cull);
+      } else {
+        ctx.save(); clipToRect(); paint(ctx, child, 1, opts, boxes, cull); ctx.restore();
+      }
+    }
   }
 }

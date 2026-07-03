@@ -105,7 +105,7 @@ export interface CanvasLike {
   ): void;
   fill(): void;
   stroke(): void;
-  clip(): void;
+  clip(fillRule?: "nonzero" | "evenodd"): void;
   fillText(text: string, x: number, y: number): void;
   /** Optional glyph stroke for outlined/hollow text. */
   strokeText?(text: string, x: number, y: number): void;

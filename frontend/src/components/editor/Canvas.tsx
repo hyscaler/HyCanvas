@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MousePointer2, PenTool, Pencil, Minus, MoveUpRight, Square, Circle, Type, MessageSquarePlus, Copy, ClipboardPaste, CopyPlus, Trash2, Group, Ungroup, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, FlipHorizontal2, FlipVertical2, Paintbrush, PaintBucket, Lock, LockOpen, Eye, EyeOff, BoxSelect } from "lucide-react";
 import type { CharStyle, Color, Paragraph, TextNode, Transform } from "@hc/schema";
-import { locate, moveTransform, marqueeSelect, parentSpaceDelta, worldMatrix, worldAABB, unionAABB, snap, type EditCommand } from "@hc/editor";
+import { locate, moveTransform, marqueeSelect, parentSpaceDelta, worldMatrix, worldAABB, unionAABB, snap, spacingSnap, type SpacingGuide, type EditCommand } from "@hc/editor";
 import { fitStickyFontScale, routeConnector } from "@hc/whiteboard";
 import { layoutText } from "@hc/text";
 import { canvasFontString, fontFamilyStack, weightFromFontStyle, type Rect } from "@hc/engine";
@@ -103,6 +103,9 @@ const COMMAND_ACTIONS: Record<string, { edit: boolean; run: (s: EditorState) => 
   "history.redo": { edit: true, run: (s) => s.redo() },
   "clipboard.copy": { edit: false, run: (s) => s.copySelection() },
   "clipboard.cut": { edit: true, run: (s) => s.cutSelection() },
+  "clipboard.pasteInPlace": { edit: true, run: (s) => s.pasteInPlace() },
+  "clipboard.copyStyle": { edit: false, run: (s) => s.copyStyle() },
+  "clipboard.pasteStyle": { edit: true, run: (s) => s.pasteStyle() },
   "selection.duplicate": { edit: true, run: (s) => s.duplicateSelection() },
   "selection.selectAll": { edit: false, run: (s) => s.selectAll() },
   "selection.group": { edit: true, run: (s) => s.group() },
@@ -1121,6 +1124,7 @@ export function Canvas() {
   const [editingConnectorLabel, setEditingConnectorLabel] = useState<string | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
   const [guides, setGuides] = useState<{ x: number[]; y: number[] } | null>(null);
+  const [spacingGuides, setSpacingGuides] = useState<SpacingGuide[]>([]);
   // Pen rubber-band: cursor position (screen) for the preview from the last anchor.
   const [penPreview, setPenPreview] = useState<{ x: number; y: number } | null>(null);
   // Pencil (freehand): collected page-space points and a screen-space preview
@@ -1164,12 +1168,27 @@ export function Canvas() {
   // change, not on every pointer move.
   const [hoverMove, setHoverMove] = useState(false);
   const hoverMoveRef = useRef(false);
+  // Id of the top-level node the select-tool pointer is idling over, so the
+  // canvas draws a faint outline on it before you click (Canva-style). Deduped
+  // via a ref so we only re-render when the hovered node actually changes.
+  // Hovered top-level node lives in the store so the canvas render loop can reveal
+  // its off-page overflow on hover (Canva-style). The ref dedupes store writes.
+  const hoverId = useEditor((s) => s.hoverId);
+  const hoverIdRef = useRef<string | null>(null);
+  // True while Alt/Option is held during an idle hover: reveals the pixel
+  // distance between the selection and the hovered element (Figma/Canva measure).
+  const [hoverAlt, setHoverAlt] = useState(false);
+  const hoverAltRef = useRef(false);
+  // First digit + timestamp of an opacity keypress, so a quick second digit
+  // combines into a two-digit percent (Figma-style: "2" then "5" -> 25%).
+  const opacityKey = useRef<{ first: number; at: number } | null>(null);
   const tool = useEditor((s) => s.tool);
   const brush = useEditor((s) => s.brush);
   // Whiteboard surface enables drag-to-connect; harmless elsewhere (never shown).
   const isWhiteboard = useEditor((s) => (s.doc.meta as { kind?: string } | undefined)?.kind === "whiteboard");
   const canComment = useComments((s) => s.canComment);
   const selection = useEditor((s) => s.selection);
+  const transforming = useEditor((s) => s.transforming);
   const cropping = useEditor((s) => s.cropping);
   const viewport = useEditor((s) => s.viewport);
   const activePage = useEditor((s) => s.activePage);
@@ -1230,6 +1249,10 @@ export function Canvas() {
     setPenPreview(null);
     setPencilPreview(null);
     setMarquee(null);
+    // A cancelled move (e.g. a pinch taking over) must not leave its smart-guide
+    // or equal-spacing overlays stuck on screen.
+    setGuides(null);
+    setSpacingGuides([]);
   });
 
   function onPenDown(e: React.PointerEvent) {
@@ -1276,6 +1299,17 @@ export function Canvas() {
       if (isWhiteboard && usePresence.getState().canEdit() && !useEditor.getState().readonlyPreview()) {
         const id = useEditor.getState().addStickyAt(page.x, page.y);
         setEditingSticky(id);
+      } else if (
+        // Empty design canvas: double-click drops a text box centered on the
+        // cursor and opens it for typing (Canva/Figma-style). Only with the
+        // select tool, so the other tools' double-click behavior is unchanged.
+        !isWhiteboard &&
+        useEditor.getState().tool === "select" &&
+        usePresence.getState().canEdit() &&
+        !useEditor.getState().readonlyPreview()
+      ) {
+        const id = useEditor.getState().addTextAt(page.x - 120, page.y - 22);
+        setEditing(id);
       }
       return;
     }
@@ -1633,10 +1667,18 @@ export function Canvas() {
   }
 
   function onPointerLeave() {
-    // Drop the hover-move cursor when the pointer leaves the surface.
+    // Drop the hover-move cursor + outline when the pointer leaves the surface.
     if (hoverMoveRef.current) {
       hoverMoveRef.current = false;
       setHoverMove(false);
+    }
+    if (hoverIdRef.current !== null) {
+      hoverIdRef.current = null;
+      useEditor.getState().setHoverId(null);
+    }
+    if (hoverAltRef.current) {
+      hoverAltRef.current = false;
+      setHoverAlt(false);
     }
     // Clear our cursor (and any laser beam) for peers when the pointer leaves the
     // canvas (FR-5/FR-17).
@@ -1683,6 +1725,7 @@ export function Canvas() {
         let sdx = 0, sdy = 0;
         const gx2: number[] = [];
         const gy2: number[] = [];
+        let statics: Rect[] = [];
         if (showGrid && gridSize > 0) {
           const tx = Math.round(box.x / gridSize) * gridSize;
           const ty = Math.round(box.y / gridSize) * gridSize;
@@ -1690,7 +1733,7 @@ export function Canvas() {
           if (Math.abs(ty - box.y) <= threshold) sdy = ty - box.y;
         } else {
           const movingSet = new Set(movedIds);
-          const statics = pageNode.children
+          statics = pageNode.children
             .filter((node) => !movingSet.has(node.id) && !node.hidden)
             .map((node) => worldAABB(doc, node.id))
             .filter((b): b is Rect => !!b);
@@ -1712,6 +1755,22 @@ export function Canvas() {
         if (rx) { sdx += rx.d; gx2.push(rx.line); }
         const ry = mg ? nearest(mg.y, [box.y + sdy, box.y + sdy + box.height / 2, box.y + sdy + box.height]) : null;
         if (ry) { sdy += ry.d; gy2.push(ry.line); }
+        // Equal-spacing (distribution) guides on axes an alignment/ruler guide
+        // hasn't already claimed. Skipped in grid mode. These give the Canva-style
+        // pink "matching gap" bars when the box is evenly spaced with neighbors.
+        const spacing: SpacingGuide[] = [];
+        if (!showGrid) {
+          const cur = { x: box.x + sdx, y: box.y + sdy, width: box.width, height: box.height };
+          if (gx2.length === 0) {
+            const sp = spacingSnap(cur, statics, "x", threshold);
+            if (sp.guide) { sdx += sp.delta; cur.x += sp.delta; spacing.push(sp.guide); }
+          }
+          if (gy2.length === 0) {
+            const sp = spacingSnap(cur, statics, "y", threshold);
+            if (sp.guide) { sdy += sp.delta; spacing.push(sp.guide); }
+          }
+        }
+        setSpacingGuides(spacing);
         if (sdx !== 0 || sdy !== 0) {
           for (const id of movedIds) {
             const loc = locate(doc, id);
@@ -1722,6 +1781,7 @@ export function Canvas() {
       }
     } else {
       setGuides(null);
+      setSpacingGuides([]);
     }
     store.setTransforming(true);
     store.tick();
@@ -1734,6 +1794,31 @@ export function Canvas() {
     const p = movePending.current;
     movePending.current = null;
     if (p) applyMove(p.clientX, p.clientY, p.shift);
+  });
+
+  // Abandon an in-progress move/marquee, restoring the dragged nodes to where
+  // the gesture started (Escape mid-drag, pro-editor style). Nothing is pushed
+  // to history. The pointer stays captured; the eventual pointer-up sees a
+  // "none" gesture and just releases it without committing.
+  const cancelDrag = useCallbackRef(() => {
+    const g = gesture.current;
+    if (g.type !== "move" && g.type !== "marquee") return false;
+    if (moveRaf.current != null) { cancelAnimationFrame(moveRaf.current); moveRaf.current = null; }
+    movePending.current = null;
+    if (g.type === "move") {
+      const store = useEditor.getState();
+      for (const [id, start] of g.before) {
+        const loc = locate(store.doc, id);
+        if (loc) loc.node.transform = { ...start };
+      }
+      store.tick();
+    }
+    gesture.current = { type: "none" };
+    setMarquee(null);
+    setGuides(null);
+    setSpacingGuides([]);
+    useEditor.getState().setTransforming(false);
+    return true;
   });
 
   function onPointerMove(e: React.PointerEvent) {
@@ -1833,11 +1918,23 @@ export function Canvas() {
         h: Math.abs(s.y - g.startY),
       });
     } else if (t === "select" && !spaceHeld.current) {
-      // Idle hover: show a move cursor over a draggable node (Canva-style).
-      const over = !!api.scene()?.hitTest(api.toPage(localPoint(e)));
+      // Idle hover: show a move cursor + faint outline over a draggable node
+      // (Canva-style). Outline targets the same top-level node a click selects.
+      const hit = api.scene()?.hitTest(api.toPage(localPoint(e)));
+      const over = !!hit;
       if (over !== hoverMoveRef.current) {
         hoverMoveRef.current = over;
         setHoverMove(over);
+      }
+      const hid = hit ? topAncestorId(useEditor.getState().doc, hit.id) : null;
+      if (hid !== hoverIdRef.current) {
+        hoverIdRef.current = hid;
+        useEditor.getState().setHoverId(hid);
+      }
+      const alt = e.altKey;
+      if (alt !== hoverAltRef.current) {
+        hoverAltRef.current = alt;
+        setHoverAlt(alt);
       }
     }
   }
@@ -2007,6 +2104,7 @@ export function Canvas() {
     gesture.current = { type: "none" };
     setMarquee(null);
     setGuides(null);
+    setSpacingGuides([]);
     canvasRef.current?.releasePointerCapture(e.pointerId);
   }
 
@@ -2071,6 +2169,13 @@ export function Canvas() {
         }
         return;
       }
+      // Holding Alt reveals the hover measurement immediately (even without
+      // moving the mouse); released in onKeyUp. Doesn't consume the event, so
+      // Alt-based chords still work.
+      if (e.key === "Alt" && !hoverAltRef.current) {
+        hoverAltRef.current = true;
+        setHoverAlt(true);
+      }
       const store = useEditor.getState();
       // The crop overlay and present mode own the keyboard; don't let canvas
       // shortcuts (delete/undo/nudge/...) mutate the doc underneath them. A
@@ -2130,10 +2235,17 @@ export function Canvas() {
           return;
         }
       }
-      if ((e.key === "Escape" || e.key === "Enter") && penDraft.current) {
+      if (e.key === "Escape" && cancelDrag()) {
+        // Esc mid-drag snaps the selection back to where it started; it does not
+        // also clear the selection (that only happens on Esc when idle).
+        e.preventDefault();
+      } else if ((e.key === "Escape" || e.key === "Enter") && penDraft.current) {
         e.preventDefault();
         finishPen();
-      } else if (e.key === "Escape" && store.selection.length) {
+      } else if (e.key === "Escape" && store.selection.length && !useEditor.getState().transforming) {
+        // Esc clears the selection only when idle. While a gizmo resize/rotate is
+        // live (transforming, but not a canvas move gesture), the gizmo's own Esc
+        // handler reverts and keeps the selection, so don't clear it here.
         e.preventDefault();
         store.clearSelection();
       } else if (
@@ -2183,6 +2295,23 @@ export function Canvas() {
         const d: Record<string, [number, number]> = { ArrowLeft: [-s, 0], ArrowRight: [s, 0], ArrowUp: [0, -s], ArrowDown: [0, s] };
         const v = d[e.key];
         if (v) store.nudge(v[0], v[1]);
+      } else if (/^[0-9]$/.test(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && store.selection.length) {
+        // Type a digit to set the selection's opacity (Figma-style): a single
+        // digit is tens (1 = 10% ... 9 = 90%, 0 = 100%); a second digit within
+        // 600ms combines into an exact percent ("2" then "5" -> 25%).
+        if (!canEdit) return;
+        e.preventDefault();
+        const d = Number(e.key);
+        const now = Date.now();
+        const combo = opacityKey.current;
+        if (combo && now - combo.at < 600) {
+          const pct = Math.min(100, Math.max(1, combo.first * 10 + d));
+          store.setOpacitySel(pct / 100);
+          opacityKey.current = null;
+        } else {
+          store.setOpacitySel(d === 0 ? 1 : d / 10);
+          opacityKey.current = { first: d, at: now };
+        }
       } else if (e.shiftKey && e.code === "Digit1") {
         e.preventDefault();
         store.fitToScreen();
@@ -2197,6 +2326,11 @@ export function Canvas() {
       if (e.code === "Space" || e.key === " ") {
         spaceHeld.current = false;
         if (!panning.current) setSpaceCursor(false);
+      }
+      // Releasing Alt hides the hover measurement immediately (see keydown).
+      if (e.key === "Alt" && hoverAltRef.current) {
+        hoverAltRef.current = false;
+        setHoverAlt(false);
       }
     };
     // System-clipboard paste (Canva-style): paste an image/screenshot or text
@@ -2259,7 +2393,7 @@ export function Canvas() {
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("paste", onPaste);
     };
-  }, [finishPen]);
+  }, [finishPen, cancelDrag]);
 
   // Drag a guide out of a ruler (index null) or move an existing one. Dropping
   // an existing guide back onto its ruler removes it.
@@ -2509,6 +2643,114 @@ export function Canvas() {
           style={{ left: marquee.x, top: marquee.y, width: marquee.w, height: marquee.h }}
         />
       )}
+      {tool === "select" && !transforming && hoverId && !selection.includes(hoverId) && (() => {
+        // Faint outline on the node under the idle pointer, so it's clear what a
+        // click will select. Hidden for already-selected nodes (the gizmo shows
+        // those) and during any live transform. A leaf node's outline follows its
+        // rotation (polygon through its transformed corners); a group falls back
+        // to its axis-aligned bounds.
+        const doc = useEditor.getState().doc;
+        const loc = locate(doc, hoverId);
+        const m = worldMatrix(doc, hoverId);
+        // Polygon (rotation-aware) only for nodes with a real size box; groups,
+        // connectors, and zero-size nodes fall back to axis-aligned bounds.
+        if (loc && m && loc.node.type !== "group" && loc.node.size.width > 0 && loc.node.size.height > 0) {
+          const { width: hw, height: hh } = loc.node.size;
+          const ap = (x: number, y: number) => api.toScreen({ x: m.a * x + m.c * y + m.e, y: m.b * x + m.d * y + m.f });
+          const pts = [ap(0, 0), ap(hw, 0), ap(hw, hh), ap(0, hh)].map((p) => `${p.x},${p.y}`).join(" ");
+          return (
+            <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
+              <polygon points={pts} fill="none" stroke={overlay.selection} strokeWidth={1.5} opacity={0.45} />
+            </svg>
+          );
+        }
+        const b = worldAABB(doc, hoverId);
+        if (!b) return null;
+        const tl = api.toScreen({ x: b.x, y: b.y });
+        const br = api.toScreen({ x: b.x + b.width, y: b.y + b.height });
+        return (
+          <div
+            className="pointer-events-none absolute"
+            style={{ left: Math.min(tl.x, br.x), top: Math.min(tl.y, br.y), width: Math.abs(br.x - tl.x), height: Math.abs(br.y - tl.y), outline: `1.5px solid ${overlay.selection}`, opacity: 0.45 }}
+          />
+        );
+      })()}
+      {hoverAlt && tool === "select" && !transforming && selection.length === 1 && (() => {
+        // Alt-hover measure. Over another element: the empty gap between it and
+        // the selection on whichever axes they're apart. Over empty canvas: the
+        // selection's distance to each page edge (Figma "distance to frame"). All
+        // drawn in active-page-local coords, so the selection must be on the
+        // active page (a stale cross-page selection is skipped).
+        const doc = useEditor.getState().doc;
+        const activePageNode = doc.pages[Math.min(useEditor.getState().activePage, doc.pages.length - 1)];
+        const la = locate(doc, selection[0]);
+        if (!la || la.page !== activePageNode) return null;
+        const a = worldAABB(doc, selection[0]);
+        if (!a) return null;
+        const aR = a.x + a.width, aB = a.y + a.height;
+        const CAP = 4;
+        const els: React.ReactElement[] = [];
+        const pill = (cx: number, cy: number, text: string, key: string) => {
+          const w = text.length * 6.2 + 8;
+          return (
+            <g key={key}>
+              <rect x={cx - w / 2} y={cy - 7} width={w} height={14} rx={3} fill={overlay.guideConflict} />
+              <text x={cx} y={cy + 3} fontSize={9} fontWeight={600} textAnchor="middle" fill="#ffffff">{text}</text>
+            </g>
+          );
+        };
+        const hBar = (x1: number, x2: number, yPage: number, key: string) => {
+          if (x2 - x1 <= 0.5) return;
+          const p1 = api.toScreen({ x: x1, y: yPage }), p2 = api.toScreen({ x: x2, y: yPage });
+          els.push(
+            <g key={key}>
+              <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke={overlay.guideConflict} strokeWidth={1} />
+              <line x1={p1.x} y1={p1.y - CAP} x2={p1.x} y2={p1.y + CAP} stroke={overlay.guideConflict} strokeWidth={1} />
+              <line x1={p2.x} y1={p2.y - CAP} x2={p2.x} y2={p2.y + CAP} stroke={overlay.guideConflict} strokeWidth={1} />
+            </g>,
+          );
+          els.push(pill((p1.x + p2.x) / 2, (p1.y + p2.y) / 2 - 9, String(Math.round(x2 - x1)), key + "l"));
+        };
+        const vBar = (y1: number, y2: number, xPage: number, key: string) => {
+          if (y2 - y1 <= 0.5) return;
+          const p1 = api.toScreen({ x: xPage, y: y1 }), p2 = api.toScreen({ x: xPage, y: y2 });
+          els.push(
+            <g key={key}>
+              <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke={overlay.guideConflict} strokeWidth={1} />
+              <line x1={p1.x - CAP} y1={p1.y} x2={p1.x + CAP} y2={p1.y} stroke={overlay.guideConflict} strokeWidth={1} />
+              <line x1={p2.x - CAP} y1={p2.y} x2={p2.x + CAP} y2={p2.y} stroke={overlay.guideConflict} strokeWidth={1} />
+            </g>,
+          );
+          els.push(pill((p1.x + p2.x) / 2 + 12, (p1.y + p2.y) / 2, String(Math.round(y2 - y1)), key + "l"));
+        };
+        const target = hoverId && !selection.includes(hoverId) ? hoverId : null;
+        if (target) {
+          // Measure to a hovered element on the same page.
+          if (locate(doc, target)?.page !== la.page) return null;
+          const b = worldAABB(doc, target);
+          if (!b) return null;
+          const bR = b.x + b.width, bB = b.y + b.height;
+          if (b.x >= aR || bR <= a.x) {
+            const loY = Math.max(a.y, b.y), hiY = Math.min(aB, bB);
+            const yPage = loY <= hiY ? (loY + hiY) / 2 : (a.y + a.height / 2 + b.y + b.height / 2) / 2;
+            hBar(b.x >= aR ? aR : bR, b.x >= aR ? b.x : a.x, yPage, "mh");
+          }
+          if (b.y >= aB || bB <= a.y) {
+            const loX = Math.max(a.x, b.x), hiX = Math.min(aR, bR);
+            const xPage = loX <= hiX ? (loX + hiX) / 2 : (a.x + a.width / 2 + b.x + b.width / 2) / 2;
+            vBar(b.y >= aB ? aB : bB, b.y >= aB ? b.y : a.y, xPage, "mv");
+          }
+        } else {
+          // Measure the selection's distance to each page edge.
+          const cx = a.x + a.width / 2, cy = a.y + a.height / 2;
+          hBar(0, a.x, cy, "pl");
+          hBar(aR, la.page.width, cy, "pr");
+          vBar(0, a.y, cx, "pt");
+          vBar(aB, la.page.height, cx, "pb");
+        }
+        if (!els.length) return null;
+        return <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">{els}</svg>;
+      })()}
       {(guides ?? snapGuides) && (() => {
         const live = guides ?? snapGuides!;
         const vp = api.viewport();
@@ -2524,6 +2766,56 @@ export function Canvas() {
             })}
           </svg>
         );
+      })()}
+      {spacingGuides.length > 0 && (() => {
+        // Equal-spacing indicators: a capped bar over each matching gap with its
+        // size, mirroring Canva's pink distribution guides. Bars sit on the
+        // moving box's centerline (segment.cross); labels ride each gap's middle.
+        const CAP = 4; // end-tick half length in screen px
+        const els: React.ReactElement[] = [];
+        spacingGuides.forEach((sg, gi) => {
+          const text = String(Math.round(sg.gap));
+          const lw = text.length * 6.2 + 8;
+          sg.segments.forEach((seg, si) => {
+            const key = `sp${gi}-${si}`;
+            if (sg.axis === "x") {
+              const y = api.toScreen({ x: 0, y: seg.cross }).y;
+              const x1 = api.toScreen({ x: seg.from, y: 0 }).x;
+              const x2 = api.toScreen({ x: seg.to, y: 0 }).x;
+              els.push(
+                <g key={key}>
+                  <line x1={x1} y1={y} x2={x2} y2={y} stroke={overlay.guideConflict} strokeWidth={1} />
+                  <line x1={x1} y1={y - CAP} x2={x1} y2={y + CAP} stroke={overlay.guideConflict} strokeWidth={1} />
+                  <line x1={x2} y1={y - CAP} x2={x2} y2={y + CAP} stroke={overlay.guideConflict} strokeWidth={1} />
+                  {sg.gap >= 1 && (
+                    <g>
+                      <rect x={(x1 + x2) / 2 - lw / 2} y={y - 15} width={lw} height={14} rx={3} fill={overlay.guideConflict} />
+                      <text x={(x1 + x2) / 2} y={y - 5} fontSize={9} fontWeight={600} textAnchor="middle" fill="#ffffff">{text}</text>
+                    </g>
+                  )}
+                </g>,
+              );
+            } else {
+              const x = api.toScreen({ x: seg.cross, y: 0 }).x;
+              const y1 = api.toScreen({ x: 0, y: seg.from }).y;
+              const y2 = api.toScreen({ x: 0, y: seg.to }).y;
+              els.push(
+                <g key={key}>
+                  <line x1={x} y1={y1} x2={x} y2={y2} stroke={overlay.guideConflict} strokeWidth={1} />
+                  <line x1={x - CAP} y1={y1} x2={x + CAP} y2={y1} stroke={overlay.guideConflict} strokeWidth={1} />
+                  <line x1={x - CAP} y1={y2} x2={x + CAP} y2={y2} stroke={overlay.guideConflict} strokeWidth={1} />
+                  {sg.gap >= 1 && (
+                    <g>
+                      <rect x={x + 6} y={(y1 + y2) / 2 - 7} width={lw} height={14} rx={3} fill={overlay.guideConflict} />
+                      <text x={x + 6 + lw / 2} y={(y1 + y2) / 2 + 3} fontSize={9} fontWeight={600} textAnchor="middle" fill="#ffffff">{text}</text>
+                    </g>
+                  )}
+                </g>,
+              );
+            }
+          });
+        });
+        return <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">{els}</svg>;
       })()}
       {tool === "pen" && penDraft.current && penPreview && (() => {
         const n = locate(useEditor.getState().doc, penDraft.current.id)?.node;

@@ -3,13 +3,14 @@
 // at the node's true transformed corners), or a union box for multi-selection.
 // Handles drive @hc/editor transform ops; one drag = one undo step.
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import type { Size, Transform } from "@hc/schema";
 import { overlay } from "@/lib/theme.generated";
 import {
   locate,
   parentSpaceDelta,
   resizeNode,
+  resizeSpacingSnap,
   rotateAboutCenter,
   unionAABB,
   worldAABB,
@@ -17,7 +18,7 @@ import {
   type EditCommand,
   type HandleId,
 } from "@hc/editor";
-import type { Mat2D } from "@hc/engine";
+import type { Mat2D, Rect } from "@hc/engine";
 import { useEditor } from "@/store/editor";
 import { usePresence } from "@/store/presence";
 import { useBrand } from "@/store/brand";
@@ -109,6 +110,7 @@ function surfacePoint(e: { clientX: number; clientY: number }) {
 function SelectionGizmo({ api, ids }: { api: CanvasApi; ids: string[] }) {
   useEditor((s) => s.rev);
   useEditor((s) => s.viewport);
+  const transforming = useEditor((s) => s.transforming);
   const drag = useRef<{
     mode: "resize" | "rotate";
     fx: number;
@@ -173,6 +175,27 @@ function SelectionGizmo({ api, ids }: { api: CanvasApi; ids: string[] }) {
     useEditor.getState().setTransforming(true);
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
+    window.addEventListener("keydown", onKey);
+  }
+
+  // Escape abandons the resize/rotate, restoring every node to its start
+  // transform without pushing to history (pro-editor style).
+  function onKey(e: KeyboardEvent) {
+    if (e.key !== "Escape") return;
+    e.preventDefault();
+    const d = drag.current;
+    drag.current = null;
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", onUp);
+    window.removeEventListener("keydown", onKey);
+    useEditor.getState().setTransforming(false);
+    if (!d) return;
+    const store = useEditor.getState();
+    for (const [id, t0] of d.before) {
+      const loc = locate(store.doc, id);
+      if (loc) loc.node.transform = { ...t0 };
+    }
+    store.tick();
   }
 
   function onMove(e: PointerEvent) {
@@ -208,6 +231,12 @@ function SelectionGizmo({ api, ids }: { api: CanvasApi; ids: string[] }) {
       const ang = Math.atan2(p.y - d.center.y, p.x - d.center.x);
       let deltaDeg = ((ang - d.startAngle) * 180) / Math.PI;
       if (e.shiftKey) deltaDeg = Math.round(deltaDeg / 15) * 15;
+      else if (useEditor.getState().snapEnabled) {
+        // Soft-snap the group rotation to the nearest 45 deg (straight/diagonal)
+        // when within a few degrees, so it clicks into clean angles like Canva.
+        const n = Math.round(deltaDeg / 45) * 45;
+        if (Math.abs(deltaDeg - n) < 3) deltaDeg = n;
+      }
       const rad = (deltaDeg * Math.PI) / 180;
       const cos = Math.cos(rad);
       const sin = Math.sin(rad);
@@ -232,6 +261,7 @@ function SelectionGizmo({ api, ids }: { api: CanvasApi; ids: string[] }) {
     drag.current = null;
     window.removeEventListener("pointermove", onMove);
     window.removeEventListener("pointerup", onUp);
+    window.removeEventListener("keydown", onKey);
     useEditor.getState().setTransforming(false);
     if (!d) return;
     const store = useEditor.getState();
@@ -288,6 +318,14 @@ function SelectionGizmo({ api, ids }: { api: CanvasApi; ids: string[] }) {
           style={{ left: sx(h.fx), top: sy(h.fy), cursor: h.cursor }}
         />
       ))}
+      {transforming && box && (
+        <div
+          className="pointer-events-none absolute -translate-x-1/2 whitespace-nowrap rounded bg-neutral-800/90 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-white shadow"
+          style={{ left: sx(0.5), top: sy(1) + 14 }}
+        >
+          {Math.round(box.width)} × {Math.round(box.height)}
+        </div>
+      )}
     </>
   );
 }
@@ -321,6 +359,8 @@ export function Gizmo({ api }: { api: CanvasApi }) {
   // Subscribe to rev + viewport so the overlay tracks edits and pan/zoom.
   useEditor((s) => s.rev);
   useEditor((s) => s.viewport);
+  // Show a live size/angle readout while the selection is being moved/resized/rotated.
+  const transforming = useEditor((s) => s.transforming);
   // Subscribe to the lock map so handles appear/disappear as a peer locks/unlocks.
   usePresence((s) => s.locks);
   const drag = useRef<{
@@ -334,6 +374,29 @@ export function Gizmo({ api }: { api: CanvasApi }) {
     startContent?: unknown; // text run snapshot, for font-scaling on corner-resize
     startBox?: unknown; // text box snapshot, kept in sync with size so text reflows
   } | null>(null);
+  // Equal-size match during a resize: the sibling width/height the dragged
+  // dimension has snapped to (null = no match on that axis). The state drives
+  // the "same size" outlines in render; the ref mirrors it so the pointermove
+  // handler can dedupe and only re-render when the match actually changes.
+  const [sizeMatch, setSizeMatch] = useState<{ w: number | null; h: number | null }>({ w: null, h: null });
+  const sizeMatchRef = useRef<{ w: number | null; h: number | null }>({ w: null, h: null });
+  const updateSizeMatch = (w: number | null, h: number | null) => {
+    if (sizeMatchRef.current.w === w && sizeMatchRef.current.h === h) return;
+    sizeMatchRef.current = { w, h };
+    setSizeMatch({ w, h });
+  };
+  // Equal-spacing match during a resize: the two now-equal gaps (page coords)
+  // between the resized box and its neighbors on the dragged axis, so the render
+  // can draw the "matching gap" bars. Deduped on the resulting position.
+  type SpacingHint = { axis: "x" | "y"; gap: number; s1: [number, number]; s2: [number, number]; cross: number } | null;
+  const [spacingMatch, setSpacingMatch] = useState<SpacingHint>(null);
+  const spacingMatchRef = useRef<SpacingHint>(null);
+  const updateSpacingMatch = (h: SpacingHint) => {
+    const p = spacingMatchRef.current;
+    if (p === h || (p && h && p.axis === h.axis && p.gap === h.gap && p.s1[0] === h.s1[0] && p.s1[1] === h.s1[1] && p.s2[0] === h.s2[0] && p.s2[1] === h.s2[1])) return;
+    spacingMatchRef.current = h;
+    setSpacingMatch(h);
+  };
 
   const doc = useEditor.getState().doc;
   if (selection.length === 0) return null;
@@ -385,6 +448,37 @@ export function Gizmo({ api }: { api: CanvasApi }) {
     useEditor.getState().setTransforming(true);
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
+    window.addEventListener("keydown", onKey);
+  }
+
+  // Escape abandons the resize/rotate, restoring the node to its start state
+  // (transform + size, and for text the reflowed box + font-scaled content)
+  // without pushing to history.
+  function onKey(e: KeyboardEvent) {
+    if (e.key !== "Escape") return;
+    e.preventDefault();
+    const d = drag.current;
+    drag.current = null;
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", onUp);
+    window.removeEventListener("keydown", onKey);
+    const store = useEditor.getState();
+    store.setSnapGuides(null);
+    updateSizeMatch(null, null);
+    updateSpacingMatch(null);
+    store.setTransforming(false);
+    if (!d) return;
+    const node = locate(store.doc, d.id)?.node;
+    if (node) {
+      node.transform = { ...d.startTransform };
+      node.size = { ...d.startSize };
+      if (node.type === "text") {
+        const tn = node as unknown as { box: unknown; content: unknown };
+        if (d.startBox !== undefined) tn.box = structuredClone(d.startBox);
+        if (d.startContent !== undefined) tn.content = structuredClone(d.startContent);
+      }
+      store.tick();
+    }
   }
 
   // Convert a clientX/clientY point to canvas-local screen coordinates.
@@ -402,7 +496,14 @@ export function Gizmo({ api }: { api: CanvasApi }) {
     if (!node) return;
     if (d.handle === "rotate") {
       const ang = Math.atan2(page.y - d.center!.y, page.x - d.center!.x);
-      const deltaDeg = ((ang - (d.startAngle ?? 0)) * 180) / Math.PI;
+      let deltaDeg = ((ang - (d.startAngle ?? 0)) * 180) / Math.PI;
+      if (!e.shiftKey && useEditor.getState().snapEnabled) {
+        // Soft-snap the resulting angle to the nearest 45 deg when within a few
+        // degrees, so the element clicks into straight/diagonal (Canva-style).
+        const finalDeg = (d.startTransform.rotation ?? 0) + deltaDeg;
+        const n = Math.round(finalDeg / 45) * 45;
+        if (Math.abs(finalDeg - n) < 3) deltaDeg += n - finalDeg;
+      }
       node.transform = rotateAboutCenter(d.startTransform, d.startSize, deltaDeg, e.shiftKey);
     } else {
       // Convert the page-space drag into the node's parent space so resizing a
@@ -436,17 +537,26 @@ export function Gizmo({ api }: { api: CanvasApi }) {
         Math.abs(d.startTransform.scaleY) === 1;
       const gx: number[] = [];
       const gy: number[] = [];
+      let matchW: number | null = null;
+      let matchH: number | null = null;
+      let spacingHint: SpacingHint = null;
       if (canSnap) {
         const T = 6 / api.viewport().zoom;
         const pg = loc2!.page;
         const xs = [0, pg.width, pg.width / 2];
         const ys = [0, pg.height, pg.height / 2];
+        const widths: number[] = [];
+        const heights: number[] = [];
+        const sibBoxes: Rect[] = [];
         for (const sib of loc2!.siblings) {
           if (sib.id === d.id || (sib as { hidden?: boolean }).hidden) continue;
           const b = worldAABB(store.doc, sib.id);
           if (!b) continue;
           xs.push(b.x, b.x + b.width, b.x + b.width / 2);
           ys.push(b.y, b.y + b.height, b.y + b.height / 2);
+          widths.push(b.width);
+          heights.push(b.height);
+          sibBoxes.push(b);
         }
         const nearest = (cur: number, targets: number[]) => {
           let best: number | null = null;
@@ -463,9 +573,53 @@ export function Gizmo({ api }: { api: CanvasApi }) {
         if (hid.includes("e")) { const t = nearest(right, xs); if (t != null) { right = t; gx.push(t); } }
         if (hid.includes("n")) { const t = nearest(top, ys); if (t != null) { top = t; gy.push(t); } }
         if (hid.includes("s")) { const t = nearest(bottom, ys); if (t != null) { bottom = t; gy.push(t); } }
+        // Equal-size: on an axis the edge-snap didn't already claim, snap the
+        // dragged dimension to a sibling's matching width/height (Canva-style).
+        // The anchor edge stays put; the moving edge shifts to hit the size.
+        if (!gx.length && (hid.includes("w") || hid.includes("e"))) {
+          const t = nearest(right - left, widths);
+          if (t != null) { matchW = t; if (hid.includes("e")) right = left + t; else left = right - t; }
+        }
+        if (!gy.length && (hid.includes("n") || hid.includes("s"))) {
+          const t = nearest(bottom - top, heights);
+          if (t != null) { matchH = t; if (hid.includes("s")) bottom = top + t; else top = bottom - t; }
+        }
+        // Snap-to-square (1:1): on a single-axis edge drag, if the dragged
+        // dimension comes within threshold of the box's other (fixed) dimension,
+        // snap to equal so it becomes a perfect square. Only when neither an edge
+        // nor an equal-size snap already claimed the axis; the W x H readout shows it.
+        let squared = false;
+        if (hid.length === 1) {
+          if (!gx.length && matchW == null && (hid === "e" || hid === "w")) {
+            const h = bottom - top;
+            if (Math.abs((right - left) - h) < T) { if (hid === "e") right = left + h; else left = right - h; squared = true; }
+          } else if (!gy.length && matchH == null && (hid === "n" || hid === "s")) {
+            const w = right - left;
+            if (Math.abs((bottom - top) - w) < T) { if (hid === "s") bottom = top + w; else top = bottom - w; squared = true; }
+          }
+        }
+        // Equal-spacing on resize (lowest precedence, single-axis edge only): move
+        // the dragged edge so the box's two neighbor-gaps become equal. Delegated
+        // to the pure, unit-tested resizeSpacingSnap. Only when no edge/equal-size/
+        // square snap already claimed the axis.
+        const spacingAxisFree =
+          hid === "e" || hid === "w" ? !gx.length && matchW == null :
+          hid === "n" || hid === "s" ? !gy.length && matchH == null : false;
+        if (hid.length === 1 && !squared && spacingAxisFree) {
+          const rs = resizeSpacingSnap({ x: left, y: top, width: right - left, height: bottom - top }, hid as "e" | "w" | "n" | "s", sibBoxes, T);
+          if (rs) {
+            if (hid === "e") right += rs.delta;
+            else if (hid === "w") left += rs.delta;
+            else if (hid === "s") bottom += rs.delta;
+            else top += rs.delta;
+            spacingHint = { axis: rs.axis, gap: rs.gap, s1: rs.s1, s2: rs.s2, cross: rs.cross };
+          }
+        }
         tf = { ...tf, x: left, y: top };
         size = { width: Math.max(1, right - left), height: Math.max(1, bottom - top) };
       }
+      updateSizeMatch(matchW, matchH);
+      updateSpacingMatch(spacingHint);
       node.transform = tf;
       node.size = size;
       store.setSnapGuides(gx.length || gy.length ? { x: gx, y: gy } : null);
@@ -492,12 +646,26 @@ export function Gizmo({ api }: { api: CanvasApi }) {
     drag.current = null;
     window.removeEventListener("pointermove", onMove);
     window.removeEventListener("pointerup", onUp);
+    window.removeEventListener("keydown", onKey);
     useEditor.getState().setTransforming(false);
     if (!d) return;
     const store = useEditor.getState();
     store.setSnapGuides(null);
+    updateSizeMatch(null, null);
+    updateSpacingMatch(null);
     const node = locate(store.doc, d.id)?.node;
     if (!node) return;
+    // A handle click that didn't actually drag (transform + size unchanged) must
+    // not push an empty undo step. Text box/font only change alongside size on an
+    // edge/corner drag, so transform+size covers those too.
+    const t0 = d.startTransform;
+    const t1 = node.transform;
+    const changed =
+      t1.x !== t0.x || t1.y !== t0.y ||
+      t1.scaleX !== t0.scaleX || t1.scaleY !== t0.scaleY ||
+      t1.rotation !== t0.rotation ||
+      node.size.width !== d.startSize.width || node.size.height !== d.startSize.height;
+    if (!changed) return;
     // Any text resize changed the box (and corners the font too); capture box +
     // content in the undo so it round-trips.
     if (node.type === "text" && d.handle !== "rotate") {
@@ -543,6 +711,109 @@ export function Gizmo({ api }: { api: CanvasApi }) {
         />
         <line x1={rot.x} y1={rot.y} x2={rotPos.x} y2={rotPos.y} stroke={overlay.selection} strokeWidth={1.5} />
       </svg>
+      {transforming && (sizeMatch.w != null || sizeMatch.h != null) && (() => {
+        // Equal-size hint (Canva-style): a dimension bar on the matched edge of
+        // the resized element and every sibling that now shares that width/height,
+        // so it's clear they're equal. The resized element's bar carries the label.
+        const d = useEditor.getState().doc;
+        const sm = sizeMatch;
+        const near = (x: number, y: number) => Math.abs(x - y) < 0.6;
+        const self = worldAABB(d, id);
+        const wBoxes: Rect[] = [];
+        const hBoxes: Rect[] = [];
+        if (self) { if (sm.w != null) wBoxes.push(self); if (sm.h != null) hBoxes.push(self); }
+        for (const s of loc.siblings) {
+          if (s.id === id || (s as { hidden?: boolean }).hidden) continue;
+          const b = worldAABB(d, s.id);
+          if (!b) continue;
+          if (sm.w != null && near(b.width, sm.w)) wBoxes.push(b);
+          if (sm.h != null && near(b.height, sm.h)) hBoxes.push(b);
+        }
+        const OFF = 10, CAP = 4;
+        const els: React.ReactElement[] = [];
+        const seg = (x1: number, y1: number, x2: number, y2: number, k: string) => (
+          <line key={k} x1={x1} y1={y1} x2={x2} y2={y2} stroke={overlay.guideConflict} strokeWidth={1} />
+        );
+        const pill = (cx: number, cy: number, text: string, k: string) => {
+          const w = text.length * 6.2 + 8;
+          return (
+            <g key={k}>
+              <rect x={cx - w / 2} y={cy - 7} width={w} height={14} rx={3} fill={overlay.guideConflict} />
+              <text x={cx} y={cy + 3} fontSize={9} fontWeight={600} textAnchor="middle" fill="#ffffff">{text}</text>
+            </g>
+          );
+        };
+        wBoxes.forEach((b, i) => {
+          const y = api.toScreen({ x: 0, y: b.y + b.height }).y + OFF;
+          const x1 = api.toScreen({ x: b.x, y: 0 }).x;
+          const x2 = api.toScreen({ x: b.x + b.width, y: 0 }).x;
+          els.push(<g key={`w${i}`}>{seg(x1, y, x2, y, "l")}{seg(x1, y - CAP, x1, y + CAP, "a")}{seg(x2, y - CAP, x2, y + CAP, "b")}</g>);
+        });
+        hBoxes.forEach((b, i) => {
+          const x = api.toScreen({ x: b.x + b.width, y: 0 }).x + OFF;
+          const y1 = api.toScreen({ x: 0, y: b.y }).y;
+          const y2 = api.toScreen({ x: 0, y: b.y + b.height }).y;
+          els.push(<g key={`h${i}`}>{seg(x, y1, x, y2, "l")}{seg(x - CAP, y1, x + CAP, y1, "a")}{seg(x - CAP, y2, x + CAP, y2, "b")}</g>);
+        });
+        if (self && sm.w != null) {
+          const y = api.toScreen({ x: 0, y: self.y + self.height }).y + OFF;
+          const cx = (api.toScreen({ x: self.x, y: 0 }).x + api.toScreen({ x: self.x + self.width, y: 0 }).x) / 2;
+          els.push(pill(cx, y - 10, String(Math.round(sm.w)), "wl"));
+        }
+        if (self && sm.h != null) {
+          const x = api.toScreen({ x: self.x + self.width, y: 0 }).x + OFF;
+          const cy = (api.toScreen({ x: 0, y: self.y }).y + api.toScreen({ x: 0, y: self.y + self.height }).y) / 2;
+          els.push(pill(x + 12, cy, String(Math.round(sm.h)), "hl"));
+        }
+        return els.length ? <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">{els}</svg> : null;
+      })()}
+      {transforming && spacingMatch && (() => {
+        // Equal-spacing hint: the two now-equal gaps between the resized box and
+        // its neighbors on the dragged axis, each shown as a capped bar + label.
+        const sm = spacingMatch;
+        const CAP = 4;
+        const els: React.ReactElement[] = [];
+        const label = String(Math.round(sm.gap));
+        const lw = label.length * 6.2 + 8;
+        const drawSeg = (from: number, to: number, key: string) => {
+          if (sm.axis === "x") {
+            const y = api.toScreen({ x: 0, y: sm.cross }).y;
+            const x1 = api.toScreen({ x: from, y: 0 }).x, x2 = api.toScreen({ x: to, y: 0 }).x;
+            els.push(
+              <g key={key}>
+                <line x1={x1} y1={y} x2={x2} y2={y} stroke={overlay.guideConflict} strokeWidth={1} />
+                <line x1={x1} y1={y - CAP} x2={x1} y2={y + CAP} stroke={overlay.guideConflict} strokeWidth={1} />
+                <line x1={x2} y1={y - CAP} x2={x2} y2={y + CAP} stroke={overlay.guideConflict} strokeWidth={1} />
+                {to - from > 1 && (
+                  <g>
+                    <rect x={(x1 + x2) / 2 - lw / 2} y={y - 15} width={lw} height={14} rx={3} fill={overlay.guideConflict} />
+                    <text x={(x1 + x2) / 2} y={y - 5} fontSize={9} fontWeight={600} textAnchor="middle" fill="#ffffff">{label}</text>
+                  </g>
+                )}
+              </g>,
+            );
+          } else {
+            const x = api.toScreen({ x: sm.cross, y: 0 }).x;
+            const y1 = api.toScreen({ x: 0, y: from }).y, y2 = api.toScreen({ x: 0, y: to }).y;
+            els.push(
+              <g key={key}>
+                <line x1={x} y1={y1} x2={x} y2={y2} stroke={overlay.guideConflict} strokeWidth={1} />
+                <line x1={x - CAP} y1={y1} x2={x + CAP} y2={y1} stroke={overlay.guideConflict} strokeWidth={1} />
+                <line x1={x - CAP} y1={y2} x2={x + CAP} y2={y2} stroke={overlay.guideConflict} strokeWidth={1} />
+                {to - from > 1 && (
+                  <g>
+                    <rect x={x + 6} y={(y1 + y2) / 2 - 7} width={lw} height={14} rx={3} fill={overlay.guideConflict} />
+                    <text x={x + 6 + lw / 2} y={(y1 + y2) / 2 + 3} fontSize={9} fontWeight={600} textAnchor="middle" fill="#ffffff">{label}</text>
+                  </g>
+                )}
+              </g>,
+            );
+          }
+        };
+        drawSeg(sm.s1[0], sm.s1[1], "sp1");
+        drawSeg(sm.s2[0], sm.s2[1], "sp2");
+        return <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">{els}</svg>;
+      })()}
       {!locked && (
         <>
           {HANDLES.map((hd) => {
@@ -563,6 +834,21 @@ export function Gizmo({ api }: { api: CanvasApi }) {
           />
         </>
       )}
+      {transforming && (() => {
+        // Live readout below the box: W x H (page units), plus the angle when the
+        // element is rotated. Updates each frame as size/rotation change.
+        const bc = corner(0.5, 1);
+        const deg = Math.round((((loc.node.transform.rotation ?? 0) % 360) + 360) % 360);
+        const label = deg ? `${Math.round(w)} × ${Math.round(h)}  ·  ${deg}°` : `${Math.round(w)} × ${Math.round(h)}`;
+        return (
+          <div
+            className="pointer-events-none absolute -translate-x-1/2 whitespace-nowrap rounded bg-neutral-800/90 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-white shadow"
+            style={{ left: bc.x, top: bc.y + 14 }}
+          >
+            {label}
+          </div>
+        );
+      })()}
     </>
   );
 }

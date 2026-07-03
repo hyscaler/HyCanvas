@@ -14,6 +14,7 @@ import { useEffect, useRef, type RefObject } from "react";
 import { createScene, type CanvasLike, type Point, type Scene, type Viewport } from "@hc/engine";
 import { pageToScreen, screenToPage } from "@hc/engine";
 import { renderScene } from "@hc/engine";
+import { locate } from "@hc/editor";
 import { useEditor } from "@/store/editor";
 import { imageAssets } from "@/lib/assetProvider";
 import { fonts } from "@/lib/fontProvider";
@@ -41,6 +42,7 @@ export function useEditorCanvas(canvasRef: RefObject<HTMLCanvasElement | null>):
   const activePage = useEditor((s) => s.activePage);
   const editingTextId = useEditor((s) => s.editingTextId);
   const transforming = useEditor((s) => s.transforming);
+  const hoverId = useEditor((s) => s.hoverId);
   const docId = useEditor((s) => s.doc.id);
 
   // Re-arm the one-time center+fit when a different document is loaded in place.
@@ -103,13 +105,37 @@ export function useEditorCanvas(canvasRef: RefObject<HTMLCanvasElement | null>):
     const doc = useEditor.getState().doc;
     if (!doc.pages.length) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height); return; }
     const offs = pageOffsets(doc);
-    // Pages are self-contained: content is clipped to its own artboard so pages
-    // don't bleed into each other. While dragging, we lift the clip on the edited
-    // Fade the element being dragged/resized so the page shows through it. Content
-    // is never clipped to the page, an element that extends past the edge stays
-    // visible on the pasteboard (Canva-style).
+    // Content is clipped to its own page (Canva-style clean edges): an element that
+    // overflows the artboard is hidden on the pasteboard, EXCEPT the current
+    // selection, which draws unclipped so a selected element reveals the parts
+    // hidden past the edge (and can be resized back). Fade the element being
+    // dragged/resized so the page shows through it during the gesture.
     const live = useEditor.getState().transforming;
-    const fadeIds = live ? new Set(useEditor.getState().selection) : undefined;
+    const selection = useEditor.getState().selection;
+    const fadeIds = live ? new Set(selection) : undefined;
+    // Reveal (draw unclipped) the selection's TOP-LEVEL ancestors, since the page
+    // clip is applied per top-level element. Whiteboards are an unbounded surface,
+    // so never page-clip them.
+    const isBoard = (doc.meta as { kind?: string } | undefined)?.kind === "whiteboard";
+    const clipToPage = !isBoard;
+    const topAncestor = (id: string): string => {
+      let cur = id;
+      for (let i = 0; i < 64; i++) {
+        const loc = locate(doc, cur);
+        if (!loc || !loc.parent) return cur;
+        cur = loc.parent.id;
+      }
+      return cur;
+    };
+    // Reveal the selection AND the hovered element, so an overflowing element
+    // shows its off-page overflow (dimmed) on hover, matching the hover outline.
+    // Skip hover-reveal during a live transform: hoverId isn't updated mid-drag,
+    // so a stale hover could otherwise reveal an unrelated element.
+    const hovered = !live ? useEditor.getState().hoverId : null;
+    const revealSrc = hovered ? [...selection, hovered] : selection;
+    const revealIds = clipToPage && revealSrc.length
+      ? new Set(revealSrc.map(topAncestor))
+      : undefined;
     // Viewport culling: only draw pages whose stacked band intersects the visible
     // area (plus a half-screen buffer so scrolling reveals neighbors smoothly).
     const z = base.zoom || 1;
@@ -145,7 +171,7 @@ export function useEditorCanvas(canvasRef: RefObject<HTMLCanvasElement | null>):
       const order = live ? [...visible].sort((a, b) => (a === activeIdx ? 1 : 0) - (b === activeIdx ? 1 : 0)) : visible;
       for (const i of order) {
         const vp: Viewport = { ...base, panY: base.panY - offs[i] };
-        renderScene(getScene(i), ctx as unknown as CanvasLike, vp, { assets: imageAssets, clear: false, skipBackground: true, skipNodeId, hiddenIds, fadeIds });
+        renderScene(getScene(i), ctx as unknown as CanvasLike, vp, { assets: imageAssets, clear: false, skipBackground: true, skipNodeId, hiddenIds, fadeIds, clipToPage, revealIds });
       }
     }
   });
@@ -163,10 +189,11 @@ export function useEditorCanvas(canvasRef: RefObject<HTMLCanvasElement | null>):
   useEffect(() => imageAssets.onChange(() => render()), [render]);
   useEffect(() => fonts.onChange(() => render()), [render]);
 
-  // Repaint on viewport, active-page, text-edit (skip), or live-transform change.
+  // Repaint on viewport, active-page, text-edit (skip), live-transform, or hover
+  // change (hover reveals a selected/overflowing element's off-page overflow).
   useEffect(() => {
     render();
-  }, [viewport, activePage, editingTextId, transforming, render]);
+  }, [viewport, activePage, editingTextId, transforming, hoverId, render]);
 
   // Repaint on container resize.
   useEffect(() => {

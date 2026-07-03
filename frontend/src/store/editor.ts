@@ -317,6 +317,7 @@ interface EditorState {
   snapGuides: { x: number[]; y: number[] } | null; // transient smart-guide preview (shared by move/resize)
   activePage: number; // index of the page being edited
   transforming: boolean; // true while an element is being live-moved/resized (fades it so the page shows through)
+  hoverId: string | null; // top-level node the select-tool pointer is idling over; the canvas reveals its off-page overflow (Canva-style)
   undoStack: UndoEntry[];
   redoStack: UndoEntry[];
 
@@ -383,6 +384,7 @@ interface EditorState {
   /** Mark a live move/resize gesture active so the canvas fades the selection
    *  (the page shows through it during the drag). Cleared on gesture end. */
   setTransforming(v: boolean): void;
+  setHoverId(id: string | null): void;
   /** Add a blank page after the current one, undoable. Defaults to the current
    *  page's size; pass a size to add a differently-sized page. */
   addPage(size?: { width: number; height: number }): void;
@@ -553,7 +555,10 @@ interface EditorState {
   // clipboard + quick edits
   copySelection(): void;
   cutSelection(): void;
-  paste(): void;
+  /** Paste the internal clipboard, nudged by `offset` px (default 24). */
+  paste(offset?: number): void;
+  /** Paste the internal clipboard at the copied position (Cmd+Shift+V). */
+  pasteInPlace(): void;
   /** Paste design nodes pasted from the system clipboard (cross-tab/refresh, or
    *  another design): re-id, offset, insert on the active page, and select. */
   pasteNodes(nodes: Node[]): void;
@@ -1090,6 +1095,7 @@ export const useEditor = create<EditorState>((set, get) => {
     playing: false,
     activePage: 0,
     transforming: false,
+    hoverId: null,
     viewportSize: { width: 0, height: 0 },
     undoStack: [],
     redoStack: [],
@@ -1177,6 +1183,7 @@ export const useEditor = create<EditorState>((set, get) => {
     },
 
     setTransforming: (v) => set((s) => (s.transforming === v ? {} : { transforming: v })),
+    setHoverId: (id) => set((s) => (s.hoverId === id ? {} : { hoverId: id })),
     setActivePage: (index) =>
       set((s) => ({
         activePage: Math.max(0, Math.min(index, s.doc.pages.length - 1)),
@@ -3005,10 +3012,10 @@ export const useEditor = create<EditorState>((set, get) => {
       get().copySelection();
       if (get().selection.length) get().deleteSelection();
     },
-    paste: () => {
+    paste: (offset = 24) => {
       if (!clipboardNodes?.length) return;
       const { nodes } = remapIds(structuredClone(clipboardNodes));
-      nodes.forEach((n) => { n.transform = { ...n.transform, x: n.transform.x + 24, y: n.transform.y + 24 }; });
+      if (offset) nodes.forEach((n) => { n.transform = { ...n.transform, x: n.transform.x + offset, y: n.transform.y + offset }; });
       const page = get().doc.pages[curPageIndex()];
       const ids = nodes.map((n) => n.id);
       const prev = get().selection;
@@ -3021,6 +3028,7 @@ export const useEditor = create<EditorState>((set, get) => {
       );
       { const pr = get().privateRound; if (pr) ids.forEach((id) => pr.mine.add(id)); } // private mode: my paste (FR-15)
     },
+    pasteInPlace: () => get().paste(0),
     pasteNodes: (incoming) => {
       // Clipboard JSON is user-controlled; keep only node-like objects with a
       // string type so a malformed paste can't corrupt the page.
