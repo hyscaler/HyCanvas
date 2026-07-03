@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { fonts } from "@/lib/fontProvider";
 import { promptText, alertText } from "@/lib/promptDialog";
-import { FILTER_PRESETS, resolvePresetOps, autoEnhanceOps, removeBackground, type AdjOp } from "@/lib/imageFilters";
+import { FILTER_PRESETS, resolvePresetOps, autoEnhanceOps, removeBackground, rasterizeToPng, type AdjOp } from "@/lib/imageFilters";
 import { useEditor } from "@/store/editor";
 import { usePresence } from "@/store/presence";
 import { useBrand, colorsLockedFor, fontsLockedFor, brandHexColors, brandFontFamilies } from "@/store/brand";
@@ -32,6 +32,7 @@ import { lockSelection, unlockSelection } from "@/lib/useRealtime";
 import { CollapsibleSection } from "./EditorPanels";
 import { ColorField } from "./ColorField";
 import { imageAssets } from "@/lib/assetProvider";
+import { resolveAssetUrl } from "@/lib/sdk";
 import { MagicResizeButton } from "./MagicResizeDialog";
 import { useToast } from "@/components/ui/Toast";
 
@@ -2250,8 +2251,8 @@ function ImageEffectsSection({ id, node }: { id: string; node: Node }) {
 
   const runBgRemoval = async () => {
     const doc = useEditor.getState().doc;
-    const assetId = (node as unknown as { source: { assetId: string } }).source.assetId;
-    const url = doc.assets.find((a) => a.id === assetId)?.url;
+    const src = (node as unknown as { source: { assetId: string; naturalWidth?: number; naturalHeight?: number } }).source;
+    const url = doc.assets.find((a) => a.id === src.assetId)?.url;
     if (!url) {
       setBgState("error");
       setBgError("This image has no resolvable source URL.");
@@ -2261,7 +2262,18 @@ function ImageEffectsSection({ id, node }: { id: string; node: Node }) {
     setBgProgress(0);
     setBgError(null);
     try {
-      const { dataUrl } = await removeBackground(url, (f) => setBgProgress(f));
+      // Fetch the image through the app's own path (absolute URL + credentials)
+      // and hand the bytes to the remover as a Blob, so it never has to fetch a
+      // relative/cross-origin URL itself (the main reason removal used to fail).
+      const resp = await fetch(resolveAssetUrl(url), { credentials: "include" });
+      if (!resp.ok) throw new Error(`Couldn't load the image (${resp.status}).`);
+      let blob = await resp.blob();
+      // The model only accepts raster images; rasterize a vector (SVG) or any
+      // non-raster to a PNG first (otherwise it throws "Invalid format").
+      if (!/^image\/(png|jpeg|webp)$/.test(blob.type)) {
+        blob = await rasterizeToPng(blob, src.naturalWidth ?? 0, src.naturalHeight ?? 0);
+      }
+      const { dataUrl } = await removeBackground(blob, (f) => setBgProgress(f));
       useEditor.getState().setImageSource(id, dataUrl);
       setBgState("idle");
     } catch (err) {

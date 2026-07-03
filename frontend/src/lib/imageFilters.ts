@@ -119,14 +119,55 @@ export interface BgRemovalResult {
 }
 
 /**
+ * Rasterize an image Blob to a PNG Blob at the given size. Used before background
+ * removal because the segmentation model only accepts raster images, feeding it a
+ * vector (SVG) throws "Invalid format: image/svg+xml". Drawing a same-origin Blob
+ * to a canvas keeps it untainted. Size is capped so a huge source can't allocate
+ * an enormous canvas.
+ */
+export async function rasterizeToPng(blob: Blob, width: number, height: number): Promise<Blob> {
+  const MAX = 2048;
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error("Couldn't decode the image."));
+      el.src = url;
+    });
+    let w = Math.max(1, Math.round(width || img.naturalWidth || 1024));
+    let h = Math.max(1, Math.round(height || img.naturalHeight || 1024));
+    const scale = Math.min(1, MAX / Math.max(w, h));
+    w = Math.max(1, Math.round(w * scale));
+    h = Math.max(1, Math.round(h * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas is unavailable.");
+    ctx.drawImage(img, 0, 0, w, h);
+    return await new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Couldn't rasterize the image."))), "image/png"),
+    );
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+/**
  * Remove the background of an image entirely in the browser using
- * `@imgly/background-removal`. The library is dynamically imported so its model
- * (downloaded on first use) never bloats the main bundle or the static export.
- * `onProgress` reports 0..1 while the model downloads/runs. Throws a friendly
- * Error on failure (unsupported environment, fetch/CORS, model error).
+ * `@imgly/background-removal` (an ISNet/U2Net foreground-segmentation model, the
+ * same class of model Canva uses). The library is dynamically imported so its
+ * model (downloaded on first use) never bloats the main bundle or the static
+ * export. `onProgress` reports 0..1 while the model downloads/runs.
+ *
+ * Pass a `Blob` (preferred): the caller fetches the image through the app's own
+ * authenticated, same-origin path, so the library never has to fetch a
+ * (possibly relative or cross-origin) URL itself, which was the main reason
+ * removal failed. A string URL is still accepted as a fallback.
  */
 export async function removeBackground(
-  imageUrl: string,
+  input: string | Blob,
   onProgress?: (fraction: number) => void,
 ): Promise<BgRemovalResult> {
   if (typeof window === "undefined") {
@@ -143,7 +184,11 @@ export async function removeBackground(
     throw new Error("Could not load the background remover. Check your connection and try again.");
   }
   try {
-    const blob = await removeBackgroundFn(imageUrl, {
+    const blob = await removeBackgroundFn(input, {
+      // Prefer WebGPU when available (much faster + higher quality), falling back
+      // to WASM/CPU automatically. Output a transparent PNG cutout.
+      device: "gpu",
+      output: { format: "image/png" },
       progress: (_key: string, current: number, total: number) => {
         if (onProgress && total > 0) onProgress(Math.min(1, current / total));
       },
