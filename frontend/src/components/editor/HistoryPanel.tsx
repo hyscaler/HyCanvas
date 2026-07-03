@@ -28,6 +28,7 @@ import { oc } from "@/lib/sdk";
 import { useEditor } from "@/store/editor";
 import { applyRestoredFile, resyncFromLiveDoc } from "@/lib/useRealtime";
 import { foldUpdatesToFile } from "@/lib/historyFold";
+import { diffLabel } from "@hc/realtime";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
@@ -120,6 +121,9 @@ export function HistoryPanel({
   const [scrubLoading, setScrubLoading] = useState(false);
   const [scrubIndex, setScrubIndex] = useState<number | null>(null);
   const [scrubFile, setScrubFile] = useState<ReturnType<typeof foldUpdatesToFile> | null>(null);
+  // Semantic label for the scrubbed op ("Moved 3 elements"), keyed to its op
+  // index so the debounced fold can't show a stale label for a different stop.
+  const [scrubLabel, setScrubLabel] = useState<{ idx: number; text: string } | null>(null);
   // True when the log exceeded the page cap: we hold only the OLDEST frames, so
   // the newest edits are missing. The right end is then NOT live, and restoring
   // from a scrub point is unsafe (it would fold a stale prefix).
@@ -207,6 +211,17 @@ export function HistoryPanel({
         setActiveId(null);
         setScrubFile(file); // kept so this point can be restored as a new version
         enterPreview(file, `${op.authorName} · ${relativeTime(new Date(op.lastMs).toISOString())}`);
+        // Semantic label (FR-9): diff the folded state against the previous op
+        // boundary (empty design for the first op) to say what actually changed.
+        try {
+          const prevCount = idx > 0 ? ops[idx - 1].prefixCount : 0;
+          const before = prevCount > 0
+            ? foldUpdatesToFile(updates.slice(0, prevCount).map((u) => u.update))
+            : ({ schemaVersion: file.schemaVersion, pages: [] } as unknown as typeof file);
+          setScrubLabel({ idx, text: diffLabel(before, file) });
+        } catch {
+          setScrubLabel(null);
+        }
       } catch {
         toast.error("Could not reconstruct that point in history.");
       }
@@ -438,7 +453,11 @@ export function HistoryPanel({
                       ? truncated
                         ? "Latest loaded (older edits only)"
                         : "Now (live)"
-                      : `${ops[scrubIndex].authorName} · ${ops[scrubIndex].count} edit${ops[scrubIndex].count > 1 ? "s" : ""} · ${relativeTime(new Date(ops[scrubIndex].lastMs).toISOString())}`}
+                      : `${ops[scrubIndex].authorName} · ${
+                          scrubLabel && scrubLabel.idx === scrubIndex && scrubLabel.text
+                            ? scrubLabel.text
+                            : `${ops[scrubIndex].count} edit${ops[scrubIndex].count > 1 ? "s" : ""}`
+                        } · ${relativeTime(new Date(ops[scrubIndex].lastMs).toISOString())}`}
                   </span>
                 </div>
                 {truncated && (

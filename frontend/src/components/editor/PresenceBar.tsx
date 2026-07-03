@@ -4,7 +4,8 @@
 // following, a "Following <name>" pill with a stop button appears, and the
 // useRealtime hook mirrors that peer's viewport until the user moves or Esc.
 
-import { Cloud, CloudOff, Eye, Loader2, X } from "lucide-react";
+import { Check, Cloud, CloudOff, Eye, Loader2, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { usePresence, type ConnectionState, type Peer } from "@/store/presence";
 
 const MAX_AVATARS = 5;
@@ -16,11 +17,19 @@ function initials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-function Badge({ state, readOnly }: { state: ConnectionState; readOnly: boolean }) {
+function Badge({ state, readOnly, synced }: { state: ConnectionState; readOnly: boolean; synced: boolean }) {
   if (readOnly)
     return (
       <span className="flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600" title="You have view-only access">
         <Eye size={13} /> Read-only
+      </span>
+    );
+  // Brief "Synced" reassurance right after reconnecting, so offline edits merging
+  // back reads as success rather than silently flipping to "Live" (FR-14 UX).
+  if (state === "connected" && synced)
+    return (
+      <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700" title="Synced: your offline changes merged in">
+        <Check size={13} /> Synced
       </span>
     );
   // Offline/reconnecting reassure that edits are safe: the Y.Doc is mirrored to
@@ -62,6 +71,20 @@ export function PresenceBar() {
   const toggleFollow = usePresence((s) => s.toggleFollow);
   const setFollowing = usePresence((s) => s.setFollowing);
 
+  // Flash "Synced" for a moment when we come back online after a drop (not on the
+  // first connect, which is just "Live"). Tracks the previous connection state.
+  const [justSynced, setJustSynced] = useState(false);
+  const prevConn = useRef(connection);
+  useEffect(() => {
+    const prev = prevConn.current;
+    prevConn.current = connection;
+    if (connection === "connected" && (prev === "offline" || prev === "reconnecting")) {
+      setJustSynced(true);
+      const t = setTimeout(() => setJustSynced(false), 2500);
+      return () => clearTimeout(t);
+    }
+  }, [connection]);
+
   const list = Object.values(peers);
   const shown = list.slice(0, MAX_AVATARS);
   const overflow = list.length - shown.length;
@@ -93,7 +116,7 @@ export function PresenceBar() {
           )}
         </div>
       )}
-      <Badge state={connection} readOnly={readOnly} />
+      <Badge state={connection} readOnly={readOnly} synced={justSynced} />
     </div>
   );
 }
