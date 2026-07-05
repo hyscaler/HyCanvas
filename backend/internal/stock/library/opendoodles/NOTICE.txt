@@ -1,0 +1,2 @@
+Open Doodles ingested from the official opendoodles.com download links (S3).
+CC0: no attribution required.

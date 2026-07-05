@@ -179,6 +179,7 @@ Postgres data persists in its own volume (the `pgdata` volume under compose, or 
 | `DB_AUTO_MIGRATE` | `true` | Apply pending SQL migrations on boot. Set `false` to manage migrations out of band. |
 | `APP_URL` | - | Public base URL of the app, used to build links in outbound email (verify email, password reset, magic link). |
 | `AI_SECRET` | falls back to `JWT_SECRET` | AES-256-GCM key encrypting secrets at rest: per-workspace AI provider keys and MFA TOTP secrets. Set a dedicated value to rotate it independently of `JWT_SECRET`. |
+| `STOCK_PHOTO_PROVIDER` | (enabled) | Live photo search via the Openverse API (open-licensed photos, anonymous tier, no key). Set `off` for air-gapped deployments; the bundled icon/illustration/emoji catalog keeps working without it. |
 
 ### Database (compose only)
 

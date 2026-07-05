@@ -1,0 +1,2 @@
+Tabler Icons 3.44.0 (outline), https://tabler.io/icons
+Ingested from npm @tabler/icons; MIT licensed.

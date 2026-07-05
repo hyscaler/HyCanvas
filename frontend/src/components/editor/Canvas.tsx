@@ -1367,9 +1367,16 @@ export function Canvas() {
     const url = e.dataTransfer.getData("application/x-oc-image") || e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text/plain");
     if (!url || !/^(https?:|data:|blob:|\/)/.test(url)) return;
     e.preventDefault();
-    if (frameId) useEditor.getState().setFrameImage(frameId, url);
+    // Stock drags carry provenance (asset id + license) so drag-placed assets
+    // keep their attribution credit, same as click-to-place.
+    let provenance: Record<string, unknown> | undefined;
+    try {
+      const p = e.dataTransfer.getData("application/x-oc-provenance");
+      if (p) provenance = JSON.parse(p) as Record<string, unknown>;
+    } catch { /* a malformed payload just means no credit metadata */ }
+    if (frameId) useEditor.getState().setFrameImage(frameId, url, provenance);
     else if (hit && hit.type === "shape") useEditor.getState().setImageFill(hit.id, url);
-    else useEditor.getState().addImage(url, page);
+    else useEditor.getState().addImage(url, page, provenance);
   }
 
   function localPoint(e: { clientX: number; clientY: number }) {

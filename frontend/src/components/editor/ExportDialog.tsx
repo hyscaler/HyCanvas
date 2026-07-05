@@ -3,7 +3,8 @@
 // toBlob (the client-side fast path); PDF embeds rendered pages via jsPDF. The
 // worker/skia path and animated formats remain deferred.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { compileAttribution, attributionText } from "@hc/stock";
 import { AlertTriangle, ShieldAlert, ChevronDown, Check, Image as ImageIcon, FileText, Shapes, Download } from "lucide-react";
 import { toSvg, rasterDimensions, encodeApng, encodeGif, designPageToLottie } from "@hc/export";
 import { zipFiles, type ZipEntry } from "@/lib/zip";
@@ -70,6 +71,10 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
   // Brand panel while this dialog is open keeps the block/warn state current.
   const rev = useEditor((s) => s.rev);
   const designId = useBrand((s) => s.designId);
+  // Credits compiled from node provenance (attribution-required stock assets,
+  // e.g. CC-BY emoji): shown with a copy button so publishing stays compliant.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const credits = useMemo(() => (open ? compileAttribution(useEditor.getState().doc) : []), [open, rev]);
   const [format, setFormat] = useState<Format>("png");
   const [scale, setScale] = useState(1);
   const [transparent, setTransparent] = useState(true);
@@ -443,6 +448,24 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
               <button onClick={() => setWarnDismissed(true)} className="text-[11px] font-medium text-amber-700 hover:underline">Dismiss</button>
             </div>
             <p>{gate!.violations.length} brand violation{gate!.violations.length === 1 ? "" : "s"} found. You can still download.</p>
+          </div>
+        )}
+
+        {credits.length > 0 && (
+          <div className="mb-3 rounded-xl bg-neutral-50 p-2.5 text-xs text-neutral-600">
+            <div className="mb-1 flex items-center justify-between">
+              <span className="font-semibold">Credits</span>
+              <button
+                onClick={() => { void navigator.clipboard.writeText(attributionText(credits)); toast.success("Credits copied"); }}
+                className="text-[11px] font-medium text-brand-600 hover:underline"
+              >
+                Copy
+              </button>
+            </div>
+            <ul className="max-h-20 overflow-y-auto">
+              {credits.map((c) => (<li key={c.assetId}>{c.attributionText}</li>))}
+            </ul>
+            <p className="mt-1 text-[11px] text-neutral-400">This design uses assets that require attribution when published.</p>
           </div>
         )}
 

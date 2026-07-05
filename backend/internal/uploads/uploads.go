@@ -16,6 +16,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -28,8 +29,9 @@ import (
 )
 
 const (
-	defaultQuotaBytes int64 = 2 * 1024 * 1024 * 1024 // 2 GiB
-	maxImportBytes    int64 = 25 * 1024 * 1024
+	defaultQuotaBytes  int64 = 2 * 1024 * 1024 * 1024 // 2 GiB
+	maxImportBytes     int64 = 25 * 1024 * 1024
+	maxImportRedirects       = 3
 )
 
 // Errors map to RFC 7807 statuses at the HTTP layer.
@@ -52,7 +54,8 @@ type Service struct {
 	storage   storage.Driver
 	access    Access
 	publicURL string
-	resolve   func(host string) ([]net.IP, error) // overridable for tests
+	resolve   func(host string) ([]net.IP, error)                               // overridable for tests
+	dial      func(ctx context.Context, network, addr string) (net.Conn, error) // overridable for tests; addr carries the vetted IP
 	client    *http.Client
 }
 
@@ -62,6 +65,7 @@ func NewService(db DBTX, store storage.Driver, access Access) *Service {
 		db: db, storage: store, access: access,
 		publicURL: os.Getenv("BACKEND_PUBLIC_URL"),
 		resolve:   net.LookupIP,
+		dial:      (&net.Dialer{Timeout: 10 * time.Second}).DialContext,
 		client:    &http.Client{Timeout: 30 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }},
 	}
 }
@@ -189,26 +193,16 @@ func (s *Service) store(ctx context.Context, userID, workspaceID string, buf []b
 	return s.toUploaded(row), nil
 }
 
-// ImportFromURL imports an image from a remote URL with a two-stage SSRF guard
+// ImportFromURL imports an image from a remote URL with a per-hop SSRF guard
 // (literal authority + resolved-IP re-check against private ranges, FR-12).
+// Every hop, including each redirect target, is re-vetted and then fetched
+// over a connection pinned to its vetted IP, so a DNS rebind between the
+// check and the request cannot reach a private address.
 func (s *Service) ImportFromURL(ctx context.Context, userID, workspaceID, rawURL string, folderID *string) (UploadedAsset, error) {
 	if err := s.access.AssertMember(ctx, userID, workspaceID, "member"); err != nil {
 		return UploadedAsset{}, ErrForbidden
 	}
-	check := media.ValidateImportURL(rawURL)
-	if !check.OK || check.Parsed == nil {
-		return UploadedAsset{}, ErrBadRequest
-	}
-	ips, err := s.resolve(check.Parsed.Host)
-	if err != nil || len(ips) == 0 {
-		return UploadedAsset{}, ErrBadRequest
-	}
-	for _, ip := range ips {
-		if media.IsPrivateIP(ip.String()) {
-			return UploadedAsset{}, ErrBadRequest
-		}
-	}
-	buf, err := s.fetchImage(rawURL)
+	buf, err := s.fetchImage(ctx, rawURL)
 	if err != nil {
 		return UploadedAsset{}, err
 	}
@@ -216,11 +210,102 @@ func (s *Service) ImportFromURL(ctx context.Context, userID, workspaceID, rawURL
 	return s.store(ctx, userID, workspaceID, buf, &fn, folderID, "", true)
 }
 
-func (s *Service) fetchImage(rawURL string) ([]byte, error) {
-	res, err := s.client.Get(rawURL)
-	if err != nil {
+// vetImportHop runs the full SSRF policy for one absolute URL: the literal
+// authority check, then a resolved-IP re-check. Every resolved IP must be
+// public; the first is returned so the fetch can pin its dial to it.
+func (s *Service) vetImportHop(rawURL string) (net.IP, error) {
+	check := media.ValidateImportURL(rawURL)
+	if !check.OK || check.Parsed == nil {
 		return nil, ErrBadRequest
 	}
+	ips, err := s.resolve(check.Parsed.Host)
+	if err != nil || len(ips) == 0 {
+		return nil, ErrBadRequest
+	}
+	for _, ip := range ips {
+		if media.IsPrivateIP(ip.String()) {
+			return nil, ErrBadRequest
+		}
+	}
+	return ips[0], nil
+}
+
+// fetchImage fetches an import URL, following at most maxImportRedirects
+// redirect hops. Each hop is vetted, then fetched with a pinned dial. A hop
+// beyond the limit, a 3xx without a Location, or any vet failure rejects.
+func (s *Service) fetchImage(ctx context.Context, rawURL string) ([]byte, error) {
+	current := rawURL
+	for hop := 0; hop <= maxImportRedirects; hop++ {
+		ip, err := s.vetImportHop(current)
+		if err != nil {
+			return nil, err
+		}
+		res, err := s.getPinned(ctx, current, ip)
+		if err != nil {
+			return nil, ErrBadRequest
+		}
+		if res.StatusCode >= 300 && res.StatusCode < 400 {
+			loc := res.Header.Get("location")
+			res.Body.Close()
+			if loc == "" {
+				return nil, ErrBadRequest
+			}
+			next, ok := resolveRedirect(current, loc)
+			if !ok {
+				return nil, ErrBadRequest
+			}
+			current = next
+			continue
+		}
+		return readImageResponse(res)
+	}
+	return nil, ErrBadRequest
+}
+
+// getPinned issues one GET whose connection is dialed to the vetted IP while
+// the URL hostname stays in place for TLS SNI/verification and the Host
+// header. Redirects are returned to the caller, never auto-followed.
+func (s *Service) getPinned(ctx context.Context, rawURL string, ip net.IP) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	pinned := ip.String()
+	transport := &http.Transport{
+		DisableKeepAlives: true,
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			_, port, err := net.SplitHostPort(addr)
+			if err != nil {
+				return nil, err
+			}
+			return s.dial(ctx, network, net.JoinHostPort(pinned, port))
+		},
+	}
+	client := &http.Client{
+		Timeout:       s.client.Timeout,
+		Transport:     transport,
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+	}
+	return client.Do(req)
+}
+
+// resolveRedirect resolves a Location header (absolute or relative) against
+// the URL of the hop that produced it.
+func resolveRedirect(current, location string) (string, bool) {
+	base, err := url.Parse(current)
+	if err != nil {
+		return "", false
+	}
+	ref, err := url.Parse(strings.TrimSpace(location))
+	if err != nil {
+		return "", false
+	}
+	return base.ResolveReference(ref).String(), true
+}
+
+// readImageResponse validates a terminal response (status, image content
+// type, declared and actual size caps) and reads at most maxImportBytes.
+func readImageResponse(res *http.Response) ([]byte, error) {
 	defer res.Body.Close()
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
 		return nil, ErrBadRequest

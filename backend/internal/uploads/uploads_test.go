@@ -1,10 +1,15 @@
 package uploads
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
+	"errors"
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -27,6 +32,165 @@ func stripSchema(dsn string) string {
 // pngBytes is a minimal valid-by-magic-bytes PNG payload.
 func pngBytes() []byte {
 	return append([]byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a}, []byte("dummy-png-body")...)
+}
+
+// fakeAccess satisfies Access for import tests that never reach the DB.
+type fakeAccess struct{}
+
+func (fakeAccess) AssertMember(context.Context, string, string, string) error { return nil }
+
+func testServerPort(t *testing.T, srv *httptest.Server) string {
+	t.Helper()
+	_, port, err := net.SplitHostPort(strings.TrimPrefix(srv.URL, "http://"))
+	if err != nil {
+		t.Fatalf("split test server addr: %v", err)
+	}
+	return port
+}
+
+// loopbackDial keeps the port of the pinned address but dials loopback, so
+// requests for fake public hostnames reach the local httptest servers. It
+// records each pinned address it sees.
+func loopbackDial(dialed *[]string) func(ctx context.Context, network, addr string) (net.Conn, error) {
+	return func(ctx context.Context, network, addr string) (net.Conn, error) {
+		*dialed = append(*dialed, addr)
+		_, port, err := net.SplitHostPort(addr)
+		if err != nil {
+			return nil, err
+		}
+		return (&net.Dialer{}).DialContext(ctx, network, net.JoinHostPort("127.0.0.1", port))
+	}
+}
+
+// newImportService wires a Service for httptest-backed import tests: resolve
+// serves the host->IP table and dial rewrites the pinned address to loopback.
+func newImportService(hosts map[string]string) (*Service, *[]string) {
+	svc := NewService(nil, nil, fakeAccess{})
+	dialed := &[]string{}
+	svc.resolve = func(host string) ([]net.IP, error) {
+		ipStr, ok := hosts[host]
+		if !ok {
+			return nil, errors.New("unexpected host: " + host)
+		}
+		return []net.IP{net.ParseIP(ipStr)}, nil
+	}
+	svc.dial = loopbackDial(dialed)
+	return svc, dialed
+}
+
+func TestImportFetch_DirectAndRedirect(t *testing.T) {
+	ctx := context.Background()
+	png := pngBytes()
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		_, _ = w.Write(png)
+	}))
+	defer target.Close()
+	targetPort := testServerPort(t, target)
+
+	hop := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Location", "http://img.example.test:"+targetPort+"/pic.png")
+		w.WriteHeader(http.StatusFound)
+	}))
+	defer hop.Close()
+	hopPort := testServerPort(t, hop)
+
+	svc, dialed := newImportService(map[string]string{
+		"cdn.example.test": "198.51.100.7",
+		"img.example.test": "203.0.113.9",
+	})
+
+	// Direct fetch (regression).
+	buf, err := svc.fetchImage(ctx, "http://img.example.test:"+targetPort+"/pic.png")
+	if err != nil || !bytes.Equal(buf, png) {
+		t.Fatalf("direct fetch wrong: len=%d err=%v", len(buf), err)
+	}
+
+	// One redirect hop to another public-vetted host is followed.
+	*dialed = nil
+	buf, err = svc.fetchImage(ctx, "http://cdn.example.test:"+hopPort+"/start")
+	if err != nil || !bytes.Equal(buf, png) {
+		t.Fatalf("redirect fetch wrong: len=%d err=%v", len(buf), err)
+	}
+	// Both hops dialed their vetted IP (pinning engaged on every hop).
+	want := []string{"198.51.100.7:" + hopPort, "203.0.113.9:" + targetPort}
+	if len(*dialed) != 2 || (*dialed)[0] != want[0] || (*dialed)[1] != want[1] {
+		t.Fatalf("pinned dials wrong: got %v want %v", *dialed, want)
+	}
+}
+
+func TestImportFromURL_RedirectVetting(t *testing.T) {
+	ctx := context.Background()
+	png := pngBytes()
+	var port string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/to-private":
+			w.Header().Set("Location", "http://internal.example.test:"+port+"/x.png")
+			w.WriteHeader(http.StatusFound)
+		case r.URL.Path == "/to-file":
+			w.Header().Set("Location", "file:///etc/passwd")
+			w.WriteHeader(http.StatusFound)
+		case r.URL.Path == "/no-location":
+			w.WriteHeader(http.StatusFound)
+		case strings.HasPrefix(r.URL.Path, "/loop/"):
+			n, _ := strconv.Atoi(strings.TrimPrefix(r.URL.Path, "/loop/"))
+			w.Header().Set("Location", "/loop/"+strconv.Itoa(n+1))
+			w.WriteHeader(http.StatusFound)
+		case strings.HasPrefix(r.URL.Path, "/chain/"):
+			n, _ := strconv.Atoi(strings.TrimPrefix(r.URL.Path, "/chain/"))
+			if n >= 3 {
+				w.Header().Set("Content-Type", "image/png")
+				_, _ = w.Write(png)
+				return
+			}
+			w.Header().Set("Location", "/chain/"+strconv.Itoa(n+1))
+			w.WriteHeader(http.StatusFound)
+		case r.URL.Path == "/huge":
+			w.Header().Set("Content-Type", "image/png")
+			w.Header().Set("Content-Length", strconv.FormatInt(maxImportBytes+1, 10))
+			w.WriteHeader(http.StatusOK)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+	port = testServerPort(t, srv)
+
+	svc, _ := newImportService(map[string]string{
+		"pub.example.test":      "198.51.100.10",
+		"internal.example.test": "10.9.8.7",
+	})
+	base := "http://pub.example.test:" + port
+
+	// Redirect target whose host resolves to a private IP is rejected.
+	if _, err := svc.ImportFromURL(ctx, "u1", "w1", base+"/to-private", nil); err != ErrBadRequest {
+		t.Fatalf("private redirect target should be BadRequest, got %v", err)
+	}
+	// Redirect to a non-http(s) scheme is rejected.
+	if _, err := svc.ImportFromURL(ctx, "u1", "w1", base+"/to-file", nil); err != ErrBadRequest {
+		t.Fatalf("file: redirect target should be BadRequest, got %v", err)
+	}
+	// A 3xx without a Location is rejected.
+	if _, err := svc.ImportFromURL(ctx, "u1", "w1", base+"/no-location", nil); err != ErrBadRequest {
+		t.Fatalf("redirect without Location should be BadRequest, got %v", err)
+	}
+	// More than maxImportRedirects hops is rejected.
+	if _, err := svc.ImportFromURL(ctx, "u1", "w1", base+"/loop/0", nil); err != ErrBadRequest {
+		t.Fatalf("redirect loop should be BadRequest, got %v", err)
+	}
+	// Exactly maxImportRedirects relative hops still succeeds.
+	if buf, err := svc.fetchImage(ctx, base+"/chain/0"); err != nil || !bytes.Equal(buf, png) {
+		t.Fatalf("3-hop chain wrong: len=%d err=%v", len(buf), err)
+	}
+	// Oversized declared content-length is rejected before the body is read.
+	if _, err := svc.ImportFromURL(ctx, "u1", "w1", base+"/huge", nil); err != ErrImportSize {
+		t.Fatalf("oversized content-length should be ErrImportSize, got %v", err)
+	}
+	// A host resolving straight to a private IP is rejected before any dial.
+	if _, err := svc.ImportFromURL(ctx, "u1", "w1", "http://internal.example.test:"+port+"/x.png", nil); err != ErrBadRequest {
+		t.Fatalf("private direct host should be BadRequest, got %v", err)
+	}
 }
 
 func TestUploads_DB(t *testing.T) {
@@ -161,6 +325,32 @@ func TestUploads_DB(t *testing.T) {
 	svc.resolve = func(host string) ([]net.IP, error) { return []net.IP{net.ParseIP("10.1.2.3")}, nil }
 	if _, err := svc.ImportFromURL(ctx, owner.ID, ws.ID, "https://example.com/x.png", nil); err != ErrBadRequest {
 		t.Fatalf("DNS-rebind to private IP should be BadRequest, got %v", err)
+	}
+
+	// Import end to end: public-vetted host, dial pinned then rewritten to the
+	// local test server, one redirect hop, asset stored.
+	remote := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/start" {
+			w.Header().Set("Location", "/logo-remote.png")
+			w.WriteHeader(http.StatusFound)
+			return
+		}
+		w.Header().Set("Content-Type", "image/png")
+		_, _ = w.Write(pngBytes())
+	}))
+	defer remote.Close()
+	rport := testServerPort(t, remote)
+	svc.resolve = func(host string) ([]net.IP, error) { return []net.IP{net.ParseIP("203.0.113.20")}, nil }
+	svc.dial = loopbackDial(&[]string{})
+	imported, err := svc.ImportFromURL(ctx, owner.ID, ws.ID, "http://img.example.test:"+rport+"/start", nil)
+	if err != nil {
+		t.Fatalf("ImportFromURL: %v", err)
+	}
+	if imported.Kind != "image" || imported.MimeType == nil || *imported.MimeType != "image/png" {
+		t.Fatalf("imported asset wrong: %+v", imported)
+	}
+	if got, mime, err := svc.Content(ctx, imported.ID); err != nil || mime != "image/png" || string(got) != string(pngBytes()) {
+		t.Fatalf("imported content wrong: mime=%s len=%d err=%v", mime, len(got), err)
 	}
 
 	// Quota: a tiny cap rejects the next upload.

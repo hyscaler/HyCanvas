@@ -7,7 +7,7 @@ package stock
 
 import (
 	"context"
-	_ "embed"
+	"embed"
 	"encoding/json"
 	"errors"
 	"io"
@@ -28,6 +28,14 @@ import (
 //go:embed stock.json
 var stockJSON []byte
 
+// The bundled open-licensed asset library (ingested by scripts/ingest-stock.mjs):
+// per-pack dirs of raw SVG files plus an index.json with asset metadata, the
+// pack license, and a collection entry. Embedded so the single self-host binary
+// ships the full library.
+//
+//go:embed library
+var libraryFS embed.FS
+
 // Errors map to RFC 7807 statuses at the HTTP layer.
 var (
 	ErrNotFound   = errors.New("not found")
@@ -47,8 +55,70 @@ type seedData struct {
 var seed = func() seedData {
 	var d seedData
 	_ = json.Unmarshal(stockJSON, &d)
+	loadLibrary(&d)
 	return d
 }()
+
+// loadLibrary appends every bundled library pack to the seed catalog. Each
+// asset's SVG is inlined (the client inserts it as editable vectors, same as
+// the seeded icons) and enriched with the pack's kind/category/license, so
+// search, favorites, recents, and attribution treat packs like any other asset.
+func loadLibrary(d *seedData) {
+	packs, err := libraryFS.ReadDir("library")
+	if err != nil {
+		return // no packs bundled yet (before the first ingest run)
+	}
+	for _, p := range packs {
+		if !p.IsDir() {
+			continue
+		}
+		dir := "library/" + p.Name()
+		raw, err := libraryFS.ReadFile(dir + "/index.json")
+		if err != nil {
+			continue
+		}
+		var idx struct {
+			Pack       string           `json:"pack"`
+			Kind       string           `json:"kind"`
+			Category   string           `json:"category"`
+			License    map[string]any   `json:"license"`
+			Collection map[string]any   `json:"collection"`
+			Assets     []map[string]any `json:"assets"`
+		}
+		if err := json.Unmarshal(raw, &idx); err != nil {
+			continue
+		}
+		for _, a := range idx.Assets {
+			file, _ := a["file"].(string)
+			svg, err := libraryFS.ReadFile(dir + "/" + file)
+			if err != nil {
+				continue
+			}
+			delete(a, "file")
+			a["svg"] = string(svg)
+			a["kind"] = idx.Kind
+			a["category"] = idx.Category
+			a["license"] = idx.License
+			a["pack"] = idx.Pack
+			a["format"] = "svg"
+			a["animated"] = false
+			a["previewUrl"] = ""
+			a["sourceUrl"] = ""
+			a["collectionIds"] = []any{idx.Pack}
+			// stockMatches expects style as an array (seed assets use one).
+			if s, ok := a["style"].(string); ok {
+				a["style"] = []any{s}
+			}
+			d.Stock = append(d.Stock, a)
+		}
+		if idx.Collection != nil {
+			if idx.Kind != "" {
+				idx.Collection["kind"] = idx.Kind
+			}
+			d.Collections = append(d.Collections, idx.Collection)
+		}
+	}
+}
 
 var stockByID = func() map[string]map[string]any {
 	m := map[string]map[string]any{}
@@ -71,11 +141,16 @@ type DBTX interface {
 type Service struct {
 	db     DBTX
 	client *http.Client
+	ov     *openverse
 }
 
 // NewService wires the stock service.
 func NewService(db DBTX) *Service {
-	return &Service{db: db, client: &http.Client{Timeout: 20 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}
+	return &Service{
+		db:     db,
+		client: &http.Client{Timeout: 20 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }},
+		ov:     newOpenverse(),
+	}
 }
 
 // Query is the stock search query.
@@ -87,7 +162,16 @@ type Query struct {
 	Category     string
 	Style        string
 	CollectionID string
+	// Paging: the bundled library is ~10k assets with inline SVG, so responses
+	// are always capped. Limit <= 0 uses the default page size.
+	Limit  int
+	Offset int
 }
+
+const (
+	defaultSearchLimit = 60
+	maxSearchLimit     = 200
+)
 
 // --- search (pure port of @hc/stock) -------------------------------------
 
@@ -180,23 +264,49 @@ func searchStock(assets []map[string]any, q Query) []map[string]any {
 			matched = append(matched, a)
 		}
 	}
-	if q.Text == "" {
-		return matched
+	if q.Text != "" {
+		sort.SliceStable(matched, func(i, j int) bool {
+			si, sj := textRelevance(matched[i], q.Text), textRelevance(matched[j], q.Text)
+			if si != sj {
+				return si > sj
+			}
+			return str(matched[i]["title"]) < str(matched[j]["title"])
+		})
 	}
-	sort.SliceStable(matched, func(i, j int) bool {
-		si, sj := textRelevance(matched[i], q.Text), textRelevance(matched[j], q.Text)
-		if si != sj {
-			return si > sj
-		}
-		return str(matched[i]["title"]) < str(matched[j]["title"])
-	})
-	return matched
+	// Page the ranked results (see Query.Limit): an unbounded response over the
+	// bundled library would ship megabytes of inline SVG per request.
+	limit := q.Limit
+	if limit <= 0 {
+		limit = defaultSearchLimit
+	}
+	if limit > maxSearchLimit {
+		limit = maxSearchLimit
+	}
+	offset := q.Offset
+	if offset < 0 {
+		offset = 0
+	}
+	if offset >= len(matched) {
+		return nil
+	}
+	if end := offset + limit; end < len(matched) {
+		return matched[offset:end]
+	}
+	return matched[offset:]
 }
 
 // --- public API ----------------------------------------------------------
 
 // Search returns matching catalog assets, each flagged with the user's favorite.
+// Text photo searches go to the live Openverse provider (open-licensed, results
+// commercially safe); everything else, and any provider failure, is served from
+// the bundled catalog.
 func (s *Service) Search(ctx context.Context, q Query, userID string) ([]map[string]any, error) {
+	if q.Kind == "photo" && strings.TrimSpace(q.Text) != "" && q.CollectionID == "" {
+		if live := s.ov.search(ctx, q); live != nil {
+			return s.withFlags(ctx, live, userID)
+		}
+	}
 	return s.withFlags(ctx, searchStock(seed.Stock, q), userID)
 }
 

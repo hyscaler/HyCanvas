@@ -1,0 +1,2 @@
+Health icons 2.0.0 (filled), https://healthicons.org
+Ingested from npm healthicons; MIT licensed.

@@ -38,7 +38,7 @@ export function ToolRail({ workspaceId, overlay = false, defaultCollapsed = fals
       case "text": return <TextPanel />;
       case "ai": return <AiPanel workspaceId={workspaceId} />;
       case "uploads": return <UploadsPanel workspaceId={workspaceId} />;
-      case "stock": return <StockPanel />;
+      case "stock": return <StockPanel workspaceId={workspaceId} />;
       case "apps": return <AppsPanel />;
       case "brand": return <BrandPanel workspaceId={workspaceId} />;
       case "layers": return <PanelShell title="Layers"><LayerPanel /></PanelShell>;

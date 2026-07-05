@@ -3,6 +3,7 @@ package httpapi
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
@@ -41,10 +42,12 @@ func stockProblem(w http.ResponseWriter, r *http.Request, err error) {
 func stockSearchHandler(st *stock.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
+		limit, _ := strconv.Atoi(q.Get("limit"))
+		offset, _ := strconv.Atoi(q.Get("offset"))
 		query := stock.Query{
 			Text: q.Get("q"), Kind: q.Get("kind"), Orientation: q.Get("orientation"),
 			Color: q.Get("color"), Category: q.Get("category"), Style: q.Get("style"),
-			CollectionID: q.Get("collection"),
+			CollectionID: q.Get("collection"), Limit: limit, Offset: offset,
 		}
 		u := userFrom(r.Context())
 		res, err := st.Search(r.Context(), query, u.ID)

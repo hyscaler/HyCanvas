@@ -8,8 +8,9 @@ export type StockKind =
   | "shape" | "gradient" | "background" | "frame" | "grid" | "chart" | "model3d";
 
 // "placeholder" marks bundled demo/sample assets (not owned by HyCanvas) that a
-// deployment is expected to replace before production.
-export type LicenseType = "hycanvas-free" | "cc0" | "cc-by" | "public-domain" | "editorial" | "placeholder";
+// deployment is expected to replace before production. "mit" covers bundled
+// open-source packs whose license text ships in the library's LICENSE/NOTICE.
+export type LicenseType = "hycanvas-free" | "cc0" | "cc-by" | "mit" | "public-domain" | "editorial" | "placeholder";
 
 export interface LicenseInfo {
   type: LicenseType;

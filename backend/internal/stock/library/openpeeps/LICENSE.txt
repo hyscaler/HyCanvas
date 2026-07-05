@@ -1,0 +1,3 @@
+Open Peeps by Pablo Stanley. https://www.openpeeps.com
+CC0 1.0 Universal (public domain dedication): https://creativecommons.org/publicdomain/zero/1.0/
+Site statement: "The library is in the public domain under the CC0 License. This means you can copy, modify, distribute, remix, burn, and use the work, even for commercial purposes, without asking permission."

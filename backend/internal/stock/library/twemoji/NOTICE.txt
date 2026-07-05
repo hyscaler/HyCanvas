@@ -1,0 +1,2 @@
+Twemoji 15.1.0 graphics, https://github.com/jdecked/twemoji
+Graphics licensed CC-BY 4.0; attribution required and compiled automatically into design credits.
