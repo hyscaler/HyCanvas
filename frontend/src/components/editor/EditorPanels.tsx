@@ -8,7 +8,7 @@ import { type ChartType, type Node, type Fill } from "@hc/schema";
 import { searchFonts, type FontCatalogEntry } from "@hc/text";
 import { toHex, fromHex } from "@hc/color";
 import { qrModules } from "@/lib/qr";
-import { STICKERS } from "@/lib/stickers";
+import { STICKERS, STICKER_CATEGORIES, type Sticker } from "@/lib/stickers";
 import { parseModelJson } from "@/lib/magicDesign";
 import {
   normalizeOutline, deckThemes, layoutDeck, groundImagePrompt,
@@ -101,7 +101,7 @@ export function PanelShell({ title, children, fill }: { title: string; children:
   // `fill` makes the panel a non-scrolling flex column so a child (e.g. the AI
   // chat) can pin its own footer and scroll only its message area.
   return (
-    <div className={`oc-scroll flex h-full w-[min(16rem,60vw)] flex-col border-r border-neutral-200 bg-white lg:w-72 ${fill ? "overflow-hidden" : "overflow-y-auto"}`}>
+    <div className={`oc-scroll flex h-full w-[min(16rem,60vw)] flex-col border-r border-neutral-200 bg-white lg:w-72 ${fill ? "overflow-hidden" : "overflow-y-auto overflow-x-hidden"}`}>
       <h3 className="px-4 pb-2 pt-4 text-sm font-bold text-neutral-800">{title}</h3>
       <div className={fill ? "flex min-h-0 flex-1 flex-col px-4 pb-4" : "flex-1 px-4 pb-4"}>{children}</div>
     </div>
@@ -255,6 +255,21 @@ export function ElementsPanel() {
   };
   const runTile = (t: ElementTile) => { recordRecent(t.label); void t.run(); };
   const recentTiles = recent.map((l) => tileByLabel.get(l)).filter((t): t is ElementTile => !!t);
+  // Graphics browser state: search across the bundled sticker library and
+  // per-category expansion (collapsed categories render only their first rows).
+  const [stickerQuery, setStickerQuery] = useState("");
+  const [expandedStickerCats, setExpandedStickerCats] = useState<Set<string>>(new Set());
+  const stickerTile = (s: Sticker) => (
+    <button
+      key={s.id}
+      onClick={() => { useEditor.getState().addIconSvg(s.svg); afterInsert(toast, s.label.toLowerCase()); }}
+      title={s.label}
+      aria-label={s.label}
+      className="grid aspect-square place-items-center rounded-lg bg-neutral-50 p-1.5 transition hover:bg-brand-50 [&>span>svg]:h-full [&>span>svg]:w-full"
+    >
+      <span className="block h-full w-full" dangerouslySetInnerHTML={{ __html: s.svg }} />
+    </button>
+  );
   return (
     <PanelShell title="Elements">
       <div className="flex flex-col gap-2.5">
@@ -282,21 +297,74 @@ export function ElementsPanel() {
             </div>
           </CollapsibleSection>
         ))}
-        {/* Graphics: bundled, free, editable-vector stickers (insert via addIconSvg). */}
-        <CollapsibleSection title="Graphics" icon={Sparkles} defaultOpen>
-          <div className="grid grid-cols-4 gap-2">
-            {STICKERS.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => { useEditor.getState().addIconSvg(s.svg); afterInsert(toast, s.label.toLowerCase()); }}
-                title={s.label}
-                aria-label={s.label}
-                className="grid aspect-square place-items-center rounded-lg bg-neutral-50 p-1.5 transition hover:bg-brand-50 [&>span>svg]:h-full [&>span>svg]:w-full"
-              >
-                <span className="block h-full w-full" dangerouslySetInnerHTML={{ __html: s.svg }} />
-              </button>
-            ))}
+        {/* Graphics: bundled, free, editable-vector stickers (insert via addIconSvg).
+            Searchable across label/category/keywords; browsable by category with
+            a per-category "Show all" so the DOM stays small at 400+ assets. */}
+        <CollapsibleSection title="Graphics" icon={Sparkles} defaultOpen badge={String(STICKERS.length)}>
+          <div className="mb-2">
+            <input
+              value={stickerQuery}
+              onChange={(e) => setStickerQuery(e.target.value)}
+              placeholder="Search graphics"
+              className="w-full rounded-lg border border-neutral-200 px-2.5 py-1.5 text-sm outline-none focus:border-brand-400"
+            />
           </div>
+          {stickerQuery.trim() ? (
+            (() => {
+              const q = stickerQuery.trim().toLowerCase();
+              const matches = STICKERS.filter(
+                (s) =>
+                  s.label.toLowerCase().includes(q) ||
+                  s.category.toLowerCase().includes(q) ||
+                  (s.keywords ?? []).some((k) => k.includes(q)),
+              );
+              const shown = matches.slice(0, 48);
+              return (
+                <>
+                  <div className="grid grid-cols-4 gap-2">
+                    {shown.map((s) => stickerTile(s))}
+                  </div>
+                  {matches.length === 0 && <p className="py-2 text-xs text-neutral-400">No graphics match &quot;{stickerQuery}&quot;.</p>}
+                  {matches.length > shown.length && (
+                    <p className="pt-2 text-[11px] text-neutral-400">+{matches.length - shown.length} more, refine your search</p>
+                  )}
+                </>
+              );
+            })()
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {STICKER_CATEGORIES.map((cat) => {
+                const items = STICKERS.filter((s) => s.category === cat);
+                const expanded = expandedStickerCats.has(cat);
+                const shown = expanded ? items : items.slice(0, 8);
+                return (
+                  <div key={cat}>
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+                        {cat} <span className="font-normal">({items.length})</span>
+                      </span>
+                      {items.length > 8 && (
+                        <button
+                          onClick={() =>
+                            setExpandedStickerCats((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(cat)) next.delete(cat);
+                              else next.add(cat);
+                              return next;
+                            })
+                          }
+                          className="text-[11px] font-medium text-brand-600 hover:text-brand-700"
+                        >
+                          {expanded ? "Show less" : "Show all"}
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">{shown.map((s) => stickerTile(s))}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </CollapsibleSection>
         {/* Animated stickers: editable vectors that insert with a looping emphasis
             animation already applied (play/present to see them move). */}
@@ -521,14 +589,14 @@ export function TextPanel() {
 }
 
 /** Place an image: into the selected frame if one is selected, else as a new node. */
-function placeImage(url: string) {
+function placeImage(url: string, provenance?: Record<string, unknown>) {
   const st = useEditor.getState();
   const sel = st.selection;
   if (sel.length === 1) {
     const loc = locate(st.doc, sel[0]);
-    if (loc?.node.type === "frame") { st.setFrameImage(sel[0], url); return; }
+    if (loc?.node.type === "frame") { st.setFrameImage(sel[0], url, provenance); return; }
   }
-  st.addImage(url);
+  st.addImage(url, undefined, provenance);
 }
 
 function formatBytes(n: number): string {
@@ -2460,20 +2528,50 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
 const STOCK_KINDS: { label: string; kind: string }[] = [
   { label: "All", kind: "" },
   { label: "Photos", kind: "photo" },
+  { label: "Illustrations", kind: "illustration" },
   { label: "Icons", kind: "icon" },
+  { label: "Emoji", kind: "sticker" },
 ];
 
 type StockTab = "browse" | "favorites" | "recents";
 
+// Live-provider assets (Openverse photos) are not in the bundled catalog:
+// favorites/recents don't apply and placement imports the file first.
+const isProviderAsset = (a: StockAssetSummary) => a.pack === "openverse";
+
+// Provenance stamped on every stock insert (asset id + license) so
+// attribution-required assets compile into the design's credits.
+const stockProvenance = (a: StockAssetSummary): Record<string, unknown> =>
+  ({ origin: "stock", stockAssetId: a.id, ...(a.license ? { license: a.license } : {}) });
+
 // Place a stock asset onto the canvas and record it as recently used. Icons
-// carry inline SVG and insert as editable vectors; photos go through the proxy.
-function placeStock(a: StockAssetSummary, toast: ReturnType<typeof useToast>) {
+// carry inline SVG and insert as editable vectors; bundled photos go through
+// the proxy; provider photos are imported into the workspace's uploads first so
+// the design never depends on an external host.
+async function placeStock(a: StockAssetSummary, toast: ReturnType<typeof useToast>, workspaceId: string | null) {
+  const provenance = stockProvenance(a);
   if (a.svg) {
-    useEditor.getState().addIconSvg(a.svg);
+    // Editable-vector insert, with provenance (asset id + license) stamped in the
+    // same undo step so CC-BY packs compile into the design's attribution.
+    useEditor.getState().addIconSvg(a.svg, provenance);
+  } else if (isProviderAsset(a) && a.sourceUrl) {
+    if (!workspaceId) {
+      toast.toast("Open a workspace design to place photos.", "info");
+      return;
+    }
+    try {
+      const up = await oc.importAssetFromUrl(workspaceId, a.sourceUrl);
+      // resolveAssetUrl: the backend returns a relative content path; in dev the
+      // frontend origin differs from the API's, same as the Uploads grid.
+      placeImage(resolveAssetUrl(up.url), provenance);
+    } catch {
+      toast.toast("Couldn't add this photo. Try another one.", "error");
+    }
+    return; // provider assets have no recents entry in the bundled catalog
   } else if (a.sourceUrl) {
     // data/blob URLs load directly; remote photos go through our proxy so the
     // export canvas stays untainted (CORS-clean). Fills a selected frame if any.
-    placeImage(/^(data:|blob:)/.test(a.sourceUrl) ? a.sourceUrl : stockProxyUrl(a.sourceUrl));
+    placeImage(/^(data:|blob:)/.test(a.sourceUrl) ? a.sourceUrl : stockProxyUrl(a.sourceUrl), provenance);
   } else {
     toast.toast("This asset isn't placeable.", "info");
     return;
@@ -2483,30 +2581,45 @@ function placeStock(a: StockAssetSummary, toast: ReturnType<typeof useToast>) {
 }
 
 function StockTile({ a, onPlace, onToggleStar }: { a: StockAssetSummary; onPlace: (a: StockAssetSummary) => void; onToggleStar: (a: StockAssetSummary) => void }) {
+  // Provider photos import on click (an async step the drop handler can't do),
+  // so drag-to-canvas is bundled-catalog only.
+  const draggable = !!a.sourceUrl && !isProviderAsset(a);
   return (
     <div className="group relative">
       <button
         onClick={() => onPlace(a)}
-        draggable={!!a.sourceUrl}
-        onDragStart={(e) => { if (a.sourceUrl) e.dataTransfer.setData("application/x-oc-image", /^(data:|blob:)/.test(a.sourceUrl) ? a.sourceUrl : stockProxyUrl(a.sourceUrl)); }}
-        title={a.sourceUrl ? "Click to place, or drag onto the canvas" : a.title}
+        draggable={draggable}
+        onDragStart={(e) => {
+          if (!draggable || !a.sourceUrl) return;
+          e.dataTransfer.setData("application/x-oc-image", /^(data:|blob:)/.test(a.sourceUrl) ? a.sourceUrl : stockProxyUrl(a.sourceUrl));
+          // The drop handler stamps this on the created node so drag-placed
+          // stock keeps its attribution credit, same as click-to-place.
+          e.dataTransfer.setData("application/x-oc-provenance", JSON.stringify(stockProvenance(a)));
+        }}
+        title={draggable ? "Click to place, or drag onto the canvas" : a.sourceUrl ? "Click to place" : a.title}
         className="grid aspect-square w-full place-items-center overflow-hidden rounded-lg border border-neutral-200 hover:border-brand-300"
       >
         {a.previewUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={a.previewUrl} alt={a.title} className="h-full w-full object-cover" />
+        ) : a.svg ? (
+          // Bundled-library vectors carry inline SVG; render it directly so the
+          // preview is crisp with no data-URL blowup or extra request.
+          <span aria-hidden className="block h-full w-full p-2 [&>svg]:h-full [&>svg]:w-full" dangerouslySetInnerHTML={{ __html: a.svg }} />
         ) : (
           <span className="px-1 text-center text-[11px] text-neutral-500">{a.title}</span>
         )}
       </button>
-      <button
-        onClick={(e) => { e.stopPropagation(); onToggleStar(a); }}
-        title={a.favorited ? "Remove from favorites" : "Add to favorites"}
-        aria-pressed={!!a.favorited}
-        className={`absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-white/90 shadow transition ${a.favorited ? "text-amber-500" : "text-neutral-400 opacity-0 group-hover:opacity-100 hover:text-amber-500"}`}
-      >
-        <Star size={13} fill={a.favorited ? "currentColor" : "none"} />
-      </button>
+      {!isProviderAsset(a) && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleStar(a); }}
+          title={a.favorited ? "Remove from favorites" : "Add to favorites"}
+          aria-pressed={!!a.favorited}
+          className={`absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-white/90 shadow transition ${a.favorited ? "text-amber-500" : "text-neutral-400 opacity-0 group-hover:opacity-100 hover:text-amber-500"}`}
+        >
+          <Star size={13} fill={a.favorited ? "currentColor" : "none"} />
+        </button>
+      )}
     </div>
   );
 }
@@ -2546,7 +2659,7 @@ const ANIMATED_STICKERS: { id: string; label: string; preset: "pulse" | "spin" |
   { id: "a-spark", label: "Flickering spark", preset: "flicker", svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2 L13.5 10.5 L22 12 L13.5 13.5 L12 22 L10.5 13.5 L2 12 L10.5 10.5 Z" fill="#f59e0b"/></svg>' },
 ];
 
-export function StockPanel() {
+export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
   const toast = useToast();
   const [tab, setTab] = useState<StockTab>("browse");
   const [query, setQuery] = useState("");
@@ -2574,7 +2687,12 @@ export function StockPanel() {
   }, []);
 
   // Load the active tab's contents. Distinguishes a failed fetch (error banner +
-  // retry) from a genuinely empty result (the "no results" message).
+  // retry) from a genuinely empty result (the "no results" message). Browse
+  // results are paged (the bundled library holds ~10k assets): a full page means
+  // more may follow, surfaced as a "Load more" button.
+  const STOCK_PAGE = 60;
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -2584,10 +2702,10 @@ export function StockPanel() {
         let r: StockAssetSummary[];
         if (tab === "favorites") r = await oc.stockFavorites();
         else if (tab === "recents") r = await oc.stockRecent();
-        else r = await oc.stockSearch(intentQuery(debouncedQuery) || undefined, kind || undefined, { collection: collection?.id });
-        if (!cancelled) setResults(r);
+        else r = await oc.stockSearch(intentQuery(debouncedQuery) || undefined, kind || undefined, { collection: collection?.id, limit: STOCK_PAGE });
+        if (!cancelled) { setResults(r); setHasMore(tab === "browse" && r.length === STOCK_PAGE); }
       } catch {
-        if (!cancelled) { setResults([]); setError(true); }
+        if (!cancelled) { setResults([]); setError(true); setHasMore(false); }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -2595,6 +2713,22 @@ export function StockPanel() {
     return () => { cancelled = true; };
     // Re-run when the tab, filters, debounced query, or active collection change.
   }, [tab, collection, debouncedQuery, kind, retryNonce]);
+
+  async function loadMore() {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const next = await oc.stockSearch(intentQuery(debouncedQuery) || undefined, kind || undefined, {
+        collection: collection?.id, limit: STOCK_PAGE, offset: results.length,
+      });
+      setResults((cur) => [...cur, ...next.filter((n) => !cur.some((c) => c.id === n.id))]);
+      setHasMore(next.length === STOCK_PAGE);
+    } catch {
+      setHasMore(false);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -2607,7 +2741,7 @@ export function StockPanel() {
   }
 
   function place(a: StockAssetSummary) {
-    placeStock(a, toast);
+    void placeStock(a, toast, workspaceId);
   }
 
   // Toggle a favorite and reflect it optimistically in the current list. On the
@@ -2654,9 +2788,12 @@ export function StockPanel() {
               </button>
             )}
           </form>
-          <div className="mb-3 flex gap-1">
+          {/* Chips size to their labels and wrap: flex-1 in a no-wrap row made the
+              five kinds overflow the panel sideways (flex items can't shrink
+              below their text), which read as the whole panel sliding. */}
+          <div className="mb-3 flex flex-wrap gap-1">
             {STOCK_KINDS.map((f) => (
-              <button key={f.label} onClick={() => setFilter(f.kind)} className={`flex-1 rounded-full border px-2 py-1 text-xs ${kind === f.kind ? "border-brand-500 bg-brand-50 text-brand-700" : "border-neutral-200 text-neutral-600 hover:bg-neutral-100"}`}>{f.label}</button>
+              <button key={f.label} onClick={() => setFilter(f.kind)} className={`whitespace-nowrap rounded-full border px-2.5 py-1 text-xs ${kind === f.kind ? "border-brand-500 bg-brand-50 text-brand-700" : "border-neutral-200 text-neutral-600 hover:bg-neutral-100"}`}>{f.label}</button>
             ))}
           </div>
           {collection ? (
@@ -2689,11 +2826,22 @@ export function StockPanel() {
       ) : results.length === 0 ? (
         <p className="mt-6 text-center text-xs text-neutral-400">{emptyMessage}</p>
       ) : (
-        <div className="grid grid-cols-2 gap-2">
-          {results.map((a) => (
-            <StockTile key={a.id} a={a} onPlace={place} onToggleStar={(x) => void toggleStar(x)} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            {results.map((a) => (
+              <StockTile key={a.id} a={a} onPlace={place} onToggleStar={(x) => void toggleStar(x)} />
+            ))}
+          </div>
+          {tab === "browse" && hasMore && (
+            <button
+              onClick={() => void loadMore()}
+              disabled={loadingMore}
+              className="mt-2 w-full rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 disabled:opacity-50"
+            >
+              {loadingMore ? "Loading…" : "Load more"}
+            </button>
+          )}
+        </>
       )}
     </PanelShell>
   );

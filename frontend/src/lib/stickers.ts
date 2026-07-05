@@ -3,10 +3,28 @@
 // turns it into fully editable vector nodes on insert. Kept fill-only (no
 // stroke-dependent strokes) so every sticker round-trips cleanly.
 
+import { ARROW_STICKERS } from "./stickerData/arrows";
+import { ABSTRACT_STICKERS } from "./stickerData/abstract";
+import { BANNER_STICKERS } from "./stickerData/banners";
+import { CALLOUT_STICKERS } from "./stickerData/callouts";
+import { BUSINESS_STICKERS } from "./stickerData/business";
+import { TECH_STICKERS } from "./stickerData/tech";
+import { FOOD_STICKERS } from "./stickerData/food";
+import { ANIMAL_STICKERS } from "./stickerData/animals";
+import { TRAVEL_STICKERS } from "./stickerData/travel";
+import { SOCIAL_STICKERS } from "./stickerData/social";
+import { NATURE_STICKERS } from "./stickerData/nature";
+import { CELEBRATION_STICKERS } from "./stickerData/celebration";
+import { SCHOOL_STICKERS } from "./stickerData/school";
+import { MUSIC_SPORT_STICKERS } from "./stickerData/musicsport";
+import { INFOGRAPHIC_STICKERS } from "./stickerData/infographic";
+
 export interface Sticker {
   id: string;
   label: string;
   category: string;
+  /** Lowercase search terms (synonyms, use-cases) for the Elements search. */
+  keywords?: string[];
   svg: string;
 }
 
@@ -59,9 +77,9 @@ export const STICKERS: Sticker[] = [
   { id: "plane", label: "Paper plane", category: "Fun", svg: svg('<path d="M8 48 92 10 64 92 48 62Z" fill="#3b82f6"/><path d="M48 62 92 10 48 54Z" fill="#1d4ed8"/>') },
   { id: "music", label: "Music note", category: "Fun", svg: svg('<path d="M40 16h36v12H52v44a16 14 0 1 1-12-13V16Z" fill="#8b5cf6"/>') },
   { id: "rainbow", label: "Rainbow", category: "Fun", svg: svg('<path d="M10 80a40 40 0 0 1 80 0H78a28 28 0 0 0-56 0Z" fill="#ef4444"/><path d="M22 80a28 28 0 0 1 56 0H66a16 16 0 0 0-32 0Z" fill="#facc15"/><path d="M34 80a16 16 0 0 1 32 0Z" fill="#22c55e"/>') },
-  { id: "crown", label: "Crown", category: "Fun", svg: svg('<path d="M14 76 22 30l20 20 8-34 8 34 20-20 8 46Z" fill="#f59e0b"/><rect x="14" y="76" width="72" height="10" fill="#d97706"/>') },
+  { id: "crownband", label: "Crown", category: "Fun", svg: svg('<path d="M14 76 22 30l20 20 8-34 8 34 20-20 8 46Z" fill="#f59e0b"/><rect x="14" y="76" width="72" height="10" fill="#d97706"/>') },
   { id: "rocket", label: "Rocket", category: "Fun", svg: svg('<path d="M50 6c16 12 22 30 22 48l-12 10H40L28 54C28 36 34 18 50 6Z" fill="#e5e7eb"/><circle cx="50" cy="40" r="8" fill="#3b82f6"/><path d="M40 64 30 86l14-8Zm20 0 10 22-14-8Z" fill="#ef4444"/>') },
-  { id: "leaf", label: "Leaf", category: "Fun", svg: svg('<path d="M84 12C40 12 16 40 16 80c0 0 0 8 4 8 40 0 68-28 68-72 0-4-4-4-4-4Z" fill="#22c55e"/>') },
+  { id: "leafcurl", label: "Leaf", category: "Fun", svg: svg('<path d="M84 12C40 12 16 40 16 80c0 0 0 8 4 8 40 0 68-28 68-72 0-4-4-4-4-4Z" fill="#22c55e"/>') },
 
   // --- More shapes ---
   { id: "pentagon", label: "Pentagon", category: "Shapes", svg: svg('<path d="M50 6 92 38 76 90H24L8 38Z" fill="#14b8a6"/>') },
@@ -69,9 +87,26 @@ export const STICKERS: Sticker[] = [
   { id: "blob", label: "Blob", category: "Shapes", svg: svg('<path d="M50 8c22 0 40 12 40 32 0 24-14 44-40 44S10 64 10 40 28 8 50 8Z" fill="#a78bfa"/>') },
 
   // --- More symbols ---
-  { id: "pin", label: "Map pin", category: "Symbols", svg: svg('<path d="M50 6c18 0 30 12 30 30 0 22-30 56-30 56S20 58 20 36C20 18 32 6 50 6Z" fill="#ef4444"/><circle cx="50" cy="34" r="11" fill="#ffffff"/>') },
+  { id: "mappin", label: "Map pin", category: "Symbols", svg: svg('<path d="M50 6c18 0 30 12 30 30 0 22-30 56-30 56S20 58 20 36C20 18 32 6 50 6Z" fill="#ef4444"/><circle cx="50" cy="34" r="11" fill="#ffffff"/>') },
   { id: "speech", label: "Speech bubble", category: "Symbols", svg: svg('<path d="M14 18h72v52H46L28 86V70H14Z" fill="#22c55e"/>') },
   { id: "award", label: "Award", category: "Symbols", svg: svg('<circle cx="50" cy="36" r="26" fill="#f59e0b"/><circle cx="50" cy="36" r="14" fill="#fcd34d"/><path d="M38 58 30 92l20-12 20 12-8-34Z" fill="#ef4444"/>') },
+
+  // --- Bundled category packs (frontend/src/lib/stickerData/*) ---
+  ...ARROW_STICKERS,
+  ...ABSTRACT_STICKERS,
+  ...BANNER_STICKERS,
+  ...CALLOUT_STICKERS,
+  ...BUSINESS_STICKERS,
+  ...TECH_STICKERS,
+  ...SOCIAL_STICKERS,
+  ...FOOD_STICKERS,
+  ...NATURE_STICKERS,
+  ...ANIMAL_STICKERS,
+  ...TRAVEL_STICKERS,
+  ...CELEBRATION_STICKERS,
+  ...SCHOOL_STICKERS,
+  ...MUSIC_SPORT_STICKERS,
+  ...INFOGRAPHIC_STICKERS,
 ];
 
 export const STICKER_CATEGORIES = Array.from(new Set(STICKERS.map((s) => s.category)));
