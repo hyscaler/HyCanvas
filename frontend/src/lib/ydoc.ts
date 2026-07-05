@@ -87,6 +87,7 @@ export class DesignDoc {
       redo: () => this.undoMgr.redo(),
       canUndo: () => this.undoMgr.canUndo(),
       canRedo: () => this.undoMgr.canRedo(),
+      stopCapturing: () => this.undoMgr.stopCapturing(),
     };
     useEditor.getState().setCollabUndo(this.undoHandle);
 
@@ -132,7 +133,12 @@ export class DesignDoc {
         return;
       }
       this.lastRev = s.rev;
+      // A reconcile into an EMPTY Y.Doc is a full-document seed (no room sync or
+      // IndexedDB state yet), not an edit: drop it from the undo manager, or the
+      // first Cmd+Z would revert the entire document to nothing.
+      const seeding = this.ydoc.getMap(DESIGN_ROOT_KEY).size === 0;
       reconcile(s.doc, this.ydoc);
+      if (seeding) this.undoMgr.clear();
     });
 
     // Bind IndexedDB persistence (browser only). It auto-loads any stored state

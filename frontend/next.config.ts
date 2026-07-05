@@ -4,6 +4,11 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: "export",
   trailingSlash: true,
+  // yjs must load as ONE module instance (two copies break instanceof checks
+  // inside the CRDT bridge: yjs issue #438). @hc/realtime is built as ESM so
+  // every consumer resolves the same yjs.mjs; no resolve alias needed (a
+  // previous yjs -> yjs/src alias hung Turbopack's dev compile of any chunk
+  // importing yjs, wedging the dashboard on its loading screen).
   // Transpile the workspace packages so Next bundles them cleanly.
   transpilePackages: [
     "@hc/schema",

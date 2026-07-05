@@ -221,6 +221,9 @@ export type CollabUndo = {
   redo(): void;
   canUndo(): boolean;
   canRedo(): boolean;
+  /** Force the next tracked edit into a NEW undo step (Yjs merges transactions
+   *  within its capture window by default). */
+  stopCapturing(): void;
 };
 
 /** One style-harmonization change (F22 FR-8), mirroring @/lib/assist's
@@ -658,13 +661,16 @@ interface EditorState {
   pushNodeSnapshot(id: string, before: { transform: Transform; size: { width: number; height: number }; box?: unknown; content?: unknown }): void;
   addNode(type: Exclude<NodeType, "model3d">, init?: Partial<Node>): void;
   /** Place an image node from a URL, registering it as a design asset. */
-  /** Add an image; `at` (page point) centers it there (e.g. a drag-drop), else viewport-centered. */
-  addImage(url: string, at?: { x: number; y: number }): void;
+  /** Add an image; `at` (page point) centers it there (e.g. a drag-drop), else viewport-centered.
+   *  `provenance` (stock origin + license) rides the node for attribution credits. */
+  addImage(url: string, at?: { x: number; y: number }, provenance?: Record<string, unknown>): void;
   /** F39 FR-24: place a generated/selected image as a full-page background -
    *  sized to the active page, at the back of the z-order, as ONE undo step. */
   addPageBackgroundImage(url: string): void;
-  /** Insert an SVG icon as an editable, scaled vector group, viewport-centered. */
-  addIconSvg(svg: string): void;
+  /** Insert an SVG icon as an editable, scaled vector group, viewport-centered.
+   *  `provenance` (e.g. stock asset id + license) is stamped on the group's data
+   *  in the same undo step, so attribution can be compiled from the design. */
+  addIconSvg(svg: string, provenance?: Record<string, unknown>): void;
   /** Insert a photo grid: a grid container whose cells are image frames you can
    *  drop photos into. Returns the grid node id. */
   insertPhotoGrid(rows: number, cols: number): string | null;
@@ -755,7 +761,7 @@ interface EditorState {
   /** Set a video node's trim/volume/loop/mute, undoable. */
   setVideoProps(id: string, patch: Partial<{ trimStartMs: number; trimEndMs: number; volume: number; muted: boolean; loop: boolean }>): void;
   /** Place an image into a frame (clipped to the frame), undoable. */
-  setFrameImage(id: string, url: string): void;
+  setFrameImage(id: string, url: string, provenance?: Record<string, unknown>): void;
   /** Fill a shape with an image, clipped to its outline (undoable). Pass an
    *  empty url to clear the image fill back to a solid color. */
   setImageFill(id: string, url: string): void;
@@ -1017,9 +1023,17 @@ export const useEditor = create<EditorState>((set, get) => {
   // changes, so panning (which calls it every frame via the MiniMap) is O(1).
   let cbCache: { rev: number; page: number; bounds: { x: number; y: number; width: number; height: number } | null } | null = null;
 
-  // Push an undo entry and apply the forward action immediately.
+  // Push an undo entry and apply the forward action immediately. While a CRDT
+  // undo manager is bound it owns history exclusively: local entries are NOT
+  // mirrored (their closures go stale the moment applyToStore rebuilds the doc
+  // tree, and replaying one against a later state re-applies old edits and can
+  // clobber peer changes), so the stacks stay empty for the whole session.
   const perform = (redo: () => void, undo: () => void) => {
     redo();
+    if (get().collabUndo) {
+      set((s) => ({ rev: s.rev + 1 }));
+      return;
+    }
     set((s) => ({
       rev: s.rev + 1,
       undoStack: [...s.undoStack, { undo, redo }],
@@ -3185,7 +3199,7 @@ export const useEditor = create<EditorState>((set, get) => {
       );
     },
 
-    addIconSvg: (svg) => {
+    addIconSvg: (svg, provenance) => {
       // Same resolver as Import SVG (resolves <style> classes, currentColor, and
       // gradient url() fills), but keeps the catalog default: a shape with no
       // resolvable fill falls back to black (so a bare monochrome icon still paints).
@@ -3207,6 +3221,9 @@ export const useEditor = create<EditorState>((set, get) => {
         children: nodes,
         transform: { x: cx - (scale * vbW) / 2, y: cy - (scale * vbH) / 2, scaleX: scale, scaleY: scale, rotation: 0 },
         size: { width: vbW, height: vbH },
+        // Provenance (stock asset id + license) rides in the same undo step so
+        // the attribution compiler can derive credits from the design itself.
+        ...(provenance ? { data: { provenance } } : {}),
       } as Partial<Node>);
       const prev = get().selection;
       perform(
@@ -3347,13 +3364,16 @@ export const useEditor = create<EditorState>((set, get) => {
       // Load referenced image assets so they render (data URLs or remote urls).
       if (typeof window !== "undefined") for (const a of assets) imageAssets.register(a.assetId, a.url);
     },
-    addImage: (url, at) => {
+    addImage: (url, at, provenance) => {
       const assetId = `asset-${crypto.randomUUID()}`;
       const node = createNode("image", {
         source: { assetId, naturalWidth: 0, naturalHeight: 0 },
         fit: "cover",
         transform: { x: 260, y: 260, scaleX: 1, scaleY: 1, rotation: 0 },
         size: { width: 320, height: 240 },
+        // Stock provenance rides the node so CC-BY photos compile into the
+        // design's credits, in the same undo step as the insert.
+        ...(provenance ? { data: { provenance } } : {}),
       } as Partial<Node>);
       // Center on the drop point if given (drag-drop), else in the viewport.
       if (at) (node as unknown as { transform: Transform }).transform = { x: at.x - 160, y: at.y - 120, scaleX: 1, scaleY: 1, rotation: 0 };
@@ -3701,7 +3721,7 @@ export const useEditor = create<EditorState>((set, get) => {
         () => { cur.scale = before.scale; cur.rotation = before.rotation; cur.repeat = before.repeat; },
       );
     },
-    setFrameImage: (id, url) => {
+    setFrameImage: (id, url, provenance) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "frame") return;
       const frame = loc.node as unknown as { size: { width: number; height: number }; children: Node[]; clip?: boolean };
@@ -3714,6 +3734,8 @@ export const useEditor = create<EditorState>((set, get) => {
         fit: "cover",
         transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
         size: { width: frame.size.width, height: frame.size.height },
+        // Same stamp as addImage: the credit follows the image into the frame.
+        ...(provenance ? { data: { provenance } } : {}),
       } as Partial<Node>);
       const before = frame.children;
       perform(
@@ -4832,12 +4854,19 @@ export const useEditor = create<EditorState>((set, get) => {
       if (cmd) registerApplied(set, get, [cmd]);
     },
 
-    setCollabUndo: (handle) => set({ collabUndo: handle }),
+    // Binding a CRDT manager clears the local stacks: entries recorded before
+    // the bind reference pre-session state and must never replay into a live
+    // doc (perform() keeps the stacks empty for the rest of the session).
+    setCollabUndo: (handle) =>
+      set(handle ? { collabUndo: handle, undoStack: [], redoStack: [] } : { collabUndo: handle }),
     undo: () => {
-      // F16: in a live collaborative session, delegate to the CRDT undo manager
-      // so this client reverts only its OWN edits (the local snapshot stack would
-      // clobber concurrent peer changes). The manager's undo flows back through
-      // the Y -> store bridge, so we do not touch the local stacks here.
+      // F16: in a live collaborative session, delegate EXCLUSIVELY to the CRDT
+      // undo manager so this client reverts only its OWN edits. Never fall back
+      // to the local stacks while a manager is bound: local entries are not
+      // consumed by CRDT undo, so any leftover would replay a stale inverse
+      // against a newer doc (re-applying old edits and clobbering peer changes),
+      // and the replay's reconcile would itself be tracked, making the next
+      // undo revert the undo. perform() keeps the stacks empty while bound.
       const cu = get().collabUndo;
       if (cu) {
         if (cu.canUndo()) cu.undo();
