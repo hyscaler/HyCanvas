@@ -16,7 +16,7 @@ export const DEFAULT_GRACE_MS = 10_000;
 
 export type RefreshOutcome =
   | { action: "rotate"; state: SessionState } // normal: issue newTokenId, advance the family
-  | { action: "tolerate"; state: SessionState } // concurrent-tab race within grace; family intact
+  | { action: "tolerate"; state: SessionState } // concurrent-tab race within grace; family intact: reissue an access token only, NEVER a new refresh token (racing tabs share one cookie jar; a second rotation would strand it on a dead token)
   | { action: "revoke-family"; state: SessionState } // reuse detected; sign the family out
   | { action: "reject"; state: SessionState }; // already revoked
 

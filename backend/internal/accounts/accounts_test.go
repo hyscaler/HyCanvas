@@ -95,9 +95,9 @@ func TestLoginFlow_DB(t *testing.T) {
 		t.Fatalf("refresh should rotate within the same session: %+v", rotated)
 	}
 
-	// Reuse detection: presenting the OLD refresh token again (beyond grace would
-	// revoke; within grace it tolerates). Here the previous token is still within
-	// grace, so it tolerates and rotates again rather than erroring.
+	// The rotated (now current) token refreshes again normally: presenting the
+	// current token always hits the CAS rotate path. (Grace-window tolerance of
+	// the *previous* token is covered by TestRefreshTolerateKeepsFamilyHealthy.)
 	if _, err := svc.Refresh(ctx, rotated.Refresh); err != nil {
 		t.Fatalf("second refresh of current token should succeed: %v", err)
 	}
@@ -167,6 +167,79 @@ func TestRefreshReuseRevokesFamily(t *testing.T) {
 	// Family revoked: the session is no longer active.
 	if svc.isSessionActive(ctx, tokens.SessionID) {
 		t.Fatal("session should be revoked after reuse detection")
+	}
+}
+
+// TestRefreshTolerateKeepsFamilyHealthy verifies the concurrent-tab race path:
+// re-presenting the just-rotated token within the grace window mints a fresh
+// access token but NO second refresh token (Tokens.Refresh stays empty so the
+// HTTP layer keeps the browser's existing cookie), does not advance the
+// rotation, and the winner's token still refreshes normally afterwards. This
+// is the regression gate for the "randomly logged out" bug: a second rotation
+// here left the shared cookie jar holding a dead token half the time, and the
+// next refresh with it looked like token theft and revoked the whole family.
+func TestRefreshTolerateKeepsFamilyHealthy(t *testing.T) {
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		t.Skip("DATABASE_URL not set; skipping DB integration test")
+	}
+	ctx := context.Background()
+	conn, err := pgx.Connect(ctx, stripSchema(dsn))
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	defer conn.Close(ctx)
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin: %v", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	email := "go-tolerate-test+" + uuid.NewString() + "@example.com"
+	hash, _ := secrets.HashPassword("pw")
+	userID := uuid.NewString()
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO "users" (id, email, name, "password_hash", "updated_at") VALUES ($1,$2,$3,$4, now())`,
+		userID, email, "Tolerate Test", hash); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	svc := NewService(tx, "test-jwt-secret")
+	_, tokens, _, err := svc.Login(ctx, email, "pw", "d", "ip")
+	if err != nil {
+		t.Fatalf("login: %v", err)
+	}
+
+	// Tab A wins the rotation.
+	winner, err := svc.Refresh(ctx, tokens.Refresh)
+	if err != nil {
+		t.Fatalf("winning rotate: %v", err)
+	}
+	if winner.Refresh == "" {
+		t.Fatal("a normal rotation must mint a new refresh token")
+	}
+
+	// Tab B re-presents the rotated-away token within grace: tolerated, and it
+	// must NOT mint a second refresh token or advance the family.
+	tolerated, err := svc.Refresh(ctx, tokens.Refresh)
+	if err != nil {
+		t.Fatalf("tolerated refresh: %v", err)
+	}
+	if tolerated.Refresh != "" {
+		t.Fatal("tolerated refresh must not mint a second refresh token (cookie jar must keep the winner's)")
+	}
+	if tolerated.Access == "" {
+		t.Fatal("tolerated refresh must still mint an access token")
+	}
+	if _, _, err := svc.VerifyAccess(ctx, tolerated.Access); err != nil {
+		t.Fatalf("tolerated access token must verify: %v", err)
+	}
+
+	// The winner's token is still current: the family stays healthy.
+	if _, err := svc.Refresh(ctx, winner.Refresh); err != nil {
+		t.Fatalf("winner's token must still rotate after a tolerated race: %v", err)
+	}
+	if !svc.isSessionActive(ctx, tokens.SessionID) {
+		t.Fatal("session must remain active through a tolerated concurrent refresh")
 	}
 }
 

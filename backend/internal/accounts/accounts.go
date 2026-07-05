@@ -262,7 +262,9 @@ func toUser(u UserRow) AuthUser {
 	}
 }
 
-// Tokens are the credentials produced by a successful login.
+// Tokens are the credentials produced by a successful login or refresh. An
+// empty Refresh (the tolerated concurrent-refresh path) means "keep the
+// existing refresh cookie"; the HTTP layer must not overwrite it.
 type Tokens struct {
 	Access    string
 	Refresh   string
@@ -552,7 +554,18 @@ func (s *Service) VerifyAccess(ctx context.Context, token string) (userID, sessi
 }
 
 // Refresh rotates a refresh token (reuse of a stale token revokes the family),
-// mirroring AuthService.refresh + @hc/authz rotateRefresh.
+// mirroring @hc/authz rotateRefresh. Two rules keep same-browser races from
+// killing the session:
+//   - Rotation is an atomic compare-and-swap on current_token_hash, so when
+//     several requests race with the same cookie exactly one rotates; the
+//     losers fall through to the grace path.
+//   - The grace ("tolerate") path never mints a second refresh token. The
+//     tabs share ONE cookie jar; if both racers rotated, the jar would keep
+//     whichever Set-Cookie landed last, a coin flip between the live token
+//     and a dead one (the next refresh with the dead one looked like token
+//     theft and revoked the whole family). Tolerate therefore returns a fresh
+//     access token with Tokens.Refresh empty, meaning "keep the existing
+//     cookie", so the jar always converges on the winner's token.
 func (s *Service) Refresh(ctx context.Context, refreshToken string) (*Tokens, error) {
 	presented := secrets.HashToken(refreshToken)
 
@@ -571,41 +584,48 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string) (*Tokens, er
 		return nil, ErrSessionRevoked
 	}
 
-	revokeFamily := func() error {
-		_, e := s.db.Exec(ctx, `UPDATE "sessions" SET "revoked_at" = now() WHERE id = $1`, id)
-		return e
-	}
-
-	switch {
-	case presented == currentHash:
-		// normal rotation
-	case prevHash != nil && presented == *prevHash:
-		if time.Since(rotatedAt) > refreshGrace {
-			if err := revokeFamily(); err != nil {
+	if presented == currentHash {
+		newToken := uuid.NewString() + "." + uuid.NewString()
+		// CAS rotation: wins only while current_token_hash is still the presented
+		// token. A concurrent refresh that rotated first makes this a no-op; the
+		// re-read below then sees the presented token as "previous" and takes the
+		// tolerate path like any other same-cookie race.
+		const rot = `UPDATE "sessions"
+			SET "current_token_hash" = $1, "previous_token_hash" = $2, "rotated_at" = now(), "last_seen_at" = now()
+			WHERE id = $3 AND "current_token_hash" = $2 AND "revoked_at" IS NULL`
+		tag, err := s.db.Exec(ctx, rot, secrets.HashToken(newToken), presented, id)
+		if err != nil {
+			return nil, err
+		}
+		if tag.RowsAffected() == 1 {
+			access, err := jwt.Sign(userID, id, s.jwtSecret, AccessTTL)
+			if err != nil {
 				return nil, err
 			}
-			return nil, ErrReuseDetected
+			return &Tokens{Access: access, Refresh: newToken, SessionID: id}, nil
 		}
-		// within grace: tolerate (advance the family)
-	default:
-		if err := revokeFamily(); err != nil {
-			return nil, err
+		if err := s.db.QueryRow(ctx, sel, presented).Scan(&id, &userID, &currentHash, &prevHash, &rotatedAt, &revokedAt); err != nil {
+			return nil, ErrInvalidRefresh
+		}
+		if revokedAt != nil {
+			return nil, ErrSessionRevoked
+		}
+	}
+
+	// From here the presented token is a rotated-away one. Within grace that is
+	// a concurrent-tab race (tolerate); beyond it, a replay of a leaked token.
+	if prevHash == nil || presented != *prevHash || time.Since(rotatedAt) > refreshGrace {
+		if _, e := s.db.Exec(ctx, `UPDATE "sessions" SET "revoked_at" = now() WHERE id = $1`, id); e != nil {
+			return nil, e
 		}
 		return nil, ErrReuseDetected
 	}
-
-	newToken := uuid.NewString() + "." + uuid.NewString()
-	const upd = `UPDATE "sessions"
-		SET "current_token_hash" = $1, "previous_token_hash" = $2, "rotated_at" = now(), "last_seen_at" = now()
-		WHERE id = $3`
-	if _, err := s.db.Exec(ctx, upd, secrets.HashToken(newToken), currentHash, id); err != nil {
-		return nil, err
-	}
+	_, _ = s.db.Exec(ctx, `UPDATE "sessions" SET "last_seen_at" = now() WHERE id = $1`, id)
 	access, err := jwt.Sign(userID, id, s.jwtSecret, AccessTTL)
 	if err != nil {
 		return nil, err
 	}
-	return &Tokens{Access: access, Refresh: newToken, SessionID: id}, nil
+	return &Tokens{Access: access, Refresh: "", SessionID: id}, nil
 }
 
 func (s *Service) isSessionActive(ctx context.Context, sid string) bool {

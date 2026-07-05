@@ -285,6 +285,11 @@ export interface StockAssetSummary {
   favorited?: boolean;
   /** Inline SVG markup for vector kinds (icons), for editable vector insertion. */
   svg?: string;
+  /** Bundled-library pack id (e.g. "twemoji"), when the asset ships with the app. */
+  pack?: string;
+  /** License metadata; attribution-required assets are stamped with provenance
+   *  on insert so credits compile from the design. */
+  license?: { type?: string; holder?: string; url?: string; attributionRequired?: boolean; attributionText?: string; attributionUrl?: string };
 }
 
 export interface StockCollectionSummary {
@@ -294,7 +299,9 @@ export interface StockCollectionSummary {
   kind?: string;
   trending?: boolean;
   seasonal?: boolean;
-  assetIds: string[];
+  /** Curated seed collections list their members; bundled-pack collections
+   *  omit this (assets point back via collectionIds instead). */
+  assetIds?: string[];
 }
 
 export interface MiniAppSummary {
@@ -959,8 +966,13 @@ export class HyCanvasClient {
   verifyMfa(mfaToken: string, code: string): Promise<{ user: User }> {
     return this.request("POST", "/v1/auth/mfa/verify", { mfaToken, code });
   }
-  refresh(): Promise<{ ok: boolean }> {
-    return this.request("POST", "/v1/auth/refresh", {});
+  /** Refresh the session, sharing the same de-duped in-flight refresh as the
+   *  automatic 401 retry. Parallel refresh POSTs carrying the same cookie race
+   *  the server-side rotation and can strand the browser on a dead token, so
+   *  every caller (401 interceptor, bootstrap, tabs) must funnel through one
+   *  request. Resolves { ok: false } instead of throwing on failure. */
+  async refresh(): Promise<{ ok: boolean }> {
+    return { ok: await this.tryRefresh() };
   }
   logout(all = false): Promise<void> {
     return this.request("POST", "/v1/auth/logout", { all });
@@ -1497,13 +1509,15 @@ export class HyCanvasClient {
   stockSearch(
     q?: string,
     kind?: string,
-    opts: { category?: string; collection?: string } = {},
+    opts: { category?: string; collection?: string; limit?: number; offset?: number } = {},
   ): Promise<StockAssetSummary[]> {
     const params = new URLSearchParams();
     if (q) params.set("q", q);
     if (kind) params.set("kind", kind);
     if (opts.category) params.set("category", opts.category);
     if (opts.collection) params.set("collection", opts.collection);
+    if (opts.limit) params.set("limit", String(opts.limit));
+    if (opts.offset) params.set("offset", String(opts.offset));
     const qs = params.toString();
     return this.request("GET", `/v1/stock/search${qs ? `?${qs}` : ""}`);
   }
@@ -1523,8 +1537,8 @@ export class HyCanvasClient {
   stockRecent(): Promise<StockAssetSummary[]> {
     return this.request("GET", "/v1/stock/recent");
   }
-  /** Record a stock asset as recently used (called when it is placed). */
-  recordStockRecent(stockId: string): Promise<{ ok: boolean }> {
+  /** Record a stock asset as recently used (called when it is placed). 204, no body. */
+  recordStockRecent(stockId: string): Promise<void> {
     return this.request("POST", `/v1/stock/recent/${stockId}`);
   }
   /** The built-in mini apps + their granted scopes. */

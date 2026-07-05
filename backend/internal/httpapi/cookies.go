@@ -15,6 +15,12 @@ func setAuthCookies(w http.ResponseWriter, access, refresh string, secure bool) 
 		Name: accessCookie, Value: access, Path: "/",
 		HttpOnly: true, Secure: secure, SameSite: http.SameSiteLaxMode, MaxAge: accessMaxAge,
 	})
+	// An empty refresh means "keep the existing cookie": the tolerated
+	// concurrent-refresh path mints only a new access token, so a racing tab
+	// never overwrites the winning refresh cookie with a stale token.
+	if refresh == "" {
+		return
+	}
 	http.SetCookie(w, &http.Cookie{
 		Name: refreshCookie, Value: refresh, Path: "/",
 		HttpOnly: true, Secure: secure, SameSite: http.SameSiteLaxMode, MaxAge: refreshMaxAge,

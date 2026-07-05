@@ -1,7 +1,8 @@
 // Auth + active-workspace state for the web app. Hydrated from the
-// httpOnly session via GET /me; bootstrap retries once through /auth/refresh so
-// a reload with only a refresh cookie still resolves. The active workspace is
-// persisted per device in localStorage and scopes the dashboard/editor.
+// httpOnly session via GET /me; on a 401 the SDK transparently refreshes once
+// (de-duped across concurrent callers) and retries, so a reload with only a
+// refresh cookie still resolves. The active workspace is persisted per device
+// in localStorage and scopes the dashboard/editor.
 
 import { create } from "zustand";
 import { ApiError, type User, type WorkspaceWithRole } from "@hc/sdk";
@@ -50,6 +51,10 @@ async function loadSession(): Promise<{ user: User; workspaces: WorkspaceWithRol
   return { user, workspaces };
 }
 
+// Shared in-flight bootstrap; module-level because the zustand store is a
+// singleton and bootstrap state is not renderable.
+let hydrating: Promise<void> | null = null;
+
 function pickActive(workspaces: WorkspaceWithRole[]): string | null {
   const saved = readActive();
   if (saved && workspaces.some((w) => w.id === saved)) return saved;
@@ -66,23 +71,26 @@ export const useAuth = create<AuthState>((set, get) => ({
   error: null,
 
   async bootstrap() {
-    try {
-      const { user, workspaces } = await loadSession();
-      set({ status: "authed", user, workspaces, activeWorkspaceId: pickActive(workspaces), error: null });
-    } catch (e) {
-      // A 401 may just mean the access cookie expired; try one refresh.
-      if (e instanceof ApiError && e.status === 401) {
+    // Several screens (plus React StrictMode's double-mounted effects) call
+    // this concurrently on load; share one in-flight hydration so the session
+    // endpoints are hit once.
+    if (!hydrating) {
+      hydrating = (async () => {
         try {
-          await oc.refresh();
           const { user, workspaces } = await loadSession();
           set({ status: "authed", user, workspaces, activeWorkspaceId: pickActive(workspaces), error: null });
-          return;
         } catch {
-          /* fall through to anon */
+          // Any 401 already went through the SDK's single de-duped refresh and
+          // retry; failing after that means there is no session. A second
+          // manual refresh here would just race the rotation with the same
+          // cookie again, the multi-tab storm that used to kill sessions.
+          set({ status: "anon", user: null, workspaces: [], activeWorkspaceId: null });
+        } finally {
+          hydrating = null;
         }
-      }
-      set({ status: "anon", user: null, workspaces: [], activeWorkspaceId: null });
+      })();
     }
+    return hydrating;
   },
 
   async login(email, password) {
@@ -118,8 +126,8 @@ export const useAuth = create<AuthState>((set, get) => ({
       // cleared regardless in the finally block.
       if (e instanceof ApiError && e.status === 401) {
         try {
-          await oc.refresh();
-          await oc.logout();
+          const { ok } = await oc.refresh();
+          if (ok) await oc.logout();
         } catch {
           /* give up on server revoke; clear locally below */
         }

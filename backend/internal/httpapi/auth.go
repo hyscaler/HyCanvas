@@ -159,9 +159,17 @@ func refreshHandler(svc *accounts.Service, secure bool) http.HandlerFunc {
 		}
 		tokens, err := svc.Refresh(r.Context(), c.Value)
 		if err != nil {
-			// On any refresh failure (invalid/revoked/reuse) clear cookies so the
-			// client falls back to a fresh login.
-			clearAuthCookies(w, secure)
+			// Clear the auth cookies only when the family is definitively dead
+			// (revoked, or reuse detected), forcing a fresh login. For a token
+			// that merely isn't current (ErrInvalidRefresh) do NOT clear: this
+			// tab may have lost a concurrent-refresh race and presented a token
+			// already rotated away, while the shared cookie jar already holds the
+			// live one. Deleting cookies here would log the whole browser out
+			// despite a healthy session; a bare 401 lets the jar keep its live
+			// cookie and the next request refreshes cleanly.
+			if errors.Is(err, accounts.ErrReuseDetected) || errors.Is(err, accounts.ErrSessionRevoked) {
+				clearAuthCookies(w, secure)
+			}
 			Problem(w, r, http.StatusUnauthorized, "Unauthorized", "invalid refresh token")
 			return
 		}
