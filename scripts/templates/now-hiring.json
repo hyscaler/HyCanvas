@@ -1,0 +1,31 @@
+{
+  "id": "now-hiring",
+  "title": "We're Hiring",
+  "categories": ["social", "business"],
+  "tags": ["hiring", "recruiting", "jobs"],
+  "styleTags": ["bold", "modern"],
+  "size": [1080, 1080],
+  "typography": [
+    { "role": "heading", "family": "Poppins", "weight": 800 },
+    { "role": "body", "family": "Inter", "weight": 500 }
+  ],
+  "pages": [
+    {
+      "name": "Post",
+      "bg": "#082F49",
+      "nodes": [
+        { "kind": "ellipse", "x": 760, "y": -260, "w": 560, "h": 560, "fill": "#38BDF8", "opacity": 0.08, "bleed": true },
+        { "kind": "ellipse", "x": -180, "y": 820, "w": 440, "h": 440, "fill": "#38BDF8", "opacity": 0.06, "bleed": true },
+        { "kind": "text", "x": 140, "y": 150, "w": 800, "h": 40, "text": "We're hiring", "family": "Poppins", "size": 30, "weight": 700, "color": "#38BDF8", "align": "center", "letterSpacing": 6, "upper": true },
+        { "kind": "text", "x": 110, "y": 280, "w": 860, "h": 340, "text": "Senior\nFrontend\nEngineer", "family": "Poppins", "size": 100, "weight": 800, "color": "#FFFFFF", "align": "center", "lineHeight": 1.08 },
+        { "kind": "text", "x": 190, "y": 710, "w": 700, "h": 40, "text": "Remote · Full-time · Apply by Dec 1", "family": "Inter", "size": 28, "weight": 500, "color": "#BAE6FD", "align": "center" },
+        { "kind": "button", "x": 360, "y": 840, "w": 360, "h": 92, "fill": { "angle": 90, "stops": [["#38BDF8", 0], ["#0EA5E9", 1]] }, "label": "Apply now", "color": "#082F49", "family": "Poppins", "size": 28, "weight": 700, "letterSpacing": 1 }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n3", "kind": "text", "label": "Role title", "hint": "The job title, one word per line" },
+    { "node": "p0-n4", "kind": "text", "label": "Details", "hint": "Location, type and deadline, e.g. Remote · Full-time · Apply by Dec 1" },
+    { "node": "p0-n5-label", "kind": "text", "label": "CTA label", "hint": "Short action, 2-3 words" }
+  ]
+}

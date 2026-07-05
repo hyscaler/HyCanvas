@@ -1,0 +1,93 @@
+{
+  "id": "ig-carousel-cover",
+  "title": "Pricing Tips Carousel Cover",
+  "categories": ["social"],
+  "tags": ["instagram", "carousel", "tips", "serif"],
+  "styleTags": ["elegant", "minimal"],
+  "size": [1080, 1080],
+  "typography": [
+    { "role": "heading", "family": "Playfair Display", "weight": 600 },
+    { "role": "body", "family": "Inter", "weight": 400 }
+  ],
+  "pages": [
+    {
+      "name": "Cover",
+      "bg": "#FAF6EF",
+      "nodes": [
+        {
+          "kind": "text",
+          "x": 600, "y": -120, "w": 460, "h": 760,
+          "text": "$",
+          "family": "Playfair Display", "size": 640, "weight": 600,
+          "color": "#7F1D1D", "opacity": 0.08, "lineHeight": 1,
+          "align": "center", "bleed": true
+        },
+        {
+          "kind": "text",
+          "x": 90, "y": 92, "w": 700, "h": 30,
+          "text": "The Freelance Ledger · No. 04",
+          "family": "Inter", "size": 22, "weight": 600,
+          "color": "#7F1D1D", "letterSpacing": 4, "upper": true
+        },
+        {
+          "kind": "text",
+          "x": 90, "y": 280, "w": 900, "h": 124,
+          "text": "5 pricing",
+          "family": "Playfair Display", "size": 112, "weight": 600,
+          "color": "#201A17", "lineHeight": 1.05
+        },
+        {
+          "kind": "text",
+          "x": 90, "y": 404, "w": 900, "h": 124,
+          "text": "mistakes",
+          "family": "Playfair Display", "size": 112, "weight": 600,
+          "color": "#7F1D1D", "lineHeight": 1.05
+        },
+        {
+          "kind": "text",
+          "x": 90, "y": 528, "w": 900, "h": 124,
+          "text": "freelancers",
+          "family": "Playfair Display", "size": 112, "weight": 600,
+          "color": "#201A17", "lineHeight": 1.05
+        },
+        {
+          "kind": "text",
+          "x": 90, "y": 652, "w": 900, "h": 124,
+          "text": "still make.",
+          "family": "Playfair Display", "size": 112, "weight": 600,
+          "color": "#201A17", "lineHeight": 1.05
+        },
+        {
+          "kind": "text",
+          "x": 90, "y": 820, "w": 800, "h": 38,
+          "text": "Save this checklist before you send your next proposal.",
+          "family": "Inter", "size": 26, "weight": 400,
+          "color": "#5B534D"
+        },
+        { "kind": "rect", "x": 90, "y": 896, "w": 900, "h": 2, "fill": "#201A17", "opacity": 0.18 },
+        {
+          "kind": "text",
+          "x": 90, "y": 918, "w": 500, "h": 72,
+          "text": "@lena.writes",
+          "family": "Inter", "size": 24, "weight": 600,
+          "color": "#201A17", "vAlign": "middle"
+        },
+        {
+          "kind": "button",
+          "x": 918, "y": 918, "w": 72, "h": 72,
+          "fill": "#7F1D1D", "label": "→",
+          "family": "Inter", "size": 30, "weight": 600,
+          "color": "#FAF6EF"
+        }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n2", "kind": "text", "label": "Headline line 1", "hint": "Start with the number, e.g. 5 pricing" },
+    { "node": "p0-n3", "kind": "text", "label": "Headline line 2", "hint": "Accent keyword line" },
+    { "node": "p0-n4", "kind": "text", "label": "Headline line 3", "hint": "Who it is for" },
+    { "node": "p0-n5", "kind": "text", "label": "Headline line 4", "hint": "Closing words" },
+    { "node": "p0-n6", "kind": "text", "label": "Subline", "hint": "One-line reason to swipe" },
+    { "node": "p0-n8", "kind": "text", "label": "Handle", "hint": "Your @handle" }
+  ]
+}

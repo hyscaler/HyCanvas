@@ -1,0 +1,32 @@
+{
+  "id": "event-poster-bold",
+  "title": "Event Poster",
+  "categories": ["marketing", "print"],
+  "tags": ["poster", "event", "bold", "typographic"],
+  "styleTags": ["bold", "modern"],
+  "size": [1080, 1528],
+  "typography": [
+    { "role": "heading", "family": "Montserrat", "weight": 900 },
+    { "role": "body", "family": "Inter", "weight": 400 }
+  ],
+  "pages": [
+    {
+      "name": "Poster",
+      "bg": "#111827",
+      "nodes": [
+        { "kind": "ellipse", "x": 690, "y": 130, "w": 300, "h": 300, "fill": { "angle": 135, "stops": [["#FACC15", 0], ["#EF4444", 1]] } },
+        { "kind": "text", "x": 90, "y": 160, "w": 560, "h": 40, "text": "Fri · Oct 24 · 7PM", "family": "Montserrat", "size": 30, "weight": 700, "color": "#FACC15", "letterSpacing": 4, "upper": true },
+        { "kind": "text", "x": 90, "y": 500, "w": 900, "h": 515, "text": "Design\nForward\n2026", "family": "Montserrat", "size": 150, "weight": 900, "color": "#FFFFFF", "lineHeight": 1.08 },
+        { "kind": "rect", "x": 90, "y": 1026, "w": 200, "h": 10, "fill": "#FACC15", "radius": 5 },
+        { "kind": "text", "x": 90, "y": 1085, "w": 820, "h": 92, "text": "An evening of talks on craft, type,\nand the future of digital design.", "family": "Inter", "size": 32, "weight": 400, "color": "#CBD5E1", "lineHeight": 1.35 },
+        { "kind": "text", "x": 90, "y": 1400, "w": 900, "h": 38, "text": "The Foundry  ·  120 Market St", "family": "Montserrat", "size": 28, "weight": 600, "color": "#FFFFFF", "letterSpacing": 2, "upper": true }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n2", "kind": "text", "label": "Event title", "hint": "Up to three short display lines" },
+    { "node": "p0-n1", "kind": "text", "label": "Date and time", "hint": "e.g. Fri · Oct 24 · 7PM" },
+    { "node": "p0-n4", "kind": "text", "label": "Description", "hint": "One or two lines about the event" },
+    { "node": "p0-n5", "kind": "text", "label": "Venue", "hint": "Venue name and address" }
+  ]
+}

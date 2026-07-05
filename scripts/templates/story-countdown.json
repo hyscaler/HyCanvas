@@ -1,0 +1,175 @@
+{
+ "id": "story-countdown",
+ "title": "Launch Countdown Story",
+ "categories": [
+  "social",
+  "marketing"
+ ],
+ "tags": [
+  "story",
+  "countdown",
+  "launch"
+ ],
+ "styleTags": [
+  "bold",
+  "gradient"
+ ],
+ "size": [
+  1080,
+  1920
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Outfit",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Work Sans",
+   "weight": 500
+  }
+ ],
+ "pages": [
+  {
+   "name": "Story",
+   "bg": {
+    "angle": 170,
+    "stops": [
+     [
+      "#D946EF",
+      0
+     ],
+     [
+      "#FB923C",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 680,
+     "y": -260,
+     "w": 620,
+     "h": 620,
+     "opacity": 0.12,
+     "bleed": true,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "ellipse",
+     "x": -180,
+     "y": 1560,
+     "w": 360,
+     "h": 360,
+     "opacity": 0.12,
+     "bleed": true,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 650,
+     "w": 800,
+     "h": 42,
+     "text": "The countdown is on",
+     "family": "Outfit",
+     "size": 28,
+     "weight": 700,
+     "color": "#4a044e",
+     "align": "center",
+     "letterSpacing": 8,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 90,
+     "y": 700,
+     "w": 900,
+     "h": 400,
+     "text": "48H",
+     "family": "Outfit",
+     "size": 360,
+     "weight": 800,
+     "color": "#FFFFFF",
+     "align": "center",
+     "lineHeight": 1.0
+    },
+    {
+     "kind": "text",
+     "x": 190,
+     "y": 1080,
+     "w": 700,
+     "h": 52,
+     "text": "until the drop",
+     "family": "Work Sans",
+     "size": 38,
+     "weight": 500,
+     "color": "#4a044e",
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 240,
+     "y": 1300,
+     "w": 600,
+     "h": 42,
+     "text": "@studio.noon",
+     "family": "Work Sans",
+     "size": 28,
+     "weight": 600,
+     "color": "#4a044e",
+     "align": "center",
+     "letterSpacing": 2
+    },
+    {
+     "kind": "rect",
+     "x": 450,
+     "y": 1440,
+     "w": 110,
+     "h": 12,
+     "fill": "#FFFFFF",
+     "radius": 6,
+     "rotation": 32
+    },
+    {
+     "kind": "rect",
+     "x": 531,
+     "y": 1503,
+     "w": 110,
+     "h": 12,
+     "fill": "#FFFFFF",
+     "radius": 6,
+     "rotation": -32
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n2",
+   "kind": "text",
+   "label": "Eyebrow",
+   "hint": "Short teaser line"
+  },
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Countdown",
+   "hint": "Time left, e.g. 48H or 3 days"
+  },
+  {
+   "node": "p0-n4",
+   "kind": "text",
+   "label": "Subline",
+   "hint": "What the countdown is for"
+  },
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Brand handle",
+   "hint": "Your @handle"
+  }
+ ]
+}

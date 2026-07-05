@@ -1,0 +1,28 @@
+{
+  "id": "story-quote-night",
+  "title": "Night Quote Story",
+  "categories": ["social", "quotes"],
+  "tags": ["story", "quote", "minimal"],
+  "styleTags": ["minimal", "dark"],
+  "size": [1080, 1920],
+  "typography": [
+    { "role": "heading", "family": "Montserrat", "weight": 800 },
+    { "role": "body", "family": "Inter", "weight": 600 }
+  ],
+  "pages": [
+    {
+      "name": "Story",
+      "bg": "#020617",
+      "nodes": [
+        { "kind": "text", "x": 120, "y": 440, "w": 300, "h": 280, "text": "“", "family": "Montserrat", "size": 260, "weight": 800, "color": "#FACC15", "align": "left", "lineHeight": 1.0 },
+        { "kind": "text", "x": 120, "y": 730, "w": 840, "h": 560, "text": "The details\nare not the\ndetails. They\nmake the\ndesign.", "family": "Montserrat", "size": 92, "weight": 800, "color": "#FFFFFF", "align": "left", "lineHeight": 1.12 },
+        { "kind": "rect", "x": 120, "y": 1360, "w": 110, "h": 10, "fill": "#FACC15", "radius": 5 },
+        { "kind": "text", "x": 120, "y": 1410, "w": 800, "h": 44, "text": "Charles Eames", "family": "Inter", "size": 30, "weight": 600, "color": "#94A3B8", "align": "left", "letterSpacing": 4, "upper": true }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n1", "kind": "text", "label": "Quote", "hint": "The quote, up to five short lines" },
+    { "node": "p0-n3", "kind": "text", "label": "Author", "hint": "Who said it" }
+  ]
+}

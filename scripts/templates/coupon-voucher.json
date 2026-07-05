@@ -1,0 +1,92 @@
+{
+  "id": "coupon-voucher",
+  "title": "Discount Coupon",
+  "categories": ["marketing", "print"],
+  "tags": ["coupon", "voucher", "discount"],
+  "styleTags": ["bold", "modern"],
+  "size": [1080, 600],
+  "typography": [
+    { "role": "heading", "family": "Poppins", "weight": 800 },
+    { "role": "body", "family": "Inter", "weight": 400 }
+  ],
+  "pages": [
+    {
+      "name": "Coupon",
+      "bg": "#065F46",
+      "nodes": [
+        { "kind": "rect", "x": 40, "y": 40, "w": 1000, "h": 520, "fill": "#FFFFFF", "radius": 24 },
+        { "kind": "rect", "x": 720, "y": 40, "w": 320, "h": 520, "fill": "#FBBF24", "radius": 24 },
+        { "kind": "rect", "x": 720, "y": 40, "w": 60, "h": 520, "fill": "#FBBF24" },
+        { "kind": "rect", "x": 728, "y": 93, "w": 4, "h": 18, "fill": "#FFFFFF" },
+        { "kind": "rect", "x": 728, "y": 129, "w": 4, "h": 18, "fill": "#FFFFFF" },
+        { "kind": "rect", "x": 728, "y": 165, "w": 4, "h": 18, "fill": "#FFFFFF" },
+        { "kind": "rect", "x": 728, "y": 201, "w": 4, "h": 18, "fill": "#FFFFFF" },
+        { "kind": "rect", "x": 728, "y": 237, "w": 4, "h": 18, "fill": "#FFFFFF" },
+        { "kind": "rect", "x": 728, "y": 273, "w": 4, "h": 18, "fill": "#FFFFFF" },
+        { "kind": "rect", "x": 728, "y": 309, "w": 4, "h": 18, "fill": "#FFFFFF" },
+        { "kind": "rect", "x": 728, "y": 345, "w": 4, "h": 18, "fill": "#FFFFFF" },
+        { "kind": "rect", "x": 728, "y": 381, "w": 4, "h": 18, "fill": "#FFFFFF" },
+        { "kind": "rect", "x": 728, "y": 417, "w": 4, "h": 18, "fill": "#FFFFFF" },
+        { "kind": "rect", "x": 728, "y": 453, "w": 4, "h": 18, "fill": "#FFFFFF" },
+        { "kind": "rect", "x": 728, "y": 489, "w": 4, "h": 18, "fill": "#FFFFFF" },
+        {
+          "kind": "text",
+          "x": 90, "y": 100, "w": 540, "h": 37,
+          "text": "Gift voucher",
+          "family": "Poppins", "size": 28, "weight": 700,
+          "color": "#059669", "letterSpacing": 4, "upper": true
+        },
+        {
+          "kind": "text",
+          "x": 90, "y": 180, "w": 580, "h": 140,
+          "text": "$50 off",
+          "family": "Poppins", "size": 120, "weight": 800,
+          "color": "#065F46", "lineHeight": 1.05
+        },
+        {
+          "kind": "text",
+          "x": 90, "y": 344, "w": 560, "h": 36,
+          "text": "on your next order over $200",
+          "family": "Inter", "size": 26, "weight": 400,
+          "color": "#134E4A"
+        },
+        {
+          "kind": "text",
+          "x": 90, "y": 473, "w": 560, "h": 28,
+          "text": "Oak & Ember Coffee Co.",
+          "family": "Inter", "size": 20, "weight": 600,
+          "color": "#059669", "letterSpacing": 2, "upper": true
+        },
+        {
+          "kind": "text",
+          "x": 720, "y": 208, "w": 320, "h": 26,
+          "text": "Use code",
+          "family": "Poppins", "size": 20, "weight": 600,
+          "color": "#7C2D12", "letterSpacing": 3, "upper": true, "align": "center"
+        },
+        { "kind": "rect", "x": 752, "y": 248, "w": 256, "h": 88, "fill": "#FFFFFF", "radius": 12 },
+        {
+          "kind": "text",
+          "x": 752, "y": 248, "w": 256, "h": 88,
+          "text": "GIFT50",
+          "family": "Poppins", "size": 52, "weight": 800,
+          "color": "#7C2D12", "letterSpacing": 2, "align": "center", "vAlign": "middle"
+        },
+        {
+          "kind": "text",
+          "x": 720, "y": 368, "w": 320, "h": 26,
+          "text": "Valid until Dec 31, 2026",
+          "family": "Inter", "size": 18, "weight": 600,
+          "color": "#7C2D12", "align": "center"
+        }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n16", "kind": "text", "label": "Offer amount", "hint": "The discount, e.g. $50 off or 25% off" },
+    { "node": "p0-n17", "kind": "text", "label": "Condition", "hint": "When the offer applies" },
+    { "node": "p0-n21", "kind": "text", "label": "Promo code", "hint": "Code to enter at checkout" },
+    { "node": "p0-n22", "kind": "text", "label": "Expiry", "hint": "Valid-until date" },
+    { "node": "p0-n18", "kind": "text", "label": "Brand", "hint": "Business name" }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "id": "business-card-bold",
+  "title": "Business Card Dark",
+  "categories": ["business", "print"],
+  "tags": ["card", "bold", "dark"],
+  "styleTags": ["bold", "modern"],
+  "size": [1050, 600],
+  "typography": [
+    { "role": "heading", "family": "Poppins", "weight": 700 },
+    { "role": "body", "family": "Inter", "weight": 400 }
+  ],
+  "pages": [
+    {
+      "name": "Front",
+      "bg": "#0f1524",
+      "nodes": [
+        {
+          "kind": "ellipse", "x": 820, "y": -60, "w": 280, "h": 280, "bleed": true,
+          "fill": { "angle": 315, "stops": [["#22d3ee", 0], ["#6366f1", 1]] }
+        },
+        {
+          "kind": "text", "x": 90, "y": 156, "w": 640, "h": 77,
+          "text": "Sam Rivera",
+          "family": "Poppins", "size": 58, "weight": 700, "color": "#ffffff", "lineHeight": 1.1
+        },
+        {
+          "kind": "text", "x": 90, "y": 244, "w": 640, "h": 34,
+          "text": "Founder & Engineer",
+          "family": "Inter", "size": 26, "weight": 500, "color": "#22d3ee",
+          "letterSpacing": 1, "lineHeight": 1.2
+        },
+        { "kind": "rect", "x": 90, "y": 308, "w": 120, "h": 6, "fill": "#22d3ee", "radius": 3 },
+        {
+          "kind": "text", "x": 90, "y": 356, "w": 640, "h": 32,
+          "text": "sam@rivera.dev",
+          "family": "Inter", "size": 24, "weight": 400, "color": "#94a3b8", "lineHeight": 1.25
+        },
+        {
+          "kind": "text", "x": 90, "y": 390, "w": 640, "h": 32,
+          "text": "+1 (555) 771 0090",
+          "family": "Inter", "size": 24, "weight": 400, "color": "#94a3b8", "lineHeight": 1.25
+        },
+        {
+          "kind": "text", "x": 90, "y": 424, "w": 640, "h": 32,
+          "text": "rivera.dev",
+          "family": "Inter", "size": 24, "weight": 400, "color": "#94a3b8", "lineHeight": 1.25
+        }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n1", "kind": "text", "label": "Name", "hint": "Full name" },
+    { "node": "p0-n2", "kind": "text", "label": "Job title", "hint": "Role or profession" },
+    { "node": "p0-n4", "kind": "text", "label": "Email", "hint": "Email address" },
+    { "node": "p0-n5", "kind": "text", "label": "Phone", "hint": "Phone number" },
+    { "node": "p0-n6", "kind": "text", "label": "Website", "hint": "Website URL" }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "id": "linkedin-banner-safe",
+  "title": "LinkedIn Banner (Safe Zones)",
+  "categories": ["social", "business"],
+  "tags": ["linkedin", "banner", "profile"],
+  "styleTags": ["modern", "minimal"],
+  "size": [1584, 396],
+  "typography": [
+    { "role": "heading", "family": "Manrope", "weight": 700 },
+    { "role": "body", "family": "Inter", "weight": 600 }
+  ],
+  "pages": [
+    {
+      "name": "Banner",
+      "bg": "#0b1220",
+      "nodes": [
+        { "kind": "ellipse", "x": 1150, "y": -260, "w": 560, "h": 560, "fill": "#22d3ee", "opacity": 0.1, "bleed": true },
+        { "kind": "ellipse", "x": -180, "y": -220, "w": 480, "h": 480, "fill": "#8b5cf6", "opacity": 0.08, "bleed": true },
+        { "kind": "rect", "x": 1576, "y": 0, "w": 8, "h": 396, "fill": { "angle": 90, "stops": [["#22d3ee", 0], ["#8b5cf6", 1]] } },
+        { "kind": "text", "x": 680, "y": 84, "w": 520, "h": 30, "text": "Daniel Okafor", "family": "Inter", "size": 22, "weight": 700, "color": "#22d3ee", "letterSpacing": 4, "upper": true },
+        { "kind": "text", "x": 680, "y": 128, "w": 840, "h": 118, "text": "I build data platforms that turn\nbillions of events into decisions.", "family": "Manrope", "size": 46, "weight": 700, "color": "#e2e8f0", "lineHeight": 1.12 },
+        { "kind": "button", "x": 680, "y": 278, "w": 180, "h": 52, "fill": "#1e293b", "label": "EX-STRIPE", "color": "#cbd5e1", "family": "Inter", "size": 17, "weight": 600, "letterSpacing": 2 },
+        { "kind": "button", "x": 880, "y": 278, "w": 250, "h": 52, "fill": "#1e293b", "label": "AWS CERTIFIED", "color": "#cbd5e1", "family": "Inter", "size": 17, "weight": 600, "letterSpacing": 2 },
+        { "kind": "button", "x": 1150, "y": 278, "w": 280, "h": 52, "fill": "#1e293b", "label": "KUBECON SPEAKER", "color": "#cbd5e1", "family": "Inter", "size": 17, "weight": 600, "letterSpacing": 2 }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n3", "kind": "text", "label": "Name", "hint": "Your name, shown as the small eyebrow line" },
+    { "node": "p0-n4", "kind": "text", "label": "Positioning", "hint": "Two-line statement of the value you deliver" },
+    { "node": "p0-n5-label", "kind": "text", "label": "Proof 1", "hint": "Credential or past employer" },
+    { "node": "p0-n6-label", "kind": "text", "label": "Proof 2", "hint": "Certification or award" },
+    { "node": "p0-n7-label", "kind": "text", "label": "Proof 3", "hint": "Talk, community or metric" }
+  ]
+}

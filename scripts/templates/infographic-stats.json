@@ -1,0 +1,323 @@
+{
+ "id": "infographic-stats",
+ "title": "Stats infographic",
+ "categories": [
+  "marketing",
+  "education"
+ ],
+ "tags": [
+  "infographic",
+  "stats",
+  "data",
+  "remote work"
+ ],
+ "styleTags": [
+  "modern",
+  "dark",
+  "data"
+ ],
+ "size": [
+  800,
+  2000
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Manrope",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Inter",
+   "weight": 400
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n1",
+   "kind": "text",
+   "label": "Title"
+  },
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Stat 1 value"
+  },
+  {
+   "node": "p0-n9",
+   "kind": "text",
+   "label": "Stat 2 value"
+  },
+  {
+   "node": "p0-n13",
+   "kind": "text",
+   "label": "Stat 3 value"
+  },
+  {
+   "node": "p0-n17",
+   "kind": "text",
+   "label": "Stat 4 value"
+  },
+  {
+   "node": "p0-n21",
+   "kind": "text",
+   "label": "Source"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Infographic",
+   "bg": "#0f172a",
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 96,
+     "w": 672,
+     "h": 28,
+     "text": "2026 report",
+     "family": "Inter",
+     "size": 20,
+     "weight": 700,
+     "color": "#22d3ee",
+     "letterSpacing": 5,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 148,
+     "w": 672,
+     "h": 140,
+     "text": "Remote work,\nby the numbers",
+     "family": "Manrope",
+     "size": 56,
+     "weight": 800,
+     "color": "#ffffff",
+     "lineHeight": 1.12
+    },
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 320,
+     "w": 640,
+     "h": 34,
+     "text": "What 12,400 knowledge workers told us this spring.",
+     "family": "Inter",
+     "size": 22,
+     "weight": 400,
+     "color": "#94a3b8"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 460,
+     "w": 4,
+     "h": 1300,
+     "fill": "#1e293b"
+    },
+    {
+     "kind": "ellipse",
+     "x": 84,
+     "y": 490,
+     "w": 28,
+     "h": 28,
+     "fill": "#22d3ee"
+    },
+    {
+     "kind": "text",
+     "x": 156,
+     "y": 460,
+     "w": 560,
+     "h": 103,
+     "text": "73%",
+     "family": "Manrope",
+     "size": 84,
+     "weight": 800,
+     "color": "#22d3ee"
+    },
+    {
+     "kind": "text",
+     "x": 156,
+     "y": 572,
+     "w": 560,
+     "h": 32,
+     "text": "Work hybrid or fully remote",
+     "family": "Inter",
+     "size": 24,
+     "weight": 600,
+     "color": "#ffffff"
+    },
+    {
+     "kind": "text",
+     "x": 156,
+     "y": 616,
+     "w": 540,
+     "h": 60,
+     "text": "Up from 61% in 2024, and highest\namong engineering and design teams.",
+     "family": "Inter",
+     "size": 19,
+     "weight": 400,
+     "color": "#94a3b8",
+     "lineHeight": 1.35
+    },
+    {
+     "kind": "ellipse",
+     "x": 84,
+     "y": 830,
+     "w": 28,
+     "h": 28,
+     "fill": "#8b5cf6"
+    },
+    {
+     "kind": "text",
+     "x": 156,
+     "y": 800,
+     "w": 560,
+     "h": 103,
+     "text": "3.1 days",
+     "family": "Manrope",
+     "size": 84,
+     "weight": 800,
+     "color": "#8b5cf6"
+    },
+    {
+     "kind": "text",
+     "x": 156,
+     "y": 912,
+     "w": 560,
+     "h": 32,
+     "text": "Average days at home per week",
+     "family": "Inter",
+     "size": 24,
+     "weight": 600,
+     "color": "#ffffff"
+    },
+    {
+     "kind": "text",
+     "x": 156,
+     "y": 956,
+     "w": 540,
+     "h": 60,
+     "text": "Tuesday and Thursday remain the most\ncommon anchor days in the office.",
+     "family": "Inter",
+     "size": 19,
+     "weight": 400,
+     "color": "#94a3b8",
+     "lineHeight": 1.35
+    },
+    {
+     "kind": "ellipse",
+     "x": 84,
+     "y": 1170,
+     "w": 28,
+     "h": 28,
+     "fill": "#22d3ee"
+    },
+    {
+     "kind": "text",
+     "x": 156,
+     "y": 1140,
+     "w": 560,
+     "h": 103,
+     "text": "42%",
+     "family": "Manrope",
+     "size": 84,
+     "weight": 800,
+     "color": "#22d3ee"
+    },
+    {
+     "kind": "text",
+     "x": 156,
+     "y": 1252,
+     "w": 560,
+     "h": 32,
+     "text": "Would switch jobs to stay remote",
+     "family": "Inter",
+     "size": 24,
+     "weight": 600,
+     "color": "#ffffff"
+    },
+    {
+     "kind": "text",
+     "x": 156,
+     "y": 1296,
+     "w": 540,
+     "h": 60,
+     "text": "Flexibility now outranks salary as the\nsecond most cited retention factor.",
+     "family": "Inter",
+     "size": 19,
+     "weight": 400,
+     "color": "#94a3b8",
+     "lineHeight": 1.35
+    },
+    {
+     "kind": "ellipse",
+     "x": 84,
+     "y": 1510,
+     "w": 28,
+     "h": 28,
+     "fill": "#8b5cf6"
+    },
+    {
+     "kind": "text",
+     "x": 156,
+     "y": 1480,
+     "w": 560,
+     "h": 103,
+     "text": "$6,800",
+     "family": "Manrope",
+     "size": 84,
+     "weight": 800,
+     "color": "#8b5cf6"
+    },
+    {
+     "kind": "text",
+     "x": 156,
+     "y": 1592,
+     "w": 560,
+     "h": 32,
+     "text": "Saved per year by skipping the commute",
+     "family": "Inter",
+     "size": 24,
+     "weight": 600,
+     "color": "#ffffff"
+    },
+    {
+     "kind": "text",
+     "x": 156,
+     "y": 1636,
+     "w": 540,
+     "h": 60,
+     "text": "Transport, food, and childcare savings,\naveraged across metro-area respondents.",
+     "family": "Inter",
+     "size": 19,
+     "weight": 400,
+     "color": "#94a3b8",
+     "lineHeight": 1.35
+    },
+    {
+     "kind": "rect",
+     "x": 64,
+     "y": 1856,
+     "w": 90,
+     "h": 8,
+     "fill": "#22d3ee",
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 1892,
+     "w": 640,
+     "h": 26,
+     "text": "Source: Global Workplace Survey 2026, n = 12,400",
+     "family": "Inter",
+     "size": 18,
+     "weight": 400,
+     "color": "#94a3b8"
+    }
+   ]
+  }
+ ]
+}

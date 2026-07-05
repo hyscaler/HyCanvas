@@ -1,0 +1,47 @@
+{
+  "id": "story-webinar-reg",
+  "title": "Webinar Registration Story",
+  "categories": ["social", "marketing"],
+  "tags": ["story", "webinar", "registration", "dark"],
+  "styleTags": ["modern", "bold"],
+  "size": [1080, 1920],
+  "typography": [
+    { "role": "heading", "family": "Manrope", "weight": 700 },
+    { "role": "body", "family": "Inter", "weight": 500 }
+  ],
+  "pages": [
+    {
+      "name": "Story",
+      "bg": "#0B1220",
+      "nodes": [
+        { "kind": "ellipse", "x": 760, "y": -220, "w": 560, "h": 560, "fill": { "angle": 135, "stops": [["#155E75", 0], ["#4C1D95", 1]] }, "bleed": true },
+        { "kind": "ellipse", "x": -160, "y": 1720, "w": 400, "h": 400, "fill": "#1E293B", "bleed": true },
+        { "kind": "text", "x": 90, "y": 260, "w": 800, "h": 36, "text": "Free engineering webinar", "family": "Inter", "size": 26, "weight": 700, "color": "#22D3EE", "align": "left", "letterSpacing": 6, "upper": true },
+        { "kind": "text", "x": 90, "y": 354, "w": 900, "h": 210, "text": "Ship faster with\ndesign tokens", "family": "Manrope", "size": 94, "weight": 700, "color": "#FFFFFF", "align": "left", "lineHeight": 1.06 },
+        { "kind": "ellipse", "x": 90, "y": 673, "w": 88, "h": 88, "fill": "#1E293B" },
+        { "kind": "text", "x": 90, "y": 673, "w": 88, "h": 88, "text": "MK", "family": "Inter", "size": 28, "weight": 700, "color": "#22D3EE", "align": "center", "vAlign": "middle" },
+        { "kind": "text", "x": 210, "y": 671, "w": 780, "h": 48, "text": "Maya Krishnan", "family": "Inter", "size": 34, "weight": 700, "color": "#FFFFFF", "align": "left" },
+        { "kind": "text", "x": 210, "y": 723, "w": 780, "h": 38, "text": "Principal Engineer, Nova UI", "family": "Inter", "size": 26, "weight": 500, "color": "#94A3B8", "align": "left" },
+        { "kind": "ellipse", "x": 90, "y": 805, "w": 88, "h": 88, "fill": "#1E293B" },
+        { "kind": "text", "x": 90, "y": 805, "w": 88, "h": 88, "text": "DR", "family": "Inter", "size": 28, "weight": 700, "color": "#22D3EE", "align": "center", "vAlign": "middle" },
+        { "kind": "text", "x": 210, "y": 803, "w": 780, "h": 48, "text": "Dan Romero", "family": "Inter", "size": 34, "weight": 700, "color": "#FFFFFF", "align": "left" },
+        { "kind": "text", "x": 210, "y": 855, "w": 780, "h": 38, "text": "Design Systems Lead, Loop", "family": "Inter", "size": 26, "weight": 500, "color": "#94A3B8", "align": "left" },
+        { "kind": "rect", "x": 90, "y": 1013, "w": 260, "h": 72, "fill": "#1E293B", "radius": 36 },
+        { "kind": "text", "x": 90, "y": 1013, "w": 260, "h": 72, "text": "Thu, Mar 12", "family": "Inter", "size": 28, "weight": 600, "color": "#FFFFFF", "align": "center", "vAlign": "middle" },
+        { "kind": "rect", "x": 374, "y": 1013, "w": 260, "h": 72, "fill": "#1E293B", "radius": 36 },
+        { "kind": "text", "x": 374, "y": 1013, "w": 260, "h": 72, "text": "11:00 AM PT", "family": "Inter", "size": 28, "weight": 600, "color": "#FFFFFF", "align": "center", "vAlign": "middle" },
+        { "kind": "button", "x": 90, "y": 1205, "w": 360, "h": 96, "fill": "#22D3EE", "label": "Save your seat", "color": "#0B1220", "family": "Manrope", "size": 30, "weight": 700 },
+        { "kind": "rect", "x": 90, "y": 1475, "w": 900, "h": 2, "fill": "#1E293B" },
+        { "kind": "text", "x": 90, "y": 1515, "w": 900, "h": 36, "text": "Tap the link in bio to register", "family": "Inter", "size": 26, "weight": 500, "color": "#94A3B8", "align": "left" }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n3", "kind": "text", "label": "Webinar title", "hint": "Keep it to two short lines" },
+    { "node": "p0-n6", "kind": "text", "label": "Speaker 1 name", "hint": "First and last name" },
+    { "node": "p0-n10", "kind": "text", "label": "Speaker 2 name", "hint": "First and last name" },
+    { "node": "p0-n13", "kind": "text", "label": "Date", "hint": "e.g. Thu, Mar 12" },
+    { "node": "p0-n15", "kind": "text", "label": "Time", "hint": "e.g. 11:00 AM PT" },
+    { "node": "p0-n16-label", "kind": "text", "label": "CTA label", "hint": "Short action, 2-3 words" }
+  ]
+}

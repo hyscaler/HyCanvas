@@ -1,0 +1,81 @@
+{
+  "id": "save-the-date",
+  "title": "Save the Date",
+  "categories": ["events", "print"],
+  "tags": ["wedding", "invite", "elegant"],
+  "styleTags": ["elegant", "minimal"],
+  "size": [1050, 1500],
+  "typography": [
+    { "role": "heading", "family": "Playfair Display", "weight": 600 },
+    { "role": "body", "family": "Inter", "weight": 400 }
+  ],
+  "pages": [
+    {
+      "name": "Card",
+      "bg": "#FAFAF9",
+      "nodes": [
+        { "kind": "rect", "x": 50, "y": 50, "w": 950, "h": 2, "fill": "#A16207", "opacity": 0.5 },
+        { "kind": "rect", "x": 50, "y": 1448, "w": 950, "h": 2, "fill": "#A16207", "opacity": 0.5 },
+        { "kind": "rect", "x": 50, "y": 50, "w": 2, "h": 1400, "fill": "#A16207", "opacity": 0.5 },
+        { "kind": "rect", "x": 998, "y": 50, "w": 2, "h": 1400, "fill": "#A16207", "opacity": 0.5 },
+        {
+          "kind": "text",
+          "x": 100, "y": 305, "w": 850, "h": 37,
+          "text": "Save the date",
+          "family": "Inter", "size": 28, "weight": 500,
+          "color": "#A16207", "letterSpacing": 8, "upper": true, "align": "center"
+        },
+        { "kind": "rect", "x": 475, "y": 386, "w": 100, "h": 4, "fill": "#A16207", "radius": 2 },
+        {
+          "kind": "text",
+          "x": 100, "y": 515, "w": 850, "h": 146,
+          "text": "Olivia",
+          "family": "Playfair Display", "size": 132, "weight": 600,
+          "color": "#292524", "lineHeight": 1.05, "align": "center"
+        },
+        {
+          "kind": "text",
+          "x": 100, "y": 675, "w": 850, "h": 84,
+          "text": "&",
+          "family": "Playfair Display", "size": 76, "weight": 400,
+          "color": "#A16207", "lineHeight": 1.05, "align": "center"
+        },
+        {
+          "kind": "text",
+          "x": 100, "y": 775, "w": 850, "h": 146,
+          "text": "Noah",
+          "family": "Playfair Display", "size": 132, "weight": 600,
+          "color": "#292524", "lineHeight": 1.05, "align": "center"
+        },
+        {
+          "kind": "text",
+          "x": 100, "y": 985, "w": 850, "h": 56,
+          "text": "September 20, 2026",
+          "family": "Playfair Display", "size": 46, "weight": 500,
+          "color": "#292524", "lineHeight": 1.1, "align": "center"
+        },
+        {
+          "kind": "text",
+          "x": 100, "y": 1059, "w": 850, "h": 34,
+          "text": "Sunhill Gardens · Napa, CA",
+          "family": "Inter", "size": 26, "weight": 400,
+          "color": "#57534E", "letterSpacing": 1, "align": "center"
+        },
+        {
+          "kind": "text",
+          "x": 100, "y": 1358, "w": 850, "h": 30,
+          "text": "Formal invitation to follow",
+          "family": "Inter", "size": 22, "weight": 400,
+          "color": "#71717A", "letterSpacing": 2, "align": "center"
+        }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n6", "kind": "text", "label": "First name", "hint": "One partner's name" },
+    { "node": "p0-n8", "kind": "text", "label": "Second name", "hint": "The other partner's name" },
+    { "node": "p0-n9", "kind": "text", "label": "Date", "hint": "Wedding date" },
+    { "node": "p0-n10", "kind": "text", "label": "Venue", "hint": "Venue and city" },
+    { "node": "p0-n11", "kind": "text", "label": "Note", "hint": "Closing line, e.g. invitation to follow" }
+  ]
+}

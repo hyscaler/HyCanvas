@@ -1,0 +1,36 @@
+{
+  "id": "webinar-flyer",
+  "title": "Webinar Flyer",
+  "categories": ["marketing", "print"],
+  "tags": ["webinar", "flyer", "register"],
+  "styleTags": ["modern", "bold"],
+  "size": [1080, 1528],
+  "typography": [
+    { "role": "heading", "family": "Poppins", "weight": 800 },
+    { "role": "body", "family": "Inter", "weight": 400 }
+  ],
+  "pages": [
+    {
+      "name": "Flyer",
+      "bg": "#0B1220",
+      "nodes": [
+        { "kind": "rect", "x": 0, "y": 0, "w": 1080, "h": 70, "fill": { "angle": 90, "stops": [["#38BDF8", 0], ["#6366F1", 1]] } },
+        { "kind": "text", "x": 90, "y": 220, "w": 900, "h": 37, "text": "Free workshop", "family": "Poppins", "size": 28, "weight": 700, "color": "#38BDF8", "letterSpacing": 6, "upper": true },
+        { "kind": "text", "x": 90, "y": 320, "w": 900, "h": 240, "text": "Ship faster with\ndesign systems", "family": "Poppins", "size": 104, "weight": 800, "color": "#FFFFFF", "lineHeight": 1.08 },
+        { "kind": "rect", "x": 90, "y": 680, "w": 900, "h": 250, "fill": "#131C2E", "stroke": "#1E293B", "strokeWidth": 1, "radius": 24 },
+        { "kind": "text", "x": 140, "y": 727, "w": 800, "h": 48, "text": "Wed, Nov 19  ·  10:00 AM PT", "family": "Inter", "size": 36, "weight": 600, "color": "#FFFFFF" },
+        { "kind": "text", "x": 140, "y": 795, "w": 800, "h": 34, "text": "With Lena Ortiz  ·  Head of Design Systems", "family": "Inter", "size": 26, "weight": 500, "color": "#CBD5E1" },
+        { "kind": "text", "x": 140, "y": 849, "w": 800, "h": 34, "text": "Live on Zoom  ·  60 minutes  ·  Live Q&A", "family": "Inter", "size": 26, "weight": 400, "color": "#94A3B8" },
+        { "kind": "button", "x": 90, "y": 1050, "w": 420, "h": 100, "fill": { "angle": 90, "stops": [["#38BDF8", 0], ["#6366F1", 1]] }, "label": "Register free", "color": "#0B1220", "family": "Poppins", "size": 30, "weight": 700, "letterSpacing": 1 },
+        { "kind": "text", "x": 90, "y": 1404, "w": 900, "h": 34, "text": "company.com/workshop", "family": "Inter", "size": 26, "weight": 500, "color": "#94A3B8", "letterSpacing": 1 }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n2", "kind": "text", "label": "Workshop title", "hint": "Two short display lines" },
+    { "node": "p0-n4", "kind": "text", "label": "Date and time", "hint": "e.g. Wed, Nov 19 · 10:00 AM PT" },
+    { "node": "p0-n5", "kind": "text", "label": "Host", "hint": "Presenter name and role" },
+    { "node": "p0-n7-label", "kind": "text", "label": "CTA label", "hint": "Short action, 2-3 words" },
+    { "node": "p0-n8", "kind": "text", "label": "Registration URL", "hint": "Where to sign up" }
+  ]
+}

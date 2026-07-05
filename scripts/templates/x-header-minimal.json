@@ -1,0 +1,49 @@
+{
+  "id": "x-header-minimal",
+  "title": "Personal Brand X Header",
+  "categories": ["social", "business"],
+  "tags": ["header", "banner", "personal brand"],
+  "styleTags": ["minimal", "modern"],
+  "size": [1500, 500],
+  "typography": [
+    { "role": "heading", "family": "Figtree", "weight": 700 },
+    { "role": "label", "family": "Space Mono", "weight": 700 }
+  ],
+  "pages": [
+    {
+      "name": "Header",
+      "bg": "#fafafa",
+      "nodes": [
+        { "kind": "ellipse", "x": 60, "y": 48, "w": 8, "h": 8, "fill": "#d4d4d4" },
+        { "kind": "ellipse", "x": 84, "y": 48, "w": 8, "h": 8, "fill": "#d4d4d4" },
+        { "kind": "ellipse", "x": 108, "y": 48, "w": 8, "h": 8, "fill": "#d4d4d4" },
+        { "kind": "ellipse", "x": 60, "y": 72, "w": 8, "h": 8, "fill": "#d4d4d4" },
+        { "kind": "ellipse", "x": 84, "y": 72, "w": 8, "h": 8, "fill": "#d4d4d4" },
+        { "kind": "ellipse", "x": 108, "y": 72, "w": 8, "h": 8, "fill": "#d4d4d4" },
+        { "kind": "rect", "x": 470, "y": 148, "w": 10, "h": 118, "fill": "#2563eb" },
+        { "kind": "text", "x": 504, "y": 148, "w": 420, "h": 28, "text": "mayachen.dev", "family": "Space Mono", "size": 20, "weight": 700, "color": "#737373", "letterSpacing": 3, "upper": true },
+        { "kind": "text", "x": 500, "y": 184, "w": 520, "h": 84, "text": "Maya Chen", "family": "Figtree", "size": 72, "weight": 700, "color": "#171717", "lineHeight": 1.05 },
+        { "kind": "text", "x": 504, "y": 290, "w": 500, "h": 72, "text": "Design engineer. I help startups ship\nfast, accessible product UI.", "family": "Figtree", "size": 24, "weight": 400, "color": "#525252", "lineHeight": 1.35 },
+        { "kind": "rect", "x": 1052, "y": 150, "w": 2, "h": 210, "fill": "#e0e0e0" },
+        { "kind": "button", "x": 1124, "y": 146, "w": 306, "h": 56, "fill": "#ebebeb", "label": "DESIGN SYSTEMS", "color": "#171717", "family": "Space Mono", "size": 17, "weight": 700, "letterSpacing": 2 },
+        { "kind": "button", "x": 1124, "y": 222, "w": 306, "h": 56, "fill": "#ebebeb", "label": "REACT + TYPESCRIPT", "color": "#171717", "family": "Space Mono", "size": 17, "weight": 700, "letterSpacing": 2 },
+        { "kind": "button", "x": 1124, "y": 298, "w": 306, "h": 56, "fill": "#ebebeb", "label": "A11Y AUDITS", "color": "#171717", "family": "Space Mono", "size": 17, "weight": 700, "letterSpacing": 2 },
+        { "kind": "ellipse", "x": -140, "y": 90, "w": 440, "h": 440, "fill": "#2563eb", "opacity": 0.05, "bleed": true },
+        { "kind": "ellipse", "x": 132, "y": 48, "w": 8, "h": 8, "fill": "#d4d4d4" },
+        { "kind": "ellipse", "x": 132, "y": 72, "w": 8, "h": 8, "fill": "#d4d4d4" },
+        { "kind": "ellipse", "x": 60, "y": 96, "w": 8, "h": 8, "fill": "#d4d4d4" },
+        { "kind": "ellipse", "x": 84, "y": 96, "w": 8, "h": 8, "fill": "#d4d4d4" },
+        { "kind": "ellipse", "x": 108, "y": 96, "w": 8, "h": 8, "fill": "#d4d4d4" },
+        { "kind": "ellipse", "x": 132, "y": 96, "w": 8, "h": 8, "fill": "#d4d4d4" }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n8", "kind": "text", "label": "Name", "hint": "Your name or wordmark" },
+    { "node": "p0-n9", "kind": "text", "label": "Positioning", "hint": "One or two lines on what you do and for whom" },
+    { "node": "p0-n7", "kind": "text", "label": "Website", "hint": "Portfolio or site URL" },
+    { "node": "p0-n11-label", "kind": "text", "label": "Topic 1", "hint": "First topic you post about" },
+    { "node": "p0-n12-label", "kind": "text", "label": "Topic 2", "hint": "Second topic you post about" },
+    { "node": "p0-n13-label", "kind": "text", "label": "Topic 3", "hint": "Third topic you post about" }
+  ]
+}

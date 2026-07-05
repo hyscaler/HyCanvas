@@ -1,0 +1,52 @@
+{
+  "id": "brand-board",
+  "title": "Brand board",
+  "categories": ["business", "marketing"],
+  "tags": ["brand", "board", "identity", "moodboard", "guidelines"],
+  "styleTags": ["editorial", "elegant"],
+  "size": [1080, 1080],
+  "typography": [
+    { "role": "heading", "family": "Playfair Display", "weight": 600 },
+    { "role": "body", "family": "Inter", "weight": 400 }
+  ],
+  "fillable": [
+    { "node": "p0-n1", "kind": "text", "label": "Brand name" },
+    { "node": "p0-n2", "kind": "text", "label": "Tagline" },
+    { "node": "p0-n26", "kind": "text", "label": "Studio credit" }
+  ],
+  "pages": [
+    {
+      "name": "Board",
+      "bg": "#faf6ef",
+      "nodes": [
+        { "kind": "text", "x": 86, "y": 84, "w": 700, "h": 26, "text": "Brand guidelines · v1", "family": "Inter", "size": 18, "weight": 600, "color": "#1d4d3b", "letterSpacing": 4, "upper": true },
+        { "kind": "text", "x": 86, "y": 128, "w": 720, "h": 84, "text": "Verdant & Co.", "family": "Playfair Display", "size": 68, "weight": 600, "color": "#201a17" },
+        { "kind": "text", "x": 86, "y": 226, "w": 700, "h": 30, "text": "Botanical goods for slow living", "family": "Inter", "size": 22, "weight": 400, "color": "#6b6257" },
+        { "kind": "rect", "x": 86, "y": 300, "w": 908, "h": 2, "fill": "#e3dccc" },
+        { "kind": "text", "x": 86, "y": 336, "w": 400, "h": 24, "text": "Palette", "family": "Inter", "size": 17, "weight": 600, "color": "#6b6257", "letterSpacing": 3, "upper": true },
+        { "kind": "rect", "x": 86, "y": 380, "w": 156, "h": 156, "fill": "#1d4d3b", "radius": 8 },
+        { "kind": "rect", "x": 274, "y": 380, "w": 156, "h": 156, "fill": "#3b6e57", "radius": 8 },
+        { "kind": "rect", "x": 462, "y": 380, "w": 156, "h": 156, "fill": "#c9a86a", "radius": 8 },
+        { "kind": "rect", "x": 650, "y": 380, "w": 156, "h": 156, "fill": "#e8e0d0", "radius": 8 },
+        { "kind": "rect", "x": 838, "y": 380, "w": 156, "h": 156, "fill": "#201a17", "radius": 8 },
+        { "kind": "text", "x": 86, "y": 552, "w": 156, "h": 22, "text": "#1D4D3B", "family": "Inter", "size": 15, "weight": 400, "color": "#6b6257", "align": "center" },
+        { "kind": "text", "x": 274, "y": 552, "w": 156, "h": 22, "text": "#3B6E57", "family": "Inter", "size": 15, "weight": 400, "color": "#6b6257", "align": "center" },
+        { "kind": "text", "x": 462, "y": 552, "w": 156, "h": 22, "text": "#C9A86A", "family": "Inter", "size": 15, "weight": 400, "color": "#6b6257", "align": "center" },
+        { "kind": "text", "x": 650, "y": 552, "w": 156, "h": 22, "text": "#E8E0D0", "family": "Inter", "size": 15, "weight": 400, "color": "#6b6257", "align": "center" },
+        { "kind": "text", "x": 838, "y": 552, "w": 156, "h": 22, "text": "#201A17", "family": "Inter", "size": 15, "weight": 400, "color": "#6b6257", "align": "center" },
+        { "kind": "text", "x": 86, "y": 632, "w": 400, "h": 24, "text": "Typography", "family": "Inter", "size": 17, "weight": 600, "color": "#6b6257", "letterSpacing": 3, "upper": true },
+        { "kind": "text", "x": 86, "y": 676, "w": 200, "h": 130, "text": "Aa", "family": "Playfair Display", "size": 110, "weight": 600, "color": "#201a17" },
+        { "kind": "text", "x": 300, "y": 706, "w": 360, "h": 28, "text": "Playfair Display", "family": "Inter", "size": 22, "weight": 600, "color": "#201a17" },
+        { "kind": "text", "x": 300, "y": 742, "w": 360, "h": 26, "text": "Display and headlines", "family": "Inter", "size": 18, "weight": 400, "color": "#6b6257" },
+        { "kind": "text", "x": 86, "y": 848, "w": 120, "h": 60, "text": "Aa", "family": "Inter", "size": 48, "weight": 400, "color": "#201a17" },
+        { "kind": "text", "x": 300, "y": 846, "w": 360, "h": 28, "text": "Inter", "family": "Inter", "size": 22, "weight": 600, "color": "#201a17" },
+        { "kind": "text", "x": 300, "y": 882, "w": 360, "h": 26, "text": "Body copy and captions", "family": "Inter", "size": 18, "weight": 400, "color": "#6b6257" },
+        { "kind": "rect", "x": 694, "y": 632, "w": 300, "h": 276, "fill": "#1d4d3b", "radius": 12 },
+        { "kind": "ellipse", "x": 744, "y": 682, "w": 90, "h": 90, "fill": "#e8e0d0", "opacity": 0.25 },
+        { "kind": "ellipse", "x": 814, "y": 732, "w": 120, "h": 120, "fill": "#c9a86a", "opacity": 0.35 },
+        { "kind": "text", "x": 714, "y": 856, "w": 260, "h": 24, "text": "Motif · layered botanics", "family": "Inter", "size": 16, "weight": 400, "color": "#e8e0d0" },
+        { "kind": "text", "x": 86, "y": 984, "w": 908, "h": 24, "text": "Prepared by Studio North · Autumn 2026", "family": "Inter", "size": 17, "weight": 400, "color": "#6b6257" }
+      ]
+    }
+  ]
+}

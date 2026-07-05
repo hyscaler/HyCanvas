@@ -1,0 +1,29 @@
+{
+  "id": "quote-card-serene",
+  "title": "Serene Quote Card",
+  "categories": ["social", "quotes"],
+  "tags": ["quote", "minimal", "instagram"],
+  "styleTags": ["minimal", "elegant"],
+  "size": [1080, 1080],
+  "typography": [
+    { "role": "heading", "family": "Poppins", "weight": 700 },
+    { "role": "body", "family": "Inter", "weight": 600 }
+  ],
+  "pages": [
+    {
+      "name": "Quote",
+      "bg": "#0F766E",
+      "nodes": [
+        { "kind": "ellipse", "x": 840, "y": -200, "w": 520, "h": 520, "fill": "#178278", "bleed": true },
+        { "kind": "text", "x": 140, "y": 170, "w": 220, "h": 250, "text": "“", "family": "Poppins", "size": 240, "weight": 800, "color": "#5EEAD4", "align": "left", "lineHeight": 0.95 },
+        { "kind": "text", "x": 140, "y": 440, "w": 800, "h": 240, "text": "Design is the silent\nambassador of\nyour brand.", "family": "Poppins", "size": 64, "weight": 700, "color": "#FFFFFF", "align": "left", "lineHeight": 1.15 },
+        { "kind": "rect", "x": 140, "y": 768, "w": 90, "h": 8, "fill": "#5EEAD4", "radius": 4 },
+        { "kind": "text", "x": 140, "y": 816, "w": 700, "h": 40, "text": "Paul Rand", "family": "Inter", "size": 30, "weight": 600, "color": "#99F6E4", "align": "left", "letterSpacing": 3, "upper": true, "lineHeight": 1.2 }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n2", "kind": "text", "label": "Quote", "hint": "The quote, broken over up to three lines" },
+    { "node": "p0-n4", "kind": "text", "label": "Author", "hint": "Who said it" }
+  ]
+}

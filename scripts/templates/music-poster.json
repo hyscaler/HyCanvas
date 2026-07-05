@@ -1,0 +1,34 @@
+{
+  "id": "music-poster",
+  "title": "Music Night Poster",
+  "categories": ["marketing", "print"],
+  "tags": ["poster", "music", "bold"],
+  "styleTags": ["bold", "modern"],
+  "size": [1080, 1528],
+  "typography": [
+    { "role": "heading", "family": "Montserrat", "weight": 900 },
+    { "role": "body", "family": "Inter", "weight": 500 }
+  ],
+  "pages": [
+    {
+      "name": "Poster",
+      "bg": "#18181B",
+      "nodes": [
+        { "kind": "rect", "x": 0, "y": 940, "w": 1080, "h": 588, "fill": { "angle": 120, "stops": [["#BE185D", 0], ["#7C3AED", 1]] } },
+        { "kind": "text", "x": 90, "y": 170, "w": 700, "h": 40, "text": "Live music", "family": "Montserrat", "size": 30, "weight": 700, "color": "#F9A8D4", "letterSpacing": 8, "upper": true },
+        { "kind": "text", "x": 90, "y": 360, "w": 900, "h": 395, "text": "Midnight\nEcho", "family": "Montserrat", "size": 175, "weight": 900, "color": "#FFFFFF", "lineHeight": 1.06 },
+        { "kind": "text", "x": 90, "y": 810, "w": 900, "h": 40, "text": "with special guest Neon Reverie", "family": "Inter", "size": 30, "weight": 500, "color": "#D4D4D8" },
+        { "kind": "text", "x": 90, "y": 1030, "w": 900, "h": 53, "text": "Sat · Dec 6 · 8PM", "family": "Montserrat", "size": 40, "weight": 700, "color": "#FFFFFF" },
+        { "kind": "text", "x": 90, "y": 1128, "w": 900, "h": 40, "text": "The Basement  ·  18+  ·  $25", "family": "Inter", "size": 30, "weight": 500, "color": "#FFFFFF" },
+        { "kind": "text", "x": 90, "y": 1402, "w": 900, "h": 36, "text": "Tickets at midnightecho.live", "family": "Inter", "size": 26, "weight": 600, "color": "#FFFFFF", "letterSpacing": 2, "upper": true }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n2", "kind": "text", "label": "Artist name", "hint": "One or two short display lines" },
+    { "node": "p0-n3", "kind": "text", "label": "Support act", "hint": "e.g. with special guest ..." },
+    { "node": "p0-n4", "kind": "text", "label": "Date and time", "hint": "e.g. Sat · Dec 6 · 8PM" },
+    { "node": "p0-n5", "kind": "text", "label": "Venue and price", "hint": "Venue · age limit · ticket price" },
+    { "node": "p0-n6", "kind": "text", "label": "Ticket link", "hint": "Where to buy tickets" }
+  ]
+}

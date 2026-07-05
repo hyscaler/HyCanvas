@@ -1,0 +1,163 @@
+{
+ "id": "webinar-square",
+ "title": "Webinar Invite",
+ "categories": [
+  "social",
+  "marketing"
+ ],
+ "tags": [
+  "webinar",
+  "event",
+  "register"
+ ],
+ "styleTags": [
+  "modern",
+  "gradient"
+ ],
+ "size": [
+  1080,
+  1080
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Poppins",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Inter",
+   "weight": 600
+  }
+ ],
+ "pages": [
+  {
+   "name": "Invite",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#0284C7",
+      0
+     ],
+     [
+      "#4F46E5",
+      0.52
+     ],
+     [
+      "#7C3AED",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 150,
+     "w": 800,
+     "h": 36,
+     "text": "Free live webinar",
+     "family": "Poppins",
+     "size": 26,
+     "weight": 700,
+     "color": "#FFFFFF",
+     "align": "center",
+     "letterSpacing": 6,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 110,
+     "y": 262,
+     "w": 860,
+     "h": 200,
+     "text": "Scaling design\nsystems in 2026",
+     "family": "Poppins",
+     "size": 84,
+     "weight": 800,
+     "color": "#FFFFFF",
+     "align": "center",
+     "lineHeight": 1.08
+    },
+    {
+     "kind": "rect",
+     "x": 260,
+     "y": 530,
+     "w": 560,
+     "h": 96,
+     "radius": 48,
+     "fill": "#ffffff",
+     "opacity": 0.16
+    },
+    {
+     "kind": "text",
+     "x": 260,
+     "y": 530,
+     "w": 560,
+     "h": 96,
+     "text": "Thu, Nov 6 \u00b7 11:00 AM PT",
+     "family": "Inter",
+     "size": 34,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "align": "center",
+     "vAlign": "middle"
+    },
+    {
+     "kind": "button",
+     "x": 360,
+     "y": 726,
+     "w": 360,
+     "h": 92,
+     "fill": "#FFFFFF",
+     "label": "Save my seat",
+     "color": "#6D28D9",
+     "family": "Poppins",
+     "size": 28,
+     "weight": 700,
+     "letterSpacing": 1
+    },
+    {
+     "kind": "text",
+     "x": 190,
+     "y": 916,
+     "w": 700,
+     "h": 40,
+     "text": "with Jane Park, Head of Design",
+     "family": "Inter",
+     "size": 28,
+     "weight": 500,
+     "color": "#EDE9FE",
+     "align": "center"
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n1",
+   "kind": "text",
+   "label": "Webinar title",
+   "hint": "Keep it to two short lines"
+  },
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Date and time",
+   "hint": "e.g. Thu, Nov 6 \u00b7 11:00 AM PT"
+  },
+  {
+   "node": "p0-n4-label",
+   "kind": "text",
+   "label": "CTA label",
+   "hint": "Short action, 2-3 words"
+  },
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Presenter",
+   "hint": "Speaker name and role"
+  }
+ ]
+}

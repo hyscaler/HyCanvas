@@ -1,0 +1,403 @@
+{
+ "id": "flyer-open-house",
+ "title": "Elegant Open House Flyer",
+ "categories": [
+  "print",
+  "business"
+ ],
+ "tags": [
+  "flyer",
+  "real estate",
+  "open house",
+  "elegant"
+ ],
+ "styleTags": [
+  "elegant",
+  "minimal"
+ ],
+ "size": [
+  1080,
+  1528
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Playfair Display",
+   "weight": 600
+  },
+  {
+   "role": "body",
+   "family": "Lato",
+   "weight": 400
+  }
+ ],
+ "pages": [
+  {
+   "name": "Flyer",
+   "bg": "#1C1917",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 48,
+     "y": 48,
+     "w": 984,
+     "h": 2,
+     "fill": "#C9A86A",
+     "opacity": 0.5
+    },
+    {
+     "kind": "rect",
+     "x": 48,
+     "y": 1478,
+     "w": 984,
+     "h": 2,
+     "fill": "#C9A86A",
+     "opacity": 0.5
+    },
+    {
+     "kind": "rect",
+     "x": 48,
+     "y": 48,
+     "w": 2,
+     "h": 1432,
+     "fill": "#C9A86A",
+     "opacity": 0.5
+    },
+    {
+     "kind": "rect",
+     "x": 1030,
+     "y": 48,
+     "w": 2,
+     "h": 1432,
+     "fill": "#C9A86A",
+     "opacity": 0.5
+    },
+    {
+     "kind": "text",
+     "x": 88,
+     "y": 150,
+     "w": 904,
+     "h": 30,
+     "text": "Open House",
+     "family": "Lato",
+     "size": 22,
+     "weight": 700,
+     "color": "#C9A86A",
+     "align": "center",
+     "letterSpacing": 12,
+     "upper": true
+    },
+    {
+     "kind": "rect",
+     "x": 504,
+     "y": 208,
+     "w": 72,
+     "h": 2,
+     "fill": "#C9A86A"
+    },
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 266,
+     "w": 960,
+     "h": 130,
+     "text": "18 Ashford Lane",
+     "family": "Playfair Display",
+     "size": 108,
+     "weight": 600,
+     "color": "#F5F0E8",
+     "align": "center",
+     "lineHeight": 1.05
+    },
+    {
+     "kind": "text",
+     "x": 88,
+     "y": 414,
+     "w": 904,
+     "h": 28,
+     "text": "Belle Meade \u00b7 Nashville, Tennessee",
+     "family": "Lato",
+     "size": 19,
+     "weight": 400,
+     "color": "#A99D89",
+     "align": "center",
+     "letterSpacing": 5,
+     "upper": true
+    },
+    {
+     "kind": "rect",
+     "x": 156,
+     "y": 490,
+     "w": 240,
+     "h": 72,
+     "fill": "#26211A",
+     "stroke": "#C9A86A",
+     "strokeWidth": 1,
+     "radius": 36
+    },
+    {
+     "kind": "text",
+     "x": 156,
+     "y": 490,
+     "w": 240,
+     "h": 72,
+     "text": "4 Beds",
+     "family": "Lato",
+     "size": 20,
+     "weight": 700,
+     "color": "#C9A86A",
+     "align": "center",
+     "vAlign": "middle",
+     "letterSpacing": 3,
+     "upper": true
+    },
+    {
+     "kind": "rect",
+     "x": 420,
+     "y": 490,
+     "w": 240,
+     "h": 72,
+     "fill": "#26211A",
+     "stroke": "#C9A86A",
+     "strokeWidth": 1,
+     "radius": 36
+    },
+    {
+     "kind": "text",
+     "x": 420,
+     "y": 490,
+     "w": 240,
+     "h": 72,
+     "text": "3.5 Baths",
+     "family": "Lato",
+     "size": 20,
+     "weight": 700,
+     "color": "#C9A86A",
+     "align": "center",
+     "vAlign": "middle",
+     "letterSpacing": 3,
+     "upper": true
+    },
+    {
+     "kind": "rect",
+     "x": 684,
+     "y": 490,
+     "w": 240,
+     "h": 72,
+     "fill": "#26211A",
+     "stroke": "#C9A86A",
+     "strokeWidth": 1,
+     "radius": 36
+    },
+    {
+     "kind": "text",
+     "x": 684,
+     "y": 490,
+     "w": 240,
+     "h": 72,
+     "text": "4,120 Sq Ft",
+     "family": "Lato",
+     "size": 20,
+     "weight": 700,
+     "color": "#C9A86A",
+     "align": "center",
+     "vAlign": "middle",
+     "letterSpacing": 3,
+     "upper": true
+    },
+    {
+     "kind": "rect",
+     "x": 533,
+     "y": 630,
+     "w": 14,
+     "h": 14,
+     "fill": "#C9A86A",
+     "rotation": 45
+    },
+    {
+     "kind": "rect",
+     "x": 384,
+     "y": 636,
+     "w": 120,
+     "h": 2,
+     "fill": "#C9A86A",
+     "opacity": 0.6
+    },
+    {
+     "kind": "rect",
+     "x": 576,
+     "y": 636,
+     "w": 120,
+     "h": 2,
+     "fill": "#C9A86A",
+     "opacity": 0.6
+    },
+    {
+     "kind": "text",
+     "x": 88,
+     "y": 700,
+     "w": 904,
+     "h": 70,
+     "text": "Sunday, August 16",
+     "family": "Playfair Display",
+     "size": 56,
+     "weight": 500,
+     "color": "#F5F0E8",
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 88,
+     "y": 788,
+     "w": 904,
+     "h": 28,
+     "text": "1:00 to 4:00 in the afternoon",
+     "family": "Lato",
+     "size": 19,
+     "weight": 400,
+     "color": "#A99D89",
+     "align": "center",
+     "letterSpacing": 4,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 88,
+     "y": 856,
+     "w": 904,
+     "h": 52,
+     "text": "Offered at $2,450,000",
+     "family": "Playfair Display",
+     "size": 40,
+     "weight": 500,
+     "color": "#C9A86A",
+     "align": "center"
+    },
+    {
+     "kind": "rect",
+     "x": 238,
+     "y": 972,
+     "w": 604,
+     "h": 2,
+     "fill": "#C9A86A",
+     "opacity": 0.35
+    },
+    {
+     "kind": "text",
+     "x": 88,
+     "y": 1016,
+     "w": 904,
+     "h": 78,
+     "text": "A restored 1928 Colonial with landscaped gardens,\na chef's kitchen and a private guest cottage.",
+     "family": "Lato",
+     "size": 22,
+     "weight": 400,
+     "color": "#CFC5B4",
+     "align": "center",
+     "lineHeight": 1.6
+    },
+    {
+     "kind": "rect",
+     "x": 504,
+     "y": 1180,
+     "w": 72,
+     "h": 2,
+     "fill": "#C9A86A"
+    },
+    {
+     "kind": "text",
+     "x": 88,
+     "y": 1216,
+     "w": 904,
+     "h": 22,
+     "text": "Presented By",
+     "family": "Lato",
+     "size": 15,
+     "weight": 700,
+     "color": "#C9A86A",
+     "align": "center",
+     "letterSpacing": 6,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 88,
+     "y": 1254,
+     "w": 904,
+     "h": 58,
+     "text": "Margaux Ellison",
+     "family": "Playfair Display",
+     "size": 46,
+     "weight": 600,
+     "color": "#F5F0E8",
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 88,
+     "y": 1328,
+     "w": 904,
+     "h": 26,
+     "text": "Harbor & Vine Realty \u00b7 (615) 555-0134",
+     "family": "Lato",
+     "size": 19,
+     "weight": 400,
+     "color": "#A99D89",
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 88,
+     "y": 1366,
+     "w": 904,
+     "h": 24,
+     "text": "margaux@harborvine.com \u00b7 TN License 00341572",
+     "family": "Lato",
+     "size": 15,
+     "weight": 400,
+     "color": "#A99D89",
+     "align": "center",
+     "letterSpacing": 1
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n6",
+   "kind": "text",
+   "label": "Address",
+   "hint": "Street address as the display line"
+  },
+  {
+   "node": "p0-n17",
+   "kind": "text",
+   "label": "Date",
+   "hint": "Open house date"
+  },
+  {
+   "node": "p0-n18",
+   "kind": "text",
+   "label": "Time",
+   "hint": "Open house hours"
+  },
+  {
+   "node": "p0-n19",
+   "kind": "text",
+   "label": "Price",
+   "hint": "Listing price line"
+  },
+  {
+   "node": "p0-n24",
+   "kind": "text",
+   "label": "Agent name",
+   "hint": "Listing agent"
+  },
+  {
+   "node": "p0-n25",
+   "kind": "text",
+   "label": "Brokerage and phone",
+   "hint": "Brokerage name and phone number"
+  }
+ ]
+}

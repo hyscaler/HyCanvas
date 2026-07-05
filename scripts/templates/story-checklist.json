@@ -1,0 +1,297 @@
+{
+ "id": "story-checklist",
+ "title": "Morning Routine Checklist",
+ "categories": [
+  "social",
+  "personal"
+ ],
+ "tags": [
+  "story",
+  "checklist",
+  "routine",
+  "playful"
+ ],
+ "styleTags": [
+  "playful"
+ ],
+ "size": [
+  1080,
+  1920
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Nunito",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Inter",
+   "weight": 600
+  },
+  {
+   "role": "accent",
+   "family": "Caveat",
+   "weight": 700
+  }
+ ],
+ "pages": [
+  {
+   "name": "Checklist",
+   "bg": "#FDE68A",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 940,
+     "y": 70,
+     "w": 220,
+     "h": 220,
+     "fill": "#F59E0B",
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 700,
+     "y": 150,
+     "w": 260,
+     "h": 120,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "ellipse",
+     "x": 830,
+     "y": 190,
+     "w": 240,
+     "h": 110,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "text",
+     "x": 90,
+     "y": 250,
+     "w": 600,
+     "h": 64,
+     "text": "rise & shine!",
+     "family": "Caveat",
+     "size": 46,
+     "weight": 700,
+     "color": "#B45309",
+     "align": "left"
+    },
+    {
+     "kind": "text",
+     "x": 90,
+     "y": 330,
+     "w": 900,
+     "h": 260,
+     "text": "Morning\nroutine",
+     "family": "Nunito",
+     "size": 116,
+     "weight": 800,
+     "color": "#451A03",
+     "align": "left",
+     "lineHeight": 1.05
+    },
+    {
+     "kind": "ellipse",
+     "x": 90,
+     "y": 700,
+     "w": 76,
+     "h": 76,
+     "fill": "#B45309"
+    },
+    {
+     "kind": "ellipse",
+     "x": 119.0,
+     "y": 729.0,
+     "w": 18,
+     "h": 18,
+     "fill": "#ffffff"
+    },
+    {
+     "kind": "text",
+     "x": 200,
+     "y": 715,
+     "w": 760,
+     "h": 48,
+     "text": "Stretch for ten minutes",
+     "family": "Inter",
+     "size": 34,
+     "weight": 600,
+     "color": "#451A03",
+     "align": "left"
+    },
+    {
+     "kind": "ellipse",
+     "x": 90,
+     "y": 830,
+     "w": 76,
+     "h": 76,
+     "fill": "#B45309"
+    },
+    {
+     "kind": "ellipse",
+     "x": 119.0,
+     "y": 859.0,
+     "w": 18,
+     "h": 18,
+     "fill": "#ffffff"
+    },
+    {
+     "kind": "text",
+     "x": 200,
+     "y": 845,
+     "w": 760,
+     "h": 48,
+     "text": "Drink a big glass of water",
+     "family": "Inter",
+     "size": 34,
+     "weight": 600,
+     "color": "#451A03",
+     "align": "left"
+    },
+    {
+     "kind": "ellipse",
+     "x": 90,
+     "y": 960,
+     "w": 76,
+     "h": 76,
+     "fill": "#ffffff"
+    },
+    {
+     "kind": "text",
+     "x": 200,
+     "y": 975,
+     "w": 760,
+     "h": 48,
+     "text": "Journal one page",
+     "family": "Inter",
+     "size": 34,
+     "weight": 600,
+     "color": "#451A03",
+     "align": "left"
+    },
+    {
+     "kind": "ellipse",
+     "x": 90,
+     "y": 1090,
+     "w": 76,
+     "h": 76,
+     "fill": "#ffffff"
+    },
+    {
+     "kind": "text",
+     "x": 200,
+     "y": 1105,
+     "w": 760,
+     "h": 48,
+     "text": "No phone until 9 AM",
+     "family": "Inter",
+     "size": 34,
+     "weight": 600,
+     "color": "#451A03",
+     "align": "left"
+    },
+    {
+     "kind": "ellipse",
+     "x": 90,
+     "y": 1220,
+     "w": 76,
+     "h": 76,
+     "fill": "#ffffff"
+    },
+    {
+     "kind": "text",
+     "x": 200,
+     "y": 1235,
+     "w": 760,
+     "h": 48,
+     "text": "Walk around the block",
+     "family": "Inter",
+     "size": 34,
+     "weight": 600,
+     "color": "#451A03",
+     "align": "left"
+    },
+    {
+     "kind": "rect",
+     "x": 90,
+     "y": 1440,
+     "w": 340,
+     "h": 76,
+     "fill": "#FFFFFF",
+     "radius": 38
+    },
+    {
+     "kind": "text",
+     "x": 90,
+     "y": 1440,
+     "w": 340,
+     "h": 76,
+     "text": "@the.morning.club",
+     "family": "Inter",
+     "size": 28,
+     "weight": 600,
+     "color": "#B45309",
+     "align": "center",
+     "vAlign": "middle"
+    },
+    {
+     "kind": "ellipse",
+     "x": 820,
+     "y": 1560,
+     "w": 300,
+     "h": 130,
+     "fill": "#FFFFFF",
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 700,
+     "y": 1620,
+     "w": 240,
+     "h": 110,
+     "fill": "#FFFFFF"
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n4",
+   "kind": "text",
+   "label": "Title",
+   "hint": "Two short words per line"
+  },
+  {
+   "node": "p0-n7",
+   "kind": "text",
+   "label": "Item 1",
+   "hint": "One line, under 30 characters"
+  },
+  {
+   "node": "p0-n10",
+   "kind": "text",
+   "label": "Item 2",
+   "hint": "One line, under 30 characters"
+  },
+  {
+   "node": "p0-n12",
+   "kind": "text",
+   "label": "Item 3",
+   "hint": "One line, under 30 characters"
+  },
+  {
+   "node": "p0-n14",
+   "kind": "text",
+   "label": "Item 4",
+   "hint": "One line, under 30 characters"
+  },
+  {
+   "node": "p0-n16",
+   "kind": "text",
+   "label": "Item 5",
+   "hint": "One line, under 30 characters"
+  }
+ ]
+}

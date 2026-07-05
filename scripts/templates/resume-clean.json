@@ -1,0 +1,57 @@
+{
+  "id": "resume-clean",
+  "title": "Resume",
+  "categories": ["business", "print"],
+  "tags": ["resume", "cv", "clean"],
+  "styleTags": ["clean", "structured"],
+  "size": [794, 1123],
+  "typography": [
+    { "role": "heading", "family": "DM Sans", "weight": 700 },
+    { "role": "body", "family": "Inter", "weight": 400 }
+  ],
+  "pages": [
+    {
+      "name": "Resume",
+      "bg": "#FFFFFF",
+      "nodes": [
+        { "kind": "rect", "x": 0, "y": 0, "w": 270, "h": 1123, "fill": "#0F172A" },
+        { "kind": "rect", "x": 40, "y": 56, "w": 96, "h": 96, "fill": "#1E293B", "radius": 16 },
+        { "kind": "text", "x": 40, "y": 56, "w": 96, "h": 96, "text": "JR", "family": "DM Sans", "size": 40, "weight": 700, "color": "#FFFFFF", "align": "center", "vAlign": "middle", "lineHeight": 1.1 },
+        { "kind": "text", "x": 40, "y": 200, "w": 190, "h": 26, "text": "Contact", "family": "DM Sans", "size": 20, "weight": 700, "color": "#60A5FA", "letterSpacing": 2, "upper": true, "lineHeight": 1.2 },
+        { "kind": "text", "x": 40, "y": 238, "w": 190, "h": 92, "text": "jordan@email.com\n+1 555 240 1180\nNew York, NY\nlinkedin.com/in/jr", "family": "Inter", "size": 15, "weight": 400, "color": "#CBD5E1", "lineHeight": 1.4 },
+        { "kind": "text", "x": 40, "y": 386, "w": 190, "h": 26, "text": "Skills", "family": "DM Sans", "size": 20, "weight": 700, "color": "#60A5FA", "letterSpacing": 2, "upper": true, "lineHeight": 1.2 },
+        { "kind": "text", "x": 40, "y": 424, "w": 190, "h": 112, "text": "Product strategy\nUX research\nDesign systems\nPrototyping\nTeam leadership", "family": "Inter", "size": 15, "weight": 400, "color": "#CBD5E1", "lineHeight": 1.4 },
+        { "kind": "text", "x": 40, "y": 593, "w": 190, "h": 26, "text": "Tools", "family": "DM Sans", "size": 20, "weight": 700, "color": "#60A5FA", "letterSpacing": 2, "upper": true, "lineHeight": 1.2 },
+        { "kind": "text", "x": 40, "y": 631, "w": 190, "h": 92, "text": "Figma\nFramer\nNotion\nJira", "family": "Inter", "size": 15, "weight": 400, "color": "#CBD5E1", "lineHeight": 1.4 },
+        { "kind": "text", "x": 40, "y": 779, "w": 190, "h": 26, "text": "Languages", "family": "DM Sans", "size": 20, "weight": 700, "color": "#60A5FA", "letterSpacing": 2, "upper": true, "lineHeight": 1.2 },
+        { "kind": "text", "x": 40, "y": 817, "w": 190, "h": 68, "text": "English (native)\nSpanish (fluent)\nFrench (basic)", "family": "Inter", "size": 15, "weight": 400, "color": "#CBD5E1", "lineHeight": 1.4 },
+        { "kind": "text", "x": 320, "y": 56, "w": 418, "h": 52, "text": "Jordan Rivera", "family": "DM Sans", "size": 42, "weight": 700, "color": "#0F172A", "lineHeight": 1.1 },
+        { "kind": "text", "x": 320, "y": 116, "w": 418, "h": 28, "text": "Senior Product Designer", "family": "Inter", "size": 20, "weight": 500, "color": "#2563EB", "letterSpacing": 1, "lineHeight": 1.2 },
+        { "kind": "rect", "x": 320, "y": 164, "w": 80, "h": 5, "fill": "#2563EB", "radius": 2.5 },
+        { "kind": "text", "x": 320, "y": 196, "w": 418, "h": 76, "text": "Product designer with 9 years shipping B2B\ntools. I pair systems thinking with hands-on\ncraft to turn complex workflows into clear wins.", "family": "Inter", "size": 16, "weight": 400, "color": "#334155", "lineHeight": 1.4 },
+        { "kind": "text", "x": 320, "y": 323, "w": 418, "h": 30, "text": "Experience", "family": "DM Sans", "size": 22, "weight": 700, "color": "#0F172A", "letterSpacing": 1, "upper": true, "lineHeight": 1.2 },
+        { "kind": "text", "x": 320, "y": 367, "w": 418, "h": 24, "text": "Lead Designer · Northwind", "family": "Inter", "size": 17, "weight": 600, "color": "#0F172A", "lineHeight": 1.2 },
+        { "kind": "text", "x": 320, "y": 393, "w": 418, "h": 20, "text": "2022 - Present", "family": "Inter", "size": 14, "weight": 400, "color": "#64748B", "lineHeight": 1.2 },
+        { "kind": "text", "x": 320, "y": 419, "w": 418, "h": 50, "text": "Led the core product redesign across web and\nmobile, lifting new-user activation 28%.", "family": "Inter", "size": 16, "weight": 400, "color": "#334155", "lineHeight": 1.4 },
+        { "kind": "text", "x": 320, "y": 501, "w": 418, "h": 24, "text": "Product Designer · Lumen", "family": "Inter", "size": 17, "weight": 600, "color": "#0F172A", "lineHeight": 1.2 },
+        { "kind": "text", "x": 320, "y": 527, "w": 418, "h": 20, "text": "2019 - 2022", "family": "Inter", "size": 14, "weight": 400, "color": "#64748B", "lineHeight": 1.2 },
+        { "kind": "text", "x": 320, "y": 553, "w": 418, "h": 50, "text": "Shipped a design system adopted by six product\nteams, halving design-to-dev handoff time.", "family": "Inter", "size": 16, "weight": 400, "color": "#334155", "lineHeight": 1.4 },
+        { "kind": "text", "x": 320, "y": 635, "w": 418, "h": 24, "text": "UX Designer · Fieldstone", "family": "Inter", "size": 17, "weight": 600, "color": "#0F172A", "lineHeight": 1.2 },
+        { "kind": "text", "x": 320, "y": 661, "w": 418, "h": 20, "text": "2016 - 2019", "family": "Inter", "size": 14, "weight": 400, "color": "#64748B", "lineHeight": 1.2 },
+        { "kind": "text", "x": 320, "y": 687, "w": 418, "h": 50, "text": "Ran discovery and prototyping for the analytics\nsuite now used by 40,000 teams weekly.", "family": "Inter", "size": 16, "weight": 400, "color": "#334155", "lineHeight": 1.4 },
+        { "kind": "text", "x": 320, "y": 792, "w": 418, "h": 30, "text": "Education", "family": "DM Sans", "size": 22, "weight": 700, "color": "#0F172A", "letterSpacing": 1, "upper": true, "lineHeight": 1.2 },
+        { "kind": "text", "x": 320, "y": 836, "w": 418, "h": 24, "text": "B.A. Design · State University", "family": "Inter", "size": 17, "weight": 600, "color": "#0F172A", "lineHeight": 1.2 },
+        { "kind": "text", "x": 320, "y": 862, "w": 418, "h": 20, "text": "2012 - 2016", "family": "Inter", "size": 14, "weight": 400, "color": "#64748B", "lineHeight": 1.2 },
+        { "kind": "text", "x": 320, "y": 939, "w": 418, "h": 30, "text": "Recognition", "family": "DM Sans", "size": 22, "weight": 700, "color": "#0F172A", "letterSpacing": 1, "upper": true, "lineHeight": 1.2 },
+        { "kind": "text", "x": 320, "y": 983, "w": 418, "h": 52, "text": "Awwwards Site of the Day, 2024\nSpeaker, Config 2023", "family": "Inter", "size": 16, "weight": 400, "color": "#334155", "lineHeight": 1.4 }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n11", "kind": "text", "label": "Name", "hint": "Your full name" },
+    { "node": "p0-n12", "kind": "text", "label": "Role", "hint": "Your current title" },
+    { "node": "p0-n4", "kind": "text", "label": "Contact", "hint": "Email, phone, city, profile link (one per line)" },
+    { "node": "p0-n14", "kind": "text", "label": "Summary", "hint": "2-3 line professional summary" },
+    { "node": "p0-n2", "kind": "text", "label": "Initials", "hint": "Your two-letter monogram" }
+  ]
+}

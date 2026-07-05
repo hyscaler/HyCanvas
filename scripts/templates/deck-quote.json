@@ -1,0 +1,33 @@
+{
+  "id": "deck-quote",
+  "title": "Quote Slide",
+  "categories": ["presentations", "business"],
+  "tags": ["slide", "quote"],
+  "styleTags": ["minimal", "editorial"],
+  "size": [1920, 1080],
+  "typography": [
+    { "role": "display", "family": "Poppins", "weight": 800 },
+    { "role": "heading", "family": "Poppins", "weight": 700 },
+    { "role": "body", "family": "Inter", "weight": 500 }
+  ],
+  "pages": [
+    {
+      "name": "Quote",
+      "bg": "#111827",
+      "nodes": [
+        { "kind": "text", "x": 1580, "y": 620, "w": 300, "h": 380, "text": "”", "family": "Poppins", "size": 340, "weight": 800, "color": "#F59E0B", "opacity": 0.1, "lineHeight": 1.05 },
+        { "kind": "text", "x": 160, "y": 210, "w": 180, "h": 336, "text": "“", "family": "Poppins", "size": 300, "weight": 800, "color": "#F59E0B", "lineHeight": 1.05 },
+        { "kind": "text", "x": 380, "y": 420, "w": 1300, "h": 184, "text": "We don't ship features.\nWe ship outcomes.", "family": "Poppins", "size": 78, "weight": 700, "color": "#FFFFFF", "lineHeight": 1.12 },
+        { "kind": "rect", "x": 380, "y": 664, "w": 90, "h": 8, "fill": "#F59E0B", "radius": 4 },
+        { "kind": "text", "x": 380, "y": 704, "w": 1200, "h": 42, "text": "Priya Nair · VP Product", "family": "Inter", "size": 30, "weight": 500, "color": "#9CA3AF", "letterSpacing": 1, "lineHeight": 1.2 },
+        { "kind": "text", "x": 160, "y": 990, "w": 700, "h": 30, "text": "Northwind Labs · Q3 business review", "family": "Inter", "size": 22, "weight": 500, "color": "#9CA3AF", "lineHeight": 1.2 },
+        { "kind": "text", "x": 1460, "y": 990, "w": 300, "h": 30, "text": "18 / 24", "family": "Inter", "size": 22, "weight": 500, "color": "#9CA3AF", "align": "right", "lineHeight": 1.2 }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n2", "kind": "text", "label": "Quote", "hint": "The quote, up to two short lines" },
+    { "node": "p0-n4", "kind": "text", "label": "Attribution", "hint": "Name and role of the speaker" },
+    { "node": "p0-n5", "kind": "text", "label": "Footer", "hint": "Company and deck name" }
+  ]
+}

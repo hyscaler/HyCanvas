@@ -19,6 +19,7 @@ import (
 	"image/jpeg"
 	"image/png"
 	"math"
+	"strings"
 
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/gofont/goregular"
@@ -67,7 +68,24 @@ func rasterColor(c pdfColor, alpha float64) color.RGBA {
 		}
 		return uint8(math.Round(v * 255))
 	}
-	return color.RGBA{R: clamp(c.r), G: clamp(c.g), B: clamp(c.b), A: clamp(alpha)}
+	// image.RGBA is alpha-premultiplied: scale the channels by alpha too, or a
+	// translucent fill draws oversaturated.
+	return color.RGBA{R: clamp(c.r * alpha), G: clamp(c.g * alpha), B: clamp(c.b * alpha), A: clamp(alpha)}
+}
+
+// alphaImage scales a paint source's premultiplied channels by a constant
+// alpha, so gradients honor node opacity like flat colors do.
+type alphaImage struct {
+	src image.Image
+	a   float64
+}
+
+func (ai alphaImage) ColorModel() color.Model { return ai.src.ColorModel() }
+func (ai alphaImage) Bounds() image.Rectangle { return ai.src.Bounds() }
+func (ai alphaImage) At(x, y int) color.Color {
+	r, g, b, a := ai.src.At(x, y).RGBA()
+	f := ai.a
+	return color.RGBA64{R: uint16(float64(r) * f), G: uint16(float64(g) * f), B: uint16(float64(b) * f), A: uint16(float64(a) * f)}
 }
 
 // rctx carries the rasterization target.
@@ -77,6 +95,15 @@ type rctx struct {
 	font  *opentype.Font
 	boxes map[string]rbox // page node world-boxes, for connector endpoint routing
 	base  mat             // output-scale matrix (page->device), for page-space connectors
+	alpha float64         // effective opacity of the node subtree being drawn
+}
+
+// paint wraps a gradient/pattern source with the current subtree opacity.
+func (rc *rctx) paint(src image.Image) image.Image {
+	if rc.alpha >= 1 {
+		return src
+	}
+	return alphaImage{src: src, a: rc.alpha}
 }
 
 func avgScale(m mat) float64 { return (math.Hypot(m.a, m.b) + math.Hypot(m.c, m.d)) / 2 }
@@ -129,10 +156,10 @@ func firstFill(node map[string]any) map[string]any {
 // (linear/radial) or a solid color; an unusable fill draws nothing.
 func (rc *rctx) fillPolyPaint(pts [][2]float64, fill map[string]any) {
 	if g := parseGradient(fill); g.ok {
-		rc.fillPathSrc(pts, g.source(bboxOf(pts), rc.dst.Bounds()))
+		rc.fillPathSrc(pts, rc.paint(g.source(bboxOf(pts), rc.dst.Bounds())))
 		return
 	}
-	rc.fillPath(pts, rasterColor(pdfPaint(fill), 1))
+	rc.fillPath(pts, rasterColor(pdfPaint(fill), rc.alpha))
 }
 
 // fillCubic rasterizes a path of cubic segments (device-space) with a flat color.
@@ -221,10 +248,10 @@ func (rc *rctx) rasterEllipse(m mat, w, h float64, fill map[string]any) {
 		for _, c := range cubics {
 			pts = append(pts, c[0], c[1], c[2])
 		}
-		rc.fillBeziersSrc(start, cubics, g.source(bboxOf(pts), rc.dst.Bounds()))
+		rc.fillBeziersSrc(start, cubics, rc.paint(g.source(bboxOf(pts), rc.dst.Bounds())))
 		return
 	}
-	rc.fillBeziers(start, cubics, rasterColor(pdfPaint(fill), 1))
+	rc.fillBeziers(start, cubics, rasterColor(pdfPaint(fill), rc.alpha))
 }
 
 func (rc *rctx) rasterPath(m mat, node map[string]any) {
@@ -232,7 +259,7 @@ func (rc *rctx) rasterPath(m mat, node map[string]any) {
 	if len(segs) == 0 {
 		return
 	}
-	col := rasterColor(fillColorOf(node), 1)
+	col := rasterColor(fillColorOf(node), rc.alpha)
 	if col.A == 0 {
 		return
 	}
@@ -281,7 +308,7 @@ func (rc *rctx) rasterLine(m mat, node map[string]any) {
 	if stroke == nil {
 		return
 	}
-	col := rasterColor(pdfPaint(asObj(stroke["fill"])), 1)
+	col := rasterColor(pdfPaint(asObj(stroke["fill"])), rc.alpha)
 	width := asNum(stroke["width"])
 	if width <= 0 {
 		width = 1
@@ -304,51 +331,142 @@ func (rc *rctx) rasterLine(m mat, node map[string]any) {
 	}
 }
 
+// runText applies the run's case transform to its text.
+func runText(ro, style map[string]any) string {
+	text := asStr(ro["text"])
+	switch asStr(style["case"]) {
+	case "upper":
+		return strings.ToUpper(text)
+	case "lower":
+		return strings.ToLower(text)
+	}
+	return text
+}
+
+// runLineHeight is the run's line height in design units: an explicit multiple
+// or absolute wins, else the engine's default 1.2 multiple.
+func runLineHeight(style map[string]any, size float64) float64 {
+	switch lh := style["lineHeight"].(type) {
+	case float64:
+		return size * lh
+	case map[string]any:
+		v := asNum(lh["value"])
+		if asStr(lh["mode"]) == "absolute" {
+			return v
+		}
+		if v > 0 {
+			return size * v
+		}
+	}
+	return size * 1.2
+}
+
 func (rc *rctx) rasterText(m mat, node map[string]any) {
-	y := 0.0
-	for _, para := range asArr(node["content"]) {
-		po := asObj(para)
-		lineHeight := 0.0
-		runs := asArr(po["runs"])
-		for _, run := range runs {
-			size := asNum(asObj(asObj(run)["style"])["fontSize"])
-			if size == 0 {
-				size = 16
+	scale := avgScale(m)
+	// Letter spacing means per-glyph drawing, so measuring shares the walk.
+	measure := func(face font.Face, text string, ls float64) float64 {
+		w := 0.0
+		for _, r := range text {
+			adv, ok := face.GlyphAdvance(r)
+			if !ok {
+				continue
 			}
-			lineHeight = math.Max(lineHeight, size*1.2)
+			w += float64(adv>>6)/scale + ls
 		}
-		if lineHeight == 0 {
-			lineHeight = 16 * 1.2
+		return w
+	}
+	runFace := func(style map[string]any) (font.Face, float64) {
+		size := asNum(style["fontSize"])
+		if size == 0 {
+			size = 16
 		}
-		y += lineHeight
-		x := 0.0
-		for _, run := range runs {
+		// Registered real fonts win (glyph-true export); otherwise the embedded
+		// fallback keeps text legible and positioned.
+		fnt := lookupFont(asStr(style["fontFamily"]), int(asNum(asObj(style["axes"])["wght"])))
+		if fnt == nil {
+			fnt = rc.font
+		}
+		face, err := opentype.NewFace(fnt, &opentype.FaceOptions{Size: size * scale, DPI: 72, Hinting: font.HintingFull})
+		if err != nil {
+			return nil, size
+		}
+		return face, size
+	}
+
+	box := asObj(node["box"])
+	boxW := asNum(box["width"])
+	if boxW == 0 {
+		boxW = asNum(asObj(node["size"])["width"])
+	}
+	boxH := asNum(box["height"])
+	if boxH == 0 {
+		boxH = asNum(asObj(node["size"])["height"])
+	}
+
+	// Measure pass: per paragraph, the line's height and total advance.
+	paras := asArr(node["content"])
+	lineHeights := make([]float64, len(paras))
+	lineWidths := make([]float64, len(paras))
+	for i, para := range paras {
+		po := asObj(para)
+		for _, run := range asArr(po["runs"]) {
 			ro := asObj(run)
 			style := asObj(ro["style"])
-			size := asNum(style["fontSize"])
-			if size == 0 {
-				size = 16
+			face, size := runFace(style)
+			lineHeights[i] = math.Max(lineHeights[i], runLineHeight(style, size))
+			if face == nil {
+				continue
+			}
+			lineWidths[i] += measure(face, runText(ro, style), asNum(style["letterSpacing"]))
+			_ = face.Close()
+		}
+		if lineHeights[i] == 0 {
+			lineHeights[i] = 16 * 1.2
+		}
+	}
+	total := 0.0
+	for _, h := range lineHeights {
+		total += h
+	}
+	y := 0.0
+	switch asStr(box["verticalAlign"]) {
+	case "middle":
+		y = (boxH - total) / 2
+	case "bottom":
+		y = boxH - total
+	}
+
+	// Draw pass: baseline sits near the line's bottom (ascent approximation).
+	for i, para := range paras {
+		po := asObj(para)
+		y += lineHeights[i]
+		x := 0.0
+		switch asStr(asObj(po["style"])["align"]) {
+		case "center":
+			x = (boxW - lineWidths[i]) / 2
+		case "right":
+			x = boxW - lineWidths[i]
+		}
+		for _, run := range asArr(po["runs"]) {
+			ro := asObj(run)
+			style := asObj(ro["style"])
+			face, _ := runFace(style)
+			if face == nil {
+				continue
 			}
 			col := pdfPaint(asObj(style["fill"]))
 			if !col.ok {
 				col = pdfColor{ok: true}
 			}
-			scale := (math.Hypot(m.a, m.b) + math.Hypot(m.c, m.d)) / 2
-			face, err := opentype.NewFace(rc.font, &opentype.FaceOptions{Size: size * scale, DPI: 72, Hinting: font.HintingFull})
-			if err != nil {
-				continue
+			src := image.NewUniform(rasterColor(col, rc.alpha))
+			ls := asNum(style["letterSpacing"])
+			for _, r := range runText(ro, style) {
+				dx, dy := m.apply(x, y)
+				d := &font.Drawer{Dst: rc.dst, Src: src, Face: face, Dot: fixed.P(int(math.Round(dx)), int(math.Round(dy)))}
+				d.DrawString(string(r))
+				adv, _ := face.GlyphAdvance(r)
+				x += float64(adv>>6)/scale + ls
 			}
-			dx, dy := m.apply(x, y)
-			d := &font.Drawer{
-				Dst:  rc.dst,
-				Src:  image.NewUniform(rasterColor(col, 1)),
-				Face: face,
-				Dot:  fixed.P(int(math.Round(dx)), int(math.Round(dy))),
-			}
-			text := asStr(ro["text"])
-			d.DrawString(text)
-			adv := d.MeasureString(text)
-			x += float64(adv>>6) / scale
 			_ = face.Close()
 		}
 	}
@@ -358,6 +476,15 @@ func (rc *rctx) rasterNode(m mat, node map[string]any) {
 	if asBool(node["hidden"]) {
 		return
 	}
+	// Node opacity multiplies down the subtree (groups included, via recursion).
+	prev := rc.alpha
+	if o, ok := node["opacity"].(float64); ok && o < 1 {
+		if o < 0 {
+			o = 0
+		}
+		rc.alpha = prev * o
+	}
+	defer func() { rc.alpha = prev }()
 	cm := m.compose(nodeMat(node))
 	switch asStr(node["type"]) {
 	case "shape":
@@ -430,7 +557,7 @@ func (rc *rctx) rasterInk(m mat, node map[string]any) {
 
 func (rc *rctx) rasterSticky(m mat, node map[string]any) {
 	w, h := sizeOf(node)
-	rc.fillPath(transformPts(m, [][2]float64{{0, 0}, {w, 0}, {w, h}, {0, h}}), rasterColor(pdfPaint(asObj(node["fill"])), 1))
+	rc.fillPath(transformPts(m, [][2]float64{{0, 0}, {w, 0}, {w, h}, {0, h}}), rasterColor(pdfPaint(asObj(node["fill"])), rc.alpha))
 	text := asStr(node["text"])
 	if text == "" {
 		return
@@ -458,7 +585,7 @@ func (rc *rctx) rasterSticky(m mat, node map[string]any) {
 			break
 		}
 		dx, dy := m.apply(pad, y)
-		d := &font.Drawer{Dst: rc.dst, Src: image.NewUniform(rasterColor(tc, 1)), Face: face, Dot: fixed.P(int(math.Round(dx)), int(math.Round(dy)))}
+		d := &font.Drawer{Dst: rc.dst, Src: image.NewUniform(rasterColor(tc, rc.alpha)), Face: face, Dot: fixed.P(int(math.Round(dx)), int(math.Round(dy)))}
 		d.DrawString(ln)
 		y += lineH
 	}
@@ -474,7 +601,7 @@ func (rc *rctx) rasterConnector(node map[string]any) {
 	if len(pts) < 2 {
 		return
 	}
-	col := rasterColor(connectorStrokeColor(node), 1)
+	col := rasterColor(connectorStrokeColor(node), rc.alpha)
 	if col.A == 0 {
 		return
 	}
@@ -535,7 +662,7 @@ func ToRaster(file Design, pageIndex int, scale float64) (*image.RGBA, error) {
 		return nil, err
 	}
 	dst := image.NewRGBA(image.Rect(0, 0, pw, ph))
-	rc := &rctx{dst: dst, w: pw, h: ph, font: fnt, boxes: pageBoxMap(page)}
+	rc := &rctx{dst: dst, w: pw, h: ph, font: fnt, boxes: pageBoxMap(page), alpha: 1}
 	base := matScale(scale)
 	rc.base = base
 

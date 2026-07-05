@@ -1,0 +1,174 @@
+{
+ "id": "story-promo-sunset",
+ "title": "Sunset Promo Story",
+ "categories": [
+  "social",
+  "marketing"
+ ],
+ "tags": [
+  "story",
+  "instagram",
+  "gradient",
+  "promo"
+ ],
+ "styleTags": [
+  "bold",
+  "gradient"
+ ],
+ "size": [
+  1080,
+  1920
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Poppins",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Inter",
+   "weight": 500
+  }
+ ],
+ "pages": [
+  {
+   "name": "Story",
+   "bg": {
+    "angle": 160,
+    "stops": [
+     [
+      "#FB923C",
+      0
+     ],
+     [
+      "#E11D48",
+      0.5
+     ],
+     [
+      "#DB2777",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 760,
+     "y": -180,
+     "w": 520,
+     "h": 520,
+     "fill": "#FFFFFF",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": -160,
+     "y": 1430,
+     "w": 380,
+     "h": 380,
+     "fill": "#FFFFFF",
+     "opacity": 0.1,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 600,
+     "w": 800,
+     "h": 44,
+     "text": "New drop",
+     "family": "Poppins",
+     "size": 30,
+     "weight": 700,
+     "color": "#FFFFFF",
+     "align": "center",
+     "letterSpacing": 8,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 90,
+     "y": 690,
+     "w": 900,
+     "h": 280,
+     "text": "Style that\nspeaks first",
+     "family": "Poppins",
+     "size": 120,
+     "weight": 800,
+     "color": "#FFFFFF",
+     "align": "center",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 165,
+     "y": 1010,
+     "w": 750,
+     "h": 48,
+     "text": "Fresh looks, limited runs, made to move.",
+     "family": "Inter",
+     "size": 32,
+     "weight": 500,
+     "color": "#FFFFFF",
+     "align": "center"
+    },
+    {
+     "kind": "button",
+     "x": 340,
+     "y": 1180,
+     "w": 400,
+     "h": 104,
+     "fill": "#FFFFFF",
+     "label": "Shop the drop",
+     "color": "#DB2777",
+     "family": "Poppins",
+     "size": 30,
+     "weight": 700,
+     "letterSpacing": 1
+    },
+    {
+     "kind": "text",
+     "x": 240,
+     "y": 1560,
+     "w": 600,
+     "h": 42,
+     "text": "@auralabel",
+     "family": "Inter",
+     "size": 28,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "align": "center",
+     "letterSpacing": 2
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Headline",
+   "hint": "Two short lines that sell the drop"
+  },
+  {
+   "node": "p0-n4",
+   "kind": "text",
+   "label": "Supporting line",
+   "hint": "One sentence about the offer"
+  },
+  {
+   "node": "p0-n5-label",
+   "kind": "text",
+   "label": "Button label",
+   "hint": "Call to action, 2-3 words"
+  },
+  {
+   "node": "p0-n6",
+   "kind": "text",
+   "label": "Brand handle",
+   "hint": "Your @handle"
+  }
+ ]
+}

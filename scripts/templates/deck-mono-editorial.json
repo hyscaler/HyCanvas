@@ -1,0 +1,114 @@
+{
+  "id": "deck-mono-editorial",
+  "title": "Editorial Strategy Deck",
+  "categories": ["presentations", "business"],
+  "tags": ["deck", "strategy", "serif", "editorial", "minimal"],
+  "styleTags": ["minimal", "elegant"],
+  "size": [1920, 1080],
+  "typography": [
+    { "role": "heading", "family": "Playfair Display", "weight": 600 },
+    { "role": "body", "family": "Inter", "weight": 400 }
+  ],
+  "pages": [
+    {
+      "name": "Title",
+      "bg": "#FAF6EF",
+      "nodes": [
+        { "kind": "text", "x": 1500, "y": 360, "w": 560, "h": 660, "text": "&", "family": "Playfair Display", "size": 560, "weight": 500, "color": "#E1E2D6", "lineHeight": 1.0, "bleed": true },
+        { "kind": "text", "x": 96, "y": 92, "w": 600, "h": 40, "text": "Meridian & Co.", "family": "Playfair Display", "size": 28, "weight": 600, "color": "#201A17", "lineHeight": 1.2 },
+        { "kind": "rect", "x": 96, "y": 380, "w": 64, "h": 6, "fill": "#1D4D3B", "radius": 3 },
+        { "kind": "text", "x": 96, "y": 414, "w": 900, "h": 30, "text": "Brand strategy · FY 2026", "family": "Inter", "size": 22, "weight": 600, "color": "#1D4D3B", "letterSpacing": 4, "upper": true, "lineHeight": 1.2 },
+        { "kind": "text", "x": 96, "y": 470, "w": 1400, "h": 270, "text": "A quieter kind\nof confidence", "family": "Playfair Display", "size": 116, "weight": 600, "color": "#201A17", "lineHeight": 1.06 },
+        { "kind": "text", "x": 96, "y": 780, "w": 1300, "h": 42, "text": "Positioning, voice, and identity for the next chapter of Meridian & Co.", "family": "Inter", "size": 28, "weight": 400, "color": "#6B6259", "lineHeight": 1.35 },
+        { "kind": "text", "x": 96, "y": 952, "w": 900, "h": 30, "text": "Prepared by Atelier North · October 2026", "family": "Inter", "size": 22, "weight": 500, "color": "#6B6259", "lineHeight": 1.2 }
+      ]
+    },
+    {
+      "name": "Agenda",
+      "bg": "#FAF6EF",
+      "nodes": [
+        { "kind": "rect", "x": 96, "y": 96, "w": 64, "h": 6, "fill": "#1D4D3B", "radius": 3 },
+        { "kind": "text", "x": 96, "y": 130, "w": 900, "h": 30, "text": "Brand strategy · FY 2026", "family": "Inter", "size": 22, "weight": 600, "color": "#1D4D3B", "letterSpacing": 4, "upper": true, "lineHeight": 1.2 },
+        { "kind": "text", "x": 96, "y": 186, "w": 800, "h": 100, "text": "Agenda", "family": "Playfair Display", "size": 84, "weight": 600, "color": "#201A17", "lineHeight": 1.05 },
+        { "kind": "rect", "x": 96, "y": 360, "w": 1728, "h": 2, "fill": "#D9D0C3" },
+        { "kind": "rect", "x": 96, "y": 495, "w": 1728, "h": 2, "fill": "#D9D0C3" },
+        { "kind": "rect", "x": 96, "y": 630, "w": 1728, "h": 2, "fill": "#D9D0C3" },
+        { "kind": "rect", "x": 96, "y": 765, "w": 1728, "h": 2, "fill": "#D9D0C3" },
+        { "kind": "rect", "x": 96, "y": 900, "w": 1728, "h": 2, "fill": "#D9D0C3" },
+        { "kind": "text", "x": 96, "y": 394, "w": 80, "h": 32, "text": "01", "family": "Inter", "size": 24, "weight": 600, "color": "#1D4D3B", "letterSpacing": 2, "lineHeight": 1.2 },
+        { "kind": "text", "x": 96, "y": 529, "w": 80, "h": 32, "text": "02", "family": "Inter", "size": 24, "weight": 600, "color": "#1D4D3B", "letterSpacing": 2, "lineHeight": 1.2 },
+        { "kind": "text", "x": 96, "y": 664, "w": 80, "h": 32, "text": "03", "family": "Inter", "size": 24, "weight": 600, "color": "#1D4D3B", "letterSpacing": 2, "lineHeight": 1.2 },
+        { "kind": "text", "x": 96, "y": 799, "w": 80, "h": 32, "text": "04", "family": "Inter", "size": 24, "weight": 600, "color": "#1D4D3B", "letterSpacing": 2, "lineHeight": 1.2 },
+        { "kind": "text", "x": 220, "y": 386, "w": 980, "h": 64, "text": "Where we stand", "family": "Playfair Display", "size": 46, "weight": 600, "color": "#201A17", "lineHeight": 1.05 },
+        { "kind": "text", "x": 220, "y": 521, "w": 980, "h": 64, "text": "What the audience told us", "family": "Playfair Display", "size": 46, "weight": 600, "color": "#201A17", "lineHeight": 1.05 },
+        { "kind": "text", "x": 220, "y": 656, "w": 980, "h": 64, "text": "The idea and the voice", "family": "Playfair Display", "size": 46, "weight": 600, "color": "#201A17", "lineHeight": 1.05 },
+        { "kind": "text", "x": 220, "y": 791, "w": 980, "h": 64, "text": "Rolling it out", "family": "Playfair Display", "size": 46, "weight": 600, "color": "#201A17", "lineHeight": 1.05 },
+        { "kind": "text", "x": 1200, "y": 394, "w": 624, "h": 32, "text": "Context", "family": "Inter", "size": 24, "weight": 500, "color": "#6B6259", "align": "right", "lineHeight": 1.2 },
+        { "kind": "text", "x": 1200, "y": 529, "w": 624, "h": 32, "text": "Research", "family": "Inter", "size": 24, "weight": 500, "color": "#6B6259", "align": "right", "lineHeight": 1.2 },
+        { "kind": "text", "x": 1200, "y": 664, "w": 624, "h": 32, "text": "Strategy", "family": "Inter", "size": 24, "weight": 500, "color": "#6B6259", "align": "right", "lineHeight": 1.2 },
+        { "kind": "text", "x": 1200, "y": 799, "w": 624, "h": 32, "text": "Roadmap", "family": "Inter", "size": 24, "weight": 500, "color": "#6B6259", "align": "right", "lineHeight": 1.2 },
+        { "kind": "text", "x": 96, "y": 952, "w": 900, "h": 30, "text": "Meridian & Co. · Brand strategy", "family": "Inter", "size": 22, "weight": 500, "color": "#6B6259", "lineHeight": 1.2 },
+        { "kind": "text", "x": 1524, "y": 952, "w": 300, "h": 30, "text": "02 / 05", "family": "Inter", "size": 22, "weight": 500, "color": "#6B6259", "align": "right", "lineHeight": 1.2 }
+      ]
+    },
+    {
+      "name": "Big idea",
+      "bg": "#FAF6EF",
+      "nodes": [
+        { "kind": "rect", "x": 96, "y": 96, "w": 64, "h": 6, "fill": "#1D4D3B", "radius": 3 },
+        { "kind": "text", "x": 96, "y": 130, "w": 900, "h": 30, "text": "The idea", "family": "Inter", "size": 22, "weight": 600, "color": "#1D4D3B", "letterSpacing": 4, "upper": true, "lineHeight": 1.2 },
+        { "kind": "text", "x": 96, "y": 350, "w": 1600, "h": 250, "text": "The most trusted brands\ndon't chase attention.", "family": "Playfair Display", "size": 104, "weight": 600, "color": "#201A17", "lineHeight": 1.08 },
+        { "kind": "text", "x": 96, "y": 610, "w": 1200, "h": 125, "text": "They reward it.", "family": "Playfair Display", "size": 104, "weight": 600, "color": "#1D4D3B", "lineHeight": 1.08 },
+        { "kind": "text", "x": 96, "y": 798, "w": 1200, "h": 84, "text": "Our next chapter trades volume for precision: fewer messages,\nsharper craft, and a voice that holds its nerve.", "family": "Inter", "size": 28, "weight": 400, "color": "#6B6259", "lineHeight": 1.4 },
+        { "kind": "text", "x": 96, "y": 952, "w": 900, "h": 30, "text": "Meridian & Co. · Brand strategy", "family": "Inter", "size": 22, "weight": 500, "color": "#6B6259", "lineHeight": 1.2 },
+        { "kind": "text", "x": 1524, "y": 952, "w": 300, "h": 30, "text": "03 / 05", "family": "Inter", "size": 22, "weight": 500, "color": "#6B6259", "align": "right", "lineHeight": 1.2 }
+      ]
+    },
+    {
+      "name": "Numbers",
+      "bg": "#FAF6EF",
+      "nodes": [
+        { "kind": "rect", "x": 96, "y": 96, "w": 64, "h": 6, "fill": "#1D4D3B", "radius": 3 },
+        { "kind": "text", "x": 96, "y": 130, "w": 900, "h": 30, "text": "Proof in numbers", "family": "Inter", "size": 22, "weight": 600, "color": "#1D4D3B", "letterSpacing": 4, "upper": true, "lineHeight": 1.2 },
+        { "kind": "text", "x": 96, "y": 186, "w": 1200, "h": 100, "text": "What precision earns", "family": "Playfair Display", "size": 84, "weight": 600, "color": "#201A17", "lineHeight": 1.05 },
+        { "kind": "rect", "x": 96, "y": 430, "w": 64, "h": 6, "fill": "#1D4D3B", "radius": 3 },
+        { "kind": "rect", "x": 700, "y": 430, "w": 64, "h": 6, "fill": "#1D4D3B", "radius": 3 },
+        { "kind": "rect", "x": 1304, "y": 430, "w": 64, "h": 6, "fill": "#1D4D3B", "radius": 3 },
+        { "kind": "text", "x": 96, "y": 466, "w": 520, "h": 130, "text": "3.2x", "family": "Playfair Display", "size": 116, "weight": 600, "color": "#201A17", "lineHeight": 1.0 },
+        { "kind": "text", "x": 700, "y": 466, "w": 520, "h": 130, "text": "68%", "family": "Playfair Display", "size": 116, "weight": 600, "color": "#201A17", "lineHeight": 1.0 },
+        { "kind": "text", "x": 1304, "y": 466, "w": 520, "h": 130, "text": "9 in 10", "family": "Playfair Display", "size": 116, "weight": 600, "color": "#201A17", "lineHeight": 1.0 },
+        { "kind": "text", "x": 96, "y": 628, "w": 520, "h": 30, "text": "Media efficiency", "family": "Inter", "size": 22, "weight": 600, "color": "#1D4D3B", "letterSpacing": 3, "upper": true, "lineHeight": 1.2 },
+        { "kind": "text", "x": 700, "y": 628, "w": 520, "h": 30, "text": "Unprompted recall", "family": "Inter", "size": 22, "weight": 600, "color": "#1D4D3B", "letterSpacing": 3, "upper": true, "lineHeight": 1.2 },
+        { "kind": "text", "x": 1304, "y": 628, "w": 520, "h": 30, "text": "Price confidence", "family": "Inter", "size": 22, "weight": 600, "color": "#1D4D3B", "letterSpacing": 3, "upper": true, "lineHeight": 1.2 },
+        { "kind": "text", "x": 96, "y": 674, "w": 520, "h": 80, "text": "Earned coverage per dollar\nafter the identity refresh.", "family": "Inter", "size": 24, "weight": 400, "color": "#6B6259", "lineHeight": 1.4 },
+        { "kind": "text", "x": 700, "y": 674, "w": 520, "h": 80, "text": "Audiences who name Meridian\nfirst in category interviews.", "family": "Inter", "size": 24, "weight": 400, "color": "#6B6259", "lineHeight": 1.4 },
+        { "kind": "text", "x": 1304, "y": 674, "w": 520, "h": 80, "text": "Customers who say the brand\njustifies its premium.", "family": "Inter", "size": 24, "weight": 400, "color": "#6B6259", "lineHeight": 1.4 },
+        { "kind": "text", "x": 96, "y": 820, "w": 900, "h": 28, "text": "Source: brand tracker, May 2026 · n = 1,204", "family": "Inter", "size": 20, "weight": 400, "color": "#6B6259", "lineHeight": 1.2 },
+        { "kind": "text", "x": 96, "y": 952, "w": 900, "h": 30, "text": "Meridian & Co. · Brand strategy", "family": "Inter", "size": 22, "weight": 500, "color": "#6B6259", "lineHeight": 1.2 },
+        { "kind": "text", "x": 1524, "y": 952, "w": 300, "h": 30, "text": "04 / 05", "family": "Inter", "size": 22, "weight": 500, "color": "#6B6259", "align": "right", "lineHeight": 1.2 }
+      ]
+    },
+    {
+      "name": "Closing",
+      "bg": "#FAF6EF",
+      "nodes": [
+        { "kind": "text", "x": 1500, "y": 360, "w": 560, "h": 660, "text": "&", "family": "Playfair Display", "size": 560, "weight": 500, "color": "#E1E2D6", "lineHeight": 1.0, "bleed": true },
+        { "kind": "rect", "x": 96, "y": 96, "w": 64, "h": 6, "fill": "#1D4D3B", "radius": 3 },
+        { "kind": "text", "x": 96, "y": 130, "w": 900, "h": 30, "text": "Next steps", "family": "Inter", "size": 22, "weight": 600, "color": "#1D4D3B", "letterSpacing": 4, "upper": true, "lineHeight": 1.2 },
+        { "kind": "text", "x": 96, "y": 400, "w": 1400, "h": 250, "text": "Let's build the quiet\nstandard together.", "family": "Playfair Display", "size": 104, "weight": 600, "color": "#201A17", "lineHeight": 1.08 },
+        { "kind": "rect", "x": 96, "y": 720, "w": 64, "h": 6, "fill": "#1D4D3B", "radius": 3 },
+        { "kind": "text", "x": 96, "y": 756, "w": 900, "h": 42, "text": "hello@ateliernorth.studio", "family": "Inter", "size": 30, "weight": 600, "color": "#201A17", "lineHeight": 1.3 },
+        { "kind": "text", "x": 96, "y": 816, "w": 900, "h": 34, "text": "ateliernorth.studio · +1 (415) 555 0134", "family": "Inter", "size": 24, "weight": 400, "color": "#6B6259", "lineHeight": 1.3 },
+        { "kind": "text", "x": 96, "y": 952, "w": 900, "h": 30, "text": "Meridian & Co. · Brand strategy", "family": "Inter", "size": 22, "weight": 500, "color": "#6B6259", "lineHeight": 1.2 },
+        { "kind": "text", "x": 1524, "y": 952, "w": 300, "h": 30, "text": "05 / 05", "family": "Inter", "size": 22, "weight": 500, "color": "#6B6259", "align": "right", "lineHeight": 1.2 }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n1", "kind": "text", "label": "Company name", "hint": "Your company or brand wordmark" },
+    { "node": "p0-n4", "kind": "text", "label": "Deck title", "hint": "The headline of the deck, up to two lines" },
+    { "node": "p0-n5", "kind": "text", "label": "Subtitle", "hint": "One line describing what the deck covers" },
+    { "node": "p4-n3", "kind": "text", "label": "Closing line", "hint": "The invitation or call to action, up to two lines" },
+    { "node": "p4-n5", "kind": "text", "label": "Contact email", "hint": "Where to reach you" }
+  ]
+}

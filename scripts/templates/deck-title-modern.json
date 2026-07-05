@@ -1,0 +1,33 @@
+{
+  "id": "deck-title-modern",
+  "title": "Presentation Title",
+  "categories": ["presentations", "business"],
+  "tags": ["slide", "title", "minimal", "corporate"],
+  "styleTags": ["minimal", "corporate"],
+  "size": [1920, 1080],
+  "typography": [
+    { "role": "heading", "family": "Poppins", "weight": 700 },
+    { "role": "body", "family": "Inter", "weight": 400 }
+  ],
+  "pages": [
+    {
+      "name": "Title",
+      "bg": "#0F172A",
+      "nodes": [
+        { "kind": "ellipse", "x": 1660, "y": -120, "w": 420, "h": 420, "fill": { "angle": 135, "stops": [["#22D3EE", 0], ["#6366F1", 1]] }, "bleed": true },
+        { "kind": "ellipse", "x": 1620, "y": 820, "w": 480, "h": 480, "fill": "#6366F1", "opacity": 0.1, "bleed": true },
+        { "kind": "text", "x": 160, "y": 300, "w": 900, "h": 32, "text": "Quarterly Review", "family": "Poppins", "size": 24, "weight": 600, "color": "#22D3EE", "letterSpacing": 4, "upper": true, "lineHeight": 1.1 },
+        { "kind": "rect", "x": 160, "y": 356, "w": 90, "h": 12, "fill": "#22D3EE", "radius": 6 },
+        { "kind": "text", "x": 160, "y": 410, "w": 1320, "h": 274, "text": "Building\nwhat’s next", "family": "Poppins", "size": 116, "weight": 700, "color": "#F8FAFC", "lineHeight": 1.12 },
+        { "kind": "text", "x": 160, "y": 716, "w": 1180, "h": 42, "text": "A clear look at progress, priorities, and the road ahead.", "family": "Inter", "size": 30, "weight": 400, "color": "#94A3B8", "lineHeight": 1.3 },
+        { "kind": "text", "x": 160, "y": 980, "w": 900, "h": 30, "text": "Northwind Labs · 2026", "family": "Inter", "size": 22, "weight": 500, "color": "#94A3B8", "letterSpacing": 2, "lineHeight": 1.2 }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n2", "kind": "text", "label": "Eyebrow", "hint": "Deck type or series, e.g. Quarterly Review" },
+    { "node": "p0-n4", "kind": "text", "label": "Title", "hint": "The presentation title" },
+    { "node": "p0-n5", "kind": "text", "label": "Subtitle", "hint": "One line on what the deck covers" },
+    { "node": "p0-n6", "kind": "text", "label": "Company and year", "hint": "Company name and year" }
+  ]
+}

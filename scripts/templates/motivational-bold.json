@@ -1,0 +1,133 @@
+{
+ "id": "motivational-bold",
+ "title": "Motivational Quote",
+ "categories": [
+  "social",
+  "quotes"
+ ],
+ "tags": [
+  "quote",
+  "bold",
+  "motivation"
+ ],
+ "styleTags": [
+  "bold",
+  "modern"
+ ],
+ "size": [
+  1080,
+  1080
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Montserrat",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Inter",
+   "weight": 600
+  }
+ ],
+ "pages": [
+  {
+   "name": "Quote",
+   "bg": "#0b1020",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 0,
+     "w": 1080,
+     "h": 1080,
+     "fill": {
+      "angle": 135,
+      "stops": [
+       [
+        "#312E81",
+        0
+       ],
+       [
+        "#0B1020",
+        1
+       ]
+      ]
+     }
+    },
+    {
+     "kind": "ellipse",
+     "x": 760,
+     "y": -180,
+     "w": 520,
+     "h": 520,
+     "opacity": 0.14,
+     "bleed": true,
+     "fill": "#22D3EE"
+    },
+    {
+     "kind": "ellipse",
+     "x": -160,
+     "y": 840,
+     "w": 320,
+     "h": 320,
+     "opacity": 0.14,
+     "bleed": true,
+     "fill": "#22D3EE"
+    },
+    {
+     "kind": "text",
+     "x": 110,
+     "y": 312,
+     "w": 860,
+     "h": 300,
+     "text": "Dream big.\nStart now.",
+     "family": "Montserrat",
+     "size": 130,
+     "weight": 800,
+     "color": "#FFFFFF",
+     "align": "center",
+     "lineHeight": 1.08
+    },
+    {
+     "kind": "rect",
+     "x": 465,
+     "y": 645,
+     "w": 150,
+     "h": 10,
+     "fill": "#22D3EE",
+     "radius": 5
+    },
+    {
+     "kind": "text",
+     "x": 190,
+     "y": 705,
+     "w": 700,
+     "h": 36,
+     "text": "Daily reminders",
+     "family": "Inter",
+     "size": 26,
+     "weight": 600,
+     "color": "#A5F3FC",
+     "align": "center",
+     "letterSpacing": 6,
+     "upper": true
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Quote",
+   "hint": "Short two-line motivational quote"
+  },
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Caption",
+   "hint": "Series name or brand tagline"
+  }
+ ]
+}

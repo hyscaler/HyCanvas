@@ -1,0 +1,58 @@
+{
+  "id": "flyer-cafe-menu",
+  "title": "Autumn Cafe Menu Flyer",
+  "categories": ["print", "food"],
+  "tags": ["flyer", "cafe", "menu", "warm"],
+  "styleTags": ["elegant", "minimal"],
+  "size": [1080, 1528],
+  "typography": [
+    { "role": "heading", "family": "Playfair Display", "weight": 600 },
+    { "role": "body", "family": "Inter", "weight": 400 }
+  ],
+  "pages": [
+    {
+      "name": "Menu",
+      "bg": "#FAF3E7",
+      "nodes": [
+        { "kind": "rect", "x": 0, "y": 0, "w": 1080, "h": 12, "fill": "#2E1F16" },
+        { "kind": "text", "x": 88, "y": 110, "w": 904, "h": 26, "text": "Est. 2018 · Alberta Street, Portland", "family": "Inter", "size": 18, "weight": 500, "color": "#6E5A47", "align": "center", "letterSpacing": 4, "upper": true },
+        { "kind": "text", "x": 88, "y": 158, "w": 904, "h": 122, "text": "Cafe Aurelia", "family": "Playfair Display", "size": 96, "weight": 600, "color": "#2E1F16", "align": "center", "lineHeight": 1.05 },
+        { "kind": "rect", "x": 531, "y": 318, "w": 18, "h": 18, "fill": "#A9713C", "rotation": 45 },
+        { "kind": "rect", "x": 362, "y": 326, "w": 130, "h": 2, "fill": "#D8C9B4" },
+        { "kind": "rect", "x": 588, "y": 326, "w": 130, "h": 2, "fill": "#D8C9B4" },
+        { "kind": "text", "x": 88, "y": 368, "w": 904, "h": 52, "text": "The New Autumn Menu", "family": "Playfair Display", "size": 40, "weight": 500, "color": "#A9713C", "align": "center" },
+        { "kind": "text", "x": 88, "y": 434, "w": 904, "h": 28, "text": "Seasonal pours and plates, served through November", "family": "Inter", "size": 19, "weight": 400, "color": "#6E5A47", "align": "center" },
+        { "kind": "text", "x": 140, "y": 540, "w": 480, "h": 44, "text": "Spiced pumpkin latte", "family": "Playfair Display", "size": 33, "weight": 600, "color": "#2E1F16" },
+        { "kind": "text", "x": 560, "y": 546, "w": 300, "h": 36, "text": ".....................", "family": "Inter", "size": 22, "weight": 400, "color": "#C4B096", "align": "center", "letterSpacing": 8 },
+        { "kind": "text", "x": 800, "y": 540, "w": 140, "h": 44, "text": "$6.50", "family": "Playfair Display", "size": 33, "weight": 600, "color": "#A9713C", "align": "right" },
+        { "kind": "text", "x": 140, "y": 592, "w": 620, "h": 30, "text": "Double espresso, oat milk, house-made spice syrup", "family": "Inter", "size": 19, "weight": 400, "color": "#6E5A47" },
+        { "kind": "text", "x": 140, "y": 672, "w": 480, "h": 44, "text": "Maple pecan cold brew", "family": "Playfair Display", "size": 33, "weight": 600, "color": "#2E1F16" },
+        { "kind": "text", "x": 560, "y": 678, "w": 300, "h": 36, "text": ".....................", "family": "Inter", "size": 22, "weight": 400, "color": "#C4B096", "align": "center", "letterSpacing": 8 },
+        { "kind": "text", "x": 800, "y": 672, "w": 140, "h": 44, "text": "$6.00", "family": "Playfair Display", "size": 33, "weight": 600, "color": "#A9713C", "align": "right" },
+        { "kind": "text", "x": 140, "y": 724, "w": 620, "h": 30, "text": "Slow-steeped 18 hours, maple cream top", "family": "Inter", "size": 19, "weight": 400, "color": "#6E5A47" },
+        { "kind": "text", "x": 140, "y": 804, "w": 480, "h": 44, "text": "Brown butter apple tart", "family": "Playfair Display", "size": 33, "weight": 600, "color": "#2E1F16" },
+        { "kind": "text", "x": 560, "y": 810, "w": 300, "h": 36, "text": ".....................", "family": "Inter", "size": 22, "weight": 400, "color": "#C4B096", "align": "center", "letterSpacing": 8 },
+        { "kind": "text", "x": 800, "y": 804, "w": 140, "h": 44, "text": "$8.50", "family": "Playfair Display", "size": 33, "weight": 600, "color": "#A9713C", "align": "right" },
+        { "kind": "text", "x": 140, "y": 856, "w": 620, "h": 30, "text": "Warm heirloom apples, vanilla bean cream", "family": "Inter", "size": 19, "weight": 400, "color": "#6E5A47" },
+        { "kind": "text", "x": 140, "y": 936, "w": 480, "h": 44, "text": "Roasted squash toast", "family": "Playfair Display", "size": 33, "weight": 600, "color": "#2E1F16" },
+        { "kind": "text", "x": 560, "y": 942, "w": 300, "h": 36, "text": ".....................", "family": "Inter", "size": 22, "weight": 400, "color": "#C4B096", "align": "center", "letterSpacing": 8 },
+        { "kind": "text", "x": 800, "y": 936, "w": 140, "h": 44, "text": "$9.00", "family": "Playfair Display", "size": 33, "weight": 600, "color": "#A9713C", "align": "right" },
+        { "kind": "text", "x": 140, "y": 988, "w": 620, "h": 30, "text": "Country sourdough, whipped ricotta, sage honey", "family": "Inter", "size": 19, "weight": 400, "color": "#6E5A47" },
+        { "kind": "rect", "x": 460, "y": 1108, "w": 160, "h": 2, "fill": "#D8C9B4" },
+        { "kind": "text", "x": 88, "y": 1142, "w": 904, "h": 28, "text": "Vegan and dairy-free swaps available on request", "family": "Inter", "size": 19, "weight": 400, "color": "#6E5A47", "align": "center" },
+        { "kind": "rect", "x": 0, "y": 1300, "w": 1080, "h": 228, "fill": "#2E1F16" },
+        { "kind": "text", "x": 88, "y": 1348, "w": 904, "h": 24, "text": "Opening Hours", "family": "Inter", "size": 16, "weight": 600, "color": "#D9A970", "align": "center", "letterSpacing": 4, "upper": true },
+        { "kind": "text", "x": 88, "y": 1388, "w": 904, "h": 34, "text": "Monday to Friday 7:00 to 16:00 · Weekends 8:00 to 17:00", "family": "Inter", "size": 23, "weight": 500, "color": "#FAF3E7", "align": "center" },
+        { "kind": "text", "x": 88, "y": 1438, "w": 904, "h": 26, "text": "2140 NE Alberta Street, Portland · @cafeaurelia", "family": "Inter", "size": 18, "weight": 400, "color": "#C9B8A5", "align": "center" }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n2", "kind": "text", "label": "Cafe name", "hint": "Your cafe or restaurant name" },
+    { "node": "p0-n6", "kind": "text", "label": "Menu headline", "hint": "Seasonal menu or promo line" },
+    { "node": "p0-n8", "kind": "text", "label": "First item", "hint": "Featured menu item name" },
+    { "node": "p0-n10", "kind": "text", "label": "First item price", "hint": "Price, e.g. $6.50" },
+    { "node": "p0-n28", "kind": "text", "label": "Opening hours", "hint": "Weekday and weekend hours" },
+    { "node": "p0-n29", "kind": "text", "label": "Address and handle", "hint": "Street address and social handle" }
+  ]
+}

@@ -1,0 +1,177 @@
+{
+ "id": "ig-quote-typographic",
+ "title": "Typographic Quote",
+ "categories": [
+  "quotes",
+  "social"
+ ],
+ "tags": [
+  "quote",
+  "typography",
+  "minimal"
+ ],
+ "styleTags": [
+  "minimal",
+  "modern"
+ ],
+ "size": [
+  1080,
+  1080
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Figtree",
+   "weight": 800
+  },
+  {
+   "role": "label",
+   "family": "Space Mono",
+   "weight": 700
+  }
+ ],
+ "pages": [
+  {
+   "name": "Quote",
+   "bg": "#FAFAFA",
+   "nodes": [
+    {
+     "kind": "text",
+     "x": -70,
+     "y": -140,
+     "w": 760,
+     "h": 760,
+     "text": "\u201c",
+     "family": "Figtree",
+     "size": 720,
+     "weight": 800,
+     "color": "#DC2626",
+     "opacity": 0.14,
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 620,
+     "y": 720,
+     "w": 760,
+     "h": 760,
+     "text": "\u201d",
+     "family": "Figtree",
+     "size": 720,
+     "weight": 800,
+     "color": "#DC2626",
+     "opacity": 0.14,
+     "lineHeight": 1,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 100,
+     "y": 430,
+     "w": 880,
+     "h": 100,
+     "text": "Good design is",
+     "family": "Figtree",
+     "size": 86,
+     "weight": 400,
+     "color": "#171717",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 100,
+     "y": 524,
+     "w": 880,
+     "h": 100,
+     "text": "as little design",
+     "family": "Figtree",
+     "size": 86,
+     "weight": 800,
+     "color": "#171717",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 100,
+     "y": 618,
+     "w": 880,
+     "h": 100,
+     "text": "as possible.",
+     "family": "Figtree",
+     "size": 86,
+     "weight": 800,
+     "color": "#171717",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "rect",
+     "x": 100,
+     "y": 790,
+     "w": 64,
+     "h": 4,
+     "fill": "#DC2626",
+     "radius": 2
+    },
+    {
+     "kind": "text",
+     "x": 100,
+     "y": 822,
+     "w": 600,
+     "h": 34,
+     "text": "Dieter Rams",
+     "family": "Space Mono",
+     "size": 24,
+     "weight": 700,
+     "color": "#171717",
+     "letterSpacing": 4,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 100,
+     "y": 868,
+     "w": 700,
+     "h": 30,
+     "text": "Ten principles of good design, 1976",
+     "family": "Space Mono",
+     "size": 20,
+     "weight": 400,
+     "color": "#737373"
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n2",
+   "kind": "text",
+   "label": "Quote line 1",
+   "hint": "First line, light weight"
+  },
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Quote line 2",
+   "hint": "Second line, bold emphasis"
+  },
+  {
+   "node": "p0-n4",
+   "kind": "text",
+   "label": "Quote line 3",
+   "hint": "Third line, bold emphasis"
+  },
+  {
+   "node": "p0-n6",
+   "kind": "text",
+   "label": "Author",
+   "hint": "Who said it"
+  },
+  {
+   "node": "p0-n7",
+   "kind": "text",
+   "label": "Source",
+   "hint": "Where or when it was said"
+  }
+ ]
+}

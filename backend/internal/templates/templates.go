@@ -1,8 +1,10 @@
 // Package templates ports the NestJS templates module (doc 14): the template
 // catalog (built-in seed + DB-backed), apply-to-new (deep copy + id regen),
 // save-as-template (style extraction), and collections. Search/relevance and the
-// deep-copy id remap are pure ports of @hc/templates; the 32-template seed
-// catalog is embedded as JSON. The DesignFile is opaque JSON.
+// deep-copy id remap are pure ports of @hc/templates; the built-in seed catalog
+// is embedded as JSON, compiled from scripts/templates/*.json by
+// scripts/build-templates.mjs (never hand-edit seed.json). The DesignFile is
+// opaque JSON.
 //
 // Deferred vs the Node original: marketplace review/publish, AI template
 // matching, and apply-into-existing (apply-to-new is the path the UI uses).

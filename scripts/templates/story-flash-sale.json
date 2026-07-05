@@ -1,0 +1,80 @@
+{
+  "id": "story-flash-sale",
+  "title": "Flash Sale Story",
+  "categories": ["social", "marketing"],
+  "tags": ["story", "sale", "bold"],
+  "styleTags": ["bold", "modern"],
+  "size": [1080, 1920],
+  "typography": [
+    { "role": "heading", "family": "Montserrat", "weight": 800 },
+    { "role": "body", "family": "Inter", "weight": 500 }
+  ],
+  "pages": [
+    {
+      "name": "Story",
+      "bg": "#111827",
+      "nodes": [
+        {
+          "kind": "text",
+          "x": 120, "y": 310, "w": 840, "h": 48,
+          "text": "Flash sale",
+          "family": "Montserrat", "size": 36, "weight": 700,
+          "color": "#FCA5A5", "align": "center",
+          "letterSpacing": 8, "upper": true
+        },
+        {
+          "kind": "rect",
+          "x": -84, "y": 520, "w": 1200, "h": 520,
+          "rotation": -6, "bleed": true,
+          "fill": "#EF4444"
+        },
+        {
+          "kind": "text",
+          "x": -75, "y": 609, "w": 1200, "h": 170,
+          "rotation": -6, "bleed": true,
+          "text": "48 hours",
+          "family": "Montserrat", "size": 150, "weight": 800,
+          "color": "#FFFFFF", "align": "center", "vAlign": "middle",
+          "lineHeight": 1.05
+        },
+        {
+          "kind": "text",
+          "x": -57, "y": 779, "w": 1200, "h": 170,
+          "rotation": -6, "bleed": true,
+          "text": "-40%",
+          "family": "Montserrat", "size": 150, "weight": 800,
+          "color": "#FFFFFF", "align": "center", "vAlign": "middle",
+          "lineHeight": 1.05
+        },
+        {
+          "kind": "text",
+          "x": 120, "y": 1074, "w": 840, "h": 44,
+          "text": "Use code FLASH40 at checkout",
+          "family": "Inter", "size": 32, "weight": 500,
+          "color": "#E5E7EB", "align": "center"
+        },
+        {
+          "kind": "button",
+          "x": 290, "y": 1236, "w": 500, "h": 112,
+          "fill": "#FFFFFF", "label": "Shop the sale",
+          "color": "#EF4444", "family": "Montserrat", "size": 32, "weight": 700,
+          "letterSpacing": 1
+        },
+        {
+          "kind": "text",
+          "x": 120, "y": 1472, "w": 840, "h": 40,
+          "text": "Ends Sunday midnight",
+          "family": "Inter", "size": 30, "weight": 500,
+          "color": "#9CA3AF", "align": "center"
+        }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n2", "kind": "text", "label": "Sale duration", "hint": "How long the sale runs, e.g. 48 hours" },
+    { "node": "p0-n3", "kind": "text", "label": "Discount", "hint": "The offer, e.g. -40%" },
+    { "node": "p0-n4", "kind": "text", "label": "Promo code line", "hint": "Code instruction shown under the ribbon" },
+    { "node": "p0-n5-label", "kind": "text", "label": "CTA label", "hint": "Button text, e.g. Shop the sale" },
+    { "node": "p0-n6", "kind": "text", "label": "Urgency line", "hint": "Deadline, e.g. Ends Sunday midnight" }
+  ]
+}

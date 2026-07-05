@@ -1,0 +1,30 @@
+{
+  "id": "linkedin-banner",
+  "title": "LinkedIn Banner",
+  "categories": ["business", "social"],
+  "tags": ["banner", "linkedin", "profile"],
+  "styleTags": ["minimal", "tech"],
+  "size": [1584, 396],
+  "typography": [
+    { "role": "heading", "family": "Poppins", "weight": 700 },
+    { "role": "body", "family": "Inter", "weight": 400 }
+  ],
+  "pages": [
+    {
+      "name": "Banner",
+      "bg": "#0A192F",
+      "nodes": [
+        { "kind": "ellipse", "x": 1380, "y": -70, "w": 440, "h": 440, "fill": { "angle": 135, "stops": [["#64FFDA", 0], ["#0891B2", 1]] }, "bleed": true },
+        { "kind": "text", "x": 520, "y": 44, "w": 500, "h": 30, "text": "priyasharma.design", "family": "Inter", "size": 20, "weight": 600, "color": "#64FFDA", "align": "left", "letterSpacing": 3, "upper": true },
+        { "kind": "rect", "x": 520, "y": 88, "w": 70, "h": 8, "fill": "#64FFDA", "radius": 4 },
+        { "kind": "text", "x": 520, "y": 110, "w": 780, "h": 72, "text": "Priya Sharma", "family": "Poppins", "size": 60, "weight": 700, "color": "#E6F1FF", "align": "left", "lineHeight": 1.1 },
+        { "kind": "text", "x": 520, "y": 198, "w": 820, "h": 36, "text": "Product Design Leader · Design systems · Mentor", "family": "Inter", "size": 26, "weight": 400, "color": "#8892B0", "align": "left", "letterSpacing": 1 }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n3", "kind": "text", "label": "Full name", "hint": "Your name as shown on your profile" },
+    { "node": "p0-n4", "kind": "text", "label": "Headline", "hint": "Role and specialties, separated by middle dots" },
+    { "node": "p0-n1", "kind": "text", "label": "Website", "hint": "Your portfolio or site URL" }
+  ]
+}

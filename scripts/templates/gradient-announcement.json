@@ -1,0 +1,33 @@
+{
+  "id": "gradient-announcement",
+  "title": "Bold Announcement",
+  "categories": ["social", "marketing"],
+  "tags": ["instagram", "gradient", "sale"],
+  "styleTags": ["bold", "gradient"],
+  "size": [1080, 1080],
+  "typography": [
+    { "role": "heading", "family": "Montserrat", "weight": 800 },
+    { "role": "body", "family": "Inter", "weight": 500 }
+  ],
+  "pages": [
+    {
+      "name": "Announcement",
+      "bg": { "angle": 140, "stops": [["#4F46E5", 0], ["#DB2777", 1]] },
+      "nodes": [
+        { "kind": "ellipse", "x": 880, "y": -140, "w": 380, "h": 380, "fill": "#5D55E7", "bleed": true },
+        { "kind": "ellipse", "x": -160, "y": 820, "w": 440, "h": 440, "fill": "#DE3882", "bleed": true },
+        { "kind": "text", "x": 140, "y": 220, "w": 800, "h": 34, "text": "Limited time only", "family": "Montserrat", "size": 26, "weight": 700, "color": "#FFFFFF", "align": "center", "letterSpacing": 8, "upper": true, "lineHeight": 1.2 },
+        { "kind": "text", "x": 110, "y": 340, "w": 860, "h": 108, "text": "Summer Sale", "family": "Montserrat", "size": 96, "weight": 800, "color": "#FFFFFF", "align": "center", "lineHeight": 1.05 },
+        { "kind": "text", "x": 110, "y": 452, "w": 860, "h": 108, "text": "up to 50% off", "family": "Montserrat", "size": 96, "weight": 800, "color": "#FCE7F3", "align": "center", "lineHeight": 1.05 },
+        { "kind": "text", "x": 190, "y": 614, "w": 700, "h": 40, "text": "Shop the collection before it's gone", "family": "Inter", "size": 28, "weight": 500, "color": "#FFFFFF", "align": "center", "lineHeight": 1.3 },
+        { "kind": "button", "x": 390, "y": 764, "w": 300, "h": 92, "fill": "#FFFFFF", "label": "Shop now", "color": "#4F46E5", "family": "Montserrat", "size": 28, "weight": 700, "letterSpacing": 1 }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n3", "kind": "text", "label": "Headline", "hint": "The sale or announcement name" },
+    { "node": "p0-n4", "kind": "text", "label": "Offer line", "hint": "The discount or hook, e.g. up to 50% off" },
+    { "node": "p0-n5", "kind": "text", "label": "Supporting line", "hint": "One short urgency or benefit line" },
+    { "node": "p0-n6-label", "kind": "text", "label": "Button label", "hint": "Call to action, 1-3 words" }
+  ]
+}

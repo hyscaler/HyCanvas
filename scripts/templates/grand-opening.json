@@ -1,0 +1,37 @@
+{
+  "id": "grand-opening",
+  "title": "Grand Opening",
+  "categories": ["marketing", "print"],
+  "tags": ["poster", "opening", "retail"],
+  "styleTags": ["bold", "warm"],
+  "size": [1080, 1528],
+  "typography": [
+    { "role": "heading", "family": "Poppins", "weight": 800 },
+    { "role": "body", "family": "Inter", "weight": 500 }
+  ],
+  "pages": [
+    {
+      "name": "Poster",
+      "bg": { "angle": 160, "stops": [["#7F1D1D", 0], ["#B91C1C", 1]] },
+      "nodes": [
+        { "kind": "rect", "x": 44, "y": 44, "w": 992, "h": 2, "fill": "#FCA5A5", "opacity": 0.55 },
+        { "kind": "rect", "x": 44, "y": 1482, "w": 992, "h": 2, "fill": "#FCA5A5", "opacity": 0.55 },
+        { "kind": "rect", "x": 44, "y": 44, "w": 2, "h": 1440, "fill": "#FCA5A5", "opacity": 0.55 },
+        { "kind": "rect", "x": 1034, "y": 44, "w": 2, "h": 1440, "fill": "#FCA5A5", "opacity": 0.55 },
+        { "kind": "text", "x": 90, "y": 210, "w": 900, "h": 40, "text": "You're invited", "family": "Poppins", "size": 30, "weight": 600, "color": "#FECACA", "align": "center", "letterSpacing": 6, "upper": true, "lineHeight": 1.2 },
+        { "kind": "text", "x": 80, "y": 350, "w": 920, "h": 340, "text": "Grand\nOpening", "family": "Poppins", "size": 150, "weight": 800, "color": "#FFFFFF", "align": "center", "lineHeight": 1.05 },
+        { "kind": "rect", "x": 440, "y": 749, "w": 200, "h": 8, "fill": "#FCA5A5", "radius": 4 },
+        { "kind": "text", "x": 90, "y": 841, "w": 900, "h": 110, "text": "Saturday, July 12\n10 AM - 6 PM", "family": "Inter", "size": 38, "weight": 500, "color": "#FEE2E2", "align": "center", "lineHeight": 1.3 },
+        { "kind": "button", "x": 260, "y": 1025, "w": 560, "h": 84, "fill": "#FECACA", "label": "First 50 guests get a free gift", "color": "#7F1D1D", "family": "Poppins", "size": 28, "weight": 700 },
+        { "kind": "text", "x": 90, "y": 1392, "w": 900, "h": 40, "text": "Maple & Co  ·  240 Birch Ave", "family": "Poppins", "size": 28, "weight": 600, "color": "#FFFFFF", "align": "center", "letterSpacing": 1, "lineHeight": 1.2 },
+        { "kind": "rect", "x": 490, "y": 1240, "w": 100, "h": 6, "fill": "#FCA5A5", "opacity": 0.5, "radius": 3 }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n5", "kind": "text", "label": "Headline", "hint": "The event name, e.g. Grand Opening" },
+    { "node": "p0-n7", "kind": "text", "label": "Date and time", "hint": "Day on the first line, hours on the second" },
+    { "node": "p0-n8-label", "kind": "text", "label": "Offer", "hint": "The opening-day hook, e.g. a gift or discount" },
+    { "node": "p0-n9", "kind": "text", "label": "Business and address", "hint": "Store name and street address" }
+  ]
+}

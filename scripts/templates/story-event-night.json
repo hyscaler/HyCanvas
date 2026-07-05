@@ -1,0 +1,67 @@
+{
+  "id": "story-event-night",
+  "title": "Event Story",
+  "categories": ["social", "marketing"],
+  "tags": ["story", "event", "music"],
+  "styleTags": ["bold", "modern"],
+  "size": [1080, 1920],
+  "typography": [
+    { "role": "heading", "family": "Poppins", "weight": 800 },
+    { "role": "body", "family": "Inter", "weight": 500 }
+  ],
+  "pages": [
+    {
+      "name": "Story",
+      "bg": { "angle": 150, "stops": [["#1E1B4B", 0], ["#4C1D95", 1]] },
+      "nodes": [
+        {
+          "kind": "ellipse",
+          "x": 680, "y": 240, "w": 280, "h": 280,
+          "fill": "#F472B6"
+        },
+        {
+          "kind": "text",
+          "x": 120, "y": 680, "w": 840, "h": 40,
+          "text": "Live & loud",
+          "family": "Poppins", "size": 30, "weight": 700,
+          "color": "#F9A8D4", "align": "left",
+          "letterSpacing": 8, "upper": true
+        },
+        {
+          "kind": "text",
+          "x": 120, "y": 752, "w": 880, "h": 500,
+          "text": "Neon\nNights\n2026",
+          "family": "Poppins", "size": 150, "weight": 800,
+          "color": "#FFFFFF", "align": "left",
+          "lineHeight": 1.05
+        },
+        {
+          "kind": "rect",
+          "x": 120, "y": 1258, "w": 120, "h": 10,
+          "fill": "#22D3EE", "radius": 5
+        },
+        {
+          "kind": "text",
+          "x": 120, "y": 1318, "w": 840, "h": 100,
+          "text": "Sat · Dec 12 · 9PM\nThe Warehouse, Downtown",
+          "family": "Inter", "size": 34, "weight": 500,
+          "color": "#E0E7FF", "align": "left",
+          "lineHeight": 1.35
+        },
+        {
+          "kind": "button",
+          "x": 120, "y": 1490, "w": 420, "h": 104,
+          "fill": "#F472B6", "label": "Get tickets",
+          "color": "#1E1B4B", "family": "Poppins", "size": 30, "weight": 700,
+          "letterSpacing": 1
+        }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n1", "kind": "text", "label": "Tagline", "hint": "Short eyebrow line above the event name" },
+    { "node": "p0-n2", "kind": "text", "label": "Event name", "hint": "One word per line reads best at this size" },
+    { "node": "p0-n4", "kind": "text", "label": "Date & venue", "hint": "Line 1: date and time. Line 2: venue" },
+    { "node": "p0-n5-label", "kind": "text", "label": "CTA label", "hint": "Button text, e.g. Get tickets" }
+  ]
+}

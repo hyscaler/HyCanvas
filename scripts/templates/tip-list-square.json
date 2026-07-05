@@ -1,0 +1,232 @@
+{
+ "id": "tip-list-square",
+ "title": "Tips List",
+ "categories": [
+  "social",
+  "education"
+ ],
+ "tags": [
+  "tips",
+  "list",
+  "carousel"
+ ],
+ "styleTags": [
+  "clean",
+  "editorial"
+ ],
+ "size": [
+  1080,
+  1080
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Poppins",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Inter",
+   "weight": 500
+  }
+ ],
+ "pages": [
+  {
+   "name": "Tips",
+   "bg": "#FFFBEB",
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 150,
+     "w": 840,
+     "h": 200,
+     "text": "5 habits of\ngreat designers",
+     "family": "Poppins",
+     "size": 76,
+     "weight": 800,
+     "color": "#1C1917",
+     "align": "left",
+     "lineHeight": 1.08
+    },
+    {
+     "kind": "rect",
+     "x": 120,
+     "y": 412,
+     "w": 90,
+     "h": 8,
+     "fill": "#EA580C",
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 480,
+     "w": 80,
+     "h": 54,
+     "text": "01",
+     "family": "Poppins",
+     "size": 40,
+     "weight": 800,
+     "color": "#EA580C",
+     "align": "left"
+    },
+    {
+     "kind": "text",
+     "x": 220,
+     "y": 486,
+     "w": 740,
+     "h": 46,
+     "text": "Sketch before you open the laptop",
+     "family": "Inter",
+     "size": 32,
+     "weight": 500,
+     "color": "#292524",
+     "align": "left"
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 580,
+     "w": 80,
+     "h": 54,
+     "text": "02",
+     "family": "Poppins",
+     "size": 40,
+     "weight": 800,
+     "color": "#EA580C",
+     "align": "left"
+    },
+    {
+     "kind": "text",
+     "x": 220,
+     "y": 586,
+     "w": 740,
+     "h": 46,
+     "text": "Steal the constraints, not the pixels",
+     "family": "Inter",
+     "size": 32,
+     "weight": 500,
+     "color": "#292524",
+     "align": "left"
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 680,
+     "w": 80,
+     "h": 54,
+     "text": "03",
+     "family": "Poppins",
+     "size": 40,
+     "weight": 800,
+     "color": "#EA580C",
+     "align": "left"
+    },
+    {
+     "kind": "text",
+     "x": 220,
+     "y": 686,
+     "w": 740,
+     "h": 46,
+     "text": "Ship, then refine in daylight",
+     "family": "Inter",
+     "size": 32,
+     "weight": 500,
+     "color": "#292524",
+     "align": "left"
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 780,
+     "w": 80,
+     "h": 54,
+     "text": "04",
+     "family": "Poppins",
+     "size": 40,
+     "weight": 800,
+     "color": "#EA580C",
+     "align": "left"
+    },
+    {
+     "kind": "text",
+     "x": 220,
+     "y": 786,
+     "w": 740,
+     "h": 46,
+     "text": "Name your layers like a pro",
+     "family": "Inter",
+     "size": 32,
+     "weight": 500,
+     "color": "#292524",
+     "align": "left"
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 880,
+     "w": 80,
+     "h": 54,
+     "text": "05",
+     "family": "Poppins",
+     "size": 40,
+     "weight": 800,
+     "color": "#EA580C",
+     "align": "left"
+    },
+    {
+     "kind": "text",
+     "x": 220,
+     "y": 886,
+     "w": 740,
+     "h": 46,
+     "text": "Read it aloud before you publish",
+     "family": "Inter",
+     "size": 32,
+     "weight": 500,
+     "color": "#292524",
+     "align": "left"
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n0",
+   "kind": "text",
+   "label": "Title",
+   "hint": "Numbered list title, two short lines"
+  },
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Tip 1",
+   "hint": "One line, under 40 characters"
+  },
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Tip 2",
+   "hint": "One line, under 40 characters"
+  },
+  {
+   "node": "p0-n7",
+   "kind": "text",
+   "label": "Tip 3",
+   "hint": "One line, under 40 characters"
+  },
+  {
+   "node": "p0-n9",
+   "kind": "text",
+   "label": "Tip 4",
+   "hint": "One line, under 40 characters"
+  },
+  {
+   "node": "p0-n11",
+   "kind": "text",
+   "label": "Tip 5",
+   "hint": "One line, under 40 characters"
+  }
+ ]
+}

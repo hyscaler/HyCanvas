@@ -1,0 +1,40 @@
+{
+  "id": "ig-product-drop",
+  "title": "Product drop",
+  "categories": ["social", "marketing"],
+  "tags": ["product", "drop", "shop", "minimal", "instagram"],
+  "styleTags": ["minimal", "clean"],
+  "size": [1080, 1080],
+  "typography": [
+    { "role": "heading", "family": "Figtree", "weight": 700 },
+    { "role": "data", "family": "Space Mono", "weight": 400 }
+  ],
+  "fillable": [
+    { "node": "p0-n1", "kind": "text", "label": "Product name" },
+    { "node": "p0-n9-label", "kind": "text", "label": "Price" },
+    { "node": "p0-n10", "kind": "text", "label": "Drop time" },
+    { "node": "p0-n11-label", "kind": "text", "label": "CTA label" },
+    { "node": "p0-n12", "kind": "text", "label": "Handle" }
+  ],
+  "pages": [
+    {
+      "name": "Drop",
+      "bg": "#fafafa",
+      "nodes": [
+        { "kind": "text", "x": 90, "y": 92, "w": 900, "h": 30, "text": "New drop 004", "family": "Space Mono", "size": 22, "weight": 400, "color": "#2563eb", "align": "center", "letterSpacing": 6, "upper": true },
+        { "kind": "text", "x": 90, "y": 150, "w": 900, "h": 76, "text": "Atlas Field Watch", "family": "Figtree", "size": 60, "weight": 700, "color": "#171717", "align": "center", "lineHeight": 1.05 },
+        { "kind": "rect", "x": 296, "y": 288, "w": 488, "h": 380, "fill": "#171717" },
+        { "kind": "rect", "x": 300, "y": 292, "w": 480, "h": 372, "fill": "#ffffff", "stroke": "#171717", "strokeWidth": 2 },
+        { "kind": "rect", "x": 292, "y": 284, "w": 16, "h": 16, "fill": "#171717" },
+        { "kind": "rect", "x": 772, "y": 284, "w": 16, "h": 16, "fill": "#171717" },
+        { "kind": "rect", "x": 292, "y": 656, "w": 16, "h": 16, "fill": "#171717" },
+        { "kind": "rect", "x": 772, "y": 656, "w": 16, "h": 16, "fill": "#171717" },
+        { "kind": "text", "x": 300, "y": 456, "w": 480, "h": 28, "text": "Product photo", "family": "Space Mono", "size": 18, "weight": 400, "color": "#6b7280", "align": "center" },
+        { "kind": "button", "x": 464, "y": 720, "w": 152, "h": 54, "fill": "#171717", "label": "$249", "color": "#fafafa", "family": "Space Mono", "size": 24, "weight": 700, "radius": 27 },
+        { "kind": "text", "x": 90, "y": 808, "w": 900, "h": 34, "text": "Drops Friday, 10 AM ET. 300 units only.", "family": "Figtree", "size": 25, "weight": 400, "color": "#4b5563", "align": "center" },
+        { "kind": "button", "x": 396, "y": 876, "w": 288, "h": 64, "fill": "#2563eb", "label": "Set a reminder", "color": "#ffffff", "family": "Figtree", "size": 24, "weight": 700 },
+        { "kind": "text", "x": 90, "y": 968, "w": 900, "h": 26, "text": "@atlas.supply", "family": "Space Mono", "size": 18, "weight": 400, "color": "#6b7280", "align": "center" }
+      ]
+    }
+  ]
+}

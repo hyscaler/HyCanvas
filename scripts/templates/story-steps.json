@@ -1,0 +1,41 @@
+{
+  "id": "story-steps",
+  "title": "How-To Story",
+  "categories": ["social", "education"],
+  "tags": ["story", "steps", "howto"],
+  "styleTags": ["clean", "editorial"],
+  "size": [1080, 1920],
+  "typography": [
+    { "role": "heading", "family": "Poppins", "weight": 800 },
+    { "role": "body", "family": "Inter", "weight": 600 }
+  ],
+  "pages": [
+    {
+      "name": "Steps",
+      "bg": "#ECFDF5",
+      "nodes": [
+        { "kind": "ellipse", "x": 800, "y": -180, "w": 440, "h": 440, "fill": "#059669", "opacity": 0.08, "bleed": true },
+        { "kind": "ellipse", "x": -160, "y": 1700, "w": 380, "h": 380, "fill": "#059669", "opacity": 0.06, "bleed": true },
+        { "kind": "text", "x": 120, "y": 380, "w": 840, "h": 190, "text": "3 steps to\na calmer inbox", "family": "Poppins", "size": 84, "weight": 800, "color": "#064E3B", "lineHeight": 1.06 },
+        { "kind": "rect", "x": 120, "y": 612, "w": 90, "h": 8, "fill": "#059669", "radius": 4 },
+        { "kind": "ellipse", "x": 120, "y": 780, "w": 90, "h": 90, "fill": "#059669" },
+        { "kind": "text", "x": 120, "y": 780, "w": 90, "h": 90, "text": "1", "family": "Poppins", "size": 44, "weight": 800, "color": "#FFFFFF", "align": "center", "vAlign": "middle" },
+        { "kind": "text", "x": 250, "y": 780, "w": 710, "h": 90, "text": "Unsubscribe ruthlessly", "family": "Inter", "size": 38, "weight": 600, "color": "#065F46", "vAlign": "middle", "lineHeight": 1.2 },
+        { "kind": "ellipse", "x": 120, "y": 980, "w": 90, "h": 90, "fill": "#059669" },
+        { "kind": "text", "x": 120, "y": 980, "w": 90, "h": 90, "text": "2", "family": "Poppins", "size": 44, "weight": 800, "color": "#FFFFFF", "align": "center", "vAlign": "middle" },
+        { "kind": "text", "x": 250, "y": 980, "w": 710, "h": 90, "text": "Two folders: now and later", "family": "Inter", "size": 38, "weight": 600, "color": "#065F46", "vAlign": "middle", "lineHeight": 1.2 },
+        { "kind": "ellipse", "x": 120, "y": 1180, "w": 90, "h": 90, "fill": "#059669" },
+        { "kind": "text", "x": 120, "y": 1180, "w": 90, "h": 90, "text": "3", "family": "Poppins", "size": 44, "weight": 800, "color": "#FFFFFF", "align": "center", "vAlign": "middle" },
+        { "kind": "text", "x": 250, "y": 1180, "w": 710, "h": 90, "text": "Reply, archive, repeat", "family": "Inter", "size": 38, "weight": 600, "color": "#065F46", "vAlign": "middle", "lineHeight": 1.2 },
+        { "kind": "button", "x": 120, "y": 1470, "w": 400, "h": 92, "fill": "#059669", "label": "Save this for later", "color": "#FFFFFF", "family": "Inter", "size": 28, "weight": 600, "letterSpacing": 1 }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n2", "kind": "text", "label": "Title", "hint": "The how-to promise, e.g. 3 steps to a calmer inbox" },
+    { "node": "p0-n6", "kind": "text", "label": "Step 1", "hint": "First step, a short imperative" },
+    { "node": "p0-n9", "kind": "text", "label": "Step 2", "hint": "Second step, a short imperative" },
+    { "node": "p0-n12", "kind": "text", "label": "Step 3", "hint": "Third step, a short imperative" },
+    { "node": "p0-n13-label", "kind": "text", "label": "Footer prompt", "hint": "Closing nudge, e.g. Save this for later" }
+  ]
+}

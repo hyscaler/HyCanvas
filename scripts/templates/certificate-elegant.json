@@ -1,0 +1,119 @@
+{
+  "id": "certificate-elegant",
+  "title": "Elegant Certificate of Completion",
+  "categories": ["education", "business"],
+  "tags": ["certificate", "award", "elegant", "gold"],
+  "styleTags": ["elegant", "minimal"],
+  "size": [1123, 794],
+  "typography": [
+    { "role": "heading", "family": "Playfair Display", "weight": 600 },
+    { "role": "body", "family": "Lato", "weight": 400 },
+    { "role": "accent", "family": "Dancing Script", "weight": 600 }
+  ],
+  "pages": [
+    {
+      "name": "Certificate",
+      "bg": "#F5F0E8",
+      "nodes": [
+        { "kind": "rect", "x": 26, "y": 26, "w": 1071, "h": 742, "fill": "#C9A86A" },
+        { "kind": "rect", "x": 29, "y": 29, "w": 1065, "h": 736, "fill": "#F5F0E8" },
+        { "kind": "rect", "x": 38, "y": 38, "w": 1047, "h": 718, "fill": "#C9A86A" },
+        { "kind": "rect", "x": 40, "y": 40, "w": 1043, "h": 714, "fill": "#F5F0E8" },
+        {
+          "kind": "text", "x": 161.5, "y": 90, "w": 800, "h": 24,
+          "text": "Northwind Design Academy",
+          "family": "Lato", "size": 16, "weight": 700, "color": "#57534E",
+          "align": "center", "letterSpacing": 6, "upper": true
+        },
+        {
+          "kind": "text", "x": 161.5, "y": 120, "w": 800, "h": 116,
+          "text": "Certificate",
+          "family": "Dancing Script", "size": 92, "weight": 600, "color": "#1C1917",
+          "align": "center", "lineHeight": 1.05
+        },
+        {
+          "kind": "text", "x": 161.5, "y": 248, "w": 800, "h": 26,
+          "text": "of Completion",
+          "family": "Lato", "size": 19, "weight": 700, "color": "#8A6D33",
+          "align": "center", "letterSpacing": 8, "upper": true
+        },
+        {
+          "kind": "text", "x": 161.5, "y": 308, "w": 800, "h": 26,
+          "text": "This certificate is proudly presented to",
+          "family": "Lato", "size": 18, "weight": 400, "color": "#57534E",
+          "align": "center"
+        },
+        {
+          "kind": "text", "x": 161.5, "y": 346, "w": 800, "h": 88,
+          "text": "Eleanor Whitmore",
+          "family": "Playfair Display", "size": 70, "weight": 600, "color": "#1C1917",
+          "align": "center", "lineHeight": 1.08
+        },
+        { "kind": "rect", "x": 405, "y": 452, "w": 11, "h": 11, "fill": "#C9A86A", "rotation": 45 },
+        { "kind": "rect", "x": 431.5, "y": 457, "w": 260, "h": 2, "fill": "#C9A86A" },
+        { "kind": "rect", "x": 707, "y": 452, "w": 11, "h": 11, "fill": "#C9A86A", "rotation": 45 },
+        {
+          "kind": "text", "x": 161.5, "y": 486, "w": 800, "h": 26,
+          "text": "for successfully completing the twelve-week program",
+          "family": "Lato", "size": 17, "weight": 400, "color": "#57534E",
+          "align": "center"
+        },
+        {
+          "kind": "text", "x": 161.5, "y": 520, "w": 800, "h": 38,
+          "text": "Typography and Layout for Digital Design",
+          "family": "Playfair Display", "size": 26, "weight": 700, "color": "#1C1917",
+          "align": "center", "lineHeight": 1.1
+        },
+        {
+          "kind": "text", "x": 161.5, "y": 568, "w": 800, "h": 24,
+          "text": "Awarded on June 26, 2026 · Portland, Oregon",
+          "family": "Lato", "size": 15, "weight": 400, "color": "#57534E",
+          "align": "center", "letterSpacing": 1
+        },
+        { "kind": "ellipse", "x": 501.5, "y": 614, "w": 120, "h": 120, "fill": "#C9A86A" },
+        { "kind": "ellipse", "x": 510.5, "y": 623, "w": 102, "h": 102, "fill": "#F5F0E8" },
+        { "kind": "ellipse", "x": 516.5, "y": 629, "w": 90, "h": 90, "fill": "#C9A86A" },
+        {
+          "kind": "text", "x": 501.5, "y": 614, "w": 120, "h": 120,
+          "text": "Est.\n2018",
+          "family": "Lato", "size": 16, "weight": 700, "color": "#1C1917",
+          "align": "center", "vAlign": "middle", "letterSpacing": 2, "upper": true, "lineHeight": 1.25
+        },
+        {
+          "kind": "text", "x": 150, "y": 636, "w": 280, "h": 36,
+          "text": "Maren Ellison",
+          "family": "Playfair Display", "size": 27, "weight": 500, "color": "#1C1917",
+          "align": "center", "lineHeight": 1.1
+        },
+        { "kind": "rect", "x": 170, "y": 684, "w": 240, "h": 2, "fill": "#1C1917" },
+        {
+          "kind": "text", "x": 150, "y": 698, "w": 280, "h": 18,
+          "text": "Program Director",
+          "family": "Lato", "size": 11, "weight": 700, "color": "#57534E",
+          "align": "center", "letterSpacing": 3, "upper": true
+        },
+        {
+          "kind": "text", "x": 693, "y": 636, "w": 280, "h": 36,
+          "text": "Tobias Reine",
+          "family": "Playfair Display", "size": 27, "weight": 500, "color": "#1C1917",
+          "align": "center", "lineHeight": 1.1
+        },
+        { "kind": "rect", "x": 713, "y": 684, "w": 240, "h": 2, "fill": "#1C1917" },
+        {
+          "kind": "text", "x": 693, "y": 698, "w": 280, "h": 18,
+          "text": "Head of Curriculum",
+          "family": "Lato", "size": 11, "weight": 700, "color": "#57534E",
+          "align": "center", "letterSpacing": 3, "upper": true
+        }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n8", "kind": "text", "label": "Recipient name", "hint": "Full name of the person receiving the certificate" },
+    { "node": "p0-n13", "kind": "text", "label": "Course name", "hint": "Program or course completed" },
+    { "node": "p0-n14", "kind": "text", "label": "Date line", "hint": "Award date and location" },
+    { "node": "p0-n4", "kind": "text", "label": "Issuer", "hint": "School, academy or company name" },
+    { "node": "p0-n19", "kind": "text", "label": "First signer", "hint": "Name above the left signature rule" },
+    { "node": "p0-n22", "kind": "text", "label": "Second signer", "hint": "Name above the right signature rule" }
+  ]
+}

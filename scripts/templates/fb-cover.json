@@ -1,0 +1,32 @@
+{
+  "id": "fb-cover",
+  "title": "Facebook Cover",
+  "categories": ["social", "marketing"],
+  "tags": ["cover", "facebook", "banner"],
+  "styleTags": ["modern", "gradient"],
+  "size": [1640, 924],
+  "typography": [
+    { "role": "heading", "family": "Poppins", "weight": 800 },
+    { "role": "body", "family": "Inter", "weight": 400 }
+  ],
+  "pages": [
+    {
+      "name": "Cover",
+      "bg": "#0F766E",
+      "nodes": [
+        { "kind": "rect", "x": 0, "y": 0, "w": 1640, "h": 924, "fill": { "angle": 120, "stops": [["#0F766E", 0], ["#0891B2", 1]] } },
+        { "kind": "ellipse", "x": 1400, "y": -60, "w": 480, "h": 480, "fill": "#FFFFFF", "opacity": 0.15, "bleed": true },
+        { "kind": "ellipse", "x": 1560, "y": 560, "w": 220, "h": 220, "fill": "#5EEAD4", "opacity": 0.18, "bleed": true },
+        { "kind": "text", "x": 120, "y": 220, "w": 1100, "h": 100, "text": "Grow with confidence", "family": "Poppins", "size": 84, "weight": 800, "color": "#FFFFFF", "align": "left", "lineHeight": 1.08 },
+        { "kind": "rect", "x": 120, "y": 352, "w": 120, "h": 10, "fill": "#5EEAD4", "radius": 5 },
+        { "kind": "text", "x": 120, "y": 394, "w": 1100, "h": 44, "text": "Tools and coaching for small teams doing big things.", "family": "Inter", "size": 32, "weight": 400, "color": "#CCFBF1", "align": "left", "lineHeight": 1.3 },
+        { "kind": "button", "x": 120, "y": 502, "w": 320, "h": 92, "fill": "#FFFFFF", "label": "Get started", "color": "#0F766E", "family": "Poppins", "size": 28, "weight": 700, "letterSpacing": 1 }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n3", "kind": "text", "label": "Headline", "hint": "Short brand promise, 2-4 words" },
+    { "node": "p0-n5", "kind": "text", "label": "Subheadline", "hint": "One line about what you offer" },
+    { "node": "p0-n6-label", "kind": "text", "label": "CTA label", "hint": "Short action, 2-3 words" }
+  ]
+}

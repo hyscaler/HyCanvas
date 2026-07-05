@@ -1,0 +1,239 @@
+{
+ "id": "poster-concert-type",
+ "title": "Typographic Concert Poster",
+ "categories": [
+  "print",
+  "events"
+ ],
+ "tags": [
+  "poster",
+  "concert",
+  "music",
+  "typographic"
+ ],
+ "styleTags": [
+  "bold"
+ ],
+ "size": [
+  1080,
+  1528
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Anton",
+   "weight": 400
+  },
+  {
+   "role": "body",
+   "family": "DM Sans",
+   "weight": 600
+  }
+ ],
+ "pages": [
+  {
+   "name": "Poster",
+   "bg": "#111111",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 44,
+     "y": 44,
+     "w": 992,
+     "h": 3,
+     "fill": "#F2EDE4"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 150,
+     "w": 800,
+     "h": 32,
+     "text": "Gravity Records presents",
+     "family": "DM Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#FF4D00",
+     "align": "center",
+     "letterSpacing": 6,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 90,
+     "y": 250,
+     "w": 900,
+     "h": 212,
+     "text": "Midnight",
+     "family": "Anton",
+     "size": 200,
+     "weight": 400,
+     "color": "#F2EDE4",
+     "align": "center",
+     "lineHeight": 1.0,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 470,
+     "w": 960,
+     "h": 318,
+     "text": "Parade",
+     "family": "Anton",
+     "size": 230,
+     "weight": 400,
+     "color": "#FF4D00",
+     "align": "center",
+     "lineHeight": 1.0,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 800,
+     "w": 800,
+     "h": 46,
+     "text": "The Afterglow Tour 2026",
+     "family": "DM Sans",
+     "size": 32,
+     "weight": 700,
+     "color": "#F2EDE4",
+     "align": "center",
+     "letterSpacing": 8,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 866,
+     "w": 800,
+     "h": 34,
+     "text": "With Nova State + The Velveteens",
+     "family": "DM Sans",
+     "size": 22,
+     "weight": 500,
+     "color": "#B8B1A4",
+     "align": "center",
+     "letterSpacing": 2,
+     "upper": true
+    },
+    {
+     "kind": "rect",
+     "x": 540,
+     "y": 1010,
+     "w": 26,
+     "h": 26,
+     "fill": "#FF4D00",
+     "rotation": 45
+    },
+    {
+     "kind": "rect",
+     "x": 44,
+     "y": 1180,
+     "w": 992,
+     "h": 76,
+     "fill": "#FF4D00"
+    },
+    {
+     "kind": "text",
+     "x": 44,
+     "y": 1180,
+     "w": 992,
+     "h": 76,
+     "text": "Sat Aug 22 \u00b7 Doors 8PM \u00b7 The Fonda Theatre, LA",
+     "family": "DM Sans",
+     "size": 26,
+     "weight": 700,
+     "color": "#111111",
+     "align": "center",
+     "vAlign": "middle",
+     "letterSpacing": 2,
+     "upper": true
+    },
+    {
+     "kind": "rect",
+     "x": 340,
+     "y": 1310,
+     "w": 400,
+     "h": 64,
+     "radius": 32,
+     "fill": "#F2EDE4",
+     "opacity": 0.15
+    },
+    {
+     "kind": "text",
+     "x": 340,
+     "y": 1310,
+     "w": 400,
+     "h": 64,
+     "text": "Tickets from $45",
+     "family": "DM Sans",
+     "size": 24,
+     "weight": 700,
+     "color": "#F2EDE4",
+     "align": "center",
+     "vAlign": "middle",
+     "letterSpacing": 3,
+     "upper": true
+    },
+    {
+     "kind": "rect",
+     "x": 44,
+     "y": 1481,
+     "w": 992,
+     "h": 3,
+     "fill": "#F2EDE4"
+    },
+    {
+     "kind": "rect",
+     "x": 44,
+     "y": 44,
+     "w": 3,
+     "h": 1440,
+     "fill": "#F2EDE4"
+    },
+    {
+     "kind": "rect",
+     "x": 1033,
+     "y": 44,
+     "w": 3,
+     "h": 1440,
+     "fill": "#F2EDE4"
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n2",
+   "kind": "text",
+   "label": "Artist line 1",
+   "hint": "First word of the artist name"
+  },
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Artist line 2",
+   "hint": "Second word of the artist name"
+  },
+  {
+   "node": "p0-n4",
+   "kind": "text",
+   "label": "Tour line",
+   "hint": "Tour name and year"
+  },
+  {
+   "node": "p0-n8",
+   "kind": "text",
+   "label": "Date and venue",
+   "hint": "Date, doors time, venue, city"
+  },
+  {
+   "node": "p0-n10",
+   "kind": "text",
+   "label": "Ticket price",
+   "hint": "Ticket price line"
+  }
+ ]
+}

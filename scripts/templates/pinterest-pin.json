@@ -1,0 +1,41 @@
+{
+  "id": "pinterest-pin",
+  "title": "Pinterest Pin",
+  "categories": ["social", "marketing"],
+  "tags": ["pin", "pinterest", "blog"],
+  "styleTags": ["editorial", "warm"],
+  "size": [1000, 1500],
+  "typography": [
+    { "role": "heading", "family": "Poppins", "weight": 800 },
+    { "role": "body", "family": "Inter", "weight": 400 }
+  ],
+  "pages": [
+    {
+      "name": "Pin",
+      "bg": "#FDF2F8",
+      "nodes": [
+        { "kind": "rect", "x": 0, "y": 0, "w": 1000, "h": 520, "fill": { "angle": 140, "stops": [["#BE185D", 0], ["#9D174D", 1]] } },
+        { "kind": "text", "x": 90, "y": 120, "w": 820, "h": 40, "text": "The guide to", "family": "Inter", "size": 30, "weight": 500, "color": "#FBCFE8", "align": "left", "letterSpacing": 4, "upper": true },
+        { "kind": "text", "x": 90, "y": 190, "w": 820, "h": 220, "text": "Cozy fall\ninteriors", "family": "Poppins", "size": 96, "weight": 800, "color": "#FFFFFF", "align": "left", "lineHeight": 1.08 },
+        { "kind": "text", "x": 90, "y": 604, "w": 820, "h": 60, "text": "12 ideas to warm up any room", "family": "Poppins", "size": 44, "weight": 700, "color": "#831843", "align": "left", "lineHeight": 1.2 },
+        { "kind": "rect", "x": 90, "y": 700, "w": 100, "h": 8, "fill": "#BE185D", "radius": 4 },
+        { "kind": "text", "x": 90, "y": 744, "w": 820, "h": 130, "text": "From texture and tone to the\nperfect amber glow, here is how\nto make the season feel like home.", "family": "Inter", "size": 30, "weight": 400, "color": "#831843", "align": "left", "lineHeight": 1.35 },
+        { "kind": "rect", "x": 90, "y": 956, "w": 820, "h": 340, "fill": "#FBCFE8", "radius": 24 },
+        { "kind": "text", "x": 140, "y": 1004, "w": 600, "h": 32, "text": "Inside the guide", "family": "Inter", "size": 24, "weight": 600, "color": "#9D174D", "align": "left", "letterSpacing": 3, "upper": true },
+        { "kind": "text", "x": 140, "y": 1068, "w": 44, "h": 38, "text": "01", "family": "Poppins", "size": 28, "weight": 800, "color": "#BE185D", "align": "left" },
+        { "kind": "text", "x": 210, "y": 1068, "w": 650, "h": 38, "text": "Layer lamps for a golden-hour glow", "family": "Inter", "size": 28, "weight": 500, "color": "#831843", "align": "left" },
+        { "kind": "text", "x": 140, "y": 1138, "w": 44, "h": 38, "text": "02", "family": "Poppins", "size": 28, "weight": 800, "color": "#BE185D", "align": "left" },
+        { "kind": "text", "x": 210, "y": 1138, "w": 650, "h": 38, "text": "Textures that make a room feel warm", "family": "Inter", "size": 28, "weight": 500, "color": "#831843", "align": "left" },
+        { "kind": "text", "x": 140, "y": 1208, "w": 44, "h": 38, "text": "03", "family": "Poppins", "size": 28, "weight": 800, "color": "#BE185D", "align": "left" },
+        { "kind": "text", "x": 210, "y": 1208, "w": 650, "h": 38, "text": "A 15-minute seasonal styling reset", "family": "Inter", "size": 28, "weight": 500, "color": "#831843", "align": "left" },
+        { "kind": "text", "x": 90, "y": 1380, "w": 820, "h": 38, "text": "willowandpine.blog", "family": "Inter", "size": 28, "weight": 600, "color": "#BE185D", "align": "left", "letterSpacing": 2 }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n2", "kind": "text", "label": "Title", "hint": "Big pin title, two short lines" },
+    { "node": "p0-n3", "kind": "text", "label": "Subtitle", "hint": "One-line hook, e.g. 12 ideas to warm up any room" },
+    { "node": "p0-n5", "kind": "text", "label": "Blurb", "hint": "2-3 short lines describing the post" },
+    { "node": "p0-n14", "kind": "text", "label": "Website", "hint": "Your blog domain" }
+  ]
+}

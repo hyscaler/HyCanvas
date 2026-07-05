@@ -1,0 +1,523 @@
+{
+ "id": "resume-compact-pro",
+ "title": "Compact Professional Resume",
+ "categories": [
+  "business",
+  "print"
+ ],
+ "tags": [
+  "resume",
+  "cv",
+  "professional",
+  "ats"
+ ],
+ "styleTags": [
+  "minimal",
+  "modern"
+ ],
+ "size": [
+  794,
+  1123
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Figtree",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Figtree",
+   "weight": 400
+  },
+  {
+   "role": "label",
+   "family": "Space Mono",
+   "weight": 700
+  }
+ ],
+ "pages": [
+  {
+   "name": "Resume",
+   "bg": "#FAFAFA",
+   "nodes": [
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 52,
+     "w": 500,
+     "h": 50,
+     "text": "Priya Raghavan",
+     "family": "Figtree",
+     "size": 40,
+     "weight": 800,
+     "color": "#171717",
+     "lineHeight": 1.05
+    },
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 110,
+     "w": 500,
+     "h": 20,
+     "text": "Senior Product Engineer",
+     "family": "Space Mono",
+     "size": 14,
+     "weight": 700,
+     "color": "#2563EB",
+     "letterSpacing": 3,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 142,
+     "w": 674,
+     "h": 18,
+     "text": "priya.raghavan@fastmail.com \u00b7 +1 415 555 0163 \u00b7 San Francisco, CA",
+     "family": "Space Mono",
+     "size": 12,
+     "weight": 400,
+     "color": "#525252"
+    },
+    {
+     "kind": "rect",
+     "x": 60,
+     "y": 178,
+     "w": 674,
+     "h": 2,
+     "fill": "#171717"
+    },
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 206,
+     "w": 200,
+     "h": 17,
+     "text": "Summary",
+     "family": "Space Mono",
+     "size": 12,
+     "weight": 700,
+     "color": "#737373",
+     "letterSpacing": 2.5,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 230,
+     "w": 674,
+     "h": 68,
+     "text": "Product engineer with nine years building design tools and collaborative editors.\nI ship performance-critical canvas UIs, lead small teams, and sweat the last\nfive percent of interaction polish.",
+     "family": "Figtree",
+     "size": 14,
+     "weight": 400,
+     "color": "#262626",
+     "lineHeight": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 60,
+     "y": 322,
+     "w": 674,
+     "h": 1,
+     "fill": "#D4D4D4"
+    },
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 346,
+     "w": 200,
+     "h": 17,
+     "text": "Experience",
+     "family": "Space Mono",
+     "size": 12,
+     "weight": 700,
+     "color": "#737373",
+     "letterSpacing": 2.5,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 376,
+     "w": 420,
+     "h": 22,
+     "text": "Senior Product Engineer",
+     "family": "Figtree",
+     "size": 16,
+     "weight": 700,
+     "color": "#171717"
+    },
+    {
+     "kind": "text",
+     "x": 494,
+     "y": 380,
+     "w": 240,
+     "h": 17,
+     "text": "2022 - Present",
+     "family": "Space Mono",
+     "size": 12,
+     "weight": 400,
+     "color": "#737373",
+     "align": "right",
+     "upper": true,
+     "letterSpacing": 1
+    },
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 404,
+     "w": 420,
+     "h": 18,
+     "text": "Figment Labs \u00b7 San Francisco, CA",
+     "family": "Space Mono",
+     "size": 13,
+     "weight": 400,
+     "color": "#2563EB"
+    },
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 432,
+     "w": 674,
+     "h": 46,
+     "text": "\u2022 Led the canvas rendering rewrite, cutting median frame time 38% on 60k-node files\n\u2022 Mentor four engineers and run the hiring loop for the editor platform team",
+     "family": "Figtree",
+     "size": 13.5,
+     "weight": 400,
+     "color": "#404040",
+     "lineHeight": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 516,
+     "w": 420,
+     "h": 22,
+     "text": "Product Engineer",
+     "family": "Figtree",
+     "size": 16,
+     "weight": 700,
+     "color": "#171717"
+    },
+    {
+     "kind": "text",
+     "x": 494,
+     "y": 520,
+     "w": 240,
+     "h": 17,
+     "text": "2019 - 2022",
+     "family": "Space Mono",
+     "size": 12,
+     "weight": 400,
+     "color": "#737373",
+     "align": "right",
+     "upper": true,
+     "letterSpacing": 1
+    },
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 544,
+     "w": 420,
+     "h": 18,
+     "text": "Nimbus HQ \u00b7 Remote",
+     "family": "Space Mono",
+     "size": 13,
+     "weight": 400,
+     "color": "#2563EB"
+    },
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 572,
+     "w": 674,
+     "h": 46,
+     "text": "\u2022 Shipped the realtime commenting system used by 40,000 weekly active teams\n\u2022 Drove the TypeScript strict migration across a 210k-line monorepo",
+     "family": "Figtree",
+     "size": 13.5,
+     "weight": 400,
+     "color": "#404040",
+     "lineHeight": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 656,
+     "w": 420,
+     "h": 22,
+     "text": "Frontend Engineer",
+     "family": "Figtree",
+     "size": 16,
+     "weight": 700,
+     "color": "#171717"
+    },
+    {
+     "kind": "text",
+     "x": 494,
+     "y": 660,
+     "w": 240,
+     "h": 17,
+     "text": "2017 - 2019",
+     "family": "Space Mono",
+     "size": 12,
+     "weight": 400,
+     "color": "#737373",
+     "align": "right",
+     "upper": true,
+     "letterSpacing": 1
+    },
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 684,
+     "w": 420,
+     "h": 18,
+     "text": "Corvid Analytics \u00b7 Seattle, WA",
+     "family": "Space Mono",
+     "size": 13,
+     "weight": 400,
+     "color": "#2563EB"
+    },
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 712,
+     "w": 674,
+     "h": 46,
+     "text": "\u2022 Built the dashboard grid engine and Canvas2D charting layer from scratch\n\u2022 Cut the initial bundle from 2.4 MB to 640 kB, lifting activation 11%",
+     "family": "Figtree",
+     "size": 13.5,
+     "weight": 400,
+     "color": "#404040",
+     "lineHeight": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 60,
+     "y": 784,
+     "w": 674,
+     "h": 1,
+     "fill": "#D4D4D4"
+    },
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 808,
+     "w": 200,
+     "h": 17,
+     "text": "Skills",
+     "family": "Space Mono",
+     "size": 12,
+     "weight": 700,
+     "color": "#737373",
+     "letterSpacing": 2.5,
+     "upper": true
+    },
+    {
+     "kind": "button",
+     "x": 60,
+     "y": 838,
+     "w": 100,
+     "h": 32,
+     "fill": "#EAEAEA",
+     "label": "TypeScript",
+     "color": "#262626",
+     "family": "Space Mono",
+     "size": 12,
+     "weight": 400
+    },
+    {
+     "kind": "button",
+     "x": 170,
+     "y": 838,
+     "w": 64,
+     "h": 32,
+     "fill": "#EAEAEA",
+     "label": "React",
+     "color": "#262626",
+     "family": "Space Mono",
+     "size": 12,
+     "weight": 400
+    },
+    {
+     "kind": "button",
+     "x": 244,
+     "y": 838,
+     "w": 86,
+     "h": 32,
+     "fill": "#EAEAEA",
+     "label": "Canvas2D",
+     "color": "#262626",
+     "family": "Space Mono",
+     "size": 12,
+     "weight": 400
+    },
+    {
+     "kind": "button",
+     "x": 340,
+     "y": 838,
+     "w": 64,
+     "h": 32,
+     "fill": "#EAEAEA",
+     "label": "WebGL",
+     "color": "#262626",
+     "family": "Space Mono",
+     "size": 12,
+     "weight": 400
+    },
+    {
+     "kind": "button",
+     "x": 414,
+     "y": 838,
+     "w": 78,
+     "h": 32,
+     "fill": "#EAEAEA",
+     "label": "Node.js",
+     "color": "#262626",
+     "family": "Space Mono",
+     "size": 12,
+     "weight": 400
+    },
+    {
+     "kind": "button",
+     "x": 502,
+     "y": 838,
+     "w": 48,
+     "h": 32,
+     "fill": "#EAEAEA",
+     "label": "Go",
+     "color": "#262626",
+     "family": "Space Mono",
+     "size": 12,
+     "weight": 400
+    },
+    {
+     "kind": "button",
+     "x": 560,
+     "y": 838,
+     "w": 86,
+     "h": 32,
+     "fill": "#EAEAEA",
+     "label": "Postgres",
+     "color": "#262626",
+     "family": "Space Mono",
+     "size": 12,
+     "weight": 400
+    },
+    {
+     "kind": "button",
+     "x": 656,
+     "y": 838,
+     "w": 78,
+     "h": 32,
+     "fill": "#EAEAEA",
+     "label": "GraphQL",
+     "color": "#262626",
+     "family": "Space Mono",
+     "size": 12,
+     "weight": 400
+    },
+    {
+     "kind": "rect",
+     "x": 60,
+     "y": 902,
+     "w": 674,
+     "h": 1,
+     "fill": "#D4D4D4"
+    },
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 926,
+     "w": 200,
+     "h": 17,
+     "text": "Education",
+     "family": "Space Mono",
+     "size": 12,
+     "weight": 700,
+     "color": "#737373",
+     "letterSpacing": 2.5,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 952,
+     "w": 674,
+     "h": 20,
+     "text": "B.S. Computer Science, University of Washington \u00b7 2013 - 2017",
+     "family": "Figtree",
+     "size": 14,
+     "weight": 600,
+     "color": "#171717"
+    },
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 978,
+     "w": 674,
+     "h": 18,
+     "text": "Graphics systems TA \u00b7 ACM student chapter \u00b7 Dean's list",
+     "family": "Space Mono",
+     "size": 12,
+     "weight": 400,
+     "color": "#737373"
+    },
+    {
+     "kind": "rect",
+     "x": 60,
+     "y": 1022,
+     "w": 674,
+     "h": 1,
+     "fill": "#D4D4D4"
+    },
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 1042,
+     "w": 674,
+     "h": 18,
+     "text": "Portfolio priyarag.dev \u00b7 github.com/priyarag \u00b7 References on request",
+     "family": "Space Mono",
+     "size": 12,
+     "weight": 400,
+     "color": "#525252"
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n0",
+   "kind": "text",
+   "label": "Name",
+   "hint": "Your full name"
+  },
+  {
+   "node": "p0-n1",
+   "kind": "text",
+   "label": "Role",
+   "hint": "Your current title"
+  },
+  {
+   "node": "p0-n2",
+   "kind": "text",
+   "label": "Contact line",
+   "hint": "Email, phone, city"
+  },
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Summary",
+   "hint": "Two or three lines on what you do best"
+  },
+  {
+   "node": "p0-n32",
+   "kind": "text",
+   "label": "Education",
+   "hint": "Degree, school, years"
+  }
+ ]
+}

@@ -1,0 +1,67 @@
+{
+  "id": "business-card-minimal",
+  "title": "Business Card",
+  "categories": ["business", "print"],
+  "tags": ["card", "minimal", "professional"],
+  "styleTags": ["minimal", "elegant"],
+  "size": [1050, 600],
+  "typography": [
+    { "role": "heading", "family": "Poppins", "weight": 600 },
+    { "role": "body", "family": "Inter", "weight": 400 }
+  ],
+  "pages": [
+    {
+      "name": "Front",
+      "bg": "#ffffff",
+      "nodes": [
+        {
+          "kind": "rect", "x": 0, "y": 0, "w": 36, "h": 600,
+          "fill": { "angle": 180, "stops": [["#d4af37", 0], ["#b45309", 1]] }
+        },
+        {
+          "kind": "text", "x": 100, "y": 152, "w": 640, "h": 74,
+          "text": "Alex Morgan",
+          "family": "Poppins", "size": 56, "weight": 600, "color": "#1f2937", "lineHeight": 1.1
+        },
+        {
+          "kind": "text", "x": 100, "y": 238, "w": 640, "h": 34,
+          "text": "Brand & Product Designer",
+          "family": "Inter", "size": 26, "weight": 500, "color": "#b45309",
+          "letterSpacing": 1, "lineHeight": 1.2
+        },
+        { "kind": "rect", "x": 100, "y": 302, "w": 120, "h": 6, "fill": "#d4af37", "radius": 3 },
+        {
+          "kind": "text", "x": 100, "y": 350, "w": 640, "h": 32,
+          "text": "hello@alexmorgan.studio",
+          "family": "Inter", "size": 24, "weight": 400, "color": "#4b5563", "lineHeight": 1.25
+        },
+        {
+          "kind": "text", "x": 100, "y": 384, "w": 640, "h": 32,
+          "text": "+1 (555) 018 2245",
+          "family": "Inter", "size": 24, "weight": 400, "color": "#4b5563", "lineHeight": 1.25
+        },
+        {
+          "kind": "text", "x": 100, "y": 418, "w": 640, "h": 32,
+          "text": "alexmorgan.studio",
+          "family": "Inter", "size": 24, "weight": 400, "color": "#4b5563", "lineHeight": 1.25
+        },
+        { "kind": "ellipse", "x": 810, "y": 230, "w": 140, "h": 140, "fill": "#d4af37" },
+        { "kind": "ellipse", "x": 816, "y": 236, "w": 128, "h": 128, "fill": "#ffffff" },
+        {
+          "kind": "text", "x": 810, "y": 230, "w": 140, "h": 140,
+          "text": "AM",
+          "family": "Poppins", "size": 44, "weight": 600, "color": "#1f2937",
+          "align": "center", "vAlign": "middle", "letterSpacing": 2
+        }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n1", "kind": "text", "label": "Name", "hint": "Full name" },
+    { "node": "p0-n2", "kind": "text", "label": "Job title", "hint": "Role or profession" },
+    { "node": "p0-n4", "kind": "text", "label": "Email", "hint": "Email address" },
+    { "node": "p0-n5", "kind": "text", "label": "Phone", "hint": "Phone number" },
+    { "node": "p0-n6", "kind": "text", "label": "Website", "hint": "Website or portfolio URL" },
+    { "node": "p0-n9", "kind": "text", "label": "Monogram", "hint": "Two-letter initials for the logo mark" }
+  ]
+}

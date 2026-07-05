@@ -1,0 +1,31 @@
+{
+  "id": "stat-spotlight",
+  "title": "Stat Spotlight",
+  "categories": ["social", "business"],
+  "tags": ["stat", "data", "report"],
+  "styleTags": ["bold", "data"],
+  "size": [1080, 1080],
+  "typography": [
+    { "role": "heading", "family": "Montserrat", "weight": 800 },
+    { "role": "body", "family": "Inter", "weight": 400 }
+  ],
+  "pages": [
+    {
+      "name": "Stat",
+      "bg": "#0B1220",
+      "nodes": [
+        { "kind": "ellipse", "x": 760, "y": -220, "w": 560, "h": 560, "fill": "#38BDF8", "opacity": 0.08, "bleed": true },
+        { "kind": "ellipse", "x": -200, "y": 820, "w": 440, "h": 440, "fill": "#0EA5E9", "opacity": 0.07, "bleed": true },
+        { "kind": "text", "x": 140, "y": 290, "w": 800, "h": 36, "text": "Customer growth", "family": "Inter", "size": 28, "weight": 600, "color": "#38BDF8", "align": "center", "letterSpacing": 4, "upper": true, "lineHeight": 1.2 },
+        { "kind": "text", "x": 120, "y": 370, "w": 840, "h": 240, "text": "+214%", "family": "Montserrat", "size": 220, "weight": 800, "color": "#FFFFFF", "align": "center", "lineHeight": 1.02 },
+        { "kind": "text", "x": 120, "y": 674, "w": 840, "h": 42, "text": "Year over year, driven by a single onboarding redesign.", "family": "Inter", "size": 30, "weight": 400, "color": "#94A3B8", "align": "center", "lineHeight": 1.3 },
+        { "kind": "rect", "x": 495, "y": 786, "w": 90, "h": 8, "fill": "#38BDF8", "radius": 4 }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n2", "kind": "text", "label": "Stat label", "hint": "What the number measures" },
+    { "node": "p0-n3", "kind": "text", "label": "Stat value", "hint": "The headline number, e.g. +214%" },
+    { "node": "p0-n4", "kind": "text", "label": "Caption", "hint": "One line of context for the number" }
+  ]
+}

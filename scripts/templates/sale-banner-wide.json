@@ -1,0 +1,222 @@
+{
+ "id": "sale-banner-wide",
+ "title": "End of Season Sale Banner",
+ "categories": [
+  "marketing"
+ ],
+ "tags": [
+  "sale",
+  "banner",
+  "promo",
+  "discount",
+  "seasonal"
+ ],
+ "styleTags": [
+  "bold",
+  "playful"
+ ],
+ "size": [
+  1640,
+  924
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Outfit",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Work Sans",
+   "weight": 600
+  }
+ ],
+ "pages": [
+  {
+   "name": "Banner",
+   "bg": {
+    "angle": 135,
+    "stops": [
+     [
+      "#F43F5E",
+      0
+     ],
+     [
+      "#F59E0B",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": -220,
+     "y": -260,
+     "w": 560,
+     "h": 560,
+     "fill": "#FFFFFF",
+     "opacity": 0.1,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 1150,
+     "y": 60,
+     "w": 800,
+     "h": 914,
+     "text": "%",
+     "family": "Outfit",
+     "size": 760,
+     "weight": 800,
+     "color": "#FFFFFF",
+     "opacity": 0.18,
+     "align": "center",
+     "rotation": 12,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 80,
+     "y": 132,
+     "w": 340,
+     "h": 64,
+     "radius": 32,
+     "fill": "#18181B"
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 132,
+     "w": 340,
+     "h": 64,
+     "text": "End of season",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 700,
+     "color": "#FFFFFF",
+     "align": "center",
+     "vAlign": "middle",
+     "letterSpacing": 4,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 252,
+     "w": 1180,
+     "h": 156,
+     "text": "Up to 60% off",
+     "family": "Outfit",
+     "size": 140,
+     "weight": 800,
+     "color": "#FFFFFF",
+     "align": "left",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 402,
+     "w": 1180,
+     "h": 156,
+     "text": "summer styles",
+     "family": "Outfit",
+     "size": 140,
+     "weight": 800,
+     "color": "#18181B",
+     "align": "left",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 596,
+     "w": 900,
+     "h": 42,
+     "text": "Sitewide markdowns end Sunday, July 12",
+     "family": "Work Sans",
+     "size": 30,
+     "weight": 600,
+     "color": "#18181B",
+     "align": "left"
+    },
+    {
+     "kind": "button",
+     "x": 80,
+     "y": 692,
+     "w": 330,
+     "h": 92,
+     "fill": "#18181B",
+     "label": "Shop the sale",
+     "color": "#FFFFFF",
+     "family": "Outfit",
+     "size": 30,
+     "weight": 700
+    },
+    {
+     "kind": "rect",
+     "x": 440,
+     "y": 692,
+     "w": 430,
+     "h": 92,
+     "radius": 46,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "text",
+     "x": 440,
+     "y": 692,
+     "w": 430,
+     "h": 92,
+     "text": "Use code SUN60",
+     "family": "Work Sans",
+     "size": 26,
+     "weight": 800,
+     "color": "#18181B",
+     "align": "center",
+     "vAlign": "middle",
+     "letterSpacing": 3,
+     "upper": true
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Eyebrow",
+   "hint": "Short campaign label, e.g. End of season"
+  },
+  {
+   "node": "p0-n4",
+   "kind": "text",
+   "label": "Offer line 1",
+   "hint": "The discount, e.g. Up to 60% off"
+  },
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Offer line 2",
+   "hint": "What is on sale"
+  },
+  {
+   "node": "p0-n6",
+   "kind": "text",
+   "label": "Deadline line",
+   "hint": "When the sale ends"
+  },
+  {
+   "node": "p0-n7-label",
+   "kind": "text",
+   "label": "CTA label",
+   "hint": "Short action, 2-3 words"
+  },
+  {
+   "node": "p0-n9",
+   "kind": "text",
+   "label": "Promo code",
+   "hint": "e.g. Use code SUN60"
+  }
+ ]
+}

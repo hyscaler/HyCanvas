@@ -1,0 +1,229 @@
+{
+ "id": "ig-event-gradient",
+ "title": "Community Meetup Announcement",
+ "categories": [
+  "social",
+  "events"
+ ],
+ "tags": [
+  "event",
+  "meetup",
+  "gradient",
+  "bold"
+ ],
+ "styleTags": [
+  "bold",
+  "modern"
+ ],
+ "size": [
+  1080,
+  1080
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Outfit",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Work Sans",
+   "weight": 600
+  }
+ ],
+ "pages": [
+  {
+   "name": "Announcement",
+   "bg": "#c026d3",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 0,
+     "w": 1080,
+     "h": 1080,
+     "fill": {
+      "angle": 135,
+      "stops": [
+       [
+        "#C026D3",
+        0
+       ],
+       [
+        "#EA580C",
+        1
+       ]
+      ]
+     }
+    },
+    {
+     "kind": "ellipse",
+     "x": 820,
+     "y": -170,
+     "w": 430,
+     "h": 430,
+     "opacity": 0.18,
+     "bleed": true,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "ellipse",
+     "x": 880,
+     "y": 740,
+     "w": 380,
+     "h": 380,
+     "fill": "#FFFFFF",
+     "opacity": 0.12,
+     "bleed": true
+    },
+    {
+     "kind": "button",
+     "x": 90,
+     "y": 90,
+     "w": 270,
+     "h": 64,
+     "fill": "#18181B",
+     "label": "Sat, Aug 22",
+     "color": "#FFFFFF",
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 700,
+     "letterSpacing": 2,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 90,
+     "y": 260,
+     "w": 900,
+     "h": 112,
+     "text": "Design nights",
+     "family": "Outfit",
+     "size": 100,
+     "weight": 800,
+     "color": "#FFFFFF",
+     "lineHeight": 1.03
+    },
+    {
+     "kind": "text",
+     "x": 90,
+     "y": 366,
+     "w": 900,
+     "h": 112,
+     "text": "Vol. 04",
+     "family": "Outfit",
+     "size": 100,
+     "weight": 800,
+     "color": "#18181B",
+     "lineHeight": 1.03
+    },
+    {
+     "kind": "rect",
+     "x": 90,
+     "y": 582,
+     "w": 16,
+     "h": 16,
+     "fill": "#FFFFFF",
+     "radius": 5
+    },
+    {
+     "kind": "text",
+     "x": 134,
+     "y": 570,
+     "w": 840,
+     "h": 42,
+     "text": "Framework Hall, 21 King Street",
+     "family": "Work Sans",
+     "size": 30,
+     "weight": 600,
+     "color": "#FFFFFF"
+    },
+    {
+     "kind": "rect",
+     "x": 90,
+     "y": 646,
+     "w": 16,
+     "h": 16,
+     "fill": "#FFFFFF",
+     "radius": 5
+    },
+    {
+     "kind": "text",
+     "x": 134,
+     "y": 634,
+     "w": 840,
+     "h": 42,
+     "text": "Doors 6:30 PM, first talk 7:00 PM",
+     "family": "Work Sans",
+     "size": 30,
+     "weight": 600,
+     "color": "#FFFFFF"
+    },
+    {
+     "kind": "button",
+     "x": 90,
+     "y": 770,
+     "w": 300,
+     "h": 92,
+     "fill": "#18181B",
+     "label": "RSVP free",
+     "color": "#FFFFFF",
+     "family": "Outfit",
+     "size": 30,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 90,
+     "y": 950,
+     "w": 600,
+     "h": 36,
+     "text": "@designnights",
+     "family": "Work Sans",
+     "size": 26,
+     "weight": 600,
+     "color": "#FFFFFF",
+     "opacity": 0.85
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n4",
+   "kind": "text",
+   "label": "Event name",
+   "hint": "Meetup or series name"
+  },
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Edition",
+   "hint": "Edition or volume, e.g. Vol. 04"
+  },
+  {
+   "node": "p0-n3-label",
+   "kind": "text",
+   "label": "Date",
+   "hint": "Short date, e.g. Sat, Aug 22"
+  },
+  {
+   "node": "p0-n7",
+   "kind": "text",
+   "label": "Venue",
+   "hint": "Venue name and street"
+  },
+  {
+   "node": "p0-n9",
+   "kind": "text",
+   "label": "Time",
+   "hint": "Doors and start time"
+  },
+  {
+   "node": "p0-n10-label",
+   "kind": "text",
+   "label": "CTA",
+   "hint": "Call to action, e.g. RSVP free"
+  }
+ ]
+}

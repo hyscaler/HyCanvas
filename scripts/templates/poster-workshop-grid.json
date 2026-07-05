@@ -1,0 +1,53 @@
+{
+  "id": "poster-workshop-grid",
+  "title": "Swiss Grid Workshop Poster",
+  "categories": ["print", "education"],
+  "tags": ["poster", "workshop", "grid", "swiss"],
+  "styleTags": ["minimal", "modern"],
+  "size": [1080, 1528],
+  "typography": [
+    { "role": "heading", "family": "Figtree", "weight": 800 },
+    { "role": "label", "family": "Space Mono", "weight": 400 }
+  ],
+  "pages": [
+    {
+      "name": "Poster",
+      "bg": "#FAFAFA",
+      "nodes": [
+        { "kind": "rect", "x": 88, "y": 93, "w": 14, "h": 14, "fill": "#DC2626" },
+        { "kind": "text", "x": 118, "y": 88, "w": 480, "h": 26, "text": "HyCanvas Design School", "family": "Space Mono", "size": 19, "weight": 700, "color": "#171717", "letterSpacing": 3, "upper": true },
+        { "kind": "text", "x": 512, "y": 88, "w": 480, "h": 26, "text": "Workshop No. 07", "family": "Space Mono", "size": 19, "weight": 400, "color": "#737373", "align": "right", "letterSpacing": 3, "upper": true },
+        { "kind": "rect", "x": 88, "y": 142, "w": 904, "h": 2, "fill": "#D4D4D4" },
+        { "kind": "text", "x": 84, "y": 196, "w": 908, "h": 412, "text": "Grids,\nsystems &\nstructure.", "family": "Figtree", "size": 124, "weight": 800, "color": "#171717", "lineHeight": 1.05 },
+        { "kind": "text", "x": 88, "y": 668, "w": 432, "h": 140, "text": "A one-day working session on\nlayout systems, modular type\nscales and responsive structure\nfor product and brand designers.", "family": "Figtree", "size": 23, "weight": 400, "color": "#404040", "lineHeight": 1.4 },
+        { "kind": "text", "x": 560, "y": 668, "w": 432, "h": 112, "text": "Sat Oct 17, 2026\n09:30 to 17:00\nFoundry Hall, Berlin", "family": "Space Mono", "size": 21, "weight": 400, "color": "#171717", "lineHeight": 1.6 },
+        { "kind": "rect", "x": 539, "y": 668, "w": 2, "h": 642, "fill": "#D4D4D4" },
+        { "kind": "rect", "x": 88, "y": 852, "w": 904, "h": 2, "fill": "#D4D4D4" },
+        { "kind": "text", "x": 88, "y": 894, "w": 120, "h": 54, "text": "01", "family": "Space Mono", "size": 42, "weight": 700, "color": "#DC2626" },
+        { "kind": "text", "x": 240, "y": 908, "w": 280, "h": 28, "text": "09:30 to 11:00", "family": "Space Mono", "size": 20, "weight": 400, "color": "#737373" },
+        { "kind": "text", "x": 560, "y": 898, "w": 432, "h": 46, "text": "Anatomy of the grid", "family": "Figtree", "size": 34, "weight": 700, "color": "#171717" },
+        { "kind": "rect", "x": 88, "y": 1004, "w": 904, "h": 2, "fill": "#D4D4D4" },
+        { "kind": "text", "x": 88, "y": 1046, "w": 120, "h": 54, "text": "02", "family": "Space Mono", "size": 42, "weight": 700, "color": "#DC2626" },
+        { "kind": "text", "x": 240, "y": 1060, "w": 280, "h": 28, "text": "11:30 to 13:00", "family": "Space Mono", "size": 20, "weight": 400, "color": "#737373" },
+        { "kind": "text", "x": 560, "y": 1050, "w": 432, "h": 46, "text": "Type scales in practice", "family": "Figtree", "size": 34, "weight": 700, "color": "#171717" },
+        { "kind": "rect", "x": 88, "y": 1156, "w": 904, "h": 2, "fill": "#D4D4D4" },
+        { "kind": "text", "x": 88, "y": 1198, "w": 120, "h": 54, "text": "03", "family": "Space Mono", "size": 42, "weight": 700, "color": "#DC2626" },
+        { "kind": "text", "x": 240, "y": 1212, "w": 280, "h": 28, "text": "14:00 to 16:30", "family": "Space Mono", "size": 20, "weight": 400, "color": "#737373" },
+        { "kind": "text", "x": 560, "y": 1202, "w": 432, "h": 46, "text": "Breaking the grid well", "family": "Figtree", "size": 34, "weight": 700, "color": "#171717" },
+        { "kind": "rect", "x": 88, "y": 1308, "w": 904, "h": 2, "fill": "#D4D4D4" },
+        { "kind": "text", "x": 88, "y": 1338, "w": 904, "h": 26, "text": "Led by Mara Chen (Linear), Tomas Ruiz (Studio Norm), Ada Okafor (Figma)", "family": "Space Mono", "size": 18, "weight": 400, "color": "#737373" },
+        { "kind": "rect", "x": 0, "y": 1428, "w": 1080, "h": 100, "fill": "#171717" },
+        { "kind": "text", "x": 88, "y": 1428, "w": 600, "h": 100, "text": "hycanvas.school/grids", "family": "Space Mono", "size": 26, "weight": 700, "color": "#FAFAFA", "vAlign": "middle" },
+        { "kind": "text", "x": 492, "y": 1428, "w": 500, "h": 100, "text": "Free entry · 40 seats", "family": "Space Mono", "size": 19, "weight": 400, "color": "#A3A3A3", "align": "right", "vAlign": "middle" }
+      ]
+    }
+  ],
+  "fillable": [
+    { "node": "p0-n4", "kind": "text", "label": "Title", "hint": "Workshop title, three stacked lines" },
+    { "node": "p0-n6", "kind": "text", "label": "Date and venue", "hint": "Date, hours, venue and city" },
+    { "node": "p0-n11", "kind": "text", "label": "Session 1 topic", "hint": "First session title" },
+    { "node": "p0-n15", "kind": "text", "label": "Session 2 topic", "hint": "Second session title" },
+    { "node": "p0-n19", "kind": "text", "label": "Session 3 topic", "hint": "Third session title" },
+    { "node": "p0-n23", "kind": "text", "label": "Registration URL", "hint": "Where people sign up" }
+  ]
+}
