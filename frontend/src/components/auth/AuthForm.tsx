@@ -1,4 +1,4 @@
-// Sign-in / sign-up - a two-pane branded layout: a gradient brand
+// Sign-in / sign-up - a two-pane branded layout: the canvas-floor brand
 // panel and a clean form. Email + password ship now; social buttons are honest
 // "coming soon" placeholders until the IdP integrations land. Free product: no
 // plan picker, no card, no upsell (FR-1).
@@ -14,20 +14,19 @@ import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { CanvasBackdrop } from "@/components/ui/CanvasBackdrop";
+import { CanvasFloor } from "@/components/ui/CanvasFloor";
 import { Logo } from "@/components/ui/Logo";
 
 // Capability chips that position the breadth of the product on the brand panel.
 const CHIPS = ["Templates", "Photos & video", "AI Magic", "Docs", "Whiteboards", "Brand kit", "Print"];
 
 // Centered branded shell for the transient auth states (magic-link redemption,
-// two-step verification): the brand gradient + dotted grid + glows behind a
-// clean white card, matching the sign-in showcase.
+// two-step verification): the canvas floor behind a clean white card, matching
+// the sign-in showcase.
 function AuthShell({ children }: { children: ReactNode }) {
   return (
-    <div className="oc-gradient relative grid min-h-screen place-items-center overflow-hidden p-6">
-      <div aria-hidden className="oc-dotgrid pointer-events-none absolute inset-0 opacity-50" />
-      <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
-      <div aria-hidden className="pointer-events-none absolute -bottom-28 -left-16 h-96 w-96 rounded-full bg-accent-400/20 blur-3xl" />
+    <div className="relative grid min-h-screen place-items-center overflow-hidden p-6">
+      <CanvasFloor />
       <div className="oc-fade-up relative z-10 w-full max-w-sm rounded-2xl bg-white p-8 shadow-2xl ring-1 ring-black/5">
         {children}
       </div>
@@ -290,12 +289,10 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
   return (
     <div className="flex min-h-screen bg-white">
-      {/* Brand showcase panel */}
-      <div className="oc-gradient relative hidden w-1/2 flex-col justify-between overflow-hidden p-14 text-white lg:flex">
-        {/* Atmosphere: dotted grid + soft color glows. */}
-        <div aria-hidden className="oc-dotgrid pointer-events-none absolute inset-0 opacity-60" />
-        <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-28 -left-16 h-96 w-96 rounded-full bg-accent-400/20 blur-3xl" />
+      {/* Brand showcase panel: the marketing site's canvas floor, with the
+          floating artboards as the light interludes on it. */}
+      <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden p-14 text-white lg:flex">
+        <CanvasFloor />
 
         <Logo variant="light" size={36} className="relative z-10 text-xl" />
 
@@ -352,7 +349,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         <p className="relative z-10 text-sm text-white/60">Your designs, your data - open format, full export, forever.</p>
       </div>
 
-      {/* Form pane (with a subtle artist's-desk backdrop, matching accept-invite) */}
+      {/* Form pane (with a subtle artist's-desk backdrop) */}
       <div className="relative flex flex-1 items-center justify-center overflow-hidden bg-neutral-50 px-6 py-12">
         <CanvasBackdrop compact />
         <div className="relative z-10 w-full max-w-sm">

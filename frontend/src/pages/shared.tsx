@@ -21,6 +21,7 @@ import type { DesignFile } from "@hc/sdk";
 import { ApiError } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
 import { useAuth } from "@/store/auth";
+import { CanvasFloor } from "@/components/ui/CanvasFloor";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -170,8 +171,9 @@ export default function SharedLinkPage() {
       <Head>
         <title>Shared design · HyCanvas</title>
       </Head>
-      <main className="flex min-h-screen items-center justify-center bg-neutral-50 px-6">
-        <div className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-8 text-center shadow-sm">
+      <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-6">
+        <CanvasFloor />
+        <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white p-8 text-center shadow-2xl ring-1 ring-black/5">
           <Logo size={32} className="mx-auto mb-6" />
           {state.kind === "resolving" && (
             <>

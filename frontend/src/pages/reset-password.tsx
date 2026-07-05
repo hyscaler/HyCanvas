@@ -9,6 +9,7 @@ import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 import { ApiError } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
+import { CanvasFloor } from "@/components/ui/CanvasFloor";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -53,8 +54,9 @@ export default function ResetPasswordPage() {
       <Head>
         <title>Reset password · HyCanvas</title>
       </Head>
-      <main className="flex min-h-screen items-center justify-center bg-neutral-50 px-6">
-        <div className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm">
+      <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-6">
+        <CanvasFloor />
+        <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white p-8 shadow-2xl ring-1 ring-black/5">
           <Logo size={32} className="mb-6" />
           {done ? (
             <div className="text-center">

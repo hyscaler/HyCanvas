@@ -2,12 +2,20 @@ package httpapi
 
 import (
 	"io"
+	"mime"
 	"net/http"
 	"path/filepath"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
 )
+
+// Go's built-in mime table has no entry for .webmanifest, so ServeContent
+// would fall back to sniffing (text/plain) and browsers would reject the PWA
+// manifest the frontend links.
+func init() {
+	_ = mime.AddExtensionType(".webmanifest", "application/manifest+json")
+}
 
 // mountStatic serves the statically-exported Next.js frontend from dir, so the
 // single binary serves the whole product (UI + API + realtime) on one port,

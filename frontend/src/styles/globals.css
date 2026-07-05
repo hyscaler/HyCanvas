@@ -92,8 +92,49 @@ body {
   100% { opacity: 0; transform: translateY(-72px) scale(1); }
 }
 .oc-reaction-rise { animation: oc-reaction-rise 2.2s ease-out forwards; }
-.oc-dotgrid {
-  background-image: radial-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1px);
+/* The canvas floor (mirrors the marketing site): the brand ink surface with a
+   design-tool dot grid, two slow ambient plum blobs, and film grain, used
+   behind the auth showcase and landing cards so the app opens on the same
+   stage the marketing sets. Ink #160A12 is a brand SURFACE constant (like the
+   logo's paper), not the app accent, which stays in theme.config.mjs. */
+.oc-floor {
+  background: #160a12;
+}
+.oc-floor-grid {
+  background-image: radial-gradient(circle, rgba(251, 247, 250, 0.13) 1px, transparent 1.4px);
+  background-size: 28px 28px;
+  -webkit-mask-image: radial-gradient(140% 120% at 50% 30%, #000 55%, transparent 100%);
+  mask-image: radial-gradient(140% 120% at 50% 30%, #000 55%, transparent 100%);
+}
+.oc-floor-blob {
+  border-radius: 50%;
+  filter: blur(90px);
+  will-change: transform;
+}
+.oc-floor-blob-a {
+  background: var(--oc-brand-start);
+  opacity: 0.45;
+  animation: oc-blob-a 38s ease-in-out infinite alternate;
+}
+.oc-floor-blob-b {
+  background: var(--color-brand-800);
+  opacity: 0.5;
+  animation: oc-blob-b 46s ease-in-out infinite alternate;
+}
+@keyframes oc-blob-a {
+  to { transform: translate(12%, 10%) scale(1.15); }
+}
+@keyframes oc-blob-b {
+  to { transform: translate(-10%, -10%) scale(1.1); }
+}
+.oc-floor-grain {
+  opacity: 0.07;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+/* Whisper-light canvas dots for working panels (ink dots on light surfaces). */
+.oc-panel-dots {
+  background-image: radial-gradient(circle, rgba(22, 10, 18, 0.07) 1px, transparent 1.4px);
   background-size: 22px 22px;
 }
 

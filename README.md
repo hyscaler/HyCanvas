@@ -1,4 +1,8 @@
-# HyCanvas
+<p align="center">
+  <img src="frontend/public/brand/visitor-tile.svg" alt="HyCanvas" width="96" height="96">
+</p>
+
+<h1 align="center">HyCanvas</h1>
 
 HyCanvas is a free, self-hostable, AI-native alternative to Canva. Design anything - social graphics, presentations, videos, whiteboards, docs, and print - with no paywalls or watermarks. Web-only.
 

@@ -4,8 +4,8 @@
 //   - Without a token (reached from the dashboard bell notification, or direct
 //     nav): list the signed-in user's pending invitations with Accept / Decline.
 // The caller must be signed in with the invited email; the backend enforces the
-// email match and single-use semantics. The chrome is an immersive artist's-desk
-// scene (shared CanvasBackdrop) since this is a first-impression, shareable moment.
+// email match and single-use semantics. The chrome is the shared canvas-floor
+// stage (CanvasFloor) since this is a first-impression, shareable moment.
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
@@ -16,7 +16,7 @@ import { useAuth } from "@/store/auth";
 import { useToast } from "@/components/ui/Toast";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
-import { CanvasBackdrop } from "@/components/ui/CanvasBackdrop";
+import { CanvasFloor } from "@/components/ui/CanvasFloor";
 
 const ROLE_LABEL: Record<WorkspaceRole, string> = { viewer: "Viewer", member: "Member", admin: "Admin", owner: "Owner" };
 const ROLE_BADGE: Record<WorkspaceRole, string> = {
@@ -26,14 +26,13 @@ const ROLE_BADGE: Record<WorkspaceRole, string> = {
   viewer: "bg-slate-100 text-slate-600 ring-slate-200",
 };
 
-// Immersive "artist's desk" backdrop behind a glassy card.
+// The canvas floor behind a glassy card: the paper artboard on the ink
+// workspace, same stage as the marketing site and the sign-in showcase.
 function Scene({ children }: { children: ReactNode }) {
   return (
-    <main className="relative grid min-h-screen place-items-center overflow-hidden bg-neutral-50 px-4 py-10">
-      <CanvasBackdrop />
-      {/* soft scrim keeps the decorative art quiet behind the card */}
-      <div aria-hidden className="absolute inset-0 bg-neutral-50/55" />
-      <div className="relative w-full max-w-md">{children}</div>
+    <main className="relative grid min-h-screen place-items-center overflow-hidden px-4 py-10">
+      <CanvasFloor />
+      <div className="relative z-10 w-full max-w-md">{children}</div>
     </main>
   );
 }
@@ -41,7 +40,7 @@ function Scene({ children }: { children: ReactNode }) {
 // Glassy card with a gradient top accent + centered logo.
 function Card({ children }: { children: ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-3xl bg-white/90 shadow-2xl shadow-brand-900/10 ring-1 ring-black/5 backdrop-blur-xl">
+    <div className="overflow-hidden rounded-3xl bg-white shadow-2xl shadow-brand-900/10 ring-1 ring-black/5">
       <div className="oc-gradient h-1.5 w-full" />
       <div className="px-7 py-8">
         <div className="mb-6 flex justify-center">

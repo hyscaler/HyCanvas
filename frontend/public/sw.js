@@ -24,8 +24,8 @@ self.addEventListener("push", (event) => {
   const url = payload.url || "/";
   const options = {
     body,
-    icon: "/favicon.ico",
-    badge: "/favicon.ico",
+    icon: "/icon-192.png",
+    badge: "/badge-72.png",
     // Carry the deep-link target (plus any extra fields) so notificationclick
     // knows where to route.
     data: Object.assign({ url }, payload.data || {}),

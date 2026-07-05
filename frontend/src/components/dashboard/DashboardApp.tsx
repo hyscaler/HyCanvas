@@ -487,7 +487,7 @@ export function DashboardApp() {
   return (
     <div className="flex h-screen overflow-hidden bg-neutral-50 text-neutral-900" onClick={() => setMenuFor(null)}>
       {/* Left rail: fixed to the viewport; only the main column scrolls. */}
-      <aside className="relative flex w-80 shrink-0 flex-col overflow-y-auto border-r border-neutral-200 bg-white p-4">
+      <aside className="oc-panel-dots relative flex w-80 shrink-0 flex-col overflow-y-auto border-r border-neutral-200 bg-white p-4">
         <div className="mb-6 px-1">
           <Logo size={32} />
         </div>
