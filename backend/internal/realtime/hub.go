@@ -779,11 +779,21 @@ func (h *Hub) HandleLock(c *conn, ids []string) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), lockStoreTimeout)
 	defer cancel()
-	if _, _, err := h.lockStore.Acquire(ctx, c.designID, ids, holderOf(id), lockHeartbeatTTL); err != nil {
+	granted, _, err := h.lockStore.Acquire(ctx, c.designID, ids, holderOf(id), lockHeartbeatTTL)
+	if err != nil {
 		slog.Warn("realtime: lock acquire failed", "err", err)
 		return
 	}
-	h.reconcileLocksAndFanOut(c.designID)
+	// Reconcile our own cache + clients, then signal peers. The peer signal is tied
+	// to the store mutation we just made (granted), NOT to whether this goroutine's
+	// reconcile observed a cache diff: a concurrent reconcile (join catch-up at
+	// addConn, or an inbound peer signal) can apply the change to our cache first,
+	// and a diff-gated publish would then skip and strand peers on other instances
+	// until the next periodic full reconcile.
+	h.reconcileLocksLocal(c.designID)
+	if len(granted) > 0 {
+		h.coord.Publish(c.designID, ctrlLocksChanged, nil)
+	}
 }
 
 func (h *Hub) HandleUnlock(c *conn, ids []string) {
@@ -805,7 +815,12 @@ func (h *Hub) HandleUnlock(c *conn, ids []string) {
 		slog.Warn("realtime: lock release failed", "err", err)
 		return
 	}
-	h.reconcileLocksAndFanOut(c.designID)
+	// As in HandleLock: reconcile locally, then signal peers unconditionally. A
+	// client-driven release is a real state change; gating the peer signal on this
+	// goroutine winning the cache-diff race against a concurrent reconcile would let
+	// peers miss the unlock until the next periodic sweep.
+	h.reconcileLocksLocal(c.designID)
+	h.coord.Publish(c.designID, ctrlLocksChanged, nil)
 }
 
 // reconcileLocksLocal refreshes a room's lock-map cache from the shared store
@@ -929,12 +944,15 @@ func (h *Hub) sweepStaleLocksStore(nowMs, ttlMs int64, fullReconcile bool) {
 		for _, cid := range w.alive {
 			_ = h.lockStore.Refresh(ctx, w.designID, cid, lockHeartbeatTTL)
 		}
-		// Freeing a stale local holder always reconciles + fans out promptly. A quiet
-		// room is reconciled only on the coarse fullReconcile tick (crashed-peer
-		// expiry catch), not every tick - reconcileLocksAndFanOut/Local only
-		// broadcast/publish on an actual change anyway.
+		// Freeing a stale local holder mutated the authority (ReleaseAll), so
+		// reconcile locally and signal peers unconditionally - never gate the peer
+		// signal on this goroutine winning the local cache-diff race (a concurrent
+		// reconcile could apply the release first and strand peers). A quiet room is
+		// reconciled only on the coarse fullReconcile tick (crashed-peer expiry
+		// catch), where reconcileLocksLocal still only broadcasts on an actual change.
 		if len(w.stale) > 0 {
-			h.reconcileLocksAndFanOut(w.designID)
+			h.reconcileLocksLocal(w.designID)
+			h.coord.Publish(w.designID, ctrlLocksChanged, nil)
 		} else if fullReconcile {
 			h.reconcileLocksLocal(w.designID)
 		}
