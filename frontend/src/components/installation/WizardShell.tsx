@@ -8,7 +8,20 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { CanvasFloor } from "@/components/ui/CanvasFloor";
 import { Logo } from "@/components/ui/Logo";
-import { setupStatus } from "./wizard";
+import { getSecret, setupStatus } from "./wizard";
+
+// useSecretGate sends steps 2..5 back to the welcome step when no verified
+// access secret is held, which is the case on any fresh page load or direct
+// deep link: the wizard always restarts at step 1. Returns readiness so the
+// caller can hold off on data fetching while redirecting.
+export function useSecretGate(): boolean {
+  const router = useRouter();
+  const ready = getSecret() !== null;
+  useEffect(() => {
+    if (!ready) void router.replace("/installation/step-1/");
+  }, [ready, router]);
+  return ready;
+}
 
 export const STEPS = [
   { n: 1, label: "Welcome" },
@@ -24,28 +37,33 @@ export function WizardShell({
   title,
   subtitle,
   children,
-  guard = true,
+  stage = "setup",
 }: {
   step: number;
   title: string;
   subtitle?: string;
   children: ReactNode;
-  // guard bounces to the app when the server is already configured; the
-  // post-install steps run after the handover and must skip it.
-  guard?: boolean;
+  // stage guards direct navigation: "setup" pages bounce to the app once the
+  // server is configured; the "configured" page (admin creation, which runs
+  // after the handover) bounces back to step 1 while the server is still in
+  // setup mode; "none" skips the check (the install step mid-flight, when the
+  // setup server intentionally disappears).
+  stage?: "setup" | "configured" | "none";
 }) {
   const router = useRouter();
 
   useEffect(() => {
-    if (!guard) return;
+    if (stage === "none") return;
     let cancelled = false;
     void setupStatus().then((st) => {
-      if (!cancelled && !st) void router.replace("/");
+      if (cancelled) return;
+      if (stage === "setup" && !st) void router.replace("/");
+      if (stage === "configured" && st) void router.replace("/installation/step-1/");
     });
     return () => {
       cancelled = true;
     };
-  }, [guard, router]);
+  }, [stage, router]);
 
   const progress = ((step - 1) / (STEPS.length - 1)) * 100;
 

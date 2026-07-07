@@ -210,13 +210,59 @@ func TestVerifyAndRateLimit(t *testing.T) {
 
 func TestMutatingEndpointsRequireSecret(t *testing.T) {
 	_, h := testServer(t)
-	for _, p := range []string{"/api/setup/db/test", "/api/setup/smtp/test", "/api/setup/s3/test", "/api/setup/complete"} {
+	for _, p := range []string{"/api/setup/answers", "/api/setup/db/test", "/api/setup/smtp/test", "/api/setup/s3/test", "/api/setup/complete"} {
 		if rec := postJSON(t, h, p, "", map[string]string{}); rec.Code != http.StatusForbidden {
 			t.Errorf("POST %s without secret = %d, want 403", p, rec.Code)
 		}
 		if rec := postJSON(t, h, p, "wrong", map[string]string{}); rec.Code != http.StatusForbidden {
 			t.Errorf("POST %s with wrong secret = %d, want 403", p, rec.Code)
 		}
+	}
+	// The answers payload echoes credentials, so reading it is gated too.
+	req := httptest.NewRequest(http.MethodGet, "/api/setup/answers", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("GET /api/setup/answers without secret = %d, want 403", rec.Code)
+	}
+}
+
+func TestAnswersAccumulateServerSide(t *testing.T) {
+	_, h := testServer(t)
+
+	if rec := postJSON(t, h, "/api/setup/answers", "test-secret", map[string]any{
+		"appUrl": "http://canvas.local", "port": "9001",
+	}); rec.Code != http.StatusOK {
+		t.Fatalf("app answers = %d: %s", rec.Code, rec.Body.String())
+	}
+	if rec := postJSON(t, h, "/api/setup/answers", "test-secret", map[string]any{
+		"db": dbRequest{Host: "dbhost", User: "hy", Name: "hycanvas"},
+	}); rec.Code != http.StatusOK {
+		t.Fatalf("db answers = %d", rec.Code)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/setup/answers", nil)
+	req.Header.Set("X-Setup-Secret", "test-secret")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	var got completeRequest
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	// Sections submitted separately must both survive (merge, not replace).
+	if got.AppURL != "http://canvas.local" || got.Port != "9001" || got.DB.Host != "dbhost" {
+		t.Errorf("answers did not accumulate: %+v", got)
+	}
+}
+
+func TestCompleteWithoutDatabaseAnswers(t *testing.T) {
+	_, h := testServer(t)
+	rec := postJSON(t, h, "/api/setup/complete", "test-secret", map[string]any{})
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("complete with no answers = %d, want 400", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "database step") {
+		t.Errorf("problem body: %s", rec.Body.String())
 	}
 }
 
@@ -235,9 +281,12 @@ func TestDBTestUnreachable(t *testing.T) {
 
 func TestCompleteWithBadDBParksInError(t *testing.T) {
 	s, h := testServer(t)
-	var body completeRequest
-	body.DB = dbRequest{Host: "127.0.0.1", Port: "59998", User: "u", Password: "p", Name: "d"}
-	if rec := postJSON(t, h, "/api/setup/complete", "test-secret", body); rec.Code != http.StatusAccepted {
+	if rec := postJSON(t, h, "/api/setup/answers", "test-secret", map[string]any{
+		"db": dbRequest{Host: "127.0.0.1", Port: "59998", User: "u", Password: "p", Name: "d"},
+	}); rec.Code != http.StatusOK {
+		t.Fatalf("answers = %d", rec.Code)
+	}
+	if rec := postJSON(t, h, "/api/setup/complete", "test-secret", map[string]any{}); rec.Code != http.StatusAccepted {
 		t.Fatalf("complete = %d", rec.Code)
 	}
 	deadline := time.Now().Add(15 * time.Second)
@@ -250,7 +299,7 @@ func TestCompleteWithBadDBParksInError(t *testing.T) {
 				t.Errorf("error detail = %q", detail)
 			}
 			// A retry must be allowed from the error phase.
-			if rec := postJSON(t, h, "/api/setup/complete", "test-secret", body); rec.Code != http.StatusAccepted {
+			if rec := postJSON(t, h, "/api/setup/complete", "test-secret", map[string]any{}); rec.Code != http.StatusAccepted {
 				t.Errorf("retry after error = %d, want 202", rec.Code)
 			}
 			return

@@ -61,6 +61,10 @@ type server struct {
 	mu        sync.Mutex
 	phase     string
 	errDetail string
+	// answers is the wizard's working state. It lives here (server memory,
+	// never the browser and never disk) until complete writes the final .env;
+	// each step reads and updates it over /api/setup/answers.
+	answers completeRequest
 	// verify rate limiting
 	fails     int
 	lockUntil time.Time
@@ -151,6 +155,8 @@ func (s *server) router() http.Handler {
 		r.Post("/verify", s.handleVerify)
 		r.Group(func(r chi.Router) {
 			r.Use(s.requireSecret)
+			r.Get("/answers", s.handleGetAnswers)
+			r.Post("/answers", s.handleUpdateAnswers)
 			r.Post("/db/test", s.handleDBTest)
 			r.Post("/smtp/test", s.handleSMTPTest)
 			r.Post("/s3/test", s.handleS3Test)
@@ -383,45 +389,96 @@ func (s *server) handleS3Test(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
-// completeRequest is the full wizard answer set.
-type completeRequest struct {
-	AppURL  string    `json:"appUrl"`
-	Port    string    `json:"port"`
-	DB      dbRequest `json:"db"`
-	Storage struct {
-		Driver    string    `json:"driver"` // "local" or "s3"
-		LocalPath string    `json:"localPath"`
-		S3        s3Request `json:"s3"`
-	} `json:"storage"`
-	SMTP struct {
-		Enabled  bool   `json:"enabled"`
-		Host     string `json:"host"`
-		Port     string `json:"port"`
-		Username string `json:"username"`
-		Password string `json:"password"`
-		From     string `json:"from"`
-		FromName string `json:"fromName"`
-	} `json:"smtp"`
+type storageAnswers struct {
+	Driver    string    `json:"driver"` // "local" or "s3"
+	LocalPath string    `json:"localPath"`
+	S3        s3Request `json:"s3"`
 }
 
-func (s *server) handleComplete(w http.ResponseWriter, req *http.Request) {
-	var body completeRequest
-	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+type smtpAnswers struct {
+	Enabled  bool   `json:"enabled"`
+	Host     string `json:"host"`
+	Port     string `json:"port"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	From     string `json:"from"`
+	FromName string `json:"fromName"`
+}
+
+// completeRequest is the full wizard answer set, accumulated server-side.
+type completeRequest struct {
+	AppURL  string         `json:"appUrl"`
+	Port    string         `json:"port"`
+	DB      dbRequest      `json:"db"`
+	Storage storageAnswers `json:"storage"`
+	SMTP    smtpAnswers    `json:"smtp"`
+}
+
+// answersUpdate is a partial update: each wizard step submits only its own
+// section; nil sections stay untouched.
+type answersUpdate struct {
+	AppURL  *string         `json:"appUrl"`
+	Port    *string         `json:"port"`
+	DB      *dbRequest      `json:"db"`
+	Storage *storageAnswers `json:"storage"`
+	SMTP    *smtpAnswers    `json:"smtp"`
+}
+
+// handleGetAnswers returns the working answers so steps can prefill after
+// navigation. Secret-gated: the payload includes operator-entered credentials.
+func (s *server) handleGetAnswers(w http.ResponseWriter, _ *http.Request) {
+	s.mu.Lock()
+	a := s.answers
+	s.mu.Unlock()
+	writeJSON(w, http.StatusOK, a)
+}
+
+func (s *server) handleUpdateAnswers(w http.ResponseWriter, req *http.Request) {
+	var u answersUpdate
+	if err := json.NewDecoder(req.Body).Decode(&u); err != nil {
 		httpapi.Problem(w, req, http.StatusBadRequest, "Bad Request", "invalid JSON body")
+		return
+	}
+	s.mu.Lock()
+	if u.AppURL != nil {
+		s.answers.AppURL = *u.AppURL
+	}
+	if u.Port != nil {
+		s.answers.Port = *u.Port
+	}
+	if u.DB != nil {
+		s.answers.DB = *u.DB
+	}
+	if u.Storage != nil {
+		s.answers.Storage = *u.Storage
+	}
+	if u.SMTP != nil {
+		s.answers.SMTP = *u.SMTP
+	}
+	a := s.answers
+	s.mu.Unlock()
+	writeJSON(w, http.StatusOK, a)
+}
+
+// handleComplete installs from the server-held answers; the request carries
+// no body beyond the secret header.
+func (s *server) handleComplete(w http.ResponseWriter, req *http.Request) {
+	s.mu.Lock()
+	body := s.answers
+	inProgress := s.phase != phaseCollecting && s.phase != phaseError
+	s.mu.Unlock()
+
+	if inProgress {
+		httpapi.Problem(w, req, http.StatusConflict, "Install In Progress", "an install is already running")
 		return
 	}
 	dsn, err := body.DB.dsn()
 	if err != nil {
-		httpapi.Problem(w, req, http.StatusBadRequest, "Invalid Database Settings", err.Error())
+		httpapi.Problem(w, req, http.StatusBadRequest, "Invalid Database Settings", "complete the database step first: "+err.Error())
 		return
 	}
 
 	s.mu.Lock()
-	if s.phase != phaseCollecting && s.phase != phaseError {
-		s.mu.Unlock()
-		httpapi.Problem(w, req, http.StatusConflict, "Install In Progress", "an install is already running")
-		return
-	}
 	s.phase, s.errDetail = phaseValidating, ""
 	s.mu.Unlock()
 

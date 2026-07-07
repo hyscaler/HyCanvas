@@ -25,7 +25,6 @@ export function Step6Admin() {
     setError(null);
     try {
       await signup(email, password, name || undefined);
-      window.sessionStorage.removeItem("hycanvas-setup");
       await router.push("/dashboard");
     } catch (err) {
       let msg = "Couldn't create the account. Please try again.";
@@ -46,7 +45,7 @@ export function Step6Admin() {
       step={6}
       title="Create your account"
       subtitle="HyCanvas is running. Create the first account; it gets its own workspace and you land straight in the dashboard."
-      guard={false}
+      stage="configured"
     >
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <Input label="Name" placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" autoFocus />

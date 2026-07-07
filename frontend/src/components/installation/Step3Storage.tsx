@@ -1,6 +1,6 @@
-// Step 3: where uploaded assets and exports live. Local disk works out of
-// the box; S3-compatible storage (AWS, MinIO, R2) must pass a connectivity
-// test before continuing.
+// Step 3: where uploaded assets and exports live. Prefills from the
+// server-held answers; local disk works out of the box, S3-compatible
+// storage must pass a connectivity test before continuing.
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/router";
@@ -8,36 +8,40 @@ import { HardDrive, Cloud } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { WizardShell, ErrorBanner, SuccessBanner } from "./WizardShell";
-import { loadAnswers, saveAnswers, setupPost, setupStatus, type SetupAnswers } from "./wizard";
+import { WizardShell, ErrorBanner, SuccessBanner, useSecretGate } from "./WizardShell";
+import { getAnswers, setupPost, setupStatus, updateAnswers, type StorageAnswers } from "./wizard";
+
+const STORAGE_DEFAULTS: StorageAnswers = {
+  driver: "local",
+  localPath: "",
+  s3: { endpoint: "", region: "", bucket: "", accessKey: "", secretKey: "", forcePathStyle: true },
+};
 
 export function Step3Storage() {
   const router = useRouter();
-  // Lazy init: sessionStorage exists client-side only; the static prerender
-  // falls back to empty answers inside loadAnswers.
-  const [answers, setAnswers] = useState(loadAnswers);
+  const ready = useSecretGate();
+  const [storage, setStorageState] = useState<StorageAnswers>(STORAGE_DEFAULTS);
+  const [tested, setTested] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    void setupStatus().then((st) => {
-      if (st) {
-        setAnswers((prev) =>
-          prev.storage.localPath
-            ? prev
-            : { ...prev, storage: { ...prev.storage, localPath: st.defaults.storagePath } },
-        );
-      }
-    });
-  }, []);
+    if (!ready) return;
+    void Promise.all([getAnswers(), setupStatus()])
+      .then(([a, st]) => {
+        const merged = a.storage.driver ? { ...STORAGE_DEFAULTS, ...a.storage } : { ...STORAGE_DEFAULTS };
+        if (!merged.localPath && st) merged.localPath = st.defaults.storagePath;
+        setStorageState(merged);
+      })
+      .catch(() => {});
+  }, [ready]);
 
-  const storage = answers.storage;
-
-  function setStorage(patch: Partial<SetupAnswers["storage"]>) {
-    setAnswers((prev) => ({ ...prev, storage: { ...prev.storage, ...patch, tested: false } }));
+  function setStorage(patch: Partial<StorageAnswers>) {
+    setStorageState((prev) => ({ ...prev, ...patch }));
+    setTested(false);
     setError(null);
   }
-  function setS3(patch: Partial<SetupAnswers["storage"]["s3"]>) {
+  function setS3(patch: Partial<StorageAnswers["s3"]>) {
     setStorage({ s3: { ...storage.s3, ...patch } });
   }
 
@@ -45,8 +49,8 @@ export function Step3Storage() {
     setBusy(true);
     setError(null);
     try {
-      await setupPost("s3/test", storage.s3, answers.secret);
-      setAnswers((prev) => ({ ...prev, storage: { ...prev.storage, tested: true } }));
+      await setupPost("s3/test", storage.s3);
+      setTested(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "S3 check failed.");
     } finally {
@@ -54,12 +58,18 @@ export function Step3Storage() {
     }
   }
 
-  const canContinue = storage.driver === "local" || storage.tested;
+  const canContinue = storage.driver === "local" || tested;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    saveAnswers(answers);
-    await router.push("/installation/step-4");
+    setBusy(true);
+    try {
+      await updateAnswers({ storage });
+      await router.push("/installation/step-4");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't save. Please try again.");
+      setBusy(false);
+    }
   }
 
   return (
@@ -129,7 +139,7 @@ export function Step3Storage() {
         )}
 
         {error && <ErrorBanner>{error}</ErrorBanner>}
-        {storage.driver === "s3" && storage.tested && <SuccessBanner>Bucket reachable.</SuccessBanner>}
+        {storage.driver === "s3" && tested && <SuccessBanner>Bucket reachable.</SuccessBanner>}
 
         <div className="flex items-center justify-between gap-3">
           <Button type="button" variant="ghost" onClick={() => void router.push("/installation/step-2")}>
@@ -138,10 +148,10 @@ export function Step3Storage() {
           <div className="flex gap-2">
             {storage.driver === "s3" && (
               <Button type="button" variant="secondary" onClick={() => void test()} disabled={busy}>
-                {busy ? "Testing…" : "Test bucket"}
+                {busy ? "Working…" : "Test bucket"}
               </Button>
             )}
-            <Button type="submit" disabled={!canContinue}>
+            <Button type="submit" disabled={!canContinue || busy}>
               Continue
             </Button>
           </div>

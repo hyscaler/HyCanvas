@@ -1,81 +1,58 @@
-// Shared state and API helpers for the first-run installation wizard. The
-// wizard talks to the Go setup server's /api/setup surface (available only
-// while the binary is unconfigured); answers accumulate in sessionStorage
-// until the final install call.
+// API helpers for the first-run installation wizard. All wizard state lives
+// on the setup server (/api/setup/answers), never in browser storage; the
+// only client-held state is the verified access secret below, kept in module
+// memory so a refresh or direct deep-link always restarts at step 1.
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8005/api";
-const STORE_KEY = "hycanvas-setup";
 
-export type SetupAnswers = {
-  secret: string;
-  appUrl: string;
+// The verified wizard access secret. Module memory survives client-side
+// navigation between steps but not a page load, by design.
+let wizardSecret: string | null = null;
+
+export function getSecret(): string | null {
+  return wizardSecret;
+}
+
+export type DBAnswers = {
+  url: string;
+  host: string;
   port: string;
-  db: {
-    mode: "fields" | "url";
-    url: string;
-    host: string;
-    port: string;
-    user: string;
-    password: string;
-    name: string;
-    tested: boolean;
-  };
-  storage: {
-    driver: "local" | "s3";
-    localPath: string;
-    s3: {
-      endpoint: string;
-      region: string;
-      bucket: string;
-      accessKey: string;
-      secretKey: string;
-      forcePathStyle: boolean;
-    };
-    tested: boolean;
-  };
-  smtp: {
-    enabled: boolean;
-    host: string;
-    port: string;
-    username: string;
-    password: string;
-    from: string;
-    fromName: string;
-    tested: boolean;
+  user: string;
+  password: string;
+  name: string;
+};
+
+export type StorageAnswers = {
+  driver: "local" | "s3" | "";
+  localPath: string;
+  s3: {
+    endpoint: string;
+    region: string;
+    bucket: string;
+    accessKey: string;
+    secretKey: string;
+    forcePathStyle: boolean;
   };
 };
 
-export function emptyAnswers(): SetupAnswers {
-  return {
-    secret: "",
-    appUrl: "",
-    port: "",
-    db: { mode: "fields", url: "", host: "localhost", port: "5432", user: "", password: "", name: "hycanvas", tested: false },
-    storage: {
-      driver: "local",
-      localPath: "",
-      s3: { endpoint: "", region: "", bucket: "", accessKey: "", secretKey: "", forcePathStyle: true },
-      tested: false,
-    },
-    smtp: { enabled: false, host: "", port: "587", username: "", password: "", from: "", fromName: "HyCanvas", tested: false },
-  };
-}
+export type SMTPAnswers = {
+  enabled: boolean;
+  host: string;
+  port: string;
+  username: string;
+  password: string;
+  from: string;
+  fromName: string;
+};
 
-export function loadAnswers(): SetupAnswers {
-  if (typeof window === "undefined") return emptyAnswers();
-  try {
-    const raw = window.sessionStorage.getItem(STORE_KEY);
-    if (!raw) return emptyAnswers();
-    return { ...emptyAnswers(), ...(JSON.parse(raw) as Partial<SetupAnswers>) };
-  } catch {
-    return emptyAnswers();
-  }
-}
-
-export function saveAnswers(a: SetupAnswers) {
-  if (typeof window === "undefined") return;
-  window.sessionStorage.setItem(STORE_KEY, JSON.stringify(a));
-}
+// SetupAnswers mirrors the server's completeRequest shape.
+export type SetupAnswers = {
+  appUrl: string;
+  port: string;
+  db: DBAnswers;
+  storage: StorageAnswers;
+  smtp: SMTPAnswers;
+};
 
 export type SetupStatus = {
   state: string;
@@ -87,7 +64,7 @@ export type SetupStatus = {
 
 // setupStatus returns the setup server's state, or null when the server is
 // already configured (the /api/setup surface is gone), so wizard pages can
-// bounce visitors to the app.
+// bounce visitors appropriately.
 export async function setupStatus(): Promise<SetupStatus | null> {
   try {
     const res = await fetch(`${API_BASE}/setup/status`, { cache: "no-store" });
@@ -109,53 +86,57 @@ async function problemDetail(res: Response): Promise<string> {
   }
 }
 
-// setupPost calls a mutating setup endpoint; resolves on success, throws an
-// Error with a readable message otherwise.
-export async function setupPost(path: string, body: unknown, secret: string): Promise<void> {
+async function setupFetch(path: string, init: RequestInit): Promise<Response> {
   let res: Response;
   try {
-    res = await fetch(`${API_BASE}/setup/${path}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Setup-Secret": secret },
-      body: JSON.stringify(body),
-    });
+    res = await fetch(`${API_BASE}/setup/${path}`, init);
   } catch {
     throw new Error("Couldn't reach the server. Is it still running?");
   }
   if (!res.ok) throw new Error(await problemDetail(res));
+  return res;
 }
 
-// verifySecret checks the wizard access secret; throws with the API's message
-// (wrong secret, rate limited) on failure.
+// setupPost calls a mutating setup endpoint with the held secret; resolves on
+// success, throws an Error with a readable message otherwise.
+export async function setupPost(path: string, body: unknown): Promise<void> {
+  await setupFetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Setup-Secret": wizardSecret ?? "" },
+    body: JSON.stringify(body),
+  });
+}
+
+// verifySecret checks the wizard access secret and holds it for this SPA
+// session on success; throws with the API's message (wrong secret, rate
+// limited) on failure.
 export async function verifySecret(secret: string): Promise<void> {
-  await setupPost("verify", { secret }, secret);
+  await setupFetch("verify", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ secret }),
+  });
+  wizardSecret = secret;
 }
 
-// completePayload converts the collected answers into the backend's
-// completeRequest shape.
-export function completePayload(a: SetupAnswers) {
-  return {
-    appUrl: a.appUrl,
-    port: a.port,
-    db:
-      a.db.mode === "url"
-        ? { url: a.db.url }
-        : { host: a.db.host, port: a.db.port, user: a.db.user, password: a.db.password, name: a.db.name },
-    storage: {
-      driver: a.storage.driver,
-      localPath: a.storage.localPath,
-      s3: a.storage.s3,
-    },
-    smtp: {
-      enabled: a.smtp.enabled,
-      host: a.smtp.host,
-      port: a.smtp.port,
-      username: a.smtp.username,
-      password: a.smtp.password,
-      from: a.smtp.from,
-      fromName: a.smtp.fromName,
-    },
-  };
+// getAnswers reads the server-held working answers for prefilling a step.
+export async function getAnswers(): Promise<SetupAnswers> {
+  const res = await setupFetch("answers", {
+    headers: { "X-Setup-Secret": wizardSecret ?? "" },
+    cache: "no-store",
+  });
+  return (await res.json()) as SetupAnswers;
+}
+
+// updateAnswers submits one step's section to the server-held answers.
+export async function updateAnswers(partial: {
+  appUrl?: string;
+  port?: string;
+  db?: DBAnswers;
+  storage?: StorageAnswers;
+  smtp?: SMTPAnswers;
+}): Promise<void> {
+  await setupPost("answers", partial);
 }
 
 // healthOk polls the normal server's health endpoint after the handover.

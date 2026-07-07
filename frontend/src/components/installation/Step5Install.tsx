@@ -1,20 +1,15 @@
-// Step 5: review + install. Kicks off the server-side install and renders
-// its live phases (validate -> write config -> migrate -> start), then waits
-// for the real server to come up and moves to the admin step.
+// Step 5: review + install. Shows the server-held answers, triggers the
+// server-side install (which uses those answers), renders its live phases
+// (validate -> write config -> migrate -> start), then waits for the real
+// server to come up and moves to the admin step.
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/Button";
-import { WizardShell, ErrorBanner } from "./WizardShell";
-import {
-  completePayload,
-  healthOk,
-  loadAnswers,
-  setupPost,
-  setupStatus,
-} from "./wizard";
+import { WizardShell, ErrorBanner, useSecretGate } from "./WizardShell";
+import { getAnswers, healthOk, setupPost, setupStatus, type SetupAnswers } from "./wizard";
 
 const PHASES = [
   { id: "validating", label: "Validating the database connection" },
@@ -31,25 +26,29 @@ type InstallState =
 
 export function Step5Install() {
   const router = useRouter();
-  // Lazy init: sessionStorage exists client-side only; the static prerender
-  // falls back to empty answers inside loadAnswers.
-  const [answers] = useState(loadAnswers);
+  const ready = useSecretGate();
+  const [answers, setAnswers] = useState<SetupAnswers | null>(null);
   const [state, setState] = useState<InstallState>({ kind: "review" });
   const pollRef = useRef<number | null>(null);
 
   useEffect(() => {
+    if (!ready) return;
+    void getAnswers()
+      .then(setAnswers)
+      .catch(() => {});
     return () => {
       if (pollRef.current !== null) window.clearInterval(pollRef.current);
     };
-  }, []);
+  }, [ready]);
 
   function advance() {
     if (pollRef.current !== null) window.clearInterval(pollRef.current);
     // If the operator changed the port, the running origin is wrong now; a
     // full navigation to the configured URL carries them over.
     const target = "/installation/step-6/";
-    if (typeof window !== "undefined" && answers.appUrl && !window.location.origin.startsWith(answers.appUrl)) {
-      window.location.href = answers.appUrl.replace(/\/$/, "") + target;
+    const appUrl = answers?.appUrl ?? "";
+    if (typeof window !== "undefined" && appUrl && !window.location.origin.startsWith(appUrl)) {
+      window.location.href = appUrl.replace(/\/$/, "") + target;
       return;
     }
     void router.push(target);
@@ -79,7 +78,7 @@ export function Step5Install() {
   async function install() {
     setState({ kind: "running", phase: "validating" });
     try {
-      await setupPost("complete", completePayload(answers), answers.secret);
+      await setupPost("complete", {});
       watchInstall();
     } catch (err) {
       setState({ kind: "error", detail: err instanceof Error ? err.message : "Install failed." });
@@ -99,33 +98,39 @@ export function Step5Install() {
           ? "Hold tight; this takes a few seconds."
           : "Everything checks out. Installing writes the configuration, prepares the database, and starts the server."
       }
-      guard={state.kind === "review"}
+      stage={state.kind === "review" ? "setup" : "none"}
     >
       {state.kind === "review" && (
         <div className="flex flex-col gap-4">
-          <dl className="divide-y divide-neutral-100 rounded-xl border border-neutral-200 text-sm">
-            <Row k="Public URL" v={answers.appUrl || "(current origin)"} />
-            <Row k="Port" v={answers.port || "8005"} />
-            <Row
-              k="Database"
-              v={
-                answers.db.mode === "url"
-                  ? answers.db.url.replace(/:\/\/([^:]+):[^@]*@/, "://$1:••••@")
-                  : `${answers.db.user}@${answers.db.host}:${answers.db.port || "5432"}/${answers.db.name}`
-              }
-            />
-            <Row
-              k="Storage"
-              v={answers.storage.driver === "s3" ? `S3: ${answers.storage.s3.bucket} @ ${answers.storage.s3.endpoint}` : `Local disk: ${answers.storage.localPath}`}
-            />
-            <Row k="Email" v={answers.smtp.enabled ? `SMTP via ${answers.smtp.host}` : "Not configured"} />
-            <Row k="Secrets" v="JWT and encryption keys are generated automatically" />
-          </dl>
+          {answers ? (
+            <dl className="divide-y divide-neutral-100 rounded-xl border border-neutral-200 text-sm">
+              <Row k="Public URL" v={answers.appUrl || "(current origin)"} />
+              <Row k="Port" v={answers.port || "8005"} />
+              <Row
+                k="Database"
+                v={
+                  answers.db.url
+                    ? answers.db.url.replace(/:\/\/([^:]+):[^@]*@/, "://$1:••••@")
+                    : `${answers.db.user}@${answers.db.host}:${answers.db.port || "5432"}/${answers.db.name}`
+                }
+              />
+              <Row
+                k="Storage"
+                v={answers.storage.driver === "s3" ? `S3: ${answers.storage.s3.bucket} @ ${answers.storage.s3.endpoint}` : `Local disk: ${answers.storage.localPath}`}
+              />
+              <Row k="Email" v={answers.smtp.enabled ? `SMTP via ${answers.smtp.host}` : "Not configured"} />
+              <Row k="Secrets" v="JWT and encryption keys are generated automatically" />
+            </dl>
+          ) : (
+            <div className="grid place-items-center rounded-xl border border-neutral-200 py-10 text-sm text-neutral-400">
+              Loading…
+            </div>
+          )}
           <div className="flex items-center justify-between gap-3">
             <Button type="button" variant="ghost" onClick={() => void router.push("/installation/step-4")}>
               Back
             </Button>
-            <Button type="button" size="lg" onClick={() => void install()}>
+            <Button type="button" size="lg" onClick={() => void install()} disabled={!answers}>
               Install HyCanvas
             </Button>
           </div>

@@ -1,26 +1,44 @@
-// Step 4: optional SMTP. Skipping is fine: without SMTP the server keeps
-// account emails (verification, resets) in an in-app dev outbox outside
-// production, and sends nothing in production.
+// Step 4: optional SMTP, prefilled from the server-held answers. Skipping is
+// fine: without SMTP the server keeps account emails (verification, resets)
+// in an in-app dev outbox outside production, and sends nothing in production.
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { WizardShell, ErrorBanner, SuccessBanner } from "./WizardShell";
-import { loadAnswers, saveAnswers, setupPost, type SetupAnswers } from "./wizard";
+import { WizardShell, ErrorBanner, SuccessBanner, useSecretGate } from "./WizardShell";
+import { getAnswers, setupPost, updateAnswers, type SMTPAnswers } from "./wizard";
+
+const SMTP_DEFAULTS: SMTPAnswers = {
+  enabled: false,
+  host: "",
+  port: "587",
+  username: "",
+  password: "",
+  from: "",
+  fromName: "HyCanvas",
+};
 
 export function Step4Email() {
   const router = useRouter();
-  // Lazy init: sessionStorage exists client-side only; the static prerender
-  // falls back to empty answers inside loadAnswers.
-  const [answers, setAnswers] = useState(loadAnswers);
+  const ready = useSecretGate();
+  const [smtp, setSMTPState] = useState<SMTPAnswers>(SMTP_DEFAULTS);
+  const [tested, setTested] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const smtp = answers.smtp;
+  useEffect(() => {
+    if (!ready) return;
+    void getAnswers()
+      .then((a) => {
+        if (a.smtp.enabled || a.smtp.host) setSMTPState({ ...SMTP_DEFAULTS, ...a.smtp });
+      })
+      .catch(() => {});
+  }, [ready]);
 
-  function setSMTP(patch: Partial<SetupAnswers["smtp"]>) {
-    setAnswers((prev) => ({ ...prev, smtp: { ...prev.smtp, ...patch, tested: false } }));
+  function setSMTP(patch: Partial<SMTPAnswers>) {
+    setSMTPState((prev) => ({ ...prev, ...patch }));
+    setTested(false);
     setError(null);
   }
 
@@ -28,12 +46,13 @@ export function Step4Email() {
     setBusy(true);
     setError(null);
     try {
-      await setupPost(
-        "smtp/test",
-        { host: smtp.host, port: smtp.port, username: smtp.username, password: smtp.password },
-        answers.secret,
-      );
-      setAnswers((prev) => ({ ...prev, smtp: { ...prev.smtp, tested: true } }));
+      await setupPost("smtp/test", {
+        host: smtp.host,
+        port: smtp.port,
+        username: smtp.username,
+        password: smtp.password,
+      });
+      setTested(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "SMTP check failed.");
     } finally {
@@ -41,12 +60,18 @@ export function Step4Email() {
     }
   }
 
-  const canContinue = !smtp.enabled || smtp.tested;
+  const canContinue = !smtp.enabled || tested;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    saveAnswers(answers);
-    await router.push("/installation/step-5");
+    setBusy(true);
+    try {
+      await updateAnswers({ smtp });
+      await router.push("/installation/step-5");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't save. Please try again.");
+      setBusy(false);
+    }
   }
 
   return (
@@ -87,7 +112,7 @@ export function Step4Email() {
         )}
 
         {error && <ErrorBanner>{error}</ErrorBanner>}
-        {smtp.enabled && smtp.tested && <SuccessBanner>SMTP server reachable and credentials accepted.</SuccessBanner>}
+        {smtp.enabled && tested && <SuccessBanner>SMTP server reachable and credentials accepted.</SuccessBanner>}
 
         <div className="flex items-center justify-between gap-3">
           <Button type="button" variant="ghost" onClick={() => void router.push("/installation/step-3")}>
@@ -96,10 +121,10 @@ export function Step4Email() {
           <div className="flex gap-2">
             {smtp.enabled && (
               <Button type="button" variant="secondary" onClick={() => void test()} disabled={busy}>
-                {busy ? "Testing…" : "Test SMTP"}
+                {busy ? "Working…" : "Test SMTP"}
               </Button>
             )}
-            <Button type="submit" disabled={!canContinue}>
+            <Button type="submit" disabled={!canContinue || busy}>
               {smtp.enabled ? "Continue" : "Skip for now"}
             </Button>
           </div>
