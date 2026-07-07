@@ -26,8 +26,8 @@ jobs:
     name: Frontend export
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
@@ -39,7 +39,7 @@ jobs:
       # build:dist sets BUILD_DIST=true, which routes the exported frontend to the
       # same-origin /api, exactly like scripts/build-dist.js does for the bundle.
       - run: npm run build:dist -w frontend
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: frontend-out
           path: frontend/out
@@ -59,13 +59,13 @@ jobs:
           - { goos: darwin, goarch: arm64 }
           - { goos: windows, goarch: amd64 }
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
         with:
           go-version: "1.25"
           cache-dependency-path: backend/go.sum
       # Stage the exported frontend into the gitignored go:embed target.
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: frontend-out
           path: backend/internal/webui/public
@@ -108,7 +108,7 @@ jobs:
           else
             tar -czf "archives/${BASE}.tar.gz" -C out .
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist-${{ matrix.goos }}-${{ matrix.goarch }}
           path: archives/
@@ -122,8 +122,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
         with:
           pattern: dist-*
           merge-multiple: true
