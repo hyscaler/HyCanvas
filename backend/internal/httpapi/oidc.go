@@ -31,12 +31,17 @@ func mountOIDC(api chi.Router, svc *oidc.Service, acct *accounts.Service, secure
 	api.With(requireAuth(acct)).Delete("/auth/oidc/identity", oidcUnlinkHandler(acct))
 }
 
+// frontendURL is where SSO redirects send the browser back to. In dev the
+// frontend runs on its own origin (FRONTEND_URL, the Next dev server); in the
+// single-binary production deployment it is served same-origin, so the public
+// APP_URL is the right target and FRONTEND_URL stays unset.
 func frontendURL() string {
-	f := strings.TrimRight(os.Getenv("FRONTEND_URL"), "/")
-	if f == "" {
-		f = "http://localhost:3000"
+	for _, k := range []string{"FRONTEND_URL", "APP_URL"} {
+		if v := strings.TrimRight(os.Getenv(k), "/"); v != "" {
+			return v
+		}
 	}
-	return f
+	return "http://localhost:3000"
 }
 
 func oidcProvidersHandler(svc *oidc.Service) http.HandlerFunc {
