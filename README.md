@@ -88,6 +88,17 @@ npm run deploy              # build:dist + pm2 reload ecosystem.config.js
 
 When writing `.env` by hand for production, set at minimum `NODE_ENV=production`, `DATABASE_URL`, a strong `JWT_SECRET`, `APP_URL` (public base URL used in generated links), and an absolute `LOCAL_STORAGE_PATH` (or `STORAGE_DRIVER=s3` with `S3_*`). AI provider keys are configured per workspace at runtime (stored encrypted), never via env.
 
+## Install a prebuilt binary
+
+Releases on the [GitHub releases page](https://github.com/hyscaler/HyCanvas/releases) ship the same self-contained binary prebuilt for Linux (amd64, arm64), macOS (Intel, Apple Silicon), and Windows (amd64), each archive containing the binary, `.env.example`, and the license files, plus a `SHA256SUMS.txt` for verification. You still need PostgreSQL; ffmpeg is only required for server-side video export.
+
+```bash
+tar -xzf hycanvas_<version>_<os>_<arch>.tar.gz && cd <unpacked dir>
+./hycanvas service start    # asks: browser wizard or terminal wizard
+```
+
+The macOS binaries are not signed or notarized; if macOS quarantines the download, run `xattr -d com.apple.quarantine hycanvas` or right-click the binary and choose Open.
+
 ## Run with Docker (self-host)
 
 The whole product (UI + REST API + realtime WebSocket) runs from one image, with Postgres as a companion service. For the full environment-variable reference and production options, see [DOCKER_SETUP.md](DOCKER_SETUP.md).
@@ -183,6 +194,16 @@ User-saved templates (Save as template) are stored in the database and need no r
 The app's color identity lives in one file: `frontend/src/theme.config.mjs` (the brand and accent scales, the identity gradient, the editor canvas-overlay colors, and the collaborator presence palette). To rebrand, edit that file and run `npm run gen:theme`. The generator rewrites the Tailwind CSS tokens, the typed canvas-overlay constants, and the Go presence palette, so one change propagates across the UI chrome, the gradient, the logo, the favicon/theme-color, the canvas overlays, and presence colors. `npm run gen:theme:check` (run as part of `npm run lint`) fails if the committed generated files drift from the source.
 
 This product/app accent is intentionally separate from the per-workspace Brand Kit, which themes design content rather than the app shell.
+
+## Releases and publishing (maintainers)
+
+Merging to `development` runs CI only; the two public distribution channels have explicit triggers:
+
+- **Binary releases**: pushing a `v*` tag (for example `git tag v0.1.0 && git push origin v0.1.0`) runs `.github/workflows/release.yml`, which builds the frontend once, cross-compiles the embedded binary for all five platforms from a single Ubuntu runner (pure Go, `CGO_ENABLED=0`), and publishes a GitHub Release with the archives and `SHA256SUMS.txt`. Tags containing a hyphen (`v1.0.0-rc.1`) are marked as pre-releases automatically. The Actions "Run workflow" button on the release workflow does a build-only dry run without creating a release.
+- **Docker image**: pushing to the `docker/build/latest` or `docker/build/development` branch (for example `git push origin development:docker/build/latest`) runs `.github/workflows/docker-build-push.yml`, which builds and pushes the multi-arch `hycanvas/hycanvas` image to Docker Hub with the matching tag.
+- **Docker Hub overview**: any change to `docker/README.md` on `development` is synced to the Docker Hub repository description automatically by `.github/workflows/dockerhub-description.yml` (also runnable manually from the Actions tab).
+
+The version stamped into the binary (`git describe`) is logged on startup and reported by `/healthz`.
 
 ## Conventions
 

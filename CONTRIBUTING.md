@@ -50,6 +50,14 @@ npm run build:dist      # full production build into a single binary
 Keep pull requests focused, describe what changed and why, and reference any
 related issue. Do not commit secrets; `.env` is gitignored and must stay that way.
 
+## Releases and publishing
+
+Merges to `development` run CI only. Binary releases are cut by pushing a `v*`
+tag, the Docker Hub image is published by pushing to the `docker/build/*`
+branches, and the Docker Hub overview syncs automatically from
+`docker/README.md`. The full maintainer walkthrough is in the README under
+"Releases and publishing".
+
 ## License of contributions
 
 HyCanvas is distributed under the Elastic License 2.0 (see `LICENSE`). By

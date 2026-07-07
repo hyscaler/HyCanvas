@@ -107,6 +107,10 @@ For every variable, SSO/web-push setup, external Postgres, and production harden
 
 Built for `linux/amd64` and `linux/arm64`.
 
+## Prefer no Docker?
+
+Prebuilt self-contained binaries for Linux (amd64/arm64), macOS (Intel/Apple Silicon), and Windows are on the [releases page](https://github.com/hyscaler/HyCanvas/releases). Unpack and run `./hycanvas service start`: a first run with no configuration walks you through setup in your browser (guarded by a one-time secret printed on the terminal) or directly in the terminal.
+
 ## Links
 
 - Source and docs: https://github.com/hyscaler/HyCanvas
