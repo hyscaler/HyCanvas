@@ -4,9 +4,9 @@
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type FormEvent } from "react";
 import { Square, SquareRoundCorner, Circle, Triangle, Pentagon, Hexagon, Star, Diamond, Octagon, Minus, MoveUpRight, Frame, QrCode, Type, Upload, Search, Table as TableIcon, BarChart3, LineChart, AreaChart, PieChart, Donut, ScatterChart, Radar, Wand2, ImagePlus, Settings2, Trash2, Folder, FolderPlus, Pencil, X, Tag, ChevronLeft, Link as LinkIcon, Mic, Video, CircleStop, Spline, Clock, LayoutGrid, Shapes, Sparkles, Stethoscope, AlignStartVertical, Play, ChevronDown, Send, Plus, RotateCcw } from "lucide-react";
-import { type ChartType, type Node, type Fill } from "@hc/schema";
+import { type ChartType, type Node, type Fill, type Color } from "@hc/schema";
 import { searchFonts, type FontCatalogEntry } from "@hc/text";
-import { toHex, fromHex } from "@hc/color";
+import { toHex, fromHex, relativeLuminance } from "@hc/color";
 import { qrModules } from "@/lib/qr";
 import { STICKERS, STICKER_CATEGORIES, type Sticker } from "@/lib/stickers";
 import { parseModelJson } from "@/lib/magicDesign";
@@ -1436,6 +1436,28 @@ function textContentOf(node: unknown): string {
     .map((p) => p.runs.map((r) => r.text).join("")).join("\n").trim();
 }
 
+/** The representative solid color of a page background fill (gradient -> first
+ *  stop), or null when it isn't a color fill we can reason about. */
+function bgSolidColor(bg: unknown): Color | null {
+  const f = bg as { type?: string; color?: Color; stops?: { color: Color }[] } | undefined;
+  if (!f) return null;
+  if (f.type === "solid" && f.color) return f.color;
+  if (f.type === "gradient" && f.stops?.length) return f.stops[0].color;
+  return null;
+}
+
+/** Whether a page's background reads as dark, so AI-added text should be light
+ *  to stay legible. Judged from the background fill's luminance (gradient -> its
+ *  first stop). Near-black default text is invisible on the dark posters the
+ *  generator makes (a saturated theme color such as deep blue), which is why AI
+ *  titles seemed to "not appear"; on those we switch to white. We only flip on
+ *  positive evidence of a dark background (never a guess about an image), so a
+ *  page over a light photo keeps the readable near-black default. */
+function pageIsDark(page: unknown): boolean {
+  const c = bgSolidColor((page as { background?: unknown } | undefined)?.background);
+  return c ? relativeLuminance(c) < 0.4 : false;
+}
+
 /** Map a free-form design-type hint to a known DesignType (defaults to deck). */
 function normalizeDesignType(v: unknown): DesignType {
   const s = String(v ?? "").toLowerCase();
@@ -1532,7 +1554,13 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       return { payload: { kind: "image", image, targetId: sel } };
     }
     case "generateDesign": {
-      const dt = normalizeDesignType(a.designType);
+      // The explicit designType wins when the model supplies one; otherwise infer
+      // it from the brief so "make a poster" still maps to a single-page poster
+      // even when the model omits designType (it often does), instead of silently
+      // defaulting to a multi-page deck.
+      const dt = a.designType != null && String(a.designType).trim()
+        ? normalizeDesignType(a.designType)
+        : normalizeDesignType(a.prompt);
       const page = st.doc.pages[st.activePage];
       const size = { width: page?.width ?? 1280, height: page?.height ?? 720 };
       const brandClause = [deps.voiceClause, deps.brandPalette.length ? `Use this brand palette: ${deps.brandPalette.join(", ")}.` : ""].filter(Boolean).join(" ").trim();
@@ -1540,6 +1568,16 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       const append = String(a.mode ?? "").toLowerCase() === "append";
       const outline = await fetchAssistantOutline(deps.workspaceId, dt, String(a.prompt), brandClause, pageCount);
       if (!outline) return { error: "couldn't plan that design" };
+      // Defensive page cap (the server caps too, but the sync-fallback outline
+      // and a non-compliant model can still over-produce): a poster is exactly
+      // one page, and an explicit pageCount is a hard ceiling. This also bounds
+      // the hero-image pass below so a single poster gets at most one image.
+      if (dt === "poster" && outline.pages.length > 1) {
+        const cover = outline.pages.find((p) => p.visualRole === "cover");
+        outline.pages = [cover ?? outline.pages[0]];
+      } else if (typeof pageCount === "number" && pageCount > 0 && outline.pages.length > pageCount) {
+        outline.pages = outline.pages.slice(0, pageCount);
+      }
       // Generate a soft hero background image for the high-impact pages so the
       // result ships WITH imagery (only when the provider supports images).
       let heroImages: { pageIndex: number; url: string }[] = [];
@@ -1650,12 +1688,18 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       if (ctx?.payload?.kind !== "text") return false;
       const { text, targetId } = ctx.payload;
       if (targetId) { st.setText(targetId, text); return true; }
+      // Contrast the text against the current page so AI-added copy is legible on
+      // the dark/imagery posters the generator makes (a near-black default is
+      // invisible there). White on dark, near-black on light.
+      const textColor: Color = pageIsDark(st.doc.pages[st.activePage])
+        ? { srgb: { r: 1, g: 1, b: 1, a: 1 } }
+        : { srgb: { r: 0.1, g: 0.12, b: 0.16, a: 1 } };
       st.addNode("text", {
         name: "AI text",
         transform: { x: 300, y: 320, scaleX: 1, scaleY: 1, rotation: 0 },
         size: { width: 480, height: 120 },
         box: { mode: "fixed", width: 480, height: 120, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
-        content: [{ runs: [{ text, style: { fontFamily: "system", fontStyle: "Regular", fontSize: 28, axes: { wght: 400 }, fill: { type: "solid", color: { srgb: { r: 0.1, g: 0.12, b: 0.16, a: 1 } } } } }], style: { align: "left", direction: "auto" } }],
+        content: [{ runs: [{ text, style: { fontFamily: "system", fontStyle: "Regular", fontSize: 28, axes: { wght: 400 }, fill: { type: "solid", color: textColor } } }], style: { align: "left", direction: "auto" } }],
       } as Partial<Node>);
       return true;
     }
@@ -1683,7 +1727,10 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       if (ctx?.payload?.kind !== "outline") return false;
       const { outline, size, brandPalette, brandFonts, heroImages, append } = ctx.payload;
       const clean: DesignOutline = { ...outline, pages: outline.pages.map((p) => ({ ...p, points: p.points.map((s) => s.trim()).filter(Boolean) })) };
-      const themes = deckThemes({ brandPalette, kicker: clean.title, count: 1, fontHeading: brandFonts.heading, fontBody: brandFonts.body });
+      // Seed the default hue from the title so different briefs don't all fall
+      // back to the same first curated color (a brand palette overrides this).
+      const seed = Array.from(clean.title).reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) | 0, 7);
+      const themes = deckThemes({ brandPalette, kicker: clean.title, count: 1, fontHeading: brandFonts.heading, fontBody: brandFonts.body, seed });
       const deck = layoutDeck(clean, themes[0], size);
       const base = append ? st.doc.pages.length : 0;
       const ids = append ? st.appendDeckPages(deck, size) : st.buildDeckFromOutline(deck, size);

@@ -42,10 +42,41 @@ func outlineSystem(designType, brandClause string, pageCount int) string {
 	return strings.Join(parts, " ")
 }
 
+// capOutlinePages enforces the page-count contract the model only receives as a
+// soft hint. A poster is exactly one page (the cover, if the model tagged one);
+// an explicit pageCount is a hard upper bound for any type. Without this a "make
+// a poster" request routinely comes back as a multi-page deck, which is then
+// laid out with per-page backgrounds and hero images the user never asked for.
+func capOutlinePages(o *DesignOutline, designType string, pageCount int) {
+	limit := 0
+	if designType == "poster" {
+		limit = 1
+	} else if pageCount > 0 {
+		limit = pageCount
+	}
+	if limit <= 0 || len(o.Pages) <= limit {
+		return
+	}
+	if limit == 1 {
+		for _, p := range o.Pages {
+			if p.VisualRole == "cover" {
+				o.Pages = []OutlineItem{p}
+				return
+			}
+		}
+	}
+	o.Pages = o.Pages[:limit]
+}
+
 // Outline generates and validates a DesignOutline (FR-2).
 func (s *Service) Outline(ctx context.Context, workspaceID, designType, prompt, brandClause string, pageCount int) (*DesignOutline, error) {
 	user := fmt.Sprintf("Design type: %s\nBrief: %s", designType, strings.TrimSpace(prompt))
-	return generateValidated(ctx, s, workspaceID, outlineSystem(designType, brandClause, pageCount), user, validateOutline)
+	o, err := generateValidated(ctx, s, workspaceID, outlineSystem(designType, brandClause, pageCount), user, validateOutline)
+	if err != nil {
+		return nil, err
+	}
+	capOutlinePages(o, designType, pageCount)
+	return o, nil
 }
 
 // GenerateDesign runs the full generation pipeline server-side: an outline,

@@ -146,6 +146,41 @@ func TestGenerateValidated_GivesUp(t *testing.T) {
 	}
 }
 
+func TestCapOutlinePages(t *testing.T) {
+	four := func() *DesignOutline {
+		return &DesignOutline{Title: "t", Pages: []OutlineItem{
+			{Title: "intro", VisualRole: "content"},
+			{Title: "hero", VisualRole: "cover"},
+			{Title: "more", VisualRole: "content"},
+			{Title: "end", VisualRole: "closing"},
+		}}
+	}
+	// A poster collapses to exactly the cover page, wherever the model put it.
+	o := four()
+	capOutlinePages(o, "poster", 1)
+	if len(o.Pages) != 1 || o.Pages[0].VisualRole != "cover" {
+		t.Fatalf("poster should keep only the cover, got %d pages %+v", len(o.Pages), o.Pages)
+	}
+	// A poster with no cover keeps the first page.
+	o = &DesignOutline{Title: "t", Pages: []OutlineItem{{Title: "a", VisualRole: "content"}, {Title: "b", VisualRole: "content"}}}
+	capOutlinePages(o, "poster", 0)
+	if len(o.Pages) != 1 || o.Pages[0].Title != "a" {
+		t.Fatalf("poster w/o cover should keep the first page, got %+v", o.Pages)
+	}
+	// An explicit pageCount is a hard ceiling for a deck.
+	o = four()
+	capOutlinePages(o, "deck", 2)
+	if len(o.Pages) != 2 {
+		t.Fatalf("pageCount should cap the deck to 2, got %d", len(o.Pages))
+	}
+	// No cap when the design fits or none is requested.
+	o = four()
+	capOutlinePages(o, "deck", 0)
+	if len(o.Pages) != 4 {
+		t.Fatalf("deck with no pageCount should be untouched, got %d", len(o.Pages))
+	}
+}
+
 func stripSchema(dsn string) string {
 	if i := strings.Index(dsn, "?"); i >= 0 {
 		return dsn[:i]

@@ -51,7 +51,7 @@ function darken(c: Color, amt: number): Color {
 /** Generate N distinct deck themes from a brand palette (if any) or curated
  *  defaults. Each variant differs in base hue and solid/gradient treatment.
  *  Brand fonts (FR-17), when supplied, apply to every variant. */
-export function deckThemes(opts: { brandPalette?: string[]; kicker?: string; count: number; fontHeading?: string; fontBody?: string }): DeckTheme[] {
+export function deckThemes(opts: { brandPalette?: string[]; kicker?: string; count: number; fontHeading?: string; fontBody?: string; seed?: number }): DeckTheme[] {
   const count = Math.max(1, Math.min(8, Math.round(opts.count)));
   const brand = (opts.brandPalette ?? [])
     .map(fromHex)
@@ -60,9 +60,17 @@ export function deckThemes(opts: { brandPalette?: string[]; kicker?: string; cou
     ? brand
     : DEFAULT_HUES.map(fromHex).filter((c): c is Color => Boolean(c));
 
+  // Without a brand palette, offset the starting hue by an optional seed so two
+  // different briefs don't both default to the first curated hue (blue). A brand
+  // palette always leads with the brand's own first color, so the seed is
+  // ignored there.
+  const offset = brand.length === 0 && typeof opts.seed === "number" && Number.isFinite(opts.seed)
+    ? ((Math.floor(opts.seed) % bases.length) + bases.length) % bases.length
+    : 0;
+
   const themes: DeckTheme[] = [];
   for (let i = 0; i < count; i++) {
-    const base = bases[i % bases.length];
+    const base = bases[(i + offset) % bases.length];
     // Alternate treatment so consecutive variants look clearly different.
     const treatment = i % 3;
     let background: DeckTheme["background"];
