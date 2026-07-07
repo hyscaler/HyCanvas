@@ -59,7 +59,17 @@ If you build the binary without the embedded UI (for example a plain `npm run bu
 
 In the dist build the frontend talks to the same-origin `/api` (no `NEXT_PUBLIC_BACKEND_URL` needed), so the one process answers UI and API together.
 
-Run it under a process manager with PM2 (`ecosystem.config.js`):
+The binary can also install itself as an OS service, so no external process manager is needed:
+
+```bash
+./dist/hycanvas service install     # systemd user unit on Linux, launchd agent on macOS
+./dist/hycanvas service status
+./dist/hycanvas service uninstall
+```
+
+`service install` uses the directory the binary lives in as the working directory (that is where `.env` is read from) and, if `.env` is missing but `.env.example` sits next to the binary, creates it from the example and waits for you to edit it before `service start`. HyCanvas never runs as root: the default install is per-user, and `--system` (which needs sudo only for the installation itself) pins the system-wide service to the non-root user who invoked sudo. On Linux, run `loginctl enable-linger <user>` so a per-user service keeps running after logout. Windows is not supported; use Docker there. Other verbs: `start`, `stop`, `restart`.
+
+Alternatively, run it under a process manager with PM2 (`ecosystem.config.js`):
 
 ```bash
 npm run deploy              # build:dist + pm2 reload ecosystem.config.js

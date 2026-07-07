@@ -1,0 +1,162 @@
+name: Release
+
+# Builds the self-contained HyCanvas binary (frontend embedded via go:embed)
+# for every supported platform and publishes them as a GitHub Release.
+#
+# Triggers:
+#   push of a version tag (v*) -> build all targets + create the release
+#   workflow_dispatch          -> build-only dry run (artifacts, no release)
+#
+# Every target cross-compiles from one Ubuntu runner: the backend is pure Go
+# (CGO_ENABLED=0), so no macOS/Windows runners and no QEMU are needed.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  BINARY_NAME: hycanvas
+
+jobs:
+  frontend:
+    name: Frontend export
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      # Fresh install rather than `npm ci`: npm's optional-dependency lockfile bug
+      # (npm/cli#4828) makes `npm ci` skip platform-native packages such as
+      # @rollup/rollup-linux-x64-gnu on Linux. This mirrors ci.yml and the Dockerfile.
+      - run: rm -f package-lock.json && npm install --no-audit --no-fund
+      - run: npm run build:packages
+      # build:dist sets BUILD_DIST=true, which routes the exported frontend to the
+      # same-origin /api, exactly like scripts/build-dist.js does for the bundle.
+      - run: npm run build:dist -w frontend
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-out
+          path: frontend/out
+          if-no-files-found: error
+
+  build:
+    name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
+    runs-on: ubuntu-latest
+    needs: frontend
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { goos: linux, goarch: amd64 }
+          - { goos: linux, goarch: arm64 }
+          - { goos: darwin, goarch: amd64 }
+          - { goos: darwin, goarch: arm64 }
+          - { goos: windows, goarch: amd64 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache-dependency-path: backend/go.sum
+      # Stage the exported frontend into the gitignored go:embed target.
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-out
+          path: backend/internal/webui/public
+      - name: Resolve version
+        id: version
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [ "$REF_TYPE" = "tag" ]; then
+            VERSION="$REF_NAME"
+          else
+            VERSION="$(git describe --tags --always 2>/dev/null || echo dev)"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+      - name: Build binary
+        working-directory: backend
+        env:
+          CGO_ENABLED: "0"
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          BIN="$BINARY_NAME"
+          if [ "$GOOS" = "windows" ]; then BIN="${BIN}.exe"; fi
+          go build -tags embed -trimpath \
+            -ldflags "-s -w -X main.version=${VERSION}" \
+            -o "../out/${BIN}" ./cmd/api
+      - name: Package archive
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          BASE="${BINARY_NAME}_${VERSION}_${GOOS}_${GOARCH}"
+          cp LICENSE NOTICE .env.example out/
+          mkdir -p archives
+          if [ "$GOOS" = "windows" ]; then
+            (cd out && zip -qr "../archives/${BASE}.zip" .)
+          else
+            tar -czf "archives/${BASE}.tar.gz" -C out .
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: archives/
+          if-no-files-found: error
+
+  release:
+    name: GitHub Release
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref_type == 'tag'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          merge-multiple: true
+          path: dist
+      - name: Generate checksums
+        working-directory: dist
+        run: sha256sum *.tar.gz *.zip > SHA256SUMS.txt
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          cat > notes.md <<'EOF'
+          ## Platform notes
+
+          - Each archive contains the self-contained `hycanvas` binary with the frontend embedded, plus `.env.example`; see the README for setup (`.env`, PostgreSQL).
+          - On Linux and macOS the binary installs itself as a service: `./hycanvas service install` (systemd user unit / launchd agent; add `--system` for system-wide). The service always runs as a regular user, never as root. On first install it creates `.env` from the example; edit it, then run `./hycanvas service start`.
+          - The macOS binaries are not signed or notarized. If macOS quarantines the download, run `xattr -d com.apple.quarantine hycanvas` or right-click the binary and choose Open.
+          - ffmpeg is only required for server-side video export; everything else works without it.
+          EOF
+          ARGS=(--title "$TAG" --verify-tag --generate-notes --notes "$(cat notes.md)")
+          case "$TAG" in *-*) ARGS+=(--prerelease) ;; esac
+          gh release create "$TAG" dist/* "${ARGS[@]}"
+      - name: Summary
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          {
+            echo "## Release summary"
+            echo ""
+            echo "**Tag**: \`${TAG}\`"
+            echo "**Assets**:"
+            for f in dist/*; do
+              echo "- \`$(basename "$f")\`"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"

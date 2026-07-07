@@ -26,6 +26,7 @@ import (
 	"hycanvas/backend/internal/bulkcreate"
 	"hycanvas/backend/internal/comments"
 	"hycanvas/backend/internal/convert"
+	"hycanvas/backend/internal/daemon"
 	"hycanvas/backend/internal/engagement"
 	"hycanvas/backend/internal/home"
 	"hycanvas/backend/internal/httpapi"
@@ -55,6 +56,12 @@ var localhostOriginRE = regexp.MustCompile(`^https?://(localhost|127\.0\.0\.1)(:
 var version = "dev"
 
 func main() {
+	// `hycanvas service ...` manages the OS service (systemd/launchd) and must
+	// not boot the server, so it dispatches before any config or logger setup.
+	if len(os.Args) > 1 && os.Args[1] == "service" {
+		os.Exit(daemon.Run(os.Args[2:], os.Stdout, os.Stderr))
+	}
+
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(logger)
 	logger.Info("starting", "service", "hycanvas", "version", version)
