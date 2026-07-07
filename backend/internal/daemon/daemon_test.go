@@ -2,133 +2,47 @@ package daemon
 
 import (
 	"bytes"
-	"io"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 )
 
-// stubCommands replaces runCommand for the test's lifetime, recording every
-// invocation and returning success.
-func stubCommands(t *testing.T) *[][]string {
+// stubServer writes an executable script into dir that ignores its args and
+// sleeps, standing in for the real server so start/stop can be exercised.
+func stubServer(t *testing.T, dir string) string {
 	t.Helper()
-	var calls [][]string
-	orig := runCommand
-	runCommand = func(name string, args ...string) (string, error) {
-		calls = append(calls, append([]string{name}, args...))
-		return "", nil
+	if runtime.GOOS == "windows" {
+		t.Skip("stub script based tests are unix-only")
 	}
-	t.Cleanup(func() { runCommand = orig })
-	return &calls
+	exe := filepath.Join(dir, "hycanvas")
+	script := "#!/bin/sh\necho \"stub server up\"\nexec sleep 60\n"
+	if err := os.WriteFile(exe, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return exe
 }
 
-func TestSystemdUnitUser(t *testing.T) {
-	unit := systemdUnit("/opt/hy canvas/hycanvas", "/opt/hy canvas", false, "")
-	for _, want := range []string{
-		"ExecStart=\"/opt/hy canvas/hycanvas\"",
-		"WorkingDirectory=/opt/hy canvas",
-		"Restart=on-failure",
-		"RestartSec=5",
-		"WantedBy=default.target",
-	} {
-		if !strings.Contains(unit, want) {
-			t.Errorf("user unit missing %q:\n%s", want, unit)
-		}
-	}
-	if strings.Contains(unit, "network-online.target") {
-		t.Errorf("user unit must not order against network-online.target:\n%s", unit)
-	}
-	if strings.Contains(unit, "User=") {
-		t.Errorf("user unit must not carry a User directive:\n%s", unit)
-	}
-}
-
-func TestSystemdUnitSystem(t *testing.T) {
-	unit := systemdUnit("/usr/local/bin/hycanvas", "/srv/hycanvas", true, "deploy")
-	for _, want := range []string{
-		"Wants=network-online.target",
-		"After=network-online.target",
-		"WantedBy=multi-user.target",
-		"User=deploy",
-	} {
-		if !strings.Contains(unit, want) {
-			t.Errorf("system unit missing %q:\n%s", want, unit)
-		}
-	}
-}
-
-func TestLaunchdPlistSystemRunsAsUser(t *testing.T) {
-	plist := launchdPlist("/srv/hycanvas/hycanvas", "/srv/hycanvas", "/Library/Logs/hycanvas", "deploy")
-	if !strings.Contains(plist, "<key>UserName</key>") || !strings.Contains(plist, "<string>deploy</string>") {
-		t.Errorf("system daemon plist must pin a non-root UserName:\n%s", plist)
-	}
-}
-
-func TestLaunchdPlistEscapesXML(t *testing.T) {
-	plist := launchdPlist("/tmp/a&b/hycanvas", "/tmp/a&b", "/tmp/a&b/logs", "")
-	if strings.Contains(plist, "UserName") {
-		t.Errorf("per-user agent must not carry a UserName key:\n%s", plist)
-	}
-	if !strings.Contains(plist, "<string>/tmp/a&amp;b/hycanvas</string>") {
-		t.Errorf("exe path not XML-escaped:\n%s", plist)
-	}
-	for _, want := range []string{
-		"<string>" + launchdLabel + "</string>",
-		"<key>WorkingDirectory</key>",
-		"<key>KeepAlive</key>",
-		"<key>SuccessfulExit</key>",
-		"<key>RunAtLoad</key>",
-	} {
-		if !strings.Contains(plist, want) {
-			t.Errorf("plist missing %q:\n%s", want, plist)
-		}
-	}
-}
-
-func TestEnsureEnv(t *testing.T) {
-	t.Run("env present", func(t *testing.T) {
-		dir := t.TempDir()
-		if err := os.WriteFile(filepath.Join(dir, ".env"), []byte("A=1\n"), 0o600); err != nil {
-			t.Fatal(err)
-		}
-		ready, _, err := ensureEnv(dir)
-		if err != nil || !ready {
-			t.Fatalf("want ready with existing .env, got ready=%v err=%v", ready, err)
+func newTestSvc(t *testing.T) (*svc, *bytes.Buffer) {
+	t.Helper()
+	dir := t.TempDir()
+	var out bytes.Buffer
+	s := &svc{exe: stubServer(t, dir), dir: dir, out: &out}
+	t.Cleanup(func() {
+		if pid, alive := s.readPid(); alive {
+			_ = forceKill(pid)
 		}
 	})
+	return s, &out
+}
 
-	t.Run("bootstraps from example", func(t *testing.T) {
-		dir := t.TempDir()
-		if err := os.WriteFile(filepath.Join(dir, ".env.example"), []byte("DATABASE_URL=\n"), 0o644); err != nil {
-			t.Fatal(err)
-		}
-		ready, msg, err := ensureEnv(dir)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if ready {
-			t.Fatal("freshly created .env must not be treated as ready")
-		}
-		if !strings.Contains(msg, "created") {
-			t.Errorf("msg = %q, want creation notice", msg)
-		}
-		data, err := os.ReadFile(filepath.Join(dir, ".env"))
-		if err != nil || string(data) != "DATABASE_URL=\n" {
-			t.Fatalf(".env not copied from example: %q, %v", data, err)
-		}
-	})
-
-	t.Run("nothing to bootstrap from", func(t *testing.T) {
-		dir := t.TempDir()
-		ready, msg, err := ensureEnv(dir)
-		if err != nil || ready {
-			t.Fatalf("want not ready, got ready=%v err=%v", ready, err)
-		}
-		if !strings.Contains(msg, "no .env") {
-			t.Errorf("msg = %q, want missing-.env notice", msg)
-		}
-	})
+func TestGenerateSecret(t *testing.T) {
+	a, b := GenerateSecret(), GenerateSecret()
+	if len(a) < 24 || a == b {
+		t.Fatalf("weak secret generation: %q %q", a, b)
+	}
 }
 
 func TestRunArgErrors(t *testing.T) {
@@ -148,146 +62,167 @@ func TestRunArgErrors(t *testing.T) {
 	}
 }
 
-func TestNewManagerUnsupportedGOOS(t *testing.T) {
-	if _, err := newManager("windows", false, io.Discard); err == nil {
-		t.Fatal("windows must be rejected with guidance")
-	} else if !strings.Contains(err.Error(), "Docker") {
-		t.Errorf("error should point at alternatives: %v", err)
+func TestStartStopLifecycle(t *testing.T) {
+	s, out := newTestSvc(t)
+
+	if err := s.start(); err != nil {
+		t.Fatalf("start: %v\noutput: %s", err, out.String())
+	}
+	pid, alive := s.readPid()
+	if !alive {
+		t.Fatal("server not alive after start")
+	}
+	// First run without .env must surface the wizard secret and URL.
+	if !strings.Contains(out.String(), "wizard access secret:") ||
+		!strings.Contains(out.String(), "/installation/step-1") {
+		t.Errorf("first-run output missing wizard secret/URL: %q", out.String())
+	}
+
+	out.Reset()
+	if err := s.start(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "already running") {
+		t.Errorf("double start should refuse: %q", out.String())
+	}
+	if p2, _ := s.readPid(); p2 != pid {
+		t.Errorf("double start replaced pid %d with %d", pid, p2)
+	}
+
+	out.Reset()
+	if err := s.status(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "running (pid "+strconv.Itoa(pid)+")") {
+		t.Errorf("status should report running: %q", out.String())
+	}
+
+	out.Reset()
+	if err := s.stop(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "stopped") {
+		t.Errorf("stop output: %q", out.String())
+	}
+	if _, err := os.Stat(s.pidPath()); !os.IsNotExist(err) {
+		t.Error("pidfile not removed by stop")
+	}
+	if processAlive(pid) {
+		t.Error("process still alive after stop")
 	}
 }
 
-func TestSystemdInstallReady(t *testing.T) {
-	calls := stubCommands(t)
-	home, dir := t.TempDir(), t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte("A=1\n"), 0o600); err != nil {
+func TestStartWithEnvDoesNotPrintSecret(t *testing.T) {
+	s, out := newTestSvc(t)
+	if err := os.WriteFile(filepath.Join(s.dir, ".env"), []byte("A=1\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.start(); err != nil {
+		t.Fatalf("start: %v\noutput: %s", err, out.String())
+	}
+	defer func() { _ = s.stop() }()
+	if strings.Contains(out.String(), "wizard access secret") {
+		t.Errorf("secret printed although .env exists: %q", out.String())
+	}
+	if !strings.Contains(out.String(), "serving on") {
+		t.Errorf("normal start output missing: %q", out.String())
+	}
+}
+
+func TestStalePidfileRecovery(t *testing.T) {
+	s, out := newTestSvc(t)
+	// A pid that cannot be alive: max pid space on the platforms we test.
+	if err := os.WriteFile(s.pidPath(), []byte("99999999\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.start(); err != nil {
+		t.Fatalf("start with stale pidfile: %v\noutput: %s", err, out.String())
+	}
+	defer func() { _ = s.stop() }()
+	if pid, alive := s.readPid(); !alive || pid == 99999999 {
+		t.Errorf("stale pidfile not replaced: pid=%d alive=%v", pid, alive)
+	}
+}
+
+func TestStopWhenNotRunning(t *testing.T) {
+	s, out := newTestSvc(t)
+	if err := s.stop(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "not running") {
+		t.Errorf("stop on idle service: %q", out.String())
+	}
+}
+
+func TestStartFailsFastWhenServerDies(t *testing.T) {
+	dir := t.TempDir()
+	exe := filepath.Join(dir, "hycanvas")
+	if err := os.WriteFile(exe, []byte("#!/bin/sh\necho boom >&2\nexit 3\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	var out bytes.Buffer
-	m := &systemdManager{exe: filepath.Join(dir, "hycanvas"), dir: dir, home: home, out: &out}
-	if err := m.install(); err != nil {
-		t.Fatal(err)
+	s := &svc{exe: exe, dir: dir, out: &out}
+	if err := s.start(); err == nil {
+		t.Fatalf("start should fail when the server dies immediately; output: %s", out.String())
 	}
-
-	unit, err := os.ReadFile(filepath.Join(home, ".config", "systemd", "user", "hycanvas.service"))
-	if err != nil {
-		t.Fatalf("unit not written: %v", err)
+	if !strings.Contains(out.String(), "boom") {
+		t.Errorf("failure output should include the log tail: %q", out.String())
 	}
-	if !strings.Contains(string(unit), "WorkingDirectory="+dir) {
-		t.Errorf("unit lacks workdir:\n%s", unit)
-	}
-
-	want := [][]string{
-		{"systemctl", "--user", "daemon-reload"},
-		{"systemctl", "--user", "enable", "--now", "hycanvas"},
-	}
-	if len(*calls) != len(want) {
-		t.Fatalf("calls = %v, want %v", *calls, want)
-	}
-	for i, w := range want {
-		if strings.Join((*calls)[i], " ") != strings.Join(w, " ") {
-			t.Errorf("call %d = %v, want %v", i, (*calls)[i], w)
-		}
+	if _, err := os.Stat(s.pidPath()); !os.IsNotExist(err) {
+		t.Error("pidfile left behind after failed start")
 	}
 }
 
-func TestSystemdInstallNotReadyDoesNotStart(t *testing.T) {
-	calls := stubCommands(t)
-	home, dir := t.TempDir(), t.TempDir()
-	var out bytes.Buffer
-	m := &systemdManager{exe: filepath.Join(dir, "hycanvas"), dir: dir, home: home, out: &out}
-	if err := m.install(); err != nil {
-		t.Fatal(err)
+func TestLogTail(t *testing.T) {
+	dir := t.TempDir()
+	logPath := filepath.Join(dir, logFileName)
+	var content strings.Builder
+	for i := 1; i <= 300; i++ {
+		content.WriteString("line " + strconv.Itoa(i) + "\n")
 	}
-	for _, c := range *calls {
-		joined := strings.Join(c, " ")
-		if strings.Contains(joined, "--now") || strings.Contains(joined, " start") {
-			t.Errorf("service must not start without a ready .env: %v", c)
-		}
-	}
-	if !strings.Contains(out.String(), "hycanvas service start") {
-		t.Errorf("output should tell the user how to start later: %q", out.String())
-	}
-}
-
-func TestSystemdUninstallRemovesUnit(t *testing.T) {
-	stubCommands(t)
-	home := t.TempDir()
-	unitPath := filepath.Join(home, ".config", "systemd", "user", "hycanvas.service")
-	if err := os.MkdirAll(filepath.Dir(unitPath), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(unitPath, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	m := &systemdManager{home: home, out: io.Discard}
-	if err := m.uninstall(); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Stat(unitPath); !os.IsNotExist(err) {
-		t.Errorf("unit file still present after uninstall")
-	}
-}
-
-func TestLaunchdInstallReady(t *testing.T) {
-	calls := stubCommands(t)
-	home, dir := t.TempDir(), t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte("A=1\n"), 0o600); err != nil {
+	if err := os.WriteFile(logPath, []byte(content.String()), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	var out bytes.Buffer
-	m := &launchdManager{exe: filepath.Join(dir, "hycanvas"), dir: dir, home: home, uid: 501, out: &out}
-	if err := m.install(); err != nil {
+	s := &svc{dir: dir, out: &out}
+	if err := s.log([]string{"-n", "3"}); err != nil {
 		t.Fatal(err)
 	}
-
-	plist, err := os.ReadFile(filepath.Join(home, "Library", "LaunchAgents", launchdLabel+".plist"))
-	if err != nil {
-		t.Fatalf("plist not written: %v", err)
-	}
-	if !strings.Contains(string(plist), "<string>"+dir+"</string>") {
-		t.Errorf("plist lacks workdir:\n%s", plist)
-	}
-
-	var sawBootstrap bool
-	for _, c := range *calls {
-		if len(c) >= 3 && c[0] == "launchctl" && c[1] == "bootstrap" && c[2] == "gui/501" {
-			sawBootstrap = true
-		}
-	}
-	if !sawBootstrap {
-		t.Errorf("expected launchctl bootstrap gui/501, got calls: %v", *calls)
+	got := strings.TrimSpace(out.String())
+	want := "line 298\nline 299\nline 300"
+	if got != want {
+		t.Errorf("log -n 3 = %q, want %q", got, want)
 	}
 }
 
-func TestLaunchdInstallNotReadyDoesNotBootstrap(t *testing.T) {
-	calls := stubCommands(t)
-	home, dir := t.TempDir(), t.TempDir()
-	m := &launchdManager{exe: filepath.Join(dir, "hycanvas"), dir: dir, home: home, uid: 501, out: io.Discard}
-	if err := m.install(); err != nil {
+func TestLogMissingFile(t *testing.T) {
+	var out bytes.Buffer
+	s := &svc{dir: t.TempDir(), out: &out}
+	if err := s.log(nil); err != nil {
 		t.Fatal(err)
 	}
-	for _, c := range *calls {
-		if len(c) >= 2 && c[1] == "bootstrap" {
-			t.Errorf("must not bootstrap without a ready .env: %v", *calls)
-		}
+	if !strings.Contains(out.String(), "no log file yet") {
+		t.Errorf("missing log message: %q", out.String())
 	}
 }
 
-func TestLaunchdUninstallRemovesPlist(t *testing.T) {
-	stubCommands(t)
-	home := t.TempDir()
-	plistPath := filepath.Join(home, "Library", "LaunchAgents", launchdLabel+".plist")
-	if err := os.MkdirAll(filepath.Dir(plistPath), 0o755); err != nil {
+func TestTailLinesTruncatedWindow(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "big.log")
+	// Bigger than the 256KB window so the partial first line is dropped.
+	line := strings.Repeat("x", 1024)
+	var b strings.Builder
+	for i := 0; i < 400; i++ {
+		b.WriteString(line + strconv.Itoa(i) + "\n")
+	}
+	if err := os.WriteFile(path, []byte(b.String()), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(plistPath, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+	lines := tailLines(path, 5)
+	if len(lines) != 5 {
+		t.Fatalf("got %d lines, want 5", len(lines))
 	}
-	m := &launchdManager{home: home, uid: 501, out: io.Discard}
-	if err := m.uninstall(); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Stat(plistPath); !os.IsNotExist(err) {
-		t.Errorf("plist still present after uninstall")
+	if !strings.HasSuffix(lines[4], "399") {
+		t.Errorf("last line = %q, want suffix 399", lines[4])
 	}
 }

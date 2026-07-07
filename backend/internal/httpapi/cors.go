@@ -2,6 +2,12 @@ package httpapi
 
 import "net/http"
 
+// CORSMiddleware exposes corsMiddleware to other servers in this module (the
+// first-run setup wizard needs the same dev-frontend CORS).
+func CORSMiddleware(allowOrigin func(string) bool) func(http.Handler) http.Handler {
+	return corsMiddleware(allowOrigin)
+}
+
 // corsMiddleware echoes CORS headers for allowed cross-origin requests and
 // answers preflight OPTIONS, mirroring the former NestJS enableCors: the matched
 // origin is echoed back (never "*") with credentials allowed, so the dev

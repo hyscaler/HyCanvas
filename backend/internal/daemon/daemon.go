@@ -1,80 +1,75 @@
-// Package daemon implements the `hycanvas service` subcommand: it installs and
-// manages the binary as an OS service (a systemd unit on Linux, a launchd
-// agent on macOS) so self-hosted deployments need no external process manager.
-// The serving path is untouched; the service manager simply runs the binary in
-// the foreground and relies on its existing graceful SIGTERM shutdown.
+// Package daemon implements the `hycanvas service` subcommand: it runs the
+// binary as a self-managed background process with a pidfile and logfile next
+// to the binary. No OS service manager is involved, so the same verbs work on
+// Linux, macOS, and Windows; boot persistence, if wanted, is up to the
+// operator (Docker, cron, or their own supervisor).
 package daemon
 
 import (
-	"encoding/xml"
+	"crypto/rand"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
-	"os/user"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
-	serviceName  = "hycanvas"
-	launchdLabel = "com.hycanvas.app"
+	pidFileName = "hycanvas.pid"
+	logFileName = "hycanvas.log"
+
+	// stopGrace is how long stop waits for a graceful shutdown before
+	// escalating to a hard kill.
+	stopGrace = 15 * time.Second
 )
 
-// runCommand is swappable in tests so verbs can be exercised without touching
-// the host's systemd or launchd.
-var runCommand = func(name string, args ...string) (string, error) {
-	out, err := exec.Command(name, args...).CombinedOutput()
-	return strings.TrimSpace(string(out)), err
-}
+// SetupSecretEnv carries the wizard access secret from `service start` to the
+// spawned server so the operator sees the secret in their own terminal while
+// the server (booting into setup mode without a .env) enforces the same value.
+const SetupSecretEnv = "HYCANVAS_SETUP_SECRET"
 
-type manager interface {
-	install() error
-	uninstall() error
-	start() error
-	stop() error
-	restart() error
-	status() error
+// GenerateSecret returns a random secret for the first-run wizard gate.
+func GenerateSecret() string {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		panic(err) // crypto/rand failing means the host is unusable
+	}
+	return hex.EncodeToString(b)
 }
 
 // Run executes `hycanvas service <verb>` and returns the process exit code.
-// Output is plain text: this is an interactive command, not the JSON server.
 func Run(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
 		usage(stderr)
 		return 2
 	}
-	verb := args[0]
-	fs := flag.NewFlagSet("service", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	system := fs.Bool("system", false, "manage a system-wide service instead of a per-user one")
-	if err := fs.Parse(args[1:]); err != nil {
-		return 2
-	}
-
-	mgr, err := newManager(runtime.GOOS, *system, stdout)
+	exe, err := os.Executable()
 	if err != nil {
-		fmt.Fprintln(stderr, "error:", err)
+		fmt.Fprintln(stderr, "error: resolve executable path:", err)
 		return 1
 	}
+	if resolved, err := filepath.EvalSymlinks(exe); err == nil {
+		exe = resolved
+	}
+	s := &svc{exe: exe, dir: filepath.Dir(exe), out: stdout}
 
 	var verr error
-	switch verb {
-	case "install":
-		verr = mgr.install()
-	case "uninstall":
-		verr = mgr.uninstall()
+	switch verb := args[0]; verb {
 	case "start":
-		verr = mgr.start()
+		verr = s.start()
 	case "stop":
-		verr = mgr.stop()
+		verr = s.stop()
 	case "restart":
-		verr = mgr.restart()
+		verr = s.restart()
 	case "status":
-		verr = mgr.status()
+		verr = s.status()
+	case "log", "logs":
+		verr = s.log(args[1:])
 	default:
 		fmt.Fprintf(stderr, "unknown service command %q\n\n", verb)
 		usage(stderr)
@@ -88,416 +83,257 @@ func Run(args []string, stdout, stderr io.Writer) int {
 }
 
 func usage(w io.Writer) {
-	fmt.Fprintln(w, "usage: hycanvas service <install|uninstall|start|stop|restart|status> [--system]")
+	fmt.Fprintln(w, "usage: hycanvas service <start|stop|restart|status|log>")
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "Installs and manages HyCanvas as an OS service: a systemd unit on Linux,")
-	fmt.Fprintln(w, "a launchd agent on macOS. The service runs per-user by default; --system")
-	fmt.Fprintln(w, "installs it system-wide (sudo needed to install, but the service itself")
-	fmt.Fprintln(w, "still runs as the non-root user who invoked sudo; HyCanvas never runs as")
-	fmt.Fprintln(w, "root). The directory the binary lives in becomes the working directory,")
-	fmt.Fprintln(w, "which is where .env is read from.")
+	fmt.Fprintln(w, "Runs HyCanvas as a self-managed background process (pidfile and logfile")
+	fmt.Fprintln(w, "next to the binary; the binary's directory is the working directory, which")
+	fmt.Fprintln(w, "is where .env is read from). `hycanvas start` runs it in the foreground.")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "  start     start the background process (prints the setup wizard secret")
+	fmt.Fprintln(w, "            and URL on a first run without a .env)")
+	fmt.Fprintln(w, "  stop      graceful shutdown, hard kill after a grace period")
+	fmt.Fprintln(w, "  restart   stop then start")
+	fmt.Fprintln(w, "  status    liveness and the last log line")
+	fmt.Fprintln(w, "  log       print the last log lines; -f follows, -n sets the line count")
 }
 
-func newManager(goos string, system bool, out io.Writer) (manager, error) {
-	switch goos {
-	case "linux", "darwin":
-	default:
-		return nil, fmt.Errorf("`hycanvas service` supports Linux (systemd) and macOS (launchd) only; on %s run the binary under Docker or a service wrapper such as NSSM or the Task Scheduler", goos)
-	}
-	var runAs *user.User
-	if system {
-		if os.Geteuid() != 0 {
-			return nil, fmt.Errorf("--system requires sudo to install; the service itself still runs unprivileged")
-		}
-		// HyCanvas must never run as root, so a system-wide service is pinned
-		// to the non-root user who invoked sudo.
-		name := os.Getenv("SUDO_USER")
-		if name == "" || name == "root" {
-			return nil, fmt.Errorf("cannot determine the non-root user the service should run as; invoke as `sudo hycanvas service ... --system` from that user's shell (not from a root shell)")
-		}
-		u, err := user.Lookup(name)
-		if err != nil {
-			return nil, fmt.Errorf("look up user %q: %w", name, err)
-		}
-		runAs = u
-	}
-	exe, err := os.Executable()
+type svc struct {
+	exe string
+	dir string
+	out io.Writer
+}
+
+func (s *svc) pidPath() string { return filepath.Join(s.dir, pidFileName) }
+func (s *svc) logPath() string { return filepath.Join(s.dir, logFileName) }
+
+// readPid returns the recorded pid and whether that process is alive.
+// A pidfile whose process is gone is stale; callers may clean it up.
+func (s *svc) readPid() (pid int, alive bool) {
+	raw, err := os.ReadFile(s.pidPath())
 	if err != nil {
-		return nil, fmt.Errorf("resolve executable path: %w", err)
+		return 0, false
 	}
-	if resolved, err := filepath.EvalSymlinks(exe); err == nil {
-		exe = resolved
+	pid, err = strconv.Atoi(strings.TrimSpace(string(raw)))
+	if err != nil || pid <= 0 {
+		return 0, false
 	}
-	home, err := os.UserHomeDir()
-	if err != nil && !system {
-		return nil, fmt.Errorf("resolve home directory: %w", err)
-	}
-	if goos == "linux" {
-		return &systemdManager{system: system, runAs: runAs, exe: exe, dir: filepath.Dir(exe), home: home, out: out}, nil
-	}
-	return &launchdManager{system: system, runAs: runAs, exe: exe, dir: filepath.Dir(exe), home: home, uid: os.Getuid(), out: out}, nil
+	return pid, processAlive(pid)
 }
 
-// ensureEnv makes sure a .env exists next to the binary. When it has to create
-// one from .env.example (the release archive ships it), or cannot create one
-// at all, the service must not be started yet; ready reports that.
-func ensureEnv(dir string) (ready bool, msg string, err error) {
-	envPath := filepath.Join(dir, ".env")
-	if _, err := os.Stat(envPath); err == nil {
-		return true, "", nil
-	}
-	example := filepath.Join(dir, ".env.example")
-	if _, err := os.Stat(example); err == nil {
-		data, err := os.ReadFile(example)
-		if err != nil {
-			return false, "", err
-		}
-		if err := os.WriteFile(envPath, data, 0o600); err != nil {
-			return false, "", err
-		}
-		return false, fmt.Sprintf("created %s from .env.example; edit it (at minimum DATABASE_URL and JWT_SECRET)", envPath), nil
-	}
-	return false, fmt.Sprintf("no .env found next to the binary; create %s (at minimum DATABASE_URL and JWT_SECRET)", envPath), nil
-}
-
-func cmdErr(what, out string, err error) error {
-	if out == "" {
-		return fmt.Errorf("%s: %w", what, err)
-	}
-	return fmt.Errorf("%s: %w: %s", what, err, out)
-}
-
-// ---- systemd (Linux) ----
-
-type systemdManager struct {
-	system bool
-	runAs  *user.User // service account for --system units; nil in user mode
-	exe    string
-	dir    string
-	home   string
-	out    io.Writer
-}
-
-func (m *systemdManager) unitPath() string {
-	if m.system {
-		return filepath.Join("/etc/systemd/system", serviceName+".service")
-	}
-	return filepath.Join(m.home, ".config", "systemd", "user", serviceName+".service")
-}
-
-func (m *systemdManager) systemctl(args ...string) (string, error) {
-	if !m.system {
-		args = append([]string{"--user"}, args...)
-	}
-	return runCommand("systemctl", args...)
-}
-
-// systemdUnit renders the unit file. ExecStart is quoted because systemd
-// shell-splits it; WorkingDirectory takes the value verbatim. User units
-// cannot order against network-online.target, only the system instance can.
-// runAs pins a system unit to a non-root account (HyCanvas never runs as
-// root); it is empty for per-user units, which are unprivileged by nature.
-func systemdUnit(exe, workdir string, system bool, runAs string) string {
-	var b strings.Builder
-	b.WriteString("[Unit]\n")
-	b.WriteString("Description=HyCanvas server\n")
-	if system {
-		b.WriteString("Wants=network-online.target\n")
-		b.WriteString("After=network-online.target\n")
-	}
-	b.WriteString("\n[Service]\n")
-	fmt.Fprintf(&b, "ExecStart=%q\n", exe)
-	fmt.Fprintf(&b, "WorkingDirectory=%s\n", workdir)
-	if system && runAs != "" {
-		fmt.Fprintf(&b, "User=%s\n", runAs)
-	}
-	b.WriteString("Restart=on-failure\n")
-	b.WriteString("RestartSec=5\n")
-	b.WriteString("\n[Install]\n")
-	if system {
-		b.WriteString("WantedBy=multi-user.target\n")
-	} else {
-		b.WriteString("WantedBy=default.target\n")
-	}
-	return b.String()
-}
-
-func (m *systemdManager) install() error {
-	ready, msg, err := ensureEnv(m.dir)
-	if err != nil {
-		return err
-	}
-	path := m.unitPath()
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	if err := os.WriteFile(path, []byte(systemdUnit(m.exe, m.dir, m.system, m.runAsName())), 0o644); err != nil {
-		return err
-	}
-	fmt.Fprintln(m.out, "wrote", path)
-	if m.system {
-		fmt.Fprintf(m.out, "the service runs as %s (never root); %s must stay readable and writable by that user\n", m.runAsName(), m.dir)
-	}
-	if out, err := m.systemctl("daemon-reload"); err != nil {
-		return cmdErr("systemctl daemon-reload", out, err)
-	}
-	if ready {
-		if out, err := m.systemctl("enable", "--now", serviceName); err != nil {
-			return cmdErr("systemctl enable --now", out, err)
-		}
-		fmt.Fprintln(m.out, "service enabled and started")
-	} else {
-		if out, err := m.systemctl("enable", serviceName); err != nil {
-			return cmdErr("systemctl enable", out, err)
-		}
-		fmt.Fprintln(m.out, msg)
-		fmt.Fprintln(m.out, "service enabled; run `hycanvas service start` once .env is ready")
-	}
-	if !m.system {
-		fmt.Fprintf(m.out, "hint: run `loginctl enable-linger %s` so the service keeps running after logout\n", userName())
-	}
-	return nil
-}
-
-func (m *systemdManager) runAsName() string {
-	if m.runAs == nil {
-		return ""
-	}
-	return m.runAs.Username
-}
-
-func (m *systemdManager) uninstall() error {
-	// Best effort: the unit may not be enabled or running.
-	_, _ = m.systemctl("disable", "--now", serviceName)
-	if err := os.Remove(m.unitPath()); err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	_, _ = m.systemctl("daemon-reload")
-	fmt.Fprintln(m.out, "service removed")
-	return nil
-}
-
-func (m *systemdManager) start() error   { return m.ctl("start") }
-func (m *systemdManager) stop() error    { return m.ctl("stop") }
-func (m *systemdManager) restart() error { return m.ctl("restart") }
-
-func (m *systemdManager) ctl(verb string) error {
-	if out, err := m.systemctl(verb, serviceName); err != nil {
-		return cmdErr("systemctl "+verb, out, err)
-	}
-	fmt.Fprintf(m.out, "service %s: ok\n", verb)
-	return nil
-}
-
-func (m *systemdManager) status() error {
-	// systemctl status exits non-zero for inactive units; the output already
-	// says so, so only treat an empty result as a real error.
-	out, err := m.systemctl("status", "--no-pager", serviceName)
-	if out != "" {
-		fmt.Fprintln(m.out, out)
+func (s *svc) start() error {
+	if pid, alive := s.readPid(); alive {
+		fmt.Fprintf(s.out, "already running (pid %d)\n", pid)
 		return nil
 	}
-	return err
-}
+	// A pidfile without a live process is left over from a crash or kill -9.
+	_ = os.Remove(s.pidPath())
 
-// ---- launchd (macOS) ----
-
-type launchdManager struct {
-	system bool
-	runAs  *user.User // service account for --system daemons; nil in user mode
-	exe    string
-	dir    string
-	home   string
-	uid    int
-	out    io.Writer
-}
-
-func (m *launchdManager) plistPath() string {
-	if m.system {
-		return filepath.Join("/Library/LaunchDaemons", launchdLabel+".plist")
+	logf, err := os.OpenFile(s.logPath(), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+	if err != nil {
+		return fmt.Errorf("open log file: %w", err)
 	}
-	return filepath.Join(m.home, "Library", "LaunchAgents", launchdLabel+".plist")
-}
+	defer logf.Close()
 
-func (m *launchdManager) domain() string {
-	if m.system {
-		return "system"
+	env := os.Environ()
+	secret := ""
+	if _, err := os.Stat(filepath.Join(s.dir, ".env")); err != nil {
+		// No .env: the server will boot into the setup wizard. Generate the
+		// wizard access secret here so it reaches the operator's terminal.
+		secret = GenerateSecret()
+		env = append(env, SetupSecretEnv+"="+secret)
 	}
-	return fmt.Sprintf("gui/%d", m.uid)
-}
 
-func (m *launchdManager) target() string {
-	return m.domain() + "/" + launchdLabel
-}
-
-func (m *launchdManager) logDir() string {
-	if m.system {
-		return filepath.Join("/Library/Logs", serviceName)
+	cmd := exec.Command(s.exe, "start")
+	cmd.Dir = s.dir
+	cmd.Stdout = logf
+	cmd.Stderr = logf
+	cmd.Env = env
+	cmd.SysProcAttr = detachAttr()
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("spawn server: %w", err)
 	}
-	return filepath.Join(m.home, "Library", "Logs", serviceName)
-}
-
-// launchdPlist renders the agent/daemon definition. runAs pins a system
-// daemon to a non-root account (HyCanvas never runs as root); it is empty for
-// per-user agents, which launchd already runs as the logged-in user.
-func launchdPlist(exe, workdir, logDir, runAs string) string {
-	userNameKey := ""
-	if runAs != "" {
-		userNameKey = fmt.Sprintf("\t<key>UserName</key>\n\t<string>%s</string>\n", xmlEscape(runAs))
+	pid := cmd.Process.Pid
+	if err := os.WriteFile(s.pidPath(), []byte(strconv.Itoa(pid)+"\n"), 0o600); err != nil {
+		_ = forceKill(pid)
+		return fmt.Errorf("write pidfile: %w", err)
 	}
-	return fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-	<key>Label</key>
-	<string>%s</string>
-	<key>ProgramArguments</key>
-	<array>
-		<string>%s</string>
-	</array>
-	<key>WorkingDirectory</key>
-	<string>%s</string>
-%s	<key>RunAtLoad</key>
-	<true/>
-	<key>KeepAlive</key>
-	<dict>
-		<key>SuccessfulExit</key>
-		<false/>
-	</dict>
-	<key>StandardOutPath</key>
-	<string>%s</string>
-	<key>StandardErrorPath</key>
-	<string>%s</string>
-</dict>
-</plist>
-`, launchdLabel, xmlEscape(exe), xmlEscape(workdir), userNameKey,
-		xmlEscape(filepath.Join(logDir, serviceName+".log")),
-		xmlEscape(filepath.Join(logDir, serviceName+".err.log")))
+	// Reap the child if it exits while this command still runs; otherwise a
+	// dead server would linger as a zombie and read as alive. This command
+	// exits right after anyway, at which point init adopts the server.
+	go func() { _ = cmd.Wait() }()
+
+	// Catch immediate failures (bad port, unreadable dir) so the operator is
+	// not told "started" about a process that already died.
+	time.Sleep(500 * time.Millisecond)
+	if !processAlive(pid) {
+		_ = os.Remove(s.pidPath())
+		fmt.Fprintln(s.out, "server exited immediately; last log lines:")
+		s.printTail(80)
+		return fmt.Errorf("server failed to start")
+	}
+
+	fmt.Fprintf(s.out, "started (pid %d)\n", pid)
+	fmt.Fprintln(s.out, "logs:", s.logPath())
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8005"
+	}
+	if secret != "" {
+		fmt.Fprintf(s.out, "\nfirst run: finish setup at http://localhost:%s/installation/step-1\n", port)
+		fmt.Fprintf(s.out, "wizard access secret: %s\n", secret)
+		fmt.Fprintln(s.out, "(the wizard asks for this secret before anything can be configured)")
+	} else {
+		fmt.Fprintf(s.out, "serving on http://localhost:%s\n", port)
+	}
+	return nil
 }
 
-func xmlEscape(s string) string {
-	var b strings.Builder
-	_ = xml.EscapeText(&b, []byte(s))
-	return b.String()
+func (s *svc) stop() error {
+	pid, alive := s.readPid()
+	if !alive {
+		_ = os.Remove(s.pidPath())
+		fmt.Fprintln(s.out, "not running")
+		return nil
+	}
+	if err := terminate(pid); err != nil {
+		return fmt.Errorf("signal pid %d: %w", pid, err)
+	}
+	deadline := time.Now().Add(stopGrace)
+	for time.Now().Before(deadline) {
+		if !processAlive(pid) {
+			_ = os.Remove(s.pidPath())
+			fmt.Fprintf(s.out, "stopped (pid %d)\n", pid)
+			return nil
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	_ = forceKill(pid)
+	time.Sleep(500 * time.Millisecond)
+	if processAlive(pid) {
+		return fmt.Errorf("pid %d did not exit even after SIGKILL", pid)
+	}
+	_ = os.Remove(s.pidPath())
+	fmt.Fprintf(s.out, "stopped (pid %d, forced after %s grace)\n", pid, stopGrace)
+	return nil
 }
 
-func (m *launchdManager) install() error {
-	ready, msg, err := ensureEnv(m.dir)
+func (s *svc) restart() error {
+	if err := s.stop(); err != nil {
+		return err
+	}
+	return s.start()
+}
+
+func (s *svc) status() error {
+	pid, alive := s.readPid()
+	if !alive {
+		fmt.Fprintln(s.out, "not running")
+		return nil
+	}
+	fmt.Fprintf(s.out, "running (pid %d)\n", pid)
+	if last := lastLine(s.logPath()); last != "" {
+		fmt.Fprintln(s.out, "last log:", last)
+	}
+	return nil
+}
+
+func (s *svc) log(args []string) error {
+	fs := flag.NewFlagSet("log", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	follow := fs.Bool("f", false, "follow the log")
+	lines := fs.Int("n", 100, "number of lines to print")
+	if err := fs.Parse(args); err != nil {
+		return fmt.Errorf("usage: hycanvas service log [-f] [-n lines]")
+	}
+	if _, err := os.Stat(s.logPath()); err != nil {
+		fmt.Fprintln(s.out, "no log file yet:", s.logPath())
+		return nil
+	}
+	s.printTail(*lines)
+	if !*follow {
+		return nil
+	}
+	return s.followLog()
+}
+
+// followLog streams appended log data until the command is interrupted.
+func (s *svc) followLog() error {
+	f, err := os.Open(s.logPath())
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(m.logDir(), 0o755); err != nil {
+	defer f.Close()
+	offset, err := f.Seek(0, io.SeekEnd)
+	if err != nil {
 		return err
 	}
-	// A --system install runs as root but the service does not; the service
-	// account must be able to write its logs.
-	if m.runAs != nil {
-		uid, uerr := strconv.Atoi(m.runAs.Uid)
-		gid, gerr := strconv.Atoi(m.runAs.Gid)
-		if uerr == nil && gerr == nil {
-			if err := os.Chown(m.logDir(), uid, gid); err != nil {
-				return fmt.Errorf("chown log dir to %s: %w", m.runAs.Username, err)
+	for {
+		time.Sleep(500 * time.Millisecond)
+		info, err := os.Stat(s.logPath())
+		if err != nil {
+			return nil // log removed; stop following
+		}
+		if info.Size() < offset {
+			offset = 0 // truncated/rotated; start over
+			if _, err := f.Seek(0, io.SeekStart); err != nil {
+				return err
 			}
 		}
-	}
-	path := m.plistPath()
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	// Unload any previous definition so a reinstall picks up the new plist.
-	_, _ = runCommand("launchctl", "bootout", m.target())
-	if err := os.WriteFile(path, []byte(launchdPlist(m.exe, m.dir, m.logDir(), m.runAsName())), 0o644); err != nil {
-		return err
-	}
-	fmt.Fprintln(m.out, "wrote", path)
-	if m.system {
-		fmt.Fprintf(m.out, "the service runs as %s (never root); %s must stay readable and writable by that user\n", m.runAsName(), m.dir)
-	}
-	if ready {
-		if out, err := runCommand("launchctl", "bootstrap", m.domain(), path); err != nil {
-			return cmdErr("launchctl bootstrap", out, err)
+		n, err := io.Copy(s.out, f)
+		if err != nil {
+			return err
 		}
-		fmt.Fprintln(m.out, "service loaded and started")
-		fmt.Fprintln(m.out, "logs:", m.logDir())
-	} else {
-		fmt.Fprintln(m.out, msg)
-		fmt.Fprintln(m.out, "run `hycanvas service start` once .env is ready")
+		offset += n
 	}
-	return nil
 }
 
-func (m *launchdManager) runAsName() string {
-	if m.runAs == nil {
-		return ""
+func (s *svc) printTail(n int) {
+	for _, line := range tailLines(s.logPath(), n) {
+		fmt.Fprintln(s.out, line)
 	}
-	return m.runAs.Username
 }
 
-func (m *launchdManager) uninstall() error {
-	// Best effort: the agent may not be loaded.
-	_, _ = runCommand("launchctl", "bootout", m.target())
-	if err := os.Remove(m.plistPath()); err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	fmt.Fprintln(m.out, "service removed")
-	return nil
-}
-
-func (m *launchdManager) start() error {
-	if _, err := os.Stat(m.plistPath()); err != nil {
-		return fmt.Errorf("not installed; run `hycanvas service install` first")
-	}
-	// Bootstrap is a no-op failure when already loaded; kickstart then does
-	// the actual start and reports meaningful errors.
-	_, _ = runCommand("launchctl", "bootstrap", m.domain(), m.plistPath())
-	if out, err := runCommand("launchctl", "kickstart", m.target()); err != nil {
-		return cmdErr("launchctl kickstart", out, err)
-	}
-	fmt.Fprintln(m.out, "service started")
-	return nil
-}
-
-func (m *launchdManager) stop() error {
-	if out, err := runCommand("launchctl", "bootout", m.target()); err != nil {
-		return cmdErr("launchctl bootout", out, err)
-	}
-	fmt.Fprintln(m.out, "service stopped (unloaded until the next start or login)")
-	return nil
-}
-
-func (m *launchdManager) restart() error {
-	if _, err := runCommand("launchctl", "kickstart", "-k", m.target()); err != nil {
-		// Not loaded; treat as a fresh start.
-		return m.start()
-	}
-	fmt.Fprintln(m.out, "service restarted")
-	return nil
-}
-
-func (m *launchdManager) status() error {
-	out, err := runCommand("launchctl", "print", m.target())
+// tailLines returns up to n final lines of the file, reading at most the last
+// 256KB so huge logs stay cheap.
+func tailLines(path string, n int) []string {
+	f, err := os.Open(path)
 	if err != nil {
-		if _, statErr := os.Stat(m.plistPath()); statErr == nil {
-			fmt.Fprintln(m.out, "installed but not loaded; run `hycanvas service start`")
-		} else {
-			fmt.Fprintln(m.out, "not installed; run `hycanvas service install`")
-		}
 		return nil
 	}
-	// launchctl print is verbose; surface only the interesting lines.
-	for _, line := range strings.Split(out, "\n") {
-		t := strings.TrimSpace(line)
-		if strings.HasPrefix(t, "state") || strings.HasPrefix(t, "pid") ||
-			strings.HasPrefix(t, "path") || strings.HasPrefix(t, "last exit") {
-			fmt.Fprintln(m.out, t)
-		}
+	defer f.Close()
+	const window = 256 * 1024
+	info, err := f.Stat()
+	if err != nil {
+		return nil
 	}
-	return nil
+	start := info.Size() - window
+	if start < 0 {
+		start = 0
+	}
+	if _, err := f.Seek(start, io.SeekStart); err != nil {
+		return nil
+	}
+	data, err := io.ReadAll(f)
+	if err != nil {
+		return nil
+	}
+	lines := strings.Split(strings.TrimRight(string(data), "\n"), "\n")
+	if start > 0 && len(lines) > 0 {
+		lines = lines[1:] // first line is likely cut mid-way
+	}
+	if len(lines) > n {
+		lines = lines[len(lines)-n:]
+	}
+	if len(lines) == 1 && lines[0] == "" {
+		return nil
+	}
+	return lines
 }
 
-func userName() string {
-	if u := os.Getenv("USER"); u != "" {
-		return u
+func lastLine(path string) string {
+	lines := tailLines(path, 1)
+	if len(lines) == 0 {
+		return ""
 	}
-	return "<user>"
+	return lines[0]
 }

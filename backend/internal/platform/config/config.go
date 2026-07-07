@@ -5,12 +5,17 @@
 package config
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"path/filepath"
 
 	"github.com/joho/godotenv"
 )
+
+// ErrDatabaseURLMissing marks the one config failure that is not fatal for
+// cmd/api: an unset DATABASE_URL means "unconfigured" and triggers the
+// first-run setup wizard instead of an exit.
+var ErrDatabaseURLMissing = errors.New("DATABASE_URL is required")
 
 type Config struct {
 	Port        string
@@ -38,7 +43,7 @@ func Load() (Config, error) {
 		AutoMigrate: os.Getenv("DB_AUTO_MIGRATE") != "false",
 	}
 	if c.DatabaseURL == "" {
-		return c, fmt.Errorf("DATABASE_URL is required")
+		return c, ErrDatabaseURLMissing
 	}
 	return c, nil
 }

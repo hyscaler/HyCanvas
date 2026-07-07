@@ -59,15 +59,21 @@ If you build the binary without the embedded UI (for example a plain `npm run bu
 
 In the dist build the frontend talks to the same-origin `/api` (no `NEXT_PUBLIC_BACKEND_URL` needed), so the one process answers UI and API together.
 
-The binary can also install itself as an OS service, so no external process manager is needed:
+The binary can also run itself as a background service, so no external process manager is needed. `./dist/hycanvas start` (or just `./dist/hycanvas`) runs in the foreground; the `service` verbs manage a detached process with a pidfile and logfile next to the binary, on Linux, macOS, and Windows alike:
 
 ```bash
-./dist/hycanvas service install     # systemd user unit on Linux, launchd agent on macOS
+./dist/hycanvas service start       # detach into the background
 ./dist/hycanvas service status
-./dist/hycanvas service uninstall
+./dist/hycanvas service log         # last log lines; -f follows
+./dist/hycanvas service restart
+./dist/hycanvas service stop
 ```
 
-`service install` uses the directory the binary lives in as the working directory (that is where `.env` is read from) and, if `.env` is missing but `.env.example` sits next to the binary, creates it from the example and waits for you to edit it before `service start`. HyCanvas never runs as root: the default install is per-user, and `--system` (which needs sudo only for the installation itself) pins the system-wide service to the non-root user who invoked sudo. On Linux, run `loginctl enable-linger <user>` so a per-user service keeps running after logout. Windows is not supported; use Docker there. Other verbs: `start`, `stop`, `restart`.
+The binary's directory is the service's working directory, which is where `.env` is read from. The service does not auto-start at boot; if you want that, use Docker or your own supervisor (PM2 below).
+
+### First-run setup wizard
+
+No `.env` yet? Just start the server. It boots into setup mode and serves a browser wizard: opening any page redirects to `/installation/step-1`, which asks for the one-time wizard access secret (printed by `service start`, in the foreground output, or in `hycanvas service log`) and then walks through PostgreSQL, storage (local or S3), and optional SMTP, testing each answer live. Finishing the wizard writes `.env` (secrets like `JWT_SECRET` are generated automatically), runs the database migrations, starts the app in the same process, and creates your first account. To skip the wizard, create a `.env` by hand (see `.env.example`) before starting.
 
 Alternatively, run it under a process manager with PM2 (`ecosystem.config.js`):
 
@@ -75,7 +81,7 @@ Alternatively, run it under a process manager with PM2 (`ecosystem.config.js`):
 npm run deploy              # build:dist + pm2 reload ecosystem.config.js
 ```
 
-Set real values in `.env` for production: at minimum `NODE_ENV=production`, `DATABASE_URL`, a strong `JWT_SECRET`, `APP_URL` (public base URL used in generated links), and an absolute `LOCAL_STORAGE_PATH` (or `STORAGE_DRIVER=s3` with `S3_*`). AI provider keys are configured per workspace at runtime (stored encrypted), never via env.
+When writing `.env` by hand for production, set at minimum `NODE_ENV=production`, `DATABASE_URL`, a strong `JWT_SECRET`, `APP_URL` (public base URL used in generated links), and an absolute `LOCAL_STORAGE_PATH` (or `STORAGE_DRIVER=s3` with `S3_*`). AI provider keys are configured per workspace at runtime (stored encrypted), never via env.
 
 ## Run with Docker (self-host)
 

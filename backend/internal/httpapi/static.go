@@ -40,6 +40,12 @@ func mountStatic(r chi.Router, dir string) {
 	mountStaticFS(r, http.Dir(dir))
 }
 
+// MountStaticFS exposes the exported-frontend resolution to other servers in
+// this module; the first-run setup wizard serves the same embedded UI.
+func MountStaticFS(r chi.Router, root http.FileSystem) {
+	mountStaticFS(r, root)
+}
+
 // mountStaticFS serves the exported frontend from any http.FileSystem, so the
 // same resolution logic backs both the embedded UI (single-binary production)
 // and a PUBLIC_DIR directory (fallback / custom deploys).

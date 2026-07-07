@@ -38,11 +38,13 @@ import (
 	"hycanvas/backend/internal/platform/db"
 	"hycanvas/backend/internal/push"
 	"hycanvas/backend/internal/realtime"
+	"hycanvas/backend/internal/setup"
 	"hycanvas/backend/internal/sharing"
 	"hycanvas/backend/internal/stock"
 	"hycanvas/backend/internal/storage"
 	"hycanvas/backend/internal/templates"
 	"hycanvas/backend/internal/uploads"
+	"hycanvas/backend/internal/webui"
 	"hycanvas/backend/internal/whiteboard"
 )
 
@@ -56,8 +58,10 @@ var localhostOriginRE = regexp.MustCompile(`^https?://(localhost|127\.0\.0\.1)(:
 var version = "dev"
 
 func main() {
-	// `hycanvas service ...` manages the OS service (systemd/launchd) and must
-	// not boot the server, so it dispatches before any config or logger setup.
+	// `hycanvas service ...` manages the background process (pidfile + logfile)
+	// and must not boot the server, so it dispatches before any config or
+	// logger setup. `hycanvas start` is the explicit foreground run, identical
+	// to invoking the binary with no arguments.
 	if len(os.Args) > 1 && os.Args[1] == "service" {
 		os.Exit(daemon.Run(os.Args[2:], os.Stdout, os.Stderr))
 	}
@@ -67,6 +71,31 @@ func main() {
 	logger.Info("starting", "service", "hycanvas", "version", version)
 
 	cfg, err := config.Load()
+	if errors.Is(err, config.ErrDatabaseURLMissing) {
+		// Unconfigured: run the first-run setup wizard when a frontend is
+		// available to serve it, then reload the freshly written .env and
+		// continue booting in this same process.
+		webFS := setupWebFS(cfg.PublicDir)
+		if webFS == nil {
+			logger.Error("DATABASE_URL is not set and no frontend is available to run the setup wizard; create a .env (see .env.example) with at least DATABASE_URL and JWT_SECRET")
+			os.Exit(1)
+		}
+		secret := os.Getenv(daemon.SetupSecretEnv)
+		if secret == "" {
+			secret = daemon.GenerateSecret()
+		}
+		if err := setup.Run(context.Background(), setup.Options{
+			Logger:  logger,
+			Version: version,
+			Port:    cfg.Port,
+			Secret:  secret,
+			WebFS:   webFS,
+		}); err != nil {
+			logger.Error("setup wizard failed", "err", err)
+			os.Exit(1)
+		}
+		cfg, err = config.Load()
+	}
 	if err != nil {
 		logger.Error("config load failed", "err", err)
 		os.Exit(1)
@@ -398,4 +427,19 @@ type pushAdapter struct{ p *push.Service }
 
 func (a pushAdapter) Send(ctx context.Context, userID, title, body, url string) {
 	a.p.Send(ctx, userID, push.Payload{Title: title, Body: body, URL: url})
+}
+
+// setupWebFS returns the frontend filesystem the setup wizard should serve:
+// the embedded UI when built with -tags embed, else PUBLIC_DIR, else nil
+// (API-only build; the wizard cannot run).
+func setupWebFS(publicDir string) http.FileSystem {
+	if webui.HasContent() {
+		return http.FS(webui.FS())
+	}
+	if publicDir != "" {
+		if info, err := os.Stat(publicDir); err == nil && info.IsDir() {
+			return http.Dir(publicDir)
+		}
+	}
+	return nil
 }

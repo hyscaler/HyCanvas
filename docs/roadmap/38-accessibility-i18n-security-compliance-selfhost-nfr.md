@@ -94,6 +94,7 @@ Self-host and NFR:
 - FR-26: Reliability: every change is autosaved with no data loss (CRDT + snapshots, the realtime and persistence layers), and version history is recoverable; defined RPO and RTO targets govern backups and disaster recovery.
 - FR-27: Observability is built in across all services: structured logs, OpenTelemetry traces, Prometheus metrics, error tracking, uptime/SLA monitoring, and usage analytics, with dashboards and alerting (extending the architecture baseline).
 - FR-28: Backups are automated and tested with restore drills; a documented DR plan with failover meets the RPO/RTO targets.
+- FR-29 (shipped): First-run setup happens in the browser. An unconfigured server (no `DATABASE_URL`) boots into a setup mode serving an installation wizard at `/installation/step-1`, gated by a one-time access secret shown on the operator's terminal; the wizard validates Postgres, storage, and SMTP answers live with visible progress, writes the configuration, migrates the database, hands over to the normal server in-process, and creates the first account. The binary also self-daemonizes (`hycanvas service start|stop|restart|status|log`) with no OS service manager required.
 
 ## 5. UX and Interaction Behavior
 
@@ -359,6 +360,7 @@ Internal contracts:
 - AC-12: The full platform deploys via docker-compose (single-node) and Helm (Kubernetes) with MinIO and a self-hosted/BYO AI model, passing health checks and a smoke run of core flows.
 - AC-13: The hosted service demonstrates the 99.9%+ SLA target in monitoring, autosaves with zero data loss in a fault-injection test, and a restore drill meets the documented RPO/RTO.
 - AC-14: Observability is live: logs, traces, metrics, error tracking, and uptime monitoring are present with dashboards and alerts for every service.
+- AC-15 (shipped): On a clean host with only PostgreSQL available, starting the release binary with no `.env` and completing the browser setup wizard (including the terminal access secret) ends with a configured, migrated, running instance and a signed-in first account, without hand-editing any file; a wrong access secret is rejected and rate-limited.
 
 ## 12. Test and Verification Plan
 
