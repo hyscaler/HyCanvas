@@ -87,7 +87,7 @@ import {
 } from "@hc/engine";
 import { booleanOp, fitCubicBeziers, pathToPolylines, recognizeShape, shapeNodeToParametric, shapeToPath, simplifyPolyline, strokeToOutline, type BooleanOp } from "@hc/geometry";
 import { imageAssets } from "@/lib/assetProvider";
-import { pageTop } from "@/lib/pageLayout";
+import { PAGE_GAP, pageOffsets, pageTop } from "@/lib/pageLayout";
 import type { MagicDesignSpec } from "@/lib/magicDesign";
 import { layoutDesign, type AiDesignSpec, type DeckResult } from "@hc/aistudio";
 import { qrModules } from "@/lib/qr";
@@ -374,6 +374,10 @@ interface EditorState {
    *  navigation (fit-all + MiniMap) so it tracks content parked beyond the page
    *  edge (F30 FR-1), not just the fixed page size. */
   contentBounds(): { x: number; y: number; width: number; height: number } | null;
+  /** Content bounds (node union ∪ page rect, page-local coords) for ANY page
+   *  index, so the MiniMap can overview the page currently under the viewport
+   *  even when it is not the active page (continuous scroll). */
+  pageContentBounds(index: number): { x: number; y: number; width: number; height: number } | null;
   /** Zoom to frame the current selection (falls back to fit). */
   zoomToSelection(): void;
   /** Select a node and pan the viewport to center it, gently (F30 search jump):
@@ -1019,9 +1023,9 @@ function ensureDocArrays(doc: DesignFile): void {
 }
 
 export const useEditor = create<EditorState>((set, get) => {
-  // Cache for contentBounds(): recomputed only when the scene rev or active page
-  // changes, so panning (which calls it every frame via the MiniMap) is O(1).
-  let cbCache: { rev: number; page: number; bounds: { x: number; y: number; width: number; height: number } | null } | null = null;
+  // Cache for pageContentBounds(): keyed by (rev, page index) so panning (which
+  // calls it every frame via the MiniMap) is O(1) unless the scene changed.
+  let cbCache: { rev: number; byPage: Map<number, { x: number; y: number; width: number; height: number } | null> } | null = null;
 
   // Push an undo entry and apply the forward action immediately. While a CRDT
   // undo manager is bound it owns history exclusively: local entries are NOT
@@ -1067,23 +1071,49 @@ export const useEditor = create<EditorState>((set, get) => {
     return -1;
   };
 
-  // Center a new node in the visible viewport (in page coordinates), clamped to
-  // the page artboard, so added elements appear where the user is looking rather
-  // than at the page's top-left corner.
-  const positionInView = (n: Node) => {
-    const { zoom, panX, panY } = get().viewport;
+  // Which page should a panel insert target, and where on it? A new element is
+  // placed at the CENTER OF THE PAGE artboard (not the viewport), so it always
+  // lands on the page regardless of how the user has panned or zoomed. Pages are
+  // stacked vertically in world space, so we first resolve which page the user
+  // is looking at: the page whose stacked band contains the viewport center
+  // (same half-gap rule as the canvas hit-testing). Wheel-scrolling does not
+  // update activePage, so resolving from the viewport (not activePage) is what
+  // makes "add on page 2" target page 2. Falls back to the active page before
+  // the viewport is measured. cx/cy are the target page's own center.
+  const insertContext = () => {
+    const { zoom, panY } = get().viewport;
     const vs = get().viewportSize;
-    const page = get().doc.pages[curPageIndex()];
+    const doc = get().doc;
+    let index = curPageIndex();
+    if (vs.height > 0 && zoom > 0 && doc.pages.length > 0) {
+      // screen = zoom*(world - pan)  =>  world = screen/zoom + pan
+      const wy = panY + vs.height / 2 / zoom;
+      const offs = pageOffsets(doc);
+      index = doc.pages.length - 1;
+      for (let i = 0; i < doc.pages.length; i++) {
+        if (wy < offs[i] + doc.pages[i].height + PAGE_GAP / 2) { index = i; break; }
+      }
+    }
+    const page = doc.pages[index];
+    return { index, page, cx: (page?.width ?? 0) / 2, cy: (page?.height ?? 0) / 2 };
+  };
+
+  // Center a new node on its target page (page-local coordinates), clamped to
+  // the artboard. Returns the index of the page the node was positioned for; the
+  // caller must insert it THERE (and make that page active) or the coordinates
+  // land on a page they do not belong to.
+  const positionInView = (n: Node): number => {
+    const { index, page, cx, cy } = insertContext();
     const size = (n as unknown as { size?: { width: number; height: number } }).size;
-    const w = size?.width ?? 100;
-    const h = size?.height ?? 100;
-    // screen = zoom*(page - pan)  =>  page = screen/zoom + pan
-    const cx = vs.width > 0 && zoom > 0 ? panX + vs.width / 2 / zoom : page.width / 2;
-    const cy = vs.height > 0 && zoom > 0 ? panY + vs.height / 2 / zoom : page.height / 2;
-    const x = Math.max(0, Math.min(cx - w / 2, Math.max(0, page.width - w)));
-    const y = Math.max(0, Math.min(cy - h / 2, Math.max(0, page.height - h)));
     const t = (n as unknown as { transform: Transform }).transform;
+    // Effective on-canvas footprint includes the node's own scale (icon groups
+    // are inserted pre-scaled), or the clamp misjudges where the box ends.
+    const w = (size?.width ?? 100) * Math.abs(t?.scaleX ?? 1);
+    const h = (size?.height ?? 100) * Math.abs(t?.scaleY ?? 1);
+    const x = Math.max(0, Math.min(cx - w / 2, Math.max(0, (page?.width ?? 0) - w)));
+    const y = Math.max(0, Math.min(cy - h / 2, Math.max(0, (page?.height ?? 0) - h)));
     (n as unknown as { transform: Transform }).transform = { ...t, x, y };
+    return index;
   };
 
   return {
@@ -1657,13 +1687,14 @@ export const useEditor = create<EditorState>((set, get) => {
       }),
     setViewportSize: (width, height) =>
       set((s) => (s.viewportSize.width === width && s.viewportSize.height === height ? {} : { viewportSize: { width, height } })),
-    contentBounds: () => {
+    contentBounds: () => get().pageContentBounds(curPageIndex()),
+    pageContentBounds: (index) => {
       const rev = get().rev;
-      const pi = curPageIndex();
-      if (cbCache && cbCache.rev === rev && cbCache.page === pi) return cbCache.bounds;
-      const page = get().doc.pages[pi];
+      if (!cbCache || cbCache.rev !== rev) cbCache = { rev, byPage: new Map() };
+      if (cbCache.byPage.has(index)) return cbCache.byPage.get(index) ?? null;
+      const page = get().doc.pages[index];
       if (!page) {
-        cbCache = { rev, page: pi, bounds: null };
+        cbCache.byPage.set(index, null);
         return null;
       }
       const pageRect = { x: 0, y: 0, width: page.width, height: page.height };
@@ -1681,7 +1712,7 @@ export const useEditor = create<EditorState>((set, get) => {
         const maxY = Math.max(nodes.y + nodes.height, pageRect.y + pageRect.height);
         bounds = { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
       }
-      cbCache = { rev, page: pi, bounds };
+      cbCache.byPage.set(index, bounds);
       return bounds;
     },
     fitToScreen: () => {
@@ -2786,12 +2817,13 @@ export const useEditor = create<EditorState>((set, get) => {
         transform: { x: 200, y: 200, scaleX: 1, scaleY: 1, rotation: 0 },
         size: { width: 480, height: 320 },
       } as unknown as Partial<Node>);
-      positionInView(node);
-      const page = get().doc.pages[curPageIndex()];
+      const pageIndex = positionInView(node);
+      const page = get().doc.pages[pageIndex];
       const prev = get().selection;
+      const prevActive = get().activePage;
       perform(
-        () => { page.children.push(node); set({ selection: [node.id] }); },
-        () => { const i = page.children.findIndex((n) => n.id === node.id); if (i >= 0) page.children.splice(i, 1); set({ selection: prev }); },
+        () => { page.children.push(node); set({ activePage: pageIndex, selection: [node.id] }); },
+        () => { const i = page.children.findIndex((n) => n.id === node.id); if (i >= 0) page.children.splice(i, 1); set({ activePage: prevActive, selection: prev }); },
       );
       return node.id;
     },
@@ -3070,13 +3102,18 @@ export const useEditor = create<EditorState>((set, get) => {
         box: { mode: "fixed", width: 360, height: 80, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
         content: [{ runs: [{ text, style: { fontFamily: "system", fontStyle: "Regular", fontSize: 24, fill: { type: "solid", color: { srgb: { r: 0.1, g: 0.12, b: 0.16, a: 1 } } } } }], style: { align: "left", direction: "auto" } }],
       } as Partial<Node>);
+      // A pointer-derived position is already in the ACTIVE page's local space
+      // (the pointer flow activates the page under the cursor first); a panel
+      // insert centers on the page under the viewport instead.
+      let pageIndex = curPageIndex();
       if (at) (node as unknown as { transform: Transform }).transform = { x: at.x, y: at.y, scaleX: 1, scaleY: 1, rotation: 0 };
-      else positionInView(node);
-      const page = get().doc.pages[curPageIndex()];
+      else pageIndex = positionInView(node);
+      const page = get().doc.pages[pageIndex];
       const prev = get().selection;
+      const prevActive = get().activePage;
       perform(
-        () => { page.children.push(node); set({ selection: [node.id] }); },
-        () => { const i = page.children.findIndex((n) => n.id === node.id); if (i >= 0) page.children.splice(i, 1); set({ selection: prev }); },
+        () => { page.children.push(node); set({ activePage: pageIndex, selection: [node.id] }); },
+        () => { const i = page.children.findIndex((n) => n.id === node.id); if (i >= 0) page.children.splice(i, 1); set({ activePage: prevActive, selection: prev }); },
       );
       get().privateRound?.mine.add(node.id); // private mode: my text (FR-15)
     },
@@ -3183,18 +3220,19 @@ export const useEditor = create<EditorState>((set, get) => {
 
     addNode: (type, init) => {
       const node = createNode(type, init);
-      positionInView(node);
-      const page = get().doc.pages[curPageIndex()];
+      const pageIndex = positionInView(node);
+      const page = get().doc.pages[pageIndex];
       const prevSelection = get().selection;
+      const prevActive = get().activePage;
       perform(
         () => {
           page.children.push(node);
-          set({ selection: [node.id] });
+          set({ activePage: pageIndex, selection: [node.id] });
         },
         () => {
           const i = page.children.findIndex((n) => n.id === node.id);
           if (i >= 0) page.children.splice(i, 1);
-          set({ selection: prevSelection });
+          set({ activePage: prevActive, selection: prevSelection });
         },
       );
     },
@@ -3211,30 +3249,29 @@ export const useEditor = create<EditorState>((set, get) => {
       const vbW = (vb && vb[2]) || 24;
       const vbH = (vb && vb[3]) || 24;
       const scale = 200 / Math.max(vbW, vbH);
-      const { zoom, panX, panY } = get().viewport;
-      const vs = get().viewportSize;
-      const page = get().doc.pages[curPageIndex()];
-      const cx = vs.width > 0 && zoom > 0 ? panX + vs.width / 2 / zoom : page.width / 2;
-      const cy = vs.height > 0 && zoom > 0 ? panY + vs.height / 2 / zoom : page.height / 2;
       const group = createNode("group", {
         name: "Icon",
         children: nodes,
-        transform: { x: cx - (scale * vbW) / 2, y: cy - (scale * vbH) / 2, scaleX: scale, scaleY: scale, rotation: 0 },
+        transform: { x: 0, y: 0, scaleX: scale, scaleY: scale, rotation: 0 },
         size: { width: vbW, height: vbH },
         // Provenance (stock asset id + license) rides in the same undo step so
         // the attribution compiler can derive credits from the design itself.
         ...(provenance ? { data: { provenance } } : {}),
       } as Partial<Node>);
+      const pageIndex = positionInView(group);
+      const page = get().doc.pages[pageIndex];
       const prev = get().selection;
+      const prevActive = get().activePage;
       perform(
-        () => { page.children.push(group); set({ selection: [group.id] }); },
-        () => { const i = page.children.findIndex((n) => n.id === group.id); if (i >= 0) page.children.splice(i, 1); set({ selection: prev }); },
+        () => { page.children.push(group); set({ activePage: pageIndex, selection: [group.id] }); },
+        () => { const i = page.children.findIndex((n) => n.id === group.id); if (i >= 0) page.children.splice(i, 1); set({ activePage: prevActive, selection: prev }); },
       );
     },
     insertPhotoGrid: (rows, cols) => {
       const r = Math.max(1, Math.min(6, Math.round(rows)));
       const c = Math.max(1, Math.min(6, Math.round(cols)));
-      const page = get().doc.pages[curPageIndex()];
+      // Size against the page under the viewport (the page the grid will join).
+      const { index: pageIndex, page } = insertContext();
       if (!page) return null;
       const gap = 8;
       // Size the grid to a comfortable square-ish box within the page.
@@ -3267,9 +3304,10 @@ export const useEditor = create<EditorState>((set, get) => {
       } as Partial<Node>);
       positionInView(grid);
       const prev = get().selection;
+      const prevActive = get().activePage;
       perform(
-        () => { page.children.push(grid); set({ selection: [grid.id] }); },
-        () => { const i = page.children.findIndex((n) => n.id === grid.id); if (i >= 0) page.children.splice(i, 1); set({ selection: prev }); },
+        () => { page.children.push(grid); set({ activePage: pageIndex, selection: [grid.id] }); },
+        () => { const i = page.children.findIndex((n) => n.id === grid.id); if (i >= 0) page.children.splice(i, 1); set({ activePage: prevActive, selection: prev }); },
       );
       return grid.id;
     },
@@ -3375,28 +3413,31 @@ export const useEditor = create<EditorState>((set, get) => {
         // design's credits, in the same undo step as the insert.
         ...(provenance ? { data: { provenance } } : {}),
       } as Partial<Node>);
-      // Center on the drop point if given (drag-drop), else in the viewport.
+      // Center on the drop point if given (drag-drop, already in the active
+      // page's local space), else on the page under the viewport center.
+      let pageIndex = curPageIndex();
       if (at) (node as unknown as { transform: Transform }).transform = { x: at.x - 160, y: at.y - 120, scaleX: 1, scaleY: 1, rotation: 0 };
-      else positionInView(node);
+      else pageIndex = positionInView(node);
       const doc = get().doc;
       ensureDocArrays(doc);
-      const page = doc.pages[curPageIndex()];
+      const page = doc.pages[pageIndex];
       // checksum is a real content hash once ingested; placement does
       // not have the bytes, so leave it empty rather than faking it with the id.
       const ref: AssetRef = { id: assetId, kind: "image", url, mime: "image/*", checksum: "" };
       const prevSelection = get().selection;
+      const prevActive = get().activePage;
       perform(
         () => {
           doc.assets.push(ref);
           page.children.push(node);
-          set({ selection: [node.id] });
+          set({ activePage: pageIndex, selection: [node.id] });
         },
         () => {
           const i = page.children.findIndex((n) => n.id === node.id);
           if (i >= 0) page.children.splice(i, 1);
           const ai = doc.assets.findIndex((a) => a.id === assetId);
           if (ai >= 0) doc.assets.splice(ai, 1);
-          set({ selection: prevSelection });
+          set({ activePage: prevActive, selection: prevSelection });
         },
       );
 
