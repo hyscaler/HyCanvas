@@ -45,10 +45,14 @@ export type SMTPAnswers = {
   fromName: string;
 };
 
-// SetupAnswers mirrors the server's completeRequest shape.
+// SetupAnswers mirrors the server's completeRequest shape. Proxied
+// deployments split the public URL (external domain) from the internal bind
+// host and port the proxy forwards to.
 export type SetupAnswers = {
   appUrl: string;
   port: string;
+  proxied: boolean;
+  bindHost: string;
   db: DBAnswers;
   storage: StorageAnswers;
   smtp: SMTPAnswers;
@@ -132,6 +136,8 @@ export async function getAnswers(): Promise<SetupAnswers> {
 export async function updateAnswers(partial: {
   appUrl?: string;
   port?: string;
+  proxied?: boolean;
+  bindHost?: string;
   db?: DBAnswers;
   storage?: StorageAnswers;
   smtp?: SMTPAnswers;

@@ -17,6 +17,8 @@ export function Step1Access() {
     typeof window !== "undefined" ? window.location.origin : "",
   );
   const [port, setPort] = useState("");
+  const [proxied, setProxied] = useState(false);
+  const [bindHost, setBindHost] = useState("127.0.0.1");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +37,12 @@ export function Step1Access() {
       // A mid-wizard refresh lands back here; keep any answers already on the
       // server, only overriding the basics with what this form now shows.
       const existing = await getAnswers();
-      await updateAnswers({ appUrl: appUrl || existing.appUrl, port: port || existing.port });
+      await updateAnswers({
+        appUrl: appUrl || existing.appUrl,
+        port: port || existing.port,
+        proxied,
+        bindHost: proxied ? bindHost : "",
+      });
       await router.push("/installation/step-2");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed. Please try again.");
@@ -59,23 +66,57 @@ export function Step1Access() {
           onChange={(e) => setSecret(e.target.value)}
           autoComplete="off"
         />
+        <label className="flex items-center gap-2 text-sm font-medium text-neutral-800">
+          <input
+            type="checkbox"
+            checked={proxied}
+            onChange={(e) => {
+              setProxied(e.target.checked);
+              if (e.target.checked && typeof window !== "undefined" && appUrl === window.location.origin) {
+                setAppUrl("");
+              }
+            }}
+            className="h-4 w-4 rounded border-neutral-300 accent-[var(--color-brand-600)]"
+          />
+          Running HyCanvas behind a proxy?
+        </label>
         <Input
-          label="Public URL"
+          label={proxied ? "External URL (the domain your proxy serves)" : "Public URL"}
           type="url"
           required
-          placeholder="https://canvas.example.com"
+          placeholder={proxied ? "https://hycanvas.art" : "https://canvas.example.com"}
           value={appUrl}
           onChange={(e) => setAppUrl(e.target.value)}
         />
-        <Input
-          label="Port"
-          inputMode="numeric"
-          placeholder="8005"
-          value={port}
-          onChange={(e) => setPort(e.target.value)}
-        />
+        {proxied ? (
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Internal host (proxy forwards here)"
+              placeholder="127.0.0.1"
+              value={bindHost}
+              onChange={(e) => setBindHost(e.target.value)}
+            />
+            <Input
+              label="Internal port"
+              inputMode="numeric"
+              placeholder="8005"
+              value={port}
+              onChange={(e) => setPort(e.target.value)}
+            />
+          </div>
+        ) : (
+          <Input
+            label="Port"
+            inputMode="numeric"
+            placeholder="8005"
+            value={port}
+            onChange={(e) => setPort(e.target.value)}
+          />
+        )}
         <p className="text-xs text-neutral-400">
-          The public URL is used in links the server generates (email verification, sharing). You can change both later in `.env`.
+          {proxied
+            ? `Point your proxy at http://${bindHost || "127.0.0.1"}:${port || "8005"} and forward the Host header. The external URL is used in links the server generates (email verification, sharing).`
+            : "The public URL is used in links the server generates (email verification, sharing). You can change both later in `.env`."}
         </p>
         {error && <ErrorBanner>{error}</ErrorBanner>}
         <Button type="submit" size="lg" block disabled={busy || !secret}>

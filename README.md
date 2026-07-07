@@ -75,7 +75,7 @@ The binary's directory is the service's working directory, which is where `.env`
 
 No `.env` yet? Just start the server. On an interactive terminal it first asks whether to set up in the browser or right there in the terminal:
 
-- **Web wizard** (default): the server boots into setup mode and prints a one-time wizard access secret; opening any page redirects to `/installation/step-1`, which asks for that secret and then walks through PostgreSQL, storage (local or S3), and optional SMTP, testing each answer live with visible progress. Answers are held on the server (never in the browser), and a page refresh always restarts at the welcome step.
+- **Web wizard** (default): the server boots into setup mode and prints a one-time wizard access secret; opening any page redirects to `/installation/step-1`, which asks for that secret and then walks through PostgreSQL, storage (local or S3), and optional SMTP, testing each answer live with visible progress. Step 1 includes "Running HyCanvas behind a proxy?": when enabled you configure the external domain (e.g. `https://hycanvas.art`) separately from the internal host and port the proxy forwards to (written as `APP_URL`, `BIND_HOST`, and `PORT`). Answers are held on the server (never in the browser), and a page refresh always restarts at the welcome step.
 - **CLI wizard**: the same questions asked in the terminal, with the same live validation and hidden password input.
 
 Either way the wizard writes `.env` (secrets like `JWT_SECRET` are generated automatically), runs the database migrations, starts the app in the same process, and (in the browser flow) creates your first account. Non-interactive starts (Docker, pipes) default to the web wizard. To skip all of it, create a `.env` by hand (see `.env.example`) before starting.
@@ -87,6 +87,27 @@ npm run deploy              # build:dist + pm2 reload ecosystem.config.js
 ```
 
 When writing `.env` by hand for production, set at minimum `NODE_ENV=production`, `DATABASE_URL`, a strong `JWT_SECRET`, `APP_URL` (public base URL used in generated links), and an absolute `LOCAL_STORAGE_PATH` (or `STORAGE_DRIVER=s3` with `S3_*`). AI provider keys are configured per workspace at runtime (stored encrypted), never via env.
+
+### Running behind a reverse proxy
+
+HyCanvas serves plain HTTP; put nginx, Caddy, or Traefik in front for TLS. Three settings matter: `APP_URL` is the external domain the proxy serves (used in generated links and the OIDC redirect), `PORT` is the internal port the proxy forwards to, and `BIND_HOST=127.0.0.1` keeps the app reachable only through the proxy. The setup wizard configures all three when you answer "Running HyCanvas behind a proxy?" in step 1. The proxy must forward the `Host` header and (for realtime collaboration) WebSocket upgrades on `/realtime`. With an https `APP_URL`, session cookies stay `Secure` automatically.
+
+### Sign in with Google (or any OIDC provider)
+
+Social sign-in is configured via env and appears on the login and signup pages once set. For Google:
+
+1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), configure the OAuth consent screen, then create an OAuth client ID of type "Web application".
+2. Add the authorized redirect URI: `<APP_URL>/api/v1/auth/oidc/callback` (for example `https://hycanvas.art/api/v1/auth/oidc/callback`).
+3. Set in `.env` and restart (`./dist/hycanvas service restart`):
+
+```bash
+OIDC_ISSUER=https://accounts.google.com
+OIDC_CLIENT_ID=<client id>.apps.googleusercontent.com
+OIDC_CLIENT_SECRET=<client secret>
+OIDC_LABEL=Google
+```
+
+A "Continue with Google" button then shows on the auth pages. Any standards-compliant OIDC provider works the same way via its issuer URL; `OIDC_ALLOWED_EMAIL_DOMAINS` restricts sign-in to listed domains, and `OIDC_REDIRECT_URI` overrides the callback when the default does not fit. The issuer must be https (localhost excepted), and `APP_URL` must be set correctly, especially behind a proxy.
 
 ## Install a prebuilt binary
 

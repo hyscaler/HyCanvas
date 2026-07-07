@@ -155,8 +155,16 @@ func (w *cliWizard) run(destDir string) error {
 	fmt.Fprintln(w.out, "\nHyCanvas terminal setup. Press Enter to accept a [default].")
 
 	var body completeRequest
-	body.Port = w.ask("Port", "8005")
-	body.AppURL = w.ask("Public URL", "http://localhost:"+body.Port)
+	if w.askYesNo("Running HyCanvas behind a proxy (nginx, Caddy, Traefik, ...)?", false) {
+		body.Proxied = true
+		body.AppURL = w.ask("External URL (the domain the proxy serves)", "https://hycanvas.example.com")
+		body.BindHost = w.ask("Internal host to listen on (the proxy forwards here)", "127.0.0.1")
+		body.Port = w.ask("Internal port", "8005")
+		fmt.Fprintf(w.out, "Point your proxy at http://%s:%s and forward the Host header.\n", body.BindHost, body.Port)
+	} else {
+		body.Port = w.ask("Port", "8005")
+		body.AppURL = w.ask("Public URL", "http://localhost:"+body.Port)
+	}
 
 	// Database: loop until the connection actually works.
 	var dsn string
@@ -247,7 +255,11 @@ func (w *cliWizard) run(destDir string) error {
 	// Summary + confirm.
 	fmt.Fprintln(w.out, "\nSummary")
 	fmt.Fprintln(w.out, "  Public URL:", body.AppURL)
-	fmt.Fprintln(w.out, "  Port:      ", body.Port)
+	if body.Proxied {
+		fmt.Fprintf(w.out, "  Listens on: %s:%s (behind your proxy)\n", body.BindHost, body.Port)
+	} else {
+		fmt.Fprintln(w.out, "  Port:      ", body.Port)
+	}
 	if body.DB.URL != "" {
 		fmt.Fprintln(w.out, "  Database:  ", maskDSN(body.DB.URL))
 	} else {

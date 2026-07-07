@@ -27,6 +27,7 @@ func TestCLIWizardHappyPath(t *testing.T) {
 	dir := t.TempDir()
 	var out bytes.Buffer
 	w := scriptedWizard([]string{
+		"",                    // proxy? -> default no
 		"9000",                // Port
 		"http://canvas.local", // Public URL
 		"",                    // DB: no URL, use fields
@@ -73,7 +74,7 @@ func TestCLIWizardRetriesFailedDB(t *testing.T) {
 	dir := t.TempDir()
 	var out bytes.Buffer
 	w := scriptedWizard([]string{
-		"", "", // port, url defaults
+		"", "", "", // proxy no, port, url defaults
 		"postgres://bad@host/db", // first attempt: URL that fails validation
 		"",                       // second attempt: fields
 		"localhost", "5432", "postgres", "pw", "hycanvas",
@@ -106,7 +107,7 @@ func TestCLIWizardCancelWritesNothing(t *testing.T) {
 	dir := t.TempDir()
 	var out bytes.Buffer
 	w := scriptedWizard([]string{
-		"", "", // port, url
+		"", "", "", // proxy no, port, url
 		"", "localhost", "", "postgres", "pw", "", // db fields
 		"", "", // s3 no, storage default
 		"",  // smtp no
@@ -124,7 +125,7 @@ func TestCLIWizardSMTPSkipAfterFailure(t *testing.T) {
 	dir := t.TempDir()
 	var out bytes.Buffer
 	w := scriptedWizard([]string{
-		"", "", // port, url
+		"", "", "", // proxy no, port, url
 		"", "localhost", "", "postgres", "pw", "", // db fields
 		"", "", // s3 no, storage default
 		"y",               // configure smtp
@@ -141,6 +142,41 @@ func TestCLIWizardSMTPSkipAfterFailure(t *testing.T) {
 	env, _ := os.ReadFile(filepath.Join(dir, ".env"))
 	if strings.Contains(string(env), "SMTP_") {
 		t.Errorf("SMTP written despite skip:\n%s", env)
+	}
+}
+
+func TestCLIWizardProxyPath(t *testing.T) {
+	dir := t.TempDir()
+	var out bytes.Buffer
+	w := scriptedWizard([]string{
+		"y",                                       // behind a proxy
+		"https://hycanvas.art",                    // external URL
+		"",                                        // internal host -> default 127.0.0.1
+		"",                                        // internal port -> default 8005
+		"", "localhost", "", "postgres", "pw", "", // db fields
+		"", "", // s3 no, storage default
+		"", // smtp no
+		"", // confirm yes
+	}, &out)
+	if err := w.run(dir); err != nil {
+		t.Fatalf("run: %v\noutput:\n%s", err, out.String())
+	}
+	env, _ := os.ReadFile(filepath.Join(dir, ".env"))
+	for _, want := range []string{
+		"APP_URL=https://hycanvas.art",
+		"BIND_HOST=127.0.0.1",
+		"PORT=8005",
+	} {
+		if !strings.Contains(string(env), want) {
+			t.Errorf("env missing %q:\n%s", want, env)
+		}
+	}
+	// TLS terminates at the proxy: Secure cookies must stay on.
+	if strings.Contains(string(env), "COOKIE_SECURE") {
+		t.Errorf("https external URL must not disable secure cookies:\n%s", env)
+	}
+	if !strings.Contains(out.String(), "Point your proxy at http://127.0.0.1:8005") {
+		t.Errorf("proxy hint missing:\n%s", out.String())
 	}
 }
 

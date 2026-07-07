@@ -277,7 +277,7 @@ func main() {
 	}
 
 	srv := &http.Server{
-		Addr: ":" + cfg.Port,
+		Addr: cfg.BindHost + ":" + cfg.Port,
 		Handler: httpapi.NewRouter(httpapi.Deps{
 			DB:          pool,
 			Logger:      logger,

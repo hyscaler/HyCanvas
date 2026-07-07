@@ -105,7 +105,11 @@ export function Step5Install() {
           {answers ? (
             <dl className="divide-y divide-neutral-100 rounded-xl border border-neutral-200 text-sm">
               <Row k="Public URL" v={answers.appUrl || "(current origin)"} />
-              <Row k="Port" v={answers.port || "8005"} />
+              {answers.proxied ? (
+                <Row k="Listens on" v={`${answers.bindHost || "127.0.0.1"}:${answers.port || "8005"} (behind your proxy)`} />
+              ) : (
+                <Row k="Port" v={answers.port || "8005"} />
+              )}
               <Row
                 k="Database"
                 v={

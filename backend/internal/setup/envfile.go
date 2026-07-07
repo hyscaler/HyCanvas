@@ -38,10 +38,16 @@ func renderEnv(body completeRequest, dsn, jwtSecret, aiSecret string) string {
 	if body.Port != "" {
 		b.WriteString(envLine("PORT", body.Port))
 	}
+	if body.BindHost != "" {
+		// Behind a reverse proxy the app only needs to listen for the proxy,
+		// typically on 127.0.0.1.
+		b.WriteString(envLine("BIND_HOST", body.BindHost))
+	}
 	if body.AppURL != "" {
 		b.WriteString(envLine("APP_URL", strings.TrimRight(body.AppURL, "/")))
 		// A production cookie is Secure by default; on a plain-http origin the
-		// browser would drop it and login silently fails.
+		// browser would drop it and login silently fails. An https public URL
+		// (e.g. a TLS-terminating proxy) keeps Secure cookies.
 		if strings.HasPrefix(body.AppURL, "http://") {
 			b.WriteString(envLine("COOKIE_SECURE", "false"))
 		}

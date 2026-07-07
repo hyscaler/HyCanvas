@@ -412,22 +412,29 @@ type smtpAnswers struct {
 }
 
 // completeRequest is the full wizard answer set, accumulated server-side.
+// Proxied deployments distinguish the public URL (the external domain the
+// proxy serves, e.g. https://hycanvas.art) from the internal bind host and
+// port the proxy forwards to.
 type completeRequest struct {
-	AppURL  string         `json:"appUrl"`
-	Port    string         `json:"port"`
-	DB      dbRequest      `json:"db"`
-	Storage storageAnswers `json:"storage"`
-	SMTP    smtpAnswers    `json:"smtp"`
+	AppURL   string         `json:"appUrl"`
+	Port     string         `json:"port"`
+	Proxied  bool           `json:"proxied"`
+	BindHost string         `json:"bindHost"`
+	DB       dbRequest      `json:"db"`
+	Storage  storageAnswers `json:"storage"`
+	SMTP     smtpAnswers    `json:"smtp"`
 }
 
 // answersUpdate is a partial update: each wizard step submits only its own
 // section; nil sections stay untouched.
 type answersUpdate struct {
-	AppURL  *string         `json:"appUrl"`
-	Port    *string         `json:"port"`
-	DB      *dbRequest      `json:"db"`
-	Storage *storageAnswers `json:"storage"`
-	SMTP    *smtpAnswers    `json:"smtp"`
+	AppURL   *string         `json:"appUrl"`
+	Port     *string         `json:"port"`
+	Proxied  *bool           `json:"proxied"`
+	BindHost *string         `json:"bindHost"`
+	DB       *dbRequest      `json:"db"`
+	Storage  *storageAnswers `json:"storage"`
+	SMTP     *smtpAnswers    `json:"smtp"`
 }
 
 // handleGetAnswers returns the working answers so steps can prefill after
@@ -451,6 +458,12 @@ func (s *server) handleUpdateAnswers(w http.ResponseWriter, req *http.Request) {
 	}
 	if u.Port != nil {
 		s.answers.Port = *u.Port
+	}
+	if u.Proxied != nil {
+		s.answers.Proxied = *u.Proxied
+	}
+	if u.BindHost != nil {
+		s.answers.BindHost = *u.BindHost
 	}
 	if u.DB != nil {
 		s.answers.DB = *u.DB

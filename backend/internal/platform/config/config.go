@@ -18,7 +18,10 @@ import (
 var ErrDatabaseURLMissing = errors.New("DATABASE_URL is required")
 
 type Config struct {
-	Port        string
+	Port string
+	// BindHost narrows the listen interface (e.g. 127.0.0.1 behind a reverse
+	// proxy on the same host). Empty binds all interfaces.
+	BindHost    string
 	DatabaseURL string
 	JWTSecret   string
 	AISecret    string
@@ -36,6 +39,7 @@ func Load() (Config, error) {
 		// PORT is the conventional deploy variable (compose, PM2, PaaS); GO_API_PORT
 		// remains accepted for continuity. Defaults to 8005, the single app port.
 		Port:        getenv("PORT", getenv("GO_API_PORT", "8005")),
+		BindHost:    os.Getenv("BIND_HOST"),
 		DatabaseURL: os.Getenv("DATABASE_URL"),
 		JWTSecret:   os.Getenv("JWT_SECRET"),
 		AISecret:    os.Getenv("AI_SECRET"),
