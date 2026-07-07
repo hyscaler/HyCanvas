@@ -25,24 +25,31 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Update Docker Hub overview
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: |
-          TOKEN=$(jq -n --arg u "$DOCKER_USERNAME" --arg p "$DOCKER_PASSWORD" '{username: $u, password: $p}' |
-            curl -sf -H "Content-Type: application/json" -d @- https://hub.docker.com/v2/users/login/ |
-            jq -r .token)
-          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-            echo "Docker Hub login failed (check DOCKER_USERNAME / DOCKER_PASSWORD)" >&2
+          BODY=$(mktemp)
+          STATUS=$(jq -n --arg u "$DOCKER_USERNAME" --arg p "$DOCKER_PASSWORD" '{username: $u, password: $p}' |
+            curl -s -o "$BODY" -w '%{http_code}' -H "Content-Type: application/json" \
+              -d @- https://hub.docker.com/v2/users/login/)
+          if [ "$STATUS" != "200" ]; then
+            echo "Docker Hub login failed (HTTP ${STATUS}): $(cat "$BODY")" >&2
             exit 1
           fi
-          RESPONSE=$(jq -n --rawfile desc docker/README.md '{full_description: $desc}' |
-            curl -sf -X PATCH -H "Authorization: JWT ${TOKEN}" -H "Content-Type: application/json" \
+          TOKEN=$(jq -r '.token // empty' "$BODY")
+          if [ -z "$TOKEN" ]; then
+            echo "Docker Hub login returned no token" >&2
+            exit 1
+          fi
+          STATUS=$(jq -n --rawfile desc docker/README.md '{full_description: $desc}' |
+            curl -s -o "$BODY" -w '%{http_code}' -X PATCH \
+              -H "Authorization: JWT ${TOKEN}" -H "Content-Type: application/json" \
               -d @- "https://hub.docker.com/v2/repositories/${DOCKER_REPO}/")
-          if ! echo "$RESPONSE" | jq -e '.full_description | length > 0' >/dev/null 2>&1; then
-            echo "Description update failed: ${RESPONSE}" >&2
+          if [ "$STATUS" != "200" ]; then
+            echo "Description update failed (HTTP ${STATUS}): $(cat "$BODY")" >&2
             exit 1
           fi
           echo "Docker Hub overview updated from docker/README.md ($(wc -c < docker/README.md) bytes)"
