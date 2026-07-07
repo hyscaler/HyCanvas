@@ -368,21 +368,27 @@ type s3Request struct {
 	ForcePathStyle bool   `json:"forcePathStyle"`
 }
 
+// testS3 validates the settings by constructing the driver, which checks the
+// bucket is reachable. Shared by the web endpoint and the CLI wizard.
+func testS3(cfg s3Request) error {
+	_, err := storage.NewS3(storage.S3Config{
+		Endpoint:       cfg.Endpoint,
+		Region:         cfg.Region,
+		Bucket:         cfg.Bucket,
+		AccessKey:      cfg.AccessKey,
+		SecretKey:      cfg.SecretKey,
+		ForcePathStyle: cfg.ForcePathStyle,
+	})
+	return err
+}
+
 func (s *server) handleS3Test(w http.ResponseWriter, req *http.Request) {
 	var body s3Request
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 		httpapi.Problem(w, req, http.StatusBadRequest, "Bad Request", "invalid JSON body")
 		return
 	}
-	_, err := storage.NewS3(storage.S3Config{
-		Endpoint:       body.Endpoint,
-		Region:         body.Region,
-		Bucket:         body.Bucket,
-		AccessKey:      body.AccessKey,
-		SecretKey:      body.SecretKey,
-		ForcePathStyle: body.ForcePathStyle,
-	})
-	if err != nil {
+	if err := testS3(body); err != nil {
 		httpapi.Problem(w, req, http.StatusBadRequest, "S3 Check Failed", err.Error())
 		return
 	}

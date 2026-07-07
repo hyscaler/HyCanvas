@@ -72,27 +72,37 @@ func main() {
 
 	cfg, err := config.Load()
 	if errors.Is(err, config.ErrDatabaseURLMissing) {
-		// Unconfigured: run the first-run setup wizard when a frontend is
-		// available to serve it, then reload the freshly written .env and
-		// continue booting in this same process.
+		// Unconfigured: run the first-run setup wizard, then reload the
+		// freshly written .env and continue booting in this same process.
+		// Interactive starts get to choose between the browser wizard and a
+		// terminal one; non-interactive starts default to the web wizard.
 		webFS := setupWebFS(cfg.PublicDir)
-		if webFS == nil {
-			logger.Error("DATABASE_URL is not set and no frontend is available to run the setup wizard; create a .env (see .env.example) with at least DATABASE_URL and JWT_SECRET")
+		if webFS == nil && !setup.StdinIsTerminal() {
+			logger.Error("DATABASE_URL is not set and no frontend is available to run the setup wizard; create a .env (see .env.example) with at least DATABASE_URL and JWT_SECRET, or run the binary interactively for the CLI wizard")
 			os.Exit(1)
 		}
-		secret := os.Getenv(daemon.SetupSecretEnv)
-		if secret == "" {
-			secret = daemon.GenerateSecret()
-		}
-		if err := setup.Run(context.Background(), setup.Options{
-			Logger:  logger,
-			Version: version,
-			Port:    cfg.Port,
-			Secret:  secret,
-			WebFS:   webFS,
-		}); err != nil {
-			logger.Error("setup wizard failed", "err", err)
-			os.Exit(1)
+		stdin := setup.NewStdinReader()
+		switch setup.ChooseMode(webFS != nil, stdin, os.Stdout) {
+		case setup.ModeCLI:
+			if err := setup.RunCLI(".", stdin); err != nil {
+				logger.Error("terminal setup failed", "err", err)
+				os.Exit(1)
+			}
+		default:
+			secret := os.Getenv(daemon.SetupSecretEnv)
+			if secret == "" {
+				secret = daemon.GenerateSecret()
+			}
+			if err := setup.Run(context.Background(), setup.Options{
+				Logger:  logger,
+				Version: version,
+				Port:    cfg.Port,
+				Secret:  secret,
+				WebFS:   webFS,
+			}); err != nil {
+				logger.Error("setup wizard failed", "err", err)
+				os.Exit(1)
+			}
 		}
 		cfg, err = config.Load()
 	}

@@ -17,6 +17,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"hycanvas/backend/internal/setup"
 )
 
 const (
@@ -89,8 +91,9 @@ func usage(w io.Writer) {
 	fmt.Fprintln(w, "next to the binary; the binary's directory is the working directory, which")
 	fmt.Fprintln(w, "is where .env is read from). `hycanvas start` runs it in the foreground.")
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "  start     start the background process (prints the setup wizard secret")
-	fmt.Fprintln(w, "            and URL on a first run without a .env)")
+	fmt.Fprintln(w, "  start     start the background process (a first run without a .env asks")
+	fmt.Fprintln(w, "            whether to set up in the browser, printing the wizard URL and")
+	fmt.Fprintln(w, "            access secret, or right here in the terminal)")
 	fmt.Fprintln(w, "  stop      graceful shutdown, hard kill after a grace period")
 	fmt.Fprintln(w, "  restart   stop then start")
 	fmt.Fprintln(w, "  status    liveness and the last log line")
@@ -137,10 +140,20 @@ func (s *svc) start() error {
 	env := os.Environ()
 	secret := ""
 	if _, err := os.Stat(filepath.Join(s.dir, ".env")); err != nil {
-		// No .env: the server will boot into the setup wizard. Generate the
-		// wizard access secret here so it reaches the operator's terminal.
-		secret = GenerateSecret()
-		env = append(env, SetupSecretEnv+"="+secret)
+		// No .env: this is a first run. When interactive, offer the terminal
+		// wizard right here (it writes .env, then the service starts
+		// normally); otherwise, or when the operator picks the browser, the
+		// spawned server boots into the web wizard and the access secret
+		// generated here reaches the operator's terminal.
+		stdin := setup.NewStdinReader()
+		if setup.ChooseMode(true, stdin, s.out) == setup.ModeCLI {
+			if err := setup.RunCLI(s.dir, stdin); err != nil {
+				return err
+			}
+		} else {
+			secret = GenerateSecret()
+			env = append(env, SetupSecretEnv+"="+secret)
+		}
 	}
 
 	cmd := exec.Command(s.exe, "start")

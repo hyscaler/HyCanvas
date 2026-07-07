@@ -73,7 +73,12 @@ The binary's directory is the service's working directory, which is where `.env`
 
 ### First-run setup wizard
 
-No `.env` yet? Just start the server. It boots into setup mode and serves a browser wizard: opening any page redirects to `/installation/step-1`, which asks for the one-time wizard access secret (printed by `service start`, in the foreground output, or in `hycanvas service log`) and then walks through PostgreSQL, storage (local or S3), and optional SMTP, testing each answer live. Finishing the wizard writes `.env` (secrets like `JWT_SECRET` are generated automatically), runs the database migrations, starts the app in the same process, and creates your first account. To skip the wizard, create a `.env` by hand (see `.env.example`) before starting.
+No `.env` yet? Just start the server. On an interactive terminal it first asks whether to set up in the browser or right there in the terminal:
+
+- **Web wizard** (default): the server boots into setup mode and prints a one-time wizard access secret; opening any page redirects to `/installation/step-1`, which asks for that secret and then walks through PostgreSQL, storage (local or S3), and optional SMTP, testing each answer live with visible progress. Answers are held on the server (never in the browser), and a page refresh always restarts at the welcome step.
+- **CLI wizard**: the same questions asked in the terminal, with the same live validation and hidden password input.
+
+Either way the wizard writes `.env` (secrets like `JWT_SECRET` are generated automatically), runs the database migrations, starts the app in the same process, and (in the browser flow) creates your first account. Non-interactive starts (Docker, pipes) default to the web wizard. To skip all of it, create a `.env` by hand (see `.env.example`) before starting.
 
 Alternatively, run it under a process manager with PM2 (`ecosystem.config.js`):
 
