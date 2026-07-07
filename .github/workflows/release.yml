@@ -101,7 +101,6 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           BASE="${BINARY_NAME}_${VERSION}_${GOOS}_${GOARCH}"
-          cp LICENSE NOTICE .env.example out/
           mkdir -p archives
           if [ "$GOOS" = "windows" ]; then
             (cd out && zip -qr "../archives/${BASE}.zip" .)
@@ -139,7 +138,7 @@ jobs:
           cat > notes.md <<'EOF'
           ## Platform notes
 
-          - Each archive contains the self-contained `hycanvas` binary with the frontend embedded, plus `.env.example`; see the README for setup (`.env`, PostgreSQL).
+          - Each archive contains just the self-contained `hycanvas` binary with the frontend embedded; see the README for setup (`.env`, PostgreSQL). The first-run wizard generates the configuration for you, and `.env.example` in the repository documents every setting.
           - First run: `./hycanvas service start` daemonizes the server (pidfile + logfile next to the binary; Linux, macOS, and Windows) and asks whether to set up in the browser or in the terminal. The browser wizard at /installation/step-1 is unlocked by the one-time access secret it prints; the CLI wizard asks the same questions right there. Other verbs: `stop`, `restart`, `status`, `log -f`. `./hycanvas start` runs in the foreground.
           - The macOS binaries are not signed or notarized. If macOS quarantines the download, run `xattr -d com.apple.quarantine hycanvas` or right-click the binary and choose Open.
           - ffmpeg is only required for server-side video export; everything else works without it.

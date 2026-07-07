@@ -90,7 +90,7 @@ When writing `.env` by hand for production, set at minimum `NODE_ENV=production`
 
 ## Install a prebuilt binary
 
-Releases on the [GitHub releases page](https://github.com/hyscaler/HyCanvas/releases) ship the same self-contained binary prebuilt for Linux (amd64, arm64), macOS (Intel, Apple Silicon), and Windows (amd64), each archive containing the binary, `.env.example`, and the license files, plus a `SHA256SUMS.txt` for verification. You still need PostgreSQL; ffmpeg is only required for server-side video export.
+Releases on the [GitHub releases page](https://github.com/hyscaler/HyCanvas/releases) ship the same self-contained binary prebuilt for Linux (amd64, arm64), macOS (Intel, Apple Silicon), and Windows (amd64). Each archive contains just the `hycanvas` binary (the first-run wizard generates the configuration), and a `SHA256SUMS.txt` accompanies the archives for verification. You still need PostgreSQL; ffmpeg is only required for server-side video export.
 
 ```bash
 tar -xzf hycanvas_<version>_<os>_<arch>.tar.gz && cd <unpacked dir>
