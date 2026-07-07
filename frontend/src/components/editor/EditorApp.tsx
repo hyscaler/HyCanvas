@@ -294,6 +294,12 @@ export function EditorApp() {
   const [compactPropsOpen, setCompactPropsOpen] = useState(false);
   const isBoard = docKind === "whiteboard";
   const effectivePropsOpen = isCompact ? compactPropsOpen : (isBoard ? boardPropsOpen : propsOpen);
+  // Below lg the secondary right-side panels (history/comments/activity/insights,
+  // all fixed w-80) float over the canvas instead of pushing it to a sliver, the
+  // same treatment as the Properties panel. `display: contents` keeps them as
+  // normal flex siblings at lg+. showPanel() is exclusive among these four, so
+  // at most one overlays at a time.
+  const rightPanelOverlay = isCompact ? "absolute right-0 top-0 z-30 h-full shadow-xl" : "contents";
   const toggleProps = () => {
     if (isCompact) {
       setCompactPropsOpen((v) => !v);
@@ -693,7 +699,7 @@ export function EditorApp() {
   }
 
   return (
-    <div className="flex h-screen w-screen flex-col bg-neutral-100 text-neutral-900">
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-neutral-100 text-neutral-900">
       {/* Top bar. flex-nowrap keeps the bar single-line down to ~768px; the
           title input shrinks/truncates and secondary actions live in the
           OverflowMenu so groups overflow gracefully instead of wrapping. In
@@ -717,9 +723,12 @@ export function EditorApp() {
           <IconButton aria-label="Undo" onClick={undo}><Undo2 size={18} /></IconButton>
           <IconButton aria-label="Redo" onClick={redo}><Redo2 size={18} /></IconButton>
         </div>
-        <ViewToggles />
+        {/* Rulers/grid/snap fit inline down to sm; below that they fold into the
+            overflow menu (they have no other entry point, so they must stay
+            reachable). */}
+        {!isVeryNarrow && <ViewToggles />}
         <div className="ml-auto flex shrink-0 items-center gap-1">
-          {designId && <PresenceBar />}
+          {!isCompact && designId && <PresenceBar />}
           {designId && (
             dirty ? (
               <span className="mr-1 hidden items-center gap-1.5 text-xs font-medium text-amber-600 lg:inline-flex" title="You have unsaved changes">
@@ -733,10 +742,12 @@ export function EditorApp() {
             )
           )}
 
-          <Sep />
-          {/* Frequent view/collaborate actions as compact icon buttons. Animation
-              preview and fullscreen present are canvas-surface only. */}
-          {docKind === "design" && (
+          {/* Frequent view/collaborate actions as compact icon buttons. Below lg
+              (isCompact) these fold into the overflow menu so the bar fits narrow
+              screens without scrolling sideways. Animation preview and fullscreen
+              present are canvas-surface only. */}
+          {!isCompact && <Sep />}
+          {!isCompact && docKind === "design" && (
             <>
               <IconButton size="sm" onClick={() => useEditor.getState().playAnimations()} disabled={playing} title={playing ? "Playing…" : "Preview animations"}>
                 <Play size={18} />
@@ -746,12 +757,12 @@ export function EditorApp() {
               </IconButton>
             </>
           )}
-          {docKind === "whiteboard" && (
+          {!isCompact && docKind === "whiteboard" && (
             <IconButton size="sm" onClick={enterBoardFocus} title="Focus mode — hide panels (full screen)">
               <Maximize2 size={18} />
             </IconButton>
           )}
-          {designId && (
+          {!isCompact && designId && (
             <div className="relative">
               <IconButton size="sm" active={commentsOpen} onClick={() => showPanel("comments")} title={openComments > 0 ? `Comments (${openComments} open)` : "Comments"}>
                 <MessageSquare size={18} />
@@ -770,6 +781,27 @@ export function EditorApp() {
               never wraps; each is gated the same way it was as a button. */}
           <OverflowMenu
             items={[
+              // Below lg, the inline secondary actions fold in here so the top bar
+              // fits narrow screens without overflowing.
+              ...(isCompact && docKind === "design"
+                ? [
+                    { icon: Play as TopIcon, label: "Preview animations", onClick: () => useEditor.getState().playAnimations() },
+                    { icon: MonitorPlay as TopIcon, label: "Present (fullscreen)", onClick: () => { useEditor.getState().setPresenting(true); setPresenting(true); } },
+                  ]
+                : []),
+              ...(isCompact && docKind === "whiteboard" ? [{ icon: Maximize2 as TopIcon, label: "Focus mode", onClick: enterBoardFocus }] : []),
+              ...(isCompact && designId ? [{ icon: MessageSquare as TopIcon, label: openComments > 0 ? `Comments (${openComments} open)` : "Comments", onClick: () => showPanel("comments") }] : []),
+              ...(isCompact && (docKind === "design" || docKind === "whiteboard") ? [{ icon: Download as TopIcon, label: "Download", onClick: () => setExportOpen(true) }] : []),
+              ...(isCompact && designId && canShare ? [{ icon: Share2 as TopIcon, label: "Share", onClick: () => setShareOpen(true) }] : []),
+              // Below sm the rulers/grid/snap toggles fold in here (their only
+              // other home, the inline ViewToggles, is hidden at that width).
+              ...(isVeryNarrow
+                ? [
+                    { icon: Ruler as TopIcon, label: "Rulers & guides", onClick: () => useEditor.getState().toggleRulers() },
+                    { icon: Grid3x3 as TopIcon, label: "Grid", onClick: () => useEditor.getState().toggleGrid() },
+                    { icon: Magnet as TopIcon, label: "Snapping", onClick: () => useEditor.getState().toggleSnap() },
+                  ]
+                : []),
               ...(designId ? [{ icon: History as TopIcon, label: "Version history", onClick: () => showPanel("history") }] : []),
               ...(designId ? [{ icon: Activity as TopIcon, label: "Activity feed", onClick: () => showPanel("activity") }] : []),
               ...(designId && canMember ? [{ icon: BarChart3 as TopIcon, label: "Engagement insights", onClick: () => showPanel("insights") }] : []),
@@ -791,14 +823,14 @@ export function EditorApp() {
           {/* Image/PDF/SVG export renders the scene; doc/sheet/video keep their
               content in meta (not scene nodes), so the chrome export is only shown
               for scene-backed kinds (Docs has its own Markdown export). */}
-          {(docKind === "design" || docKind === "whiteboard") && (
+          {!isCompact && (docKind === "design" || docKind === "whiteboard") && (
             <IconButton size="sm" onClick={() => setExportOpen(true)} title="Download">
               <Download size={18} />
             </IconButton>
           )}
 
-          <Sep />
-          {designId && canShare && (
+          {!isCompact && <Sep />}
+          {!isCompact && designId && canShare && (
             <Button variant="secondary" size="sm" onClick={() => setShareOpen(true)} title="Share this design">
               <Share2 size={16} /> Share
             </Button>
@@ -843,7 +875,7 @@ export function EditorApp() {
       {presenting && <PresentMode onClose={() => { useEditor.getState().setPresenting(false); setPresenting(false); }} />}
       <PromptHost />
 
-      <div className="flex min-h-0 flex-1">
+      <div className="relative flex min-h-0 flex-1">
         {/* The left tool rail is shared by the canvas-backed kinds. Whiteboard is
             scene-backed (its surface renders the same Canvas + store), so the
             Elements/Text/Uploads/Stock/Brand/Layers panels apply there too; only
@@ -895,6 +927,7 @@ export function EditorApp() {
         {!inFocus && (
         <>
         {historyOpen && designId ? (
+          <div className={rightPanelOverlay}>
           <HistoryPanel
             designId={designId}
             workspaceId={workspaceId}
@@ -909,6 +942,7 @@ export function EditorApp() {
               setHistoryOpen(false);
             }}
           />
+          </div>
         ) : docKind === "design" || docKind === "whiteboard" ? (
           // The Properties panel edits scene-node properties, so it applies to
           // the canvas-backed kinds (design and whiteboard). Doc/sheet/video keep
@@ -917,8 +951,14 @@ export function EditorApp() {
           // lg it defaults collapsed (effectivePropsOpen) to protect canvas width.
           effectivePropsOpen ? (
             <aside
-              className="relative flex shrink-0 flex-col border-l border-neutral-200 bg-white"
-              style={{ width: panelWidth }}
+              // Below lg the panel floats over the canvas (like the left rail's
+              // overlay) and caps its width to the viewport, so opening it on a
+              // phone never crushes the canvas; at lg+ it is a normal flex sibling
+              // at the user's resizable width.
+              className={`flex flex-col border-l border-neutral-200 bg-white ${
+                isCompact ? "absolute right-0 top-0 z-30 h-full shadow-xl" : "relative shrink-0"
+              }`}
+              style={{ width: isCompact ? "min(20rem, 86vw)" : panelWidth }}
             >
               {/* Drag the left edge to resize the panel. */}
               <div
@@ -956,13 +996,19 @@ export function EditorApp() {
           )
         ) : null}
         {commentsOpen && designId && (
-          <CommentsPanel onClose={() => useComments.getState().setPanelOpen(false)} />
+          <div className={rightPanelOverlay}>
+            <CommentsPanel onClose={() => useComments.getState().setPanelOpen(false)} />
+          </div>
         )}
         {activityOpen && designId && (
-          <ActivityPanel designId={designId} onClose={() => setActivityOpen(false)} />
+          <div className={rightPanelOverlay}>
+            <ActivityPanel designId={designId} onClose={() => setActivityOpen(false)} />
+          </div>
         )}
         {insightsOpen && designId && canMember && (
-          <InsightsPanel designId={designId} onClose={() => setInsightsOpen(false)} />
+          <div className={rightPanelOverlay}>
+            <InsightsPanel designId={designId} onClose={() => setInsightsOpen(false)} />
+          </div>
         )}
         </>
         )}
