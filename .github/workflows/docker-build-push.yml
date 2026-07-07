@@ -71,8 +71,8 @@ jobs:
           cache-from: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache-${{ steps.meta.outputs.docker_tag }}
           cache-to: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache-${{ steps.meta.outputs.docker_tag }},mode=max
 
-      # The Docker Hub repo description (the listing page) is maintained manually
-      # in the Docker Hub UI; docker/README.md is the source to paste from.
+      # The Docker Hub repo description (the listing page) is synced from
+      # docker/README.md by .github/workflows/dockerhub-description.yml.
 
       - name: Summary
         run: |
