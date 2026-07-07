@@ -1406,8 +1406,10 @@ export function PropertiesPanel() {
               <Field key={`sb${ps?.spaceBefore ?? 0}`} label="⤒" value={ps?.spaceBefore ?? 0} onCommit={(n) => setPara({ spaceBefore: Math.max(0, n) })} />
               <Field key={`sa${ps?.spaceAfter ?? 0}`} label="⤓" value={ps?.spaceAfter ?? 0} onCommit={(n) => setPara({ spaceAfter: Math.max(0, n) })} />
             </div>
-            {/* Effects (shadow/outline/glow presets + fine-tune), engine-rendered. */}
-            <NodeEffects id={id} effects={single.node.effects} />
+            {/* Text uses the named text-effect system below (glyph-aware,
+                Canva-style), not the generic node.effects control that shapes
+                and images use, so it is intentionally omitted here to avoid a
+                duplicate, unreliable "Effects" section on text. */}
             {/* Text background highlight (Canva-style): a padded rounded rect behind the text. */}
             {(() => {
               const tn = single.node as unknown as { textEffects?: { kind: string; color?: { type: string; color?: Color }; radius?: number; padding?: number }[] };

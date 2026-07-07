@@ -4141,15 +4141,27 @@ export const useEditor = create<EditorState>((set, get) => {
     setTextEffect: (id, effect) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return;
-      const node = loc.node as unknown as { textEffects?: TextEffect[] };
+      const node = loc.node as unknown as { textEffects?: TextEffect[]; effects?: unknown };
       const before = node.textEffects;
+      const beforeEffects = node.effects;
       // Effects are exclusive; keep only the background highlight, then add the
       // chosen one (if any).
       const kept = (before ?? []).filter((e) => e.kind === "highlight");
       const next = effect ? [...kept, effect] : kept;
       perform(
-        () => { node.textEffects = (next.length ? next : undefined) as never; },
-        () => { node.textEffects = before; },
+        () => {
+          node.textEffects = (next.length ? next : undefined) as never;
+          // Text uses this named textEffects system, not the generic node.effects
+          // outline/shadow/glow that shapes/images use (the panel no longer offers
+          // it on text). Strip any legacy node.effects so the two systems can't
+          // both render (e.g. a double outline) and stale effects from the old
+          // control are cleaned up the moment the user touches text effects.
+          node.effects = undefined;
+        },
+        () => {
+          node.textEffects = before;
+          node.effects = beforeEffects as never;
+        },
       );
     },
 
