@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { useAuth } from "@/store/auth";
+import { FullScreenLoader } from "@/components/ui/BrandLoader";
 
 export default function Home() {
   const router = useRouter();
@@ -26,7 +27,7 @@ export default function Home() {
         <title>HyCanvas</title>
         <meta name="description" content="A free, AI-native visual design platform." />
       </Head>
-      <div className="grid min-h-screen place-items-center text-sm text-neutral-500">HyCanvas…</div>
+      <FullScreenLoader label="HyCanvas…" />
     </>
   );
 }

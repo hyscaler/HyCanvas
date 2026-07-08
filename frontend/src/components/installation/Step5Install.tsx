@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { BrandLoader } from "@/components/ui/BrandLoader";
 import { Button } from "@/components/ui/Button";
 import { WizardShell, ErrorBanner, useSecretGate } from "./WizardShell";
 import { getAnswers, healthOk, setupPost, setupStatus, type SetupAnswers } from "./wizard";
@@ -126,8 +127,8 @@ export function Step5Install() {
               <Row k="Secrets" v="JWT and encryption keys are generated automatically" />
             </dl>
           ) : (
-            <div className="grid place-items-center rounded-xl border border-neutral-200 py-10 text-sm text-neutral-400">
-              Loading…
+            <div className="grid place-items-center rounded-xl border border-neutral-200 py-10">
+              <BrandLoader size={72} />
             </div>
           )}
           <div className="flex items-center justify-between gap-3">

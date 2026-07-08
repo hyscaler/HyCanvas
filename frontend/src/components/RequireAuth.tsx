@@ -5,6 +5,7 @@
 import { useEffect, type ReactNode } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/store/auth";
+import { FullScreenLoader } from "@/components/ui/BrandLoader";
 
 export function RequireAuth({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -20,7 +21,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   }, [status, router]);
 
   if (status !== "authed") {
-    return <div className="grid min-h-screen place-items-center text-sm text-neutral-500">Loading…</div>;
+    return <FullScreenLoader />;
   }
   return <>{children}</>;
 }

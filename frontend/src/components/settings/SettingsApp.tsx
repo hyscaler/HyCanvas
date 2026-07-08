@@ -12,6 +12,7 @@ import { oc, ssoLinkUrl } from "@/lib/sdk";
 import { disablePush, enablePush, getPushState, type PushState } from "@/lib/push";
 import { useAuth } from "@/store/auth";
 import { useToast } from "@/components/ui/Toast";
+import { FullScreenLoader } from "@/components/ui/BrandLoader";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -368,7 +369,7 @@ export function SettingsApp() {
   }
 
   if (!user) {
-    return <div className="grid min-h-screen place-items-center text-sm text-neutral-500">Loading…</div>;
+    return <FullScreenLoader />;
   }
 
   return (
