@@ -43,7 +43,8 @@ import {
   Users,
 } from "lucide-react";
 import { createBlankDesign } from "@hc/schema";
-import type { DesignRecord, HomeItem, MyTask, TaskStatus, TemplateCollectionSummary, TemplateSummary, WorkspaceRole } from "@hc/sdk";
+import type { DesignRecord, HomeItem, MyTask, StorageUsageView, TaskStatus, TemplateCollectionSummary, TemplateSummary, WorkspaceRole } from "@hc/sdk";
+import { formatBytes } from "@/lib/format";
 import { oc } from "@/lib/sdk";
 import { useAuth } from "@/store/auth";
 import { useToast } from "@/components/ui/Toast";
@@ -168,6 +169,14 @@ export function DashboardApp() {
   }
   const [trash, setTrash] = useState<DesignRecord[]>([]);
   const [favorites, setFavorites] = useState<HomeItem[]>([]);
+  // Storage usage for the rail meter (workspace + account scopes).
+  const [storageUsage, setStorageUsage] = useState<StorageUsageView | null>(null);
+  useEffect(() => {
+    if (!activeWorkspaceId) return;
+    let cancelled = false;
+    void oc.assetUsage(activeWorkspaceId).then((u) => { if (!cancelled) setStorageUsage(u); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [activeWorkspaceId]);
   const [tasks, setTasks] = useState<MyTask[]>([]);
   // Hybrid-dashboard chrome: recents view/sort controls.
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -562,6 +571,12 @@ export function DashboardApp() {
           <RailItem icon={Trash2} label="Trash" active={view === "trash"} collapsed={railCollapsed} onClick={() => setView("trash")} />
         </nav>
 
+        {/* Storage meter pinned to the rail's bottom corner. */}
+        {!railCollapsed && storageUsage && (
+          <div className="relative z-10 mt-auto pt-4">
+            <RailStorage usage={storageUsage} />
+          </div>
+        )}
         {!railCollapsed && <RailArt />}
       </aside>
 
@@ -951,6 +966,37 @@ function RailItem({
       <Icon size={18} className="shrink-0" />
       {!collapsed && label}
     </button>
+  );
+}
+
+// RailStorage is the bottom-of-sidebar storage meter: the workspace quota
+// bar, plus the global account bar on instances that set a per-user limit.
+function RailStorage({ usage }: { usage: StorageUsageView }) {
+  const bar = (used: number, quota: number) => (
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
+      <div
+        className={`h-full rounded-full ${quota > 0 && used / quota >= 0.9 ? "bg-red-500" : "oc-gradient"}`}
+        style={{ width: `${quota > 0 ? Math.min(100, (used / quota) * 100) : 0}%` }}
+      />
+    </div>
+  );
+  return (
+    <div className="rounded-xl border border-neutral-200 bg-white/80 p-3 backdrop-blur-sm">
+      <div className="mb-1 flex items-center justify-between text-[11px] text-neutral-500">
+        <span className="font-medium">Workspace storage</span>
+        <span>{formatBytes(usage.usedBytes)}{usage.quotaBytes > 0 ? ` of ${formatBytes(usage.quotaBytes)}` : ""}</span>
+      </div>
+      {usage.quotaBytes > 0 && bar(usage.usedBytes, usage.quotaBytes)}
+      {usage.userQuotaBytes > 0 && (
+        <>
+          <div className="mb-1 mt-2.5 flex items-center justify-between text-[11px] text-neutral-500">
+            <span className="font-medium">Your storage</span>
+            <span>{formatBytes(usage.userUsedBytes)} of {formatBytes(usage.userQuotaBytes)}</span>
+          </div>
+          {bar(usage.userUsedBytes, usage.userQuotaBytes)}
+        </>
+      )}
+    </div>
   );
 }
 

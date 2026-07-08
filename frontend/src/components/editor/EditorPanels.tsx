@@ -7,6 +7,7 @@ import { Square, SquareRoundCorner, Circle, Triangle, Pentagon, Hexagon, Star, D
 import { type ChartType, type Node, type Fill, type Color } from "@hc/schema";
 import { searchFonts, type FontCatalogEntry } from "@hc/text";
 import { toHex, fromHex, relativeLuminance } from "@hc/color";
+import { formatBytes } from "@/lib/format";
 import { qrModules } from "@/lib/qr";
 import { STICKERS, STICKER_CATEGORIES, type Sticker } from "@/lib/stickers";
 import { parseModelJson } from "@/lib/magicDesign";
@@ -597,14 +598,6 @@ function placeImage(url: string, provenance?: Record<string, unknown>) {
     if (loc?.node.type === "frame") { st.setFrameImage(sel[0], url, provenance); return; }
   }
   st.addImage(url, undefined, provenance);
-}
-
-function formatBytes(n: number): string {
-  if (n <= 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.min(units.length - 1, Math.floor(Math.log(n) / Math.log(1024)));
-  const v = n / 1024 ** i;
-  return `${v >= 10 || i === 0 ? Math.round(v) : v.toFixed(1)} ${units[i]}`;
 }
 
 /** True if an asset is an SVG, by content-type or filename. */
