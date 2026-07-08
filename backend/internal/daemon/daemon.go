@@ -35,6 +35,12 @@ const (
 // the server (booting into setup mode without a .env) enforces the same value.
 const SetupSecretEnv = "HYCANVAS_SETUP_SECRET"
 
+// ProcessAlive exposes the platform liveness probe to sibling CLI commands
+// (storage migrate checks the server pidfile with it).
+func ProcessAlive(pid int) bool {
+	return processAlive(pid)
+}
+
 // GenerateSecret returns a random secret for the first-run wizard gate.
 func GenerateSecret() string {
 	b := make([]byte, 16)
@@ -98,6 +104,8 @@ func usage(w io.Writer) {
 	fmt.Fprintln(w, "  restart   stop then start")
 	fmt.Fprintln(w, "  status    liveness and the last log line")
 	fmt.Fprintln(w, "  log       print the last log lines; -f follows, -n sets the line count")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "See also: `hycanvas storage migrate` moves local-disk blobs to S3.")
 }
 
 type svc struct {

@@ -44,6 +44,12 @@ type S3Config struct {
 	ForcePathStyle bool // path-style addressing (required by most MinIO setups)
 }
 
+// S3ConfigFromEnv exposes the canonical S3_* env parsing to CLI commands
+// (the storage migration reuses it for its destination).
+func S3ConfigFromEnv() S3Config {
+	return s3ConfigFromEnv()
+}
+
 // s3ConfigFromEnv reads the S3_* environment into an S3Config.
 func s3ConfigFromEnv() S3Config {
 	return S3Config{

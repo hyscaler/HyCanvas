@@ -42,6 +42,7 @@ import (
 	"hycanvas/backend/internal/sharing"
 	"hycanvas/backend/internal/stock"
 	"hycanvas/backend/internal/storage"
+	"hycanvas/backend/internal/storagecli"
 	"hycanvas/backend/internal/templates"
 	"hycanvas/backend/internal/uploads"
 	"hycanvas/backend/internal/webui"
@@ -64,6 +65,11 @@ func main() {
 	// to invoking the binary with no arguments.
 	if len(os.Args) > 1 && os.Args[1] == "service" {
 		os.Exit(daemon.Run(os.Args[2:], os.Stdout, os.Stderr))
+	}
+	// `hycanvas storage migrate` copies local blobs to S3 and flips .env; it
+	// runs its own env loading and never boots the server.
+	if len(os.Args) > 1 && os.Args[1] == "storage" {
+		os.Exit(storagecli.Run(os.Args[2:], os.Stdin, os.Stdout, os.Stderr))
 	}
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))

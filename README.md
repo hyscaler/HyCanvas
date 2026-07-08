@@ -109,6 +109,18 @@ OIDC_LABEL=Google
 
 A "Continue with Google" button then shows on the auth pages. Any standards-compliant OIDC provider works the same way via its issuer URL; `OIDC_ALLOWED_EMAIL_DOMAINS` restricts sign-in to listed domains, and `OIDC_REDIRECT_URI` overrides the callback when the default does not fit. The issuer must be https (localhost excepted), and `APP_URL` must be set correctly, especially behind a proxy.
 
+### Moving from local storage to S3
+
+Started on local-disk storage and want object storage later? The binary migrates itself:
+
+```bash
+./dist/hycanvas service stop       # stop first so no new objects land mid-copy
+./dist/hycanvas storage migrate    # copies every object, verifies, updates .env
+./dist/hycanvas service start
+```
+
+The S3 target (AWS, MinIO, R2, ...) is taken from `S3_*` in the environment when present, or asked interactively with a connectivity check; `--dry-run` previews the object count and size, and `--yes` makes it non-interactive for scripts. The copy is idempotent (already-present objects are skipped, so re-runs are safe), the database needs no changes (it stores storage keys, not URLs), and the local files are kept as a rollback until you delete them.
+
 ## Install a prebuilt binary
 
 Releases on the [GitHub releases page](https://github.com/hyscaler/HyCanvas/releases) ship the same self-contained binary prebuilt for Linux (amd64, arm64), macOS (Intel, Apple Silicon), and Windows (amd64). Each archive contains just the `hycanvas` binary (the first-run wizard generates the configuration), and a `SHA256SUMS.txt` accompanies the archives for verification. You still need PostgreSQL; ffmpeg is only required for server-side video export.
