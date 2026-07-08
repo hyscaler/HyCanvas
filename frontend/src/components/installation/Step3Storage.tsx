@@ -96,11 +96,11 @@ export function Step3Storage() {
                 "flex flex-col items-start gap-1 rounded-xl border p-4 text-left transition",
                 storage.driver === opt.id
                   ? "border-brand-400 bg-brand-50/60 ring-2 ring-brand-100"
-                  : "border-neutral-200 bg-white hover:border-neutral-300",
+                  : "border-neutral-200 bg-surface hover:border-neutral-300",
               )}
             >
               <span className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
-                <opt.icon size={15} className="text-brand-600" /> {opt.label}
+                <opt.icon size={15} className="text-brand-ink" /> {opt.label}
               </span>
               <span className="text-xs text-neutral-500">{opt.desc}</span>
             </button>

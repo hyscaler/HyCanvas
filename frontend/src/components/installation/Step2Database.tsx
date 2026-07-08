@@ -110,7 +110,7 @@ export function Step2Database() {
             setTested(false);
             setError(null);
           }}
-          className="self-start text-sm font-medium text-brand-700 hover:underline"
+          className="self-start text-sm font-medium text-brand-ink hover:underline"
         >
           {mode === "fields" ? "Paste a connection URL instead" : "Enter host and credentials instead"}
         </button>

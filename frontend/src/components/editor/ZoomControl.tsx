@@ -36,7 +36,7 @@ export function ZoomControl() {
   }, [menuOpen]);
   const run = (fn: () => void) => { setMenuOpen(false); fn(); };
   return (
-    <div className="absolute bottom-4 right-4 flex items-center gap-1 rounded-xl border border-neutral-200 bg-white px-1.5 py-1 shadow-md">
+    <div className="absolute bottom-4 right-4 flex items-center gap-1 rounded-xl border border-neutral-200 bg-surface px-1.5 py-1 shadow-md">
       <IconButton size="sm" aria-label="Zoom out" onClick={() => by(0.8)}><Minus size={16} /></IconButton>
       <div ref={ref} className="relative">
         <button
@@ -49,7 +49,7 @@ export function ZoomControl() {
           <ChevronDown size={12} className="text-neutral-400" />
         </button>
         {menuOpen && (
-          <div className="absolute bottom-full right-0 z-50 mb-2 w-44 overflow-hidden rounded-xl border border-neutral-200 bg-white py-1 shadow-lg">
+          <div className="absolute bottom-full right-0 z-50 mb-2 w-44 overflow-hidden rounded-xl border border-neutral-200 bg-surface py-1 shadow-lg">
             {ZOOM_PRESETS.map((z) => (
               <button
                 key={z}
@@ -57,7 +57,7 @@ export function ZoomControl() {
                 className="flex w-full items-center justify-between px-3 py-1.5 text-left text-sm text-neutral-700 hover:bg-neutral-100"
               >
                 {Math.round(z * 100)}%
-                {Math.abs(zoom - z) < 0.005 && <Check size={14} className="text-brand-600" />}
+                {Math.abs(zoom - z) < 0.005 && <Check size={14} className="text-brand-ink" />}
               </button>
             ))}
             <div className="my-1 h-px bg-neutral-100" />

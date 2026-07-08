@@ -66,7 +66,7 @@ export function PagesBar() {
   const [sizeMenu, setSizeMenu] = useState(false);
 
   return (
-    <div className="oc-scroll flex shrink-0 items-center gap-2 overflow-x-auto border-t border-neutral-200 bg-white px-3 py-2">
+    <div className="oc-scroll flex shrink-0 items-center gap-2 overflow-x-auto border-t border-neutral-200 bg-surface px-3 py-2">
       {pages.map((p, i) => {
         const hidden = !!(p as { hidden?: boolean }).hidden;
         return (
@@ -87,7 +87,7 @@ export function PagesBar() {
               s.setViewport({ panY: off - 40 / (s.viewport.zoom || 1) });
             }}
             title={`${p.name ?? `Page ${i + 1}`}${hidden ? " (hidden in present)" : ""}`}
-            className={`relative grid place-items-center overflow-hidden rounded-md border bg-white transition ${
+            className={`relative grid place-items-center overflow-hidden rounded-md border bg-surface transition ${
               i === active ? "border-brand-500 ring-2 ring-brand-200" : "border-neutral-200 hover:border-neutral-300"
             } ${dragIdx === i ? "opacity-50" : ""} ${hidden ? "opacity-50" : ""}`}
             style={{ width: THUMB_W, height: THUMB_H }}
@@ -119,7 +119,7 @@ export function PagesBar() {
           <button
             onClick={() => st().setPageHidden(!hidden, i)}
             title={hidden ? "Show slide while presenting" : "Hide slide while presenting"}
-            className="absolute -left-1.5 -top-1.5 hidden h-5 w-5 place-items-center rounded-full bg-white text-neutral-400 shadow group-hover:grid hover:text-brand-700"
+            className="absolute -left-1.5 -top-1.5 hidden h-5 w-5 place-items-center rounded-full bg-surface text-neutral-400 shadow group-hover:grid hover:text-brand-ink"
           >
             {hidden ? <EyeOff size={12} /> : <Eye size={12} />}
           </button>
@@ -127,7 +127,7 @@ export function PagesBar() {
             <button
               onClick={() => st().deletePage(i)}
               title="Delete page"
-              className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 place-items-center rounded-full bg-white text-neutral-400 shadow group-hover:grid hover:text-red-600"
+              className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 place-items-center rounded-full bg-surface text-neutral-400 shadow group-hover:grid hover:text-red-600"
             >
               <Trash2 size={12} />
             </button>
@@ -138,7 +138,7 @@ export function PagesBar() {
       <button
         onClick={() => st().duplicatePage()}
         title="Duplicate current page"
-        className="grid shrink-0 place-items-center rounded-md border border-neutral-200 text-neutral-500 hover:border-brand-300 hover:text-brand-700"
+        className="grid shrink-0 place-items-center rounded-md border border-neutral-200 text-neutral-500 hover:border-brand-300 hover:text-brand-ink"
         style={{ width: 40, height: THUMB_H }}
       >
         <Copy size={16} />
@@ -147,7 +147,7 @@ export function PagesBar() {
         <button
           onClick={() => st().addPage()}
           title="Add page (same size)"
-          className="grid place-items-center rounded-l-md border border-dashed border-neutral-300 text-neutral-500 hover:border-brand-400 hover:text-brand-700"
+          className="grid place-items-center rounded-l-md border border-dashed border-neutral-300 text-neutral-500 hover:border-brand-400 hover:text-brand-ink"
           style={{ width: 34, height: THUMB_H }}
         >
           <Plus size={18} />
@@ -155,7 +155,7 @@ export function PagesBar() {
         <button
           onClick={() => setSizeMenu((v) => !v)}
           title="Add page with a preset size"
-          className="grid w-5 place-items-center rounded-r-md border border-l-0 border-dashed border-neutral-300 text-neutral-400 hover:border-brand-400 hover:text-brand-700"
+          className="grid w-5 place-items-center rounded-r-md border border-l-0 border-dashed border-neutral-300 text-neutral-400 hover:border-brand-400 hover:text-brand-ink"
           style={{ height: THUMB_H }}
         >
           <ChevronDown size={12} />
@@ -163,12 +163,12 @@ export function PagesBar() {
         {sizeMenu && (
           <>
             <div className="fixed inset-0 z-10" onClick={() => setSizeMenu(false)} />
-            <div className="absolute bottom-full left-0 z-20 mb-1 w-44 overflow-hidden rounded-lg border border-neutral-200 bg-white py-1 shadow-lg">
+            <div className="absolute bottom-full left-0 z-20 mb-1 w-44 overflow-hidden rounded-lg border border-neutral-200 bg-surface py-1 shadow-lg">
               {PAGE_SIZE_PRESETS.map((p) => (
                 <button
                   key={p.label}
                   onClick={() => { st().addPage({ width: p.w, height: p.h }); setSizeMenu(false); }}
-                  className="flex w-full items-center justify-between px-3 py-1.5 text-left text-xs text-neutral-700 hover:bg-brand-50 hover:text-brand-700"
+                  className="flex w-full items-center justify-between px-3 py-1.5 text-left text-xs text-neutral-700 hover:bg-brand-50 hover:text-brand-ink"
                 >
                   <span>{p.label}</span>
                   <span className="text-[10px] text-neutral-400">{p.w}×{p.h}</span>

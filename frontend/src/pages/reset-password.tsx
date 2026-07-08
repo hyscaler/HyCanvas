@@ -56,7 +56,7 @@ export default function ResetPasswordPage() {
       </Head>
       <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-6">
         <CanvasFloor />
-        <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white p-8 shadow-2xl ring-1 ring-black/5">
+        <div className="relative z-10 w-full max-w-sm rounded-2xl bg-surface p-8 shadow-2xl ring-1 ring-black/5">
           <Logo size={32} className="mb-6" />
           {done ? (
             <div className="text-center">
@@ -105,7 +105,7 @@ export default function ResetPasswordPage() {
                 </Button>
               </form>
               <p className="mt-6 text-center text-sm text-neutral-500">
-                <Link href="/login" className="font-semibold text-brand-700 hover:underline">
+                <Link href="/login" className="font-semibold text-brand-ink hover:underline">
                   Back to sign in
                 </Link>
               </p>

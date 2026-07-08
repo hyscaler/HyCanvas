@@ -121,7 +121,7 @@ function ColorHarmony({ baseHex, onPick }: { baseHex: string; onPick: (hex: stri
   const swatches = colorHarmony(colorFromHex(baseHex), scheme).map((c) => colorHex(c));
   return (
     <div className="flex flex-col gap-1">
-      <select value={scheme} onChange={(e) => setScheme(e.target.value as HarmonyScheme)} className="self-start rounded-md border border-neutral-200 bg-white px-1.5 py-0.5 text-[11px] text-neutral-500 outline-none">
+      <select value={scheme} onChange={(e) => setScheme(e.target.value as HarmonyScheme)} className="self-start rounded-md border border-neutral-200 bg-surface px-1.5 py-0.5 text-[11px] text-neutral-500 outline-none">
         {HARMONY_SCHEMES.map((s) => <option key={s} value={s}>{s.replace("-", " ")}</option>)}
       </select>
       <div className="flex flex-wrap gap-1.5">
@@ -231,8 +231,8 @@ function ChartDataTable({ node }: { node: ChartNode }) {
         </table>
       </div>
       <div className="flex gap-2">
-        <button onClick={addRow} className="text-[11px] text-brand-600 hover:underline">+ Row</button>
-        <button onClick={addSeries} className="text-[11px] text-brand-600 hover:underline">+ Series</button>
+        <button onClick={addRow} className="text-[11px] text-brand-ink hover:underline">+ Row</button>
+        <button onClick={addSeries} className="text-[11px] text-brand-ink hover:underline">+ Series</button>
       </div>
     </div>
   );
@@ -305,9 +305,9 @@ function VideoSection({ node }: { node: Node }) {
     </Section>
   );
 }
-const chipCls = (active: boolean) => `rounded-md px-2.5 py-1 text-xs font-medium transition ${active ? "bg-white text-brand-700 shadow-sm" : "text-neutral-500 hover:text-neutral-700"}`;
-const selectCls = "w-full rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-sm text-neutral-800 outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100";
-const inputCls = "w-full rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-sm text-neutral-800 outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100";
+const chipCls = (active: boolean) => `rounded-md px-2.5 py-1 text-xs font-medium transition ${active ? "bg-surface text-brand-ink shadow-sm" : "text-neutral-500 hover:text-neutral-700"}`;
+const selectCls = "w-full rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm text-neutral-800 outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100";
+const inputCls = "w-full rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm text-neutral-800 outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100";
 
 function runColorHex(style: CharStyle): string {
   if (style.fill?.type === "solid") {
@@ -350,7 +350,7 @@ function Field({
     else onCommit(n);
   };
   return (
-    <label className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-sm transition focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-100">
+    <label className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm transition focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-100">
       <span className="shrink-0 text-xs font-medium text-neutral-400">{label}</span>
       <input
         defaultValue={initial}
@@ -446,7 +446,7 @@ function GradientEditor({ g, onChange }: { g: GradientFill; onChange: (patch: Pa
           </div>
         ))}
       </div>
-      <button onClick={addStop} className="self-start text-xs text-brand-600 hover:underline">+ Add stop</button>
+      <button onClick={addStop} className="self-start text-xs text-brand-ink hover:underline">+ Add stop</button>
       {g.gradient !== "radial" && (
         <Field key={`ga${g.angle ?? 90}`} label="∠" value={g.angle ?? 90} onCommit={(n) => onChange({ angle: n })} />
       )}
@@ -530,7 +530,7 @@ export function PropertiesPanel() {
               const p = PAGE_PRESETS.find((x) => `${x.w}x${x.h}` === e.target.value);
               if (p) st.setPageSize(p.w, p.h);
             }}
-            className="w-full rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-sm outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+            className="w-full rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
           >
             {!PAGE_PRESETS.some((p) => `${p.w}x${p.h}` === cur) && <option value="custom">Custom ({cur})</option>}
             {PAGE_PRESETS.map((p) => <option key={p.label} value={`${p.w}x${p.h}`}>{p.label}</option>)}
@@ -666,7 +666,7 @@ export function PropertiesPanel() {
         ) : (
           <button
             onClick={() => (selfHoldsAll ? unlockSelection() : lockSelection())}
-            className={`flex w-full items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-xs font-medium transition ${selfHoldsAll ? "border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100" : "border-neutral-200 text-neutral-600 hover:bg-neutral-100"}`}
+            className={`flex w-full items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-xs font-medium transition ${selfHoldsAll ? "border-brand-200 bg-brand-50 text-brand-ink hover:bg-brand-100" : "border-neutral-200 text-neutral-600 hover:bg-neutral-100"}`}
             title={selfHoldsAll ? "Release your collaborative lock" : "Lock so only you can edit this"}
           >
             {selfHoldsAll ? <><Unlock size={13} /> Unlock for others</> : <><Lock size={13} /> Lock for me</>}
@@ -785,7 +785,7 @@ export function PropertiesPanel() {
               <div className="flex items-center gap-1.5">
                 <button
                   onClick={async () => { const u = await promptText({ title: "Image fill", label: "Image URL", placeholder: "https://…", confirmText: "Apply" }); if (u) st.setImageFill(id, u); }}
-                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium transition ${fill?.type === "image" ? "bg-brand-50 text-brand-700" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
+                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium transition ${fill?.type === "image" ? "bg-brand-50 text-brand-ink" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
                 >
                   <ImagePlus size={14} /> {fill?.type === "image" ? "Replace image" : "Image fill"}
                 </button>
@@ -802,7 +802,7 @@ export function PropertiesPanel() {
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={async () => { const u = await promptText({ title: "Pattern fill", label: "Image URL", placeholder: "https://…", confirmText: "Apply" }); if (u) st.setPatternFill(id, u); }}
-                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium transition ${pat ? "bg-brand-50 text-brand-700" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
+                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium transition ${pat ? "bg-brand-50 text-brand-ink" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
                     >
                       <ImagePlus size={14} /> {pat ? "Replace pattern" : "Pattern fill"}
                     </button>
@@ -873,7 +873,7 @@ export function PropertiesPanel() {
                 <button
                   key={k}
                   onClick={() => useEditor.getState().setShapeKind(id, k)}
-                  className={`grid h-8 place-items-center rounded-lg border text-sm transition ${cur === k ? "border-brand-300 bg-brand-50 text-brand-700" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
+                  className={`grid h-8 place-items-center rounded-lg border text-sm transition ${cur === k ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
                   title={`Make ${k}`}
                 >{label}</button>
               ))}
@@ -886,7 +886,7 @@ export function PropertiesPanel() {
           style={{ order: ORDER.type }}
           onClick={() => useEditor.getState().convertToFrame(single.node.id)}
           title="Turn this shape into a frame you can drop an image into"
-          className="flex items-center justify-center gap-1.5 rounded-lg border border-neutral-200 px-2 py-2 text-xs font-medium text-neutral-700 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
+          className="flex items-center justify-center gap-1.5 rounded-lg border border-neutral-200 px-2 py-2 text-xs font-medium text-neutral-700 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink"
         >
           Use as image frame
         </button>
@@ -898,7 +898,7 @@ export function PropertiesPanel() {
           style={{ order: ORDER.type }}
           onClick={() => useEditor.getState().strokeToOutlineSelection()}
           title="Convert the stroke into a filled outline shape"
-          className="flex items-center justify-center gap-1.5 rounded-lg border border-neutral-200 px-2 py-2 text-xs font-medium text-neutral-700 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
+          className="flex items-center justify-center gap-1.5 rounded-lg border border-neutral-200 px-2 py-2 text-xs font-medium text-neutral-700 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink"
         >
           Outline stroke
         </button>
@@ -908,7 +908,7 @@ export function PropertiesPanel() {
           style={{ order: ORDER.type }}
           onClick={() => useEditor.getState().recognizeSelectedPath()}
           title="Snap this freehand path to a clean shape (rectangle, ellipse, line, polygon)"
-          className="flex items-center justify-center gap-1.5 rounded-lg border border-neutral-200 px-2 py-2 text-xs font-medium text-neutral-700 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
+          className="flex items-center justify-center gap-1.5 rounded-lg border border-neutral-200 px-2 py-2 text-xs font-medium text-neutral-700 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink"
         >
           Recognize shape
         </button>
@@ -926,7 +926,7 @@ export function PropertiesPanel() {
             <select
               value={(single.node as unknown as { fit?: ImageFit }).fit ?? "cover"}
               onChange={(e) => useEditor.getState().setImageFit(single.node.id, e.target.value as ImageFit)}
-              className="w-32 rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-sm outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+              className="w-32 rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
             >
               <option value="cover">Cover</option>
               <option value="contain">Contain</option>
@@ -1136,7 +1136,7 @@ export function PropertiesPanel() {
               defaultValue={textOf(single.node)}
               onBlur={(e) => useEditor.getState().setText(id, e.target.value)}
               rows={2}
-              className="w-full resize-none rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-sm outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+              className="w-full resize-none rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
             />
             {/* Quick styles: apply a heading/subheading/body preset to the selection. */}
             <div className="flex gap-1.5">
@@ -1207,7 +1207,7 @@ export function PropertiesPanel() {
               {/* Italic */}
               <button
                 onClick={() => setChar({ fontStyle: isItalic ? "Regular" : "Italic" })}
-                className={`grid h-8 w-9 place-items-center rounded-lg border text-sm italic transition ${isItalic ? "border-brand-300 bg-brand-50 text-brand-700" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
+                className={`grid h-8 w-9 place-items-center rounded-lg border text-sm italic transition ${isItalic ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
                 title="Italic"
               >I</button>
               {/* Underline / strikethrough (per-run decoration). */}
@@ -1224,7 +1224,7 @@ export function PropertiesPanel() {
                       setChar({ decoration: on ? cur.filter((x) => x !== d) : [...cur, d] });
                     }}
                     style={{ textDecoration: deco }}
-                    className={`grid h-8 w-9 place-items-center rounded-lg border text-sm transition ${on ? "border-brand-300 bg-brand-50 text-brand-700" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
+                    className={`grid h-8 w-9 place-items-center rounded-lg border text-sm transition ${on ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
                     title={d === "underline" ? "Underline" : "Strikethrough"}
                   >{label}</button>
                 );
@@ -1239,7 +1239,7 @@ export function PropertiesPanel() {
                 <button
                   key={a}
                   onClick={() => setPara({ align: a })}
-                  className={`grid h-8 w-9 place-items-center rounded-lg border transition ${ps?.align === a ? "border-brand-300 bg-brand-50 text-brand-700" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
+                  className={`grid h-8 w-9 place-items-center rounded-lg border transition ${ps?.align === a ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
                   title={`Align ${a}`}
                 ><I size={15} /></button>
               ))}
@@ -1247,7 +1247,7 @@ export function PropertiesPanel() {
                   editor types/caret RTL. Mixed-bidi reordering on canvas is limited. */}
               <button
                 onClick={() => { const rtl = ps?.direction === "rtl"; setPara({ direction: rtl ? "ltr" : "rtl", align: rtl ? "left" : "right" }); }}
-                className={`grid h-8 w-9 place-items-center rounded-lg border text-xs font-semibold transition ${ps?.direction === "rtl" ? "border-brand-300 bg-brand-50 text-brand-700" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
+                className={`grid h-8 w-9 place-items-center rounded-lg border text-xs font-semibold transition ${ps?.direction === "rtl" ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
                 title="Right-to-left"
               >RTL</button>
               {/* Color: freeform unless the brand locks colors for this member. */}
@@ -1361,7 +1361,7 @@ export function PropertiesPanel() {
                   <button
                     key={opt.label}
                     onClick={() => setPara({ list: opt.key ? { type: opt.key, level: ps?.list?.level ?? 0 } : undefined })}
-                    className={`h-8 min-w-[32px] rounded-lg border px-1.5 text-xs transition ${active ? "border-brand-300 bg-brand-50 text-brand-700" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
+                    className={`h-8 min-w-[32px] rounded-lg border px-1.5 text-xs transition ${active ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
                     title={opt.key ? `${opt.key} list` : "No list"}
                   >{opt.label}</button>
                 );
@@ -1394,7 +1394,7 @@ export function PropertiesPanel() {
                     <button
                       key={m}
                       onClick={() => setPara({ list: { type: "bullet", level: ps.list!.level ?? 0, marker: m } })}
-                      className={`h-8 min-w-[32px] rounded-lg border px-1.5 text-sm transition ${on ? "border-brand-300 bg-brand-50 text-brand-700" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
+                      className={`h-8 min-w-[32px] rounded-lg border px-1.5 text-sm transition ${on ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
                       title={`Bullet ${m}`}
                     >{m}</button>
                   );
@@ -1455,7 +1455,7 @@ export function PropertiesPanel() {
               const curve = tn.flow?.kind === "arc" ? Math.round(((tn.flow.curvature ?? 0) / 2.5) * 100) : 0;
               const vAlign = tn.box?.verticalAlign ?? "top";
               const script = cs?.script ?? "normal";
-              const ebtn = (a: boolean) => `rounded-lg border px-1.5 py-1.5 text-[11px] font-medium transition ${a ? "border-brand-300 bg-brand-50 text-brand-700" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`;
+              const ebtn = (a: boolean) => `rounded-lg border px-1.5 py-1.5 text-[11px] font-medium transition ${a ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`;
               return (
                 <div className="flex flex-col gap-2">
                   <span className="text-[10px] uppercase tracking-wide text-neutral-400">Effects</span>
@@ -1555,7 +1555,7 @@ export function PropertiesPanel() {
         const fr = single.node as unknown as { maskShape?: string; cornerRadius?: { topLeft: number } };
         const isEllipse = fr.maskShape === "ellipse";
         const isRounded = !isEllipse && (fr.cornerRadius?.topLeft ?? 0) > 0;
-        const chip = (active: boolean) => `flex-1 rounded-lg border py-1.5 text-xs font-medium transition ${active ? "border-brand-300 bg-brand-50 text-brand-700" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`;
+        const chip = (active: boolean) => `flex-1 rounded-lg border py-1.5 text-xs font-medium transition ${active ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`;
         return (
           <Section title="Frame" order={ORDER.type}>
             <div className="flex gap-1">
@@ -1620,7 +1620,7 @@ export function PropertiesPanel() {
         const border = tb.borderStyle ?? { show: true };
         const sel = tableCell;
         const selCell = tb.cells.find((c) => c.row === sel.row && c.col === sel.col);
-        const btnCls = "flex-1 rounded-md border border-neutral-200 bg-white px-2 py-1 text-[11px] text-neutral-700 transition hover:bg-neutral-50 disabled:opacity-40";
+        const btnCls = "flex-1 rounded-md border border-neutral-200 bg-surface px-2 py-1 text-[11px] text-neutral-700 transition hover:bg-neutral-50 disabled:opacity-40";
         return (
           <Section title="Table data" order={ORDER.type}>
             <p className="text-[11px] text-neutral-400">One row per line, cells comma-separated.</p>
@@ -1680,7 +1680,7 @@ export function PropertiesPanel() {
             </div>
             <div className="flex gap-1.5">
               {(["left", "center", "right"] as const).map((a) => (
-                <button key={a} type="button" className={`${btnCls} capitalize ${selCell?.align === a ? "border-brand-400 bg-brand-50 text-brand-700" : ""}`} onClick={() => st.setTableCellStyle(id, sel.row, sel.col, { align: a })}>{a}</button>
+                <button key={a} type="button" className={`${btnCls} capitalize ${selCell?.align === a ? "border-brand-400 bg-brand-50 text-brand-ink" : ""}`} onClick={() => st.setTableCellStyle(id, sel.row, sel.col, { align: a })}>{a}</button>
               ))}
             </div>
             <div className="flex items-center gap-2 text-[11px] text-neutral-500">
@@ -1813,7 +1813,7 @@ function KeyframeEditor({ node }: { node: Node }) {
         {kfs.map((k, i) => (
           <button
             key={i} onClick={() => setSel(i)} title={`${k.t}ms`}
-            className={`absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border ${i === curIdx ? "border-brand-600 bg-brand-500" : "border-neutral-300 bg-white"}`}
+            className={`absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border ${i === curIdx ? "border-brand-600 bg-brand-500" : "border-neutral-300 bg-surface"}`}
             style={{ left: `${Math.max(0, Math.min(1, k.t / Math.max(1, track.durationMs))) * 100}%` }}
           />
         ))}
@@ -1864,7 +1864,7 @@ function AnimateSection({ node }: { node: Node }) {
       {/* Magic Animate: one click animates every element on the page with a
           staggered build-in (no AI; tasteful defaults by element kind). */}
       <div className="flex gap-1.5">
-        <button onClick={() => st.magicAnimatePage()} className="flex-1 rounded-lg bg-brand-50 px-2 py-1.5 text-[11px] font-medium text-brand-700 transition hover:bg-brand-100">✨ Animate all</button>
+        <button onClick={() => st.magicAnimatePage()} className="flex-1 rounded-lg bg-brand-50 px-2 py-1.5 text-[11px] font-medium text-brand-ink transition hover:bg-brand-100">✨ Animate all</button>
         <button onClick={() => st.magicAnimatePage(true)} className="rounded-lg bg-neutral-100 px-2 py-1.5 text-[11px] text-neutral-500 transition hover:bg-neutral-200" title="Remove animations from all elements on this page">Clear all</button>
       </div>
       <div className="flex rounded-lg bg-neutral-100 p-0.5 text-xs">
@@ -1872,7 +1872,7 @@ function AnimateSection({ node }: { node: Node }) {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`flex-1 rounded-md py-1 capitalize transition ${tab === t ? "bg-white text-neutral-800 shadow-sm" : "text-neutral-500 hover:text-neutral-700"}`}
+            className={`flex-1 rounded-md py-1 capitalize transition ${tab === t ? "bg-surface text-neutral-800 shadow-sm" : "text-neutral-500 hover:text-neutral-700"}`}
           >{t}</button>
         ))}
       </div>
@@ -2037,7 +2037,7 @@ function InteractionSection({ node, doc }: { node: Node; doc: DesignFile }) {
             const link: ElementLink = { kind: v.startsWith("mailto:") || v.includes("@") ? "email" : "url", target: v };
             setAction(v ? { kind: "open-link", link } : { kind: "none" });
           }}
-          className="w-full rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-sm outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+          className="w-full rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
         />
       )}
     </Section>
@@ -2121,7 +2121,7 @@ function PagePresentSection({ page }: { page: Page }) {
           onBlur={(e) => st.setPageNotes(e.target.value)}
           placeholder="Notes for the presenter view (not shown to the audience)."
           rows={4}
-          className="w-full resize-y rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-sm leading-relaxed outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+          className="w-full resize-y rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm leading-relaxed outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
         />
       </div>
       <label className="flex items-center justify-between gap-2 text-sm text-neutral-700">
@@ -2138,7 +2138,7 @@ function PagePresentSection({ page }: { page: Page }) {
               const v = e.target.value.trim();
               st.setPageAutoAdvance(v === "" ? null : Math.max(0, Number(v) || 0) * 1000);
             }}
-            className="w-16 rounded-lg border border-neutral-200 bg-white px-2 py-1 text-right text-sm tabular-nums outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+            className="w-16 rounded-lg border border-neutral-200 bg-surface px-2 py-1 text-right text-sm tabular-nums outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
           />
           <span className="text-xs text-neutral-400">s</span>
         </span>
@@ -2285,7 +2285,7 @@ function ImageEffectsSection({ id, node }: { id: string; node: Node }) {
   };
 
   const tabCls = (on: boolean) =>
-    `flex-1 rounded-md py-1 text-xs font-medium transition ${on ? "bg-white text-neutral-800 shadow-sm" : "text-neutral-500 hover:text-neutral-700"}`;
+    `flex-1 rounded-md py-1 text-xs font-medium transition ${on ? "bg-surface text-neutral-800 shadow-sm" : "text-neutral-500 hover:text-neutral-700"}`;
 
   return (
     <Section title="Image effects" order={ORDER.type}>
@@ -2302,7 +2302,7 @@ function ImageEffectsSection({ id, node }: { id: string; node: Node }) {
               <button
                 key={p.id}
                 onClick={() => applyPreset(p.id, intensity)}
-                className={`rounded-lg border py-2 text-[11px] font-medium transition ${activePreset === p.id ? "border-brand-300 bg-brand-50 text-brand-700" : "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50"}`}
+                className={`rounded-lg border py-2 text-[11px] font-medium transition ${activePreset === p.id ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-50"}`}
               >
                 {p.name}
               </button>
@@ -2466,7 +2466,7 @@ function DataBindingControls({ node }: { node: Node }) {
       <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…/data.csv" className={`${inputCls} text-[11px]`} />
       <div className="flex gap-1.5">
         <button onClick={fetchUrl} disabled={!url.trim() || busy} className="flex-1 rounded-md border border-neutral-200 px-2 py-1 text-[11px] font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-40">Fetch URL</button>
-        {binding?.kind === "url" && <button onClick={refresh} disabled={busy} className="rounded-md border border-neutral-200 px-2 py-1 text-[11px] font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-40">Refresh</button>}
+        {binding?.kind === "url" && <button onClick={refresh} disabled={busy} className="rounded-md border border-neutral-200 px-2 py-1 text-[11px] font-medium text-brand-ink hover:bg-brand-50 disabled:opacity-40">Refresh</button>}
       </div>
     </div>
   );
@@ -2586,7 +2586,7 @@ function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (
       onClick={() => onChange(!checked)}
       className={`relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-40 ${checked ? "bg-brand-600" : "bg-neutral-300"}`}
     >
-      <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all ${checked ? "left-[18px]" : "left-0.5"}`} />
+      <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-surface shadow-sm transition-all ${checked ? "left-[18px]" : "left-0.5"}`} />
     </button>
   );
 }
@@ -2601,7 +2601,7 @@ function IconBtn({ icon: Icon, title, onClick, active = false, disabled = false 
       disabled={disabled}
       onClick={onClick}
       className={`grid h-8 flex-1 place-items-center rounded-lg border transition disabled:opacity-30 ${
-        active ? "border-brand-300 bg-brand-50 text-brand-700" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+        active ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
       }`}
     >
       <Icon size={15} strokeWidth={2} />
@@ -2642,7 +2642,7 @@ function NodeEffects({ id, effects }: { id: string; effects?: readonly { kind: s
   const setAll = (next: EffectItem[]) => useEditor.getState().setEffects(id, (next.length ? next : undefined) as never);
   const toggle = (k: string) => setAll(has(k) ? eff.filter((e) => e.kind !== k) : [...eff, make[k]()]);
   const update = (k: string, patch: Partial<EffectItem>) => setAll(eff.map((e) => (e.kind === k ? { ...e, ...patch } : e)));
-  const cls = (on: boolean) => `flex-1 rounded-lg border py-1.5 text-xs font-medium transition ${on ? "border-brand-300 bg-brand-50 text-brand-700" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`;
+  const cls = (on: boolean) => `flex-1 rounded-lg border py-1.5 text-xs font-medium transition ${on ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`;
   const colorInput = (k: string, c?: Color) => (
     <input type="color" value={c ? colorHex(c) : "#000000"} onChange={(e) => update(k, { color: colorFromHex(e.target.value) })} className="oc-color h-8 w-9 shrink-0" />
   );

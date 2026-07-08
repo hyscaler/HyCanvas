@@ -216,7 +216,7 @@ export function CommandMenu({ onExport, onShortcuts, workspaceId }: { onExport: 
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-start bg-black/20 pt-32" onClick={() => setOpen(false)}>
-      <div className="mx-auto w-[28rem] overflow-hidden rounded-lg bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="mx-auto w-[28rem] overflow-hidden rounded-lg bg-surface shadow-xl" onClick={(e) => e.stopPropagation()}>
         <input
           ref={inputRef}
           role="combobox"
@@ -258,9 +258,9 @@ export function CommandMenu({ onExport, onShortcuts, workspaceId }: { onExport: 
                 disabled={asking}
                 className={`flex w-full items-center gap-2 px-4 py-2 text-left text-sm ${active === -1 ? "bg-brand-50" : ""} disabled:opacity-60`}
               >
-                <Sparkles size={14} className="shrink-0 text-brand-600" />
+                <Sparkles size={14} className="shrink-0 text-brand-ink" />
                 <span className="truncate">
-                  <span className="text-brand-600">Ask AI · </span>
+                  <span className="text-brand-ink">Ask AI · </span>
                   {asking ? "Thinking…" : `“${query.trim()}”`}
                 </span>
               </button>

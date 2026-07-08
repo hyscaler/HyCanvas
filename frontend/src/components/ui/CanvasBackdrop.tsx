@@ -309,7 +309,7 @@ export function HeroArt() {
  *  the rail it lives in must be `relative`. */
 export function RailArt() {
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 overflow-hidden">
+    <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 overflow-hidden dark:opacity-40">
       {/* glow rising to ~60%, fading to transparent at the top */}
       <div className="absolute inset-0 bg-gradient-to-t from-brand-50/80 via-brand-50/20 to-transparent" />
       {/* faint canvas dots concentrated near the floor */}

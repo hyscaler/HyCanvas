@@ -37,7 +37,7 @@ export default function VerifyEmailPage() {
       </Head>
       <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-6">
         <CanvasFloor />
-        <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white p-8 text-center shadow-2xl ring-1 ring-black/5">
+        <div className="relative z-10 w-full max-w-sm rounded-2xl bg-surface p-8 text-center shadow-2xl ring-1 ring-black/5">
           <Logo size={32} className="mx-auto mb-6" />
           {state === "verifying" && (
             <>
@@ -62,7 +62,7 @@ export default function VerifyEmailPage() {
               <p className="mt-1.5 text-sm text-neutral-500">
                 This verification link is no longer valid. You can request a new one from your dashboard.
               </p>
-              <Link href="/dashboard" className="mt-6 inline-block text-sm font-semibold text-brand-700 hover:underline">
+              <Link href="/dashboard" className="mt-6 inline-block text-sm font-semibold text-brand-ink hover:underline">
                 Back to dashboard
               </Link>
             </>

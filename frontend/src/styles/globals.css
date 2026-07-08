@@ -1,13 +1,20 @@
 @import "tailwindcss";
 
-/* HyCanvas design tokens. Light theme is locked for v1 (a dark editor chrome
-   is applied locally, not via prefers-color-scheme). The brand/accent tokens
-   and the identity gradient below are GENERATED from the single source
-   src/theme.config.mjs by scripts/gen-theme.mjs (npm run gen:theme); edit colors
-   there, not here. The brand font is injected by next/font as --font-sans. */
-@theme inline {
-  --font-sans: var(--font-brand), ui-sans-serif, system-ui, sans-serif;
+/* Dark mode is class-driven, not media-driven: lib/theme.ts puts `dark` on
+   <html> from the stored preference (system/light/dark), so `dark:` utilities
+   and the generated `.dark` token overrides both key off that class. */
+@custom-variant dark (&:where(.dark, .dark *));
 
+/* HyCanvas design tokens. The brand/accent tokens, the semantic chrome
+   surfaces, the identity gradient, and the `.dark` overrides below are
+   GENERATED from the single source src/theme.config.mjs by
+   scripts/gen-theme.mjs (npm run gen:theme); edit colors there, not here.
+   The brand font is injected by next/font as --font-sans.
+
+   This @theme block is intentionally NOT `inline`: utilities must reference
+   the CSS variables (bg-brand-50 -> var(--color-brand-50)) so the `.dark`
+   class can swap values at runtime. */
+@theme {
   /* THEME:colors:start (generated from src/theme.config.mjs - do not edit by hand) */
   --color-brand-50: #FBEFF7;
   --color-brand-100: #F6DDEE;
@@ -32,7 +39,16 @@
   --color-accent-800: #6B1C4A;
   --color-accent-900: #4F1537;
   --color-accent-950: #350D24;
+
+  /* Semantic chrome surfaces (dark mode swaps these; see THEME:dark). */
+  --color-page: #ffffff;
+  --color-surface: #ffffff;
+  --color-brand-ink: #7E2059;
   /* THEME:colors:end */
+}
+
+@theme inline {
+  --font-sans: var(--font-brand), ui-sans-serif, system-ui, sans-serif;
 }
 
 :root {
@@ -49,12 +65,74 @@
   --color-pen-preview: #a855f7;
   --color-ruler: #9ca3af;
   /* THEME:root:end */
+
+  /* Non-token chrome details that flip with the theme (static, hand-edited). */
+  --oc-scrollbar: #d4d4d8;
+  --oc-panel-dot: rgba(22, 10, 18, 0.07);
+  --oc-swatch-border: rgba(0, 0, 0, 0.12);
+}
+
+/* THEME:dark:start (generated from src/theme.config.mjs - do not edit by hand) */
+.dark {
+  --color-page: #111114;
+  --color-surface: #1b1b20;
+  --color-brand-ink: #E195C7;
+
+  --color-neutral-50: #161619;
+  --color-neutral-100: #1e1e23;
+  --color-neutral-200: #2a2a31;
+  --color-neutral-300: #3a3a42;
+  --color-neutral-400: #8f8f9a;
+  --color-neutral-500: #a5a5b0;
+  --color-neutral-600: #c2c2cb;
+  --color-neutral-700: #d8d8de;
+  --color-neutral-800: #e8e8ed;
+  --color-neutral-900: #f4f4f6;
+  --color-neutral-950: #fbfbfc;
+
+  --color-brand-50: #2b1424;
+  --color-brand-100: #3a1b30;
+  --color-brand-200: #4e2340;
+}
+
+/* Escape hatch: subtrees that must stay light even under a dark app chrome
+   (document surfaces such as sheets, docs, and the present stage render the
+   user's content, which the app theme must never restyle). */
+.light {
+  color-scheme: light;
+  --color-page: #ffffff;
+  --color-surface: #ffffff;
+  --color-brand-ink: #7E2059;
+
+  --color-neutral-50: #fafafa;
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #e5e5e5;
+  --color-neutral-300: #d4d4d4;
+  --color-neutral-400: #a3a3a3;
+  --color-neutral-500: #737373;
+  --color-neutral-600: #525252;
+  --color-neutral-700: #404040;
+  --color-neutral-800: #262626;
+  --color-neutral-900: #171717;
+  --color-neutral-950: #0a0a0a;
+
+  --color-brand-50: #FBEFF7;
+  --color-brand-100: #F6DDEE;
+  --color-brand-200: #EDBBDC;
+}
+/* THEME:dark:end */
+
+.dark {
+  color-scheme: dark;
+  --oc-scrollbar: #3f3f46;
+  --oc-panel-dot: rgba(244, 244, 246, 0.06);
+  --oc-swatch-border: rgba(255, 255, 255, 0.16);
 }
 
 html,
 body {
-  background: #ffffff;
-  color: #18181b;
+  background: var(--color-page);
+  color: var(--color-neutral-900);
 }
 
 body {
@@ -134,14 +212,14 @@ body {
 }
 /* Whisper-light canvas dots for working panels (ink dots on light surfaces). */
 .oc-panel-dots {
-  background-image: radial-gradient(circle, rgba(22, 10, 18, 0.07) 1px, transparent 1.4px);
+  background-image: radial-gradient(circle, var(--oc-panel-dot) 1px, transparent 1.4px);
   background-size: 22px 22px;
 }
 
 /* Thin, modern scrollbars for panels. */
 .oc-scroll {
   scrollbar-width: thin;
-  scrollbar-color: #d4d4d8 transparent;
+  scrollbar-color: var(--oc-scrollbar) transparent;
 }
 
 /* Clean, swatch-style native color inputs used across the editor panels. */
@@ -158,11 +236,11 @@ body {
   padding: 0;
 }
 .oc-color::-webkit-color-swatch {
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--oc-swatch-border);
   border-radius: 8px;
 }
 .oc-color::-moz-color-swatch {
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--oc-swatch-border);
   border-radius: 8px;
 }
 

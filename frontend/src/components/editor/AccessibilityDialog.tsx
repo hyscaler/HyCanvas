@@ -54,7 +54,7 @@ export function AccessibilityDialog({ open, onClose }: { open: boolean; onClose:
               <li key={`${i.nodeId}-${i.kind}-${idx}`}>
                 <button
                   onClick={() => jump(i)}
-                  className="flex w-full items-start gap-2.5 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-left transition hover:border-brand-300 hover:bg-brand-50/40"
+                  className="flex w-full items-start gap-2.5 rounded-lg border border-neutral-200 bg-surface px-3 py-2 text-left transition hover:border-brand-300 hover:bg-brand-50/40"
                 >
                   {i.severity === "error" ? (
                     <AlertTriangle size={16} className="mt-0.5 shrink-0 text-red-500" />

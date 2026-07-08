@@ -165,7 +165,7 @@ function Composer({
   return (
     <div className="relative">
       {query != null && matches.length > 0 && (
-        <div className="absolute bottom-full left-0 z-20 mb-1 w-60 overflow-hidden rounded-xl border border-neutral-200 bg-white p-1 shadow-lg ring-1 ring-black/5">
+        <div className="absolute bottom-full left-0 z-20 mb-1 w-60 overflow-hidden rounded-xl border border-neutral-200 bg-surface p-1 shadow-lg ring-1 ring-black/5">
           {matches.map((p) => (
             <button
               key={p.id}
@@ -217,11 +217,11 @@ function ReactionPills({ comment, canComment, userId, onReact }: { comment: Comm
             key={r.emoji}
             disabled={!canComment}
             onClick={() => onReact(r.emoji)}
-            className={`flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs transition disabled:opacity-60 ${mine ? "border-brand-300 bg-brand-50 text-brand-700" : "border-neutral-200 text-neutral-600 hover:bg-neutral-50"}`}
+            className={`flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs transition disabled:opacity-60 ${mine ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-neutral-200 text-neutral-600 hover:bg-neutral-50"}`}
             title={`${r.userIds.length} reaction(s)`}
           >
             <span>{r.emoji}</span>
-            <span className={mine ? "text-brand-700" : "text-neutral-500"}>{r.userIds.length}</span>
+            <span className={mine ? "text-brand-ink" : "text-neutral-500"}>{r.userIds.length}</span>
           </button>
         );
       })}
@@ -238,7 +238,7 @@ function ReactButton({ onReact }: { onReact: (emoji: string) => void }) {
         <Smile size={14} />
       </button>
       {picking && (
-        <div className="absolute right-0 z-20 mt-1 flex gap-1 rounded-lg border border-neutral-200 bg-white p-1 shadow-lg ring-1 ring-black/5">
+        <div className="absolute right-0 z-20 mt-1 flex gap-1 rounded-lg border border-neutral-200 bg-surface p-1 shadow-lg ring-1 ring-black/5">
           {REACTIONS.map((e) => (
             <button key={e} onMouseDown={(ev) => { ev.preventDefault(); onReact(e); setPicking(false); }} className="rounded px-1 text-base hover:bg-neutral-100">{e}</button>
           ))}
@@ -280,8 +280,8 @@ function TaskControls({ comment, people, canComment, open, onClose, onChange }: 
         onClick={() => setExpanded(true)}
         className="mt-2 flex w-full items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-2 py-1.5 text-xs transition hover:bg-neutral-100"
       >
-        <CheckSquare size={13} className="shrink-0 text-brand-600" />
-        <span className="shrink-0 rounded-full bg-white px-1.5 py-0.5 text-[11px] text-neutral-600 ring-1 ring-neutral-200">{STATUS_LABEL[task.status]}</span>
+        <CheckSquare size={13} className="shrink-0 text-brand-ink" />
+        <span className="shrink-0 rounded-full bg-surface px-1.5 py-0.5 text-[11px] text-neutral-600 ring-1 ring-neutral-200">{STATUS_LABEL[task.status]}</span>
         <span className="min-w-0 flex-1 truncate text-left text-neutral-600">{assigneeName}</span>
         {dueShort && <span className="shrink-0 text-neutral-400">Due {dueShort}</span>}
         <ChevronDown size={13} className="shrink-0 text-neutral-400" />
@@ -294,9 +294,9 @@ function TaskControls({ comment, people, canComment, open, onClose, onChange }: 
   return (
     <div className="mt-2 rounded-lg border border-neutral-200 bg-neutral-50 p-2 text-xs">
       <div className="flex items-center gap-2">
-        <CheckSquare size={13} className="text-brand-600" />
+        <CheckSquare size={13} className="text-brand-ink" />
         <span className="font-semibold text-neutral-700">Task</span>
-        {task && <span className="rounded-full bg-white px-1.5 py-0.5 text-[11px] text-neutral-600 ring-1 ring-neutral-200">{STATUS_LABEL[task.status]}</span>}
+        {task && <span className="rounded-full bg-surface px-1.5 py-0.5 text-[11px] text-neutral-600 ring-1 ring-neutral-200">{STATUS_LABEL[task.status]}</span>}
         <button onClick={collapse} className="ml-auto grid h-5 w-5 place-items-center rounded text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700" title="Collapse"><ChevronUp size={14} /></button>
       </div>
       <div className="mt-2 grid gap-1.5">
@@ -389,7 +389,7 @@ function CommentRow({ comment, people, canComment, userId, isRoot, onChanged }: 
       {/* Hover toolbar: react + author edit/delete, floating top-right so the
           resting card stays clean (Figma/Canva pattern). */}
       {!editing && (canComment || mine) && (
-        <div className="absolute right-0 top-0 flex items-center gap-0.5 rounded-lg border border-neutral-200 bg-white p-0.5 opacity-0 shadow-sm ring-1 ring-black/5 transition focus-within:opacity-100 group-hover/row:opacity-100">
+        <div className="absolute right-0 top-0 flex items-center gap-0.5 rounded-lg border border-neutral-200 bg-surface p-0.5 opacity-0 shadow-sm ring-1 ring-black/5 transition focus-within:opacity-100 group-hover/row:opacity-100">
           {canComment && <ReactButton onReact={react} />}
           {mine && (
             <button onClick={() => setEditing(true)} className="grid h-6 w-6 place-items-center rounded-md text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700" title="Edit"><Pencil size={13} /></button>
@@ -439,7 +439,7 @@ function Thread({ thread, people, canComment, userId, onChanged }: {
 
   return (
     <div
-      className={`cursor-pointer rounded-xl border p-3 transition ${thread.resolved ? "border-neutral-100 bg-neutral-50/60" : "border-neutral-200 bg-white hover:border-neutral-300"} ${expanded ? "ring-1 ring-brand-200" : ""}`}
+      className={`cursor-pointer rounded-xl border p-3 transition ${thread.resolved ? "border-neutral-100 bg-neutral-50/60" : "border-neutral-200 bg-surface hover:border-neutral-300"} ${expanded ? "ring-1 ring-brand-200" : ""}`}
       onClick={openAndReveal}
     >
       <div onClick={(e) => e.stopPropagation()}>
@@ -526,9 +526,9 @@ export function CommentsPanel({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <aside className="oc-scroll flex w-80 shrink-0 flex-col overflow-hidden border-l border-neutral-200 bg-white">
+    <aside className="oc-scroll flex w-80 shrink-0 flex-col overflow-hidden border-l border-neutral-200 bg-surface">
       <div className="flex items-center gap-2 border-b border-neutral-200 px-3 py-2.5">
-        <MessageSquare size={18} className="text-brand-600" />
+        <MessageSquare size={18} className="text-brand-ink" />
         <span className="text-sm font-semibold text-neutral-800">Comments</span>
         {threads.length > 0 && (
           <span className="rounded-full bg-neutral-100 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-neutral-500">{threads.length}</span>
@@ -541,7 +541,7 @@ export function CommentsPanel({ onClose }: { onClose: () => void }) {
           <button
             key={f.id}
             onClick={() => useComments.getState().setFilter(f.id)}
-            className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium transition ${filter === f.id ? "bg-brand-50 text-brand-700" : "text-neutral-500 hover:bg-neutral-100"}`}
+            className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium transition ${filter === f.id ? "bg-brand-50 text-brand-ink" : "text-neutral-500 hover:bg-neutral-100"}`}
           >
             {f.label}
           </button>
@@ -593,7 +593,7 @@ export function CommentsPanel({ onClose }: { onClose: () => void }) {
           {canComment && (
             <div className="border-t border-neutral-200 p-3">
               {draftAnchor && (
-                <div className="mb-1.5 flex items-center justify-between rounded-lg bg-brand-50 px-2 py-1 text-[11px] text-brand-700">
+                <div className="mb-1.5 flex items-center justify-between rounded-lg bg-brand-50 px-2 py-1 text-[11px] text-brand-ink">
                   <span className="flex items-center gap-1"><MessageSquare size={11} /> {draftAnchor.kind === "element" ? "Commenting on an element" : "Commenting on a spot"}</span>
                   <button onClick={() => useComments.getState().setDraftAnchor(null)} className="font-medium hover:underline">Clear</button>
                 </div>

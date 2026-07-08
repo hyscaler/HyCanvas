@@ -261,7 +261,7 @@ export function PresenceOverlay({ api }: { api: CanvasApi }) {
         return (
           <div
             key={`chat:${peer.clientId}`}
-            className="absolute max-w-[220px] break-words rounded-xl border bg-white px-2.5 py-1 text-xs text-neutral-800 shadow-sm"
+            className="absolute max-w-[220px] break-words rounded-xl border bg-surface px-2.5 py-1 text-xs text-neutral-800 shadow-sm"
             style={{ left: p.x + 14, top: p.y + 16, borderColor: peer.color }}
           >
             {chat}

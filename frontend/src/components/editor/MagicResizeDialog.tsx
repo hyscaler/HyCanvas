@@ -88,9 +88,9 @@ export function MagicResizeDialog({ open, onClose }: { open: boolean; onClose: (
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/20" onClick={onClose} />
-      <div role="dialog" aria-label="Magic Resize" className="fixed left-1/2 top-1/2 z-50 max-h-[80vh] w-[26rem] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-4 shadow-2xl">
+      <div role="dialog" aria-label="Magic Resize" className="fixed left-1/2 top-1/2 z-50 max-h-[80vh] w-[26rem] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-neutral-200 bg-surface p-4 shadow-2xl">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="flex items-center gap-1.5 text-base font-semibold text-neutral-900"><Wand2 size={16} className="text-brand-600" /> Resize &amp; Switch</h2>
+          <h2 className="flex items-center gap-1.5 text-base font-semibold text-neutral-900"><Wand2 size={16} className="text-brand-ink" /> Resize &amp; Switch</h2>
           <button onClick={onClose} className="grid h-7 w-7 place-items-center rounded-lg text-neutral-400 hover:bg-neutral-100"><X size={16} /></button>
         </div>
         {/* Magic Switch: one-click format targets (incl. a multi-size social set). */}
@@ -101,7 +101,7 @@ export function MagicResizeDialog({ open, onClose }: { open: boolean; onClose: (
               <button
                 key={f.label} onClick={() => apply(f.sizes, "Switched to")}
                 title={f.sizes.map((s) => `${s.w}×${s.h}`).join(", ")}
-                className="flex items-center gap-1 rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs font-medium text-neutral-700 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
+                className="flex items-center gap-1 rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs font-medium text-neutral-700 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink"
               >
                 <span aria-hidden>{f.emoji}</span> {f.label}{f.sizes.length > 1 ? ` (${f.sizes.length})` : ""}
               </button>
@@ -121,7 +121,7 @@ export function MagicResizeDialog({ open, onClose }: { open: boolean; onClose: (
                 return (
                   <button
                     key={p.label} onClick={() => toggle(p)}
-                    className={`flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-left text-xs transition ${active ? "border-brand-400 bg-brand-50 text-brand-700" : "border-neutral-200 text-neutral-700 hover:bg-neutral-50"}`}
+                    className={`flex items-center justify-between rounded-lg border px-2.5 py-1.5 text-left text-xs transition ${active ? "border-brand-400 bg-brand-50 text-brand-ink" : "border-neutral-200 text-neutral-700 hover:bg-neutral-50"}`}
                   >
                     <span className="font-medium">{p.label}</span>
                     <span className="text-[10px] text-neutral-400">{p.w}×{p.h}</span>
@@ -160,7 +160,7 @@ export function MagicResizeButton() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center justify-center gap-1.5 rounded-lg border border-neutral-200 px-2 py-2 text-xs font-medium text-neutral-700 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
+        className="flex items-center justify-center gap-1.5 rounded-lg border border-neutral-200 px-2 py-2 text-xs font-medium text-neutral-700 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink"
       >
         <Wand2 size={14} /> Magic Resize
       </button>

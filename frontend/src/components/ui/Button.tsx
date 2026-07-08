@@ -11,7 +11,7 @@ const button = cva(
     variants: {
       variant: {
         primary: "oc-gradient text-white shadow-sm hover:opacity-90 active:opacity-100",
-        secondary: "border border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-50",
+        secondary: "border border-neutral-200 bg-surface text-neutral-800 hover:bg-neutral-50",
         ghost: "text-neutral-600 hover:bg-neutral-100",
         danger: "bg-red-600 text-white hover:bg-red-700",
       },

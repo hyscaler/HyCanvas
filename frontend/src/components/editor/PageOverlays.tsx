@@ -79,7 +79,7 @@ export function PageOverlays({ api }: { api: CanvasApi }) {
               title="Rename page"
             >{p.name ? `- ${p.name}` : "- Add page title"}</button>
             <span className="flex-1" />
-            <div className={`flex shrink-0 items-center gap-0.5 rounded-lg bg-white/90 px-0.5 shadow-sm ring-1 ring-black/5 transition-opacity ${isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+            <div className={`flex shrink-0 items-center gap-0.5 rounded-lg bg-surface/90 px-0.5 shadow-sm ring-1 ring-black/5 transition-opacity ${isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
               <HdrBtn icon={ChevronUp} title="Move up" disabled={i === 0} onClick={() => st.movePage(i, i - 1)} />
               <HdrBtn icon={ChevronDown} title="Move down" disabled={i === n - 1} onClick={() => st.movePage(i, i + 1)} />
               <HdrBtn icon={hidden ? EyeOff : Eye} title={hidden ? "Unhide while presenting" : "Hide while presenting"} onClick={() => st.setPageHidden(!hidden, i)} />
@@ -93,7 +93,7 @@ export function PageOverlays({ api }: { api: CanvasApi }) {
       <div className="pointer-events-auto absolute" style={{ left: addLeft, top: lastBottom + 18, width: addWidth }}>
         <button
           onClick={() => st.addPage()}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white py-2.5 text-sm font-medium text-neutral-600 shadow-sm transition hover:border-brand-400 hover:text-brand-700"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-surface py-2.5 text-sm font-medium text-neutral-600 shadow-sm transition hover:border-brand-400 hover:text-brand-ink"
         >
           <Plus size={16} /> Add page
         </button>

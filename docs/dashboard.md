@@ -50,6 +50,6 @@ The avatar menu in the top-right opens **Settings**.
 
 ![Account settings](images/settings.png)
 
-- **Account**: display name, language, and your data. **Download my data** exports everything in your account; **Delete account** permanently removes it.
+- **Account**: display name, language, appearance, and your data. **Appearance** picks the interface theme (system, light, or dark; your designs are never restyled), also toggleable from the avatar menu on the dashboard. **Download my data** exports everything in your account; **Delete account** permanently removes it.
 - **Security**: change your password, set up two-factor authentication (TOTP), and link a social sign-in (for example Google) to your account.
 - **Notifications**: choose what HyCanvas emails you about.

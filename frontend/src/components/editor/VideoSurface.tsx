@@ -772,7 +772,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
 
   if (!project) {
     return (
-      <div className="grid flex-1 place-items-center bg-neutral-950 text-sm text-neutral-400">
+      <div className="light grid flex-1 place-items-center bg-neutral-950 text-sm text-neutral-400">
         Preparing video project...
       </div>
     );
@@ -784,7 +784,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
   const anySolo = soloActive(project.tracks);
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-1 bg-neutral-950 text-neutral-100">
+    <div className="light flex h-full min-h-0 min-w-0 flex-1 bg-neutral-950 text-neutral-100">
       {/* stage + timeline column (everything except the right inspector) */}
       <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
       {/* ---------------------------------------------------------------- */}

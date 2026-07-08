@@ -138,7 +138,7 @@ export default function SharedLinkPage() {
           <title>{designTitle} · HyCanvas</title>
         </Head>
         <div className="min-h-screen bg-neutral-100">
-          <header className="flex items-center gap-3 border-b border-neutral-200 bg-white px-4 py-2.5">
+          <header className="flex items-center gap-3 border-b border-neutral-200 bg-surface px-4 py-2.5">
             <Logo size={26} />
             <span className="min-w-0 truncate text-sm font-semibold text-neutral-800">{designTitle}</span>
             <span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">View only</span>
@@ -146,7 +146,7 @@ export default function SharedLinkPage() {
               {unlock && (
                 <Link
                   href={`/login?next=${encodeURIComponent(router.asPath || `/shared?token=${token}`)}`}
-                  className="text-sm font-semibold text-brand-700 hover:underline"
+                  className="text-sm font-semibold text-brand-ink hover:underline"
                 >
                   Sign in to {unlock}
                 </Link>
@@ -173,7 +173,7 @@ export default function SharedLinkPage() {
       </Head>
       <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-6">
         <CanvasFloor />
-        <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white p-8 text-center shadow-2xl ring-1 ring-black/5">
+        <div className="relative z-10 w-full max-w-sm rounded-2xl bg-surface p-8 text-center shadow-2xl ring-1 ring-black/5">
           <Logo size={32} className="mx-auto mb-6" />
           {state.kind === "resolving" && (
             <>
@@ -225,7 +225,7 @@ export default function SharedLinkPage() {
               <p className="mt-1.5 text-sm text-neutral-500">{state.reason}</p>
               <Link
                 href={authStatus === "authed" ? "/dashboard" : "/"}
-                className="mt-6 inline-block text-sm font-semibold text-brand-700 hover:underline"
+                className="mt-6 inline-block text-sm font-semibold text-brand-ink hover:underline"
               >
                 {authStatus === "authed" ? "Go to your dashboard" : "Go to HyCanvas"}
               </Link>

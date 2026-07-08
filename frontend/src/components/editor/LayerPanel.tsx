@@ -58,7 +58,7 @@ export function LayerPanel() {
               className={`group flex items-center gap-1.5 border-t-2 px-2 py-1.5 text-sm ${
                 showDropIndicator ? "border-t-brand-500" : "border-t-transparent"
               } ${
-                selected ? "bg-brand-50 text-brand-700" : "text-neutral-700 hover:bg-neutral-50"
+                selected ? "bg-brand-50 text-brand-ink" : "text-neutral-700 hover:bg-neutral-50"
               } ${dragId === node.id ? "opacity-50" : ""}`}
             >
               <GripVertical size={14} className="shrink-0 cursor-grab text-neutral-300 group-hover:text-neutral-400" />

@@ -195,7 +195,7 @@ function BulkCreateBody({
           <div className="mb-4">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">2. Paste your data (CSV)</p>
-              <button className="text-xs font-medium text-brand-700 hover:underline" onClick={() => setCsvText(SAMPLE_CSV)}>
+              <button className="text-xs font-medium text-brand-ink hover:underline" onClick={() => setCsvText(SAMPLE_CSV)}>
                 Use sample
               </button>
             </div>
@@ -227,7 +227,7 @@ function BulkCreateBody({
                     <select
                       value={mapping[f.nodeId] ?? ""}
                       onChange={(e) => setMapping((m) => ({ ...m, [f.nodeId]: e.target.value }))}
-                      className="h-9 flex-1 rounded-lg border border-neutral-200 bg-white px-2 text-sm outline-none focus:border-brand-500"
+                      className="h-9 flex-1 rounded-lg border border-neutral-200 bg-surface px-2 text-sm outline-none focus:border-brand-500"
                     >
                       <option value="">(not mapped)</option>
                       {parsed.headers.map((h) => (
@@ -300,7 +300,7 @@ function BulkCreateBody({
             {result.created.map((c) => (
               <li key={c.id} className="flex items-center justify-between px-3 py-2 text-sm">
                 <span className="truncate text-neutral-700">{c.title}</span>
-                <button className="shrink-0 font-medium text-brand-700 hover:underline" onClick={() => onOpenDesign(c.id)}>
+                <button className="shrink-0 font-medium text-brand-ink hover:underline" onClick={() => onOpenDesign(c.id)}>
                   Open
                 </button>
               </li>
@@ -355,7 +355,7 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-2 font-medium ${active ? "border-b-2 border-brand-600 text-brand-700" : "text-neutral-500 hover:text-neutral-800"}`}
+      className={`px-4 py-2 font-medium ${active ? "border-b-2 border-brand-600 text-brand-ink" : "text-neutral-500 hover:text-neutral-800"}`}
     >
       {children}
     </button>

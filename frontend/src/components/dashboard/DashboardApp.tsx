@@ -41,10 +41,13 @@ import {
   CheckSquare,
   List,
   Users,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { createBlankDesign } from "@hc/schema";
 import type { DesignRecord, HomeItem, MyTask, StorageUsageView, TaskStatus, TemplateCollectionSummary, TemplateSummary, WorkspaceRole } from "@hc/sdk";
 import { formatBytes } from "@/lib/format";
+import { resolvedTheme, setThemePreference } from "@/lib/theme";
 import { oc } from "@/lib/sdk";
 import { useAuth } from "@/store/auth";
 import { useToast } from "@/components/ui/Toast";
@@ -442,14 +445,14 @@ export function DashboardApp() {
       <select
         value={sortBy}
         onChange={(e) => setSortBy(e.target.value as "recent" | "name")}
-        className="h-8 rounded-lg border border-neutral-200 bg-white px-2 text-xs text-neutral-600 outline-none focus:border-brand-400"
+        className="h-8 rounded-lg border border-neutral-200 bg-surface px-2 text-xs text-neutral-600 outline-none focus:border-brand-400"
       >
         <option value="recent">Last edited</option>
         <option value="name">Name (A-Z)</option>
       </select>
       <div className="flex overflow-hidden rounded-lg border border-neutral-200">
-        <button onClick={() => setViewMode("grid")} title="Grid view" className={`grid h-8 w-8 place-items-center ${viewMode === "grid" ? "bg-brand-50 text-brand-700" : "text-neutral-500 hover:bg-neutral-100"}`}><LayoutGrid size={15} /></button>
-        <button onClick={() => setViewMode("list")} title="List view" className={`grid h-8 w-8 place-items-center border-l border-neutral-200 ${viewMode === "list" ? "bg-brand-50 text-brand-700" : "text-neutral-500 hover:bg-neutral-100"}`}><List size={15} /></button>
+        <button onClick={() => setViewMode("grid")} title="Grid view" className={`grid h-8 w-8 place-items-center ${viewMode === "grid" ? "bg-brand-50 text-brand-ink" : "text-neutral-500 hover:bg-neutral-100"}`}><LayoutGrid size={15} /></button>
+        <button onClick={() => setViewMode("list")} title="List view" className={`grid h-8 w-8 place-items-center border-l border-neutral-200 ${viewMode === "list" ? "bg-brand-50 text-brand-ink" : "text-neutral-500 hover:bg-neutral-100"}`}><List size={15} /></button>
       </div>
     </div>
   );
@@ -459,7 +462,7 @@ export function DashboardApp() {
     <div className="relative">
       <IconButton size="sm" onClick={(e) => { e.stopPropagation(); setMenuFor(menuFor === item.id ? null : item.id); }} aria-label="More"><MoreHorizontal size={16} /></IconButton>
       {menuFor === item.id && (
-        <div className="absolute right-0 z-30 mt-1 w-36 overflow-hidden rounded-xl border border-neutral-200 bg-white py-1 text-sm shadow-lg" onClick={(e) => e.stopPropagation()}>
+        <div className="absolute right-0 z-30 mt-1 w-36 overflow-hidden rounded-xl border border-neutral-200 bg-surface py-1 text-sm shadow-lg" onClick={(e) => e.stopPropagation()}>
           <MenuRow icon={ExternalLink} onClick={() => { setMenuFor(null); void open(item.id); }}>Open</MenuRow>
           <MenuRow icon={Copy} onClick={() => { setMenuFor(null); void duplicate(item); }}>Duplicate</MenuRow>
           <MenuRow icon={Pencil} onClick={() => { setMenuFor(null); setRenameTarget(item); setRenameValue(item.title); }}>Rename</MenuRow>
@@ -471,7 +474,7 @@ export function DashboardApp() {
 
   // A design as a grid card / a list row. Used across Home + Favorites.
   const renderCard = (item: HomeItem) => (
-    <li key={item.id} className="group relative rounded-2xl border border-neutral-200 bg-white shadow-sm transition hover:shadow-md">
+    <li key={item.id} className="group relative rounded-2xl border border-neutral-200 bg-surface shadow-sm transition hover:shadow-md">
       <button onClick={() => void open(item.id)} className="block aspect-[4/3] w-full overflow-hidden rounded-t-2xl" title="Open"><DesignThumb designId={item.id} /></button>
       <FavoriteButton starred={item.starred} onToggle={() => void toggleFavorite(item)} />
       <div className="flex items-center justify-between gap-2 px-3 py-2.5">
@@ -501,7 +504,7 @@ export function DashboardApp() {
     viewMode === "grid" ? (
       <ul className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">{list.map(renderCard)}</ul>
     ) : (
-      <ul className="rounded-2xl border border-neutral-200 bg-white shadow-sm [&>li:first-child]:rounded-t-2xl [&>li:last-child]:rounded-b-2xl">{list.map(renderRow)}</ul>
+      <ul className="rounded-2xl border border-neutral-200 bg-surface shadow-sm [&>li:first-child]:rounded-t-2xl [&>li:last-child]:rounded-b-2xl">{list.map(renderRow)}</ul>
     );
 
   return (
@@ -509,7 +512,7 @@ export function DashboardApp() {
       {/* Left rail: fixed to the viewport; only the main column scrolls.
           Collapsible to an icon-only strip (remembered in localStorage). */}
       <aside
-        className={`oc-panel-dots relative flex shrink-0 flex-col overflow-y-auto border-r border-neutral-200 bg-white transition-[width] duration-200 ${
+        className={`oc-panel-dots relative flex shrink-0 flex-col overflow-y-auto border-r border-neutral-200 bg-surface transition-[width] duration-200 ${
           railCollapsed ? "w-[4.5rem] p-3" : "w-80 p-4"
         }`}
       >
@@ -583,14 +586,14 @@ export function DashboardApp() {
       {/* Main */}
       <main className="oc-scroll flex-1 overflow-y-auto" style={DASH_BACKDROP}>
         {/* Header: global search, create, notifications, and the user menu. */}
-        <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-neutral-200 bg-white/90 px-6 py-2.5 backdrop-blur">
+        <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-neutral-200 bg-surface/90 px-6 py-2.5 backdrop-blur">
           <form onSubmit={onSearch} className="relative max-w-lg flex-1">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search designs and templates…"
-              className="h-9 w-full rounded-xl border border-neutral-200 bg-neutral-50 pl-9 pr-3 text-sm outline-none transition focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-100"
+              className="h-9 w-full rounded-xl border border-neutral-200 bg-neutral-50 pl-9 pr-3 text-sm outline-none transition focus:border-brand-400 focus:bg-surface focus:ring-2 focus:ring-brand-100"
             />
           </form>
           <div className="ml-auto flex items-center gap-2">
@@ -692,7 +695,7 @@ export function DashboardApp() {
                     onClick={() => void applyTemplate(t)}
                     disabled={busy}
                     title="Use this template"
-                    className="group overflow-hidden rounded-2xl border border-neutral-200 bg-white text-left shadow-sm transition hover:shadow-md disabled:opacity-60"
+                    className="group overflow-hidden rounded-2xl border border-neutral-200 bg-surface text-left shadow-sm transition hover:shadow-md disabled:opacity-60"
                   >
                     <div className="aspect-[4/3] bg-neutral-100">
                       <DesignThumb templateId={t.id} />
@@ -729,7 +732,7 @@ export function DashboardApp() {
                   <select
                     value={tplCollection ?? ""}
                     onChange={(e) => setTplCollection(e.target.value || null)}
-                    className="h-8 rounded-lg border border-neutral-200 bg-white px-2 text-xs text-neutral-600 outline-none focus:border-brand-400"
+                    className="h-8 rounded-lg border border-neutral-200 bg-surface px-2 text-xs text-neutral-600 outline-none focus:border-brand-400"
                   >
                     <option value="">All collections</option>
                     {collections.map((c) => (
@@ -744,7 +747,7 @@ export function DashboardApp() {
                 <div className="mb-4 flex flex-wrap gap-2">
                   <button
                     onClick={() => setTplCategory(null)}
-                    className={`rounded-lg border px-3 py-1 text-sm transition ${tplCategory === null ? "border-brand-200 bg-brand-50 text-brand-700" : "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50"}`}
+                    className={`rounded-lg border px-3 py-1 text-sm transition ${tplCategory === null ? "border-brand-200 bg-brand-50 text-brand-ink" : "border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-50"}`}
                   >
                     All
                   </button>
@@ -752,7 +755,7 @@ export function DashboardApp() {
                     <button
                       key={c}
                       onClick={() => setTplCategory(c)}
-                      className={`rounded-lg border px-3 py-1 text-sm capitalize transition ${tplCategory === c ? "border-brand-200 bg-brand-50 text-brand-700" : "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50"}`}
+                      className={`rounded-lg border px-3 py-1 text-sm capitalize transition ${tplCategory === c ? "border-brand-200 bg-brand-50 text-brand-ink" : "border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-50"}`}
                     >
                       {c}
                     </button>
@@ -764,7 +767,7 @@ export function DashboardApp() {
               ) : (
                 <ul className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                   {filteredTemplates.map((t) => (
-                    <li key={t.id} className="group relative rounded-2xl border border-neutral-200 bg-white shadow-sm transition hover:shadow-md">
+                    <li key={t.id} className="group relative rounded-2xl border border-neutral-200 bg-surface shadow-sm transition hover:shadow-md">
                       <button
                         onClick={() => void applyTemplate(t)}
                         disabled={busy}
@@ -789,12 +792,12 @@ export function DashboardApp() {
               ) : (
                 <ul className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                   {trash.map((d) => (
-                    <li key={d.id} className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+                    <li key={d.id} className="overflow-hidden rounded-2xl border border-neutral-200 bg-surface shadow-sm">
                       <div className="aspect-[4/3] bg-neutral-100"><DesignThumb designId={d.id} trashed /></div>
                       <div className="px-3 py-2.5">
                         <div className="truncate text-sm font-semibold text-neutral-800">{d.title}</div>
                         <div className="mt-2 flex gap-2 text-xs">
-                          <button onClick={() => void restoreFromTrash(d.id)} className="font-medium text-brand-700 hover:underline">Restore</button>
+                          <button onClick={() => void restoreFromTrash(d.id)} className="font-medium text-brand-ink hover:underline">Restore</button>
                           <button onClick={() => void deleteForever(d.id)} className="font-medium text-red-600 hover:underline">Delete forever</button>
                         </div>
                       </div>
@@ -824,9 +827,9 @@ export function DashboardApp() {
                       <li key={t.id}>
                         <button
                           onClick={() => void open(t.designId)}
-                          className="flex w-full items-center gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-left shadow-sm hover:border-brand-300 hover:bg-brand-50/40"
+                          className="flex w-full items-center gap-3 rounded-xl border border-neutral-200 bg-surface px-4 py-3 text-left shadow-sm hover:border-brand-300 hover:bg-brand-50/40"
                         >
-                          <CheckSquare size={18} className="shrink-0 text-brand-600" />
+                          <CheckSquare size={18} className="shrink-0 text-brand-ink" />
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-sm font-medium text-neutral-800">{t.body}</span>
                             <span className="block truncate text-xs text-neutral-400">
@@ -961,7 +964,7 @@ function RailItem({
       aria-label={label}
       className={`flex items-center rounded-xl font-medium ${
         collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2 text-left"
-      } ${active ? "bg-brand-50 text-brand-700" : "text-neutral-600 hover:bg-neutral-100"}`}
+      } ${active ? "bg-brand-50 text-brand-ink" : "text-neutral-600 hover:bg-neutral-100"}`}
     >
       <Icon size={18} className="shrink-0" />
       {!collapsed && label}
@@ -981,7 +984,7 @@ function RailStorage({ usage }: { usage: StorageUsageView }) {
     </div>
   );
   return (
-    <div className="rounded-xl border border-white/60 bg-white/40 p-3 shadow-[0_8px_24px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.7)] backdrop-blur-[6px] backdrop-saturate-150">
+    <div className="rounded-xl border border-white/60 bg-surface/40 p-3 shadow-[0_8px_24px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.7)] backdrop-blur-[6px] backdrop-saturate-150 dark:border-white/10 dark:shadow-[0_8px_24px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)]">
       <div className="mb-1 flex items-center justify-between text-[11px] text-neutral-600">
         <span className="font-medium">Workspace storage</span>
         <span>{formatBytes(usage.usedBytes)}{usage.quotaBytes > 0 ? ` of ${formatBytes(usage.quotaBytes)}` : ""}</span>
@@ -1011,7 +1014,7 @@ function FavoriteButton({ starred, onToggle }: { starred: boolean; onToggle: () 
       aria-label={starred ? "Remove from favorites" : "Add to favorites"}
       aria-pressed={starred}
       title={starred ? "Remove from favorites" : "Add to favorites"}
-      className={`absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-white/90 shadow-sm backdrop-blur transition hover:bg-white ${
+      className={`absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-surface/90 shadow-sm backdrop-blur transition hover:bg-surface ${
         starred ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus:opacity-100"
       }`}
     >
@@ -1059,7 +1062,7 @@ function FormatTile({ f, disabled, onClick }: { f: Format; disabled?: boolean; o
       className="group flex w-24 flex-col items-center gap-2"
       title={f.label === "Blank" ? f.label : `${f.label} · ${f.w}×${f.h}`}
     >
-      <span className="relative grid h-[78px] w-full place-items-center rounded-xl border border-neutral-200 bg-white shadow-sm transition group-hover:-translate-y-0.5 group-hover:border-brand-300 group-hover:shadow-md">
+      <span className="relative grid h-[78px] w-full place-items-center rounded-xl border border-neutral-200 bg-surface shadow-sm transition group-hover:-translate-y-0.5 group-hover:border-brand-300 group-hover:shadow-md">
         <span className="rounded bg-brand-50 ring-1 ring-brand-100" style={{ width: boxW, height: boxH }} />
         <span className="absolute inset-0 grid place-items-center text-brand-500"><f.icon size={20} strokeWidth={1.75} /></span>
       </span>
@@ -1087,9 +1090,9 @@ function CreateMenu({ disabled, onPick, onCustom, onBulk }: { disabled?: boolean
     <div className="relative" ref={ref}>
       <Button onClick={() => setOpen((o) => !o)} disabled={disabled}><Plus size={16} /> Create</Button>
       {open && (
-        <div className="absolute right-0 z-40 mt-1.5 max-h-[72vh] w-64 overflow-y-auto rounded-xl border border-neutral-200 bg-white p-1.5 shadow-xl ring-1 ring-black/5">
+        <div className="absolute right-0 z-40 mt-1.5 max-h-[72vh] w-64 overflow-y-auto rounded-xl border border-neutral-200 bg-surface p-1.5 shadow-xl ring-1 ring-black/5">
           <button onClick={() => { setOpen(false); onCustom(); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-medium text-neutral-700 hover:bg-neutral-100">
-            <Plus size={16} className="text-brand-600" /> Blank / custom size
+            <Plus size={16} className="text-brand-ink" /> Blank / custom size
           </button>
           {FORMAT_GROUPS.map((g) => (
             <div key={g.title}>
@@ -1125,17 +1128,38 @@ function UserMenu({ user, onSettings, onSignOut }: { user: { name?: string | nul
         {(user?.name || user?.email || "?").charAt(0).toUpperCase()}
       </button>
       {open && (
-        <div className="absolute right-0 z-40 mt-1.5 w-56 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-xl ring-1 ring-black/5">
+        <div className="absolute right-0 z-40 mt-1.5 w-56 rounded-xl border border-neutral-200 bg-surface p-1.5 shadow-xl ring-1 ring-black/5">
           <div className="px-2.5 py-1.5">
             {user?.name && <div className="truncate text-sm font-semibold text-neutral-800">{user.name}</div>}
             <div className="truncate text-xs text-neutral-500">{user?.email}</div>
           </div>
           <div className="my-1 border-t border-neutral-100" />
+          <ThemeMenuItem />
           <button onClick={() => { setOpen(false); onSettings(); }} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100"><Settings size={15} className="text-neutral-400" /> Settings</button>
           <button onClick={() => { setOpen(false); onSignOut(); }} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100"><LogOut size={15} className="text-neutral-400" /> Sign out</button>
         </div>
       )}
     </div>
+  );
+}
+
+// Quick dark-mode toggle in the avatar menu; cycles the resolved look and
+// stores it as an explicit preference (the full 3-way choice lives in
+// Settings > Appearance).
+function ThemeMenuItem() {
+  const [dark, setDark] = useState(() => resolvedTheme() === "dark");
+  return (
+    <button
+      onClick={() => {
+        const next = dark ? "light" : "dark";
+        setThemePreference(next);
+        setDark(next === "dark");
+      }}
+      className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100"
+    >
+      {dark ? <Sun size={15} className="text-neutral-400" /> : <Moon size={15} className="text-neutral-400" />}
+      {dark ? "Light mode" : "Dark mode"}
+    </button>
   );
 }
 
@@ -1167,18 +1191,18 @@ function WorkspaceSwitcher({
         <ChevronDown size={16} className="text-neutral-400" />
       </button>
       {open && (
-        <div className="absolute left-0 right-0 z-20 mt-1 overflow-hidden rounded-xl border border-neutral-200 bg-white py-1 shadow-lg" onClick={(e) => e.stopPropagation()}>
+        <div className="absolute left-0 right-0 z-20 mt-1 overflow-hidden rounded-xl border border-neutral-200 bg-surface py-1 shadow-lg" onClick={(e) => e.stopPropagation()}>
           {workspaces.map((w) => (
             <button
               key={w.id}
               onClick={() => { onSelect(w.id); setOpen(false); }}
-              className={`block w-full truncate px-3 py-2 text-left text-sm hover:bg-neutral-50 ${w.id === activeId ? "font-semibold text-brand-700" : "text-neutral-700"}`}
+              className={`block w-full truncate px-3 py-2 text-left text-sm hover:bg-neutral-50 ${w.id === activeId ? "font-semibold text-brand-ink" : "text-neutral-700"}`}
             >
               {w.name}
               {w.kind === "personal" ? " · personal" : ""}
             </button>
           ))}
-          <button onClick={() => { onCreate(); setOpen(false); }} className="block w-full border-t border-neutral-100 px-3 py-2 text-left text-sm font-medium text-brand-700 hover:bg-neutral-50">
+          <button onClick={() => { onCreate(); setOpen(false); }} className="block w-full border-t border-neutral-100 px-3 py-2 text-left text-sm font-medium text-brand-ink hover:bg-neutral-50">
             + New workspace
           </button>
         </div>

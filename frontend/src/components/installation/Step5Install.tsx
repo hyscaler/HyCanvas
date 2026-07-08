@@ -153,7 +153,7 @@ export function Step5Install() {
                   className={cn(
                     "grid h-6 w-6 place-items-center rounded-full",
                     done && "oc-gradient text-white",
-                    active && "bg-brand-50 text-brand-700",
+                    active && "bg-brand-50 text-brand-ink",
                     !done && !active && "bg-neutral-100 text-neutral-400",
                   )}
                 >

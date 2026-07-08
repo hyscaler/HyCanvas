@@ -648,7 +648,7 @@ function TextEditOverlay({ api, id, onClose }: { api: CanvasApi; id: string; onC
       />
       {hasSel && (
         <div
-          className="absolute z-30 flex items-center gap-1 rounded-lg border border-neutral-200 bg-white px-1.5 py-1 shadow-lg"
+          className="absolute z-30 flex items-center gap-1 rounded-lg border border-neutral-200 bg-surface px-1.5 py-1 shadow-lg"
           style={{ left: tl.x, top: tl.y - 44 }}
           onMouseDown={(e) => e.preventDefault()}
         >
@@ -985,7 +985,7 @@ function ConnectorLabelOverlay({ api, id, onClose }: { api: CanvasApi; id: strin
       }}
       placeholder="Label"
       aria-label="Connector label"
-      className="absolute z-30 rounded-md border-2 border-[color:var(--color-selection)] bg-white px-1.5 py-0.5 text-center text-xs text-neutral-800 shadow outline-none"
+      className="absolute z-30 rounded-md border-2 border-[color:var(--color-selection)] bg-surface px-1.5 py-0.5 text-center text-xs text-neutral-800 shadow outline-none"
       style={{ left: c.x, top: c.y, width: 120, transform: "translate(-50%, -50%)" }}
     />
   );
@@ -2501,7 +2501,7 @@ export function Canvas() {
           }}
         />
       )}
-      <div className="absolute left-3 top-3 z-10 flex flex-col gap-1 rounded-xl border border-neutral-200 bg-white p-1 shadow-md">
+      <div className="absolute left-3 top-3 z-10 flex flex-col gap-1 rounded-xl border border-neutral-200 bg-surface p-1 shadow-md">
         {TOOLBAR.map((b, i) =>
           b === "sep" ? (
             <div key={`sep${i}`} className="my-0.5 h-px w-7 self-center bg-neutral-200" />
@@ -2510,7 +2510,7 @@ export function Canvas() {
               key={b.tool}
               onClick={() => (b.tool === "select" ? finishPen() : useEditor.getState().setTool(b.tool))}
               title={b.title}
-              className={`grid h-9 w-9 place-items-center rounded-lg ${tool === b.tool ? "bg-brand-50 text-brand-700" : "text-neutral-500 hover:bg-neutral-100"}`}
+              className={`grid h-9 w-9 place-items-center rounded-lg ${tool === b.tool ? "bg-brand-50 text-brand-ink" : "text-neutral-500 hover:bg-neutral-100"}`}
             >
               <b.icon size={18} />
             </button>
@@ -2524,7 +2524,7 @@ export function Canvas() {
             <button
               onClick={() => useEditor.getState().setTool("comment")}
               title="Comment (C) - click the canvas to drop a pin"
-              className={`grid h-9 w-9 place-items-center rounded-lg ${tool === "comment" ? "bg-brand-50 text-brand-700" : "text-neutral-500 hover:bg-neutral-100"}`}
+              className={`grid h-9 w-9 place-items-center rounded-lg ${tool === "comment" ? "bg-brand-50 text-brand-ink" : "text-neutral-500 hover:bg-neutral-100"}`}
             >
               <MessageSquarePlus size={18} />
             </button>
@@ -2534,7 +2534,7 @@ export function Canvas() {
       {/* Brush options: shown for the pencil and board ink tools. Width / opacity /
           color feed addPencilPath / addInkStroke via the store's brush settings. */}
       {(tool === "pencil" || tool === "ink") && (
-        <div className="absolute left-16 top-3 z-10 flex items-center gap-3 rounded-xl border border-neutral-200 bg-white px-3 py-2 shadow-md">
+        <div className="absolute left-16 top-3 z-10 flex items-center gap-3 rounded-xl border border-neutral-200 bg-surface px-3 py-2 shadow-md">
           <label className="flex items-center gap-1.5 text-[11px] text-neutral-500">
             Size
             <input type="range" min={1} max={40} value={brush.width} onChange={(e) => useEditor.getState().setBrush({ width: Number(e.target.value) })} className="w-20 accent-brand-600" />
@@ -2622,12 +2622,12 @@ export function Canvas() {
       {/* Rulers (drag from a ruler onto the canvas to create a guide). */}
       {showRulers && apg && (
         <>
-          <div className="absolute left-0 top-0 z-10 bg-white" style={{ width: RULER, height: RULER, borderRight: "1px solid #e5e5e5", borderBottom: "1px solid #e5e5e5" }} />
+          <div className="absolute left-0 top-0 z-10 bg-surface" style={{ width: RULER, height: RULER, borderRight: "1px solid var(--color-neutral-200)", borderBottom: "1px solid var(--color-neutral-200)" }} />
           {/* Top ruler measures X; dragging DOWN from it pulls a horizontal guide
               (axis "y"), matching Canva/Figma/Photoshop. */}
           <div
-            className="absolute top-0 z-10 cursor-ns-resize bg-white"
-            style={{ left: RULER, right: 0, height: RULER, borderBottom: "1px solid #e5e5e5" }}
+            className="absolute top-0 z-10 cursor-ns-resize bg-surface"
+            style={{ left: RULER, right: 0, height: RULER, borderBottom: "1px solid var(--color-neutral-200)" }}
             onPointerDown={(e) => beginGuide(e, "y", null)}
             title="Drag down to add a horizontal guide"
           >
@@ -2635,8 +2635,8 @@ export function Canvas() {
           </div>
           {/* Left ruler measures Y; dragging RIGHT from it pulls a vertical guide. */}
           <div
-            className="absolute left-0 z-10 cursor-ew-resize bg-white"
-            style={{ top: RULER, bottom: 0, width: RULER, borderRight: "1px solid #e5e5e5" }}
+            className="absolute left-0 z-10 cursor-ew-resize bg-surface"
+            style={{ top: RULER, bottom: 0, width: RULER, borderRight: "1px solid var(--color-neutral-200)" }}
             onPointerDown={(e) => beginGuide(e, "x", null)}
             title="Drag right to add a vertical guide"
           >
@@ -2916,7 +2916,7 @@ export function Canvas() {
         return (
           <div
             role="menu"
-            className="oc-scroll absolute z-30 max-h-[80vh] w-56 overflow-y-auto rounded-xl border border-neutral-200 bg-white p-1.5 shadow-xl ring-1 ring-black/5"
+            className="oc-scroll absolute z-30 max-h-[80vh] w-56 overflow-y-auto rounded-xl border border-neutral-200 bg-surface p-1.5 shadow-xl ring-1 ring-black/5"
             style={{ left: ctxMenu.x, top: ctxMenu.y }}
             onClick={(e) => e.stopPropagation()}
           >

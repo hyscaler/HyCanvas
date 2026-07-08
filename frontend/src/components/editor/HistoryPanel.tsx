@@ -392,9 +392,9 @@ export function HistoryPanel({
   }
 
   return (
-    <aside className="oc-scroll flex w-80 shrink-0 flex-col overflow-y-auto border-l border-neutral-200 bg-white">
-      <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-neutral-200 bg-white px-3 py-2.5">
-        <History size={18} className="text-brand-600" />
+    <aside className="oc-scroll flex w-80 shrink-0 flex-col overflow-y-auto border-l border-neutral-200 bg-surface">
+      <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-neutral-200 bg-surface px-3 py-2.5">
+        <History size={18} className="text-brand-ink" />
         <h2 className="text-sm font-semibold text-neutral-800">Version history</h2>
         <IconButton aria-label="Close history" onClick={onClose} className="ml-auto">
           <X size={18} />
@@ -549,7 +549,7 @@ export function HistoryPanel({
       {/* Preview controls live in the in-canvas banner (PreviewBanner); the panel
           surfaces the same actions here for discoverability when previewing. */}
       {preview && (
-        <footer className="sticky bottom-0 border-t border-neutral-200 bg-white p-3">
+        <footer className="sticky bottom-0 border-t border-neutral-200 bg-surface p-3">
           <p className="mb-2 flex items-center gap-1.5 text-xs text-neutral-500">
             <Eye size={13} /> {activeId ? "Previewing a past version (read-only)" : "Scrubbing history (read-only)"}
           </p>

@@ -52,7 +52,7 @@ export function ToolRail({ workspaceId, overlay = false, defaultCollapsed = fals
         role="toolbar"
         aria-label="Editor tools"
         aria-orientation="vertical"
-        className="flex w-[68px] shrink-0 flex-col items-center gap-1 border-r border-neutral-200 bg-white py-3"
+        className="flex w-[68px] shrink-0 flex-col items-center gap-1 border-r border-neutral-200 bg-surface py-3"
       >
         {TOOLS.map((t) => {
           const isActive = active === t.id;
@@ -65,7 +65,7 @@ export function ToolRail({ workspaceId, overlay = false, defaultCollapsed = fals
               aria-label={isActive ? `Hide ${t.label}` : `Open ${t.label}`}
               aria-pressed={isActive}
               className={`flex w-14 flex-col items-center gap-1 rounded-xl py-2 text-[11px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 ${
-                isActive ? "bg-brand-50 text-brand-700" : "text-neutral-500 hover:bg-neutral-100"
+                isActive ? "bg-brand-50 text-brand-ink" : "text-neutral-500 hover:bg-neutral-100"
               }`}
             >
               <t.icon size={20} />

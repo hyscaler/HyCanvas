@@ -22,7 +22,7 @@ function fmtDuration(ms: number): string {
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-3">
+    <div className="rounded-xl border border-neutral-200 bg-surface p-3">
       <div className="text-2xl font-bold text-neutral-900">{value}</div>
       <div className="text-xs text-neutral-500">{label}</div>
     </div>
@@ -102,7 +102,7 @@ export function InsightsPanel({ designId, onClose }: { designId: string; onClose
   const empty = status === "ok" && data && data.totalViews === 0;
 
   return (
-    <aside className="oc-scroll flex w-80 shrink-0 flex-col overflow-y-auto border-l border-neutral-200 bg-white">
+    <aside className="oc-scroll flex w-80 shrink-0 flex-col overflow-y-auto border-l border-neutral-200 bg-surface">
       <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
         <span className="flex items-center gap-2 text-sm font-semibold text-neutral-800">
           <BarChart3 size={16} /> Insights

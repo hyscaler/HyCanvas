@@ -102,7 +102,7 @@ export function PanelShell({ title, children, fill }: { title: string; children:
   // `fill` makes the panel a non-scrolling flex column so a child (e.g. the AI
   // chat) can pin its own footer and scroll only its message area.
   return (
-    <div className={`oc-scroll flex h-full w-[min(16rem,60vw)] flex-col border-r border-neutral-200 bg-white lg:w-72 ${fill ? "overflow-hidden" : "overflow-y-auto overflow-x-hidden"}`}>
+    <div className={`oc-scroll flex h-full w-[min(16rem,60vw)] flex-col border-r border-neutral-200 bg-surface lg:w-72 ${fill ? "overflow-hidden" : "overflow-y-auto overflow-x-hidden"}`}>
       <h3 className="px-4 pb-2 pt-4 text-sm font-bold text-neutral-800">{title}</h3>
       <div className={fill ? "flex min-h-0 flex-1 flex-col px-4 pb-4" : "flex-1 px-4 pb-4"}>{children}</div>
     </div>
@@ -278,7 +278,7 @@ export function ElementsPanel() {
           <CollapsibleSection title="Recently used" icon={Clock} defaultOpen>
             <div className="grid grid-cols-2 gap-2">
               {recentTiles.map((t) => (
-                <button key={`recent-${t.label}`} onClick={() => runTile(t)} className="flex aspect-square flex-col items-center justify-center gap-2 rounded-xl bg-neutral-50 text-neutral-600 transition hover:bg-brand-50 hover:text-brand-700">
+                <button key={`recent-${t.label}`} onClick={() => runTile(t)} className="flex aspect-square flex-col items-center justify-center gap-2 rounded-xl bg-neutral-50 text-neutral-600 transition hover:bg-brand-50 hover:text-brand-ink">
                   <t.icon size={26} />
                   <span className="text-xs font-medium">{t.label}</span>
                 </button>
@@ -290,7 +290,7 @@ export function ElementsPanel() {
           <CollapsibleSection key={g.title} title={g.title} icon={g.icon} defaultOpen={g.defaultOpen}>
             <div className="grid grid-cols-2 gap-2">
               {g.tiles.map((t) => (
-                <button key={t.label} onClick={() => runTile(t)} className="flex aspect-square flex-col items-center justify-center gap-2 rounded-xl bg-neutral-50 text-neutral-600 transition hover:bg-brand-50 hover:text-brand-700">
+                <button key={t.label} onClick={() => runTile(t)} className="flex aspect-square flex-col items-center justify-center gap-2 rounded-xl bg-neutral-50 text-neutral-600 transition hover:bg-brand-50 hover:text-brand-ink">
                   <t.icon size={26} />
                   <span className="text-xs font-medium">{t.label}</span>
                 </button>
@@ -354,7 +354,7 @@ export function ElementsPanel() {
                               return next;
                             })
                           }
-                          className="text-[11px] font-medium text-brand-600 hover:text-brand-700"
+                          className="text-[11px] font-medium text-brand-ink hover:text-brand-ink"
                         >
                           {expanded ? "Show less" : "Show all"}
                         </button>
@@ -559,7 +559,7 @@ export function TextPanel() {
             )}
           </div>
           <input ref={fontFileRef} type="file" accept=".ttf,.otf,.woff,.woff2,font/*" hidden onChange={(e) => void onFontFile(e)} />
-          <button onClick={() => fontFileRef.current?.click()} className="flex items-center justify-center gap-1.5 rounded-lg border border-neutral-200 py-2 text-xs font-medium text-neutral-600 hover:border-brand-300 hover:text-brand-700">
+          <button onClick={() => fontFileRef.current?.click()} className="flex items-center justify-center gap-1.5 rounded-lg border border-neutral-200 py-2 text-xs font-medium text-neutral-600 hover:border-brand-300 hover:text-brand-ink">
             <Upload size={13} /> Upload a font
           </button>
           {customFams.length > 0 && (
@@ -945,13 +945,13 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
             </Button>
             <p className="mt-2 text-[11px] text-neutral-400">or drop images here</p>
             <div className="mt-2.5 grid grid-cols-3 gap-1.5">
-              <button onClick={() => void importUrl()} disabled={!workspaceId} title="Import an image from a URL" className="flex flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-none text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 disabled:opacity-40">
+              <button onClick={() => void importUrl()} disabled={!workspaceId} title="Import an image from a URL" className="flex flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-none text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink disabled:opacity-40">
                 <LinkIcon size={15} /> <span className="whitespace-nowrap">From URL</span>
               </button>
-              <button onClick={() => svgRef.current?.click()} title="Import an SVG (e.g. a Canva SVG export) as editable elements" className="flex flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-none text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700">
+              <button onClick={() => svgRef.current?.click()} title="Import an SVG (e.g. a Canva SVG export) as editable elements" className="flex flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-none text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink">
                 <Upload size={15} /> <span className="whitespace-nowrap">Import SVG</span>
               </button>
-              <button onClick={() => pdfRef.current?.click()} title="Import a PDF (e.g. a Canva PDF export) as editable pages (text)" className="flex flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-none text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700">
+              <button onClick={() => pdfRef.current?.click()} title="Import a PDF (e.g. a Canva PDF export) as editable pages (text)" className="flex flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-none text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink">
                 <Upload size={15} /> <span className="whitespace-nowrap">Import PDF</span>
               </button>
             </div>
@@ -976,19 +976,19 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
 
         {/* Folders: All uploads + per-folder chips, with create/rename/delete. */}
         <CollapsibleSection title="Folders" icon={Folder} defaultOpen>
-          <button onClick={() => void createFolder()} disabled={!workspaceId} className="flex items-center gap-1.5 self-start rounded-md px-2 py-1 text-xs font-medium text-neutral-500 hover:bg-neutral-100 hover:text-brand-600 disabled:opacity-40">
+          <button onClick={() => void createFolder()} disabled={!workspaceId} className="flex items-center gap-1.5 self-start rounded-md px-2 py-1 text-xs font-medium text-neutral-500 hover:bg-neutral-100 hover:text-brand-ink disabled:opacity-40">
             <FolderPlus size={14} /> New folder
           </button>
           <div className="flex flex-col gap-0.5">
-            <button onClick={() => setFolderId(null)} className={`flex items-center gap-2 rounded-md px-2 py-1 text-left text-sm ${folderId === null ? "bg-brand-50 font-medium text-brand-700" : "text-neutral-600 hover:bg-neutral-100"}`}>
+            <button onClick={() => setFolderId(null)} className={`flex items-center gap-2 rounded-md px-2 py-1 text-left text-sm ${folderId === null ? "bg-brand-50 font-medium text-brand-ink" : "text-neutral-600 hover:bg-neutral-100"}`}>
               <Folder size={14} /> All uploads
             </button>
             {folders.map((f) => (
-              <div key={f.id} className={`group flex items-center gap-1 rounded-md px-2 py-1 text-sm ${folderId === f.id ? "bg-brand-50 text-brand-700" : "text-neutral-600 hover:bg-neutral-100"}`}>
+              <div key={f.id} className={`group flex items-center gap-1 rounded-md px-2 py-1 text-sm ${folderId === f.id ? "bg-brand-50 text-brand-ink" : "text-neutral-600 hover:bg-neutral-100"}`}>
                 <button onClick={() => setFolderId(f.id)} className="flex flex-1 items-center gap-2 text-left">
                   <Folder size={14} /> <span className="truncate">{f.name}</span>
                 </button>
-                <button onClick={() => void renameFolder(f)} title="Rename folder" className="hidden h-5 w-5 place-items-center rounded text-neutral-400 hover:text-brand-600 group-hover:grid"><Pencil size={12} /></button>
+                <button onClick={() => void renameFolder(f)} title="Rename folder" className="hidden h-5 w-5 place-items-center rounded text-neutral-400 hover:text-brand-ink group-hover:grid"><Pencil size={12} /></button>
                 <button
                   onClick={() => confirmDelete.confirm(`folder:${f.id}`, () => void deleteFolder(f))}
                   title={confirmDelete.armed === `folder:${f.id}` ? "Click again to delete" : "Delete folder"}
@@ -1057,14 +1057,14 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
               </button>
               <div className="absolute right-1 top-1 hidden gap-1 group-hover:flex">
                 {isSvgAsset(a) && (
-                  <button onClick={() => void insertSvgEditable(a)} title="Insert as editable vectors" className="grid h-6 w-6 place-items-center rounded-full bg-white/90 text-neutral-500 shadow hover:text-brand-600"><Spline size={12} /></button>
+                  <button onClick={() => void insertSvgEditable(a)} title="Insert as editable vectors" className="grid h-6 w-6 place-items-center rounded-full bg-surface/90 text-neutral-500 shadow hover:text-brand-ink"><Spline size={12} /></button>
                 )}
-                <button onClick={() => setEditing((id) => (id === a.id ? null : a.id))} title="Edit tags" className="grid h-6 w-6 place-items-center rounded-full bg-white/90 text-neutral-500 shadow hover:text-brand-600"><Tag size={12} /></button>
-                <button onClick={() => void renameAsset(a)} title="Rename" className="grid h-6 w-6 place-items-center rounded-full bg-white/90 text-neutral-500 shadow hover:text-brand-600"><Pencil size={12} /></button>
+                <button onClick={() => setEditing((id) => (id === a.id ? null : a.id))} title="Edit tags" className="grid h-6 w-6 place-items-center rounded-full bg-surface/90 text-neutral-500 shadow hover:text-brand-ink"><Tag size={12} /></button>
+                <button onClick={() => void renameAsset(a)} title="Rename" className="grid h-6 w-6 place-items-center rounded-full bg-surface/90 text-neutral-500 shadow hover:text-brand-ink"><Pencil size={12} /></button>
                 <button
                   onClick={() => confirmDelete.confirm(`asset:${a.id}`, () => void removeAsset(a.id))}
                   title={confirmDelete.armed === `asset:${a.id}` ? "Click again to delete" : "Delete upload"}
-                  className={`grid h-6 w-6 place-items-center rounded-full shadow ${confirmDelete.armed === `asset:${a.id}` ? "bg-red-600 text-white" : "bg-white/90 text-neutral-500 hover:text-red-600"}`}
+                  className={`grid h-6 w-6 place-items-center rounded-full shadow ${confirmDelete.armed === `asset:${a.id}` ? "bg-red-600 text-white" : "bg-surface/90 text-neutral-500 hover:text-red-600"}`}
                 >
                   <Trash2 size={13} />
                 </button>
@@ -1213,7 +1213,7 @@ function Recorder({ mode, disabled, onCapture }: {
   return (
     <div className="mt-2">
       {!open ? (
-        <button onClick={() => setOpen(true)} disabled={disabled} className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-neutral-200 py-1.5 text-xs font-medium text-neutral-600 hover:border-brand-300 hover:text-brand-700 disabled:opacity-40">
+        <button onClick={() => setOpen(true)} disabled={disabled} className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-neutral-200 py-1.5 text-xs font-medium text-neutral-600 hover:border-brand-300 hover:text-brand-ink disabled:opacity-40">
           <Icon size={14} /> {label}
         </button>
       ) : (
@@ -1263,7 +1263,7 @@ function TagEditor({ asset, folders, onClose, onSetTags, onMove }: {
     setDraft("");
   }
   return (
-    <div className="absolute inset-0 flex flex-col gap-1.5 bg-white/97 p-2 text-xs">
+    <div className="absolute inset-0 flex flex-col gap-1.5 bg-surface/97 p-2 text-xs">
       <div className="flex items-center justify-between">
         <span className="font-semibold text-neutral-700">Tags</span>
         <button onClick={onClose} className="grid h-5 w-5 place-items-center rounded text-neutral-400 hover:text-neutral-700"><X size={13} /></button>
@@ -2027,7 +2027,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   const lastTurn = turns[turns.length - 1];
   const lastWasDesign = lastTurn?.role === "assistant" && !!lastTurn.steps?.some((s) => s.action === "generateDesign" && s.ok);
   const AssistantAvatar = (
-    <div className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-100 text-brand-700"><Sparkles size={13} /></div>
+    <div className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-100 text-brand-ink"><Sparkles size={13} /></div>
   );
 
   return (
@@ -2057,13 +2057,13 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
             {/* Primary: design-creation starters. */}
             <div className="grid w-full max-w-[16rem] grid-cols-2 gap-1.5">
               {DESIGN_TYPES.map((t) => (
-                <button key={t.label} onClick={() => startFromType(t.prompt)} disabled={!aiReady} className="rounded-lg border border-neutral-200 bg-white px-2 py-2 text-xs font-medium text-neutral-700 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 disabled:opacity-50">{t.label}</button>
+                <button key={t.label} onClick={() => startFromType(t.prompt)} disabled={!aiReady} className="rounded-lg border border-neutral-200 bg-surface px-2 py-2 text-xs font-medium text-neutral-700 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink disabled:opacity-50">{t.label}</button>
               ))}
             </div>
             {/* Secondary: quick edits on the current design. */}
             <div className="flex flex-wrap justify-center gap-1.5">
               {ASSISTANT_SUGGESTIONS.map((s) => (
-                <button key={s} onClick={() => { setInput(s); inputRef.current?.focus(); }} disabled={!aiReady} className="rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[11px] text-neutral-500 hover:border-brand-300 hover:text-brand-700 disabled:opacity-50">{s}</button>
+                <button key={s} onClick={() => { setInput(s); inputRef.current?.focus(); }} disabled={!aiReady} className="rounded-full border border-neutral-200 bg-surface px-2.5 py-1 text-[11px] text-neutral-500 hover:border-brand-300 hover:text-brand-ink disabled:opacity-50">{s}</button>
               ))}
             </div>
           </div>
@@ -2117,14 +2117,14 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       {lastWasDesign && !pending && !busy && (
         <div className="mt-2 flex shrink-0 flex-wrap gap-1.5">
           {DESIGN_FOLLOWUPS.map((f) => (
-            <button key={f} onClick={() => void send(f)} className="rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-[11px] text-neutral-600 hover:border-brand-300 hover:text-brand-700">{f}</button>
+            <button key={f} onClick={() => void send(f)} className="rounded-full border border-neutral-200 bg-surface px-2.5 py-1 text-[11px] text-neutral-600 hover:border-brand-300 hover:text-brand-ink">{f}</button>
           ))}
         </div>
       )}
 
       {/* Composer, pinned to the bottom. */}
       <div className="mt-2 shrink-0">
-        <div className="flex items-end gap-1.5 rounded-2xl border border-neutral-300 bg-white px-2 py-1.5 focus-within:border-brand-400">
+        <div className="flex items-end gap-1.5 rounded-2xl border border-neutral-300 bg-surface px-2 py-1.5 focus-within:border-brand-400">
           <textarea
             ref={inputRef}
             value={input}
@@ -2209,7 +2209,7 @@ function CritiqueSection() {
         <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
           <Stethoscope size={14} /> Design critique
         </span>
-        <button onClick={run} className="rounded-md bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-600 hover:bg-brand-50 hover:text-brand-700">
+        <button onClick={run} className="rounded-md bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-600 hover:bg-brand-50 hover:text-brand-ink">
           {issues === null ? "Analyze" : "Re-analyze"}
         </button>
       </div>
@@ -2223,12 +2223,12 @@ function CritiqueSection() {
               <ul className="flex flex-col gap-1">
                 {items.map((i) => (
                   <li key={i.id} className="rounded-lg border border-neutral-100 bg-neutral-50 px-2 py-1.5 text-xs">
-                    <button onClick={() => i.nodeId && highlightNode(i.nodeId)} disabled={!i.nodeId} className="flex w-full items-start gap-1.5 text-left text-neutral-600 hover:text-brand-700 disabled:cursor-default disabled:hover:text-neutral-600" title={i.nodeId ? "Show on canvas" : undefined}>
+                    <button onClick={() => i.nodeId && highlightNode(i.nodeId)} disabled={!i.nodeId} className="flex w-full items-start gap-1.5 text-left text-neutral-600 hover:text-brand-ink disabled:cursor-default disabled:hover:text-neutral-600" title={i.nodeId ? "Show on canvas" : undefined}>
                       <span className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${ISSUE_DOT[i.severity]}`} />
                       <span>{i.message}</span>
                     </button>
                     {i.fix && (
-                      <button onClick={() => applyFix(i)} className="mt-1 pl-3 text-[11px] font-medium text-brand-600 hover:underline">Fix</button>
+                      <button onClick={() => applyFix(i)} className="mt-1 pl-3 text-[11px] font-medium text-brand-ink hover:underline">Fix</button>
                     )}
                   </li>
                 ))}
@@ -2267,7 +2267,7 @@ function HarmonizeSection() {
         <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
           <Sparkles size={14} /> Harmonize styles
         </span>
-        <button onClick={preview} className="rounded-md bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-600 hover:bg-brand-50 hover:text-brand-700">Preview</button>
+        <button onClick={preview} className="rounded-md bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-600 hover:bg-brand-50 hover:text-brand-ink">Preview</button>
       </div>
       {proposal === null && <p className="text-xs text-neutral-400">Collapse fonts, snap colors to a few roles, and unify corner radii across the page.</p>}
       {proposal !== null && !hasHarmonizeChanges(proposal) && (
@@ -2346,7 +2346,7 @@ function AutoLayoutSection() {
         <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
           <AlignStartVertical size={14} /> Auto-layout
         </span>
-        <button onClick={run} className="rounded-md bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-600 hover:bg-brand-50 hover:text-brand-700">Suggest</button>
+        <button onClick={run} className="rounded-md bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-600 hover:bg-brand-50 hover:text-brand-ink">Suggest</button>
       </div>
       {suggestions === null && <p className="text-xs text-neutral-400">Detect misaligned, unevenly spaced, or stray elements and fix them with one click.</p>}
       {suggestions !== null && suggestions.length === 0 && (
@@ -2357,7 +2357,7 @@ function AutoLayoutSection() {
           {suggestions.map((s) => (
             <li key={s.op} className="flex items-center justify-between gap-2 rounded-lg border border-neutral-100 bg-neutral-50 px-2 py-1.5 text-xs text-neutral-600">
               <span>{s.label}</span>
-              <button onClick={() => apply(s)} className="shrink-0 rounded-md border border-neutral-200 px-2 py-0.5 text-[11px] font-medium text-brand-600 hover:bg-white">Apply</button>
+              <button onClick={() => apply(s)} className="shrink-0 rounded-md border border-neutral-200 px-2 py-0.5 text-[11px] font-medium text-brand-ink hover:bg-surface">Apply</button>
             </li>
           ))}
         </ul>
@@ -2399,7 +2399,7 @@ function AutoAnimateSection() {
           <button
             key={s.id}
             onClick={() => setStyle(s.id)}
-            className={`rounded-md border px-2 py-1 text-xs font-medium ${style === s.id ? "border-brand-300 bg-brand-50 text-brand-700" : "border-neutral-200 text-neutral-600 hover:bg-neutral-100"}`}
+            className={`rounded-md border px-2 py-1 text-xs font-medium ${style === s.id ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-neutral-200 text-neutral-600 hover:bg-neutral-100"}`}
           >
             {s.label}
           </button>
@@ -2523,7 +2523,7 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
               <Settings2 size={14} className="text-brand-500" /> Connect an AI provider
             </div>
             <p className="mb-2.5 text-[11px] text-neutral-500">Bring your own key. It is stored encrypted and never leaves the server.</p>
-            <p className="mb-2.5 flex items-start gap-1.5 rounded-md bg-brand-50 px-2 py-1.5 text-[11px] text-brand-700">
+            <p className="mb-2.5 flex items-start gap-1.5 rounded-md bg-brand-50 px-2 py-1.5 text-[11px] text-brand-ink">
               <Wand2 size={12} className="mt-px shrink-0" />
               <span>Connect a provider to unlock <span className="font-medium">Magic Design</span> (text to a finished page) and image generation. The tools below work without AI.</span>
             </p>
@@ -2571,7 +2571,7 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
           {/* Brand-voice grounding indicator (F21 FR-6/FR-7). Shows when the
               design has a voice; lets the user ignore it for the next action. */}
           {brandVoice && brandVoiceClause(brandVoice) && (
-            <div className="flex shrink-0 items-center justify-between gap-2 rounded-lg border border-brand-200 bg-brand-50 px-2.5 py-1.5 text-[11px] text-brand-700">
+            <div className="flex shrink-0 items-center justify-between gap-2 rounded-lg border border-brand-200 bg-brand-50 px-2.5 py-1.5 text-[11px] text-brand-ink">
               <span className="flex items-center gap-1.5">
                 <Wand2 size={12} />
                 {ignoreVoice ? "Brand voice off" : `Using brand voice: ${brandVoiceLabel(brandVoice)}`}
@@ -2686,7 +2686,7 @@ function StockTile({ a, onPlace, onToggleStar }: { a: StockAssetSummary; onPlace
           onClick={(e) => { e.stopPropagation(); onToggleStar(a); }}
           title={a.favorited ? "Remove from favorites" : "Add to favorites"}
           aria-pressed={!!a.favorited}
-          className={`absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-white/90 shadow transition ${a.favorited ? "text-amber-500" : "text-neutral-400 opacity-0 group-hover:opacity-100 hover:text-amber-500"}`}
+          className={`absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-surface/90 shadow transition ${a.favorited ? "text-amber-500" : "text-neutral-400 opacity-0 group-hover:opacity-100 hover:text-amber-500"}`}
         >
           <Star size={13} fill={a.favorited ? "currentColor" : "none"} />
         </button>
@@ -2842,7 +2842,7 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
     <PanelShell title="Stock">
       <div className="mb-3 flex gap-1">
         {TABS.map((t) => (
-          <button key={t.id} onClick={() => { setTab(t.id); setCollection(null); }} className={`flex flex-1 items-center justify-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-medium ${tab === t.id ? "border-brand-500 bg-brand-50 text-brand-700" : "border-neutral-200 text-neutral-600 hover:bg-neutral-100"}`}>
+          <button key={t.id} onClick={() => { setTab(t.id); setCollection(null); }} className={`flex flex-1 items-center justify-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-medium ${tab === t.id ? "border-brand-500 bg-brand-50 text-brand-ink" : "border-neutral-200 text-neutral-600 hover:bg-neutral-100"}`}>
             <t.icon size={13} />{t.label}
           </button>
         ))}
@@ -2864,11 +2864,11 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
               below their text), which read as the whole panel sliding. */}
           <div className="mb-3 flex flex-wrap gap-1">
             {STOCK_KINDS.map((f) => (
-              <button key={f.label} onClick={() => setFilter(f.kind)} className={`whitespace-nowrap rounded-full border px-2.5 py-1 text-xs ${kind === f.kind ? "border-brand-500 bg-brand-50 text-brand-700" : "border-neutral-200 text-neutral-600 hover:bg-neutral-100"}`}>{f.label}</button>
+              <button key={f.label} onClick={() => setFilter(f.kind)} className={`whitespace-nowrap rounded-full border px-2.5 py-1 text-xs ${kind === f.kind ? "border-brand-500 bg-brand-50 text-brand-ink" : "border-neutral-200 text-neutral-600 hover:bg-neutral-100"}`}>{f.label}</button>
             ))}
           </div>
           {collection ? (
-            <button onClick={() => setCollection(null)} className="mb-2 flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">
+            <button onClick={() => setCollection(null)} className="mb-2 flex items-center gap-1 text-xs font-medium text-brand-ink hover:underline">
               <ChevronLeft size={13} />Back to collections
             </button>
           ) : !query && !kind && collections.length > 0 ? (
@@ -2876,7 +2876,7 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
               <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Collections</p>
               <div className="flex flex-wrap gap-1.5">
                 {collections.map((c) => (
-                  <button key={c.id} onClick={() => setCollection(c)} title={c.description} className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs text-neutral-600 hover:bg-brand-50 hover:text-brand-700">{c.title}</button>
+                  <button key={c.id} onClick={() => setCollection(c)} title={c.description} className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs text-neutral-600 hover:bg-brand-50 hover:text-brand-ink">{c.title}</button>
                 ))}
               </div>
             </div>
@@ -2890,7 +2890,7 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
       ) : error ? (
         <div className="mt-6 flex flex-col items-center gap-2 text-center">
           <p className="text-xs text-neutral-500">Couldn&apos;t reach the stock library.</p>
-          <button onClick={() => setRetryNonce((n) => n + 1)} className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700">
+          <button onClick={() => setRetryNonce((n) => n + 1)} className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink">
             Retry
           </button>
         </div>
@@ -2907,7 +2907,7 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
             <button
               onClick={() => void loadMore()}
               disabled={loadingMore}
-              className="mt-2 w-full rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 disabled:opacity-50"
+              className="mt-2 w-full rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink disabled:opacity-50"
             >
               {loadingMore ? "Loading…" : "Load more"}
             </button>
@@ -3013,9 +3013,9 @@ export function AppsPanel() {
     const Icon = APP_ICONS[open.id] ?? Shapes;
     return (
       <PanelShell title="Apps">
-        <button onClick={() => setOpen(null)} className="mb-3 flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline"><ChevronLeft size={13} />All apps</button>
+        <button onClick={() => setOpen(null)} className="mb-3 flex items-center gap-1 text-xs font-medium text-brand-ink hover:underline"><ChevronLeft size={13} />All apps</button>
         <div className="mb-3 flex items-center gap-2">
-          <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand-50 text-brand-700"><Icon size={18} /></span>
+          <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand-50 text-brand-ink"><Icon size={18} /></span>
           <div>
             <p className="text-sm font-semibold text-neutral-800">{open.name}</p>
             <p className="text-[11px] text-neutral-400">Scopes: {open.scopes.join(", ")}</p>
@@ -3023,7 +3023,7 @@ export function AppsPanel() {
         </div>
         <div className="grid gap-2">
           {actions.map((a) => (
-            <button key={a.label} onClick={() => runAction(open, a)} className="flex items-center gap-2 rounded-lg bg-neutral-50 px-3 py-2 text-sm text-neutral-700 hover:bg-brand-50 hover:text-brand-700">
+            <button key={a.label} onClick={() => runAction(open, a)} className="flex items-center gap-2 rounded-lg bg-neutral-50 px-3 py-2 text-sm text-neutral-700 hover:bg-brand-50 hover:text-brand-ink">
               <a.icon size={16} />{a.label}
             </button>
           ))}
@@ -3040,7 +3040,7 @@ export function AppsPanel() {
       ) : error ? (
         <div className="mt-6 flex flex-col items-center gap-2 text-center">
           <p className="text-xs text-neutral-500">Couldn&apos;t load apps.</p>
-          <button onClick={() => setRetryNonce((n) => n + 1)} className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700">
+          <button onClick={() => setRetryNonce((n) => n + 1)} className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink">
             Retry
           </button>
         </div>
@@ -3051,7 +3051,7 @@ export function AppsPanel() {
           {apps.map((app) => {
             const Icon = APP_ICONS[app.id] ?? Shapes;
             return (
-              <button key={app.id} onClick={() => setOpen(app)} className="flex aspect-square flex-col items-center justify-center gap-2 rounded-xl bg-neutral-50 text-neutral-600 transition hover:bg-brand-50 hover:text-brand-700">
+              <button key={app.id} onClick={() => setOpen(app)} className="flex aspect-square flex-col items-center justify-center gap-2 rounded-xl bg-neutral-50 text-neutral-600 transition hover:bg-brand-50 hover:text-brand-ink">
                 <Icon size={28} />
                 <span className="text-xs font-medium">{app.name}</span>
               </button>

@@ -104,7 +104,7 @@ export function Modal({
         aria-labelledby={title ? titleId : undefined}
         aria-label={title ? undefined : (ariaLabel ?? "Dialog")}
         tabIndex={-1}
-        className={`${width} rounded-2xl bg-white p-5 shadow-2xl outline-none`}
+        className={`${width} rounded-2xl bg-surface p-5 shadow-2xl outline-none`}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={onPanelKeyDown}
       >

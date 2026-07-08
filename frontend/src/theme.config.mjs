@@ -56,6 +56,60 @@ export const theme = {
     end: "#C84B9A",
   },
 
+  // Dark mode for the APP CHROME only (design content is never themed; the
+  // Brand Kit owns that). The app runs light by default; setting `dark` on
+  // <html> swaps these token values via the generated `.dark` region in
+  // globals.css. `page` is the document background, `surface` the elevated
+  // card/popover color (both are white in light mode). The neutral ramp
+  // mirrors Tailwind's neutral scale in reverse so the ~2k existing
+  // `neutral-*` call sites read correctly on dark without edits. `brand`
+  // remaps ONLY the light tint steps (chip/hover/ring backgrounds); solid
+  // accent steps (500+) keep their light-mode values so buttons and the
+  // gradient stay identical. `brandInk` is the accent TEXT color on chrome
+  // (light mode uses brand-700); it exists because text and backgrounds share
+  // scale steps and cannot be swapped wholesale.
+  // Tailwind's default neutral scale, restated so the generator can emit the
+  // `.light` escape hatch (document surfaces like sheets and present mode pin
+  // themselves light even when the app chrome is dark). Keep in sync with
+  // Tailwind; these are not brand colors.
+  neutral: {
+    50: "#fafafa",
+    100: "#f5f5f5",
+    200: "#e5e5e5",
+    300: "#d4d4d4",
+    400: "#a3a3a3",
+    500: "#737373",
+    600: "#525252",
+    700: "#404040",
+    800: "#262626",
+    900: "#171717",
+    950: "#0a0a0a",
+  },
+
+  dark: {
+    page: "#111114",
+    surface: "#1b1b20",
+    neutral: {
+      50: "#161619",
+      100: "#1e1e23",
+      200: "#2a2a31",
+      300: "#3a3a42",
+      400: "#8f8f9a",
+      500: "#a5a5b0",
+      600: "#c2c2cb",
+      700: "#d8d8de",
+      800: "#e8e8ed",
+      900: "#f4f4f6",
+      950: "#fbfbfc",
+    },
+    brand: {
+      50: "#2b1424",
+      100: "#3a1b30",
+      200: "#4e2340",
+    },
+    brandInk: "#E195C7",
+  },
+
   // Editor canvas overlay colors. The engine paints to Canvas2D and cannot read
   // CSS, so these are also pushed in as data in a later phase. `selection` is a
   // deliberate cool hue kept DISTINCT from the brand so selections stay legible

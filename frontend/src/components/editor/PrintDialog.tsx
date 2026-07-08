@@ -124,7 +124,7 @@ export function PrintDialog({ open, onClose }: { open: boolean; onClose: () => v
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/30" onClick={onClose}>
-      <div role="dialog" aria-label="Print" className="w-80 rounded-2xl bg-white p-5 shadow-2xl ring-1 ring-black/5" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-label="Print" className="w-80 rounded-2xl bg-surface p-5 shadow-2xl ring-1 ring-black/5" onClick={(e) => e.stopPropagation()}>
         <h2 className="mb-1 flex items-center gap-2 text-base font-semibold text-neutral-900">
           <Printer size={18} className="text-neutral-500" /> Print
         </h2>

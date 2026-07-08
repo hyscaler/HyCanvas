@@ -300,7 +300,7 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
       <div
         role="dialog"
         aria-label="Download"
-        className="fixed right-3 top-14 z-50 max-h-[calc(100vh-5rem)] w-[22rem] overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-4 shadow-2xl ring-1 ring-black/5"
+        className="fixed right-3 top-14 z-50 max-h-[calc(100vh-5rem)] w-[22rem] overflow-y-auto rounded-2xl border border-neutral-200 bg-surface p-4 shadow-2xl ring-1 ring-black/5"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="mb-3 text-base font-semibold text-neutral-900">Download</h2>
@@ -323,7 +323,7 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
             <ChevronDown size={16} className={`shrink-0 text-neutral-400 transition-transform ${formatOpen ? "rotate-180" : ""}`} />
           </button>
           {formatOpen && (
-            <ul role="listbox" className="absolute z-10 mt-1 w-full overflow-hidden rounded-xl border border-neutral-200 bg-white p-1 shadow-xl ring-1 ring-black/5">
+            <ul role="listbox" className="absolute z-10 mt-1 w-full overflow-hidden rounded-xl border border-neutral-200 bg-surface p-1 shadow-xl ring-1 ring-black/5">
               {FORMATS.map((f) => (
                 <li key={f.value} role="option" aria-selected={f.value === format}>
                   <button
@@ -335,11 +335,11 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
                     <span className="flex-1">
                       <span className="flex items-center gap-1.5 text-sm font-medium text-neutral-800">
                         {f.label}
-                        {f.badge && <span className="rounded-full bg-brand-100 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-brand-700">{f.badge}</span>}
+                        {f.badge && <span className="rounded-full bg-brand-100 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-brand-ink">{f.badge}</span>}
                       </span>
                       <span className="block text-[11px] text-neutral-400">{f.desc}</span>
                     </span>
-                    {f.value === format && <Check size={15} className="shrink-0 text-brand-600" />}
+                    {f.value === format && <Check size={15} className="shrink-0 text-brand-ink" />}
                   </button>
                 </li>
               ))}
@@ -402,7 +402,7 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
             <div className="mb-1.5 flex items-center justify-between">
               <label className="text-xs font-medium text-neutral-500">Pages ({pages.length}/{pageCount})</label>
               <div className="flex gap-2 text-[11px] font-medium">
-                <button type="button" onClick={() => setSelected(doc.pages.map((_, i) => i))} className="text-brand-600 hover:underline">All</button>
+                <button type="button" onClick={() => setSelected(doc.pages.map((_, i) => i))} className="text-brand-ink hover:underline">All</button>
                 <button type="button" onClick={() => setSelected([Math.min(activePage, pageCount - 1)])} className="text-neutral-500 hover:underline">Current</button>
               </div>
             </div>
@@ -457,7 +457,7 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
               <span className="font-semibold">Credits</span>
               <button
                 onClick={() => { void navigator.clipboard.writeText(attributionText(credits)); toast.success("Credits copied"); }}
-                className="text-[11px] font-medium text-brand-600 hover:underline"
+                className="text-[11px] font-medium text-brand-ink hover:underline"
               >
                 Copy
               </button>

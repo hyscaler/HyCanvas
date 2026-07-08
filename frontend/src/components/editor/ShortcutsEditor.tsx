@@ -67,7 +67,7 @@ export function ShortcutsCustomizer() {
           type="button"
           onClick={() => resetAllShortcuts()}
           disabled={!anyCustom}
-          className="flex items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-2.5 py-1 text-[11px] font-medium text-neutral-600 enabled:hover:bg-neutral-100 disabled:opacity-40"
+          className="flex items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-2.5 py-1 text-[11px] font-medium text-neutral-600 enabled:hover:bg-neutral-100 disabled:opacity-40"
         >
           <RotateCcw size={12} /> Reset all
         </button>
@@ -102,7 +102,7 @@ export function ShortcutsCustomizer() {
                       ? "border-blue-400 bg-blue-50 text-blue-600"
                       : inConflict
                         ? "border-amber-300 bg-amber-50 text-amber-700"
-                        : "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-100")
+                        : "border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-100")
                   }
                 >
                   {rec ? (

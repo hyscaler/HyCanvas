@@ -44,7 +44,7 @@ function AuthShell({ children }: { children: ReactNode }) {
   return (
     <div className="relative grid min-h-screen place-items-center overflow-hidden p-6">
       <CanvasFloor />
-      <div className="oc-fade-up relative z-10 w-full max-w-sm rounded-2xl bg-white p-8 shadow-2xl ring-1 ring-black/5">
+      <div className="oc-fade-up relative z-10 w-full max-w-sm rounded-2xl bg-surface p-8 shadow-2xl ring-1 ring-black/5">
         {children}
       </div>
     </div>
@@ -296,7 +296,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
               setMfaCode("");
               setError(null);
             }}
-            className="mt-3 w-full text-center text-sm font-medium text-brand-700 hover:underline"
+            className="mt-3 w-full text-center text-sm font-medium text-brand-ink hover:underline"
           >
             {useRecovery ? "Use your authenticator app instead" : "Use a recovery code"}
           </button>
@@ -305,7 +305,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className="flex min-h-screen bg-surface">
       {/* Brand showcase panel: the marketing site's canvas floor, with the
           floating artboards as the light interludes on it. */}
       <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden p-14 text-white lg:flex">
@@ -317,8 +317,8 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         <div aria-hidden className="relative z-10 mx-auto my-2 h-60 w-full max-w-md">
           {/* Presentation slide */}
           <div className="absolute left-1 top-3 w-48 rotate-[-7deg]">
-            <div className="oc-float rounded-2xl bg-white p-3 text-neutral-800 shadow-2xl ring-1 ring-black/5">
-              <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold text-brand-600"><Presentation size={12} /> Presentation</div>
+            <div className="oc-float rounded-2xl bg-surface p-3 text-neutral-800 shadow-2xl ring-1 ring-black/5">
+              <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold text-brand-ink"><Presentation size={12} /> Presentation</div>
               <div className="h-1.5 w-2/3 rounded bg-neutral-800" />
               <div className="mt-1.5 h-1.5 w-1/2 rounded bg-neutral-300" />
               <div className="mt-3 flex gap-1.5">
@@ -330,7 +330,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           </div>
           {/* Social / photo post */}
           <div className="absolute right-2 top-0 w-40 rotate-[6deg]">
-            <div className="oc-float overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5" style={{ animationDelay: "1.2s" }}>
+            <div className="oc-float overflow-hidden rounded-2xl bg-surface shadow-2xl ring-1 ring-black/5" style={{ animationDelay: "1.2s" }}>
               <div className="grid h-24 place-items-center bg-gradient-to-br from-pink-400 via-fuchsia-500 to-brand-500 text-white"><ImageIcon size={22} /></div>
               <div className="p-2.5"><div className="h-1.5 w-3/4 rounded bg-neutral-800" /><div className="mt-1.5 h-1.5 w-1/2 rounded bg-neutral-300" /></div>
             </div>
@@ -339,7 +339,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           <div className="absolute bottom-0 left-24 w-44 rotate-[3deg]">
             <div className="oc-float overflow-hidden rounded-2xl bg-neutral-900 text-white shadow-2xl ring-1 ring-white/10" style={{ animationDelay: "0.6s" }}>
               <div className="oc-gradient grid h-20 place-items-center">
-                <span className="grid h-8 w-8 place-items-center rounded-full bg-white/90 text-neutral-900"><Play size={14} className="ml-0.5" fill="currentColor" /></span>
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-surface/90 text-neutral-900"><Play size={14} className="ml-0.5" fill="currentColor" /></span>
               </div>
               <div className="flex items-center gap-1.5 p-2"><div className="h-1 flex-1 rounded bg-white/30" /><span className="text-[9px] text-white/60">0:12</span></div>
             </div>
@@ -387,7 +387,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
                 <a
                   key={p.id}
                   href={authStartUrl(p.id)}
-                  className="flex items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-700 transition hover:border-neutral-400 hover:bg-neutral-50"
+                  className="flex items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-surface px-4 py-2.5 text-sm font-semibold text-neutral-700 transition hover:border-neutral-400 hover:bg-neutral-50"
                 >
                   <ProviderIcon label={p.label} />
                   Continue with {p.label}
@@ -430,7 +430,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
                     type="button"
                     onClick={() => void forgotPassword()}
                     disabled={busy}
-                    className="self-end text-xs font-medium text-brand-700 hover:underline disabled:opacity-50"
+                    className="self-end text-xs font-medium text-brand-ink hover:underline disabled:opacity-50"
                   >
                     Forgot password?
                   </button>
@@ -460,7 +460,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
                 setMagic((m) => !m);
                 setError(null);
               }}
-              className="mt-3 w-full text-center text-sm font-medium text-brand-700 hover:underline"
+              className="mt-3 w-full text-center text-sm font-medium text-brand-ink hover:underline"
             >
               {magic ? "Use a password instead" : "Sign in with a magic link"}
             </button>
@@ -470,14 +470,14 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
             {isSignup ? (
               <>
                 Already have an account?{" "}
-                <Link href="/login" className="font-semibold text-brand-700 hover:underline">
+                <Link href="/login" className="font-semibold text-brand-ink hover:underline">
                   Sign in
                 </Link>
               </>
             ) : (
               <>
                 New to HyCanvas?{" "}
-                <Link href="/signup" className="font-semibold text-brand-700 hover:underline">
+                <Link href="/signup" className="font-semibold text-brand-ink hover:underline">
                   Create a free account
                 </Link>
               </>

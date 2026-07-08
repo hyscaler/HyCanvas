@@ -474,7 +474,7 @@ function Popover(props: {
     <div
       ref={ref}
       className={
-        "absolute z-20 mt-2 rounded-xl border border-neutral-200 bg-white p-3 shadow-xl " +
+        "absolute z-20 mt-2 rounded-xl border border-neutral-200 bg-surface p-3 shadow-xl " +
         (props.className ?? "")
       }
     >
@@ -1141,7 +1141,7 @@ export function WhiteboardSurface(props: {
           pointer events. */}
       {isEmpty && onboarded && (
         <div className="pointer-events-none absolute inset-0 grid place-items-center">
-          <div className="rounded-2xl border border-dashed border-neutral-300 bg-white/70 px-6 py-5 text-center backdrop-blur-sm">
+          <div className="rounded-2xl border border-dashed border-neutral-300 bg-surface/70 px-6 py-5 text-center backdrop-blur-sm">
             <p className="text-sm font-medium text-neutral-700">Your board is empty</p>
             <p className="mt-1 text-xs text-neutral-500">
               Add a sticky, or pick a template to get started.
@@ -1154,7 +1154,7 @@ export function WhiteboardSurface(props: {
           starts plus a pointer to the facilitation tools, dismissed per-user. */}
       {isEmpty && !onboarded && (
         <div className="pointer-events-none absolute inset-0 grid place-items-center p-4">
-          <div className="pointer-events-auto w-full max-w-md rounded-2xl border border-neutral-200 bg-white/95 p-5 shadow-xl backdrop-blur">
+          <div className="pointer-events-auto w-full max-w-md rounded-2xl border border-neutral-200 bg-surface/95 p-5 shadow-xl backdrop-blur">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-base font-semibold text-neutral-800">Welcome to your whiteboard</p>
@@ -1175,21 +1175,21 @@ export function WhiteboardSurface(props: {
                 onClick={() => { addSticky(); dismissOnboarding(); }}
                 className="flex flex-col items-center gap-1.5 rounded-xl border border-neutral-200 px-2 py-3 text-xs font-medium text-neutral-700 hover:border-brand-300 hover:bg-brand-50"
               >
-                <StickyNote size={20} className="text-brand-600" /> Add a sticky
+                <StickyNote size={20} className="text-brand-ink" /> Add a sticky
               </button>
               <button
                 type="button"
                 onClick={() => { dismissOnboarding(); setMenu("templates"); }}
                 className="flex flex-col items-center gap-1.5 rounded-xl border border-neutral-200 px-2 py-3 text-xs font-medium text-neutral-700 hover:border-brand-300 hover:bg-brand-50"
               >
-                <LayoutTemplate size={20} className="text-brand-600" /> Use a template
+                <LayoutTemplate size={20} className="text-brand-ink" /> Use a template
               </button>
               <button
                 type="button"
                 onClick={() => { pickInk("pen"); dismissOnboarding(); }}
                 className="flex flex-col items-center gap-1.5 rounded-xl border border-neutral-200 px-2 py-3 text-xs font-medium text-neutral-700 hover:border-brand-300 hover:bg-brand-50"
               >
-                <Pen size={20} className="text-brand-600" /> Draw
+                <Pen size={20} className="text-brand-ink" /> Draw
               </button>
             </div>
             <p className="mt-4 text-[11px] leading-relaxed text-neutral-500">
@@ -1205,13 +1205,13 @@ export function WhiteboardSurface(props: {
       {/* Forced-spotlight banner (FR-14): shown while a facilitator drives our
           viewport. Esc or the Exit button breaks free. */}
       {presenter && (
-        <div className="pointer-events-auto absolute left-1/2 top-3 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-brand-200 bg-brand-50/95 px-3 py-1.5 text-xs font-medium text-brand-700 shadow-md backdrop-blur">
+        <div className="pointer-events-auto absolute left-1/2 top-3 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-brand-200 bg-brand-50/95 px-3 py-1.5 text-xs font-medium text-brand-ink shadow-md backdrop-blur">
           <Presentation size={14} />
           <span>{presenter.name} is presenting</span>
           <button
             type="button"
             onClick={() => usePresence.getState().setFollowing(null)}
-            className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] text-brand-700 hover:bg-white"
+            className="rounded-full bg-surface/70 px-2 py-0.5 text-[11px] text-brand-ink hover:bg-surface"
           >
             Exit (Esc)
           </button>
@@ -1228,7 +1228,7 @@ export function WhiteboardSurface(props: {
             <button
               type="button"
               onClick={revealPrivate}
-              className="rounded-full bg-white/80 px-2 py-0.5 text-[11px] text-amber-800 hover:bg-white"
+              className="rounded-full bg-surface/80 px-2 py-0.5 text-[11px] text-amber-800 hover:bg-surface"
             >
               Reveal
             </button>
@@ -1238,7 +1238,7 @@ export function WhiteboardSurface(props: {
 
       {/* One-shot summon toast (FR-14): a facilitator brought everyone here. */}
       {summon && (
-        <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-full border border-neutral-200 bg-white/95 px-3 py-1.5 text-xs font-medium text-neutral-700 shadow-md backdrop-blur">
+        <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-full border border-neutral-200 bg-surface/95 px-3 py-1.5 text-xs font-medium text-neutral-700 shadow-md backdrop-blur">
           {summon.name} brought everyone here
         </div>
       )}
@@ -1248,7 +1248,7 @@ export function WhiteboardSurface(props: {
           the top-left until moved). */}
       <div
         ref={toolbarRef}
-        className="absolute z-10 flex items-center gap-1 rounded-2xl border border-neutral-200 bg-white/95 p-1.5 shadow-lg backdrop-blur"
+        className="absolute z-10 flex items-center gap-1 rounded-2xl border border-neutral-200 bg-surface/95 p-1.5 shadow-lg backdrop-blur"
         style={toolbarPos ? { left: toolbarPos.x, top: toolbarPos.y } : { left: 12, top: 12 }}
       >
         <button
@@ -1330,7 +1330,7 @@ export function WhiteboardSurface(props: {
             title="Stamp (emoji / dot-vote)"
             aria-label="Stamp"
             className={`grid h-8 w-8 place-items-center rounded-lg text-base leading-none ${
-              tool === "stamp" ? "bg-brand-100 text-brand-700" : "text-neutral-600 hover:bg-neutral-100"
+              tool === "stamp" ? "bg-brand-100 text-brand-ink" : "text-neutral-600 hover:bg-neutral-100"
             }`}
           >
             <span aria-hidden>{stampGlyph || "👍"}</span>
@@ -1445,7 +1445,7 @@ export function WhiteboardSurface(props: {
             type="button"
             className={
               "flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100 " +
-              (menu === "templates" ? "bg-brand-50 text-brand-700" : "")
+              (menu === "templates" ? "bg-brand-50 text-brand-ink" : "")
             }
             onClick={() => setMenu(menu === "templates" ? null : "templates")}
             title="Insert a template"
@@ -1560,7 +1560,7 @@ export function WhiteboardSurface(props: {
               type="button"
               className={
                 "flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100 " +
-                (menu === "participants" ? "bg-brand-50 text-brand-700" : "")
+                (menu === "participants" ? "bg-brand-50 text-brand-ink" : "")
               }
               onClick={() => setMenu(menu === "participants" ? null : "participants")}
               title="Participants / moderation"
@@ -1606,7 +1606,7 @@ export function WhiteboardSurface(props: {
             type="button"
             className={
               "flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100 " +
-              (menu === "views" ? "bg-brand-50 text-brand-700" : "")
+              (menu === "views" ? "bg-brand-50 text-brand-ink" : "")
             }
             onClick={() => setMenu(menu === "views" ? null : "views")}
             title="Saved views / agenda"
@@ -1659,7 +1659,7 @@ export function WhiteboardSurface(props: {
             type="button"
             className={
               "flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium tabular-nums text-neutral-700 transition hover:bg-neutral-100 " +
-              (menu === "timer" ? "bg-brand-50 text-brand-700" : "")
+              (menu === "timer" ? "bg-brand-50 text-brand-ink" : "")
             }
             onClick={() => setMenu(menu === "timer" ? null : "timer")}
             title="Countdown timer"
@@ -1710,7 +1710,7 @@ export function WhiteboardSurface(props: {
             type="button"
             className={
               "flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100 " +
-              (menu === "vote" ? "bg-brand-50 text-brand-700" : "")
+              (menu === "vote" ? "bg-brand-50 text-brand-ink" : "")
             }
             onClick={() => setMenu(menu === "vote" ? null : "vote")}
             title="Dot voting"
@@ -1843,7 +1843,7 @@ function BoardSearch({ onClose }: { onClose: () => void }): React.ReactElement {
   const matches: SearchMatch[] = page ? searchNodes(page.children, q) : [];
   const jump = (id: string) => useEditor.getState().jumpToNode(id);
   return (
-    <div className="absolute right-3 top-3 z-30 w-72 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-lg">
+    <div className="absolute right-3 top-3 z-30 w-72 overflow-hidden rounded-xl border border-neutral-200 bg-surface shadow-lg">
       <div className="flex items-center gap-2 border-b border-neutral-100 px-3 py-2">
         <Search size={15} className="shrink-0 text-neutral-400" />
         <input

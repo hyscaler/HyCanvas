@@ -83,7 +83,7 @@ function ViewToggles() {
   const showGrid = useEditor((s) => s.showGrid);
   const snapEnabled = useEditor((s) => s.snapEnabled);
   const st = useEditor.getState;
-  const cls = (on: boolean) => `grid h-8 w-8 place-items-center rounded-lg ${on ? "bg-brand-50 text-brand-700" : "text-neutral-500 hover:bg-neutral-100"}`;
+  const cls = (on: boolean) => `grid h-8 w-8 place-items-center rounded-lg ${on ? "bg-brand-50 text-brand-ink" : "text-neutral-500 hover:bg-neutral-100"}`;
   return (
     <div className="ml-1 flex items-center gap-0.5">
       <button onClick={() => st().toggleRulers()} title="Rulers & guides" className={cls(showRulers)}><Ruler size={16} /></button>
@@ -157,7 +157,7 @@ function OverflowMenu({ items }: { items: MenuItem[] }) {
           role="menu"
           aria-label="More actions"
           onKeyDown={onMenuKeyDown}
-          className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-neutral-200 bg-white py-1 shadow-lg"
+          className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-neutral-200 bg-surface py-1 shadow-lg"
         >
           {items.map((it) => (
             <button
@@ -706,7 +706,7 @@ export function EditorApp() {
           focus (full-screen) mode the whole bar is hidden so only the board
           canvas + its floating toolbar remain. */}
       {!inFocus && (
-      <header className="flex flex-nowrap items-center gap-3 border-b border-neutral-200 bg-white px-3 py-2">
+      <header className="flex flex-nowrap items-center gap-3 border-b border-neutral-200 bg-surface px-3 py-2">
         <IconButton className="shrink-0" aria-label="Back to dashboard" onClick={() => void router.push("/dashboard")}>
           <ChevronLeft size={20} />
         </IconButton>
@@ -955,7 +955,7 @@ export function EditorApp() {
               // overlay) and caps its width to the viewport, so opening it on a
               // phone never crushes the canvas; at lg+ it is a normal flex sibling
               // at the user's resizable width.
-              className={`flex flex-col border-l border-neutral-200 bg-white ${
+              className={`flex flex-col border-l border-neutral-200 bg-surface ${
                 isCompact ? "absolute right-0 top-0 z-30 h-full shadow-xl" : "relative shrink-0"
               }`}
               style={{ width: isCompact ? "min(20rem, 86vw)" : panelWidth }}
@@ -989,7 +989,7 @@ export function EditorApp() {
               onClick={toggleProps}
               title="Show properties"
               aria-label="Show properties panel"
-              className="grid w-9 shrink-0 cursor-pointer place-items-start justify-center border-l border-neutral-200 bg-white pt-2.5 text-neutral-400 hover:bg-neutral-50 hover:text-neutral-700"
+              className="grid w-9 shrink-0 cursor-pointer place-items-start justify-center border-l border-neutral-200 bg-surface pt-2.5 text-neutral-400 hover:bg-neutral-50 hover:text-neutral-700"
             >
               <PanelRightOpen size={18} />
             </button>
@@ -1024,7 +1024,7 @@ export function EditorApp() {
           onClick={exitBoardFocus}
           title="Exit focus mode (Esc)"
           aria-label="Exit focus mode"
-          className="fixed right-3 top-3 z-[60] flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white/95 px-3 py-1.5 text-xs font-medium text-neutral-700 shadow-lg backdrop-blur hover:bg-neutral-100"
+          className="fixed right-3 top-3 z-[60] flex items-center gap-1.5 rounded-full border border-neutral-200 bg-surface/95 px-3 py-1.5 text-xs font-medium text-neutral-700 shadow-lg backdrop-blur hover:bg-neutral-100"
         >
           <Minimize2 size={14} />
           Exit focus

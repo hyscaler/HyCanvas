@@ -72,7 +72,7 @@ export function SaveAsTemplateDialog({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Template name"
-            className="h-11 rounded-xl border border-neutral-200 bg-white px-3.5 text-sm text-neutral-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+            className="h-11 rounded-xl border border-neutral-200 bg-surface px-3.5 text-sm text-neutral-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           />
         </label>
         <label className="flex flex-col gap-1.5">
@@ -81,7 +81,7 @@ export function SaveAsTemplateDialog({
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             placeholder="e.g. social, poster, resume"
-            className="h-11 rounded-xl border border-neutral-200 bg-white px-3.5 text-sm text-neutral-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+            className="h-11 rounded-xl border border-neutral-200 bg-surface px-3.5 text-sm text-neutral-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           />
         </label>
         <fieldset className="flex flex-col gap-1.5">

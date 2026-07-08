@@ -28,7 +28,7 @@ const ROLE_DESC: Record<WorkspaceRole, string> = {
 // Color-coded role chip styling, by authority.
 const ROLE_BADGE: Record<WorkspaceRole, string> = {
   owner: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200",
-  admin: "bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-200",
+  admin: "bg-brand-50 text-brand-ink ring-1 ring-inset ring-brand-200",
   member: "bg-neutral-100 text-neutral-700 ring-1 ring-inset ring-neutral-200",
   viewer: "bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200",
 };
@@ -124,7 +124,7 @@ function RoleSelect({
         value={value}
         onChange={(e) => onChange(e.target.value as WorkspaceRole)}
         aria-label={ariaLabel}
-        className={`${dims} w-full appearance-none border border-neutral-200 bg-white text-neutral-700 outline-none transition hover:border-neutral-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100`}
+        className={`${dims} w-full appearance-none border border-neutral-200 bg-surface text-neutral-700 outline-none transition hover:border-neutral-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100`}
       >
         {roles.map((r) => (
           <option key={r} value={r}>
@@ -326,7 +326,7 @@ export function MembersPanel({
                       if (e.key === "Enter" && email.trim() && !busy) void sendInvite();
                     }}
                     aria-label="Invite by email"
-                    className="h-11 w-full rounded-xl border border-neutral-200 bg-white pl-10 pr-3 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                    className="h-11 w-full rounded-xl border border-neutral-200 bg-surface pl-10 pr-3 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                   />
                 </div>
                 <div className="w-32 shrink-0">
@@ -422,7 +422,7 @@ export function MembersPanel({
                     <button
                       onClick={() => void sendInvite(inv.email, inv.role, true)}
                       disabled={busy}
-                      className="shrink-0 rounded-lg px-2.5 py-1 text-xs font-medium text-brand-700 transition-colors hover:bg-brand-50 disabled:opacity-50"
+                      className="shrink-0 rounded-lg px-2.5 py-1 text-xs font-medium text-brand-ink transition-colors hover:bg-brand-50 disabled:opacity-50"
                     >
                       Resend
                     </button>
@@ -470,7 +470,7 @@ export function MembersPanel({
                       onChange={(e) => setDeleteConfirm(e.target.value)}
                       autoFocus
                       placeholder={workspaceName}
-                      className="mt-1.5 h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm text-neutral-900 placeholder:text-neutral-300 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                      className="mt-1.5 h-10 w-full rounded-xl border border-neutral-200 bg-surface px-3 text-sm text-neutral-900 placeholder:text-neutral-300 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
                     />
                     <div className="mt-3 flex justify-end gap-2">
                       <Button variant="ghost" size="sm" onClick={() => { setConfirmingDelete(false); setDeleteConfirm(""); }}>
@@ -591,7 +591,7 @@ function CustomRolesSection({ workspaceId }: { workspaceId: string }) {
         count={roles.length || undefined}
         action={
           !formOpen && (
-            <button onClick={() => { closeForm(); setCreating(true); }} className="flex items-center gap-1 text-xs font-semibold text-brand-700 transition-colors hover:text-brand-800">
+            <button onClick={() => { closeForm(); setCreating(true); }} className="flex items-center gap-1 text-xs font-semibold text-brand-ink transition-colors hover:text-brand-800">
               <Plus size={14} /> New role
             </button>
           )
@@ -607,7 +607,7 @@ function CustomRolesSection({ workspaceId }: { workspaceId: string }) {
           <ul className="divide-y divide-neutral-100 overflow-hidden rounded-xl border border-neutral-200">
             {roles.map((r) => (
               <li key={r.id} className={`flex items-center gap-3 px-3.5 py-3 transition-colors hover:bg-neutral-50/70 ${editingId === r.id ? "bg-brand-50/40" : ""}`}>
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-50 text-brand-600 ring-1 ring-inset ring-brand-100">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-50 text-brand-ink ring-1 ring-inset ring-brand-100">
                   <Shield size={16} />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -647,7 +647,7 @@ function CustomRolesSection({ workspaceId }: { workspaceId: string }) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             autoFocus
-            className="h-11 w-full rounded-xl border border-neutral-200 bg-white px-3.5 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+            className="h-11 w-full rounded-xl border border-neutral-200 bg-surface px-3.5 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           />
           <p className="mb-2 mt-3 text-xs font-medium text-neutral-600">Capabilities</p>
           <div className="flex flex-wrap gap-2">
@@ -655,7 +655,7 @@ function CustomRolesSection({ workspaceId }: { workspaceId: string }) {
               <label
                 key={c.id}
                 className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors ${
-                  caps.includes(c.id) ? "border-brand-300 bg-brand-50 font-medium text-brand-700" : "border-neutral-200 text-neutral-600 hover:border-neutral-300"
+                  caps.includes(c.id) ? "border-brand-300 bg-brand-50 font-medium text-brand-ink" : "border-neutral-200 text-neutral-600 hover:border-neutral-300"
                 }`}
               >
                 <input type="checkbox" className="sr-only" checked={caps.includes(c.id)} onChange={() => toggleCap(c.id)} />

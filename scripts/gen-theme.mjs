@@ -28,15 +28,60 @@ const COLORS_START = "/* THEME:colors:start (generated from src/theme.config.mjs
 const COLORS_END = "/* THEME:colors:end */";
 const ROOT_START = "/* THEME:root:start (generated from src/theme.config.mjs - do not edit by hand) */";
 const ROOT_END = "/* THEME:root:end */";
+const DARK_START = "/* THEME:dark:start (generated from src/theme.config.mjs - do not edit by hand) */";
+const DARK_END = "/* THEME:dark:end */";
 
-function scaleVars(prefix, scale) {
+function scaleVars(prefix, scale, indent = "  ") {
   return Object.keys(scale)
-    .map((step) => `  --color-${prefix}-${step}: ${scale[step]};`)
+    .map((step) => `${indent}--color-${prefix}-${step}: ${scale[step]};`)
     .join("\n");
 }
 
 function colorsRegion() {
-  return [COLORS_START, scaleVars("brand", theme.brand), "", scaleVars("accent", theme.accent), `  ${COLORS_END}`].join("\n");
+  return [
+    COLORS_START,
+    scaleVars("brand", theme.brand),
+    "",
+    scaleVars("accent", theme.accent),
+    "",
+    "  /* Semantic chrome surfaces (dark mode swaps these; see THEME:dark). */",
+    "  --color-page: #ffffff;",
+    "  --color-surface: #ffffff;",
+    `  --color-brand-ink: ${theme.brand[700]};`,
+    `  ${COLORS_END}`,
+  ].join("\n");
+}
+
+function darkRegion() {
+  const d = theme.dark;
+  const lightBrandTints = Object.fromEntries(Object.keys(d.brand).map((k) => [k, theme.brand[k]]));
+  return [
+    DARK_START,
+    ".dark {",
+    `  --color-page: ${d.page};`,
+    `  --color-surface: ${d.surface};`,
+    `  --color-brand-ink: ${d.brandInk};`,
+    "",
+    scaleVars("neutral", d.neutral),
+    "",
+    scaleVars("brand", d.brand),
+    "}",
+    "",
+    "/* Escape hatch: subtrees that must stay light even under a dark app chrome",
+    "   (document surfaces such as sheets, docs, and the present stage render the",
+    "   user's content, which the app theme must never restyle). */",
+    ".light {",
+    "  color-scheme: light;",
+    "  --color-page: #ffffff;",
+    "  --color-surface: #ffffff;",
+    `  --color-brand-ink: ${theme.brand[700]};`,
+    "",
+    scaleVars("neutral", theme.neutral),
+    "",
+    scaleVars("brand", lightBrandTints),
+    "}",
+    DARK_END,
+  ].join("\n");
 }
 
 function rootRegion() {
@@ -71,6 +116,7 @@ function replaceRegion(src, startMarker, endMarker, replacement, label) {
 function nextGlobals(current) {
   let out = replaceRegion(current, COLORS_START, COLORS_END, colorsRegion(), "colors");
   out = replaceRegion(out, ROOT_START, ROOT_END, rootRegion(), "root");
+  out = replaceRegion(out, DARK_START, DARK_END, darkRegion(), "dark");
   return out;
 }
 

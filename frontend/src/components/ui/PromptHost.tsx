@@ -53,7 +53,7 @@ export function PromptHost() {
             ref={inputRef}
             defaultValue={req.defaultValue ?? ""}
             placeholder={req.placeholder}
-            className="h-11 rounded-xl border border-neutral-200 bg-white px-3.5 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+            className="h-11 rounded-xl border border-neutral-200 bg-surface px-3.5 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="secondary" size="sm" onClick={cancel}>Cancel</Button>

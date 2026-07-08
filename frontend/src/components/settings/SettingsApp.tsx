@@ -6,9 +6,10 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/router";
 import QRCode from "qrcode";
-import { Bell, BellRing, Check, ChevronLeft, Copy, Download, KeyRound, LogOut, ShieldCheck, Trash2, User as UserIcon } from "lucide-react";
+import { Bell, BellRing, Check, ChevronLeft, Copy, Download, KeyRound, LogOut, Moon, MonitorSmartphone, ShieldCheck, Sun, Trash2, User as UserIcon } from "lucide-react";
 import { ApiError, type MfaEnrollment, type NotificationType, type SessionInfo } from "@hc/sdk";
 import { oc, ssoLinkUrl } from "@/lib/sdk";
+import { getThemePreference, setThemePreference, type ThemePreference } from "@/lib/theme";
 import { disablePush, enablePush, getPushState, type PushState } from "@/lib/push";
 import { useAuth } from "@/store/auth";
 import { useToast } from "@/components/ui/Toast";
@@ -374,7 +375,7 @@ export function SettingsApp() {
 
   return (
     <div className="min-h-screen bg-neutral-50">
-      <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-neutral-200 bg-white/90 px-4 py-2.5 backdrop-blur">
+      <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-neutral-200 bg-surface/90 px-4 py-2.5 backdrop-blur">
         <button onClick={() => void router.push("/dashboard")} aria-label="Back to dashboard" className="grid h-8 w-8 place-items-center rounded-lg text-neutral-500 hover:bg-neutral-100">
           <ChevronLeft size={20} />
         </button>
@@ -389,9 +390,9 @@ export function SettingsApp() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex flex-1 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition md:flex-none ${tab === t.id ? "bg-brand-50 text-brand-700" : "text-neutral-600 hover:bg-neutral-100"}`}
+              className={`flex flex-1 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition md:flex-none ${tab === t.id ? "bg-brand-50 text-brand-ink" : "text-neutral-600 hover:bg-neutral-100"}`}
             >
-              <t.icon size={16} className={tab === t.id ? "text-brand-600" : "text-neutral-400"} />
+              <t.icon size={16} className={tab === t.id ? "text-brand-ink" : "text-neutral-400"} />
               {t.label}
             </button>
           ))}
@@ -423,7 +424,7 @@ export function SettingsApp() {
                     <select
                       value={locale}
                       onChange={(e) => setLocale(e.target.value)}
-                      className="h-11 rounded-xl border border-neutral-200 bg-white px-3 text-sm text-neutral-800 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                      className="h-11 rounded-xl border border-neutral-200 bg-surface px-3 text-sm text-neutral-800 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                     >
                       {localeOptions.map((l) => (
                         <option key={l.value} value={l.value}>{l.label}</option>
@@ -436,6 +437,10 @@ export function SettingsApp() {
                     </Button>
                   </div>
                 </div>
+              </Card>
+
+              <Card title="Appearance" description="How the HyCanvas interface looks on this device. Your designs are never restyled.">
+                <ThemePicker />
               </Card>
 
               <Card title="Your data" description="Download everything in your account, or permanently delete it.">
@@ -504,7 +509,7 @@ export function SettingsApp() {
                     <ul className="grid grid-cols-2 gap-1.5 rounded-xl bg-neutral-50 p-3 font-mono text-sm text-neutral-800">
                       {recoveryCodes.map((c) => <li key={c}>{c}</li>)}
                     </ul>
-                    <button type="button" onClick={copyCodes} className="inline-flex items-center gap-1.5 self-start text-sm font-medium text-brand-700 hover:underline"><Copy size={14} /> Copy codes</button>
+                    <button type="button" onClick={copyCodes} className="inline-flex items-center gap-1.5 self-start text-sm font-medium text-brand-ink hover:underline"><Copy size={14} /> Copy codes</button>
                     <label className="flex items-start gap-2 text-sm text-neutral-700">
                       <input type="checkbox" checked={acknowledged} onChange={(e) => setAcknowledged(e.target.checked)} className="mt-0.5" />
                       I have saved these recovery codes.
@@ -561,7 +566,7 @@ export function SettingsApp() {
           {tab === "notifications" && (
             <Card title="Notifications" description="In-app notifications are always on. Choose what also emails or pushes to you.">
               <div className="flex items-start gap-3 rounded-xl bg-neutral-50 p-3">
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-700"><BellRing size={16} /></span>
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-ink"><BellRing size={16} /></span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-neutral-800">Push on this device</p>
                   <p className="mt-0.5 text-xs text-neutral-500">
@@ -620,10 +625,51 @@ export function SettingsApp() {
   );
 }
 
+// Appearance: the app-chrome theme choice (system / light / dark), applied
+// instantly and remembered per device via lib/theme.ts.
+function ThemePicker() {
+  const [pref, setPref] = useState<ThemePreference>(() => getThemePreference());
+  const options: { value: ThemePreference; label: string; icon: typeof Sun; hint: string }[] = [
+    { value: "system", label: "System", icon: MonitorSmartphone, hint: "Follow this device" },
+    { value: "light", label: "Light", icon: Sun, hint: "Always light" },
+    { value: "dark", label: "Dark", icon: Moon, hint: "Always dark" },
+  ];
+  return (
+    <div role="radiogroup" aria-label="Interface theme" className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+      {options.map((o) => {
+        const active = pref === o.value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            onClick={() => {
+              setPref(o.value);
+              setThemePreference(o.value);
+            }}
+            className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm transition ${
+              active
+                ? "border-brand-500 bg-brand-50 text-brand-ink ring-1 ring-brand-200"
+                : "border-neutral-200 text-neutral-700 hover:border-neutral-300 hover:bg-neutral-50"
+            }`}
+          >
+            <o.icon size={18} className="shrink-0" />
+            <span className="min-w-0">
+              <span className="block font-medium">{o.label}</span>
+              <span className={`block text-xs ${active ? "text-brand-ink/80" : "text-neutral-500"}`}>{o.hint}</span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // A settings section: a titled, lightly-bordered white card.
 function Card({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return (
-    <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+    <section className="rounded-2xl border border-neutral-200 bg-surface p-6 shadow-sm">
       <h2 className="text-sm font-semibold text-neutral-900">{title}</h2>
       {description && <p className="mt-1 text-sm text-neutral-500">{description}</p>}
       <div className="mt-5">{children}</div>

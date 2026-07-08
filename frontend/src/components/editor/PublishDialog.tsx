@@ -359,7 +359,7 @@ export function PublishDialog({
       onClick={onClose}
     >
       <div
-        className="flex max-h-[88vh] w-[40rem] max-w-[94vw] flex-col overflow-hidden rounded-xl bg-white shadow-2xl"
+        className="flex max-h-[88vh] w-[40rem] max-w-[94vw] flex-col overflow-hidden rounded-xl bg-surface shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -593,7 +593,7 @@ export function PublishDialog({
                       className={
                         "min-h-[4.5rem] rounded-md border p-1 text-left " +
                         (cell.inMonth
-                          ? "border-neutral-200 bg-white"
+                          ? "border-neutral-200 bg-surface"
                           : "border-neutral-100 bg-neutral-50 text-neutral-300")
                       }
                     >

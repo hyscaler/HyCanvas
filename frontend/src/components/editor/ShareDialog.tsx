@@ -30,7 +30,7 @@ function ModeSelect({ value, onChange, disabled }: { value: AccessMode; onChange
       value={value}
       disabled={disabled}
       onChange={(e) => onChange(e.target.value as AccessMode)}
-      className="h-9 rounded-lg border border-neutral-200 bg-white px-2 text-sm text-neutral-800 outline-none focus:border-brand-500 disabled:opacity-50"
+      className="h-9 rounded-lg border border-neutral-200 bg-surface px-2 text-sm text-neutral-800 outline-none focus:border-brand-500 disabled:opacity-50"
     >
       {MODES.map((m) => (
         <option key={m} value={m}>{MODE_LABEL[m]}</option>
@@ -401,7 +401,7 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
                 {requests.map((req) => {
                   const armedDeny = armed === `deny-req:${req.id}`;
                   return (
-                    <li key={req.id} className="flex items-center gap-2 rounded-lg border border-amber-100 bg-white px-3 py-2">
+                    <li key={req.id} className="flex items-center gap-2 rounded-lg border border-amber-100 bg-surface px-3 py-2">
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm text-neutral-800">{req.requester.name || req.requester.email || "Someone"}</span>
                         <span className="block truncate text-xs text-neutral-400">
@@ -478,7 +478,7 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
                         {label.secondary && <span className="block truncate text-xs text-neutral-400">{label.secondary}</span>}
                         {g.invitedByName && <span className="block truncate text-[11px] text-neutral-400">Invited by {g.invitedByName}</span>}
                       </span>
-                      {!canManageRoles && role && <span className="rounded bg-brand-50 px-1.5 py-0.5 text-xs font-medium text-brand-700">{role}</span>}
+                      {!canManageRoles && role && <span className="rounded bg-brand-50 px-1.5 py-0.5 text-xs font-medium text-brand-ink">{role}</span>}
                       <ModeSelect value={g.mode} onChange={(m) => void changeGrant(g, m)} disabled={isPending(g.id)} />
                       <button
                         aria-label={armedRemove ? "Click again to remove access" : "Remove access"}
@@ -497,7 +497,7 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
                           value={g.roleId ?? ""}
                           disabled={isPending(g.id)}
                           onChange={(e) => void setGrantRole(g, e.target.value)}
-                          className="h-7 rounded border border-neutral-200 bg-white px-1.5 text-xs text-neutral-700 outline-none focus:border-brand-500 disabled:opacity-50"
+                          className="h-7 rounded border border-neutral-200 bg-surface px-1.5 text-xs text-neutral-700 outline-none focus:border-brand-500 disabled:opacity-50"
                         >
                           <option value="">No role</option>
                           {data?.customRoles.map((r) => (
@@ -543,7 +543,7 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
                 <ChevronRight size={13} className={`transition-transform ${linkOptionsOpen ? "rotate-90" : ""}`} />
                 Link options
                 {(linkPassword || linkExpiry || linkRequireSignin) && (
-                  <span className="rounded-full bg-brand-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-700">set</span>
+                  <span className="rounded-full bg-brand-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-ink">set</span>
                 )}
               </button>
 
@@ -589,7 +589,7 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
                   const armedRotate = armed === `rot-link:${l.id}`;
                   const armedDelete = armed === `del-link:${l.id}`;
                   return (
-                    <li key={l.id} className={`flex flex-col gap-2 rounded-xl border px-3 py-2.5 ${l.disabled ? "border-neutral-100 bg-neutral-50 opacity-70" : "border-neutral-200 bg-white"}`}>
+                    <li key={l.id} className={`flex flex-col gap-2 rounded-xl border px-3 py-2.5 ${l.disabled ? "border-neutral-100 bg-neutral-50 opacity-70" : "border-neutral-200 bg-surface"}`}>
                       <div className="flex items-center gap-2">
                         <ModeSelect value={l.mode} onChange={(m) => void patchLink(l, { mode: m }, "Link access updated.")} disabled={busy} />
                         <span className="flex flex-wrap items-center gap-1.5 text-xs font-medium text-neutral-500">
@@ -629,7 +629,7 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
                             value={toLocalInput(l.expiresAt)}
                             disabled={busy}
                             onChange={(e) => void patchLink(l, { expiresAt: e.target.value ? new Date(e.target.value).toISOString() : null }, e.target.value ? "Expiry updated." : "Expiry removed.")}
-                            className="h-7 rounded border border-neutral-200 bg-white px-1.5 text-xs text-neutral-700 outline-none focus:border-brand-500 disabled:opacity-50"
+                            className="h-7 rounded border border-neutral-200 bg-surface px-1.5 text-xs text-neutral-700 outline-none focus:border-brand-500 disabled:opacity-50"
                           />
                         </label>
                         <label className="flex items-center gap-1">

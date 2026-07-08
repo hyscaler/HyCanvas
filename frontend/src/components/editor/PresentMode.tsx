@@ -998,7 +998,7 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
   if (pages.length === 0) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-neutral-900">
+    <div className="light fixed inset-0 z-[100] flex flex-col bg-neutral-900">
       {/* Audience-facing render path: only the slide canvas. Presenter-only UI
           (HUD, controls, magic-tool overlays) lives outside this surface so a
           captured/mirrored slide area never shows presenter chrome. */}

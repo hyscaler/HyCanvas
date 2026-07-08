@@ -70,7 +70,7 @@ export function WizardShell({
   return (
     <div className="relative grid min-h-screen place-items-center overflow-hidden p-6">
       <CanvasFloor />
-      <div className="oc-fade-up relative z-10 w-full max-w-xl rounded-2xl bg-white p-8 shadow-2xl ring-1 ring-black/5">
+      <div className="oc-fade-up relative z-10 w-full max-w-xl rounded-2xl bg-surface p-8 shadow-2xl ring-1 ring-black/5">
         <div className="mb-6 flex items-center justify-between">
           <Logo size={28} />
           <span className="text-xs font-medium text-neutral-400">
@@ -86,8 +86,8 @@ export function WizardShell({
                 className={cn(
                   "grid h-7 w-7 place-items-center rounded-full text-xs font-semibold ring-1 transition",
                   s.n < step && "oc-gradient text-white ring-transparent",
-                  s.n === step && "bg-brand-50 text-brand-700 ring-brand-300",
-                  s.n > step && "bg-white text-neutral-400 ring-neutral-200",
+                  s.n === step && "bg-brand-50 text-brand-ink ring-brand-300",
+                  s.n > step && "bg-surface text-neutral-400 ring-neutral-200",
                 )}
               >
                 {s.n < step ? <Check size={13} /> : s.n}
@@ -95,7 +95,7 @@ export function WizardShell({
               <span
                 className={cn(
                   "text-[10px] font-medium",
-                  s.n === step ? "text-brand-700" : "text-neutral-400",
+                  s.n === step ? "text-brand-ink" : "text-neutral-400",
                 )}
               >
                 {s.label}

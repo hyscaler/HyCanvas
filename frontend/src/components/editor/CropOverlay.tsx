@@ -146,15 +146,15 @@ export function CropOverlay({ api, id }: { api: CanvasApi; id: string }) {
         />
         {/* Rule-of-thirds guides. */}
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute left-1/3 top-0 h-full w-px bg-white/40" />
-          <div className="absolute left-2/3 top-0 h-full w-px bg-white/40" />
-          <div className="absolute left-0 top-1/3 h-px w-full bg-white/40" />
-          <div className="absolute left-0 top-2/3 h-px w-full bg-white/40" />
+          <div className="absolute left-1/3 top-0 h-full w-px bg-surface/40" />
+          <div className="absolute left-2/3 top-0 h-full w-px bg-surface/40" />
+          <div className="absolute left-0 top-1/3 h-px w-full bg-surface/40" />
+          <div className="absolute left-0 top-2/3 h-px w-full bg-surface/40" />
         </div>
       </div>
       {/* Toolbar below the frame. */}
       <div
-        className="absolute z-30 flex items-center gap-3 rounded-xl border border-neutral-200 bg-white px-3 py-2 shadow-lg"
+        className="absolute z-30 flex items-center gap-3 rounded-xl border border-neutral-200 bg-surface px-3 py-2 shadow-lg"
         style={{ left: ftl.x, top: ftl.y + fh + 10 }}
         onPointerDown={(e) => e.stopPropagation()}
       >

@@ -170,7 +170,7 @@ export function ColorField({
         }}
       />
       {open && (
-        <div className="absolute right-0 z-50 mt-1.5 w-60 max-w-[calc(100vw-2rem)] rounded-xl border border-neutral-200 bg-white p-3 shadow-xl">
+        <div className="absolute right-0 z-50 mt-1.5 w-60 max-w-[calc(100vw-2rem)] rounded-xl border border-neutral-200 bg-surface p-3 shadow-xl">
           {/* SV square */}
           <div
             ref={svRef}

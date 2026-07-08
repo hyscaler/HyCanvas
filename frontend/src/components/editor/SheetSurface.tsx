@@ -940,7 +940,7 @@ export function SheetSurface(props: {
         "inline-flex h-7 w-7 items-center justify-center rounded-md border text-xs",
         active
           ? "border-blue-400 bg-blue-50 text-blue-600"
-          : "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-100",
+          : "border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-100",
       ].join(" ")}
     >
       {node}
@@ -948,14 +948,14 @@ export function SheetSurface(props: {
   );
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-white text-neutral-900">
+    <div className="light flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-surface text-neutral-900">
       {/* Toolbar: structure + cell formatting for the active cell (spreadsheet
           convention - a full-width top toolbar, like Google Sheets). */}
       <div className="flex flex-wrap items-center gap-1.5 border-b border-neutral-200 bg-neutral-50 px-3 py-1.5">
         <button
           type="button"
           onClick={addRow}
-          className="inline-flex items-center gap-1 rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100"
+          className="inline-flex items-center gap-1 rounded-md border border-neutral-200 bg-surface px-2 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100"
           title="Add row"
         >
           <Rows3 className="h-3.5 w-3.5" /> Row
@@ -963,7 +963,7 @@ export function SheetSurface(props: {
         <button
           type="button"
           onClick={addColumn}
-          className="inline-flex items-center gap-1 rounded-md border border-neutral-200 bg-white px-2 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100"
+          className="inline-flex items-center gap-1 rounded-md border border-neutral-200 bg-surface px-2 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100"
           title="Add column"
         >
           <Columns3 className="h-3.5 w-3.5" /> Column
@@ -975,7 +975,7 @@ export function SheetSurface(props: {
         <select
           value={activeFormatValue}
           onChange={(e) => setActiveNumberFormat(e.target.value)}
-          className="rounded-md border border-neutral-200 bg-white px-1.5 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100 focus:outline-none focus:ring-1 focus:ring-blue-400"
+          className="rounded-md border border-neutral-200 bg-surface px-1.5 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100 focus:outline-none focus:ring-1 focus:ring-blue-400"
           title="Number format for the active cell"
         >
           {NUMBER_FORMATS.map((nf) => (
@@ -987,7 +987,7 @@ export function SheetSurface(props: {
         <button
           type="button"
           onClick={() => stepDecimals(1)}
-          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-100"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-100"
           title="Increase decimal places"
         >
           <DecimalsArrowRight className="h-3.5 w-3.5" />
@@ -995,7 +995,7 @@ export function SheetSurface(props: {
         <button
           type="button"
           onClick={() => stepDecimals(-1)}
-          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-100"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-100"
           title="Decrease decimal places"
         >
           <DecimalsArrowLeft className="h-3.5 w-3.5" />
@@ -1016,7 +1016,7 @@ export function SheetSurface(props: {
           "Italic",
           <Italic className="h-3.5 w-3.5" />,
         )}
-        <label className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-neutral-200 bg-white hover:bg-neutral-100" title="Text color" style={{ color: fontColor }}>
+        <label className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-neutral-200 bg-surface hover:bg-neutral-100" title="Text color" style={{ color: fontColor }}>
           <Type className="h-3.5 w-3.5" />
           <input type="color" value={fontColor} onChange={(e) => patchActiveFmt({ font: { color: e.target.value } })} className="sr-only" />
         </label>
@@ -1044,12 +1044,12 @@ export function SheetSurface(props: {
         <div className="mx-0.5 h-5 w-px bg-neutral-200" />
 
         {/* Fill */}
-        <label className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-neutral-200 bg-white hover:bg-neutral-100" title="Fill color" style={{ color: fillColor }}>
+        <label className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-neutral-200 bg-surface hover:bg-neutral-100" title="Fill color" style={{ color: fillColor }}>
           <PaintBucket className="h-3.5 w-3.5" />
           <input type="color" value={fillColor} onChange={(e) => patchActiveFmt({ fill: e.target.value })} className="sr-only" />
         </label>
         {activeFmt?.fill && (
-          <button type="button" onClick={() => patchActiveFmt({ fill: undefined })} className="rounded-md border border-neutral-200 bg-white px-1.5 py-1 text-[11px] text-neutral-600 hover:bg-neutral-100" title="Clear fill">Clear</button>
+          <button type="button" onClick={() => patchActiveFmt({ fill: undefined })} className="rounded-md border border-neutral-200 bg-surface px-1.5 py-1 text-[11px] text-neutral-600 hover:bg-neutral-100" title="Clear fill">Clear</button>
         )}
 
         {/* Borders dropdown */}
@@ -1057,14 +1057,14 @@ export function SheetSurface(props: {
           <button
             type="button"
             onClick={() => setBordersOpen((v) => !v)}
-            className={`inline-flex h-7 items-center gap-1 rounded-md border px-2 text-xs ${bordersOpen ? "border-blue-400 bg-blue-50 text-blue-600" : "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-100"}`}
+            className={`inline-flex h-7 items-center gap-1 rounded-md border px-2 text-xs ${bordersOpen ? "border-blue-400 bg-blue-50 text-blue-600" : "border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-100"}`}
             title="Borders"
             aria-expanded={bordersOpen}
           >
             <Square className="h-3.5 w-3.5" /> <ChevronDown className="h-3 w-3" />
           </button>
           {bordersOpen && (
-            <div className="absolute left-0 z-30 mt-1 flex flex-col gap-2 rounded-lg border border-neutral-200 bg-white p-2 shadow-lg">
+            <div className="absolute left-0 z-30 mt-1 flex flex-col gap-2 rounded-lg border border-neutral-200 bg-surface p-2 shadow-lg">
               <div className="flex items-center gap-1.5">
                 {iconToggle(!!activeFmt?.border?.top, () => toggleBorderEdge("top"), "Top border", <span className="text-[10px] font-semibold">T</span>)}
                 {iconToggle(!!activeFmt?.border?.right, () => toggleBorderEdge("right"), "Right border", <span className="text-[10px] font-semibold">R</span>)}
@@ -1072,8 +1072,8 @@ export function SheetSurface(props: {
                 {iconToggle(!!activeFmt?.border?.left, () => toggleBorderEdge("left"), "Left border", <span className="text-[10px] font-semibold">L</span>)}
               </div>
               <div className="flex items-center gap-2">
-                <button type="button" onClick={setAllBorders} className="rounded-md border border-neutral-200 bg-white px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-100">All</button>
-                <button type="button" onClick={() => patchActiveFmt({ border: undefined })} className="rounded-md border border-neutral-200 bg-white px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-100">None</button>
+                <button type="button" onClick={setAllBorders} className="rounded-md border border-neutral-200 bg-surface px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-100">All</button>
+                <button type="button" onClick={() => patchActiveFmt({ border: undefined })} className="rounded-md border border-neutral-200 bg-surface px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-100">None</button>
                 <label className="ml-auto inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-neutral-200" title="Border color" style={{ color: borderColor }}>
                   <Square className="h-3.5 w-3.5" />
                   <input
@@ -1098,7 +1098,7 @@ export function SheetSurface(props: {
       </div>
 
       {/* Formula bar */}
-      <div className="flex items-center gap-2 border-b border-neutral-200 bg-white px-3 py-1.5">
+      <div className="flex items-center gap-2 border-b border-neutral-200 bg-surface px-3 py-1.5">
         <span className="min-w-12 rounded border border-neutral-200 bg-neutral-50 px-2 py-1 text-center font-mono text-xs font-semibold text-neutral-700">
           {activeKey}
         </span>
@@ -1343,7 +1343,7 @@ export function SheetSurface(props: {
                             // to splice a ref into an "=" formula.
                             if (!insertingRef) commitDraft(activeKey, draft);
                           }}
-                          className="absolute inset-0 h-full w-full border-0 bg-white px-1.5 font-mono text-sm text-neutral-900 outline-none"
+                          className="absolute inset-0 h-full w-full border-0 bg-surface px-1.5 font-mono text-sm text-neutral-900 outline-none"
                         />
                       ) : (
                         <span
@@ -1379,7 +1379,7 @@ export function SheetSurface(props: {
       {/* Header right-click menu: insert / delete a row or column at a position. */}
       {headerMenu && (
         <div
-          className="fixed z-50 min-w-44 rounded-md border border-neutral-200 bg-white py-1 text-sm shadow-lg"
+          className="fixed z-50 min-w-44 rounded-md border border-neutral-200 bg-surface py-1 text-sm shadow-lg"
           style={{ left: headerMenu.x, top: headerMenu.y }}
           // Stop the document mousedown listener from closing before click runs.
           onMouseDown={(e) => e.stopPropagation()}

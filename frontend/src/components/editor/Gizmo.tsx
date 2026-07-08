@@ -307,14 +307,14 @@ function SelectionGizmo({ api, ids }: { api: CanvasApi; ids: string[] }) {
       <div className="pointer-events-none absolute border-2 border-[color:var(--color-selection)]" style={{ left: tl.x, top: tl.y, width: br.x - tl.x, height: br.y - tl.y }} />
       <div
         onPointerDown={(e) => begin(e, "rotate", 0.5, 0)}
-        className="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[color:var(--color-selection)] bg-white"
+        className="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[color:var(--color-selection)] bg-surface"
         style={{ left: sx(0.5), top: sy(0) - 26, cursor: ROTATE_CURSOR }}
       />
       {handles.map((h) => (
         <div
           key={`${h.fx},${h.fy}`}
           onPointerDown={(e) => begin(e, "resize", h.fx, h.fy)}
-          className="absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-sm border border-[color:var(--color-selection)] bg-white"
+          className="absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-sm border border-[color:var(--color-selection)] bg-surface"
           style={{ left: sx(h.fx), top: sy(h.fy), cursor: h.cursor }}
         />
       ))}
@@ -822,14 +822,14 @@ export function Gizmo({ api }: { api: CanvasApi }) {
               <div
                 key={hd.id}
                 onPointerDown={(e) => beginResize(e, hd.id)}
-                className="absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-sm border border-[color:var(--color-selection)] bg-white"
+                className="absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-sm border border-[color:var(--color-selection)] bg-surface"
                 style={{ left: p.x, top: p.y, cursor: resizeCursor(hd.fx, hd.fy, exAxis) }}
               />
             );
           })}
           <div
             onPointerDown={(e) => beginResize(e, "rotate")}
-            className="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[color:var(--color-selection)] bg-white"
+            className="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[color:var(--color-selection)] bg-surface"
             style={{ left: rotPos.x, top: rotPos.y, cursor: ROTATE_CURSOR }}
           />
         </>

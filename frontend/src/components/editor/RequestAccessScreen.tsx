@@ -43,7 +43,7 @@ export function RequestAccessScreen({ designId, onBack }: { designId: string; on
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-neutral-50 px-6">
-      <div className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-8 text-center shadow-sm">
+      <div className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-surface p-8 text-center shadow-sm">
         <span className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-neutral-100 text-neutral-500">
           <Lock size={22} />
         </span>
@@ -67,7 +67,7 @@ export function RequestAccessScreen({ designId, onBack }: { designId: string; on
                 <select
                   value={mode}
                   onChange={(e) => setMode(e.target.value as AccessMode)}
-                  className="mt-1 h-10 w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm text-neutral-800 outline-none focus:border-brand-500"
+                  className="mt-1 h-10 w-full rounded-xl border border-neutral-200 bg-surface px-3 text-sm text-neutral-800 outline-none focus:border-brand-500"
                 >
                   {MODES.map((m) => (
                     <option key={m.value} value={m.value}>{m.label}</option>
@@ -79,7 +79,7 @@ export function RequestAccessScreen({ designId, onBack }: { designId: string; on
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Add a message (optional)"
                 rows={2}
-                className="resize-none rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-800 outline-none focus:border-brand-500"
+                className="resize-none rounded-xl border border-neutral-200 bg-surface px-3 py-2 text-sm text-neutral-800 outline-none focus:border-brand-500"
               />
             </div>
             <div className="mt-5 flex gap-2">

@@ -250,7 +250,7 @@ export function BrandPanel({ workspaceId }: { workspaceId: string | null }) {
             value={kit?.id ?? ""}
             disabled={!canManage}
             onChange={(e) => void useBrand.getState().assign(e.target.value || null)}
-            className="w-full rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand-400 disabled:opacity-60"
+            className="w-full rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm outline-none focus:border-brand-400 disabled:opacity-60"
           >
             <option value="">No brand</option>
             {kits.map((k) => (
@@ -323,7 +323,7 @@ export function BrandPanel({ workspaceId }: { workspaceId: string | null }) {
               users. Fillers don't see it. */}
           {canManage && (
             <div className="flex flex-col gap-2">
-              <button onClick={applyBrandDefaults} className="flex items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm font-medium text-brand-700 hover:bg-brand-100">
+              <button onClick={applyBrandDefaults} className="flex items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm font-medium text-brand-ink hover:bg-brand-100">
                 <Wand2 size={15} /> Apply brand
               </button>
               <button onClick={() => doReskin()} className="flex items-center justify-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700 hover:border-brand-300 hover:bg-brand-50">
@@ -502,7 +502,7 @@ function BrandUpdateBanner({
       {canManage ? (
         <div className="flex gap-2">
           <button onClick={() => void onApply()} className="rounded-md bg-amber-600 px-2.5 py-1 font-medium text-white hover:bg-amber-700">Apply update</button>
-          <button onClick={() => void onPin()} className="rounded-md border border-amber-300 bg-white px-2.5 py-1 font-medium text-amber-700 hover:bg-amber-100">Pin current</button>
+          <button onClick={() => void onPin()} className="rounded-md border border-amber-300 bg-surface px-2.5 py-1 font-medium text-amber-700 hover:bg-amber-100">Pin current</button>
         </div>
       ) : (
         <p className="text-[11px] text-amber-600">A brand admin can apply or pin this update.</p>
@@ -568,10 +568,10 @@ function LintSection({
                   const canFix = fixTargetOf(v) !== null;
                   return (
                     <li key={v.id} className="rounded-lg border border-neutral-100 bg-neutral-50 px-2 py-1.5 text-xs">
-                      <button onClick={() => onHighlight(v)} disabled={!v.nodeId} className="block w-full text-left text-neutral-600 hover:text-brand-700 disabled:cursor-default disabled:hover:text-neutral-600" title={v.nodeId ? "Highlight on canvas" : undefined}>
+                      <button onClick={() => onHighlight(v)} disabled={!v.nodeId} className="block w-full text-left text-neutral-600 hover:text-brand-ink disabled:cursor-default disabled:hover:text-neutral-600" title={v.nodeId ? "Highlight on canvas" : undefined}>
                         {v.message}
                       </button>
-                      <button onClick={() => onFix(v)} className="mt-1 text-[11px] font-medium text-brand-600 hover:underline">
+                      <button onClick={() => onFix(v)} className="mt-1 text-[11px] font-medium text-brand-ink hover:underline">
                         {canFix ? "Fix" : "How to fix"}
                       </button>
                     </li>
@@ -629,7 +629,7 @@ function PinTrackControl({
         value={pinnedVersion == null ? "" : String(pinnedVersion)}
         disabled={busy}
         onChange={(e) => void set(e.target.value === "" ? null : Number(e.target.value))}
-        className="w-full rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand-400 disabled:opacity-60"
+        className="w-full rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm outline-none focus:border-brand-400 disabled:opacity-60"
       >
         <option value="">Track latest (v{latestVersion})</option>
         {versions.map((v) => (<option key={v} value={v}>Pin v{v}</option>))}
@@ -772,7 +772,7 @@ function VersionHistory({ kitId, onRestored }: { kitId: string; onRestored: () =
                 onClick={() => onRestoreClick(v.version)}
                 disabled={busy}
                 title={confirmVersion === v.version ? "Click again to restore (history is preserved)" : `Restore to v${v.version}`}
-                className={`flex items-center gap-1 hover:underline disabled:opacity-50 ${confirmVersion === v.version ? "font-semibold text-red-600" : "text-brand-600"}`}
+                className={`flex items-center gap-1 hover:underline disabled:opacity-50 ${confirmVersion === v.version ? "font-semibold text-red-600" : "text-brand-ink"}`}
               >
                 <RotateCcw size={12} /> {confirmVersion === v.version ? "Confirm restore" : "Restore"}
               </button>
@@ -832,7 +832,7 @@ function ReskinMapping({
     <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-2 text-xs">
       <div className="mb-1 flex items-center justify-between">
         <span className="font-medium text-neutral-600">Re-skin mapping</span>
-        <button onClick={onUndo} className="text-brand-600 hover:underline">Undo</button>
+        <button onClick={onUndo} className="text-brand-ink hover:underline">Undo</button>
       </div>
       {result.colors.map((m) => {
         const choice = choices[m.from] ?? m.to;
@@ -848,7 +848,7 @@ function ReskinMapping({
             <select
               value={choice}
               onChange={(e) => setChoices((c) => ({ ...c, [m.from]: e.target.value }))}
-              className="ml-auto rounded border border-neutral-200 bg-white px-1 py-0.5 text-[11px] outline-none focus:border-brand-400"
+              className="ml-auto rounded border border-neutral-200 bg-surface px-1 py-0.5 text-[11px] outline-none focus:border-brand-400"
               title="Map this color to a brand swatch, or keep the original"
             >
               <option value="keep">Keep original</option>
@@ -943,7 +943,7 @@ function BrandControlsEditor({
                   const palettes = kit.palettes.map((p) => ({ ...p, colors: p.colors.filter((c) => c.id !== sw.id) }));
                   void save({ palettes });
                 }}
-                className="absolute -right-1 -top-1 hidden rounded-full bg-white text-neutral-400 group-hover:block hover:text-red-500"
+                className="absolute -right-1 -top-1 hidden rounded-full bg-surface text-neutral-400 group-hover:block hover:text-red-500"
               >
                 <Trash2 size={12} />
               </button>
@@ -992,7 +992,7 @@ function ControlToggle({ label, checked, onChange, disabled }: { label: string; 
         onClick={() => onChange(!checked)}
         className={`relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-40 ${checked ? "bg-brand-600" : "bg-neutral-300"}`}
       >
-        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${checked ? "left-4" : "left-0.5"}`} />
+        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-surface transition-all ${checked ? "left-4" : "left-0.5"}`} />
       </button>
     </label>
   );
@@ -1022,7 +1022,7 @@ function AddLogoFromUploads({ workspaceId, assetUrls, onAdd }: { workspaceId: st
   }, [open, workspaceId]);
   return (
     <div className="mb-3">
-      <button onClick={() => setOpen((v) => !v)} className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">
+      <button onClick={() => setOpen((v) => !v)} className="flex items-center gap-1 text-xs font-medium text-brand-ink hover:underline">
         <Plus size={12} /> Add logo from uploads
       </button>
       {open && (
@@ -1158,7 +1158,7 @@ function GenerateFromLogo({
       <button
         onClick={() => inputRef.current?.click()}
         disabled={busy}
-        className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm font-medium text-brand-700 hover:bg-brand-100 disabled:opacity-60"
+        className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm font-medium text-brand-ink hover:bg-brand-100 disabled:opacity-60"
       >
         <Sparkles size={15} /> {busy ? "Generating…" : "Generate from logo"}
       </button>

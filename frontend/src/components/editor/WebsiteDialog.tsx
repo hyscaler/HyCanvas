@@ -184,13 +184,13 @@ export function WebsiteDialog({
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/30" onClick={onClose}>
       <div
-        className="flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl"
+        className="flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-surface shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-3.5">
           <div className="flex items-center gap-2">
-            <Globe size={18} className="text-brand-600" />
+            <Globe size={18} className="text-brand-ink" />
             <h2 className="text-base font-semibold text-neutral-900">Publish as website</h2>
           </div>
           <div className="flex items-center gap-1 rounded-lg bg-neutral-100 p-1 text-sm">
@@ -206,7 +206,7 @@ export function WebsiteDialog({
                 onClick={() => setTab(id)}
                 className={
                   "flex items-center gap-1.5 rounded-md px-3 py-1.5 font-medium transition " +
-                  (tab === id ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-800")
+                  (tab === id ? "bg-surface text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-800")
                 }
               >
                 <Icon size={14} /> {label}
@@ -306,7 +306,7 @@ export function WebsiteDialog({
                         onChange={(e) => setNavLabel(n.id, e.target.value)}
                       />
                       {n.target.kind === "page" && n.target.pageId === site.homePageId && (
-                        <span className="shrink-0 rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-medium text-brand-700">
+                        <span className="shrink-0 rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-medium text-brand-ink">
                           home
                         </span>
                       )}
@@ -360,7 +360,7 @@ export function WebsiteDialog({
                   title="Site preview"
                   srcDoc={homeHtml}
                   style={{ width: device === "desktop" ? "100%" : `${DEVICE_WIDTH[device]}px` }}
-                  className="h-[60vh] w-full rounded-md border border-neutral-300 bg-white shadow-sm"
+                  className="h-[60vh] w-full rounded-md border border-neutral-300 bg-surface shadow-sm"
                   sandbox="allow-same-origin"
                 />
               </div>

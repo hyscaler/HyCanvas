@@ -378,7 +378,7 @@ export function DocSurface(props: { workspaceId?: string; designId?: string }): 
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden bg-neutral-100">
+    <div className="light flex flex-1 flex-col overflow-hidden bg-neutral-100">
       <DocToolbar
         aiEnabled={aiEnabled}
         onExport={exportMarkdown}
@@ -387,7 +387,7 @@ export function DocSurface(props: { workspaceId?: string; designId?: string }): 
       />
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto my-10 w-full max-w-[760px] px-4">
-          <div className="rounded-2xl bg-white px-12 py-14 shadow-sm ring-1 ring-neutral-200">
+          <div className="rounded-2xl bg-surface px-12 py-14 shadow-sm ring-1 ring-neutral-200">
             {blocks.length === 0 ? (
               <p className="text-sm text-neutral-400">Loading document...</p>
             ) : (
@@ -434,13 +434,13 @@ function DocToolbar({
   docExporting: "docx" | "pdf" | null;
 }): React.ReactElement {
   return (
-    <div className="flex shrink-0 items-center gap-2 border-b border-neutral-200 bg-white px-4 py-2">
+    <div className="flex shrink-0 items-center gap-2 border-b border-neutral-200 bg-surface px-4 py-2">
       <span className="text-sm font-semibold text-neutral-700">Document</span>
       <div className="flex-1" />
       <span
         className={cn(
           "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium",
-          aiEnabled ? "text-brand-700" : "text-neutral-400",
+          aiEnabled ? "text-brand-ink" : "text-neutral-400",
         )}
         title={aiEnabled ? "Inline AI is available per block" : "AI needs a workspace"}
       >
@@ -722,7 +722,7 @@ function CalloutBody({
   onChange: (next: DocBlock) => void;
 }): React.ReactElement {
   const tones = {
-    info: "border-brand-300 bg-brand-50 text-brand-700",
+    info: "border-brand-300 bg-brand-50 text-brand-ink",
     warn: "border-amber-300 bg-amber-50 text-amber-700",
     success: "border-emerald-300 bg-emerald-50 text-emerald-700",
   } as const;
@@ -734,7 +734,7 @@ function CalloutBody({
         <select
           value={block.tone}
           onChange={(e) => onChange({ ...block, tone: e.target.value as CalloutBlock["tone"] })}
-          className="cursor-pointer rounded bg-white/60 text-[10px] focus:outline-none"
+          className="cursor-pointer rounded bg-surface/60 text-[10px] focus:outline-none"
           aria-label="Callout tone"
         >
           <option value="info">info</option>
@@ -864,7 +864,7 @@ function EmbedBody({
       <div className="mb-2 flex items-center gap-2 text-sm text-neutral-600">
         <Link2 size={15} />
         {block.url ? (
-          <a href={block.url} target="_blank" rel="noopener noreferrer" className="truncate text-brand-600 hover:underline">
+          <a href={block.url} target="_blank" rel="noopener noreferrer" className="truncate text-brand-ink hover:underline">
             {block.url}
           </a>
         ) : (
@@ -1214,7 +1214,7 @@ function Popover({
     <div
       onMouseDown={(e) => e.stopPropagation()}
       className={cn(
-        "absolute z-20 rounded-xl border border-neutral-200 bg-white p-1 shadow-lg",
+        "absolute z-20 rounded-xl border border-neutral-200 bg-surface p-1 shadow-lg",
         className,
       )}
     >
@@ -1243,7 +1243,7 @@ function MenuItem({
       className={cn(
         "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm transition disabled:cursor-not-allowed disabled:opacity-40",
         danger ? "text-red-600 hover:bg-red-50" : "text-neutral-700 hover:bg-neutral-100",
-        active && "bg-brand-50 text-brand-700",
+        active && "bg-brand-50 text-brand-ink",
       )}
     >
       {children}

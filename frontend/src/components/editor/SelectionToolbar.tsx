@@ -18,7 +18,7 @@ function ToolBtn({ icon: Icon, label, onClick, danger }: { icon: typeof CopyPlus
       title={label}
       aria-label={label}
       onClick={onClick}
-      className={`grid h-8 w-8 place-items-center rounded-lg transition ${danger ? "text-neutral-500 hover:bg-red-50 hover:text-red-600" : "text-neutral-600 hover:bg-neutral-100 hover:text-brand-700"}`}
+      className={`grid h-8 w-8 place-items-center rounded-lg transition ${danger ? "text-neutral-500 hover:bg-red-50 hover:text-red-600" : "text-neutral-600 hover:bg-neutral-100 hover:text-brand-ink"}`}
     >
       <Icon size={16} />
     </button>
@@ -67,7 +67,7 @@ export function SelectionToolbar({ api }: { api: CanvasApi }) {
 
   return (
     <div
-      className="pointer-events-auto absolute z-30 flex items-center gap-0.5 rounded-xl border border-neutral-200 bg-white p-1 shadow-lg ring-1 ring-black/5"
+      className="pointer-events-auto absolute z-30 flex items-center gap-0.5 rounded-xl border border-neutral-200 bg-surface p-1 shadow-lg ring-1 ring-black/5"
       style={{ left: centerX, top, transform: translate }}
       onPointerDown={(e) => e.stopPropagation()}
     >

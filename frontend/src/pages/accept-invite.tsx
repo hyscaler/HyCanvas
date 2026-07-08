@@ -21,7 +21,7 @@ import { CanvasFloor } from "@/components/ui/CanvasFloor";
 const ROLE_LABEL: Record<WorkspaceRole, string> = { viewer: "Viewer", member: "Member", admin: "Admin", owner: "Owner" };
 const ROLE_BADGE: Record<WorkspaceRole, string> = {
   owner: "bg-amber-50 text-amber-700 ring-amber-200",
-  admin: "bg-brand-50 text-brand-700 ring-brand-200",
+  admin: "bg-brand-50 text-brand-ink ring-brand-200",
   member: "bg-neutral-100 text-neutral-700 ring-neutral-200",
   viewer: "bg-slate-100 text-slate-600 ring-slate-200",
 };
@@ -40,7 +40,7 @@ function Scene({ children }: { children: ReactNode }) {
 // Glassy card with a gradient top accent + centered logo.
 function Card({ children }: { children: ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-3xl bg-white shadow-2xl shadow-brand-900/10 ring-1 ring-black/5">
+    <div className="overflow-hidden rounded-3xl bg-surface shadow-2xl shadow-brand-900/10 ring-1 ring-black/5">
       <div className="oc-gradient h-1.5 w-full" />
       <div className="px-7 py-8">
         <div className="mb-6 flex justify-center">
@@ -58,7 +58,7 @@ function HeroIcon({ children, tone = "brand" }: { children: ReactNode; tone?: "b
       ? "bg-emerald-50 text-emerald-600 ring-emerald-100"
       : tone === "red"
         ? "bg-red-50 text-red-600 ring-red-100"
-        : "bg-brand-50 text-brand-600 ring-brand-100";
+        : "bg-brand-50 text-brand-ink ring-brand-100";
   return <div className={`mx-auto grid h-12 w-12 place-items-center rounded-2xl ring-1 ring-inset ${cls}`}>{children}</div>;
 }
 

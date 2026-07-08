@@ -132,7 +132,7 @@ export function MiniMap() {
   // Sits above the zoom control (pinned at bottom-4 right-4) so the two do not
   // overlap in the bottom-right corner.
   return (
-    <div className="absolute bottom-16 right-4 z-10 overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-md" style={{ width: mw, height: mh }}>
+    <div className="absolute bottom-16 right-4 z-10 overflow-hidden rounded-lg border border-neutral-200 bg-surface shadow-md" style={{ width: mw, height: mh }}>
       <canvas
         ref={canvasRef}
         className="block cursor-pointer"

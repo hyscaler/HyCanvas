@@ -1,10 +1,13 @@
 import { Html, Head, Main, NextScript } from "next/document";
 import { brand } from "@/lib/theme.generated";
+import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 
 export default function Document() {
   return (
     <Html lang="en">
       <Head>
+        {/* Apply the stored dark-mode preference before first paint (no flash). */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
         <meta name="theme-color" content={brand["600"]} />
         {/* The visitor mark (hycanvas-marketing/brand): SVG first, PNG + ICO
             fallbacks, plus the touch/PWA tiles. */}

@@ -128,7 +128,7 @@ export function ActivityPanel({ designId, onClose }: { designId: string; onClose
   }
 
   return (
-    <aside className="oc-scroll flex w-80 shrink-0 flex-col overflow-y-auto border-l border-neutral-200 bg-white">
+    <aside className="oc-scroll flex w-80 shrink-0 flex-col overflow-y-auto border-l border-neutral-200 bg-surface">
       <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
         <span className="flex items-center gap-2 text-sm font-semibold text-neutral-800">
           <Activity size={16} /> Activity
@@ -144,7 +144,7 @@ export function ActivityPanel({ designId, onClose }: { designId: string; onClose
             key={f.value}
             onClick={() => setFilter(f.value)}
             className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${
-              filter === f.value ? "bg-brand-50 text-brand-700" : "text-neutral-500 hover:bg-neutral-100"
+              filter === f.value ? "bg-brand-50 text-brand-ink" : "text-neutral-500 hover:bg-neutral-100"
             }`}
           >
             {f.label}
@@ -179,7 +179,7 @@ export function ActivityPanel({ designId, onClose }: { designId: string; onClose
           <button
             onClick={() => void loadMore()}
             disabled={loadingMore}
-            className="my-3 w-full text-center text-xs font-medium text-brand-600 hover:text-brand-700 disabled:opacity-50"
+            className="my-3 w-full text-center text-xs font-medium text-brand-ink hover:text-brand-ink disabled:opacity-50"
           >
             {loadingMore ? "Loading…" : "Load more"}
           </button>
