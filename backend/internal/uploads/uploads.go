@@ -40,6 +40,7 @@ var (
 	ErrNotFound   = errors.New("not found")
 	ErrBadRequest = errors.New("bad request")
 	ErrQuota      = errors.New("storage quota exceeded")
+	ErrUserQuota  = errors.New("your account storage limit is reached")
 	ErrImportSize = errors.New("imported file too large")
 )
 
@@ -79,6 +80,19 @@ func quotaBytes() int64 {
 	return defaultQuotaBytes
 }
 
+// userQuotaBytes is the GLOBAL per-user upload cap across all workspaces
+// (public-instance abuse protection). Unset or 0 means unlimited, so
+// self-hosted deployments see no behavior change; the per-workspace
+// ASSET_QUOTA_BYTES applies independently.
+func userQuotaBytes() int64 {
+	if raw := os.Getenv("USER_STORAGE_QUOTA_BYTES"); raw != "" {
+		if n, err := strconv.ParseInt(raw, 10, 64); err == nil {
+			return n
+		}
+	}
+	return 0
+}
+
 // mediaKind -> Prisma AssetKind enum (stored uppercase).
 var kindMap = map[media.Kind]string{
 	media.KindImage: "IMAGE", media.KindGIF: "IMAGE", media.KindVector: "IMAGE",
@@ -110,10 +124,13 @@ type FolderView struct {
 	CreatedAt   string  `json:"createdAt"`
 }
 
-// UsageView is the workspace storage usage + cap.
+// UsageView is the workspace storage usage + cap, plus the caller's global
+// account usage (userQuotaBytes 0 = unlimited).
 type UsageView struct {
-	UsedBytes  int64 `json:"usedBytes"`
-	QuotaBytes int64 `json:"quotaBytes"`
+	UsedBytes      int64 `json:"usedBytes"`
+	QuotaBytes     int64 `json:"quotaBytes"`
+	UserUsedBytes  int64 `json:"userUsedBytes"`
+	UserQuotaBytes int64 `json:"userQuotaBytes"`
 }
 
 func (s *Service) contentURL(id string) string {
@@ -163,6 +180,17 @@ func (s *Service) store(ctx context.Context, userID, workspaceID string, buf []b
 	}
 	if !media.CanUpload(used, quotaBytes(), int64(len(buf))) {
 		return UploadedAsset{}, ErrQuota
+	}
+	// Global per-user cap across all workspaces, so a public-instance user
+	// cannot multiply their budget by creating workspaces.
+	if uq := userQuotaBytes(); uq > 0 && userID != "" {
+		userUsed, err := s.usedByUser(ctx, userID)
+		if err != nil {
+			return UploadedAsset{}, err
+		}
+		if !media.CanUpload(userUsed, uq, int64(len(buf))) {
+			return UploadedAsset{}, ErrUserQuota
+		}
 	}
 	fid, err := s.resolveFolder(ctx, workspaceID, folderID)
 	if err != nil {
@@ -421,7 +449,14 @@ func (s *Service) UsageView(ctx context.Context, userID, workspaceID string) (Us
 	if err != nil {
 		return UsageView{}, err
 	}
-	return UsageView{UsedBytes: used, QuotaBytes: quotaBytes()}, nil
+	userUsed, err := s.usedByUser(ctx, userID)
+	if err != nil {
+		return UsageView{}, err
+	}
+	return UsageView{
+		UsedBytes: used, QuotaBytes: quotaBytes(),
+		UserUsedBytes: userUsed, UserQuotaBytes: userQuotaBytes(),
+	}, nil
 }
 
 // UpdateAsset renames / moves-to-folder / sets-tags an asset.

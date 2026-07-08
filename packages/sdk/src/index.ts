@@ -697,6 +697,10 @@ export interface AssetFolder {
 export interface StorageUsageView {
   usedBytes: number;
   quotaBytes: number;
+  /** The caller's uploads across ALL workspaces (global account usage). */
+  userUsedBytes: number;
+  /** Global per-user cap; 0 = unlimited. */
+  userQuotaBytes: number;
 }
 
 /** Filters for {@link HyCanvasClient.listAssets}. `folderId: null` = root. */

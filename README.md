@@ -190,6 +190,8 @@ All configuration is read from the root `.env` (copy `.env.example`). The most i
 | `STORAGE_DRIVER` | both | `local` (default) or `s3`. |
 | `LOCAL_STORAGE_PATH` | both | Absolute path for local-file storage when `STORAGE_DRIVER=local`. Must be absolute so dev and the dist bundle share it. |
 | `S3_*` | optional | S3-compatible object storage (endpoint, bucket, keys) when `STORAGE_DRIVER=s3`. |
+| `ASSET_QUOTA_BYTES` | optional | Per-workspace upload cap in bytes (default 2 GiB). |
+| `USER_STORAGE_QUOTA_BYTES` | optional | Global per-user upload cap across all workspaces; unset/0 = unlimited. For public instances. |
 | `AI_SECRET` | optional | Encrypts stored per-workspace AI keys; falls back to `JWT_SECRET`. |
 | `OIDC_*` | optional | OIDC single sign-on (issuer, client id/secret). |
 | `VAPID_*` | optional | Web-push keys for notifications. |

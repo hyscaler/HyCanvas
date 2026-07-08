@@ -706,6 +706,18 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
     setFolders(await oc.listAssetFolders(workspaceId).catch(() => []));
   }, [workspaceId]);
 
+  // quotaErrorKind tells the two 413 causes apart: the per-workspace quota vs
+  // the global per-user account limit (problem+json detail carries which).
+  function quotaErrorKind(e: unknown): false | "workspace" | "account" {
+    const status = e instanceof ApiError ? e.status : (e as { status?: number } | null)?.status;
+    if (status !== 413) return false;
+    const detail =
+      e instanceof ApiError
+        ? ((e.body as { detail?: string } | undefined)?.detail ?? "")
+        : ((e as { detail?: string } | null)?.detail ?? "");
+    return detail.includes("account storage") ? "account" : "workspace";
+  }
+
   // Upload one or many image files (drag-drop or picker) into the open folder.
   const uploadFiles = useCallback(async (files: File[]) => {
     if (!workspaceId) return;
@@ -721,7 +733,7 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
       return cur.filter((x) => x.id !== id);
     });
     let ok = 0;
-    let overQuota = false;
+    let overQuota: false | "workspace" | "account" = false;
     for (const it of items) {
       try {
         const dataUrl = await readAsDataUrl(it.file);
@@ -738,15 +750,16 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
         setAssets((cur) => (cur.some((a) => a.id === asset.id) ? cur : [asset, ...cur]));
         remove(it.id);
       } catch (e) {
-        if (e instanceof ApiError && e.status === 413) overQuota = true;
-        else if (typeof e === "object" && e && (e as { status?: number }).status === 413) overQuota = true;
+        const kind = quotaErrorKind(e);
+        if (kind) overQuota = kind;
         // Mark the tile failed, then clear it after a moment so the grid recovers.
         setUploading((cur) => cur.map((u) => (u.id === it.id ? { ...u, error: true } : u)));
         setTimeout(() => remove(it.id), 4000);
       }
     }
     if (ok) { toast.success(ok === 1 ? "Uploaded." : `Uploaded ${ok} images.`); await refresh(); }
-    if (overQuota) toast.error("Storage quota reached. Delete some uploads to free space.");
+    if (overQuota === "account") toast.error("Your account storage limit is reached. Delete some uploads to free space.");
+    else if (overQuota) toast.error("Storage quota reached. Delete some uploads to free space.");
     else if (ok < imgs.length) toast.error(`${imgs.length - ok} upload(s) failed (unsupported type or too large?).`);
   }, [workspaceId, folderId, refresh, toast]);
 
@@ -759,7 +772,9 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
       toast.success("Recording saved.");
       await refresh();
     } catch (e) {
-      if (e instanceof ApiError && e.status === 413) toast.error("Storage quota reached.");
+      const kind = quotaErrorKind(e);
+      if (kind === "account") toast.error("Your account storage limit is reached.");
+      else if (kind) toast.error("Storage quota reached.");
       else toast.error("Couldn't save the recording.");
     }
   }, [workspaceId, folderId, refresh, toast]);
@@ -774,10 +789,11 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
       toast.success("Imported.");
       await refresh();
     } catch (e) {
-      if (e instanceof ApiError) {
-        if (e.status === 413) toast.error("That image is too large or exceeds your storage quota.");
-        else toast.error("Couldn't import that URL (not an image, blocked host, or unreachable).");
-      } else toast.error("Couldn't import that URL.");
+      const kind = quotaErrorKind(e);
+      if (kind === "account") toast.error("Your account storage limit is reached.");
+      else if (kind) toast.error("That image is too large or exceeds your storage quota.");
+      else if (e instanceof ApiError) toast.error("Couldn't import that URL (not an image, blocked host, or unreachable).");
+      else toast.error("Couldn't import that URL.");
     }
   }, [workspaceId, folderId, refresh, toast]);
 
@@ -913,6 +929,9 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
 
   const selectedFolder = folders.find((f) => f.id === folderId) ?? null;
   const usePct = usage && usage.quotaBytes > 0 ? Math.min(100, (usage.usedBytes / usage.quotaBytes) * 100) : 0;
+  // Global account usage (all workspaces); shown only when the instance sets
+  // a per-user limit (USER_STORAGE_QUOTA_BYTES).
+  const userPct = usage && usage.userQuotaBytes > 0 ? Math.min(100, (usage.userUsedBytes / usage.userQuotaBytes) * 100) : 0;
 
   return (
     <PanelShell title="Uploads">
@@ -1081,6 +1100,18 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
                   <div className={`h-full rounded-full ${usePct >= 90 ? "bg-red-500" : "oc-gradient"}`} style={{ width: `${usePct}%` }} />
                 </div>
+              )}
+              {/* Global account usage, shown only on instances with a per-user limit. */}
+              {usage.userQuotaBytes > 0 && (
+                <>
+                  <div className="mb-1 mt-2 flex items-center justify-between text-[11px] text-neutral-500">
+                    <span>Your storage (all workspaces)</span>
+                    <span>{formatBytes(usage.userUsedBytes)} of {formatBytes(usage.userQuotaBytes)}</span>
+                  </div>
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
+                    <div className={`h-full rounded-full ${userPct >= 90 ? "bg-red-500" : "oc-gradient"}`} style={{ width: `${userPct}%` }} />
+                  </div>
+                </>
               )}
             </div>
           )}

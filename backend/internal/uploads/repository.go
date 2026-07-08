@@ -109,6 +109,14 @@ func (s *Service) usedBytes(ctx context.Context, workspaceID string) (int64, err
 	return used, err
 }
 
+// usedByUser sums a user's uploads across ALL workspaces (global per-user
+// quota); backed by assets_uploaded_by_id_idx.
+func (s *Service) usedByUser(ctx context.Context, userID string) (int64, error) {
+	var used int64
+	err := s.db.QueryRow(ctx, `SELECT COALESCE(SUM("byte_size"),0) FROM "assets" WHERE "uploaded_by_id" = $1`, userID).Scan(&used)
+	return used, err
+}
+
 type assetPatch struct {
 	filename  *string
 	folderID  *string

@@ -41,7 +41,9 @@ func uploadsProblem(w http.ResponseWriter, r *http.Request, err error) {
 		Problem(w, r, http.StatusNotFound, "Not Found", "not found")
 	case errors.Is(err, uploads.ErrBadRequest):
 		Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid upload request")
-	case errors.Is(err, uploads.ErrQuota), errors.Is(err, uploads.ErrImportSize):
+	case errors.Is(err, uploads.ErrQuota), errors.Is(err, uploads.ErrUserQuota), errors.Is(err, uploads.ErrImportSize):
+		// The detail distinguishes the workspace quota from the global
+		// per-user limit so clients can word the error accordingly.
 		Problem(w, r, http.StatusRequestEntityTooLarge, "Payload Too Large", err.Error())
 	default:
 		Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed")

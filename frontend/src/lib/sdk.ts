@@ -36,8 +36,15 @@ export function uploadAssetWithProgress(
         // Session likely needs a refresh; the fetch client handles that for us.
         oc.uploadAsset(workspaceId, input).then(resolve, reject);
       } else {
-        const err = new Error(`Upload failed (${xhr.status}).`) as Error & { status?: number };
+        const err = new Error(`Upload failed (${xhr.status}).`) as Error & { status?: number; detail?: string };
         err.status = xhr.status;
+        // Surface the problem+json detail so callers can word quota errors
+        // (workspace cap vs the global account limit) accurately.
+        try {
+          err.detail = (JSON.parse(xhr.responseText) as { detail?: string }).detail;
+        } catch {
+          /* non-JSON error body */
+        }
         reject(err);
       }
     };
