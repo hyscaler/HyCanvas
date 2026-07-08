@@ -1,45 +1,19 @@
-# HyCanvas - one-command self-host stack (PUBLISHED IMAGE).
+# HyCanvas - self-host stack (PUBLISHED IMAGE), bring-your-own Postgres.
 #
-#   cp .env.example .env   # set JWT_SECRET
+#   cp .env.example .env   # set JWT_SECRET + DATABASE_URL (your managed Postgres)
 #   docker compose up -d
 #
-# Pulls the published hycanvas/hycanvas image and runs it with a bundled Postgres,
-# serving the whole product (UI + API + realtime) at http://localhost:8005; the Go
-# app applies migrations on boot. Update later with `docker compose pull && docker
-# compose up -d`. To BUILD from source instead, use docker-compose.prod.yml; for
-# local development with hot reload, use docker-compose.dev.yml.
+# Pulls the published hycanvas/hycanvas image and runs the whole product (UI +
+# API + realtime) at http://localhost:${APP_PORT}; the Go app applies migrations
+# on boot. Update later with `docker compose pull && docker compose up -d`. To
+# BUILD from source instead, use docker-compose.prod.yml; for local development
+# with hot reload, use docker-compose.dev.yml.
 #
-# With the default COMPOSE_PROFILES=bundled (set in .env) it also runs Postgres;
-# in EXTERNAL mode it runs only the app against your managed Postgres (see the
-# Database note below).
-#
-# Database: external if you provide it in .env, bundled otherwise.
-#   - BUNDLED (default): the db container runs, gated by the `bundled` compose
-#     profile (enabled by COMPOSE_PROFILES=bundled in .env). The app's connection
-#     is assembled from the POSTGRES_* credentials in .env.
-#   - EXTERNAL (bring your own managed Postgres): set EXTERNAL_DATABASE_URL in
-#     .env, and set COMPOSE_PROFILES= (empty) so the bundled container does NOT
-#     start. The app then connects to your endpoint.
-# Other secrets (JWT_SECRET, SMTP_*, OIDC_*, AI keys, VAPID_*, ...) always come
-# from .env.
+# Database: this file ships NO bundled Postgres. Point it at your managed
+# Postgres by setting DATABASE_URL (or EXTERNAL_DATABASE_URL) in .env. Other
+# secrets (JWT_SECRET, SMTP_*, OIDC_*, AI keys, VAPID_*, ...) also come from .env.
 
 services:
-  db:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    profiles: ["bundled"]
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-hycanvas}
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-hycanvas}"]
-      interval: 5s
-      timeout: 5s
-      retries: 12
-
   app:
     image: hycanvas/hycanvas:latest
     restart: unless-stopped
@@ -52,10 +26,6 @@ services:
     env_file:
       - path: .env
         required: false
-    # Connection config: use EXTERNAL_DATABASE_URL from .env when set (bring-your-
-    # own managed Postgres); otherwise assemble the bundled-container URL from the
-    # POSTGRES_* credentials with the compose service-name host. (.env's own
-    # DATABASE_URL stays localhost-based for non-docker dev.)
     environment:
       NODE_ENV: production
       PORT: "8005"
@@ -64,22 +34,25 @@ services:
       # the browser drops the session and login fails. Behind a TLS proxy, set
       # this to "true" (and point APP_URL at your https origin).
       COOKIE_SECURE: "false"
-      DATABASE_URL: "${EXTERNAL_DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-hycanvas}?schema=public}"
+      # Bring-your-own managed Postgres: EXTERNAL_DATABASE_URL wins, else the
+      # DATABASE_URL from .env. There is no bundled db container in this file, so
+      # one of them must be set (an empty value fails loudly at boot).
+      DATABASE_URL: "${EXTERNAL_DATABASE_URL:-${DATABASE_URL:-}}"
       # Single-instance self-host: no Redis. A REDIS_URL in your .env is for native
       # dev (host Redis); in the container localhost is not the host and this compose
       # ships no redis service, so a set-but-unreachable REDIS_URL crash-loops the app
       # on boot. Force it empty here. For multi-instance, add a redis service and set
       # REDIS_URL to redis://<service>:6379/0.
       REDIS_URL: ""
-      # Storage on the container volume (a host absolute path from .env would not
-      # exist here). Set S3_* in .env to use object storage instead.
-      STORAGE_DRIVER: local
+      # Storage driver comes from .env (defaults to local); set STORAGE_DRIVER=s3
+      # plus the S3_* vars there to use object storage. LOCAL_STORAGE_PATH stays
+      # pinned to the container path on purpose: a host absolute path from .env
+      # would not exist inside the container.
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
       LOCAL_STORAGE_PATH: /app/.data/storage
     extra_hosts:
       - "host.docker.internal:host-gateway"
-
+    # Persists local-file storage on the host when STORAGE_DRIVER=local; unused
+    # (but harmless) when using S3.
     volumes:
       - ./data/storage:/app/.data/storage
-
-volumes:
-  pgdata:
