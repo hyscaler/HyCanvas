@@ -19,8 +19,10 @@ on:
     tags:
       - "v*"
 
+# contents: write lets the tag-triggered run advance the docker/build/*
+# branches to the released commit (see the sync step).
 permissions:
-  contents: read
+  contents: write
 
 env:
   DOCKER_IMAGE: hycanvas/hycanvas
@@ -85,6 +87,16 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache-${{ steps.meta.outputs.docker_tag }}
           cache-to: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache-${{ steps.meta.outputs.docker_tag }},mode=max
+
+      # A release tag updates the latest and development Docker channels, so
+      # both publish branches advance to the released commit and keep
+      # reflecting what the channels serve. GITHUB_TOKEN pushes do not
+      # retrigger workflows, so this causes no duplicate builds.
+      - name: Sync docker/build branches to the released commit
+        if: github.ref_type == 'tag'
+        run: |
+          git push --force origin "HEAD:refs/heads/docker/build/latest"
+          git push --force origin "HEAD:refs/heads/docker/build/development"
 
       # The Docker Hub repo description (the listing page) is synced from
       # docker/README.md by .github/workflows/dockerhub-description.yml.
