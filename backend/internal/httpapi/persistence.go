@@ -179,7 +179,18 @@ func designFileHandler(p *persistence.Service, acct *accounts.Service, sh *shari
 			authProblem(w, r, err)
 			return
 		}
-		loaded, err := p.LoadFile(r.Context(), id, ws)
+		// ?trashed=1 lets WORKSPACE MEMBERS preview a design that sits in the
+		// trash (the dashboard Trash cards need a real thumbnail to decide what
+		// to restore). Share-grant visitors fall through to the normal load,
+		// which keeps trashed designs NotFound for them until restored.
+		load := p.LoadFile
+		if r.URL.Query().Get("trashed") == "1" {
+			u := userFrom(r.Context())
+			if acct.AssertMember(r.Context(), u.ID, ws, "viewer") == nil {
+				load = p.LoadFileIncludingTrashed
+			}
+		}
+		loaded, err := load(r.Context(), id, ws)
 		if err != nil {
 			persistenceProblem(w, r, err)
 			return

@@ -8,7 +8,7 @@ import { createScene, renderScene, type CanvasLike, type Viewport } from "@hc/en
 import { oc } from "@/lib/sdk";
 import { imageAssets } from "@/lib/assetProvider";
 
-export function DesignThumb({ designId, templateId }: { designId?: string; templateId?: string }) {
+export function DesignThumb({ designId, templateId, trashed }: { designId?: string; templateId?: string; trashed?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [ok, setOk] = useState<boolean | null>(null);
 
@@ -16,7 +16,10 @@ export function DesignThumb({ designId, templateId }: { designId?: string; templ
     let cancelled = false;
     void (async () => {
       try {
-        const file = templateId ? await oc.getTemplateFile(templateId) : await oc.getDesignFile(designId!);
+        // `trashed` opts into the member-only trash read; without it the file
+        // endpoint returns 404 for trashed designs and the card shows only the
+        // gradient fallback.
+        const file = templateId ? await oc.getTemplateFile(templateId) : await oc.getDesignFile(designId!, trashed ? { trashed: true } : undefined);
         if (cancelled) return;
         const canvas = ref.current;
         if (!canvas) return;
@@ -44,7 +47,7 @@ export function DesignThumb({ designId, templateId }: { designId?: string; templ
     return () => {
       cancelled = true;
     };
-  }, [designId, templateId]);
+  }, [designId, templateId, trashed]);
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-neutral-100">

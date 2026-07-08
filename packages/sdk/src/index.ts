@@ -1116,8 +1116,10 @@ export class HyCanvasClient {
   renameDesign(id: string, title: string): Promise<DesignRecord> {
     return this.request("PATCH", `/v1/designs/${id}`, { title });
   }
-  getDesignFile(id: string): Promise<DesignFile> {
-    return this.request("GET", `/v1/designs/${id}/file`);
+  /** Fetch the design's current file. `trashed: true` lets workspace members
+   *  read a design that sits in the trash (Trash-view preview thumbnails). */
+  getDesignFile(id: string, opts?: { trashed?: boolean }): Promise<DesignFile> {
+    return this.request("GET", `/v1/designs/${id}/file${opts?.trashed ? "?trashed=1" : ""}`);
   }
   saveSnapshot(id: string, input: { file: DesignFile; label?: string; kind?: SnapshotKind }): Promise<DesignRecord> {
     return this.request("POST", `/v1/designs/${id}/snapshots`, input);

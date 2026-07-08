@@ -139,10 +139,23 @@ func (s *Service) Create(ctx context.Context, workspaceID, title string, from De
 // LoadFile returns the design's current file, recovering an older valid snapshot
 // when the current blob is unreadable (doc 04 FR-13).
 func (s *Service) LoadFile(ctx context.Context, designID, workspaceID string) (LoadResult, error) {
+	return s.loadFile(ctx, designID, workspaceID, false)
+}
+
+// LoadFileIncludingTrashed also serves designs sitting in the trash. Reserved
+// for read-only, member-facing surfaces (the Trash view's preview thumbnails,
+// where restore decisions need to see the design); every editing and export
+// path keeps using LoadFile so trashed designs stay inaccessible there until
+// restored.
+func (s *Service) LoadFileIncludingTrashed(ctx context.Context, designID, workspaceID string) (LoadResult, error) {
+	return s.loadFile(ctx, designID, workspaceID, true)
+}
+
+func (s *Service) loadFile(ctx context.Context, designID, workspaceID string, includeTrashed bool) (LoadResult, error) {
 	if s.storage == nil {
 		return LoadResult{}, ErrNoStorage
 	}
-	d, err := s.requireDesign(ctx, designID, workspaceID, false)
+	d, err := s.requireDesign(ctx, designID, workspaceID, includeTrashed)
 	if err != nil {
 		return LoadResult{}, err
 	}
