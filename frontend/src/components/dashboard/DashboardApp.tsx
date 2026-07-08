@@ -981,7 +981,7 @@ function RailStorage({ usage }: { usage: StorageUsageView }) {
     </div>
   );
   return (
-    <div className="rounded-xl border border-white/60 bg-white/40 p-3 shadow-[0_8px_24px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.7)] backdrop-blur-xl backdrop-saturate-150">
+    <div className="rounded-xl border border-white/60 bg-white/40 p-3 shadow-[0_8px_24px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.7)] backdrop-blur-[6px] backdrop-saturate-150">
       <div className="mb-1 flex items-center justify-between text-[11px] text-neutral-600">
         <span className="font-medium">Workspace storage</span>
         <span>{formatBytes(usage.usedBytes)}{usage.quotaBytes > 0 ? ` of ${formatBytes(usage.quotaBytes)}` : ""}</span>
