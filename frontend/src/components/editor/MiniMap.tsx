@@ -104,12 +104,15 @@ export function MiniMap() {
   }, [doc, viewed, mw, mh, scale, bounds.x, bounds.y, page, rev]);
 
   // Register the doc's assets/fonts (idempotent) and paint; repaint when any
-  // finish loading, mirroring the main canvas.
+  // finish loading, mirroring the main canvas. `fits` must be a dependency:
+  // when the map transitions hidden -> visible (zooming in flips `fits` false
+  // and mounts the canvas) none of paint's own inputs change, so without it
+  // the fresh canvas stays blank until the next document edit repaints it.
   useEffect(() => {
     imageAssets.registerAll(doc.assets ?? []);
     fonts.ensureForDoc(doc);
     paint();
-  }, [doc, paint]);
+  }, [doc, paint, fits]);
   useEffect(() => imageAssets.onChange(() => paint()), [paint]);
   useEffect(() => fonts.onChange(() => paint()), [paint]);
 
