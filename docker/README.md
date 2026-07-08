@@ -54,7 +54,7 @@ docker compose up -d
 
 Then open http://localhost:8005. `JWT_SECRET` is required (the app refuses to start without it); the app applies database migrations automatically on boot. Update later with `docker compose pull && docker compose up -d`.
 
-> The HyCanvas repository ships an equivalent `docker-compose.yml` (it reads `JWT_SECRET` and `POSTGRES_*` from a `.env` instead of inlining them). From a clone: `cp .env.example .env`, set `JWT_SECRET`, then `docker compose up -d`.
+> From a clone of the HyCanvas repository, `docker-compose.yml` runs the published image against your own managed Postgres (no bundled `db` service): it reads `JWT_SECRET`, `DATABASE_URL` (or `EXTERNAL_DATABASE_URL`), and the rest from a `.env`. Do `cp .env.example .env`, set `JWT_SECRET` and a reachable `DATABASE_URL`, then `docker compose up -d`. To get a bundled Postgres from a clone instead, build from source with `docker-compose.prod.yml` and `COMPOSE_PROFILES=bundled`.
 
 ### Using your own Postgres
 
