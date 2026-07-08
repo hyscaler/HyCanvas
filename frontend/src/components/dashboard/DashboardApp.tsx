@@ -973,7 +973,7 @@ function RailItem({
 // bar, plus the global account bar on instances that set a per-user limit.
 function RailStorage({ usage }: { usage: StorageUsageView }) {
   const bar = (used: number, quota: number) => (
-    <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-500/15">
       <div
         className={`h-full rounded-full ${quota > 0 && used / quota >= 0.9 ? "bg-red-500" : "oc-gradient"}`}
         style={{ width: `${quota > 0 ? Math.min(100, (used / quota) * 100) : 0}%` }}
@@ -981,15 +981,15 @@ function RailStorage({ usage }: { usage: StorageUsageView }) {
     </div>
   );
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white/80 p-3 backdrop-blur-sm">
-      <div className="mb-1 flex items-center justify-between text-[11px] text-neutral-500">
+    <div className="rounded-xl border border-white/60 bg-white/40 p-3 shadow-[0_8px_24px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.7)] backdrop-blur-xl backdrop-saturate-150">
+      <div className="mb-1 flex items-center justify-between text-[11px] text-neutral-600">
         <span className="font-medium">Workspace storage</span>
         <span>{formatBytes(usage.usedBytes)}{usage.quotaBytes > 0 ? ` of ${formatBytes(usage.quotaBytes)}` : ""}</span>
       </div>
       {usage.quotaBytes > 0 && bar(usage.usedBytes, usage.quotaBytes)}
       {usage.userQuotaBytes > 0 && (
         <>
-          <div className="mb-1 mt-2.5 flex items-center justify-between text-[11px] text-neutral-500">
+          <div className="mb-1 mt-2.5 flex items-center justify-between text-[11px] text-neutral-600">
             <span className="font-medium">Your storage</span>
             <span>{formatBytes(usage.userUsedBytes)} of {formatBytes(usage.userQuotaBytes)}</span>
           </div>
