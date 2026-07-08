@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -47,7 +48,12 @@ func persistenceProblem(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, persistence.ErrNoStorage):
 		Problem(w, r, http.StatusServiceUnavailable, "Service Unavailable", "storage is not configured")
 	case errors.Is(err, persistence.ErrInvalidFile):
-		Problem(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "the design file is structurally invalid")
+		// Surface the specific violated invariant (e.g. `duplicate node id "x"`).
+		// The reasons carry only ids/types, never design content, and the saver
+		// already holds the full file, so this leaks nothing and turns an opaque
+		// 422 into a diagnosable one.
+		slog.Warn("design file rejected", "path", r.URL.Path, "reason", err.Error())
+		Problem(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "the design file is structurally invalid: "+err.Error())
 	default:
 		Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed")
 	}
