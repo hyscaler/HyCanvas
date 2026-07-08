@@ -775,7 +775,7 @@ export function DashboardApp() {
                 <ul className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                   {trash.map((d) => (
                     <li key={d.id} className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
-                      <div className="aspect-[4/3] bg-neutral-100"><DesignThumb designId={d.id} /></div>
+                      <div className="aspect-[4/3] bg-neutral-100"><DesignThumb designId={d.id} trashed /></div>
                       <div className="px-3 py-2.5">
                         <div className="truncate text-sm font-semibold text-neutral-800">{d.title}</div>
                         <div className="mt-2 flex gap-2 text-xs">

@@ -165,6 +165,14 @@ func TestPersistenceLifecycle_DB(t *testing.T) {
 	if _, err := svc.LoadFile(ctx, rec.ID, ws.ID); err != ErrNotFound {
 		t.Fatalf("trashed design should be NotFound on load, got %v", err)
 	}
+	// The trash-preview path still serves the file (Trash view thumbnails),
+	// while staying workspace-scoped.
+	if loaded, err := svc.LoadFileIncludingTrashed(ctx, rec.ID, ws.ID); err != nil || loaded.File == nil {
+		t.Fatalf("LoadFileIncludingTrashed should serve a trashed design, got %v", err)
+	}
+	if _, err := svc.LoadFileIncludingTrashed(ctx, rec.ID, uuid.NewString()); err != ErrNotFound {
+		t.Fatalf("cross-workspace trashed load should be NotFound, got %v", err)
+	}
 	trash, _ := svc.ListTrash(ctx, ws.ID)
 	foundTrash := false
 	for _, d := range trash {

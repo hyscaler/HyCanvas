@@ -57,7 +57,10 @@ services:
       # own localhost (no redis here) and would crash the app on boot. Force empty;
       # set it (and add a redis service) only to test multi-instance fan-out.
       REDIS_URL: ""
-      STORAGE_DRIVER: local
+      # From .env (defaults to local); set STORAGE_DRIVER=s3 + the S3_* vars there
+      # for object storage. LOCAL_STORAGE_PATH stays the container path (a host
+      # path from .env would not exist in the container).
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
       LOCAL_STORAGE_PATH: /app/.data/storage
       # Reliable file-watching for Next.js + tooling over a bind mount.
       WATCHPACK_POLLING: "true"
