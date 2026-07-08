@@ -138,14 +138,14 @@ The whole product (UI + REST API + realtime WebSocket) runs from one image, with
 
 ### Run the published image (fastest)
 
-The repo ships a `docker-compose.yml` that pulls the prebuilt image (`linux/amd64` and `linux/arm64`) and runs it with a bundled Postgres:
+The repo ships a `docker-compose.yml` that pulls the prebuilt image (`linux/amd64` and `linux/arm64`) and runs it against your own managed Postgres (it ships no bundled `db`):
 
 ```bash
-cp .env.example .env   # set JWT_SECRET and APP_PORT (and POSTGRES_* if you like)
+cp .env.example .env   # set JWT_SECRET, APP_PORT, and a reachable DATABASE_URL
 docker compose up -d
 ```
 
-Then open `http://localhost:<APP_PORT>` (e.g. `http://localhost:8005`). `JWT_SECRET` and `APP_PORT` are required and migrations run on boot. Update later with `docker compose pull && docker compose up -d`. You don't even need a checkout, the same compose (and a `docker run` alternative) is in [docker/README.md](docker/README.md), runnable anywhere.
+Then open `http://localhost:<APP_PORT>` (e.g. `http://localhost:8005`). `JWT_SECRET`, `APP_PORT`, and a reachable `DATABASE_URL` (or `EXTERNAL_DATABASE_URL`) are required and migrations run on boot; inside a container `localhost` is the container, so use `host.docker.internal` for a DB on your machine (mapped via `extra_hosts`) or a managed endpoint. Update later with `docker compose pull && docker compose up -d`. If you'd rather have Postgres bundled for a quick trial, the self-contained compose in [docker/README.md](docker/README.md) includes a `db` service and runs anywhere.
 
 ### Build from source
 
@@ -155,13 +155,13 @@ To run your own source instead of the published image, use the build variant (it
 docker compose -f docker-compose.prod.yml up --build -d
 ```
 
-The build variant serves at `http://localhost:8005`; the published `docker-compose.yml` publishes on the host port you set in `APP_PORT`. Stop with `docker compose down` (add `-v` to drop the bundled Postgres volume).
+The build variant serves at `http://localhost:8005`; the published `docker-compose.yml` publishes on the host port you set in `APP_PORT`. Stop with `docker compose down`. The build variant can run a bundled Postgres (`COMPOSE_PROFILES=bundled`); add `-v` to drop that Postgres volume.
 
 Notes:
 - ffmpeg (for video export) is bundled in the image; no host install needed.
 - Local-file storage persists on the host at `./data/storage` (bind-mounted to `/app/.data/storage`) with the published `docker-compose.yml`, so it survives `docker compose down -v`. To use object storage instead, set the `S3_*` variables on the `app` service.
 - Secrets/config (notably `JWT_SECRET`, and optionally `AI_SECRET`, `OIDC_*`, `VAPID_*`) come from your `.env`.
-- To point the app at an external Postgres, set `EXTERNAL_DATABASE_URL` and `COMPOSE_PROFILES=` (empty) so the bundled `db` container does not start. For Postgres on the host, use `host.docker.internal` as the host (the published compose maps it via `extra_hosts`).
+- Database: the published `docker-compose.yml` always uses an external Postgres, set `DATABASE_URL` or `EXTERNAL_DATABASE_URL` in `.env`. The build-from-source `docker-compose.prod.yml` can bundle Postgres with `COMPOSE_PROFILES=bundled`, or point it external by emptying `COMPOSE_PROFILES` and setting `EXTERNAL_DATABASE_URL`. For Postgres on the host, use `host.docker.internal` (both compose files map it via `extra_hosts`).
 
 ### Develop in Docker (hot reload)
 
