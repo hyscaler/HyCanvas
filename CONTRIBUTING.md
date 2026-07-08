@@ -52,11 +52,13 @@ related issue. Do not commit secrets; `.env` is gitignored and must stay that wa
 
 ## Releases and publishing
 
-Merges to `development` run CI only. Binary releases are cut by pushing a `v*`
-tag, the Docker Hub image is published by pushing to the `docker/build/*`
-branches, and the Docker Hub overview syncs automatically from
-`docker/README.md`. The full maintainer walkthrough is in the README under
-"Releases and publishing".
+Merges to `development` run CI only; nothing publishes on ordinary commits.
+Releases are cut by tagging `v*` on the `stable` branch (merge `development`
+into `stable` first; the pipeline rejects tags from anywhere else). One tag
+builds the binaries, the GitHub Release, and the lean Docker images
+(`latest` + semver for final tags, `development` for pre-releases). The
+Docker Hub overview syncs automatically from `docker/README.md`. The full
+maintainer walkthrough is in the README under "Releases and publishing".
 
 ## License of contributions
 

@@ -5,8 +5,8 @@ name: Docker Hub Description
 #
 # Runs when the README (or this workflow) changes on development, and on
 # manual dispatch. Uses the same DOCKER_USERNAME / DOCKER_PASSWORD secrets as
-# docker-build-push.yml; the access token needs Read, Write, Delete scope
-# (Docker Hub requires it for the description API).
+# the release workflow's docker job; the access token needs Read, Write,
+# Delete scope (Docker Hub requires it for the description API).
 
 on:
   push:

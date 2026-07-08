@@ -101,11 +101,12 @@ For every variable, SSO/web-push setup, external Postgres, and production harden
 
 ## Tags
 
-- `latest` - most recent stable build.
-- `development` - latest development build.
-- `<version>-<sha>` - immutable, pinned to a specific commit.
+- `latest` - most recent stable release.
+- `<version>` (e.g. `0.2.0`) - immutable, pinned to that release.
+- `<major.minor>` (e.g. `0.2`) - rolling alias for the latest patch of that minor.
+- `development` - latest release including pre-releases; previews the next stable.
 
-Built for `linux/amd64` and `linux/arm64`.
+Every image packages the corresponding release binary. Built for `linux/amd64` and `linux/arm64`.
 
 ## Prefer no Docker?
 

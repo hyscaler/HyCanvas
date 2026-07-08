@@ -1,10 +1,14 @@
 name: Release
 
 # Builds the self-contained HyCanvas binary (frontend embedded via go:embed)
-# for every supported platform and publishes them as a GitHub Release.
+# for every supported platform, publishes them as a GitHub Release, and
+# publishes the lean Docker images from those binaries.
 #
 # Triggers:
-#   push of a version tag (v*) -> build all targets + create the release
+#   push of a version tag (v*) -> build all targets + release + Docker images.
+#                                 Tags are only accepted from the STABLE
+#                                 branch (the guard job enforces it); merge
+#                                 development into stable, then tag there.
 #   workflow_dispatch          -> build-only dry run (artifacts, no release)
 #
 # Every target cross-compiles from one Ubuntu runner: the backend is pure Go
@@ -22,9 +26,30 @@ env:
   BINARY_NAME: hycanvas
 
 jobs:
+  # Releases are cut from the stable branch only: a tag whose commit is not
+  # reachable from origin/stable fails here before anything builds.
+  guard:
+    name: Verify release source
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Require the tag to be on stable
+        if: github.ref_type == 'tag'
+        run: |
+          git fetch origin stable
+          if git merge-base --is-ancestor "$GITHUB_SHA" origin/stable; then
+            echo "tag commit is reachable from stable"
+          else
+            echo "::error::Release tags must point to a commit on the stable branch. Merge development into stable, then tag there."
+            exit 1
+          fi
+
   frontend:
     name: Frontend export
     runs-on: ubuntu-latest
+    needs: guard
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
@@ -162,16 +187,16 @@ jobs:
 
   # Publish the Docker image from the release binaries just uploaded: a lean
   # runtime-only build (Dockerfile.release), no Node/Go toolchains and no
-  # QEMU-emulated compilation. Also advances the docker/build/* branches so
-  # they keep reflecting what the Docker channels serve (GITHUB_TOKEN pushes
-  # do not retrigger workflows, so no duplicate builds).
+  # QEMU-emulated compilation. Channel mapping:
+  #   final tag (v0.2.0)        -> :latest, :development, :0.2.0, :0.2
+  #   pre-release (v0.2.0-rc.1) -> :development, :0.2.0-rc.1
   docker:
     name: Docker image (from release binaries)
     runs-on: ubuntu-latest
     needs: release
     if: github.ref_type == 'tag'
     permissions:
-      contents: write
+      contents: read
     env:
       DOCKER_IMAGE: hycanvas/hycanvas
     steps:
@@ -185,6 +210,21 @@ jobs:
           gh release download "$TAG" -p "hycanvas_${TAG}_linux_amd64.tar.gz" -O - | tar -xz -C binaries/amd64
           gh release download "$TAG" -p "hycanvas_${TAG}_linux_arm64.tar.gz" -O - | tar -xz -C binaries/arm64
           file binaries/amd64/hycanvas binaries/arm64/hycanvas
+      - name: Compute Docker tags
+        id: meta
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          BARE="${TAG#v}"
+          if [ "${TAG#*-}" != "$TAG" ]; then
+            # Pre-release: refresh only the development channel.
+            TAGS="${DOCKER_IMAGE}:development,${DOCKER_IMAGE}:${BARE}"
+          else
+            MINOR="${BARE%.*}"
+            TAGS="${DOCKER_IMAGE}:latest,${DOCKER_IMAGE}:development,${DOCKER_IMAGE}:${BARE},${DOCKER_IMAGE}:${MINOR}"
+          fi
+          echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
+          echo "publishing: ${TAGS}"
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
@@ -203,13 +243,6 @@ jobs:
           file: ./Dockerfile.release
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: |
-            ${{ env.DOCKER_IMAGE }}:latest
-            ${{ env.DOCKER_IMAGE }}:development
-            ${{ env.DOCKER_IMAGE }}:${{ github.ref_name }}
+          tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache-release
           cache-to: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache-release,mode=max
-      - name: Sync docker/build branches to the released commit
-        run: |
-          git push --force origin "HEAD:refs/heads/docker/build/latest"
-          git push --force origin "HEAD:refs/heads/docker/build/development"

@@ -232,11 +232,20 @@ This product/app accent is intentionally separate from the per-workspace Brand K
 
 ## Releases and publishing (maintainers)
 
-Merging to `development` runs CI only; the two public distribution channels have explicit triggers:
+Two long-lived branches: `development` (ongoing work) and `stable` (release-ready). Pushing commits builds no Docker images and cuts no releases; CI runs tests only. Releasing is explicit:
 
-- **Binary releases**: pushing a `v*` tag (for example `git tag v0.1.0 && git push origin v0.1.0`) runs `.github/workflows/release.yml`, which builds the frontend once, cross-compiles the embedded binary for all five platforms from a single Ubuntu runner (pure Go, `CGO_ENABLED=0`), and publishes a GitHub Release with the archives and `SHA256SUMS.txt`. Tags containing a hyphen (`v1.0.0-rc.1`) are marked as pre-releases automatically. The Actions "Run workflow" button on the release workflow does a build-only dry run without creating a release.
-- **Docker image**: every `v*` release tag also publishes the multi-arch `hycanvas/hycanvas` image as `:latest`, `:development`, and `:<tag>` via the `docker` job in the release workflow, which packages the just-built release binaries into the lean runtime-only `Dockerfile.release` (no toolchains, no emulated compilation) and advances the `docker/build/latest` and `docker/build/development` branches to the released commit. Between releases, pushing to one of those branches (for example `git push origin development:docker/build/development`) runs `.github/workflows/docker-build-push.yml`, a full from-source image build, for the matching channel.
+1. Merge `development` into `stable` when it is release-ready.
+2. Tag on `stable`: `git tag v0.2.0 && git push origin v0.2.0`. The release workflow REFUSES tags whose commit is not on `stable`.
+
+One tag then drives everything (`.github/workflows/release.yml`):
+
+- **Binary release**: the frontend builds once, the embedded binary cross-compiles for all five platforms (pure Go, `CGO_ENABLED=0`), and a GitHub Release is published with the archives and `SHA256SUMS.txt`. Hyphenated tags (`v0.2.0-rc.1`) are marked pre-release.
+- **Docker images**, always lean (the `docker` job packages the just-built release binaries into the runtime-only `Dockerfile.release`; no toolchains, no from-source image builds anywhere):
+  - a final tag `v0.2.0` publishes `hycanvas/hycanvas:latest`, `:development`, `:0.2.0`, and the rolling minor alias `:0.2`;
+  - a pre-release tag `v0.2.0-rc.1` publishes `:development` and `:0.2.0-rc.1` only, so the development channel previews the next release while `latest` stays on the last final one.
 - **Docker Hub overview**: any change to `docker/README.md` on `development` is synced to the Docker Hub repository description automatically by `.github/workflows/dockerhub-description.yml` (also runnable manually from the Actions tab).
+
+The Actions "Run workflow" button on the release workflow does a build-only dry run without releasing or publishing images.
 
 The version stamped into the binary (`git describe`) is logged on startup and reported by `/healthz`.
 
