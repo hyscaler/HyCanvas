@@ -8,6 +8,8 @@ import { useRouter } from "next/router";
 import {
   Home as HomeIcon,
   LayoutTemplate,
+  PanelLeftClose,
+  PanelLeftOpen,
   Trash2,
   Search,
   Star,
@@ -48,7 +50,7 @@ import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { Input } from "@/components/ui/Input";
-import { Logo } from "@/components/ui/Logo";
+import { Logo, LogoMark } from "@/components/ui/Logo";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
 import { DesignThumb } from "./DesignThumb";
@@ -155,6 +157,15 @@ export function DashboardApp() {
   const [customH, setCustomH] = useState(1080);
   const [wsName, setWsName] = useState("");
   const [view, setView] = useState<"home" | "favorites" | "templates" | "trash" | "tasks" | "members">("home");
+  // Left rail collapse, remembered across visits. Lazy init: localStorage is
+  // client-only and the static prerender falls back to expanded.
+  const [railCollapsed, setRailCollapsed] = useState(
+    () => typeof window !== "undefined" && window.localStorage.getItem("hc-dash-rail") === "collapsed",
+  );
+  function toggleRail(collapsed: boolean) {
+    setRailCollapsed(collapsed);
+    window.localStorage.setItem("hc-dash-rail", collapsed ? "collapsed" : "expanded");
+  }
   const [trash, setTrash] = useState<DesignRecord[]>([]);
   const [favorites, setFavorites] = useState<HomeItem[]>([]);
   const [tasks, setTasks] = useState<MyTask[]>([]);
@@ -486,29 +497,72 @@ export function DashboardApp() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-neutral-50 text-neutral-900" onClick={() => setMenuFor(null)}>
-      {/* Left rail: fixed to the viewport; only the main column scrolls. */}
-      <aside className="oc-panel-dots relative flex w-80 shrink-0 flex-col overflow-y-auto border-r border-neutral-200 bg-white p-4">
-        <div className="mb-6 px-1">
-          <Logo size={32} />
-        </div>
+      {/* Left rail: fixed to the viewport; only the main column scrolls.
+          Collapsible to an icon-only strip (remembered in localStorage). */}
+      <aside
+        className={`oc-panel-dots relative flex shrink-0 flex-col overflow-y-auto border-r border-neutral-200 bg-white transition-[width] duration-200 ${
+          railCollapsed ? "w-[4.5rem] p-3" : "w-80 p-4"
+        }`}
+      >
+        {railCollapsed ? (
+          <>
+            <div className="mb-4 flex justify-center">
+              <LogoMark size={30} />
+            </div>
+            <button
+              type="button"
+              onClick={() => toggleRail(false)}
+              title="Expand sidebar"
+              aria-label="Expand sidebar"
+              className="mb-4 flex justify-center rounded-xl py-2 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700"
+            >
+              <PanelLeftOpen size={18} />
+            </button>
+            {/* Collapsed workspace chip: expanding is the way to switch. */}
+            <button
+              type="button"
+              onClick={() => toggleRail(false)}
+              title={workspaces.find((w) => w.id === activeWorkspaceId)?.name ?? "Workspace"}
+              aria-label="Expand sidebar to switch workspace"
+              className="oc-gradient mx-auto grid h-8 w-8 place-items-center rounded-md text-xs font-bold text-white"
+            >
+              {(workspaces.find((w) => w.id === activeWorkspaceId)?.name || "?").charAt(0).toUpperCase()}
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="mb-6 flex items-center justify-between px-1">
+              <Logo size={32} />
+              <button
+                type="button"
+                onClick={() => toggleRail(true)}
+                title="Collapse sidebar"
+                aria-label="Collapse sidebar"
+                className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
+              >
+                <PanelLeftClose size={18} />
+              </button>
+            </div>
 
-        <WorkspaceSwitcher
-          workspaces={workspaces}
-          activeId={activeWorkspaceId}
-          onSelect={setActiveWorkspace}
-          onCreate={() => setWsModal(true)}
-        />
+            <WorkspaceSwitcher
+              workspaces={workspaces}
+              activeId={activeWorkspaceId}
+              onSelect={setActiveWorkspace}
+              onCreate={() => setWsModal(true)}
+            />
+          </>
+        )}
 
         <nav className="mt-5 flex flex-col gap-1 text-sm">
-          <RailItem icon={HomeIcon} label="Home" active={view === "home"} onClick={() => setView("home")} />
-          <RailItem icon={Star} label="Favorites" active={view === "favorites"} onClick={() => setView("favorites")} />
-          <RailItem icon={CheckSquare} label="My tasks" active={view === "tasks"} onClick={() => setView("tasks")} />
-          <RailItem icon={LayoutTemplate} label="Templates" active={view === "templates"} onClick={() => setView("templates")} />
-          <RailItem icon={Users} label="Members" active={view === "members"} onClick={() => setView("members")} />
-          <RailItem icon={Trash2} label="Trash" active={view === "trash"} onClick={() => setView("trash")} />
+          <RailItem icon={HomeIcon} label="Home" active={view === "home"} collapsed={railCollapsed} onClick={() => setView("home")} />
+          <RailItem icon={Star} label="Favorites" active={view === "favorites"} collapsed={railCollapsed} onClick={() => setView("favorites")} />
+          <RailItem icon={CheckSquare} label="My tasks" active={view === "tasks"} collapsed={railCollapsed} onClick={() => setView("tasks")} />
+          <RailItem icon={LayoutTemplate} label="Templates" active={view === "templates"} collapsed={railCollapsed} onClick={() => setView("templates")} />
+          <RailItem icon={Users} label="Members" active={view === "members"} collapsed={railCollapsed} onClick={() => setView("members")} />
+          <RailItem icon={Trash2} label="Trash" active={view === "trash"} collapsed={railCollapsed} onClick={() => setView("trash")} />
         </nav>
 
-        <RailArt />
+        {!railCollapsed && <RailArt />}
       </aside>
 
       {/* Main */}
@@ -871,14 +925,31 @@ export function DashboardApp() {
   );
 }
 
-function RailItem({ icon: Icon, label, active, onClick }: { icon: typeof HomeIcon; label: string; active?: boolean; onClick?: () => void }) {
+function RailItem({
+  icon: Icon,
+  label,
+  active,
+  collapsed,
+  onClick,
+}: {
+  icon: typeof HomeIcon;
+  label: string;
+  active?: boolean;
+  collapsed?: boolean;
+  onClick?: () => void;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`flex items-center gap-3 rounded-xl px-3 py-2 text-left font-medium ${active ? "bg-brand-50 text-brand-700" : "text-neutral-600 hover:bg-neutral-100"}`}
+      title={collapsed ? label : undefined}
+      aria-label={label}
+      className={`flex items-center rounded-xl font-medium ${
+        collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2 text-left"
+      } ${active ? "bg-brand-50 text-brand-700" : "text-neutral-600 hover:bg-neutral-100"}`}
     >
-      <Icon size={18} /> {label}
+      <Icon size={18} className="shrink-0" />
+      {!collapsed && label}
     </button>
   );
 }
