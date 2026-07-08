@@ -1,0 +1,35 @@
+# Lean release image: packages a prebuilt hycanvas release binary instead of
+# compiling the stack, so multi-arch publishes take minutes, not QEMU-compiled
+# toolchain runs. The release pipeline extracts the per-arch linux binaries
+# into binaries/<arch>/hycanvas before building; the runtime layers mirror
+# Dockerfile's runtime stage exactly.
+#
+#   docker buildx build -f Dockerfile.release --platform linux/amd64,linux/arm64 .
+
+FROM debian:bookworm-slim
+WORKDIR /app
+
+# ffmpeg: video export. ca-certificates: outbound TLS (AI providers, SSO).
+# curl: container healthcheck against /healthz.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ffmpeg ca-certificates curl \
+ && rm -rf /var/lib/apt/lists/*
+
+# TARGETARCH is set by buildx per platform (amd64 / arm64).
+ARG TARGETARCH
+COPY binaries/${TARGETARCH}/hycanvas /app/hycanvas
+
+ENV PORT=8005 \
+    DB_AUTO_MIGRATE=true \
+    STORAGE_DRIVER=local \
+    LOCAL_STORAGE_PATH=/app/.data/storage
+
+EXPOSE 8005
+# Persist uploads/exports/snapshots when using the local storage driver.
+VOLUME ["/app/.data/storage"]
+
+# The Go binary serves /healthz once its HTTP listener is up.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD curl -fsS "http://localhost:${PORT}/healthz" || exit 1
+
+ENTRYPOINT ["/app/hycanvas"]

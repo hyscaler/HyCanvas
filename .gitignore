@@ -48,3 +48,6 @@ prisma/migrations/.migration_lock.toml
 # Builds that omit the tag (dev, tests, plain build:backend) never reference it, so
 # the directory exists only during a production build and is fully ignored.
 backend/internal/webui/public/
+
+# Per-arch release binaries staged for Dockerfile.release (CI workspace)
+binaries/

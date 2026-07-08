@@ -1,12 +1,11 @@
 name: Docker Build and Push
 
-# Publishes the single self-contained HyCanvas image to Docker Hub.
-# Triggers:
-#   release tag (v*)          -> tags :latest + :development + :<tag>
+# Publishes the single self-contained HyCanvas image to Docker Hub, BUILT
+# FROM SOURCE, for image-only publishes between releases:
 #   docker/build/latest       -> tags :latest      (+ :<version>-<sha>)
 #   docker/build/development  -> tags :development (+ :<version>-<sha>)
-# so every binary release also refreshes the Docker channels, while the
-# branches remain available for image-only publishes between releases.
+# Release tags publish the image separately (and much faster) from the
+# prebuilt release binaries: see the docker job in release.yml.
 #
 # Requires two repository secrets: DOCKER_USERNAME and DOCKER_PASSWORD
 # (a Docker Hub access token, not the account password).
@@ -16,13 +15,9 @@ on:
     branches:
       - docker/build/latest
       - docker/build/development
-    tags:
-      - "v*"
 
-# contents: write lets the tag-triggered run advance the docker/build/*
-# branches to the released commit (see the sync step).
 permissions:
-  contents: write
+  contents: read
 
 env:
   DOCKER_IMAGE: hycanvas/hycanvas
@@ -52,25 +47,16 @@ jobs:
       - name: Extract metadata
         id: meta
         env:
-          REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-          if [ "$REF_TYPE" = "tag" ]; then
-            # A release tag publishes every channel: the immutable version
-            # image plus refreshed latest and development.
-            VERSION="$REF_NAME"
-            DOCKER_TAG="latest"
-            TAGS="${DOCKER_IMAGE}:latest,${DOCKER_IMAGE}:development,${DOCKER_IMAGE}:${VERSION}"
-          else
-            case "$REF_NAME" in
-              docker/build/latest) DOCKER_TAG="latest" ;;
-              docker/build/development) DOCKER_TAG="development" ;;
-              *) DOCKER_TAG="manual" ;;
-            esac
-            VERSION="$(grep -m1 '"version"' package.json | cut -d'"' -f4)-${SHORT_SHA}"
-            TAGS="${DOCKER_IMAGE}:${DOCKER_TAG},${DOCKER_IMAGE}:${VERSION}"
-          fi
+          case "$REF_NAME" in
+            docker/build/latest) DOCKER_TAG="latest" ;;
+            docker/build/development) DOCKER_TAG="development" ;;
+            *) DOCKER_TAG="manual" ;;
+          esac
+          VERSION="$(grep -m1 '"version"' package.json | cut -d'"' -f4)-${SHORT_SHA}"
+          TAGS="${DOCKER_IMAGE}:${DOCKER_TAG},${DOCKER_IMAGE}:${VERSION}"
           echo "docker_tag=${DOCKER_TAG}" >> "$GITHUB_OUTPUT"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
@@ -87,16 +73,6 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache-${{ steps.meta.outputs.docker_tag }}
           cache-to: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache-${{ steps.meta.outputs.docker_tag }},mode=max
-
-      # A release tag updates the latest and development Docker channels, so
-      # both publish branches advance to the released commit and keep
-      # reflecting what the channels serve. GITHUB_TOKEN pushes do not
-      # retrigger workflows, so this causes no duplicate builds.
-      - name: Sync docker/build branches to the released commit
-        if: github.ref_type == 'tag'
-        run: |
-          git push --force origin "HEAD:refs/heads/docker/build/latest"
-          git push --force origin "HEAD:refs/heads/docker/build/development"
 
       # The Docker Hub repo description (the listing page) is synced from
       # docker/README.md by .github/workflows/dockerhub-description.yml.
