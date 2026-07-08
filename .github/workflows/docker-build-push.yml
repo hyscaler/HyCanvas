@@ -1,9 +1,12 @@
 name: Docker Build and Push
 
 # Publishes the single self-contained HyCanvas image to Docker Hub.
-# Trigger by pushing (or merging) to one of the publish branches:
-#   docker/build/latest      -> tags :latest      (+ :<version>-<sha>)
+# Triggers:
+#   release tag (v*)          -> tags :latest + :development + :<tag>
+#   docker/build/latest       -> tags :latest      (+ :<version>-<sha>)
 #   docker/build/development  -> tags :development (+ :<version>-<sha>)
+# so every binary release also refreshes the Docker channels, while the
+# branches remain available for image-only publishes between releases.
 #
 # Requires two repository secrets: DOCKER_USERNAME and DOCKER_PASSWORD
 # (a Docker Hub access token, not the account password).
@@ -13,6 +16,8 @@ on:
     branches:
       - docker/build/latest
       - docker/build/development
+    tags:
+      - "v*"
 
 permissions:
   contents: read
@@ -44,17 +49,29 @@ jobs:
 
       - name: Extract metadata
         id: meta
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          case "${{ github.ref_name }}" in
-            docker/build/latest) DOCKER_TAG="latest" ;;
-            docker/build/development) DOCKER_TAG="development" ;;
-            *) DOCKER_TAG="manual" ;;
-          esac
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-          VERSION=$(grep -m1 '"version"' package.json | cut -d'"' -f4)
+          if [ "$REF_TYPE" = "tag" ]; then
+            # A release tag publishes every channel: the immutable version
+            # image plus refreshed latest and development.
+            VERSION="$REF_NAME"
+            DOCKER_TAG="latest"
+            TAGS="${DOCKER_IMAGE}:latest,${DOCKER_IMAGE}:development,${DOCKER_IMAGE}:${VERSION}"
+          else
+            case "$REF_NAME" in
+              docker/build/latest) DOCKER_TAG="latest" ;;
+              docker/build/development) DOCKER_TAG="development" ;;
+              *) DOCKER_TAG="manual" ;;
+            esac
+            VERSION="$(grep -m1 '"version"' package.json | cut -d'"' -f4)-${SHORT_SHA}"
+            TAGS="${DOCKER_IMAGE}:${DOCKER_TAG},${DOCKER_IMAGE}:${VERSION}"
+          fi
           echo "docker_tag=${DOCKER_TAG}" >> "$GITHUB_OUTPUT"
-          echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -64,10 +81,8 @@ jobs:
           platforms: ${{ env.PLATFORMS }}
           push: true
           build-args: |
-            VERSION=${{ steps.meta.outputs.version }}-${{ steps.meta.outputs.short_sha }}
-          tags: |
-            ${{ env.DOCKER_IMAGE }}:${{ steps.meta.outputs.docker_tag }}
-            ${{ env.DOCKER_IMAGE }}:${{ steps.meta.outputs.version }}-${{ steps.meta.outputs.short_sha }}
+            VERSION=${{ steps.meta.outputs.version }}
+          tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache-${{ steps.meta.outputs.docker_tag }}
           cache-to: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache-${{ steps.meta.outputs.docker_tag }},mode=max
 
@@ -80,11 +95,9 @@ jobs:
             echo "## Docker build summary"
             echo ""
             echo "**Image**: \`${{ env.DOCKER_IMAGE }}\`"
-            echo "**Branch**: \`${{ github.ref_name }}\`"
+            echo "**Ref**: \`${{ github.ref_name }}\`"
             echo "**Platforms**: \`${{ env.PLATFORMS }}\`"
-            echo "**Tags**:"
-            echo "- \`${{ steps.meta.outputs.docker_tag }}\`"
-            echo "- \`${{ steps.meta.outputs.version }}-${{ steps.meta.outputs.short_sha }}\`"
+            echo "**Tags**: \`${{ steps.meta.outputs.tags }}\`"
             echo ""
             echo "Pull:"
             echo '```bash'
