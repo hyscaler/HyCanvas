@@ -33,7 +33,7 @@
     "build:dist": "dotenv -e .env -- node scripts/build-dist.js",
     "start:dist": "npm run build:dist && npm run start:dist:only",
     "start:dist:only": "./dist/hycanvas",
-    "deploy": "npm run build:dist && pm2 reload ecosystem.config.js"
+    "deploy": "npm run build:dist && ./dist/hycanvas service restart"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",

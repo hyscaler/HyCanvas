@@ -39,7 +39,7 @@ The frontend and shared packages are an npm-workspaces monorepo (orchestrated wi
 - `packages/config` - typed, validated env config (`@hc/config`).
 - `packages/ui` - shared UI utilities/components (`@hc/ui`).
 - other `packages/*` - framework-agnostic `@hc/*` libraries (text, color, geometry, export, media, stock, templates, authz, formula, sheets, timeline, whiteboard, docs, publishing, website, print, a11y, ...). The frontend imports them from their built `dist/`.
-- `scripts/build-dist.js` - embeds the exported frontend into the Go binary (`go build -tags embed`) and writes the single `dist/hycanvas` for PM2.
+- `scripts/build-dist.js` - embeds the exported frontend into the Go binary (`go build -tags embed`) and writes the single `dist/hycanvas`.
 
 Keep the rendering engine free of any React or UI dependency so it stays reusable across browser, worker, and server.
 
@@ -81,7 +81,7 @@ Run from the repo root. After cloning, copy `.env.example` to `.env`, then `npm 
 - `npm run db:migrate` - apply SQL migrations (Go migrator); the server also migrates on boot.
 - `npm run test` - run package and Go backend tests.
 - `npm run lint` - vet the Go backend and lint the frontend.
-- `npm run build:dist` then `npm run deploy` - build the single binary and (re)start under PM2.
+- `npm run build:dist` then `npm run deploy` - build the single binary and restart it via the built-in service daemon (`hycanvas service restart`).
 
 ## When Making Changes
 

@@ -4,7 +4,8 @@
 //   - the statically-exported Next.js frontend, embedded INTO the binary via
 //     go:embed (internal/webui), served on the same port. No sidecar folder.
 //
-// The binary is built for the host platform (for local runs / PM2). The
+// The binary is built for the host platform (for local runs / the built-in
+// service daemon). The
 // container image builds its own Linux binary in a Go stage (see Dockerfile),
 // so this script is not used inside Docker. There is no npm install in dist and
 // no Node runtime: the bundle is the binary plus static files.

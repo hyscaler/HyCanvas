@@ -13,7 +13,7 @@ The frontend and shared packages are an npm-workspaces monorepo (orchestrated wi
 - `backend` - Go backend (REST under `/api/v1`, the `/realtime` WebSocket, the Go rendering engine for export, and DB migrations). Serves the exported frontend in the production bundle. Postgres only.
 - `frontend` - Next.js app (Pages Router), statically exported for production.
 - `packages/*` - framework-agnostic `@hc/*` libraries (schema, engine, editor, sdk, color, text, geometry, export, media, stock, templates, authz, formula, sheets, timeline, whiteboard, docs, publishing, website, print, a11y, ...). The frontend imports them from their built `dist/`.
-- `scripts/build-dist.js` - embeds the exported frontend into the Go binary (`go build -tags embed`) and writes the single self-contained `dist/hycanvas` for PM2.
+- `scripts/build-dist.js` - embeds the exported frontend into the Go binary (`go build -tags embed`) and writes the single self-contained `dist/hycanvas`.
 
 ## Documentation
 
@@ -53,7 +53,7 @@ npm run build:dist          # builds @hc/* + the frontend (routed to /api), embe
 ./dist/hycanvas       # run it directly: the binary loads .env itself, no Node needed
 ```
 
-Running the bundle needs no Node at all: the Go binary loads a `.env` from the working directory (or its parent) on startup, so `./dist/hycanvas` is fully standalone, exactly how it runs under Docker and PM2. Real environment variables always win over `.env`, so injected config (containers, PM2, CI) is never overridden. `npm run start:dist:only` is just a convenience alias for the same binary.
+Running the bundle needs no Node at all: the Go binary loads a `.env` from the working directory (or its parent) on startup, so `./dist/hycanvas` is fully standalone, exactly how it runs under Docker. Real environment variables always win over `.env`, so injected config (containers, CI) is never overridden. `npm run start:dist:only` is just a convenience alias for the same binary.
 
 If you build the binary without the embedded UI (for example a plain `npm run build:backend`), set `PUBLIC_DIR` to an exported frontend directory to serve it; with neither, the binary serves the API only and shows a short notice page.
 
@@ -69,7 +69,7 @@ The binary can also run itself as a background service, so no external process m
 ./dist/hycanvas service stop
 ```
 
-The binary's directory is the service's working directory, which is where `.env` is read from. The service does not auto-start at boot; if you want that, use Docker or your own supervisor (PM2 below).
+The binary's directory is the service's working directory, which is where `.env` is read from. The service does not auto-start at boot; if you want that, add a crontab entry (`@reboot /path/to/hycanvas service start`) or use Docker.
 
 ### First-run setup wizard
 
@@ -80,11 +80,7 @@ No `.env` yet? Just start the server. On an interactive terminal it first asks w
 
 Either way the wizard writes `.env` (secrets like `JWT_SECRET` are generated automatically), runs the database migrations, starts the app in the same process, and (in the browser flow) creates your first account. Non-interactive starts (Docker, pipes) default to the web wizard. To skip all of it, create a `.env` by hand (see `.env.example`) before starting.
 
-Alternatively, run it under a process manager with PM2 (`ecosystem.config.js`):
-
-```bash
-npm run deploy              # build:dist + pm2 reload ecosystem.config.js
-```
+`npm run deploy` rebuilds the bundle and restarts the running service in one step (`build:dist` + `./dist/hycanvas service restart`).
 
 When writing `.env` by hand for production, set at minimum `NODE_ENV=production`, `DATABASE_URL`, a strong `JWT_SECRET`, `APP_URL` (public base URL used in generated links), and an absolute `LOCAL_STORAGE_PATH` (or `STORAGE_DRIVER=s3` with `S3_*`). AI provider keys are configured per workspace at runtime (stored encrypted), never via env.
 
@@ -210,7 +206,7 @@ All configuration is read from the root `.env` (copy `.env.example`). The most i
 | `npm run test` | Run the package and Go backend tests. |
 | `npm run build:dist` | Compile the single `dist/hycanvas` binary with the frontend embedded (`-tags embed`) and the git version stamped in. |
 | `npm run start:dist:only` | Run the already-built binary (alias for `./dist/hycanvas`, which loads `.env` itself). |
-| `npm run deploy` | Build the dist bundle and reload it under PM2. |
+| `npm run deploy` | Build the dist bundle and restart the built-in service (`hycanvas service restart`). |
 
 ## Built-in Templates
 

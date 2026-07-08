@@ -36,7 +36,7 @@ type Config struct {
 func Load() (Config, error) {
 	loadDotEnv()
 	c := Config{
-		// PORT is the conventional deploy variable (compose, PM2, PaaS); GO_API_PORT
+		// PORT is the conventional deploy variable (compose, PaaS); GO_API_PORT
 		// remains accepted for continuity. Defaults to 8005, the single app port.
 		Port:        getenv("PORT", getenv("GO_API_PORT", "8005")),
 		BindHost:    os.Getenv("BIND_HOST"),
@@ -54,10 +54,10 @@ func Load() (Config, error) {
 
 // loadDotEnv loads a .env file if one is present, so the production binary runs
 // standalone (`./dist/hycanvas`) with no Node dotenv-cli wrapper, matching
-// how it runs under Docker and PM2. It checks the working directory then the
+// how it runs under Docker and the service daemon. It checks the working directory then the
 // parent (so running from the repo root or from dist/ both find the root .env).
 // godotenv never overrides variables already set in the environment, so a real
-// deployment (Docker/PM2/CI, which inject env directly) is unaffected even if a
+// deployment (Docker/CI, which inject env directly) is unaffected even if a
 // stray .env exists. Absent .env is a no-op.
 func loadDotEnv() {
 	for _, p := range []string{".env", filepath.Join("..", ".env")} {
