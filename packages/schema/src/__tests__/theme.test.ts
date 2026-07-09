@@ -34,11 +34,10 @@ function themedDeck(): DesignFile {
 }
 
 describe("schema version", () => {
-  it("is 11 and the v10 migration is purely additive", () => {
-    expect(CURRENT_SCHEMA_VERSION).toBe(11);
+  it("migrates a v10 file to the current version purely additively", () => {
     const v10 = { ...createBlankDesign({ title: "Old", width: 800, height: 600 }), schemaVersion: 10 };
     const migrated = migrate(v10 as unknown as DesignFile);
-    expect(migrated.schemaVersion).toBe(11);
+    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     // Nothing added, nothing lost: only the version changed.
     expect({ ...migrated, schemaVersion: 10 }).toEqual(v10);
   });

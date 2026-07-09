@@ -765,6 +765,10 @@ interface EditorState {
   setImageSource(id: string, url: string): void;
   /** Set/clear an image node's accessibility alt text (F22 FR-12), undoable. */
   setImageAlt(id: string, alt: string | undefined): void;
+  /** Set/clear any node's accessibility description (doc 28 FR-29), undoable. */
+  setNodeAltText(id: string, altText: string | undefined): void;
+  /** Mark a node presentational, so checkers and accessible exports skip it. */
+  setNodeDecorative(id: string, decorative: boolean): void;
   /** Replace an image node's source AND set its box to a known size in one
    *  undoable step (Magic Expand / outpaint: the padded result has a new aspect
    *  computed client-side, so we set it directly rather than waiting on load). */
@@ -4389,6 +4393,35 @@ export const useEditor = create<EditorState>((set, get) => {
         () => {
           rec.fit = before;
         },
+      );
+    },
+    setNodeAltText: (id, altText) => {
+      const loc = locate(get().doc, id);
+      if (!loc) return;
+      const rec = loc.node as unknown as { altText?: string };
+      const before = rec.altText;
+      const next = altText && altText.trim().length ? altText : undefined;
+      if (before === next) return;
+      perform(
+        () => { rec.altText = next; },
+        () => { rec.altText = before; },
+      );
+    },
+    setNodeDecorative: (id, decorative) => {
+      const loc = locate(get().doc, id);
+      if (!loc) return;
+      const rec = loc.node as unknown as { decorative?: boolean; altText?: string };
+      const before = rec.decorative;
+      const beforeAlt = rec.altText;
+      if (!!before === decorative) return;
+      perform(
+        () => {
+          rec.decorative = decorative || undefined;
+          // A decorative node needs no description; clear a stale one so the
+          // two flags cannot contradict each other.
+          if (decorative) rec.altText = undefined;
+        },
+        () => { rec.decorative = before; rec.altText = beforeAlt; },
       );
     },
     setImageAlt: (id, alt) => {

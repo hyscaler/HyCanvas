@@ -1737,6 +1737,7 @@ export function PropertiesPanel() {
       {single && <AnimateSection node={single.node} />}
       {single && single.node.type === "image" && <ImageMotionSection node={single.node} />}
       {single && <InteractionSection node={single.node} doc={doc} />}
+      {single && <NodeAccessibilitySection node={single.node} />}
     </Wrap>
   );
 }
@@ -2047,7 +2048,6 @@ function InteractionSection({ node, doc }: { node: Node; doc: DesignFile }) {
   );
 }
 
-/** Per-page transition control shown in the empty-selection page panel. */
 /** Slide layout picker (doc 28 FR-3). Assigning a layout gives the page a
  *  placeholder cascade, including the title placeholder that makes its name a
  *  real, screen-reader-navigable slide title. Installing the built-in layouts
@@ -2162,6 +2162,48 @@ function DeckThemeSection() {
   );
 }
 
+/** Per-node accessibility (doc 28 FR-29): a description for assistive
+ *  technology, or a decorative flag that exempts the node from needing one.
+ *  Shown for every node type, because meaning is not the preserve of images. */
+function NodeAccessibilitySection({ node }: { node: Node }) {
+  const st = useEditor.getState();
+  const rev = useEditor((s) => s.rev);
+  void rev;
+  const rec = node as unknown as { altText?: string; alt?: string; decorative?: boolean };
+  const decorative = rec.decorative === true;
+  // The generic field wins; the legacy image-only `alt` still shows so an older
+  // file's description is visible rather than appearing to have vanished.
+  const value = rec.altText ?? (node.type === "image" ? rec.alt : undefined) ?? "";
+  return (
+    <Section title="Accessibility" order={ORDER.accessibility}>
+      <label className="mb-1 block text-[11px] font-medium text-neutral-500" htmlFor="a11y-alt">
+        Description (alt text)
+      </label>
+      <textarea
+        id="a11y-alt"
+        data-testid="alt-text-input"
+        rows={2}
+        disabled={decorative}
+        value={value}
+        placeholder={decorative ? "Not needed for decorative elements" : "Describe this element for screen readers"}
+        onChange={(e) => st.setNodeAltText(node.id, e.target.value)}
+        className="w-full resize-y rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm text-neutral-800 outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100 disabled:opacity-50"
+      />
+      <label className="mt-2 flex items-center gap-2 text-sm text-neutral-700">
+        <input
+          type="checkbox"
+          data-testid="decorative-toggle"
+          checked={decorative}
+          onChange={(e) => st.setNodeDecorative(node.id, e.target.checked)}
+          className="h-4 w-4 rounded border-neutral-300 accent-brand-600"
+        />
+        Decorative (skip for screen readers)
+      </label>
+    </Section>
+  );
+}
+
+/** Per-page transition control shown in the empty-selection page panel. */
 function PageTransitionSection({ page }: { page: Page }) {
   const st = useEditor.getState();
   const t = (page as { transition?: import("@hc/schema").PageTransition }).transition;
@@ -2681,6 +2723,7 @@ const ORDER = {
   arrange: 5,
   appearance: 6,
   interactivity: 7, // animate / motion / interaction
+  accessibility: 8, // alt text / decorative (doc 28 FR-29)
 } as const;
 
 /** A small "locked by brand" hint shown above a constrained picker (FR-4). */
