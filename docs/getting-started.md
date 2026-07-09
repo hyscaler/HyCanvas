@@ -57,6 +57,7 @@ The [editor guide](editor.md) walks through every panel and tool.
 
 ## Where to go next
 
-- [The dashboard](dashboard.md): workspaces, members, templates, storage, settings.
-- [The editor](editor.md): the full tour, including AI, brand kits, and export.
+- [The dashboard](dashboard.md): workspaces, members, roles, templates, storage, dark mode, settings.
+- [The editor](editor.md): the full tour, including AI, brand kits, sharing, version history, and export.
+- [Document types](document-types.md): presentations, whiteboards, sheets, docs, and video.
 - Working with others? Share a design and edit it together live; presence cursors and locks keep you out of each other's way.

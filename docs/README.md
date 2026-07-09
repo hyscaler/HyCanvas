@@ -5,8 +5,9 @@ Everything in HyCanvas is free: no tiers, no paywalls, no watermarks. These page
 ## User guides
 
 - [Getting started](getting-started.md), from first sign-in to your first design.
-- [The dashboard](dashboard.md), workspaces, templates, members, storage, and settings.
-- [The editor](editor.md), a tour of the design surface and its panels.
+- [The dashboard](dashboard.md), workspaces, templates, members, roles, storage, dark mode, and settings.
+- [The editor](editor.md), the full tour: panels, properties, shortcuts, AI, sharing, collaboration, version history, present mode, and export.
+- [Document types](document-types.md), presentations, whiteboards, sheets, docs, and video.
 
 ## Operator guides
 
@@ -16,5 +17,5 @@ Everything in HyCanvas is free: no tiers, no paywalls, no watermarks. These page
 
 ## Project references
 
-- [`roadmap/`](roadmap/README.md), forward-looking specs for work not yet built.
-- [`shipped/`](shipped/), archived specs for features that already ship (the code is their source of truth).
+- [`roadmap/`](roadmap/README.md), forward-looking specs for work not yet built, with per-area shipped/remaining status.
+- [`shipped/`](shipped/README.md), archived specs for features that already ship (the code is their source of truth).

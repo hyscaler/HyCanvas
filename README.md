@@ -17,7 +17,7 @@ The frontend and shared packages are an npm-workspaces monorepo (orchestrated wi
 
 ## Documentation
 
-- [`docs/`](docs/README.md) - illustrated user and operator guides: [getting started](docs/getting-started.md), [the dashboard](docs/dashboard.md), [the editor](docs/editor.md), and the [first-run setup wizard](docs/setup-wizard.md).
+- [`docs/`](docs/README.md) - illustrated user and operator guides: [getting started](docs/getting-started.md), [the dashboard](docs/dashboard.md), [the editor](docs/editor.md), [document types](docs/document-types.md), and the [first-run setup wizard](docs/setup-wizard.md) with every step screenshotted.
 - `docs/roadmap/` - forward-looking specs for work not yet built (realtime collaboration, AI media, accessibility/i18n/enterprise).
 - `CLAUDE.md` - working guidance for this repository.
 

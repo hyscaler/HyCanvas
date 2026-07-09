@@ -40,9 +40,26 @@ The bottom of the sidebar shows how much storage your uploads use:
 
 A bar turns red as it approaches its limit. When a limit is reached, uploads are rejected with a message naming which limit was hit; deleting uploads frees space immediately.
 
-## Members and sharing
+## Members, roles, and sharing
 
-**Members** lists everyone in the workspace with their role, and is where owners and admins invite people (invitees receive an email link) or remove them. Sharing a single design with specific people or via link happens from the **Share** button inside the editor.
+**Members** lists everyone in the workspace with their role, and is where owners and admins invite people by email (invitees receive an email link; the invite is bound to that address) or remove them.
+
+![The members panel](images/members.png)
+
+- **Roles**: Owner and Admin manage everything; Member can view, comment, edit, and share; Viewer can view and comment. Personal workspaces cannot be invited into.
+- **Custom roles**: named capability sets (view, comment, edit, share, approve, manage roles, manage brand, delete) that admins define here and assign per design from the editor's Share dialog.
+
+Sharing a single design with specific people or via link happens from the **Share** button inside the editor; see [the editor guide](editor.md#sharing-and-permissions).
+
+## My tasks
+
+Comments converted to tasks (from the editor's comment panel) land in **My tasks** when assigned to you, with status (Open, In progress, Done) and optional due dates.
+
+## Dark mode
+
+The interface follows your OS theme by default, and you can pin it light or dark from the avatar menu or Settings. Your designs, template previews, and present mode always keep their own colors.
+
+![The dashboard in dark mode](images/dark-dashboard.png)
 
 ## Account settings
 
@@ -51,5 +68,8 @@ The avatar menu in the top-right opens **Settings**.
 ![Account settings](images/settings.png)
 
 - **Account**: display name, language, appearance, and your data. **Appearance** picks the interface theme (system, light, or dark; your designs are never restyled), also toggleable from the avatar menu on the dashboard. **Download my data** exports everything in your account; **Delete account** permanently removes it.
-- **Security**: change your password, set up two-factor authentication (TOTP), and link a social sign-in (for example Google) to your account.
-- **Notifications**: choose what HyCanvas emails you about.
+- **Security**: change your password, enroll two-step verification (a TOTP authenticator app), review and revoke active sessions, and link your organization's single sign-on (for example Google) to the account when the server has it configured.
+
+![Security settings](images/settings-security.png)
+
+- **Notifications**: per-type email and push preferences for mentions, replies, task assignments, shares, approval requests and decisions, workspace invites, and access requests.
