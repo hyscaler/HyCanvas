@@ -47,6 +47,17 @@ export {
   type MorphPlan,
 } from "./transition";
 export {
+  planDeckFrames,
+  planDurationMs,
+  slideDurationMs,
+  visibleSlideIndices,
+  DEFAULT_SLIDE_HOLD_MS,
+  type DeckFrame,
+  type DeckPlanOptions,
+  type SlideFrame,
+  type DeckTransitionFrame,
+} from "./deck";
+export {
   mountRenderer,
   render,
   probeContext,
