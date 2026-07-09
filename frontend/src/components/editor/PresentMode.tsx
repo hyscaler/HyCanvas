@@ -37,6 +37,9 @@ import {
   appliedOpacity,
   sequenceStarts,
   revealEntranceText,
+  renderTransition,
+  morphPlan,
+  morphDesignAt,
   type AnimPatch,
   type CanvasLike,
   type Viewport,
@@ -626,7 +629,7 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
         // begins its entrance (from the start of the transition window).
         poseExit(from, elapsed, reducedMotion);
         poseEnter(slide, tSlide, reducedMotion);
-        renderTransition(ctx.canvas, ctx, vp, from, slide, arrivingTransition!, p, bufA, bufB, drawSlide);
+        compositeTransition(ctx.canvas, ctx, vp, from, slide, arrivingTransition!, p, bufA, bufB, drawSlide);
       } else if (phase === "exit" && tr) {
         // No page transition, but the leaving slide has exit clips: play them in a
         // brief exit window so a configured exit always shows on slide-leave.
@@ -1465,7 +1468,12 @@ function PresenterHud(props: {
 // Composite the leaving and arriving slides into `dest` for the given transition
 // at eased progress `p` (0..1). Uses two offscreen buffers (sized to the canvas)
 // so each slide renders once per frame and is then blended/translated cheaply.
-function renderTransition(
+//
+// This is a thin browser adapter: it owns the offscreen buffers and the morph
+// overlay (which needs a scene render), while the compositing math lives in the
+// pure `@hc/engine` helper (doc 28 FR-13), so present mode, the web player, and
+// headless export all render transitions identically.
+function compositeTransition(
   dest: HTMLCanvasElement,
   destCtx: CanvasRenderingContext2D,
   vp: Viewport,
@@ -1495,7 +1503,7 @@ function renderTransition(
   // Morph (Magic Move): elements shared by id between the two slides are drawn
   // tweened on top, so they must NOT appear in the cross-faded buffers. Hide them
   // in both clones for the buffer draws, then restore.
-  const morph = transition.type === "morph" ? morphPlan(from, to) : null;
+  const morph = transition.type === "morph" ? morphPlan(from.doc, from.pageIndex, to.doc, to.pageIndex) : null;
   const restoreHidden: { node: Node; prev: boolean | undefined }[] = [];
   if (morph) {
     for (const n of morph.fromNodes.values()) { restoreHidden.push({ node: n, prev: n.hidden }); (n as { hidden?: boolean }).hidden = true; }
@@ -1505,175 +1513,20 @@ function renderTransition(
   draw(to, cb, vp);
   for (const h of restoreHidden) (h.node as { hidden?: boolean }).hidden = h.prev;
 
-  destCtx.setTransform(1, 0, 0, 1, 0, 0);
-  destCtx.clearRect(0, 0, W, H);
-  destCtx.fillStyle = "#ffffff";
-  destCtx.fillRect(0, 0, W, H);
+  renderTransition(destCtx as unknown as CanvasLike, transition, {
+    from: bufA,
+    to: bufB,
+    width: W,
+    height: H,
+    progress: p,
+  });
 
-  const dir = transition.direction ?? "left";
-  const sign = dir === "right" || dir === "down" ? -1 : 1;
-  const horizontal = dir === "left" || dir === "right";
-
-  switch (transition.type) {
-    case "fade":
-    case "dissolve": {
-      destCtx.globalAlpha = 1 - p;
-      destCtx.drawImage(bufA, 0, 0);
-      destCtx.globalAlpha = p;
-      destCtx.drawImage(bufB, 0, 0);
-      destCtx.globalAlpha = 1;
-      break;
-    }
-    case "slide": {
-      // The incoming slide slides in over the (stationary) outgoing one.
-      destCtx.drawImage(bufA, 0, 0);
-      const dx = horizontal ? sign * (1 - p) * W : 0;
-      const dy = horizontal ? 0 : sign * (1 - p) * H;
-      destCtx.drawImage(bufB, dx, dy);
-      break;
-    }
-    case "push": {
-      // Both slides move together: outgoing pushed out, incoming pushed in.
-      const dx = horizontal ? sign * p * W : 0;
-      const dy = horizontal ? 0 : sign * p * H;
-      destCtx.drawImage(bufA, -dx, -dy);
-      destCtx.drawImage(bufB, horizontal ? sign * W - dx : 0, horizontal ? 0 : sign * H - dy);
-      break;
-    }
-    case "morph-lite": {
-      // A simple cross-zoom: the outgoing slide zooms out + fades, the incoming
-      // zooms in from slightly small + fades in.
-      const outScale = 1 + 0.12 * p;
-      const inScale = 0.88 + 0.12 * p;
-      destCtx.globalAlpha = 1 - p;
-      drawScaled(destCtx, bufA, outScale, W, H);
-      destCtx.globalAlpha = p;
-      drawScaled(destCtx, bufB, inScale, W, H);
-      destCtx.globalAlpha = 1;
-      break;
-    }
-    case "wipe": {
-      // The incoming slide is revealed under a growing clip rect in `dir`.
-      destCtx.drawImage(bufA, 0, 0);
-      destCtx.save();
-      destCtx.beginPath();
-      if (horizontal) {
-        const w = p * W;
-        destCtx.rect(dir === "right" ? W - w : 0, 0, w, H);
-      } else {
-        const h = p * H;
-        destCtx.rect(0, dir === "down" ? H - h : 0, W, h);
-      }
-      destCtx.clip();
-      destCtx.drawImage(bufB, 0, 0);
-      destCtx.restore();
-      break;
-    }
-    case "flip": {
-      // Horizontal card flip: outgoing squashes to a sliver, incoming expands.
-      if (p < 0.5) {
-        const s = 1 - p * 2; // 1 -> 0
-        destCtx.save();
-        destCtx.translate(W / 2, 0);
-        destCtx.scale(s, 1);
-        destCtx.translate(-W / 2, 0);
-        destCtx.drawImage(bufA, 0, 0);
-        destCtx.restore();
-      } else {
-        const s = (p - 0.5) * 2; // 0 -> 1
-        destCtx.save();
-        destCtx.translate(W / 2, 0);
-        destCtx.scale(s, 1);
-        destCtx.translate(-W / 2, 0);
-        destCtx.drawImage(bufB, 0, 0);
-        destCtx.restore();
-      }
-      break;
-    }
-    case "zoom": {
-      // Outgoing holds; incoming zooms up from the center with a fade.
-      destCtx.drawImage(bufA, 0, 0);
-      destCtx.globalAlpha = p;
-      drawScaled(destCtx, bufB, 0.3 + 0.7 * p, W, H);
-      destCtx.globalAlpha = 1;
-      break;
-    }
-    case "morph": {
-      // Magic Move: cross-fade the non-shared content (buffers were drawn with the
-      // shared elements hidden), then render the shared elements tweened from their
-      // outgoing pose to their incoming pose on top, so they glide into place.
-      destCtx.globalAlpha = 1 - p;
-      destCtx.drawImage(bufA, 0, 0);
-      destCtx.globalAlpha = p;
-      destCtx.drawImage(bufB, 0, 0);
-      destCtx.globalAlpha = 1;
-      if (morph && morph.ids.length) {
-        const children = morph.ids.map((id) => lerpNode(morph.fromNodes.get(id)!, morph.toNodes.get(id)!, p));
-        const pages = to.doc.pages.map((pg, i) => (i === to.pageIndex ? { ...pg, children } : pg));
-        const tempDoc = { ...to.doc, pages } as DesignFile;
-        try {
-          renderScene(createScene(tempDoc, to.pageIndex), destCtx as unknown as CanvasLike, vp, { assets: imageAssets });
-        } catch { /* a cross-origin image can throw; skip the morphed layer */ }
-      }
-      break;
-    }
-    default: {
-      destCtx.drawImage(bufB, 0, 0);
-    }
+  // The morphed layer needs a scene render, so it stays with the caller: the
+  // engine helper has already cross-faded the shared-element-free buffers.
+  if (morph && morph.ids.length) {
+    const tempDoc = morphDesignAt(morph, to.doc, to.pageIndex, p);
+    try {
+      renderScene(createScene(tempDoc, to.pageIndex), destCtx as unknown as CanvasLike, vp, { assets: imageAssets });
+    } catch { /* a cross-origin image can throw; skip the morphed layer */ }
   }
-}
-
-/** Plan a morph: the nodes shared by id between two slides' top-level children,
- *  indexed for both the outgoing (from) and incoming (to) poses. */
-function morphPlan(from: Slide, to: Slide): { ids: string[]; fromNodes: Map<string, Node>; toNodes: Map<string, Node> } | null {
-  const fromCh = from.doc.pages[from.pageIndex]?.children ?? [];
-  const toCh = to.doc.pages[to.pageIndex]?.children ?? [];
-  // Match shared elements: by id (same node on both slides), then fall back to a
-  // unique name (covers "duplicate slide, then move an element" since duplication
-  // regenerates ids but keeps names). The pairing keys both maps by the to-id.
-  const fromById = new Map(fromCh.map((n) => [n.id, n]));
-  const fromByName = new Map<string, Node[]>();
-  for (const n of fromCh) { if (n.name) (fromByName.get(n.name) ?? fromByName.set(n.name, []).get(n.name)!).push(n); }
-  const toNameCount = new Map<string, number>();
-  for (const n of toCh) if (n.name) toNameCount.set(n.name, (toNameCount.get(n.name) ?? 0) + 1);
-  const ids: string[] = [];
-  const fromNodes = new Map<string, Node>();
-  const toNodes = new Map<string, Node>();
-  for (const tn of toCh) {
-    let match: Node | undefined = fromById.get(tn.id);
-    if (!match && tn.name && toNameCount.get(tn.name) === 1) {
-      const byName = fromByName.get(tn.name);
-      if (byName && byName.length === 1) match = byName[0]; // unique on both sides
-    }
-    if (match) { ids.push(tn.id); fromNodes.set(tn.id, match); toNodes.set(tn.id, tn); }
-  }
-  return ids.length ? { ids, fromNodes, toNodes } : null;
-}
-
-/** Interpolate a node between its outgoing and incoming pose (transform/size/
- *  opacity) at eased progress `p`; appearance is taken from the destination. */
-function lerpNode(a: Node, b: Node, p: number): Node {
-  const L = (x: number, y: number) => x + (y - x) * p;
-  const ta = a.transform; const tb = b.transform;
-  return {
-    ...b,
-    transform: {
-      ...tb,
-      x: L(ta.x, tb.x), y: L(ta.y, tb.y),
-      scaleX: L(ta.scaleX, tb.scaleX), scaleY: L(ta.scaleY, tb.scaleY),
-      rotation: L(ta.rotation, tb.rotation),
-    },
-    size: { width: L(a.size.width, b.size.width), height: L(a.size.height, b.size.height) },
-    opacity: L(a.opacity, b.opacity),
-  } as Node;
-}
-
-// Draw a buffer scaled about its center into the destination context.
-function drawScaled(ctx: CanvasRenderingContext2D, buf: HTMLCanvasElement, scale: number, W: number, H: number): void {
-  ctx.save();
-  ctx.translate(W / 2, H / 2);
-  ctx.scale(scale, scale);
-  ctx.translate(-W / 2, -H / 2);
-  ctx.drawImage(buf, 0, 0);
-  ctx.restore();
 }

@@ -37,6 +37,16 @@ export { renderScene, bumpTextLayout, blendToComposite, type Render2DOptions } f
 export { benchmarkRender, createNullContext, type BenchResult, type BenchOptions } from "./bench";
 export { poseDesignAt, pageAnimationDuration, sequenceStarts, revealEntranceText } from "./pose";
 export {
+  renderTransition,
+  morphPlan,
+  morphDesignAt,
+  morphHiddenIds,
+  lerpNode,
+  type TransitionFrame,
+  type TransitionSurface,
+  type MorphPlan,
+} from "./transition";
+export {
   mountRenderer,
   render,
   probeContext,
