@@ -28,6 +28,17 @@ const nextConfig: NextConfig = {
         ? "/api"
         : process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8005/api",
   },
+  // Pretty editor URLs (/editor/<id>) are a SERVER rewrite to the exported
+  // editor page: the Go static server does it in production, and this mirrors
+  // it for `next dev`. Dev-only because rewrites are incompatible with (and
+  // unnecessary for) the static export build.
+  ...(process.env.NODE_ENV === "development"
+    ? {
+        async rewrites() {
+          return [{ source: "/editor/:id", destination: "/editor" }];
+        },
+      }
+    : {}),
 };
 
 export default nextConfig;

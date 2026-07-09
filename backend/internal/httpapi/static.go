@@ -88,6 +88,19 @@ func mountStaticFS(r chi.Router, root http.FileSystem) {
 			serveFile(w, req, root, clean+"/index.html")
 			return
 		}
+		// Pretty editor URLs: /editor/<id> is a client-resolved dynamic route
+		// (the static export cannot emit per-design HTML for user-created ids),
+		// so serve the exported editor page and let the frontend read the id
+		// from the path. Single path segment only, and never a file-looking
+		// name, so real assets and nested paths still 404 honestly.
+		if rest, ok := strings.CutPrefix(clean, "/editor/"); ok && rest != "" && !strings.ContainsAny(rest, "/.") {
+			for _, cand := range []string{"/editor.html", "/editor/index.html"} {
+				if exists(cand) {
+					serveFile(w, req, root, cand)
+					return
+				}
+			}
+		}
 		// Genuinely unknown path: serve the exported 404 page with a real 404
 		// status; fall back to the app shell if no 404 page was exported.
 		if serveNotFound(w, root) {

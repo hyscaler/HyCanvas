@@ -56,6 +56,20 @@ func TestStaticServingFS(t *testing.T) {
 	if code, body := get("/unknown/route"); code != 404 || body != "<html>notfound</html>" {
 		t.Fatalf("fs 404 fallback: %d %q", code, body)
 	}
+	// Pretty editor URLs: a single id segment serves the editor page; nested
+	// paths and file-looking names still 404.
+	if code, body := get("/editor/b2599ed3-d4bd-4226-82cd-9a20e5888596"); code != 200 || body != "<html>editor</html>" {
+		t.Fatalf("fs /editor/<id>: %d %q", code, body)
+	}
+	if code, body := get("/editor/b2599ed3-d4bd-4226-82cd-9a20e5888596/"); code != 200 || body != "<html>editor</html>" {
+		t.Fatalf("fs /editor/<id>/: %d %q", code, body)
+	}
+	if code, _ := get("/editor/a/b"); code != 404 {
+		t.Fatalf("fs /editor nested should 404: %d", code)
+	}
+	if code, _ := get("/editor/evil.html"); code != 404 {
+		t.Fatalf("fs /editor file-looking should 404: %d", code)
+	}
 }
 
 // TestAPIOnlyNotice covers the no-frontend fallback: non-API GET routes get a
@@ -144,8 +158,13 @@ func TestStaticServing(t *testing.T) {
 	if code, _, cc := get("/_next/static/app.js"); code != 200 || cc == "" {
 		t.Fatalf("/_next asset: %d cache=%q", code, cc)
 	}
+	// Pretty editor URL: /editor/<id> serves the editor page (the id is
+	// client-resolved; the export cannot emit per-design HTML).
+	if code, body, _ := get("/editor/abc123"); code != 200 || body != "<html>editor</html>" {
+		t.Fatalf("/editor/<id>: %d %q", code, body)
+	}
 	// Genuinely unknown path serves the exported 404 page with a 404 status.
-	if code, body, _ := get("/editor/abc123"); code != 404 || body != "<html>notfound</html>" {
+	if code, body, _ := get("/no-such-page"); code != 404 || body != "<html>notfound</html>" {
 		t.Fatalf("404 fallback: %d %q", code, body)
 	}
 	// Unmatched API path is a JSON 404, never the shell.
