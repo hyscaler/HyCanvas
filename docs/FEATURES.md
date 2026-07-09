@@ -71,6 +71,8 @@ A living checklist of what ships today versus what is planned. Shipped items are
 - [ ] Captions, TTS, music generation, AI avatars, lip-sync, image-to-video (blocked on the video pipeline + audio/video model endpoints)
 
 ### Presentations ([spec 28](roadmap/28-presentations.md))
+- [x] Pure, exportable transition compositor in `@hc/engine` (FR-13), the dependency for the web player and deck-to-video
+- [ ] Consume the compositor from the web player and headless export; per-transition easing
 - [ ] PPTX import/export round-trip; slide masters, layouts, themes, sections
 - [ ] True second-display presenter view; present-and-record; full-deck video
 - [ ] Live audience Q&A, polls, reactions, captions
