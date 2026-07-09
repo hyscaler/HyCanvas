@@ -15,6 +15,10 @@ Everything in HyCanvas is free: no tiers, no paywalls, no watermarks. These page
 - [Root README, Production](../README.md#production), building, the service commands, reverse proxies, Google sign-in, and storage migration.
 - [Root README, Environment Variables](../README.md#environment-variables), every configuration knob.
 
+## Status
+
+- [`FEATURES.md`](FEATURES.md), a checklist of what ships today versus what is planned.
+
 ## Project references
 
 - [`roadmap/`](roadmap/README.md), forward-looking specs for work not yet built, with per-area shipped/remaining status.
