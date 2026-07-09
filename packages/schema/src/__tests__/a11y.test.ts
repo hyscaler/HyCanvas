@@ -169,3 +169,35 @@ describe("alt text", () => {
     expect(missingAltTextCount(file)).toBe(2); // a and c; b is decorative
   });
 });
+
+// The editor's Tab navigation is defined as: reading order, minus locked,
+// hidden, and decorative nodes. Pinning that composition here keeps the
+// canvas and the Reading Order pane honest about being the same order.
+describe("tab order = reading order minus locked/hidden/decorative", () => {
+  const tabbable = (p: Page) =>
+    resolveReadingOrder(p)
+      .filter((n) => !n.locked && !n.hidden && !isDecorative(n))
+      .map((n) => n.id);
+
+  it("follows an explicit reading order, not z-order", () => {
+    const p = pageWith([shape("a"), shape("b"), shape("c")], ["c", "a", "b"]);
+    expect(tabbable(p)).toEqual(["c", "a", "b"]);
+  });
+
+  it("skips decorative, locked, and hidden nodes", () => {
+    const a = shape("a");
+    const b = shape("b");
+    (b as { decorative?: boolean }).decorative = true;
+    const c = shape("c");
+    (c as { locked?: boolean }).locked = true;
+    const d = shape("d");
+    (d as { hidden?: boolean }).hidden = true;
+    const e = shape("e");
+    expect(tabbable(pageWith([a, b, c, d, e]))).toEqual(["a", "e"]);
+  });
+
+  it("still reaches a node added after the order was authored", () => {
+    const p = pageWith([shape("a"), shape("b")], ["a"]);
+    expect(tabbable(p)).toEqual(["a", "b"]);
+  });
+});
