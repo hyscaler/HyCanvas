@@ -451,7 +451,20 @@ export function EditorApp() {
 
   useEffect(() => {
     if (!router.isReady) return;
-    const id = typeof router.query.id === "string" ? router.query.id : null;
+    // The design id arrives either path-style (/editor/<id>/, served by the Go
+    // rewrite on hard loads) or as the legacy ?id= query (client-side navs and
+    // old links). The query form is canonicalized to the path form below.
+    const pathMatch = typeof window !== "undefined" ? /^\/editor\/([^/?#]+)\/?$/.exec(window.location.pathname) : null;
+    const id = typeof router.query.id === "string" ? router.query.id : pathMatch ? decodeURIComponent(pathMatch[1]) : null;
+    if (id && typeof window !== "undefined" && !pathMatch) {
+      // Cosmetic URL rewrite only (outside the Next router, which has no
+      // /editor/[id] route in the static export): keep every other query param
+      // (e.g. share=requests) so deep links still resolve.
+      const rest = new URLSearchParams(window.location.search);
+      rest.delete("id");
+      const qs = rest.toString();
+      window.history.replaceState(window.history.state, "", `/editor/${encodeURIComponent(id)}/${qs ? `?${qs}` : ""}`);
+    }
     let cancelled = false;
     void (async () => {
       if (!id) {
@@ -642,6 +655,12 @@ export function EditorApp() {
       // When realtime is live, snapshot the shared Y.Doc (the source of truth
       // for collaborative edits); otherwise fall back to the local store doc.
       const file = getDesignDoc()?.snapshot() ?? useEditor.getState().doc;
+      if (!Array.isArray(file.pages) || file.pages.length === 0) {
+        // A blank zero-page file means the document has not loaded yet (the
+        // server would 422 it anyway); saving now could only lose work.
+        toast.error("The design is still loading; try again in a moment.");
+        return;
+      }
       await oc.saveSnapshot(designId, { file, kind: "checkpoint" });
       if (!mounted.current) return;
       // Mark the doc clean at the just-saved revision so the dirty indicator and

@@ -43,9 +43,13 @@ export function unlockSelection(): void {
   if (ids.length) activeClient?.sendUnlock(ids);
 }
 
-/** The live collaborative document binding, or null when not connected. */
+/** The live collaborative document binding, or null when not connected.
+ *  Also null before the doc has any state: until initial sync lands (or when
+ *  realtime never connects), the Y.Doc is empty and snapshotting it would
+ *  produce a blank zero-page file that the server rightly rejects (422), so
+ *  callers must keep using the REST-loaded store doc instead. */
 export function getDesignDoc(): DesignDoc | null {
-  return activeDoc;
+  return activeDoc?.hasState ? activeDoc : null;
 }
 
 /**
@@ -60,8 +64,12 @@ export function applyRestoredFile(file: DesignFile): void {
   // Always end any preview and reset the local editing doc first.
   useEditor.getState().exitPreview();
   useEditor.getState().loadDoc(file);
-  // Then, if connected, push it into the shared doc so peers see the restore.
-  activeDoc?.replaceDoc(file);
+  // Then, if connected AND synced, push it into the shared doc so peers see the
+  // restore. Pre-sync the room must stay authoritative: reconciling into an
+  // empty Y.Doc would mint a divergent CRDT identity space that merges into
+  // duplicates once server state arrives (the restore already persisted a
+  // server snapshot, so a later room seed converges on it anyway).
+  if (activeDoc?.hasState) activeDoc.replaceDoc(file);
 }
 
 /**
@@ -73,7 +81,7 @@ export function applyRestoredFile(file: DesignFile): void {
  */
 export function resyncFromLiveDoc(): void {
   const doc = activeDoc;
-  if (!doc) return;
+  if (!doc?.hasState) return; // an unsynced doc would clobber the store with a blank file
   useEditor.getState().loadDoc(doc.snapshot());
 }
 

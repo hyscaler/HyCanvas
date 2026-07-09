@@ -58,6 +58,7 @@ export function useAutoSnapshot(designId: string | null, onSaved?: () => void) {
         // Prefer the shared Y.Doc when realtime is live (the collaborative source
         // of truth); fall back to the local store doc otherwise. Mirrors save().
         const file = doc?.snapshot() ?? ed.doc;
+        if (!Array.isArray(file.pages) || file.pages.length === 0) return; // never persist a blank doc
         await oc.saveSnapshot(designId, { file, kind: "auto" });
         if (disposed) return;
         lastSavedAt = Date.now();
