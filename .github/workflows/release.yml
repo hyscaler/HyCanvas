@@ -147,6 +147,10 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Full history + tags so the release notes can list the commits since
+          # the previous release tag.
+          fetch-depth: 0
       - uses: actions/download-artifact@v8
         with:
           pattern: dist-*
@@ -160,7 +164,21 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_name }}
         run: |
-          cat > notes.md <<'EOF'
+          # What's changed: the commit subjects since the previous tag. Releases
+          # are cut from direct commits (no PRs), so GitHub's auto-generated
+          # notes alone would only produce a compare link.
+          PREV=$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)
+          {
+            echo "## What's changed"
+            echo ""
+            if [ -n "$PREV" ]; then
+              git log --no-merges --reverse --pretty='- %s' "${PREV}..${TAG}"
+            else
+              git log --no-merges --reverse --pretty='- %s' "${TAG}"
+            fi
+            echo ""
+          } > notes.md
+          cat >> notes.md <<'EOF'
           ## Platform notes
 
           - Each archive contains just the self-contained `hycanvas` binary with the frontend embedded; see the README for setup (`.env`, PostgreSQL). The first-run wizard generates the configuration for you, and `.env.example` in the repository documents every setting.

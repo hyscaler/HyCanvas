@@ -101,6 +101,10 @@ export function MiniMap() {
     ctx.strokeStyle = "rgba(0,0,0,0.18)";
     ctx.lineWidth = 1;
     ctx.strokeRect(px + 0.5, py + 0.5, page.width * scale - 1, page.height * scale - 1);
+    // `rev` is not read in the body, but it must stay a dependency: edits can
+    // mutate `doc` in place (stable identity), and the repaint effect below
+    // keys on `paint`, so the rev bump is what recreates paint() and repaints.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc, viewed, mw, mh, scale, bounds.x, bounds.y, page, rev]);
 
   // Register the doc's assets/fonts (idempotent) and paint; repaint when any
