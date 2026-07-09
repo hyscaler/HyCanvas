@@ -28,6 +28,7 @@ A living checklist of what ships today versus what is planned. Shipped items are
 - [x] Shared-link deck player: engine-drawn slides, navigation, fullscreen, real transitions (F28 FR-26)
 - [x] Animated export of a whole deck (APNG/GIF) with slide transitions composited (F28 FR-19 groundwork)
 - [x] Second-display presenter view: audience window, wall clock, teleprompter (F28 FR-15)
+- [x] Slide master/layout/placeholder model + swappable deck Theme, schema v11 (F28 FR-3, FR-4); editor UI pending
 - [x] Whiteboards (sticky/frame/ink/connectors, 8 templates, facilitation, synced timer, dot voting, convert-to-deck)
 - [x] Sheets (~48-function formula engine, formatting, borders, sort)
 - [x] Docs (block editor, callouts, embeds, AI writing tools, DOCX/PDF export)
@@ -77,7 +78,8 @@ A living checklist of what ships today versus what is planned. Shipped items are
 ### Presentations ([spec 28](roadmap/28-presentations.md))
 - [ ] Deck-to-video (server MP4 with animations, transitions, narration); per-transition easing
 - [ ] Tracked per-audience player links with passcodes and per-slide dwell analytics; iframe embed
-- [ ] PPTX import/export round-trip; slide masters, layouts, themes, sections
+- [ ] Editor UI for masters/layouts/themes; slide sections; grid/outline overview
+- [ ] PPTX import/export round-trip
 - [ ] Present-and-record; full-deck video
 - [ ] Live audience Q&A, polls, reactions, captions
 - [ ] AI design autopilot, whole-deck translation, speaker-note generation, doc/URL ingestion
