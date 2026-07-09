@@ -263,4 +263,4 @@ HyCanvas is licensed under the Elastic License 2.0 (see `LICENSE`). This is a so
 - **Hosting HyCanvas for your own customers?** That needs a [commercial license](COMMERCIAL.md) from HyScaler; internal use and self-hosting never do.
 - **Contributing?** All contributions require a one-time [Contributor License Agreement](CLA.md), signed with a single comment on your first pull request.
 
-© 2026 HyScaler. HyCanvas is a product of HyScaler. HyScaler® is a registered trademark of HyScaler; the HyCanvas name and logo are trademarks of HyScaler.
+© 2026 HyScaler. HyCanvas is a product of HyScaler. HyScaler® is a registered trademark of HyScaler.

@@ -23,4 +23,4 @@ The one thing the license reserves is offering HyCanvas to third parties as a ho
 
 Write to licensing@hycanvas.com with a short description of your intended offering. Please include expected scale and the countries you plan to operate in.
 
-HyScaler® and HyCanvas are trademarks of HyScaler. © 2026 HyScaler. All rights reserved where not expressly licensed.
+HyScaler® is a registered trademark of HyScaler; HyCanvas is a product of HyScaler. © 2026 HyScaler. All rights reserved where not expressly licensed.
