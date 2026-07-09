@@ -30,6 +30,7 @@ A living checklist of what ships today versus what is planned. Shipped items are
 - [x] Second-display presenter view: audience window, wall clock, teleprompter (F28 FR-15)
 - [x] Slide master/layout/placeholder model + swappable deck Theme, schema v11 (F28 FR-3, FR-4)
 - [x] Accessibility model: per-node alt text + decorative, page reading order, schema v12 (F28 FR-29)
+- [x] Reading Order pane; keyboard Tab navigation follows reading order and skips decorative nodes (F28 FR-29)
 - [x] Whiteboards (sticky/frame/ink/connectors, 8 templates, facilitation, synced timer, dot voting, convert-to-deck)
 - [x] Sheets (~48-function formula engine, formatting, borders, sort)
 - [x] Docs (block editor, callouts, embeds, AI writing tools, DOCX/PDF export)
