@@ -14,6 +14,8 @@ import {
   Pause,
   Repeat,
   PanelRightOpen,
+  MonitorPlay,
+  MonitorX,
   MousePointer2,
   Pencil,
   Lightbulb,
@@ -56,6 +58,8 @@ import type {
 } from "@hc/schema";
 import { useEditor } from "@/store/editor";
 import { imageAssets } from "@/lib/assetProvider";
+import { useBrand } from "@/store/brand";
+import { AudienceLink, openAudienceWindow } from "@/lib/audienceWindow";
 import {
   adjustSpotlightRadius,
   DEFAULT_AUTO_ADVANCE_MS,
@@ -377,6 +381,15 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
   const [autopilot, setAutopilot] = useState(false);
   const [loop, setLoop] = useState(false);
   const [showHud, setShowHud] = useState(false);
+  // Second-display presenter view (doc 28 FR-15): an audience window mirrors
+  // the slide over a BroadcastChannel while this window keeps the HUD. Popups
+  // can be blocked, so this only gates the affordance; the same-window overlay
+  // keeps working either way (AC-3).
+  const designId = useBrand((s) => s.designId);
+  const [audienceOpen, setAudienceOpen] = useState(false);
+  const [popupBlocked, setPopupBlocked] = useState(false);
+  const audienceLink = useRef<AudienceLink | null>(null);
+  const audienceWin = useRef<Window | null>(null);
 
   // Visible-slide bookkeeping (skips hidden slides for nav + the n-of-N count).
   const visIdxs = useMemo(() => visibleIndices(pages as SlideLike[]), [pages, rev]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -386,6 +399,40 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
     () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true,
     [],
   );
+
+  /** Open (or focus) the audience display. Returns false when popups are blocked. */
+  const openAudience = useCallback((): boolean => {
+    if (!designId) return false;
+    const win = openAudienceWindow(designId, idx);
+    if (!win) return false;
+    audienceWin.current = win;
+    setPopupBlocked(false);
+    if (!audienceLink.current) audienceLink.current = new AudienceLink(designId);
+    audienceLink.current.post({ index: idx, blank: blank === "none" ? null : blank });
+    setAudienceOpen(true);
+    return true;
+  }, [designId, idx, blank]);
+
+  const closeAudience = useCallback(() => {
+    audienceLink.current?.close();
+    audienceLink.current = null;
+    try {
+      audienceWin.current?.close();
+    } catch {
+      /* already closed by the user */
+    }
+    audienceWin.current = null;
+    setAudienceOpen(false);
+  }, []);
+
+  // Mirror slide + blanking to the audience display whenever either changes.
+  useEffect(() => {
+    if (!audienceOpen) return;
+    audienceLink.current?.post({ index: idx, blank: blank === "none" ? null : blank });
+  }, [audienceOpen, idx, blank]);
+
+  // Leaving present mode closes the projection with it.
+  useEffect(() => () => closeAudience(), [closeAudience]);
 
   // Build the slide clone for the current page; rebuilt on page/edit change. The
   // store mutates `doc` in place, so `rev` (not `doc`'s identity) signals edits.
@@ -529,6 +576,13 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
       if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); guardedPrev(); return; }
       switch (e.key) {
         case "s": case "S": e.preventDefault(); setShowHud((v) => !v); return; // presenter view (FR-4)
+        // Second display (FR-15): mirror the slide to an audience window.
+        // `E` for "extend"; D/P/L/O/B/W/Z/G/S are already taken by tools.
+        case "e": case "E":
+          e.preventDefault();
+          if (audienceOpen) closeAudience();
+          else if (designId && !openAudience()) setPopupBlocked(true);
+          return;
         case "p": case "P": e.preventDefault(); setAutopilot((v) => !v); return; // autopilot (FR-14)
         case "l": case "L": e.preventDefault(); selectTool("laser"); return; // laser pointer
         case "d": case "D": e.preventDefault(); selectTool("pen"); return; // on-slide draw (P is autopilot)
@@ -551,7 +605,7 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [guardedNext, guardedPrev, onClose, paletteOpen, showHelp, blank, tool, selectTool]);
+  }, [guardedNext, guardedPrev, onClose, paletteOpen, showHelp, blank, tool, selectTool, audienceOpen, closeAudience, openAudience, designId]);
 
   // Compute and store the fit for the current slide whenever it/size changes.
   const layout = useCallback((): { ctx: CanvasRenderingContext2D; vp: Viewport } | null => {
@@ -1115,6 +1169,18 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
         <ToolButton active={autopilot} onClick={() => setAutopilot((v) => !v)} title={autopilot ? "Pause autopilot (P)" : "Play autopilot (P)"}>{autopilot ? <Pause size={16} /> : <Play size={16} />}</ToolButton>
         <ToolButton active={loop} onClick={() => setLoop((v) => !v)} title={loop ? "Loop on" : "Loop off"}><Repeat size={16} /></ToolButton>
         <ToolButton active={showHud} onClick={() => setShowHud((v) => !v)} title="Presenter view (S)"><PanelRightOpen size={16} /></ToolButton>
+        {designId && (
+          <ToolButton
+            active={audienceOpen}
+            onClick={() => {
+              if (audienceOpen) { closeAudience(); return; }
+              if (!openAudience()) setPopupBlocked(true);
+            }}
+            title={audienceOpen ? "Close audience display (E)" : "Open audience display on a second screen (E)"}
+          >
+            {audienceOpen ? <MonitorX size={16} /> : <MonitorPlay size={16} />}
+          </ToolButton>
+        )}
         <ToolButton active={showHelp} onClick={() => setShowHelp((v) => !v)} title="Shortcuts (?)"><HelpCircle size={16} /></ToolButton>
       </div>
 
@@ -1128,6 +1194,15 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
           onJump={(i) => { setPaletteOpen(false); navigate(i); }}
           onClose={() => setPaletteOpen(false)}
         />
+      )}
+
+      {/* Popups blocked: AC-3 requires falling back to the same-window overlay,
+          so we explain rather than fail silently. */}
+      {popupBlocked && (
+        <div className="pointer-events-auto absolute left-1/2 top-4 z-50 -translate-x-1/2 rounded-lg bg-amber-500/95 px-3 py-2 text-xs font-medium text-black shadow-lg">
+          Allow pop-ups for this site to open the audience display. The presenter view still works here (S).
+          <button onClick={() => setPopupBlocked(false)} className="ml-3 underline">Dismiss</button>
+        </div>
       )}
 
       {showHud && (
@@ -1199,6 +1274,7 @@ function ShortcutHelp({ onClose }: { onClose: () => void }) {
     ["W", "White screen"],
     ["G or /", "Jump-to-slide palette"],
     ["S", "Presenter view"],
+    ["E", "Audience display (2nd screen)"],
     ["P", "Autopilot play/pause"],
     ["?", "Toggle this help"],
     ["Esc", "Close tool / overlay, then exit"],
@@ -1340,6 +1416,107 @@ function SlideThumb({ doc, index, w, h }: { doc: DesignFile; index: number; w: n
 // window.open + BroadcastChannel is a deferred enhancement). Shows the current
 // slide, the next-slide thumbnail, speaker notes, n-of-N, prev/next + a jump
 // control, and a rehearsal/count-down timer with a per-slide breakdown on stop.
+/** Speaker notes as a teleprompter (doc 28 FR-15): resizable type and an
+ *  optional steady auto-scroll, so a presenter can read from across a lectern.
+ *  Scrolling resets when the slide's notes change. */
+function Teleprompter({ notes }: { notes: string }) {
+  const [fontPx, setFontPx] = useState(14);
+  const [speed, setSpeed] = useState(0); // px/sec; 0 = off
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (ref.current) ref.current.scrollTop = 0;
+  }, [notes]);
+
+  useEffect(() => {
+    if (!speed) return;
+    let raf = 0;
+    let last = performance.now();
+    const step = (now: number) => {
+      const el = ref.current;
+      const dt = (now - last) / 1000;
+      last = now;
+      if (el) {
+        el.scrollTop = Math.min(el.scrollTop + speed * dt, el.scrollHeight - el.clientHeight);
+      }
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [speed]);
+
+  const has = notes.trim().length > 0;
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between text-[10px] uppercase tracking-wide text-white/40">
+        <span>Speaker notes</span>
+        {has && (
+          <div className="flex items-center gap-2 normal-case">
+            <button
+              onClick={() => setFontPx((v) => Math.max(11, v - 2))}
+              className="rounded px-1.5 py-0.5 text-white/60 hover:bg-white/10"
+              aria-label="Smaller notes text"
+              title="Smaller"
+            >
+              A-
+            </button>
+            <button
+              onClick={() => setFontPx((v) => Math.min(30, v + 2))}
+              className="rounded px-1.5 py-0.5 text-white/60 hover:bg-white/10"
+              aria-label="Larger notes text"
+              title="Larger"
+            >
+              A+
+            </button>
+            <button
+              onClick={() => setSpeed((v) => (v ? 0 : 18))}
+              className={`rounded px-1.5 py-0.5 hover:bg-white/10 ${speed ? "text-brand-300" : "text-white/60"}`}
+              aria-pressed={speed > 0}
+              title="Auto-scroll the notes"
+            >
+              Scroll
+            </button>
+            {speed > 0 && (
+              <input
+                type="range"
+                min={6}
+                max={60}
+                value={speed}
+                onChange={(e) => setSpeed(Number(e.target.value))}
+                className="h-1 w-16 accent-white/70"
+                aria-label="Scroll speed"
+              />
+            )}
+          </div>
+        )}
+      </div>
+      <div
+        ref={ref}
+        data-testid="teleprompter"
+        style={{ fontSize: `${fontPx}px` }}
+        className="max-h-40 overflow-y-auto whitespace-pre-wrap rounded-lg border border-white/10 bg-white/5 p-2.5 leading-relaxed text-white/85"
+      >
+        {has ? notes : <span className="text-white/30">No notes for this slide.</span>}
+      </div>
+    </div>
+  );
+}
+
+/** The presenter's wall clock (doc 28 FR-15): real time of day, distinct from
+ *  the rehearsal timer, so a presenter can pace against the room's schedule. */
+function WallClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <span data-testid="wall-clock" className="tabular-nums text-white/70">
+      {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+    </span>
+  );
+}
+
 function PresenterHud(props: {
   doc: DesignFile;
   curIdx: number;
@@ -1378,7 +1555,11 @@ function PresenterHud(props: {
     >
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-wide text-white/50">Presenter view</span>
-        <span className="text-xs tabular-nums text-white/60">{position} of {total}</span>
+        <span className="flex items-center gap-2 text-xs tabular-nums text-white/60">
+          <WallClock />
+          <span className="text-white/25">|</span>
+          <span>{position} of {total}</span>
+        </span>
       </div>
 
       <div className="flex gap-2">
@@ -1411,12 +1592,7 @@ function PresenterHud(props: {
         <button onClick={onNext} disabled={!hasNext} className="rounded-lg bg-white/10 px-3 py-1.5 text-xs hover:bg-white/20 disabled:opacity-30">Next</button>
       </div>
 
-      <div>
-        <div className="mb-1 text-[10px] uppercase tracking-wide text-white/40">Speaker notes</div>
-        <div className="max-h-40 overflow-y-auto whitespace-pre-wrap rounded-lg border border-white/10 bg-white/5 p-2.5 text-sm leading-relaxed text-white/85">
-          {notes.trim() ? notes : <span className="text-white/30">No notes for this slide.</span>}
-        </div>
-      </div>
+      <Teleprompter notes={notes} />
 
       <div className="rounded-lg border border-white/10 bg-white/5 p-3">
         <div className="flex items-center justify-between">

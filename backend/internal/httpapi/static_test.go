@@ -70,6 +70,11 @@ func TestStaticServingFS(t *testing.T) {
 	if code, _ := get("/editor/evil.html"); code != 404 {
 		t.Fatalf("fs /editor file-looking should 404: %d", code)
 	}
+	// The audience display uses the same rewrite: /present/<designId>.
+	write("present/index.html", "<html>present</html>")
+	if code, body := get("/present/abc-123"); code != 200 || body != "<html>present</html>" {
+		t.Fatalf("fs /present/<id>: %d %q", code, body)
+	}
 	// Share links use the same pretty-URL rewrite: /shared/<token>.
 	write("shared/index.html", "<html>shared</html>")
 	if code, body := get("/shared/DkGjFpCEs3hDOsY1NwK4YddjgTcYPuRK"); code != 200 || body != "<html>shared</html>" {
