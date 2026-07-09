@@ -12,7 +12,7 @@ import { walkNodes, type Color, type DesignFile, type Fill } from "@hc/schema";
 import { contrastRatio } from "@hc/color";
 
 export type A11ySeverity = "error" | "warning";
-export type A11yKind = "contrast" | "alt-text" | "small-text" | "touch-target";
+export type A11yKind = "contrast" | "alt-text" | "small-text" | "touch-target" | "slide-title";
 
 export interface A11yIssue {
   nodeId: string;
@@ -51,6 +51,23 @@ function isLarge(fontSize: number, weight: number): boolean {
 /** Audit a design file. Returns one issue per problem, in page/visit order. */
 export function checkAccessibility(doc: DesignFile): A11yIssue[] {
   const issues: A11yIssue[] = [];
+  // Slide titles (doc 28 FR-3/FR-29): every slide in a deck needs a name, or a
+  // screen-reader user cannot navigate the presentation. Single-page designs
+  // are not decks, so they are exempt.
+  if (doc.pages.length > 1) {
+    doc.pages.forEach((page, pageIndex) => {
+      if (!page.name?.trim()) {
+        issues.push({
+          nodeId: page.id,
+          nodeName: page.name,
+          pageIndex,
+          kind: "slide-title",
+          severity: "warning",
+          message: `Slide ${pageIndex + 1} has no title. Name the slide so screen readers can navigate the deck.`,
+        });
+      }
+    });
+  }
   doc.pages.forEach((page, pageIndex) => {
     const bg = solidOf(page.background) ?? WHITE;
     walkNodes(
@@ -142,7 +159,7 @@ export interface A11ySummary {
 
 /** Roll up an issue list into counts for the accessibility panel/score. */
 export function summarizeAccessibility(issues: A11yIssue[]): A11ySummary {
-  const byKind: Record<A11yKind, number> = { contrast: 0, "alt-text": 0, "small-text": 0, "touch-target": 0 };
+  const byKind: Record<A11yKind, number> = { contrast: 0, "alt-text": 0, "small-text": 0, "touch-target": 0, "slide-title": 0 };
   let errors = 0;
   let warnings = 0;
   for (const i of issues) {

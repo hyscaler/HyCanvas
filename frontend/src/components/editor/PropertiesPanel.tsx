@@ -307,6 +307,7 @@ function VideoSection({ node }: { node: Node }) {
 }
 const chipCls = (active: boolean) => `rounded-md px-2.5 py-1 text-xs font-medium transition ${active ? "bg-surface text-brand-ink shadow-sm" : "text-neutral-500 hover:text-neutral-700"}`;
 const selectCls = "w-full rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm text-neutral-800 outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100";
+const actionBtnCls = "w-full rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50";
 const inputCls = "w-full rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm text-neutral-800 outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100";
 
 function runColorHex(style: CharStyle): string {
@@ -573,6 +574,8 @@ export function PropertiesPanel() {
             </Section>
           );
         })()}
+        <PageLayoutSection page={page} />
+        <DeckThemeSection />
         <PageTransitionSection page={page} />
         <PagePresentSection page={page} />
       </Wrap>
@@ -2045,6 +2048,120 @@ function InteractionSection({ node, doc }: { node: Node; doc: DesignFile }) {
 }
 
 /** Per-page transition control shown in the empty-selection page panel. */
+/** Slide layout picker (doc 28 FR-3). Assigning a layout gives the page a
+ *  placeholder cascade, including the title placeholder that makes its name a
+ *  real, screen-reader-navigable slide title. Installing the built-in layouts
+ *  is itself one undoable action, so a deck opts in explicitly. */
+function PageLayoutSection({ page }: { page: Page }) {
+  const st = useEditor.getState();
+  const rev = useEditor((s) => s.rev);
+  const doc = useEditor.getState().doc as unknown as {
+    layouts?: { id: string; name: string }[];
+  };
+  const layouts = doc.layouts ?? [];
+  const current = (page as { layoutId?: string }).layoutId;
+  // Resolve against the live doc so a deleted layout shows as "None".
+  const known = layouts.some((l) => l.id === current);
+  void rev; // re-render when the deck's layouts change
+
+  if (!layouts.length) {
+    return (
+      <Section title="Layout">
+        <p className="mb-2 text-[11px] leading-relaxed text-neutral-500">
+          Slide layouts give each slide a title and content placeholders, and make slide titles readable by screen
+          readers.
+        </p>
+        <button type="button" onClick={() => st.ensureSlideLayouts()} className={actionBtnCls} data-testid="add-layouts">
+          Add slide layouts
+        </button>
+      </Section>
+    );
+  }
+  return (
+    <Section title="Layout">
+      <select
+        value={known ? current : "none"}
+        onChange={(e) => st.setPageLayout(e.target.value === "none" ? undefined : e.target.value)}
+        className={selectCls}
+        data-testid="layout-select"
+        aria-label="Slide layout"
+      >
+        <option value="none">None</option>
+        {layouts.map((l) => (
+          <option key={l.id} value={l.id}>
+            {l.name}
+          </option>
+        ))}
+      </select>
+      <p className="mt-1.5 text-[11px] text-neutral-500">
+        The layout supplies this slide&apos;s title and content regions.
+      </p>
+    </Section>
+  );
+}
+
+/** Deck theme swap (doc 28 FR-4). Adopting a theme restyles the deck's palette
+ *  and font pair in one undoable action; it never rewrites page content, which
+ *  is what keeps it reversible (recoloring nodes is the Brand panel's re-skin). */
+const BUILTIN_THEMES: { id: string; name: string; colors: string[]; fontHeading: string; fontBody: string }[] = [
+  { id: "theme-plum", name: "Plum", colors: ["#9B2C72", "#C84B9A", "#3E1030", "#FBEFF7", "#18181b", "#ffffff"], fontHeading: "Plus Jakarta Sans", fontBody: "Plus Jakarta Sans" },
+  { id: "theme-slate", name: "Slate", colors: ["#0f172a", "#334155", "#64748b", "#e2e8f0", "#020617", "#ffffff"], fontHeading: "Inter", fontBody: "Inter" },
+  { id: "theme-forest", name: "Forest", colors: ["#14532d", "#16a34a", "#4ade80", "#dcfce7", "#052e16", "#ffffff"], fontHeading: "Inter", fontBody: "Inter" },
+];
+
+function DeckThemeSection() {
+  const st = useEditor.getState();
+  const rev = useEditor((s) => s.rev);
+  const doc = useEditor.getState().doc as unknown as { theme?: { id: string } };
+  const current = doc.theme?.id;
+  void rev;
+  return (
+    <Section title="Deck theme">
+      <div className="flex flex-col gap-1.5" role="radiogroup" aria-label="Deck theme">
+        {BUILTIN_THEMES.map((t) => {
+          const active = current === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              data-testid={`theme-${t.id}`}
+              onClick={() =>
+                st.setDeckTheme({
+                  id: t.id,
+                  name: t.name,
+                  colors: t.colors.map((hex, i) => ({ id: `${t.id}-${i}`, color: colorFromHex(hex) })),
+                  fontHeading: t.fontHeading,
+                  fontBody: t.fontBody,
+                })
+              }
+              className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-left text-sm transition ${
+                active ? "border-brand-500 bg-brand-50 text-brand-ink" : "border-neutral-200 hover:bg-neutral-50"
+              }`}
+            >
+              <span className="flex shrink-0 gap-0.5">
+                {t.colors.slice(0, 4).map((c) => (
+                  <span key={c} style={{ background: c }} className="h-4 w-2.5 rounded-sm ring-1 ring-black/10" />
+                ))}
+              </span>
+              <span className="min-w-0 flex-1 truncate">{t.name}</span>
+            </button>
+          );
+        })}
+        {current && (
+          <button type="button" onClick={() => st.setDeckTheme(undefined)} className="mt-0.5 text-left text-[11px] text-neutral-500 hover:underline" data-testid="clear-theme">
+            Clear theme
+          </button>
+        )}
+      </div>
+      <p className="mt-1.5 text-[11px] leading-relaxed text-neutral-500">
+        Themes set the deck&apos;s palette and fonts. Your slide content is not restyled.
+      </p>
+    </Section>
+  );
+}
+
 function PageTransitionSection({ page }: { page: Page }) {
   const st = useEditor.getState();
   const t = (page as { transition?: import("@hc/schema").PageTransition }).transition;

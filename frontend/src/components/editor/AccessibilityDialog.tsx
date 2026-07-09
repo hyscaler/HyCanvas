@@ -15,6 +15,7 @@ const KIND_LABEL: Record<A11yIssue["kind"], string> = {
   "alt-text": "Alt text",
   "small-text": "Small text",
   "touch-target": "Target size",
+  "slide-title": "Slide titles",
 };
 
 export function AccessibilityDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -30,8 +31,12 @@ export function AccessibilityDialog({ open, onClose }: { open: boolean; onClose:
   const jump = (i: A11yIssue) => {
     const st = useEditor.getState();
     st.setActivePage(i.pageIndex);
-    st.select([i.nodeId]);
-    st.zoomToSelection();
+    // A slide-title issue points at a PAGE, not a node: there is nothing to
+    // select or zoom to, so just navigate to the slide.
+    if (i.kind !== "slide-title") {
+      st.select([i.nodeId]);
+      st.zoomToSelection();
+    }
     onClose();
   };
 
@@ -41,7 +46,7 @@ export function AccessibilityDialog({ open, onClose }: { open: boolean; onClose:
         <div className="flex flex-col items-center gap-2 py-8 text-center">
           <CheckCircle2 size={36} className="text-emerald-500" />
           <p className="text-sm font-medium text-neutral-700">No accessibility issues found</p>
-          <p className="max-w-xs text-xs text-neutral-400">Text contrast, image alt text, and text size all look good.</p>
+          <p className="max-w-xs text-xs text-neutral-400">Text contrast, image alt text, text size, and slide titles all look good.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -64,7 +69,10 @@ export function AccessibilityDialog({ open, onClose }: { open: boolean; onClose:
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm text-neutral-800">{i.message}</span>
                     <span className="block truncate text-xs text-neutral-400">
-                      {KIND_LABEL[i.kind]} · {i.nodeName || "element"} · page {i.pageIndex + 1}
+                      {/* A slide-title issue is about the PAGE, not an element on it. */}
+                      {i.kind === "slide-title"
+                        ? `${KIND_LABEL[i.kind]} · slide ${i.pageIndex + 1}`
+                        : `${KIND_LABEL[i.kind]} · ${i.nodeName || "element"} · page ${i.pageIndex + 1}`}
                     </span>
                   </span>
                 </button>

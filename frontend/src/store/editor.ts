@@ -29,6 +29,9 @@ import {
   type NodeType,
   type Page,
   type PageTransition,
+  type Theme,
+  applyTheme,
+  builtinMasterAndLayouts,
   type Paragraph,
   type ParagraphStyle,
   type Stroke,
@@ -603,6 +606,12 @@ interface EditorState {
   setPageTransition(transition: PageTransition | undefined, pageIndex?: number): void;
   /** Set the active (or given) page's speaker notes, undoable. */
   setPageNotes(notes: string, pageIndex?: number): void;
+  /** Assign (or clear) the slide layout this page inherits (doc 28 FR-3). */
+  setPageLayout(layoutId: string | undefined, pageIndex?: number): void;
+  /** Install the built-in master + layouts on a deck that has none (FR-3). */
+  ensureSlideLayouts(): void;
+  /** Adopt a theme for the whole deck in one undoable action (FR-4). */
+  setDeckTheme(theme: Theme | undefined): void;
   /** Set/clear the active (or given) page's autopilot dwell in ms;
    *  pass null to clear (fall back to the global default). Undoable. */
   setPageAutoAdvance(ms: number | null, pageIndex?: number): void;
@@ -2607,6 +2616,48 @@ export const useEditor = create<EditorState>((set, get) => {
       perform(
         () => { page.transition = transition; },
         () => { page.transition = before; },
+      );
+    },
+    setPageLayout: (layoutId, pageIndex) => {
+      const idx = pageIndex ?? curPageIndex();
+      const page = get().doc.pages[idx] as unknown as { layoutId?: string };
+      if (!page) return;
+      const before = page.layoutId;
+      if (before === layoutId) return;
+      perform(
+        () => { page.layoutId = layoutId; },
+        () => { page.layoutId = before; },
+      );
+    },
+    ensureSlideLayouts: () => {
+      const doc = get().doc as unknown as { masters?: unknown[]; layouts?: unknown[]; pages: { width: number; height: number }[] };
+      if (doc.layouts?.length) return; // already installed
+      const { master, layouts } = builtinMasterAndLayouts(doc.pages[0] ?? { width: 1920, height: 1080 });
+      const beforeM = doc.masters;
+      const beforeL = doc.layouts;
+      perform(
+        () => { doc.masters = [...(beforeM ?? []), master]; doc.layouts = layouts; },
+        () => { doc.masters = beforeM; doc.layouts = beforeL; },
+      );
+    },
+    setDeckTheme: (theme) => {
+      const doc = get().doc as unknown as { theme?: Theme; masters?: { theme?: string }[] };
+      const before = doc.theme;
+      const beforeMasters = doc.masters?.map((m) => m.theme);
+      if (before?.id === theme?.id) return;
+      perform(
+        () => {
+          // Reuse the pure helper so the file-level swap (and master repointing)
+          // stays in one place; then mirror it onto the live mutable doc.
+          if (!theme) { doc.theme = undefined; return; }
+          const next = applyTheme(get().doc, theme);
+          doc.theme = next.theme;
+          if (next.masters && doc.masters) next.masters.forEach((m, i) => { if (doc.masters![i]) doc.masters![i].theme = m.theme; });
+        },
+        () => {
+          doc.theme = before;
+          if (beforeMasters && doc.masters) doc.masters.forEach((m, i) => { m.theme = beforeMasters[i]; });
+        },
       );
     },
     setPageNotes: (notes, pageIndex) => {
