@@ -288,6 +288,11 @@ export const migrations: Record<number, Migration> = {
   // before, and it stays structurally valid v11. Bump the version so newer
   // readers know the deck may carry a master/layout cascade and a theme.
   10: (file: AnyObj) => ({ ...file, schemaVersion: 11 }),
+  // v11 -> v12: accessibility (F28 FR-29). NodeBase gains optional altText and
+  // decorative; Page gains an optional readingOrder. All additive: a v11 file
+  // omits them, alt text still falls back to ImageNode.alt, and reading order
+  // falls back to z-order. It stays structurally valid v12 and always opens.
+  11: (file: AnyObj) => ({ ...file, schemaVersion: 12 }),
 };
 
 export class MigrationError extends Error {
