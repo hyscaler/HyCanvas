@@ -39,9 +39,11 @@ function ModeSelect({ value, onChange, disabled }: { value: AccessMode; onChange
   );
 }
 
-/** Build the absolute landing URL for a share token (the /shared?token= route). */
+/** Build the absolute landing URL for a share token: the canonical path form
+ *  /shared/<token>/ (the Go server rewrites it to the shared page; the legacy
+ *  ?token= query form keeps resolving too). */
 function linkUrl(token: string): string {
-  const path = `/shared?token=${encodeURIComponent(token)}`;
+  const path = `/shared/${encodeURIComponent(token)}/`;
   if (typeof window === "undefined") return path;
   return `${window.location.origin}${path}`;
 }

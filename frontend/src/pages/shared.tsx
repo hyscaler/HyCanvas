@@ -49,12 +49,29 @@ function problemCode(body: unknown): string | undefined {
   return undefined;
 }
 
+/** The link token, path-style (/shared/<token>, the canonical form the Go
+ *  server rewrites) or legacy query (?token=). */
+function tokenFromLocation(query: unknown): string {
+  if (typeof query === "string" && query) return query;
+  if (typeof window === "undefined") return "";
+  const m = /^\/shared\/([^/?#]+)\/?$/.exec(window.location.pathname);
+  return m ? decodeURIComponent(m[1]) : "";
+}
+
 export default function SharedLinkPage() {
   const router = useRouter();
   const authStatus = useAuth((s) => s.status);
+  const bootstrap = useAuth((s) => s.bootstrap);
   const [state, setState] = useState<State>({ kind: "resolving" });
   const [password, setPassword] = useState("");
   const ran = useRef(false);
+
+  // Resolve the session ourselves: nothing else on this public page triggers
+  // the auth bootstrap, and the open() effect below waits for it, so without
+  // this an anonymous visitor would sit on the spinner forever.
+  useEffect(() => {
+    if (authStatus === "loading") void bootstrap();
+  }, [authStatus, bootstrap]);
 
   const open = useCallback(
     async (token: string, pwd?: string) => {
@@ -114,13 +131,18 @@ export default function SharedLinkPage() {
     // signed-in visitor is routed to the editor rather than the anonymous path.
     if (!router.isReady || authStatus === "loading" || ran.current) return;
     ran.current = true;
-    const token = typeof router.query.token === "string" ? router.query.token : "";
+    const token = tokenFromLocation(router.query.token);
+    // Canonicalize a legacy ?token= URL to the path form (cosmetic; outside the
+    // Next router, which has no /shared/[token] route in the static export).
+    if (token && typeof window !== "undefined" && typeof router.query.token === "string") {
+      window.history.replaceState(window.history.state, "", `/shared/${encodeURIComponent(token)}/`);
+    }
     void open(token);
   }, [router.isReady, router.query.token, authStatus, open]);
 
   function submitPassword(e: React.FormEvent) {
     e.preventDefault();
-    const token = typeof router.query.token === "string" ? router.query.token : "";
+    const token = tokenFromLocation(router.query.token);
     setState({ kind: "resolving" });
     void open(token, password);
   }
@@ -131,7 +153,7 @@ export default function SharedLinkPage() {
     // comment/edit link (commenting/editing need an account). Show "View only"
     // honestly and offer a sign-in CTA that unlocks what the link grants.
     const unlock = state.mode === "edit" ? "edit" : state.mode === "comment" ? "comment" : null;
-    const token = typeof router.query.token === "string" ? router.query.token : "";
+    const token = tokenFromLocation(router.query.token);
     return (
       <>
         <Head>
@@ -145,7 +167,7 @@ export default function SharedLinkPage() {
             <div className="ml-auto flex items-center gap-3">
               {unlock && (
                 <Link
-                  href={`/login?next=${encodeURIComponent(router.asPath || `/shared?token=${token}`)}`}
+                  href={`/login?next=${encodeURIComponent(`/shared/${encodeURIComponent(token)}/`)}`}
                   className="text-sm font-semibold text-brand-ink hover:underline"
                 >
                   Sign in to {unlock}
@@ -207,9 +229,7 @@ export default function SharedLinkPage() {
                 The owner requires you to sign in to open this shared design.
               </p>
               <Link
-                href={`/login?next=${encodeURIComponent(
-                  router.asPath || `/shared?token=${typeof router.query.token === "string" ? router.query.token : ""}`,
-                )}`}
+                href={`/login?next=${encodeURIComponent(`/shared/${encodeURIComponent(tokenFromLocation(router.query.token))}/`)}`}
                 className="block"
               >
                 <Button block size="lg">

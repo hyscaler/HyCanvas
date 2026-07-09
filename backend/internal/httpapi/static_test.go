@@ -70,6 +70,14 @@ func TestStaticServingFS(t *testing.T) {
 	if code, _ := get("/editor/evil.html"); code != 404 {
 		t.Fatalf("fs /editor file-looking should 404: %d", code)
 	}
+	// Share links use the same pretty-URL rewrite: /shared/<token>.
+	write("shared/index.html", "<html>shared</html>")
+	if code, body := get("/shared/DkGjFpCEs3hDOsY1NwK4YddjgTcYPuRK"); code != 200 || body != "<html>shared</html>" {
+		t.Fatalf("fs /shared/<token>: %d %q", code, body)
+	}
+	if code, _ := get("/shared/a/b"); code != 404 {
+		t.Fatalf("fs /shared nested should 404: %d", code)
+	}
 }
 
 // TestAPIOnlyNotice covers the no-frontend fallback: non-API GET routes get a
