@@ -23,8 +23,11 @@ import { z } from "zod";
  *  v10: whiteboard board node types (F30) - ink, mindmap, boardview, diagramcode,
  *      stamp - plus additive optional fields on ConnectorNode (label/waypoints/
  *      jumpOver, EndPoint.attach.port), StickyNode (authorId/shape), and FrameNode
- *      (header/collapsed). All additive: older files omit them and open as-is. */
-export const CURRENT_SCHEMA_VERSION = 10;
+ *      (header/collapsed). All additive: older files omit them and open as-is.
+ *  v11: presentations (F28) slide masters, layouts, placeholders, and a swappable
+ *      deck Theme on DesignFile, plus Page.layoutId. All additive and optional:
+ *      a v10 deck has none of them and opens unchanged. */
+export const CURRENT_SCHEMA_VERSION = 11;
 
 /** Maximum container nesting depth; guards traversal against stack overflow (FR-4). */
 export const MAX_NESTING_DEPTH = 32;
@@ -1711,6 +1714,86 @@ export const NodeSchema: z.ZodType<Node> = z.lazy(() =>
 ) as z.ZodType<Node>;
 
 // ---------------------------------------------------------------------------
+// Section 6.1: slide masters, layouts, and themes (doc 28 FR-3, FR-4)
+// ---------------------------------------------------------------------------
+
+/** A named region a layout reserves for content. `role` gives the region its
+ *  meaning: the `title` placeholder is what makes a slide's name a real,
+ *  screen-reader-navigable slide title (FR-3, FR-29). */
+export type PlaceholderRole = "title" | "body" | "content" | "picture" | "chart" | "media" | "footer";
+export const PlaceholderRoleSchema = z.enum(["title", "body", "content", "picture", "chart", "media", "footer"]);
+
+export interface Placeholder {
+  id: string;
+  role: PlaceholderRole;
+  rect: { x: number; y: number; width: number; height: number };
+}
+export const PlaceholderSchema = z.object({
+  id: z.string(),
+  role: PlaceholderRoleSchema,
+  rect: z.object({ x: z.number(), y: z.number(), width: unit, height: unit }),
+});
+
+/** A slide master: the root of a style cascade (background + shared
+ *  placeholders) that its layouts, and the pages using them, inherit. */
+export interface SlideMaster {
+  id: string;
+  name?: string;
+  /** Theme id this master styles against; falls back to the file theme. */
+  theme?: string;
+  background?: Fill;
+  placeholders: Placeholder[];
+}
+export const SlideMasterSchema = z.object({
+  id: z.string(),
+  name: z.string().optional(),
+  theme: z.string().optional(),
+  background: FillSchema.optional(),
+  placeholders: z.array(PlaceholderSchema),
+});
+
+/** A layout under a master (title, title+content, two-content, ...). A `Page`
+ *  points at one via `layoutId`; the cascade is page -> layout -> master. */
+export interface SlideLayout {
+  id: string;
+  masterId: string;
+  name: string;
+  background?: Fill;
+  placeholders: Placeholder[];
+}
+export const SlideLayoutSchema = z.object({
+  id: z.string(),
+  masterId: z.string(),
+  name: z.string(),
+  background: FillSchema.optional(),
+  placeholders: z.array(PlaceholderSchema),
+});
+
+/** A swappable deck theme: a color palette plus the heading/body font pair.
+ *  Adopting a different theme restyles the whole deck in one action (FR-4). */
+export interface Theme {
+  id: string;
+  name?: string;
+  /** Ordered palette slots (PowerPoint-style 12; any length validates). */
+  colors: ColorSwatch[];
+  fontHeading?: string;
+  fontBody?: string;
+  effects?: Record<string, unknown>;
+  variants?: { id: string; name?: string; colors: ColorSwatch[] }[];
+}
+export const ThemeSchema = z.object({
+  id: z.string(),
+  name: z.string().optional(),
+  colors: z.array(ColorSwatchSchema),
+  fontHeading: z.string().optional(),
+  fontBody: z.string().optional(),
+  effects: z.record(z.string(), z.unknown()).optional(),
+  variants: z
+    .array(z.object({ id: z.string(), name: z.string().optional(), colors: z.array(ColorSwatchSchema) }))
+    .optional(),
+});
+
+// ---------------------------------------------------------------------------
 // Section 6.1: page and file
 // ---------------------------------------------------------------------------
 
@@ -1726,6 +1809,7 @@ export interface Page {
   notes?: string;
   transition?: PageTransition; // applied when advancing to this page
   // presentations (additive, optional; older files still validate):
+  layoutId?: string; // slide layout this page inherits from (doc 28 FR-3)
   autoAdvanceMs?: number; // autopilot dwell before auto-advancing this slide (FR-14)
   hidden?: boolean; // slide is skipped while presenting / in autopilot (FR-1)
   timelineDuration?: number; // derived/cached total ms for this page (optional)
@@ -1742,6 +1826,7 @@ export const PageSchema = z.object({
   guides: z.array(GuideSchema).optional(),
   notes: z.string().optional(),
   transition: PageTransitionSchema.optional(),
+  layoutId: z.string().optional(),
   autoAdvanceMs: z.number().optional(),
   hidden: z.boolean().optional(),
   timelineDuration: z.number().optional(),
@@ -1762,6 +1847,12 @@ export interface DesignFile {
   assets: AssetRef[];
   fonts: FontRef[];
   palette?: ColorSwatch[];
+  // Presentations (doc 28 FR-3, FR-4). All optional and additive: a deck with
+  // no masters/layouts/theme behaves exactly as before, and every page whose
+  // `layoutId` is absent (or dangling) renders standalone.
+  masters?: SlideMaster[];
+  layouts?: SlideLayout[];
+  theme?: Theme;
   meta: Record<string, unknown>;
 }
 export const DesignFileSchema = z.object({
@@ -1773,6 +1864,9 @@ export const DesignFileSchema = z.object({
   dpi: z.number().positive(),
   colorProfile: z.string().optional(),
   pages: z.array(PageSchema),
+  masters: z.array(SlideMasterSchema).optional(),
+  layouts: z.array(SlideLayoutSchema).optional(),
+  theme: ThemeSchema.optional(),
   assets: z.array(AssetRefSchema),
   fonts: z.array(FontRefSchema),
   palette: z.array(ColorSwatchSchema).optional(),

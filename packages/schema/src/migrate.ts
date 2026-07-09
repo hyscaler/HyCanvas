@@ -282,6 +282,12 @@ export const migrations: Record<number, Migration> = {
   // new node types and omits the new fields, so it stays structurally valid v10
   // and always opens. Bump the version so newer readers know it may carry them.
   9: (file: AnyObj) => ({ ...file, schemaVersion: 10 }),
+  // v10 -> v11: presentations (F28) slide masters, layouts, placeholders, and a
+  // swappable deck Theme on DesignFile, plus the optional Page.layoutId. All
+  // additive: a v10 file carries none of them, every page renders standalone as
+  // before, and it stays structurally valid v11. Bump the version so newer
+  // readers know the deck may carry a master/layout cascade and a theme.
+  10: (file: AnyObj) => ({ ...file, schemaVersion: 11 }),
 };
 
 export class MigrationError extends Error {

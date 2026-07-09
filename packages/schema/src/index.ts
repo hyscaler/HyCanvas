@@ -28,6 +28,7 @@ export * from "./json-schema";
 
 // Yjs bridge (edit-time CRDT <-> serialized file).
 export * from "./yjs";
+export * from "./theme";
 
 /**
  * Back-compat alias for the schema version constant. Prefer
