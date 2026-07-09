@@ -26,6 +26,7 @@ A living checklist of what ships today versus what is planned. Shipped items are
 - [x] Presentations (present mode: 9 transitions incl. Magic Move, laser/pen/spotlight, autopilot, presenter HUD, rehearsal timer)
 - [x] Pure, exportable transition compositor in `@hc/engine` (F28 FR-13), shared by present mode, the player, and (planned) export
 - [x] Shared-link deck player: engine-drawn slides, navigation, fullscreen, real transitions (F28 FR-26)
+- [x] Animated export of a whole deck (APNG/GIF) with slide transitions composited (F28 FR-19 groundwork)
 - [x] Whiteboards (sticky/frame/ink/connectors, 8 templates, facilitation, synced timer, dot voting, convert-to-deck)
 - [x] Sheets (~48-function formula engine, formatting, borders, sort)
 - [x] Docs (block editor, callouts, embeds, AI writing tools, DOCX/PDF export)
@@ -73,7 +74,7 @@ A living checklist of what ships today versus what is planned. Shipped items are
 - [ ] Captions, TTS, music generation, AI avatars, lip-sync, image-to-video (blocked on the video pipeline + audio/video model endpoints)
 
 ### Presentations ([spec 28](roadmap/28-presentations.md))
-- [ ] Consume the transition compositor from headless export (deck-to-video); per-transition easing
+- [ ] Deck-to-video (server MP4 with animations, transitions, narration); per-transition easing
 - [ ] Tracked per-audience player links with passcodes and per-slide dwell analytics; iframe embed
 - [ ] PPTX import/export round-trip; slide masters, layouts, themes, sections
 - [ ] True second-display presenter view; present-and-record; full-deck video
