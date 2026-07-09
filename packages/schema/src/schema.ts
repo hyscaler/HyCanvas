@@ -26,8 +26,12 @@ import { z } from "zod";
  *      (header/collapsed). All additive: older files omit them and open as-is.
  *  v11: presentations (F28) slide masters, layouts, placeholders, and a swappable
  *      deck Theme on DesignFile, plus Page.layoutId. All additive and optional:
- *      a v10 deck has none of them and opens unchanged. */
-export const CURRENT_SCHEMA_VERSION = 11;
+ *      a v10 deck has none of them and opens unchanged.
+ *  v12: accessibility (F28 FR-29): NodeBase.altText/decorative and
+ *      Page.readingOrder. All additive and optional: a v11 file omits them,
+ *      alt text falls back to ImageNode.alt, and reading order falls back to
+ *      z-order, exactly as before. */
+export const CURRENT_SCHEMA_VERSION = 12;
 
 /** Maximum container nesting depth; guards traversal against stack overflow (FR-4). */
 export const MAX_NESTING_DEPTH = 32;
@@ -633,6 +637,13 @@ export interface NodeBase {
   // typed per-node animation set + interaction (additive, optional).
   animation?: NodeAnimation;
   interaction?: Interaction;
+  /** Accessibility (doc 28 FR-29). `altText` describes the node for assistive
+   *  technology; `decorative` marks it as presentational, so a checker and an
+   *  accessible export skip it instead of demanding a description. Both are
+   *  additive and optional: older files omit them. `ImageNode.alt` predates
+   *  this and remains the image-specific field; `altText` generalizes it. */
+  altText?: string;
+  decorative?: boolean;
   // Manipulation metadata; optional and non-geometric.
   aspectLocked?: boolean;
   opticalAlign?: boolean;
@@ -656,6 +667,8 @@ const nodeBaseFields = {
   animations: z.array(z.unknown()).optional(),
   animation: NodeAnimationSchema.optional(),
   interaction: InteractionSchema.optional(),
+  altText: z.string().optional(),
+  decorative: z.boolean().optional(),
   aspectLocked: z.boolean().optional(),
   opticalAlign: z.boolean().optional(),
   data: z.record(z.string(), z.unknown()).optional(),
@@ -1810,6 +1823,12 @@ export interface Page {
   transition?: PageTransition; // applied when advancing to this page
   // presentations (additive, optional; older files still validate):
   layoutId?: string; // slide layout this page inherits from (doc 28 FR-3)
+  /** Node ids in the order assistive technology should traverse them, which is
+   *  independent of z-order (doc 28 FR-29). Absent = fall back to z-order, the
+   *  behavior before this field existed. Ids not on the page are ignored, and
+   *  nodes missing from the list follow in z-order, so the field can never
+   *  hide content. */
+  readingOrder?: string[];
   autoAdvanceMs?: number; // autopilot dwell before auto-advancing this slide (FR-14)
   hidden?: boolean; // slide is skipped while presenting / in autopilot (FR-1)
   timelineDuration?: number; // derived/cached total ms for this page (optional)
@@ -1827,6 +1846,7 @@ export const PageSchema = z.object({
   notes: z.string().optional(),
   transition: PageTransitionSchema.optional(),
   layoutId: z.string().optional(),
+  readingOrder: z.array(z.string()).optional(),
   autoAdvanceMs: z.number().optional(),
   hidden: z.boolean().optional(),
   timelineDuration: z.number().optional(),

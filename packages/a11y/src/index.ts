@@ -8,7 +8,7 @@
 // compositing). Gradient/solid fills are handled; image/pattern backgrounds are
 // treated as unknown and skipped for contrast.
 
-import { walkNodes, type Color, type DesignFile, type Fill } from "@hc/schema";
+import { needsAltText, walkNodes, type Color, type DesignFile, type Fill } from "@hc/schema";
 import { contrastRatio } from "@hc/color";
 
 export type A11ySeverity = "error" | "warning";
@@ -111,18 +111,17 @@ export function checkAccessibility(doc: DesignFile): A11yIssue[] {
               message: `Very small text (${Math.round(minFont)}px) is hard to read`,
             });
           }
-        } else if (node.type === "image") {
-          const alt = (node as { alt?: string }).alt;
-          if (!alt || !alt.trim()) {
-            issues.push({
-              nodeId: node.id,
-              nodeName: name,
-              pageIndex,
-              kind: "alt-text",
-              severity: "warning",
-              message: "Image has no alt text for screen readers",
-            });
-          }
+        } else if (needsAltText(node)) {
+          // Generalized (doc 28 FR-29): honors NodeBase.altText and skips nodes
+          // explicitly marked `decorative`, falling back to ImageNode.alt.
+          issues.push({
+            nodeId: node.id,
+            nodeName: name,
+            pageIndex,
+            kind: "alt-text",
+            severity: "warning",
+            message: "Image has no alt text for screen readers",
+          });
         }
         // Interactive elements (a link or pointer interaction) must meet the
         // minimum target size, regardless of node type (WCAG 2.5.8).
