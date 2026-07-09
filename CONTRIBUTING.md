@@ -60,11 +60,14 @@ builds the binaries, the GitHub Release, and the lean Docker images
 Docker Hub overview syncs automatically from `docker/README.md`. The full
 maintainer walkthrough is in the README under "Releases and publishing".
 
-## License of contributions
+## License of contributions (CLA required)
 
-HyCanvas is distributed under the Elastic License 2.0 (see `LICENSE`). By
-submitting a contribution, you agree that it is licensed under the same terms and
-that you have the right to submit it.
+HyCanvas is distributed under the Elastic License 2.0 (see `LICENSE`), with
+[commercial licensing](COMMERCIAL.md) available from HyScaler for hosted
+offerings. To keep that dual-licensing possible, every contributor must sign
+the [Contributor License Agreement](CLA.md) once: the CLA bot will ask on your
+first pull request, and signing is a single comment. You keep ownership of your
+contribution and grant HyScaler the license rights described in the CLA.
 
 ## Reporting security issues
 

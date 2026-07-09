@@ -19,3 +19,7 @@ Everything in HyCanvas is free: no tiers, no paywalls, no watermarks. These page
 
 - [`roadmap/`](roadmap/README.md), forward-looking specs for work not yet built, with per-area shipped/remaining status.
 - [`shipped/`](shipped/README.md), archived specs for features that already ship (the code is their source of truth).
+
+## Licensing
+
+HyCanvas is source-available under the [Elastic License 2.0](../LICENSE): free to use, self-host, and modify, with hosted-service resale reserved to [commercial licenses](../COMMERCIAL.md) from HyScaler. Contributions require the one-time [CLA](../CLA.md). © 2026 HyScaler.

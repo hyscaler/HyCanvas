@@ -363,7 +363,10 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           </div>
         </div>
 
-        <p className="relative z-10 text-sm text-white/60">Your designs, your data - open format, full export, forever.</p>
+        <p className="relative z-10 text-sm text-white/60">
+          Your designs, your data - open format, full export, forever.
+          <span className="mt-1 block text-xs text-white/40">© 2026 HyScaler. HyCanvas is a HyScaler® product.</span>
+        </p>
       </div>
 
       {/* Form pane (with a subtle artist's-desk backdrop) */}

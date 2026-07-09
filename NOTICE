@@ -1,7 +1,11 @@
 HyCanvas
-Copyright (c) 2026 HyScaler
+Copyright (c) 2026 HyScaler. All rights reserved where not expressly licensed.
+HyScaler(R) is a registered trademark of HyScaler; the HyCanvas name and logo
+are trademarks of HyScaler.
 
 This software is made available under the Elastic License 2.0 (see LICENSE).
+Commercial licenses for hosted offerings are available (see COMMERCIAL.md).
+Contributions are accepted under the Contributor License Agreement (CLA.md).
 
 This product bundles third-party open-source software, each under its own
 license. Notable runtime and build dependencies include (non-exhaustive):
