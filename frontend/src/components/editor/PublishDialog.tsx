@@ -166,9 +166,13 @@ export function PublishDialog({
   const [openPostId, setOpenPostId] = useState<string | null>(null);
 
   // ---- QR tab state ----
-  const [qrText, setQrText] = useState(
-    designId ? `https://hycanvas.app/d/${designId}` : "https://hycanvas.app",
-  );
+  const [qrText, setQrText] = useState(() => {
+    // Default to this instance's own origin so self-hosted servers get their
+    // own domain in the QR code, not ours.
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "https://hycanvas.art";
+    return designId ? `${origin}/d/${designId}` : origin;
+  });
   const [qrEc, setQrEc] = useState<QrEcLevel>("M");
   const [qrFg, setQrFg] = useState("#000000");
   const [qrBg, setQrBg] = useState("#ffffff");

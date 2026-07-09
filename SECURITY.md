@@ -7,7 +7,7 @@ pull request for a security problem.
 
 - Preferred: open a private security advisory through the repository's security
   tab (GitHub Security Advisories), or
-- Email: security@hycanvas.app
+- Email: security@hycanvas.com
 
 Include a description of the issue, steps to reproduce, the affected component
 (frontend, Go backend, a specific `@hc/*` package), and any proof-of-concept.
