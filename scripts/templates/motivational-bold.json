@@ -113,6 +113,16 @@
      "letterSpacing": 6,
      "upper": true
     }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-free-svg-illustration-rocket",
+     "x": 730,
+     "y": 760,
+     "w": 310,
+     "h": 320,
+     "position": "after:motivational-bold-p0-n2"
+    }
    ]
   }
  ],
@@ -129,5 +139,8 @@
    "label": "Caption",
    "hint": "Series name or brand tagline"
   }
- ]
+ ],
+ "version": 2,
+ "updated": "2026-07-10T00:00:00.000Z",
+ "rank": 20
 }

@@ -1,0 +1,221 @@
+{
+ "id": "volunteer-callout-post",
+ "title": "Volunteer Callout",
+ "categories": [
+  "social",
+  "business"
+ ],
+ "tags": [
+  "volunteer",
+  "community",
+  "nonprofit",
+  "signup",
+  "local"
+ ],
+ "styleTags": [
+  "warm",
+  "friendly"
+ ],
+ "size": [
+  1080,
+  1350
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Poppins",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Figtree",
+   "weight": 500
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n2",
+   "kind": "text",
+   "label": "Headline",
+   "hint": "The invitation, e.g. Lend a hand, change a Saturday."
+  },
+  {
+   "node": "p0-n10-label",
+   "kind": "text",
+   "label": "Signup line",
+   "hint": "Where to sign up"
+  },
+  {
+   "node": "p0-n11",
+   "kind": "text",
+   "label": "Reassurance line",
+   "hint": "Why it is easy to start"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Callout",
+   "bg": "#fdf6ec",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": -140,
+     "y": -140,
+     "w": 360,
+     "h": 360,
+     "fill": "#f9e7cd",
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 90,
+     "y": 96,
+     "w": 900,
+     "h": 26,
+     "text": "Harborview Community Center",
+     "family": "Figtree",
+     "size": 20,
+     "weight": 700,
+     "color": "#c2410c",
+     "letterSpacing": 5,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 90,
+     "y": 142,
+     "w": 830,
+     "h": 200,
+     "text": "Lend a hand, change a Saturday.",
+     "family": "Poppins",
+     "size": 74,
+     "weight": 800,
+     "color": "#341c0f",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 90,
+     "y": 372,
+     "w": 700,
+     "h": 34,
+     "text": "Three ways to help this month:",
+     "family": "Figtree",
+     "size": 26,
+     "weight": 600,
+     "color": "#8a5b3c"
+    },
+    {
+     "kind": "text",
+     "x": 90,
+     "y": 440,
+     "w": 70,
+     "h": 52,
+     "text": "01",
+     "family": "Poppins",
+     "size": 40,
+     "weight": 800,
+     "color": "#ea7a3b"
+    },
+    {
+     "kind": "text",
+     "x": 180,
+     "y": 448,
+     "w": 740,
+     "h": 38,
+     "text": "Pack weekend meal kits \u00b7 Sat mornings",
+     "family": "Figtree",
+     "size": 28,
+     "weight": 600,
+     "color": "#341c0f"
+    },
+    {
+     "kind": "text",
+     "x": 90,
+     "y": 522,
+     "w": 70,
+     "h": 52,
+     "text": "02",
+     "family": "Poppins",
+     "size": 40,
+     "weight": 800,
+     "color": "#ea7a3b"
+    },
+    {
+     "kind": "text",
+     "x": 180,
+     "y": 530,
+     "w": 740,
+     "h": 38,
+     "text": "Tutor after-school reading \u00b7 Tue + Thu",
+     "family": "Figtree",
+     "size": 28,
+     "weight": 600,
+     "color": "#341c0f"
+    },
+    {
+     "kind": "text",
+     "x": 90,
+     "y": 604,
+     "w": 70,
+     "h": 52,
+     "text": "03",
+     "family": "Poppins",
+     "size": 40,
+     "weight": 800,
+     "color": "#ea7a3b"
+    },
+    {
+     "kind": "text",
+     "x": 180,
+     "y": 612,
+     "w": 740,
+     "h": 38,
+     "text": "Drive seniors to appointments \u00b7 flexible",
+     "family": "Figtree",
+     "size": 28,
+     "weight": 600,
+     "color": "#341c0f"
+    },
+    {
+     "kind": "button",
+     "x": 90,
+     "y": 712,
+     "w": 650,
+     "h": 84,
+     "fill": "#c2410c",
+     "label": "Sign up at harborview.org/volunteer",
+     "family": "Figtree",
+     "size": 24,
+     "weight": 700,
+     "color": "#fff7ed",
+     "radius": 42
+    },
+    {
+     "kind": "text",
+     "x": 90,
+     "y": 830,
+     "w": 640,
+     "h": 60,
+     "text": "No experience needed. Two hours makes a real difference.",
+     "family": "Figtree",
+     "size": 22,
+     "weight": 500,
+     "color": "#8a5b3c",
+     "lineHeight": 1.4
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-flat-character-illustrations",
+     "x": 620,
+     "y": 900,
+     "w": 400,
+     "h": 430
+    }
+   ]
+  }
+ ],
+ "rank": 20
+}

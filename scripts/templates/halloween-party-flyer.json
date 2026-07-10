@@ -1,0 +1,452 @@
+{
+ "id": "halloween-party-flyer",
+ "title": "Midnight Pumpkin Ball Flyer",
+ "categories": [
+  "events",
+  "social"
+ ],
+ "tags": [
+  "halloween",
+  "party",
+  "flyer",
+  "costume",
+  "october"
+ ],
+ "styleTags": [
+  "dark",
+  "playful",
+  "elegant"
+ ],
+ "size": [
+  794,
+  1123
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Playfair Display",
+   "weight": 700
+  },
+  {
+   "role": "body",
+   "family": "Manrope",
+   "weight": 500
+  },
+  {
+   "role": "script",
+   "family": "Caveat",
+   "weight": 600
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n9",
+   "kind": "text",
+   "label": "Event name",
+   "hint": "Your party name, e.g. The Midnight Pumpkin Ball"
+  },
+  {
+   "node": "p0-n13",
+   "kind": "text",
+   "label": "Date",
+   "hint": "Event date, e.g. Saturday, Oct 31"
+  },
+  {
+   "node": "p0-n17",
+   "kind": "text",
+   "label": "Venue",
+   "hint": "Venue or host name"
+  },
+  {
+   "node": "p0-n27-label",
+   "kind": "text",
+   "label": "RSVP label",
+   "hint": "Call to action, e.g. RSVP by Oct 24"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Flyer",
+   "bg": {
+    "angle": 168,
+    "stops": [
+     [
+      "#231743",
+      0
+     ],
+     [
+      "#100a20",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 255,
+     "y": 96,
+     "w": 284,
+     "h": 284,
+     "fill": "#b9a8e3",
+     "opacity": 0.08
+    },
+    {
+     "kind": "ellipse",
+     "x": 277,
+     "y": 118,
+     "w": 240,
+     "h": 240,
+     "fill": "#efe7fa",
+     "opacity": 0.12
+    },
+    {
+     "kind": "ellipse",
+     "x": 118,
+     "y": 148,
+     "w": 5,
+     "h": 5,
+     "fill": "#cfc3ea",
+     "opacity": 0.7
+    },
+    {
+     "kind": "ellipse",
+     "x": 196,
+     "y": 268,
+     "w": 4,
+     "h": 4,
+     "fill": "#cfc3ea",
+     "opacity": 0.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 648,
+     "y": 160,
+     "w": 6,
+     "h": 6,
+     "fill": "#cfc3ea",
+     "opacity": 0.8
+    },
+    {
+     "kind": "ellipse",
+     "x": 700,
+     "y": 296,
+     "w": 4,
+     "h": 4,
+     "fill": "#cfc3ea",
+     "opacity": 0.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 88,
+     "y": 332,
+     "w": 4,
+     "h": 4,
+     "fill": "#cfc3ea",
+     "opacity": 0.45
+    },
+    {
+     "kind": "text",
+     "x": 147,
+     "y": 70,
+     "w": 500,
+     "h": 18,
+     "text": "The Raven Room presents",
+     "family": "Manrope",
+     "size": 13,
+     "weight": 700,
+     "color": "#b9a8e3",
+     "align": "center",
+     "letterSpacing": 5,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 197,
+     "y": 372,
+     "w": 400,
+     "h": 42,
+     "text": "All Hallows' Eve",
+     "family": "Caveat",
+     "size": 36,
+     "weight": 600,
+     "color": "#f0955a",
+     "align": "center",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 418,
+     "w": 666,
+     "h": 156,
+     "text": "The Midnight\nPumpkin Ball",
+     "family": "Playfair Display",
+     "size": 70,
+     "weight": 700,
+     "color": "#f6f0e4",
+     "align": "center",
+     "lineHeight": 1.05
+    },
+    {
+     "kind": "text",
+     "x": 147,
+     "y": 596,
+     "w": 500,
+     "h": 48,
+     "text": "Candlelit cocktails, a haunted dance floor, and\ntreats worth tricking for. Dress to unsettle.",
+     "family": "Manrope",
+     "size": 16,
+     "weight": 500,
+     "color": "#cfc3ea",
+     "align": "center",
+     "lineHeight": 1.45
+    },
+    {
+     "kind": "rect",
+     "x": 64,
+     "y": 672,
+     "w": 666,
+     "h": 1,
+     "fill": "#3b2d5e"
+    },
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 694,
+     "w": 202,
+     "h": 14,
+     "text": "When",
+     "family": "Manrope",
+     "size": 11,
+     "weight": 700,
+     "color": "#8d7fb5",
+     "align": "center",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 716,
+     "w": 202,
+     "h": 30,
+     "text": "Saturday, Oct 31",
+     "family": "Playfair Display",
+     "size": 21,
+     "weight": 700,
+     "color": "#f6f0e4",
+     "align": "center",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 750,
+     "w": 202,
+     "h": 18,
+     "text": "Doors 8 PM till late",
+     "family": "Manrope",
+     "size": 13,
+     "weight": 500,
+     "color": "#b6a9d6",
+     "align": "center",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 281,
+     "y": 694,
+     "w": 1,
+     "h": 74,
+     "fill": "#3b2d5e"
+    },
+    {
+     "kind": "text",
+     "x": 296,
+     "y": 694,
+     "w": 202,
+     "h": 14,
+     "text": "Where",
+     "family": "Manrope",
+     "size": 11,
+     "weight": 700,
+     "color": "#8d7fb5",
+     "align": "center",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 296,
+     "y": 716,
+     "w": 202,
+     "h": 30,
+     "text": "The Raven Room",
+     "family": "Playfair Display",
+     "size": 21,
+     "weight": 700,
+     "color": "#f6f0e4",
+     "align": "center",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 296,
+     "y": 750,
+     "w": 202,
+     "h": 18,
+     "text": "12 Hollow Hill Lane",
+     "family": "Manrope",
+     "size": 13,
+     "weight": 500,
+     "color": "#b6a9d6",
+     "align": "center",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 513,
+     "y": 694,
+     "w": 1,
+     "h": 74,
+     "fill": "#3b2d5e"
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 694,
+     "w": 202,
+     "h": 14,
+     "text": "Entry",
+     "family": "Manrope",
+     "size": 11,
+     "weight": 700,
+     "color": "#8d7fb5",
+     "align": "center",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 716,
+     "w": 202,
+     "h": 30,
+     "text": "Free with RSVP",
+     "family": "Playfair Display",
+     "size": 21,
+     "weight": 700,
+     "color": "#f6f0e4",
+     "align": "center",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 528,
+     "y": 750,
+     "w": 202,
+     "h": 18,
+     "text": "Cash bar \u00b7 21+",
+     "family": "Manrope",
+     "size": 13,
+     "weight": 500,
+     "color": "#b6a9d6",
+     "align": "center",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 64,
+     "y": 812,
+     "w": 666,
+     "h": 150,
+     "fill": "#251a44",
+     "radius": 16,
+     "stroke": "#453472",
+     "strokeWidth": 1
+    },
+    {
+     "kind": "text",
+     "x": 246,
+     "y": 838,
+     "w": 440,
+     "h": 14,
+     "text": "Costume contest \u00b7 10 PM",
+     "family": "Manrope",
+     "size": 11,
+     "weight": 700,
+     "color": "#f0955a",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 246,
+     "y": 860,
+     "w": 440,
+     "h": 32,
+     "text": "Best look takes the crown.",
+     "family": "Playfair Display",
+     "size": 25,
+     "weight": 700,
+     "color": "#f6f0e4",
+     "lineHeight": 1.15
+    },
+    {
+     "kind": "text",
+     "x": 246,
+     "y": 900,
+     "w": 440,
+     "h": 42,
+     "text": "Solo or squad, come as your boldest self. The winning\ncostume rides home with a $150 midnight treat chest.",
+     "family": "Manrope",
+     "size": 14,
+     "weight": 500,
+     "color": "#cfc3ea",
+     "lineHeight": 1.5
+    },
+    {
+     "kind": "button",
+     "x": 277,
+     "y": 998,
+     "w": 240,
+     "h": 52,
+     "fill": "#e8632c",
+     "label": "RSVP by Oct 24",
+     "family": "Manrope",
+     "size": 15,
+     "weight": 700,
+     "color": "#221636",
+     "radius": 26,
+     "letterSpacing": 2,
+     "upper": true
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day33-pumpkin",
+     "x": 291,
+     "y": 132,
+     "w": 212,
+     "h": 212,
+     "cleanCard": true
+    },
+    {
+     "asset": "il-day32-frankenstein",
+     "x": 100,
+     "y": 834,
+     "w": 104,
+     "h": 106,
+     "cleanCard": true
+    }
+   ]
+  }
+ ],
+ "rank": 1
+}

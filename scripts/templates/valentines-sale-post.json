@@ -1,0 +1,307 @@
+{
+ "id": "valentines-sale-post",
+ "title": "Valentine's Sale Post",
+ "categories": [
+  "marketing",
+  "social"
+ ],
+ "tags": [
+  "valentines",
+  "sale",
+  "instagram",
+  "promo",
+  "love"
+ ],
+ "styleTags": [
+  "romantic",
+  "warm"
+ ],
+ "size": [
+  1080,
+  1080
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Playfair Display",
+   "weight": 700
+  },
+  {
+   "role": "body",
+   "family": "DM Sans",
+   "weight": 500
+  },
+  {
+   "role": "script",
+   "family": "Caveat",
+   "weight": 600
+  },
+  {
+   "role": "mono",
+   "family": "Space Mono",
+   "weight": 700
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Offer line",
+   "hint": "What's on sale and the discount, one or two short lines"
+  },
+  {
+   "node": "p0-n10",
+   "kind": "text",
+   "label": "Discount code",
+   "hint": "The promo code customers enter at checkout, e.g. XOXO25"
+  },
+  {
+   "node": "p0-n11-label",
+   "kind": "text",
+   "label": "Button label",
+   "hint": "Call to action, 1-3 words"
+  },
+  {
+   "node": "p0-n13",
+   "kind": "text",
+   "label": "Brand name",
+   "hint": "Your shop or brand name"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Sale post",
+   "bg": "#fdf1ea",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 760,
+     "y": -220,
+     "w": 560,
+     "h": 560,
+     "fill": "#f9ddd2",
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 630,
+     "y": 600,
+     "w": 430,
+     "h": 430,
+     "fill": "#f9ddd2"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 132,
+     "w": 600,
+     "h": 24,
+     "family": "DM Sans",
+     "size": 19,
+     "weight": 700,
+     "color": "#9c2b43",
+     "letterSpacing": 6,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "The Valentine Edit \u00b7 Feb 7 to 14"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 192,
+     "w": 760,
+     "h": 112,
+     "family": "Playfair Display",
+     "size": 100,
+     "weight": 700,
+     "color": "#46141f",
+     "lineHeight": 1.05,
+     "text": "Love is in"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 308,
+     "w": 760,
+     "h": 112,
+     "family": "Playfair Display",
+     "size": 100,
+     "weight": 700,
+     "color": "#46141f",
+     "lineHeight": 1.05,
+     "spans": [
+      {
+       "text": "the "
+      },
+      {
+       "text": "cart.",
+       "color": "#e8506b"
+      }
+     ]
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 472,
+     "w": 620,
+     "h": 78,
+     "family": "DM Sans",
+     "size": 26,
+     "weight": 500,
+     "color": "#7a5a55",
+     "lineHeight": 1.45,
+     "text": "Treat your favorite person to 25% off\nbouquets, keepsakes, and date-night sets."
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 628,
+     "w": 400,
+     "h": 100,
+     "fill": "#ffffff",
+     "stroke": "#46141f",
+     "strokeWidth": 2,
+     "radius": 20
+    },
+    {
+     "kind": "ellipse",
+     "x": 82,
+     "y": 664,
+     "w": 28,
+     "h": 28,
+     "fill": "#fdf1ea"
+    },
+    {
+     "kind": "ellipse",
+     "x": 482,
+     "y": 664,
+     "w": 28,
+     "h": 28,
+     "fill": "#fdf1ea"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 652,
+     "w": 200,
+     "h": 16,
+     "family": "DM Sans",
+     "size": 13,
+     "weight": 700,
+     "color": "#7a5a55",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Use code"
+    },
+    {
+     "kind": "text",
+     "x": 136,
+     "y": 674,
+     "w": 320,
+     "h": 36,
+     "family": "Space Mono",
+     "size": 30,
+     "weight": 700,
+     "color": "#46141f",
+     "letterSpacing": 3,
+     "lineHeight": 1.2,
+     "text": "XOXO25"
+    },
+    {
+     "kind": "button",
+     "x": 96,
+     "y": 784,
+     "w": 310,
+     "h": 92,
+     "fill": "#9c2b43",
+     "label": "Shop the sale",
+     "family": "DM Sans",
+     "size": 26,
+     "weight": 700,
+     "color": "#fff7f3",
+     "radius": 46,
+     "letterSpacing": 1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 904,
+     "w": 460,
+     "h": 22,
+     "family": "DM Sans",
+     "size": 17,
+     "weight": 500,
+     "color": "#7a5a55",
+     "lineHeight": 1.3,
+     "text": "Free shipping over $50 \u00b7 Ends Feb 14"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 990,
+     "w": 400,
+     "h": 22,
+     "family": "DM Sans",
+     "size": 18,
+     "weight": 700,
+     "color": "#46141f",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Rosette & Co."
+    },
+    {
+     "kind": "text",
+     "x": 860,
+     "y": 200,
+     "w": 140,
+     "h": 52,
+     "family": "Caveat",
+     "size": 42,
+     "weight": 600,
+     "color": "#9c2b43",
+     "lineHeight": 1.2,
+     "text": "xoxo"
+    },
+    {
+     "kind": "rect",
+     "x": 980,
+     "y": 104,
+     "w": 22,
+     "h": 22,
+     "fill": "#e8506b",
+     "rotation": 45,
+     "radius": 5
+    },
+    {
+     "kind": "ellipse",
+     "x": 920,
+     "y": 72,
+     "w": 14,
+     "h": 14,
+     "fill": "#f0a8b6"
+    },
+    {
+     "kind": "ellipse",
+     "x": 760,
+     "y": 176,
+     "w": 10,
+     "h": 10,
+     "fill": "#9c2b43"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-conversation-illustration",
+     "x": 668,
+     "y": 640,
+     "w": 350,
+     "h": 350
+    }
+   ]
+  }
+ ],
+ "rank": 20
+}

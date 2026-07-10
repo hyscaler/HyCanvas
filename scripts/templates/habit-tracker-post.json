@@ -1,0 +1,271 @@
+{
+ "id": "habit-tracker-post",
+ "title": "Monthly Habit Tracker",
+ "categories": [
+  "personal",
+  "social"
+ ],
+ "tags": [
+  "habits",
+  "tracker",
+  "wellness",
+  "monthly",
+  "routine"
+ ],
+ "styleTags": [
+  "clean",
+  "motivating"
+ ],
+ "size": [
+  1080,
+  1350
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Poppins",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Nunito",
+   "weight": 600
+  },
+  {
+   "role": "script",
+   "family": "Caveat",
+   "weight": 600
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n2",
+   "kind": "text",
+   "label": "Headline",
+   "hint": "The month's theme, e.g. Tiny habits, big month."
+  },
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Habit one",
+   "hint": "Your first habit"
+  },
+  {
+   "node": "p0-n15",
+   "kind": "text",
+   "label": "Motto",
+   "hint": "A motivating one-liner"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Tracker",
+   "bg": "#eef3fb",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": -150,
+     "y": -150,
+     "w": 400,
+     "h": 400,
+     "fill": "#dde9f9",
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 90,
+     "y": 96,
+     "w": 600,
+     "h": 26,
+     "text": "August reset",
+     "family": "Nunito",
+     "size": 20,
+     "weight": 700,
+     "color": "#2b9cf2",
+     "letterSpacing": 5,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 90,
+     "y": 142,
+     "w": 820,
+     "h": 170,
+     "text": "Tiny habits, big month.",
+     "family": "Poppins",
+     "size": 68,
+     "weight": 800,
+     "color": "#1e2c46",
+     "lineHeight": 1.12
+    },
+    {
+     "kind": "rect",
+     "x": 90,
+     "y": 370,
+     "w": 900,
+     "h": 96,
+     "fill": "#ffffff",
+     "radius": 20
+    },
+    {
+     "kind": "ellipse",
+     "x": 122,
+     "y": 398,
+     "w": 40,
+     "h": 40,
+     "fill": "#eef3fb",
+     "stroke": "#2b9cf2",
+     "strokeWidth": 2
+    },
+    {
+     "kind": "text",
+     "x": 190,
+     "y": 398,
+     "w": 640,
+     "h": 40,
+     "text": "Drink two liters of water",
+     "family": "Nunito",
+     "size": 26,
+     "weight": 700,
+     "color": "#1e2c46",
+     "vAlign": "middle"
+    },
+    {
+     "kind": "rect",
+     "x": 90,
+     "y": 490,
+     "w": 900,
+     "h": 96,
+     "fill": "#ffffff",
+     "radius": 20
+    },
+    {
+     "kind": "ellipse",
+     "x": 122,
+     "y": 518,
+     "w": 40,
+     "h": 40,
+     "fill": "#eef3fb",
+     "stroke": "#2b9cf2",
+     "strokeWidth": 2
+    },
+    {
+     "kind": "text",
+     "x": 190,
+     "y": 518,
+     "w": 640,
+     "h": 40,
+     "text": "Move for twenty minutes",
+     "family": "Nunito",
+     "size": 26,
+     "weight": 700,
+     "color": "#1e2c46",
+     "vAlign": "middle"
+    },
+    {
+     "kind": "rect",
+     "x": 90,
+     "y": 610,
+     "w": 900,
+     "h": 96,
+     "fill": "#ffffff",
+     "radius": 20
+    },
+    {
+     "kind": "ellipse",
+     "x": 122,
+     "y": 638,
+     "w": 40,
+     "h": 40,
+     "fill": "#eef3fb",
+     "stroke": "#2b9cf2",
+     "strokeWidth": 2
+    },
+    {
+     "kind": "text",
+     "x": 190,
+     "y": 638,
+     "w": 640,
+     "h": 40,
+     "text": "Read ten pages",
+     "family": "Nunito",
+     "size": 26,
+     "weight": 700,
+     "color": "#1e2c46",
+     "vAlign": "middle"
+    },
+    {
+     "kind": "rect",
+     "x": 90,
+     "y": 730,
+     "w": 900,
+     "h": 96,
+     "fill": "#ffffff",
+     "radius": 20
+    },
+    {
+     "kind": "ellipse",
+     "x": 122,
+     "y": 758,
+     "w": 40,
+     "h": 40,
+     "fill": "#eef3fb",
+     "stroke": "#2b9cf2",
+     "strokeWidth": 2
+    },
+    {
+     "kind": "text",
+     "x": 190,
+     "y": 758,
+     "w": 640,
+     "h": 40,
+     "text": "Lights out by eleven",
+     "family": "Nunito",
+     "size": 26,
+     "weight": 700,
+     "color": "#1e2c46",
+     "vAlign": "middle"
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 886,
+     "w": 840,
+     "h": 60,
+     "text": "Small steps, kept daily, beat big plans kept never.",
+     "family": "Caveat",
+     "size": 40,
+     "weight": 600,
+     "color": "#2b9cf2",
+     "align": "center"
+    },
+    {
+     "kind": "button",
+     "x": 90,
+     "y": 1200,
+     "w": 300,
+     "h": 64,
+     "fill": "#1e2c46",
+     "label": "@resetclub",
+     "family": "Nunito",
+     "size": 20,
+     "weight": 700,
+     "color": "#ffffff",
+     "radius": 32
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-103-gym-time",
+     "x": 620,
+     "y": 980,
+     "w": 380,
+     "h": 330,
+     "cleanCard": true
+    }
+   ]
+  }
+ ],
+ "rank": 20
+}

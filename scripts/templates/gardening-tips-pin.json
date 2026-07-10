@@ -1,0 +1,257 @@
+{
+ "id": "gardening-tips-pin",
+ "title": "Beginner Gardening Tips",
+ "categories": [
+  "personal",
+  "social"
+ ],
+ "tags": [
+  "gardening",
+  "plants",
+  "tips",
+  "pinterest",
+  "beginner"
+ ],
+ "styleTags": [
+  "fresh",
+  "editorial"
+ ],
+ "size": [
+  1000,
+  1500
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Playfair Display",
+   "weight": 700
+  },
+  {
+   "role": "body",
+   "family": "DM Sans",
+   "weight": 500
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n2",
+   "kind": "text",
+   "label": "Headline",
+   "hint": "The promise, e.g. Keep your first plants alive."
+  },
+  {
+   "node": "p0-n4",
+   "kind": "text",
+   "label": "Tip one",
+   "hint": "Your most important tip"
+  },
+  {
+   "node": "p0-n12",
+   "kind": "text",
+   "label": "Save prompt",
+   "hint": "Why to save this pin"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Pin",
+   "bg": "#f4f7ef",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": -140,
+     "y": 1140,
+     "w": 380,
+     "h": 380,
+     "fill": "#e4ecdb",
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 88,
+     "w": 840,
+     "h": 24,
+     "text": "The Potting Shed \u00b7 Beginner Series",
+     "family": "DM Sans",
+     "size": 18,
+     "weight": 700,
+     "color": "#4a7c59",
+     "letterSpacing": 4,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 130,
+     "w": 840,
+     "h": 180,
+     "text": "Keep your first plants alive.",
+     "family": "Playfair Display",
+     "size": 72,
+     "weight": 700,
+     "color": "#253226",
+     "lineHeight": 1.12
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 382,
+     "w": 70,
+     "h": 52,
+     "text": "01",
+     "family": "Playfair Display",
+     "size": 40,
+     "weight": 700,
+     "color": "#d9822b"
+    },
+    {
+     "kind": "text",
+     "x": 170,
+     "y": 388,
+     "w": 660,
+     "h": 66,
+     "text": "Water when the top inch of soil is dry, not on a schedule.",
+     "family": "DM Sans",
+     "size": 24,
+     "weight": 500,
+     "color": "#253226",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 502,
+     "w": 70,
+     "h": 52,
+     "text": "02",
+     "family": "Playfair Display",
+     "size": 40,
+     "weight": 700,
+     "color": "#d9822b"
+    },
+    {
+     "kind": "text",
+     "x": 170,
+     "y": 508,
+     "w": 660,
+     "h": 66,
+     "text": "Sunlight first: match the plant to the window you have.",
+     "family": "DM Sans",
+     "size": 24,
+     "weight": 500,
+     "color": "#253226",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 622,
+     "w": 70,
+     "h": 52,
+     "text": "03",
+     "family": "Playfair Display",
+     "size": 40,
+     "weight": 700,
+     "color": "#d9822b"
+    },
+    {
+     "kind": "text",
+     "x": 170,
+     "y": 628,
+     "w": 660,
+     "h": 66,
+     "text": "Pots need drainage holes. No exceptions.",
+     "family": "DM Sans",
+     "size": 24,
+     "weight": 500,
+     "color": "#253226",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 742,
+     "w": 70,
+     "h": 52,
+     "text": "04",
+     "family": "Playfair Display",
+     "size": 40,
+     "weight": 700,
+     "color": "#d9822b"
+    },
+    {
+     "kind": "text",
+     "x": 170,
+     "y": 748,
+     "w": 660,
+     "h": 66,
+     "text": "Repot once a year, one size up at a time.",
+     "family": "DM Sans",
+     "size": 24,
+     "weight": 500,
+     "color": "#253226",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 1320,
+     "w": 1000,
+     "h": 180,
+     "fill": "#253226"
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 1372,
+     "w": 520,
+     "h": 36,
+     "text": "Save this pin for spring",
+     "family": "DM Sans",
+     "size": 26,
+     "weight": 700,
+     "color": "#f4f7ef"
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 1418,
+     "w": 520,
+     "h": 26,
+     "text": "@thepottingshed \u00b7 new guides weekly",
+     "family": "DM Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#b8c8b4"
+    },
+    {
+     "kind": "button",
+     "x": 760,
+     "y": 1364,
+     "w": 160,
+     "h": 72,
+     "fill": "#d9822b",
+     "label": "Save",
+     "family": "DM Sans",
+     "size": 20,
+     "weight": 700,
+     "color": "#ffffff",
+     "radius": 36
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day53-farm",
+     "x": 560,
+     "y": 860,
+     "w": 380,
+     "h": 330,
+     "cleanCard": true
+    }
+   ]
+  }
+ ],
+ "rank": 20
+}

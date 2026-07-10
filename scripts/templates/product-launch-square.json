@@ -1,35 +1,192 @@
 {
-  "id": "product-launch-square",
-  "title": "Product Launch",
-  "categories": ["social", "marketing"],
-  "tags": ["launch", "product", "bold"],
-  "styleTags": ["bold", "modern"],
-  "size": [1080, 1080],
-  "typography": [
-    { "role": "heading", "family": "Poppins", "weight": 800 },
-    { "role": "body", "family": "Inter", "weight": 400 }
-  ],
-  "pages": [
+ "id": "product-launch-square",
+ "title": "Product Launch",
+ "categories": [
+  "social",
+  "marketing"
+ ],
+ "tags": [
+  "launch",
+  "product",
+  "bold"
+ ],
+ "styleTags": [
+  "bold",
+  "modern"
+ ],
+ "size": [
+  1080,
+  1080
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Poppins",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Inter",
+   "weight": 400
+  }
+ ],
+ "pages": [
+  {
+   "name": "Launch",
+   "bg": "#111827",
+   "nodes": [
     {
-      "name": "Launch",
-      "bg": "#111827",
-      "nodes": [
-        { "kind": "rect", "x": 120, "y": 120, "w": 840, "h": 350, "radius": 32, "fill": { "angle": 120, "stops": [["#F59E0B", 0], ["#EF4444", 1]] } },
-        { "kind": "ellipse", "x": 600, "y": 145, "w": 300, "h": 300, "fill": "#FFFFFF", "opacity": 0.18 },
-        { "kind": "ellipse", "x": 625, "y": 170, "w": 250, "h": 250, "fill": "#FFFFFF" },
-        { "kind": "text", "x": 180, "y": 240, "w": 380, "h": 34, "text": "Just launched", "family": "Poppins", "size": 26, "weight": 700, "color": "#111827", "letterSpacing": 6, "upper": true, "lineHeight": 1.2 },
-        { "kind": "button", "x": 180, "y": 296, "w": 250, "h": 52, "radius": 26, "fill": "#111827", "label": "Ships Aug 15", "color": "#FFFFFF", "family": "Inter", "size": 23, "weight": 600 },
-        { "kind": "text", "x": 120, "y": 526, "w": 840, "h": 230, "text": "The Aero\nWireless 2", "family": "Poppins", "size": 100, "weight": 800, "color": "#FFFFFF", "lineHeight": 1.06 },
-        { "kind": "text", "x": 120, "y": 776, "w": 760, "h": 42, "text": "40-hour battery. Studio sound. Featherlight.", "family": "Inter", "size": 30, "weight": 400, "color": "#9CA3AF", "lineHeight": 1.3 },
-        { "kind": "button", "x": 120, "y": 868, "w": 320, "h": 92, "fill": "#F59E0B", "label": "Pre-order", "color": "#111827", "family": "Poppins", "size": 28, "weight": 700, "letterSpacing": 1 }
+     "kind": "rect",
+     "x": 120,
+     "y": 120,
+     "w": 840,
+     "h": 350,
+     "radius": 32,
+     "fill": {
+      "angle": 120,
+      "stops": [
+       [
+        "#F59E0B",
+        0
+       ],
+       [
+        "#EF4444",
+        1
+       ]
       ]
+     }
+    },
+    {
+     "kind": "ellipse",
+     "x": 600,
+     "y": 145,
+     "w": 300,
+     "h": 300,
+     "fill": "#FFFFFF",
+     "opacity": 0.18
+    },
+    {
+     "kind": "ellipse",
+     "x": 625,
+     "y": 170,
+     "w": 250,
+     "h": 250,
+     "fill": "#FFFFFF"
+    },
+    {
+     "kind": "text",
+     "x": 180,
+     "y": 240,
+     "w": 380,
+     "h": 34,
+     "text": "Just launched",
+     "family": "Poppins",
+     "size": 26,
+     "weight": 700,
+     "color": "#111827",
+     "letterSpacing": 6,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "button",
+     "x": 180,
+     "y": 296,
+     "w": 250,
+     "h": 52,
+     "radius": 26,
+     "fill": "#111827",
+     "label": "Ships Aug 15",
+     "color": "#FFFFFF",
+     "family": "Inter",
+     "size": 23,
+     "weight": 600
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 526,
+     "w": 840,
+     "h": 230,
+     "text": "The Aero\nWireless 2",
+     "family": "Poppins",
+     "size": 100,
+     "weight": 800,
+     "color": "#FFFFFF",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 776,
+     "w": 760,
+     "h": 42,
+     "text": "40-hour battery. Studio sound. Featherlight.",
+     "family": "Inter",
+     "size": 30,
+     "weight": 400,
+     "color": "#9CA3AF",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 120,
+     "y": 868,
+     "w": 320,
+     "h": 92,
+     "fill": "#F59E0B",
+     "label": "Pre-order",
+     "color": "#111827",
+     "family": "Poppins",
+     "size": 28,
+     "weight": 700,
+     "letterSpacing": 1
     }
-  ],
-  "fillable": [
-    { "node": "p0-n2", "kind": "image", "label": "Product photo", "hint": "Drop the product shot into the circle" },
-    { "node": "p0-n4-label", "kind": "text", "label": "Launch date", "hint": "Ship or release date, e.g. Ships Aug 15" },
-    { "node": "p0-n5", "kind": "text", "label": "Product name", "hint": "The product being launched" },
-    { "node": "p0-n6", "kind": "text", "label": "Feature line", "hint": "Three short benefits separated by periods" },
-    { "node": "p0-n7-label", "kind": "text", "label": "Button label", "hint": "Call to action, 1-2 words" }
-  ]
+   ],
+   "illustrations": [
+    {
+     "asset": "la-free-svg-illustration-rocket",
+     "x": 700,
+     "y": 830,
+     "w": 280,
+     "h": 230
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n2",
+   "kind": "image",
+   "label": "Product photo",
+   "hint": "Drop the product shot into the circle"
+  },
+  {
+   "node": "p0-n4-label",
+   "kind": "text",
+   "label": "Launch date",
+   "hint": "Ship or release date, e.g. Ships Aug 15"
+  },
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Product name",
+   "hint": "The product being launched"
+  },
+  {
+   "node": "p0-n6",
+   "kind": "text",
+   "label": "Feature line",
+   "hint": "Three short benefits separated by periods"
+  },
+  {
+   "node": "p0-n7-label",
+   "kind": "text",
+   "label": "Button label",
+   "hint": "Call to action, 1-2 words"
+  }
+ ],
+ "version": 2,
+ "updated": "2026-07-10T00:00:00.000Z",
+ "rank": 20
 }

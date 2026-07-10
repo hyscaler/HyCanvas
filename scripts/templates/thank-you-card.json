@@ -1,0 +1,166 @@
+{
+ "id": "thank-you-card",
+ "title": "Warm Thank You Card",
+ "categories": [
+  "personal",
+  "print"
+ ],
+ "tags": [
+  "thank you",
+  "card",
+  "gratitude",
+  "note",
+  "print"
+ ],
+ "styleTags": [
+  "warm",
+  "classic"
+ ],
+ "size": [
+  1050,
+  750
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Playfair Display",
+   "weight": 700
+  },
+  {
+   "role": "body",
+   "family": "Lato",
+   "weight": 400
+  },
+  {
+   "role": "script",
+   "family": "Caveat",
+   "weight": 600
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Occasion line",
+   "hint": "What you are thankful for, e.g. for celebrating with us"
+  },
+  {
+   "node": "p0-n4",
+   "kind": "text",
+   "label": "Message",
+   "hint": "Two warm sentences in your own words"
+  },
+  {
+   "node": "p0-n6",
+   "kind": "text",
+   "label": "Signature",
+   "hint": "Who the card is from"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Card",
+   "bg": "#fbf5ee",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 40,
+     "y": 40,
+     "w": 970,
+     "h": 670,
+     "fill": "#fbf5ee",
+     "stroke": "#d8c3ae",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 125,
+     "y": 210,
+     "w": 800,
+     "h": 24,
+     "text": "With gratitude",
+     "family": "Lato",
+     "size": 16,
+     "weight": 600,
+     "color": "#d16b4e",
+     "align": "center",
+     "letterSpacing": 6,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 125,
+     "y": 252,
+     "w": 800,
+     "h": 120,
+     "text": "Thank you",
+     "family": "Playfair Display",
+     "size": 96,
+     "weight": 700,
+     "color": "#4a3728",
+     "align": "center",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 125,
+     "y": 392,
+     "w": 800,
+     "h": 56,
+     "text": "for celebrating with us",
+     "family": "Caveat",
+     "size": 40,
+     "weight": 600,
+     "color": "#b98a5a",
+     "align": "center"
+    },
+    {
+     "kind": "text",
+     "x": 225,
+     "y": 480,
+     "w": 600,
+     "h": 66,
+     "text": "Your kindness means more than you know. We are so lucky to have you in our corner.",
+     "family": "Lato",
+     "size": 20,
+     "weight": 400,
+     "color": "#6f5b49",
+     "align": "center",
+     "lineHeight": 1.6
+    },
+    {
+     "kind": "rect",
+     "x": 425,
+     "y": 600,
+     "w": 200,
+     "h": 2,
+     "fill": "#d8c3ae"
+    },
+    {
+     "kind": "text",
+     "x": 325,
+     "y": 618,
+     "w": 400,
+     "h": 44,
+     "text": "The Alvarez Family",
+     "family": "Caveat",
+     "size": 30,
+     "weight": 600,
+     "color": "#4a3728",
+     "align": "center"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-small-character-illustrations",
+     "x": 415,
+     "y": 78,
+     "w": 220,
+     "h": 110
+    }
+   ]
+  }
+ ],
+ "rank": 20
+}

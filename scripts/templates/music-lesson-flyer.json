@@ -1,0 +1,201 @@
+{
+ "id": "music-lesson-flyer",
+ "title": "Music Lessons Flyer",
+ "categories": [
+  "education",
+  "marketing"
+ ],
+ "tags": [
+  "music",
+  "lessons",
+  "piano",
+  "guitar",
+  "studio"
+ ],
+ "styleTags": [
+  "friendly",
+  "bright"
+ ],
+ "size": [
+  794,
+  1123
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Poppins",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "DM Sans",
+   "weight": 500
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n2",
+   "kind": "text",
+   "label": "Headline",
+   "hint": "The promise, e.g. Play your first song in four weeks."
+  },
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Offer line",
+   "hint": "Instruments, ages, class style"
+  },
+  {
+   "node": "p0-n9",
+   "kind": "text",
+   "label": "Contact line",
+   "hint": "Booking site and address"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Flyer",
+   "bg": "#fdf3f5",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 560,
+     "y": -120,
+     "w": 360,
+     "h": 360,
+     "fill": "#fbe0e8",
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 84,
+     "w": 560,
+     "h": 22,
+     "text": "Norte Studio \u00b7 Music Lessons",
+     "family": "DM Sans",
+     "size": 16,
+     "weight": 700,
+     "color": "#f72d5c",
+     "letterSpacing": 4,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 124,
+     "w": 580,
+     "h": 170,
+     "text": "Play your first song in four weeks.",
+     "family": "Poppins",
+     "size": 54,
+     "weight": 800,
+     "color": "#33104b",
+     "lineHeight": 1.15
+    },
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 322,
+     "w": 540,
+     "h": 62,
+     "text": "Piano, guitar, and voice \u00b7 ages 6 to 96 \u00b7 patient teachers, tiny class sizes.",
+     "family": "DM Sans",
+     "size": 20,
+     "weight": 500,
+     "color": "#6b5a76",
+     "lineHeight": 1.5
+    },
+    {
+     "kind": "button",
+     "x": 64,
+     "y": 424,
+     "w": 260,
+     "h": 64,
+     "fill": "#f72d5c",
+     "label": "First lesson free",
+     "family": "DM Sans",
+     "size": 20,
+     "weight": 700,
+     "color": "#ffffff",
+     "radius": 32
+    },
+    {
+     "kind": "text",
+     "x": 350,
+     "y": 440,
+     "w": 300,
+     "h": 30,
+     "text": "Fall enrollment open now",
+     "family": "DM Sans",
+     "size": 18,
+     "weight": 600,
+     "color": "#4c005f"
+    },
+    {
+     "kind": "rect",
+     "x": 64,
+     "y": 540,
+     "w": 666,
+     "h": 300,
+     "fill": "#ffffff",
+     "radius": 24,
+     "stroke": "#f3d7de",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 100,
+     "y": 580,
+     "w": 300,
+     "h": 24,
+     "text": "How it works",
+     "family": "DM Sans",
+     "size": 16,
+     "weight": 700,
+     "color": "#f72d5c",
+     "letterSpacing": 4,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 100,
+     "y": 622,
+     "w": 580,
+     "h": 190,
+     "text": "01 \u00b7 Meet your teacher and pick a song\n02 \u00b7 Four 45-minute lessons, one each week\n03 \u00b7 Play it live at our studio showcase",
+     "family": "DM Sans",
+     "size": 22,
+     "weight": 500,
+     "color": "#33104b",
+     "lineHeight": 1.8
+    },
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 1010,
+     "w": 340,
+     "h": 52,
+     "text": "nortestudio.music\n22 Alder Lane, Asheville",
+     "family": "DM Sans",
+     "size": 17,
+     "weight": 500,
+     "color": "#6b5a76",
+     "lineHeight": 1.5
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day1-ipod",
+     "x": 470,
+     "y": 870,
+     "w": 260,
+     "h": 220,
+     "cleanCard": true
+    }
+   ]
+  }
+ ],
+ "rank": 20
+}

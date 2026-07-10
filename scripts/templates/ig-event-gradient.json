@@ -185,6 +185,16 @@
      "color": "#FFFFFF",
      "opacity": 0.85
     }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-conversation-illustration",
+     "x": 670,
+     "y": 528,
+     "w": 302,
+     "h": 410,
+     "position": "after:ig-event-gradient-p0-n2"
+    }
    ]
   }
  ],
@@ -225,5 +235,8 @@
    "label": "CTA",
    "hint": "Call to action, e.g. RSVP free"
   }
- ]
+ ],
+ "version": 2,
+ "updated": "2026-07-10T00:00:00.000Z",
+ "rank": 20
 }

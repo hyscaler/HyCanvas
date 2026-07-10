@@ -1,0 +1,287 @@
+{
+ "id": "website-launch-og",
+ "title": "Website Launch Social Card",
+ "categories": [
+  "marketing",
+  "business"
+ ],
+ "tags": [
+  "og image",
+  "launch",
+  "website",
+  "social preview",
+  "announcement"
+ ],
+ "styleTags": [
+  "modern",
+  "bold"
+ ],
+ "size": [
+  1200,
+  630
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Outfit",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Figtree",
+   "weight": 500
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n16",
+   "kind": "text",
+   "label": "Site name",
+   "hint": "Your website or product name"
+  },
+  {
+   "node": "p0-n17",
+   "kind": "text",
+   "label": "Tagline",
+   "hint": "One or two short lines on what the site offers"
+  },
+  {
+   "node": "p0-n13",
+   "kind": "text",
+   "label": "Website URL",
+   "hint": "Your site address as shown in the browser bar"
+  },
+  {
+   "node": "p0-n18-label",
+   "kind": "text",
+   "label": "Button label",
+   "hint": "Call to action, 1-3 words"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Launch card",
+   "bg": {
+    "angle": 135,
+    "stops": [
+     [
+      "#181828",
+      0
+     ],
+     [
+      "#232144",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1010,
+     "y": -150,
+     "w": 380,
+     "h": 380,
+     "fill": "#2a2950",
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": -160,
+     "y": 430,
+     "w": 360,
+     "h": 360,
+     "fill": "#2a2950",
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 150,
+     "y": 50,
+     "w": 16,
+     "h": 16,
+     "fill": "#ffcc6f",
+     "rotation": 24,
+     "radius": 4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1044,
+     "y": 572,
+     "w": 14,
+     "h": 14,
+     "fill": "#8fd8f0"
+    },
+    {
+     "kind": "rect",
+     "x": 64,
+     "y": 306,
+     "w": 12,
+     "h": 12,
+     "fill": "#fe5f57",
+     "rotation": -18,
+     "radius": 3
+    },
+    {
+     "kind": "ellipse",
+     "x": 1132,
+     "y": 210,
+     "w": 12,
+     "h": 12,
+     "fill": "#ffcc6f"
+    },
+    {
+     "kind": "rect",
+     "x": 104,
+     "y": 94,
+     "w": 1020,
+     "h": 470,
+     "fill": "#ffcc6f",
+     "radius": 22
+    },
+    {
+     "kind": "rect",
+     "x": 90,
+     "y": 80,
+     "w": 1020,
+     "h": 470,
+     "fill": "#ffffff",
+     "radius": 22
+    },
+    {
+     "kind": "rect",
+     "x": 90,
+     "y": 148,
+     "w": 1020,
+     "h": 2,
+     "fill": "#e8ecf1"
+    },
+    {
+     "kind": "ellipse",
+     "x": 126,
+     "y": 107,
+     "w": 14,
+     "h": 14,
+     "fill": "#fe5f57"
+    },
+    {
+     "kind": "ellipse",
+     "x": 150,
+     "y": 107,
+     "w": 14,
+     "h": 14,
+     "fill": "#febc2e"
+    },
+    {
+     "kind": "ellipse",
+     "x": 174,
+     "y": 107,
+     "w": 14,
+     "h": 14,
+     "fill": "#28c840"
+    },
+    {
+     "kind": "rect",
+     "x": 220,
+     "y": 96,
+     "w": 340,
+     "h": 36,
+     "fill": "#eef2f4",
+     "radius": 18
+    },
+    {
+     "kind": "text",
+     "x": 220,
+     "y": 96,
+     "w": 340,
+     "h": 36,
+     "text": "https://driftlane.studio",
+     "family": "Space Mono",
+     "size": 16,
+     "weight": 400,
+     "color": "#444e59",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 150,
+     "y": 190,
+     "w": 150,
+     "h": 36,
+     "fill": "#fff1d6",
+     "radius": 18
+    },
+    {
+     "kind": "text",
+     "x": 150,
+     "y": 190,
+     "w": 150,
+     "h": 36,
+     "text": "Now live",
+     "family": "Outfit",
+     "size": 14,
+     "weight": 700,
+     "color": "#7c5205",
+     "align": "center",
+     "vAlign": "middle",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 150,
+     "y": 248,
+     "w": 530,
+     "h": 64,
+     "text": "Driftlane Studio",
+     "family": "Outfit",
+     "size": 56,
+     "weight": 800,
+     "color": "#181828",
+     "lineHeight": 1.05
+    },
+    {
+     "kind": "text",
+     "x": 150,
+     "y": 338,
+     "w": 500,
+     "h": 64,
+     "text": "Handcrafted websites and brand kits\nfor small teams with big ideas.",
+     "family": "Figtree",
+     "size": 22,
+     "weight": 500,
+     "color": "#565d6b",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 150,
+     "y": 444,
+     "w": 250,
+     "h": 56,
+     "fill": "#181828",
+     "label": "Visit the site",
+     "family": "Outfit",
+     "size": 18,
+     "weight": 700,
+     "color": "#ffffff",
+     "radius": 28,
+     "letterSpacing": 1
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-website-work",
+     "x": 710,
+     "y": 190,
+     "w": 380,
+     "h": 320
+    }
+   ]
+  }
+ ],
+ "rank": 2
+}

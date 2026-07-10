@@ -1,0 +1,187 @@
+{
+ "id": "app-beta-invite",
+ "title": "App Beta Invite",
+ "categories": [
+  "marketing",
+  "social"
+ ],
+ "tags": [
+  "beta",
+  "app",
+  "waitlist",
+  "launch",
+  "early access"
+ ],
+ "styleTags": [
+  "dark",
+  "tech",
+  "bold"
+ ],
+ "size": [
+  1080,
+  1080
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Outfit",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Inter",
+   "weight": 500
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Headline",
+   "hint": "What users get first, e.g. Be first to try Pulse."
+  },
+  {
+   "node": "p0-n4",
+   "kind": "text",
+   "label": "Pitch",
+   "hint": "One or two lines on what the app does"
+  },
+  {
+   "node": "p0-n7",
+   "kind": "text",
+   "label": "Link line",
+   "hint": "Where to join, e.g. pulse.app/beta"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Invite",
+   "bg": {
+    "angle": 150,
+    "stops": [
+     [
+      "#0f1222",
+      0
+     ],
+     [
+      "#1c1440",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 820,
+     "y": -140,
+     "w": 420,
+     "h": 420,
+     "fill": "#241a54",
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": -160,
+     "y": 860,
+     "w": 380,
+     "h": 380,
+     "fill": "#191046",
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 96,
+     "w": 620,
+     "h": 26,
+     "text": "Early access \u00b7 limited seats",
+     "family": "Inter",
+     "size": 20,
+     "weight": 700,
+     "color": "#9e64fa",
+     "letterSpacing": 5,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 150,
+     "w": 620,
+     "h": 250,
+     "text": "Be first to try Pulse.",
+     "family": "Outfit",
+     "size": 88,
+     "weight": 800,
+     "color": "#ffffff",
+     "lineHeight": 1.05
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 430,
+     "w": 540,
+     "h": 120,
+     "text": "The focus app that plans your day around your energy. The iOS and Android beta opens this month.",
+     "family": "Inter",
+     "size": 25,
+     "weight": 500,
+     "color": "#b9b3d9",
+     "lineHeight": 1.45
+    },
+    {
+     "kind": "button",
+     "x": 80,
+     "y": 620,
+     "w": 360,
+     "h": 84,
+     "fill": "#9e64fa",
+     "label": "Join the waitlist",
+     "family": "Outfit",
+     "size": 24,
+     "weight": 700,
+     "color": "#14092b",
+     "radius": 42
+    },
+    {
+     "kind": "ellipse",
+     "x": 700,
+     "y": 120,
+     "w": 14,
+     "h": 14,
+     "fill": "#ffc53d"
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 740,
+     "w": 520,
+     "h": 26,
+     "text": "pulse.app/beta \u00b7 first 500 users",
+     "family": "Inter",
+     "size": 20,
+     "weight": 500,
+     "color": "#7f78a8"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1010,
+     "y": 560,
+     "w": 12,
+     "h": 12,
+     "fill": "#37e0b0"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-ai-hero",
+     "x": 660,
+     "y": 440,
+     "w": 360,
+     "h": 560
+    }
+   ]
+  }
+ ],
+ "rank": 20
+}

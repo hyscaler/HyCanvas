@@ -1,0 +1,442 @@
+{
+ "id": "recipe-card-post",
+ "title": "Recipe Card Post",
+ "categories": [
+  "food",
+  "social"
+ ],
+ "tags": [
+  "recipe",
+  "cooking",
+  "kitchen",
+  "food",
+  "instagram"
+ ],
+ "styleTags": [
+  "warm",
+  "cozy",
+  "editorial"
+ ],
+ "size": [
+  1080,
+  1350
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Playfair Display",
+   "weight": 700
+  },
+  {
+   "role": "body",
+   "family": "Nunito",
+   "weight": 600
+  },
+  {
+   "role": "script",
+   "family": "Caveat",
+   "weight": 600
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n4",
+   "kind": "text",
+   "label": "Dish name",
+   "hint": "Your recipe's name, e.g. Roasted Tomato & White Bean Stew"
+  },
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Tagline",
+   "hint": "A short handwritten line about the dish, e.g. the coziest one-pot dinner we know"
+  },
+  {
+   "node": "p0-n7",
+   "kind": "text",
+   "label": "Time & servings",
+   "hint": "Prep and cook time plus servings, e.g. Prep 15 min \u00b7 Cook 30 min \u00b7 Serves 4"
+  },
+  {
+   "node": "p0-n24",
+   "kind": "text",
+   "label": "Social handle",
+   "hint": "Your kitchen or food account handle"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Recipe card",
+   "bg": "#f2e7d0",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 40,
+     "y": 40,
+     "w": 1000,
+     "h": 1270,
+     "fill": "#fbf4e6",
+     "stroke": "#e3d0ac",
+     "strokeWidth": 2,
+     "radius": 20
+    },
+    {
+     "kind": "rect",
+     "x": 268,
+     "y": 109,
+     "w": 9,
+     "h": 9,
+     "fill": "#b7503e",
+     "radius": 1,
+     "rotation": 45
+    },
+    {
+     "kind": "rect",
+     "x": 803,
+     "y": 109,
+     "w": 9,
+     "h": 9,
+     "fill": "#b7503e",
+     "radius": 1,
+     "rotation": 45
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 102,
+     "w": 800,
+     "h": 22,
+     "family": "Nunito",
+     "size": 15,
+     "weight": 800,
+     "color": "#b7503e",
+     "align": "center",
+     "letterSpacing": 5,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "The Sunday Table \u00b7 Recipe No. 07"
+    },
+    {
+     "kind": "text",
+     "x": 84,
+     "y": 142,
+     "w": 912,
+     "h": 178,
+     "family": "Playfair Display",
+     "size": 80,
+     "weight": 700,
+     "color": "#362a20",
+     "align": "center",
+     "lineHeight": 1.06,
+     "text": "Roasted Tomato\n& White Bean Stew"
+    },
+    {
+     "kind": "text",
+     "x": 190,
+     "y": 334,
+     "w": 700,
+     "h": 46,
+     "family": "Caveat",
+     "size": 36,
+     "weight": 600,
+     "color": "#7a6752",
+     "align": "center",
+     "lineHeight": 1.2,
+     "text": "the coziest one-pot dinner we know"
+    },
+    {
+     "kind": "rect",
+     "x": 290,
+     "y": 404,
+     "w": 500,
+     "h": 54,
+     "fill": "#b7503e",
+     "radius": 27
+    },
+    {
+     "kind": "text",
+     "x": 290,
+     "y": 404,
+     "w": 500,
+     "h": 54,
+     "family": "Nunito",
+     "size": 15,
+     "weight": 800,
+     "color": "#fdf6ea",
+     "align": "center",
+     "vAlign": "middle",
+     "letterSpacing": 2.5,
+     "upper": true,
+     "text": "Prep 15 min \u00b7 Cook 30 min \u00b7 Serves 4"
+    },
+    {
+     "kind": "rect",
+     "x": 84,
+     "y": 500,
+     "w": 912,
+     "h": 470,
+     "fill": "#fffdf6",
+     "stroke": "#eddcbe",
+     "strokeWidth": 2,
+     "radius": 28
+    },
+    {
+     "kind": "text",
+     "x": 148,
+     "y": 548,
+     "w": 440,
+     "h": 24,
+     "family": "Nunito",
+     "size": 16,
+     "weight": 800,
+     "color": "#b7503e",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "What you'll need"
+    },
+    {
+     "kind": "text",
+     "x": 596,
+     "y": 538,
+     "w": 336,
+     "h": 40,
+     "family": "Caveat",
+     "size": 30,
+     "weight": 600,
+     "color": "#8a765c",
+     "align": "right",
+     "lineHeight": 1.2,
+     "text": "just five things!"
+    },
+    {
+     "kind": "rect",
+     "x": 148,
+     "y": 596,
+     "w": 784,
+     "h": 2,
+     "fill": "#f0e2c8"
+    },
+    {
+     "kind": "rect",
+     "x": 148,
+     "y": 640,
+     "w": 10,
+     "h": 10,
+     "fill": "#b7503e",
+     "radius": 1,
+     "rotation": 45
+    },
+    {
+     "kind": "text",
+     "x": 178,
+     "y": 634,
+     "w": 520,
+     "h": 32,
+     "family": "Nunito",
+     "size": 22,
+     "weight": 600,
+     "color": "#3a2c1f",
+     "lineHeight": 1.3,
+     "spans": [
+      {
+       "text": "400 g ",
+       "color": "#b7503e",
+       "weight": 800
+      },
+      {
+       "text": "cherry tomatoes, halved"
+      }
+     ]
+    },
+    {
+     "kind": "rect",
+     "x": 148,
+     "y": 702,
+     "w": 10,
+     "h": 10,
+     "fill": "#b7503e",
+     "radius": 1,
+     "rotation": 45
+    },
+    {
+     "kind": "text",
+     "x": 178,
+     "y": 696,
+     "w": 520,
+     "h": 32,
+     "family": "Nunito",
+     "size": 22,
+     "weight": 600,
+     "color": "#3a2c1f",
+     "lineHeight": 1.3,
+     "spans": [
+      {
+       "text": "2 cans ",
+       "color": "#b7503e",
+       "weight": 800
+      },
+      {
+       "text": "white beans, rinsed"
+      }
+     ]
+    },
+    {
+     "kind": "rect",
+     "x": 148,
+     "y": 764,
+     "w": 10,
+     "h": 10,
+     "fill": "#b7503e",
+     "radius": 1,
+     "rotation": 45
+    },
+    {
+     "kind": "text",
+     "x": 178,
+     "y": 758,
+     "w": 520,
+     "h": 32,
+     "family": "Nunito",
+     "size": 22,
+     "weight": 600,
+     "color": "#3a2c1f",
+     "lineHeight": 1.3,
+     "spans": [
+      {
+       "text": "4 cloves ",
+       "color": "#b7503e",
+       "weight": 800
+      },
+      {
+       "text": "garlic, thinly sliced"
+      }
+     ]
+    },
+    {
+     "kind": "rect",
+     "x": 148,
+     "y": 826,
+     "w": 10,
+     "h": 10,
+     "fill": "#b7503e",
+     "radius": 1,
+     "rotation": 45
+    },
+    {
+     "kind": "text",
+     "x": 178,
+     "y": 820,
+     "w": 520,
+     "h": 32,
+     "family": "Nunito",
+     "size": 22,
+     "weight": 600,
+     "color": "#3a2c1f",
+     "lineHeight": 1.3,
+     "spans": [
+      {
+       "text": "1 bunch ",
+       "color": "#b7503e",
+       "weight": 800
+      },
+      {
+       "text": "basil, torn at the end"
+      }
+     ]
+    },
+    {
+     "kind": "rect",
+     "x": 148,
+     "y": 888,
+     "w": 10,
+     "h": 10,
+     "fill": "#b7503e",
+     "radius": 1,
+     "rotation": 45
+    },
+    {
+     "kind": "text",
+     "x": 178,
+     "y": 882,
+     "w": 520,
+     "h": 32,
+     "family": "Nunito",
+     "size": 22,
+     "weight": 600,
+     "color": "#3a2c1f",
+     "lineHeight": 1.3,
+     "spans": [
+      {
+       "text": "60 ml ",
+       "color": "#b7503e",
+       "weight": 800
+      },
+      {
+       "text": "olive oil, plus a swirl to serve"
+      }
+     ]
+    },
+    {
+     "kind": "rect",
+     "x": 84,
+     "y": 1002,
+     "w": 912,
+     "h": 288,
+     "fill": "#e7f1ea",
+     "radius": 28
+    },
+    {
+     "kind": "text",
+     "x": 580,
+     "y": 1096,
+     "w": 376,
+     "h": 44,
+     "family": "Caveat",
+     "size": 32,
+     "weight": 600,
+     "color": "#3a2c1f",
+     "align": "right",
+     "lineHeight": 1.2,
+     "text": "made for slow Sundays"
+    },
+    {
+     "kind": "text",
+     "x": 580,
+     "y": 1156,
+     "w": 376,
+     "h": 24,
+     "family": "Nunito",
+     "size": 15,
+     "weight": 800,
+     "color": "#b7503e",
+     "align": "right",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "@thesundaytable"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day59-kitchen",
+     "x": 124,
+     "y": 1032,
+     "w": 420,
+     "h": 228,
+     "cleanCard": true
+    },
+    {
+     "asset": "il-day80-tea",
+     "x": 728,
+     "y": 648,
+     "w": 184,
+     "h": 240,
+     "cleanCard": true
+    }
+   ]
+  }
+ ],
+ "rank": 20
+}

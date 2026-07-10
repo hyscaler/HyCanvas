@@ -1,0 +1,375 @@
+{
+ "id": "new-year-party-story",
+ "title": "Gilded Midnight NYE Countdown",
+ "categories": [
+  "events",
+  "social"
+ ],
+ "tags": [
+  "new year",
+  "party",
+  "countdown",
+  "instagram story",
+  "invitation"
+ ],
+ "styleTags": [
+  "elegant",
+  "dark",
+  "glamour"
+ ],
+ "size": [
+  1080,
+  1920
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Playfair Display",
+   "weight": 700
+  },
+  {
+   "role": "body",
+   "family": "Manrope",
+   "weight": 500
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n10",
+   "kind": "text",
+   "label": "Host line",
+   "hint": "Who is throwing the party, e.g. The Gilded Hour presents"
+  },
+  {
+   "node": "p0-n17",
+   "kind": "text",
+   "label": "Time line",
+   "hint": "Doors and countdown time, e.g. Doors 9 PM, countdown at midnight"
+  },
+  {
+   "node": "p0-n18",
+   "kind": "text",
+   "label": "Date line",
+   "hint": "The party date, e.g. Wednesday, December 31"
+  },
+  {
+   "node": "p0-n19",
+   "kind": "text",
+   "label": "Venue line",
+   "hint": "Venue name and address in one short line"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Countdown story",
+   "bg": {
+    "angle": 168,
+    "stops": [
+     [
+      "#1d1436",
+      0
+     ],
+     [
+      "#0a0716",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 60,
+     "y": 60,
+     "w": 960,
+     "h": 2,
+     "fill": "#c9a24b",
+     "opacity": 0.5
+    },
+    {
+     "kind": "rect",
+     "x": 60,
+     "y": 1858,
+     "w": 960,
+     "h": 2,
+     "fill": "#c9a24b",
+     "opacity": 0.5
+    },
+    {
+     "kind": "rect",
+     "x": 60,
+     "y": 60,
+     "w": 2,
+     "h": 1800,
+     "fill": "#c9a24b",
+     "opacity": 0.5
+    },
+    {
+     "kind": "rect",
+     "x": 1018,
+     "y": 60,
+     "w": 2,
+     "h": 1800,
+     "fill": "#c9a24b",
+     "opacity": 0.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 104,
+     "y": 300,
+     "w": 10,
+     "h": 10,
+     "fill": "#e3b95c"
+    },
+    {
+     "kind": "rect",
+     "x": 952,
+     "y": 248,
+     "w": 12,
+     "h": 12,
+     "fill": "#c9a24b",
+     "rotation": 24,
+     "radius": 3
+    },
+    {
+     "kind": "ellipse",
+     "x": 968,
+     "y": 568,
+     "w": 8,
+     "h": 8,
+     "fill": "#c9a24b",
+     "opacity": 0.6
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 612,
+     "w": 12,
+     "h": 12,
+     "fill": "#e3b95c",
+     "rotation": -18,
+     "radius": 3,
+     "opacity": 0.85
+    },
+    {
+     "kind": "ellipse",
+     "x": 148,
+     "y": 1168,
+     "w": 10,
+     "h": 10,
+     "fill": "#c9a24b",
+     "opacity": 0.8
+    },
+    {
+     "kind": "rect",
+     "x": 924,
+     "y": 1140,
+     "w": 12,
+     "h": 12,
+     "fill": "#e3b95c",
+     "rotation": 30,
+     "radius": 3,
+     "opacity": 0.85
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 150,
+     "w": 800,
+     "h": 30,
+     "text": "The Gilded Hour presents",
+     "family": "Manrope",
+     "size": 24,
+     "weight": 600,
+     "color": "#c9a24b",
+     "align": "center",
+     "letterSpacing": 7,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 212,
+     "w": 800,
+     "h": 96,
+     "text": "New Year's Eve",
+     "family": "Playfair Display",
+     "size": 78,
+     "weight": 700,
+     "color": "#f4ead6",
+     "align": "center",
+     "lineHeight": 1.05
+    },
+    {
+     "kind": "text",
+     "x": 190,
+     "y": 336,
+     "w": 700,
+     "h": 310,
+     "text": "2027",
+     "family": "Playfair Display",
+     "size": 300,
+     "weight": 700,
+     "color": "#e3b95c",
+     "align": "center",
+     "letterSpacing": 4,
+     "lineHeight": 1
+    },
+    {
+     "kind": "text",
+     "x": 190,
+     "y": 700,
+     "w": 700,
+     "h": 32,
+     "text": "3 \u00b7 2 \u00b7 1 \u00b7 Happy New Year",
+     "family": "Manrope",
+     "size": 24,
+     "weight": 600,
+     "color": "#bfa878",
+     "align": "center",
+     "letterSpacing": 6,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 370,
+     "y": 1251,
+     "w": 140,
+     "h": 2,
+     "fill": "#c9a24b",
+     "opacity": 0.7
+    },
+    {
+     "kind": "rect",
+     "x": 530,
+     "y": 1242,
+     "w": 20,
+     "h": 20,
+     "fill": "#e3b95c",
+     "rotation": 45
+    },
+    {
+     "kind": "rect",
+     "x": 570,
+     "y": 1251,
+     "w": 140,
+     "h": 2,
+     "fill": "#c9a24b",
+     "opacity": 0.7
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 1300,
+     "w": 800,
+     "h": 30,
+     "text": "Doors 9 PM \u00b7 Countdown at midnight",
+     "family": "Manrope",
+     "size": 22,
+     "weight": 700,
+     "color": "#c9a24b",
+     "align": "center",
+     "letterSpacing": 5,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 1352,
+     "w": 800,
+     "h": 60,
+     "text": "Wednesday, December 31",
+     "family": "Playfair Display",
+     "size": 48,
+     "weight": 700,
+     "color": "#f4ead6",
+     "align": "center",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 1434,
+     "w": 800,
+     "h": 36,
+     "text": "Gilded Hour Rooftop \u00b7 88 Mercer St, SoHo",
+     "family": "Manrope",
+     "size": 26,
+     "weight": 500,
+     "color": "#cfc3ab",
+     "align": "center",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 330,
+     "y": 1526,
+     "w": 420,
+     "h": 92,
+     "fill": "#e3b95c",
+     "label": "Reserve your glass",
+     "family": "Manrope",
+     "size": 26,
+     "weight": 700,
+     "color": "#221636",
+     "radius": 46,
+     "letterSpacing": 2,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 1682,
+     "w": 800,
+     "h": 32,
+     "text": "Black tie & sparkle \u00b7 Open bar until 11",
+     "family": "Manrope",
+     "size": 22,
+     "weight": 500,
+     "color": "#a6997f",
+     "align": "center",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 1748,
+     "w": 800,
+     "h": 26,
+     "text": "@thegildedhour \u00b7 #Midnight2027",
+     "family": "Manrope",
+     "size": 20,
+     "weight": 600,
+     "color": "#8d8069",
+     "align": "center",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day97-champagne",
+     "x": 330,
+     "y": 790,
+     "w": 380,
+     "h": 390,
+     "cleanCard": true
+    },
+    {
+     "asset": "il-day35-firework",
+     "x": 730,
+     "y": 780,
+     "w": 170,
+     "h": 200,
+     "cleanCard": true,
+     "rotation": 8
+    }
+   ]
+  }
+ ],
+ "rank": 20
+}

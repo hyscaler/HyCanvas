@@ -1,0 +1,336 @@
+{
+ "id": "baby-shower-story",
+ "title": "Sweet Baby Shower Story",
+ "categories": [
+  "events",
+  "personal"
+ ],
+ "tags": [
+  "baby shower",
+  "invitation",
+  "story",
+  "pastel",
+  "party"
+ ],
+ "styleTags": [
+  "soft",
+  "playful"
+ ],
+ "size": [
+  1080,
+  1920
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Playfair Display",
+   "weight": 700
+  },
+  {
+   "role": "body",
+   "family": "Nunito",
+   "weight": 600
+  },
+  {
+   "role": "script",
+   "family": "Caveat",
+   "weight": 600
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n10",
+   "kind": "text",
+   "label": "Guest of honor",
+   "hint": "The mama-to-be or parents being celebrated"
+  },
+  {
+   "node": "p0-n12",
+   "kind": "text",
+   "label": "Date",
+   "hint": "Day and date of the shower, e.g. Saturday, August 22nd"
+  },
+  {
+   "node": "p0-n15",
+   "kind": "text",
+   "label": "Venue",
+   "hint": "Where the shower is happening"
+  },
+  {
+   "node": "p0-n17-label",
+   "kind": "text",
+   "label": "RSVP line",
+   "hint": "Who to RSVP to and by when"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Invitation",
+   "bg": {
+    "angle": 165,
+    "stops": [
+     [
+      "#fdf7f1",
+      0
+     ],
+     [
+      "#fbe8de",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": -150,
+     "y": -150,
+     "w": 400,
+     "h": 400,
+     "fill": "#fbe3d3",
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 880,
+     "y": 1680,
+     "w": 420,
+     "h": 420,
+     "fill": "#f7d9c6",
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 150,
+     "y": 340,
+     "w": 18,
+     "h": 18,
+     "fill": "#f0cf8e"
+    },
+    {
+     "kind": "ellipse",
+     "x": 910,
+     "y": 290,
+     "w": 22,
+     "h": 22,
+     "fill": "#e5998a"
+    },
+    {
+     "kind": "ellipse",
+     "x": 205,
+     "y": 445,
+     "w": 14,
+     "h": 14,
+     "fill": "#b5cdb9"
+    },
+    {
+     "kind": "ellipse",
+     "x": 876,
+     "y": 432,
+     "w": 16,
+     "h": 16,
+     "fill": "#f0cf8e"
+    },
+    {
+     "kind": "text",
+     "x": 240,
+     "y": 500,
+     "w": 600,
+     "h": 76,
+     "text": "oh, baby!",
+     "family": "Caveat",
+     "size": 62,
+     "weight": 600,
+     "color": "#b95744",
+     "align": "center",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 90,
+     "y": 586,
+     "w": 900,
+     "h": 150,
+     "text": "Baby Shower",
+     "family": "Playfair Display",
+     "size": 128,
+     "weight": 700,
+     "color": "#4b2e42",
+     "align": "center",
+     "lineHeight": 1.05
+    },
+    {
+     "kind": "rect",
+     "x": 515,
+     "y": 772,
+     "w": 50,
+     "h": 4,
+     "fill": "#e3a292",
+     "radius": 2
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 806,
+     "w": 800,
+     "h": 32,
+     "text": "In honor of the mama-to-be",
+     "family": "Nunito",
+     "size": 24,
+     "weight": 700,
+     "color": "#b95744",
+     "align": "center",
+     "letterSpacing": 5,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 856,
+     "w": 800,
+     "h": 90,
+     "text": "Elena Hartwell",
+     "family": "Playfair Display",
+     "size": 72,
+     "weight": 700,
+     "color": "#4b2e42",
+     "align": "center",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "rect",
+     "x": 120,
+     "y": 1030,
+     "w": 840,
+     "h": 380,
+     "fill": "#ffffff",
+     "radius": 40,
+     "stroke": "#f2dbc9",
+     "strokeWidth": 2
+    },
+    {
+     "kind": "text",
+     "x": 160,
+     "y": 1092,
+     "w": 760,
+     "h": 64,
+     "text": "Saturday, August 22nd",
+     "family": "Playfair Display",
+     "size": 54,
+     "weight": 700,
+     "color": "#4b2e42",
+     "align": "center",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 160,
+     "y": 1170,
+     "w": 760,
+     "h": 36,
+     "text": "Two until five in the afternoon",
+     "family": "Nunito",
+     "size": 27,
+     "weight": 600,
+     "color": "#8a6f63",
+     "align": "center",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 515,
+     "y": 1240,
+     "w": 50,
+     "h": 3,
+     "fill": "#e8c9b8",
+     "radius": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 150,
+     "y": 1272,
+     "w": 780,
+     "h": 40,
+     "text": "The Garden Room at Willow House",
+     "family": "Nunito",
+     "size": 30,
+     "weight": 700,
+     "color": "#4b2e42",
+     "align": "center",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 150,
+     "y": 1324,
+     "w": 780,
+     "h": 34,
+     "text": "418 Meadowlark Lane \u00b7 Portland, Oregon",
+     "family": "Nunito",
+     "size": 25,
+     "weight": 500,
+     "color": "#8a6f63",
+     "align": "center",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "button",
+     "x": 280,
+     "y": 1490,
+     "w": 520,
+     "h": 92,
+     "fill": "#b95744",
+     "label": "RSVP to Anna by August 8th",
+     "family": "Nunito",
+     "size": 26,
+     "weight": 700,
+     "color": "#fff6ee",
+     "radius": 46,
+     "letterSpacing": 1
+    },
+    {
+     "kind": "text",
+     "x": 240,
+     "y": 1652,
+     "w": 600,
+     "h": 64,
+     "text": "we can't wait to meet you, little one",
+     "family": "Caveat",
+     "size": 46,
+     "weight": 600,
+     "color": "#b95744",
+     "align": "center",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "ellipse",
+     "x": 150,
+     "y": 1762,
+     "w": 20,
+     "h": 20,
+     "fill": "#e5998a"
+    },
+    {
+     "kind": "ellipse",
+     "x": 236,
+     "y": 1814,
+     "w": 14,
+     "h": 14,
+     "fill": "#f0cf8e"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day26-rainbow",
+     "x": 350,
+     "y": 170,
+     "w": 380,
+     "h": 290,
+     "cleanCard": true
+    }
+   ]
+  }
+ ],
+ "rank": 11
+}

@@ -1,0 +1,169 @@
+{
+ "id": "photography-workshop-post",
+ "title": "Photography Workshop Post",
+ "categories": [
+  "education",
+  "marketing"
+ ],
+ "tags": [
+  "photography",
+  "workshop",
+  "camera",
+  "beginner",
+  "weekend"
+ ],
+ "styleTags": [
+  "fresh",
+  "modern"
+ ],
+ "size": [
+  1080,
+  1080
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Manrope",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Inter",
+   "weight": 500
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n2",
+   "kind": "text",
+   "label": "Headline",
+   "hint": "The promise, e.g. Shoot better in one Saturday."
+  },
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Details",
+   "hint": "Who it is for and what to bring"
+  },
+  {
+   "node": "p0-n6",
+   "kind": "text",
+   "label": "Booking line",
+   "hint": "Where to reserve a seat"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Workshop",
+   "bg": "#f3f6ef",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 760,
+     "y": -160,
+     "w": 460,
+     "h": 460,
+     "fill": "#e2ecdb",
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 90,
+     "y": 96,
+     "w": 700,
+     "h": 26,
+     "text": "Golden Hour Collective",
+     "family": "Inter",
+     "size": 20,
+     "weight": 700,
+     "color": "#3f7d4e",
+     "letterSpacing": 5,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 90,
+     "y": 142,
+     "w": 800,
+     "h": 190,
+     "text": "Shoot better in one Saturday.",
+     "family": "Manrope",
+     "size": 76,
+     "weight": 800,
+     "color": "#1d2b1f",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 90,
+     "y": 372,
+     "w": 620,
+     "h": 100,
+     "text": "A hands-on photography workshop for beginners. Bring any camera, leave with photos you love.",
+     "family": "Inter",
+     "size": 24,
+     "weight": 500,
+     "color": "#52655a",
+     "lineHeight": 1.5
+    },
+    {
+     "kind": "button",
+     "x": 90,
+     "y": 520,
+     "w": 320,
+     "h": 68,
+     "fill": "#1d2b1f",
+     "label": "Sat, Oct 3 \u00b7 9 AM",
+     "family": "Inter",
+     "size": 20,
+     "weight": 700,
+     "color": "#f3f6ef",
+     "radius": 34
+    },
+    {
+     "kind": "text",
+     "x": 440,
+     "y": 538,
+     "w": 380,
+     "h": 30,
+     "text": "All levels \u00b7 12 seats",
+     "family": "Inter",
+     "size": 20,
+     "weight": 600,
+     "color": "#3f7d4e"
+    },
+    {
+     "kind": "text",
+     "x": 90,
+     "y": 650,
+     "w": 540,
+     "h": 30,
+     "text": "Reserve: goldenhour.co/workshop",
+     "family": "Inter",
+     "size": 22,
+     "weight": 600,
+     "color": "#1d2b1f"
+    },
+    {
+     "kind": "ellipse",
+     "x": 800,
+     "y": 120,
+     "w": 16,
+     "h": 16,
+     "fill": "#d97706"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-cactus",
+     "x": 700,
+     "y": 580,
+     "w": 340,
+     "h": 440
+    }
+   ]
+  }
+ ],
+ "rank": 20
+}

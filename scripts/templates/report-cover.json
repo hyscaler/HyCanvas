@@ -1,34 +1,173 @@
 {
-  "id": "report-cover",
-  "title": "Report Cover",
-  "categories": ["business", "print"],
-  "tags": ["report", "cover", "editorial", "annual"],
-  "styleTags": ["editorial", "corporate"],
-  "size": [794, 1123],
-  "typography": [
-    { "role": "heading", "family": "Poppins", "weight": 800 },
-    { "role": "body", "family": "Inter", "weight": 400 }
-  ],
-  "pages": [
+ "id": "report-cover",
+ "title": "Report Cover",
+ "categories": [
+  "business",
+  "print"
+ ],
+ "tags": [
+  "report",
+  "cover",
+  "editorial",
+  "annual"
+ ],
+ "styleTags": [
+  "editorial",
+  "corporate"
+ ],
+ "size": [
+  794,
+  1123
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Poppins",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Inter",
+   "weight": 400
+  }
+ ],
+ "pages": [
+  {
+   "name": "Cover",
+   "bg": "#1D4ED8",
+   "nodes": [
     {
-      "name": "Cover",
-      "bg": "#1D4ED8",
-      "nodes": [
-        { "kind": "ellipse", "x": 520, "y": 60, "w": 420, "h": 420, "fill": "#3B82F6", "opacity": 0.5, "bleed": true },
-        { "kind": "ellipse", "x": 640, "y": 260, "w": 300, "h": 300, "fill": "#93C5FD", "opacity": 0.3, "bleed": true },
-        { "kind": "text", "x": 64, "y": 88, "w": 666, "h": 26, "text": "Annual Report", "family": "Inter", "size": 17, "weight": 600, "color": "#BFDBFE", "letterSpacing": 4, "upper": true, "lineHeight": 1.2 },
-        { "kind": "rect", "x": 64, "y": 134, "w": 90, "h": 6, "fill": "#BFDBFE", "radius": 3 },
-        { "kind": "text", "x": 64, "y": 430, "w": 666, "h": 210, "text": "The year\nin review", "family": "Poppins", "size": 92, "weight": 800, "color": "#FFFFFF", "lineHeight": 1.08 },
-        { "kind": "text", "x": 64, "y": 676, "w": 666, "h": 38, "text": "Performance, milestones, and what comes next.", "family": "Inter", "size": 26, "weight": 400, "color": "#BFDBFE", "lineHeight": 1.3 },
-        { "kind": "rect", "x": 0, "y": 980, "w": 794, "h": 143, "fill": "#1E40AF" },
-        { "kind": "text", "x": 64, "y": 980, "w": 666, "h": 143, "text": "Brightwave Inc.  ·  2026", "family": "Inter", "size": 17, "weight": 600, "color": "#BFDBFE", "letterSpacing": 2, "vAlign": "middle", "lineHeight": 1.2 }
-      ]
+     "kind": "ellipse",
+     "x": 520,
+     "y": 60,
+     "w": 420,
+     "h": 420,
+     "fill": "#3B82F6",
+     "opacity": 0.5,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 640,
+     "y": 260,
+     "w": 300,
+     "h": 300,
+     "fill": "#93C5FD",
+     "opacity": 0.3,
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 88,
+     "w": 666,
+     "h": 26,
+     "text": "Annual Report",
+     "family": "Inter",
+     "size": 17,
+     "weight": 600,
+     "color": "#BFDBFE",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 64,
+     "y": 134,
+     "w": 90,
+     "h": 6,
+     "fill": "#BFDBFE",
+     "radius": 3
+    },
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 430,
+     "w": 666,
+     "h": 210,
+     "text": "The year\nin review",
+     "family": "Poppins",
+     "size": 92,
+     "weight": 800,
+     "color": "#FFFFFF",
+     "lineHeight": 1.08
+    },
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 676,
+     "w": 666,
+     "h": 38,
+     "text": "Performance, milestones, and what comes next.",
+     "family": "Inter",
+     "size": 26,
+     "weight": 400,
+     "color": "#BFDBFE",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 980,
+     "w": 794,
+     "h": 143,
+     "fill": "#1E40AF"
+    },
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 980,
+     "w": 666,
+     "h": 143,
+     "text": "Brightwave Inc.  \u00b7  2026",
+     "family": "Inter",
+     "size": 17,
+     "weight": 600,
+     "color": "#BFDBFE",
+     "letterSpacing": 2,
+     "vAlign": "middle",
+     "lineHeight": 1.2
     }
-  ],
-  "fillable": [
-    { "node": "p0-n2", "kind": "text", "label": "Report type", "hint": "e.g. Annual Report, Q3 Update" },
-    { "node": "p0-n4", "kind": "text", "label": "Title", "hint": "The report title, two short lines" },
-    { "node": "p0-n5", "kind": "text", "label": "Subtitle", "hint": "One line on what the report covers" },
-    { "node": "p0-n7", "kind": "text", "label": "Company and year", "hint": "Organization name and year" }
-  ]
+   ],
+   "illustrations": [
+    {
+     "asset": "la-woman-working-2",
+     "x": 440,
+     "y": 716,
+     "w": 300,
+     "h": 250
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n2",
+   "kind": "text",
+   "label": "Report type",
+   "hint": "e.g. Annual Report, Q3 Update"
+  },
+  {
+   "node": "p0-n4",
+   "kind": "text",
+   "label": "Title",
+   "hint": "The report title, two short lines"
+  },
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Subtitle",
+   "hint": "One line on what the report covers"
+  },
+  {
+   "node": "p0-n7",
+   "kind": "text",
+   "label": "Company and year",
+   "hint": "Organization name and year"
+  }
+ ],
+ "version": 2,
+ "updated": "2026-07-10T00:00:00.000Z",
+ "rank": 20
 }

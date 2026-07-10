@@ -1,0 +1,820 @@
+{
+ "id": "startup-pitch-deck",
+ "title": "Main Street Startup Pitch",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "pitch",
+  "startup",
+  "seed",
+  "investor",
+  "deck"
+ ],
+ "styleTags": [
+  "playful",
+  "bold",
+  "editorial"
+ ],
+ "size": [
+  1920,
+  1080
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Outfit",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Inter",
+   "weight": 400
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n2",
+   "kind": "text",
+   "label": "Company name",
+   "hint": "Your startup's wordmark, one word is best"
+  },
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Headline",
+   "hint": "Your one-line pitch, split across two short lines"
+  },
+  {
+   "node": "p0-n6",
+   "kind": "text",
+   "label": "Subtitle",
+   "hint": "What the company does and for whom, one or two sentences"
+  },
+  {
+   "node": "p2-n19",
+   "kind": "text",
+   "label": "The ask",
+   "hint": "Round size and what it unlocks, two short lines"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Title",
+   "bg": "#faf4ec",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1330,
+     "y": 410,
+     "w": 520,
+     "h": 520,
+     "fill": "#f9a948"
+    },
+    {
+     "kind": "rect",
+     "x": 120,
+     "y": 92,
+     "w": 28,
+     "h": 28,
+     "fill": "#ea3139",
+     "radius": 8
+    },
+    {
+     "kind": "text",
+     "x": 164,
+     "y": 90,
+     "w": 340,
+     "h": 36,
+     "family": "Outfit",
+     "size": 28,
+     "weight": 700,
+     "color": "#181828",
+     "lineHeight": 1.2,
+     "text": "Locale"
+    },
+    {
+     "kind": "rect",
+     "x": 120,
+     "y": 386,
+     "w": 64,
+     "h": 10,
+     "fill": "#ea3139",
+     "radius": 5
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 424,
+     "w": 800,
+     "h": 30,
+     "family": "Inter",
+     "size": 22,
+     "weight": 700,
+     "color": "#ea3139",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Seed round \u00b7 Summer 2026"
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 478,
+     "w": 1160,
+     "h": 230,
+     "family": "Outfit",
+     "size": 100,
+     "weight": 800,
+     "color": "#181828",
+     "lineHeight": 1.06,
+     "text": "Putting main street\nback in business."
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 766,
+     "w": 980,
+     "h": 88,
+     "family": "Inter",
+     "size": 28,
+     "weight": 400,
+     "color": "#5f5b52",
+     "lineHeight": 1.45,
+     "text": "Locale turns any neighborhood shop into a full online storefront in one afternoon. No code, no commissions."
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 954,
+     "w": 700,
+     "h": 26,
+     "family": "Inter",
+     "size": 20,
+     "weight": 500,
+     "color": "#5f5b52",
+     "lineHeight": 1.2,
+     "text": "Locale \u00b7 Seed pitch \u00b7 July 2026"
+    },
+    {
+     "kind": "text",
+     "x": 1620,
+     "y": 954,
+     "w": 180,
+     "h": 26,
+     "family": "Inter",
+     "size": 20,
+     "weight": 500,
+     "color": "#5f5b52",
+     "align": "right",
+     "lineHeight": 1.2,
+     "text": "01 / 03"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-building-3-0",
+     "x": 1280,
+     "y": 560,
+     "w": 540,
+     "h": 336
+    }
+   ]
+  },
+  {
+   "name": "Problem & solution",
+   "bg": "#faf4ec",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 0,
+     "w": 940,
+     "h": 1080,
+     "fill": "#181828"
+    },
+    {
+     "kind": "rect",
+     "x": 937,
+     "y": 0,
+     "w": 6,
+     "h": 1080,
+     "fill": "#ea3139"
+    },
+    {
+     "kind": "rect",
+     "x": 120,
+     "y": 132,
+     "w": 64,
+     "h": 10,
+     "fill": "#f9a948",
+     "radius": 5
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 170,
+     "w": 500,
+     "h": 28,
+     "family": "Inter",
+     "size": 22,
+     "weight": 700,
+     "color": "#f9a948",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "The problem"
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 226,
+     "w": 700,
+     "h": 210,
+     "family": "Outfit",
+     "size": 58,
+     "weight": 800,
+     "color": "#faf4ec",
+     "lineHeight": 1.12,
+     "text": "Selling online is\nstill built for\nbig brands."
+    },
+    {
+     "kind": "rect",
+     "x": 120,
+     "y": 511,
+     "w": 14,
+     "h": 14,
+     "fill": "#f9a948",
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 158,
+     "y": 500,
+     "w": 620,
+     "h": 76,
+     "family": "Inter",
+     "size": 24,
+     "weight": 400,
+     "color": "#b6b3c4",
+     "lineHeight": 1.5,
+     "text": "7 in 10 neighborhood shops still can't take an order online."
+    },
+    {
+     "kind": "rect",
+     "x": 120,
+     "y": 627,
+     "w": 14,
+     "h": 14,
+     "fill": "#f9a948",
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 158,
+     "y": 616,
+     "w": 620,
+     "h": 76,
+     "family": "Inter",
+     "size": 24,
+     "weight": 400,
+     "color": "#b6b3c4",
+     "lineHeight": 1.5,
+     "text": "Store builders demand weeks of setup, plugins, and fees."
+    },
+    {
+     "kind": "rect",
+     "x": 120,
+     "y": 743,
+     "w": 14,
+     "h": 14,
+     "fill": "#f9a948",
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 158,
+     "y": 732,
+     "w": 620,
+     "h": 76,
+     "family": "Inter",
+     "size": 24,
+     "weight": 400,
+     "color": "#b6b3c4",
+     "lineHeight": 1.5,
+     "text": "Marketplaces skim up to 30% and keep the customer data."
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 954,
+     "w": 600,
+     "h": 26,
+     "family": "Inter",
+     "size": 20,
+     "weight": 500,
+     "color": "#8f8ba0",
+     "lineHeight": 1.2,
+     "text": "Locale \u00b7 Seed pitch"
+    },
+    {
+     "kind": "rect",
+     "x": 1060,
+     "y": 132,
+     "w": 64,
+     "h": 10,
+     "fill": "#ea3139",
+     "radius": 5
+    },
+    {
+     "kind": "text",
+     "x": 1060,
+     "y": 170,
+     "w": 500,
+     "h": 28,
+     "family": "Inter",
+     "size": 22,
+     "weight": 700,
+     "color": "#ea3139",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Our solution"
+    },
+    {
+     "kind": "text",
+     "x": 1060,
+     "y": 226,
+     "w": 740,
+     "h": 140,
+     "family": "Outfit",
+     "size": 58,
+     "weight": 800,
+     "color": "#181828",
+     "lineHeight": 1.12,
+     "text": "Storefronts that\nbuild themselves."
+    },
+    {
+     "kind": "text",
+     "x": 1060,
+     "y": 396,
+     "w": 700,
+     "h": 116,
+     "family": "Inter",
+     "size": 24,
+     "weight": 400,
+     "color": "#5f5b52",
+     "lineHeight": 1.5,
+     "text": "Locale reads a shop's socials and point-of-sale, then assembles a ready-to-sell storefront: inventory, payments, and same-day delivery included."
+    },
+    {
+     "kind": "rect",
+     "x": 1060,
+     "y": 589,
+     "w": 14,
+     "h": 14,
+     "fill": "#ea3139",
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 1098,
+     "y": 580,
+     "w": 380,
+     "h": 34,
+     "family": "Inter",
+     "size": 24,
+     "weight": 600,
+     "color": "#181828",
+     "lineHeight": 1.3,
+     "text": "Live in one afternoon"
+    },
+    {
+     "kind": "rect",
+     "x": 1060,
+     "y": 665,
+     "w": 14,
+     "h": 14,
+     "fill": "#f9a948",
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 1098,
+     "y": 656,
+     "w": 380,
+     "h": 34,
+     "family": "Inter",
+     "size": 24,
+     "weight": 600,
+     "color": "#181828",
+     "lineHeight": 1.3,
+     "text": "0% commission, one flat fee"
+    },
+    {
+     "kind": "rect",
+     "x": 1060,
+     "y": 741,
+     "w": 14,
+     "h": 14,
+     "fill": "#6b64ff",
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 1098,
+     "y": 732,
+     "w": 380,
+     "h": 34,
+     "family": "Inter",
+     "size": 24,
+     "weight": 600,
+     "color": "#181828",
+     "lineHeight": 1.3,
+     "text": "You own every customer"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1490,
+     "y": 560,
+     "w": 320,
+     "h": 320,
+     "fill": "#ea3139"
+    },
+    {
+     "kind": "text",
+     "x": 1620,
+     "y": 954,
+     "w": 180,
+     "h": 26,
+     "family": "Inter",
+     "size": 20,
+     "weight": 500,
+     "color": "#5f5b52",
+     "align": "right",
+     "lineHeight": 1.2,
+     "text": "02 / 03"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-goal",
+     "x": 1500,
+     "y": 560,
+     "w": 320,
+     "h": 360
+    }
+   ]
+  },
+  {
+   "name": "Traction & ask",
+   "bg": "#faf4ec",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 120,
+     "y": 110,
+     "w": 64,
+     "h": 10,
+     "fill": "#ea3139",
+     "radius": 5
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 148,
+     "w": 600,
+     "h": 28,
+     "family": "Inter",
+     "size": 22,
+     "weight": 700,
+     "color": "#ea3139",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Traction"
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 204,
+     "w": 1200,
+     "h": 100,
+     "family": "Outfit",
+     "size": 76,
+     "weight": 800,
+     "color": "#181828",
+     "lineHeight": 1.05,
+     "text": "The flywheel is turning."
+    },
+    {
+     "kind": "rect",
+     "x": 120,
+     "y": 372,
+     "w": 64,
+     "h": 8,
+     "fill": "#ea3139",
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 404,
+     "w": 440,
+     "h": 104,
+     "family": "Outfit",
+     "size": 92,
+     "weight": 800,
+     "color": "#181828",
+     "lineHeight": 1.05,
+     "text": "2,400"
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 524,
+     "w": 440,
+     "h": 26,
+     "family": "Inter",
+     "size": 18,
+     "weight": 700,
+     "color": "#5f5b52",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Shops live"
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 562,
+     "w": 420,
+     "h": 62,
+     "family": "Inter",
+     "size": 20,
+     "weight": 400,
+     "color": "#5f5b52",
+     "lineHeight": 1.45,
+     "text": "Across 12 cities, grown entirely by word of mouth."
+    },
+    {
+     "kind": "rect",
+     "x": 600,
+     "y": 372,
+     "w": 64,
+     "h": 8,
+     "fill": "#f9a948",
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 600,
+     "y": 404,
+     "w": 440,
+     "h": 104,
+     "family": "Outfit",
+     "size": 92,
+     "weight": 800,
+     "color": "#181828",
+     "lineHeight": 1.05,
+     "text": "$1.1M"
+    },
+    {
+     "kind": "text",
+     "x": 600,
+     "y": 524,
+     "w": 440,
+     "h": 26,
+     "family": "Inter",
+     "size": 18,
+     "weight": 700,
+     "color": "#5f5b52",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Monthly GMV"
+    },
+    {
+     "kind": "text",
+     "x": 600,
+     "y": 562,
+     "w": 420,
+     "h": 62,
+     "family": "Inter",
+     "size": 20,
+     "weight": 400,
+     "color": "#5f5b52",
+     "lineHeight": 1.45,
+     "text": "Up 6x since January. The median shop sells $460 a month."
+    },
+    {
+     "kind": "rect",
+     "x": 1080,
+     "y": 372,
+     "w": 64,
+     "h": 8,
+     "fill": "#6b64ff",
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 1080,
+     "y": 404,
+     "w": 440,
+     "h": 104,
+     "family": "Outfit",
+     "size": 92,
+     "weight": 800,
+     "color": "#181828",
+     "lineHeight": 1.05,
+     "text": "+22%"
+    },
+    {
+     "kind": "text",
+     "x": 1080,
+     "y": 524,
+     "w": 440,
+     "h": 26,
+     "family": "Inter",
+     "size": 18,
+     "weight": 700,
+     "color": "#5f5b52",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "MoM growth"
+    },
+    {
+     "kind": "text",
+     "x": 1080,
+     "y": 562,
+     "w": 420,
+     "h": 62,
+     "family": "Inter",
+     "size": 20,
+     "weight": 400,
+     "color": "#5f5b52",
+     "lineHeight": 1.45,
+     "text": "Retention at 94% after six months."
+    },
+    {
+     "kind": "ellipse",
+     "x": 1515,
+     "y": 356,
+     "w": 300,
+     "h": 300,
+     "fill": "#6b64ff"
+    },
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 720,
+     "w": 1920,
+     "h": 360,
+     "fill": "#181828"
+    },
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 720,
+     "w": 1920,
+     "h": 6,
+     "fill": "#ea3139"
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 772,
+     "w": 400,
+     "h": 26,
+     "family": "Inter",
+     "size": 20,
+     "weight": 700,
+     "color": "#f9a948",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "The ask"
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 812,
+     "w": 1040,
+     "h": 130,
+     "family": "Outfit",
+     "size": 54,
+     "weight": 800,
+     "color": "#faf4ec",
+     "lineHeight": 1.15,
+     "text": "Raising $1.5M to bring\nLocale to 40 new cities."
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 972,
+     "w": 700,
+     "h": 30,
+     "family": "Inter",
+     "size": 24,
+     "weight": 600,
+     "color": "#f9a948",
+     "lineHeight": 1.2,
+     "text": "hello@locale.shop \u00b7 locale.shop/deck"
+    },
+    {
+     "kind": "rect",
+     "x": 1260,
+     "y": 807,
+     "w": 14,
+     "h": 14,
+     "fill": "#ea3139",
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 1298,
+     "y": 800,
+     "w": 500,
+     "h": 30,
+     "family": "Inter",
+     "size": 22,
+     "weight": 500,
+     "color": "#faf4ec",
+     "lineHeight": 1.3,
+     "text": "60% \u00b7 Product and engineering"
+    },
+    {
+     "kind": "rect",
+     "x": 1260,
+     "y": 863,
+     "w": 14,
+     "h": 14,
+     "fill": "#f9a948",
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 1298,
+     "y": 856,
+     "w": 500,
+     "h": 30,
+     "family": "Inter",
+     "size": 22,
+     "weight": 500,
+     "color": "#faf4ec",
+     "lineHeight": 1.3,
+     "text": "25% \u00b7 New city launches"
+    },
+    {
+     "kind": "rect",
+     "x": 1260,
+     "y": 919,
+     "w": 14,
+     "h": 14,
+     "fill": "#6b64ff",
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 1298,
+     "y": 912,
+     "w": 500,
+     "h": 30,
+     "family": "Inter",
+     "size": 22,
+     "weight": 500,
+     "color": "#faf4ec",
+     "lineHeight": 1.3,
+     "text": "15% \u00b7 Operations and support"
+    },
+    {
+     "kind": "text",
+     "x": 1620,
+     "y": 1022,
+     "w": 180,
+     "h": 24,
+     "family": "Inter",
+     "size": 18,
+     "weight": 500,
+     "color": "#8f8ba0",
+     "align": "right",
+     "lineHeight": 1.2,
+     "text": "03 / 03"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-success-illustration",
+     "x": 1560,
+     "y": 324,
+     "w": 210,
+     "h": 396
+    }
+   ]
+  }
+ ],
+ "rank": 12
+}

@@ -1,45 +1,305 @@
 {
-  "id": "a4-proposal-cover",
-  "title": "Dark Tech Proposal Cover",
-  "categories": ["print", "business"],
-  "tags": ["proposal", "cover", "a4", "document"],
-  "styleTags": ["modern", "bold"],
-  "size": [794, 1123],
-  "typography": [
-    { "role": "heading", "family": "Manrope", "weight": 800 },
-    { "role": "body", "family": "Inter", "weight": 400 }
-  ],
-  "pages": [
+ "id": "a4-proposal-cover",
+ "title": "Dark Tech Proposal Cover",
+ "categories": [
+  "print",
+  "business"
+ ],
+ "tags": [
+  "proposal",
+  "cover",
+  "a4",
+  "document"
+ ],
+ "styleTags": [
+  "modern",
+  "bold"
+ ],
+ "size": [
+  794,
+  1123
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Manrope",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Inter",
+   "weight": 400
+  }
+ ],
+ "pages": [
+  {
+   "name": "Cover",
+   "bg": "#0B1220",
+   "nodes": [
     {
-      "name": "Cover",
-      "bg": "#0B1220",
-      "nodes": [
-        { "kind": "ellipse", "x": 494, "y": -200, "w": 480, "h": 480, "fill": { "angle": 135, "stops": [["#22D3EE", 0], ["#8B5CF6", 1]] }, "bleed": true },
-        { "kind": "ellipse", "x": 560, "y": -290, "w": 480, "h": 480, "fill": "#0B1220", "bleed": true },
-        { "kind": "ellipse", "x": 700, "y": 296, "w": 12, "h": 12, "fill": "#22D3EE" },
-        { "kind": "ellipse", "x": -160, "y": 940, "w": 360, "h": 360, "fill": "#8B5CF6", "opacity": 0.14, "bleed": true },
-        { "kind": "ellipse", "x": -60, "y": 1040, "w": 220, "h": 220, "fill": "#22D3EE", "opacity": 0.1, "bleed": true },
-        { "kind": "rect", "x": 64, "y": 64, "w": 18, "h": 18, "fill": "#22D3EE", "radius": 5 },
-        { "kind": "text", "x": 94, "y": 62, "w": 320, "h": 24, "text": "Northwind Studio", "family": "Manrope", "size": 19, "weight": 700, "color": "#F1F5F9" },
-        { "kind": "text", "x": 430, "y": 66, "w": 300, "h": 18, "text": "Confidential", "family": "Inter", "size": 12, "weight": 500, "color": "#94A3B8", "align": "right", "letterSpacing": 3, "upper": true },
-        { "kind": "text", "x": 64, "y": 400, "w": 400, "h": 22, "text": "Project Proposal", "family": "Inter", "size": 15, "weight": 600, "color": "#22D3EE", "letterSpacing": 4, "upper": true },
-        { "kind": "text", "x": 60, "y": 440, "w": 640, "h": 302, "text": "Website\nredesign\nproposal", "family": "Manrope", "size": 92, "weight": 800, "color": "#F1F5F9", "lineHeight": 1.04 },
-        { "kind": "rect", "x": 64, "y": 768, "w": 88, "h": 6, "fill": "#22D3EE", "radius": 3 },
-        { "kind": "text", "x": 64, "y": 812, "w": 400, "h": 20, "text": "Prepared for", "family": "Inter", "size": 13, "weight": 500, "color": "#94A3B8", "letterSpacing": 3, "upper": true },
-        { "kind": "text", "x": 64, "y": 838, "w": 560, "h": 36, "text": "Meridian Health Group", "family": "Manrope", "size": 27, "weight": 700, "color": "#F1F5F9" },
-        { "kind": "button", "x": 64, "y": 908, "w": 148, "h": 44, "fill": "#172236", "stroke": "#2A3B5A", "strokeWidth": 1, "label": "July 2026", "color": "#E2E8F0", "family": "Inter", "size": 15, "weight": 600 },
-        { "kind": "button", "x": 228, "y": 908, "w": 168, "h": 44, "fill": "#172236", "stroke": "#2A3B5A", "strokeWidth": 1, "label": "Version 2.1", "color": "#E2E8F0", "family": "Inter", "size": 15, "weight": 600 },
-        { "kind": "rect", "x": 64, "y": 1006, "w": 666, "h": 2, "fill": "#1E293B" },
-        { "kind": "text", "x": 64, "y": 1028, "w": 340, "h": 20, "text": "northwindstudio.com", "family": "Inter", "size": 14, "weight": 400, "color": "#94A3B8" },
-        { "kind": "text", "x": 390, "y": 1028, "w": 340, "h": 20, "text": "hello@northwind.studio", "family": "Inter", "size": 14, "weight": 400, "color": "#94A3B8", "align": "right" }
+     "kind": "ellipse",
+     "x": 494,
+     "y": -200,
+     "w": 480,
+     "h": 480,
+     "fill": {
+      "angle": 135,
+      "stops": [
+       [
+        "#22D3EE",
+        0
+       ],
+       [
+        "#8B5CF6",
+        1
+       ]
       ]
+     },
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 560,
+     "y": -290,
+     "w": 480,
+     "h": 480,
+     "fill": "#0B1220",
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 700,
+     "y": 296,
+     "w": 12,
+     "h": 12,
+     "fill": "#22D3EE"
+    },
+    {
+     "kind": "ellipse",
+     "x": -160,
+     "y": 940,
+     "w": 360,
+     "h": 360,
+     "fill": "#8B5CF6",
+     "opacity": 0.14,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": -60,
+     "y": 1040,
+     "w": 220,
+     "h": 220,
+     "fill": "#22D3EE",
+     "opacity": 0.1,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 64,
+     "y": 64,
+     "w": 18,
+     "h": 18,
+     "fill": "#22D3EE",
+     "radius": 5
+    },
+    {
+     "kind": "text",
+     "x": 94,
+     "y": 62,
+     "w": 320,
+     "h": 24,
+     "text": "Northwind Studio",
+     "family": "Manrope",
+     "size": 19,
+     "weight": 700,
+     "color": "#F1F5F9"
+    },
+    {
+     "kind": "text",
+     "x": 430,
+     "y": 66,
+     "w": 300,
+     "h": 18,
+     "text": "Confidential",
+     "family": "Inter",
+     "size": 12,
+     "weight": 500,
+     "color": "#94A3B8",
+     "align": "right",
+     "letterSpacing": 3,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 400,
+     "w": 400,
+     "h": 22,
+     "text": "Project Proposal",
+     "family": "Inter",
+     "size": 15,
+     "weight": 600,
+     "color": "#22D3EE",
+     "letterSpacing": 4,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 440,
+     "w": 640,
+     "h": 302,
+     "text": "Website\nredesign\nproposal",
+     "family": "Manrope",
+     "size": 92,
+     "weight": 800,
+     "color": "#F1F5F9",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "rect",
+     "x": 64,
+     "y": 768,
+     "w": 88,
+     "h": 6,
+     "fill": "#22D3EE",
+     "radius": 3
+    },
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 812,
+     "w": 400,
+     "h": 20,
+     "text": "Prepared for",
+     "family": "Inter",
+     "size": 13,
+     "weight": 500,
+     "color": "#94A3B8",
+     "letterSpacing": 3,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 838,
+     "w": 560,
+     "h": 36,
+     "text": "Meridian Health Group",
+     "family": "Manrope",
+     "size": 27,
+     "weight": 700,
+     "color": "#F1F5F9"
+    },
+    {
+     "kind": "button",
+     "x": 64,
+     "y": 908,
+     "w": 148,
+     "h": 44,
+     "fill": "#172236",
+     "stroke": "#2A3B5A",
+     "strokeWidth": 1,
+     "label": "July 2026",
+     "color": "#E2E8F0",
+     "family": "Inter",
+     "size": 15,
+     "weight": 600
+    },
+    {
+     "kind": "button",
+     "x": 228,
+     "y": 908,
+     "w": 168,
+     "h": 44,
+     "fill": "#172236",
+     "stroke": "#2A3B5A",
+     "strokeWidth": 1,
+     "label": "Version 2.1",
+     "color": "#E2E8F0",
+     "family": "Inter",
+     "size": 15,
+     "weight": 600
+    },
+    {
+     "kind": "rect",
+     "x": 64,
+     "y": 1006,
+     "w": 666,
+     "h": 2,
+     "fill": "#1E293B"
+    },
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 1028,
+     "w": 340,
+     "h": 20,
+     "text": "northwindstudio.com",
+     "family": "Inter",
+     "size": 14,
+     "weight": 400,
+     "color": "#94A3B8"
+    },
+    {
+     "kind": "text",
+     "x": 390,
+     "y": 1028,
+     "w": 340,
+     "h": 20,
+     "text": "hello@northwind.studio",
+     "family": "Inter",
+     "size": 14,
+     "weight": 400,
+     "color": "#94A3B8",
+     "align": "right"
     }
-  ],
-  "fillable": [
-    { "node": "p0-n6", "kind": "text", "label": "Studio name", "hint": "Your company or logotype text" },
-    { "node": "p0-n9", "kind": "text", "label": "Title", "hint": "Proposal title, three stacked lines" },
-    { "node": "p0-n12", "kind": "text", "label": "Client name", "hint": "Who the proposal is for" },
-    { "node": "p0-n13-label", "kind": "text", "label": "Date", "hint": "Month and year" },
-    { "node": "p0-n14-label", "kind": "text", "label": "Version", "hint": "Document version" }
-  ]
+   ],
+   "illustrations": [
+    {
+     "asset": "la-free-svg-illustrations-image-guy",
+     "x": 96,
+     "y": 136,
+     "w": 280,
+     "h": 250
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n6",
+   "kind": "text",
+   "label": "Studio name",
+   "hint": "Your company or logotype text"
+  },
+  {
+   "node": "p0-n9",
+   "kind": "text",
+   "label": "Title",
+   "hint": "Proposal title, three stacked lines"
+  },
+  {
+   "node": "p0-n12",
+   "kind": "text",
+   "label": "Client name",
+   "hint": "Who the proposal is for"
+  },
+  {
+   "node": "p0-n13-label",
+   "kind": "text",
+   "label": "Date",
+   "hint": "Month and year"
+  },
+  {
+   "node": "p0-n14-label",
+   "kind": "text",
+   "label": "Version",
+   "hint": "Document version"
+  }
+ ],
+ "version": 2,
+ "updated": "2026-07-10T00:00:00.000Z",
+ "rank": 20
 }
