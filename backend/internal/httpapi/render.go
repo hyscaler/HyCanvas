@@ -127,8 +127,12 @@ func renderPDFHandler(p *persistence.Service, acct *accounts.Service) http.Handl
 			authProblem(w, r, err)
 			return
 		}
+		// `?page=all` exports the whole deck as one tagged document (doc 28
+		// FR-22). Any other value keeps the original per-page behavior, so an
+		// existing caller sees exactly what it saw before.
+		deck := r.URL.Query().Get("page") == "all"
 		page := 0
-		if v := r.URL.Query().Get("page"); v != "" {
+		if v := r.URL.Query().Get("page"); v != "" && !deck {
 			if n, err := strconv.Atoi(v); err == nil {
 				page = n
 			}
@@ -138,7 +142,12 @@ func renderPDFHandler(p *persistence.Service, acct *accounts.Service) http.Handl
 			persistenceProblem(w, r, err)
 			return
 		}
-		pdf, err := render.ToPDF(render.Design(loaded.File), page)
+		var pdf []byte
+		if deck {
+			pdf, err = render.ToDeckPDF(render.Design(loaded.File))
+		} else {
+			pdf, err = render.ToPDF(render.Design(loaded.File), page)
+		}
 		if err != nil {
 			Problem(w, r, http.StatusBadRequest, "Bad Request", "page index out of range")
 			return

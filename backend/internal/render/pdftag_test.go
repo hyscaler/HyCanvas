@@ -86,7 +86,7 @@ func TestTaggedPDFStructureFollowsReadingOrder(t *testing.T) {
 
 	// Structure elements are emitted in reading order: caption, undescribed,
 	// photo. Their /K values are the MCIDs above, so the tree reverses z-order.
-	elems := regexp.MustCompile(`/Type /StructElem /S /(\w+) /P \d+ 0 R /Pg 3 0 R /K (\d+)`).FindAllStringSubmatch(pdf, -1)
+	elems := regexp.MustCompile(`/Type /StructElem /S /(\w+) /P \d+ 0 R /Pg \d+ 0 R /K (\d+)`).FindAllStringSubmatch(pdf, -1)
 	gotRead := make([]string, len(elems))
 	for i, m := range elems {
 		gotRead[i] = m[1] + ":" + m[2]
@@ -216,7 +216,63 @@ func TestEmptyPageProducesValidTree(t *testing.T) {
 	if !strings.Contains(pdf, "/S /Sect") || !strings.Contains(pdf, "/Nums [0 []]") {
 		t.Error("empty page should still carry an empty structure tree")
 	}
-	if !strings.Contains(pdf, "/T (Slide)") {
+	if !strings.Contains(pdf, "/T (Slide 1)") {
 		t.Error("an unnamed slide should fall back to a generic title")
+	}
+}
+
+// A whole deck exports as one tagged document: a Document element holding one
+// titled Sect per slide, each element pointing at its own page.
+func TestDeckPDFTagsEveryPage(t *testing.T) {
+	page := func(id, name string) map[string]any {
+		return map[string]any{
+			"id": id, "name": name, "width": 200.0, "height": 100.0,
+			"children": []any{map[string]any{"id": id + "-t", "type": "text",
+				"transform": map[string]any{"x": 0.0, "y": 0.0, "scaleX": 1.0, "scaleY": 1.0},
+				"content":   []any{map[string]any{"runs": []any{map[string]any{"text": name, "style": map[string]any{"fontSize": 12.0}}}}}}},
+		}
+	}
+	hidden := page("p3", "Skipped")
+	hidden["hidden"] = true
+	file := Design(map[string]any{"pages": []any{page("p1", "Intro"), hidden, page("p2", "Outro")}})
+
+	out, err := ToDeckPDF(file)
+	if err != nil {
+		t.Fatalf("ToDeckPDF: %v", err)
+	}
+	pdf := string(out)
+
+	// The hidden slide is skipped, exactly as present mode skips it.
+	if strings.Contains(pdf, "/T (Skipped)") {
+		t.Error("a hidden slide must not appear in the exported deck")
+	}
+	if !strings.Contains(pdf, "/T (Intro)") || !strings.Contains(pdf, "/T (Outro)") {
+		t.Error("every visible slide should title its own section")
+	}
+	if !strings.Contains(pdf, "/Count 2") {
+		t.Error("deck should contain exactly the two visible pages")
+	}
+	// Marked-content ids restart per page, so each page keys its own entry in
+	// the number tree by its own /StructParents index.
+	if !strings.Contains(pdf, "/StructParents 0") || !strings.Contains(pdf, "/StructParents 1") {
+		t.Error("each page needs its own structure-parents key")
+	}
+	if !regexp.MustCompile(`/Nums \[0 \[\d+ 0 R\] 1 \[\d+ 0 R\]\]`).MatchString(pdf) {
+		t.Error("number tree should carry one entry per page")
+	}
+	if n := strings.Count(pdf, "/S /Sect"); n != 2 {
+		t.Errorf("got %d sections, want one per visible slide", n)
+	}
+	if n := strings.Count(pdf, "/S /Document"); n != 1 {
+		t.Errorf("got %d document elements, want exactly 1", n)
+	}
+}
+
+// A deck of only hidden slides has nothing to export, and says so rather than
+// emitting a PDF with zero pages, which no viewer accepts.
+func TestDeckPDFRejectsAnEmptyDeck(t *testing.T) {
+	file := Design(map[string]any{"pages": []any{map[string]any{"id": "p", "hidden": true, "width": 10.0, "height": 10.0}}})
+	if _, err := ToDeckPDF(file); err != ErrPageRange {
+		t.Errorf("want ErrPageRange for an all-hidden deck, got %v", err)
 	}
 }
