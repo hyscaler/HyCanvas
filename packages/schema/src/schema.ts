@@ -33,8 +33,12 @@ import { z } from "zod";
  *      z-order, exactly as before.
  *  v13: presentations (F28 FR-5) slide sections: a DesignFile.sections registry
  *      and Page.sectionId membership. Additive and optional: a v12 deck has no
- *      sections, every page stands alone, and it opens unchanged. */
-export const CURRENT_SCHEMA_VERSION = 13;
+ *      sections, every page stands alone, and it opens unchanged.
+ *  v14: effect normalization: Shadow.type becomes optional (absence means
+ *      "drop", healing shadows early panels wrote without a type), and the
+ *      migration stamps it plus bakes never-rendered text-shadow opacity to 1
+ *      so existing designs keep their exact published appearance. */
+export const CURRENT_SCHEMA_VERSION = 14;
 
 /** Maximum container nesting depth; guards traversal against stack overflow (FR-4). */
 export const MAX_NESTING_DEPTH = 32;
@@ -262,7 +266,9 @@ export const StrokeSchema = z.object({
 });
 
 export interface Shadow {
-  type: "drop" | "inner";
+  /** Missing means "drop": early effect panels wrote shadows without a type,
+   *  so those files must stay valid and render as drop shadows. */
+  type?: "drop" | "inner";
   color: Color;
   offsetX: number;
   offsetY: number;
@@ -270,7 +276,7 @@ export interface Shadow {
   spread: number;
 }
 const shadowFields = {
-  type: z.enum(["drop", "inner"]),
+  type: z.enum(["drop", "inner"]).optional(),
   color: ColorSchema,
   offsetX: unit,
   offsetY: unit,

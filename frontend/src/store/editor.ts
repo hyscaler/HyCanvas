@@ -814,6 +814,12 @@ interface EditorState {
   previewAdjustments(id: string, ops: { name: string; value: number }[]): void;
   /** Commit an effects change as one undo step (before = effects at gesture start). */
   commitEffects(id: string, before: unknown): void;
+  /** Live-preview a node's whole effects array with no undo step (slider drags). */
+  previewEffects(id: string, effects?: Effect[]): void;
+  /** Live-preview a text node's whole textEffects array with no undo step. */
+  previewTextEffects(id: string, effects?: TextEffect[]): void;
+  /** Commit a textEffects change as one undo step (before = value at gesture start). */
+  commitTextEffects(id: string, before: unknown): void;
   /** Set a uniform corner radius on a shape/frame node, undoable. */
   setCornerRadius(id: string, radius: number): void;
   /** Set a uniform corner radius on every rect-ish node in the selection (one undo step). */
@@ -4479,6 +4485,35 @@ export const useEditor = create<EditorState>((set, get) => {
       const set2 = (snap: unknown) => {
         const l = locate(get().doc, id);
         if (l) (l.node as unknown as { effects?: unknown }).effects = (structuredClone(snap) ?? undefined) as never;
+      };
+      set((s) => ({
+        rev: s.rev + 1,
+        undoStack: [...s.undoStack, { undo: () => set2(beforeSnap), redo: () => set2(after) }],
+        redoStack: [],
+      }));
+    },
+    previewEffects: (id, effects) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.locked || editBlocked(id)) return;
+      (loc.node as unknown as { effects?: Effect[] }).effects = (effects?.length ? effects : undefined) as never;
+      get().tick();
+    },
+    previewTextEffects: (id, effects) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return;
+      (loc.node as unknown as { textEffects?: TextEffect[] }).textEffects = (effects?.length ? effects : undefined) as never;
+      get().tick();
+    },
+    commitTextEffects: (id, before) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return;
+      const rec = loc.node as unknown as { textEffects?: unknown };
+      const after = structuredClone(rec.textEffects ?? null);
+      const beforeSnap = structuredClone((before ?? null) as never);
+      if (JSON.stringify(after) === JSON.stringify(beforeSnap)) return;
+      const set2 = (snap: unknown) => {
+        const l = locate(get().doc, id);
+        if (l) (l.node as unknown as { textEffects?: unknown }).textEffects = (structuredClone(snap) ?? undefined) as never;
       };
       set((s) => ({
         rev: s.rev + 1,

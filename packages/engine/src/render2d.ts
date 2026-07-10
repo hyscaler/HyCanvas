@@ -719,12 +719,16 @@ function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, bo
       const eSplice = tfx.find((e) => e.kind === "splice") as Extract<TextEffect, { kind: "splice" }> | undefined;
       const eOutlineFx = tfx.find((e) => e.kind === "outline") as Extract<TextEffect, { kind: "outline" }> | undefined;
       const fillVisible = !eHollow; // hollow = glyph outline only, no fill
-      const flatColor = (fill: Fill): string =>
-        fill.type === "solid"
-          ? colorToCss(fill.color)
-          : fill.type === "gradient" && fill.stops[0]
-            ? colorToCss(fill.stops[0].color)
-            : "rgba(0,0,0,1)";
+      // Flat effect color with its alpha scaled: shadow `opacity` and glow
+      // `intensity` are schema knobs that must actually dim the cast. One
+      // flattener feeds both paths so shadow colors can't drift from other
+      // effect colors, and colorToCss keeps channel clamping.
+      const flatColorAlpha = (fill: Fill, mult: number): string => {
+        const c = fill.type === "solid" ? fill.color : fill.type === "gradient" && fill.stops[0] ? fill.stops[0].color : { srgb: { r: 0, g: 0, b: 0, a: 1 } };
+        const m = Math.max(0, Math.min(1, mult));
+        return colorToCss({ srgb: { ...c.srgb, a: (c.srgb.a ?? 1) * m } });
+      };
+      const flatColor = (fill: Fill): string => flatColorAlpha(fill, 1);
       const sctx = ctx as unknown as { shadowColor: string; shadowBlur: number; shadowOffsetX: number; shadowOffsetY: number };
       const hasShadowApi = "shadowBlur" in (ctx as object);
       const clearShadow = () => { if (hasShadowApi) { sctx.shadowColor = "rgba(0,0,0,0)"; sctx.shadowBlur = 0; sctx.shadowOffsetX = 0; sctx.shadowOffsetY = 0; } };
@@ -881,12 +885,20 @@ function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, bo
             if (eSplice && ctx.strokeText) { const o = eSplice.offset || 0; ctx.lineWidth = Math.max(0.5, eSplice.thickness); ctx.strokeStyle = flatColor(eSplice.color); ctx.strokeText(t, x + o, baseY + o); }
             // Glow / neon / shadow / lift cast via the canvas drop shadow.
             if (hasShadowApi) {
-              if (eGlow) { sctx.shadowColor = flatColor(eGlow.color); sctx.shadowBlur = Math.max(0, eGlow.radius); sctx.shadowOffsetX = 0; sctx.shadowOffsetY = 0; }
+              if (eGlow) { const gi = Math.max(0.2, eGlow.intensity || 1); sctx.shadowColor = flatColorAlpha(eGlow.color, gi); sctx.shadowBlur = Math.max(0, eGlow.radius); sctx.shadowOffsetX = 0; sctx.shadowOffsetY = 0; }
               else if (eNeon) { sctx.shadowColor = flatColor(eNeon.color); sctx.shadowBlur = Math.max(4, fs * 0.5 * Math.max(0.2, eNeon.intensity || 1)); sctx.shadowOffsetX = 0; sctx.shadowOffsetY = 0; }
-              else if (eShadow) { sctx.shadowColor = flatColor(eShadow.color); sctx.shadowBlur = Math.max(0, eShadow.blur); sctx.shadowOffsetX = eShadow.dx; sctx.shadowOffsetY = eShadow.dy; }
+              else if (eShadow) { sctx.shadowColor = flatColorAlpha(eShadow.color, eShadow.opacity ?? 1); sctx.shadowBlur = Math.max(0, eShadow.blur); sctx.shadowOffsetX = eShadow.dx; sctx.shadowOffsetY = eShadow.dy; }
               else if (eLift) { const k = Math.max(0.1, eLift.intensity || 0.5); sctx.shadowColor = `rgba(0,0,0,${0.35 * k})`; sctx.shadowBlur = fs * 0.3 * k + 2; sctx.shadowOffsetX = 0; sctx.shadowOffsetY = fs * 0.06; }
             }
-            if (fillVisible && ctx.fillText) { ctx.fillStyle = segCss; ctx.fillText(t, x, baseY); }
+            if (fillVisible && ctx.fillText) {
+              ctx.fillStyle = segCss;
+              ctx.fillText(t, x, baseY);
+              // Glow intensity above 1 brightens by stacking passes (the canvas
+              // shadow alpha caps at the color's own); blur stays the Size knob's.
+              if (eGlow && hasShadowApi && (eGlow.intensity ?? 1) > 1) {
+                for (let gp = Math.min(2, Math.round(eGlow.intensity) - 1); gp > 0; gp--) ctx.fillText(t, x, baseY);
+              }
+            }
             clearShadow();
             // Neon: a crisp second pass so the bright core reads over the glow.
             if (eNeon && fillVisible && ctx.fillText) { ctx.fillStyle = segCss; ctx.fillText(t, x, baseY); }

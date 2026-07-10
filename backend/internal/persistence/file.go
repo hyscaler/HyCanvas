@@ -14,7 +14,7 @@ import (
 )
 
 // currentSchemaVersion mirrors @hc/schema CURRENT_SCHEMA_VERSION.
-const currentSchemaVersion = 13
+const currentSchemaVersion = 14
 
 // CurrentSchemaVersion is the exported mirror of currentSchemaVersion for other
 // packages (e.g. convert) so they cannot pin a second, drifting copy.

@@ -8,7 +8,7 @@ A living checklist of what ships today versus what is planned. Shipped items are
 - [x] Scene-graph engine on Canvas2D (framework-agnostic; browser, worker, headless server)
 - [x] Shapes, lines, arrows, frames, grids, tables, 9 chart types, QR codes
 - [x] Text: presets, font pairings, searchable catalog, custom font upload (embedded)
-- [x] Fills (solid/gradient/image/pattern), stroke, corner radius, opacity, effects (shadow/lift/hollow/glow/neon)
+- [x] Fills (solid/gradient/image/pattern), stroke, corner radius, opacity, effects (shadow/lift/hollow/glow/neon/echo/splice/outline/blur) with per-effect level controls
 - [x] Image filters, Light/Color/Detail adjust, crop, remove background, rasterize
 - [x] Animations: entrance/exit/emphasis presets, motion-path keyframes, photo motion (Ken Burns/parallax)
 - [x] Layers panel, alignment guides/snap, rulers, grid, minimap, zoom control

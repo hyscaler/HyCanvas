@@ -1431,13 +1431,13 @@ export function PropertiesPanel() {
                     <Toggle checked={!!hl} onChange={(on) => setBg(on ? (colorFromHex("#fde047")) : null)} />
                   </label>
                   {hl && (
-                    <div className="flex items-center gap-2">
-                      <input type="color" value={hlColor ? colorHex(hlColor) : "#fde047"} onChange={(e) => setBg(colorFromHex(e.target.value))} className="oc-color h-8 w-9 shrink-0" title="Background color" />
-                      <div className="flex flex-1 items-center gap-1.5">
-                        <span className="text-[11px] text-neutral-400">Round</span>
-                        <input type="range" min={0} max={40} value={radius} onChange={(e) => useEditor.getState().setTextBackground(id, hlColor ?? colorFromHex("#fde047"), hl.padding ?? 8, Number(e.target.value))} className="flex-1 accent-brand-600" />
+                    <>
+                      <div className="flex items-center gap-2">
+                        <span className="w-12 shrink-0 text-[11px] text-neutral-400">Color</span>
+                        <input type="color" value={hlColor ? colorHex(hlColor) : "#fde047"} onChange={(e) => setBg(colorFromHex(e.target.value))} className="oc-color h-8 w-9 shrink-0" title="Background color" />
                       </div>
-                    </div>
+                      <TextHighlightLevels id={id} hl={hl} />
+                    </>
                   )}
                 </div>
               );
@@ -1445,7 +1445,8 @@ export function PropertiesPanel() {
             {/* Named text effects (Canva-style), engine-rendered. Mutually exclusive. */}
             {(() => {
               const tn = single.node as unknown as { textEffects?: { kind: string }[]; box?: { verticalAlign?: "top" | "middle" | "bottom" }; flow?: { kind: string; curvature?: number } };
-              const active = (tn.textEffects ?? []).find((e) => e.kind !== "highlight")?.kind ?? "none";
+              const fx = (single.node as unknown as { textEffects?: TextEffect[] }).textEffects?.find((e) => e.kind !== "highlight");
+              const active = fx?.kind ?? "none";
               const set = (effect: TextEffect | null) => useEditor.getState().setTextEffect(id, effect);
               const black = solidFromHex("#000000");
               const PRESETS: { key: string; label: string; make: () => TextEffect | null }[] = [
@@ -1471,6 +1472,8 @@ export function PropertiesPanel() {
                       <button key={p.key} onClick={() => set(p.make())} className={ebtn(active === p.key)} title={p.label}>{p.label}</button>
                     ))}
                   </div>
+                  {/* Per-effect levels: every preset is tunable, not take-it-or-leave-it. */}
+                  {fx && <TextEffectControls id={id} fx={fx} />}
                   {/* Curve */}
                   <div className="flex items-center gap-2">
                     <span className="w-12 shrink-0 text-[11px] text-neutral-400">Curve</span>
@@ -2357,7 +2360,7 @@ function effectLabel(e: Effect): string {
     case "adjustment": return "Adjustments";
     case "duotone": return "Duotone";
     case "blur": return "Blur";
-    case "shadow": return e.type === "drop" ? "Drop shadow" : "Inner shadow";
+    case "shadow": return (e.type ?? "drop") === "drop" ? "Drop shadow" : "Inner shadow";
     case "glow": return "Glow";
     case "outline": return "Outline";
     default: return (e as { kind: string }).kind;
@@ -2795,7 +2798,103 @@ function Swatch({ color, onClick, title }: { color: string; onClick: () => void;
   );
 }
 
-type EffectItem = { kind: string; color?: Color; offsetX?: number; offsetY?: number; blur?: number; width?: number; radius?: number; spread?: number };
+type EffectItem = { kind: string; type?: "drop" | "inner"; color?: Color; offsetX?: number; offsetY?: number; blur?: number; width?: number; radius?: number; spread?: number };
+
+/** Per-effect level controls for the active named text effect. Slider drags
+ *  live-preview via previewTextEffects and land as ONE undo step on release
+ *  (commitTextEffects); switching presets stays setTextEffect's job, so a mere
+ *  parameter tweak never strips a legacy node.effects stack. */
+function TextEffectControls({ id, fx }: { id: string; fx: TextEffect }) {
+  const before = useRef<unknown>(null);
+  const st = () => useEditor.getState();
+  const liveList = () => ((locate(st().doc, id)?.node as unknown as { textEffects?: TextEffect[] })?.textEffects ?? []);
+  const snapshot = () => { before.current = structuredClone(liveList().length ? liveList() : null); };
+  const preview = (patch: object) => st().previewTextEffects(id, liveList().map((e) => (e.kind === fx.kind ? ({ ...e, ...patch } as TextEffect) : e)));
+  const commit = () => st().commitTextEffects(id, before.current);
+  // Discrete color pick = one undo step: snapshot, apply, commit in one go.
+  const pickColor = (hex: string) => { snapshot(); preview({ color: solidFromHex(hex) }); commit(); };
+  const fxHex = (f?: { type: string; color?: Color }) => (f?.type === "solid" && f.color ? colorHex(f.color) : "#000000");
+  const colorRow = (color?: { type: string; color?: Color }) => (
+    <div className="flex items-center gap-2">
+      <span className="w-12 shrink-0 text-[11px] text-neutral-400">Color</span>
+      <input type="color" value={fxHex(color)} onChange={(e) => pickColor(e.target.value)} className="oc-color h-8 w-9 shrink-0" />
+    </div>
+  );
+  const slider = (label: string, min: number, max: number, value: number, patch: (n: number) => object, opts: { step?: number; fmt?: (n: number) => string } = {}) => (
+    <FxSlider label={label} min={min} max={max} step={opts.step} value={value} fmt={opts.fmt} onStart={snapshot} onCommit={commit} onChange={(n) => preview(patch(n))} />
+  );
+  const pct = (n: number) => `${n}%`;
+  switch (fx.kind) {
+    case "shadow": return (<>
+      {slider("X", -50, 50, Math.round(fx.dx), (n) => ({ dx: n }))}
+      {slider("Y", -50, 50, Math.round(fx.dy), (n) => ({ dy: n }))}
+      {slider("Blur", 0, 40, Math.round(fx.blur), (n) => ({ blur: n }))}
+      {slider("Opacity", 0, 100, Math.round(fx.opacity * 100), (n) => ({ opacity: n / 100 }), { fmt: pct })}
+      {colorRow(fx.color)}
+    </>);
+    case "lift": return slider("Intensity", 10, 100, Math.round(fx.intensity * 100), (n) => ({ intensity: n / 100 }), { fmt: pct });
+    case "hollow": return slider("Thickness", 0.5, 8, fx.thickness, (n) => ({ thickness: n }), { step: 0.5 });
+    case "splice": return (<>
+      {slider("Thickness", 0.5, 8, fx.thickness, (n) => ({ thickness: n }), { step: 0.5 })}
+      {slider("Offset", 0, 30, Math.round(fx.offset), (n) => ({ offset: n }))}
+      {colorRow(fx.color)}
+    </>);
+    case "echo": return (<>
+      {slider("Offset", 1, 30, Math.round(fx.offset), (n) => ({ offset: n }))}
+      {slider("Copies", 2, 6, Math.round(fx.count), (n) => ({ count: n }))}
+      {colorRow(fx.color)}
+    </>);
+    case "glow": return (<>
+      {slider("Size", 0, 60, Math.round(fx.radius), (n) => ({ radius: n }))}
+      {slider("Intensity", 20, 200, Math.round(fx.intensity * 100), (n) => ({ intensity: n / 100 }), { fmt: pct })}
+      {colorRow(fx.color)}
+    </>);
+    case "neon": return (<>
+      {slider("Intensity", 20, 200, Math.round(fx.intensity * 100), (n) => ({ intensity: n / 100 }), { fmt: pct })}
+      {colorRow(fx.color)}
+    </>);
+    case "outline": return (<>
+      {slider("Width", 0.5, 12, fx.width, (n) => ({ width: n }), { step: 0.5 })}
+      {colorRow(fx.color)}
+    </>);
+    default: return null;
+  }
+}
+
+/** Round/Padding levels for the text background highlight, previewed live and
+ *  committed as one undo step per gesture. */
+function TextHighlightLevels({ id, hl }: { id: string; hl: { padding?: number; radius?: number } }) {
+  const before = useRef<unknown>(null);
+  const st = () => useEditor.getState();
+  const liveList = () => ((locate(st().doc, id)?.node as unknown as { textEffects?: TextEffect[] })?.textEffects ?? []);
+  const snapshot = () => { before.current = structuredClone(liveList().length ? liveList() : null); };
+  const preview = (patch: object) => st().previewTextEffects(id, liveList().map((e) => (e.kind === "highlight" ? ({ ...e, ...patch } as TextEffect) : e)));
+  const commit = () => st().commitTextEffects(id, before.current);
+  return (<>
+    <FxSlider label="Round" min={0} max={40} value={Math.round(hl.radius ?? 8)} onStart={snapshot} onCommit={commit} onChange={(n) => preview({ radius: n })} />
+    <FxSlider label="Padding" min={0} max={40} value={Math.round(hl.padding ?? 8)} onStart={snapshot} onCommit={commit} onChange={(n) => preview({ padding: n })} />
+  </>);
+}
+
+/** Labeled slider row for effect parameters: the drag-to-feel control every
+ *  effect level needs. onChange fires per tick for a live no-undo preview;
+ *  onStart/onCommit bracket the gesture so one drag lands as one undo step
+ *  (same contract as the image adjust sliders' beginDrag/commitEffects). */
+function FxSlider({ label, min, max, step = 1, value, onChange, onStart, onCommit, fmt }: { label: string; min: number; max: number; step?: number; value: number; onChange: (n: number) => void; onStart?: () => void; onCommit?: () => void; fmt?: (n: number) => string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-12 shrink-0 text-[11px] text-neutral-400">{label}</span>
+      <input
+        type="range" min={min} max={max} step={step} value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        onPointerDown={onStart} onPointerUp={onCommit}
+        onKeyDown={(e) => { if (!e.repeat) onStart?.(); }} onKeyUp={onCommit} onBlur={onCommit}
+        className="flex-1 accent-brand-600"
+      />
+      <span className="w-9 shrink-0 text-right text-[11px] tabular-nums text-neutral-500">{fmt ? fmt(value) : value}</span>
+    </div>
+  );
+}
 
 /**
  * Reusable Effects control: one-click presets (shadow/lift/hollow/splice/glow/
@@ -2808,26 +2907,39 @@ function NodeEffects({ id, effects }: { id: string; effects?: readonly { kind: s
   const find = (k: string) => eff.find((e) => e.kind === k);
   const has = (k: string) => !!find(k);
   const make: Record<string, () => EffectItem> = {
-    shadow: () => ({ kind: "shadow", color: { srgb: { r: 0, g: 0, b: 0, a: 0.35 } }, offsetX: 0, offsetY: 3, blur: 6, spread: 0 }),
+    shadow: () => ({ kind: "shadow", type: "drop", color: { srgb: { r: 0, g: 0, b: 0, a: 0.35 } }, offsetX: 0, offsetY: 3, blur: 6, spread: 0 }),
     outline: () => ({ kind: "outline", color: { srgb: { r: 0, g: 0, b: 0, a: 1 } }, width: 3 }),
     glow: () => ({ kind: "glow", color: { srgb: { r: 0.45, g: 0.5, b: 1, a: 0.9 } }, radius: 10 }),
+    blur: () => ({ kind: "blur", radius: 4 }),
   };
   const setAll = (next: EffectItem[]) => useEditor.getState().setEffects(id, (next.length ? next : undefined) as never);
   const toggle = (k: string) => setAll(has(k) ? eff.filter((e) => e.kind !== k) : [...eff, make[k]()]);
   const update = (k: string, patch: Partial<EffectItem>) => setAll(eff.map((e) => (e.kind === k ? { ...e, ...patch } : e)));
+  // Slider gestures: live no-undo preview per tick, one undo step on release
+  // (same contract as the image adjust sliders).
+  const dragBefore = useRef<unknown>(null);
+  const snapshot = () => { dragBefore.current = structuredClone(locate(useEditor.getState().doc, id)?.node.effects ?? null); };
+  const commit = () => useEditor.getState().commitEffects(id, dragBefore.current);
+  const previewUpdate = (k: string, patch: Partial<EffectItem>) => {
+    const live = ((locate(useEditor.getState().doc, id)?.node as unknown as { effects?: EffectItem[] })?.effects ?? []);
+    useEditor.getState().previewEffects(id, live.map((e) => (e.kind === k ? { ...e, ...patch } : e)) as never);
+  };
   const cls = (on: boolean) => `flex-1 rounded-lg border py-1.5 text-xs font-medium transition ${on ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`;
+  // Recoloring keeps the color's alpha: the Opacity slider owns it, and a
+  // swatch change must not silently reset a 35% shadow to full strength.
   const colorInput = (k: string, c?: Color) => (
-    <input type="color" value={c ? colorHex(c) : "#000000"} onChange={(e) => update(k, { color: colorFromHex(e.target.value) })} className="oc-color h-8 w-9 shrink-0" />
+    <input type="color" value={c ? colorHex(c) : "#000000"} onChange={(e) => update(k, { color: { srgb: { ...colorFromHex(e.target.value).srgb, a: c?.srgb.a ?? 1 } } })} className="oc-color h-8 w-9 shrink-0" />
   );
   const sh = find("shadow");
   const ol = find("outline");
   const gl = find("glow");
+  const bl = find("blur");
   const presets: { id: string; label: string; build: () => EffectItem[] }[] = [
     { id: "none", label: "None", build: () => [] },
-    { id: "shadow", label: "Shadow", build: () => [{ kind: "shadow", color: { srgb: { r: 0, g: 0, b: 0, a: 0.35 } }, offsetX: 0, offsetY: 4, blur: 6, spread: 0 }] },
-    { id: "lift", label: "Lift", build: () => [{ kind: "shadow", color: { srgb: { r: 0, g: 0, b: 0, a: 0.28 } }, offsetX: 0, offsetY: 10, blur: 24, spread: 0 }] },
+    { id: "shadow", label: "Shadow", build: () => [{ kind: "shadow", type: "drop", color: { srgb: { r: 0, g: 0, b: 0, a: 0.35 } }, offsetX: 0, offsetY: 4, blur: 6, spread: 0 }] },
+    { id: "lift", label: "Lift", build: () => [{ kind: "shadow", type: "drop", color: { srgb: { r: 0, g: 0, b: 0, a: 0.28 } }, offsetX: 0, offsetY: 10, blur: 24, spread: 0 }] },
     { id: "hollow", label: "Hollow", build: () => [{ kind: "outline", color: { srgb: { r: 0, g: 0, b: 0, a: 1 } }, width: 2 }] },
-    { id: "splice", label: "Splice", build: () => [{ kind: "outline", color: { srgb: { r: 0, g: 0, b: 0, a: 1 } }, width: 2 }, { kind: "shadow", color: { srgb: { r: 0, g: 0, b: 0, a: 0.4 } }, offsetX: 4, offsetY: 4, blur: 0, spread: 0 }] },
+    { id: "splice", label: "Splice", build: () => [{ kind: "outline", color: { srgb: { r: 0, g: 0, b: 0, a: 1 } }, width: 2 }, { kind: "shadow", type: "drop", color: { srgb: { r: 0, g: 0, b: 0, a: 0.4 } }, offsetX: 4, offsetY: 4, blur: 0, spread: 0 }] },
     { id: "glow", label: "Glow", build: () => [{ kind: "glow", color: { srgb: { r: 0.45, g: 0.5, b: 1, a: 0.9 } }, radius: 12 }] },
     { id: "neon", label: "Neon", build: () => [{ kind: "glow", color: { srgb: { r: 0.2, g: 0.9, b: 1, a: 0.95 } }, radius: 16 }, { kind: "outline", color: { srgb: { r: 0.2, g: 0.9, b: 1, a: 1 } }, width: 1.5 }] },
   ];
@@ -2850,14 +2962,19 @@ function NodeEffects({ id, effects }: { id: string; effects?: readonly { kind: s
         <button onClick={() => toggle("shadow")} className={cls(has("shadow"))}>Shadow</button>
         <button onClick={() => toggle("outline")} className={cls(has("outline"))}>Outline</button>
         <button onClick={() => toggle("glow")} className={cls(has("glow"))}>Glow</button>
+        <button onClick={() => toggle("blur")} className={cls(has("blur"))}>Blur</button>
       </div>
       {sh && (
-        <div className="flex items-center gap-2">
-          {colorInput("shadow", sh.color)}
-          <Field key={`shx${sh.offsetX}`} label="X" value={sh.offsetX ?? 0} onCommit={(n) => update("shadow", { offsetX: n })} />
-          <Field key={`shy${sh.offsetY}`} label="Y" value={sh.offsetY ?? 0} onCommit={(n) => update("shadow", { offsetY: n })} />
-          <Field key={`shb${sh.blur}`} label="◌" value={sh.blur ?? 0} onCommit={(n) => update("shadow", { blur: Math.max(0, n) })} />
-        </div>
+        <>
+          <div className="flex items-center gap-2">
+            {colorInput("shadow", sh.color)}
+            <Field key={`shx${sh.offsetX}`} label="X" value={sh.offsetX ?? 0} onCommit={(n) => update("shadow", { offsetX: n })} />
+            <Field key={`shy${sh.offsetY}`} label="Y" value={sh.offsetY ?? 0} onCommit={(n) => update("shadow", { offsetY: n })} />
+          </div>
+          <FxSlider label="Blur" min={0} max={60} value={Math.round(sh.blur ?? 0)} onStart={snapshot} onCommit={commit} onChange={(n) => previewUpdate("shadow", { blur: n })} />
+          <FxSlider label="Opacity" min={0} max={100} value={Math.round(((sh.color?.srgb.a ?? 1) as number) * 100)} fmt={(n) => `${n}%`} onStart={snapshot} onCommit={commit}
+            onChange={(n) => sh.color && previewUpdate("shadow", { color: { ...sh.color, srgb: { ...sh.color.srgb, a: n / 100 } } })} />
+        </>
       )}
       {ol && (
         <div className="flex items-center gap-2">
@@ -2866,10 +2983,18 @@ function NodeEffects({ id, effects }: { id: string; effects?: readonly { kind: s
         </div>
       )}
       {gl && (
-        <div className="flex items-center gap-2">
-          {colorInput("glow", gl.color)}
-          <Field key={`glr${gl.radius}`} label="◌" value={gl.radius ?? 0} onCommit={(n) => update("glow", { radius: Math.max(0, n) })} />
-        </div>
+        <>
+          <div className="flex items-center gap-2">
+            <span className="w-12 shrink-0 text-[11px] text-neutral-400">Color</span>
+            {colorInput("glow", gl.color)}
+          </div>
+          <FxSlider label="Size" min={0} max={60} value={Math.round(gl.radius ?? 0)} onStart={snapshot} onCommit={commit} onChange={(n) => previewUpdate("glow", { radius: n })} />
+          <FxSlider label="Opacity" min={0} max={100} value={Math.round(((gl.color?.srgb.a ?? 1) as number) * 100)} fmt={(n) => `${n}%`} onStart={snapshot} onCommit={commit}
+            onChange={(n) => gl.color && previewUpdate("glow", { color: { ...gl.color, srgb: { ...gl.color.srgb, a: n / 100 } } })} />
+        </>
+      )}
+      {bl && (
+        <FxSlider label="Amount" min={0} max={40} value={Math.round(bl.radius ?? 0)} onStart={snapshot} onCommit={commit} onChange={(n) => previewUpdate("blur", { radius: n })} />
       )}
     </div>
   );

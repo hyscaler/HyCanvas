@@ -224,6 +224,22 @@ function mapNodesV6(nodes: AnyObj[]): AnyObj[] {
   });
 }
 
+// v13 -> v14: effect normalization (see the step comment below).
+function mapNodesV14(nodes: AnyObj[]): AnyObj[] {
+  return nodes.map((node) => {
+    let n = node;
+    if (Array.isArray(n.effects) && n.effects.some((e: AnyObj) => e.kind === "shadow" && e.type === undefined)) {
+      n = { ...n, effects: n.effects.map((e: AnyObj) => (e.kind === "shadow" && e.type === undefined ? { ...e, type: "drop" } : e)) };
+    }
+    if (Array.isArray(n.textEffects) && n.textEffects.some((e: AnyObj) => e.kind === "shadow" && e.opacity !== 1)) {
+      n = { ...n, textEffects: n.textEffects.map((e: AnyObj) => (e.kind === "shadow" && e.opacity !== 1 ? { ...e, opacity: 1 } : e)) };
+    }
+    if (Array.isArray(n.children)) n = { ...n, children: mapNodesV14(n.children) };
+    if (n.child && typeof n.child === "object") n = { ...n, child: mapNodesV14([n.child])[0] };
+    return n;
+  });
+}
+
 /**
  * Migration steps keyed by their SOURCE version. `migrations[n]` upgrades a
  * version-`n` file to version `n + 1`.
@@ -298,6 +314,19 @@ export const migrations: Record<number, Migration> = {
   // carries neither, every slide stands alone as before, and it stays
   // structurally valid v13 and always opens.
   12: (file: AnyObj) => ({ ...file, schemaVersion: 13 }),
+  // v13 -> v14: effect normalization. (a) Shadow.type becomes optional with
+  // "drop" as the meaning of absence: early effect panels wrote node shadows
+  // without a type, which strict validation rejected and the renderer skipped;
+  // stamp those as "drop" so the data says what the fixed renderer draws.
+  // (b) Text-effect shadow `opacity` was never applied by any renderer, so bake
+  // it to 1 (its effective value): renders stay pixel-identical to what users
+  // published, and the field becomes live for the new effect level controls.
+  // Both idempotent; nothing else changes shape.
+  13: (file: AnyObj) => ({
+    ...file,
+    schemaVersion: 14,
+    pages: (file.pages ?? []).map((p: AnyObj) => ({ ...p, children: mapNodesV14(p.children ?? []) })),
+  }),
 };
 
 export class MigrationError extends Error {
