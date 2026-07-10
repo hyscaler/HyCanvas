@@ -43,6 +43,7 @@ import {
   type TextEffect,
   type TextFlow,
   type Transform,
+  type SlideSection,
 } from "@hc/schema";
 import { contrastRatio, fixToAA, fromHex, nearestPaletteColor, seriesColorAt, toHex } from "@hc/color";
 import {
@@ -412,6 +413,14 @@ interface EditorState {
   setPageBackground(fill: Fill | undefined): void;
   /** Reorder pages (move page at `from` to index `to`), undoable. */
   movePage(from: number, to: number): void;
+  /** Start a new section at `pageIndex`, adopting the run that follows (FR-5). */
+  addSection(pageIndex: number, name?: string): void;
+  renameSection(sectionId: string, name: string): void;
+  /** Delete the section record; its slides become unsectioned (never deleted). */
+  removeSection(sectionId: string): void;
+  toggleSectionCollapsed(sectionId: string): void;
+  /** Assign (or clear) a slide's section. */
+  setPageSection(pageIndex: number, sectionId: string | undefined): void;
   /** Re-parent top-level nodes from the active page to another page (a cross-page
    *  drag-drop), converting their coordinates into the destination page's local
    *  space and appending them as the top layers there. `before` holds each node's
@@ -1597,6 +1606,81 @@ export const useEditor = create<EditorState>((set, get) => {
       perform(
         () => { page.background = fill; },
         () => { page.background = before; },
+      );
+    },
+    addSection: (pageIndex, name) => {
+      const doc = get().doc as unknown as { sections?: SlideSection[]; pages: { sectionId?: string }[] };
+      const pages = doc.pages;
+      if (!pages[pageIndex]) return;
+      const id = `sec-${Math.random().toString(36).slice(2, 10)}`;
+      const section: SlideSection = { id, name: name?.trim() || `Section ${(doc.sections?.length ?? 0) + 1}` };
+      // The new section owns this slide and every following one up to the next
+      // sectioned slide, which is what "start a section here" means in a deck.
+      const adopt: number[] = [];
+      const startedIn = pages[pageIndex].sectionId;
+      for (let i = pageIndex; i < pages.length; i++) {
+        if (i > pageIndex && pages[i].sectionId !== startedIn) break;
+        adopt.push(i);
+      }
+      const before = adopt.map((i) => pages[i].sectionId);
+      const beforeSections = doc.sections;
+      perform(
+        () => {
+          doc.sections = [...(beforeSections ?? []), section];
+          adopt.forEach((i) => { pages[i].sectionId = id; });
+        },
+        () => {
+          doc.sections = beforeSections;
+          adopt.forEach((i, k) => { pages[i].sectionId = before[k]; });
+        },
+      );
+    },
+    renameSection: (sectionId, name) => {
+      const doc = get().doc as unknown as { sections?: SlideSection[] };
+      const sec = doc.sections?.find((x) => x.id === sectionId);
+      const next = name.trim();
+      if (!sec || !next || sec.name === next) return;
+      const before = sec.name;
+      perform(
+        () => { sec.name = next; },
+        () => { sec.name = before; },
+      );
+    },
+    removeSection: (sectionId) => {
+      const doc = get().doc as unknown as { sections?: SlideSection[]; pages: { sectionId?: string }[] };
+      if (!doc.sections?.some((x) => x.id === sectionId)) return;
+      const beforeSections = doc.sections;
+      const members = doc.pages.map((p, i) => (p.sectionId === sectionId ? i : -1)).filter((i) => i >= 0);
+      perform(
+        () => {
+          // Removing a section never removes slides; they become unsectioned.
+          doc.sections = beforeSections.filter((x) => x.id !== sectionId);
+          members.forEach((i) => { doc.pages[i].sectionId = undefined; });
+        },
+        () => {
+          doc.sections = beforeSections;
+          members.forEach((i) => { doc.pages[i].sectionId = sectionId; });
+        },
+      );
+    },
+    toggleSectionCollapsed: (sectionId) => {
+      const doc = get().doc as unknown as { sections?: SlideSection[] };
+      const sec = doc.sections?.find((x) => x.id === sectionId);
+      if (!sec) return;
+      const before = sec.collapsed;
+      perform(
+        () => { sec.collapsed = !before || undefined; },
+        () => { sec.collapsed = before; },
+      );
+    },
+    setPageSection: (pageIndex, sectionId) => {
+      const page = get().doc.pages[pageIndex] as unknown as { sectionId?: string };
+      if (!page) return;
+      const before = page.sectionId;
+      if (before === sectionId) return;
+      perform(
+        () => { page.sectionId = sectionId; },
+        () => { page.sectionId = before; },
       );
     },
     addPage: (size) => {

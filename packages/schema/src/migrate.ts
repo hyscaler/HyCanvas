@@ -293,6 +293,11 @@ export const migrations: Record<number, Migration> = {
   // omits them, alt text still falls back to ImageNode.alt, and reading order
   // falls back to z-order. It stays structurally valid v12 and always opens.
   11: (file: AnyObj) => ({ ...file, schemaVersion: 12 }),
+  // v12 -> v13: slide sections (F28 FR-5). DesignFile gains an optional
+  // `sections` registry and Page an optional `sectionId`. Additive: a v12 file
+  // carries neither, every slide stands alone as before, and it stays
+  // structurally valid v13 and always opens.
+  12: (file: AnyObj) => ({ ...file, schemaVersion: 13 }),
 };
 
 export class MigrationError extends Error {

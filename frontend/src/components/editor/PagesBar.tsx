@@ -1,9 +1,10 @@
 // Pages strip (Canva-style): live thumbnails you can switch, drag to reorder,
 // add, duplicate, and delete.
 
-import { useEffect, useRef, useState } from "react";
-import { Plus, Copy, Trash2, Eye, EyeOff, ChevronDown } from "lucide-react";
+import { Fragment, useEffect, useRef, useState } from "react";
+import { Plus, Copy, Trash2, Eye, EyeOff, ChevronDown, ChevronRight, Bookmark } from "lucide-react";
 import { createScene, renderScene, type CanvasLike, type Viewport } from "@hc/engine";
+import { groupPagesBySection, type SectionGroup, type SlideSection } from "@hc/schema";
 import { useEditor } from "@/store/editor";
 import { imageAssets } from "@/lib/assetProvider";
 import { PAGE_GAP } from "@/lib/pageLayout";
@@ -59,18 +60,37 @@ function PageThumb({ index }: { index: number }) {
 export function PagesBar() {
   useEditor((s) => s.rev);
   const active = useEditor((s) => s.activePage);
-  const pages = useEditor.getState().doc.pages;
+  const doc = useEditor.getState().doc;
+  const pages = doc.pages;
   const st = useEditor.getState;
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [renaming, setRenaming] = useState<number | null>(null);
   const [sizeMenu, setSizeMenu] = useState(false);
 
+  // Section runs (doc 28 FR-5). The bar stays a flat strip; a divider chip is
+  // injected at each group boundary, and a collapsed group hides its thumbs
+  // (never its slides: collapse is a view preference, not a deletion).
+  const groups = groupPagesBySection(doc);
+  const groupStart = new Map<number, SectionGroup>();
+  const collapsedPages = new Set<number>();
+  for (const g of groups) {
+    if (g.pageIndices.length) groupStart.set(g.pageIndices[0], g);
+    if (g.section?.collapsed) for (const i of g.pageIndices) collapsedPages.add(i);
+  }
+
   return (
     <div className="oc-scroll flex shrink-0 items-center gap-2 overflow-x-auto border-t border-neutral-200 bg-surface px-3 py-2">
       {pages.map((p, i) => {
         const hidden = !!(p as { hidden?: boolean }).hidden;
+        const startsGroup = groupStart.get(i);
+        const divider = startsGroup?.section ? (
+          <SectionChip key={`sec-${startsGroup.section.id}`} section={startsGroup.section} count={startsGroup.pageIndices.length} />
+        ) : null;
+        if (collapsedPages.has(i)) return divider; // thumbs hidden while collapsed
         return (
-        <div key={p.id} className="group relative shrink-0">
+        <Fragment key={`g${p.id}`}>
+        {divider}
+        <div className="group relative shrink-0">
           <button
             draggable
             onDragStart={() => setDragIdx(i)}
@@ -133,8 +153,18 @@ export function PagesBar() {
             </button>
           )}
         </div>
+        </Fragment>
         );
       })}
+      <button
+        onClick={() => st().addSection(useEditor.getState().activePage)}
+        title="Start a section at the current slide"
+        data-testid="add-section"
+        className="grid shrink-0 place-items-center rounded-md border border-neutral-200 text-neutral-500 hover:border-brand-300 hover:text-brand-ink"
+        style={{ width: 40, height: THUMB_H }}
+      >
+        <Bookmark size={16} />
+      </button>
       <button
         onClick={() => st().duplicatePage()}
         title="Duplicate current page"
@@ -179,6 +209,55 @@ export function PagesBar() {
         )}
       </div>
       <span className="ml-1 shrink-0 text-xs text-neutral-400">Page {active + 1} of {pages.length}</span>
+    </div>
+  );
+}
+
+/** A section divider in the slide bar (doc 28 FR-5): name, slide count,
+ *  collapse toggle, rename, and remove. Removing a section never removes its
+ *  slides; they simply become unsectioned. */
+function SectionChip({ section, count }: { section: SlideSection; count: number }) {
+  const st = useEditor.getState;
+  const [renaming, setRenaming] = useState(false);
+  return (
+    <div
+      className="flex shrink-0 items-center gap-1 self-stretch rounded-md border border-neutral-200 bg-neutral-50 px-1.5"
+      data-testid={`section-chip-${section.id}`}
+    >
+      <button
+        onClick={() => st().toggleSectionCollapsed(section.id)}
+        title={section.collapsed ? "Expand section" : "Collapse section"}
+        data-testid={`section-toggle-${section.id}`}
+        className="grid h-5 w-5 place-items-center rounded text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700"
+      >
+        {section.collapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
+      </button>
+      {renaming ? (
+        <input
+          autoFocus
+          defaultValue={section.name}
+          onBlur={(e) => { st().renameSection(section.id, e.target.value); setRenaming(false); }}
+          onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setRenaming(false); }}
+          className="w-24 rounded border border-brand-300 px-1 text-[11px] outline-none"
+        />
+      ) : (
+        <button
+          onDoubleClick={() => setRenaming(true)}
+          title="Double-click to rename"
+          className="max-w-28 truncate text-[11px] font-medium text-neutral-600"
+        >
+          {section.name}
+        </button>
+      )}
+      <span className="text-[10px] tabular-nums text-neutral-400">{count}</span>
+      <button
+        onClick={() => st().removeSection(section.id)}
+        title="Remove section (slides are kept)"
+        data-testid={`section-remove-${section.id}`}
+        className="grid h-5 w-5 place-items-center rounded text-neutral-300 hover:bg-neutral-200 hover:text-red-600"
+      >
+        <Trash2 size={11} />
+      </button>
     </div>
   );
 }

@@ -30,8 +30,11 @@ import { z } from "zod";
  *  v12: accessibility (F28 FR-29): NodeBase.altText/decorative and
  *      Page.readingOrder. All additive and optional: a v11 file omits them,
  *      alt text falls back to ImageNode.alt, and reading order falls back to
- *      z-order, exactly as before. */
-export const CURRENT_SCHEMA_VERSION = 12;
+ *      z-order, exactly as before.
+ *  v13: presentations (F28 FR-5) slide sections: a DesignFile.sections registry
+ *      and Page.sectionId membership. Additive and optional: a v12 deck has no
+ *      sections, every page stands alone, and it opens unchanged. */
+export const CURRENT_SCHEMA_VERSION = 13;
 
 /** Maximum container nesting depth; guards traversal against stack overflow (FR-4). */
 export const MAX_NESTING_DEPTH = 32;
@@ -1806,6 +1809,25 @@ export const ThemeSchema = z.object({
     .optional(),
 });
 
+/** A named, colored group of consecutive slides (doc 28 FR-5). Membership is
+ *  carried by `Page.sectionId`, so `pages` order remains the single source of
+ *  truth for the deck's sequence and a section can never disagree with it. */
+export interface SlideSection {
+  id: string;
+  name: string;
+  /** Swatch hex for the divider row; the UI supplies a default when absent. */
+  color?: string;
+  /** Collapsed in the slide bar / overview. Purely a view preference, stored so
+   *  it survives a reload; never affects presenting or export. */
+  collapsed?: boolean;
+}
+export const SlideSectionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  color: z.string().optional(),
+  collapsed: z.boolean().optional(),
+});
+
 // ---------------------------------------------------------------------------
 // Section 6.1: page and file
 // ---------------------------------------------------------------------------
@@ -1823,6 +1845,7 @@ export interface Page {
   transition?: PageTransition; // applied when advancing to this page
   // presentations (additive, optional; older files still validate):
   layoutId?: string; // slide layout this page inherits from (doc 28 FR-3)
+  sectionId?: string; // the section this slide belongs to (doc 28 FR-5)
   /** Node ids in the order assistive technology should traverse them, which is
    *  independent of z-order (doc 28 FR-29). Absent = fall back to z-order, the
    *  behavior before this field existed. Ids not on the page are ignored, and
@@ -1846,6 +1869,7 @@ export const PageSchema = z.object({
   notes: z.string().optional(),
   transition: PageTransitionSchema.optional(),
   layoutId: z.string().optional(),
+  sectionId: z.string().optional(),
   readingOrder: z.array(z.string()).optional(),
   autoAdvanceMs: z.number().optional(),
   hidden: z.boolean().optional(),
@@ -1873,6 +1897,9 @@ export interface DesignFile {
   masters?: SlideMaster[];
   layouts?: SlideLayout[];
   theme?: Theme;
+  /** Slide sections (doc 28 FR-5). Order here is presentational only; the deck
+   *  sequence is `pages`. A section with no pages is legal (just empty). */
+  sections?: SlideSection[];
   meta: Record<string, unknown>;
 }
 export const DesignFileSchema = z.object({
@@ -1887,6 +1914,7 @@ export const DesignFileSchema = z.object({
   masters: z.array(SlideMasterSchema).optional(),
   layouts: z.array(SlideLayoutSchema).optional(),
   theme: ThemeSchema.optional(),
+  sections: z.array(SlideSectionSchema).optional(),
   assets: z.array(AssetRefSchema),
   fonts: z.array(FontRefSchema),
   palette: z.array(ColorSwatchSchema).optional(),

@@ -56,6 +56,7 @@ import type {
   PageTransition,
   ElementLink,
 } from "@hc/schema";
+import { nextSectionStart, prevSectionStart } from "@hc/schema";
 import { useEditor } from "@/store/editor";
 import { imageAssets } from "@/lib/assetProvider";
 import { useBrand } from "@/store/brand";
@@ -590,6 +591,19 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
         case "b": case "B": e.preventDefault(); setBlank((v) => (v === "black" ? "none" : "black")); return; // black screen
         case "w": case "W": e.preventDefault(); setBlank((v) => (v === "white" ? "none" : "white")); return; // white screen
         case "g": case "G": case "/": e.preventDefault(); setPaletteOpen(true); return; // jump-to-slide palette
+        // Section-aware navigation (doc 28 FR-5): jump to the start of the
+        // next/previous section, skipping the rest of the current one. A deck
+        // with no sections has nothing to jump to, so these are no-ops.
+        case "]":
+        case "[": {
+          // The spotlight tool owns the brackets for its radius, so only jump
+          // sections when it is not the active tool.
+          if (tool === "spotlight") break;
+          e.preventDefault();
+          const to = e.key === "]" ? nextSectionStart(doc, idx) : prevSectionStart(doc, idx);
+          if (to >= 0) navigate(to);
+          return;
+        }
         case "z": case "Z": e.preventDefault(); setZoom((z) => stepZoom(z, ZOOM_STEP * 2, 0.5, 0.5)); return; // zoom in (center)
         case "=": case "+": e.preventDefault(); setZoom((z) => stepZoom(z, ZOOM_STEP, z.originX, z.originY)); return;
         case "-": case "_": e.preventDefault(); setZoom((z) => stepZoom(z, -ZOOM_STEP, z.originX, z.originY)); return;
@@ -605,7 +619,7 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [guardedNext, guardedPrev, onClose, paletteOpen, showHelp, blank, tool, selectTool, audienceOpen, closeAudience, openAudience, designId]);
+  }, [guardedNext, guardedPrev, onClose, paletteOpen, showHelp, blank, tool, selectTool, audienceOpen, closeAudience, openAudience, designId, doc, idx, navigate]);
 
   // Compute and store the fit for the current slide whenever it/size changes.
   const layout = useCallback((): { ctx: CanvasRenderingContext2D; vp: Viewport } | null => {
@@ -1275,6 +1289,7 @@ function ShortcutHelp({ onClose }: { onClose: () => void }) {
     ["G or /", "Jump-to-slide palette"],
     ["S", "Presenter view"],
     ["E", "Audience display (2nd screen)"],
+    ["[ / ]", "Previous / next section"],
     ["P", "Autopilot play/pause"],
     ["?", "Toggle this help"],
     ["Esc", "Close tool / overlay, then exit"],
