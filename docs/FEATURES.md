@@ -79,7 +79,7 @@ A living checklist of what ships today versus what is planned. Shipped items are
 ### Presentations ([spec 28](roadmap/28-presentations.md))
 - [ ] Deck-to-video (server MP4 with animations, transitions, narration); per-transition easing
 - [ ] Tracked per-audience player links with passcodes and per-slide dwell analytics; iframe embed
-- [ ] Editor UI for masters/layouts/themes; slide sections; grid/outline overview
+- [ ] Grid/outline overview editing view
 - [ ] PPTX import/export round-trip
 - [ ] Present-and-record; full-deck video
 - [ ] Live audience Q&A, polls, reactions, captions
