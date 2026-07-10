@@ -30,6 +30,7 @@ export * from "./json-schema";
 export * from "./yjs";
 export * from "./theme";
 export * from "./a11y";
+export * from "./sections";
 
 /**
  * Back-compat alias for the schema version constant. Prefer

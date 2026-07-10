@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
 import { useRouter } from "next/router";
-import { ChevronLeft, Undo2, Redo2, Download, Play, MonitorPlay, Ruler, Grid3x3, Magnet, LayoutTemplate, History, Eye, Share2, MessageSquare, ShieldCheck, Activity, BarChart3, MoreHorizontal, Send, Globe, Printer, PanelRightClose, PanelRightOpen, Keyboard, Info, X, Accessibility, Maximize2, Minimize2 } from "lucide-react";
+import { ChevronLeft, Undo2, Redo2, Download, Play, MonitorPlay, Ruler, Grid3x3, Magnet, LayoutTemplate, History, Eye, Share2, MessageSquare, ShieldCheck, Activity, BarChart3, MoreHorizontal, Send, Globe, Printer, PanelRightClose, PanelRightOpen, Keyboard, Info, X, Accessibility, Maximize2, Minimize2, LayoutGrid } from "lucide-react";
 import type { AccessMode } from "@hc/sdk";
 import { ApiError } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
@@ -19,6 +19,7 @@ import { ZoomControl } from "./ZoomControl";
 import { CommandMenu } from "./CommandMenu";
 import { ShortcutsHelp } from "./ShortcutsHelp";
 import { ExportDialog } from "./ExportDialog";
+import { SlideOverview } from "./SlideOverview";
 import { ShareDialog } from "./ShareDialog";
 import { RequestAccessScreen } from "./RequestAccessScreen";
 import { NotFoundScreen } from "@/components/ui/NotFound";
@@ -267,6 +268,9 @@ export function EditorApp() {
   const focus = useBoardFocus((s) => s.focus);
   const inFocus = focus && docKind === "whiteboard";
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [overviewOpen, setOverviewOpen] = useState(false);
+  // Page count for the overview affordance; `rev` bumps on add/delete.
+  const pageCount = useEditor((s) => { void s.rev; return s.doc.pages.length; });
   // Responsive breakpoints (graceful degradation for narrow laptops/tablets;
   // not a mobile redesign). Below lg the left tool panel floats over the canvas
   // instead of taking layout width so the canvas keeps usable space; below the
@@ -821,6 +825,9 @@ export function EditorApp() {
                     { icon: Magnet as TopIcon, label: "Snapping", onClick: () => useEditor.getState().toggleSnap() },
                   ]
                 : []),
+              ...(docKind === "design" && pageCount > 1
+                ? [{ icon: LayoutGrid as TopIcon, label: "Slide overview", onClick: () => setOverviewOpen(true) }]
+                : []),
               ...(designId ? [{ icon: History as TopIcon, label: "Version history", onClick: () => showPanel("history") }] : []),
               ...(designId ? [{ icon: Activity as TopIcon, label: "Activity feed", onClick: () => showPanel("activity") }] : []),
               ...(designId && canMember ? [{ icon: BarChart3 as TopIcon, label: "Engagement insights", onClick: () => showPanel("insights") }] : []),
@@ -891,6 +898,7 @@ export function EditorApp() {
       {websiteOpen && <WebsiteDialog open onClose={() => setWebsiteOpen(false)} designId={designId ?? undefined} workspaceId={workspaceId ?? undefined} />}
       {printOpen && <PrintDialog open onClose={() => setPrintOpen(false)} />}
       {a11yOpen && <AccessibilityDialog open onClose={() => setA11yOpen(false)} />}
+      <SlideOverview open={overviewOpen} onClose={() => setOverviewOpen(false)} />
       {presenting && <PresentMode onClose={() => { useEditor.getState().setPresenting(false); setPresenting(false); }} />}
       <PromptHost />
 
