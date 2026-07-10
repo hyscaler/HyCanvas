@@ -1,12 +1,11 @@
 // Pages strip (Canva-style): live thumbnails you can switch, drag to reorder,
 // add, duplicate, and delete.
 
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useState } from "react";
 import { Plus, Copy, Trash2, Eye, EyeOff, ChevronDown, ChevronRight, Bookmark } from "lucide-react";
-import { createScene, renderScene, type CanvasLike, type Viewport } from "@hc/engine";
 import { groupPagesBySection, type SectionGroup, type SlideSection } from "@hc/schema";
 import { useEditor } from "@/store/editor";
-import { imageAssets } from "@/lib/assetProvider";
+import { SlideThumb } from "./SlideThumb";
 import { PAGE_GAP } from "@/lib/pageLayout";
 
 const THUMB_W = 80;
@@ -23,39 +22,6 @@ const PAGE_SIZE_PRESETS: { label: string; w: number; h: number }[] = [
   { label: "A4 Landscape", w: 1754, h: 1240 },
 ];
 
-function PageThumb({ index }: { index: number }) {
-  const rev = useEditor((s) => s.rev);
-  const activePage = useEditor((s) => s.activePage);
-  // Only the active page is editable, so a non-active thumbnail's content can't
-  // change between renders; gate its re-render on rev so a single drag doesn't
-  // rebuild every page's scene. Structural ops (add/move/delete) re-key/re-index
-  // the row, which re-runs the effect anyway.
-  const liveRev = index === activePage ? rev : 0;
-  const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const canvas = ref.current;
-    if (!canvas) return;
-    const doc = useEditor.getState().doc;
-    const pg = doc.pages[index];
-    if (!pg) return;
-    const scale = Math.min(THUMB_W / pg.width, THUMB_H / pg.height);
-    const cw = Math.max(1, Math.round(pg.width * scale));
-    const ch = Math.max(1, Math.round(pg.height * scale));
-    canvas.width = cw;
-    canvas.height = ch;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, cw, ch);
-    const vp: Viewport = { zoom: scale, panX: 0, panY: 0, dpr: 1, width: cw, height: ch };
-    try {
-      renderScene(createScene(doc, index), ctx as unknown as CanvasLike, vp, { assets: imageAssets });
-    } catch {
-      /* a tainted/cross-origin image can throw; the thumbnail just shows white */
-    }
-  }, [liveRev, index]);
-  return <canvas ref={ref} className="max-h-full max-w-full" />;
-}
 
 export function PagesBar() {
   useEditor((s) => s.rev);
@@ -112,7 +78,7 @@ export function PagesBar() {
             } ${dragIdx === i ? "opacity-50" : ""} ${hidden ? "opacity-50" : ""}`}
             style={{ width: THUMB_W, height: THUMB_H }}
           >
-            <PageThumb index={i} />
+            <SlideThumb index={i} width={THUMB_W} height={THUMB_H} />
             {hidden && (
               <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-0.5 bg-neutral-900/70 py-0.5 text-[9px] font-medium text-white">
                 <EyeOff size={9} /> Hidden
