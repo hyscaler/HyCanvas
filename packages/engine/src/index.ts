@@ -47,6 +47,13 @@ export {
   type MorphPlan,
 } from "./transition";
 export {
+  planBuildOrder,
+  childIndexForBuildOrder,
+  startModeLabel,
+  type BuildPlan,
+  type BuildStep,
+} from "./buildorder";
+export {
   planDeckFrames,
   planDurationMs,
   slideDurationMs,
