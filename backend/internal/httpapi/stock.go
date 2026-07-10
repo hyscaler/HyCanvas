@@ -11,14 +11,15 @@ import (
 	"hycanvas/backend/internal/stock"
 )
 
-// mountStock attaches the stock catalog surface (doc 13). Search/get/collections
-// are auth-guarded (favorited flags need the caller); favorites/recents are
-// per-user. The image proxy is public (the bytes are allowlisted stock images).
+// mountStock attaches the stock catalog surface (doc 13). Search/get/collections/
+// filters are auth-guarded (favorited flags need the caller); favorites/recents
+// are per-user. The image proxy is public (the bytes are allowlisted stock images).
 func mountStock(api chi.Router, st *stock.Service, acct *accounts.Service) {
 	api.Group(func(r chi.Router) {
 		r.Use(requireAuth(acct))
 		r.Get("/stock/search", stockSearchHandler(st))
 		r.Get("/stock/collections", stockCollectionsHandler(st))
+		r.Get("/stock/filters", stockFiltersHandler(st))
 		r.Get("/stock/favorites", stockFavoritesHandler(st))
 		r.Post("/stock/favorites/{id}", stockToggleFavoriteHandler(st))
 		r.Get("/stock/recent", stockRecentsHandler(st))
@@ -73,6 +74,15 @@ func stockGetHandler(st *stock.Service) http.HandlerFunc {
 func stockCollectionsHandler(st *stock.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, st.Collections())
+	}
+}
+
+// stockFiltersHandler lists the catalog's filterable facets (category, style,
+// orientation), aggregated per kind, so the panel offers only filters that
+// actually have data behind them.
+func stockFiltersHandler(st *stock.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, st.Filters())
 	}
 }
 

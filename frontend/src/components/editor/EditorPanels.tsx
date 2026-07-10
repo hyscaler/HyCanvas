@@ -36,7 +36,7 @@ import {
   type AutoLayoutSuggestion,
   type AnimateStyle,
 } from "@/lib/assist";
-import { ApiError, type AiConfigView, type AssetFolder, type MiniAppSummary, type StockAssetSummary, type StockCollectionSummary, type StorageUsageView, type UploadedAsset } from "@hc/sdk";
+import { ApiError, type AiConfigView, type AssetFolder, type MiniAppSummary, type StockAssetSummary, type StockCollectionSummary, type StockFacetValue, type StockFiltersSummary, type StorageUsageView, type UploadedAsset } from "@hc/sdk";
 import { checkAppAction, type AppAction } from "@hc/stock";
 import { oc, resolveAssetUrl, stockProxyUrl, uploadAssetWithProgress } from "@/lib/sdk";
 import type { BrandVoice, BrandLintViolation } from "@hc/sdk";
@@ -2604,6 +2604,32 @@ const STOCK_KINDS: { label: string; kind: string }[] = [
   { label: "Emoji", kind: "sticker" },
 ];
 
+const stockChipCls = (active: boolean) =>
+  `whitespace-nowrap rounded-full border px-2.5 py-1 text-xs ${active ? "border-brand-500 bg-brand-50 text-brand-ink" : "border-neutral-200 text-neutral-600 hover:bg-neutral-100"}`;
+
+// Facet ids are catalog slugs; render them as words ("health" -> "Health").
+const FACET_LABELS: Record<string, string> = { ui: "UI" };
+const facetLabel = (id: string) => FACET_LABELS[id] ?? id.charAt(0).toUpperCase() + id.slice(1);
+
+// One facet row (category/style/orientation) below the kind chips. Values come
+// from /stock/filters aggregated per kind server-side, so new packs or
+// orientations surface automatically with no frontend change. Hidden unless
+// the active kind has at least two values to choose between.
+function FacetChips({ label, values, active, onPick }: { label: string; values: StockFacetValue[]; active: string; onPick: (id: string) => void }) {
+  if (values.length < 2) return null;
+  return (
+    <div className="mb-2">
+      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">{label}</p>
+      <div className="flex flex-wrap gap-1">
+        <button onClick={() => onPick("")} className={stockChipCls(active === "")}>All</button>
+        {values.map((v) => (
+          <button key={v.id} onClick={() => onPick(v.id)} title={`${v.count} asset${v.count === 1 ? "" : "s"}`} className={stockChipCls(active === v.id)}>{facetLabel(v.id)}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 type StockTab = "browse" | "favorites" | "recents";
 
 // Live-provider assets (Openverse photos) are not in the bundled catalog:
@@ -2737,6 +2763,11 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
   // Debounce the live search so a refetch fires after typing stops, not per key.
   const debouncedQuery = useDebouncedValue(query);
   const [kind, setKind] = useState("");
+  // Facet filters (category/style/orientation), kind-scoped; "" means all.
+  const [category, setCategory] = useState("");
+  const [style, setStyle] = useState("");
+  const [orientation, setOrientation] = useState("");
+  const [filters, setFilters] = useState<StockFiltersSummary | null>(null);
   const [collection, setCollection] = useState<StockCollectionSummary | null>(null);
   const [collections, setCollections] = useState<StockCollectionSummary[]>([]);
   const [results, setResults] = useState<StockAssetSummary[]>([]);
@@ -2747,15 +2778,25 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
   // Bump to force a retry of the active tab's fetch effect.
   const [retryNonce, setRetryNonce] = useState(0);
 
-  // Load collections once; the browse landing state shows them as a row.
+  // Load collections and filter facets; the browse landing state shows
+  // collections as a row, facets appear per kind. Keyed on retryNonce so the
+  // results-area Retry button also heals a failed load here (a miss would
+  // otherwise hide collections and facets for the panel's lifetime), keeping
+  // whatever already loaded when a refetch fails.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const c = await oc.stockCollections().catch(() => []);
-      if (!cancelled) setCollections(c);
+      const [c, f] = await Promise.all([
+        oc.stockCollections().catch(() => []),
+        oc.stockFilters().catch(() => null),
+      ]);
+      if (!cancelled) {
+        setCollections((cur) => (c.length ? c : cur));
+        setFilters((cur) => f ?? cur);
+      }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [retryNonce]);
 
   // Load the active tab's contents. Distinguishes a failed fetch (error banner +
   // retry) from a genuinely empty result (the "no results" message). Browse
@@ -2764,8 +2805,13 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
   const STOCK_PAGE = 60;
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  // Generation guard: the SDK has no request cancellation, so an in-flight
+  // "Load more" must drop its append when a filter/query change has already
+  // replaced the grid (a stale page would violate the active filters).
+  const fetchGen = useRef(0);
   useEffect(() => {
     let cancelled = false;
+    fetchGen.current += 1;
     void (async () => {
       setLoading(true);
       setError(false);
@@ -2773,7 +2819,7 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
         let r: StockAssetSummary[];
         if (tab === "favorites") r = await oc.stockFavorites();
         else if (tab === "recents") r = await oc.stockRecent();
-        else r = await oc.stockSearch(intentQuery(debouncedQuery) || undefined, kind || undefined, { collection: collection?.id, limit: STOCK_PAGE });
+        else r = await oc.stockSearch(intentQuery(debouncedQuery) || undefined, kind || undefined, { category: category || undefined, style: style || undefined, orientation: orientation || undefined, collection: collection?.id, limit: STOCK_PAGE });
         if (!cancelled) { setResults(r); setHasMore(tab === "browse" && r.length === STOCK_PAGE); }
       } catch {
         if (!cancelled) { setResults([]); setError(true); setHasMore(false); }
@@ -2783,19 +2829,22 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
     })();
     return () => { cancelled = true; };
     // Re-run when the tab, filters, debounced query, or active collection change.
-  }, [tab, collection, debouncedQuery, kind, retryNonce]);
+  }, [tab, collection, debouncedQuery, kind, category, style, orientation, retryNonce]);
 
   async function loadMore() {
     if (loadingMore) return;
     setLoadingMore(true);
+    const gen = fetchGen.current;
     try {
       const next = await oc.stockSearch(intentQuery(debouncedQuery) || undefined, kind || undefined, {
+        category: category || undefined, style: style || undefined, orientation: orientation || undefined,
         collection: collection?.id, limit: STOCK_PAGE, offset: results.length,
       });
+      if (gen !== fetchGen.current) return; // filters changed mid-flight; the grid was replaced
       setResults((cur) => [...cur, ...next.filter((n) => !cur.some((c) => c.id === n.id))]);
       setHasMore(next.length === STOCK_PAGE);
     } catch {
-      setHasMore(false);
+      if (gen === fetchGen.current) setHasMore(false);
     } finally {
       setLoadingMore(false);
     }
@@ -2808,6 +2857,8 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
   }
   function setFilter(k: string) {
     setKind(k);
+    // Facets are kind-scoped; switching kind resets them.
+    setCategory(""); setStyle(""); setOrientation("");
     setTab("browse");
   }
 
@@ -2836,7 +2887,13 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
     tab === "favorites" ? "No favorites yet. Tap the star on any asset." :
     tab === "recents" ? "Nothing placed yet." :
     collection ? `Nothing in ${collection.title}.` :
-    debouncedQuery ? `No results for “${debouncedQuery}”.` : "No stock assets available.";
+    // Name the facet as a cause alongside the query: with both active, the
+    // facet is often the real constraint (and on photos it also switches the
+    // search from the live provider to the bundled library).
+    debouncedQuery && (category || style || orientation) ? `No results for “${debouncedQuery}” with these filters. Try clearing a filter.` :
+    debouncedQuery ? `No results for “${debouncedQuery}”.` :
+    category || style || orientation ? "Nothing matches these filters." :
+    "No stock assets available.";
 
   return (
     <PanelShell title="Stock">
@@ -2864,9 +2921,23 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
               below their text), which read as the whole panel sliding. */}
           <div className="mb-3 flex flex-wrap gap-1">
             {STOCK_KINDS.map((f) => (
-              <button key={f.label} onClick={() => setFilter(f.kind)} className={`whitespace-nowrap rounded-full border px-2.5 py-1 text-xs ${kind === f.kind ? "border-brand-500 bg-brand-50 text-brand-ink" : "border-neutral-200 text-neutral-600 hover:bg-neutral-100"}`}>{f.label}</button>
+              <button key={f.label} onClick={() => setFilter(f.kind)} className={stockChipCls(kind === f.kind)}>{f.label}</button>
             ))}
           </div>
+          {/* Kind-scoped facet rows; a selected collection is already a narrower
+              container, so facets stay hidden until it's cleared. */}
+          {kind && !collection && filters && (
+            <>
+              <FacetChips label="Category" values={filters.categories.filter((v) => v.kind === kind)} active={category} onPick={setCategory} />
+              <FacetChips label="Style" values={filters.styles.filter((v) => v.kind === kind)} active={style} onPick={setStyle} />
+              <FacetChips label="Orientation" values={filters.orientations.filter((v) => v.kind === kind)} active={orientation} onPick={setOrientation} />
+              {/* Faceted photo search is bundled-only (the live provider can't
+                  apply facets), so say so instead of results silently shrinking. */}
+              {kind === "photo" && (category || style || orientation) && (
+                <p className="mb-2 text-[11px] text-neutral-500">Filters search the built-in library. Clear them to search live photos.</p>
+              )}
+            </>
+          )}
           {collection ? (
             <button onClick={() => setCollection(null)} className="mb-2 flex items-center gap-1 text-xs font-medium text-brand-ink hover:underline">
               <ChevronLeft size={13} />Back to collections

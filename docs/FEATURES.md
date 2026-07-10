@@ -18,7 +18,7 @@ A living checklist of what ships today versus what is planned. Shipped items are
 
 ### Content systems
 - [x] Uploads (folders, tags, from-URL, SVG/PDF import, screen/mic recording)
-- [x] Stock (bundled catalog + live Openverse photos, licensing/attribution)
+- [x] Stock (bundled catalog + live Openverse photos, licensing/attribution, faceted filters: category/style/orientation, colorful-first browse order)
 - [x] Templates (categories, save-as-template, workspace collections, locked regions)
 - [x] Brand kits (colors/fonts/logos/voice, brand lock with off/warn/block policy, auto-fix, re-skin)
 
