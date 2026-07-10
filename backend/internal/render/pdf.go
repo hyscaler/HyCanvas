@@ -63,6 +63,38 @@ type pdfCtx struct {
 	// Accessibility tagging (doc 28 FR-22). Tags are collected as content is
 	// drawn, so `tags` is in z-order; the structure tree reorders them.
 	tags []pdfTag
+	// Embedded images, deduplicated by asset id: a logo placed on every slide
+	// is encoded once per page and drawn many times.
+	src      ImageSource
+	images   []*pdfImage
+	imageByA map[string]*pdfImage
+}
+
+// imageBody draws an image node, embedding its asset the first time it is seen.
+// The unit square an XObject paints into is y-up, and page content is already
+// flipped to the design's y-down space, so the matrix counter-flips to put the
+// image's top row at the node's top edge.
+func (c *pdfCtx) imageBody(node map[string]any) {
+	w, h := sizeOf(node)
+	id, data, ok := assetBytes(node, c.src)
+	if !ok {
+		return // no pixels available; the node still keeps its structure tag
+	}
+	im, seen := c.imageByA[id]
+	if !seen {
+		var built bool
+		im, built = encodeImage(fmt.Sprintf("Im%d", len(c.images)), data)
+		if !built {
+			return // undecodable bytes degrade to a missing image, not a failed export
+		}
+		if c.imageByA == nil {
+			c.imageByA = map[string]*pdfImage{}
+		}
+		c.imageByA[id] = im
+		c.images = append(c.images, im)
+	}
+	c.op(pn(w) + " 0 0 " + pn(-h) + " 0 " + pn(h) + " cm")
+	c.op("/" + im.name + " Do")
 }
 
 func (c *pdfCtx) op(s string) { c.buf.WriteString(s); c.buf.WriteByte('\n') }
@@ -379,6 +411,8 @@ func (c *pdfCtx) emitNode(node map[string]any, inArtifact bool) {
 		c.lineBody(node)
 	case "text":
 		c.textBody(node)
+	case "image":
+		c.imageBody(node)
 	case "ink":
 		c.inkBody(node)
 	case "sticky":
@@ -543,29 +577,39 @@ type pdfPage struct {
 	w, h    float64
 	tags    []pdfTag
 	name    string
+	images  []*pdfImage
 }
 
-// ToPDF renders one page of a design to a single-page PDF document.
-func ToPDF(file Design, pageIndex int) ([]byte, error) {
+// ToPDF renders one page of a design to a single-page PDF document. An optional
+// ImageSource supplies asset bytes; without one, image nodes draw nothing, which
+// is what this encoder did before it could embed images at all.
+func ToPDF(file Design, pageIndex int, src ...ImageSource) ([]byte, error) {
 	pages := asArr(file["pages"])
 	if pageIndex < 0 || pageIndex >= len(pages) {
 		return nil, ErrPageRange
 	}
-	return assemblePDF([]pdfPage{renderPDFPage(asObj(pages[pageIndex]))}), nil
+	return assemblePDF([]pdfPage{renderPDFPage(asObj(pages[pageIndex]), firstSource(src))}), nil
+}
+
+func firstSource(src []ImageSource) ImageSource {
+	if len(src) == 0 {
+		return nil
+	}
+	return src[0]
 }
 
 // ToDeckPDF renders every page of a design into one tagged PDF, so a whole deck
 // exports as a single accessible document (doc 28 FR-22). Hidden slides are
 // skipped, matching present mode: a slide the author hid is not part of the
 // deck being delivered.
-func ToDeckPDF(file Design) ([]byte, error) {
+func ToDeckPDF(file Design, src ...ImageSource) ([]byte, error) {
 	var out []pdfPage
 	for _, p := range asArr(file["pages"]) {
 		page := asObj(p)
 		if asBool(page["hidden"]) {
 			continue
 		}
-		out = append(out, renderPDFPage(page))
+		out = append(out, renderPDFPage(page, firstSource(src)))
 	}
 	if len(out) == 0 {
 		return nil, ErrPageRange
@@ -574,10 +618,10 @@ func ToDeckPDF(file Design) ([]byte, error) {
 }
 
 // renderPDFPage draws one page and collects the structure tags it produced.
-func renderPDFPage(page map[string]any) pdfPage {
+func renderPDFPage(page map[string]any, src ImageSource) pdfPage {
 	w, h := asNum(page["width"]), asNum(page["height"])
 
-	c := &pdfCtx{boxes: pageBoxMap(page)}
+	c := &pdfCtx{boxes: pageBoxMap(page), src: src}
 	// Flip to design space (top-left origin, y-down).
 	c.op("1 0 0 -1 0 " + pn(h) + " cm")
 	// Background. Purely presentational, so it is an artifact: a screen reader
@@ -611,7 +655,7 @@ func renderPDFPage(page map[string]any) pdfPage {
 		}
 	}
 
-	return pdfPage{content: c.buf.Bytes(), w: w, h: h, tags: ordered, name: asStr(page["name"])}
+	return pdfPage{content: c.buf.Bytes(), w: w, h: h, tags: ordered, name: asStr(page["name"]), images: c.images}
 }
 
 // assemblePDF writes a valid PDF over one or more pages, registering the base-14
@@ -636,9 +680,26 @@ func assemblePDF(pages []pdfPage) []byte {
 		fmt.Fprintf(&fontDict, "/%s %d 0 R ", f.key, 3+i)
 		fontObjs[i] = fmt.Sprintf("<< /Type /Font /Subtype /Type1 /BaseFont /%s /Encoding /WinAnsiEncoding >>", f.baseFont)
 	}
-	firstPage := 3 + len(pdfFontTable)
-	pageObj := func(i int) int { return firstPage + 2*i } // page, then its contents
-	structRoot := firstPage + 2*len(pages)
+	// A page owns its own objects: the page, its contents, and an XObject (plus
+	// a soft mask, when the image has transparency) per embedded image. So the
+	// numbers are laid out by walking the pages rather than by a fixed stride.
+	next := 3 + len(pdfFontTable)
+	pageObjNo := make([]int, len(pages))
+	imageObjNo := make([][]int, len(pages))
+	for i, p := range pages {
+		pageObjNo[i] = next
+		next += 2 // page, contents
+		imageObjNo[i] = make([]int, len(p.images))
+		for j, im := range p.images {
+			imageObjNo[i][j] = next
+			next++
+			if im.alpha != nil {
+				next++ // its soft mask
+			}
+		}
+	}
+	pageObj := func(i int) int { return pageObjNo[i] }
+	structRoot := next
 	docElem := structRoot + 1
 	sectElem := func(i int) int { return docElem + 1 + i }
 	firstLeaf := sectElem(len(pages))
@@ -651,14 +712,28 @@ func assemblePDF(pages []pdfPage) []byte {
 
 	var (
 		pageObjs, contentObjs, sectObjs, leafObjs []string
+		imageObjs                                 [][]string
 		nums                                      []string
 		leafNo                                    = firstLeaf
 		kidRefs                                   strings.Builder
 	)
 	for i, p := range pages {
+		var xobjDict strings.Builder
+		var bodies []string
+		for j, im := range p.images {
+			b, res := im.xobjects(imageObjNo[i][j])
+			bodies = append(bodies, b...)
+			xobjDict.WriteString(res)
+		}
+		imageObjs = append(imageObjs, bodies)
+		xobjects := ""
+		if xobjDict.Len() > 0 {
+			xobjects = fmt.Sprintf(" /XObject << %s>>", xobjDict.String())
+		}
+
 		pageObjs = append(pageObjs, fmt.Sprintf(
-			"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %s %s] /Resources << /Font << %s>> >> /Contents %d 0 R /StructParents %d /Tabs /S >>",
-			pn(p.w), pn(p.h), fontDict.String(), pageObj(i)+1, i))
+			"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %s %s] /Resources << /Font << %s>>%s >> /Contents %d 0 R /StructParents %d /Tabs /S >>",
+			pn(p.w), pn(p.h), fontDict.String(), xobjects, pageObj(i)+1, i))
 		contentObjs = append(contentObjs, fmt.Sprintf("<< /Length %d >>\nstream\n%s\nendstream", len(p.content)+1, p.content))
 
 		// One structure element per tag, in reading order, each pointing at its
@@ -703,6 +778,7 @@ func assemblePDF(pages []pdfPage) []byte {
 	objs = append(objs, fontObjs...)
 	for i := range pages {
 		objs = append(objs, pageObjs[i], contentObjs[i])
+		objs = append(objs, imageObjs[i]...)
 	}
 	objs = append(objs,
 		// Every role we emit is a standard structure type, so no /RoleMap.
