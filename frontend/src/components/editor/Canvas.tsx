@@ -4,7 +4,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MousePointer2, PenTool, Pencil, Minus, MoveUpRight, Square, Circle, Type, MessageSquarePlus, Copy, ClipboardPaste, CopyPlus, Trash2, Group, Ungroup, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, FlipHorizontal2, FlipVertical2, Paintbrush, PaintBucket, Lock, LockOpen, Eye, EyeOff, BoxSelect } from "lucide-react";
-import type { CharStyle, Color, Paragraph, TextNode, Transform } from "@hc/schema";
+import type { CharStyle, Color, Page, Paragraph, TextNode, Transform } from "@hc/schema";
+import { isDecorative, resolveReadingOrder } from "@hc/schema";
 import { locate, moveTransform, marqueeSelect, parentSpaceDelta, worldMatrix, worldAABB, unionAABB, snap, spacingSnap, type SpacingGuide, type EditCommand } from "@hc/editor";
 import { fitStickyFontScale, routeConnector } from "@hc/whiteboard";
 import { layoutText } from "@hc/text";
@@ -127,9 +128,15 @@ function topAncestorId(doc: Parameters<typeof locate>[0], id: string): string {
 // Top-level, keyboard-reachable nodes of a page: skip locked and hidden ones so
 // Tab-cycling only lands on objects a keyboard user can actually select and act
 // on (mirrors the visible, selectable set). Order matches paint/child order.
-function tabbableIds(page: { children: { id: string; locked?: boolean; hidden?: boolean }[] } | undefined): string[] {
+/** The order keyboard Tab (and, by proxy, assistive technology) visits a page's
+ *  elements: the page's reading order (doc 28 FR-29) rather than raw z-order,
+ *  so what is drawn on top does not dictate what is announced first. Decorative
+ *  nodes are skipped, and locked/hidden ones remain unreachable as before. */
+function tabbableIds(page: Page | undefined): string[] {
   if (!page) return [];
-  return page.children.filter((n) => !n.locked && !n.hidden).map((n) => n.id);
+  return resolveReadingOrder(page)
+    .filter((n) => !n.locked && !n.hidden && !isDecorative(n))
+    .map((n) => n.id);
 }
 
 function canCrop(t: Transform): boolean {

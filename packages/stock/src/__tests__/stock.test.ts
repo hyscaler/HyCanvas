@@ -6,6 +6,7 @@ import {
   canEditNode,
   checkAppAction,
   classifyEmbed,
+  colorfulness,
   colorMatches,
   compileAttribution,
   createQrNode,
@@ -69,6 +70,20 @@ describe("catalog search (FR-1, FR-2, AC-1)", () => {
   it("ranks text relevance (title over tag)", () => {
     const r = searchStock(assets, { text: "sunset" });
     expect(r[0].id).toBe("sunset");
+  });
+
+  it("browse (no text) leads with photos and the most colorful within a kind", () => {
+    const browse = [
+      stock("mono-icon", { kind: "icon", title: "A Mono Icon", dominantColors: ["#111111"] }),
+      stock("emoji", { kind: "sticker", title: "Grin", dominantColors: ["#fcc21b", "#65471b"] }),
+      stock("drawing", { kind: "illustration", title: "Drawing", dominantColors: ["#9b2c72"] }),
+      stock("dull-photo", { title: "Dull Photo", dominantColors: ["#223344"] }),
+      stock("vivid-photo", { title: "Vivid Photo", dominantColors: ["#dd6622", "#22aa66"] }),
+    ];
+    expect(searchStock(browse).map((a) => a.id)).toEqual(["vivid-photo", "dull-photo", "drawing", "emoji", "mono-icon"]);
+    // Monochrome scores 0; vivid multi-color palettes score highest.
+    expect(colorfulness(browse[0])).toBe(0);
+    expect(colorfulness(browse[4])).toBeGreaterThan(colorfulness(browse[3]));
   });
 });
 

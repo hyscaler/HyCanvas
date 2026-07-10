@@ -130,6 +130,63 @@ var stockByID = func() map[string]map[string]any {
 	return m
 }()
 
+// FacetValue is one value of a filterable facet, scoped to an asset kind so
+// the client can offer only the filters that apply to what the user browses.
+type FacetValue struct {
+	ID    string `json:"id"`
+	Kind  string `json:"kind"`
+	Count int    `json:"count"`
+}
+
+// Filters are the catalog's filterable facets, aggregated from the bundled
+// assets at init and sorted by count (desc) then id, ready to render as-is.
+// New packs, categories, or orientations surface here with no client change.
+type Filters struct {
+	Categories   []FacetValue `json:"categories"`
+	Styles       []FacetValue `json:"styles"`
+	Orientations []FacetValue `json:"orientations"`
+}
+
+var stockFilters = func() Filters {
+	type key struct{ facet, kind, id string }
+	counts := map[key]int{}
+	for _, a := range seed.Stock {
+		kind := str(a["kind"])
+		if c := str(a["category"]); c != "" {
+			counts[key{"category", kind, c}]++
+		}
+		if o := str(a["orientation"]); o != "" {
+			counts[key{"orientation", kind, o}]++
+		}
+		for _, v := range arr(a["style"]) {
+			if sv := str(v); sv != "" {
+				counts[key{"style", kind, sv}]++
+			}
+		}
+	}
+	f := Filters{Categories: []FacetValue{}, Styles: []FacetValue{}, Orientations: []FacetValue{}}
+	for k, n := range counts {
+		v := FacetValue{ID: k.id, Kind: k.kind, Count: n}
+		switch k.facet {
+		case "category":
+			f.Categories = append(f.Categories, v)
+		case "style":
+			f.Styles = append(f.Styles, v)
+		case "orientation":
+			f.Orientations = append(f.Orientations, v)
+		}
+	}
+	for _, vs := range [][]FacetValue{f.Categories, f.Styles, f.Orientations} {
+		sort.Slice(vs, func(i, j int) bool {
+			if vs[i].Count != vs[j].Count {
+				return vs[i].Count > vs[j].Count
+			}
+			return vs[i].ID < vs[j].ID
+		})
+	}
+	return f
+}()
+
 // DBTX is the query surface (satisfied by *pgxpool.Pool and pgx.Tx).
 type DBTX interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
@@ -214,6 +271,49 @@ func colorMatches(a map[string]any, hex string) bool {
 	return false
 }
 
+// browseKindRank orders kinds for browsing: photos and illustrations lead,
+// icon packs trail, so an unfiltered browse opens on rich imagery instead of
+// thousands of monochrome glyphs.
+func browseKindRank(a map[string]any) int {
+	switch str(a["kind"]) {
+	case "photo":
+		return 0
+	case "illustration":
+		return 1
+	case "sticker":
+		return 2
+	case "icon":
+		return 3
+	}
+	return 4
+}
+
+// colorfulness scores an asset's dominant palette: the widest channel spread
+// (chroma) across the dominant colors, plus a small bonus per extra vivid
+// color. Monochrome assets score 0.
+func colorfulness(a map[string]any) float64 {
+	best, vivid := 0.0, 0
+	for _, c := range arr(a["dominantColors"]) {
+		rgb, ok := hexToRGB(str(c))
+		if !ok {
+			continue
+		}
+		mx := math.Max(rgb[0], math.Max(rgb[1], rgb[2]))
+		mn := math.Min(rgb[0], math.Min(rgb[1], rgb[2]))
+		chroma := (mx - mn) / 255
+		if chroma > best {
+			best = chroma
+		}
+		if chroma >= 0.25 {
+			vivid++
+		}
+	}
+	if vivid > 4 {
+		vivid = 4
+	}
+	return best + 0.05*float64(vivid)
+}
+
 func stockMatches(a map[string]any, q Query) bool {
 	if q.Text != "" && textRelevance(a, q.Text) == 0 {
 		return false
@@ -272,6 +372,25 @@ func searchStock(assets []map[string]any, q Query) []map[string]any {
 			}
 			return str(matched[i]["title"]) < str(matched[j]["title"])
 		})
+	} else {
+		// Browse order (no text to rank by): photos/illustrations before icon
+		// packs, most colorful first within a kind. Deterministic (title
+		// tiebreak) so offset paging stays stable across requests.
+		score := make(map[string]float64, len(matched))
+		for _, a := range matched {
+			score[str(a["id"])] = colorfulness(a)
+		}
+		sort.SliceStable(matched, func(i, j int) bool {
+			ri, rj := browseKindRank(matched[i]), browseKindRank(matched[j])
+			if ri != rj {
+				return ri < rj
+			}
+			si, sj := score[str(matched[i]["id"])], score[str(matched[j]["id"])]
+			if si != sj {
+				return si > sj
+			}
+			return str(matched[i]["title"]) < str(matched[j]["title"])
+		})
 	}
 	// Page the ranked results (see Query.Limit): an unbounded response over the
 	// bundled library would ship megabytes of inline SVG per request.
@@ -300,9 +419,12 @@ func searchStock(assets []map[string]any, q Query) []map[string]any {
 // Search returns matching catalog assets, each flagged with the user's favorite.
 // Text photo searches go to the live Openverse provider (open-licensed, results
 // commercially safe); everything else, and any provider failure, is served from
-// the bundled catalog.
+// the bundled catalog. Facet filters (category, style, orientation, color) are
+// bundled-only: the provider can't apply them, so an active facet keeps the
+// search local rather than returning results that silently ignore it.
 func (s *Service) Search(ctx context.Context, q Query, userID string) ([]map[string]any, error) {
-	if q.Kind == "photo" && strings.TrimSpace(q.Text) != "" && q.CollectionID == "" {
+	if q.Kind == "photo" && strings.TrimSpace(q.Text) != "" && q.CollectionID == "" &&
+		q.Category == "" && q.Style == "" && q.Orientation == "" && q.Color == "" {
 		if live := s.ov.search(ctx, q); live != nil {
 			return s.withFlags(ctx, live, userID)
 		}
@@ -321,6 +443,9 @@ func (s *Service) Get(id string) (map[string]any, error) {
 
 // Collections returns the curated catalog collections.
 func (s *Service) Collections() []any { return seed.Collections }
+
+// Filters returns the filterable facets of the bundled catalog.
+func (s *Service) Filters() Filters { return stockFilters }
 
 // ToggleFavorite flips the user's favorite on a stock asset.
 func (s *Service) ToggleFavorite(ctx context.Context, userID, stockID string) (bool, error) {

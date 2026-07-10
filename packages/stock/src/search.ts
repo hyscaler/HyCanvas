@@ -61,6 +61,35 @@ function asArray<T>(v: T | T[] | undefined): T[] {
   return v === undefined ? [] : Array.isArray(v) ? v : [v];
 }
 
+/** Browse-order kind precedence: photos and illustrations lead, icon packs
+ *  trail, so an unfiltered browse opens on rich imagery instead of thousands
+ *  of monochrome glyphs. */
+function browseKindRank(kind: StockKind): number {
+  switch (kind) {
+    case "photo": return 0;
+    case "illustration": return 1;
+    case "sticker": return 2;
+    case "icon": return 3;
+    default: return 4;
+  }
+}
+
+/** Colorfulness of the dominant palette: the widest channel spread (chroma)
+ *  across the dominant colors, plus a small bonus per extra vivid color.
+ *  Monochrome assets score 0. */
+export function colorfulness(asset: StockAsset): number {
+  let best = 0;
+  let vivid = 0;
+  for (const c of asset.dominantColors) {
+    const rgb = hexToRgb(c);
+    if (!rgb) continue;
+    const chroma = (Math.max(...rgb) - Math.min(...rgb)) / 255;
+    if (chroma > best) best = chroma;
+    if (chroma >= 0.25) vivid++;
+  }
+  return best + 0.05 * Math.min(vivid, 4);
+}
+
 /** Whether an asset satisfies a query (no text-relevance gate beyond a match). */
 export function stockMatches(asset: StockAsset, query: StockQuery): boolean {
   if (query.text && textRelevance(asset, query.text) === 0) return false;
@@ -91,11 +120,19 @@ export function stockMatches(asset: StockAsset, query: StockQuery): boolean {
   return true;
 }
 
-/** Filter and relevance-rank a catalog slice for a query (FR-1, AC-1). */
+/** Filter and rank a catalog slice for a query (FR-1, AC-1). Text queries rank
+ *  by relevance; without text, browse order applies: photos/illustrations
+ *  before icon packs, most colorful first within a kind. Deterministic (title
+ *  tiebreak) so offset paging stays stable across requests. */
 export function searchStock(assets: StockAsset[], query: StockQuery = {}): StockAsset[] {
   const matched = assets.filter((a) => stockMatches(a, query));
   if (query.sort === "newest") return matched; // caller supplies newest-first order
-  if (!query.text) return matched;
+  if (!query.text) {
+    return matched
+      .map((a) => ({ a, rank: browseKindRank(a.kind), score: colorfulness(a) }))
+      .sort((x, y) => x.rank - y.rank || y.score - x.score || x.a.title.localeCompare(y.a.title))
+      .map((r) => r.a);
+  }
   return matched
     .map((a) => ({ a, score: textRelevance(a, query.text!) }))
     .sort((x, y) => y.score - x.score || x.a.title.localeCompare(y.a.title))

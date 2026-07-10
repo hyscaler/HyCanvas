@@ -304,6 +304,23 @@ export interface StockCollectionSummary {
   assetIds?: string[];
 }
 
+/** One value of a filterable stock facet (category/style/orientation), scoped
+ *  to an asset kind, with how many bundled assets carry it. */
+export interface StockFacetValue {
+  id: string;
+  kind: string;
+  count: number;
+}
+
+/** The bundled catalog's filterable facets, aggregated per kind and sorted by
+ *  count. Facets apply to the bundled catalog only: a faceted photo search
+ *  stays on the bundled catalog instead of the live provider. */
+export interface StockFiltersSummary {
+  categories: StockFacetValue[];
+  styles: StockFacetValue[];
+  orientations: StockFacetValue[];
+}
+
 export interface MiniAppSummary {
   id: string;
   name: string;
@@ -1515,12 +1532,14 @@ export class HyCanvasClient {
   stockSearch(
     q?: string,
     kind?: string,
-    opts: { category?: string; collection?: string; limit?: number; offset?: number } = {},
+    opts: { category?: string; style?: string; orientation?: string; collection?: string; limit?: number; offset?: number } = {},
   ): Promise<StockAssetSummary[]> {
     const params = new URLSearchParams();
     if (q) params.set("q", q);
     if (kind) params.set("kind", kind);
     if (opts.category) params.set("category", opts.category);
+    if (opts.style) params.set("style", opts.style);
+    if (opts.orientation) params.set("orientation", opts.orientation);
     if (opts.collection) params.set("collection", opts.collection);
     if (opts.limit) params.set("limit", String(opts.limit));
     if (opts.offset) params.set("offset", String(opts.offset));
@@ -1530,6 +1549,10 @@ export class HyCanvasClient {
   /** The curated stock collections. */
   stockCollections(): Promise<StockCollectionSummary[]> {
     return this.request("GET", "/v1/stock/collections");
+  }
+  /** The catalog's filterable facets (categories, styles, orientations) per kind. */
+  stockFilters(): Promise<StockFiltersSummary> {
+    return this.request("GET", "/v1/stock/filters");
   }
   /** The current user's favorited stock assets (newest first). */
   stockFavorites(): Promise<StockAssetSummary[]> {

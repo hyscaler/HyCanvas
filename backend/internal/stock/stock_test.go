@@ -2,6 +2,7 @@ package stock
 
 import (
 	"context"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -134,6 +135,96 @@ func TestBundledLibrary(t *testing.T) {
 	}
 }
 
+// TestBrowseOrder covers the no-text browse ranking: photos and illustrations
+// lead, icon packs trail, colorful before monochrome within a kind, and the
+// order is deterministic so offset paging never overlaps.
+func TestBrowseOrder(t *testing.T) {
+	got := searchStock(seed.Stock, Query{Limit: maxSearchLimit})
+	if len(got) == 0 || str(got[0]["kind"]) != "photo" {
+		t.Fatalf("browse should open on photos: %v", got[0]["kind"])
+	}
+	prevRank, prevScore := 0, math.Inf(1)
+	for _, a := range got {
+		r := browseKindRank(a)
+		if r < prevRank {
+			t.Fatalf("kind precedence violated at %v", a["id"])
+		}
+		s := colorfulness(a)
+		if r == prevRank && s > prevScore+1e-9 {
+			t.Fatalf("colorfulness order violated at %v", a["id"])
+		}
+		prevRank, prevScore = r, s
+	}
+	// Deterministic paging: consecutive pages never overlap.
+	p1 := searchStock(seed.Stock, Query{Limit: 60})
+	p2 := searchStock(seed.Stock, Query{Limit: 60, Offset: 60})
+	seen := map[string]bool{}
+	for _, a := range p1 {
+		seen[str(a["id"])] = true
+	}
+	for _, a := range p2 {
+		if seen[str(a["id"])] {
+			t.Fatalf("page overlap: %v", a["id"])
+		}
+	}
+	// A text query still ranks by relevance, not browse order.
+	hearts := searchStock(seed.Stock, Query{Text: "heart"})
+	if len(hearts) == 0 || textRelevance(hearts[0], "heart") == 0 {
+		t.Fatal("text search must rank by relevance")
+	}
+}
+
+// TestFilters covers the facet aggregation the filter UI is built from: every
+// value is kind-scoped with a real count, the known catalog facets are present,
+// and a facet filter narrows search to exactly that facet.
+func TestFilters(t *testing.T) {
+	f := (&Service{}).Filters()
+	find := func(vs []FacetValue, kind, id string) *FacetValue {
+		for i := range vs {
+			if vs[i].Kind == kind && vs[i].ID == id {
+				return &vs[i]
+			}
+		}
+		return nil
+	}
+	// Icon styles: line (seed icons), outline + filled (the tabler packs).
+	for _, style := range []string{"line", "outline", "filled"} {
+		if v := find(f.Styles, "icon", style); v == nil || v.Count == 0 {
+			t.Fatalf("missing icon style facet %q: %+v", style, f.Styles)
+		}
+	}
+	// Pack categories surface under their pack's kind.
+	if v := find(f.Categories, "icon", "health"); v == nil || v.Count < 500 {
+		t.Fatalf("healthicons category facet missing or undercounted: %+v", v)
+	}
+	if find(f.Categories, "sticker", "emoji") == nil {
+		t.Fatal("emoji category facet missing")
+	}
+	if find(f.Categories, "illustration", "characters") == nil {
+		t.Fatal("characters category facet missing")
+	}
+	// Seed photos carry an orientation.
+	if find(f.Orientations, "photo", "landscape") == nil {
+		t.Fatal("landscape orientation facet missing")
+	}
+	// Values arrive sorted by count desc so clients render them as-is.
+	for i := 1; i < len(f.Categories); i++ {
+		if f.Categories[i-1].Count < f.Categories[i].Count {
+			t.Fatal("categories must be sorted by count desc")
+		}
+	}
+	// A style filter scopes search to exactly the assets carrying that style.
+	filled := searchStock(seed.Stock, Query{Kind: "icon", Style: "filled", Limit: maxSearchLimit})
+	if len(filled) == 0 {
+		t.Fatal("expected filled-style icons")
+	}
+	for _, a := range filled {
+		if str(a["pack"]) != "tabler-filled" {
+			t.Fatalf("style filter leaked: %v", a["id"])
+		}
+	}
+}
+
 // TestSearchPhotoProvider covers the Search gate: text photo searches go to the
 // live provider, everything else (and provider failure) serves the seed.
 func TestSearchPhotoProvider(t *testing.T) {
@@ -160,6 +251,15 @@ func TestSearchPhotoProvider(t *testing.T) {
 	got, _ = s.Search(ctx, Query{Kind: "icon", Text: "heart"}, "")
 	if len(got) == 0 || strings.HasPrefix(str(got[0]["id"]), "ov-") {
 		t.Fatalf("icon search must stay on the seed: %v", got[0]["id"])
+	}
+	// An active facet (category/style/orientation/color) keeps a text photo
+	// search on the bundled seed: the provider can't apply facets and would
+	// silently return unfiltered results.
+	got, _ = s.Search(ctx, Query{Kind: "photo", Text: "nature", Category: "nature"}, "")
+	for _, a := range got {
+		if strings.HasPrefix(str(a["id"]), "ov-") {
+			t.Fatal("facet-filtered search must not hit the provider")
+		}
 	}
 	// A dead provider falls back to the seed instead of erroring.
 	s.ov.baseURL = "http://127.0.0.1:1"

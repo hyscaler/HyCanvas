@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { Shapes, Type, Upload, ImagePlus, Layers, Sparkles, LayoutGrid, Palette } from "lucide-react";
 import { LayerPanel } from "./LayerPanel";
+import { ReadingOrderPane } from "./ReadingOrderPane";
 import { ElementsPanel, TextPanel, UploadsPanel, StockPanel, AppsPanel, AiPanel, PanelShell } from "./EditorPanels";
 import { BrandPanel } from "./BrandPanel";
 
@@ -41,7 +42,7 @@ export function ToolRail({ workspaceId, overlay = false, defaultCollapsed = fals
       case "stock": return <StockPanel workspaceId={workspaceId} />;
       case "apps": return <AppsPanel />;
       case "brand": return <BrandPanel workspaceId={workspaceId} />;
-      case "layers": return <PanelShell title="Layers"><LayerPanel /></PanelShell>;
+      case "layers": return <PanelShell title="Layers"><LayersTabs /></PanelShell>;
       default: return null;
     }
   })();
@@ -87,3 +88,28 @@ export function ToolRail({ workspaceId, overlay = false, defaultCollapsed = fals
 }
 
 export type { Tool };
+
+/** Layers panel with two views of the same nodes: paint order (z-order) and the
+ *  reading order assistive technology follows (doc 28 FR-29). They are
+ *  deliberately separate, because changing what is drawn on top must not change
+ *  what a screen reader announces first. */
+function LayersTabs() {
+  const [tab, setTab] = useState<"layers" | "reading">("layers");
+  const tabCls = (on: boolean) =>
+    `flex-1 border-b-2 px-2 py-1.5 text-xs font-medium transition ${
+      on ? "border-brand-500 text-brand-ink" : "border-transparent text-neutral-500 hover:text-neutral-700"
+    }`;
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex shrink-0 border-b border-neutral-200">
+        <button type="button" onClick={() => setTab("layers")} className={tabCls(tab === "layers")} data-testid="tab-layers">
+          Layers
+        </button>
+        <button type="button" onClick={() => setTab("reading")} className={tabCls(tab === "reading")} data-testid="tab-reading-order">
+          Reading order
+        </button>
+      </div>
+      <div className="min-h-0 flex-1">{tab === "layers" ? <LayerPanel /> : <ReadingOrderPane />}</div>
+    </div>
+  );
+}
