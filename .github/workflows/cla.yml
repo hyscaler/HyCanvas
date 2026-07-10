@@ -30,7 +30,11 @@ jobs:
           path-to-signatures: "signatures/cla.json"
           path-to-document: "https://github.com/hyscaler/HyCanvas/blob/development/CLA.md"
           branch: "cla-signatures"
-          allowlist: "dependabot[bot],github-actions[bot]"
+          # HyScaler staff are exempt: HyScaler already owns the copyright in
+          # work authored by its own people, so the CLA (which exists to secure
+          # relicensing rights over OUTSIDE contributions) does not apply to
+          # them. Every other contributor must still sign. Add new staff here.
+          allowlist: "devadattas,dependabot[bot],github-actions[bot]"
           custom-notsigned-prcomment: >
             Thank you for the contribution. Before we can merge, we need you to
             sign the [HyCanvas Contributor License Agreement](https://github.com/hyscaler/HyCanvas/blob/development/CLA.md).
