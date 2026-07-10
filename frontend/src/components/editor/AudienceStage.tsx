@@ -20,6 +20,7 @@ import {
   type Viewport,
 } from "@hc/engine";
 import { imageAssets } from "@/lib/assetProvider";
+import { fonts } from "@/lib/fontProvider";
 import { oc } from "@/lib/sdk";
 import { subscribeAudience, type AudienceState } from "@/lib/audienceWindow";
 
@@ -44,7 +45,13 @@ export function AudienceStage({ designId, initialSlide }: { designId: string; in
     void oc
       .getDesignFile(designId)
       .then((f) => {
-        if (!cancelled) setDoc(f);
+        if (cancelled) return;
+        // The audience window is a fresh page: preload the design's web fonts
+        // (canvas text never triggers font loading itself), or every slide
+        // shows fallback faces. The rAF loop repaints as faces arrive.
+        fonts.ensureForDoc(f);
+        imageAssets.registerAll(f.assets ?? []);
+        setDoc(f);
       })
       .catch(() => {
         if (!cancelled) setError("Could not open this design.");
