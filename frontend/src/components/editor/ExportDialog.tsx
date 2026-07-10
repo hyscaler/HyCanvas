@@ -155,6 +155,9 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const credits = useMemo(() => (open ? compileAttribution(useEditor.getState().doc) : []), [open, rev]);
   const [format, setFormat] = useState<Format>("png");
+  // Accessibility-tagged PDF (doc 28 FR-22): rendered by the Go encoder instead
+  // of rasterized here, so the text stays real text and carries a structure tree.
+  const [taggedPdf, setTaggedPdf] = useState(false);
   const [scale, setScale] = useState(1);
   const [transparent, setTransparent] = useState(true);
   const [quality, setQuality] = useState(92); // jpg quality 0..100
@@ -242,7 +245,7 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
   const isRaster = format === "png" || format === "jpg";
   // Animated/vector-anim formats export a single file of the active page only.
   const isSingleAnimated = format === "apng" || format === "gif" || format === "lottie";
-  const sizable = format !== "svg" && format !== "lottie"; // resolution-independent
+  const sizable = format !== "svg" && format !== "lottie" && !(format === "pdf" && taggedPdf); // resolution-independent
   // The page(s) that will actually be exported, sorted; PDF always uses all
   // selected, raster/svg emit one file per selected page.
   const pages = selected.length ? [...selected].sort((a, b) => a - b) : [Math.min(activePage, pageCount - 1)];
@@ -300,7 +303,14 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
       const safeBase = (doc.title || "design").replace(/[^\w.-]+/g, "-").replace(/^-+|-+$/g, "") || "design";
       const nameFor = (i: number, suffix: string) => (fileCount > 1 ? `${safeBase}-${i + 1}.${suffix}` : `${safeBase}.${suffix}`);
 
-      if (format === "pdf") {
+      if (format === "pdf" && taggedPdf && designId) {
+        // The server renders the design as last saved, so it is fetched rather
+        // than built here. Its text is real text in the author's reading order.
+        const res = await fetch(oc.taggedPdfUrl(designId), { credentials: "include" });
+        if (!res.ok) throw new Error(`tagged PDF export failed (${res.status})`);
+        download(await res.blob(), `${safeBase}.pdf`);
+        toast.success(`Downloaded ${safeBase}.pdf`);
+      } else if (format === "pdf") {
         const { jsPDF } = await import("jspdf");
         let pdf: import("jspdf").jsPDF | undefined;
         for (const i of pages) {
@@ -457,6 +467,33 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
             </ul>
           )}
         </div>
+
+        {/* Accessible PDF (doc 28 FR-22). The two PDF paths are a real
+            trade-off, so it is named rather than hidden: the tagged one is
+            readable by assistive technology but renders text in standard
+            faces, and it exports the design as last saved. */}
+        {format === "pdf" && (
+          <div className="mb-3 rounded-lg border border-neutral-200 p-2.5">
+            <label className="flex cursor-pointer items-start gap-2">
+              <input
+                type="checkbox"
+                checked={taggedPdf}
+                disabled={!designId}
+                onChange={(e) => setTaggedPdf(e.target.checked)}
+                data-testid="export-tagged-pdf"
+                className="mt-0.5 h-3.5 w-3.5 accent-brand-500"
+              />
+              <span className="min-w-0">
+                <span className="block text-xs font-medium text-neutral-700">Accessible PDF (tagged)</span>
+                <span className="mt-0.5 block text-[11px] leading-snug text-neutral-500">
+                  {designId
+                    ? "Real, selectable text a screen reader can follow in your reading order, with alt text and slide titles. Custom fonts fall back to standard ones, and the last saved version is exported."
+                    : "Save the design first to export an accessible PDF."}
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
 
         {/* Size multiplier with live pixel dimensions (raster + pdf). */}
         {sizable && (

@@ -125,7 +125,7 @@ func NewRouter(d Deps) http.Handler {
 		}
 		if d.Accounts != nil && d.Persistence != nil {
 			mountPersistence(api, d.Persistence, d.Accounts, d.Sharing)
-			mountRender(api, d.Persistence, d.Accounts)
+			mountRender(api, d.Persistence, d.Accounts, d.Uploads)
 		}
 		if d.Accounts != nil && d.Home != nil {
 			mountHome(api, d.Home, d.Accounts)
