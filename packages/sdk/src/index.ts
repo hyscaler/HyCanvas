@@ -1498,6 +1498,13 @@ export class HyCanvasClient {
   docExportDownloadUrl(designId: string, jobId: string): string {
     return `${this.baseUrl}/v1/designs/${designId}/export/doc/${jobId}/download`;
   }
+  /** The authenticated URL for an accessibility-tagged PDF of the whole deck,
+   *  rendered by the Go encoder (doc 28 FR-22). It serves the design as last
+   *  saved, and its text is real text: selectable, searchable, and readable by
+   *  assistive technology in the author's reading order. */
+  taggedPdfUrl(designId: string): string {
+    return `${this.baseUrl}/v1/designs/${designId}/render.pdf?page=all`;
+  }
   /** Convert a whiteboard design into a presentation deck. Poll via
    *  getJob; the result carries the new design id to open. */
   convertWhiteboardToDeck(designId: string): Promise<{ jobId: string }> {
