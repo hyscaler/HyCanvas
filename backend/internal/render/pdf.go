@@ -60,9 +60,26 @@ func pn(n float64) string {
 type pdfCtx struct {
 	buf   bytes.Buffer
 	boxes map[string]rbox // page node world-boxes, for connector endpoint routing
+	// Accessibility tagging (doc 28 FR-22). Tags are collected as content is
+	// drawn, so `tags` is in z-order; the structure tree reorders them.
+	tags []pdfTag
 }
 
 func (c *pdfCtx) op(s string) { c.buf.WriteString(s); c.buf.WriteByte('\n') }
+
+// beginTag opens a marked-content sequence for a node that belongs in the
+// structure tree, returning the tag it created. beginArtifact opens one for
+// presentational content, which stays out of the tree entirely.
+func (c *pdfCtx) beginTag(role, alt string) pdfTag {
+	t := pdfTag{mcid: len(c.tags), role: role, alt: alt}
+	c.tags = append(c.tags, t)
+	c.op("/" + role + " <</MCID " + strconv.Itoa(t.mcid) + ">> BDC")
+	return t
+}
+
+func (c *pdfCtx) beginArtifact() { c.op("/Artifact BMC") }
+
+func (c *pdfCtx) endMarked() { c.op("EMC") }
 
 // paintAndStroke emits the fill+stroke for the current path using the node's
 // fills[0] and stroke, choosing the right paint operator (f/S/B/n).
@@ -307,10 +324,43 @@ func (c *pdfCtx) textBody(node map[string]any) {
 	}
 }
 
-func (c *pdfCtx) emitNode(node map[string]any) {
+// emitNode draws a node, wrapping it in the marked content that makes it
+// reachable (or deliberately unreachable) from the structure tree.
+//
+// `inArtifact` is set once an ancestor was marked decorative. Marked-content
+// sequences do not nest across that boundary: everything under a decorative
+// group is already artifact, so a child must not open a tag of its own.
+//
+// Containers (group, frame, grid) are transparent. They carry no words, so
+// tagging them would add a level a screen reader must step through for nothing;
+// their children are tagged individually instead.
+func (c *pdfCtx) emitNode(node map[string]any, inArtifact bool) {
 	if asBool(node["hidden"]) {
 		return
 	}
+	kind := asStr(node["type"])
+	container := kind == "group" || kind == "frame" || kind == "grid"
+	marked := false
+	if !inArtifact {
+		switch {
+		case isDecorative(node):
+			c.beginArtifact()
+			marked, inArtifact = true, true
+		case container:
+			// transparent: no tag of its own
+		case tagRole(node) == "":
+			c.beginArtifact()
+			marked = true
+		default:
+			c.beginTag(tagRole(node), nodeAltText(node))
+			marked = true
+		}
+	}
+	defer func() {
+		if marked {
+			c.endMarked()
+		}
+	}()
 	c.op("q")
 	// Apply the node transform matrix (same a b c d e f as the SVG matrix). A
 	// connector is drawn from connectorPoints in absolute PAGE space, so it must
@@ -337,7 +387,7 @@ func (c *pdfCtx) emitNode(node map[string]any) {
 		c.connectorBody(node)
 	case "group", "frame", "grid":
 		for _, ch := range childrenOf(node) {
-			c.emitNode(asObj(ch))
+			c.emitNode(asObj(ch), inArtifact)
 		}
 	}
 	c.op("Q")
@@ -498,26 +548,52 @@ func ToPDF(file Design, pageIndex int) ([]byte, error) {
 	c := &pdfCtx{boxes: pageBoxMap(page)}
 	// Flip to design space (top-left origin, y-down).
 	c.op("1 0 0 -1 0 " + pn(h) + " cm")
-	// Background.
+	// Background. Purely presentational, so it is an artifact: a screen reader
+	// should never announce the slide's backdrop.
 	if bg := asObj(page["background"]); bg != nil {
 		if k := asStr(bg["type"]); k != "pattern" && k != "image" {
 			if fc := pdfPaint(bg); fc.ok {
+				c.beginArtifact()
 				c.op(pn(fc.r) + " " + pn(fc.g) + " " + pn(fc.b) + " rg")
 				c.op("0 0 " + pn(w) + " " + pn(h) + " re")
 				c.op("f")
+				c.endMarked()
 			}
 		}
 	}
+	// Draw in z-order, remembering which tags each top-level node produced, so
+	// the structure tree can be assembled in reading order without disturbing
+	// how the page looks. A node may produce several tags (a group), or none
+	// (it was decorative, and became an artifact).
+	spans := make(map[string][2]int, len(asArr(page["children"])))
 	for _, n := range asArr(page["children"]) {
-		c.emitNode(asObj(n))
+		node := asObj(n)
+		start := len(c.tags)
+		c.emitNode(node, false)
+		spans[asStr(node["id"])] = [2]int{start, len(c.tags)}
+	}
+	var ordered []pdfTag
+	for _, n := range resolveReadingOrder(page) {
+		if s, ok := spans[asStr(asObj(n)["id"])]; ok {
+			ordered = append(ordered, c.tags[s[0]:s[1]]...)
+		}
 	}
 
-	return assemblePDF(c.buf.Bytes(), w, h), nil
+	return assemblePDF(c.buf.Bytes(), w, h, ordered, asStr(page["name"])), nil
 }
 
 // assemblePDF writes a minimal valid single-page PDF registering the base-14
-// font set used by text runs, with a correct xref table.
-func assemblePDF(content []byte, w, h float64) []byte {
+// font set used by text runs, with a correct xref table and an accessibility
+// structure tree (doc 28 FR-22).
+//
+// `tags` arrives in reading order; each one's `mcid` points back at the marked
+// content in the stream, which is in z-order. `pageName` becomes the section's
+// title, which is what gives the slide a navigable name in a screen reader.
+//
+// Object layout: 1 Catalog, 2 Pages, 3 Page, 4 Contents, then the fonts, then
+// the structure tree (root, Document, Sect, one element per tag) and finally
+// the number tree that maps marked content back to its element.
+func assemblePDF(content []byte, w, h float64, tags []pdfTag, pageName string) []byte {
 	// Font objects follow the content object (4); font i lives at object 5+i.
 	var fontDict strings.Builder
 	fontObjs := make([]string, len(pdfFontTable))
@@ -525,13 +601,52 @@ func assemblePDF(content []byte, w, h float64) []byte {
 		fmt.Fprintf(&fontDict, "/%s %d 0 R ", f.key, 5+i)
 		fontObjs[i] = fmt.Sprintf("<< /Type /Font /Subtype /Type1 /BaseFont /%s /Encoding /WinAnsiEncoding >>", f.baseFont)
 	}
+	structRoot := 5 + len(pdfFontTable)
+	docElem, sectElem := structRoot+1, structRoot+2
+	leaf := func(i int) int { return sectElem + 1 + i }
+	parentTree := leaf(len(tags))
+
+	// A structure element per tag, in reading order, each pointing at its
+	// marked content by id. /Alt is what a screen reader announces.
+	elems := make([]string, len(tags))
+	var kids strings.Builder
+	for i, t := range tags {
+		alt := ""
+		if t.alt != "" {
+			alt = fmt.Sprintf(" /Alt (%s)", pdfEscapeText(t.alt))
+		}
+		elems[i] = fmt.Sprintf("<< /Type /StructElem /S /%s /P %d 0 R /Pg 3 0 R /K %d%s >>", t.role, sectElem, t.mcid, alt)
+		fmt.Fprintf(&kids, "%d 0 R ", leaf(i))
+	}
+	// The number tree maps each marked-content id back to the element that owns
+	// it, so it is indexed by mcid (z-order), not by reading order.
+	nums := make([]string, len(tags))
+	for i, t := range tags {
+		nums[t.mcid] = fmt.Sprintf("%d 0 R", leaf(i))
+	}
+
+	title := pageName
+	if title == "" {
+		title = "Slide"
+	}
 	objs := []string{
-		"<< /Type /Catalog /Pages 2 0 R >>",
+		// /Lang states the document's natural language, which PDF/UA requires.
+		// The open format has no document-level language yet, so this is the
+		// default rather than a claim about the deck's actual language.
+		fmt.Sprintf("<< /Type /Catalog /Pages 2 0 R /MarkInfo << /Marked true >> /StructTreeRoot %d 0 R /Lang (en-US) /ViewerPreferences << /DisplayDocTitle true >> >>", structRoot),
 		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-		fmt.Sprintf("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %s %s] /Resources << /Font << %s>> >> /Contents 4 0 R >>", pn(w), pn(h), fontDict.String()),
+		fmt.Sprintf("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %s %s] /Resources << /Font << %s>> >> /Contents 4 0 R /StructParents 0 /Tabs /S >>", pn(w), pn(h), fontDict.String()),
 		fmt.Sprintf("<< /Length %d >>\nstream\n%s\nendstream", len(content)+1, content),
 	}
 	objs = append(objs, fontObjs...)
+	objs = append(objs,
+		// Every role we emit is a standard structure type, so no /RoleMap.
+		fmt.Sprintf("<< /Type /StructTreeRoot /K [%d 0 R] /ParentTree %d 0 R /ParentTreeNextKey 1 >>", docElem, parentTree),
+		fmt.Sprintf("<< /Type /StructElem /S /%s /P %d 0 R /K [%d 0 R] >>", tagDocument, structRoot, sectElem),
+		fmt.Sprintf("<< /Type /StructElem /S /%s /P %d 0 R /Pg 3 0 R /T (%s) /K [%s] >>", tagSection, docElem, pdfEscapeText(title), strings.TrimSpace(kids.String())),
+	)
+	objs = append(objs, elems...)
+	objs = append(objs, fmt.Sprintf("<< /Nums [0 [%s]] >>", strings.Join(nums, " ")))
 	var out bytes.Buffer
 	out.WriteString("%PDF-1.7\n")
 	offsets := make([]int, len(objs)+1)
