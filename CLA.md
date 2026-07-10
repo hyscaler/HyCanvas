@@ -35,6 +35,10 @@ You are not expected to provide support for your Contributions.
 
 If you accept this Agreement on behalf of a company or other legal entity, you represent that you are authorized to bind that entity, and "You" includes the entity and all employees it authorizes to submit Contributions to HyCanvas.
 
-## 6. Miscellany
+## 6. Who must sign
+
+Everyone contributing to HyCanvas signs, once, except HyScaler's own personnel: HyScaler already owns the copyright in work its employees and contractors author for it, so there are no rights left for them to license back. The CLA bot enforces this, exempting the maintainers listed in its allowlist. Submitting a pull request is not by itself acceptance of this Agreement; the signature comment is.
+
+## 7. Miscellany
 
 You agree to notify HyScaler of any facts or circumstances that would make these representations inaccurate. This Agreement is governed by the laws applicable to HyScaler's principal place of business, without regard to conflict-of-law rules.

@@ -64,10 +64,15 @@ maintainer walkthrough is in the README under "Releases and publishing".
 
 HyCanvas is distributed under the Elastic License 2.0 (see `LICENSE`), with
 [commercial licensing](COMMERCIAL.md) available from HyScaler for hosted
-offerings. To keep that dual-licensing possible, every contributor must sign
-the [Contributor License Agreement](CLA.md) once: the CLA bot will ask on your
+offerings. Selling a commercial exception means relicensing the code, and only
+a contributor can grant that right, so every contributor signs the
+[Contributor License Agreement](CLA.md) once: the CLA bot will ask on your
 first pull request, and signing is a single comment. You keep ownership of your
 contribution and grant HyScaler the license rights described in the CLA.
+
+Opening a pull request is not by itself acceptance; the signature comment is.
+HyScaler's own personnel are exempt (HyScaler already owns their work) and are
+listed in the bot's allowlist in `.github/workflows/cla.yml`.
 
 ## Reporting security issues
 
