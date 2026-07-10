@@ -28,10 +28,12 @@ function deck(n: number, assign: Record<number, string> = {}, sections: { id: st
 }
 
 describe("schema v13", () => {
-  it("is 13 and the v12 migration is purely additive", () => {
-    expect(CURRENT_SCHEMA_VERSION).toBe(13);
+  it("the v12 -> v13 migration step is purely additive", () => {
+    // Target v13 explicitly rather than CURRENT_SCHEMA_VERSION: this test is
+    // about THIS step, and must not break every time a later version lands.
+    expect(CURRENT_SCHEMA_VERSION).toBeGreaterThanOrEqual(13);
     const v12 = { ...createBlankDesign({ title: "Old", width: 800, height: 600 }), schemaVersion: 12 };
-    const migrated = migrate(v12 as unknown as DesignFile);
+    const migrated = migrate(v12 as unknown as DesignFile, 13);
     expect(migrated.schemaVersion).toBe(13);
     expect({ ...migrated, schemaVersion: 12 }).toEqual(v12);
   });

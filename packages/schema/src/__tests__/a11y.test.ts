@@ -40,10 +40,12 @@ function pageWith(children: Node[], readingOrder?: string[]): Page {
 }
 
 describe("schema v12", () => {
-  it("is 12 and the v11 migration is purely additive", () => {
-    expect(CURRENT_SCHEMA_VERSION).toBe(12);
+  it("the v11 -> v12 migration step is purely additive", () => {
+    // Target v12 explicitly rather than CURRENT_SCHEMA_VERSION: this test is
+    // about THIS step, and must not break every time a later version lands.
+    expect(CURRENT_SCHEMA_VERSION).toBeGreaterThanOrEqual(12);
     const v11 = { ...createBlankDesign({ title: "Old", width: 800, height: 600 }), schemaVersion: 11 };
-    const migrated = migrate(v11 as unknown as DesignFile);
+    const migrated = migrate(v11 as unknown as DesignFile, 12);
     expect(migrated.schemaVersion).toBe(12);
     expect({ ...migrated, schemaVersion: 11 }).toEqual(v11);
   });
