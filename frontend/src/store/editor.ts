@@ -43,6 +43,7 @@ import {
   type TextEffect,
   type TextFlow,
   type Transform,
+  moveInReadingOrder,
 } from "@hc/schema";
 import { contrastRatio, fixToAA, fromHex, nearestPaletteColor, seriesColorAt, toHex } from "@hc/color";
 import {
@@ -769,6 +770,10 @@ interface EditorState {
   setNodeAltText(id: string, altText: string | undefined): void;
   /** Mark a node presentational, so checkers and accessible exports skip it. */
   setNodeDecorative(id: string, decorative: boolean): void;
+  /** Reorder a page's reading order by moving index `from` to `to` (FR-29). */
+  moveReadingOrder(from: number, to: number, pageIndex?: number): void;
+  /** Clear the explicit reading order, falling back to z-order (FR-29). */
+  resetReadingOrder(pageIndex?: number): void;
   /** Replace an image node's source AND set its box to a known size in one
    *  undoable step (Magic Expand / outpaint: the padded result has a new aspect
    *  computed client-side, so we set it directly rather than waiting on load). */
@@ -4405,6 +4410,28 @@ export const useEditor = create<EditorState>((set, get) => {
       perform(
         () => { rec.altText = next; },
         () => { rec.altText = before; },
+      );
+    },
+    moveReadingOrder: (from, to, pageIndex) => {
+      const idx = pageIndex ?? curPageIndex();
+      const page = get().doc.pages[idx] as unknown as { readingOrder?: string[] };
+      if (!page) return;
+      const next = moveInReadingOrder(get().doc.pages[idx], from, to);
+      const before = page.readingOrder;
+      if (before && before.join() === next.join()) return;
+      perform(
+        () => { page.readingOrder = next; },
+        () => { page.readingOrder = before; },
+      );
+    },
+    resetReadingOrder: (pageIndex) => {
+      const idx = pageIndex ?? curPageIndex();
+      const page = get().doc.pages[idx] as unknown as { readingOrder?: string[] };
+      if (!page?.readingOrder) return;
+      const before = page.readingOrder;
+      perform(
+        () => { page.readingOrder = undefined; },
+        () => { page.readingOrder = before; },
       );
     },
     setNodeDecorative: (id, decorative) => {
