@@ -26,6 +26,7 @@ import { fonts } from "@/lib/fontProvider";
 import { promptText, alertText } from "@/lib/promptDialog";
 import { FILTER_PRESETS, resolvePresetOps, autoEnhanceOps, removeBackground, rasterizeToPng, type AdjOp } from "@/lib/imageFilters";
 import { useEditor } from "@/store/editor";
+import { BuildOrderSection } from "./BuildOrderSection";
 import { usePresence } from "@/store/presence";
 import { useBrand, colorsLockedFor, fontsLockedFor, brandHexColors, brandFontFamilies } from "@/store/brand";
 import { lockSelection, unlockSelection } from "@/lib/useRealtime";
@@ -577,6 +578,9 @@ export function PropertiesPanel() {
         <PageLayoutSection page={page} />
         <DeckThemeSection />
         <PageTransitionSection page={page} />
+        <Section title="Build order" defaultOpen={false}>
+          <BuildOrderSection />
+        </Section>
         <PagePresentSection page={page} />
       </Wrap>
     );
@@ -2248,6 +2252,15 @@ function PageTransitionSection({ page }: { page: Page }) {
         </div>
       )}
       <p className="text-[11px] text-neutral-400">Plays when advancing to this page in present mode.</p>
+      {/* Apply-to-all (doc 28 FR-10): PowerPoint's "Apply To All", one undo step. */}
+      <button
+        type="button"
+        data-testid="apply-transition-all"
+        onClick={() => st.applyTransitionToAllPages()}
+        className="mt-2 w-full rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
+      >
+        Apply to all slides
+      </button>
     </Section>
   );
 }

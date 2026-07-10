@@ -592,6 +592,8 @@ interface EditorState {
    *  Pass undefined to clear all animation. Clears the legacy `animations`/`link`
    *  slots so the typed model is the single source of truth. */
   setNodeAnimation(id: string, anim: NodeAnimation | undefined): void;
+  /** Apply the active page's transition to every page, one undo step (FR-10). */
+  applyTransitionToAllPages(): void;
   /** Magic Animate: apply tasteful, staggered entrance animations to every
    *  top-level element on the active page in one undoable step (or clear them). */
   magicAnimatePage(clear?: boolean): void;
@@ -2547,6 +2549,20 @@ export const useEditor = create<EditorState>((set, get) => {
       );
     },
 
+    applyTransitionToAllPages: () => {
+      const doc = get().doc;
+      const src = doc.pages[curPageIndex()] as unknown as { transition?: PageTransition };
+      const transition = src?.transition;
+      const pages = doc.pages as unknown as { transition?: PageTransition }[];
+      const before = pages.map((p) => p.transition);
+      // A transition plays when advancing TO a page, so the first slide never
+      // shows one; setting it there anyway would be a silent no-op, not a bug.
+      if (before.every((t) => JSON.stringify(t) === JSON.stringify(transition))) return;
+      perform(
+        () => { pages.forEach((p) => { p.transition = transition ? { ...transition } : undefined; }); },
+        () => { pages.forEach((p, i) => { p.transition = before[i]; }); },
+      );
+    },
     setNodeAnimation: (id, anim) => {
       const loc = locate(get().doc, id);
       if (!loc || editBlocked(id)) return;
