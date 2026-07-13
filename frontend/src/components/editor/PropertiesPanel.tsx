@@ -1644,6 +1644,14 @@ export function PropertiesPanel() {
               <span>Show values</span>
               <Toggle checked={style.valueLabels === true} onChange={(v) => st.setChart(id, { style: { ...style, valueLabels: v } })} />
             </div>
+            {/* Base size for all chart text; title, legend, axis and value
+                labels scale proportionally from it (11 is the built-in base). */}
+            <Field
+              key={`cfs-${id}-${style.fontSize ?? 11}`}
+              label="Text size"
+              value={style.fontSize ?? 11}
+              onCommit={(n) => st.setChart(id, { style: { ...style, fontSize: Math.max(6, Math.min(44, Math.round(n))) } })}
+            />
             <div className="flex flex-col gap-1.5">
               <span className="text-[11px] text-neutral-400">Series colors</span>
               {(ch.series ?? []).map((s, i) => (

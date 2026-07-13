@@ -331,6 +331,9 @@ export const migrations: Record<number, Migration> = {
   // file carries no contours and every path renders exactly as before. Bump
   // the version so newer readers know a file may carry compound paths.
   14: (file: AnyObj) => ({ ...file, schemaVersion: 15 }),
+  // v15 -> v16: chart text size (ChartStyle.fontSize). Purely additive: a v15
+  // file carries no fontSize and every chart renders at the built-in base.
+  15: (file: AnyObj) => ({ ...file, schemaVersion: 16 }),
 };
 
 export class MigrationError extends Error {

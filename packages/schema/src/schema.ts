@@ -41,8 +41,11 @@ import { z } from "zod";
  *  v15: compound paths: PathNode gains optional `contours` (extra subpaths,
  *      filled together with the first under the even-odd rule) so imported
  *      vector line art keeps its interior holes. Additive: older files omit
- *      it and open unchanged. */
-export const CURRENT_SCHEMA_VERSION = 15;
+ *      it and open unchanged.
+ *  v16: chart text size: ChartStyle gains optional `fontSize` (base size in px;
+ *      all chart text scales from it, absence means the built-in 11). Additive:
+ *      older files omit it and render unchanged. */
+export const CURRENT_SCHEMA_VERSION = 16;
 
 /** Maximum container nesting depth; guards traversal against stack overflow (FR-4). */
 export const MAX_NESTING_DEPTH = 32;
@@ -1344,6 +1347,10 @@ export interface ChartStyle {
   title?: string;
   legend?: { show: boolean; position: LegendPosition };
   valueLabels?: boolean;
+  /** Base text size in px (v16). Every chart text (title, legend, axis and
+   *  value labels) scales proportionally from it; absent means the built-in
+   *  base of 11, so older files render unchanged. */
+  fontSize?: number;
   axes?: {
     showX?: boolean;
     showY?: boolean;
@@ -1355,6 +1362,7 @@ export const ChartStyleSchema = z.object({
   title: z.string().optional(),
   legend: z.object({ show: z.boolean(), position: z.enum(["top", "right", "bottom", "left"]) }).optional(),
   valueLabels: z.boolean().optional(),
+  fontSize: z.number().positive().optional(),
   axes: z
     .object({
       showX: z.boolean().optional(),
