@@ -40,6 +40,13 @@
     "dotenv-cli": "^8.0.0",
     "shx": "^0.3.4"
   },
+  "overrides": {
+    "dompurify": ">=3.4.11",
+    "vite": "^7.3.6",
+    "esbuild": ">=0.28.1",
+    "shell-quote": ">=1.8.4",
+    "postcss": ">=8.5.10"
+  },
   "engines": {
     "node": ">=20.0.0"
   }
