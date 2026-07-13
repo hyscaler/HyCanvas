@@ -106,6 +106,34 @@ OIDC_LABEL=Google
 
 A "Continue with Google" button then shows on the auth pages. Any standards-compliant OIDC provider works the same way via its issuer URL; `OIDC_ALLOWED_EMAIL_DOMAINS` restricts sign-in to listed domains, and `OIDC_REDIRECT_URI` overrides the callback when the default does not fit. The issuer must be https (localhost excepted), and `APP_URL` must be set correctly, especially behind a proxy.
 
+### Choosing which sign-in methods are allowed
+
+Three sign-in methods ship (email + password, magic link, and OIDC/SSO), and each has an independent login and signup toggle so you can decide exactly how people get in and how accounts are created. Set any of these to `true` or `false`; anything else keeps the default. The defaults leave the product as it was before these settings existed, so you only set what you want to change.
+
+| Variable | Default | Effect |
+| --- | --- | --- |
+| `AUTH_PASSWORD_LOGIN_ENABLED` | `true` | Sign in with email + password |
+| `AUTH_PASSWORD_SIGNUP_ENABLED` | `true` | Create an account with a password |
+| `AUTH_MAGICLINK_LOGIN_ENABLED` | `true` | Emailed sign-in link for an existing account |
+| `AUTH_MAGICLINK_SIGNUP_ENABLED` | `false` | Emailed link that creates a new account (create-on-click; nothing is created until the link is opened) |
+| `AUTH_OIDC_LOGIN_ENABLED` | `true` | SSO sign-in (needs the `OIDC_*` settings above) |
+| `AUTH_OIDC_SIGNUP_ENABLED` | `true` | SSO creates a new account on first login |
+
+The sign-in page shows only the methods you leave on, so no user sees a form they cannot use. The toggles are enforced on the server too: a disabled method's endpoint returns 403, not just a hidden button.
+
+Two guardrails apply automatically. The OIDC toggles do nothing unless OIDC is configured. And if a combination would leave no usable way to sign in, the server keeps password login on and logs a warning, so a typo cannot lock you out.
+
+To run an instance where every account comes from your identity provider (no passwords, no magic links), turn the local methods off and leave OIDC on:
+
+```bash
+AUTH_PASSWORD_LOGIN_ENABLED=false
+AUTH_PASSWORD_SIGNUP_ENABLED=false
+AUTH_MAGICLINK_LOGIN_ENABLED=false
+# OIDC_* configured as above; AUTH_OIDC_* left at their true default
+```
+
+Note when switching an existing instance to SSO-only: a user who already has a password account links their SSO identity to it automatically only when the provider's email domain is listed in `OIDC_ALLOWED_EMAIL_DOMAINS` (you are vouching that the provider owns those emails). Without that, their first SSO login creates a separate account. Set the allowlist before flipping the switch if you have existing password users.
+
 ### Moving from local storage to S3
 
 Started on local-disk storage and want object storage later? The binary migrates itself:
@@ -191,6 +219,7 @@ All configuration is read from the root `.env` (copy `.env.example`). The most i
 | `USER_STORAGE_QUOTA_BYTES` | optional | Global per-user upload cap across all workspaces; unset/0 = unlimited. For public instances. |
 | `AI_SECRET` | optional | Encrypts stored per-workspace AI keys; falls back to `JWT_SECRET`. |
 | `OIDC_*` | optional | OIDC single sign-on (issuer, client id/secret). |
+| `AUTH_*_ENABLED` | optional | Enable/disable each sign-in method's login and signup (password, magic link, OIDC). Defaults preserve prior behavior. See [Choosing which sign-in methods are allowed](#choosing-which-sign-in-methods-are-allowed). |
 | `VAPID_*` | optional | Web-push keys for notifications. |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` / `COMPOSE_PROFILES` | docker | Used by the bundled Postgres in `docker-compose.yml`. |
 
