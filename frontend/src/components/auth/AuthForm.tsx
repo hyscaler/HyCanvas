@@ -77,17 +77,13 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const redeemedRef = useRef(false);
   // Social sign-in providers (empty unless configured server-side).
   const [providers, setProviders] = useState<{ id: string; label: string }[]>([]);
-  // Which auth methods this instance allows (AUTH_*_ENABLED). Defaults to
-  // everything on, so the first paint of a normal install is unchanged; the
-  // server's real policy arrives from authConfig() and narrows it.
-  const [policy, setPolicy] = useState<AuthPolicy>({
-    passwordLogin: true,
-    passwordSignup: true,
-    magicLinkLogin: true,
-    magicLinkSignup: true,
-    oidcLogin: true,
-    oidcSignup: true,
-  });
+  // Which auth methods this instance allows (AUTH_*_ENABLED), null until the
+  // server's authConfig() resolves. We hold the method UI until then rather than
+  // guessing "everything on": on an instance that disables a method, an
+  // optimistic guess would render (say) the password form and then yank it away
+  // once the real policy arrives, which is the flash this null-gate prevents.
+  const [policy, setPolicy] = useState<AuthPolicy | null>(null);
+  const policyReady = policy !== null;
 
   const isSignup = mode === "signup";
   // Where to land after a successful sign-in. Honors a `?next=` return path so a
@@ -147,16 +143,32 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       if (cancelled) return;
       setProviders(c.providers);
       setPolicy(c.policy);
-    }).catch(() => {});
+    }).catch(() => {
+      // If the config cannot be fetched, fall back to the classic
+      // password + magic-link login so the page is never stuck loading. OIDC
+      // stays off in the fallback because its buttons need the provider list,
+      // which also failed to load.
+      if (!cancelled) {
+        setPolicy({
+          passwordLogin: true,
+          passwordSignup: true,
+          magicLinkLogin: true,
+          magicLinkSignup: false,
+          oidcLogin: false,
+          oidcSignup: false,
+        });
+      }
+    });
     return () => { cancelled = true; };
   }, []);
 
-  // Method availability for the current mode.
-  const passwordOn = isSignup ? policy.passwordSignup : policy.passwordLogin;
-  const magicOn = isSignup ? policy.magicLinkSignup : policy.magicLinkLogin;
-  const oidcOn = policy.oidcLogin || policy.oidcSignup;
-  const anySignup = policy.passwordSignup || policy.magicLinkSignup || policy.oidcSignup;
-  const anyLogin = policy.passwordLogin || policy.magicLinkLogin || policy.oidcLogin;
+  // Method availability for the current mode. Until the policy loads, every
+  // flag reads false so the method UI stays hidden behind the loading state.
+  const passwordOn = !!policy && (isSignup ? policy.passwordSignup : policy.passwordLogin);
+  const magicOn = !!policy && (isSignup ? policy.magicLinkSignup : policy.magicLinkLogin);
+  const oidcOn = !!policy && (policy.oidcLogin || policy.oidcSignup);
+  const anySignup = !!policy && (policy.passwordSignup || policy.magicLinkSignup || policy.oidcSignup);
+  const anyLogin = !!policy && (policy.passwordLogin || policy.magicLinkLogin || policy.oidcLogin);
   // Nothing available for this mode (e.g. OIDC-only viewing /signup): show a
   // notice instead of an empty pane.
   const noMethod = !passwordOn && !magicOn && !(oidcOn && providers.length > 0);
@@ -413,6 +425,15 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
             {isSignup ? "Start designing in seconds - no card required." : "Sign in to pick up where you left off."}
           </p>
 
+          {/* Hold the method UI until the policy loads, so a disabled method is
+              never shown and then removed. The spinner keeps its height so the
+              pane does not jump when the real controls arrive. */}
+          {!policyReady ? (
+            <div className="mt-7 grid h-40 place-items-center" role="status" aria-label="Loading sign-in options">
+              <span className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-brand-500" />
+            </div>
+          ) : (
+          <>
           {oidcOn && providers.length > 0 && (
             <div className="mt-7 flex flex-col gap-2">
               {providers.map((p) => (
@@ -472,7 +493,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
                         onChange={(e) => setPassword(e.target.value)}
                         autoComplete={isSignup ? "new-password" : "current-password"}
                       />
-                      {!isSignup && policy.passwordLogin && (
+                      {!isSignup && !!policy?.passwordLogin && (
                         <button
                           type="button"
                           onClick={() => void forgotPassword()}
@@ -543,6 +564,8 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
                 </>
               )}
             </p>
+          )}
+          </>
           )}
         </div>
       </div>
