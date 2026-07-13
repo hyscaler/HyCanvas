@@ -1,0 +1,167 @@
+{
+ "id": "coding-bootcamp-banner",
+ "title": "Coding Bootcamp Banner",
+ "categories": [
+  "education",
+  "marketing"
+ ],
+ "tags": [
+  "bootcamp",
+  "coding",
+  "cohort",
+  "career",
+  "apply"
+ ],
+ "styleTags": [
+  "dark",
+  "tech",
+  "credible"
+ ],
+ "size": [
+  1280,
+  720
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Outfit",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Inter",
+   "weight": 500
+  },
+  {
+   "role": "mono",
+   "family": "Space Mono",
+   "weight": 700
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n2",
+   "kind": "text",
+   "label": "Headline",
+   "hint": "The outcome, e.g. Code your career change."
+  },
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Program line",
+   "hint": "Length, format, and stack"
+  },
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Apply link",
+   "hint": "Application URL"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Banner",
+   "bg": "#0d1321",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 980,
+     "y": -160,
+     "w": 420,
+     "h": 420,
+     "fill": "#16203a",
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 88,
+     "w": 520,
+     "h": 24,
+     "text": "Fullstack Cohort 09",
+     "family": "Space Mono",
+     "size": 18,
+     "weight": 700,
+     "color": "#4cc9f0",
+     "letterSpacing": 5,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 132,
+     "w": 660,
+     "h": 150,
+     "text": "Code your career change.",
+     "family": "Outfit",
+     "size": 64,
+     "weight": 800,
+     "color": "#ffffff",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 312,
+     "w": 560,
+     "h": 92,
+     "text": "16 weeks, live and online. JavaScript, React, and a portfolio that gets interviews.",
+     "family": "Inter",
+     "size": 22,
+     "weight": 500,
+     "color": "#9fb0d0",
+     "lineHeight": 1.5
+    },
+    {
+     "kind": "button",
+     "x": 80,
+     "y": 460,
+     "w": 300,
+     "h": 76,
+     "fill": "#4cc9f0",
+     "label": "Apply by Sep 1",
+     "family": "Outfit",
+     "size": 22,
+     "weight": 700,
+     "color": "#08131f",
+     "radius": 38
+    },
+    {
+     "kind": "text",
+     "x": 410,
+     "y": 484,
+     "w": 280,
+     "h": 28,
+     "text": "bytebridge.dev/apply",
+     "family": "Space Mono",
+     "size": 18,
+     "weight": 700,
+     "color": "#4cc9f0"
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 592,
+     "w": 560,
+     "h": 28,
+     "text": "94% job placement \u00b7 1:8 mentor ratio",
+     "family": "Inter",
+     "size": 20,
+     "weight": 500,
+     "color": "#7286ab"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-free-svg-illustration-hosting",
+     "x": 720,
+     "y": 470,
+     "w": 500,
+     "h": 200
+    }
+   ]
+  }
+ ],
+ "rank": 20
+}

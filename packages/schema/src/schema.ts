@@ -23,8 +23,22 @@ import { z } from "zod";
  *  v10: whiteboard board node types (F30) - ink, mindmap, boardview, diagramcode,
  *      stamp - plus additive optional fields on ConnectorNode (label/waypoints/
  *      jumpOver, EndPoint.attach.port), StickyNode (authorId/shape), and FrameNode
- *      (header/collapsed). All additive: older files omit them and open as-is. */
-export const CURRENT_SCHEMA_VERSION = 10;
+ *      (header/collapsed). All additive: older files omit them and open as-is.
+ *  v11: presentations (F28) slide masters, layouts, placeholders, and a swappable
+ *      deck Theme on DesignFile, plus Page.layoutId. All additive and optional:
+ *      a v10 deck has none of them and opens unchanged.
+ *  v12: accessibility (F28 FR-29): NodeBase.altText/decorative and
+ *      Page.readingOrder. All additive and optional: a v11 file omits them,
+ *      alt text falls back to ImageNode.alt, and reading order falls back to
+ *      z-order, exactly as before.
+ *  v13: presentations (F28 FR-5) slide sections: a DesignFile.sections registry
+ *      and Page.sectionId membership. Additive and optional: a v12 deck has no
+ *      sections, every page stands alone, and it opens unchanged.
+ *  v14: effect normalization: Shadow.type becomes optional (absence means
+ *      "drop", healing shadows early panels wrote without a type), and the
+ *      migration stamps it plus bakes never-rendered text-shadow opacity to 1
+ *      so existing designs keep their exact published appearance. */
+export const CURRENT_SCHEMA_VERSION = 14;
 
 /** Maximum container nesting depth; guards traversal against stack overflow (FR-4). */
 export const MAX_NESTING_DEPTH = 32;
@@ -252,7 +266,9 @@ export const StrokeSchema = z.object({
 });
 
 export interface Shadow {
-  type: "drop" | "inner";
+  /** Missing means "drop": early effect panels wrote shadows without a type,
+   *  so those files must stay valid and render as drop shadows. */
+  type?: "drop" | "inner";
   color: Color;
   offsetX: number;
   offsetY: number;
@@ -260,7 +276,7 @@ export interface Shadow {
   spread: number;
 }
 const shadowFields = {
-  type: z.enum(["drop", "inner"]),
+  type: z.enum(["drop", "inner"]).optional(),
   color: ColorSchema,
   offsetX: unit,
   offsetY: unit,
@@ -630,6 +646,13 @@ export interface NodeBase {
   // typed per-node animation set + interaction (additive, optional).
   animation?: NodeAnimation;
   interaction?: Interaction;
+  /** Accessibility (doc 28 FR-29). `altText` describes the node for assistive
+   *  technology; `decorative` marks it as presentational, so a checker and an
+   *  accessible export skip it instead of demanding a description. Both are
+   *  additive and optional: older files omit them. `ImageNode.alt` predates
+   *  this and remains the image-specific field; `altText` generalizes it. */
+  altText?: string;
+  decorative?: boolean;
   // Manipulation metadata; optional and non-geometric.
   aspectLocked?: boolean;
   opticalAlign?: boolean;
@@ -653,6 +676,8 @@ const nodeBaseFields = {
   animations: z.array(z.unknown()).optional(),
   animation: NodeAnimationSchema.optional(),
   interaction: InteractionSchema.optional(),
+  altText: z.string().optional(),
+  decorative: z.boolean().optional(),
   aspectLocked: z.boolean().optional(),
   opticalAlign: z.boolean().optional(),
   data: z.record(z.string(), z.unknown()).optional(),
@@ -1711,6 +1736,105 @@ export const NodeSchema: z.ZodType<Node> = z.lazy(() =>
 ) as z.ZodType<Node>;
 
 // ---------------------------------------------------------------------------
+// Section 6.1: slide masters, layouts, and themes (doc 28 FR-3, FR-4)
+// ---------------------------------------------------------------------------
+
+/** A named region a layout reserves for content. `role` gives the region its
+ *  meaning: the `title` placeholder is what makes a slide's name a real,
+ *  screen-reader-navigable slide title (FR-3, FR-29). */
+export type PlaceholderRole = "title" | "body" | "content" | "picture" | "chart" | "media" | "footer";
+export const PlaceholderRoleSchema = z.enum(["title", "body", "content", "picture", "chart", "media", "footer"]);
+
+export interface Placeholder {
+  id: string;
+  role: PlaceholderRole;
+  rect: { x: number; y: number; width: number; height: number };
+}
+export const PlaceholderSchema = z.object({
+  id: z.string(),
+  role: PlaceholderRoleSchema,
+  rect: z.object({ x: z.number(), y: z.number(), width: unit, height: unit }),
+});
+
+/** A slide master: the root of a style cascade (background + shared
+ *  placeholders) that its layouts, and the pages using them, inherit. */
+export interface SlideMaster {
+  id: string;
+  name?: string;
+  /** Theme id this master styles against; falls back to the file theme. */
+  theme?: string;
+  background?: Fill;
+  placeholders: Placeholder[];
+}
+export const SlideMasterSchema = z.object({
+  id: z.string(),
+  name: z.string().optional(),
+  theme: z.string().optional(),
+  background: FillSchema.optional(),
+  placeholders: z.array(PlaceholderSchema),
+});
+
+/** A layout under a master (title, title+content, two-content, ...). A `Page`
+ *  points at one via `layoutId`; the cascade is page -> layout -> master. */
+export interface SlideLayout {
+  id: string;
+  masterId: string;
+  name: string;
+  background?: Fill;
+  placeholders: Placeholder[];
+}
+export const SlideLayoutSchema = z.object({
+  id: z.string(),
+  masterId: z.string(),
+  name: z.string(),
+  background: FillSchema.optional(),
+  placeholders: z.array(PlaceholderSchema),
+});
+
+/** A swappable deck theme: a color palette plus the heading/body font pair.
+ *  Adopting a different theme restyles the whole deck in one action (FR-4). */
+export interface Theme {
+  id: string;
+  name?: string;
+  /** Ordered palette slots (PowerPoint-style 12; any length validates). */
+  colors: ColorSwatch[];
+  fontHeading?: string;
+  fontBody?: string;
+  effects?: Record<string, unknown>;
+  variants?: { id: string; name?: string; colors: ColorSwatch[] }[];
+}
+export const ThemeSchema = z.object({
+  id: z.string(),
+  name: z.string().optional(),
+  colors: z.array(ColorSwatchSchema),
+  fontHeading: z.string().optional(),
+  fontBody: z.string().optional(),
+  effects: z.record(z.string(), z.unknown()).optional(),
+  variants: z
+    .array(z.object({ id: z.string(), name: z.string().optional(), colors: z.array(ColorSwatchSchema) }))
+    .optional(),
+});
+
+/** A named, colored group of consecutive slides (doc 28 FR-5). Membership is
+ *  carried by `Page.sectionId`, so `pages` order remains the single source of
+ *  truth for the deck's sequence and a section can never disagree with it. */
+export interface SlideSection {
+  id: string;
+  name: string;
+  /** Swatch hex for the divider row; the UI supplies a default when absent. */
+  color?: string;
+  /** Collapsed in the slide bar / overview. Purely a view preference, stored so
+   *  it survives a reload; never affects presenting or export. */
+  collapsed?: boolean;
+}
+export const SlideSectionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  color: z.string().optional(),
+  collapsed: z.boolean().optional(),
+});
+
+// ---------------------------------------------------------------------------
 // Section 6.1: page and file
 // ---------------------------------------------------------------------------
 
@@ -1726,6 +1850,14 @@ export interface Page {
   notes?: string;
   transition?: PageTransition; // applied when advancing to this page
   // presentations (additive, optional; older files still validate):
+  layoutId?: string; // slide layout this page inherits from (doc 28 FR-3)
+  sectionId?: string; // the section this slide belongs to (doc 28 FR-5)
+  /** Node ids in the order assistive technology should traverse them, which is
+   *  independent of z-order (doc 28 FR-29). Absent = fall back to z-order, the
+   *  behavior before this field existed. Ids not on the page are ignored, and
+   *  nodes missing from the list follow in z-order, so the field can never
+   *  hide content. */
+  readingOrder?: string[];
   autoAdvanceMs?: number; // autopilot dwell before auto-advancing this slide (FR-14)
   hidden?: boolean; // slide is skipped while presenting / in autopilot (FR-1)
   timelineDuration?: number; // derived/cached total ms for this page (optional)
@@ -1742,6 +1874,9 @@ export const PageSchema = z.object({
   guides: z.array(GuideSchema).optional(),
   notes: z.string().optional(),
   transition: PageTransitionSchema.optional(),
+  layoutId: z.string().optional(),
+  sectionId: z.string().optional(),
+  readingOrder: z.array(z.string()).optional(),
   autoAdvanceMs: z.number().optional(),
   hidden: z.boolean().optional(),
   timelineDuration: z.number().optional(),
@@ -1762,6 +1897,15 @@ export interface DesignFile {
   assets: AssetRef[];
   fonts: FontRef[];
   palette?: ColorSwatch[];
+  // Presentations (doc 28 FR-3, FR-4). All optional and additive: a deck with
+  // no masters/layouts/theme behaves exactly as before, and every page whose
+  // `layoutId` is absent (or dangling) renders standalone.
+  masters?: SlideMaster[];
+  layouts?: SlideLayout[];
+  theme?: Theme;
+  /** Slide sections (doc 28 FR-5). Order here is presentational only; the deck
+   *  sequence is `pages`. A section with no pages is legal (just empty). */
+  sections?: SlideSection[];
   meta: Record<string, unknown>;
 }
 export const DesignFileSchema = z.object({
@@ -1773,6 +1917,10 @@ export const DesignFileSchema = z.object({
   dpi: z.number().positive(),
   colorProfile: z.string().optional(),
   pages: z.array(PageSchema),
+  masters: z.array(SlideMasterSchema).optional(),
+  layouts: z.array(SlideLayoutSchema).optional(),
+  theme: ThemeSchema.optional(),
+  sections: z.array(SlideSectionSchema).optional(),
   assets: z.array(AssetRefSchema),
   fonts: z.array(FontRefSchema),
   palette: z.array(ColorSwatchSchema).optional(),

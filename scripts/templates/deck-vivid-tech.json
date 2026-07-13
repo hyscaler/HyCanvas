@@ -1,135 +1,1270 @@
 {
-  "id": "deck-vivid-tech",
-  "title": "Vivid Tech Review Deck",
-  "categories": ["presentations", "business"],
-  "tags": ["deck", "product", "roadmap", "dark", "tech"],
-  "styleTags": ["modern", "bold"],
-  "size": [1920, 1080],
-  "typography": [
-    { "role": "heading", "family": "Manrope", "weight": 700 },
-    { "role": "body", "family": "Inter", "weight": 400 }
-  ],
-  "pages": [
+ "id": "deck-vivid-tech",
+ "title": "Vivid Tech Review Deck",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "deck",
+  "product",
+  "roadmap",
+  "dark",
+  "tech"
+ ],
+ "styleTags": [
+  "modern",
+  "bold"
+ ],
+ "size": [
+  1920,
+  1080
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Manrope",
+   "weight": 700
+  },
+  {
+   "role": "body",
+   "family": "Inter",
+   "weight": 400
+  }
+ ],
+ "pages": [
+  {
+   "name": "Title",
+   "bg": "#0B1220",
+   "nodes": [
     {
-      "name": "Title",
-      "bg": "#0B1220",
-      "nodes": [
-        { "kind": "ellipse", "x": 1520, "y": -240, "w": 620, "h": 620, "fill": { "angle": 135, "stops": [["#22D3EE", 0], ["#8B5CF6", 1]] }, "bleed": true },
-        { "kind": "ellipse", "x": -220, "y": 860, "w": 560, "h": 560, "fill": "#1A1B3A", "bleed": true },
-        { "kind": "rect", "x": 96, "y": 102, "w": 20, "h": 20, "fill": { "angle": 135, "stops": [["#22D3EE", 0], ["#8B5CF6", 1]] }, "radius": 6 },
-        { "kind": "text", "x": 130, "y": 95, "w": 400, "h": 34, "text": "Northbeam", "family": "Manrope", "size": 26, "weight": 700, "color": "#F8FAFC", "lineHeight": 1.2 },
-        { "kind": "rect", "x": 96, "y": 392, "w": 96, "h": 8, "fill": { "angle": 90, "stops": [["#22D3EE", 0], ["#8B5CF6", 1]] }, "radius": 4 },
-        { "kind": "text", "x": 96, "y": 428, "w": 1100, "h": 30, "text": "Q3 2026 · Product & engineering review", "family": "Inter", "size": 22, "weight": 600, "color": "#22D3EE", "letterSpacing": 4, "upper": true, "lineHeight": 1.2 },
-        { "kind": "text", "x": 96, "y": 490, "w": 1400, "h": 270, "text": "What we shipped,\nwhat's next", "family": "Manrope", "size": 112, "weight": 700, "color": "#F8FAFC", "lineHeight": 1.08 },
-        { "kind": "text", "x": 96, "y": 788, "w": 1300, "h": 42, "text": "The platform team's quarter in review: releases, reliability, and the road to Q1.", "family": "Inter", "size": 28, "weight": 400, "color": "#94A3B8", "lineHeight": 1.35 },
-        { "kind": "text", "x": 96, "y": 952, "w": 700, "h": 30, "text": "October 14, 2026 · Internal", "family": "Inter", "size": 22, "weight": 500, "color": "#94A3B8", "lineHeight": 1.2 },
-        { "kind": "text", "x": 1524, "y": 952, "w": 300, "h": 30, "text": "01 / 05", "family": "Inter", "size": 22, "weight": 500, "color": "#94A3B8", "align": "right", "lineHeight": 1.2 }
+     "kind": "ellipse",
+     "x": 1520,
+     "y": -240,
+     "w": 620,
+     "h": 620,
+     "fill": {
+      "angle": 135,
+      "stops": [
+       [
+        "#22D3EE",
+        0
+       ],
+       [
+        "#8B5CF6",
+        1
+       ]
       ]
+     },
+     "bleed": true
     },
     {
-      "name": "Agenda",
-      "bg": "#0B1220",
-      "nodes": [
-        { "kind": "rect", "x": 96, "y": 96, "w": 96, "h": 8, "fill": { "angle": 90, "stops": [["#22D3EE", 0], ["#8B5CF6", 1]] }, "radius": 4 },
-        { "kind": "text", "x": 96, "y": 132, "w": 600, "h": 30, "text": "Agenda", "family": "Inter", "size": 22, "weight": 600, "color": "#22D3EE", "letterSpacing": 4, "upper": true, "lineHeight": 1.2 },
-        { "kind": "text", "x": 96, "y": 188, "w": 1000, "h": 92, "text": "What we'll cover", "family": "Manrope", "size": 76, "weight": 700, "color": "#F8FAFC", "lineHeight": 1.05 },
-        { "kind": "rect", "x": 96, "y": 360, "w": 56, "h": 56, "fill": "#141D33", "radius": 16 },
-        { "kind": "rect", "x": 96, "y": 480, "w": 56, "h": 56, "fill": "#141D33", "radius": 16 },
-        { "kind": "rect", "x": 96, "y": 600, "w": 56, "h": 56, "fill": "#141D33", "radius": 16 },
-        { "kind": "rect", "x": 96, "y": 720, "w": 56, "h": 56, "fill": "#141D33", "radius": 16 },
-        { "kind": "text", "x": 96, "y": 360, "w": 56, "h": 56, "text": "01", "family": "Inter", "size": 22, "weight": 700, "color": "#22D3EE", "align": "center", "vAlign": "middle", "lineHeight": 1.2 },
-        { "kind": "text", "x": 96, "y": 480, "w": 56, "h": 56, "text": "02", "family": "Inter", "size": 22, "weight": 700, "color": "#22D3EE", "align": "center", "vAlign": "middle", "lineHeight": 1.2 },
-        { "kind": "text", "x": 96, "y": 600, "w": 56, "h": 56, "text": "03", "family": "Inter", "size": 22, "weight": 700, "color": "#22D3EE", "align": "center", "vAlign": "middle", "lineHeight": 1.2 },
-        { "kind": "text", "x": 96, "y": 720, "w": 56, "h": 56, "text": "04", "family": "Inter", "size": 22, "weight": 700, "color": "#22D3EE", "align": "center", "vAlign": "middle", "lineHeight": 1.2 },
-        { "kind": "text", "x": 192, "y": 366, "w": 1000, "h": 52, "text": "Shipped in Q3", "family": "Manrope", "size": 38, "weight": 600, "color": "#F8FAFC", "lineHeight": 1.2 },
-        { "kind": "text", "x": 192, "y": 486, "w": 1000, "h": 52, "text": "Reliability and quality", "family": "Manrope", "size": 38, "weight": 600, "color": "#F8FAFC", "lineHeight": 1.2 },
-        { "kind": "text", "x": 192, "y": 606, "w": 1000, "h": 52, "text": "Roadmap for the next two quarters", "family": "Manrope", "size": 38, "weight": 600, "color": "#F8FAFC", "lineHeight": 1.2 },
-        { "kind": "text", "x": 192, "y": 726, "w": 1000, "h": 52, "text": "Metrics and asks", "family": "Manrope", "size": 38, "weight": 600, "color": "#F8FAFC", "lineHeight": 1.2 },
-        { "kind": "rect", "x": 1280, "y": 360, "w": 544, "h": 416, "fill": "#141D33", "radius": 20 },
-        { "kind": "text", "x": 1328, "y": 416, "w": 448, "h": 28, "text": "The quarter", "family": "Inter", "size": 20, "weight": 600, "color": "#22D3EE", "letterSpacing": 3, "upper": true, "lineHeight": 1.2 },
-        { "kind": "text", "x": 1328, "y": 458, "w": 448, "h": 64, "text": "90 days", "family": "Manrope", "size": 54, "weight": 700, "color": "#F8FAFC", "lineHeight": 1.1 },
-        { "kind": "text", "x": 1328, "y": 552, "w": 448, "h": 72, "text": "12 releases across 3 teams,\nzero rollback events.", "family": "Inter", "size": 24, "weight": 400, "color": "#94A3B8", "lineHeight": 1.4 },
-        { "kind": "rect", "x": 1328, "y": 664, "w": 448, "h": 2, "fill": "#243352" },
-        { "kind": "text", "x": 1328, "y": 690, "w": 448, "h": 30, "text": "Live demo: the new deploy pipeline", "family": "Inter", "size": 22, "weight": 500, "color": "#E2E8F0", "lineHeight": 1.2 },
-        { "kind": "text", "x": 96, "y": 952, "w": 900, "h": 30, "text": "Northbeam · Q3 2026 review", "family": "Inter", "size": 22, "weight": 500, "color": "#94A3B8", "lineHeight": 1.2 },
-        { "kind": "text", "x": 1524, "y": 952, "w": 300, "h": 30, "text": "02 / 05", "family": "Inter", "size": 22, "weight": 500, "color": "#94A3B8", "align": "right", "lineHeight": 1.2 }
-      ]
+     "kind": "ellipse",
+     "x": -220,
+     "y": 860,
+     "w": 560,
+     "h": 560,
+     "fill": "#1A1B3A",
+     "bleed": true
     },
     {
-      "name": "Roadmap",
-      "bg": "#0B1220",
-      "nodes": [
-        { "kind": "rect", "x": 96, "y": 96, "w": 96, "h": 8, "fill": { "angle": 90, "stops": [["#22D3EE", 0], ["#8B5CF6", 1]] }, "radius": 4 },
-        { "kind": "text", "x": 96, "y": 132, "w": 600, "h": 30, "text": "Roadmap", "family": "Inter", "size": 22, "weight": 600, "color": "#22D3EE", "letterSpacing": 4, "upper": true, "lineHeight": 1.2 },
-        { "kind": "text", "x": 96, "y": 188, "w": 1000, "h": 92, "text": "Next two quarters", "family": "Manrope", "size": 76, "weight": 700, "color": "#F8FAFC", "lineHeight": 1.05 },
-        { "kind": "rect", "x": 96, "y": 340, "w": 520, "h": 500, "fill": "#141D33", "radius": 20 },
-        { "kind": "rect", "x": 700, "y": 340, "w": 520, "h": 500, "fill": "#141D33", "radius": 20 },
-        { "kind": "rect", "x": 1304, "y": 340, "w": 520, "h": 500, "fill": "#141D33", "radius": 20 },
-        { "kind": "rect", "x": 144, "y": 388, "w": 64, "h": 6, "fill": { "angle": 90, "stops": [["#22D3EE", 0], ["#8B5CF6", 1]] }, "radius": 3 },
-        { "kind": "rect", "x": 748, "y": 388, "w": 64, "h": 6, "fill": { "angle": 90, "stops": [["#22D3EE", 0], ["#8B5CF6", 1]] }, "radius": 3 },
-        { "kind": "rect", "x": 1352, "y": 388, "w": 64, "h": 6, "fill": { "angle": 90, "stops": [["#22D3EE", 0], ["#8B5CF6", 1]] }, "radius": 3 },
-        { "kind": "text", "x": 144, "y": 420, "w": 424, "h": 26, "text": "Now · Q4 2026", "family": "Inter", "size": 20, "weight": 700, "color": "#22D3EE", "letterSpacing": 3, "upper": true, "lineHeight": 1.2 },
-        { "kind": "text", "x": 748, "y": 420, "w": 424, "h": 26, "text": "Next · Q1 2027", "family": "Inter", "size": 20, "weight": 700, "color": "#A78BFA", "letterSpacing": 3, "upper": true, "lineHeight": 1.2 },
-        { "kind": "text", "x": 1352, "y": 420, "w": 424, "h": 26, "text": "Later · H2 2027", "family": "Inter", "size": 20, "weight": 700, "color": "#94A3B8", "letterSpacing": 3, "upper": true, "lineHeight": 1.2 },
-        { "kind": "text", "x": 144, "y": 462, "w": 424, "h": 96, "text": "Realtime\ncollaboration", "family": "Manrope", "size": 40, "weight": 700, "color": "#F8FAFC", "lineHeight": 1.1 },
-        { "kind": "text", "x": 748, "y": 462, "w": 424, "h": 96, "text": "AI media\nstudio", "family": "Manrope", "size": 40, "weight": 700, "color": "#F8FAFC", "lineHeight": 1.1 },
-        { "kind": "text", "x": 1352, "y": 462, "w": 424, "h": 96, "text": "Enterprise\nplatform", "family": "Manrope", "size": 40, "weight": 700, "color": "#F8FAFC", "lineHeight": 1.1 },
-        { "kind": "text", "x": 144, "y": 592, "w": 424, "h": 118, "text": "Multiplayer cursors, presence\nComment threads on nodes\nOffline-first sync core", "family": "Inter", "size": 24, "weight": 400, "color": "#94A3B8", "lineHeight": 1.5 },
-        { "kind": "text", "x": 748, "y": 592, "w": 424, "h": 118, "text": "Generate and edit images\nBrand-safe style presets\nBatch background removal", "family": "Inter", "size": 24, "weight": 400, "color": "#94A3B8", "lineHeight": 1.5 },
-        { "kind": "text", "x": 1352, "y": 592, "w": 424, "h": 118, "text": "SSO, SCIM, and audit logs\nRegional data residency\nPlugin marketplace beta", "family": "Inter", "size": 24, "weight": 400, "color": "#94A3B8", "lineHeight": 1.5 },
-        { "kind": "rect", "x": 144, "y": 738, "w": 424, "h": 2, "fill": "#243352" },
-        { "kind": "rect", "x": 748, "y": 738, "w": 424, "h": 2, "fill": "#243352" },
-        { "kind": "rect", "x": 1352, "y": 738, "w": 424, "h": 2, "fill": "#243352" },
-        { "kind": "text", "x": 144, "y": 762, "w": 424, "h": 30, "text": "Owner: Collab squad", "family": "Inter", "size": 22, "weight": 600, "color": "#E2E8F0", "lineHeight": 1.2 },
-        { "kind": "text", "x": 748, "y": 762, "w": 424, "h": 30, "text": "Owner: AI squad", "family": "Inter", "size": 22, "weight": 600, "color": "#E2E8F0", "lineHeight": 1.2 },
-        { "kind": "text", "x": 1352, "y": 762, "w": 424, "h": 30, "text": "Owner: Platform squad", "family": "Inter", "size": 22, "weight": 600, "color": "#E2E8F0", "lineHeight": 1.2 },
-        { "kind": "text", "x": 96, "y": 952, "w": 900, "h": 30, "text": "Northbeam · Q3 2026 review", "family": "Inter", "size": 22, "weight": 500, "color": "#94A3B8", "lineHeight": 1.2 },
-        { "kind": "text", "x": 1524, "y": 952, "w": 300, "h": 30, "text": "03 / 05", "family": "Inter", "size": 22, "weight": 500, "color": "#94A3B8", "align": "right", "lineHeight": 1.2 }
+     "kind": "rect",
+     "x": 96,
+     "y": 102,
+     "w": 20,
+     "h": 20,
+     "fill": {
+      "angle": 135,
+      "stops": [
+       [
+        "#22D3EE",
+        0
+       ],
+       [
+        "#8B5CF6",
+        1
+       ]
       ]
+     },
+     "radius": 6
     },
     {
-      "name": "Metrics",
-      "bg": "#0B1220",
-      "nodes": [
-        { "kind": "rect", "x": 96, "y": 96, "w": 96, "h": 8, "fill": { "angle": 90, "stops": [["#22D3EE", 0], ["#8B5CF6", 1]] }, "radius": 4 },
-        { "kind": "text", "x": 96, "y": 132, "w": 600, "h": 30, "text": "Metrics", "family": "Inter", "size": 22, "weight": 600, "color": "#22D3EE", "letterSpacing": 4, "upper": true, "lineHeight": 1.2 },
-        { "kind": "text", "x": 96, "y": 188, "w": 1400, "h": 92, "text": "The quarter in two numbers", "family": "Manrope", "size": 76, "weight": 700, "color": "#F8FAFC", "lineHeight": 1.05 },
-        { "kind": "rect", "x": 96, "y": 340, "w": 822, "h": 500, "fill": "#141D33", "radius": 24 },
-        { "kind": "rect", "x": 1002, "y": 340, "w": 822, "h": 500, "fill": "#141D33", "radius": 24 },
-        { "kind": "text", "x": 160, "y": 404, "w": 694, "h": 28, "text": "Deploy frequency", "family": "Inter", "size": 22, "weight": 600, "color": "#22D3EE", "letterSpacing": 3, "upper": true, "lineHeight": 1.2 },
-        { "kind": "text", "x": 1066, "y": 404, "w": 694, "h": 28, "text": "Platform uptime", "family": "Inter", "size": 22, "weight": 600, "color": "#A78BFA", "letterSpacing": 3, "upper": true, "lineHeight": 1.2 },
-        { "kind": "text", "x": 160, "y": 448, "w": 694, "h": 150, "text": "4.6/day", "family": "Manrope", "size": 132, "weight": 700, "color": "#F8FAFC", "lineHeight": 1.05 },
-        { "kind": "text", "x": 1066, "y": 448, "w": 694, "h": 150, "text": "99.98%", "family": "Manrope", "size": 132, "weight": 700, "color": "#F8FAFC", "lineHeight": 1.05 },
-        { "kind": "button", "x": 160, "y": 628, "w": 210, "h": 48, "fill": "#1F2E52", "label": "+156% vs Q2", "color": "#22D3EE", "family": "Inter", "size": 20, "weight": 700 },
-        { "kind": "button", "x": 1066, "y": 628, "w": 250, "h": 48, "fill": "#1F2E52", "label": "+0.09 pts vs Q2", "color": "#A78BFA", "family": "Inter", "size": 20, "weight": 700 },
-        { "kind": "text", "x": 160, "y": 704, "w": 694, "h": 78, "text": "Up from 1.8 per day in Q2, driven by the\nrelease train and automated canary checks.", "family": "Inter", "size": 26, "weight": 400, "color": "#94A3B8", "lineHeight": 1.4 },
-        { "kind": "text", "x": 1066, "y": 704, "w": 694, "h": 78, "text": "Failover rework and multi-region reads\nput four nines within reach.", "family": "Inter", "size": 26, "weight": 400, "color": "#94A3B8", "lineHeight": 1.4 },
-        { "kind": "text", "x": 96, "y": 884, "w": 900, "h": 28, "text": "Source: delivery dashboard · Jul 1 to Sep 30, 2026", "family": "Inter", "size": 20, "weight": 400, "color": "#94A3B8", "lineHeight": 1.2 },
-        { "kind": "text", "x": 96, "y": 952, "w": 900, "h": 30, "text": "Northbeam · Q3 2026 review", "family": "Inter", "size": 22, "weight": 500, "color": "#94A3B8", "lineHeight": 1.2 },
-        { "kind": "text", "x": 1524, "y": 952, "w": 300, "h": 30, "text": "04 / 05", "family": "Inter", "size": 22, "weight": 500, "color": "#94A3B8", "align": "right", "lineHeight": 1.2 }
-      ]
+     "kind": "text",
+     "x": 130,
+     "y": 95,
+     "w": 400,
+     "h": 34,
+     "text": "Northbeam",
+     "family": "Manrope",
+     "size": 26,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.2
     },
     {
-      "name": "Closing",
-      "bg": "#0B1220",
-      "nodes": [
-        { "kind": "ellipse", "x": 1560, "y": -260, "w": 560, "h": 560, "fill": { "angle": 135, "stops": [["#22D3EE", 0], ["#8B5CF6", 1]] }, "bleed": true },
-        { "kind": "ellipse", "x": -200, "y": 880, "w": 520, "h": 520, "fill": "#1A1B3A", "bleed": true },
-        { "kind": "rect", "x": 96, "y": 96, "w": 96, "h": 8, "fill": { "angle": 90, "stops": [["#22D3EE", 0], ["#8B5CF6", 1]] }, "radius": 4 },
-        { "kind": "text", "x": 96, "y": 132, "w": 600, "h": 30, "text": "Next steps", "family": "Inter", "size": 22, "weight": 600, "color": "#22D3EE", "letterSpacing": 4, "upper": true, "lineHeight": 1.2 },
-        { "kind": "text", "x": 96, "y": 380, "w": 1400, "h": 250, "text": "Help us ship\nthe next quarter", "family": "Manrope", "size": 104, "weight": 700, "color": "#F8FAFC", "lineHeight": 1.08 },
-        { "kind": "text", "x": 96, "y": 668, "w": 1300, "h": 42, "text": "Three asks: two backend hires, SSO budget, and design partner intros.", "family": "Inter", "size": 28, "weight": 400, "color": "#94A3B8", "lineHeight": 1.35 },
-        { "kind": "button", "x": 96, "y": 772, "w": 520, "h": 92, "fill": { "angle": 90, "stops": [["#22D3EE", 0], ["#8B5CF6", 1]] }, "label": "Book roadmap office hours", "color": "#0B1220", "family": "Manrope", "size": 26, "weight": 700 },
-        { "kind": "text", "x": 96, "y": 952, "w": 900, "h": 30, "text": "platform@northbeam.dev · #platform-reviews", "family": "Inter", "size": 22, "weight": 500, "color": "#94A3B8", "lineHeight": 1.2 },
-        { "kind": "text", "x": 1524, "y": 952, "w": 300, "h": 30, "text": "05 / 05", "family": "Inter", "size": 22, "weight": 500, "color": "#94A3B8", "align": "right", "lineHeight": 1.2 }
+     "kind": "rect",
+     "x": 96,
+     "y": 392,
+     "w": 96,
+     "h": 8,
+     "fill": {
+      "angle": 90,
+      "stops": [
+       [
+        "#22D3EE",
+        0
+       ],
+       [
+        "#8B5CF6",
+        1
+       ]
       ]
+     },
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 428,
+     "w": 1100,
+     "h": 30,
+     "text": "Q3 2026 \u00b7 Product & engineering review",
+     "family": "Inter",
+     "size": 22,
+     "weight": 600,
+     "color": "#22D3EE",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 490,
+     "w": 1400,
+     "h": 270,
+     "text": "What we shipped,\nwhat's next",
+     "family": "Manrope",
+     "size": 112,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.08
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 788,
+     "w": 1300,
+     "h": 42,
+     "text": "The platform team's quarter in review: releases, reliability, and the road to Q1.",
+     "family": "Inter",
+     "size": 28,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.35
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 952,
+     "w": 700,
+     "h": 30,
+     "text": "October 14, 2026 \u00b7 Internal",
+     "family": "Inter",
+     "size": 22,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1524,
+     "y": 952,
+     "w": 300,
+     "h": 30,
+     "text": "01 / 05",
+     "family": "Inter",
+     "size": 22,
+     "weight": 500,
+     "color": "#94A3B8",
+     "align": "right",
+     "lineHeight": 1.2
     }
-  ],
-  "fillable": [
-    { "node": "p0-n3", "kind": "text", "label": "Product name", "hint": "Company or product wordmark" },
-    { "node": "p0-n6", "kind": "text", "label": "Deck title", "hint": "The headline of the review, up to two lines" },
-    { "node": "p0-n7", "kind": "text", "label": "Subtitle", "hint": "One line describing what the deck covers" },
-    { "node": "p4-n6-label", "kind": "text", "label": "CTA label", "hint": "Closing call to action" },
-    { "node": "p4-n7", "kind": "text", "label": "Contact line", "hint": "Email or channel for follow-ups" }
-  ]
+   ]
+  },
+  {
+   "name": "Agenda",
+   "bg": "#0B1220",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 96,
+     "h": 8,
+     "fill": {
+      "angle": 90,
+      "stops": [
+       [
+        "#22D3EE",
+        0
+       ],
+       [
+        "#8B5CF6",
+        1
+       ]
+      ]
+     },
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 132,
+     "w": 600,
+     "h": 30,
+     "text": "Agenda",
+     "family": "Inter",
+     "size": 22,
+     "weight": 600,
+     "color": "#22D3EE",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 188,
+     "w": 1000,
+     "h": 92,
+     "text": "What we'll cover",
+     "family": "Manrope",
+     "size": 76,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.05
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 360,
+     "w": 56,
+     "h": 56,
+     "fill": "#141D33",
+     "radius": 16
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 480,
+     "w": 56,
+     "h": 56,
+     "fill": "#141D33",
+     "radius": 16
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 600,
+     "w": 56,
+     "h": 56,
+     "fill": "#141D33",
+     "radius": 16
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 720,
+     "w": 56,
+     "h": 56,
+     "fill": "#141D33",
+     "radius": 16
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 360,
+     "w": 56,
+     "h": 56,
+     "text": "01",
+     "family": "Inter",
+     "size": 22,
+     "weight": 700,
+     "color": "#22D3EE",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 480,
+     "w": 56,
+     "h": 56,
+     "text": "02",
+     "family": "Inter",
+     "size": 22,
+     "weight": 700,
+     "color": "#22D3EE",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 600,
+     "w": 56,
+     "h": 56,
+     "text": "03",
+     "family": "Inter",
+     "size": 22,
+     "weight": 700,
+     "color": "#22D3EE",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 720,
+     "w": 56,
+     "h": 56,
+     "text": "04",
+     "family": "Inter",
+     "size": 22,
+     "weight": 700,
+     "color": "#22D3EE",
+     "align": "center",
+     "vAlign": "middle",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 192,
+     "y": 366,
+     "w": 1000,
+     "h": 52,
+     "text": "Shipped in Q3",
+     "family": "Manrope",
+     "size": 38,
+     "weight": 600,
+     "color": "#F8FAFC",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 192,
+     "y": 486,
+     "w": 1000,
+     "h": 52,
+     "text": "Reliability and quality",
+     "family": "Manrope",
+     "size": 38,
+     "weight": 600,
+     "color": "#F8FAFC",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 192,
+     "y": 606,
+     "w": 1000,
+     "h": 52,
+     "text": "Roadmap for the next two quarters",
+     "family": "Manrope",
+     "size": 38,
+     "weight": 600,
+     "color": "#F8FAFC",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 192,
+     "y": 726,
+     "w": 1000,
+     "h": 52,
+     "text": "Metrics and asks",
+     "family": "Manrope",
+     "size": 38,
+     "weight": 600,
+     "color": "#F8FAFC",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "rect",
+     "x": 1280,
+     "y": 360,
+     "w": 544,
+     "h": 416,
+     "fill": "#141D33",
+     "radius": 20
+    },
+    {
+     "kind": "text",
+     "x": 1328,
+     "y": 416,
+     "w": 448,
+     "h": 28,
+     "text": "The quarter",
+     "family": "Inter",
+     "size": 20,
+     "weight": 600,
+     "color": "#22D3EE",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1328,
+     "y": 458,
+     "w": 448,
+     "h": 64,
+     "text": "90 days",
+     "family": "Manrope",
+     "size": 54,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1328,
+     "y": 552,
+     "w": 448,
+     "h": 72,
+     "text": "12 releases across 3 teams,\nzero rollback events.",
+     "family": "Inter",
+     "size": 24,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "rect",
+     "x": 1328,
+     "y": 664,
+     "w": 448,
+     "h": 2,
+     "fill": "#243352"
+    },
+    {
+     "kind": "text",
+     "x": 1328,
+     "y": 690,
+     "w": 448,
+     "h": 30,
+     "text": "Live demo: the new deploy pipeline",
+     "family": "Inter",
+     "size": 22,
+     "weight": 500,
+     "color": "#E2E8F0",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 952,
+     "w": 900,
+     "h": 30,
+     "text": "Northbeam \u00b7 Q3 2026 review",
+     "family": "Inter",
+     "size": 22,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1524,
+     "y": 952,
+     "w": 300,
+     "h": 30,
+     "text": "02 / 05",
+     "family": "Inter",
+     "size": 22,
+     "weight": 500,
+     "color": "#94A3B8",
+     "align": "right",
+     "lineHeight": 1.2
+    }
+   ]
+  },
+  {
+   "name": "Roadmap",
+   "bg": "#0B1220",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 96,
+     "h": 8,
+     "fill": {
+      "angle": 90,
+      "stops": [
+       [
+        "#22D3EE",
+        0
+       ],
+       [
+        "#8B5CF6",
+        1
+       ]
+      ]
+     },
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 132,
+     "w": 600,
+     "h": 30,
+     "text": "Roadmap",
+     "family": "Inter",
+     "size": 22,
+     "weight": 600,
+     "color": "#22D3EE",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 188,
+     "w": 1000,
+     "h": 92,
+     "text": "Next two quarters",
+     "family": "Manrope",
+     "size": 76,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.05
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 340,
+     "w": 520,
+     "h": 500,
+     "fill": "#141D33",
+     "radius": 20
+    },
+    {
+     "kind": "rect",
+     "x": 700,
+     "y": 340,
+     "w": 520,
+     "h": 500,
+     "fill": "#141D33",
+     "radius": 20
+    },
+    {
+     "kind": "rect",
+     "x": 1304,
+     "y": 340,
+     "w": 520,
+     "h": 500,
+     "fill": "#141D33",
+     "radius": 20
+    },
+    {
+     "kind": "rect",
+     "x": 144,
+     "y": 388,
+     "w": 64,
+     "h": 6,
+     "fill": {
+      "angle": 90,
+      "stops": [
+       [
+        "#22D3EE",
+        0
+       ],
+       [
+        "#8B5CF6",
+        1
+       ]
+      ]
+     },
+     "radius": 3
+    },
+    {
+     "kind": "rect",
+     "x": 748,
+     "y": 388,
+     "w": 64,
+     "h": 6,
+     "fill": {
+      "angle": 90,
+      "stops": [
+       [
+        "#22D3EE",
+        0
+       ],
+       [
+        "#8B5CF6",
+        1
+       ]
+      ]
+     },
+     "radius": 3
+    },
+    {
+     "kind": "rect",
+     "x": 1352,
+     "y": 388,
+     "w": 64,
+     "h": 6,
+     "fill": {
+      "angle": 90,
+      "stops": [
+       [
+        "#22D3EE",
+        0
+       ],
+       [
+        "#8B5CF6",
+        1
+       ]
+      ]
+     },
+     "radius": 3
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 420,
+     "w": 424,
+     "h": 26,
+     "text": "Now \u00b7 Q4 2026",
+     "family": "Inter",
+     "size": 20,
+     "weight": 700,
+     "color": "#22D3EE",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 748,
+     "y": 420,
+     "w": 424,
+     "h": 26,
+     "text": "Next \u00b7 Q1 2027",
+     "family": "Inter",
+     "size": 20,
+     "weight": 700,
+     "color": "#A78BFA",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1352,
+     "y": 420,
+     "w": 424,
+     "h": 26,
+     "text": "Later \u00b7 H2 2027",
+     "family": "Inter",
+     "size": 20,
+     "weight": 700,
+     "color": "#94A3B8",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 462,
+     "w": 424,
+     "h": 96,
+     "text": "Realtime\ncollaboration",
+     "family": "Manrope",
+     "size": 40,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 748,
+     "y": 462,
+     "w": 424,
+     "h": 96,
+     "text": "AI media\nstudio",
+     "family": "Manrope",
+     "size": 40,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 1352,
+     "y": 462,
+     "w": 424,
+     "h": 96,
+     "text": "Enterprise\nplatform",
+     "family": "Manrope",
+     "size": 40,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.1
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 592,
+     "w": 424,
+     "h": 118,
+     "text": "Multiplayer cursors, presence\nComment threads on nodes\nOffline-first sync core",
+     "family": "Inter",
+     "size": 24,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 748,
+     "y": 592,
+     "w": 424,
+     "h": 118,
+     "text": "Generate and edit images\nBrand-safe style presets\nBatch background removal",
+     "family": "Inter",
+     "size": 24,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 1352,
+     "y": 592,
+     "w": 424,
+     "h": 118,
+     "text": "SSO, SCIM, and audit logs\nRegional data residency\nPlugin marketplace beta",
+     "family": "Inter",
+     "size": 24,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 144,
+     "y": 738,
+     "w": 424,
+     "h": 2,
+     "fill": "#243352"
+    },
+    {
+     "kind": "rect",
+     "x": 748,
+     "y": 738,
+     "w": 424,
+     "h": 2,
+     "fill": "#243352"
+    },
+    {
+     "kind": "rect",
+     "x": 1352,
+     "y": 738,
+     "w": 424,
+     "h": 2,
+     "fill": "#243352"
+    },
+    {
+     "kind": "text",
+     "x": 144,
+     "y": 762,
+     "w": 424,
+     "h": 30,
+     "text": "Owner: Collab squad",
+     "family": "Inter",
+     "size": 22,
+     "weight": 600,
+     "color": "#E2E8F0",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 748,
+     "y": 762,
+     "w": 424,
+     "h": 30,
+     "text": "Owner: AI squad",
+     "family": "Inter",
+     "size": 22,
+     "weight": 600,
+     "color": "#E2E8F0",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1352,
+     "y": 762,
+     "w": 424,
+     "h": 30,
+     "text": "Owner: Platform squad",
+     "family": "Inter",
+     "size": 22,
+     "weight": 600,
+     "color": "#E2E8F0",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 952,
+     "w": 900,
+     "h": 30,
+     "text": "Northbeam \u00b7 Q3 2026 review",
+     "family": "Inter",
+     "size": 22,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1524,
+     "y": 952,
+     "w": 300,
+     "h": 30,
+     "text": "03 / 05",
+     "family": "Inter",
+     "size": 22,
+     "weight": 500,
+     "color": "#94A3B8",
+     "align": "right",
+     "lineHeight": 1.2
+    }
+   ]
+  },
+  {
+   "name": "Metrics",
+   "bg": "#0B1220",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 96,
+     "h": 8,
+     "fill": {
+      "angle": 90,
+      "stops": [
+       [
+        "#22D3EE",
+        0
+       ],
+       [
+        "#8B5CF6",
+        1
+       ]
+      ]
+     },
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 132,
+     "w": 600,
+     "h": 30,
+     "text": "Metrics",
+     "family": "Inter",
+     "size": 22,
+     "weight": 600,
+     "color": "#22D3EE",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 188,
+     "w": 1400,
+     "h": 92,
+     "text": "The quarter in two numbers",
+     "family": "Manrope",
+     "size": 76,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.05
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 340,
+     "w": 822,
+     "h": 500,
+     "fill": "#141D33",
+     "radius": 24
+    },
+    {
+     "kind": "rect",
+     "x": 1002,
+     "y": 340,
+     "w": 822,
+     "h": 500,
+     "fill": "#141D33",
+     "radius": 24
+    },
+    {
+     "kind": "text",
+     "x": 160,
+     "y": 404,
+     "w": 694,
+     "h": 28,
+     "text": "Deploy frequency",
+     "family": "Inter",
+     "size": 22,
+     "weight": 600,
+     "color": "#22D3EE",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1066,
+     "y": 404,
+     "w": 694,
+     "h": 28,
+     "text": "Platform uptime",
+     "family": "Inter",
+     "size": 22,
+     "weight": 600,
+     "color": "#A78BFA",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 160,
+     "y": 448,
+     "w": 694,
+     "h": 150,
+     "text": "4.6/day",
+     "family": "Manrope",
+     "size": 132,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.05
+    },
+    {
+     "kind": "text",
+     "x": 1066,
+     "y": 448,
+     "w": 694,
+     "h": 150,
+     "text": "99.98%",
+     "family": "Manrope",
+     "size": 132,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.05
+    },
+    {
+     "kind": "button",
+     "x": 160,
+     "y": 628,
+     "w": 210,
+     "h": 48,
+     "fill": "#1F2E52",
+     "label": "+156% vs Q2",
+     "color": "#22D3EE",
+     "family": "Inter",
+     "size": 20,
+     "weight": 700
+    },
+    {
+     "kind": "button",
+     "x": 1066,
+     "y": 628,
+     "w": 250,
+     "h": 48,
+     "fill": "#1F2E52",
+     "label": "+0.09 pts vs Q2",
+     "color": "#A78BFA",
+     "family": "Inter",
+     "size": 20,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 160,
+     "y": 704,
+     "w": 694,
+     "h": 78,
+     "text": "Up from 1.8 per day in Q2, driven by the\nrelease train and automated canary checks.",
+     "family": "Inter",
+     "size": 26,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 1066,
+     "y": 704,
+     "w": 694,
+     "h": 78,
+     "text": "Failover rework and multi-region reads\nput four nines within reach.",
+     "family": "Inter",
+     "size": 26,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 884,
+     "w": 900,
+     "h": 28,
+     "text": "Source: delivery dashboard \u00b7 Jul 1 to Sep 30, 2026",
+     "family": "Inter",
+     "size": 20,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 952,
+     "w": 900,
+     "h": 30,
+     "text": "Northbeam \u00b7 Q3 2026 review",
+     "family": "Inter",
+     "size": 22,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1524,
+     "y": 952,
+     "w": 300,
+     "h": 30,
+     "text": "04 / 05",
+     "family": "Inter",
+     "size": 22,
+     "weight": 500,
+     "color": "#94A3B8",
+     "align": "right",
+     "lineHeight": 1.2
+    }
+   ]
+  },
+  {
+   "name": "Closing",
+   "bg": "#0B1220",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 1560,
+     "y": -260,
+     "w": 560,
+     "h": 560,
+     "fill": {
+      "angle": 135,
+      "stops": [
+       [
+        "#22D3EE",
+        0
+       ],
+       [
+        "#8B5CF6",
+        1
+       ]
+      ]
+     },
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": -200,
+     "y": 880,
+     "w": 520,
+     "h": 520,
+     "fill": "#1A1B3A",
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 96,
+     "h": 8,
+     "fill": {
+      "angle": 90,
+      "stops": [
+       [
+        "#22D3EE",
+        0
+       ],
+       [
+        "#8B5CF6",
+        1
+       ]
+      ]
+     },
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 132,
+     "w": 600,
+     "h": 30,
+     "text": "Next steps",
+     "family": "Inter",
+     "size": 22,
+     "weight": 600,
+     "color": "#22D3EE",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 380,
+     "w": 1400,
+     "h": 250,
+     "text": "Help us ship\nthe next quarter",
+     "family": "Manrope",
+     "size": 104,
+     "weight": 700,
+     "color": "#F8FAFC",
+     "lineHeight": 1.08
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 668,
+     "w": 1300,
+     "h": 42,
+     "text": "Three asks: two backend hires, SSO budget, and design partner intros.",
+     "family": "Inter",
+     "size": 28,
+     "weight": 400,
+     "color": "#94A3B8",
+     "lineHeight": 1.35
+    },
+    {
+     "kind": "button",
+     "x": 96,
+     "y": 772,
+     "w": 520,
+     "h": 92,
+     "fill": {
+      "angle": 90,
+      "stops": [
+       [
+        "#22D3EE",
+        0
+       ],
+       [
+        "#8B5CF6",
+        1
+       ]
+      ]
+     },
+     "label": "Book roadmap office hours",
+     "color": "#0B1220",
+     "family": "Manrope",
+     "size": 26,
+     "weight": 700
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 952,
+     "w": 900,
+     "h": 30,
+     "text": "platform@northbeam.dev \u00b7 #platform-reviews",
+     "family": "Inter",
+     "size": 22,
+     "weight": 500,
+     "color": "#94A3B8",
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 1524,
+     "y": 952,
+     "w": 300,
+     "h": 30,
+     "text": "05 / 05",
+     "family": "Inter",
+     "size": 22,
+     "weight": 500,
+     "color": "#94A3B8",
+     "align": "right",
+     "lineHeight": 1.2
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-free-svg-illustration-rocket",
+     "x": 1300,
+     "y": 390,
+     "w": 440,
+     "h": 490
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Product name",
+   "hint": "Company or product wordmark"
+  },
+  {
+   "node": "p0-n6",
+   "kind": "text",
+   "label": "Deck title",
+   "hint": "The headline of the review, up to two lines"
+  },
+  {
+   "node": "p0-n7",
+   "kind": "text",
+   "label": "Subtitle",
+   "hint": "One line describing what the deck covers"
+  },
+  {
+   "node": "p4-n6-label",
+   "kind": "text",
+   "label": "CTA label",
+   "hint": "Closing call to action"
+  },
+  {
+   "node": "p4-n7",
+   "kind": "text",
+   "label": "Contact line",
+   "hint": "Email or channel for follow-ups"
+  }
+ ],
+ "version": 2,
+ "updated": "2026-07-10T00:00:00.000Z",
+ "rank": 20
 }

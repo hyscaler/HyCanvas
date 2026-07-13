@@ -88,13 +88,13 @@ func mountStaticFS(r chi.Router, root http.FileSystem) {
 			serveFile(w, req, root, clean+"/index.html")
 			return
 		}
-		// Pretty client-resolved dynamic routes: /editor/<id> and
-		// /shared/<token> (the static export cannot emit per-value HTML for
+		// Pretty client-resolved dynamic routes: /editor/<id>, /shared/<token>,
+		// and /present/<id> (the static export cannot emit per-value HTML for
 		// user-created ids/tokens), so serve the exported page and let the
 		// frontend read the value from the path. Single path segment only, and
 		// never a file-looking name, so real assets and nested paths still 404
 		// honestly.
-		for _, route := range []string{"editor", "shared"} {
+		for _, route := range []string{"editor", "shared", "present"} {
 			rest, ok := strings.CutPrefix(clean, "/"+route+"/")
 			if !ok || rest == "" || strings.ContainsAny(rest, "/.") {
 				continue

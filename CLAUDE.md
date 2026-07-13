@@ -51,6 +51,19 @@ Keep the rendering engine free of any React or UI dependency so it stays reusabl
 - Per-workspace data isolation is enforced at the query layer.
 - Degrade gracefully: WebGL/WebGPU unavailable falls back to Canvas2D; object storage is abstracted so self-hosters can use local files or MinIO.
 
+## Zero Data Loss (non-negotiable)
+
+Every instance is someone's production instance, and self-hosters upgrade by swapping a binary. A change must be deployable onto a live instance holding real designs without destroying, corrupting, or silently altering any of it.
+
+Rules for every change:
+- **Never break existing data.** Opening, rendering, and saving a design created by any earlier version must keep working. If a change cannot preserve existing data, it does not ship in that form.
+- **Every schema change is additive-first.** Add optional fields and new node types; do not repurpose, rename, or narrow an existing field's meaning. Additive changes need only a `CURRENT_SCHEMA_VERSION` bump, because older files omit the field and `UnknownNode.raw` preserves a newer client's nodes losslessly.
+- **A bump touches two files or the write boundary rejects the file.** Raise `CURRENT_SCHEMA_VERSION` in `packages/schema/src/schema.ts` AND the Go mirror `currentSchemaVersion` in `backend/internal/persistence/file.go` in the same change, or `persistence/validate.go` returns 422 and nothing persists. Append the version-history line in `schema.ts`.
+- **Provide the forward migration.** Register the migration step in `migrate.ts` keyed on the source version. Migrations are forward-only, idempotent, and never drop unrecognized data.
+- **Destructive SQL is forbidden by default.** No `DROP COLUMN`, `DROP TABLE`, destructive `ALTER`, or backfill that overwrites user content. Additive columns are nullable or defaulted. If a genuinely destructive migration is unavoidable, it needs an explicit expand/migrate/contract plan, a verified backup, and the user's explicit approval before it is written.
+- **Mixed versions must coexist.** During a rollout an old client and a new client may edit the same design. Neither may discard the other's data, and a rollback to the previous binary must leave existing designs openable.
+- **Prove it before deploying.** Verify against a database seeded with pre-change designs (open, edit, save, export, restore an old version), not just fresh ones. A pure code change that touches no schema and no SQL should say so explicitly when reporting.
+
 ## Conventions
 
 Documentation:

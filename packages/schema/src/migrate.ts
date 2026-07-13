@@ -224,6 +224,22 @@ function mapNodesV6(nodes: AnyObj[]): AnyObj[] {
   });
 }
 
+// v13 -> v14: effect normalization (see the step comment below).
+function mapNodesV14(nodes: AnyObj[]): AnyObj[] {
+  return nodes.map((node) => {
+    let n = node;
+    if (Array.isArray(n.effects) && n.effects.some((e: AnyObj) => e.kind === "shadow" && e.type === undefined)) {
+      n = { ...n, effects: n.effects.map((e: AnyObj) => (e.kind === "shadow" && e.type === undefined ? { ...e, type: "drop" } : e)) };
+    }
+    if (Array.isArray(n.textEffects) && n.textEffects.some((e: AnyObj) => e.kind === "shadow" && e.opacity !== 1)) {
+      n = { ...n, textEffects: n.textEffects.map((e: AnyObj) => (e.kind === "shadow" && e.opacity !== 1 ? { ...e, opacity: 1 } : e)) };
+    }
+    if (Array.isArray(n.children)) n = { ...n, children: mapNodesV14(n.children) };
+    if (n.child && typeof n.child === "object") n = { ...n, child: mapNodesV14([n.child])[0] };
+    return n;
+  });
+}
+
 /**
  * Migration steps keyed by their SOURCE version. `migrations[n]` upgrades a
  * version-`n` file to version `n + 1`.
@@ -282,6 +298,35 @@ export const migrations: Record<number, Migration> = {
   // new node types and omits the new fields, so it stays structurally valid v10
   // and always opens. Bump the version so newer readers know it may carry them.
   9: (file: AnyObj) => ({ ...file, schemaVersion: 10 }),
+  // v10 -> v11: presentations (F28) slide masters, layouts, placeholders, and a
+  // swappable deck Theme on DesignFile, plus the optional Page.layoutId. All
+  // additive: a v10 file carries none of them, every page renders standalone as
+  // before, and it stays structurally valid v11. Bump the version so newer
+  // readers know the deck may carry a master/layout cascade and a theme.
+  10: (file: AnyObj) => ({ ...file, schemaVersion: 11 }),
+  // v11 -> v12: accessibility (F28 FR-29). NodeBase gains optional altText and
+  // decorative; Page gains an optional readingOrder. All additive: a v11 file
+  // omits them, alt text still falls back to ImageNode.alt, and reading order
+  // falls back to z-order. It stays structurally valid v12 and always opens.
+  11: (file: AnyObj) => ({ ...file, schemaVersion: 12 }),
+  // v12 -> v13: slide sections (F28 FR-5). DesignFile gains an optional
+  // `sections` registry and Page an optional `sectionId`. Additive: a v12 file
+  // carries neither, every slide stands alone as before, and it stays
+  // structurally valid v13 and always opens.
+  12: (file: AnyObj) => ({ ...file, schemaVersion: 13 }),
+  // v13 -> v14: effect normalization. (a) Shadow.type becomes optional with
+  // "drop" as the meaning of absence: early effect panels wrote node shadows
+  // without a type, which strict validation rejected and the renderer skipped;
+  // stamp those as "drop" so the data says what the fixed renderer draws.
+  // (b) Text-effect shadow `opacity` was never applied by any renderer, so bake
+  // it to 1 (its effective value): renders stay pixel-identical to what users
+  // published, and the field becomes live for the new effect level controls.
+  // Both idempotent; nothing else changes shape.
+  13: (file: AnyObj) => ({
+    ...file,
+    schemaVersion: 14,
+    pages: (file.pages ?? []).map((p: AnyObj) => ({ ...p, children: mapNodesV14(p.children ?? []) })),
+  }),
 };
 
 export class MigrationError extends Error {

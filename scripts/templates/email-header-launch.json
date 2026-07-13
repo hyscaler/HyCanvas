@@ -1,44 +1,270 @@
 {
-  "id": "email-header-launch",
-  "title": "Product Launch Email Header",
-  "categories": ["marketing"],
-  "tags": ["email", "header", "launch"],
-  "styleTags": ["bold", "modern"],
-  "size": [1200, 400],
-  "typography": [
-    { "role": "heading", "family": "Outfit", "weight": 800 },
-    { "role": "body", "family": "Work Sans", "weight": 500 }
-  ],
-  "pages": [
+ "id": "email-header-launch",
+ "title": "Product Launch Email Header",
+ "categories": [
+  "marketing"
+ ],
+ "tags": [
+  "email",
+  "header",
+  "launch"
+ ],
+ "styleTags": [
+  "bold",
+  "modern"
+ ],
+ "size": [
+  1200,
+  400
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Outfit",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Work Sans",
+   "weight": 500
+  }
+ ],
+ "pages": [
+  {
+   "name": "Header",
+   "bg": {
+    "angle": 115,
+    "stops": [
+     [
+      "#c026d3",
+      0
+     ],
+     [
+      "#ea580c",
+      1
+     ]
+    ]
+   },
+   "nodes": [
     {
-      "name": "Header",
-      "bg": { "angle": 115, "stops": [["#c026d3", 0], ["#ea580c", 1]] },
-      "nodes": [
-        { "kind": "ellipse", "x": 980, "y": -220, "w": 460, "h": 460, "fill": "#ffffff", "opacity": 0.14, "bleed": true },
-        { "kind": "button", "x": 72, "y": 80, "w": 220, "h": 52, "fill": "#18181b", "label": "NEW · V4.0", "color": "#ffffff", "family": "Work Sans", "size": 19, "weight": 700, "letterSpacing": 2 },
-        { "kind": "text", "x": 72, "y": 162, "w": 1000, "h": 92, "text": "Meet the new dashboard", "family": "Outfit", "size": 78, "weight": 800, "color": "#ffffff", "lineHeight": 1.05 },
-        { "kind": "text", "x": 72, "y": 276, "w": 760, "h": 38, "text": "Realtime insights, custom views, zero setup.", "family": "Work Sans", "size": 26, "weight": 600, "color": "#18181b" },
-        { "kind": "ellipse", "x": 972, "y": 268, "w": 12, "h": 12, "fill": "#ffffff", "opacity": 0.5 },
-        { "kind": "ellipse", "x": 1008, "y": 268, "w": 12, "h": 12, "fill": "#ffffff", "opacity": 0.5 },
-        { "kind": "ellipse", "x": 1044, "y": 268, "w": 12, "h": 12, "fill": "#ffffff", "opacity": 0.5 },
-        { "kind": "ellipse", "x": 1080, "y": 268, "w": 12, "h": 12, "fill": "#ffffff", "opacity": 0.5 },
-        { "kind": "ellipse", "x": 1116, "y": 268, "w": 12, "h": 12, "fill": "#ffffff", "opacity": 0.5 },
-        { "kind": "ellipse", "x": 972, "y": 304, "w": 12, "h": 12, "fill": "#ffffff", "opacity": 0.5 },
-        { "kind": "ellipse", "x": 1008, "y": 304, "w": 12, "h": 12, "fill": "#ffffff", "opacity": 0.5 },
-        { "kind": "ellipse", "x": 1044, "y": 304, "w": 12, "h": 12, "fill": "#ffffff", "opacity": 0.5 },
-        { "kind": "ellipse", "x": 1080, "y": 304, "w": 12, "h": 12, "fill": "#ffffff", "opacity": 0.5 },
-        { "kind": "ellipse", "x": 1116, "y": 304, "w": 12, "h": 12, "fill": "#ffffff", "opacity": 0.5 },
-        { "kind": "ellipse", "x": 972, "y": 340, "w": 12, "h": 12, "fill": "#ffffff", "opacity": 0.5 },
-        { "kind": "ellipse", "x": 1008, "y": 340, "w": 12, "h": 12, "fill": "#ffffff", "opacity": 0.5 },
-        { "kind": "ellipse", "x": 1044, "y": 340, "w": 12, "h": 12, "fill": "#ffffff", "opacity": 0.5 },
-        { "kind": "ellipse", "x": 1080, "y": 340, "w": 12, "h": 12, "fill": "#ffffff", "opacity": 0.5 },
-        { "kind": "ellipse", "x": 1116, "y": 340, "w": 12, "h": 12, "fill": "#ffffff", "opacity": 0.5 }
-      ]
+     "kind": "ellipse",
+     "x": 980,
+     "y": -220,
+     "w": 460,
+     "h": 460,
+     "fill": "#ffffff",
+     "opacity": 0.14,
+     "bleed": true
+    },
+    {
+     "kind": "button",
+     "x": 72,
+     "y": 80,
+     "w": 220,
+     "h": 52,
+     "fill": "#18181b",
+     "label": "NEW \u00b7 V4.0",
+     "color": "#ffffff",
+     "family": "Work Sans",
+     "size": 19,
+     "weight": 700,
+     "letterSpacing": 2
+    },
+    {
+     "kind": "text",
+     "x": 72,
+     "y": 162,
+     "w": 1000,
+     "h": 92,
+     "text": "Meet the new dashboard",
+     "family": "Outfit",
+     "size": 78,
+     "weight": 800,
+     "color": "#ffffff",
+     "lineHeight": 1.05
+    },
+    {
+     "kind": "text",
+     "x": 72,
+     "y": 276,
+     "w": 760,
+     "h": 38,
+     "text": "Realtime insights, custom views, zero setup.",
+     "family": "Work Sans",
+     "size": 26,
+     "weight": 600,
+     "color": "#18181b"
+    },
+    {
+     "kind": "ellipse",
+     "x": 972,
+     "y": 268,
+     "w": 12,
+     "h": 12,
+     "fill": "#ffffff",
+     "opacity": 0.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1008,
+     "y": 268,
+     "w": 12,
+     "h": 12,
+     "fill": "#ffffff",
+     "opacity": 0.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1044,
+     "y": 268,
+     "w": 12,
+     "h": 12,
+     "fill": "#ffffff",
+     "opacity": 0.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1080,
+     "y": 268,
+     "w": 12,
+     "h": 12,
+     "fill": "#ffffff",
+     "opacity": 0.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1116,
+     "y": 268,
+     "w": 12,
+     "h": 12,
+     "fill": "#ffffff",
+     "opacity": 0.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 972,
+     "y": 304,
+     "w": 12,
+     "h": 12,
+     "fill": "#ffffff",
+     "opacity": 0.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1008,
+     "y": 304,
+     "w": 12,
+     "h": 12,
+     "fill": "#ffffff",
+     "opacity": 0.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1044,
+     "y": 304,
+     "w": 12,
+     "h": 12,
+     "fill": "#ffffff",
+     "opacity": 0.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1080,
+     "y": 304,
+     "w": 12,
+     "h": 12,
+     "fill": "#ffffff",
+     "opacity": 0.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1116,
+     "y": 304,
+     "w": 12,
+     "h": 12,
+     "fill": "#ffffff",
+     "opacity": 0.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 972,
+     "y": 340,
+     "w": 12,
+     "h": 12,
+     "fill": "#ffffff",
+     "opacity": 0.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1008,
+     "y": 340,
+     "w": 12,
+     "h": 12,
+     "fill": "#ffffff",
+     "opacity": 0.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1044,
+     "y": 340,
+     "w": 12,
+     "h": 12,
+     "fill": "#ffffff",
+     "opacity": 0.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1080,
+     "y": 340,
+     "w": 12,
+     "h": 12,
+     "fill": "#ffffff",
+     "opacity": 0.5
+    },
+    {
+     "kind": "ellipse",
+     "x": 1116,
+     "y": 340,
+     "w": 12,
+     "h": 12,
+     "fill": "#ffffff",
+     "opacity": 0.5
     }
-  ],
-  "fillable": [
-    { "node": "p0-n2", "kind": "text", "label": "Headline", "hint": "Launch announcement, e.g. Meet the new dashboard" },
-    { "node": "p0-n3", "kind": "text", "label": "Subline", "hint": "Three short benefits, comma separated" },
-    { "node": "p0-n1-label", "kind": "text", "label": "Version chip", "hint": "Release tag, e.g. NEW · V4.0" }
-  ]
+   ],
+   "illustrations": [
+    {
+     "asset": "la-free-svg-illustration-rocket",
+     "x": 988,
+     "y": 28,
+     "w": 180,
+     "h": 218,
+     "position": "after:email-header-launch-p0-n0",
+     "rotation": 6
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n2",
+   "kind": "text",
+   "label": "Headline",
+   "hint": "Launch announcement, e.g. Meet the new dashboard"
+  },
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Subline",
+   "hint": "Three short benefits, comma separated"
+  },
+  {
+   "node": "p0-n1-label",
+   "kind": "text",
+   "label": "Version chip",
+   "hint": "Release tag, e.g. NEW \u00b7 V4.0"
+  }
+ ],
+ "version": 2,
+ "updated": "2026-07-10T00:00:00.000Z",
+ "rank": 20
 }

@@ -1,52 +1,389 @@
 {
-  "id": "webinar-yt-cover",
-  "title": "Webinar Stream Cover",
-  "categories": ["marketing", "social"],
-  "tags": ["webinar", "stream", "cover", "youtube", "dark"],
-  "styleTags": ["modern", "bold"],
-  "size": [1920, 1080],
-  "typography": [
-    { "role": "heading", "family": "Manrope", "weight": 800 },
-    { "role": "body", "family": "Inter", "weight": 500 }
-  ],
-  "pages": [
+ "id": "webinar-yt-cover",
+ "title": "Webinar Stream Cover",
+ "categories": [
+  "marketing",
+  "social"
+ ],
+ "tags": [
+  "webinar",
+  "stream",
+  "cover",
+  "youtube",
+  "dark"
+ ],
+ "styleTags": [
+  "modern",
+  "bold"
+ ],
+ "size": [
+  1920,
+  1080
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Manrope",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Inter",
+   "weight": 500
+  }
+ ],
+ "pages": [
+  {
+   "name": "Cover",
+   "bg": "#0B1220",
+   "nodes": [
     {
-      "name": "Cover",
-      "bg": "#0B1220",
-      "nodes": [
-        { "kind": "rect", "x": 1320, "y": 200, "w": 640, "h": 960, "radius": 72, "fill": "#8B5CF6", "opacity": 0.22, "bleed": true },
-        { "kind": "rect", "x": 1390, "y": 130, "w": 640, "h": 960, "radius": 72, "fill": "#22D3EE", "opacity": 0.3, "bleed": true },
-        { "kind": "rect", "x": 1460, "y": 60, "w": 640, "h": 960, "radius": 72, "fill": { "angle": 135, "stops": [["#22D3EE", 0], ["#8B5CF6", 1]] }, "bleed": true },
-        { "kind": "rect", "x": 1560, "y": 140, "w": 180, "h": 60, "radius": 30, "fill": "#0B1220", "opacity": 0.85 },
-        { "kind": "ellipse", "x": 1592, "y": 163, "w": 14, "h": 14, "fill": "#22D3EE" },
-        { "kind": "text", "x": 1616, "y": 140, "w": 110, "h": 60, "text": "LIVE", "family": "Inter", "size": 24, "weight": 800, "color": "#FFFFFF", "align": "left", "vAlign": "middle", "letterSpacing": 5, "upper": true },
-        { "kind": "rect", "x": 96, "y": 96, "w": 64, "h": 64, "radius": 18, "fill": "#22D3EE" },
-        { "kind": "text", "x": 96, "y": 96, "w": 64, "h": 64, "text": "DS", "family": "Manrope", "size": 26, "weight": 800, "color": "#0B1220", "align": "center", "vAlign": "middle" },
-        { "kind": "text", "x": 180, "y": 96, "w": 620, "h": 64, "text": "Dev Signals", "family": "Manrope", "size": 32, "weight": 800, "color": "#FFFFFF", "align": "left", "vAlign": "middle", "letterSpacing": 5, "upper": true },
-        { "kind": "text", "x": 96, "y": 330, "w": 800, "h": 36, "text": "Episode 24 · Live webinar", "family": "Inter", "size": 26, "weight": 700, "color": "#22D3EE", "align": "left", "letterSpacing": 6, "upper": true },
-        { "kind": "text", "x": 96, "y": 392, "w": 1200, "h": 118, "text": "Scaling Postgres", "family": "Manrope", "size": 104, "weight": 400, "color": "#CBD5E1", "align": "left", "lineHeight": 1.06 },
-        { "kind": "text", "x": 96, "y": 512, "w": 1240, "h": 120, "text": "past 1 billion rows", "family": "Manrope", "size": 104, "weight": 800, "color": "#FFFFFF", "align": "left", "lineHeight": 1.04 },
-        { "kind": "rect", "x": 96, "y": 712, "w": 430, "h": 104, "radius": 52, "fill": "#1E293B" },
-        { "kind": "ellipse", "x": 112, "y": 728, "w": 72, "h": 72, "fill": "#0B1220" },
-        { "kind": "text", "x": 112, "y": 728, "w": 72, "h": 72, "text": "PN", "family": "Inter", "size": 24, "weight": 800, "color": "#22D3EE", "align": "center", "vAlign": "middle" },
-        { "kind": "text", "x": 200, "y": 730, "w": 312, "h": 36, "text": "Priya Nair", "family": "Inter", "size": 28, "weight": 700, "color": "#FFFFFF", "align": "left" },
-        { "kind": "text", "x": 200, "y": 768, "w": 312, "h": 30, "text": "Staff Engineer, Corelight", "family": "Inter", "size": 20, "weight": 500, "color": "#94A3B8", "align": "left" },
-        { "kind": "rect", "x": 550, "y": 712, "w": 400, "h": 104, "radius": 52, "fill": "#1E293B" },
-        { "kind": "ellipse", "x": 566, "y": 728, "w": 72, "h": 72, "fill": "#0B1220" },
-        { "kind": "text", "x": 566, "y": 728, "w": 72, "h": 72, "text": "MR", "family": "Inter", "size": 24, "weight": 800, "color": "#22D3EE", "align": "center", "vAlign": "middle" },
-        { "kind": "text", "x": 654, "y": 730, "w": 282, "h": 36, "text": "Marco Ruiz", "family": "Inter", "size": 28, "weight": 700, "color": "#FFFFFF", "align": "left" },
-        { "kind": "text", "x": 654, "y": 768, "w": 282, "h": 30, "text": "Infra Lead, Fathom", "family": "Inter", "size": 20, "weight": 500, "color": "#94A3B8", "align": "left" },
-        { "kind": "rect", "x": 96, "y": 884, "w": 56, "h": 6, "fill": "#22D3EE" },
-        { "kind": "text", "x": 96, "y": 914, "w": 1150, "h": 40, "text": "Thu, Jul 23 · 10:00 AM PT · Live on youtube.com/devsignals", "family": "Inter", "size": 30, "weight": 600, "color": "#E2E8F0", "align": "left" }
+     "kind": "rect",
+     "x": 1320,
+     "y": 200,
+     "w": 640,
+     "h": 960,
+     "radius": 72,
+     "fill": "#8B5CF6",
+     "opacity": 0.22,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 1390,
+     "y": 130,
+     "w": 640,
+     "h": 960,
+     "radius": 72,
+     "fill": "#22D3EE",
+     "opacity": 0.3,
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 1460,
+     "y": 60,
+     "w": 640,
+     "h": 960,
+     "radius": 72,
+     "fill": {
+      "angle": 135,
+      "stops": [
+       [
+        "#22D3EE",
+        0
+       ],
+       [
+        "#8B5CF6",
+        1
+       ]
       ]
+     },
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 1560,
+     "y": 140,
+     "w": 180,
+     "h": 60,
+     "radius": 30,
+     "fill": "#0B1220",
+     "opacity": 0.85
+    },
+    {
+     "kind": "ellipse",
+     "x": 1592,
+     "y": 163,
+     "w": 14,
+     "h": 14,
+     "fill": "#22D3EE"
+    },
+    {
+     "kind": "text",
+     "x": 1616,
+     "y": 140,
+     "w": 110,
+     "h": 60,
+     "text": "LIVE",
+     "family": "Inter",
+     "size": 24,
+     "weight": 800,
+     "color": "#FFFFFF",
+     "align": "left",
+     "vAlign": "middle",
+     "letterSpacing": 5,
+     "upper": true
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 96,
+     "w": 64,
+     "h": 64,
+     "radius": 18,
+     "fill": "#22D3EE"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 96,
+     "w": 64,
+     "h": 64,
+     "text": "DS",
+     "family": "Manrope",
+     "size": 26,
+     "weight": 800,
+     "color": "#0B1220",
+     "align": "center",
+     "vAlign": "middle"
+    },
+    {
+     "kind": "text",
+     "x": 180,
+     "y": 96,
+     "w": 620,
+     "h": 64,
+     "text": "Dev Signals",
+     "family": "Manrope",
+     "size": 32,
+     "weight": 800,
+     "color": "#FFFFFF",
+     "align": "left",
+     "vAlign": "middle",
+     "letterSpacing": 5,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 330,
+     "w": 800,
+     "h": 36,
+     "text": "Episode 24 \u00b7 Live webinar",
+     "family": "Inter",
+     "size": 26,
+     "weight": 700,
+     "color": "#22D3EE",
+     "align": "left",
+     "letterSpacing": 6,
+     "upper": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 392,
+     "w": 1200,
+     "h": 118,
+     "text": "Scaling Postgres",
+     "family": "Manrope",
+     "size": 104,
+     "weight": 400,
+     "color": "#CBD5E1",
+     "align": "left",
+     "lineHeight": 1.06
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 512,
+     "w": 1240,
+     "h": 120,
+     "text": "past 1 billion rows",
+     "family": "Manrope",
+     "size": 104,
+     "weight": 800,
+     "color": "#FFFFFF",
+     "align": "left",
+     "lineHeight": 1.04
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 712,
+     "w": 430,
+     "h": 104,
+     "radius": 52,
+     "fill": "#1E293B"
+    },
+    {
+     "kind": "ellipse",
+     "x": 112,
+     "y": 728,
+     "w": 72,
+     "h": 72,
+     "fill": "#0B1220"
+    },
+    {
+     "kind": "text",
+     "x": 112,
+     "y": 728,
+     "w": 72,
+     "h": 72,
+     "text": "PN",
+     "family": "Inter",
+     "size": 24,
+     "weight": 800,
+     "color": "#22D3EE",
+     "align": "center",
+     "vAlign": "middle"
+    },
+    {
+     "kind": "text",
+     "x": 200,
+     "y": 730,
+     "w": 312,
+     "h": 36,
+     "text": "Priya Nair",
+     "family": "Inter",
+     "size": 28,
+     "weight": 700,
+     "color": "#FFFFFF",
+     "align": "left"
+    },
+    {
+     "kind": "text",
+     "x": 200,
+     "y": 768,
+     "w": 312,
+     "h": 30,
+     "text": "Staff Engineer, Corelight",
+     "family": "Inter",
+     "size": 20,
+     "weight": 500,
+     "color": "#94A3B8",
+     "align": "left"
+    },
+    {
+     "kind": "rect",
+     "x": 550,
+     "y": 712,
+     "w": 400,
+     "h": 104,
+     "radius": 52,
+     "fill": "#1E293B"
+    },
+    {
+     "kind": "ellipse",
+     "x": 566,
+     "y": 728,
+     "w": 72,
+     "h": 72,
+     "fill": "#0B1220"
+    },
+    {
+     "kind": "text",
+     "x": 566,
+     "y": 728,
+     "w": 72,
+     "h": 72,
+     "text": "MR",
+     "family": "Inter",
+     "size": 24,
+     "weight": 800,
+     "color": "#22D3EE",
+     "align": "center",
+     "vAlign": "middle"
+    },
+    {
+     "kind": "text",
+     "x": 654,
+     "y": 730,
+     "w": 282,
+     "h": 36,
+     "text": "Marco Ruiz",
+     "family": "Inter",
+     "size": 28,
+     "weight": 700,
+     "color": "#FFFFFF",
+     "align": "left"
+    },
+    {
+     "kind": "text",
+     "x": 654,
+     "y": 768,
+     "w": 282,
+     "h": 30,
+     "text": "Infra Lead, Fathom",
+     "family": "Inter",
+     "size": 20,
+     "weight": 500,
+     "color": "#94A3B8",
+     "align": "left"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 884,
+     "w": 56,
+     "h": 6,
+     "fill": "#22D3EE"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 914,
+     "w": 1150,
+     "h": 40,
+     "text": "Thu, Jul 23 \u00b7 10:00 AM PT \u00b7 Live on youtube.com/devsignals",
+     "family": "Inter",
+     "size": 30,
+     "weight": 600,
+     "color": "#E2E8F0",
+     "align": "left"
     }
-  ],
-  "fillable": [
-    { "node": "p0-n8", "kind": "text", "label": "Series name", "hint": "Your show or channel wordmark" },
-    { "node": "p0-n10", "kind": "text", "label": "Title line 1", "hint": "Light lead-in line" },
-    { "node": "p0-n11", "kind": "text", "label": "Title line 2", "hint": "Bold payoff line" },
-    { "node": "p0-n15", "kind": "text", "label": "Speaker 1 name", "hint": "First and last name" },
-    { "node": "p0-n20", "kind": "text", "label": "Speaker 2 name", "hint": "First and last name" },
-    { "node": "p0-n23", "kind": "text", "label": "Schedule line", "hint": "Date, time and where to watch" }
-  ]
+   ],
+   "illustrations": [
+    {
+     "asset": "la-programming",
+     "x": 1500,
+     "y": 540,
+     "w": 380,
+     "h": 430,
+     "position": "after:webinar-yt-cover-p0-n2"
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n8",
+   "kind": "text",
+   "label": "Series name",
+   "hint": "Your show or channel wordmark"
+  },
+  {
+   "node": "p0-n10",
+   "kind": "text",
+   "label": "Title line 1",
+   "hint": "Light lead-in line"
+  },
+  {
+   "node": "p0-n11",
+   "kind": "text",
+   "label": "Title line 2",
+   "hint": "Bold payoff line"
+  },
+  {
+   "node": "p0-n15",
+   "kind": "text",
+   "label": "Speaker 1 name",
+   "hint": "First and last name"
+  },
+  {
+   "node": "p0-n20",
+   "kind": "text",
+   "label": "Speaker 2 name",
+   "hint": "First and last name"
+  },
+  {
+   "node": "p0-n23",
+   "kind": "text",
+   "label": "Schedule line",
+   "hint": "Date, time and where to watch"
+  }
+ ],
+ "version": 2,
+ "updated": "2026-07-10T00:00:00.000Z",
+ "rank": 20
 }

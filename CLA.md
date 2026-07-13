@@ -2,7 +2,9 @@
 
 Version 1.0
 
-Thank you for contributing to HyCanvas, a product of HyScaler® ("HyScaler", "we", "us"). This Contributor License Agreement ("Agreement") clarifies the intellectual-property rights in your contributions. It protects you, HyScaler, and users of HyCanvas, and it is what allows HyScaler to keep HyCanvas freely available under the Elastic License 2.0 while also offering separate commercial licenses.
+Thank you for contributing to HyCanvas, a product of NetTantra Technologies (India) Private Limited ("NetTantra", "we", "us"). HyScaler® is a registered trademark of NetTantra Technologies (India) Private Limited; it is a brand, not the contracting party, so the rights below are granted to NetTantra Technologies (India) Private Limited itself.
+
+This Contributor License Agreement ("Agreement") clarifies the intellectual-property rights in your contributions. It protects you, NetTantra, and users of HyCanvas, and it is what allows NetTantra to keep HyCanvas freely available under the Elastic License 2.0 while also offering separate commercial licenses.
 
 By commenting `I have read the CLA Document and I hereby sign the CLA` on a HyCanvas pull request (or otherwise signing as we direct), you accept this Agreement for your present and future contributions to HyCanvas.
 
@@ -13,13 +15,13 @@ By commenting `I have read the CLA Document and I hereby sign the CLA` on a HyCa
 
 ## 2. Copyright license
 
-You grant HyScaler and recipients of software distributed by HyScaler a perpetual, worldwide, non-exclusive, irrevocable, royalty-free copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, distribute, and sublicense your Contributions and derivative works, and to license and relicense the foregoing under any license terms of HyScaler's choosing, including the Elastic License 2.0, commercial licenses, and open-source licenses.
+You grant NetTantra and recipients of software distributed by NetTantra a perpetual, worldwide, non-exclusive, irrevocable, royalty-free copyright license to reproduce, prepare derivative works of, publicly display, publicly perform, distribute, and sublicense your Contributions and derivative works, and to license and relicense the foregoing under any license terms of NetTantra's choosing, including the Elastic License 2.0, commercial licenses, and open-source licenses.
 
 You retain ownership of your Contributions; this is a license, not an assignment. You retain the right to use your own Contributions for any other purpose.
 
 ## 3. Patent license
 
-You grant HyScaler and recipients of software distributed by HyScaler a perpetual, worldwide, non-exclusive, irrevocable (except as below), royalty-free patent license to make, have made, use, offer to sell, sell, import, and otherwise transfer your Contributions alone or in combination with HyCanvas, for any patent claims you can license that are necessarily infringed by your Contributions. If any entity brings patent litigation alleging that HyCanvas or a Contribution infringes a patent, any patent licenses granted by that entity under this Agreement terminate.
+You grant NetTantra and recipients of software distributed by NetTantra a perpetual, worldwide, non-exclusive, irrevocable (except as below), royalty-free patent license to make, have made, use, offer to sell, sell, import, and otherwise transfer your Contributions alone or in combination with HyCanvas, for any patent claims you can license that are necessarily infringed by your Contributions. If any entity brings patent litigation alleging that HyCanvas or a Contribution infringes a patent, any patent licenses granted by that entity under this Agreement terminate.
 
 ## 4. Your representations
 
@@ -35,6 +37,10 @@ You are not expected to provide support for your Contributions.
 
 If you accept this Agreement on behalf of a company or other legal entity, you represent that you are authorized to bind that entity, and "You" includes the entity and all employees it authorizes to submit Contributions to HyCanvas.
 
-## 6. Miscellany
+## 6. Who must sign
 
-You agree to notify HyScaler of any facts or circumstances that would make these representations inaccurate. This Agreement is governed by the laws applicable to HyScaler's principal place of business, without regard to conflict-of-law rules.
+Everyone contributing to HyCanvas signs, once, except NetTantra's own personnel: NetTantra already owns the copyright in work its employees and contractors author for it, so there are no rights left for them to license back. The CLA bot enforces this, exempting the maintainers listed in its allowlist. Submitting a pull request is not by itself acceptance of this Agreement; the signature comment is.
+
+## 7. Miscellany
+
+You agree to notify NetTantra of any facts or circumstances that would make these representations inaccurate. This Agreement is governed by the laws applicable to NetTantra's principal place of business, without regard to conflict-of-law rules.

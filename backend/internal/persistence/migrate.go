@@ -36,7 +36,8 @@ func migrateFile(file DesignFile) DesignFile {
 		case 5:
 			cur = bumpPages(cur, 6, mapNodesV6)
 		default:
-			// Additive bumps (v4->v5, v6->v7, v7->v8, v8->v9): no transform.
+			// Additive bumps (v4->v5, v6->v7, v7->v8, v8->v9, v9->v10, v10->v11):
+			// no transform; the file simply omits the newer optional fields.
 			cur = shallowCopy(cur)
 			cur["schemaVersion"] = float64(v + 1)
 		}

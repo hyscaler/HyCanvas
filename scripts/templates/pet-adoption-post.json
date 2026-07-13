@@ -1,0 +1,326 @@
+{
+ "id": "pet-adoption-post",
+ "title": "Pet Adoption Drive",
+ "categories": [
+  "social",
+  "personal"
+ ],
+ "tags": [
+  "pets",
+  "adoption",
+  "shelter",
+  "rescue",
+  "community"
+ ],
+ "styleTags": [
+  "warm",
+  "friendly"
+ ],
+ "size": [
+  1080,
+  1080
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Nunito",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Work Sans",
+   "weight": 400
+  },
+  {
+   "role": "script",
+   "family": "Caveat",
+   "weight": 600
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Event details",
+   "hint": "One or two warm lines about the pets and any offer, e.g. fees waived"
+  },
+  {
+   "node": "p0-n8",
+   "kind": "text",
+   "label": "Date & time",
+   "hint": "When the adoption drive happens, e.g. Sat, Aug 15 \u00b7 10am to 4pm"
+  },
+  {
+   "node": "p0-n10",
+   "kind": "text",
+   "label": "Location",
+   "hint": "Shelter name and street address, two short lines"
+  },
+  {
+   "node": "p0-n11-label",
+   "kind": "text",
+   "label": "Button label",
+   "hint": "Call to action, 2-4 words"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Adoption post",
+   "bg": "#fdf4e6",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 560,
+     "y": 570,
+     "w": 760,
+     "h": 760,
+     "fill": "#f7e3c7",
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 784,
+     "y": 96,
+     "w": 244,
+     "h": 244,
+     "fill": "#f7e3c7"
+    },
+    {
+     "kind": "text",
+     "x": 84,
+     "y": 96,
+     "w": 690,
+     "h": 30,
+     "text": "Sunny Paws Rescue \u00b7 Adoption Drive",
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 700,
+     "color": "#b0501f",
+     "letterSpacing": 5,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 84,
+     "y": 150,
+     "w": 690,
+     "h": 120,
+     "text": "Adopt,",
+     "family": "Nunito",
+     "size": 108,
+     "weight": 800,
+     "color": "#3b2c20",
+     "lineHeight": 1.05
+    },
+    {
+     "kind": "text",
+     "x": 84,
+     "y": 274,
+     "w": 690,
+     "h": 120,
+     "text": "don't shop.",
+     "family": "Nunito",
+     "size": 108,
+     "weight": 800,
+     "color": "#d9622b",
+     "lineHeight": 1.05
+    },
+    {
+     "kind": "text",
+     "x": 84,
+     "y": 440,
+     "w": 500,
+     "h": 116,
+     "text": "Meet 38 dogs, cats, and gentle seniors ready for their forever couch. Adoption fees are waived all weekend.",
+     "family": "Work Sans",
+     "size": 25,
+     "weight": 400,
+     "color": "#6f5b46",
+     "lineHeight": 1.5
+    },
+    {
+     "kind": "rect",
+     "x": 84,
+     "y": 600,
+     "w": 480,
+     "h": 240,
+     "fill": "#ffffff",
+     "radius": 24,
+     "stroke": "#f1e0c3",
+     "strokeWidth": 2
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 634,
+     "w": 200,
+     "h": 18,
+     "text": "When",
+     "family": "Work Sans",
+     "size": 14,
+     "weight": 700,
+     "color": "#b0501f",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 658,
+     "w": 408,
+     "h": 30,
+     "text": "Sat, Aug 15 \u00b7 10am to 4pm",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#3b2c20",
+     "lineHeight": 1.3
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 712,
+     "w": 200,
+     "h": 18,
+     "text": "Where",
+     "family": "Work Sans",
+     "size": 14,
+     "weight": 700,
+     "color": "#b0501f",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 736,
+     "w": 408,
+     "h": 66,
+     "text": "Sunny Paws Rescue\n214 Willow Lane, Maple Grove",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#3b2c20",
+     "lineHeight": 1.4
+    },
+    {
+     "kind": "button",
+     "x": 84,
+     "y": 884,
+     "w": 312,
+     "h": 84,
+     "fill": "#d9622b",
+     "label": "Meet the pets",
+     "family": "Nunito",
+     "size": 26,
+     "weight": 800,
+     "color": "#ffffff",
+     "radius": 42,
+     "letterSpacing": 1
+    },
+    {
+     "kind": "text",
+     "x": 690,
+     "y": 456,
+     "w": 320,
+     "h": 90,
+     "text": "I've been waiting\nfor you!",
+     "family": "Caveat",
+     "size": 40,
+     "weight": 600,
+     "color": "#b0501f",
+     "align": "center",
+     "lineHeight": 1.1,
+     "rotation": -4
+    },
+    {
+     "kind": "ellipse",
+     "x": 428,
+     "y": 886,
+     "w": 40,
+     "h": 32,
+     "fill": "#ecd7b4"
+    },
+    {
+     "kind": "ellipse",
+     "x": 426,
+     "y": 864,
+     "w": 14,
+     "h": 16,
+     "fill": "#ecd7b4"
+    },
+    {
+     "kind": "ellipse",
+     "x": 444,
+     "y": 856,
+     "w": 14,
+     "h": 16,
+     "fill": "#ecd7b4"
+    },
+    {
+     "kind": "ellipse",
+     "x": 462,
+     "y": 864,
+     "w": 14,
+     "h": 16,
+     "fill": "#ecd7b4"
+    },
+    {
+     "kind": "ellipse",
+     "x": 508,
+     "y": 946,
+     "w": 40,
+     "h": 32,
+     "fill": "#ecd7b4"
+    },
+    {
+     "kind": "ellipse",
+     "x": 506,
+     "y": 924,
+     "w": 14,
+     "h": 16,
+     "fill": "#ecd7b4"
+    },
+    {
+     "kind": "ellipse",
+     "x": 524,
+     "y": 916,
+     "w": 14,
+     "h": 16,
+     "fill": "#ecd7b4"
+    },
+    {
+     "kind": "ellipse",
+     "x": 542,
+     "y": 924,
+     "w": 14,
+     "h": 16,
+     "fill": "#ecd7b4"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day67-dog",
+     "x": 620,
+     "y": 580,
+     "w": 440,
+     "h": 440,
+     "cleanCard": true
+    },
+    {
+     "asset": "il-day68-happy-cat",
+     "x": 800,
+     "y": 108,
+     "w": 220,
+     "h": 220,
+     "cleanCard": true
+    }
+   ]
+  }
+ ],
+ "rank": 20
+}

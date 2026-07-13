@@ -188,6 +188,16 @@
      "color": "#292524",
      "align": "left"
     }
+   ],
+   "illustrations": [
+    {
+     "asset": "od-sitting-reading",
+     "x": 690,
+     "y": 64,
+     "w": 290,
+     "h": 250,
+     "position": "bottom"
+    }
    ]
   }
  ],
@@ -228,5 +238,8 @@
    "label": "Tip 5",
    "hint": "One line, under 40 characters"
   }
- ]
+ ],
+ "version": 2,
+ "updated": "2026-07-10T00:00:00.000Z",
+ "rank": 20
 }

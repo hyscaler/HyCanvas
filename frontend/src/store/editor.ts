@@ -29,6 +29,9 @@ import {
   type NodeType,
   type Page,
   type PageTransition,
+  type Theme,
+  applyTheme,
+  builtinMasterAndLayouts,
   type Paragraph,
   type ParagraphStyle,
   type Stroke,
@@ -40,6 +43,8 @@ import {
   type TextEffect,
   type TextFlow,
   type Transform,
+  type SlideSection,
+  moveInReadingOrder,
 } from "@hc/schema";
 import { contrastRatio, fixToAA, fromHex, nearestPaletteColor, seriesColorAt, toHex } from "@hc/color";
 import {
@@ -409,6 +414,14 @@ interface EditorState {
   setPageBackground(fill: Fill | undefined): void;
   /** Reorder pages (move page at `from` to index `to`), undoable. */
   movePage(from: number, to: number): void;
+  /** Start a new section at `pageIndex`, adopting the run that follows (FR-5). */
+  addSection(pageIndex: number, name?: string): void;
+  renameSection(sectionId: string, name: string): void;
+  /** Delete the section record; its slides become unsectioned (never deleted). */
+  removeSection(sectionId: string): void;
+  toggleSectionCollapsed(sectionId: string): void;
+  /** Assign (or clear) a slide's section. */
+  setPageSection(pageIndex: number, sectionId: string | undefined): void;
   /** Re-parent top-level nodes from the active page to another page (a cross-page
    *  drag-drop), converting their coordinates into the destination page's local
    *  space and appending them as the top layers there. `before` holds each node's
@@ -588,6 +601,8 @@ interface EditorState {
    *  Pass undefined to clear all animation. Clears the legacy `animations`/`link`
    *  slots so the typed model is the single source of truth. */
   setNodeAnimation(id: string, anim: NodeAnimation | undefined): void;
+  /** Apply the active page's transition to every page, one undo step (FR-10). */
+  applyTransitionToAllPages(): void;
   /** Magic Animate: apply tasteful, staggered entrance animations to every
    *  top-level element on the active page in one undoable step (or clear them). */
   magicAnimatePage(clear?: boolean): void;
@@ -603,6 +618,12 @@ interface EditorState {
   setPageTransition(transition: PageTransition | undefined, pageIndex?: number): void;
   /** Set the active (or given) page's speaker notes, undoable. */
   setPageNotes(notes: string, pageIndex?: number): void;
+  /** Assign (or clear) the slide layout this page inherits (doc 28 FR-3). */
+  setPageLayout(layoutId: string | undefined, pageIndex?: number): void;
+  /** Install the built-in master + layouts on a deck that has none (FR-3). */
+  ensureSlideLayouts(): void;
+  /** Adopt a theme for the whole deck in one undoable action (FR-4). */
+  setDeckTheme(theme: Theme | undefined): void;
   /** Set/clear the active (or given) page's autopilot dwell in ms;
    *  pass null to clear (fall back to the global default). Undoable. */
   setPageAutoAdvance(ms: number | null, pageIndex?: number): void;
@@ -756,6 +777,14 @@ interface EditorState {
   setImageSource(id: string, url: string): void;
   /** Set/clear an image node's accessibility alt text (F22 FR-12), undoable. */
   setImageAlt(id: string, alt: string | undefined): void;
+  /** Set/clear any node's accessibility description (doc 28 FR-29), undoable. */
+  setNodeAltText(id: string, altText: string | undefined): void;
+  /** Mark a node presentational, so checkers and accessible exports skip it. */
+  setNodeDecorative(id: string, decorative: boolean): void;
+  /** Reorder a page's reading order by moving index `from` to `to` (FR-29). */
+  moveReadingOrder(from: number, to: number, pageIndex?: number): void;
+  /** Clear the explicit reading order, falling back to z-order (FR-29). */
+  resetReadingOrder(pageIndex?: number): void;
   /** Replace an image node's source AND set its box to a known size in one
    *  undoable step (Magic Expand / outpaint: the padded result has a new aspect
    *  computed client-side, so we set it directly rather than waiting on load). */
@@ -785,6 +814,12 @@ interface EditorState {
   previewAdjustments(id: string, ops: { name: string; value: number }[]): void;
   /** Commit an effects change as one undo step (before = effects at gesture start). */
   commitEffects(id: string, before: unknown): void;
+  /** Live-preview a node's whole effects array with no undo step (slider drags). */
+  previewEffects(id: string, effects?: Effect[]): void;
+  /** Live-preview a text node's whole textEffects array with no undo step. */
+  previewTextEffects(id: string, effects?: TextEffect[]): void;
+  /** Commit a textEffects change as one undo step (before = value at gesture start). */
+  commitTextEffects(id: string, before: unknown): void;
   /** Set a uniform corner radius on a shape/frame node, undoable. */
   setCornerRadius(id: string, radius: number): void;
   /** Set a uniform corner radius on every rect-ish node in the selection (one undo step). */
@@ -1584,6 +1619,81 @@ export const useEditor = create<EditorState>((set, get) => {
       perform(
         () => { page.background = fill; },
         () => { page.background = before; },
+      );
+    },
+    addSection: (pageIndex, name) => {
+      const doc = get().doc as unknown as { sections?: SlideSection[]; pages: { sectionId?: string }[] };
+      const pages = doc.pages;
+      if (!pages[pageIndex]) return;
+      const id = `sec-${Math.random().toString(36).slice(2, 10)}`;
+      const section: SlideSection = { id, name: name?.trim() || `Section ${(doc.sections?.length ?? 0) + 1}` };
+      // The new section owns this slide and every following one up to the next
+      // sectioned slide, which is what "start a section here" means in a deck.
+      const adopt: number[] = [];
+      const startedIn = pages[pageIndex].sectionId;
+      for (let i = pageIndex; i < pages.length; i++) {
+        if (i > pageIndex && pages[i].sectionId !== startedIn) break;
+        adopt.push(i);
+      }
+      const before = adopt.map((i) => pages[i].sectionId);
+      const beforeSections = doc.sections;
+      perform(
+        () => {
+          doc.sections = [...(beforeSections ?? []), section];
+          adopt.forEach((i) => { pages[i].sectionId = id; });
+        },
+        () => {
+          doc.sections = beforeSections;
+          adopt.forEach((i, k) => { pages[i].sectionId = before[k]; });
+        },
+      );
+    },
+    renameSection: (sectionId, name) => {
+      const doc = get().doc as unknown as { sections?: SlideSection[] };
+      const sec = doc.sections?.find((x) => x.id === sectionId);
+      const next = name.trim();
+      if (!sec || !next || sec.name === next) return;
+      const before = sec.name;
+      perform(
+        () => { sec.name = next; },
+        () => { sec.name = before; },
+      );
+    },
+    removeSection: (sectionId) => {
+      const doc = get().doc as unknown as { sections?: SlideSection[]; pages: { sectionId?: string }[] };
+      if (!doc.sections?.some((x) => x.id === sectionId)) return;
+      const beforeSections = doc.sections;
+      const members = doc.pages.map((p, i) => (p.sectionId === sectionId ? i : -1)).filter((i) => i >= 0);
+      perform(
+        () => {
+          // Removing a section never removes slides; they become unsectioned.
+          doc.sections = beforeSections.filter((x) => x.id !== sectionId);
+          members.forEach((i) => { doc.pages[i].sectionId = undefined; });
+        },
+        () => {
+          doc.sections = beforeSections;
+          members.forEach((i) => { doc.pages[i].sectionId = sectionId; });
+        },
+      );
+    },
+    toggleSectionCollapsed: (sectionId) => {
+      const doc = get().doc as unknown as { sections?: SlideSection[] };
+      const sec = doc.sections?.find((x) => x.id === sectionId);
+      if (!sec) return;
+      const before = sec.collapsed;
+      perform(
+        () => { sec.collapsed = !before || undefined; },
+        () => { sec.collapsed = before; },
+      );
+    },
+    setPageSection: (pageIndex, sectionId) => {
+      const page = get().doc.pages[pageIndex] as unknown as { sectionId?: string };
+      if (!page) return;
+      const before = page.sectionId;
+      if (before === sectionId) return;
+      perform(
+        () => { page.sectionId = sectionId; },
+        () => { page.sectionId = before; },
       );
     },
     addPage: (size) => {
@@ -2529,6 +2639,20 @@ export const useEditor = create<EditorState>((set, get) => {
       );
     },
 
+    applyTransitionToAllPages: () => {
+      const doc = get().doc;
+      const src = doc.pages[curPageIndex()] as unknown as { transition?: PageTransition };
+      const transition = src?.transition;
+      const pages = doc.pages as unknown as { transition?: PageTransition }[];
+      const before = pages.map((p) => p.transition);
+      // A transition plays when advancing TO a page, so the first slide never
+      // shows one; setting it there anyway would be a silent no-op, not a bug.
+      if (before.every((t) => JSON.stringify(t) === JSON.stringify(transition))) return;
+      perform(
+        () => { pages.forEach((p) => { p.transition = transition ? { ...transition } : undefined; }); },
+        () => { pages.forEach((p, i) => { p.transition = before[i]; }); },
+      );
+    },
     setNodeAnimation: (id, anim) => {
       const loc = locate(get().doc, id);
       if (!loc || editBlocked(id)) return;
@@ -2607,6 +2731,48 @@ export const useEditor = create<EditorState>((set, get) => {
       perform(
         () => { page.transition = transition; },
         () => { page.transition = before; },
+      );
+    },
+    setPageLayout: (layoutId, pageIndex) => {
+      const idx = pageIndex ?? curPageIndex();
+      const page = get().doc.pages[idx] as unknown as { layoutId?: string };
+      if (!page) return;
+      const before = page.layoutId;
+      if (before === layoutId) return;
+      perform(
+        () => { page.layoutId = layoutId; },
+        () => { page.layoutId = before; },
+      );
+    },
+    ensureSlideLayouts: () => {
+      const doc = get().doc as unknown as { masters?: unknown[]; layouts?: unknown[]; pages: { width: number; height: number }[] };
+      if (doc.layouts?.length) return; // already installed
+      const { master, layouts } = builtinMasterAndLayouts(doc.pages[0] ?? { width: 1920, height: 1080 });
+      const beforeM = doc.masters;
+      const beforeL = doc.layouts;
+      perform(
+        () => { doc.masters = [...(beforeM ?? []), master]; doc.layouts = layouts; },
+        () => { doc.masters = beforeM; doc.layouts = beforeL; },
+      );
+    },
+    setDeckTheme: (theme) => {
+      const doc = get().doc as unknown as { theme?: Theme; masters?: { theme?: string }[] };
+      const before = doc.theme;
+      const beforeMasters = doc.masters?.map((m) => m.theme);
+      if (before?.id === theme?.id) return;
+      perform(
+        () => {
+          // Reuse the pure helper so the file-level swap (and master repointing)
+          // stays in one place; then mirror it onto the live mutable doc.
+          if (!theme) { doc.theme = undefined; return; }
+          const next = applyTheme(get().doc, theme);
+          doc.theme = next.theme;
+          if (next.masters && doc.masters) next.masters.forEach((m, i) => { if (doc.masters![i]) doc.masters![i].theme = m.theme; });
+        },
+        () => {
+          doc.theme = before;
+          if (beforeMasters && doc.masters) doc.masters.forEach((m, i) => { m.theme = beforeMasters[i]; });
+        },
       );
     },
     setPageNotes: (notes, pageIndex) => {
@@ -4326,6 +4492,35 @@ export const useEditor = create<EditorState>((set, get) => {
         redoStack: [],
       }));
     },
+    previewEffects: (id, effects) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.locked || editBlocked(id)) return;
+      (loc.node as unknown as { effects?: Effect[] }).effects = (effects?.length ? effects : undefined) as never;
+      get().tick();
+    },
+    previewTextEffects: (id, effects) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return;
+      (loc.node as unknown as { textEffects?: TextEffect[] }).textEffects = (effects?.length ? effects : undefined) as never;
+      get().tick();
+    },
+    commitTextEffects: (id, before) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return;
+      const rec = loc.node as unknown as { textEffects?: unknown };
+      const after = structuredClone(rec.textEffects ?? null);
+      const beforeSnap = structuredClone((before ?? null) as never);
+      if (JSON.stringify(after) === JSON.stringify(beforeSnap)) return;
+      const set2 = (snap: unknown) => {
+        const l = locate(get().doc, id);
+        if (l) (l.node as unknown as { textEffects?: unknown }).textEffects = (structuredClone(snap) ?? undefined) as never;
+      };
+      set((s) => ({
+        rev: s.rev + 1,
+        undoStack: [...s.undoStack, { undo: () => set2(beforeSnap), redo: () => set2(after) }],
+        redoStack: [],
+      }));
+    },
     setImageFit: (id, fit) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "image" || loc.node.locked || editBlocked(id)) return;
@@ -4338,6 +4533,57 @@ export const useEditor = create<EditorState>((set, get) => {
         () => {
           rec.fit = before;
         },
+      );
+    },
+    setNodeAltText: (id, altText) => {
+      const loc = locate(get().doc, id);
+      if (!loc) return;
+      const rec = loc.node as unknown as { altText?: string };
+      const before = rec.altText;
+      const next = altText && altText.trim().length ? altText : undefined;
+      if (before === next) return;
+      perform(
+        () => { rec.altText = next; },
+        () => { rec.altText = before; },
+      );
+    },
+    moveReadingOrder: (from, to, pageIndex) => {
+      const idx = pageIndex ?? curPageIndex();
+      const page = get().doc.pages[idx] as unknown as { readingOrder?: string[] };
+      if (!page) return;
+      const next = moveInReadingOrder(get().doc.pages[idx], from, to);
+      const before = page.readingOrder;
+      if (before && before.join() === next.join()) return;
+      perform(
+        () => { page.readingOrder = next; },
+        () => { page.readingOrder = before; },
+      );
+    },
+    resetReadingOrder: (pageIndex) => {
+      const idx = pageIndex ?? curPageIndex();
+      const page = get().doc.pages[idx] as unknown as { readingOrder?: string[] };
+      if (!page?.readingOrder) return;
+      const before = page.readingOrder;
+      perform(
+        () => { page.readingOrder = undefined; },
+        () => { page.readingOrder = before; },
+      );
+    },
+    setNodeDecorative: (id, decorative) => {
+      const loc = locate(get().doc, id);
+      if (!loc) return;
+      const rec = loc.node as unknown as { decorative?: boolean; altText?: string };
+      const before = rec.decorative;
+      const beforeAlt = rec.altText;
+      if (!!before === decorative) return;
+      perform(
+        () => {
+          rec.decorative = decorative || undefined;
+          // A decorative node needs no description; clear a stale one so the
+          // two flags cannot contradict each other.
+          if (decorative) rec.altText = undefined;
+        },
+        () => { rec.decorative = before; rec.altText = beforeAlt; },
       );
     },
     setImageAlt: (id, alt) => {

@@ -1,34 +1,189 @@
 {
-  "id": "yt-thumbnail-bold",
-  "title": "Bold Tutorial Thumbnail",
-  "categories": ["social", "marketing"],
-  "tags": ["youtube", "thumbnail", "bold", "tutorial"],
-  "styleTags": ["bold", "modern"],
-  "size": [1280, 720],
-  "typography": [
-    { "role": "heading", "family": "Outfit", "weight": 800 },
-    { "role": "body", "family": "Work Sans", "weight": 600 }
-  ],
-  "pages": [
+ "id": "yt-thumbnail-bold",
+ "title": "Bold Tutorial Thumbnail",
+ "categories": [
+  "social",
+  "marketing"
+ ],
+ "tags": [
+  "youtube",
+  "thumbnail",
+  "bold",
+  "tutorial"
+ ],
+ "styleTags": [
+  "bold",
+  "modern"
+ ],
+ "size": [
+  1280,
+  720
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Outfit",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Work Sans",
+   "weight": 600
+  }
+ ],
+ "pages": [
+  {
+   "name": "Thumbnail",
+   "bg": "#18181b",
+   "nodes": [
     {
-      "name": "Thumbnail",
-      "bg": "#18181b",
-      "nodes": [
-        { "kind": "rect", "x": 920, "y": -140, "w": 700, "h": 1100, "rotation": 8, "bleed": true, "fill": { "angle": 135, "stops": [["#fb7185", 0], ["#f59e0b", 1]] } },
-        { "kind": "rect", "x": 906, "y": -140, "w": 16, "h": 1100, "rotation": 8, "bleed": true, "fill": "#fafafa" },
-        { "kind": "button", "x": 60, "y": 64, "w": 300, "h": 56, "fill": "#f59e0b", "label": "TUTORIAL · EP 04", "color": "#18181b", "family": "Work Sans", "size": 22, "weight": 800, "letterSpacing": 2 },
-        { "kind": "text", "x": 60, "y": 190, "w": 830, "h": 145, "text": "I rebuilt it", "family": "Outfit", "size": 132, "weight": 800, "color": "#ffffff", "align": "left", "lineHeight": 1.02 },
-        { "kind": "text", "x": 60, "y": 330, "w": 830, "h": 190, "text": "in Rust", "family": "Outfit", "size": 176, "weight": 800, "color": "#f59e0b", "align": "left", "lineHeight": 1.02 },
-        { "kind": "text", "x": 60, "y": 590, "w": 700, "h": 48, "text": "Zero segfaults. 3x faster.", "family": "Work Sans", "size": 34, "weight": 600, "color": "#ffffff", "opacity": 0.88, "align": "left" },
-        { "kind": "rect", "x": 706, "y": 356, "w": 120, "h": 22, "rotation": 45, "radius": 11, "fill": "#f59e0b" },
-        { "kind": "rect", "x": 706, "y": 526, "w": 120, "h": 22, "rotation": -45, "radius": 11, "fill": "#f59e0b" }
+     "kind": "rect",
+     "x": 920,
+     "y": -140,
+     "w": 700,
+     "h": 1100,
+     "rotation": 8,
+     "bleed": true,
+     "fill": {
+      "angle": 135,
+      "stops": [
+       [
+        "#fb7185",
+        0
+       ],
+       [
+        "#f59e0b",
+        1
+       ]
       ]
+     }
+    },
+    {
+     "kind": "rect",
+     "x": 906,
+     "y": -140,
+     "w": 16,
+     "h": 1100,
+     "rotation": 8,
+     "bleed": true,
+     "fill": "#fafafa"
+    },
+    {
+     "kind": "button",
+     "x": 60,
+     "y": 64,
+     "w": 300,
+     "h": 56,
+     "fill": "#f59e0b",
+     "label": "TUTORIAL \u00b7 EP 04",
+     "color": "#18181b",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 800,
+     "letterSpacing": 2
+    },
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 190,
+     "w": 830,
+     "h": 145,
+     "text": "I rebuilt it",
+     "family": "Outfit",
+     "size": 132,
+     "weight": 800,
+     "color": "#ffffff",
+     "align": "left",
+     "lineHeight": 1.02
+    },
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 330,
+     "w": 830,
+     "h": 190,
+     "text": "in Rust",
+     "family": "Outfit",
+     "size": 176,
+     "weight": 800,
+     "color": "#f59e0b",
+     "align": "left",
+     "lineHeight": 1.02
+    },
+    {
+     "kind": "text",
+     "x": 60,
+     "y": 590,
+     "w": 700,
+     "h": 48,
+     "text": "Zero segfaults. 3x faster.",
+     "family": "Work Sans",
+     "size": 34,
+     "weight": 600,
+     "color": "#ffffff",
+     "opacity": 0.88,
+     "align": "left"
+    },
+    {
+     "kind": "rect",
+     "x": 706,
+     "y": 356,
+     "w": 120,
+     "h": 22,
+     "rotation": 45,
+     "radius": 11,
+     "fill": "#f59e0b"
+    },
+    {
+     "kind": "rect",
+     "x": 706,
+     "y": 526,
+     "w": 120,
+     "h": 22,
+     "rotation": -45,
+     "radius": 11,
+     "fill": "#f59e0b"
     }
-  ],
-  "fillable": [
-    { "node": "p0-n3", "kind": "text", "label": "Hook line 1", "hint": "First line of the video hook" },
-    { "node": "p0-n4", "kind": "text", "label": "Hook line 2", "hint": "Punch word or phrase, keep it short" },
-    { "node": "p0-n2-label", "kind": "text", "label": "Episode chip", "hint": "Series and episode, e.g. TUTORIAL · EP 04" },
-    { "node": "p0-n5", "kind": "text", "label": "Support line", "hint": "One short proof or payoff line" }
-  ]
+   ],
+   "illustrations": [
+    {
+     "asset": "la-ai-robot-2",
+     "x": 935,
+     "y": 230,
+     "w": 320,
+     "h": 260,
+     "position": "after:yt-thumbnail-bold-p0-n1"
+    }
+   ]
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Hook line 1",
+   "hint": "First line of the video hook"
+  },
+  {
+   "node": "p0-n4",
+   "kind": "text",
+   "label": "Hook line 2",
+   "hint": "Punch word or phrase, keep it short"
+  },
+  {
+   "node": "p0-n2-label",
+   "kind": "text",
+   "label": "Episode chip",
+   "hint": "Series and episode, e.g. TUTORIAL \u00b7 EP 04"
+  },
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Support line",
+   "hint": "One short proof or payoff line"
+  }
+ ],
+ "version": 2,
+ "updated": "2026-07-10T00:00:00.000Z",
+ "rank": 20
 }

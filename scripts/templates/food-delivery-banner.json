@@ -1,0 +1,264 @@
+{
+ "id": "food-delivery-banner",
+ "title": "Food Delivery Promo Banner",
+ "categories": [
+  "food",
+  "marketing"
+ ],
+ "tags": [
+  "delivery",
+  "restaurant",
+  "burger",
+  "promo",
+  "banner"
+ ],
+ "styleTags": [
+  "bold",
+  "warm"
+ ],
+ "size": [
+  1200,
+  628
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Poppins",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Figtree",
+   "weight": 500
+  },
+  {
+   "role": "accent",
+   "family": "Space Mono",
+   "weight": 700
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n7",
+   "kind": "text",
+   "label": "Brand line",
+   "hint": "Your restaurant or delivery service name"
+  },
+  {
+   "node": "p0-n8",
+   "kind": "text",
+   "label": "Headline",
+   "hint": "Short appetite hook, e.g. Cravings, delivered."
+  },
+  {
+   "node": "p0-n9",
+   "kind": "text",
+   "label": "Supporting line",
+   "hint": "What you deliver and how fast"
+  },
+  {
+   "node": "p0-n12",
+   "kind": "text",
+   "label": "Promo code",
+   "hint": "The checkout code, e.g. Use code TASTY30"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Banner",
+   "bg": "#fff6ea",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 790,
+     "y": -46,
+     "w": 720,
+     "h": 720,
+     "fill": "#d82435",
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 620,
+     "w": 1200,
+     "h": 8,
+     "fill": "#f5a623"
+    },
+    {
+     "kind": "ellipse",
+     "x": 925,
+     "y": 112,
+     "w": 14,
+     "h": 14,
+     "fill": "#ffe9d2"
+    },
+    {
+     "kind": "ellipse",
+     "x": 968,
+     "y": 90,
+     "w": 10,
+     "h": 10,
+     "fill": "#ffe9d2"
+    },
+    {
+     "kind": "ellipse",
+     "x": 1008,
+     "y": 118,
+     "w": 8,
+     "h": 8,
+     "fill": "#ffe9d2"
+    },
+    {
+     "kind": "ellipse",
+     "x": 716,
+     "y": 22,
+     "w": 148,
+     "h": 148,
+     "fill": "#f5a623",
+     "stroke": "#fff6ea",
+     "strokeWidth": 6
+    },
+    {
+     "kind": "text",
+     "x": 730,
+     "y": 62,
+     "w": 120,
+     "h": 68,
+     "text": "Free\ndelivery",
+     "family": "Poppins",
+     "size": 19,
+     "weight": 800,
+     "color": "#2b1d12",
+     "align": "center",
+     "vAlign": "middle",
+     "letterSpacing": 1,
+     "upper": true,
+     "lineHeight": 1.15
+    },
+    {
+     "kind": "text",
+     "x": 72,
+     "y": 88,
+     "w": 520,
+     "h": 22,
+     "text": "Forkful \u00b7 Food Delivery",
+     "family": "Poppins",
+     "size": 15,
+     "weight": 700,
+     "color": "#c11f2e",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2
+    },
+    {
+     "kind": "text",
+     "x": 72,
+     "y": 132,
+     "w": 620,
+     "h": 172,
+     "text": "Cravings,\ndelivered.",
+     "family": "Poppins",
+     "size": 78,
+     "weight": 800,
+     "color": "#2b1d12",
+     "lineHeight": 1.05
+    },
+    {
+     "kind": "text",
+     "x": 72,
+     "y": 328,
+     "w": 560,
+     "h": 66,
+     "text": "Hot dishes from 200+ local kitchens,\nat your door in 30 minutes or less.",
+     "family": "Figtree",
+     "size": 21,
+     "weight": 500,
+     "color": "#7c6250",
+     "lineHeight": 1.5
+    },
+    {
+     "kind": "button",
+     "x": 72,
+     "y": 468,
+     "w": 228,
+     "h": 64,
+     "fill": "#d82435",
+     "label": "Order now",
+     "family": "Poppins",
+     "size": 21,
+     "weight": 700,
+     "color": "#fff6ea",
+     "radius": 32,
+     "letterSpacing": 1
+    },
+    {
+     "kind": "rect",
+     "x": 330,
+     "y": 474,
+     "w": 216,
+     "h": 52,
+     "fill": "#fff6ea",
+     "stroke": "#dcbd93",
+     "strokeWidth": 1.5,
+     "radius": 26
+    },
+    {
+     "kind": "text",
+     "x": 330,
+     "y": 474,
+     "w": 216,
+     "h": 52,
+     "text": "Use code TASTY30",
+     "family": "Space Mono",
+     "size": 14,
+     "weight": 700,
+     "color": "#2b1d12",
+     "align": "center",
+     "vAlign": "middle",
+     "letterSpacing": 1,
+     "upper": true
+    },
+    {
+     "kind": "rect",
+     "x": 806,
+     "y": 546,
+     "w": 24,
+     "h": 6,
+     "fill": "#e0a24b",
+     "radius": 3,
+     "rotation": -8
+    },
+    {
+     "kind": "rect",
+     "x": 838,
+     "y": 528,
+     "w": 16,
+     "h": 6,
+     "fill": "#e0a24b",
+     "radius": 3,
+     "rotation": -16
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day82-burger",
+     "x": 872,
+     "y": 152,
+     "w": 320,
+     "h": 320,
+     "cleanCard": true
+    },
+    {
+     "asset": "la-scooter",
+     "x": 612,
+     "y": 452,
+     "w": 180,
+     "h": 150
+    }
+   ]
+  }
+ ],
+ "rank": 6
+}

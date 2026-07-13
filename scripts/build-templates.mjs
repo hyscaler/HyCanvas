@@ -20,7 +20,20 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 // authoring pipeline to compile candidate specs to a scratch seed for review).
 const SPEC_DIR = process.env.TEMPLATE_SPECS || join(ROOT, "scripts", "templates");
 const SEED = process.env.TEMPLATE_SEED || join(ROOT, "backend", "internal", "templates", "seed.json");
-const { validate } = await import(join(ROOT, "packages", "schema", "dist", "index.js"));
+const { validate, createNode } = await import(join(ROOT, "packages", "schema", "dist", "index.js"));
+const { svgToNodes } = await import(join(ROOT, "packages", "stock", "dist", "index.js"));
+
+// Bundled illustration packs (for "illustrations" page entries): asset id ->
+// pack dir, svg file, title, and the pack license for provenance stamping.
+const LIBRARY = join(ROOT, "backend", "internal", "stock", "library");
+const STOCK = (() => {
+  const m = new Map();
+  for (const pack of ["illlustrations", "lukaszadam", "opendoodles", "openpeeps"]) {
+    const idx = JSON.parse(readFileSync(join(LIBRARY, pack, "index.json"), "utf8"));
+    for (const a of idx.assets) m.set(a.id, { pack, file: a.file, title: a.title, license: idx.license });
+  }
+  return m;
+})();
 
 // --- primitives ------------------------------------------------------------
 
@@ -82,10 +95,20 @@ function textNode(id, n) {
   if (n.letterSpacing) style.letterSpacing = n.letterSpacing;
   if (n.upper) style.case = "upper";
   if (n.lineHeight) style.lineHeight = { mode: "multiple", value: n.lineHeight };
-  const paragraphs = String(n.text).split("\n").map((line) => ({
-    runs: [{ text: line, style }],
-    style: { align: n.align ?? "left", direction: "auto" },
-  }));
+  // "spans" mixes styles within one line (e.g. an accent-colored word);
+  // otherwise "text" splits on newlines into single-style paragraphs.
+  const paragraphs = n.spans
+    ? [{
+        runs: n.spans.map((sp) => ({
+          text: sp.text,
+          style: { ...style, ...(sp.color ? { fill: fillOf(sp.color) } : {}), ...(sp.weight ? { axes: { wght: sp.weight } } : {}) },
+        })),
+        style: { align: n.align ?? "left", direction: "auto" },
+      }]
+    : String(n.text).split("\n").map((line) => ({
+        runs: [{ text: line, style }],
+        style: { align: n.align ?? "left", direction: "auto" },
+      }));
   return {
     ...baseNode(id, n),
     type: "text",
@@ -113,10 +136,76 @@ function buttonNodes(id, n) {
   return [rect, label];
 }
 
+// --- illustrations -----------------------------------------------------------
+
+// True bounds from path geometry (converted paths keep transform at 0,0).
+function nodeBBox(n) {
+  if (n.segments?.length) {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const s of n.segments) for (const p of [s, s.cIn, s.cOut]) if (p) {
+      x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y);
+    }
+    return { x0, y0, x1, y1 };
+  }
+  const x = n.transform?.x ?? 0, y = n.transform?.y ?? 0;
+  return { x0: x, y0: y, x1: x + (n.size?.width ?? 0), y1: y + (n.size?.height ?? 0) };
+}
+
+const roundTo = (v, p) => Math.round(v * p) / p;
+function roundDeep(v, k) {
+  if (typeof v === "number") return roundTo(v, k === "r" || k === "g" || k === "b" || k === "a" ? 1e4 : 1e2);
+  if (Array.isArray(v)) return v.map((x) => roundDeep(x, k));
+  if (v && typeof v === "object") { const o = {}; for (const [kk, vv] of Object.entries(v)) o[kk] = roundDeep(vv, kk); return o; }
+  return v;
+}
+
+/** Compile one page-level illustration entry into an editable vector group,
+ *  provenance-stamped like an editor stock insert. illlustrations-pack assets
+ *  get their baked bottom-strip credit marks stripped, and optionally the
+ *  baked background card too (cleanCard), refitting to the remaining art. */
+function illustrationGroup(specId, k, il, pageW, pageH, errors) {
+  const asset = STOCK.get(il.asset);
+  if (!asset) { errors.push(`${specId} il${k}: unknown illustration asset ${il.asset}`); return null; }
+  const cx = il.x + il.w / 2, cy = il.y + il.h / 2;
+  if (cx < 0 || cy < 0 || cx > pageW || cy > pageH) { errors.push(`${specId} il${k}: center off page`); return null; }
+  const svg = readFileSync(join(LIBRARY, asset.pack, asset.file), "utf8");
+  let i = 0;
+  let { nodes } = svgToNodes(svg, () => `${specId}-il${k}-n${++i}`);
+  if (!nodes.length) { errors.push(`${specId} il${k}: empty svg parse`); return null; }
+  const vb = /viewBox\s*=\s*"([^"]+)"/i.exec(svg)?.[1]?.trim().split(/[\s,]+/).map(Number);
+  const vbW = (vb && vb[2]) || 200, vbH = (vb && vb[3]) || 200;
+  let bx = 0, by = 0, bw = vbW, bh = vbH;
+  if (asset.pack === "illlustrations") {
+    nodes = nodes.filter((n) => {
+      const b = nodeBBox(n);
+      if (b.y0 > 0.86 * vbH) return false; // bottom-strip credit marks
+      if (il.cleanCard && (b.x1 - b.x0) > 0.85 * vbW && (b.y1 - b.y0) > 0.85 * vbH) return false; // baked card
+      return true;
+    });
+    if (!nodes.length) { errors.push(`${specId} il${k}: nothing left after cleaning`); return null; }
+    if (il.cleanCard) {
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (const n of nodes) { const b = nodeBBox(n); x0 = Math.min(x0, b.x0); y0 = Math.min(y0, b.y0); x1 = Math.max(x1, b.x1); y1 = Math.max(y1, b.y1); }
+      bx = x0; by = y0; bw = x1 - x0; bh = y1 - y0;
+    }
+  }
+  const s = Math.min(il.w / bw, il.h / bh);
+  return roundDeep(createNode("group", {
+    id: `${specId}-il${k}`,
+    name: asset.title,
+    children: nodes,
+    transform: { x: il.x + (il.w - bw * s) / 2 - bx * s, y: il.y + (il.h - bh * s) / 2 - by * s, scaleX: s, scaleY: s, rotation: il.rotation ?? 0 },
+    size: { width: bw, height: bh },
+    ...(il.opacity !== undefined && il.opacity !== 1 ? { opacity: il.opacity } : {}),
+    data: { provenance: { origin: "stock", stockAssetId: il.asset, license: asset.license } },
+  }), "");
+}
+
 // --- compile one spec --------------------------------------------------------
 
 function compile(spec) {
   const errors = [];
+  let ilCount = 0; // illustration ids are numbered across the whole template
   const pages = spec.pages.map((p, pi) => {
     const children = [];
     (p.nodes ?? []).forEach((n, ni) => {
@@ -125,6 +214,7 @@ function compile(spec) {
       else if (n.kind === "ellipse") children.push(shapeNode(id, n, "ellipse"));
       else if (n.kind === "text") children.push(textNode(id, n));
       else if (n.kind === "button") children.push(...buttonNodes(id, n));
+      else if (n.kind === "frame") children.push({ ...baseNode(id, n), type: "frame", ...(n.fill ? { fills: [fillOf(n.fill)] } : {}) });
       else errors.push(`${spec.id} p${pi} n${ni}: unknown kind ${n.kind}`);
       // Alpha-hex lint: 8-digit colors silently lose their alpha; authors must
       // use node opacity for translucency.
@@ -142,15 +232,28 @@ function compile(spec) {
         }
       }
     });
+    const all = typeof p.bg === "object"
+      ? [shapeNode(`${spec.id}-p${pi}-bg`, { x: 0, y: 0, w: spec.size[0], h: spec.size[1], fill: p.bg, bleed: true }, "rect"), ...children]
+      : children;
+    // Illustrations land after every primitive so "after:<nodeId>" anchors
+    // resolve; "bottom" sits under everything, "top" (default) over.
+    (p.illustrations ?? []).forEach((il) => {
+      const g = illustrationGroup(spec.id, ilCount++, il, spec.size[0], spec.size[1], errors);
+      if (!g) return;
+      if (il.position === "bottom") all.unshift(g);
+      else if (typeof il.position === "string" && il.position.startsWith("after:")) {
+        const at = all.findIndex((n) => n.id === il.position.slice(6));
+        if (at < 0) { errors.push(`${spec.id} p${pi} il${k}: anchor ${il.position} not found`); return; }
+        all.splice(at + 1, 0, g);
+      } else all.push(g);
+    });
     return {
       id: `${spec.id}-page-${pi}`,
       name: p.name ?? `Page ${pi + 1}`,
       width: spec.size[0],
       height: spec.size[1],
       background: { type: "solid", color: srgb(typeof p.bg === "string" ? p.bg : "#ffffff") },
-      children: typeof p.bg === "object"
-        ? [shapeNode(`${spec.id}-p${pi}-bg`, { x: 0, y: 0, w: spec.size[0], h: spec.size[1], fill: p.bg, bleed: true }, "rect"), ...children]
-        : children,
+      children: all,
     };
   });
 
@@ -196,9 +299,9 @@ function compile(spec) {
     previewUrls: [],
     fillableFields: (spec.fillable ?? []).map(({ node, ...rest }) => ({ nodeId: `${spec.id}-${node}`, ...rest })),
     attributions: [],
-    version: 1,
+    version: spec.version ?? 1,
     createdAt: spec.created ?? "2026-07-04T00:00:00.000Z",
-    updatedAt: spec.created ?? "2026-07-04T00:00:00.000Z",
+    updatedAt: spec.updated ?? spec.created ?? "2026-07-04T00:00:00.000Z",
     designFileKey: `seed:${spec.id}`,
   };
   return { entry: { template, file }, errors };
@@ -218,16 +321,19 @@ for (const f of specs) {
   const { entry, errors } = compile(spec);
   allErrors.push(...errors);
   const v = validate(entry.file);
-  if (!v.ok) allErrors.push(`${spec.id}: schema invalid: ${JSON.stringify(v.errors?.slice(0, 3))}`);
-  entries.push(entry);
+  if (!v.ok) allErrors.push(`${spec.id}: schema invalid at ${v.pointer}: ${v.message}`);
+  entries.push({ entry, rank: spec.rank ?? 100, id: spec.id });
 }
+// The gallery serves built-ins in seed order, so seed order IS the landing
+// order: curated rank first (lower leads), id as the stable tiebreak.
+entries.sort((a, b) => a.rank - b.rank || (a.id < b.id ? -1 : 1));
 if (allErrors.length) {
   console.error(`FAIL: ${allErrors.length} error(s)`);
   for (const e of allErrors) console.error("  -", e);
   process.exit(1);
 }
 if (!process.argv.includes("--check")) {
-  writeFileSync(SEED, JSON.stringify(entries, null, 1) + "\n");
+  writeFileSync(SEED, JSON.stringify(entries.map((e) => e.entry), null, 1) + "\n");
   console.log(`wrote ${entries.length} templates -> ${SEED}`);
 } else {
   console.log(`ok: ${entries.length} templates compile and validate`);

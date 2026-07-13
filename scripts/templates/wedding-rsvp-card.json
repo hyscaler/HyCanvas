@@ -1,0 +1,325 @@
+{
+ "id": "wedding-rsvp-card",
+ "title": "Elegant Wedding RSVP Card",
+ "categories": [
+  "events",
+  "print"
+ ],
+ "tags": [
+  "wedding",
+  "rsvp",
+  "reply card",
+  "invitation",
+  "elegant"
+ ],
+ "styleTags": [
+  "elegant",
+  "romantic",
+  "classic"
+ ],
+ "size": [
+  1050,
+  750
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Playfair Display",
+   "weight": 700
+  },
+  {
+   "role": "body",
+   "family": "Lato",
+   "weight": 400
+  },
+  {
+   "role": "script",
+   "family": "Dancing Script",
+   "weight": 600
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n9",
+   "kind": "text",
+   "label": "Couple's names",
+   "hint": "Your first names, e.g. Eleanor & Theodore"
+  },
+  {
+   "node": "p0-n12",
+   "kind": "text",
+   "label": "Reply-by line",
+   "hint": "Your response deadline, e.g. Kindly respond by the first of August"
+  },
+  {
+   "node": "p0-n6",
+   "kind": "text",
+   "label": "Wedding date",
+   "hint": "Short numeric date, e.g. 09 . 12 . 26"
+  },
+  {
+   "node": "p0-n7",
+   "kind": "text",
+   "label": "Venue",
+   "hint": "Venue and location on two short lines"
+  }
+ ],
+ "pages": [
+  {
+   "name": "RSVP card",
+   "bg": "#f9f4ea",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 672,
+     "y": 0,
+     "w": 378,
+     "h": 750,
+     "fill": "#2e3a2c"
+    },
+    {
+     "kind": "rect",
+     "x": 660,
+     "y": 0,
+     "w": 2,
+     "h": 750,
+     "fill": "#c3a068"
+    },
+    {
+     "kind": "rect",
+     "x": 698,
+     "y": 26,
+     "w": 326,
+     "h": 698,
+     "fill": "#2e3a2c",
+     "stroke": "#d9bb8c",
+     "strokeWidth": 1
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 78,
+     "w": 282,
+     "h": 60,
+     "family": "Dancing Script",
+     "size": 46,
+     "weight": 600,
+     "color": "#d9bb8c",
+     "align": "center",
+     "lineHeight": 1.2,
+     "text": "E & T"
+    },
+    {
+     "kind": "rect",
+     "x": 843,
+     "y": 158,
+     "w": 36,
+     "h": 2,
+     "fill": "#d9bb8c",
+     "radius": 1
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 502,
+     "w": 282,
+     "h": 20,
+     "family": "Lato",
+     "size": 14,
+     "weight": 600,
+     "color": "#d9bb8c",
+     "align": "center",
+     "letterSpacing": 6,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Saturday evening"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 534,
+     "w": 282,
+     "h": 52,
+     "family": "Playfair Display",
+     "size": 40,
+     "weight": 700,
+     "color": "#f3ecdd",
+     "align": "center",
+     "lineHeight": 1.1,
+     "text": "09 . 12 . 26"
+    },
+    {
+     "kind": "text",
+     "x": 720,
+     "y": 604,
+     "w": 282,
+     "h": 48,
+     "family": "Lato",
+     "size": 15,
+     "weight": 400,
+     "color": "#cfc4ac",
+     "align": "center",
+     "lineHeight": 1.5,
+     "text": "Rosewood Farm Estate\nHudson Valley, New York"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 88,
+     "w": 504,
+     "h": 22,
+     "family": "Lato",
+     "size": 14,
+     "weight": 600,
+     "color": "#8f6d33",
+     "letterSpacing": 5,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "The favour of a reply is requested"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 128,
+     "w": 520,
+     "h": 160,
+     "family": "Playfair Display",
+     "size": 70,
+     "weight": 700,
+     "color": "#2e3a2c",
+     "lineHeight": 1.08,
+     "text": "Eleanor\n& Theodore"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 310,
+     "w": 520,
+     "h": 46,
+     "family": "Dancing Script",
+     "size": 30,
+     "weight": 600,
+     "color": "#8a6a30",
+     "lineHeight": 1.2,
+     "text": "can hardly wait to celebrate with you"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 396,
+     "w": 54,
+     "h": 2,
+     "fill": "#b08c58",
+     "radius": 1
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 416,
+     "w": 520,
+     "h": 36,
+     "family": "Playfair Display",
+     "size": 26,
+     "weight": 600,
+     "color": "#2e3a2c",
+     "lineHeight": 1.2,
+     "text": "Kindly respond by the first of August"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 478,
+     "w": 20,
+     "h": 20,
+     "fill": "#f9f4ea",
+     "stroke": "#2e3a2c",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 474,
+     "w": 300,
+     "h": 28,
+     "family": "Lato",
+     "size": 18,
+     "weight": 500,
+     "color": "#4a4438",
+     "vAlign": "middle",
+     "lineHeight": 1.2,
+     "text": "Joyfully accepts"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 530,
+     "w": 20,
+     "h": 20,
+     "fill": "#f9f4ea",
+     "stroke": "#2e3a2c",
+     "strokeWidth": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 132,
+     "y": 526,
+     "w": 300,
+     "h": 28,
+     "family": "Lato",
+     "size": 18,
+     "weight": 500,
+     "color": "#4a4438",
+     "vAlign": "middle",
+     "lineHeight": 1.2,
+     "text": "Regretfully declines"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 608,
+     "w": 34,
+     "h": 38,
+     "family": "Playfair Display",
+     "size": 28,
+     "weight": 700,
+     "color": "#2e3a2c",
+     "lineHeight": 1.2,
+     "text": "M"
+    },
+    {
+     "kind": "rect",
+     "x": 138,
+     "y": 640,
+     "w": 348,
+     "h": 2,
+     "fill": "#b08c58"
+    },
+    {
+     "kind": "text",
+     "x": 138,
+     "y": 652,
+     "w": 348,
+     "h": 18,
+     "family": "Lato",
+     "size": 12,
+     "weight": 400,
+     "color": "#7d7461",
+     "lineHeight": 1.3,
+     "text": "names as they appear on the invitation"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day97-champagne",
+     "x": 756,
+     "y": 218,
+     "w": 210,
+     "h": 210,
+     "cleanCard": true
+    }
+   ]
+  }
+ ],
+ "rank": 8
+}

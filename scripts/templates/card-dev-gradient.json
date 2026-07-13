@@ -1,39 +1,237 @@
 {
-  "id": "card-dev-gradient",
-  "title": "Developer card",
-  "categories": ["business", "print"],
-  "tags": ["business card", "developer", "dark", "mono", "engineer"],
-  "styleTags": ["modern", "bold"],
-  "size": [1050, 600],
-  "typography": [
-    { "role": "heading", "family": "Manrope", "weight": 700 },
-    { "role": "data", "family": "JetBrains Mono", "weight": 400 }
-  ],
-  "fillable": [
-    { "node": "p0-n2", "kind": "text", "label": "Name" },
-    { "node": "p0-n3", "kind": "text", "label": "Role" },
-    { "node": "p0-n5", "kind": "text", "label": "Email" },
-    { "node": "p0-n7", "kind": "text", "label": "Website" },
-    { "node": "p0-n9", "kind": "text", "label": "GitHub" }
-  ],
-  "pages": [
+ "id": "card-dev-gradient",
+ "title": "Developer card",
+ "categories": [
+  "business",
+  "print"
+ ],
+ "tags": [
+  "business card",
+  "developer",
+  "dark",
+  "mono",
+  "engineer"
+ ],
+ "styleTags": [
+  "modern",
+  "bold"
+ ],
+ "size": [
+  1050,
+  600
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Manrope",
+   "weight": 700
+  },
+  {
+   "role": "data",
+   "family": "JetBrains Mono",
+   "weight": 400
+  }
+ ],
+ "fillable": [
+  {
+   "node": "p0-n2",
+   "kind": "text",
+   "label": "Name"
+  },
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Role"
+  },
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Email"
+  },
+  {
+   "node": "p0-n7",
+   "kind": "text",
+   "label": "Website"
+  },
+  {
+   "node": "p0-n9",
+   "kind": "text",
+   "label": "GitHub"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Front",
+   "bg": "#0b1220",
+   "nodes": [
     {
-      "name": "Front",
-      "bg": "#0b1220",
-      "nodes": [
-        { "kind": "rect", "x": 0, "y": 0, "w": 14, "h": 600, "fill": { "angle": 90, "stops": [["#22d3ee", 0], ["#8b5cf6", 1]] } },
-        { "kind": "text", "x": 78, "y": 64, "w": 200, "h": 44, "text": "~$ _", "family": "JetBrains Mono", "size": 32, "weight": 700, "color": "#22d3ee" },
-        { "kind": "text", "x": 78, "y": 196, "w": 700, "h": 64, "text": "Maya Okafor", "family": "Manrope", "size": 54, "weight": 700, "color": "#ffffff" },
-        { "kind": "text", "x": 78, "y": 272, "w": 700, "h": 34, "text": "Full-stack engineer", "family": "Manrope", "size": 25, "weight": 400, "color": "#94a3b8" },
-        { "kind": "text", "x": 78, "y": 396, "w": 90, "h": 24, "text": "mail", "family": "JetBrains Mono", "size": 16, "weight": 400, "color": "#94a3b8", "upper": true, "letterSpacing": 2 },
-        { "kind": "text", "x": 190, "y": 392, "w": 620, "h": 28, "text": "maya@okafor.dev", "family": "JetBrains Mono", "size": 20, "weight": 400, "color": "#e2e8f0" },
-        { "kind": "text", "x": 78, "y": 448, "w": 90, "h": 24, "text": "web", "family": "JetBrains Mono", "size": 16, "weight": 400, "color": "#94a3b8", "upper": true, "letterSpacing": 2 },
-        { "kind": "text", "x": 190, "y": 444, "w": 620, "h": 28, "text": "okafor.dev", "family": "JetBrains Mono", "size": 20, "weight": 400, "color": "#e2e8f0" },
-        { "kind": "text", "x": 78, "y": 500, "w": 90, "h": 24, "text": "git", "family": "JetBrains Mono", "size": 16, "weight": 400, "color": "#94a3b8", "upper": true, "letterSpacing": 2 },
-        { "kind": "text", "x": 190, "y": 496, "w": 620, "h": 28, "text": "github.com/mokafor", "family": "JetBrains Mono", "size": 20, "weight": 400, "color": "#e2e8f0" },
-        { "kind": "ellipse", "x": 790, "y": 140, "w": 420, "h": 420, "fill": "#22d3ee", "opacity": 0.08, "bleed": true },
-        { "kind": "ellipse", "x": 900, "y": 250, "w": 200, "h": 200, "fill": "#8b5cf6", "opacity": 0.12, "bleed": true }
+     "kind": "rect",
+     "x": 0,
+     "y": 0,
+     "w": 14,
+     "h": 600,
+     "fill": {
+      "angle": 90,
+      "stops": [
+       [
+        "#22d3ee",
+        0
+       ],
+       [
+        "#8b5cf6",
+        1
+       ]
       ]
+     }
+    },
+    {
+     "kind": "text",
+     "x": 78,
+     "y": 64,
+     "w": 200,
+     "h": 44,
+     "text": "~$ _",
+     "family": "JetBrains Mono",
+     "size": 32,
+     "weight": 700,
+     "color": "#22d3ee"
+    },
+    {
+     "kind": "text",
+     "x": 78,
+     "y": 196,
+     "w": 700,
+     "h": 64,
+     "text": "Maya Okafor",
+     "family": "Manrope",
+     "size": 54,
+     "weight": 700,
+     "color": "#ffffff"
+    },
+    {
+     "kind": "text",
+     "x": 78,
+     "y": 272,
+     "w": 700,
+     "h": 34,
+     "text": "Full-stack engineer",
+     "family": "Manrope",
+     "size": 25,
+     "weight": 400,
+     "color": "#94a3b8"
+    },
+    {
+     "kind": "text",
+     "x": 78,
+     "y": 396,
+     "w": 90,
+     "h": 24,
+     "text": "mail",
+     "family": "JetBrains Mono",
+     "size": 16,
+     "weight": 400,
+     "color": "#94a3b8",
+     "upper": true,
+     "letterSpacing": 2
+    },
+    {
+     "kind": "text",
+     "x": 190,
+     "y": 392,
+     "w": 620,
+     "h": 28,
+     "text": "maya@okafor.dev",
+     "family": "JetBrains Mono",
+     "size": 20,
+     "weight": 400,
+     "color": "#e2e8f0"
+    },
+    {
+     "kind": "text",
+     "x": 78,
+     "y": 448,
+     "w": 90,
+     "h": 24,
+     "text": "web",
+     "family": "JetBrains Mono",
+     "size": 16,
+     "weight": 400,
+     "color": "#94a3b8",
+     "upper": true,
+     "letterSpacing": 2
+    },
+    {
+     "kind": "text",
+     "x": 190,
+     "y": 444,
+     "w": 620,
+     "h": 28,
+     "text": "okafor.dev",
+     "family": "JetBrains Mono",
+     "size": 20,
+     "weight": 400,
+     "color": "#e2e8f0"
+    },
+    {
+     "kind": "text",
+     "x": 78,
+     "y": 500,
+     "w": 90,
+     "h": 24,
+     "text": "git",
+     "family": "JetBrains Mono",
+     "size": 16,
+     "weight": 400,
+     "color": "#94a3b8",
+     "upper": true,
+     "letterSpacing": 2
+    },
+    {
+     "kind": "text",
+     "x": 190,
+     "y": 496,
+     "w": 620,
+     "h": 28,
+     "text": "github.com/mokafor",
+     "family": "JetBrains Mono",
+     "size": 20,
+     "weight": 400,
+     "color": "#e2e8f0"
+    },
+    {
+     "kind": "ellipse",
+     "x": 790,
+     "y": 140,
+     "w": 420,
+     "h": 420,
+     "fill": "#22d3ee",
+     "opacity": 0.08,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 900,
+     "y": 250,
+     "w": 200,
+     "h": 200,
+     "fill": "#8b5cf6",
+     "opacity": 0.12,
+     "bleed": true
     }
-  ]
+   ],
+   "illustrations": [
+    {
+     "asset": "la-ai-robot-3",
+     "x": 815,
+     "y": 335,
+     "w": 210,
+     "h": 185,
+     "position": "after:card-dev-gradient-p0-n11"
+    }
+   ]
+  }
+ ],
+ "version": 2,
+ "updated": "2026-07-10T00:00:00.000Z",
+ "rank": 20
 }

@@ -142,6 +142,15 @@
      "align": "center",
      "letterSpacing": 2
     }
+   ],
+   "illustrations": [
+    {
+     "asset": "od-sleek",
+     "x": 600,
+     "y": 1610,
+     "w": 440,
+     "h": 300
+    }
    ]
   }
  ],
@@ -170,5 +179,8 @@
    "label": "Brand handle",
    "hint": "Your @handle"
   }
- ]
+ ],
+ "version": 2,
+ "updated": "2026-07-10T00:00:00.000Z",
+ "rank": 20
 }

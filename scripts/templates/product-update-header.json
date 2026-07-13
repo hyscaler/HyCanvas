@@ -1,0 +1,209 @@
+{
+ "id": "product-update-header",
+ "title": "Product Update Email Header",
+ "categories": [
+  "marketing",
+  "business"
+ ],
+ "tags": [
+  "email",
+  "changelog",
+  "update",
+  "header",
+  "playful"
+ ],
+ "styleTags": [
+  "playful",
+  "friendly"
+ ],
+ "size": [
+  1200,
+  400
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Nunito",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Nunito",
+   "weight": 600
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Headline",
+   "hint": "Short update headline, e.g. What's new"
+  },
+  {
+   "node": "p0-n4",
+   "kind": "text",
+   "label": "Month chip",
+   "hint": "Month and year of this release, e.g. July 2026"
+  },
+  {
+   "node": "p0-n6",
+   "kind": "text",
+   "label": "Teaser line",
+   "hint": "One line summing up the release highlights"
+  },
+  {
+   "node": "p0-n2",
+   "kind": "text",
+   "label": "Brand line",
+   "hint": "Your product name plus the word changelog"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Header",
+   "bg": "#fff7e8",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 810,
+     "y": 36,
+     "w": 430,
+     "h": 430,
+     "fill": "#c2ebf9",
+     "bleed": true
+    },
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 392,
+     "w": 1200,
+     "h": 8,
+     "fill": "#f7af21"
+    },
+    {
+     "kind": "text",
+     "x": 72,
+     "y": 62,
+     "w": 420,
+     "h": 22,
+     "family": "Nunito",
+     "size": 14,
+     "weight": 800,
+     "color": "#6b717f",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Loopdesk \u00b7 Changelog"
+    },
+    {
+     "kind": "rect",
+     "x": 72,
+     "y": 110,
+     "w": 168,
+     "h": 44,
+     "fill": "#f7af21",
+     "radius": 22
+    },
+    {
+     "kind": "text",
+     "x": 72,
+     "y": 110,
+     "w": 168,
+     "h": 44,
+     "family": "Nunito",
+     "size": 17,
+     "weight": 800,
+     "color": "#1f2430",
+     "align": "center",
+     "vAlign": "middle",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "July 2026"
+    },
+    {
+     "kind": "text",
+     "x": 72,
+     "y": 176,
+     "w": 660,
+     "h": 98,
+     "family": "Nunito",
+     "size": 84,
+     "weight": 800,
+     "color": "#1f2430",
+     "lineHeight": 1.05,
+     "spans": [
+      {
+       "text": "What's "
+      },
+      {
+       "text": "new",
+       "color": "#2563eb"
+      }
+     ]
+    },
+    {
+     "kind": "text",
+     "x": 72,
+     "y": 290,
+     "w": 680,
+     "h": 34,
+     "family": "Nunito",
+     "size": 24,
+     "weight": 600,
+     "color": "#6b717f",
+     "lineHeight": 1.3,
+     "text": "Faster boards, smarter search, and 12 little fixes."
+    },
+    {
+     "kind": "rect",
+     "x": 778,
+     "y": 60,
+     "w": 18,
+     "h": 18,
+     "fill": "#f7af21",
+     "rotation": 18,
+     "radius": 4
+    },
+    {
+     "kind": "ellipse",
+     "x": 1150,
+     "y": 54,
+     "w": 14,
+     "h": 14,
+     "fill": "#2563eb"
+    },
+    {
+     "kind": "ellipse",
+     "x": 762,
+     "y": 316,
+     "w": 12,
+     "h": 12,
+     "fill": "#f7af21"
+    },
+    {
+     "kind": "rect",
+     "x": 1196,
+     "y": 330,
+     "w": 12,
+     "h": 12,
+     "fill": "#2563eb",
+     "rotation": -15,
+     "radius": 3,
+     "bleed": true
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-ai-robot-3",
+     "x": 860,
+     "y": 88,
+     "w": 330,
+     "h": 300
+    }
+   ]
+  }
+ ],
+ "rank": 20
+}

@@ -38,6 +38,7 @@ const nextConfig: NextConfig = {
           return [
             { source: "/editor/:id", destination: "/editor" },
             { source: "/shared/:token", destination: "/shared" },
+            { source: "/present/:id", destination: "/present" },
           ];
         },
       }

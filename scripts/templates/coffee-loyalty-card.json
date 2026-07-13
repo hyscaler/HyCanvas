@@ -1,0 +1,462 @@
+{
+ "id": "coffee-loyalty-card",
+ "title": "Coffee Loyalty Punch Card",
+ "categories": [
+  "food",
+  "print"
+ ],
+ "tags": [
+  "coffee",
+  "loyalty",
+  "cafe",
+  "rewards"
+ ],
+ "styleTags": [
+  "warm",
+  "crafted"
+ ],
+ "size": [
+  1050,
+  600
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Playfair Display",
+   "weight": 700
+  },
+  {
+   "role": "body",
+   "family": "Work Sans",
+   "weight": 400
+  },
+  {
+   "role": "script",
+   "family": "Caveat",
+   "weight": 600
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Cafe name",
+   "hint": "Your coffee shop or cafe name"
+  },
+  {
+   "node": "p0-n7",
+   "kind": "text",
+   "label": "Headline",
+   "hint": "Short warm line about the program, e.g. Every cup counts."
+  },
+  {
+   "node": "p0-n32",
+   "kind": "text",
+   "label": "Reward line",
+   "hint": "What the customer earns, e.g. Your 8th drink is on the house."
+  },
+  {
+   "node": "p0-n34",
+   "kind": "text",
+   "label": "Fine print",
+   "hint": "Terms or locations, e.g. One stamp per drink"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Loyalty card",
+   "bg": "#f8f2e7",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 0,
+     "w": 400,
+     "h": 600,
+     "fill": "#33221a"
+    },
+    {
+     "kind": "rect",
+     "x": 400,
+     "y": 0,
+     "w": 6,
+     "h": 600,
+     "fill": "#b3661f"
+    },
+    {
+     "kind": "text",
+     "x": 40,
+     "y": 84,
+     "w": 320,
+     "h": 22,
+     "family": "Work Sans",
+     "size": 14,
+     "weight": 600,
+     "color": "#ecdfc9",
+     "align": "center",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Small batch \u00b7 est. 2018"
+    },
+    {
+     "kind": "text",
+     "x": 40,
+     "y": 122,
+     "w": 320,
+     "h": 140,
+     "family": "Playfair Display",
+     "size": 64,
+     "weight": 700,
+     "color": "#fdf9f1",
+     "align": "center",
+     "lineHeight": 1.05,
+     "text": "Copper\n& Clay"
+    },
+    {
+     "kind": "rect",
+     "x": 178,
+     "y": 280,
+     "w": 44,
+     "h": 3,
+     "fill": "#b3661f",
+     "radius": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 40,
+     "y": 300,
+     "w": 320,
+     "h": 46,
+     "family": "Caveat",
+     "size": 34,
+     "weight": 600,
+     "color": "#ecdfc9",
+     "align": "center",
+     "lineHeight": 1.2,
+     "text": "coffee roasters"
+    },
+    {
+     "kind": "text",
+     "x": 470,
+     "y": 88,
+     "w": 518,
+     "h": 24,
+     "family": "Work Sans",
+     "size": 15,
+     "weight": 600,
+     "color": "#b3661f",
+     "letterSpacing": 5,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Loyalty card"
+    },
+    {
+     "kind": "text",
+     "x": 470,
+     "y": 124,
+     "w": 518,
+     "h": 68,
+     "family": "Playfair Display",
+     "size": 54,
+     "weight": 700,
+     "color": "#33221a",
+     "lineHeight": 1.1,
+     "text": "Every cup counts."
+    },
+    {
+     "kind": "text",
+     "x": 470,
+     "y": 202,
+     "w": 518,
+     "h": 28,
+     "family": "Work Sans",
+     "size": 18,
+     "weight": 400,
+     "color": "#7a6a5c",
+     "lineHeight": 1.3,
+     "text": "Collect a stamp with every handcrafted drink."
+    },
+    {
+     "kind": "ellipse",
+     "x": 470,
+     "y": 280,
+     "w": 54,
+     "h": 54,
+     "fill": "#33221a"
+    },
+    {
+     "kind": "ellipse",
+     "x": 475,
+     "y": 285,
+     "w": 44,
+     "h": 44,
+     "fill": "#f8f2e7"
+    },
+    {
+     "kind": "text",
+     "x": 470,
+     "y": 280,
+     "w": 54,
+     "h": 54,
+     "family": "Work Sans",
+     "size": 17,
+     "weight": 600,
+     "color": "#33221a",
+     "align": "center",
+     "vAlign": "middle",
+     "text": "1"
+    },
+    {
+     "kind": "ellipse",
+     "x": 536,
+     "y": 280,
+     "w": 54,
+     "h": 54,
+     "fill": "#33221a"
+    },
+    {
+     "kind": "ellipse",
+     "x": 541,
+     "y": 285,
+     "w": 44,
+     "h": 44,
+     "fill": "#f8f2e7"
+    },
+    {
+     "kind": "text",
+     "x": 536,
+     "y": 280,
+     "w": 54,
+     "h": 54,
+     "family": "Work Sans",
+     "size": 17,
+     "weight": 600,
+     "color": "#33221a",
+     "align": "center",
+     "vAlign": "middle",
+     "text": "2"
+    },
+    {
+     "kind": "ellipse",
+     "x": 602,
+     "y": 280,
+     "w": 54,
+     "h": 54,
+     "fill": "#33221a"
+    },
+    {
+     "kind": "ellipse",
+     "x": 607,
+     "y": 285,
+     "w": 44,
+     "h": 44,
+     "fill": "#f8f2e7"
+    },
+    {
+     "kind": "text",
+     "x": 602,
+     "y": 280,
+     "w": 54,
+     "h": 54,
+     "family": "Work Sans",
+     "size": 17,
+     "weight": 600,
+     "color": "#33221a",
+     "align": "center",
+     "vAlign": "middle",
+     "text": "3"
+    },
+    {
+     "kind": "ellipse",
+     "x": 668,
+     "y": 280,
+     "w": 54,
+     "h": 54,
+     "fill": "#33221a"
+    },
+    {
+     "kind": "ellipse",
+     "x": 673,
+     "y": 285,
+     "w": 44,
+     "h": 44,
+     "fill": "#f8f2e7"
+    },
+    {
+     "kind": "text",
+     "x": 668,
+     "y": 280,
+     "w": 54,
+     "h": 54,
+     "family": "Work Sans",
+     "size": 17,
+     "weight": 600,
+     "color": "#33221a",
+     "align": "center",
+     "vAlign": "middle",
+     "text": "4"
+    },
+    {
+     "kind": "ellipse",
+     "x": 734,
+     "y": 280,
+     "w": 54,
+     "h": 54,
+     "fill": "#33221a"
+    },
+    {
+     "kind": "ellipse",
+     "x": 739,
+     "y": 285,
+     "w": 44,
+     "h": 44,
+     "fill": "#f8f2e7"
+    },
+    {
+     "kind": "text",
+     "x": 734,
+     "y": 280,
+     "w": 54,
+     "h": 54,
+     "family": "Work Sans",
+     "size": 17,
+     "weight": 600,
+     "color": "#33221a",
+     "align": "center",
+     "vAlign": "middle",
+     "text": "5"
+    },
+    {
+     "kind": "ellipse",
+     "x": 800,
+     "y": 280,
+     "w": 54,
+     "h": 54,
+     "fill": "#33221a"
+    },
+    {
+     "kind": "ellipse",
+     "x": 805,
+     "y": 285,
+     "w": 44,
+     "h": 44,
+     "fill": "#f8f2e7"
+    },
+    {
+     "kind": "text",
+     "x": 800,
+     "y": 280,
+     "w": 54,
+     "h": 54,
+     "family": "Work Sans",
+     "size": 17,
+     "weight": 600,
+     "color": "#33221a",
+     "align": "center",
+     "vAlign": "middle",
+     "text": "6"
+    },
+    {
+     "kind": "ellipse",
+     "x": 866,
+     "y": 280,
+     "w": 54,
+     "h": 54,
+     "fill": "#33221a"
+    },
+    {
+     "kind": "ellipse",
+     "x": 871,
+     "y": 285,
+     "w": 44,
+     "h": 44,
+     "fill": "#f8f2e7"
+    },
+    {
+     "kind": "text",
+     "x": 866,
+     "y": 280,
+     "w": 54,
+     "h": 54,
+     "family": "Work Sans",
+     "size": 17,
+     "weight": 600,
+     "color": "#33221a",
+     "align": "center",
+     "vAlign": "middle",
+     "text": "7"
+    },
+    {
+     "kind": "ellipse",
+     "x": 932,
+     "y": 280,
+     "w": 54,
+     "h": 54,
+     "fill": "#b3661f"
+    },
+    {
+     "kind": "text",
+     "x": 932,
+     "y": 280,
+     "w": 54,
+     "h": 54,
+     "family": "Work Sans",
+     "size": 12,
+     "weight": 700,
+     "color": "#fdf9f1",
+     "align": "center",
+     "vAlign": "middle",
+     "letterSpacing": 1,
+     "upper": true,
+     "text": "Free"
+    },
+    {
+     "kind": "text",
+     "x": 470,
+     "y": 372,
+     "w": 518,
+     "h": 52,
+     "family": "Caveat",
+     "size": 38,
+     "weight": 600,
+     "color": "#b3661f",
+     "lineHeight": 1.2,
+     "text": "Your 8th drink is on the house."
+    },
+    {
+     "kind": "rect",
+     "x": 470,
+     "y": 506,
+     "w": 518,
+     "h": 2,
+     "fill": "#ecdfc9"
+    },
+    {
+     "kind": "text",
+     "x": 470,
+     "y": 522,
+     "w": 518,
+     "h": 24,
+     "family": "Work Sans",
+     "size": 14,
+     "weight": 500,
+     "color": "#7a6a5c",
+     "lineHeight": 1.3,
+     "text": "One stamp per drink \u00b7 Valid at all Copper & Clay locations"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-espresso",
+     "x": 78,
+     "y": 388,
+     "w": 168,
+     "h": 168
+    }
+   ]
+  }
+ ],
+ "rank": 13
+}

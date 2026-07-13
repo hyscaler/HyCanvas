@@ -1,0 +1,186 @@
+{
+ "id": "podcast-cover-tech",
+ "title": "Tech Podcast Cover",
+ "categories": [
+  "social",
+  "marketing"
+ ],
+ "tags": [
+  "podcast",
+  "tech",
+  "cover",
+  "robot",
+  "audio"
+ ],
+ "styleTags": [
+  "bold",
+  "playful"
+ ],
+ "size": [
+  1080,
+  1080
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Anton",
+   "weight": 400
+  },
+  {
+   "role": "body",
+   "family": "Outfit",
+   "weight": 500
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n4",
+   "kind": "text",
+   "label": "Show name",
+   "hint": "The podcast name, split across two short lines"
+  },
+  {
+   "node": "p0-n7",
+   "kind": "text",
+   "label": "Hosts line",
+   "hint": "Who hosts the show, e.g. Mira Chen & Dev Okafor"
+  },
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Tagline",
+   "hint": "One witty line about what the show is"
+  },
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Kicker",
+   "hint": "What kind of show this is, 2-3 words, e.g. A Tech Podcast"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Cover",
+   "bg": "#16162e",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 756,
+     "w": 1080,
+     "h": 324,
+     "fill": "#ffc53d"
+    },
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 742,
+     "w": 1080,
+     "h": 14,
+     "fill": "#ff6b4a"
+    },
+    {
+     "kind": "rect",
+     "x": 84,
+     "y": 92,
+     "w": 312,
+     "h": 58,
+     "fill": "#ff6b4a",
+     "radius": 29
+    },
+    {
+     "kind": "text",
+     "x": 84,
+     "y": 92,
+     "w": 312,
+     "h": 58,
+     "family": "Space Mono",
+     "size": 22,
+     "weight": 700,
+     "color": "#16162e",
+     "align": "center",
+     "vAlign": "middle",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "A Tech Podcast"
+    },
+    {
+     "kind": "text",
+     "x": 84,
+     "y": 276,
+     "w": 912,
+     "h": 372,
+     "family": "Anton",
+     "size": 172,
+     "weight": 400,
+     "color": "#ffffff",
+     "upper": true,
+     "lineHeight": 1.04,
+     "text": "Machine\nYearning"
+    },
+    {
+     "kind": "text",
+     "x": 84,
+     "y": 672,
+     "w": 800,
+     "h": 44,
+     "family": "Outfit",
+     "size": 32,
+     "weight": 500,
+     "color": "#c7d6e4",
+     "lineHeight": 1.3,
+     "text": "Two humans. One extremely confident machine."
+    },
+    {
+     "kind": "text",
+     "x": 84,
+     "y": 868,
+     "w": 400,
+     "h": 26,
+     "family": "Space Mono",
+     "size": 20,
+     "weight": 700,
+     "color": "#16162e",
+     "letterSpacing": 5,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Hosted by"
+    },
+    {
+     "kind": "text",
+     "x": 84,
+     "y": 908,
+     "w": 540,
+     "h": 58,
+     "family": "Outfit",
+     "size": 44,
+     "weight": 800,
+     "color": "#16162e",
+     "lineHeight": 1.2,
+     "text": "Mira Chen & Dev Okafor"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-ai-ball",
+     "x": 820,
+     "y": 84,
+     "w": 176,
+     "h": 170,
+     "position": "bottom"
+    },
+    {
+     "asset": "la-free-svg-illustrations-robots",
+     "x": 660,
+     "y": 800,
+     "w": 336,
+     "h": 240,
+     "position": "after:podcast-cover-tech-p0-n1"
+    }
+   ]
+  }
+ ],
+ "rank": 9
+}

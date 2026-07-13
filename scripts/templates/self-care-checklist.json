@@ -1,0 +1,353 @@
+{
+ "id": "self-care-checklist",
+ "title": "Self-care Sunday Checklist",
+ "categories": [
+  "personal",
+  "social"
+ ],
+ "tags": [
+  "self-care",
+  "checklist",
+  "sunday",
+  "wellness",
+  "instagram"
+ ],
+ "styleTags": [
+  "soft",
+  "calm",
+  "cozy"
+ ],
+ "size": [
+  1080,
+  1350
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Playfair Display",
+   "weight": 700
+  },
+  {
+   "role": "body",
+   "family": "Nunito",
+   "weight": 600
+  },
+  {
+   "role": "accent",
+   "family": "Caveat",
+   "weight": 500
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Headline",
+   "hint": "The checklist title, e.g. Self-care Sunday"
+  },
+  {
+   "node": "p0-n4",
+   "kind": "text",
+   "label": "Gentle subtitle",
+   "hint": "One soft supporting line, e.g. your permission slip to rest"
+  },
+  {
+   "node": "p0-n9",
+   "kind": "text",
+   "label": "First list item",
+   "hint": "The first small act of self-care on the list"
+  },
+  {
+   "node": "p0-n24",
+   "kind": "text",
+   "label": "Social handle",
+   "hint": "Your @handle for the footer chip"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Self-care Sunday",
+   "bg": "#f7f1e8",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 880,
+     "y": -120,
+     "w": 360,
+     "h": 360,
+     "fill": "#f2e1c6",
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": -160,
+     "y": 1080,
+     "w": 420,
+     "h": 420,
+     "fill": "#f2e1c6",
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 116,
+     "w": 560,
+     "h": 30,
+     "family": "Nunito",
+     "size": 22,
+     "weight": 700,
+     "color": "#a96a38",
+     "letterSpacing": 6,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "a gentle checklist"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 164,
+     "w": 580,
+     "h": 230,
+     "family": "Playfair Display",
+     "size": 100,
+     "weight": 700,
+     "color": "#4a3b30",
+     "lineHeight": 1.08,
+     "text": "Self-care\nSunday"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 408,
+     "w": 580,
+     "h": 60,
+     "family": "Caveat",
+     "size": 42,
+     "weight": 500,
+     "color": "#a96a38",
+     "lineHeight": 1.2,
+     "text": "your permission slip to rest"
+    },
+    {
+     "kind": "rect",
+     "x": 716,
+     "y": 124,
+     "w": 288,
+     "h": 288,
+     "fill": "#efab59",
+     "radius": 40
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 496,
+     "w": 888,
+     "h": 112,
+     "fill": "#ffffff",
+     "radius": 28
+    },
+    {
+     "kind": "rect",
+     "x": 136,
+     "y": 530,
+     "w": 44,
+     "h": 44,
+     "fill": "#f2e1c6",
+     "radius": 14
+    },
+    {
+     "kind": "rect",
+     "x": 146,
+     "y": 540,
+     "w": 24,
+     "h": 24,
+     "fill": "#efab59",
+     "radius": 8
+    },
+    {
+     "kind": "text",
+     "x": 208,
+     "y": 532,
+     "w": 736,
+     "h": 40,
+     "family": "Nunito",
+     "size": 30,
+     "weight": 600,
+     "color": "#4a3b30",
+     "lineHeight": 1.2,
+     "text": "Sleep in a little longer"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 632,
+     "w": 888,
+     "h": 112,
+     "fill": "#ffffff",
+     "radius": 28
+    },
+    {
+     "kind": "rect",
+     "x": 136,
+     "y": 666,
+     "w": 44,
+     "h": 44,
+     "fill": "#f2e1c6",
+     "radius": 14
+    },
+    {
+     "kind": "rect",
+     "x": 146,
+     "y": 676,
+     "w": 24,
+     "h": 24,
+     "fill": "#efab59",
+     "radius": 8
+    },
+    {
+     "kind": "text",
+     "x": 208,
+     "y": 668,
+     "w": 736,
+     "h": 40,
+     "family": "Nunito",
+     "size": 30,
+     "weight": 600,
+     "color": "#4a3b30",
+     "lineHeight": 1.2,
+     "text": "Make tea, drink it slowly"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 768,
+     "w": 888,
+     "h": 112,
+     "fill": "#ffffff",
+     "radius": 28
+    },
+    {
+     "kind": "rect",
+     "x": 136,
+     "y": 802,
+     "w": 44,
+     "h": 44,
+     "fill": "#f2e1c6",
+     "radius": 14
+    },
+    {
+     "kind": "text",
+     "x": 208,
+     "y": 804,
+     "w": 736,
+     "h": 40,
+     "family": "Nunito",
+     "size": 30,
+     "weight": 600,
+     "color": "#4a3b30",
+     "lineHeight": 1.2,
+     "text": "Take a walk, no headphones"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 904,
+     "w": 888,
+     "h": 112,
+     "fill": "#ffffff",
+     "radius": 28
+    },
+    {
+     "kind": "rect",
+     "x": 136,
+     "y": 938,
+     "w": 44,
+     "h": 44,
+     "fill": "#f2e1c6",
+     "radius": 14
+    },
+    {
+     "kind": "text",
+     "x": 208,
+     "y": 940,
+     "w": 736,
+     "h": 40,
+     "family": "Nunito",
+     "size": 30,
+     "weight": 600,
+     "color": "#4a3b30",
+     "lineHeight": 1.2,
+     "text": "Write down three good things"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 1040,
+     "w": 888,
+     "h": 112,
+     "fill": "#ffffff",
+     "radius": 28
+    },
+    {
+     "kind": "rect",
+     "x": 136,
+     "y": 1074,
+     "w": 44,
+     "h": 44,
+     "fill": "#f2e1c6",
+     "radius": 14
+    },
+    {
+     "kind": "text",
+     "x": 208,
+     "y": 1076,
+     "w": 736,
+     "h": 40,
+     "family": "Nunito",
+     "size": 30,
+     "weight": 600,
+     "color": "#4a3b30",
+     "lineHeight": 1.2,
+     "text": "Early night, fresh sheets"
+    },
+    {
+     "kind": "rect",
+     "x": 390,
+     "y": 1204,
+     "w": 300,
+     "h": 60,
+     "fill": "#4a3b30",
+     "radius": 30
+    },
+    {
+     "kind": "text",
+     "x": 390,
+     "y": 1204,
+     "w": 300,
+     "h": 60,
+     "family": "Nunito",
+     "size": 22,
+     "weight": 700,
+     "color": "#f7f1e8",
+     "align": "center",
+     "vAlign": "middle",
+     "letterSpacing": 1,
+     "lineHeight": 1.2,
+     "text": "@slow.sunday.club"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day80-tea",
+     "x": 696,
+     "y": 104,
+     "w": 288,
+     "h": 288,
+     "position": "after:self-care-checklist-p0-n5"
+    }
+   ]
+  }
+ ],
+ "rank": 20
+}

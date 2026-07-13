@@ -10,15 +10,16 @@ import (
 	"hycanvas/backend/internal/accounts"
 	"hycanvas/backend/internal/persistence"
 	"hycanvas/backend/internal/render"
+	"hycanvas/backend/internal/uploads"
 )
 
 // mountRender attaches the server-side export surface (doc 11): the Go rendering
 // engine serializes a design's page to a downloadable format. SVG is wired here;
 // PDF/PNG/JPG/video follow as the engine grows. Membership-gated like the rest
 // of the persistence surface.
-func mountRender(api chi.Router, p *persistence.Service, acct *accounts.Service) {
+func mountRender(api chi.Router, p *persistence.Service, acct *accounts.Service, up *uploads.Service) {
 	api.With(requireAuth(acct)).Get("/designs/{id}/render.svg", renderSVGHandler(p, acct))
-	api.With(requireAuth(acct)).Get("/designs/{id}/render.pdf", renderPDFHandler(p, acct))
+	api.With(requireAuth(acct)).Get("/designs/{id}/render.pdf", renderPDFHandler(p, acct, up))
 	api.With(requireAuth(acct)).Get("/designs/{id}/render.png", renderRasterHandler(p, acct, "png"))
 	api.With(requireAuth(acct)).Get("/designs/{id}/render.jpg", renderRasterHandler(p, acct, "jpg"))
 	api.With(requireAuth(acct)).Get("/designs/{id}/render.mp4", renderVideoHandler(p, acct))
@@ -119,7 +120,25 @@ func renderRasterHandler(p *persistence.Service, acct *accounts.Service, format 
 	}
 }
 
-func renderPDFHandler(p *persistence.Service, acct *accounts.Service) http.HandlerFunc {
+// pdfImageSource lets the PDF encoder embed an asset's pixels while `render`
+// stays pure: it resolves an asset id to bytes through the uploads service. A
+// nil service, or an asset that will not load, yields no pixels rather than an
+// error, so one broken upload degrades a single image instead of failing the
+// export.
+func pdfImageSource(r *http.Request, up *uploads.Service) render.ImageSource {
+	if up == nil {
+		return nil
+	}
+	return func(assetID string) ([]byte, bool) {
+		data, _, err := up.Content(r.Context(), assetID)
+		if err != nil || len(data) == 0 {
+			return nil, false
+		}
+		return data, true
+	}
+}
+
+func renderPDFHandler(p *persistence.Service, acct *accounts.Service, up *uploads.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
 		ws, err := authorizeDesign(r, p, acct, id, "viewer")
@@ -127,8 +146,12 @@ func renderPDFHandler(p *persistence.Service, acct *accounts.Service) http.Handl
 			authProblem(w, r, err)
 			return
 		}
+		// `?page=all` exports the whole deck as one tagged document (doc 28
+		// FR-22). Any other value keeps the original per-page behavior, so an
+		// existing caller sees exactly what it saw before.
+		deck := r.URL.Query().Get("page") == "all"
 		page := 0
-		if v := r.URL.Query().Get("page"); v != "" {
+		if v := r.URL.Query().Get("page"); v != "" && !deck {
 			if n, err := strconv.Atoi(v); err == nil {
 				page = n
 			}
@@ -138,7 +161,13 @@ func renderPDFHandler(p *persistence.Service, acct *accounts.Service) http.Handl
 			persistenceProblem(w, r, err)
 			return
 		}
-		pdf, err := render.ToPDF(render.Design(loaded.File), page)
+		var pdf []byte
+		src := pdfImageSource(r, up)
+		if deck {
+			pdf, err = render.ToDeckPDF(render.Design(loaded.File), src)
+		} else {
+			pdf, err = render.ToPDF(render.Design(loaded.File), page, src)
+		}
 		if err != nil {
 			Problem(w, r, http.StatusBadRequest, "Bad Request", "page index out of range")
 			return

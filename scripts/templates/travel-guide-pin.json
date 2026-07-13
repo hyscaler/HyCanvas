@@ -1,0 +1,367 @@
+{
+ "id": "travel-guide-pin",
+ "title": "Mountain Weekend Guide",
+ "categories": [
+  "social",
+  "marketing"
+ ],
+ "tags": [
+  "travel",
+  "itinerary",
+  "pinterest",
+  "weekend",
+  "guide"
+ ],
+ "styleTags": [
+  "editorial",
+  "outdoors"
+ ],
+ "size": [
+  1000,
+  1500
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Playfair Display",
+   "weight": 700
+  },
+  {
+   "role": "body",
+   "family": "DM Sans",
+   "weight": 400
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n2",
+   "kind": "text",
+   "label": "Headline",
+   "hint": "Trip length and destination, e.g. 3 days in the mountains"
+  },
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Intro line",
+   "hint": "One sentence on the vibe of the trip"
+  },
+  {
+   "node": "p0-n8",
+   "kind": "text",
+   "label": "Stop one",
+   "hint": "The first stop or activity on day one"
+  },
+  {
+   "node": "p0-n19",
+   "kind": "text",
+   "label": "Save prompt",
+   "hint": "Why readers should save this pin, e.g. Pin it for your next long weekend"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Guide",
+   "bg": "#f7f3ec",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 0,
+     "w": 1000,
+     "h": 12,
+     "fill": "#92ced7"
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 72,
+     "w": 840,
+     "h": 30,
+     "family": "DM Sans",
+     "size": 20,
+     "weight": 700,
+     "color": "#534668",
+     "align": "center",
+     "letterSpacing": 5,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Trailhead Press \u00b7 Weekend Field Guide"
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 118,
+     "w": 840,
+     "h": 210,
+     "family": "Playfair Display",
+     "size": 92,
+     "weight": 700,
+     "color": "#534668",
+     "align": "center",
+     "lineHeight": 1.06,
+     "text": "3 days in\nthe mountains"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 340,
+     "w": 720,
+     "h": 80,
+     "family": "DM Sans",
+     "size": 26,
+     "weight": 400,
+     "color": "#686868",
+     "align": "center",
+     "lineHeight": 1.45,
+     "text": "An unhurried route of quiet trails, camp dinners, and one perfect sunrise above the clouds."
+    },
+    {
+     "kind": "rect",
+     "x": 311,
+     "y": 482,
+     "w": 400,
+     "h": 400,
+     "fill": "#534668"
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 928,
+     "w": 400,
+     "h": 26,
+     "family": "DM Sans",
+     "size": 20,
+     "weight": 700,
+     "color": "#c2503a",
+     "letterSpacing": 5,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "The itinerary"
+    },
+    {
+     "kind": "text",
+     "x": 500,
+     "y": 930,
+     "w": 420,
+     "h": 24,
+     "family": "DM Sans",
+     "size": 16,
+     "weight": 500,
+     "color": "#686868",
+     "align": "right",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Pine Ridge Loop \u00b7 3 days"
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 976,
+     "w": 104,
+     "h": 76,
+     "family": "Playfair Display",
+     "size": 56,
+     "weight": 700,
+     "color": "#c2503a",
+     "lineHeight": 1,
+     "text": "01"
+    },
+    {
+     "kind": "text",
+     "x": 204,
+     "y": 972,
+     "w": 716,
+     "h": 36,
+     "family": "DM Sans",
+     "size": 29,
+     "weight": 600,
+     "color": "#534668",
+     "lineHeight": 1.2,
+     "text": "Ride the gondola to Basecamp Lake"
+    },
+    {
+     "kind": "text",
+     "x": 204,
+     "y": 1014,
+     "w": 716,
+     "h": 28,
+     "family": "DM Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#686868",
+     "lineHeight": 1.3,
+     "text": "Ease in with a lakeshore loop, then a slow camp dinner."
+    },
+    {
+     "kind": "rect",
+     "x": 204,
+     "y": 1066,
+     "w": 716,
+     "h": 2,
+     "fill": "#534668",
+     "opacity": 0.15
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 1098,
+     "w": 104,
+     "h": 76,
+     "family": "Playfair Display",
+     "size": 56,
+     "weight": 700,
+     "color": "#c2503a",
+     "lineHeight": 1,
+     "text": "02"
+    },
+    {
+     "kind": "text",
+     "x": 204,
+     "y": 1094,
+     "w": 716,
+     "h": 36,
+     "family": "DM Sans",
+     "size": 29,
+     "weight": 600,
+     "color": "#534668",
+     "lineHeight": 1.2,
+     "text": "Hike the Larkspur Ridge traverse"
+    },
+    {
+     "kind": "text",
+     "x": 204,
+     "y": 1136,
+     "w": 716,
+     "h": 28,
+     "family": "DM Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#686868",
+     "lineHeight": 1.3,
+     "text": "Seven miles of wildflower saddles and big granite views."
+    },
+    {
+     "kind": "rect",
+     "x": 204,
+     "y": 1188,
+     "w": 716,
+     "h": 2,
+     "fill": "#534668",
+     "opacity": 0.15
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 1220,
+     "w": 104,
+     "h": 76,
+     "family": "Playfair Display",
+     "size": 56,
+     "weight": 700,
+     "color": "#c2503a",
+     "lineHeight": 1,
+     "text": "03"
+    },
+    {
+     "kind": "text",
+     "x": 204,
+     "y": 1216,
+     "w": 716,
+     "h": 36,
+     "family": "DM Sans",
+     "size": 29,
+     "weight": 600,
+     "color": "#534668",
+     "lineHeight": 1.2,
+     "text": "Sunrise coffee at Copper Overlook"
+    },
+    {
+     "kind": "text",
+     "x": 204,
+     "y": 1258,
+     "w": 716,
+     "h": 28,
+     "family": "DM Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#686868",
+     "lineHeight": 1.3,
+     "text": "Watch the valley wake up, then amble back down to town."
+    },
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 1330,
+     "w": 1000,
+     "h": 170,
+     "fill": "#534668"
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 1378,
+     "w": 560,
+     "h": 38,
+     "family": "DM Sans",
+     "size": 28,
+     "weight": 700,
+     "color": "#ffffff",
+     "lineHeight": 1.2,
+     "text": "Pin it for your next long weekend"
+    },
+    {
+     "kind": "text",
+     "x": 80,
+     "y": 1424,
+     "w": 560,
+     "h": 26,
+     "family": "DM Sans",
+     "size": 18,
+     "weight": 500,
+     "color": "#92ced7",
+     "lineHeight": 1.3,
+     "text": "New field guides every Friday \u00b7 @trailheadpress"
+    },
+    {
+     "kind": "rect",
+     "x": 680,
+     "y": 1379,
+     "w": 240,
+     "h": 72,
+     "fill": "#c2503a",
+     "radius": 36
+    },
+    {
+     "kind": "text",
+     "x": 680,
+     "y": 1379,
+     "w": 240,
+     "h": 72,
+     "family": "DM Sans",
+     "size": 18,
+     "weight": 700,
+     "color": "#ffffff",
+     "align": "center",
+     "vAlign": "middle",
+     "letterSpacing": 2,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Save this guide"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day96-camping",
+     "x": 289,
+     "y": 460,
+     "w": 400,
+     "h": 400,
+     "position": "after:travel-guide-pin-p0-n4"
+    }
+   ]
+  }
+ ],
+ "rank": 14
+}

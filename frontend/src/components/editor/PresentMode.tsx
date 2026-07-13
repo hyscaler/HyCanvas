@@ -14,6 +14,8 @@ import {
   Pause,
   Repeat,
   PanelRightOpen,
+  MonitorPlay,
+  MonitorX,
   MousePointer2,
   Pencil,
   Lightbulb,
@@ -37,6 +39,9 @@ import {
   appliedOpacity,
   sequenceStarts,
   revealEntranceText,
+  renderTransition,
+  morphPlan,
+  morphDesignAt,
   type AnimPatch,
   type CanvasLike,
   type Viewport,
@@ -51,8 +56,11 @@ import type {
   PageTransition,
   ElementLink,
 } from "@hc/schema";
+import { nextSectionStart, prevSectionStart } from "@hc/schema";
 import { useEditor } from "@/store/editor";
 import { imageAssets } from "@/lib/assetProvider";
+import { useBrand } from "@/store/brand";
+import { AudienceLink, openAudienceWindow } from "@/lib/audienceWindow";
 import {
   adjustSpotlightRadius,
   DEFAULT_AUTO_ADVANCE_MS,
@@ -374,6 +382,15 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
   const [autopilot, setAutopilot] = useState(false);
   const [loop, setLoop] = useState(false);
   const [showHud, setShowHud] = useState(false);
+  // Second-display presenter view (doc 28 FR-15): an audience window mirrors
+  // the slide over a BroadcastChannel while this window keeps the HUD. Popups
+  // can be blocked, so this only gates the affordance; the same-window overlay
+  // keeps working either way (AC-3).
+  const designId = useBrand((s) => s.designId);
+  const [audienceOpen, setAudienceOpen] = useState(false);
+  const [popupBlocked, setPopupBlocked] = useState(false);
+  const audienceLink = useRef<AudienceLink | null>(null);
+  const audienceWin = useRef<Window | null>(null);
 
   // Visible-slide bookkeeping (skips hidden slides for nav + the n-of-N count).
   const visIdxs = useMemo(() => visibleIndices(pages as SlideLike[]), [pages, rev]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -383,6 +400,40 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
     () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true,
     [],
   );
+
+  /** Open (or focus) the audience display. Returns false when popups are blocked. */
+  const openAudience = useCallback((): boolean => {
+    if (!designId) return false;
+    const win = openAudienceWindow(designId, idx);
+    if (!win) return false;
+    audienceWin.current = win;
+    setPopupBlocked(false);
+    if (!audienceLink.current) audienceLink.current = new AudienceLink(designId);
+    audienceLink.current.post({ index: idx, blank: blank === "none" ? null : blank });
+    setAudienceOpen(true);
+    return true;
+  }, [designId, idx, blank]);
+
+  const closeAudience = useCallback(() => {
+    audienceLink.current?.close();
+    audienceLink.current = null;
+    try {
+      audienceWin.current?.close();
+    } catch {
+      /* already closed by the user */
+    }
+    audienceWin.current = null;
+    setAudienceOpen(false);
+  }, []);
+
+  // Mirror slide + blanking to the audience display whenever either changes.
+  useEffect(() => {
+    if (!audienceOpen) return;
+    audienceLink.current?.post({ index: idx, blank: blank === "none" ? null : blank });
+  }, [audienceOpen, idx, blank]);
+
+  // Leaving present mode closes the projection with it.
+  useEffect(() => () => closeAudience(), [closeAudience]);
 
   // Build the slide clone for the current page; rebuilt on page/edit change. The
   // store mutates `doc` in place, so `rev` (not `doc`'s identity) signals edits.
@@ -526,6 +577,13 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
       if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); guardedPrev(); return; }
       switch (e.key) {
         case "s": case "S": e.preventDefault(); setShowHud((v) => !v); return; // presenter view (FR-4)
+        // Second display (FR-15): mirror the slide to an audience window.
+        // `E` for "extend"; D/P/L/O/B/W/Z/G/S are already taken by tools.
+        case "e": case "E":
+          e.preventDefault();
+          if (audienceOpen) closeAudience();
+          else if (designId && !openAudience()) setPopupBlocked(true);
+          return;
         case "p": case "P": e.preventDefault(); setAutopilot((v) => !v); return; // autopilot (FR-14)
         case "l": case "L": e.preventDefault(); selectTool("laser"); return; // laser pointer
         case "d": case "D": e.preventDefault(); selectTool("pen"); return; // on-slide draw (P is autopilot)
@@ -533,6 +591,19 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
         case "b": case "B": e.preventDefault(); setBlank((v) => (v === "black" ? "none" : "black")); return; // black screen
         case "w": case "W": e.preventDefault(); setBlank((v) => (v === "white" ? "none" : "white")); return; // white screen
         case "g": case "G": case "/": e.preventDefault(); setPaletteOpen(true); return; // jump-to-slide palette
+        // Section-aware navigation (doc 28 FR-5): jump to the start of the
+        // next/previous section, skipping the rest of the current one. A deck
+        // with no sections has nothing to jump to, so these are no-ops.
+        case "]":
+        case "[": {
+          // The spotlight tool owns the brackets for its radius, so only jump
+          // sections when it is not the active tool.
+          if (tool === "spotlight") break;
+          e.preventDefault();
+          const to = e.key === "]" ? nextSectionStart(doc, idx) : prevSectionStart(doc, idx);
+          if (to >= 0) navigate(to);
+          return;
+        }
         case "z": case "Z": e.preventDefault(); setZoom((z) => stepZoom(z, ZOOM_STEP * 2, 0.5, 0.5)); return; // zoom in (center)
         case "=": case "+": e.preventDefault(); setZoom((z) => stepZoom(z, ZOOM_STEP, z.originX, z.originY)); return;
         case "-": case "_": e.preventDefault(); setZoom((z) => stepZoom(z, -ZOOM_STEP, z.originX, z.originY)); return;
@@ -548,7 +619,7 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [guardedNext, guardedPrev, onClose, paletteOpen, showHelp, blank, tool, selectTool]);
+  }, [guardedNext, guardedPrev, onClose, paletteOpen, showHelp, blank, tool, selectTool, audienceOpen, closeAudience, openAudience, designId, doc, idx, navigate]);
 
   // Compute and store the fit for the current slide whenever it/size changes.
   const layout = useCallback((): { ctx: CanvasRenderingContext2D; vp: Viewport } | null => {
@@ -626,7 +697,7 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
         // begins its entrance (from the start of the transition window).
         poseExit(from, elapsed, reducedMotion);
         poseEnter(slide, tSlide, reducedMotion);
-        renderTransition(ctx.canvas, ctx, vp, from, slide, arrivingTransition!, p, bufA, bufB, drawSlide);
+        compositeTransition(ctx.canvas, ctx, vp, from, slide, arrivingTransition!, p, bufA, bufB, drawSlide);
       } else if (phase === "exit" && tr) {
         // No page transition, but the leaving slide has exit clips: play them in a
         // brief exit window so a configured exit always shows on slide-leave.
@@ -1112,6 +1183,18 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
         <ToolButton active={autopilot} onClick={() => setAutopilot((v) => !v)} title={autopilot ? "Pause autopilot (P)" : "Play autopilot (P)"}>{autopilot ? <Pause size={16} /> : <Play size={16} />}</ToolButton>
         <ToolButton active={loop} onClick={() => setLoop((v) => !v)} title={loop ? "Loop on" : "Loop off"}><Repeat size={16} /></ToolButton>
         <ToolButton active={showHud} onClick={() => setShowHud((v) => !v)} title="Presenter view (S)"><PanelRightOpen size={16} /></ToolButton>
+        {designId && (
+          <ToolButton
+            active={audienceOpen}
+            onClick={() => {
+              if (audienceOpen) { closeAudience(); return; }
+              if (!openAudience()) setPopupBlocked(true);
+            }}
+            title={audienceOpen ? "Close audience display (E)" : "Open audience display on a second screen (E)"}
+          >
+            {audienceOpen ? <MonitorX size={16} /> : <MonitorPlay size={16} />}
+          </ToolButton>
+        )}
         <ToolButton active={showHelp} onClick={() => setShowHelp((v) => !v)} title="Shortcuts (?)"><HelpCircle size={16} /></ToolButton>
       </div>
 
@@ -1125,6 +1208,15 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
           onJump={(i) => { setPaletteOpen(false); navigate(i); }}
           onClose={() => setPaletteOpen(false)}
         />
+      )}
+
+      {/* Popups blocked: AC-3 requires falling back to the same-window overlay,
+          so we explain rather than fail silently. */}
+      {popupBlocked && (
+        <div className="pointer-events-auto absolute left-1/2 top-4 z-50 -translate-x-1/2 rounded-lg bg-amber-500/95 px-3 py-2 text-xs font-medium text-black shadow-lg">
+          Allow pop-ups for this site to open the audience display. The presenter view still works here (S).
+          <button onClick={() => setPopupBlocked(false)} className="ml-3 underline">Dismiss</button>
+        </div>
       )}
 
       {showHud && (
@@ -1196,6 +1288,8 @@ function ShortcutHelp({ onClose }: { onClose: () => void }) {
     ["W", "White screen"],
     ["G or /", "Jump-to-slide palette"],
     ["S", "Presenter view"],
+    ["E", "Audience display (2nd screen)"],
+    ["[ / ]", "Previous / next section"],
     ["P", "Autopilot play/pause"],
     ["?", "Toggle this help"],
     ["Esc", "Close tool / overlay, then exit"],
@@ -1337,6 +1431,107 @@ function SlideThumb({ doc, index, w, h }: { doc: DesignFile; index: number; w: n
 // window.open + BroadcastChannel is a deferred enhancement). Shows the current
 // slide, the next-slide thumbnail, speaker notes, n-of-N, prev/next + a jump
 // control, and a rehearsal/count-down timer with a per-slide breakdown on stop.
+/** Speaker notes as a teleprompter (doc 28 FR-15): resizable type and an
+ *  optional steady auto-scroll, so a presenter can read from across a lectern.
+ *  Scrolling resets when the slide's notes change. */
+function Teleprompter({ notes }: { notes: string }) {
+  const [fontPx, setFontPx] = useState(14);
+  const [speed, setSpeed] = useState(0); // px/sec; 0 = off
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (ref.current) ref.current.scrollTop = 0;
+  }, [notes]);
+
+  useEffect(() => {
+    if (!speed) return;
+    let raf = 0;
+    let last = performance.now();
+    const step = (now: number) => {
+      const el = ref.current;
+      const dt = (now - last) / 1000;
+      last = now;
+      if (el) {
+        el.scrollTop = Math.min(el.scrollTop + speed * dt, el.scrollHeight - el.clientHeight);
+      }
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [speed]);
+
+  const has = notes.trim().length > 0;
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between text-[10px] uppercase tracking-wide text-white/40">
+        <span>Speaker notes</span>
+        {has && (
+          <div className="flex items-center gap-2 normal-case">
+            <button
+              onClick={() => setFontPx((v) => Math.max(11, v - 2))}
+              className="rounded px-1.5 py-0.5 text-white/60 hover:bg-white/10"
+              aria-label="Smaller notes text"
+              title="Smaller"
+            >
+              A-
+            </button>
+            <button
+              onClick={() => setFontPx((v) => Math.min(30, v + 2))}
+              className="rounded px-1.5 py-0.5 text-white/60 hover:bg-white/10"
+              aria-label="Larger notes text"
+              title="Larger"
+            >
+              A+
+            </button>
+            <button
+              onClick={() => setSpeed((v) => (v ? 0 : 18))}
+              className={`rounded px-1.5 py-0.5 hover:bg-white/10 ${speed ? "text-brand-300" : "text-white/60"}`}
+              aria-pressed={speed > 0}
+              title="Auto-scroll the notes"
+            >
+              Scroll
+            </button>
+            {speed > 0 && (
+              <input
+                type="range"
+                min={6}
+                max={60}
+                value={speed}
+                onChange={(e) => setSpeed(Number(e.target.value))}
+                className="h-1 w-16 accent-white/70"
+                aria-label="Scroll speed"
+              />
+            )}
+          </div>
+        )}
+      </div>
+      <div
+        ref={ref}
+        data-testid="teleprompter"
+        style={{ fontSize: `${fontPx}px` }}
+        className="max-h-40 overflow-y-auto whitespace-pre-wrap rounded-lg border border-white/10 bg-white/5 p-2.5 leading-relaxed text-white/85"
+      >
+        {has ? notes : <span className="text-white/30">No notes for this slide.</span>}
+      </div>
+    </div>
+  );
+}
+
+/** The presenter's wall clock (doc 28 FR-15): real time of day, distinct from
+ *  the rehearsal timer, so a presenter can pace against the room's schedule. */
+function WallClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <span data-testid="wall-clock" className="tabular-nums text-white/70">
+      {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+    </span>
+  );
+}
+
 function PresenterHud(props: {
   doc: DesignFile;
   curIdx: number;
@@ -1375,7 +1570,11 @@ function PresenterHud(props: {
     >
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-wide text-white/50">Presenter view</span>
-        <span className="text-xs tabular-nums text-white/60">{position} of {total}</span>
+        <span className="flex items-center gap-2 text-xs tabular-nums text-white/60">
+          <WallClock />
+          <span className="text-white/25">|</span>
+          <span>{position} of {total}</span>
+        </span>
       </div>
 
       <div className="flex gap-2">
@@ -1408,12 +1607,7 @@ function PresenterHud(props: {
         <button onClick={onNext} disabled={!hasNext} className="rounded-lg bg-white/10 px-3 py-1.5 text-xs hover:bg-white/20 disabled:opacity-30">Next</button>
       </div>
 
-      <div>
-        <div className="mb-1 text-[10px] uppercase tracking-wide text-white/40">Speaker notes</div>
-        <div className="max-h-40 overflow-y-auto whitespace-pre-wrap rounded-lg border border-white/10 bg-white/5 p-2.5 text-sm leading-relaxed text-white/85">
-          {notes.trim() ? notes : <span className="text-white/30">No notes for this slide.</span>}
-        </div>
-      </div>
+      <Teleprompter notes={notes} />
 
       <div className="rounded-lg border border-white/10 bg-white/5 p-3">
         <div className="flex items-center justify-between">
@@ -1465,7 +1659,12 @@ function PresenterHud(props: {
 // Composite the leaving and arriving slides into `dest` for the given transition
 // at eased progress `p` (0..1). Uses two offscreen buffers (sized to the canvas)
 // so each slide renders once per frame and is then blended/translated cheaply.
-function renderTransition(
+//
+// This is a thin browser adapter: it owns the offscreen buffers and the morph
+// overlay (which needs a scene render), while the compositing math lives in the
+// pure `@hc/engine` helper (doc 28 FR-13), so present mode, the web player, and
+// headless export all render transitions identically.
+function compositeTransition(
   dest: HTMLCanvasElement,
   destCtx: CanvasRenderingContext2D,
   vp: Viewport,
@@ -1495,7 +1694,7 @@ function renderTransition(
   // Morph (Magic Move): elements shared by id between the two slides are drawn
   // tweened on top, so they must NOT appear in the cross-faded buffers. Hide them
   // in both clones for the buffer draws, then restore.
-  const morph = transition.type === "morph" ? morphPlan(from, to) : null;
+  const morph = transition.type === "morph" ? morphPlan(from.doc, from.pageIndex, to.doc, to.pageIndex) : null;
   const restoreHidden: { node: Node; prev: boolean | undefined }[] = [];
   if (morph) {
     for (const n of morph.fromNodes.values()) { restoreHidden.push({ node: n, prev: n.hidden }); (n as { hidden?: boolean }).hidden = true; }
@@ -1505,175 +1704,20 @@ function renderTransition(
   draw(to, cb, vp);
   for (const h of restoreHidden) (h.node as { hidden?: boolean }).hidden = h.prev;
 
-  destCtx.setTransform(1, 0, 0, 1, 0, 0);
-  destCtx.clearRect(0, 0, W, H);
-  destCtx.fillStyle = "#ffffff";
-  destCtx.fillRect(0, 0, W, H);
+  renderTransition(destCtx as unknown as CanvasLike, transition, {
+    from: bufA,
+    to: bufB,
+    width: W,
+    height: H,
+    progress: p,
+  });
 
-  const dir = transition.direction ?? "left";
-  const sign = dir === "right" || dir === "down" ? -1 : 1;
-  const horizontal = dir === "left" || dir === "right";
-
-  switch (transition.type) {
-    case "fade":
-    case "dissolve": {
-      destCtx.globalAlpha = 1 - p;
-      destCtx.drawImage(bufA, 0, 0);
-      destCtx.globalAlpha = p;
-      destCtx.drawImage(bufB, 0, 0);
-      destCtx.globalAlpha = 1;
-      break;
-    }
-    case "slide": {
-      // The incoming slide slides in over the (stationary) outgoing one.
-      destCtx.drawImage(bufA, 0, 0);
-      const dx = horizontal ? sign * (1 - p) * W : 0;
-      const dy = horizontal ? 0 : sign * (1 - p) * H;
-      destCtx.drawImage(bufB, dx, dy);
-      break;
-    }
-    case "push": {
-      // Both slides move together: outgoing pushed out, incoming pushed in.
-      const dx = horizontal ? sign * p * W : 0;
-      const dy = horizontal ? 0 : sign * p * H;
-      destCtx.drawImage(bufA, -dx, -dy);
-      destCtx.drawImage(bufB, horizontal ? sign * W - dx : 0, horizontal ? 0 : sign * H - dy);
-      break;
-    }
-    case "morph-lite": {
-      // A simple cross-zoom: the outgoing slide zooms out + fades, the incoming
-      // zooms in from slightly small + fades in.
-      const outScale = 1 + 0.12 * p;
-      const inScale = 0.88 + 0.12 * p;
-      destCtx.globalAlpha = 1 - p;
-      drawScaled(destCtx, bufA, outScale, W, H);
-      destCtx.globalAlpha = p;
-      drawScaled(destCtx, bufB, inScale, W, H);
-      destCtx.globalAlpha = 1;
-      break;
-    }
-    case "wipe": {
-      // The incoming slide is revealed under a growing clip rect in `dir`.
-      destCtx.drawImage(bufA, 0, 0);
-      destCtx.save();
-      destCtx.beginPath();
-      if (horizontal) {
-        const w = p * W;
-        destCtx.rect(dir === "right" ? W - w : 0, 0, w, H);
-      } else {
-        const h = p * H;
-        destCtx.rect(0, dir === "down" ? H - h : 0, W, h);
-      }
-      destCtx.clip();
-      destCtx.drawImage(bufB, 0, 0);
-      destCtx.restore();
-      break;
-    }
-    case "flip": {
-      // Horizontal card flip: outgoing squashes to a sliver, incoming expands.
-      if (p < 0.5) {
-        const s = 1 - p * 2; // 1 -> 0
-        destCtx.save();
-        destCtx.translate(W / 2, 0);
-        destCtx.scale(s, 1);
-        destCtx.translate(-W / 2, 0);
-        destCtx.drawImage(bufA, 0, 0);
-        destCtx.restore();
-      } else {
-        const s = (p - 0.5) * 2; // 0 -> 1
-        destCtx.save();
-        destCtx.translate(W / 2, 0);
-        destCtx.scale(s, 1);
-        destCtx.translate(-W / 2, 0);
-        destCtx.drawImage(bufB, 0, 0);
-        destCtx.restore();
-      }
-      break;
-    }
-    case "zoom": {
-      // Outgoing holds; incoming zooms up from the center with a fade.
-      destCtx.drawImage(bufA, 0, 0);
-      destCtx.globalAlpha = p;
-      drawScaled(destCtx, bufB, 0.3 + 0.7 * p, W, H);
-      destCtx.globalAlpha = 1;
-      break;
-    }
-    case "morph": {
-      // Magic Move: cross-fade the non-shared content (buffers were drawn with the
-      // shared elements hidden), then render the shared elements tweened from their
-      // outgoing pose to their incoming pose on top, so they glide into place.
-      destCtx.globalAlpha = 1 - p;
-      destCtx.drawImage(bufA, 0, 0);
-      destCtx.globalAlpha = p;
-      destCtx.drawImage(bufB, 0, 0);
-      destCtx.globalAlpha = 1;
-      if (morph && morph.ids.length) {
-        const children = morph.ids.map((id) => lerpNode(morph.fromNodes.get(id)!, morph.toNodes.get(id)!, p));
-        const pages = to.doc.pages.map((pg, i) => (i === to.pageIndex ? { ...pg, children } : pg));
-        const tempDoc = { ...to.doc, pages } as DesignFile;
-        try {
-          renderScene(createScene(tempDoc, to.pageIndex), destCtx as unknown as CanvasLike, vp, { assets: imageAssets });
-        } catch { /* a cross-origin image can throw; skip the morphed layer */ }
-      }
-      break;
-    }
-    default: {
-      destCtx.drawImage(bufB, 0, 0);
-    }
+  // The morphed layer needs a scene render, so it stays with the caller: the
+  // engine helper has already cross-faded the shared-element-free buffers.
+  if (morph && morph.ids.length) {
+    const tempDoc = morphDesignAt(morph, to.doc, to.pageIndex, p);
+    try {
+      renderScene(createScene(tempDoc, to.pageIndex), destCtx as unknown as CanvasLike, vp, { assets: imageAssets });
+    } catch { /* a cross-origin image can throw; skip the morphed layer */ }
   }
-}
-
-/** Plan a morph: the nodes shared by id between two slides' top-level children,
- *  indexed for both the outgoing (from) and incoming (to) poses. */
-function morphPlan(from: Slide, to: Slide): { ids: string[]; fromNodes: Map<string, Node>; toNodes: Map<string, Node> } | null {
-  const fromCh = from.doc.pages[from.pageIndex]?.children ?? [];
-  const toCh = to.doc.pages[to.pageIndex]?.children ?? [];
-  // Match shared elements: by id (same node on both slides), then fall back to a
-  // unique name (covers "duplicate slide, then move an element" since duplication
-  // regenerates ids but keeps names). The pairing keys both maps by the to-id.
-  const fromById = new Map(fromCh.map((n) => [n.id, n]));
-  const fromByName = new Map<string, Node[]>();
-  for (const n of fromCh) { if (n.name) (fromByName.get(n.name) ?? fromByName.set(n.name, []).get(n.name)!).push(n); }
-  const toNameCount = new Map<string, number>();
-  for (const n of toCh) if (n.name) toNameCount.set(n.name, (toNameCount.get(n.name) ?? 0) + 1);
-  const ids: string[] = [];
-  const fromNodes = new Map<string, Node>();
-  const toNodes = new Map<string, Node>();
-  for (const tn of toCh) {
-    let match: Node | undefined = fromById.get(tn.id);
-    if (!match && tn.name && toNameCount.get(tn.name) === 1) {
-      const byName = fromByName.get(tn.name);
-      if (byName && byName.length === 1) match = byName[0]; // unique on both sides
-    }
-    if (match) { ids.push(tn.id); fromNodes.set(tn.id, match); toNodes.set(tn.id, tn); }
-  }
-  return ids.length ? { ids, fromNodes, toNodes } : null;
-}
-
-/** Interpolate a node between its outgoing and incoming pose (transform/size/
- *  opacity) at eased progress `p`; appearance is taken from the destination. */
-function lerpNode(a: Node, b: Node, p: number): Node {
-  const L = (x: number, y: number) => x + (y - x) * p;
-  const ta = a.transform; const tb = b.transform;
-  return {
-    ...b,
-    transform: {
-      ...tb,
-      x: L(ta.x, tb.x), y: L(ta.y, tb.y),
-      scaleX: L(ta.scaleX, tb.scaleX), scaleY: L(ta.scaleY, tb.scaleY),
-      rotation: L(ta.rotation, tb.rotation),
-    },
-    size: { width: L(a.size.width, b.size.width), height: L(a.size.height, b.size.height) },
-    opacity: L(a.opacity, b.opacity),
-  } as Node;
-}
-
-// Draw a buffer scaled about its center into the destination context.
-function drawScaled(ctx: CanvasRenderingContext2D, buf: HTMLCanvasElement, scale: number, W: number, H: number): void {
-  ctx.save();
-  ctx.translate(W / 2, H / 2);
-  ctx.scale(scale, scale);
-  ctx.translate(-W / 2, -H / 2);
-  ctx.drawImage(buf, 0, 0);
-  ctx.restore();
 }

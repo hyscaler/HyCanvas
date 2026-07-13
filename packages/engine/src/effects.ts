@@ -88,7 +88,9 @@ export function effectsFilter(effects?: Effect[]): string {
         parts.push(`drop-shadow(0px 0px ${e.radius}px ${colorToCss(e.color)})`);
         break;
       case "shadow":
-        if (e.type === "drop") {
+        // Missing type means "drop" (see @hc/schema Shadow): early panels
+        // omitted it, and those shadows must render, not silently vanish.
+        if ((e.type ?? "drop") === "drop") {
           parts.push(
             `drop-shadow(${e.offsetX}px ${e.offsetY}px ${e.blur}px ${colorToCss(e.color)})`,
           );

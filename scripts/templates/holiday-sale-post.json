@@ -1,0 +1,193 @@
+{
+ "id": "holiday-sale-post",
+ "title": "Festive Holiday Sale",
+ "categories": [
+  "social",
+  "marketing"
+ ],
+ "tags": [
+  "christmas",
+  "holiday",
+  "sale",
+  "instagram",
+  "promo"
+ ],
+ "styleTags": [
+  "festive",
+  "elegant"
+ ],
+ "size": [
+  1080,
+  1080
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Playfair Display",
+   "weight": 700
+  },
+  {
+   "role": "body",
+   "family": "Inter",
+   "weight": 500
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Headline",
+   "hint": "The sale name, two short lines work best"
+  },
+  {
+   "node": "p0-n4",
+   "kind": "text",
+   "label": "Offer line",
+   "hint": "The discount and perk, e.g. 30% off sitewide plus free gift wrap"
+  },
+  {
+   "node": "p0-n6-label",
+   "kind": "text",
+   "label": "Discount code",
+   "hint": "Short uppercase promo code, e.g. MERRY30"
+  },
+  {
+   "node": "p0-n7",
+   "kind": "text",
+   "label": "Sale dates",
+   "hint": "When the sale runs and where, e.g. Dec 12 to 24, online and in stores"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Holiday Sale",
+   "bg": "#0c3b2b",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 744,
+     "y": -196,
+     "w": 520,
+     "h": 520,
+     "fill": "#124e39",
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": -140,
+     "y": 920,
+     "w": 340,
+     "h": 340,
+     "fill": "#124e39",
+     "bleed": true
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 104,
+     "w": 640,
+     "h": 30,
+     "family": "Inter",
+     "size": 22,
+     "weight": 700,
+     "color": "#e4b054",
+     "letterSpacing": 6,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Pine & Parcel \u00b7 Holiday Sale"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 186,
+     "w": 888,
+     "h": 310,
+     "family": "Playfair Display",
+     "size": 140,
+     "weight": 700,
+     "color": "#f6efe2",
+     "lineHeight": 1.06,
+     "text": "Merry little\nmarkdowns."
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 540,
+     "w": 800,
+     "h": 44,
+     "family": "Inter",
+     "size": 30,
+     "weight": 600,
+     "color": "#e4b054",
+     "lineHeight": 1.45,
+     "text": "30% off sitewide, plus free gift wrap on us."
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 672,
+     "w": 400,
+     "h": 26,
+     "family": "Inter",
+     "size": 18,
+     "weight": 700,
+     "color": "#9cb8a6",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Use code at checkout"
+    },
+    {
+     "kind": "button",
+     "x": 96,
+     "y": 710,
+     "w": 312,
+     "h": 96,
+     "fill": "#f6efe2",
+     "label": "MERRY30",
+     "family": "Space Mono",
+     "size": 34,
+     "weight": 700,
+     "color": "#0c3b2b",
+     "radius": 48,
+     "letterSpacing": 4
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 864,
+     "w": 560,
+     "h": 28,
+     "family": "Inter",
+     "size": 20,
+     "weight": 600,
+     "color": "#9cb8a6",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.3,
+     "text": "Dec 12 to 24 \u00b7 Online & in stores"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day83-snowman",
+     "x": 848,
+     "y": 104,
+     "w": 176,
+     "h": 176,
+     "rotation": -5
+    },
+    {
+     "asset": "il-day89-christmas-gift",
+     "x": 680,
+     "y": 616,
+     "w": 344,
+     "h": 344,
+     "rotation": 3
+    }
+   ]
+  }
+ ],
+ "rank": 20
+}

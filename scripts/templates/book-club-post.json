@@ -1,0 +1,409 @@
+{
+ "id": "book-club-post",
+ "title": "Book Club Monthly Pick",
+ "categories": [
+  "education",
+  "social"
+ ],
+ "tags": [
+  "book club",
+  "reading",
+  "monthly pick",
+  "literary",
+  "cozy"
+ ],
+ "styleTags": [
+  "cozy",
+  "editorial",
+  "warm"
+ ],
+ "size": [
+  1080,
+  1080
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Playfair Display",
+   "weight": 700
+  },
+  {
+   "role": "body",
+   "family": "Figtree",
+   "weight": 500
+  },
+  {
+   "role": "script",
+   "family": "Caveat",
+   "weight": 600
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n1",
+   "kind": "text",
+   "label": "Club name",
+   "hint": "Your book club's name, e.g. The Marginalia Book Club"
+  },
+  {
+   "node": "p0-n6",
+   "kind": "text",
+   "label": "Meeting date & time",
+   "hint": "When you meet, e.g. Thursday, August 20 \u00b7 7:00 pm"
+  },
+  {
+   "node": "p0-n18",
+   "kind": "text",
+   "label": "Book title",
+   "hint": "This month's pick, on the cover"
+  },
+  {
+   "node": "p0-n20",
+   "kind": "text",
+   "label": "Author",
+   "hint": "The author's name, on the cover"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Monthly pick",
+   "bg": "#f7f0e4",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 40,
+     "y": 40,
+     "w": 1000,
+     "h": 1000,
+     "fill": "#f7f0e4",
+     "stroke": "#d9c9ab",
+     "strokeWidth": 2
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 136,
+     "w": 464,
+     "h": 22,
+     "family": "Figtree",
+     "size": 16,
+     "weight": 700,
+     "color": "#a8512b",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "The Marginalia Book Club"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 174,
+     "w": 464,
+     "h": 292,
+     "family": "Playfair Display",
+     "size": 92,
+     "weight": 700,
+     "color": "#2b2118",
+     "lineHeight": 1.05,
+     "text": "This\nMonth's\nPick."
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 486,
+     "w": 464,
+     "h": 90,
+     "family": "Caveat",
+     "size": 34,
+     "weight": 600,
+     "color": "#a8512b",
+     "lineHeight": 1.2,
+     "text": "best read under a blanket,\nkettle within reach"
+    },
+    {
+     "kind": "rect",
+     "x": 96,
+     "y": 602,
+     "w": 56,
+     "h": 3,
+     "fill": "#a8512b",
+     "radius": 1.5
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 634,
+     "w": 464,
+     "h": 16,
+     "family": "Figtree",
+     "size": 13,
+     "weight": 600,
+     "color": "#75634e",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "When"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 656,
+     "w": 464,
+     "h": 30,
+     "family": "Figtree",
+     "size": 22,
+     "weight": 600,
+     "color": "#2b2118",
+     "lineHeight": 1.25,
+     "text": "Thursday, August 20 \u00b7 7:00 pm"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 712,
+     "w": 464,
+     "h": 16,
+     "family": "Figtree",
+     "size": 13,
+     "weight": 600,
+     "color": "#75634e",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Where"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 734,
+     "w": 464,
+     "h": 30,
+     "family": "Figtree",
+     "size": 22,
+     "weight": 600,
+     "color": "#2b2118",
+     "lineHeight": 1.25,
+     "text": "Hearthside Books, 14 Alder Lane"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 790,
+     "w": 464,
+     "h": 16,
+     "family": "Figtree",
+     "size": 13,
+     "weight": 600,
+     "color": "#75634e",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Bring"
+    },
+    {
+     "kind": "text",
+     "x": 96,
+     "y": 812,
+     "w": 464,
+     "h": 30,
+     "family": "Figtree",
+     "size": 22,
+     "weight": 600,
+     "color": "#2b2118",
+     "lineHeight": 1.25,
+     "text": "Your favorite mug (tea is on us)"
+    },
+    {
+     "kind": "button",
+     "x": 96,
+     "y": 880,
+     "w": 252,
+     "h": 60,
+     "fill": "#2b2118",
+     "label": "Save my seat",
+     "family": "Figtree",
+     "size": 14,
+     "weight": 700,
+     "color": "#f6ecd7",
+     "radius": 30,
+     "letterSpacing": 2,
+     "upper": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 600,
+     "y": 236,
+     "w": 400,
+     "h": 400,
+     "fill": "#ecdfc6"
+    },
+    {
+     "kind": "rect",
+     "x": 666,
+     "y": 232,
+     "w": 300,
+     "h": 444,
+     "fill": "#2b2118",
+     "radius": 6,
+     "opacity": 0.12
+    },
+    {
+     "kind": "rect",
+     "x": 650,
+     "y": 214,
+     "w": 300,
+     "h": 444,
+     "fill": "#a8512b",
+     "radius": 6
+    },
+    {
+     "kind": "rect",
+     "x": 654,
+     "y": 218,
+     "w": 14,
+     "h": 436,
+     "fill": "#8f3f1e"
+    },
+    {
+     "kind": "text",
+     "x": 674,
+     "y": 258,
+     "w": 252,
+     "h": 18,
+     "family": "Figtree",
+     "size": 13,
+     "weight": 600,
+     "color": "#f6ecd7",
+     "align": "center",
+     "letterSpacing": 5,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "A novel"
+    },
+    {
+     "kind": "rect",
+     "x": 674,
+     "y": 330,
+     "w": 252,
+     "h": 180,
+     "fill": "#f6ecd7",
+     "radius": 2
+    },
+    {
+     "kind": "text",
+     "x": 690,
+     "y": 354,
+     "w": 220,
+     "h": 94,
+     "family": "Playfair Display",
+     "size": 40,
+     "weight": 700,
+     "color": "#2b2118",
+     "align": "center",
+     "lineHeight": 1.12,
+     "text": "The Tide\nClock"
+    },
+    {
+     "kind": "rect",
+     "x": 782,
+     "y": 462,
+     "w": 36,
+     "h": 2,
+     "fill": "#a8512b"
+    },
+    {
+     "kind": "text",
+     "x": 690,
+     "y": 474,
+     "w": 220,
+     "h": 16,
+     "family": "Figtree",
+     "size": 12,
+     "weight": 600,
+     "color": "#6b5a45",
+     "align": "center",
+     "letterSpacing": 2,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "N. E. Winterbourne"
+    },
+    {
+     "kind": "rect",
+     "x": 794,
+     "y": 548,
+     "w": 12,
+     "h": 12,
+     "fill": "#f6ecd7",
+     "rotation": 45
+    },
+    {
+     "kind": "text",
+     "x": 674,
+     "y": 600,
+     "w": 252,
+     "h": 14,
+     "family": "Figtree",
+     "size": 11,
+     "weight": 600,
+     "color": "#f6ecd7",
+     "align": "center",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Hearthside Press"
+    },
+    {
+     "kind": "ellipse",
+     "x": 858,
+     "y": 100,
+     "w": 112,
+     "h": 112,
+     "fill": "#f2e8d2",
+     "stroke": "#a8512b",
+     "strokeWidth": 2
+    },
+    {
+     "kind": "text",
+     "x": 858,
+     "y": 130,
+     "w": 112,
+     "h": 14,
+     "family": "Figtree",
+     "size": 11,
+     "weight": 700,
+     "color": "#75634e",
+     "align": "center",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Meeting"
+    },
+    {
+     "kind": "text",
+     "x": 858,
+     "y": 148,
+     "w": 112,
+     "h": 40,
+     "family": "Playfair Display",
+     "size": 32,
+     "weight": 700,
+     "color": "#2b2118",
+     "align": "center",
+     "lineHeight": 1.1,
+     "text": "No. 12"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "od-sitting-reading",
+     "x": 628,
+     "y": 724,
+     "w": 344,
+     "h": 258
+    }
+   ]
+  }
+ ],
+ "rank": 20
+}

@@ -9,7 +9,19 @@ import { AlertTriangle, ShieldAlert, ChevronDown, Check, Image as ImageIcon, Fil
 import { toSvg, rasterDimensions, encodeApng, encodeGif, designPageToLottie } from "@hc/export";
 import { zipFiles, type ZipEntry } from "@/lib/zip";
 import type { BrandLintResult } from "@hc/sdk";
-import { createScene, renderScene, poseDesignAt, pageAnimationDuration, type CanvasLike, type Viewport } from "@hc/engine";
+import {
+  createScene,
+  renderScene,
+  poseDesignAt,
+  pageAnimationDuration,
+  planDeckFrames,
+  renderTransition,
+  morphPlan,
+  morphDesignAt,
+  type CanvasLike,
+  type Viewport,
+  type DeckFrame,
+} from "@hc/engine";
 import { useEditor } from "@/store/editor";
 import { useBrand } from "@/store/brand";
 import { imageAssets } from "@/lib/assetProvider";
@@ -23,8 +35,8 @@ const FORMATS: { value: Format; label: string; suffix: string; desc: string; ico
   { value: "jpg", label: "JPG", suffix: "jpg", desc: "Small file size, best for photos", icon: ImageIcon },
   { value: "pdf", label: "PDF", suffix: "pdf", desc: "Best for documents and printing", icon: FileText },
   { value: "svg", label: "SVG", suffix: "svg", desc: "Editable vector graphic", icon: Shapes },
-  { value: "apng", label: "Animated PNG", suffix: "apng", desc: "Plays this page's animation, lossless", icon: ImageIcon },
-  { value: "gif", label: "Animated GIF", suffix: "gif", desc: "Plays this page's animation, widely supported", icon: ImageIcon },
+  { value: "apng", label: "Animated PNG", suffix: "apng", desc: "Plays the deck (or page) with transitions, lossless", icon: ImageIcon },
+  { value: "gif", label: "Animated GIF", suffix: "gif", desc: "Plays the deck (or page) with transitions, widely supported", icon: ImageIcon },
   { value: "lottie", label: "Lottie", suffix: "json", desc: "Vector animation JSON (lottie-web, After Effects)", icon: Shapes },
 ];
 
@@ -49,6 +61,73 @@ function renderPageCanvas(doc: import("@hc/schema").DesignFile, index: number, s
   // not just the white canvas prefill, or the PNG comes out opaque.
   renderScene(createScene(doc, index), ctx as unknown as CanvasLike, vp, { assets: imageAssets, skipBackground: !opaque });
   return canvas;
+}
+
+/**
+ * Render one planned deck frame (doc 28 FR-19): either a posed slide or a
+ * transition composite between two slides, drawn through the same pure
+ * `@hc/engine` compositor present mode and the web player use, so an exported
+ * deck animates exactly as it presents.
+ */
+function renderDeckFrame(
+  doc: import("@hc/schema").DesignFile,
+  frame: DeckFrame,
+  scale: number,
+  opaque: boolean,
+): HTMLCanvasElement | null {
+  if (frame.kind === "slide") {
+    return renderPageCanvas(poseDesignAt(doc, frame.pageIndex, frame.tMs), frame.pageIndex, scale, opaque);
+  }
+  // A transition composite: pose both slides, then blend them.
+  const { fromIndex, toIndex, transition, progress, toTMs } = frame;
+  const pg = doc.pages[toIndex];
+  if (!pg) return null;
+  const w = Math.max(1, Math.round(pg.width * scale));
+  const h = Math.max(1, Math.round(pg.height * scale));
+  const dest = document.createElement("canvas");
+  dest.width = w;
+  dest.height = h;
+  const ctx = dest.getContext("2d");
+  if (!ctx) return null;
+
+  // Magic Move: hide the shared elements in both buffers so the compositor
+  // cross-fades only the non-shared content; the tweened layer is drawn on top.
+  const fromPosed = poseDesignAt(doc, fromIndex, Number.MAX_SAFE_INTEGER); // leaving slide, settled
+  const toPosed = poseDesignAt(doc, toIndex, toTMs); // arriving slide, entering
+  const morph = transition.type === "morph" ? morphPlan(fromPosed, fromIndex, toPosed, toIndex) : null;
+  if (morph) {
+    for (const n of morph.fromNodes.values()) (n as { hidden?: boolean }).hidden = true;
+    for (const n of morph.toNodes.values()) (n as { hidden?: boolean }).hidden = true;
+  }
+  const bufA = renderPageCanvas(fromPosed, fromIndex, scale, opaque);
+  const bufB = renderPageCanvas(toPosed, toIndex, scale, opaque);
+  if (!bufA || !bufB) return null;
+
+  renderTransition(ctx as unknown as CanvasLike, transition, {
+    from: bufA,
+    to: bufB,
+    width: w,
+    height: h,
+    progress,
+    background: opaque ? "#ffffff" : "transparent",
+  });
+
+  if (morph && morph.ids.length) {
+    // `morphDesignAt` reads the (hidden) shared nodes it planned, so unhiding
+    // first would not change the tween; render the tweened layer as planned.
+    const tweened = morphDesignAt(morph, toPosed, toIndex, progress);
+    for (const n of tweened.pages[toIndex].children) (n as { hidden?: boolean }).hidden = false;
+    const vp: Viewport = { zoom: scale, panX: 0, panY: 0, dpr: 1, width: w, height: h };
+    try {
+      renderScene(createScene(tweened, toIndex), ctx as unknown as CanvasLike, vp, {
+        assets: imageAssets,
+        skipBackground: true,
+      });
+    } catch {
+      /* a cross-origin image can throw; keep the composited frame */
+    }
+  }
+  return dest;
 }
 
 function download(blob: Blob, filename: string) {
@@ -76,6 +155,9 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const credits = useMemo(() => (open ? compileAttribution(useEditor.getState().doc) : []), [open, rev]);
   const [format, setFormat] = useState<Format>("png");
+  // Accessibility-tagged PDF (doc 28 FR-22): rendered by the Go encoder instead
+  // of rasterized here, so the text stays real text and carries a structure tree.
+  const [taggedPdf, setTaggedPdf] = useState(false);
   const [scale, setScale] = useState(1);
   const [transparent, setTransparent] = useState(true);
   const [quality, setQuality] = useState(92); // jpg quality 0..100
@@ -92,15 +174,26 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
   const doc = useEditor.getState().doc;
   const pageCount = doc.pages.length;
 
-  // Default the page selection to the current page each time the panel opens.
-  // Deferred out of the effect body (Promise microtask) to avoid a synchronous
-  // setState-in-effect, matching the gate effects below.
+  // Default the page selection when the panel opens or the format changes.
+  // Animated formats on a multi-page deck default to the WHOLE deck, so the
+  // export plays the presentation through with its transitions (doc 28 FR-19);
+  // everything else defaults to the current page. Narrowing to one page is
+  // still a deliberate click. Deferred out of the effect body (Promise
+  // microtask) to avoid a synchronous setState-in-effect, matching the gate
+  // effects below.
+  const animatedDeck = (format === "apng" || format === "gif") && pageCount > 1;
+  // Keyed on `open` + whether the animated-deck default applies, so choosing a
+  // format re-defaults the selection but a later manual narrow (Current / a
+  // page toggle) sticks: this effect does not re-run on `selected`.
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    void Promise.resolve().then(() => { if (!cancelled) setSelected([Math.min(activePage, pageCount - 1)]); });
+    void Promise.resolve().then(() => {
+      if (cancelled) return;
+      setSelected(animatedDeck ? Array.from({ length: pageCount }, (_, i) => i) : [Math.min(activePage, pageCount - 1)]);
+    });
     return () => { cancelled = true; };
-  }, [open, activePage, pageCount]);
+  }, [open, activePage, pageCount, animatedDeck]);
 
   // Close the format dropdown on outside click / Escape.
   useEffect(() => {
@@ -152,7 +245,7 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
   const isRaster = format === "png" || format === "jpg";
   // Animated/vector-anim formats export a single file of the active page only.
   const isSingleAnimated = format === "apng" || format === "gif" || format === "lottie";
-  const sizable = format !== "svg" && format !== "lottie"; // resolution-independent
+  const sizable = format !== "svg" && format !== "lottie" && !(format === "pdf" && taggedPdf); // resolution-independent
   // The page(s) that will actually be exported, sorted; PDF always uses all
   // selected, raster/svg emit one file per selected page.
   const pages = selected.length ? [...selected].sort((a, b) => a - b) : [Math.min(activePage, pageCount - 1)];
@@ -163,6 +256,35 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
 
   function togglePage(i: number) {
     setSelected((prev) => (prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]));
+  }
+
+  /**
+   * Frames for an animated export (doc 28 FR-19). A multi-page deck with no
+   * narrowed page selection exports its whole playthrough, transitions
+   * included, through the pure `@hc/engine` planner; otherwise it stays a
+   * single page's own animation timeline (the shipped behavior). Reduced
+   * motion drops transitions, matching the reduced-motion present path.
+   */
+  function deckPlan(): DeckFrame[] {
+    const fps = 15;
+    // More than one page in play means "play the deck through"; exactly one
+    // selected page means "export just that page's own animation".
+    const wholeDeck = pageCount > 1 && pages.length > 1;
+    if (wholeDeck) {
+      const reducedMotion =
+        typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+      return planDeckFrames(doc, { fps, reducedMotion, maxFrames: 900, pageIndices: pages });
+    }
+    const idx = pages[0] ?? Math.min(activePage, pageCount - 1);
+    const dur = pageAnimationDuration(doc, idx) || 3000;
+    const frameCount = Math.max(2, Math.min(150, Math.round((dur / 1000) * fps) + 1));
+    const delayMs = Math.round(1000 / fps);
+    return Array.from({ length: frameCount }, (_, i) => ({
+      kind: "slide" as const,
+      pageIndex: idx,
+      tMs: (i / (frameCount - 1)) * dur,
+      delayMs,
+    }));
   }
 
   async function run() {
@@ -181,7 +303,14 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
       const safeBase = (doc.title || "design").replace(/[^\w.-]+/g, "-").replace(/^-+|-+$/g, "") || "design";
       const nameFor = (i: number, suffix: string) => (fileCount > 1 ? `${safeBase}-${i + 1}.${suffix}` : `${safeBase}.${suffix}`);
 
-      if (format === "pdf") {
+      if (format === "pdf" && taggedPdf && designId) {
+        // The server renders the design as last saved, so it is fetched rather
+        // than built here. Its text is real text in the author's reading order.
+        const res = await fetch(oc.taggedPdfUrl(designId), { credentials: "include" });
+        if (!res.ok) throw new Error(`tagged PDF export failed (${res.status})`);
+        download(await res.blob(), `${safeBase}.pdf`);
+        toast.success(`Downloaded ${safeBase}.pdf`);
+      } else if (format === "pdf") {
         const { jsPDF } = await import("jspdf");
         let pdf: import("jspdf").jsPDF | undefined;
         for (const i of pages) {
@@ -198,51 +327,43 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
         if (pdf) pdf.save(`${safeBase}.pdf`);
         toast.success(`Downloaded ${safeBase}.pdf`);
       } else if (format === "apng") {
-        // Animated PNG of the active page: sample the page's animation timeline,
-        // pose + render each frame to a PNG, then assemble a lossless APNG.
-        const idx = pages[0] ?? Math.min(activePage, pageCount - 1);
-        const dur = pageAnimationDuration(doc, idx) || 3000;
-        const fps = 15;
-        const frameCount = Math.max(2, Math.min(150, Math.round((dur / 1000) * fps) + 1));
-        const delayMs = Math.round(1000 / fps);
+        // Animated PNG. A multi-page deck exports its whole playthrough,
+        // transitions included, via the pure deck planner + compositor (doc 28
+        // FR-19); a single page exports its own animation timeline as before.
+        const plan = deckPlan();
         const frames: { png: Uint8Array; delayMs: number }[] = [];
-        for (let i = 0; i < frameCount; i++) {
-          const t = (i / (frameCount - 1)) * dur;
-          const canvas = renderPageCanvas(poseDesignAt(doc, idx, t), idx, scale, !transparent);
+        for (const f of plan) {
+          const canvas = renderDeckFrame(doc, f, scale, !transparent);
           if (!canvas) continue;
           const blob: Blob | null = await new Promise((res) => canvas.toBlob(res, "image/png"));
-          if (blob) frames.push({ png: new Uint8Array(await blob.arrayBuffer()), delayMs });
+          if (blob) frames.push({ png: new Uint8Array(await blob.arrayBuffer()), delayMs: f.delayMs });
         }
         if (frames.length < 2) {
-          toast.error("This page has no animation to export. Add one in the Animate panel.");
+          toast.error("Nothing to animate. Add an animation or a slide transition, or add a page.");
         } else {
           download(new Blob([encodeApng(frames, { loops: 0 }) as BlobPart], { type: "image/apng" }), `${safeBase}.apng`);
           toast.success(`Downloaded ${safeBase}.apng (${frames.length} frames)`);
         }
       } else if (format === "gif") {
-        // Animated GIF of the active page: same timeline sampling as APNG, but we
-        // grab raw RGBA per frame and quantize to a shared palette in @hc/export.
-        const idx = pages[0] ?? Math.min(activePage, pageCount - 1);
-        const dur = pageAnimationDuration(doc, idx) || 3000;
-        const fps = 15;
-        const frameCount = Math.max(2, Math.min(150, Math.round((dur / 1000) * fps) + 1));
-        const delayMs = Math.round(1000 / fps);
+        // Animated GIF: same deck plan as APNG (whole playthrough with
+        // transitions for a deck, one page's timeline otherwise), but we grab
+        // raw RGBA per frame and quantize to a shared palette in @hc/export.
+        const plan = deckPlan();
         let gw = 0;
         let gh = 0;
         const frames: { rgba: Uint8Array; delayMs: number }[] = [];
-        for (let i = 0; i < frameCount; i++) {
-          const t = (i / (frameCount - 1)) * dur;
-          const canvas = renderPageCanvas(poseDesignAt(doc, idx, t), idx, scale, !transparent);
+        for (const f of plan) {
+          const canvas = renderDeckFrame(doc, f, scale, !transparent);
           if (!canvas) continue;
           const ctx = canvas.getContext("2d");
           if (!ctx) continue;
           gw = canvas.width;
           gh = canvas.height;
           const img = ctx.getImageData(0, 0, gw, gh);
-          frames.push({ rgba: new Uint8Array(img.data.buffer.slice(0)), delayMs });
+          frames.push({ rgba: new Uint8Array(img.data.buffer.slice(0)), delayMs: f.delayMs });
         }
         if (frames.length < 2 || !gw || !gh) {
-          toast.error("This page has no animation to export. Add one in the Animate panel.");
+          toast.error("Nothing to animate. Add an animation or a slide transition, or add a page.");
         } else {
           const gif = encodeGif(frames, { width: gw, height: gh, loops: 0, transparentAlpha: transparent ? 128 : 0 });
           download(new Blob([gif as BlobPart], { type: "image/gif" }), `${safeBase}.gif`);
@@ -346,6 +467,33 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
             </ul>
           )}
         </div>
+
+        {/* Accessible PDF (doc 28 FR-22). The two PDF paths are a real
+            trade-off, so it is named rather than hidden: the tagged one is
+            readable by assistive technology but renders text in standard
+            faces, and it exports the design as last saved. */}
+        {format === "pdf" && (
+          <div className="mb-3 rounded-lg border border-neutral-200 p-2.5">
+            <label className="flex cursor-pointer items-start gap-2">
+              <input
+                type="checkbox"
+                checked={taggedPdf}
+                disabled={!designId}
+                onChange={(e) => setTaggedPdf(e.target.checked)}
+                data-testid="export-tagged-pdf"
+                className="mt-0.5 h-3.5 w-3.5 accent-brand-500"
+              />
+              <span className="min-w-0">
+                <span className="block text-xs font-medium text-neutral-700">Accessible PDF (tagged)</span>
+                <span className="mt-0.5 block text-[11px] leading-snug text-neutral-500">
+                  {designId
+                    ? "Real, selectable text a screen reader can follow in your reading order, with alt text and slide titles. Fonts you uploaded are embedded; web fonts fall back to standard faces. The last saved version is exported."
+                    : "Save the design first to export an accessible PDF."}
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
 
         {/* Size multiplier with live pixel dimensions (raster + pdf). */}
         {sizable && (

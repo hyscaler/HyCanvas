@@ -159,8 +159,10 @@ export default function SharedLinkPage() {
         <Head>
           <title>{designTitle} · HyCanvas</title>
         </Head>
-        <div className="min-h-screen bg-neutral-100">
-          <header className="flex items-center gap-3 border-b border-neutral-200 bg-surface px-4 py-2.5">
+        {/* A column flex screen so the deck player can fill the space under the
+            header (a scroll-stack render for a single page still scrolls). */}
+        <div className="flex min-h-screen flex-col bg-neutral-100">
+          <header className="flex shrink-0 items-center gap-3 border-b border-neutral-200 bg-surface px-4 py-2.5">
             <Logo size={26} />
             <span className="min-w-0 truncate text-sm font-semibold text-neutral-800">{designTitle}</span>
             <span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">View only</span>

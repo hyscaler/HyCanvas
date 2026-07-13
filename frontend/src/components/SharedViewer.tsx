@@ -10,6 +10,7 @@ import type { DesignFile } from "@hc/sdk";
 import { createScene, renderScene, type CanvasLike, type Viewport } from "@hc/engine";
 import { imageAssets } from "@/lib/assetProvider";
 import { useViewBeat } from "@/lib/useViewBeat";
+import { DeckPlayer } from "@/components/DeckPlayer";
 
 function PageCanvas({ doc, index, onVisible }: { doc: DesignFile; index: number; onVisible?: (index: number) => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -58,6 +59,24 @@ export function SharedViewer({
   token?: string;
   password?: string;
 }) {
+  // Multi-page designs are decks: render the real web player (engine-drawn
+  // slides, navigation, fullscreen, transitions) instead of a scroll stack
+  // (doc 28 FR-26). Single-page designs stay a plain scroll render.
+  if (doc.pages.length > 1) {
+    return <DeckPlayer doc={doc} token={token} password={password} />;
+  }
+  return <ScrollViewer doc={doc} token={token} password={password} />;
+}
+
+function ScrollViewer({
+  doc,
+  token,
+  password,
+}: {
+  doc: DesignFile;
+  token?: string;
+  password?: string;
+}) {
   const [visiblePage, setVisiblePage] = useState(0);
   // Anonymous engagement instrumentation: record a view +
   // heartbeats keyed to the share-link token, attributing time to the page the
@@ -69,7 +88,7 @@ export function SharedViewer({
     getPageId: () => doc.pages[visiblePage]?.id ?? null,
   });
   return (
-    <div className="flex flex-col items-center gap-6 py-8">
+    <div className="flex flex-1 flex-col items-center gap-6 overflow-auto py-8">
       {doc.pages.map((_, i) => (
         <PageCanvas key={i} doc={doc} index={i} onVisible={setVisiblePage} />
       ))}

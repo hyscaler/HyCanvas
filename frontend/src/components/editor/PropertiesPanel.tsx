@@ -26,6 +26,7 @@ import { fonts } from "@/lib/fontProvider";
 import { promptText, alertText } from "@/lib/promptDialog";
 import { FILTER_PRESETS, resolvePresetOps, autoEnhanceOps, removeBackground, rasterizeToPng, type AdjOp } from "@/lib/imageFilters";
 import { useEditor } from "@/store/editor";
+import { BuildOrderSection } from "./BuildOrderSection";
 import { usePresence } from "@/store/presence";
 import { useBrand, colorsLockedFor, fontsLockedFor, brandHexColors, brandFontFamilies } from "@/store/brand";
 import { lockSelection, unlockSelection } from "@/lib/useRealtime";
@@ -307,6 +308,7 @@ function VideoSection({ node }: { node: Node }) {
 }
 const chipCls = (active: boolean) => `rounded-md px-2.5 py-1 text-xs font-medium transition ${active ? "bg-surface text-brand-ink shadow-sm" : "text-neutral-500 hover:text-neutral-700"}`;
 const selectCls = "w-full rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm text-neutral-800 outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100";
+const actionBtnCls = "w-full rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50";
 const inputCls = "w-full rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm text-neutral-800 outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100";
 
 function runColorHex(style: CharStyle): string {
@@ -573,7 +575,12 @@ export function PropertiesPanel() {
             </Section>
           );
         })()}
+        <PageLayoutSection page={page} />
+        <DeckThemeSection />
         <PageTransitionSection page={page} />
+        <Section title="Build order" defaultOpen={false}>
+          <BuildOrderSection />
+        </Section>
         <PagePresentSection page={page} />
       </Wrap>
     );
@@ -1424,13 +1431,13 @@ export function PropertiesPanel() {
                     <Toggle checked={!!hl} onChange={(on) => setBg(on ? (colorFromHex("#fde047")) : null)} />
                   </label>
                   {hl && (
-                    <div className="flex items-center gap-2">
-                      <input type="color" value={hlColor ? colorHex(hlColor) : "#fde047"} onChange={(e) => setBg(colorFromHex(e.target.value))} className="oc-color h-8 w-9 shrink-0" title="Background color" />
-                      <div className="flex flex-1 items-center gap-1.5">
-                        <span className="text-[11px] text-neutral-400">Round</span>
-                        <input type="range" min={0} max={40} value={radius} onChange={(e) => useEditor.getState().setTextBackground(id, hlColor ?? colorFromHex("#fde047"), hl.padding ?? 8, Number(e.target.value))} className="flex-1 accent-brand-600" />
+                    <>
+                      <div className="flex items-center gap-2">
+                        <span className="w-12 shrink-0 text-[11px] text-neutral-400">Color</span>
+                        <input type="color" value={hlColor ? colorHex(hlColor) : "#fde047"} onChange={(e) => setBg(colorFromHex(e.target.value))} className="oc-color h-8 w-9 shrink-0" title="Background color" />
                       </div>
-                    </div>
+                      <TextHighlightLevels id={id} hl={hl} />
+                    </>
                   )}
                 </div>
               );
@@ -1438,7 +1445,8 @@ export function PropertiesPanel() {
             {/* Named text effects (Canva-style), engine-rendered. Mutually exclusive. */}
             {(() => {
               const tn = single.node as unknown as { textEffects?: { kind: string }[]; box?: { verticalAlign?: "top" | "middle" | "bottom" }; flow?: { kind: string; curvature?: number } };
-              const active = (tn.textEffects ?? []).find((e) => e.kind !== "highlight")?.kind ?? "none";
+              const fx = (single.node as unknown as { textEffects?: TextEffect[] }).textEffects?.find((e) => e.kind !== "highlight");
+              const active = fx?.kind ?? "none";
               const set = (effect: TextEffect | null) => useEditor.getState().setTextEffect(id, effect);
               const black = solidFromHex("#000000");
               const PRESETS: { key: string; label: string; make: () => TextEffect | null }[] = [
@@ -1464,6 +1472,8 @@ export function PropertiesPanel() {
                       <button key={p.key} onClick={() => set(p.make())} className={ebtn(active === p.key)} title={p.label}>{p.label}</button>
                     ))}
                   </div>
+                  {/* Per-effect levels: every preset is tunable, not take-it-or-leave-it. */}
+                  {fx && <TextEffectControls id={id} fx={fx} />}
                   {/* Curve */}
                   <div className="flex items-center gap-2">
                     <span className="w-12 shrink-0 text-[11px] text-neutral-400">Curve</span>
@@ -1734,6 +1744,7 @@ export function PropertiesPanel() {
       {single && <AnimateSection node={single.node} />}
       {single && single.node.type === "image" && <ImageMotionSection node={single.node} />}
       {single && <InteractionSection node={single.node} doc={doc} />}
+      {single && <NodeAccessibilitySection node={single.node} />}
     </Wrap>
   );
 }
@@ -2044,6 +2055,161 @@ function InteractionSection({ node, doc }: { node: Node; doc: DesignFile }) {
   );
 }
 
+/** Slide layout picker (doc 28 FR-3). Assigning a layout gives the page a
+ *  placeholder cascade, including the title placeholder that makes its name a
+ *  real, screen-reader-navigable slide title. Installing the built-in layouts
+ *  is itself one undoable action, so a deck opts in explicitly. */
+function PageLayoutSection({ page }: { page: Page }) {
+  const st = useEditor.getState();
+  const rev = useEditor((s) => s.rev);
+  const doc = useEditor.getState().doc as unknown as {
+    layouts?: { id: string; name: string }[];
+  };
+  const layouts = doc.layouts ?? [];
+  const current = (page as { layoutId?: string }).layoutId;
+  // Resolve against the live doc so a deleted layout shows as "None".
+  const known = layouts.some((l) => l.id === current);
+  void rev; // re-render when the deck's layouts change
+
+  if (!layouts.length) {
+    return (
+      <Section title="Layout">
+        <p className="mb-2 text-[11px] leading-relaxed text-neutral-500">
+          Slide layouts give each slide a title and content placeholders, and make slide titles readable by screen
+          readers.
+        </p>
+        <button type="button" onClick={() => st.ensureSlideLayouts()} className={actionBtnCls} data-testid="add-layouts">
+          Add slide layouts
+        </button>
+      </Section>
+    );
+  }
+  return (
+    <Section title="Layout">
+      <select
+        value={known ? current : "none"}
+        onChange={(e) => st.setPageLayout(e.target.value === "none" ? undefined : e.target.value)}
+        className={selectCls}
+        data-testid="layout-select"
+        aria-label="Slide layout"
+      >
+        <option value="none">None</option>
+        {layouts.map((l) => (
+          <option key={l.id} value={l.id}>
+            {l.name}
+          </option>
+        ))}
+      </select>
+      <p className="mt-1.5 text-[11px] text-neutral-500">
+        The layout supplies this slide&apos;s title and content regions.
+      </p>
+    </Section>
+  );
+}
+
+/** Deck theme swap (doc 28 FR-4). Adopting a theme restyles the deck's palette
+ *  and font pair in one undoable action; it never rewrites page content, which
+ *  is what keeps it reversible (recoloring nodes is the Brand panel's re-skin). */
+const BUILTIN_THEMES: { id: string; name: string; colors: string[]; fontHeading: string; fontBody: string }[] = [
+  { id: "theme-plum", name: "Plum", colors: ["#9B2C72", "#C84B9A", "#3E1030", "#FBEFF7", "#18181b", "#ffffff"], fontHeading: "Plus Jakarta Sans", fontBody: "Plus Jakarta Sans" },
+  { id: "theme-slate", name: "Slate", colors: ["#0f172a", "#334155", "#64748b", "#e2e8f0", "#020617", "#ffffff"], fontHeading: "Inter", fontBody: "Inter" },
+  { id: "theme-forest", name: "Forest", colors: ["#14532d", "#16a34a", "#4ade80", "#dcfce7", "#052e16", "#ffffff"], fontHeading: "Inter", fontBody: "Inter" },
+];
+
+function DeckThemeSection() {
+  const st = useEditor.getState();
+  const rev = useEditor((s) => s.rev);
+  const doc = useEditor.getState().doc as unknown as { theme?: { id: string } };
+  const current = doc.theme?.id;
+  void rev;
+  return (
+    <Section title="Deck theme">
+      <div className="flex flex-col gap-1.5" role="radiogroup" aria-label="Deck theme">
+        {BUILTIN_THEMES.map((t) => {
+          const active = current === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              data-testid={`theme-${t.id}`}
+              onClick={() =>
+                st.setDeckTheme({
+                  id: t.id,
+                  name: t.name,
+                  colors: t.colors.map((hex, i) => ({ id: `${t.id}-${i}`, color: colorFromHex(hex) })),
+                  fontHeading: t.fontHeading,
+                  fontBody: t.fontBody,
+                })
+              }
+              className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-left text-sm transition ${
+                active ? "border-brand-500 bg-brand-50 text-brand-ink" : "border-neutral-200 hover:bg-neutral-50"
+              }`}
+            >
+              <span className="flex shrink-0 gap-0.5">
+                {t.colors.slice(0, 4).map((c) => (
+                  <span key={c} style={{ background: c }} className="h-4 w-2.5 rounded-sm ring-1 ring-black/10" />
+                ))}
+              </span>
+              <span className="min-w-0 flex-1 truncate">{t.name}</span>
+            </button>
+          );
+        })}
+        {current && (
+          <button type="button" onClick={() => st.setDeckTheme(undefined)} className="mt-0.5 text-left text-[11px] text-neutral-500 hover:underline" data-testid="clear-theme">
+            Clear theme
+          </button>
+        )}
+      </div>
+      <p className="mt-1.5 text-[11px] leading-relaxed text-neutral-500">
+        Themes set the deck&apos;s palette and fonts. Your slide content is not restyled.
+      </p>
+    </Section>
+  );
+}
+
+/** Per-node accessibility (doc 28 FR-29): a description for assistive
+ *  technology, or a decorative flag that exempts the node from needing one.
+ *  Shown for every node type, because meaning is not the preserve of images. */
+function NodeAccessibilitySection({ node }: { node: Node }) {
+  const st = useEditor.getState();
+  const rev = useEditor((s) => s.rev);
+  void rev;
+  const rec = node as unknown as { altText?: string; alt?: string; decorative?: boolean };
+  const decorative = rec.decorative === true;
+  // The generic field wins; the legacy image-only `alt` still shows so an older
+  // file's description is visible rather than appearing to have vanished.
+  const value = rec.altText ?? (node.type === "image" ? rec.alt : undefined) ?? "";
+  return (
+    <Section title="Accessibility" order={ORDER.accessibility}>
+      <label className="mb-1 block text-[11px] font-medium text-neutral-500" htmlFor="a11y-alt">
+        Description (alt text)
+      </label>
+      <textarea
+        id="a11y-alt"
+        data-testid="alt-text-input"
+        rows={2}
+        disabled={decorative}
+        value={value}
+        placeholder={decorative ? "Not needed for decorative elements" : "Describe this element for screen readers"}
+        onChange={(e) => st.setNodeAltText(node.id, e.target.value)}
+        className="w-full resize-y rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm text-neutral-800 outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100 disabled:opacity-50"
+      />
+      <label className="mt-2 flex items-center gap-2 text-sm text-neutral-700">
+        <input
+          type="checkbox"
+          data-testid="decorative-toggle"
+          checked={decorative}
+          onChange={(e) => st.setNodeDecorative(node.id, e.target.checked)}
+          className="h-4 w-4 rounded border-neutral-300 accent-brand-600"
+        />
+        Decorative (skip for screen readers)
+      </label>
+    </Section>
+  );
+}
+
 /** Per-page transition control shown in the empty-selection page panel. */
 function PageTransitionSection({ page }: { page: Page }) {
   const st = useEditor.getState();
@@ -2089,6 +2255,15 @@ function PageTransitionSection({ page }: { page: Page }) {
         </div>
       )}
       <p className="text-[11px] text-neutral-400">Plays when advancing to this page in present mode.</p>
+      {/* Apply-to-all (doc 28 FR-10): PowerPoint's "Apply To All", one undo step. */}
+      <button
+        type="button"
+        data-testid="apply-transition-all"
+        onClick={() => st.applyTransitionToAllPages()}
+        className="mt-2 w-full rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
+      >
+        Apply to all slides
+      </button>
     </Section>
   );
 }
@@ -2185,7 +2360,7 @@ function effectLabel(e: Effect): string {
     case "adjustment": return "Adjustments";
     case "duotone": return "Duotone";
     case "blur": return "Blur";
-    case "shadow": return e.type === "drop" ? "Drop shadow" : "Inner shadow";
+    case "shadow": return (e.type ?? "drop") === "drop" ? "Drop shadow" : "Inner shadow";
     case "glow": return "Glow";
     case "outline": return "Outline";
     default: return (e as { kind: string }).kind;
@@ -2564,6 +2739,7 @@ const ORDER = {
   arrange: 5,
   appearance: 6,
   interactivity: 7, // animate / motion / interaction
+  accessibility: 8, // alt text / decorative (doc 28 FR-29)
 } as const;
 
 /** A small "locked by brand" hint shown above a constrained picker (FR-4). */
@@ -2622,7 +2798,103 @@ function Swatch({ color, onClick, title }: { color: string; onClick: () => void;
   );
 }
 
-type EffectItem = { kind: string; color?: Color; offsetX?: number; offsetY?: number; blur?: number; width?: number; radius?: number; spread?: number };
+type EffectItem = { kind: string; type?: "drop" | "inner"; color?: Color; offsetX?: number; offsetY?: number; blur?: number; width?: number; radius?: number; spread?: number };
+
+/** Per-effect level controls for the active named text effect. Slider drags
+ *  live-preview via previewTextEffects and land as ONE undo step on release
+ *  (commitTextEffects); switching presets stays setTextEffect's job, so a mere
+ *  parameter tweak never strips a legacy node.effects stack. */
+function TextEffectControls({ id, fx }: { id: string; fx: TextEffect }) {
+  const before = useRef<unknown>(null);
+  const st = () => useEditor.getState();
+  const liveList = () => ((locate(st().doc, id)?.node as unknown as { textEffects?: TextEffect[] })?.textEffects ?? []);
+  const snapshot = () => { before.current = structuredClone(liveList().length ? liveList() : null); };
+  const preview = (patch: object) => st().previewTextEffects(id, liveList().map((e) => (e.kind === fx.kind ? ({ ...e, ...patch } as TextEffect) : e)));
+  const commit = () => st().commitTextEffects(id, before.current);
+  // Discrete color pick = one undo step: snapshot, apply, commit in one go.
+  const pickColor = (hex: string) => { snapshot(); preview({ color: solidFromHex(hex) }); commit(); };
+  const fxHex = (f?: { type: string; color?: Color }) => (f?.type === "solid" && f.color ? colorHex(f.color) : "#000000");
+  const colorRow = (color?: { type: string; color?: Color }) => (
+    <div className="flex items-center gap-2">
+      <span className="w-12 shrink-0 text-[11px] text-neutral-400">Color</span>
+      <input type="color" value={fxHex(color)} onChange={(e) => pickColor(e.target.value)} className="oc-color h-8 w-9 shrink-0" />
+    </div>
+  );
+  const slider = (label: string, min: number, max: number, value: number, patch: (n: number) => object, opts: { step?: number; fmt?: (n: number) => string } = {}) => (
+    <FxSlider label={label} min={min} max={max} step={opts.step} value={value} fmt={opts.fmt} onStart={snapshot} onCommit={commit} onChange={(n) => preview(patch(n))} />
+  );
+  const pct = (n: number) => `${n}%`;
+  switch (fx.kind) {
+    case "shadow": return (<>
+      {slider("X", -50, 50, Math.round(fx.dx), (n) => ({ dx: n }))}
+      {slider("Y", -50, 50, Math.round(fx.dy), (n) => ({ dy: n }))}
+      {slider("Blur", 0, 40, Math.round(fx.blur), (n) => ({ blur: n }))}
+      {slider("Opacity", 0, 100, Math.round(fx.opacity * 100), (n) => ({ opacity: n / 100 }), { fmt: pct })}
+      {colorRow(fx.color)}
+    </>);
+    case "lift": return slider("Intensity", 10, 100, Math.round(fx.intensity * 100), (n) => ({ intensity: n / 100 }), { fmt: pct });
+    case "hollow": return slider("Thickness", 0.5, 8, fx.thickness, (n) => ({ thickness: n }), { step: 0.5 });
+    case "splice": return (<>
+      {slider("Thickness", 0.5, 8, fx.thickness, (n) => ({ thickness: n }), { step: 0.5 })}
+      {slider("Offset", 0, 30, Math.round(fx.offset), (n) => ({ offset: n }))}
+      {colorRow(fx.color)}
+    </>);
+    case "echo": return (<>
+      {slider("Offset", 1, 30, Math.round(fx.offset), (n) => ({ offset: n }))}
+      {slider("Copies", 2, 6, Math.round(fx.count), (n) => ({ count: n }))}
+      {colorRow(fx.color)}
+    </>);
+    case "glow": return (<>
+      {slider("Size", 0, 60, Math.round(fx.radius), (n) => ({ radius: n }))}
+      {slider("Intensity", 20, 200, Math.round(fx.intensity * 100), (n) => ({ intensity: n / 100 }), { fmt: pct })}
+      {colorRow(fx.color)}
+    </>);
+    case "neon": return (<>
+      {slider("Intensity", 20, 200, Math.round(fx.intensity * 100), (n) => ({ intensity: n / 100 }), { fmt: pct })}
+      {colorRow(fx.color)}
+    </>);
+    case "outline": return (<>
+      {slider("Width", 0.5, 12, fx.width, (n) => ({ width: n }), { step: 0.5 })}
+      {colorRow(fx.color)}
+    </>);
+    default: return null;
+  }
+}
+
+/** Round/Padding levels for the text background highlight, previewed live and
+ *  committed as one undo step per gesture. */
+function TextHighlightLevels({ id, hl }: { id: string; hl: { padding?: number; radius?: number } }) {
+  const before = useRef<unknown>(null);
+  const st = () => useEditor.getState();
+  const liveList = () => ((locate(st().doc, id)?.node as unknown as { textEffects?: TextEffect[] })?.textEffects ?? []);
+  const snapshot = () => { before.current = structuredClone(liveList().length ? liveList() : null); };
+  const preview = (patch: object) => st().previewTextEffects(id, liveList().map((e) => (e.kind === "highlight" ? ({ ...e, ...patch } as TextEffect) : e)));
+  const commit = () => st().commitTextEffects(id, before.current);
+  return (<>
+    <FxSlider label="Round" min={0} max={40} value={Math.round(hl.radius ?? 8)} onStart={snapshot} onCommit={commit} onChange={(n) => preview({ radius: n })} />
+    <FxSlider label="Padding" min={0} max={40} value={Math.round(hl.padding ?? 8)} onStart={snapshot} onCommit={commit} onChange={(n) => preview({ padding: n })} />
+  </>);
+}
+
+/** Labeled slider row for effect parameters: the drag-to-feel control every
+ *  effect level needs. onChange fires per tick for a live no-undo preview;
+ *  onStart/onCommit bracket the gesture so one drag lands as one undo step
+ *  (same contract as the image adjust sliders' beginDrag/commitEffects). */
+function FxSlider({ label, min, max, step = 1, value, onChange, onStart, onCommit, fmt }: { label: string; min: number; max: number; step?: number; value: number; onChange: (n: number) => void; onStart?: () => void; onCommit?: () => void; fmt?: (n: number) => string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-12 shrink-0 text-[11px] text-neutral-400">{label}</span>
+      <input
+        type="range" min={min} max={max} step={step} value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        onPointerDown={onStart} onPointerUp={onCommit}
+        onKeyDown={(e) => { if (!e.repeat) onStart?.(); }} onKeyUp={onCommit} onBlur={onCommit}
+        className="flex-1 accent-brand-600"
+      />
+      <span className="w-9 shrink-0 text-right text-[11px] tabular-nums text-neutral-500">{fmt ? fmt(value) : value}</span>
+    </div>
+  );
+}
 
 /**
  * Reusable Effects control: one-click presets (shadow/lift/hollow/splice/glow/
@@ -2635,26 +2907,39 @@ function NodeEffects({ id, effects }: { id: string; effects?: readonly { kind: s
   const find = (k: string) => eff.find((e) => e.kind === k);
   const has = (k: string) => !!find(k);
   const make: Record<string, () => EffectItem> = {
-    shadow: () => ({ kind: "shadow", color: { srgb: { r: 0, g: 0, b: 0, a: 0.35 } }, offsetX: 0, offsetY: 3, blur: 6, spread: 0 }),
+    shadow: () => ({ kind: "shadow", type: "drop", color: { srgb: { r: 0, g: 0, b: 0, a: 0.35 } }, offsetX: 0, offsetY: 3, blur: 6, spread: 0 }),
     outline: () => ({ kind: "outline", color: { srgb: { r: 0, g: 0, b: 0, a: 1 } }, width: 3 }),
     glow: () => ({ kind: "glow", color: { srgb: { r: 0.45, g: 0.5, b: 1, a: 0.9 } }, radius: 10 }),
+    blur: () => ({ kind: "blur", radius: 4 }),
   };
   const setAll = (next: EffectItem[]) => useEditor.getState().setEffects(id, (next.length ? next : undefined) as never);
   const toggle = (k: string) => setAll(has(k) ? eff.filter((e) => e.kind !== k) : [...eff, make[k]()]);
   const update = (k: string, patch: Partial<EffectItem>) => setAll(eff.map((e) => (e.kind === k ? { ...e, ...patch } : e)));
+  // Slider gestures: live no-undo preview per tick, one undo step on release
+  // (same contract as the image adjust sliders).
+  const dragBefore = useRef<unknown>(null);
+  const snapshot = () => { dragBefore.current = structuredClone(locate(useEditor.getState().doc, id)?.node.effects ?? null); };
+  const commit = () => useEditor.getState().commitEffects(id, dragBefore.current);
+  const previewUpdate = (k: string, patch: Partial<EffectItem>) => {
+    const live = ((locate(useEditor.getState().doc, id)?.node as unknown as { effects?: EffectItem[] })?.effects ?? []);
+    useEditor.getState().previewEffects(id, live.map((e) => (e.kind === k ? { ...e, ...patch } : e)) as never);
+  };
   const cls = (on: boolean) => `flex-1 rounded-lg border py-1.5 text-xs font-medium transition ${on ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`;
+  // Recoloring keeps the color's alpha: the Opacity slider owns it, and a
+  // swatch change must not silently reset a 35% shadow to full strength.
   const colorInput = (k: string, c?: Color) => (
-    <input type="color" value={c ? colorHex(c) : "#000000"} onChange={(e) => update(k, { color: colorFromHex(e.target.value) })} className="oc-color h-8 w-9 shrink-0" />
+    <input type="color" value={c ? colorHex(c) : "#000000"} onChange={(e) => update(k, { color: { srgb: { ...colorFromHex(e.target.value).srgb, a: c?.srgb.a ?? 1 } } })} className="oc-color h-8 w-9 shrink-0" />
   );
   const sh = find("shadow");
   const ol = find("outline");
   const gl = find("glow");
+  const bl = find("blur");
   const presets: { id: string; label: string; build: () => EffectItem[] }[] = [
     { id: "none", label: "None", build: () => [] },
-    { id: "shadow", label: "Shadow", build: () => [{ kind: "shadow", color: { srgb: { r: 0, g: 0, b: 0, a: 0.35 } }, offsetX: 0, offsetY: 4, blur: 6, spread: 0 }] },
-    { id: "lift", label: "Lift", build: () => [{ kind: "shadow", color: { srgb: { r: 0, g: 0, b: 0, a: 0.28 } }, offsetX: 0, offsetY: 10, blur: 24, spread: 0 }] },
+    { id: "shadow", label: "Shadow", build: () => [{ kind: "shadow", type: "drop", color: { srgb: { r: 0, g: 0, b: 0, a: 0.35 } }, offsetX: 0, offsetY: 4, blur: 6, spread: 0 }] },
+    { id: "lift", label: "Lift", build: () => [{ kind: "shadow", type: "drop", color: { srgb: { r: 0, g: 0, b: 0, a: 0.28 } }, offsetX: 0, offsetY: 10, blur: 24, spread: 0 }] },
     { id: "hollow", label: "Hollow", build: () => [{ kind: "outline", color: { srgb: { r: 0, g: 0, b: 0, a: 1 } }, width: 2 }] },
-    { id: "splice", label: "Splice", build: () => [{ kind: "outline", color: { srgb: { r: 0, g: 0, b: 0, a: 1 } }, width: 2 }, { kind: "shadow", color: { srgb: { r: 0, g: 0, b: 0, a: 0.4 } }, offsetX: 4, offsetY: 4, blur: 0, spread: 0 }] },
+    { id: "splice", label: "Splice", build: () => [{ kind: "outline", color: { srgb: { r: 0, g: 0, b: 0, a: 1 } }, width: 2 }, { kind: "shadow", type: "drop", color: { srgb: { r: 0, g: 0, b: 0, a: 0.4 } }, offsetX: 4, offsetY: 4, blur: 0, spread: 0 }] },
     { id: "glow", label: "Glow", build: () => [{ kind: "glow", color: { srgb: { r: 0.45, g: 0.5, b: 1, a: 0.9 } }, radius: 12 }] },
     { id: "neon", label: "Neon", build: () => [{ kind: "glow", color: { srgb: { r: 0.2, g: 0.9, b: 1, a: 0.95 } }, radius: 16 }, { kind: "outline", color: { srgb: { r: 0.2, g: 0.9, b: 1, a: 1 } }, width: 1.5 }] },
   ];
@@ -2677,14 +2962,19 @@ function NodeEffects({ id, effects }: { id: string; effects?: readonly { kind: s
         <button onClick={() => toggle("shadow")} className={cls(has("shadow"))}>Shadow</button>
         <button onClick={() => toggle("outline")} className={cls(has("outline"))}>Outline</button>
         <button onClick={() => toggle("glow")} className={cls(has("glow"))}>Glow</button>
+        <button onClick={() => toggle("blur")} className={cls(has("blur"))}>Blur</button>
       </div>
       {sh && (
-        <div className="flex items-center gap-2">
-          {colorInput("shadow", sh.color)}
-          <Field key={`shx${sh.offsetX}`} label="X" value={sh.offsetX ?? 0} onCommit={(n) => update("shadow", { offsetX: n })} />
-          <Field key={`shy${sh.offsetY}`} label="Y" value={sh.offsetY ?? 0} onCommit={(n) => update("shadow", { offsetY: n })} />
-          <Field key={`shb${sh.blur}`} label="◌" value={sh.blur ?? 0} onCommit={(n) => update("shadow", { blur: Math.max(0, n) })} />
-        </div>
+        <>
+          <div className="flex items-center gap-2">
+            {colorInput("shadow", sh.color)}
+            <Field key={`shx${sh.offsetX}`} label="X" value={sh.offsetX ?? 0} onCommit={(n) => update("shadow", { offsetX: n })} />
+            <Field key={`shy${sh.offsetY}`} label="Y" value={sh.offsetY ?? 0} onCommit={(n) => update("shadow", { offsetY: n })} />
+          </div>
+          <FxSlider label="Blur" min={0} max={60} value={Math.round(sh.blur ?? 0)} onStart={snapshot} onCommit={commit} onChange={(n) => previewUpdate("shadow", { blur: n })} />
+          <FxSlider label="Opacity" min={0} max={100} value={Math.round(((sh.color?.srgb.a ?? 1) as number) * 100)} fmt={(n) => `${n}%`} onStart={snapshot} onCommit={commit}
+            onChange={(n) => sh.color && previewUpdate("shadow", { color: { ...sh.color, srgb: { ...sh.color.srgb, a: n / 100 } } })} />
+        </>
       )}
       {ol && (
         <div className="flex items-center gap-2">
@@ -2693,10 +2983,18 @@ function NodeEffects({ id, effects }: { id: string; effects?: readonly { kind: s
         </div>
       )}
       {gl && (
-        <div className="flex items-center gap-2">
-          {colorInput("glow", gl.color)}
-          <Field key={`glr${gl.radius}`} label="◌" value={gl.radius ?? 0} onCommit={(n) => update("glow", { radius: Math.max(0, n) })} />
-        </div>
+        <>
+          <div className="flex items-center gap-2">
+            <span className="w-12 shrink-0 text-[11px] text-neutral-400">Color</span>
+            {colorInput("glow", gl.color)}
+          </div>
+          <FxSlider label="Size" min={0} max={60} value={Math.round(gl.radius ?? 0)} onStart={snapshot} onCommit={commit} onChange={(n) => previewUpdate("glow", { radius: n })} />
+          <FxSlider label="Opacity" min={0} max={100} value={Math.round(((gl.color?.srgb.a ?? 1) as number) * 100)} fmt={(n) => `${n}%`} onStart={snapshot} onCommit={commit}
+            onChange={(n) => gl.color && previewUpdate("glow", { color: { ...gl.color, srgb: { ...gl.color.srgb, a: n / 100 } } })} />
+        </>
+      )}
+      {bl && (
+        <FxSlider label="Amount" min={0} max={40} value={Math.round(bl.radius ?? 0)} onStart={snapshot} onCommit={commit} onChange={(n) => previewUpdate("blur", { radius: n })} />
       )}
     </div>
   );

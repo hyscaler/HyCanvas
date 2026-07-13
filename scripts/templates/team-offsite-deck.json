@@ -1,0 +1,979 @@
+{
+ "id": "team-offsite-deck",
+ "title": "Aspen Creek Team Offsite",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "offsite",
+  "agenda",
+  "team",
+  "retreat",
+  "schedule"
+ ],
+ "styleTags": [
+  "playful",
+  "editorial",
+  "warm"
+ ],
+ "size": [
+  1920,
+  1080
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Figtree",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Work Sans",
+   "weight": 400
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n3",
+   "kind": "text",
+   "label": "Offsite name",
+   "hint": "Your offsite name and year, split across two short lines"
+  },
+  {
+   "node": "p0-n4",
+   "kind": "text",
+   "label": "Welcome line",
+   "hint": "One warm sentence about what the trip is for"
+  },
+  {
+   "node": "p0-n6-label",
+   "kind": "text",
+   "label": "Location chip",
+   "hint": "Venue name and place, e.g. Aspen Creek Lodge, Colorado"
+  },
+  {
+   "node": "p1-n2",
+   "kind": "text",
+   "label": "Day headline",
+   "hint": "A short, punchy theme for the day, 3-5 words"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Title",
+   "bg": {
+    "angle": 135,
+    "stops": [
+     [
+      "#3d2c5a",
+      0
+     ],
+     [
+      "#2a1e40",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 1326,
+     "y": 254,
+     "w": 440,
+     "h": 440,
+     "fill": "#fdc858",
+     "radius": 28
+    },
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 210,
+     "w": 64,
+     "h": 10,
+     "fill": "#fdc858",
+     "radius": 5
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 248,
+     "w": 760,
+     "h": 30,
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 700,
+     "color": "#fdc858",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Ridgeline Software \u00b7 All-hands offsite"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 306,
+     "w": 1060,
+     "h": 236,
+     "family": "Figtree",
+     "size": 108,
+     "weight": 800,
+     "color": "#ffffff",
+     "lineHeight": 1.06,
+     "text": "Aspen Creek\nOffsite 2026"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 596,
+     "w": 900,
+     "h": 90,
+     "family": "Work Sans",
+     "size": 28,
+     "weight": 400,
+     "color": "#cfc2e6",
+     "lineHeight": 1.5,
+     "text": "Three days in the mountains to chart the 2027 course, ship something silly, and eat too many s'mores."
+    },
+    {
+     "kind": "button",
+     "x": 140,
+     "y": 756,
+     "w": 290,
+     "h": 64,
+     "fill": "#4a3868",
+     "label": "Sept 16 to 18",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#ebd9ff",
+     "radius": 32
+    },
+    {
+     "kind": "button",
+     "x": 454,
+     "y": 756,
+     "w": 430,
+     "h": 64,
+     "fill": "#4a3868",
+     "label": "Aspen Creek Lodge, Colorado",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#ebd9ff",
+     "radius": 32
+    },
+    {
+     "kind": "button",
+     "x": 908,
+     "y": 756,
+     "w": 290,
+     "h": 64,
+     "fill": "#4a3868",
+     "label": "All 42 of us",
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 600,
+     "color": "#ebd9ff",
+     "radius": 32
+    },
+    {
+     "kind": "text",
+     "x": 1300,
+     "y": 716,
+     "w": 440,
+     "h": 48,
+     "family": "Caveat",
+     "size": 38,
+     "weight": 700,
+     "color": "#fdc858",
+     "align": "center",
+     "lineHeight": 1.2,
+     "text": "cabin crew, assemble!"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 980,
+     "w": 760,
+     "h": 26,
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 500,
+     "color": "#9d8cbe",
+     "lineHeight": 1.2,
+     "text": "Ridgeline Software \u00b7 People Ops \u00b7 #offsite-2026"
+    },
+    {
+     "kind": "text",
+     "x": 1600,
+     "y": 980,
+     "w": 180,
+     "h": 26,
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 500,
+     "color": "#9d8cbe",
+     "align": "right",
+     "lineHeight": 1.2,
+     "text": "01 / 03"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day66-travel",
+     "x": 1300,
+     "y": 228,
+     "w": 440,
+     "h": 440
+    }
+   ]
+  },
+  {
+   "name": "Day one schedule",
+   "bg": "#f7f3fb",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 140,
+     "y": 100,
+     "w": 64,
+     "h": 10,
+     "fill": "#fdc858",
+     "radius": 5
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 136,
+     "w": 800,
+     "h": 28,
+     "family": "Work Sans",
+     "size": 22,
+     "weight": 700,
+     "color": "#7549a5",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Day one \u00b7 Wednesday, September 16"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 188,
+     "w": 1000,
+     "h": 80,
+     "family": "Figtree",
+     "size": 62,
+     "weight": 800,
+     "color": "#33254a",
+     "lineHeight": 1.1,
+     "text": "Maps out, laptops shut."
+    },
+    {
+     "kind": "rect",
+     "x": 150,
+     "y": 332,
+     "w": 4,
+     "h": 520,
+     "fill": "#d9c8ef",
+     "radius": 2
+    },
+    {
+     "kind": "ellipse",
+     "x": 142,
+     "y": 322,
+     "w": 20,
+     "h": 20,
+     "fill": "#fdc858"
+    },
+    {
+     "kind": "text",
+     "x": 196,
+     "y": 320,
+     "w": 150,
+     "h": 28,
+     "family": "JetBrains Mono",
+     "size": 22,
+     "weight": 600,
+     "color": "#7549a5",
+     "lineHeight": 1.2,
+     "text": "08:30"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 316,
+     "w": 620,
+     "h": 32,
+     "family": "Figtree",
+     "size": 27,
+     "weight": 700,
+     "color": "#33254a",
+     "lineHeight": 1.2,
+     "text": "Trailhead check-in"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 354,
+     "w": 620,
+     "h": 56,
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#665a7d",
+     "lineHeight": 1.4,
+     "text": "Lodge porch. Badges, trail maps, and the good espresso."
+    },
+    {
+     "kind": "ellipse",
+     "x": 142,
+     "y": 426,
+     "w": 20,
+     "h": 20,
+     "fill": "#fdc858"
+    },
+    {
+     "kind": "text",
+     "x": 196,
+     "y": 424,
+     "w": 150,
+     "h": 28,
+     "family": "JetBrains Mono",
+     "size": 22,
+     "weight": 600,
+     "color": "#7549a5",
+     "lineHeight": 1.2,
+     "text": "10:00"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 420,
+     "w": 620,
+     "h": 32,
+     "family": "Figtree",
+     "size": 27,
+     "weight": 700,
+     "color": "#33254a",
+     "lineHeight": 1.2,
+     "text": "The year ahead, unplugged"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 458,
+     "w": 620,
+     "h": 56,
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#665a7d",
+     "lineHeight": 1.4,
+     "text": "Priya and Sam walk the 2027 plan. Ten slides, zero spreadsheets."
+    },
+    {
+     "kind": "ellipse",
+     "x": 142,
+     "y": 530,
+     "w": 20,
+     "h": 20,
+     "fill": "#fdc858"
+    },
+    {
+     "kind": "text",
+     "x": 196,
+     "y": 528,
+     "w": 150,
+     "h": 28,
+     "family": "JetBrains Mono",
+     "size": 22,
+     "weight": 600,
+     "color": "#7549a5",
+     "lineHeight": 1.2,
+     "text": "12:30"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 524,
+     "w": 620,
+     "h": 32,
+     "family": "Figtree",
+     "size": 27,
+     "weight": 700,
+     "color": "#33254a",
+     "lineHeight": 1.2,
+     "text": "Long-table lunch"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 562,
+     "w": 620,
+     "h": 56,
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#665a7d",
+     "lineHeight": 1.4,
+     "text": "One table, forty-two chairs, everything served family style."
+    },
+    {
+     "kind": "ellipse",
+     "x": 142,
+     "y": 634,
+     "w": 20,
+     "h": 20,
+     "fill": "#fdc858"
+    },
+    {
+     "kind": "text",
+     "x": 196,
+     "y": 632,
+     "w": 150,
+     "h": 28,
+     "family": "JetBrains Mono",
+     "size": 22,
+     "weight": 600,
+     "color": "#7549a5",
+     "lineHeight": 1.2,
+     "text": "14:00"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 628,
+     "w": 620,
+     "h": 32,
+     "family": "Figtree",
+     "size": 27,
+     "weight": 700,
+     "color": "#33254a",
+     "lineHeight": 1.2,
+     "text": "Workshop tracks"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 666,
+     "w": 620,
+     "h": 56,
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#665a7d",
+     "lineHeight": 1.4,
+     "text": "Pick one: Product bets, Customer stories, or the AI test kitchen."
+    },
+    {
+     "kind": "ellipse",
+     "x": 142,
+     "y": 738,
+     "w": 20,
+     "h": 20,
+     "fill": "#fdc858"
+    },
+    {
+     "kind": "text",
+     "x": 196,
+     "y": 736,
+     "w": 150,
+     "h": 28,
+     "family": "JetBrains Mono",
+     "size": 22,
+     "weight": 600,
+     "color": "#7549a5",
+     "lineHeight": 1.2,
+     "text": "16:30"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 732,
+     "w": 620,
+     "h": 32,
+     "family": "Figtree",
+     "size": 27,
+     "weight": 700,
+     "color": "#33254a",
+     "lineHeight": 1.2,
+     "text": "Ridgeline hike"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 770,
+     "w": 620,
+     "h": 56,
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#665a7d",
+     "lineHeight": 1.4,
+     "text": "Choose the gentle lake loop or the summit scramble."
+    },
+    {
+     "kind": "ellipse",
+     "x": 142,
+     "y": 842,
+     "w": 20,
+     "h": 20,
+     "fill": "#fdc858"
+    },
+    {
+     "kind": "text",
+     "x": 196,
+     "y": 840,
+     "w": 150,
+     "h": 28,
+     "family": "JetBrains Mono",
+     "size": 22,
+     "weight": 600,
+     "color": "#7549a5",
+     "lineHeight": 1.2,
+     "text": "19:00"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 836,
+     "w": 620,
+     "h": 32,
+     "family": "Figtree",
+     "size": 27,
+     "weight": 700,
+     "color": "#33254a",
+     "lineHeight": 1.2,
+     "text": "Cookout & campfire"
+    },
+    {
+     "kind": "text",
+     "x": 360,
+     "y": 874,
+     "w": 620,
+     "h": 56,
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#665a7d",
+     "lineHeight": 1.4,
+     "text": "Dinner off the grill, stories by the fire, s'mores until late."
+    },
+    {
+     "kind": "rect",
+     "x": 1120,
+     "y": 268,
+     "w": 660,
+     "h": 650,
+     "fill": "#ebd9ff",
+     "radius": 28
+    },
+    {
+     "kind": "text",
+     "x": 1180,
+     "y": 324,
+     "w": 540,
+     "h": 24,
+     "family": "Work Sans",
+     "size": 19,
+     "weight": 700,
+     "color": "#7549a5",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "After hours"
+    },
+    {
+     "kind": "text",
+     "x": 1180,
+     "y": 360,
+     "w": 540,
+     "h": 84,
+     "family": "Figtree",
+     "size": 34,
+     "weight": 800,
+     "color": "#33254a",
+     "lineHeight": 1.2,
+     "text": "Night one ends\naround the fire."
+    },
+    {
+     "kind": "text",
+     "x": 1180,
+     "y": 812,
+     "w": 540,
+     "h": 44,
+     "family": "Caveat",
+     "size": 34,
+     "weight": 700,
+     "color": "#7549a5",
+     "align": "center",
+     "lineHeight": 1.2,
+     "text": "bring a hoodie, trust us"
+    },
+    {
+     "kind": "text",
+     "x": 140,
+     "y": 980,
+     "w": 700,
+     "h": 26,
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 500,
+     "color": "#6f5f8f",
+     "lineHeight": 1.2,
+     "text": "Aspen Creek Offsite \u00b7 Day one of three"
+    },
+    {
+     "kind": "text",
+     "x": 1600,
+     "y": 980,
+     "w": 180,
+     "h": 26,
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 500,
+     "color": "#6f5f8f",
+     "align": "right",
+     "lineHeight": 1.2,
+     "text": "02 / 03"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day96-camping",
+     "x": 1240,
+     "y": 478,
+     "w": 420,
+     "h": 300,
+     "cleanCard": true
+    }
+   ]
+  },
+  {
+   "name": "Logistics",
+   "bg": "#f7f3fb",
+   "nodes": [
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 0,
+     "w": 640,
+     "h": 1080,
+     "fill": "#33254a"
+    },
+    {
+     "kind": "rect",
+     "x": 100,
+     "y": 150,
+     "w": 64,
+     "h": 10,
+     "fill": "#fdc858",
+     "radius": 5
+    },
+    {
+     "kind": "text",
+     "x": 100,
+     "y": 186,
+     "w": 440,
+     "h": 28,
+     "family": "Work Sans",
+     "size": 21,
+     "weight": 700,
+     "color": "#fdc858",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "The fine print"
+    },
+    {
+     "kind": "text",
+     "x": 100,
+     "y": 240,
+     "w": 480,
+     "h": 130,
+     "family": "Figtree",
+     "size": 52,
+     "weight": 800,
+     "color": "#ffffff",
+     "lineHeight": 1.15,
+     "text": "Getting there\n& settling in."
+    },
+    {
+     "kind": "text",
+     "x": 120,
+     "y": 880,
+     "w": 400,
+     "h": 44,
+     "family": "Caveat",
+     "size": 34,
+     "weight": 700,
+     "color": "#fdc858",
+     "align": "center",
+     "lineHeight": 1.2,
+     "text": "pack light, dream big"
+    },
+    {
+     "kind": "rect",
+     "x": 760,
+     "y": 150,
+     "w": 490,
+     "h": 300,
+     "fill": "#ffffff",
+     "radius": 24
+    },
+    {
+     "kind": "rect",
+     "x": 800,
+     "y": 192,
+     "w": 14,
+     "h": 14,
+     "fill": "#fdc858",
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 828,
+     "y": 188,
+     "w": 380,
+     "h": 24,
+     "family": "Work Sans",
+     "size": 19,
+     "weight": 700,
+     "color": "#7549a5",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Getting there"
+    },
+    {
+     "kind": "text",
+     "x": 800,
+     "y": 236,
+     "w": 410,
+     "h": 180,
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#4c4160",
+     "lineHeight": 1.55,
+     "text": "Shuttles leave HQ at 7:15 sharp and roll back Friday at 16:00. Driving yourself? Park behind the lodge and snap your spot."
+    },
+    {
+     "kind": "rect",
+     "x": 1290,
+     "y": 150,
+     "w": 490,
+     "h": 300,
+     "fill": "#ffffff",
+     "radius": 24
+    },
+    {
+     "kind": "rect",
+     "x": 1330,
+     "y": 192,
+     "w": 14,
+     "h": 14,
+     "fill": "#fdc858",
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 1358,
+     "y": 188,
+     "w": 380,
+     "h": 24,
+     "family": "Work Sans",
+     "size": 19,
+     "weight": 700,
+     "color": "#7549a5",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Cabins & keys"
+    },
+    {
+     "kind": "text",
+     "x": 1330,
+     "y": 236,
+     "w": 410,
+     "h": 180,
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#4c4160",
+     "lineHeight": 1.55,
+     "text": "Cabin assignments land in your inbox Friday. Check-in opens at 15:00; the front desk will happily hold bags before then."
+    },
+    {
+     "kind": "rect",
+     "x": 760,
+     "y": 490,
+     "w": 490,
+     "h": 300,
+     "fill": "#ffffff",
+     "radius": 24
+    },
+    {
+     "kind": "rect",
+     "x": 800,
+     "y": 532,
+     "w": 14,
+     "h": 14,
+     "fill": "#fdc858",
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 828,
+     "y": 528,
+     "w": 380,
+     "h": 24,
+     "family": "Work Sans",
+     "size": 19,
+     "weight": 700,
+     "color": "#7549a5",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "What to pack"
+    },
+    {
+     "kind": "text",
+     "x": 800,
+     "y": 576,
+     "w": 410,
+     "h": 180,
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#4c4160",
+     "lineHeight": 1.55,
+     "text": "Layers, trail shoes, a water bottle, and a swimsuit for the brave. Laptops stay home unless you are on call."
+    },
+    {
+     "kind": "rect",
+     "x": 1290,
+     "y": 490,
+     "w": 490,
+     "h": 300,
+     "fill": "#ffffff",
+     "radius": 24
+    },
+    {
+     "kind": "rect",
+     "x": 1330,
+     "y": 532,
+     "w": 14,
+     "h": 14,
+     "fill": "#fdc858",
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 1358,
+     "y": 528,
+     "w": 380,
+     "h": 24,
+     "family": "Work Sans",
+     "size": 19,
+     "weight": 700,
+     "color": "#7549a5",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Stay connected"
+    },
+    {
+     "kind": "text",
+     "x": 1330,
+     "y": 576,
+     "w": 410,
+     "h": 180,
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 400,
+     "color": "#4c4160",
+     "lineHeight": 1.55,
+     "text": "Wi-Fi is RIDGE-GUEST, password campfire26. For anything urgent, Dana holds the front desk and room 12."
+    },
+    {
+     "kind": "rect",
+     "x": 760,
+     "y": 830,
+     "w": 1020,
+     "h": 130,
+     "fill": "#fdc858",
+     "radius": 24
+    },
+    {
+     "kind": "text",
+     "x": 808,
+     "y": 862,
+     "w": 300,
+     "h": 24,
+     "family": "Figtree",
+     "size": 19,
+     "weight": 800,
+     "color": "#33254a",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "House rule"
+    },
+    {
+     "kind": "text",
+     "x": 808,
+     "y": 896,
+     "w": 930,
+     "h": 34,
+     "family": "Work Sans",
+     "size": 24,
+     "weight": 600,
+     "color": "#33254a",
+     "lineHeight": 1.3,
+     "text": "No work Slack after dinner. The roadmap will keep; the campfire will not."
+    },
+    {
+     "kind": "text",
+     "x": 760,
+     "y": 984,
+     "w": 700,
+     "h": 26,
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 500,
+     "color": "#6f5f8f",
+     "lineHeight": 1.2,
+     "text": "Questions? Post in #offsite-2026 or find Dana at the front desk."
+    },
+    {
+     "kind": "text",
+     "x": 1600,
+     "y": 984,
+     "w": 180,
+     "h": 26,
+     "family": "Work Sans",
+     "size": 20,
+     "weight": 500,
+     "color": "#6f5f8f",
+     "align": "right",
+     "lineHeight": 1.2,
+     "text": "03 / 03"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day61-travel-bag",
+     "x": 120,
+     "y": 436,
+     "w": 400,
+     "h": 400
+    }
+   ]
+  }
+ ],
+ "rank": 20
+}

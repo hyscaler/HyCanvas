@@ -1,0 +1,373 @@
+{
+ "id": "summer-camp-poster",
+ "title": "Kids Summer Camp Poster",
+ "categories": [
+  "education",
+  "events"
+ ],
+ "tags": [
+  "summer camp",
+  "kids",
+  "poster",
+  "outdoors",
+  "registration"
+ ],
+ "styleTags": [
+  "playful",
+  "warm"
+ ],
+ "size": [
+  794,
+  1123
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Anton",
+   "weight": 400
+  },
+  {
+   "role": "body",
+   "family": "DM Sans",
+   "weight": 500
+  },
+  {
+   "role": "script",
+   "family": "Caveat",
+   "weight": 600
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n5",
+   "kind": "text",
+   "label": "Camp name",
+   "hint": "Your camp name on two lines, e.g. Camp Wildpine"
+  },
+  {
+   "node": "p0-n15",
+   "kind": "text",
+   "label": "Session dates",
+   "hint": "One session per line, e.g. Jun 15 - Jul 10"
+  },
+  {
+   "node": "p0-n17",
+   "kind": "text",
+   "label": "Age range",
+   "hint": "Who can join, e.g. 7 to 12 years"
+  },
+  {
+   "node": "p0-n23-label",
+   "kind": "text",
+   "label": "Sign-up line",
+   "hint": "Where to register, e.g. Sign up at campwildpine.org"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Poster",
+   "bg": "#f8f2e4",
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": 598,
+     "y": 66,
+     "w": 132,
+     "h": 132,
+     "fill": "#f7b62e"
+    },
+    {
+     "kind": "ellipse",
+     "x": 628,
+     "y": 236,
+     "w": 12,
+     "h": 12,
+     "fill": "#e2593a"
+    },
+    {
+     "kind": "ellipse",
+     "x": 668,
+     "y": 282,
+     "w": 10,
+     "h": 10,
+     "fill": "#1f4d33"
+    },
+    {
+     "kind": "ellipse",
+     "x": 700,
+     "y": 330,
+     "w": 14,
+     "h": 14,
+     "fill": "#f7b62e"
+    },
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 72,
+     "w": 520,
+     "h": 22,
+     "family": "DM Sans",
+     "size": 15,
+     "weight": 700,
+     "color": "#c2502f",
+     "letterSpacing": 4,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Trailhead Youth Camps \u00b7 Summer 2026"
+    },
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 118,
+     "w": 520,
+     "h": 240,
+     "family": "Anton",
+     "size": 108,
+     "weight": 400,
+     "color": "#1f4d33",
+     "upper": true,
+     "lineHeight": 1.05,
+     "text": "Camp\nWildpine"
+    },
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 368,
+     "w": 470,
+     "h": 48,
+     "family": "Caveat",
+     "size": 36,
+     "weight": 600,
+     "color": "#e2593a",
+     "lineHeight": 1.2,
+     "text": "Wild days, campfire nights."
+    },
+    {
+     "kind": "rect",
+     "x": 233,
+     "y": 452,
+     "w": 344,
+     "h": 356,
+     "fill": "#e6d9bc",
+     "radius": 8
+    },
+    {
+     "kind": "rect",
+     "x": 225,
+     "y": 444,
+     "w": 344,
+     "h": 356,
+     "fill": "#ffffff",
+     "radius": 8
+    },
+    {
+     "kind": "rect",
+     "x": 196,
+     "y": 432,
+     "w": 76,
+     "h": 24,
+     "fill": "#f7b62e",
+     "opacity": 0.85,
+     "rotation": -10,
+     "radius": 4
+    },
+    {
+     "kind": "rect",
+     "x": 522,
+     "y": 432,
+     "w": 76,
+     "h": 24,
+     "fill": "#f7b62e",
+     "opacity": 0.85,
+     "rotation": 10,
+     "radius": 4
+    },
+    {
+     "kind": "text",
+     "x": 277,
+     "y": 764,
+     "w": 240,
+     "h": 26,
+     "family": "Caveat",
+     "size": 22,
+     "weight": 600,
+     "color": "#7a6a50",
+     "align": "center",
+     "lineHeight": 1.2,
+     "text": "Lake Nimbus \u00b7 est. 1998"
+    },
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 820,
+     "w": 794,
+     "h": 303,
+     "fill": "#1f4d33"
+    },
+    {
+     "kind": "rect",
+     "x": 0,
+     "y": 820,
+     "w": 794,
+     "h": 6,
+     "fill": "#f7b62e"
+    },
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 854,
+     "w": 210,
+     "h": 18,
+     "family": "DM Sans",
+     "size": 13,
+     "weight": 700,
+     "color": "#f7b62e",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Session dates"
+    },
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 880,
+     "w": 210,
+     "h": 56,
+     "family": "DM Sans",
+     "size": 19,
+     "weight": 700,
+     "color": "#fdf9ee",
+     "lineHeight": 1.4,
+     "text": "Jun 15 - Jul 10\nJul 13 - Aug 7"
+    },
+    {
+     "kind": "text",
+     "x": 292,
+     "y": 854,
+     "w": 210,
+     "h": 18,
+     "family": "DM Sans",
+     "size": 13,
+     "weight": 700,
+     "color": "#f7b62e",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Ages"
+    },
+    {
+     "kind": "text",
+     "x": 292,
+     "y": 880,
+     "w": 210,
+     "h": 56,
+     "family": "DM Sans",
+     "size": 19,
+     "weight": 700,
+     "color": "#fdf9ee",
+     "lineHeight": 1.4,
+     "text": "7 to 12 years\nAll skill levels"
+    },
+    {
+     "kind": "text",
+     "x": 520,
+     "y": 854,
+     "w": 210,
+     "h": 18,
+     "family": "DM Sans",
+     "size": 13,
+     "weight": 700,
+     "color": "#f7b62e",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Basecamp"
+    },
+    {
+     "kind": "text",
+     "x": 520,
+     "y": 880,
+     "w": 210,
+     "h": 56,
+     "family": "DM Sans",
+     "size": 19,
+     "weight": 700,
+     "color": "#fdf9ee",
+     "lineHeight": 1.4,
+     "text": "Lake Nimbus Shore\nPinecrest Valley"
+    },
+    {
+     "kind": "rect",
+     "x": 282,
+     "y": 852,
+     "w": 2,
+     "h": 88,
+     "fill": "#3a6d52"
+    },
+    {
+     "kind": "rect",
+     "x": 510,
+     "y": 852,
+     "w": 2,
+     "h": 88,
+     "fill": "#3a6d52"
+    },
+    {
+     "kind": "rect",
+     "x": 64,
+     "y": 964,
+     "w": 666,
+     "h": 2,
+     "fill": "#3a6d52"
+    },
+    {
+     "kind": "button",
+     "x": 227,
+     "y": 990,
+     "w": 340,
+     "h": 52,
+     "fill": "#f7b62e",
+     "label": "Sign up at campwildpine.org",
+     "family": "DM Sans",
+     "size": 16,
+     "weight": 800,
+     "color": "#1f3527",
+     "radius": 26
+    },
+    {
+     "kind": "text",
+     "x": 64,
+     "y": 1058,
+     "w": 666,
+     "h": 18,
+     "family": "DM Sans",
+     "size": 13,
+     "weight": 500,
+     "color": "#bcd3c2",
+     "align": "center",
+     "lineHeight": 1.3,
+     "text": "Registration opens May 1 \u00b7 Day and overnight sessions \u00b7 Financial aid available"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "il-day96-camping",
+     "x": 247,
+     "y": 464,
+     "w": 300,
+     "h": 300
+    },
+    {
+     "asset": "il-day22-owl",
+     "x": 150,
+     "y": 658,
+     "w": 100,
+     "h": 100,
+     "cleanCard": true
+    }
+   ]
+  }
+ ],
+ "rank": 4
+}

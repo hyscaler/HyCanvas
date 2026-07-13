@@ -1,0 +1,335 @@
+{
+ "id": "job-fair-banner",
+ "title": "Career Fair Event Banner",
+ "categories": [
+  "business",
+  "events"
+ ],
+ "tags": [
+  "career fair",
+  "hiring",
+  "job fair",
+  "recruitment",
+  "banner"
+ ],
+ "styleTags": [
+  "professional",
+  "bold",
+  "modern"
+ ],
+ "size": [
+  1640,
+  924
+ ],
+ "typography": [
+  {
+   "role": "heading",
+   "family": "Outfit",
+   "weight": 800
+  },
+  {
+   "role": "body",
+   "family": "Inter",
+   "weight": 500
+  }
+ ],
+ "created": "2026-07-10T00:00:00.000Z",
+ "fillable": [
+  {
+   "node": "p0-n8",
+   "kind": "text",
+   "label": "Date & time",
+   "hint": "Event date and hours, e.g. Sat, Oct 17 \u00b7 9 AM to 4 PM"
+  },
+  {
+   "node": "p0-n11",
+   "kind": "text",
+   "label": "Venue",
+   "hint": "Where the fair takes place"
+  },
+  {
+   "node": "p0-n16",
+   "kind": "text",
+   "label": "Employer count",
+   "hint": "How many employers are attending, e.g. 120+"
+  },
+  {
+   "node": "p0-n13",
+   "kind": "text",
+   "label": "Registration line",
+   "hint": "Where to register, e.g. Free tickets at yoursite.com"
+  }
+ ],
+ "pages": [
+  {
+   "name": "Banner",
+   "bg": {
+    "angle": 128,
+    "stops": [
+     [
+      "#0f2440",
+      0
+     ],
+     [
+      "#1c3d66",
+      1
+     ]
+    ]
+   },
+   "nodes": [
+    {
+     "kind": "ellipse",
+     "x": -180,
+     "y": 560,
+     "w": 520,
+     "h": 520,
+     "fill": "#2a5188",
+     "opacity": 0.28,
+     "bleed": true
+    },
+    {
+     "kind": "ellipse",
+     "x": 940,
+     "y": 120,
+     "w": 14,
+     "h": 14,
+     "fill": "#fbbf24"
+    },
+    {
+     "kind": "rect",
+     "x": 1560,
+     "y": 808,
+     "w": 16,
+     "h": 16,
+     "fill": "#fbbf24",
+     "radius": 4,
+     "rotation": 20
+    },
+    {
+     "kind": "text",
+     "x": 112,
+     "y": 126,
+     "w": 700,
+     "h": 26,
+     "family": "Outfit",
+     "size": 20,
+     "weight": 700,
+     "color": "#fbbf24",
+     "letterSpacing": 5,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Spring hiring event \u00b7 Free admission"
+    },
+    {
+     "kind": "text",
+     "x": 108,
+     "y": 176,
+     "w": 880,
+     "h": 118,
+     "family": "Outfit",
+     "size": 106,
+     "weight": 800,
+     "color": "#ffffff",
+     "lineHeight": 1.02,
+     "text": "Metro Career"
+    },
+    {
+     "kind": "text",
+     "x": 108,
+     "y": 294,
+     "w": 880,
+     "h": 118,
+     "family": "Outfit",
+     "size": 106,
+     "weight": 800,
+     "color": "#ffffff",
+     "lineHeight": 1.02,
+     "spans": [
+      {
+       "text": "Fair "
+      },
+      {
+       "text": "2026",
+       "color": "#fbbf24"
+      }
+     ]
+    },
+    {
+     "kind": "text",
+     "x": 112,
+     "y": 452,
+     "w": 800,
+     "h": 74,
+     "family": "Inter",
+     "size": 25,
+     "weight": 500,
+     "color": "#b9c7dd",
+     "lineHeight": 1.45,
+     "text": "Bring your resume, meet hiring managers face to face, and interview on the spot. Open to all experience levels."
+    },
+    {
+     "kind": "text",
+     "x": 112,
+     "y": 576,
+     "w": 340,
+     "h": 20,
+     "family": "Inter",
+     "size": 14,
+     "weight": 700,
+     "color": "#7f93b3",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Date & time"
+    },
+    {
+     "kind": "text",
+     "x": 112,
+     "y": 602,
+     "w": 360,
+     "h": 32,
+     "family": "Outfit",
+     "size": 24,
+     "weight": 700,
+     "color": "#ffffff",
+     "lineHeight": 1.2,
+     "text": "Sat, Oct 17 \u00b7 9 AM to 4 PM"
+    },
+    {
+     "kind": "rect",
+     "x": 496,
+     "y": 574,
+     "w": 2,
+     "h": 62,
+     "fill": "#31517a"
+    },
+    {
+     "kind": "text",
+     "x": 532,
+     "y": 576,
+     "w": 380,
+     "h": 20,
+     "family": "Inter",
+     "size": 14,
+     "weight": 700,
+     "color": "#7f93b3",
+     "letterSpacing": 3,
+     "upper": true,
+     "lineHeight": 1.2,
+     "text": "Venue"
+    },
+    {
+     "kind": "text",
+     "x": 532,
+     "y": 602,
+     "w": 430,
+     "h": 32,
+     "family": "Outfit",
+     "size": 24,
+     "weight": 700,
+     "color": "#ffffff",
+     "lineHeight": 1.2,
+     "text": "Harborview Convention Center"
+    },
+    {
+     "kind": "button",
+     "x": 112,
+     "y": 700,
+     "w": 308,
+     "h": 78,
+     "fill": "#fbbf24",
+     "label": "Register free",
+     "family": "Outfit",
+     "size": 26,
+     "weight": 700,
+     "color": "#102844",
+     "radius": 39,
+     "letterSpacing": 1
+    },
+    {
+     "kind": "text",
+     "x": 452,
+     "y": 700,
+     "w": 460,
+     "h": 78,
+     "family": "Inter",
+     "size": 21,
+     "weight": 500,
+     "color": "#b9c7dd",
+     "vAlign": "middle",
+     "lineHeight": 1.3,
+     "text": "Free tickets at metrocareerfair.com"
+    },
+    {
+     "kind": "rect",
+     "x": 1064,
+     "y": 126,
+     "w": 466,
+     "h": 574,
+     "fill": "#f4f7fc",
+     "radius": 32
+    },
+    {
+     "kind": "rect",
+     "x": 992,
+     "y": 598,
+     "w": 270,
+     "h": 148,
+     "fill": "#fbbf24",
+     "radius": 24
+    },
+    {
+     "kind": "text",
+     "x": 992,
+     "y": 622,
+     "w": 270,
+     "h": 60,
+     "family": "Outfit",
+     "size": 54,
+     "weight": 800,
+     "color": "#102844",
+     "align": "center",
+     "lineHeight": 1.05,
+     "text": "120+"
+    },
+    {
+     "kind": "text",
+     "x": 992,
+     "y": 688,
+     "w": 270,
+     "h": 24,
+     "family": "Inter",
+     "size": 18,
+     "weight": 600,
+     "color": "#102844",
+     "align": "center",
+     "lineHeight": 1.2,
+     "text": "employers hiring"
+    },
+    {
+     "kind": "text",
+     "x": 112,
+     "y": 832,
+     "w": 700,
+     "h": 22,
+     "family": "Inter",
+     "size": 16,
+     "weight": 500,
+     "color": "#7f93b3",
+     "lineHeight": 1.3,
+     "text": "Presented by the Northbridge Employment Alliance"
+    }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-woman-working-1",
+     "x": 1102,
+     "y": 168,
+     "w": 390,
+     "h": 390
+    }
+   ]
+  }
+ ],
+ "rank": 20
+}

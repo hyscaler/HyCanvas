@@ -102,8 +102,8 @@
     },
     {
      "kind": "ellipse",
-     "x": 119.0,
-     "y": 729.0,
+     "x": 119,
+     "y": 729,
      "w": 18,
      "h": 18,
      "fill": "#ffffff"
@@ -131,8 +131,8 @@
     },
     {
      "kind": "ellipse",
-     "x": 119.0,
-     "y": 859.0,
+     "x": 119,
+     "y": 859,
      "w": 18,
      "h": 18,
      "fill": "#ffffff"
@@ -253,6 +253,15 @@
      "h": 110,
      "fill": "#FFFFFF"
     }
+   ],
+   "illustrations": [
+    {
+     "asset": "la-coffee",
+     "x": 110,
+     "y": 1545,
+     "w": 300,
+     "h": 320
+    }
    ]
   }
  ],
@@ -293,5 +302,8 @@
    "label": "Item 5",
    "hint": "One line, under 30 characters"
   }
- ]
+ ],
+ "version": 2,
+ "updated": "2026-07-10T00:00:00.000Z",
+ "rank": 20
 }
