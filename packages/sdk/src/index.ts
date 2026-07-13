@@ -18,6 +18,17 @@ export type { AccessMode, Capability } from "@hc/authz";
 export type { BrandLintViolation, BrandLintFix } from "@hc/brandkit";
 
 /** Owner-safe view of a background job returned by GET /jobs/:id. */
+/** Which sign-in methods and account-creation paths an instance allows, mirrored
+ *  from the backend AuthPolicy (AUTH_*_ENABLED env). Drives the sign-in UI. */
+export interface AuthPolicy {
+  passwordLogin: boolean;
+  passwordSignup: boolean;
+  magicLinkLogin: boolean;
+  magicLinkSignup: boolean;
+  oidcLogin: boolean;
+  oidcSignup: boolean;
+}
+
 export interface JobStatusView<R = unknown> {
   id: string;
   name: string;
@@ -1052,7 +1063,16 @@ export class HyCanvasClient {
    *  The login UI renders a button per entry; start the flow by navigating the
    *  browser to `${baseUrl}/v1/auth/{id}/start`. */
   authProviders(): Promise<{ id: string; label: string }[]> {
-    return this.request<{ providers: { id: string; label: string }[] }>("GET", "/v1/auth/providers").then((r) => r.providers);
+    return this.authConfig().then((r) => r.providers);
+  }
+  /** The instance's auth configuration: the SSO providers plus which sign-in
+   *  methods and account-creation paths are enabled (AUTH_*_ENABLED). The sign-in
+   *  page renders only the methods the policy allows. */
+  authConfig(): Promise<{ providers: { id: string; label: string }[]; policy: AuthPolicy }> {
+    return this.request<{ providers: { id: string; label: string }[]; policy: AuthPolicy }>(
+      "GET",
+      "/v1/auth/providers",
+    );
   }
   /** SSO status for the signed-in user: whether an OIDC identity is linked and
    *  whether SSO is configured at all (so the UI can hide the card when it isn't).

@@ -30,6 +30,21 @@ type Config struct {
 	PublicDir string
 	// AutoMigrate applies pending SQL migrations on boot (default true).
 	AutoMigrate bool
+	// Auth gates which sign-in methods and account-creation paths are available.
+	Auth AuthPolicy
+}
+
+// AuthPolicy is the per-instance switchboard for authentication. Each method has
+// an independent login and signup toggle, so an operator can run, for example,
+// OIDC-only (password + magic-link off) without a code change. The zero value is
+// all-off; Load() fills it from env with defaults that preserve prior behavior.
+type AuthPolicy struct {
+	PasswordLogin   bool // AUTH_PASSWORD_LOGIN_ENABLED   (default true)
+	PasswordSignup  bool // AUTH_PASSWORD_SIGNUP_ENABLED  (default true)
+	MagicLinkLogin  bool // AUTH_MAGICLINK_LOGIN_ENABLED  (default true)
+	MagicLinkSignup bool // AUTH_MAGICLINK_SIGNUP_ENABLED (default false; creates accounts)
+	OidcLogin       bool // AUTH_OIDC_LOGIN_ENABLED       (default true; effective only when OIDC configured)
+	OidcSignup      bool // AUTH_OIDC_SIGNUP_ENABLED      (default true; effective only when OIDC configured)
 }
 
 // Load reads and validates configuration. DATABASE_URL is required.
@@ -45,11 +60,33 @@ func Load() (Config, error) {
 		AISecret:    os.Getenv("AI_SECRET"),
 		PublicDir:   getenv("PUBLIC_DIR", "./public"),
 		AutoMigrate: os.Getenv("DB_AUTO_MIGRATE") != "false",
+		Auth: AuthPolicy{
+			PasswordLogin:   envBool("AUTH_PASSWORD_LOGIN_ENABLED", true),
+			PasswordSignup:  envBool("AUTH_PASSWORD_SIGNUP_ENABLED", true),
+			MagicLinkLogin:  envBool("AUTH_MAGICLINK_LOGIN_ENABLED", true),
+			MagicLinkSignup: envBool("AUTH_MAGICLINK_SIGNUP_ENABLED", false),
+			OidcLogin:       envBool("AUTH_OIDC_LOGIN_ENABLED", true),
+			OidcSignup:      envBool("AUTH_OIDC_SIGNUP_ENABLED", true),
+		},
 	}
 	if c.DatabaseURL == "" {
 		return c, ErrDatabaseURLMissing
 	}
 	return c, nil
+}
+
+// envBool reads a boolean env var. Only the exact strings "true" and "false"
+// flip it; anything else (including empty) keeps the default, so a partially set
+// deployment never silently disables a method by typo.
+func envBool(key string, def bool) bool {
+	switch os.Getenv(key) {
+	case "true":
+		return true
+	case "false":
+		return false
+	default:
+		return def
+	}
 }
 
 // loadDotEnv loads a .env file if one is present, so the production binary runs
