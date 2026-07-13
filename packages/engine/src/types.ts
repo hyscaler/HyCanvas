@@ -103,7 +103,7 @@ export interface CanvasLike {
     start: number,
     end: number,
   ): void;
-  fill(): void;
+  fill(fillRule?: "nonzero" | "evenodd"): void;
   stroke(): void;
   clip(fillRule?: "nonzero" | "evenodd"): void;
   fillText(text: string, x: number, y: number): void;

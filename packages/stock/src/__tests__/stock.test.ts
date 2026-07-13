@@ -133,6 +133,34 @@ describe("svgToNodes (FR-5, AC-2)", () => {
     expect(approximated).toBe(true);
   });
 
+  it("keeps a compound path as ONE node whose extra subpaths become contours (holes)", () => {
+    // A ring: outer square with an inner square that must cut a hole, not
+    // become a second solid node stacked on top.
+    const svg = '<svg><path d="M0 0 L100 0 L100 100 L0 100 Z M25 25 L75 25 L75 75 L25 75 Z" fill="#000000"/></svg>';
+    const { nodes } = svgToNodes(svg, idgen());
+    expect(nodes).toHaveLength(1);
+    const p = nodes[0] as unknown as {
+      type: string;
+      closed: boolean;
+      size: { width: number; height: number };
+      segments: { x: number; y: number }[];
+      contours?: { segments: { x: number; y: number }[]; closed: boolean }[];
+    };
+    expect(p.type).toBe("path");
+    expect(p.closed).toBe(true);
+    expect(p.segments.map((s) => [s.x, s.y])).toEqual([[0, 0], [100, 0], [100, 100], [0, 100]]);
+    expect(p.contours).toHaveLength(1);
+    expect(p.contours![0].closed).toBe(true);
+    expect(p.contours![0].segments.map((s) => [s.x, s.y])).toEqual([[25, 25], [75, 25], [75, 75], [25, 75]]);
+    // The node box spans every contour.
+    expect(p.size).toEqual({ width: 100, height: 100 });
+  });
+
+  it("omits contours for a single-subpath path", () => {
+    const { nodes } = svgToNodes('<svg><path d="M0 0 L10 0 L10 10 Z" fill="#000"/></svg>', idgen());
+    expect((nodes[0] as unknown as { contours?: unknown[] }).contours).toBeUndefined();
+  });
+
   it("imports <text> as an editable text box (content, size, color, weight)", () => {
     const svg = '<svg><text x="10" y="40" font-size="32" font-weight="700" fill="#0000ff" text-anchor="start">Hello &amp; world</text></svg>';
     const { nodes } = svgToNodes(svg, idgen());

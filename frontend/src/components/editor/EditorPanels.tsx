@@ -944,15 +944,20 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
               <Upload size={16} /> {selectedFolder ? `Upload to ${selectedFolder.name}` : "Upload images"}
             </Button>
             <p className="mt-2 text-[11px] text-neutral-400">or drop images here</p>
+            {/* Compact one-word labels so the three cells hold one line at
+                every panel width and font metric (the previous nowrap labels
+                overflowed their neighbors on narrow panels / wider fonts);
+                the icons and tooltips carry the full meaning. Wrap-safe as a
+                fallback: no nowrap, min-w-0, centered. */}
             <div className="mt-2.5 grid grid-cols-3 gap-1.5">
-              <button onClick={() => void importUrl()} disabled={!workspaceId} title="Import an image from a URL" className="flex flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-none text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink disabled:opacity-40">
-                <LinkIcon size={15} /> <span className="whitespace-nowrap">From URL</span>
+              <button onClick={() => void importUrl()} disabled={!workspaceId} title="Import an image from a URL" className="flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-tight text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink disabled:opacity-40">
+                <LinkIcon size={15} className="shrink-0" /> <span className="text-center">From URL</span>
               </button>
-              <button onClick={() => svgRef.current?.click()} title="Import an SVG (e.g. an SVG export from another design tool) as editable elements" className="flex flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-none text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink">
-                <Upload size={15} /> <span className="whitespace-nowrap">Import SVG</span>
+              <button onClick={() => svgRef.current?.click()} title="Import an SVG (e.g. an SVG export from another design tool) as editable elements" className="flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-tight text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink">
+                <Upload size={15} className="shrink-0" /> <span className="text-center">SVG</span>
               </button>
-              <button onClick={() => pdfRef.current?.click()} title="Import a PDF (e.g. a PDF export from another design tool) as editable pages (text)" className="flex flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-none text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink">
-                <Upload size={15} /> <span className="whitespace-nowrap">Import PDF</span>
+              <button onClick={() => pdfRef.current?.click()} title="Import a PDF (e.g. a PDF export from another design tool) as editable pages (text)" className="flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-tight text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink">
+                <Upload size={15} className="shrink-0" /> <span className="text-center">PDF</span>
               </button>
             </div>
           </div>

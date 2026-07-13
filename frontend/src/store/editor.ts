@@ -892,16 +892,20 @@ type PathSeg = { x: number; y: number; cIn?: { x: number; y: number }; cOut?: { 
 type PathNodeLike = {
   transform: { x: number; y: number };
   segments: PathSeg[];
+  contours?: { segments: PathSeg[]; closed: boolean }[];
   size: { width: number; height: number };
   closed: boolean;
 };
 
 // Re-tighten a path node: shift its transform to the min of all anchor+handle
 // points (keeping absolute position) and set size to the point bounds, so the
-// node stays selectable and the gizmo box hugs the path as it grows.
+// node stays selectable and the gizmo box hugs the path as it grows. Extra
+// contours of a compound path share the node's local space, so they take part
+// in the bounds and shift with the primary contour.
 function normalizePath(node: PathNodeLike): void {
+  const contourSegs = (node.contours ?? []).flatMap((c) => c.segments);
   const pts: { x: number; y: number }[] = [];
-  for (const s of node.segments) {
+  for (const s of [...node.segments, ...contourSegs]) {
     pts.push({ x: s.x, y: s.y });
     if (s.cIn) pts.push(s.cIn);
     if (s.cOut) pts.push(s.cOut);
@@ -914,7 +918,7 @@ function normalizePath(node: PathNodeLike): void {
   }
   node.transform.x += minX;
   node.transform.y += minY;
-  for (const s of node.segments) {
+  for (const s of [...node.segments, ...contourSegs]) {
     s.x -= minX; s.y -= minY;
     if (s.cIn) { s.cIn.x -= minX; s.cIn.y -= minY; }
     if (s.cOut) { s.cOut.x -= minX; s.cOut.y -= minY; }
@@ -2211,8 +2215,8 @@ export const useEditor = create<EditorState>((set, get) => {
     snapshotPath: (id) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "path") return null;
-      const n = loc.node as unknown as { segments: unknown; transform: unknown; size: unknown };
-      return structuredClone({ segments: n.segments, transform: n.transform, size: n.size });
+      const n = loc.node as unknown as { segments: unknown; contours?: unknown; transform: unknown; size: unknown };
+      return structuredClone({ segments: n.segments, contours: n.contours, transform: n.transform, size: n.size });
     },
     editAnchor: (id, index, x, y) => {
       const loc = locate(get().doc, id);
@@ -2263,12 +2267,16 @@ export const useEditor = create<EditorState>((set, get) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "path" || loc.node.locked || editBlocked(id) || !before) return;
       const n = loc.node as unknown as { segments: unknown; transform: unknown; size: unknown };
-      const after = structuredClone({ segments: n.segments, transform: n.transform, size: n.size });
-      const apply = (snap: { segments: unknown; transform: unknown; size: unknown }) => {
+      const after = structuredClone({ segments: n.segments, contours: (n as { contours?: unknown }).contours, transform: n.transform, size: n.size });
+      const apply = (snap: { segments: unknown; contours?: unknown; transform: unknown; size: unknown }) => {
         const l = locate(get().doc, id);
         if (!l) return;
-        const m = l.node as unknown as { segments: unknown; transform: Record<string, unknown>; size: unknown };
+        const m = l.node as unknown as { segments: unknown; contours?: unknown; transform: Record<string, unknown>; size: unknown };
         m.segments = structuredClone(snap.segments);
+        // normalizePath shifts contours together with the primary contour, so
+        // undo/redo must restore them together too.
+        if (snap.contours === undefined) delete m.contours;
+        else m.contours = structuredClone(snap.contours);
         Object.assign(m.transform, structuredClone(snap.transform));
         m.size = structuredClone(snap.size);
       };

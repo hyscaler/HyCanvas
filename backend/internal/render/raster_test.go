@@ -160,3 +160,46 @@ func TestRasterPageRange(t *testing.T) {
 		t.Fatalf("out-of-range page should error, got %v", err)
 	}
 }
+
+// A compound path (schema v15 contours) must cut a hole for the interior
+// contour under the even-odd rule, even when both contours wind the same way.
+func TestRasterCompoundPathHole(t *testing.T) {
+	seg := func(x, y float64) map[string]any { return map[string]any{"x": x, "y": y} }
+	design := Design{
+		"pages": []any{
+			map[string]any{
+				"width": 100.0, "height": 100.0,
+				"background": map[string]any{"type": "solid", "color": map[string]any{"srgb": map[string]any{"r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0}}},
+				"children": []any{
+					map[string]any{
+						"id": "p1", "type": "path", "closed": true,
+						"size":      map[string]any{"width": 80.0, "height": 80.0},
+						"transform": map[string]any{"x": 10.0, "y": 10.0, "scaleX": 1.0, "scaleY": 1.0, "rotation": 0.0},
+						// Outer square 0..80 and interior square 20..60, both clockwise.
+						"segments": []any{seg(0, 0), seg(80, 0), seg(80, 80), seg(0, 80)},
+						"contours": []any{map[string]any{
+							"closed":   true,
+							"segments": []any{seg(20, 20), seg(60, 20), seg(60, 60), seg(20, 60)},
+						}},
+						"fills": []any{map[string]any{"type": "solid", "color": map[string]any{"srgb": map[string]any{"r": 0.0, "g": 0.0, "b": 0.0, "a": 1.0}}}},
+					},
+				},
+			},
+		},
+		"assets": []any{},
+	}
+	img, err := ToRaster(design, 0, 1)
+	if err != nil {
+		t.Fatalf("ToRaster: %v", err)
+	}
+	// The ring (between the contours) is black.
+	r, g, b, _ := img.At(25, 50).RGBA()
+	if r>>8 > 60 || g>>8 > 60 || b>>8 > 60 {
+		t.Fatalf("expected black ring at (25,50), got r=%d g=%d b=%d", r>>8, g>>8, b>>8)
+	}
+	// The interior contour cut a hole: page background shows through.
+	hr, hg, hb, _ := img.At(50, 50).RGBA()
+	if hr>>8 < 240 || hg>>8 < 240 || hb>>8 < 240 {
+		t.Fatalf("expected white hole at (50,50), got r=%d g=%d b=%d", hr>>8, hg>>8, hb>>8)
+	}
+}

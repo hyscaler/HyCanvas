@@ -166,12 +166,9 @@ function shapeBody(node: Node, ctx: Ctx): string {
   return "";
 }
 
-function pathBody(node: Node, ctx: Ctx): string {
-  const rec = node as unknown as AnyRec;
-  const segs = (rec.segments as AnyRec[]) ?? [];
-  if (segs.length === 0) return "";
+function pathContourD(segs: AnyRec[], closed: boolean): string {
   let d = `M ${num(Number(segs[0].x))} ${num(Number(segs[0].y))}`;
-  const count = rec.closed ? segs.length : segs.length - 1;
+  const count = closed ? segs.length : segs.length - 1;
   for (let i = 0; i < count; i++) {
     const from = segs[i];
     const to = segs[(i + 1) % segs.length];
@@ -185,9 +182,24 @@ function pathBody(node: Node, ctx: Ctx): string {
       d += ` L ${num(Number(to.x))} ${num(Number(to.y))}`;
     }
   }
-  if (rec.closed) d += " Z";
+  if (closed) d += " Z";
+  return d;
+}
+
+function pathBody(node: Node, ctx: Ctx): string {
+  const rec = node as unknown as AnyRec;
+  const segs = (rec.segments as AnyRec[]) ?? [];
+  if (segs.length === 0) return "";
+  const parts = [pathContourD(segs, !!rec.closed)];
+  // Extra contours of a compound path (schema v15) join the same path data;
+  // fill-rule="evenodd" makes interior contours cut holes.
+  for (const c of (rec.contours as AnyRec[] | undefined) ?? []) {
+    const cs = (c.segments as AnyRec[]) ?? [];
+    if (cs.length >= 2) parts.push(pathContourD(cs, !!c.closed));
+  }
+  const rule = parts.length > 1 ? ` fill-rule="evenodd"` : "";
   const paint = fillAttrs(rec.fills as Fill[] | undefined, ctx) + strokeAttrs(rec.stroke as Stroke | undefined, ctx);
-  return `<path d="${d}"${paint}/>`;
+  return `<path d="${parts.join(" ")}"${rule}${paint}/>`;
 }
 
 function lineBody(node: Node, ctx: Ctx): string {
