@@ -67,10 +67,10 @@ export interface Render2DOptions {
   skipBackground?: boolean;
   /** Node ids to render at reduced opacity (and their subtrees). The editor sets
    *  this to the element(s) being actively moved/resized so the page shows through
-   *  them during the gesture (Canva-style). */
+   *  them during the gesture. */
   fadeIds?: ReadonlySet<string>;
   /** Clip each top-level element to the page rectangle so content that overflows
-   *  the artboard is hidden (Canva-style clean page edges). Off by default so
+   *  the artboard is hidden (clean page edges). Off by default so
    *  export/thumbnail render the full content. `revealIds` are exempt. */
   clipToPage?: boolean;
   /** Top-level node ids exempt from `clipToPage`, drawn unclipped so their
@@ -85,11 +85,11 @@ export interface Render2DOptions {
 type BoxMap = Record<string, { x: number; y: number; width: number; height: number }>;
 
 // Opacity for an element while it is actively being moved/resized, so the page
-// and content behind it show through (Canva-style live-transform translucency).
+// and content behind it show through (live-transform translucency).
 const LIVE_TRANSFORM_ALPHA = 0.5;
 // Opacity for the part of a selected element that spills past the page edge, so
 // the revealed overflow reads as "outside the artboard" while the in-page part
-// stays crisp (Canva-style pasteboard dimming).
+// stays crisp (pasteboard dimming).
 const OVERFLOW_REVEAL_ALPHA = 0.4;
 const PLACEHOLDER_FILL = "rgba(0, 0, 0, 0.06)";
 const PLACEHOLDER_STROKE = "rgba(0, 0, 0, 0.25)";
@@ -202,7 +202,7 @@ function drawShape(ctx: CanvasLike, node: ShapeNode, assets?: AssetProvider): vo
     if (node.stroke) { shapePath(ctx, node); setStroke(ctx, node.stroke.width, resolveFill(ctx, node.stroke.fill, w, h)); }
     return;
   }
-  // Image fill (Canva-style): clip to the shape outline and cover-draw the image.
+  // Image fill clip to the shape outline and cover-draw the image.
   const imgFill = node.fills.find((f) => f.type === "image") as { source: { assetId: string } } | undefined;
   if (imgFill && ctx.save && ctx.restore && ctx.clip) {
     const assetId = imgFill.source.assetId;
@@ -696,7 +696,7 @@ function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, bo
         : undefined;
       const pad = node.box.padding ?? { t: 0, r: 0, b: 0, l: 0 };
       const contentW = w - pad.l - pad.r;
-      // Background highlight (Canva-style) hugs the TEXT per line, not the box.
+      // Background highlight hugs the TEXT per line, not the box.
       // Resolve its fill + padding/roundness once; the rects are drawn per line
       // (behind the glyphs) inside the line loop below.
       const hl = (node.textEffects ?? []).find((e) => e.kind === "highlight");
@@ -706,7 +706,7 @@ function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, bo
       // Glyph outline (hollow/outlined text) from an "outline" effect.
       const outline = (node.effects ?? []).find((e) => e.kind === "outline") as { color: { srgb: { r: number; g: number; b: number; a: number } }; width: number } | undefined;
       if (outline && "lineJoin" in (ctx as object)) (ctx as { lineJoin?: string }).lineJoin = "round";
-      // Named text effects (Canva-style): resolved once, applied behind/around the
+      // Named text effects resolved once, applied behind/around the
       // run fill in the segment loop below. Shadows need a flat CSS color (a
       // gradient can't be a shadowColor), so resolve effect fills to a flat color.
       const tfx: TextEffect[] = node.textEffects ?? [];
@@ -775,7 +775,7 @@ function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, bo
         vShift = vAlign === "middle" ? slack / 2 : slack;
       }
       const isWs = (t: string) => t.length > 0 && t.trim() === "";
-      // Curved text (Canva "Curve"): lay glyphs along a circular arc. Skips the
+      // Curved text: lay glyphs along a circular arc. Skips the
       // normal line loop; effects/lists are not combined with curve.
       const arcCurv = node.flow?.kind === "arc" ? node.flow.curvature : 0;
       for (let li = 0; !arcCurv && li < lines.length; li++) {
@@ -1764,7 +1764,7 @@ function paint(
   ctx.transform(m.a, m.b, m.c, m.d, m.e, m.f);
 
   // Fade an actively transformed element (and its subtree) so the page shows
-  // through it while it is being moved/resized (Canva-style live translucency).
+  // through it while it is being moved/resized (live translucency).
   const fade = opts.fadeIds && opts.fadeIds.has(node.id) ? LIVE_TRANSFORM_ALPHA : 1;
   const alpha = parentAlpha * node.opacity * fade;
   ctx.globalAlpha = alpha;
@@ -1897,7 +1897,7 @@ export function renderScene(
 
   const kids = scene.root.children;
   if (kids) {
-    // Page clipping (Canva-style): each top-level element is clipped to the page
+    // Page clipping each top-level element is clipped to the page
     // rect so overflow past the artboard edge is hidden, keeping clean page edges.
     // Selected/transforming nodes (revealIds) draw unclipped so their hidden
     // overflow reappears while selected. When clipToPage is off (export/thumbnail)

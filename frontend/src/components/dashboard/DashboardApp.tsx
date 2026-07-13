@@ -128,7 +128,7 @@ const FORMAT_GROUPS: { title: string; items: Format[] }[] = [
   },
 ];
 
-// Preset canvas sizes offered in the "Create a design" size picker (Canva-style).
+// Preset canvas sizes offered in the "Create a design" size picker.
 const SIZE_PRESETS: { label: string; w: number; h: number }[] = [
   { label: "Instagram Post", w: 1080, h: 1080 },
   { label: "Instagram Story", w: 1080, h: 1920 },

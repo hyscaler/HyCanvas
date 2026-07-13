@@ -599,7 +599,7 @@ These sample representative, testable criteria across the phases; a requirement 
 - AI eval / golden-set: a harness scoring text-to-diagram correctness, clustering quality, summarize faithfulness, and agent action validity (no invalid ids, coordinates in range, every action undoable) across multiple models, for reproducibility.
 - Manual: facilitator runbook (run a full workshop end to end), self-host smoke test with a BYO key proving no board data egress, accessibility audit against WCAG 2.2 AA.
 
-## 17. Better-than-Canva deltas
+## 17. Differentiators
 
 - Everything free and unwatermarked: the full facilitation suite (private mode, summon/take-control, voting, planning poker, timers, breakouts) and the full AI canvas suite ship ungated, where Mural/Miro lock the strongest facilitation and AI behind paid plans (differentiator 1).
 - Open file format + self-host + data ownership: every AI/diagram/import/template action lands as editable native scene-graph nodes (no rasterized dead-ends), fully exportable and runnable on-prem; closed Miro/FigJam formats cannot match this (differentiator 6).

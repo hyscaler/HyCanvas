@@ -4,7 +4,7 @@ Guidance for working in the HyCanvas repository.
 
 ## What This Project Is
 
-HyCanvas is a free, self-hostable, AI-native alternative to Canva, built to lead on performance, AI quality, collaboration, openness, and accessibility. Everything is free: no tiers, no paywalls, no watermarks. Web-only.
+HyCanvas is a free, self-hostable, AI-native design platform, built to lead on performance, AI quality, collaboration, openness, and accessibility. Everything is free: no tiers, no paywalls, no watermarks. Web-only.
 
 Current state: the core product is built and runs. A single-player editor, content systems (uploads, stock, templates), accounts and workspaces, document types (presentations, video, whiteboard, docs, sheets), export, brand kits, and a bring-your-own-key AI layer all ship today. The remaining and early-stage work is tracked in `docs/roadmap/`.
 
@@ -65,6 +65,11 @@ Rules for every change:
 - **Prove it before deploying.** Verify against a database seeded with pre-change designs (open, edit, save, export, restore an old version), not just fresh ones. A pure code change that touches no schema and no SQL should say so explicitly when reporting.
 
 ## Conventions
+
+Naming:
+- Describe code by what it does, not by whose product it resembles. "Floating selection toolbar", not "<competitor>-style toolbar"; "equal-spacing guides", not "<competitor>'s pink guides". This applies to source comments, commit messages, test names, and user-facing strings.
+- HyCanvas is stated on its own terms: a full-featured, self-hostable design platform. Its positioning does not define it against another product.
+- Market context in `docs/roadmap/` (what exists, where the capability bar sits, where a gap is) is how we decide what to build, and stays. We do not set our own goals by another product's feature list.
 
 Documentation:
 - Feature IDs: `F<seq>` (for example `F05`). Requirement IDs: `FR-<n>`. Acceptance criteria: `AC-<n>`.

@@ -72,7 +72,7 @@ const ROTATE_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(
 // box's aspect ratio, and every handle stays correct when the node is rotated.
 // (Using the angle to the box center instead mislabels corners of a wide, short
 // box, e.g. a text box, as a horizontal ew-resize.) Snapped to the four resize
-// cursors at 45deg increments, matching Canva. `ex` is the box's screen-space
+// cursors at 45deg increments. `ex` is the box's screen-space
 // x-axis vector (top-right corner minus top-left).
 function resizeCursor(fx: number, fy: number, ex: { x: number; y: number }): string {
   const baseDeg = (Math.atan2(fy - 0.5, fx - 0.5) * 180) / Math.PI; // outward dir in box space
@@ -233,7 +233,7 @@ function SelectionGizmo({ api, ids }: { api: CanvasApi; ids: string[] }) {
       if (e.shiftKey) deltaDeg = Math.round(deltaDeg / 15) * 15;
       else if (useEditor.getState().snapEnabled) {
         // Soft-snap the group rotation to the nearest 45 deg (straight/diagonal)
-        // when within a few degrees, so it clicks into clean angles like Canva.
+        // when within a few degrees, so it clicks into clean angles.
         const n = Math.round(deltaDeg / 45) * 45;
         if (Math.abs(deltaDeg - n) < 3) deltaDeg = n;
       }
@@ -283,7 +283,7 @@ function SelectionGizmo({ api, ids }: { api: CanvasApi; ids: string[] }) {
     { fx: 1, fy: 0.5, cursor: "ew-resize" }, { fx: 1, fy: 1, cursor: "nwse-resize" }, { fx: 0.5, fy: 1, cursor: "ns-resize" },
     { fx: 0, fy: 1, cursor: "nesw-resize" }, { fx: 0, fy: 0.5, cursor: "ew-resize" },
   ];
-  // Per-item outlines (Canva-style): a thin dashed box around each selected
+  // Per-item outlines a thin dashed box around each selected
   // element so it's clear what's in the selection, not just the union bounds.
   // Computed via api.toScreen so it stays correct on any (offset) page.
   const outlines = ids
@@ -505,7 +505,7 @@ export function Gizmo({ api }: { api: CanvasApi }) {
       let deltaDeg = ((ang - (d.startAngle ?? 0)) * 180) / Math.PI;
       if (!e.shiftKey && useEditor.getState().snapEnabled) {
         // Soft-snap the resulting angle to the nearest 45 deg when within a few
-        // degrees, so the element clicks into straight/diagonal (Canva-style).
+        // degrees, so the element clicks into straight/diagonal.
         const finalDeg = (d.startTransform.rotation ?? 0) + deltaDeg;
         const n = Math.round(finalDeg / 45) * 45;
         if (Math.abs(finalDeg - n) < 3) deltaDeg += n - finalDeg;
@@ -515,7 +515,7 @@ export function Gizmo({ api }: { api: CanvasApi }) {
       // Convert the page-space drag into the node's parent space so resizing a
       // node inside a transformed group still tracks the cursor.
       const pd = parentSpaceDelta(store.doc, d.id, page.x - d.startPage.x, page.y - d.startPage.y);
-      // Dragging a CORNER of a text box scales the font (Canva-style); edges just
+      // Dragging a CORNER of a text box scales the font; edges just
       // resize the box and reflow. Corners are aspect-locked for text/image/group.
       const isTextCorner = node.type === "text" && CORNERS.has(d.handle as string);
       const aspect = node.type === "image" || node.type === "group" || isTextCorner ? !e.shiftKey : e.shiftKey;
@@ -580,7 +580,7 @@ export function Gizmo({ api }: { api: CanvasApi }) {
         if (hid.includes("n")) { const t = nearest(top, ys); if (t != null) { top = t; gy.push(t); } }
         if (hid.includes("s")) { const t = nearest(bottom, ys); if (t != null) { bottom = t; gy.push(t); } }
         // Equal-size: on an axis the edge-snap didn't already claim, snap the
-        // dragged dimension to a sibling's matching width/height (Canva-style).
+        // dragged dimension to a sibling's matching width/height.
         // The anchor edge stays put; the moving edge shifts to hit the size.
         if (!gx.length && (hid.includes("w") || hid.includes("e"))) {
           const t = nearest(right - left, widths);
@@ -718,7 +718,7 @@ export function Gizmo({ api }: { api: CanvasApi }) {
         <line x1={rot.x} y1={rot.y} x2={rotPos.x} y2={rotPos.y} stroke={overlay.selection} strokeWidth={1.5} />
       </svg>
       {transforming && (sizeMatch.w != null || sizeMatch.h != null) && (() => {
-        // Equal-size hint (Canva-style): a dimension bar on the matched edge of
+        // Equal-size hint a dimension bar on the matched edge of
         // the resized element and every sibling that now shares that width/height,
         // so it's clear they're equal. The resized element's bar carries the label.
         const d = useEditor.getState().doc;

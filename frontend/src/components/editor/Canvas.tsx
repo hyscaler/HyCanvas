@@ -491,7 +491,7 @@ function TextEditOverlay({ api, id, onClose }: { api: CanvasApi; id: string; onC
     const el = ref.current;
     return el ? htmlToContent(el, modelRef.current ?? node.content) : (modelRef.current ?? node.content);
   };
-  // Auto-grow (Canva-style): the box height the engine would render for `model`,
+  // Auto-grow the box height the engine would render for `model`,
   // measured with the SAME layout + canvas measurer the canvas/export use, in page
   // units. This is the source of truth, so the selection box fits the rendered
   // text exactly rather than approximating from the DOM's scrollHeight.
@@ -627,7 +627,7 @@ function TextEditOverlay({ api, id, onClose }: { api: CanvasApi; id: string; onC
           left: tl.x,
           top: tl.y,
           width: node.size.width * sx * zoom,
-          // Fixed width, auto-sizing height (Canva-style): the editor grows/shrinks
+          // Fixed width, auto-sizing height the editor grows/shrinks
           // with the content (floored at ~one line); the box height is fitted to
           // the rendered content on commit. height stays unset so it tracks content.
           minHeight: ((cs?.fontSize ?? 16) * 1.6 + pad.t + pad.b) * sy * zoom,
@@ -1171,19 +1171,19 @@ export function Canvas() {
   // Drives the grab/grabbing cursor while Space is held or a pan is in flight.
   const [spaceCursor, setSpaceCursor] = useState(false);
   // True when the select-tool pointer hovers a draggable node, so the canvas
-  // shows a move cursor (Canva-style). The ref dedupes so we only re-render on a
+  // shows a move cursor. The ref dedupes so we only re-render on a
   // change, not on every pointer move.
   const [hoverMove, setHoverMove] = useState(false);
   const hoverMoveRef = useRef(false);
   // Id of the top-level node the select-tool pointer is idling over, so the
-  // canvas draws a faint outline on it before you click (Canva-style). Deduped
+  // canvas draws a faint outline on it before you click. Deduped
   // via a ref so we only re-render when the hovered node actually changes.
   // Hovered top-level node lives in the store so the canvas render loop can reveal
-  // its off-page overflow on hover (Canva-style). The ref dedupes store writes.
+  // its off-page overflow on hover. The ref dedupes store writes.
   const hoverId = useEditor((s) => s.hoverId);
   const hoverIdRef = useRef<string | null>(null);
   // True while Alt/Option is held during an idle hover: reveals the pixel
-  // distance between the selection and the hovered element (Figma/Canva measure).
+  // distance between the selection and the hovered element (a measurement overlay).
   const [hoverAlt, setHoverAlt] = useState(false);
   const hoverAltRef = useRef(false);
   // First digit + timestamp of an opacity keypress, so a quick second digit
@@ -1310,7 +1310,7 @@ export function Canvas() {
         setEditingSticky(id);
       } else if (
         // Empty design canvas: double-click drops a text box centered on the
-        // cursor and opens it for typing (Canva/Figma-style). Only with the
+        // cursor and opens it for typing . Only with the
         // select tool, so the other tools' double-click behavior is unchanged.
         !isWhiteboard &&
         useEditor.getState().tool === "select" &&
@@ -1577,7 +1577,7 @@ export function Canvas() {
     const page = api.toPage(screen);
     const scene = api.scene();
     const store = useEditor.getState();
-    // Locked elements stay selectable (Canva-style): when nothing unlocked is
+    // Locked elements stay selectable when nothing unlocked is
     // under the cursor, hit-test again including locked nodes so a click can
     // select one and surface its Unlock affordances (selection toolbar, panel,
     // context menu). Every transform path already excludes locked nodes, so a
@@ -1783,7 +1783,7 @@ export function Canvas() {
         const ry = mg ? nearest(mg.y, [box.y + sdy, box.y + sdy + box.height / 2, box.y + sdy + box.height]) : null;
         if (ry) { sdy += ry.d; gy2.push(ry.line); }
         // Equal-spacing (distribution) guides on axes an alignment/ruler guide
-        // hasn't already claimed. Skipped in grid mode. These give the Canva-style
+        // hasn't already claimed. Skipped in grid mode. These give the style
         // pink "matching gap" bars when the box is evenly spaced with neighbors.
         const spacing: SpacingGuide[] = [];
         if (!showGrid) {
@@ -1946,7 +1946,7 @@ export function Canvas() {
       });
     } else if (t === "select" && !spaceHeld.current) {
       // Idle hover: show a move cursor + faint outline over a draggable node
-      // (Canva-style). Outline targets the same top-level node a click selects.
+      //. Outline targets the same top-level node a click selects.
       const hit = api.scene()?.hitTest(api.toPage(localPoint(e)));
       const over = !!hit;
       if (over !== hoverMoveRef.current) {
@@ -2084,7 +2084,7 @@ export function Canvas() {
     if (g.type === "move") {
       const movedIds = [...g.before.keys()];
       // Cross-page drop: if the pointer is released over a DIFFERENT page and the
-      // moved nodes are all top-level, re-parent them into that page (Canva-style
+        // moved nodes are all top-level, re-parent them into that page
       // move-to-page) as one undo step, instead of leaving them stranded in the
       // source page's coordinate space (which would render "under" the other page).
       const srcIdx = Math.min(store.activePage, store.doc.pages.length - 1);
@@ -2143,7 +2143,7 @@ export function Canvas() {
     const vp = store.viewport;
     if (e.ctrlKey || e.metaKey) {
       const screen = localPoint(e);
-      // Gentle, incremental zoom about the cursor (~12% per notch, Canva-like)
+      // Gentle, incremental zoom about the cursor (~12% per notch)
       // instead of one coarse jump. Normalize line/page wheel deltas to pixels and
       // clamp the step so a single fast notch can't leap 50%->200%.
       let dy = e.deltaY;
@@ -2283,7 +2283,7 @@ export function Canvas() {
         // level listeners). Read meta.kind live (the effect closure is created once).
         !((store.doc.meta as { kind?: string } | undefined)?.kind === "whiteboard" && ["p", "l", "t"].includes(e.key.toLowerCase()))
       ) {
-        // Single-key tool shortcuts (Canva-style): V select, P pen, T text,
+        // Single-key tool shortcuts V select, P pen, T text,
         // R rectangle, E ellipse, L line, A arrow. A read-only user may still
         // switch tools (the actual draw/mutate is refused at pointer/store level),
         // but never enter a content-creating draw tool that implies an edit.
@@ -2360,7 +2360,7 @@ export function Canvas() {
         setHoverAlt(false);
       }
     };
-    // System-clipboard paste (Canva-style): paste an image/screenshot or text
+    // System-clipboard paste paste an image/screenshot or text
     // copied from anywhere, or our own copied elements (cross-tab/refresh). Runs
     // on the native paste event because that is the only place clipboard files
     // are exposed. Fields/the rich-text editor handle their own paste.
@@ -2397,7 +2397,7 @@ export function Canvas() {
         } catch { /* ignore malformed clipboard JSON */ }
         return;
       }
-      // A bare image URL pastes as an image (Canva-style); other text as a box.
+      // A bare image URL pastes as an image; other text as a box.
       const trimmed = text?.trim() ?? "";
       if (/^https?:\/\/\S+\.(png|jpe?g|gif|webp|svg|avif)(\?\S*)?$/i.test(trimmed)) {
         e.preventDefault();
@@ -2581,7 +2581,7 @@ export function Canvas() {
       />
       {/* Artboard outline: a crisp 1px page edge drawn ON TOP of the canvas so the
           canvas bounds stay visible even when an element covers or overflows the
-          page (pairs with the engine's faded-overflow ghost, Canva-style). */}
+          page (pairs with the engine's faded-overflow ghost). */}
       {pageFrame && (
         <div
           aria-hidden
@@ -2644,7 +2644,7 @@ export function Canvas() {
         <>
           <div className="absolute left-0 top-0 z-10 bg-surface" style={{ width: RULER, height: RULER, borderRight: "1px solid var(--color-neutral-200)", borderBottom: "1px solid var(--color-neutral-200)" }} />
           {/* Top ruler measures X; dragging DOWN from it pulls a horizontal guide
-              (axis "y"), matching Canva/Figma/Photoshop. */}
+              (axis "y"), the conventional axis mapping. */}
           <div
             className="absolute top-0 z-10 cursor-ns-resize bg-surface"
             style={{ left: RULER, right: 0, height: RULER, borderBottom: "1px solid var(--color-neutral-200)" }}
@@ -2796,7 +2796,7 @@ export function Canvas() {
       })()}
       {spacingGuides.length > 0 && (() => {
         // Equal-spacing indicators: a capped bar over each matching gap with its
-        // size, mirroring Canva's pink distribution guides. Bars sit on the
+        // size, shown as equal-spacing distribution guides. Bars sit on the
         // moving box's centerline (segment.cross); labels ride each gap's middle.
         const CAP = 4; // end-tick half length in screen px
         const els: React.ReactElement[] = [];

@@ -1,4 +1,4 @@
-// Pages strip (Canva-style): live thumbnails you can switch, drag to reorder,
+// Pages strip live thumbnails you can switch, drag to reorder,
 // add, duplicate, and delete.
 
 import { Fragment, useState } from "react";

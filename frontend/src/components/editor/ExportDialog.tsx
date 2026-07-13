@@ -1,4 +1,4 @@
-// Download panel, Canva-style. SVG export uses the pure @hc/export
+// Download panel. SVG export uses the pure @hc/export
 // serializer; PNG/JPG render the engine scene to a real canvas and download via
 // toBlob (the client-side fast path); PDF embeds rendered pages via jsPDF. The
 // worker/skia path and animated formats remain deferred.
@@ -249,7 +249,7 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
   // The page(s) that will actually be exported, sorted; PDF always uses all
   // selected, raster/svg emit one file per selected page.
   const pages = selected.length ? [...selected].sort((a, b) => a - b) : [Math.min(activePage, pageCount - 1)];
-  // Live pixel dimensions for the first exported page (Canva shows this).
+  // Live pixel dimensions for the first exported page (design tools commonly show this).
   const refPage = doc.pages[pages[0]] ?? doc.pages[0];
   const dim = rasterDimensions(refPage, { scale }, doc.dpi ?? 96);
   const fileCount = format === "pdf" || isSingleAnimated ? 1 : pages.length;
@@ -416,7 +416,7 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
 
   return (
     <>
-      {/* Click-away backdrop (transparent; the panel is anchored top-right like Canva). */}
+      {/* Click-away backdrop (transparent; the panel is anchored top-right). */}
       <div className="fixed inset-0 z-40" onClick={onClose} />
       <div
         role="dialog"

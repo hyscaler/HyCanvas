@@ -1,4 +1,4 @@
-// Workspace member + invitation REST endpoints (Canva-style team invites): list
+// Workspace member + invitation REST endpoints (team invitations): list
 // members, invite by email, accept an invitation, list/revoke pending
 // invitations, change a member's role, remove a member. All authenticated; the
 // accounts service enforces the workspace-role authority + last-owner invariants.

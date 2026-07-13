@@ -1,13 +1,13 @@
-# Editor Parity Backlog (Canva-level gaps)
+# Editor Capability Backlog
 
-A grounded gap analysis of the HyCanvas editor against Canva, produced by auditing the actual code (`frontend/src/components/editor`, `frontend/src/store/editor.ts`, `packages/*`). Use this to pick up work; check items off as they ship.
+A grounded gap analysis of the HyCanvas editor against the capability bar a mature design tool is expected to meet, produced by auditing the actual code (`frontend/src/components/editor`, `frontend/src/store/editor.ts`, `packages/*`). Use this to pick up work; check items off as they ship.
 
 Re-audited against the code on 2026-06-23: several items previously marked missing were already shipped (curved text, connectors UI, hover/click interaction states, rulers + drag-to-add guides, CVD preview in the picker, the keyframe timeline, continuous multi-page scroll, shaped frames, and keyboard-shortcut remapping). Those are corrected below so the backlog reflects reality.
 
 ## Legend
 
 - Status: **M** = missing entirely, **W** = exists but weak/shallow, **D** = exists but poor discoverability.
-- Priority: **P1** = Canva-defining, high user impact. **P2** = important depth. **P3** = polish / advanced.
+- Priority: **P1** = table stakes for a design editor, high user impact. **P2** = important depth. **P3** = polish / advanced.
 
 ## P1 - High impact
 

@@ -313,7 +313,7 @@ Internal package contracts:
 - E2E: background-remove and replace on a real clip; scene-detect and split; caption, edit a cue, translate, export SRT; generate music and auto-fit; TTS voiceover feeding captions; avatar/lip-sync regenerate; image-to-video with keyframe edit.
 - Manual: subjective quality review of matte edges, caption accuracy, music fit, voice naturalness, and lip-sync alignment across a sample set; concurrent-edit-during-job behavior; degradation with capability-limited BYO models.
 
-## 13. Better than Canva
+## 13. Differentiators
 
 - Editable output timelines everywhere: captions, music, voice, motion, and matte are all editable native artifacts, not baked renders, so refinement never means re-doing.
 - Longer-form video generation and higher-fidelity, broader multilingual voices than Canva's bundled set.

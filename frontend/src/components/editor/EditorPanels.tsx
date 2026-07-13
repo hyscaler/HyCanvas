@@ -88,7 +88,7 @@ function useArmedConfirm(timeoutMs = 3500) {
 
 /** After an insert, just confirm with a subtle toast. The node is already placed
  *  at the current viewport center and selected by addNode, so it appears where
- *  the user is looking - we deliberately do NOT zoom (Canva-style: the view
+   *  the user is looking - we deliberately do NOT zoom (the view stays put
  *  stays put rather than jumping to frame the new element). */
 function afterInsert(toast: ReturnType<typeof useToast>, label: string) {
   toast.success(`Added ${label}`);
@@ -174,7 +174,7 @@ export function ElementsPanel() {
   const insertChart = useEditor((s) => s.insertChart);
   // Insert helpers: the store already centers the new node in the current
   // viewport and selects it, so afterInsert only confirms with a subtle toast
-  // (no zoom - the view stays put, Canva-style).
+  // (no zoom - the view stays put).
   const insertShape = (label: string, init: Partial<Node>) => { addNode("shape", init); afterInsert(toast, label.toLowerCase()); };
   const insertLineNode = (label: string, init: Partial<Node>) => { addNode("line", init); afterInsert(toast, label.toLowerCase()); };
   const insertFrame = (init: Partial<Node>) => { addNode("frame", init); afterInsert(toast, "frame"); };
@@ -659,7 +659,7 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
   const pdfRef = useRef<HTMLInputElement>(null);
   const [assets, setAssets] = useState<UploadedAsset[]>([]);
   // In-flight uploads shown as placeholder tiles with a live progress percentage
-  // (Canva-style), replaced by the real asset when each finishes.
+  //, replaced by the real asset when each finishes.
   const [uploading, setUploading] = useState<{ id: string; name: string; preview: string; progress: number; error: boolean }[]>([]);
   const [folders, setFolders] = useState<AssetFolder[]>([]);
   const [usage, setUsage] = useState<StorageUsageView | null>(null);
@@ -890,7 +890,7 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
     if (fileRef.current) fileRef.current.value = "";
   }
 
-  // Import an SVG file (e.g. a Canva SVG export) as editable elements, fit to the
+  // Import an SVG file (e.g. an SVG export from another design tool) as editable elements, fit to the
   // page. Reads the file locally; no upload needed.
   async function onSvgFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -902,7 +902,7 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
     toast.success("Imported SVG as editable elements.");
   }
 
-  // Import a PDF (e.g. a Canva PDF export) as editable pages (text). pdf.js loads
+  // Import a PDF (e.g. a PDF export from another design tool) as editable pages (text). pdf.js loads
   // on demand. Vectors/images from the PDF are not extracted (text only).
   async function onPdfFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -948,10 +948,10 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
               <button onClick={() => void importUrl()} disabled={!workspaceId} title="Import an image from a URL" className="flex flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-none text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink disabled:opacity-40">
                 <LinkIcon size={15} /> <span className="whitespace-nowrap">From URL</span>
               </button>
-              <button onClick={() => svgRef.current?.click()} title="Import an SVG (e.g. a Canva SVG export) as editable elements" className="flex flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-none text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink">
+              <button onClick={() => svgRef.current?.click()} title="Import an SVG (e.g. an SVG export from another design tool) as editable elements" className="flex flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-none text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink">
                 <Upload size={15} /> <span className="whitespace-nowrap">Import SVG</span>
               </button>
-              <button onClick={() => pdfRef.current?.click()} title="Import a PDF (e.g. a Canva PDF export) as editable pages (text)" className="flex flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-none text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink">
+              <button onClick={() => pdfRef.current?.click()} title="Import a PDF (e.g. a PDF export from another design tool) as editable pages (text)" className="flex flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-none text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink">
                 <Upload size={15} /> <span className="whitespace-nowrap">Import PDF</span>
               </button>
             </div>

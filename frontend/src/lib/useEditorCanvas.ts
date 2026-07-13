@@ -3,8 +3,8 @@
 // (with device-pixel-ratio handling), re-rendering on document/viewport/resize.
 //
 // Continuous multi-page scroll: all pages are drawn stacked vertically (each at
-// a cumulative page-space offset), so scrolling reveals the whole document like
-// Canva. Editing still targets the ACTIVE page: the coordinate helpers map
+// a cumulative page-space offset), so scrolling reveals the whole document.
+// Editing still targets the ACTIVE page: the coordinate helpers map
 // screen <-> the active page's local space at its stacked offset, so selection,
 // the gizmo, and hit-testing keep working unchanged. A single-page document has
 // offset 0, so it behaves exactly as before.
@@ -105,7 +105,7 @@ export function useEditorCanvas(canvasRef: RefObject<HTMLCanvasElement | null>):
     const doc = useEditor.getState().doc;
     if (!doc.pages.length) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height); return; }
     const offs = pageOffsets(doc);
-    // Content is clipped to its own page (Canva-style clean edges): an element that
+    // Content is clipped to its own page (clean edges): an element that
     // overflows the artboard is hidden on the pasteboard, EXCEPT the current
     // selection, which draws unclipped so a selected element reveals the parts
     // hidden past the edge (and can be resized back). Fade the element being

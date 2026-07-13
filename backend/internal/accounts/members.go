@@ -1,4 +1,4 @@
-// Workspace member + invitation management (the Canva-style "invite people to
+// Workspace member + invitation management (the "invite people to
 // your team" flow). Sits on the accounts Service because it owns WorkspaceMember,
 // the role rank, the secrets/token helpers, and the dev mail outbox. Invitations
 // are stored token-hash-only (sha256), single-use, and expiring; acceptance

@@ -373,7 +373,7 @@ Internal contracts:
 - Security/compliance: third-party penetration test and bug-bounty intake; control-evidence collection mapped to SOC 2/ISO 27001; GDPR/CCPA data-rights flows; HIPAA-eligible configuration review.
 - Manual: assistive-technology testing with real screen readers (NVDA, VoiceOver, TalkBack); admin-console walkthroughs for SSO/SCIM/RBAC/DLP/keys/residency/data-requests; self-host operator guide on a clean environment.
 
-## 13. Better than Canva
+## 13. Differentiators
 
 - Enterprise-grade governance (SSO/SCIM/MFA, custom RBAC, tamper-evident audit, DLP) and full compliance posture provided to organizations at no license cost, where these are paid-tier or enterprise-only elsewhere.
 - A first-class self-host/private-cloud option for the entire platform with customer-managed encryption keys and data-residency pinning, so organizations fully own their data, plus complete data portability in an open format.

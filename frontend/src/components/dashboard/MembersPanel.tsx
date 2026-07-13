@@ -1,4 +1,4 @@
-// Workspace member management (Canva-style "invite people to your team"): roster
+// Workspace member management (team invitations): roster
 // with role changes + removal, invite-by-email, and pending invitations with
 // resend/revoke. The backend (accounts members) enforces the real authority +
 // last-owner invariants; this UI hides clearly-disallowed controls and surfaces

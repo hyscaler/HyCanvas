@@ -1,4 +1,4 @@
-// Floating selection toolbar (Canva-style): a small action bar that hovers just
+// Floating selection toolbar a small action bar that hovers just
 // above the selected element(s) on the canvas, giving one-click duplicate,
 // delete, lock, and z-order without going to the side panel. Rendered in screen
 // space alongside the Gizmo; it owns no transform logic, only quick actions.

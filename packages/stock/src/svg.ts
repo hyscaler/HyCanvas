@@ -17,7 +17,7 @@ function parseAttrs(s: string): Attrs {
   // `fill:url("#id")` to `&quot;`, which would otherwise defeat url() matching.
   for (const m of s.matchAll(/([\w:-]+)\s*=\s*"([^"]*)"/g)) out[m[1]] = decodeEntities(m[2]);
   // CSS `style="fill:..;font-size:.."` overrides presentation attributes (SVG
-  // spec). Most exporters (incl. Canva) put fill/font on style, so fold it in.
+  // spec). Most exporters put fill/font on style, so fold it in.
   if (out.style) {
     for (const decl of out.style.split(";")) {
       const i = decl.indexOf(":");

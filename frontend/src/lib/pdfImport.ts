@@ -1,4 +1,4 @@
-// Import a PDF (e.g. a Canva PDF export) into editable pages. Uses pdf.js to pull
+// Import a PDF (e.g. a PDF export from another design tool) into editable pages. Uses pdf.js to pull
 // each page's text runs (position, size) and rebuild them as editable text boxes,
 // one design page per PDF page. pdf.js is dynamically imported so it stays out of
 // the main bundle and never runs on the server.

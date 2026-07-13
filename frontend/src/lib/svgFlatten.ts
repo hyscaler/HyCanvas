@@ -1,7 +1,7 @@
 // Flatten an SVG's group transforms before converting to scene nodes. The
 // @hc/stock `svgToNodes` is a flat, dependency-free scanner that ignores
-// ancestor <g transform="..."> nesting, so a grouped/transformed SVG (e.g. a
-// Canva export) would import with wrong positions/scales. Here, in the browser,
+// ancestor <g transform="..."> nesting, so a grouped/transformed SVG (e.g. an
+// export from another design tool) would import with wrong positions/scales. Here, in the browser,
 // we parse the DOM, accumulate each leaf's full transform matrix (translate /
 // scale / rotate / matrix / skew, nested), convert that single leaf via
 // svgToNodes (which yields it in its own local coordinates), then bake the
