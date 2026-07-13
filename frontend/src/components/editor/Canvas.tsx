@@ -9,7 +9,8 @@ import { isDecorative, resolveReadingOrder } from "@hc/schema";
 import { locate, moveTransform, marqueeSelect, parentSpaceDelta, worldMatrix, worldAABB, unionAABB, snap, spacingSnap, type SpacingGuide, type EditCommand } from "@hc/editor";
 import { fitStickyFontScale, routeConnector } from "@hc/whiteboard";
 import { layoutText } from "@hc/text";
-import { canvasFontString, fontFamilyStack, weightFromFontStyle, type Rect } from "@hc/engine";
+import { fontFamilyStack, weightFromFontStyle, type Rect } from "@hc/engine";
+import { canvasMeasure, measuredTextHeight } from "@/lib/textFit";
 import { useCallbackRef } from "@/lib/useCallbackRef";
 import { overlay } from "@/lib/theme.generated";
 import { useEditorCanvas, type CanvasApi } from "@/lib/useEditorCanvas";
@@ -222,20 +223,8 @@ const runSpan = (text: string, style: CharStyle, zoom: number) =>
   // the container's (first run's) font and size while editing. Escape them.
   `<span data-st="${encodeURIComponent(JSON.stringify(style))}" style="${charCss(style, zoom).replace(/"/g, "&quot;")}">${escHtml(text)}</span>`;
 
-// Single shared offscreen context for measuring text exactly as @hc/engine's
-// render path does (same canvasFontString + letter-spacing), so the editor wraps
-// at the same points the canvas and export will.
-let _measureCanvas: HTMLCanvasElement | null = null;
-const canvasMeasure = (text: string, style: CharStyle): number => {
-  if (typeof document === "undefined") return text.length * (style.fontSize ?? 16) * 0.55;
-  if (!_measureCanvas) _measureCanvas = document.createElement("canvas");
-  const ctx = _measureCanvas.getContext("2d");
-  if (!ctx) return text.length * (style.fontSize ?? 16) * 0.55;
-  const lctx = ctx as unknown as { letterSpacing?: string };
-  ctx.font = canvasFontString(style);
-  if ("letterSpacing" in ctx) lctx.letterSpacing = `${style.letterSpacing ?? 0}px`;
-  return ctx.measureText(text).width;
-};
+// Text measurement (canvasMeasure) and auto-height fitting live in @/lib/textFit
+// so the editor and the resize gizmo wrap/fit identically.
 
 // For each paragraph, the character offsets (within that paragraph's text) where
 // the engine starts a new visual line. Derived from layoutText so the editor's
@@ -545,11 +534,7 @@ function TextEditOverlay({ api, id, onClose }: { api: CanvasApi; id: string; onC
   const measuredHeight = (model: EditPara[]): number => {
     const real = locate(useEditor.getState().doc, id)?.node as unknown as TextNode | undefined;
     if (!real) return startHeightRef.current ?? 1;
-    const laid = layoutText(
-      { ...real, content: model as unknown as Paragraph[], box: { ...real.box, mode: "autoHeight" } } as TextNode,
-      { measure: canvasMeasure },
-    );
-    return Math.max(1, Math.round(laid.height));
+    return measuredTextHeight(real, model as unknown as Paragraph[]);
   };
   // Live auto-grow: track the box height to the content as the user types, so the
   // selection box and surrounding layout follow line wraps immediately (the final

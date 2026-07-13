@@ -4,7 +4,8 @@
 // Handles drive @hc/editor transform ops; one drag = one undo step.
 
 import { useRef, useState } from "react";
-import type { Size, Transform } from "@hc/schema";
+import type { Size, TextNode, Transform } from "@hc/schema";
+import { measuredTextHeight, minContentWidth } from "@/lib/textFit";
 import { overlay } from "@/lib/theme.generated";
 import {
   locate,
@@ -379,6 +380,8 @@ export function Gizmo({ api }: { api: CanvasApi }) {
     startAngle?: number;
     startContent?: unknown; // text run snapshot, for font-scaling on corner-resize
     startBox?: unknown; // text box snapshot, kept in sync with size so text reflows
+    startMinW?: number; // narrowest reflow width (longest word) at the start font
+    startMinH?: number; // natural content height at the start font + width
   } | null>(null);
   // Equal-size match during a resize: the sibling width/height the dragged
   // dimension has snapped to (null = no match on that axis). The state drives
@@ -450,6 +453,10 @@ export function Gizmo({ api }: { api: CanvasApi }) {
       startAngle: Math.atan2(startPage.y - centerPage.y, startPage.x - centerPage.x),
       startContent: loc!.node.type === "text" ? structuredClone((loc!.node as unknown as { content: unknown }).content) : undefined,
       startBox: loc!.node.type === "text" ? structuredClone((loc!.node as unknown as { box: unknown }).box) : undefined,
+      // Reflow thresholds captured once at the start font, so the two-phase side
+      // resize (reflow, then scale past the fit) has a stable pivot per gesture.
+      startMinW: loc!.node.type === "text" ? minContentWidth(loc!.node as unknown as TextNode) : undefined,
+      startMinH: loc!.node.type === "text" ? measuredTextHeight(loc!.node as unknown as TextNode) : undefined,
     };
     useEditor.getState().setTransforming(true);
     window.addEventListener("pointermove", onMove);
@@ -630,17 +637,36 @@ export function Gizmo({ api }: { api: CanvasApi }) {
       node.size = size;
       store.setSnapGuides(gx.length || gy.length ? { x: gx, y: gy } : null);
       if (node.type === "text") {
-        // Text wraps/clips to its box, so keep the box in sync with the size
-        // (edge-resize reflows); corners also scale the font.
         const tn = node as unknown as { box: { width: number; height: number; mode?: string } };
         tn.box = { ...tn.box, width: size.width, height: size.height };
-        // Dragging a pure vertical edge (top/bottom, not a corner) is an explicit
-        // height choice: switch to a fixed box so it stops auto-growing and the
-        // user's size sticks. Width-only and corner (font-scale) drags stay
-        // auto-height and re-fit to the content.
-        if (d.handle === "n" || d.handle === "s") tn.box.mode = "fixed";
-        if (isTextCorner && d.startContent && d.startSize.width > 0) {
-          scaleTextFonts(node as unknown as { content?: unknown }, d.startContent, size.width / d.startSize.width);
+        const scale = (factor: number) => {
+          if (d.startContent && factor !== 1) scaleTextFonts(node as unknown as { content?: unknown }, d.startContent, factor);
+        };
+        if (isTextCorner) {
+          // Corner: uniform aspect scale + font by the width ratio (unchanged).
+          if (d.startSize.width > 0) scale(size.width / d.startSize.width);
+        } else if (d.handle === "e" || d.handle === "w") {
+          // Left/right: the box reflows the text at the current font first;
+          // only once it's narrower than the tightest wrap (longest word at the
+          // start font, startMinW) does the font scale down to keep fitting.
+          // Growing never scales up - the text just gets more room.
+          const minW = d.startMinW ?? 1;
+          scale(size.width < minW ? size.width / minW : 1);
+          // Height auto-fits the (reflowed or rescaled) text.
+          if (tn.box.mode !== "fixed") {
+            const hh = measuredTextHeight(node as unknown as TextNode);
+            tn.box.height = hh;
+            size = { ...size, height: hh };
+            node.size = size;
+          }
+        } else if (d.handle === "n" || d.handle === "s") {
+          // Top/bottom: the box holds the text plus empty space at the current
+          // font first; only once it's shorter than the text needs (startMinH)
+          // does the font scale down. Growing adds space, never scales up. The
+          // box holds the dragged height, so switch off auto-height.
+          const minH = d.startMinH ?? 1;
+          scale(size.height < minH ? size.height / minH : 1);
+          tn.box.mode = "fixed";
         }
       }
     }
