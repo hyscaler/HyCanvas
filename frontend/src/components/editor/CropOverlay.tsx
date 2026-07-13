@@ -1,4 +1,4 @@
-// Canva-style crop overlay: the node box is a fixed frame; the user pans and
+// crop overlay: the node box is a fixed frame; the user pans and
 // zooms the source image behind it. The region inside the frame becomes the new
 // crop (normalized to the source). The image always covers the frame, so the
 // crop region's aspect matches the frame and "cover" reproduces it exactly.

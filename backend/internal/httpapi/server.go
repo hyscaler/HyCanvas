@@ -29,6 +29,7 @@ import (
 	"hycanvas/backend/internal/jobs"
 	"hycanvas/backend/internal/oidc"
 	"hycanvas/backend/internal/persistence"
+	"hycanvas/backend/internal/platform/config"
 	"hycanvas/backend/internal/push"
 	"hycanvas/backend/internal/realtime"
 	"hycanvas/backend/internal/sharing"
@@ -67,8 +68,9 @@ type Deps struct {
 	Convert     *convert.Service
 	Storage     storage.Driver
 	AccountData *accountdata.Service
-	Secure      bool   // set Secure on session cookies (production / HTTPS)
-	PublicDir   string // exported Next.js frontend to serve; empty = API only
+	Secure      bool              // set Secure on session cookies (production / HTTPS)
+	Auth        config.AuthPolicy // which sign-in methods and signups are enabled
+	PublicDir   string            // exported Next.js frontend to serve; empty = API only
 	// AllowOrigin gates CORS: it returns true for cross-origin Origins that may
 	// call the API with credentials (dev frontend). Nil disables CORS handling.
 	AllowOrigin func(origin string) bool
@@ -113,7 +115,7 @@ func NewRouter(d Deps) http.Handler {
 		// Ported: auth + accounts (login / logout / me). Other modules mount here
 		// as they are migrated; the reverse proxy keeps unported routes on Node.
 		if d.Accounts != nil {
-			mountAuth(api, d.Accounts, d.Secure)
+			mountAuth(api, d.Accounts, d.Secure, d.Auth)
 			mountWorkspaces(api, d.Accounts)
 			mountMembers(api, d.Accounts)
 		}
@@ -121,7 +123,7 @@ func NewRouter(d Deps) http.Handler {
 			mountAccount(api, d.AccountData, d.Accounts, d.Secure)
 		}
 		if d.Accounts != nil && d.OIDC != nil {
-			mountOIDC(api, d.OIDC, d.Accounts, d.Secure)
+			mountOIDC(api, d.OIDC, d.Accounts, d.Secure, d.Auth)
 		}
 		if d.Accounts != nil && d.Persistence != nil {
 			mountPersistence(api, d.Persistence, d.Accounts, d.Sharing)

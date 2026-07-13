@@ -281,7 +281,7 @@ let styleClip: unknown = null;
 
 // Prefix that marks design-node JSON written to the OS clipboard, so a paste can
 // tell our own copied elements from arbitrary external text. Keeps copy/paste
-// working across refresh and browser tabs (last copy wins, same as Canva).
+// working across refresh and browser tabs (last copy wins, as editors conventionally do).
 export const OC_CLIP_PREFIX = "oc-clipboard-v1::";
 
 /** Assign fresh ids to a node subtree (used when duplicating a page). */
@@ -325,7 +325,7 @@ interface EditorState {
   snapGuides: { x: number[]; y: number[] } | null; // transient smart-guide preview (shared by move/resize)
   activePage: number; // index of the page being edited
   transforming: boolean; // true while an element is being live-moved/resized (fades it so the page shows through)
-  hoverId: string | null; // top-level node the select-tool pointer is idling over; the canvas reveals its off-page overflow (Canva-style)
+  hoverId: string | null; // top-level node the select-tool pointer is idling over; the canvas reveals its off-page overflow
   undoStack: UndoEntry[];
   redoStack: UndoEntry[];
 
@@ -704,7 +704,7 @@ interface EditorState {
   /** Append imported pages (e.g. from a PDF), each sized to the source page with
    *  its editable nodes, and switch to the first new page. Undoable. */
   importPdfPages(pages: { width: number; height: number; nodes: Node[] }[]): void;
-  /** Import a full SVG file (e.g. a Canva SVG export) as editable elements:
+  /** Import a full SVG file (e.g. an SVG export from another design tool) as editable elements:
    *  shapes/paths/text/images, registered assets, scaled to fit the page and
    *  grouped (ungroup to edit each element). Undoable. */
   importSvg(svg: string): void;
@@ -724,12 +724,12 @@ interface EditorState {
    *  (live feedback while typing, so the selection box tracks line wraps). The
    *  final height is recorded once, undoably, by setContent on commit. */
   growTextBoxLive(id: string, height: number): void;
-  /** Set (or clear, with null) a text node's background highlight (Canva-style),
+  /** Set (or clear, with null) a text node's background highlight,
    *  a padded rounded rect filled behind the text. Undoable. */
   setTextBackground(id: string, color: Color | null, padding?: number, radius?: number): void;
   /** Set (or clear, with null) the single named text effect on a text node
    *  (shadow/lift/hollow/splice/echo/neon/glow/outline). Effects are mutually
-   *  exclusive (Canva-style); the background highlight is kept separate. Undoable. */
+   *  exclusive; the background highlight is kept separate. Undoable. */
   setTextEffect(id: string, effect: TextEffect | null): void;
   /** Set a text node's vertical alignment within its box (top/middle/bottom). */
   setVerticalAlign(id: string, v: "top" | "middle" | "bottom"): void;
@@ -747,7 +747,7 @@ interface EditorState {
   /** Record an uploaded font in the design (cross-device): a FontRef with the
    *  asset URL so the font loads when the design opens on another device. */
   addDocFont(ref: { id: string; family: string; url: string }): void;
-  /** Curve a text node's baseline along an arc (Canva "Curve"); 0 clears it. */
+  /** Curve a text node's baseline along an arc ; 0 clears it. */
   setCurve(id: string, curvature: number): void;
   /** Replace all occurrences of `find` with `replace` across every text node in
    *  the document, undoable. Returns the number of text nodes changed. */
@@ -1207,7 +1207,7 @@ export const useEditor = create<EditorState>((set, get) => {
       const page = get().doc.pages[curPageIndex()];
       const sel = get().selection;
       if (!page || !sel.length) return;
-      // Match against the type of the first selected node (Canva "Select all").
+      // Match against the type of the first selected node (a type-matched "select all").
       const first = page.children.find((n) => n.id === sel[0]);
       if (!first) return;
       const type = first.type;
@@ -1995,7 +1995,7 @@ export const useEditor = create<EditorState>((set, get) => {
         name: "Text",
         transform: { x, y, scaleX: 1, scaleY: 1, rotation: 0 },
         size: { width: 240, height: 44 },
-        // Auto-height by default (Canva-style): the box grows with the typed text;
+        // Auto-height by default the box grows with the typed text;
         // dragging the top/bottom handle switches it to a fixed height.
         box: { mode: "autoHeight", width: 240, height: 44, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
         content: [{ runs: [{ text: "Text", style: { fontFamily: "system", fontStyle: "Regular", fontSize: 32, fill: { type: "solid", color: { srgb: { r: 0.1, g: 0.12, b: 0.16, a: 1 } } } } }], style: { align: "left", direction: "auto" } }],
@@ -3542,7 +3542,7 @@ export const useEditor = create<EditorState>((set, get) => {
       const vbH = (vb && vb.length === 4 ? vb[3] : hAttr) || 100;
       const page = get().doc.pages[curPageIndex()];
       // Fit within the page without upscaling, centered (keeps native size when it
-      // already matches the page, e.g. a same-size Canva export).
+      // already matches the page, e.g. a same-size export from another design tool).
       const scale = Math.min(page.width / vbW, page.height / vbH, 1);
       const gx = (page.width - vbW * scale) / 2 - minX * scale;
       const gy = (page.height - vbH * scale) / 2 - minY * scale;
@@ -4264,7 +4264,7 @@ export const useEditor = create<EditorState>((set, get) => {
       if (!content.length) return; // never leave a text node with zero paragraphs
       const before = structuredClone(node.content);
       const after = structuredClone(content);
-      // Auto-grow height (Canva-style) ONLY for auto-height boxes; a fixed box
+      // Auto-grow height ONLY for auto-height boxes; a fixed box
       // keeps the user's chosen height (text overflows / auto-fits instead). The
       // undo baseline is the height before editing began (boxHeightBefore) when
       // known, so transient live-grow during typing reverts cleanly.

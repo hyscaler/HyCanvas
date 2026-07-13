@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 // OidcProfile is the resolved identity from the IdP userinfo endpoint.
@@ -37,6 +38,10 @@ var (
 	ErrOidcDomainNotAllowed = errOidc("this email domain is not permitted for SSO")
 	ErrOidcSubjectTaken     = errOidc("this SSO identity is already linked to another account")
 	ErrOidcLastFactor       = errOidc("set a password before disconnecting SSO so you are not locked out")
+	// Policy gates (AUTH_OIDC_LOGIN_ENABLED / AUTH_OIDC_SIGNUP_ENABLED): signing an
+	// existing identity in, or provisioning a new account, is turned off here.
+	ErrOidcLoginDisabled  = errOidc("single sign-in is disabled on this instance")
+	ErrOidcSignupDisabled = errOidc("account creation via single sign-on is disabled on this instance")
 )
 
 // LinkOidcIdentity connects an IdP identity to an already-authenticated user
@@ -138,11 +143,17 @@ func (s *Service) finishOidcLogin(ctx context.Context, u *UserRow, device, ip st
 // LoginWithOidc links an OIDC profile to an account and issues a session (or an
 // MFA challenge). Returns (user, tokens, mfaToken, err); on ErrMFARequired the
 // caller drives the same VerifyMfaLogin step the password flow uses.
-func (s *Service) LoginWithOidc(ctx context.Context, p OidcProfile, device, ip string) (*AuthUser, *Tokens, string, error) {
+// allowLogin gates signing an existing/linked identity in (cases 1 and 2);
+// allowSignup gates provisioning a brand-new account (case 3). Each maps to
+// AUTH_OIDC_LOGIN_ENABLED / AUTH_OIDC_SIGNUP_ENABLED.
+func (s *Service) LoginWithOidc(ctx context.Context, p OidcProfile, device, ip string, allowLogin, allowSignup bool) (*AuthUser, *Tokens, string, error) {
 	// 1) Returning SSO user: an identity already exists for this subject.
 	var existingUserID string
 	err := s.db.QueryRow(ctx, `SELECT "user_id" FROM "auth_identities" WHERE provider = 'OIDC' AND "provider_subject" = $1`, p.Subject).Scan(&existingUserID)
 	if err == nil && existingUserID != "" {
+		if !allowLogin {
+			return nil, nil, "", ErrOidcLoginDisabled
+		}
 		u, err := s.findUserByID(ctx, existingUserID)
 		if err != nil || u == nil {
 			return nil, nil, "", ErrOidcNoAccount
@@ -161,6 +172,9 @@ func (s *Service) LoginWithOidc(ctx context.Context, p OidcProfile, device, ip s
 
 	// 2) Existing account with the same verified email: link the SSO identity.
 	if u, err := s.findUserByEmail(ctx, email); err == nil && u != nil {
+		if !allowLogin {
+			return nil, nil, "", ErrOidcLoginDisabled
+		}
 		if !p.EmailVerified {
 			return nil, nil, "", ErrOidcUnverified
 		}
@@ -181,47 +195,70 @@ func (s *Service) LoginWithOidc(ctx context.Context, p OidcProfile, device, ip s
 		return s.finishOidcLogin(ctx, u, device, ip)
 	}
 
-	// 3) New account: user (no password) + OIDC identity + personal workspace.
-	name := strings.TrimSpace(p.Name)
+	// 3) New account: user (no password) + OIDC identity + personal workspace, all
+	// in one transaction so the identity is atomic with the user.
+	if !allowSignup {
+		return nil, nil, "", ErrOidcSignupDisabled
+	}
+	userID, err := s.createUserWithWorkspace(ctx, email, p.Name, p.EmailVerified, func(tx pgx.Tx, userID string) error {
+		_, err := tx.Exec(ctx,
+			`INSERT INTO "auth_identities" (id,"user_id",provider,"provider_subject") VALUES ($1,$2,'OIDC',$3)`,
+			uuid.NewString(), userID, p.Subject)
+		return err
+	})
+	if err != nil {
+		return nil, nil, "", err
+	}
+	u, err := s.findUserByID(ctx, userID)
+	if err != nil || u == nil {
+		return nil, nil, "", ErrOidcNoAccount
+	}
+	return s.finishOidcLogin(ctx, u, device, ip)
+}
+
+// createUserWithWorkspace creates a passwordless user and their personal
+// workspace (owner membership) in one transaction, and returns the new user id.
+// `withinTx`, if non-nil, runs inside the same transaction after the user row is
+// inserted but before commit, so a caller can attach an auth identity (OIDC) or
+// any other per-account row atomically. Shared by OIDC just-in-time signup and
+// magic-link signup.
+func (s *Service) createUserWithWorkspace(ctx context.Context, email, name string, emailVerified bool, withinTx func(tx pgx.Tx, userID string) error) (string, error) {
+	email = strings.ToLower(strings.TrimSpace(email))
+	name = strings.TrimSpace(name)
 	if name == "" {
 		name = strings.SplitN(email, "@", 2)[0]
 	}
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
-		return nil, nil, "", err
+		return "", err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	userID := uuid.NewString()
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO "users" (id, email, name, "email_verified", "updated_at") VALUES ($1,$2,$3,$4, now())`,
-		userID, email, name, p.EmailVerified); err != nil {
-		return nil, nil, "", err
+		userID, email, name, emailVerified); err != nil {
+		return "", err
 	}
-	if _, err := tx.Exec(ctx,
-		`INSERT INTO "auth_identities" (id,"user_id",provider,"provider_subject") VALUES ($1,$2,'OIDC',$3)`,
-		uuid.NewString(), userID, p.Subject); err != nil {
-		return nil, nil, "", err
+	if withinTx != nil {
+		if err := withinTx(tx, userID); err != nil {
+			return "", err
+		}
 	}
 	wsID := uuid.NewString()
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO "workspaces" (id, kind, name, slug, "owner_id", "updated_at") VALUES ($1,'PERSONAL',$2,$3,$4, now())`,
 		wsID, name+" Workspace", slugify(name), userID); err != nil {
-		return nil, nil, "", err
+		return "", err
 	}
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO "workspace_members" (id, "workspace_id", "user_id", role, status, "joined_at", "updated_at")
 		 VALUES ($1,$2,$3,'OWNER','ACTIVE', now(), now())`,
 		uuid.NewString(), wsID, userID); err != nil {
-		return nil, nil, "", err
+		return "", err
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return nil, nil, "", err
+		return "", err
 	}
-
-	u, err := s.findUserByID(ctx, userID)
-	if err != nil || u == nil {
-		return nil, nil, "", ErrOidcNoAccount
-	}
-	return s.finishOidcLogin(ctx, u, device, ip)
+	return userID, nil
 }

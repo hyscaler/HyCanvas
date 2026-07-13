@@ -111,7 +111,7 @@ function rangesOverlap(a0: number, a1: number, b0: number, b1: number): boolean 
 
 /**
  * Equal-spacing (distribution) snap for a moving box against static neighbors
- * along one axis (the Canva "pink" spacing guides). Only boxes that share a band
+ * along one axis (the equal-spacing guides). Only boxes that share a band
  * on the cross axis count as in-line neighbors. Two behaviors are considered and
  * the smaller correction wins:
  *

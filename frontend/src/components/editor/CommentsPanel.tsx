@@ -387,7 +387,7 @@ function CommentRow({ comment, people, canComment, userId, isRoot, onChanged }: 
         {!editing && <ReactionPills comment={comment} canComment={canComment} userId={userId} onReact={react} />}
       </div>
       {/* Hover toolbar: react + author edit/delete, floating top-right so the
-          resting card stays clean (Figma/Canva pattern). */}
+          resting card stays clean (a common design-tool pattern). */}
       {!editing && (canComment || mine) && (
         <div className="absolute right-0 top-0 flex items-center gap-0.5 rounded-lg border border-neutral-200 bg-surface p-0.5 opacity-0 shadow-sm ring-1 ring-black/5 transition focus-within:opacity-100 group-hover/row:opacity-100">
           {canComment && <ReactButton onReact={react} />}

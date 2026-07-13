@@ -1,4 +1,4 @@
-// Per-page headers for continuous-scroll mode (Canva-style): above each stacked
+// Per-page headers for continuous-scroll mode above each stacked
 // page, a row with "Page N - <title>" and quick tools (move up/down, hide, lock,
 // duplicate, delete), plus an "Add page" button below the last page. Rendered in
 // screen space over the canvas; positions track scroll/zoom via the base viewport.

@@ -282,6 +282,23 @@ func main() {
 		return !isProd && localhostOriginRE.MatchString(origin)
 	}
 
+	// Resolve the effective auth policy. Two adjustments to what env asked for:
+	// (1) OIDC toggles only mean something when a provider is configured, and
+	// (2) a config that would leave no usable login method is a lockout, so we
+	// force password login back on rather than stranding the operator. Both are
+	// logged so the discrepancy is visible.
+	authPolicy := cfg.Auth
+	if !oidcSvc.Configured() {
+		if authPolicy.OidcLogin || authPolicy.OidcSignup {
+			logger.Warn("OIDC auth requested but no provider is configured; OIDC sign-in unavailable")
+		}
+		authPolicy.OidcLogin, authPolicy.OidcSignup = false, false
+	}
+	if !authPolicy.PasswordLogin && !authPolicy.MagicLinkLogin && !authPolicy.OidcLogin {
+		logger.Error("auth config disables every login method; forcing password login on to avoid lockout")
+		authPolicy.PasswordLogin = true
+	}
+
 	srv := &http.Server{
 		Addr: cfg.BindHost + ":" + cfg.Port,
 		Handler: httpapi.NewRouter(httpapi.Deps{
@@ -311,6 +328,7 @@ func main() {
 			Storage:     store,
 			AccountData: accountDataSvc,
 			Secure:      secureCookies,
+			Auth:        authPolicy,
 			PublicDir:   cfg.PublicDir,
 			AllowOrigin: allowOrigin,
 		}),

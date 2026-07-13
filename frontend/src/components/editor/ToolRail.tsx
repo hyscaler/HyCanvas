@@ -1,4 +1,4 @@
-// Vertical tool rail (Canva-style) + the active slide-out panel. Switches
+// Vertical tool rail + the active slide-out panel. Switches
 // between Elements, Text, Uploads, Stock, and Layers.
 
 import { useState } from "react";

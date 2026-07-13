@@ -2,7 +2,7 @@
 
 # HyCanvas
 
-A free, self-hostable, AI-native alternative to Canva: design anything, with no paywalls or watermarks. Shipped as a single self-contained image - one Go binary serves the web UI, the REST API, and the realtime WebSocket on one port, runs its database migrations on boot, and includes ffmpeg for video export. Postgres is the only external dependency.
+A free, self-hostable, AI-native design platform: design anything, with no paywalls or watermarks. Shipped as a single self-contained image - one Go binary serves the web UI, the REST API, and the realtime WebSocket on one port, runs its database migrations on boot, and includes ffmpeg for video export. Postgres is the only external dependency.
 
 ## Quick start (Docker Compose, recommended)
 

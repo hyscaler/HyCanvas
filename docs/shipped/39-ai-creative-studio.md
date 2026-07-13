@@ -237,7 +237,7 @@ Internal interfaces:
 - Quality/manual: human review of generated decks/posters for visual quality, brand fidelity, contrast/legibility, RTL/non-Latin output, and editability (every element selectable and restylable).
 - Generation eval harness: a golden set of prompts per design type, scored (automatically where possible: contrast pass rate, overflow/overlap count, brand-color adherence, element count, structured-output validity rate; plus periodic human rating) to catch quality regressions as prompts/models change. Run against a mock and at least one real provider.
 
-## 13. Better-than-Canva deltas
+## 13. Differentiators
 
 - Editable-native by construction: generated decks and posters are first-class scene-graph designs, so there is no export-cleanup tax (Gamma's PowerPoint export substitutes fonts and shifts layouts; ours does not, because the artifact is the format).
 - Bring-your-own-key and self-host: agentic generation runs against the user's own provider, privately, with no per-seat AI paywall and no watermarks; competitors meter AI behind Pro tiers.

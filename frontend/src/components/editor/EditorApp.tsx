@@ -1,5 +1,5 @@
 // The editor shell: a polished top bar (home, inline rename, undo/redo, export,
-// save) over a Canva-style layout (vertical tool rail + slide-out panel,
+// save) over a layout (vertical tool rail + slide-out panel,
 // canvas with a zoom control, and a contextual properties panel). Client-only.
 
 import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";

@@ -580,7 +580,7 @@ These sample representative, testable criteria across the phases; a requirement 
 - AI eval / golden-set: a harness scoring text-to-deck and ingestion correctness, layout quality, translation faithfulness (layout preserved), speaker-notes quality, and assistant action validity (no invalid ids, every action undoable) across multiple models, for reproducibility.
 - Manual: presenter runbook (deliver a full talk end to end with second display, teleprompter, and audience companion); self-host smoke test with a BYO key proving no deck/audio egress; PPTX round-trip against real-world decks; accessibility audit against WCAG 2.2 AA.
 
-## 17. Better-than-Canva deltas
+## 17. Differentiators
 
 - Everything free and unwatermarked: presenter view, present-and-record, audience Q&A/polls/reactions, captions, analytics, brand kits, custom fonts, and AI deck generation all ship ungated, where Canva caps Magic Design uses, Gamma paywalls PPTX/PDF, and PowerPoint gates Copilot behind licensing; the full deck-delivery suite is the wedge competitors gate (differentiator 1).
 - Open file format + self-host + data ownership: every AI/generated/imported slide lands as editable native scene-graph nodes (never a flattened render or locked blob), fully exportable, forward-migratable, and runnable on-prem, attacking Gamma's lock-in and the export gap that killed Tome (differentiator 6).

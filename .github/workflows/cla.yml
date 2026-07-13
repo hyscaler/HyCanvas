@@ -1,7 +1,7 @@
 # CLA gate: every external pull request must have a signed Contributor License
 # Agreement (CLA.md) before merge. Signatures are recorded on the dedicated
 # `cla-signatures` branch by CLA Assistant Lite; contributors sign by posting
-# the acceptance comment on their PR. Required so NetTantra can dual-license
+# the acceptance comment on their PR. Required so HyScaler can dual-license
 # (Elastic License 2.0 + commercial) with clear rights in every contribution.
 name: CLA
 
@@ -30,7 +30,7 @@ jobs:
           path-to-signatures: "signatures/cla.json"
           path-to-document: "https://github.com/hyscaler/HyCanvas/blob/development/CLA.md"
           branch: "cla-signatures"
-          # NetTantra staff are exempt: NetTantra already owns the copyright in
+          # HyScaler staff are exempt: HyScaler already owns the copyright in
           # work authored by its own people, so the CLA (which exists to secure
           # relicensing rights over OUTSIDE contributions) does not apply to
           # them. Every other contributor must still sign. Add new staff here.

@@ -34,4 +34,4 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
           repository: ${{ env.DOCKER_REPO }}
           readme-filepath: ./docker/README.md
-          short-description: "Free, self-hostable, AI-native alternative to Canva. No paywalls, no watermarks."
+          short-description: "Free, self-hostable, AI-native design platform. No paywalls, no watermarks."

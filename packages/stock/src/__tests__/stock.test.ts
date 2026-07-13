@@ -146,7 +146,7 @@ describe("svgToNodes (FR-5, AC-2)", () => {
     expect(t.transform.x).toBe(10); // text-anchor start -> left edge at x
   });
 
-  it("reads fill/font from the CSS style attribute (how Canva exports text)", () => {
+  it("reads fill/font from the CSS style attribute (how design tools commonly export text)", () => {
     const svg = '<svg><text x="0" y="20" style="font-size:48px;font-weight:700;fill:#00ff00;text-anchor:middle">Hi</text></svg>';
     const t = svgToNodes(svg, idgen()).nodes[0] as unknown as { content: { runs: { style: { fontSize: number; axes?: { wght: number }; fill: { color: { srgb: { g: number } } } } }[]; style: { align: string } }[] };
     expect(t.content[0].runs[0].style.fontSize).toBe(48);

@@ -278,7 +278,7 @@ Security:
 - Load/perf: simulate many concurrent editors on a large design; measure apply-to-render latency, frame rate, join time, and gateway memory/CPU; verify update-log compaction bounds storage.
 - Manual: pull the network cable mid-drag and confirm editing continues and later syncs; kill a lock holder and confirm auto-release; verify no "someone else is editing" lockout state ever appears.
 
-## 13. Better than Canva
+## 13. Differentiators
 
 - True offline-first editing: keep working with no connection and merge conflict-free on reconnect, which Canva does not offer.
 - Conflict-free by construction (CRDT): no "someone else saved, reload" failures and no lost edits under heavy contention.

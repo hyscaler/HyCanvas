@@ -88,7 +88,7 @@ function pageBgOf(doc: DesignFile, activePage: number): Color {
   return b?.type === "solid" ? b.color : { srgb: { r: 1, g: 1, b: 1, a: 1 } };
 }
 
-// Recently-used colors (Canva-style), persisted across the session in
+// Recently-used colors, persisted across the session in
 // localStorage. Read at render; written when a color is applied. Not reactive,
 // but the panel re-renders on each edit (rev bump), so the row stays current.
 const RECENT_COLORS_KEY = "oc-recent-colors";
@@ -1413,11 +1413,11 @@ export function PropertiesPanel() {
               <Field key={`sb${ps?.spaceBefore ?? 0}`} label="⤒" value={ps?.spaceBefore ?? 0} onCommit={(n) => setPara({ spaceBefore: Math.max(0, n) })} />
               <Field key={`sa${ps?.spaceAfter ?? 0}`} label="⤓" value={ps?.spaceAfter ?? 0} onCommit={(n) => setPara({ spaceAfter: Math.max(0, n) })} />
             </div>
-            {/* Text uses the named text-effect system below (glyph-aware,
-                Canva-style), not the generic node.effects control that shapes
+              {/* Text uses the named text-effect system below (glyph-aware),
+                  not the generic node.effects control that shapes
                 and images use, so it is intentionally omitted here to avoid a
                 duplicate, unreliable "Effects" section on text. */}
-            {/* Text background highlight (Canva-style): a padded rounded rect behind the text. */}
+            {/* Text background highlight a padded rounded rect behind the text. */}
             {(() => {
               const tn = single.node as unknown as { textEffects?: { kind: string; color?: { type: string; color?: Color }; radius?: number; padding?: number }[] };
               const hl = (tn.textEffects ?? []).find((e) => e.kind === "highlight");
@@ -1442,7 +1442,7 @@ export function PropertiesPanel() {
                 </div>
               );
             })()}
-            {/* Named text effects (Canva-style), engine-rendered. Mutually exclusive. */}
+            {/* Named text effects, engine-rendered. Mutually exclusive. */}
             {(() => {
               const tn = single.node as unknown as { textEffects?: { kind: string }[]; box?: { verticalAlign?: "top" | "middle" | "bottom" }; flow?: { kind: string; curvature?: number } };
               const fx = (single.node as unknown as { textEffects?: TextEffect[] }).textEffects?.find((e) => e.kind !== "highlight");
@@ -1931,7 +1931,7 @@ function AnimateSection({ node }: { node: Node }) {
             {EASINGS.map((es) => <option key={es.v} value={es.v}>{es.label}</option>)}
           </select>
           {/* Entrance sequencing across siblings: start with/after the previous
-              animated element (Canva "with/after previous"). */}
+              animated element ("with/after previous" timing). */}
           {tab === "entrance" && (
             <label className="flex flex-col gap-1 text-[11px] text-neutral-400">Start
               <select value={(clip as { startMode?: string }).startMode ?? "delay"} onChange={(e) => set({ ...clip, startMode: e.target.value as "delay" | "with-previous" | "after-previous" })} className={selectCls}>

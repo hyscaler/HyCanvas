@@ -157,7 +157,7 @@ export async function rasterizeToPng(blob: Blob, width: number, height: number):
 /**
  * Remove the background of an image entirely in the browser using
  * `@imgly/background-removal` (an ISNet/U2Net foreground-segmentation model, the
- * same class of model Canva uses). The library is dynamically imported so its
+ * standard class of model for this task). The library is dynamically imported so its
  * model (downloaded on first use) never bloats the main bundle or the static
  * export. `onProgress` reports 0..1 while the model downloads/runs.
  *

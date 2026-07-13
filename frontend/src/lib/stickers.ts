@@ -1,4 +1,4 @@
-// Bundled, free graphics/stickers (Canva-style "Elements"). Each is a small,
+// Bundled, free graphics/stickers ("Elements"). Each is a small,
 // fill-only SVG (viewBox 0 0 100 100) so the SVG-to-vector parser (addIconSvg)
 // turns it into fully editable vector nodes on insert. Kept fill-only (no
 // stroke-dependent strokes) so every sticker round-trips cleanly.

@@ -1,4 +1,4 @@
-// Mini-map / zoom overview (a la Canva's navigator): a small thumbnail of the
+// Mini-map / zoom overview (a document navigator): a small thumbnail of the
 // CONTENT extent of the page currently under the viewport (all nodes unioned
 // with the page rect, so it tracks objects parked beyond the page edge on an
 // infinite board, F30 FR-1) with a rectangle marking the visible viewport. Click
@@ -94,7 +94,7 @@ export function MiniMap() {
     } catch {
       /* tainted image: leave what we have */
     }
-    // A hairline page border so the artboard always reads as a card (Canva-like),
+    // A hairline page border so the artboard always reads as a card ,
     // even when its background is white or it is mostly empty.
     const px = (0 - bounds.x) * scale;
     const py = (0 - bounds.y) * scale;

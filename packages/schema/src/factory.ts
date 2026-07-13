@@ -147,7 +147,7 @@ export function createBlankDesign(
         name: "Page 1",
         width: init?.width ?? 1080,
         height: init?.height ?? 1080,
-        // A white page surface by default (Canva-style), so a new design shows a
+        // A white page surface by default, so a new design shows a
         // sized white artboard rather than the empty pasteboard.
         background: { type: "solid", color: { srgb: { r: 1, g: 1, b: 1, a: 1 } } },
         children: [],
