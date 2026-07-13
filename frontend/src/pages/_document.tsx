@@ -9,6 +9,21 @@ export default function Document() {
         {/* Apply the stored dark-mode preference before first paint (no flash). */}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
         <meta name="theme-color" content={brand["600"]} />
+        {/* Social share card (Open Graph + Twitter): the banner shown when a
+            HyCanvas link is unfurled in chat, social, and previews. The image is
+            an absolute URL on the brand host so it resolves from any origin. */}
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="HyCanvas" />
+        <meta property="og:title" content="HyCanvas" />
+        <meta property="og:description" content="A free, AI-native visual design platform." />
+        <meta property="og:image" content="https://brand.hycanvas.com/assets/png/og-image-1200x630.png" />
+        <meta property="og:image:type" content="image/png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="HyCanvas" />
+        <meta name="twitter:description" content="A free, AI-native visual design platform." />
+        <meta name="twitter:image" content="https://brand.hycanvas.com/assets/png/og-image-1200x630.png" />
         {/* The visitor mark (hycanvas-marketing/brand): SVG first, PNG + ICO
             fallbacks, plus the touch/PWA tiles. */}
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
