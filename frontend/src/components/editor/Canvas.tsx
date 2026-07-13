@@ -1299,7 +1299,9 @@ export function Canvas() {
     const cp = api.pageIndexAt(localPoint(e));
     if (cp >= 0 && cp !== useEditor.getState().activePage) useEditor.getState().setActivePage(cp);
     const page = api.toPage(localPoint(e));
-    const hit = api.scene()?.hitTest(page);
+    // Second chance including locked nodes: a locked leaf is still selectable
+    // (only the edit/crop entry below is gated).
+    const hit = api.scene()?.hitTest(page) ?? api.scene()?.hitTest(page, { ignoreLocked: false });
     if (!hit) {
       // Empty board canvas: double-click drops a sticky at the cursor and opens
       // it for immediate typing (F30 sticky speed).
@@ -1321,12 +1323,12 @@ export function Canvas() {
       return;
     }
     const loc = locate(useEditor.getState().doc, hit.id);
+    // Double-click selects the leaf under the cursor - entering a group to grab
+    // a child - even when it is locked, so its Unlock affordances appear.
+    useEditor.getState().select([hit.id]);
     // Locked (static flag), collab-locked by another user, or a brand locked
     // region for this caller: no edit/crop entry.
     if (loc?.node.locked || usePresence.getState().collabLockedByOther(hit.id) || useBrand.getState().isLockedRegion(hit.id) || usePresence.getState().protectedByOther(hit.id)) return;
-    // Double-click selects the leaf under the cursor - entering a group to grab a
-    // child, and triggering text edit / image crop where applicable.
-    useEditor.getState().select([hit.id]);
     if (loc?.node.type === "text") {
       setEditing(hit.id);
     } else if (loc?.node.type === "sticky") {
@@ -1399,7 +1401,9 @@ export function Canvas() {
   function onContextMenu(e: React.MouseEvent) {
     e.preventDefault();
     const store = useEditor.getState();
-    const hit = api.scene()?.hitTest(api.toPage(localPoint(e)));
+    const pt = api.toPage(localPoint(e));
+    // Locked nodes are right-clickable too, so the menu can offer Unlock.
+    const hit = api.scene()?.hitTest(pt) ?? api.scene()?.hitTest(pt, { ignoreLocked: false });
     if (hit && !store.selection.includes(hit.id)) store.select([hit.id]);
     // Clamp the menu so it stays fully on-canvas even near the right/bottom edge
     // (estimate its size from whether there is a selection).
@@ -1573,7 +1577,12 @@ export function Canvas() {
     const page = api.toPage(screen);
     const scene = api.scene();
     const store = useEditor.getState();
-    const hit = scene?.hitTest(page);
+    // Locked elements stay selectable (Canva-style): when nothing unlocked is
+    // under the cursor, hit-test again including locked nodes so a click can
+    // select one and surface its Unlock affordances (selection toolbar, panel,
+    // context menu). Every transform path already excludes locked nodes, so a
+    // drag on the locked selection simply does nothing.
+    const hit = scene?.hitTest(page) ?? scene?.hitTest(page, { ignoreLocked: false });
 
     // Select-under (Cmd/Meta-click): reach a buried object by stepping down the
     // stack of items under the cursor instead of always taking the top-most.
@@ -1618,7 +1627,11 @@ export function Canvas() {
         const dup = new Map<string, Transform>();
         for (const id of useEditor.getState().selection) {
           const loc = locate(useEditor.getState().doc, id);
-          if (loc) dup.set(id, { ...loc.node.transform });
+          // A duplicate of a locked node is itself locked (verbatim clone):
+          // exclude it from the drag set like the plain move path does.
+          if (loc && !loc.node.locked && !usePresence.getState().collabLockedByOther(id) && !useBrand.getState().isLockedRegion(id) && !usePresence.getState().protectedByOther(id)) {
+            dup.set(id, { ...loc.node.transform });
+          }
         }
         gesture.current = { type: "move", startX: page.x, startY: page.y, before: dup };
         canvasRef.current?.setPointerCapture(e.pointerId);
