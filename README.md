@@ -1,5 +1,5 @@
 <p align="center">
-  <img src=".github/readme-banner.png" alt="HyCanvas: design anything, own everything" width="820">
+  <img src="https://brand.hycanvas.com/assets/png/og-image-1200x630.png" alt="HyCanvas: design anything, own everything" width="820">
 </p>
 
 HyCanvas is a free, self-hostable, AI-native design platform. Design anything - social graphics, presentations, videos, whiteboards, docs, and print - with no paywalls or watermarks. Web-only.
