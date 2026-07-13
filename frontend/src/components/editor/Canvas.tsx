@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MousePointer2, PenTool, Pencil, Minus, MoveUpRight, Square, Circle, Type, MessageSquarePlus, Copy, ClipboardPaste, CopyPlus, Trash2, Group, Ungroup, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, FlipHorizontal2, FlipVertical2, Paintbrush, PaintBucket, Lock, LockOpen, Eye, EyeOff, BoxSelect } from "lucide-react";
-import type { CharStyle, Color, Node as SchemaNode, Page, Paragraph, TextNode, Transform } from "@hc/schema";
+import type { CharStyle, Color, Node as SchemaNode, Page, Paragraph, ParagraphStyle, TextNode, Transform } from "@hc/schema";
 import { isDecorative, resolveReadingOrder } from "@hc/schema";
 import { locate, moveTransform, marqueeSelect, parentSpaceDelta, worldMatrix, worldAABB, unionAABB, snap, spacingSnap, type SpacingGuide, type EditCommand } from "@hc/editor";
 import { fitStickyFontScale, routeConnector } from "@hc/whiteboard";
@@ -163,6 +163,22 @@ type EditPara = { runs: EditRun[]; style: { align?: string } & Record<string, un
 const escHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const stylesEqual = (a: CharStyle, b: CharStyle) => JSON.stringify(a) === JSON.stringify(b);
 
+// The engine's line advance for a run style (mirrors layoutText's
+// lineHeightPx: an explicit multiple/absolute, else fontSize * 1.2). The
+// browser's font-metric default varies per family, so every piece of editor
+// text (runs AND the container, whose "\n" separators form their own inline
+// boxes) must carry this explicitly or lines visibly shift between edit mode
+// and the canvas render.
+function lineAdvancePx(style: CharStyle | undefined): number {
+  const fs = style?.fontSize ?? 16;
+  const lh = style?.lineHeight as number | { mode: "auto" | "multiple" | "absolute"; value: number } | undefined;
+  if (lh === undefined) return fs * 1.2;
+  if (typeof lh === "number") return fs * lh;
+  if (lh.mode === "absolute") return lh.value;
+  if (lh.mode === "multiple") return fs * lh.value;
+  return fs * 1.2;
+}
+
 function charCss(style: CharStyle, zoom: number): string {
   const weight = style.axes?.wght ?? weightFromFontStyle(style.fontStyle);
   const italic = /italic|oblique/i.test(style.fontStyle ?? "");
@@ -173,13 +189,16 @@ function charCss(style: CharStyle, zoom: number): string {
   // baseline; the engine-driven wrap is character-based so this stays in sync.
   const script = style.script;
   const sizeMul = script === "super" || script === "sub" ? 0.66 : 1;
+  const fs = style.fontSize ?? 16;
+  const lhPx = lineAdvancePx(style);
   const decos: string[] = [];
   if (style.decoration?.includes("underline")) decos.push("underline");
   if (style.decoration?.includes("strikethrough")) decos.push("line-through");
   if (style.link && !decos.includes("underline")) decos.push("underline");
   const out = [
     `font-family:${fontFamilyStack(style.fontFamily)}`,
-    `font-size:${(style.fontSize ?? 16) * sizeMul * zoom}px`,
+    `font-size:${fs * sizeMul * zoom}px`,
+    `line-height:${lhPx * zoom}px`,
     `font-weight:${weight}`,
     `font-style:${italic ? "italic" : "normal"}`,
     `color:${color}`,
@@ -197,7 +216,11 @@ function charCss(style: CharStyle, zoom: number): string {
 const SOFT_BR = '<br data-soft="1">';
 
 const runSpan = (text: string, style: CharStyle, zoom: number) =>
-  `<span data-st="${encodeURIComponent(JSON.stringify(style))}" style="${charCss(style, zoom)}">${escHtml(text)}</span>`;
+  // The CSS contains double quotes (font-family stacks quote names like
+  // "Segoe UI"), which would terminate the style attribute at the first one
+  // and silently drop the run's whole inline style - every run then inherits
+  // the container's (first run's) font and size while editing. Escape them.
+  `<span data-st="${encodeURIComponent(JSON.stringify(style))}" style="${charCss(style, zoom).replace(/"/g, "&quot;")}">${escHtml(text)}</span>`;
 
 // Single shared offscreen context for measuring text exactly as @hc/engine's
 // render path does (same canvasFontString + letter-spacing), so the editor wraps
@@ -236,31 +259,39 @@ function computeBreaks(lines: { paragraph: number; segments: { text: string }[] 
 // computed offsets. Paragraphs are joined by "\n" (hard breaks); within a
 // paragraph, runs are split at break offsets with a SOFT_BR between pieces.
 function layoutToHtml(content: EditPara[], breaks: Map<number, number[]>, zoom: number): string {
-  return content
-    .map((p, pi) => {
-      const cuts = (breaks.get(pi) ?? []).slice().sort((a, b) => a - b);
-      let pos = 0;
-      let bi = 0;
-      let out = "";
-      for (const r of p.runs) {
-        let local = 0;
-        while (bi < cuts.length && cuts[bi] <= pos + r.text.length) {
-          const cut = cuts[bi] - pos;
-          if (cut >= local) {
-            const piece = r.text.slice(local, cut);
-            if (piece) out += runSpan(piece, r.style, zoom);
-            out += SOFT_BR;
-            local = cut;
-          }
-          bi++;
+  const parts = content.map((p, pi) => {
+    const cuts = (breaks.get(pi) ?? []).slice().sort((a, b) => a - b);
+    let pos = 0;
+    let bi = 0;
+    let out = "";
+    for (const r of p.runs) {
+      let local = 0;
+      while (bi < cuts.length && cuts[bi] <= pos + r.text.length) {
+        const cut = cuts[bi] - pos;
+        if (cut >= local) {
+          const piece = r.text.slice(local, cut);
+          if (piece) out += runSpan(piece, r.style, zoom);
+          out += SOFT_BR;
+          local = cut;
         }
-        out += runSpan(r.text.slice(local), r.style, zoom);
-        pos += r.text.length;
+        bi++;
       }
-      if (!p.runs.length) out += runSpan("", DEFAULT_CHAR, zoom);
-      return out;
-    })
-    .join("\n");
+      out += runSpan(r.text.slice(local), r.style, zoom);
+      pos += r.text.length;
+    }
+    if (!p.runs.length) out += runSpan("", DEFAULT_CHAR, zoom);
+    return out;
+  });
+  // Join paragraphs with a hard "\n", each wrapped in a span styled like the
+  // paragraph it terminates: a bare newline would take the container's style
+  // and could inflate that paragraph's last line box past the engine's
+  // advance. htmlToContent splits text on "\n" regardless of the span.
+  let joined = "";
+  for (let i = 0; i < parts.length; i++) {
+    joined += parts[i];
+    if (i < parts.length - 1) joined += runSpan("\n", content[i].runs[0]?.style ?? DEFAULT_CHAR, zoom);
+  }
+  return joined;
 }
 
 // Build editor HTML for a text node + (possibly edited) model: lay the model out
@@ -389,7 +420,7 @@ function setFlatSelection(el: HTMLElement, start: number, end: number) {
 }
 
 /** Apply a char patch to the [start,end) range, splitting runs at boundaries. */
-function styleRange(content: EditPara[], start: number, end: number, char: Partial<CharStyle>): EditPara[] {
+function styleRange(content: EditPara[], start: number, end: number, patch: Partial<CharStyle> | ((s: CharStyle) => Partial<CharStyle>)): EditPara[] {
   let offset = 0;
   return content.map((p) => {
     const runs: EditRun[] = [];
@@ -404,6 +435,7 @@ function styleRange(content: EditPara[], start: number, end: number, char: Parti
         const a = s - rOff;
         const b = e - rOff;
         if (a > 0) runs.push({ text: run.text.slice(0, a), style: run.style });
+        const char = typeof patch === "function" ? patch(run.style) : patch;
         const merged = Object.assign(structuredClone(run.style), char);
         if (char.axes) merged.axes = { ...run.style.axes, ...char.axes };
         runs.push({ text: run.text.slice(a, b), style: merged });
@@ -437,6 +469,21 @@ function TextEditOverlay({ api, id, onClose }: { api: CanvasApi; id: string; onC
   // live-grow updates while typing don't leak into the undo stack.
   const startHeightRef = useRef<number | null>(null);
   const [hasSel, setHasSel] = useState(false);
+  // Let the properties panel restyle the live selection while this editor is
+  // open (the store's setTextStyle delegates here). Registered via a ref so
+  // the latest applyRange closure is always used; declared before the early
+  // returns below so hook order is stable.
+  const applyRangeRef = useRef<((char: Partial<CharStyle>) => void) | null>(null);
+  useEffect(() => {
+    useEditor.getState().setTextEditApply((char) => {
+      const el = ref.current;
+      const range = el ? (flatSelection(el) ?? selRef.current) : null;
+      if (!range || range.end <= range.start || !applyRangeRef.current) return false;
+      applyRangeRef.current(char);
+      return true;
+    });
+    return () => useEditor.getState().setTextEditApply(null);
+  }, [id]);
 
   // Build the DOM from the model once per edited node, then select all.
   useEffect(() => {
@@ -550,13 +597,18 @@ function TextEditOverlay({ api, id, onClose }: { api: CanvasApi; id: string; onC
   // Apply a char patch to the selection: re-derive the model from the DOM
   // (capturing any typing), style the range, write it back, and re-render with
   // the engine's wrapping. Falls back to the last cached selection if the live
-  // one was cleared.
-  const applyRange = (char: Partial<CharStyle>) => {
+  // one was cleared; with no selection at all (collapsed caret) the whole box
+  // is styled, so shortcuts and panel controls always do something visible.
+  const applyRange = (char: Partial<CharStyle> | ((s: CharStyle) => Partial<CharStyle>)) => {
     const el = ref.current;
     if (!el) return;
-    const range = flatSelection(el) ?? selRef.current;
-    if (!range || range.end <= range.start) return;
-    const styled = styleRange(htmlToContent(el, modelRef.current ?? node.content), range.start, range.end, char);
+    const model = htmlToContent(el, modelRef.current ?? node.content);
+    let range = flatSelection(el) ?? selRef.current;
+    if (!range || range.end <= range.start) {
+      const total = model.reduce((n, p) => n + p.runs.reduce((m, r) => m + r.text.length, 0), 0) + model.length - 1;
+      range = { start: 0, end: Math.max(1, total) };
+    }
+    const styled = styleRange(model, range.start, range.end, char);
     modelRef.current = styled;
     useEditor.getState().setContent(id, styled as unknown as Paragraph[]);
     const real = (locate(useEditor.getState().doc, id)?.node as unknown as TextNode | undefined) ?? (loc.node as unknown as TextNode);
@@ -567,6 +619,73 @@ function TextEditOverlay({ api, id, onClose }: { api: CanvasApi; id: string; onC
     setFlatSelection(el, range.start, range.end);
     setHasSel(true);
   };
+  // The style at the selection start (or the box's first run), for deciding
+  // toggle direction (bold <-> regular, underline on <-> off, ...).
+  const selStyle = (): CharStyle => {
+    const el = ref.current;
+    const model = el ? htmlToContent(el, modelRef.current ?? node.content) : (modelRef.current ?? node.content);
+    const range = el ? (flatSelection(el) ?? selRef.current) : selRef.current;
+    let off = range?.start ?? 0;
+    for (const p of model) {
+      for (const r of p.runs) {
+        if (off < r.text.length || (off === r.text.length && r === p.runs[p.runs.length - 1])) return r.style;
+        off -= r.text.length;
+      }
+      off -= 1; // the "\n" separator
+      if (off < 0) break;
+    }
+    return model[0]?.runs[0]?.style ?? DEFAULT_CHAR;
+  };
+  const isBold = (s: CharStyle) => (s.axes?.wght ?? weightFromFontStyle(s.fontStyle)) >= 600;
+  const isItal = (s: CharStyle) => /italic|oblique/i.test(s.fontStyle ?? "");
+  const toggleBold = () => {
+    const s = selStyle();
+    applyRange({ axes: { ...(s.axes ?? {}), wght: isBold(s) ? 400 : 700 } });
+  };
+  const toggleItalic = () => {
+    const s = selStyle();
+    // Toggle only the italic token so a named weight ("SemiBold Italic") keeps
+    // its weight when italics come off.
+    const base = (s.fontStyle ?? "Regular").replace(/\s*italic\s*/i, " ").replace(/\s+/g, " ").trim();
+    applyRange({ fontStyle: isItal(s) ? base || "Regular" : `${base && base !== "Regular" ? base + " " : ""}Italic` });
+  };
+  const toggleDeco = (d: "underline" | "strikethrough") => {
+    const s = selStyle();
+    const rest = (s.decoration ?? []).filter((x) => x !== d);
+    applyRange({ decoration: s.decoration?.includes(d) ? (rest.length ? rest : undefined) : [...rest, d] });
+  };
+  const stepFontSize = (delta: number) => {
+    applyRange((s) => ({ fontSize: Math.max(4, Math.min(512, Math.round((s.fontSize ?? 16) + delta))) }));
+  };
+  // Patch the paragraph under the caret (list level for Tab / Shift+Tab).
+  const applyParaAtCaret = (patch: (p: EditPara) => Partial<ParagraphStyle> | null) => {
+    const el = ref.current;
+    if (!el) return false;
+    const model = htmlToContent(el, modelRef.current ?? node.content);
+    const range = flatSelection(el) ?? selRef.current ?? { start: 0, end: 0 };
+    let off = range.start;
+    let pi = 0;
+    for (; pi < model.length - 1; pi++) {
+      const len = model[pi].runs.reduce((n, r) => n + r.text.length, 0) + 1;
+      if (off < len) break;
+      off -= len;
+    }
+    const para = model[pi];
+    const next = patch(para);
+    if (!next) return false;
+    para.style = { ...para.style, ...next } as EditPara["style"];
+    modelRef.current = model;
+    useEditor.getState().setContent(id, model as unknown as Paragraph[]);
+    const real = (locate(useEditor.getState().doc, id)?.node as unknown as TextNode | undefined) ?? (loc.node as unknown as TextNode);
+    const built = buildEditorHtml(real, model, zoom);
+    el.innerHTML = built.html;
+    breakSigRef.current = built.sig;
+    el.focus();
+    setFlatSelection(el, range.start, range.end);
+    return true;
+  };
+
+  applyRangeRef.current = applyRange;
 
   return (
     <>
@@ -600,6 +719,24 @@ function TextEditOverlay({ api, id, onClose }: { api: CanvasApi; id: string; onC
           if (e.key === "Escape") {
             e.preventDefault();
             ref.current?.blur();
+          } else if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && ["b", "i", "u"].includes(e.key.toLowerCase())) {
+            // Formatting shortcuts must not reach the browser: its native
+            // bold/italic wraps text in <b>/<i> tags the commit parser ignores,
+            // so the formatting would show while typing and vanish on commit.
+            e.preventDefault();
+            const k = e.key.toLowerCase();
+            if (k === "b") toggleBold();
+            else if (k === "i") toggleItalic();
+            else toggleDeco("underline");
+          } else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "x") {
+            e.preventDefault();
+            toggleDeco("strikethrough");
+          } else if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === "." || e.key === ">")) {
+            e.preventDefault();
+            stepFontSize(1);
+          } else if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === "," || e.key === "<")) {
+            e.preventDefault();
+            stepFontSize(-1);
           } else if (e.key === "Enter" && !e.nativeEvent.isComposing) {
             // Insert a literal newline (hard paragraph break), then re-flow so the
             // engine's wrapping is reflected immediately. Skip while an IME is
@@ -609,11 +746,21 @@ function TextEditOverlay({ api, id, onClose }: { api: CanvasApi; id: string; onC
             rewrap();
             growLive();
           } else if (e.key === "Tab") {
-            // Insert a tab character (advances to the next tab stop on canvas)
-            // rather than moving focus out of the editor.
+            // In a list paragraph, Tab / Shift+Tab change the nesting level (the
+            // familiar outliner gesture); otherwise Tab inserts a tab character
+            // (advances to the next tab stop on canvas) rather than moving focus.
             e.preventDefault();
-            document.execCommand("insertText", false, "\t");
-            rewrap();
+            const dir = e.shiftKey ? -1 : 1;
+            const handled = applyParaAtCaret((p) => {
+              const list = (p.style as { list?: { type: "bullet" | "number" | "checklist"; level: number; marker?: string } }).list;
+              if (!list) return null;
+              const level = Math.max(0, Math.min(4, (list.level ?? 0) + dir));
+              return level === list.level ? null : ({ list: { ...list, level } } as Partial<ParagraphStyle>);
+            });
+            if (!handled && !e.shiftKey) {
+              document.execCommand("insertText", false, "\t");
+              rewrap();
+            }
           }
         }}
         onPaste={(e) => {
@@ -626,12 +773,16 @@ function TextEditOverlay({ api, id, onClose }: { api: CanvasApi; id: string; onC
           position: "absolute",
           left: tl.x,
           top: tl.y,
-          width: node.size.width * sx * zoom,
+          // Everything lays out in the node's LOCAL units (like the engine),
+          // and the world scale is applied as a transform, so a corner-resized
+          // text box (scaleX/scaleY on its transform) shows the same glyph
+          // sizes in edit mode as the canvas render.
+          width: node.size.width * zoom,
           // Fixed width, auto-sizing height the editor grows/shrinks
           // with the content (floored at ~one line); the box height is fitted to
           // the rendered content on commit. height stays unset so it tracks content.
-          minHeight: ((cs?.fontSize ?? 16) * 1.6 + pad.t + pad.b) * sy * zoom,
-          transform: rot ? `rotate(${rot}deg)` : undefined,
+          minHeight: ((cs?.fontSize ?? 16) * 1.6 + pad.t + pad.b) * zoom,
+          transform: rot || sx !== 1 || sy !== 1 ? `rotate(${rot}deg) scale(${sx}, ${sy})` : undefined,
           transformOrigin: "0 0",
           color: baseColor,
           // The engine owns wrapping: we inject soft breaks at its exact points,
@@ -649,8 +800,13 @@ function TextEditOverlay({ api, id, onClose }: { api: CanvasApi; id: string; onC
           overflow: "visible",
           zIndex: 20,
           // Sensible defaults so the caret has a size before any text is typed.
+          // line-height included: the "\n" paragraph separators are bare text
+          // nodes styled by the container, and without it they take the font's
+          // natural metric (some display fonts run ~1.5), inflating their line
+          // box past the engine's advance and pushing later lines down.
           fontFamily: fontFamilyStack(cs?.fontFamily),
           fontSize: (cs?.fontSize ?? 16) * zoom,
+          lineHeight: `${lineAdvancePx(cs) * zoom}px`,
         }}
       />
       {hasSel && (
@@ -659,12 +815,41 @@ function TextEditOverlay({ api, id, onClose }: { api: CanvasApi; id: string; onC
           style={{ left: tl.x, top: tl.y - 44 }}
           onMouseDown={(e) => e.preventDefault()}
         >
-          <button onClick={() => applyRange({ axes: { ...(cs?.axes ?? {}), wght: 700 } })} className="h-7 w-7 rounded text-sm font-bold text-neutral-700 hover:bg-neutral-100" title="Bold">B</button>
-          <button onClick={() => applyRange({ fontStyle: "Italic" })} className="h-7 w-7 rounded text-sm italic text-neutral-700 hover:bg-neutral-100" title="Italic">I</button>
+          <button onClick={toggleBold} className="h-7 w-7 rounded text-sm font-bold text-neutral-700 hover:bg-neutral-100" title="Bold (Cmd/Ctrl+B)">B</button>
+          <button onClick={toggleItalic} className="h-7 w-7 rounded text-sm italic text-neutral-700 hover:bg-neutral-100" title="Italic (Cmd/Ctrl+I)">I</button>
+          <button onClick={() => toggleDeco("underline")} className="h-7 w-7 rounded text-sm text-neutral-700 underline hover:bg-neutral-100" title="Underline (Cmd/Ctrl+U)">U</button>
+          <button onClick={() => toggleDeco("strikethrough")} className="h-7 w-7 rounded text-sm text-neutral-700 line-through hover:bg-neutral-100" title="Strikethrough (Cmd/Ctrl+Shift+X)">S</button>
           <span className="mx-0.5 h-5 w-px bg-neutral-200" />
-          {[12, 16, 24, 36, 48].map((s) => (
-            <button key={s} onClick={() => applyRange({ fontSize: s })} className="h-7 rounded px-1 text-xs text-neutral-600 hover:bg-neutral-100" title={`${s}px`}>{s}</button>
-          ))}
+          <button onClick={() => stepFontSize(-1)} className="h-7 w-6 rounded text-sm text-neutral-600 hover:bg-neutral-100" title="Smaller (Cmd/Ctrl+Shift+,)">-</button>
+          <input
+            key={`fs-${selStyle().fontSize ?? 16}`}
+            defaultValue={Math.round(selStyle().fontSize ?? 16)}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter") return;
+              e.preventDefault();
+              const n = parseFloat((e.target as HTMLInputElement).value);
+              if (Number.isFinite(n)) applyRange({ fontSize: Math.max(4, Math.min(512, n)) });
+            }}
+            onBlur={(e) => {
+              const n = parseFloat(e.target.value);
+              const cur = selStyle().fontSize ?? 16;
+              if (Number.isFinite(n) && Math.round(n) !== Math.round(cur)) applyRange({ fontSize: Math.max(4, Math.min(512, n)) });
+            }}
+            className="h-7 w-10 rounded border border-neutral-200 bg-surface text-center text-xs text-neutral-700 outline-none focus:border-brand-400"
+            title="Font size"
+          />
+          <button onClick={() => stepFontSize(1)} className="h-7 w-6 rounded text-sm text-neutral-600 hover:bg-neutral-100" title="Larger (Cmd/Ctrl+Shift+.)">+</button>
+          <span className="mx-0.5 h-5 w-px bg-neutral-200" />
+          <button
+            onClick={() => {
+              const order = ["left", "center", "right", "justify"] as const;
+              const cur = (align ?? "left") as (typeof order)[number];
+              const next = order[(order.indexOf(cur) + 1) % order.length];
+              useEditor.getState().setTextStyle(id, undefined, { align: next });
+            }}
+            className="h-7 w-7 rounded text-sm text-neutral-700 hover:bg-neutral-100"
+            title={`Alignment: ${align ?? "left"} (click to cycle)`}
+          >{align === "center" ? "≡" : align === "right" ? "→" : align === "justify" ? "☰" : "←"}</button>
           <span className="mx-0.5 h-5 w-px bg-neutral-200" />
           <input
             type="color"
@@ -2262,6 +2447,46 @@ export function Canvas() {
       // for the remappable command set; non-command modifier keys fall through.
       const remapCmd = e.metaKey || e.ctrlKey || e.altKey ? commandForEvent(e) : null;
       const remapAction = remapCmd ? COMMAND_ACTIONS[remapCmd] : null;
+      // Text formatting on the selected text node(s) without entering edit mode:
+      // Cmd/Ctrl+B / I / U toggle, Cmd/Ctrl+Shift+. / , step the font size.
+      // (Inside the text editor the overlay handles these itself.)
+      if (canEdit && (e.metaKey || e.ctrlKey) && !e.altKey && store.selection.length) {
+        const textIds = store.selection.filter((sid) => {
+          const l = locate(store.doc, sid);
+          return l?.node.type === "text" && !l.node.locked;
+        });
+        if (textIds.length) {
+          const k = e.key.toLowerCase();
+          const first = locate(store.doc, textIds[0])?.node as unknown as { content?: { runs: { style: CharStyle }[] }[] } | undefined;
+          const s = first?.content?.[0]?.runs?.[0]?.style;
+          const patchAll = (char: Partial<CharStyle>) => textIds.forEach((tid) => store.setTextStyle(tid, char));
+          if (!e.shiftKey && k === "b") {
+            e.preventDefault();
+            const bold = (s?.axes?.wght ?? 400) >= 600;
+            patchAll({ axes: { ...(s?.axes ?? {}), wght: bold ? 400 : 700 } });
+            return;
+          }
+          if (!e.shiftKey && k === "i") {
+            e.preventDefault();
+            const ital = /italic|oblique/i.test(s?.fontStyle ?? "");
+            const base = (s?.fontStyle ?? "Regular").replace(/\s*italic\s*/i, " ").replace(/\s+/g, " ").trim();
+            patchAll({ fontStyle: ital ? base || "Regular" : `${base && base !== "Regular" ? base + " " : ""}Italic` });
+            return;
+          }
+          if (!e.shiftKey && k === "u") {
+            e.preventDefault();
+            const rest = (s?.decoration ?? []).filter((x) => x !== "underline");
+            patchAll({ decoration: s?.decoration?.includes("underline") ? (rest.length ? rest : undefined) : [...rest, "underline"] });
+            return;
+          }
+          if (e.shiftKey && (e.key === "." || e.key === ">" || e.key === "," || e.key === "<")) {
+            e.preventDefault();
+            const delta = e.key === "." || e.key === ">" ? 1 : -1;
+            textIds.forEach((tid) => store.stepTextFontSize(tid, delta));
+            return;
+          }
+        }
+      }
       // Keyboard selection (a11y): when the canvas surface is focused, Tab /
       // Shift+Tab cycle the top-level selectable objects on the active page, and
       // Enter opens text-edit on a single text/sticky selection. These run before

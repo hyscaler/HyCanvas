@@ -23,7 +23,7 @@ import {
 } from "@hc/schema";
 import { fitRect } from "./image";
 import { buildClipFromPathData } from "./pathclip";
-import { layoutText, isTabRun, tabRunWidth, type MeasureFn } from "@hc/text";
+import { autoFitNode, layoutText, isTabRun, tabRunWidth, type MeasureFn } from "@hc/text";
 import { colorToCss } from "./color";
 import { applyTextCase, canvasFontString, fontFamilyStack } from "./fonts";
 import { effectsFilter, outlineSpecs, duotoneEffect } from "./effects";
@@ -769,7 +769,10 @@ function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, bo
       // Always lay segments out left-to-right so each keeps its own font/color
       // (canvas textAlign would force one style across the whole line).
       ctx.textAlign = "left";
-      const { lines } = layoutText(node, measure ? { measure } : {});
+      // Shrink-to-fit: an auto-fit fixed box lays out with uniformly scaled
+      // fonts so the content never overflows (the layout lines carry the
+      // scaled styles, so the glyph draw below follows automatically).
+      const { lines } = layoutText(autoFitNode(node, measure ? { measure } : {}), measure ? { measure } : {});
       // Vertical alignment within the box (top/middle/bottom): shift every line
       // by the slack between the laid-out text block and the box's content area.
       const vAlign = node.box.verticalAlign ?? "top";

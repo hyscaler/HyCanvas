@@ -315,6 +315,15 @@ interface EditorState {
   playing: boolean; // animation preview running
   cropping: string | null; // id of the image currently in crop mode (UI only)
   editingTextId: string | null; // text node currently in the inline editor (UI only); the renderer skips it so it doesn't double up
+  /** Step every run's font size by `delta` px (relative, so mixed-size boxes
+   *  keep their ratios), clamped to a sane range. Undoable. */
+  stepTextFontSize(id: string, delta: number): void;
+  /** While the inline text editor is open: applies a char patch to its live
+   *  selection, returning true when a range was styled (false = no selection,
+   *  caller falls back to whole-node styling). Registered by the overlay so
+   *  panel controls edit the selected range instead of clobbering the box. */
+  textEditApply: ((char: Partial<CharStyle>) => boolean) | null;
+  setTextEditApply(fn: ((char: Partial<CharStyle>) => boolean) | null): void;
   presenting: boolean; // fullscreen present mode is open (suppresses canvas keys)
   // View aids (UI only, not part of the document)
   showRulers: boolean;
@@ -740,6 +749,9 @@ interface EditorState {
   setVerticalAlign(id: string, v: "top" | "middle" | "bottom"): void;
   /** Set a text node's box sizing mode (fixed / auto-height / auto-width). */
   setTextBoxMode(id: string, mode: "fixed" | "autoHeight" | "autoWidth"): void;
+  /** Toggle shrink-to-fit for a fixed text box (text scales down instead of
+   *  overflowing when the content outgrows the box). */
+  setTextAutoFit(id: string, enabled: boolean): void;
   /** Set a text node's column count + gutter (1 column clears it). */
   setTextColumns(id: string, count: number, gutter?: number): void;
   /** Set a text node's language tag (BCP-47) for locale-aware spellcheck; "" clears. */
@@ -1188,6 +1200,7 @@ export const useEditor = create<EditorState>((set, get) => {
     brush: { width: 3, colorHex: "#1a1f29", opacity: 1, mode: "pen" },
     cropping: null,
     editingTextId: null,
+    textEditApply: null,
     presenting: false,
     showRulers: true,
     showGrid: false,
@@ -1892,6 +1905,7 @@ export const useEditor = create<EditorState>((set, get) => {
     setBrush: (patch) => set((s) => ({ brush: { ...s.brush, ...patch } })),
     setCropping: (id) => set({ cropping: id }),
     setEditingText: (id) => set({ editingTextId: id }),
+    setTextEditApply: (fn) => set({ textEditApply: fn }),
     setPresenting: (on) => set({ presenting: on }),
     toggleRulers: () => set((s) => ({ showRulers: !s.showRulers })),
     toggleGrid: () => set((s) => ({ showGrid: !s.showGrid })),
@@ -4434,6 +4448,17 @@ export const useEditor = create<EditorState>((set, get) => {
       get().tick();
     },
 
+    setTextAutoFit: (id, enabled) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return;
+      const box = (loc.node as unknown as { box: { autoFit?: { enabled: boolean; min: number; max: number } } }).box;
+      const before = box.autoFit ? { ...box.autoFit } : undefined;
+      if ((before?.enabled ?? false) === enabled) return;
+      perform(
+        () => { box.autoFit = { min: 8, max: 512, ...(before ?? {}), enabled }; },
+        () => { box.autoFit = before; },
+      );
+    },
     setShapeKind: (id, shape) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "shape" || loc.node.locked || editBlocked(id)) return;
@@ -4513,8 +4538,31 @@ export const useEditor = create<EditorState>((set, get) => {
       );
     },
 
+    stepTextFontSize: (id, delta) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return;
+      const node = loc.node as unknown as { content: { runs: { style: { fontSize: number } }[] }[] };
+      const before = structuredClone(node.content);
+      perform(
+        () => {
+          node.content.forEach((p) => p.runs.forEach((r) => {
+            r.style.fontSize = Math.max(4, Math.min(512, Math.round(r.style.fontSize + delta)));
+          }));
+        },
+        () => {
+          node.content = structuredClone(before);
+        },
+      );
+    },
     setTextStyle: (id, char, para) => {
       if (!char && !para) return;
+      // While this node is open in the inline editor with a text selection,
+      // char-only patches restyle the selection (what the user expects from
+      // panel controls mid-edit) instead of every run in the box.
+      if (char && !para) {
+        const s = get();
+        if (s.editingTextId === id && s.textEditApply && s.textEditApply(char)) return;
+      }
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return;
       const node = loc.node as unknown as {
