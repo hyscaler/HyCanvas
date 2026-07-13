@@ -30,7 +30,7 @@ jobs:
           path-to-signatures: "signatures/cla.json"
           path-to-document: "https://github.com/hyscaler/HyCanvas/blob/development/CLA.md"
           branch: "cla-signatures"
-          # NetTantra staff are exempt: NetTantra already owns the copyright in
+          # NetTantra (dba HyScaler) staff are exempt: the company already owns the copyright in
           # work authored by its own people, so the CLA (which exists to secure
           # relicensing rights over OUTSIDE contributions) does not apply to
           # them. Every other contributor must still sign. Add new staff here.

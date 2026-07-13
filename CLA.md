@@ -2,7 +2,7 @@
 
 Version 1.0
 
-Thank you for contributing to HyCanvas, a product of NetTantra Technologies (India) Private Limited ("NetTantra", "we", "us"). HyScaler® is a registered trademark of NetTantra Technologies (India) Private Limited; it is a brand, not the contracting party, so the rights below are granted to NetTantra Technologies (India) Private Limited itself.
+Thank you for contributing to HyCanvas, a product of NetTantra Technologies (India) Private Limited, doing business as HyScaler ("NetTantra", "we", "us"). HyScaler is a trading name (DBA) of NetTantra Technologies (India) Private Limited, and a registered trademark of it, rather than a separate legal entity. The rights below are therefore granted to the company itself, whichever name it trades under.
 
 This Contributor License Agreement ("Agreement") clarifies the intellectual-property rights in your contributions. It protects you, NetTantra, and users of HyCanvas, and it is what allows NetTantra to keep HyCanvas freely available under the Elastic License 2.0 while also offering separate commercial licenses.
 
