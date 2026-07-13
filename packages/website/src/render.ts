@@ -333,26 +333,36 @@ function renderVector(node: Node, _ctx: RenderContext): string {
   const pn = node as PathNode;
   const segs = pn.segments ?? [];
   if (segs.length < 2) return "";
-  let d = `M ${segs[0].x} ${segs[0].y}`;
-  for (let i = 1; i < segs.length; i++) {
-    const from = segs[i - 1];
-    const to = segs[i];
-    if (from.cOut || to.cIn) {
-      const c1 = from.cOut ?? { x: from.x, y: from.y };
-      const c2 = to.cIn ?? { x: to.x, y: to.y };
-      d += ` C ${c1.x} ${c1.y} ${c2.x} ${c2.y} ${to.x} ${to.y}`;
-    } else {
-      d += ` L ${to.x} ${to.y}`;
+  const contourD = (ss: typeof segs, closed: boolean): string => {
+    let d = `M ${ss[0].x} ${ss[0].y}`;
+    for (let i = 1; i < ss.length; i++) {
+      const from = ss[i - 1];
+      const to = ss[i];
+      if (from.cOut || to.cIn) {
+        const c1 = from.cOut ?? { x: from.x, y: from.y };
+        const c2 = to.cIn ?? { x: to.x, y: to.y };
+        d += ` C ${c1.x} ${c1.y} ${c2.x} ${c2.y} ${to.x} ${to.y}`;
+      } else {
+        d += ` L ${to.x} ${to.y}`;
+      }
     }
+    if (closed) d += " Z";
+    return d;
+  };
+  const parts = [contourD(segs, !!pn.closed)];
+  // Extra contours of a compound path join the same path data;
+  // fill-rule="evenodd" makes interior contours cut holes.
+  for (const c of pn.contours ?? []) {
+    if (c.segments.length >= 2) parts.push(contourD(c.segments, c.closed));
   }
-  if (pn.closed) d += " Z";
+  const rule = parts.length > 1 ? ` fill-rule="evenodd"` : "";
   const fill = pn.fills && pn.fills[0]?.type === "solid" ? colorToCss(pn.fills[0].color) : "none";
   const stroke = pn.stroke?.fill.type === "solid" ? colorToCss(pn.stroke.fill.color) : "none";
   const sw = pn.stroke?.width ?? 0;
   return (
     `<svg class="oc-path" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" ` +
     `style="position:absolute;inset:0;overflow:visible" preserveAspectRatio="none">` +
-    `<path d="${escapeAttr(d)}" fill="${escapeAttr(fill)}" stroke="${escapeAttr(stroke)}" stroke-width="${sw}"/>` +
+    `<path d="${escapeAttr(parts.join(" "))}"${rule} fill="${escapeAttr(fill)}" stroke="${escapeAttr(stroke)}" stroke-width="${sw}"/>` +
     `</svg>`
   );
 }

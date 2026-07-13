@@ -16,6 +16,7 @@ import (
 	"bytes"
 	"image"
 	"image/color"
+	"image/draw"
 	"image/jpeg"
 	"image/png"
 	"math"
@@ -254,18 +255,9 @@ func (rc *rctx) rasterEllipse(m mat, w, h float64, fill map[string]any) {
 	rc.fillBeziers(start, cubics, rasterColor(pdfPaint(fill), rc.alpha))
 }
 
-func (rc *rctx) rasterPath(m mat, node map[string]any) {
-	segs := asArr(node["segments"])
-	if len(segs) == 0 {
-		return
-	}
-	col := rasterColor(fillColorOf(node), rc.alpha)
-	if col.A == 0 {
-		return
-	}
-	closed := asBool(node["closed"])
+// tracePathContour traces one subpath's segments into the rasterizer.
+func tracePathContour(r *vector.Rasterizer, m mat, segs []any, closed bool) {
 	first := asObj(segs[0])
-	r := vector.NewRasterizer(rc.w, rc.h)
 	sx, sy := m.apply(asNum(first["x"]), asNum(first["y"]))
 	r.MoveTo(float32(sx), float32(sy))
 	count := len(segs) - 1
@@ -295,7 +287,59 @@ func (rc *rctx) rasterPath(m mat, node map[string]any) {
 		}
 	}
 	r.ClosePath()
-	r.Draw(rc.dst, rc.dst.Bounds(), image.NewUniform(col), image.Point{})
+}
+
+func (rc *rctx) rasterPath(m mat, node map[string]any) {
+	segs := asArr(node["segments"])
+	if len(segs) == 0 {
+		return
+	}
+	col := rasterColor(fillColorOf(node), rc.alpha)
+	if col.A == 0 {
+		return
+	}
+	closed := asBool(node["closed"])
+	// Extra contours of a compound path (schema v15): all filled together under
+	// the even-odd rule so interior contours cut holes.
+	type contour struct {
+		segs   []any
+		closed bool
+	}
+	contours := []contour{{segs, closed}}
+	for _, c := range asArr(node["contours"]) {
+		co := asObj(c)
+		if cs := asArr(co["segments"]); len(cs) >= 2 {
+			contours = append(contours, contour{cs, asBool(co["closed"])})
+		}
+	}
+	if len(contours) == 1 {
+		r := vector.NewRasterizer(rc.w, rc.h)
+		tracePathContour(r, m, segs, closed)
+		r.Draw(rc.dst, rc.dst.Bounds(), image.NewUniform(col), image.Point{})
+		return
+	}
+	// The vector rasterizer accumulates non-zero winding, which cannot cut a
+	// hole whose contour winds the same direction as its parent. Rasterize each
+	// contour's coverage separately and fold it in as |acc - mask| (a soft XOR),
+	// which realizes the even-odd rule on antialiased coverage.
+	acc := image.NewAlpha(rc.dst.Bounds())
+	tmp := image.NewAlpha(rc.dst.Bounds())
+	for _, c := range contours {
+		for i := range tmp.Pix {
+			tmp.Pix[i] = 0
+		}
+		r := vector.NewRasterizer(rc.w, rc.h)
+		tracePathContour(r, m, c.segs, c.closed)
+		r.Draw(tmp, tmp.Bounds(), image.Opaque, image.Point{})
+		for i := range acc.Pix {
+			d := int(acc.Pix[i]) - int(tmp.Pix[i])
+			if d < 0 {
+				d = -d
+			}
+			acc.Pix[i] = uint8(d)
+		}
+	}
+	draw.DrawMask(rc.dst, rc.dst.Bounds(), image.NewUniform(col), image.Point{}, acc, image.Point{}, draw.Over)
 }
 
 // rasterLine draws each polyline segment as a thick filled quad (stroke approx).

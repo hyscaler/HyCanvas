@@ -697,9 +697,14 @@ interface EditorState {
    *  in the same undo step, so attribution can be compiled from the design. */
   addIconSvg(svg: string, provenance?: Record<string, unknown>): void;
   /** Insert a photo grid: a grid container whose cells are image frames you can
-   *  drop photos into. Returns the grid node id. */
-  insertPhotoGrid(rows: number, cols: number): string | null;
-  /** Re-lay a grid's cells (rows/cols/gap), preserving any filled cell images. */
+   *  drop photos into. `spans` overrides the default uniform one-cell-per-slot
+   *  layout with an explicit cell list (row/col plus row/col spans) for feature
+   *  layouts such as one large cell beside two small ones. Returns the grid
+   *  node id. */
+  insertPhotoGrid(rows: number, cols: number, spans?: GridSpan[]): string | null;
+  /** Re-lay a grid's cells (rows/cols/gap), preserving any filled cell images.
+   *  A gap-only change keeps the existing cell list (including spans); changing
+   *  rows or cols rebuilds a uniform layout. */
   setGridLayout(id: string, patch: { rows?: number; cols?: number; gap?: number }): void;
   /** Append imported pages (e.g. from a PDF), each sized to the source page with
    *  its editable nodes, and switch to the first new page. Undoable. */
@@ -887,21 +892,40 @@ function hexToColor(hex: string): { srgb: { r: number; g: number; b: number; a: 
   return { srgb: { r: r / 255, g: g / 255, b: b / 255, a: 1 } };
 }
 
+/** One photo-grid cell: its slot position plus row/col spans. */
+export type GridSpan = { row: number; col: number; rowSpan: number; colSpan: number };
+
+// The local-space box of a grid cell within a grid node's box.
+function gridCellBox(size: { width: number; height: number }, rows: number, cols: number, gap: number, s: GridSpan) {
+  const cellW = (size.width - gap * (cols - 1)) / cols;
+  const cellH = (size.height - gap * (rows - 1)) / rows;
+  return {
+    x: s.col * (cellW + gap),
+    y: s.row * (cellH + gap),
+    width: cellW * s.colSpan + gap * (s.colSpan - 1),
+    height: cellH * s.rowSpan + gap * (s.rowSpan - 1),
+  };
+}
+
 // Minimal view of a PathNode for the pen tool's in-place mutations.
 type PathSeg = { x: number; y: number; cIn?: { x: number; y: number }; cOut?: { x: number; y: number }; corner?: boolean };
 type PathNodeLike = {
   transform: { x: number; y: number };
   segments: PathSeg[];
+  contours?: { segments: PathSeg[]; closed: boolean }[];
   size: { width: number; height: number };
   closed: boolean;
 };
 
 // Re-tighten a path node: shift its transform to the min of all anchor+handle
 // points (keeping absolute position) and set size to the point bounds, so the
-// node stays selectable and the gizmo box hugs the path as it grows.
+// node stays selectable and the gizmo box hugs the path as it grows. Extra
+// contours of a compound path share the node's local space, so they take part
+// in the bounds and shift with the primary contour.
 function normalizePath(node: PathNodeLike): void {
+  const contourSegs = (node.contours ?? []).flatMap((c) => c.segments);
   const pts: { x: number; y: number }[] = [];
-  for (const s of node.segments) {
+  for (const s of [...node.segments, ...contourSegs]) {
     pts.push({ x: s.x, y: s.y });
     if (s.cIn) pts.push(s.cIn);
     if (s.cOut) pts.push(s.cOut);
@@ -914,7 +938,7 @@ function normalizePath(node: PathNodeLike): void {
   }
   node.transform.x += minX;
   node.transform.y += minY;
-  for (const s of node.segments) {
+  for (const s of [...node.segments, ...contourSegs]) {
     s.x -= minX; s.y -= minY;
     if (s.cIn) { s.cIn.x -= minX; s.cIn.y -= minY; }
     if (s.cOut) { s.cOut.x -= minX; s.cOut.y -= minY; }
@@ -2211,8 +2235,8 @@ export const useEditor = create<EditorState>((set, get) => {
     snapshotPath: (id) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "path") return null;
-      const n = loc.node as unknown as { segments: unknown; transform: unknown; size: unknown };
-      return structuredClone({ segments: n.segments, transform: n.transform, size: n.size });
+      const n = loc.node as unknown as { segments: unknown; contours?: unknown; transform: unknown; size: unknown };
+      return structuredClone({ segments: n.segments, contours: n.contours, transform: n.transform, size: n.size });
     },
     editAnchor: (id, index, x, y) => {
       const loc = locate(get().doc, id);
@@ -2263,12 +2287,16 @@ export const useEditor = create<EditorState>((set, get) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "path" || loc.node.locked || editBlocked(id) || !before) return;
       const n = loc.node as unknown as { segments: unknown; transform: unknown; size: unknown };
-      const after = structuredClone({ segments: n.segments, transform: n.transform, size: n.size });
-      const apply = (snap: { segments: unknown; transform: unknown; size: unknown }) => {
+      const after = structuredClone({ segments: n.segments, contours: (n as { contours?: unknown }).contours, transform: n.transform, size: n.size });
+      const apply = (snap: { segments: unknown; contours?: unknown; transform: unknown; size: unknown }) => {
         const l = locate(get().doc, id);
         if (!l) return;
-        const m = l.node as unknown as { segments: unknown; transform: Record<string, unknown>; size: unknown };
+        const m = l.node as unknown as { segments: unknown; contours?: unknown; transform: Record<string, unknown>; size: unknown };
         m.segments = structuredClone(snap.segments);
+        // normalizePath shifts contours together with the primary contour, so
+        // undo/redo must restore them together too.
+        if (snap.contours === undefined) delete m.contours;
+        else m.contours = structuredClone(snap.contours);
         Object.assign(m.transform, structuredClone(snap.transform));
         m.size = structuredClone(snap.size);
       };
@@ -3433,7 +3461,7 @@ export const useEditor = create<EditorState>((set, get) => {
         () => { const i = page.children.findIndex((n) => n.id === group.id); if (i >= 0) page.children.splice(i, 1); set({ activePage: prevActive, selection: prev }); },
       );
     },
-    insertPhotoGrid: (rows, cols) => {
+    insertPhotoGrid: (rows, cols, spans) => {
       const r = Math.max(1, Math.min(6, Math.round(rows)));
       const c = Math.max(1, Math.min(6, Math.round(cols)));
       // Size against the page under the viewport (the page the grid will join).
@@ -3443,24 +3471,31 @@ export const useEditor = create<EditorState>((set, get) => {
       // Size the grid to a comfortable square-ish box within the page.
       const gw = Math.min(page.width * 0.8, 720);
       const gh = Math.min(page.height * 0.8, 720);
-      const cellW = (gw - gap * (c - 1)) / c;
-      const cellH = (gh - gap * (r - 1)) / r;
+      // Feature layouts pass an explicit cell list (with spans); default is one
+      // cell per row/col slot. Out-of-bounds spans are clamped to the grid.
+      const slots: GridSpan[] = spans?.length
+        ? spans.map((s) => ({
+            row: Math.max(0, Math.min(r - 1, s.row)),
+            col: Math.max(0, Math.min(c - 1, s.col)),
+            rowSpan: Math.max(1, Math.min(r - Math.max(0, Math.min(r - 1, s.row)), s.rowSpan)),
+            colSpan: Math.max(1, Math.min(c - Math.max(0, Math.min(c - 1, s.col)), s.colSpan)),
+          }))
+        : Array.from({ length: r * c }, (_, i) => ({ row: Math.floor(i / c), col: i % c, rowSpan: 1, colSpan: 1 }));
       const children: Node[] = [];
       const cells: { row: number; col: number; rowSpan: number; colSpan: number; childId: string }[] = [];
-      for (let row = 0; row < r; row++) {
-        for (let col = 0; col < c; col++) {
-          const cell = createNode("frame", {
-            name: "Photo",
-            transform: { x: col * (cellW + gap), y: row * (cellH + gap), scaleX: 1, scaleY: 1, rotation: 0 },
-            size: { width: cellW, height: cellH },
-            clip: true,
-            children: [],
-            maskShape: "rect",
-            fills: [{ type: "solid", color: { srgb: { r: 0.9, g: 0.91, b: 0.93, a: 1 } } }],
-          } as Partial<Node>);
-          children.push(cell);
-          cells.push({ row, col, rowSpan: 1, colSpan: 1, childId: cell.id });
-        }
+      for (const s of slots) {
+        const box = gridCellBox({ width: gw, height: gh }, r, c, gap, s);
+        const cell = createNode("frame", {
+          name: "Photo",
+          transform: { x: box.x, y: box.y, scaleX: 1, scaleY: 1, rotation: 0 },
+          size: { width: box.width, height: box.height },
+          clip: true,
+          children: [],
+          maskShape: "rect",
+          fills: [{ type: "solid", color: { srgb: { r: 0.9, g: 0.91, b: 0.93, a: 1 } } }],
+        } as Partial<Node>);
+        children.push(cell);
+        cells.push({ ...s, childId: cell.id });
       }
       const grid = createNode("grid", {
         name: "Photo grid",
@@ -3485,23 +3520,53 @@ export const useEditor = create<EditorState>((set, get) => {
       const r = Math.max(1, Math.min(6, Math.round(patch.rows ?? g.rows)));
       const c = Math.max(1, Math.min(6, Math.round(patch.cols ?? g.cols)));
       const gap = Math.max(0, patch.gap ?? g.gap);
-      const cellW = (g.size.width - gap * (c - 1)) / c;
-      const cellH = (g.size.height - gap * (r - 1)) / r;
-      // Preserve existing cell frames where the grid keeps that position; create
-      // fresh empty frames for new cells; drop frames outside the new bounds.
+      // Lay a frame into its cell box, and keep a filled cell's image covering
+      // the whole cell (the image child is sized to the frame at fill time).
+      const layout = (frame: { transform: Transform; size: { width: number; height: number }; children?: Node[] }, s: GridSpan, rr: number, cc: number) => {
+        const box = gridCellBox(g.size, rr, cc, gap, s);
+        frame.transform = { x: box.x, y: box.y, scaleX: 1, scaleY: 1, rotation: 0 };
+        frame.size = { width: box.width, height: box.height };
+        const img = frame.children?.length === 1 && frame.children[0].type === "image" ? (frame.children[0] as unknown as { transform: Transform; size: { width: number; height: number } }) : null;
+        if (img) {
+          img.transform = { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 };
+          img.size = { width: box.width, height: box.height };
+        }
+      };
+      if (r === g.rows && c === g.cols) {
+        // Gap-only change: keep the existing cell list (including feature-layout
+        // spans) and just re-lay every frame. Frames are mutated here, once;
+        // the undo/redo closures only swap the arrays (before holds pre-change
+        // clones), matching the rebuild path below.
+        const byId = new Map(g.children.map((n) => [n.id, n]));
+        for (const cell of g.cells) {
+          const frame = cell.childId ? byId.get(cell.childId) : undefined;
+          if (frame) layout(frame as never, cell, r, c);
+        }
+        const afterChildren = g.children;
+        const afterCells = g.cells;
+        perform(
+          () => { g.gap = gap; g.cells = afterCells; g.children = afterChildren; },
+          () => { g.gap = before.gap; g.cells = before.cells as never; g.children = before.children as never; },
+        );
+        return;
+      }
+      // Row/col change: rebuild a uniform layout, preserving existing cell
+      // frames where the grid keeps that position; create fresh empty frames
+      // for new cells; drop frames outside the new bounds.
       const old = g.children as Node[];
       const byPos = new Map<string, Node>();
       for (const cell of g.cells) if (cell.childId) { const ch = old.find((n) => n.id === cell.childId); if (ch) byPos.set(`${cell.row},${cell.col}`, ch); }
       const nextChildren: Node[] = [];
       const nextCells: typeof g.cells = [];
+      const cellW = (g.size.width - gap * (c - 1)) / c;
+      const cellH = (g.size.height - gap * (r - 1)) / r;
       for (let row = 0; row < r; row++) {
         for (let col = 0; col < c; col++) {
-          const keep = byPos.get(`${row},${col}`) as unknown as { id: string; transform: Transform; size: { width: number; height: number } } | undefined;
+          const keep = byPos.get(`${row},${col}`) as unknown as { id: string; transform: Transform; size: { width: number; height: number }; children?: Node[] } | undefined;
           const frame = keep ?? (createNode("frame", {
             name: "Photo", transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: cellW, height: cellH }, clip: true, children: [], maskShape: "rect", fills: [{ type: "solid", color: { srgb: { r: 0.9, g: 0.91, b: 0.93, a: 1 } } }],
-          } as Partial<Node>) as unknown as { id: string; transform: Transform; size: { width: number; height: number } });
-          frame.transform = { x: col * (cellW + gap), y: row * (cellH + gap), scaleX: 1, scaleY: 1, rotation: 0 };
-          frame.size = { width: cellW, height: cellH };
+          } as Partial<Node>) as unknown as { id: string; transform: Transform; size: { width: number; height: number }; children?: Node[] });
+          layout(frame, { row, col, rowSpan: 1, colSpan: 1 }, r, c);
           nextChildren.push(frame as unknown as Node);
           nextCells.push({ row, col, rowSpan: 1, colSpan: 1, childId: frame.id });
         }
@@ -3874,12 +3939,23 @@ export const useEditor = create<EditorState>((set, get) => {
         () => { doc.assets.push(ref); node.fills = [fill]; },
         () => { node.fills = before; const ai = doc.assets.findIndex((a) => a.id === assetId); if (ai >= 0) doc.assets.splice(ai, 1); },
       );
-      // Register the asset and repaint once it loads (cover-fit reads natural dims).
+      // Register the asset; once it loads, patch the fill's natural size (the
+      // crop overlay needs real dimensions) and repaint.
       if (typeof window !== "undefined") {
         imageAssets.register(assetId, url);
         const off = imageAssets.onChange((changed) => {
           if (changed !== assetId) return;
           if (imageAssets.status(assetId) === "loading") return;
+          const img = imageAssets.image(assetId) as { naturalWidth?: number; naturalHeight?: number } | null;
+          const l = locate(get().doc, id);
+          const f = l?.node.type === "shape" ? (l.node as unknown as { fills?: Fill[] }).fills?.[0] : undefined;
+          if (f?.type === "image" && img?.naturalWidth) {
+            const src = (f as unknown as { source: { assetId: string; naturalWidth: number; naturalHeight: number } }).source;
+            if (src.assetId === assetId) {
+              src.naturalWidth = img.naturalWidth;
+              src.naturalHeight = img.naturalHeight ?? img.naturalWidth;
+            }
+          }
           get().tick();
           off();
         });
@@ -3930,7 +4006,7 @@ export const useEditor = create<EditorState>((set, get) => {
     },
     setFrameImage: (id, url, provenance) => {
       const loc = locate(get().doc, id);
-      if (!loc || loc.node.type !== "frame") return;
+      if (!loc || loc.node.type !== "frame" || loc.node.locked || editBlocked(id)) return;
       const frame = loc.node as unknown as { size: { width: number; height: number }; children: Node[]; clip?: boolean };
       const doc = get().doc;
       ensureDocArrays(doc);
@@ -4604,8 +4680,18 @@ export const useEditor = create<EditorState>((set, get) => {
     },
     setImageCrop: (id, crop) => {
       const loc = locate(get().doc, id);
-      if (!loc || loc.node.type !== "image" || loc.node.locked || editBlocked(id)) return;
-      const rec = loc.node as unknown as { crop?: CropRect; fit: ImageFit };
+      if (!loc || loc.node.locked || editBlocked(id)) return;
+      // The crop lives on the image node itself, or on a shape's image fill
+      // (fills[0]) - the same normalized-crop model either way, so the crop
+      // overlay serves both.
+      let rec: { crop?: CropRect; fit: ImageFit } | null = null;
+      if (loc.node.type === "image") {
+        rec = loc.node as unknown as { crop?: CropRect; fit: ImageFit };
+      } else if (loc.node.type === "shape") {
+        const fill = (loc.node as unknown as { fills?: Fill[] }).fills?.[0];
+        if (fill?.type === "image") rec = fill as unknown as { crop?: CropRect; fit: ImageFit };
+      }
+      if (!rec) return;
       // Clamp to a valid sub-rectangle (CropRectSchema requires non-zero area,
       // within [0,1]); float math in the overlay can drift past the edge.
       let next: CropRect | undefined = crop;

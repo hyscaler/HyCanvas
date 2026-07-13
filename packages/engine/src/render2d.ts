@@ -147,16 +147,6 @@ function shapePath(ctx: CanvasLike, node: ShapeNode): void {
   }
 }
 
-/** Draw an image to cover a w x h box (object-fit: cover, centered). */
-function drawCover(ctx: CanvasLike, img: { width?: number; height?: number; naturalWidth?: number; naturalHeight?: number }, w: number, h: number): void {
-  const iw = (img.naturalWidth || img.width || w) as number;
-  const ih = (img.naturalHeight || img.height || h) as number;
-  const scale = Math.max(w / iw, h / ih);
-  const dw = iw * scale;
-  const dh = ih * scale;
-  if (ctx.drawImage) ctx.drawImage(img as unknown as CanvasImageSource, (w - dw) / 2, (h - dh) / 2, dw, dh);
-}
-
 /** Paint a pattern fill (tiled image) clipped to the current shape path. Returns
  *  true when it handled the fill (asset ready or a placeholder was drawn). */
 function paintPattern(
@@ -202,8 +192,12 @@ function drawShape(ctx: CanvasLike, node: ShapeNode, assets?: AssetProvider): vo
     if (node.stroke) { shapePath(ctx, node); setStroke(ctx, node.stroke.width, resolveFill(ctx, node.stroke.fill, w, h)); }
     return;
   }
-  // Image fill clip to the shape outline and cover-draw the image.
-  const imgFill = node.fills.find((f) => f.type === "image") as { source: { assetId: string } } | undefined;
+  // Image fill: clip to the shape outline and draw the image honoring the
+  // fill's crop/fit (the crop overlay writes fills[0].crop, the same model as
+  // the image node), so adjusting an image inside a shape renders faithfully.
+  const imgFill = node.fills.find((f) => f.type === "image") as
+    | { source: { assetId: string }; fit?: ImageNode["fit"]; crop?: { x: number; y: number; width: number; height: number }; focalPoint?: { x: number; y: number } }
+    | undefined;
   if (imgFill && ctx.save && ctx.restore && ctx.clip) {
     const assetId = imgFill.source.assetId;
     const status = assets ? assets.status(assetId) : "loading";
@@ -211,8 +205,20 @@ function drawShape(ctx: CanvasLike, node: ShapeNode, assets?: AssetProvider): vo
     shapePath(ctx, node);
     ctx.clip();
     const img = status === "ready" ? assets?.image(assetId) : null;
-    if (img) drawCover(ctx, img as { width?: number; height?: number }, w, h);
-    else placeholderBox(ctx, w, h, status === "missing" ? MISSING_FILL : undefined, status === "missing" ? MISSING_STROKE : undefined);
+    if (img && ctx.drawImage) {
+      const el = img as { width?: number; height?: number; naturalWidth?: number; naturalHeight?: number };
+      const iw = (el.naturalWidth || el.width || 1) as number;
+      const ih = (el.naturalHeight || el.height || 1) as number;
+      const crop = imgFill.crop ?? { x: 0, y: 0, width: 1, height: 1 };
+      const fr = fitRect(iw * crop.width, ih * crop.height, w, h, imgFill.fit ?? "cover", imgFill.focalPoint);
+      const sx = (crop.x + fr.source.x * crop.width) * iw;
+      const sy = (crop.y + fr.source.y * crop.height) * ih;
+      const sw = fr.source.width * crop.width * iw;
+      const sh = fr.source.height * crop.height * ih;
+      ctx.drawImage(img as CanvasImageSource, sx, sy, sw, sh, fr.dest.x, fr.dest.y, fr.dest.width, fr.dest.height);
+    } else {
+      placeholderBox(ctx, w, h, status === "missing" ? MISSING_FILL : undefined, status === "missing" ? MISSING_STROKE : undefined);
+    }
     ctx.restore();
     if (node.stroke) { shapePath(ctx, node); setStroke(ctx, node.stroke.width, resolveFill(ctx, node.stroke.fill, w, h)); }
     return;
@@ -991,9 +997,11 @@ function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, bo
     }
     case "path": {
       const segs = node.segments;
-      if (segs.length >= 2) {
-        ctx.beginPath();
-        ctx.moveTo(segs[0].x, segs[0].y);
+      // Compound path: all contours join the primary one so interior contours
+      // cut holes under the even-odd fill rule. A node whose primary contour
+      // is degenerate still draws its remaining contours.
+      const contours = node.contours?.filter((c) => c.segments.length >= 2) ?? [];
+      if (segs.length >= 2 || contours.length) {
         const segTo = (from: typeof segs[0], to: typeof segs[0]) => {
           if ((from.cOut || to.cIn) && ctx.bezierCurveTo) {
             const c1 = from.cOut ?? { x: from.x, y: from.y };
@@ -1003,14 +1011,21 @@ function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, bo
             ctx.lineTo(to.x, to.y);
           }
         };
-        for (let i = 1; i < segs.length; i++) segTo(segs[i - 1], segs[i]);
-        if (node.closed) {
-          segTo(segs[segs.length - 1], segs[0]);
-          ctx.closePath();
-        }
+        const trace = (ss: typeof segs, closed: boolean) => {
+          ctx.moveTo(ss[0].x, ss[0].y);
+          for (let i = 1; i < ss.length; i++) segTo(ss[i - 1], ss[i]);
+          if (closed) {
+            segTo(ss[ss.length - 1], ss[0]);
+            ctx.closePath();
+          }
+        };
+        ctx.beginPath();
+        if (segs.length >= 2) trace(segs, node.closed);
+        for (const c of contours) trace(c.segments, c.closed);
         if (node.fills && node.fills.length > 0) {
           ctx.fillStyle = resolveFill(ctx, node.fills[0], w, h);
-          ctx.fill();
+          if (contours.length) ctx.fill("evenodd");
+          else ctx.fill();
         }
         if (node.stroke) setStroke(ctx, node.stroke.width, resolveFill(ctx, node.stroke.fill, w, h));
       }
@@ -1384,9 +1399,18 @@ function seriesColor(s: { color?: { srgb: { r: number; g: number; b: number; a: 
   return s.color ? colorToCss(s.color) : SERIES_PALETTE_HEX[i % SERIES_PALETTE_HEX.length];
 }
 
+/** Text scale for a chart's labels: the style's base font size relative to the
+ *  built-in base of 11px. Every chart text (and the bands reserved for it)
+ *  multiplies by this, so raising the size never clips labels. */
+function chartTextScale(node: ChartNode): number {
+  const base = node.style?.fontSize;
+  if (!base || !Number.isFinite(base)) return 1;
+  return Math.min(4, Math.max(0.5, base / 11));
+}
+
 /** Draw the formatted numeric value above/at a point (chart data labels). */
-function valueLabel(ctx: CanvasLike, text: string, x: number, y: number): void {
-  ctx.font = `500 10px ${fontFamilyStack("system")}`;
+function valueLabel(ctx: CanvasLike, text: string, x: number, y: number, k = 1): void {
+  ctx.font = `500 ${Math.round(10 * k)}px ${fontFamilyStack("system")}`;
   ctx.fillStyle = "#52525b";
   ctx.textAlign = "center";
   ctx.fillText(text, x, y);
@@ -1422,11 +1446,12 @@ function ellipsize(ctx: CanvasLike, text: string, maxWidth: number): string {
 function drawLegend(ctx: CanvasLike, node: ChartNode, w: number, h: number, position: string): void {
   const series = node.series ?? [];
   if (series.length === 0) return;
-  ctx.font = `500 11px ${fontFamilyStack("system")}`;
+  const k = chartTextScale(node);
+  ctx.font = `500 ${Math.round(11 * k)}px ${fontFamilyStack("system")}`;
   ctx.textAlign = "left";
-  const sw = 10, gap = 6, rowH = 16, itemGap = 16;
+  const sw = 10 * k, gap = 6 * k, rowH = 16 * k, itemGap = 16 * k;
   if (position === "top" || position === "bottom") {
-    const y = position === "top" ? 4 : h - rowH + 4;
+    const y = position === "top" ? 4 * k : h - rowH + 4 * k;
     const maxX = w - 8; // keep within the node's right edge
     let x = 8;
     for (let j = 0; j < series.length; j++) {
@@ -1440,11 +1465,11 @@ function drawLegend(ctx: CanvasLike, node: ChartNode, w: number, h: number, posi
       x = labelX + textWidth(ctx, label) + itemGap;
     }
   } else {
-    // chartInsets reserves 80px on the legend side; keep labels inside it.
-    const band = 80;
+    // chartInsets reserves a band on the legend side; keep labels inside it.
+    const band = 80 * k;
     const x = position === "left" ? 6 : w - band + 6;
     const labelMax = band - sw - gap - 6;
-    let y = 10;
+    let y = 10 * k;
     for (let j = 0; j < series.length; j++) {
       if (y + sw > h) break; // ran out of vertical room
       ctx.fillStyle = seriesColor(series[j], j);
@@ -1465,7 +1490,7 @@ function tickLabel(v: number): string {
 /** Draw the left Y axis: a vertical line, evenly spaced tick marks, and value
  *  labels from 0 to `maxV`. Stays within the reserved left inset (labels are
  *  right-aligned just left of the axis). For value-based charts only. */
-function drawYAxis(ctx: CanvasLike, x0: number, y0: number, ph: number, maxV: number): void {
+function drawYAxis(ctx: CanvasLike, x0: number, y0: number, ph: number, maxV: number, k = 1): void {
   const ticks = tickCount(ph);
   ctx.strokeStyle = "#d4d4d8";
   ctx.lineWidth = 1;
@@ -1473,7 +1498,7 @@ function drawYAxis(ctx: CanvasLike, x0: number, y0: number, ph: number, maxV: nu
   ctx.moveTo(x0, y0);
   ctx.lineTo(x0, y0 + ph);
   ctx.stroke();
-  ctx.font = `500 9px ${fontFamilyStack("system")}`;
+  ctx.font = `500 ${Math.round(9 * k)}px ${fontFamilyStack("system")}`;
   ctx.fillStyle = "#52525b";
   ctx.textAlign = "right";
   for (let t = 0; t <= ticks; t++) {
@@ -1484,7 +1509,7 @@ function drawYAxis(ctx: CanvasLike, x0: number, y0: number, ph: number, maxV: nu
     ctx.moveTo(x0 - 3, ty);
     ctx.lineTo(x0, ty);
     ctx.stroke();
-    ctx.fillText(tickLabel(maxV * frac), x0 - 5, ty + 3);
+    ctx.fillText(tickLabel(maxV * frac), x0 - 5, ty + 3 * k);
   }
 }
 
@@ -1496,22 +1521,24 @@ function hasValueAxis(type: ChartType): boolean {
     type === "line" || type === "area" || type === "scatter";
 }
 
-/** Insets the plot rect to make room for title, legend, and axis labels. */
+/** Insets the plot rect to make room for title, legend, and axis labels. All
+ *  text bands scale with the chart's text size so larger labels never clip. */
 function chartInsets(node: ChartNode, w: number, h: number): { x0: number; y0: number; pw: number; ph: number } {
   const style = node.style;
+  const k = chartTextScale(node);
   let top = 14, bottom = 14, left = 14, right = 14;
-  if (style?.title) top += 18;
+  if (style?.title) top += 18 * k;
   if (style?.legend?.show) {
     const pos = style.legend.position;
-    if (pos === "top") top += 18;
-    else if (pos === "bottom") bottom += 18;
-    else if (pos === "left") left += 80;
-    else right += 80;
+    if (pos === "top") top += 18 * k;
+    else if (pos === "bottom") bottom += 18 * k;
+    else if (pos === "left") left += 80 * k;
+    else right += 80 * k;
   }
-  if (style?.axes?.yLabel) left += 14;
-  if (style?.axes?.xLabel) bottom += 14;
+  if (style?.axes?.yLabel) left += 14 * k;
+  if (style?.axes?.xLabel) bottom += 14 * k;
   // Reserve room for Y tick labels when a value axis is drawn.
-  if (style?.axes?.showY !== false && hasValueAxis(node.chartType)) left += 22;
+  if (style?.axes?.showY !== false && hasValueAxis(node.chartType)) left += 22 * k;
   return { x0: left, y0: top, pw: Math.max(1, w - left - right), ph: Math.max(1, h - top - bottom) };
 }
 
@@ -1519,20 +1546,21 @@ function chartInsets(node: ChartNode, w: number, h: number): { x0: number; y0: n
 function drawChartChrome(ctx: CanvasLike, node: ChartNode, w: number, h: number): void {
   const style = node.style;
   if (!style) return;
+  const k = chartTextScale(node);
   if (style.title) {
-    ctx.font = `600 13px ${fontFamilyStack("system")}`;
+    ctx.font = `600 ${Math.round(13 * k)}px ${fontFamilyStack("system")}`;
     ctx.fillStyle = "#18181b";
     ctx.textAlign = "center";
-    ctx.fillText(style.title, w / 2, 14);
+    ctx.fillText(style.title, w / 2, 14 * k);
   }
   if (style.axes?.xLabel) {
-    ctx.font = `500 11px ${fontFamilyStack("system")}`;
+    ctx.font = `500 ${Math.round(11 * k)}px ${fontFamilyStack("system")}`;
     ctx.fillStyle = "#52525b";
     ctx.textAlign = "center";
     ctx.fillText(style.axes.xLabel, w / 2, h - 4);
   }
   if (style.axes?.yLabel) {
-    ctx.font = `500 11px ${fontFamilyStack("system")}`;
+    ctx.font = `500 ${Math.round(11 * k)}px ${fontFamilyStack("system")}`;
     ctx.fillStyle = "#52525b";
     ctx.textAlign = "center";
     ctx.fillText(style.axes.yLabel, 8, h / 2);
@@ -1547,6 +1575,7 @@ function drawChart(ctx: CanvasLike, node: ChartNode, w: number, h: number): void
   if (series.length === 0) { placeholderBox(ctx, w, h); return; }
   const type = node.chartType;
   const showValues = node.style?.valueLabels === true;
+  const k = chartTextScale(node);
   drawChartChrome(ctx, node, w, h);
 
   if (type === "pie" || type === "donut") {
@@ -1576,7 +1605,7 @@ function drawChart(ctx: CanvasLike, node: ChartNode, w: number, h: number): void
       }
       if (showValues) {
         const mid = (a0 + a1) / 2;
-        valueLabel(ctx, String(vals[i]), cx + Math.cos(mid) * r * 0.6, cy + Math.sin(mid) * r * 0.6);
+        valueLabel(ctx, String(vals[i]), cx + Math.cos(mid) * r * 0.6, cy + Math.sin(mid) * r * 0.6, k);
       }
       a0 = a1;
     }
@@ -1610,7 +1639,7 @@ function drawChart(ctx: CanvasLike, node: ChartNode, w: number, h: number): void
     ctx.stroke();
   }
   // left value (y) axis with ticks/labels, unless explicitly hidden
-  if (node.style?.axes?.showY !== false) drawYAxis(ctx, x0, y0, ph, maxV);
+  if (node.style?.axes?.showY !== false) drawYAxis(ctx, x0, y0, ph, maxV, k);
 
   if (type === "bar" || type === "barGrouped" || type === "barStacked") {
     for (let i = 0; i < n; i++) {
@@ -1625,7 +1654,7 @@ function drawChart(ctx: CanvasLike, node: ChartNode, w: number, h: number): void
           const by = y0 + ph - ((base + v) / maxV) * ph;
           ctx.fillStyle = seriesColor(series[j], j);
           ctx.fillRect(bx, by, barW, bh);
-          if (showValues && v > 0) valueLabel(ctx, String(series[j].values[i]), bx + barW / 2, by + 10);
+          if (showValues && v > 0) valueLabel(ctx, String(series[j].values[i]), bx + barW / 2, by + 10 * k, k);
         }
       } else {
         for (let j = 0; j < series.length; j++) {
@@ -1634,7 +1663,7 @@ function drawChart(ctx: CanvasLike, node: ChartNode, w: number, h: number): void
           const g = groupedBarLayout(pw, n, series.length, i, j);
           ctx.fillStyle = seriesColor(series[j], j);
           ctx.fillRect(x0 + g.x, y0 + ph - bh, g.width * 0.9, bh);
-          if (showValues) valueLabel(ctx, String(v), x0 + g.x + g.width * 0.45, y0 + ph - bh - 3);
+          if (showValues) valueLabel(ctx, String(v), x0 + g.x + g.width * 0.45, y0 + ph - bh - 3 * k, k);
         }
       }
     }
@@ -1670,7 +1699,7 @@ function drawChart(ctx: CanvasLike, node: ChartNode, w: number, h: number): void
     if (showValues) {
       for (let i = 0; i < n; i++) {
         const v = series[j].values[i] ?? 0;
-        valueLabel(ctx, String(v), x0 + i * step, y0 + ph - (Math.max(0, v) / maxV) * ph - 4);
+        valueLabel(ctx, String(v), x0 + i * step, y0 + ph - (Math.max(0, v) / maxV) * ph - 4 * k, k);
       }
     }
   }
@@ -1680,6 +1709,7 @@ function drawChart(ctx: CanvasLike, node: ChartNode, w: number, h: number): void
 function drawScatter(ctx: CanvasLike, node: ChartNode, x0: number, y0: number, pw: number, ph: number, n: number, showValues: boolean): void {
   const series = node.series ?? [];
   const maxV = seriesMax(series) || 1;
+  const k = chartTextScale(node);
   if (node.style?.axes?.showX !== false) {
     ctx.strokeStyle = "#d4d4d8";
     ctx.lineWidth = 1;
@@ -1688,7 +1718,7 @@ function drawScatter(ctx: CanvasLike, node: ChartNode, x0: number, y0: number, p
     ctx.lineTo(x0 + pw, y0 + ph);
     ctx.stroke();
   }
-  if (node.style?.axes?.showY !== false) drawYAxis(ctx, x0, y0, ph, maxV);
+  if (node.style?.axes?.showY !== false) drawYAxis(ctx, x0, y0, ph, maxV, k);
   const step = n > 1 ? pw / (n - 1) : 0;
   for (let j = 0; j < series.length; j++) {
     ctx.fillStyle = seriesColor(series[j], j);
@@ -1703,7 +1733,7 @@ function drawScatter(ctx: CanvasLike, node: ChartNode, x0: number, y0: number, p
       } else {
         ctx.fillRect(px - 3, py - 3, 6, 6);
       }
-      if (showValues) valueLabel(ctx, String(v), px, py - 6);
+      if (showValues) valueLabel(ctx, String(v), px, py - 6 * k, k);
     }
   }
 }

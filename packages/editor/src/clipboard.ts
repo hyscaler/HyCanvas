@@ -159,16 +159,25 @@ export function remapIds(
       n.id = fresh;
     });
   }
-  // Rewrite connector endpoint attachments that point inside the fragment.
+  // Rewrite intra-fragment id references: connector endpoint attachments, and
+  // a photo grid's cell -> frame links (stale childIds would make a later
+  // grid re-layout treat every cell as missing and rebuild them empty).
   for (const root of cloned) {
     visitTree(root, (n) => {
-      if (n.type !== "connector") return;
-      const rec = n as unknown as AnyRec;
-      for (const key of ["start", "end"] as const) {
-        const ep = rec[key] as AnyRec | undefined;
-        const attach = ep?.attach as AnyRec | undefined;
-        const old = attach?.nodeId as string | undefined;
-        if (old && idMap.has(old)) attach!.nodeId = idMap.get(old);
+      if (n.type === "connector") {
+        const rec = n as unknown as AnyRec;
+        for (const key of ["start", "end"] as const) {
+          const ep = rec[key] as AnyRec | undefined;
+          const attach = ep?.attach as AnyRec | undefined;
+          const old = attach?.nodeId as string | undefined;
+          if (old && idMap.has(old)) attach!.nodeId = idMap.get(old);
+        }
+      } else if (n.type === "grid") {
+        const cells = (n as unknown as AnyRec).cells as AnyRec[] | undefined;
+        for (const c of cells ?? []) {
+          const old = c.childId as string | undefined;
+          if (old && idMap.has(old)) c.childId = idMap.get(old);
+        }
       }
     });
   }

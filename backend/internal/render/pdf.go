@@ -121,6 +121,12 @@ func (c *pdfCtx) endMarked() { c.op("EMC") }
 // paintAndStroke emits the fill+stroke for the current path using the node's
 // fills[0] and stroke, choosing the right paint operator (f/S/B/n).
 func (c *pdfCtx) paintAndStroke(node map[string]any) {
+	c.paintAndStrokeRule(node, false)
+}
+
+// paintAndStrokeRule paints the current path; evenOdd selects the even-odd
+// fill operators (f*/B*) for compound paths whose contours cut holes.
+func (c *pdfCtx) paintAndStrokeRule(node map[string]any, evenOdd bool) {
 	var fills []any = asArr(node["fills"])
 	var fill map[string]any
 	if len(fills) > 0 {
@@ -139,11 +145,15 @@ func (c *pdfCtx) paintAndStroke(node map[string]any) {
 		c.op(pn(sc.r) + " " + pn(sc.g) + " " + pn(sc.b) + " RG")
 		c.op(pn(asNum(stroke["width"])) + " w")
 	}
+	fillOp, bothOp := "f", "B"
+	if evenOdd {
+		fillOp, bothOp = "f*", "B*"
+	}
 	switch {
 	case fc.ok && sc.ok:
-		c.op("B")
+		c.op(bothOp)
 	case fc.ok:
-		c.op("f")
+		c.op(fillOp)
 	case sc.ok:
 		c.op("S")
 	default:
@@ -240,12 +250,8 @@ func (c *pdfCtx) shapeBody(node map[string]any) {
 	}
 }
 
-func (c *pdfCtx) pathBody(node map[string]any) {
-	segs := asArr(node["segments"])
-	if len(segs) == 0 {
-		return
-	}
-	closed := asBool(node["closed"])
+// pathContourOps emits one subpath's construction operators.
+func (c *pdfCtx) pathContourOps(segs []any, closed bool) {
 	first := asObj(segs[0])
 	c.op(pn(asNum(first["x"])) + " " + pn(asNum(first["y"])) + " m")
 	count := len(segs) - 1
@@ -274,7 +280,25 @@ func (c *pdfCtx) pathBody(node map[string]any) {
 	if closed {
 		c.op("h")
 	}
-	c.paintAndStroke(node)
+}
+
+func (c *pdfCtx) pathBody(node map[string]any) {
+	segs := asArr(node["segments"])
+	if len(segs) == 0 {
+		return
+	}
+	c.pathContourOps(segs, asBool(node["closed"]))
+	// Extra contours of a compound path (schema v15) join the same path; the
+	// even-odd operators make interior contours cut holes.
+	compound := false
+	for _, ct := range asArr(node["contours"]) {
+		co := asObj(ct)
+		if cs := asArr(co["segments"]); len(cs) >= 2 {
+			c.pathContourOps(cs, asBool(co["closed"]))
+			compound = true
+		}
+	}
+	c.paintAndStrokeRule(node, compound)
 }
 
 func (c *pdfCtx) lineBody(node map[string]any) {

@@ -276,14 +276,23 @@ function num(attrs: Attrs, key: string, dflt = 0): number {
   return Number.isFinite(v) ? v : dflt;
 }
 
-function pathNodeFromSub(sub: SubPathData, fills: Fill[], id: string, stroke?: Stroke, opacity?: number): Node {
-  const bb = bboxOfSegments(sub.segments);
+// One node per <path> element: the first subpath fills `segments`/`closed`,
+// the rest become `contours` so interior subpaths cut holes under the
+// even-odd rule instead of each flooding as a separate solid shape. A
+// degenerate leading subpath (a lone moveto) would make renderers skip the
+// whole node, so the primary slot gets the first drawable subpath instead.
+function pathNodeFromSubs(subs: SubPathData[], fills: Fill[], id: string, stroke?: Stroke, opacity?: number): Node {
+  const pi = Math.max(0, subs.findIndex((s) => s.segments.length >= 2));
+  const first = subs[pi];
+  const rest = subs.filter((_, i) => i !== pi);
+  const bb = bboxOfSegments(subs.flatMap((s) => s.segments));
   return createNode("path", {
     id,
     transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
     size: { width: bb.w, height: bb.h },
-    segments: sub.segments,
-    closed: sub.closed,
+    segments: first.segments,
+    closed: first.closed,
+    ...(rest.length ? { contours: rest.map((s) => ({ segments: s.segments, closed: s.closed })) } : {}),
     fills,
     ...(stroke ? { stroke } : {}),
     ...(opacity != null && opacity < 1 ? { opacity } : {}),
@@ -396,7 +405,7 @@ export function svgToNodes(
       if (/[aA]/.test(attrs.d ?? "")) approximated = true;
       const subs = parsePathData(attrs.d ?? "");
       const fills = ff(attrs, !stroke);
-      for (const sub of subs) nodes.push(pathNodeFromSub(sub, fills, idGen(), stroke, opP));
+      if (subs.length) nodes.push(pathNodeFromSubs(subs, fills, idGen(), stroke, opP));
     } else if (tag === "rect") {
       const r = num(attrs, "rx", num(attrs, "ry", 0));
       nodes.push(createNode("shape", {
@@ -424,13 +433,13 @@ export function svgToNodes(
     } else if (tag === "polygon" || tag === "polyline") {
       const segs = pointsToSegments(attrs.points ?? "");
       const fills = tag === "polygon" ? ff(attrs, !stroke) : [];
-      if (segs.length) nodes.push(pathNodeFromSub({ segments: segs, closed: tag === "polygon" }, fills, idGen(), stroke, opP));
+      if (segs.length) nodes.push(pathNodeFromSubs([{ segments: segs, closed: tag === "polygon" }], fills, idGen(), stroke, opP));
     } else if (tag === "line") {
       const segs: PathSegment[] = [
         { x: num(attrs, "x1"), y: num(attrs, "y1") },
         { x: num(attrs, "x2"), y: num(attrs, "y2") },
       ];
-      nodes.push(pathNodeFromSub({ segments: segs, closed: false }, [], idGen(), stroke, opP));
+      nodes.push(pathNodeFromSubs([{ segments: segs, closed: false }], [], idGen(), stroke, opP));
     }
   }
   return { nodes, assets, approximated };
