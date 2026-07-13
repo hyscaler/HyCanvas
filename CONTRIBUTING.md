@@ -63,8 +63,8 @@ maintainer walkthrough is in the README under "Releases and publishing".
 ## License of contributions (CLA required)
 
 HyCanvas is distributed under the Elastic License 2.0 (see `LICENSE`), with
-[commercial licensing](COMMERCIAL.md) available from NetTantra for hosted
-offerings. Selling a commercial exception means relicensing the code, and only
+[commercial licensing](COMMERCIAL.md) available from NetTantra Technologies (India) Private Limited,
+which does business as HyScaler, for hosted offerings. Selling a commercial exception means relicensing the code, and only
 a contributor can grant that right, so every contributor signs the
 [Contributor License Agreement](CLA.md) once: the CLA bot will ask on your
 first pull request, and signing is a single comment. You keep ownership of your

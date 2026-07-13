@@ -1,6 +1,6 @@
 # Commercial Licensing
 
-HyCanvas is a product of NetTantra Technologies (India) Private Limited. The source is available under the [Elastic License 2.0](LICENSE), which lets you do almost everything for free, forever:
+HyCanvas is a product of NetTantra Technologies (India) Private Limited, doing business as HyScaler. The source is available under the [Elastic License 2.0](LICENSE), which lets you do almost everything for free, forever:
 
 - Run HyCanvas inside your company, for any number of users, in production.
 - Self-host it for yourself, your team, or your organization.
@@ -23,4 +23,4 @@ The one thing the license reserves is offering HyCanvas to third parties as a ho
 
 Write to licensing@hycanvas.com with a short description of your intended offering. Please include expected scale and the countries you plan to operate in.
 
-HyScaler® is a registered trademark of NetTantra Technologies (India) Private Limited; HyCanvas is a product of NetTantra Technologies (India) Private Limited. © 2026 NetTantra Technologies (India) Private Limited. All rights reserved where not expressly licensed.
+HyScaler is a trading name (DBA) of NetTantra Technologies (India) Private Limited and a registered trademark of it; HyCanvas is a product of that company. © 2026 NetTantra Technologies (India) Private Limited. All rights reserved where not expressly licensed.

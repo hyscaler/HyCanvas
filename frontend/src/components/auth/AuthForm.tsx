@@ -365,7 +365,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
         <p className="relative z-10 text-sm text-white/60">
           Your designs, your data - open format, full export, forever.
-          <span className="mt-1 block text-xs text-white/40">© 2026 NetTantra Technologies (India) Private Limited. HyCanvas is a HyScaler® product.</span>
+          <span className="mt-1 block text-xs text-white/40">© 2026 NetTantra Technologies (India) Private Limited, dba HyScaler.</span>
         </p>
       </div>
 
