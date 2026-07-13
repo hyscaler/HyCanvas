@@ -166,6 +166,25 @@ describe("AC-4: forward migration is total and idempotent", () => {
     const design = createBlankDesign();
     expect(() => migrate(design, -1)).toThrowError(/forward-only/);
   });
+
+  it("v14 -> v15 stamps the version and leaves path nodes untouched; contours validate", () => {
+    const design = createBlankDesign();
+    const path = createNode("path", {
+      segments: [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }],
+      closed: true,
+      fills: [{ type: "solid", color: { srgb: { r: 0, g: 0, b: 0, a: 1 } } }],
+    } as Partial<Node>);
+    design.pages[0].children.push(path);
+    const v14 = structuredClone({ ...design, schemaVersion: 14 }) as DesignFile;
+    const out = migrate(v14);
+    expect(out.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(out.pages[0].children[0]).toEqual(path); // additive: node byte-identical
+    // A compound path (extra even-odd contours) is valid in the new version.
+    (out.pages[0].children[0] as unknown as Record<string, unknown>).contours = [
+      { segments: [{ x: 2, y: 2 }, { x: 8, y: 2 }, { x: 8, y: 8 }], closed: true },
+    ];
+    expect(validate(out)).toEqual({ ok: true });
+  });
 });
 
 describe("v1 -> v2 text migration", () => {

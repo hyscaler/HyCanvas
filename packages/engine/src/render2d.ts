@@ -991,9 +991,11 @@ function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, bo
     }
     case "path": {
       const segs = node.segments;
-      if (segs.length >= 2) {
-        ctx.beginPath();
-        ctx.moveTo(segs[0].x, segs[0].y);
+      // Compound path: all contours join the primary one so interior contours
+      // cut holes under the even-odd fill rule. A node whose primary contour
+      // is degenerate still draws its remaining contours.
+      const contours = node.contours?.filter((c) => c.segments.length >= 2) ?? [];
+      if (segs.length >= 2 || contours.length) {
         const segTo = (from: typeof segs[0], to: typeof segs[0]) => {
           if ((from.cOut || to.cIn) && ctx.bezierCurveTo) {
             const c1 = from.cOut ?? { x: from.x, y: from.y };
@@ -1003,14 +1005,21 @@ function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, bo
             ctx.lineTo(to.x, to.y);
           }
         };
-        for (let i = 1; i < segs.length; i++) segTo(segs[i - 1], segs[i]);
-        if (node.closed) {
-          segTo(segs[segs.length - 1], segs[0]);
-          ctx.closePath();
-        }
+        const trace = (ss: typeof segs, closed: boolean) => {
+          ctx.moveTo(ss[0].x, ss[0].y);
+          for (let i = 1; i < ss.length; i++) segTo(ss[i - 1], ss[i]);
+          if (closed) {
+            segTo(ss[ss.length - 1], ss[0]);
+            ctx.closePath();
+          }
+        };
+        ctx.beginPath();
+        if (segs.length >= 2) trace(segs, node.closed);
+        for (const c of contours) trace(c.segments, c.closed);
         if (node.fills && node.fills.length > 0) {
           ctx.fillStyle = resolveFill(ctx, node.fills[0], w, h);
-          ctx.fill();
+          if (contours.length) ctx.fill("evenodd");
+          else ctx.fill();
         }
         if (node.stroke) setStroke(ctx, node.stroke.width, resolveFill(ctx, node.stroke.fill, w, h));
       }

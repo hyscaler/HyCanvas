@@ -258,14 +258,12 @@ func (c *svgCtx) shapeBody(node map[string]any) string {
 	return ""
 }
 
-func (c *svgCtx) pathBody(node map[string]any) string {
-	segs := asArr(node["segments"])
-	if len(segs) == 0 {
-		return ""
-	}
-	closed := asBool(node["closed"])
+// contourD appends one subpath's path-data commands to d.
+func contourD(d *strings.Builder, segs []any, closed bool) {
 	first := asObj(segs[0])
-	var d strings.Builder
+	if d.Len() > 0 {
+		d.WriteString(" ")
+	}
 	d.WriteString("M " + num(asNum(first["x"])) + " " + num(asNum(first["y"])))
 	count := len(segs) - 1
 	if closed {
@@ -293,8 +291,31 @@ func (c *svgCtx) pathBody(node map[string]any) string {
 	if closed {
 		d.WriteString(" Z")
 	}
+}
+
+func (c *svgCtx) pathBody(node map[string]any) string {
+	segs := asArr(node["segments"])
+	if len(segs) == 0 {
+		return ""
+	}
+	var d strings.Builder
+	contourD(&d, segs, asBool(node["closed"]))
+	// Extra contours of a compound path (schema v15) join the same path data;
+	// fill-rule="evenodd" makes interior contours cut holes.
+	compound := false
+	for _, ct := range asArr(node["contours"]) {
+		co := asObj(ct)
+		if cs := asArr(co["segments"]); len(cs) >= 2 {
+			contourD(&d, cs, asBool(co["closed"]))
+			compound = true
+		}
+	}
+	rule := ""
+	if compound {
+		rule = ` fill-rule="evenodd"`
+	}
 	pnt := c.fillAttrs(asArr(node["fills"])) + c.strokeAttrs(asObj(node["stroke"]))
-	return `<path d="` + d.String() + `"` + pnt + `/>`
+	return `<path d="` + d.String() + `"` + rule + pnt + `/>`
 }
 
 func (c *svgCtx) lineBody(node map[string]any) string {

@@ -327,6 +327,10 @@ export const migrations: Record<number, Migration> = {
     schemaVersion: 14,
     pages: (file.pages ?? []).map((p: AnyObj) => ({ ...p, children: mapNodesV14(p.children ?? []) })),
   }),
+  // v14 -> v15: compound paths (PathNode.contours). Purely additive: a v14
+  // file carries no contours and every path renders exactly as before. Bump
+  // the version so newer readers know a file may carry compound paths.
+  14: (file: AnyObj) => ({ ...file, schemaVersion: 15 }),
 };
 
 export class MigrationError extends Error {

@@ -37,8 +37,12 @@ import { z } from "zod";
  *  v14: effect normalization: Shadow.type becomes optional (absence means
  *      "drop", healing shadows early panels wrote without a type), and the
  *      migration stamps it plus bakes never-rendered text-shadow opacity to 1
- *      so existing designs keep their exact published appearance. */
-export const CURRENT_SCHEMA_VERSION = 14;
+ *      so existing designs keep their exact published appearance.
+ *  v15: compound paths: PathNode gains optional `contours` (extra subpaths,
+ *      filled together with the first under the even-odd rule) so imported
+ *      vector line art keeps its interior holes. Additive: older files omit
+ *      it and open unchanged. */
+export const CURRENT_SCHEMA_VERSION = 15;
 
 /** Maximum container nesting depth; guards traversal against stack overflow (FR-4). */
 export const MAX_NESTING_DEPTH = 32;
@@ -990,10 +994,25 @@ export const PathSegmentSchema = z.object({
   corner: z.boolean().optional(),
 });
 
+export interface PathContour {
+  segments: PathSegment[];
+  closed: boolean;
+}
+export const PathContourSchema = z.object({
+  segments: z.array(PathSegmentSchema),
+  closed: z.boolean(),
+});
+
 export interface PathNode extends NodeBase {
   type: "path";
   segments: PathSegment[];
   closed: boolean;
+  /** Additional subpaths of a compound path (`segments`/`closed` hold the
+   *  first). All contours are filled together under the even-odd rule, so
+   *  interior contours cut holes: this is how imported vector line art keeps
+   *  its counters instead of flooding solid. Optional and additive: an older
+   *  file omits it, and an older reader still draws the first contour. */
+  contours?: PathContour[];
   fills?: Fill[];
   stroke?: Stroke;
 }
@@ -1002,6 +1021,7 @@ export const PathNodeSchema = z.object({
   type: z.literal("path"),
   segments: z.array(PathSegmentSchema),
   closed: z.boolean(),
+  contours: z.array(PathContourSchema).optional(),
   fills: z.array(FillSchema).optional(),
   stroke: StrokeSchema.optional(),
 });
