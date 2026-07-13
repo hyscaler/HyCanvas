@@ -26,4 +26,4 @@ Everything in HyCanvas is free: no tiers, no paywalls, no watermarks. These page
 
 ## Licensing
 
-HyCanvas is source-available under the [Elastic License 2.0](../LICENSE): free to use, self-host, and modify, with hosted-service resale reserved to [commercial licenses](../COMMERCIAL.md) from HyScaler. Contributions require the one-time [CLA](../CLA.md). © 2026 HyScaler.
+HyCanvas is source-available under the [Elastic License 2.0](../LICENSE): free to use, self-host, and modify, with hosted-service resale reserved to [commercial licenses](../COMMERCIAL.md) from NetTantra Technologies (India) Private Limited. Contributions require the one-time [CLA](../CLA.md). © 2026 NetTantra Technologies (India) Private Limited.
