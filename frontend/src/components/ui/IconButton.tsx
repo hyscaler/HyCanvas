@@ -55,7 +55,9 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
       <span
         role="tooltip"
         className={cn(
-          "pointer-events-none absolute left-1/2 z-50 -translate-x-1/2 scale-95 whitespace-nowrap rounded-md bg-neutral-900 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition duration-100 group-hover/tt:scale-100 group-hover/tt:opacity-100 group-focus-within/tt:scale-100 group-focus-within/tt:opacity-100",
+          // text-surface, not text-white: neutral-900 flips light in dark mode,
+          // so the label must flip with it to stay readable.
+          "pointer-events-none absolute left-1/2 z-50 -translate-x-1/2 scale-95 whitespace-nowrap rounded-md bg-neutral-900 px-2 py-1 text-xs font-medium text-surface opacity-0 shadow-lg transition duration-100 group-hover/tt:scale-100 group-hover/tt:opacity-100 group-focus-within/tt:scale-100 group-focus-within/tt:opacity-100",
           tooltipSide === "bottom" ? "top-full mt-1.5" : "bottom-full mb-1.5",
         )}
       >

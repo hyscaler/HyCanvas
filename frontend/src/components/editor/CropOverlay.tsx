@@ -168,7 +168,9 @@ export function CropOverlay({ api, id }: { api: CanvasApi; id: string }) {
           onChange={(e) => setZoom(Number(e.target.value))}
           className="w-32"
         />
-        <button onClick={apply} className="flex items-center gap-1 rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-700">
+        {/* text-surface, not text-white: neutral-900 flips light in dark mode,
+            so the label must flip with it to stay readable. */}
+        <button onClick={apply} className="flex items-center gap-1 rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-medium text-surface hover:bg-neutral-700">
           <Check size={14} /> Done
         </button>
         <button onClick={() => setCropping(null)} className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs text-neutral-600 hover:bg-neutral-100">
