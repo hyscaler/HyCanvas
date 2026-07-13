@@ -55,6 +55,16 @@ export function autoFitScale(
   return lo;
 }
 
+/** The node with every run's font scaled DOWN (shrink-only) so the content
+ *  fits the box height, or the node itself when it already fits or auto-fit
+ *  is not enabled for it. Renderers call this before layout so an enabled
+ *  fixed box shrinks its text instead of overflowing. */
+export function autoFitNode(node: TextNode, opts: LayoutOptions = {}): TextNode {
+  if (!node.box.autoFit?.enabled || node.box.mode !== "fixed") return node;
+  const scale = autoFitScale(node, opts, { maxScale: 1, steps: 12 });
+  return scale >= 0.999 ? node : scaleNode(node, scale);
+}
+
 /** Box dimensions sized to the content (fit box to text). The autoWidth measure
  *  already includes padding, so no extra is added. */
 export function fitBoxToText(

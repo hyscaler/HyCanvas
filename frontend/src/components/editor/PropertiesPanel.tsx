@@ -1347,6 +1347,31 @@ export function PropertiesPanel() {
               <Field key={`lh${lineHeight}`} label="Line" value={lineHeight} onCommit={(n) => setChar({ lineHeight: Math.max(0.5, n) })} />
               <Field key={`ls${cs?.letterSpacing ?? 0}`} label="Letter" value={cs?.letterSpacing ?? 0} onCommit={(n) => setChar({ letterSpacing: n })} />
             </div>
+            {/* Underline / strikethrough (applies to the selection when the
+                inline editor is open, else the whole box). */}
+            <div className="flex items-center gap-1">
+              {([["underline", "U", "underline"], ["strikethrough", "S", "line-through"]] as const).map(([deco, label, cls]) => {
+                const active = cs?.decoration?.includes(deco) ?? false;
+                return (
+                  <button
+                    key={deco}
+                    onClick={() => {
+                      const rest = (cs?.decoration ?? []).filter((x) => x !== deco);
+                      setChar({ decoration: active ? (rest.length ? rest : undefined) : [...rest, deco] });
+                    }}
+                    className={`h-8 min-w-[32px] rounded-lg border px-2 text-sm ${cls === "underline" ? "underline" : "line-through"} transition ${active ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
+                    title={deco === "underline" ? "Underline (Cmd/Ctrl+U)" : "Strikethrough (Cmd/Ctrl+Shift+X)"}
+                  >{label}</button>
+                );
+              })}
+            </div>
+            {/* Paragraph spacing and indents (engine lays these out per paragraph). */}
+            <div className="grid grid-cols-2 gap-2">
+              <Field key={`sb${ps?.spaceBefore ?? 0}`} label="Before" value={ps?.spaceBefore ?? 0} onCommit={(n) => setPara({ spaceBefore: Math.max(0, n) || undefined })} />
+              <Field key={`sa${ps?.spaceAfter ?? 0}`} label="After" value={ps?.spaceAfter ?? 0} onCommit={(n) => setPara({ spaceAfter: Math.max(0, n) || undefined })} />
+              <Field key={`in${ps?.indentStart ?? 0}`} label="Indent" value={ps?.indentStart ?? 0} onCommit={(n) => setPara({ indentStart: Math.max(0, n) || undefined })} />
+              <Field key={`fi${ps?.firstLineIndent ?? 0}`} label="1st line" value={ps?.firstLineIndent ?? 0} onCommit={(n) => setPara({ firstLineIndent: n || undefined })} />
+            </div>
             <select
               value={cs?.case ?? "none"}
               onChange={(e) => setChar({ case: e.target.value as CharStyle["case"] })}
@@ -1530,6 +1555,21 @@ export function PropertiesPanel() {
                           <button key={m} onClick={() => useEditor.getState().setTextBoxMode(id, m)} className={`flex-1 ${ebtn(mode === m)}`} title={m === "fixed" ? "Fixed size box" : m === "autoHeight" ? "Grow height to fit text" : "Grow width to fit text"}>{label}</button>
                         ))}
                       </div>
+                    );
+                  })()}
+                  {/* Shrink-to-fit: a fixed box scales its text down instead of
+                      overflowing when the content outgrows the box. */}
+                  {(() => {
+                    const box = (single.node as unknown as { box?: { mode?: string; autoFit?: { enabled: boolean } } }).box;
+                    if ((box?.mode ?? "fixed") !== "fixed") return null;
+                    return (
+                      <label className="flex items-center justify-between text-sm text-neutral-600">
+                        <span title="Scale text down so it never overflows the box">Shrink to fit</span>
+                        <Toggle
+                          checked={box?.autoFit?.enabled ?? false}
+                          onChange={(on) => useEditor.getState().setTextAutoFit(id, on)}
+                        />
+                      </label>
                     );
                   })()}
                   {/* Columns: flow the text into N columns (engine multi-column). */}
