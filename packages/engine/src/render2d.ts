@@ -147,16 +147,6 @@ function shapePath(ctx: CanvasLike, node: ShapeNode): void {
   }
 }
 
-/** Draw an image to cover a w x h box (object-fit: cover, centered). */
-function drawCover(ctx: CanvasLike, img: { width?: number; height?: number; naturalWidth?: number; naturalHeight?: number }, w: number, h: number): void {
-  const iw = (img.naturalWidth || img.width || w) as number;
-  const ih = (img.naturalHeight || img.height || h) as number;
-  const scale = Math.max(w / iw, h / ih);
-  const dw = iw * scale;
-  const dh = ih * scale;
-  if (ctx.drawImage) ctx.drawImage(img as unknown as CanvasImageSource, (w - dw) / 2, (h - dh) / 2, dw, dh);
-}
-
 /** Paint a pattern fill (tiled image) clipped to the current shape path. Returns
  *  true when it handled the fill (asset ready or a placeholder was drawn). */
 function paintPattern(
@@ -202,8 +192,12 @@ function drawShape(ctx: CanvasLike, node: ShapeNode, assets?: AssetProvider): vo
     if (node.stroke) { shapePath(ctx, node); setStroke(ctx, node.stroke.width, resolveFill(ctx, node.stroke.fill, w, h)); }
     return;
   }
-  // Image fill clip to the shape outline and cover-draw the image.
-  const imgFill = node.fills.find((f) => f.type === "image") as { source: { assetId: string } } | undefined;
+  // Image fill: clip to the shape outline and draw the image honoring the
+  // fill's crop/fit (the crop overlay writes fills[0].crop, the same model as
+  // the image node), so adjusting an image inside a shape renders faithfully.
+  const imgFill = node.fills.find((f) => f.type === "image") as
+    | { source: { assetId: string }; fit?: ImageNode["fit"]; crop?: { x: number; y: number; width: number; height: number }; focalPoint?: { x: number; y: number } }
+    | undefined;
   if (imgFill && ctx.save && ctx.restore && ctx.clip) {
     const assetId = imgFill.source.assetId;
     const status = assets ? assets.status(assetId) : "loading";
@@ -211,8 +205,20 @@ function drawShape(ctx: CanvasLike, node: ShapeNode, assets?: AssetProvider): vo
     shapePath(ctx, node);
     ctx.clip();
     const img = status === "ready" ? assets?.image(assetId) : null;
-    if (img) drawCover(ctx, img as { width?: number; height?: number }, w, h);
-    else placeholderBox(ctx, w, h, status === "missing" ? MISSING_FILL : undefined, status === "missing" ? MISSING_STROKE : undefined);
+    if (img && ctx.drawImage) {
+      const el = img as { width?: number; height?: number; naturalWidth?: number; naturalHeight?: number };
+      const iw = (el.naturalWidth || el.width || 1) as number;
+      const ih = (el.naturalHeight || el.height || 1) as number;
+      const crop = imgFill.crop ?? { x: 0, y: 0, width: 1, height: 1 };
+      const fr = fitRect(iw * crop.width, ih * crop.height, w, h, imgFill.fit ?? "cover", imgFill.focalPoint);
+      const sx = (crop.x + fr.source.x * crop.width) * iw;
+      const sy = (crop.y + fr.source.y * crop.height) * ih;
+      const sw = fr.source.width * crop.width * iw;
+      const sh = fr.source.height * crop.height * ih;
+      ctx.drawImage(img as CanvasImageSource, sx, sy, sw, sh, fr.dest.x, fr.dest.y, fr.dest.width, fr.dest.height);
+    } else {
+      placeholderBox(ctx, w, h, status === "missing" ? MISSING_FILL : undefined, status === "missing" ? MISSING_STROKE : undefined);
+    }
     ctx.restore();
     if (node.stroke) { shapePath(ctx, node); setStroke(ctx, node.stroke.width, resolveFill(ctx, node.stroke.fill, w, h)); }
     return;

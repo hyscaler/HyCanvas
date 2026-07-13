@@ -560,6 +560,24 @@ describe("clipboard copy/paste (F10 FR-2..FR-4, AC-1, AC-2)", () => {
     expect(d.pages[0].children.map((n) => n.id)).toEqual(["a", "b", "c"]);
   });
 
+  it("pasting a photo grid remaps cell childIds to the fresh frame ids", () => {
+    const cellFrame = createNode("frame", { id: "cell-1", clip: true, children: [], transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: 100, height: 100 } } as Partial<Node>);
+    const grid = createNode("grid", {
+      id: "grid-1", rows: 1, cols: 1, gap: 8,
+      cells: [{ row: 0, col: 0, rowSpan: 1, colSpan: 1, childId: "cell-1" }],
+      children: [cellFrame],
+      transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: 100, height: 100 },
+    } as Partial<Node>);
+    const d = designWith(grid);
+    const payload = serializeSelection(d, ["grid-1"], { designId: "d1", pageId: "pg" })!;
+    const r = pasteOps(d, payload, { mode: "in-place", idGen: gen() });
+    const pasted = r.nodes[0] as unknown as { children: { id: string }[]; cells: { childId?: string }[] };
+    expect(pasted.children[0].id).not.toBe("cell-1");
+    // The cell must reference the pasted frame, not the source frame, or a
+    // later grid re-layout treats the cell as missing and rebuilds it empty.
+    expect(pasted.cells[0].childId).toBe(pasted.children[0].id);
+  });
+
   it("cut returns a payload and removal ops; paste of the payload round-trips", () => {
     const d = designWith(shape("a", 40, 40, 10, 10), shape("b", 0, 0, 10, 10));
     const { payload, ops } = cut(d, ["a"], { designId: "d1", pageId: "pg" });

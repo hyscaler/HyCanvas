@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MousePointer2, PenTool, Pencil, Minus, MoveUpRight, Square, Circle, Type, MessageSquarePlus, Copy, ClipboardPaste, CopyPlus, Trash2, Group, Ungroup, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, FlipHorizontal2, FlipVertical2, Paintbrush, PaintBucket, Lock, LockOpen, Eye, EyeOff, BoxSelect } from "lucide-react";
-import type { CharStyle, Color, Page, Paragraph, TextNode, Transform } from "@hc/schema";
+import type { CharStyle, Color, Node as SchemaNode, Page, Paragraph, TextNode, Transform } from "@hc/schema";
 import { isDecorative, resolveReadingOrder } from "@hc/schema";
 import { locate, moveTransform, marqueeSelect, parentSpaceDelta, worldMatrix, worldAABB, unionAABB, snap, spacingSnap, type SpacingGuide, type EditCommand } from "@hc/editor";
 import { fitStickyFontScale, routeConnector } from "@hc/whiteboard";
@@ -1339,26 +1339,66 @@ export function Canvas() {
       setEditingConnectorLabel(hit.id);
     } else if (loc?.node.type === "image" && canCrop(loc.node.transform)) {
       useEditor.getState().setCropping(hit.id);
+    } else if (loc?.node.type === "shape" && canCrop(loc.node.transform)) {
+      // A shape with an image fill adjusts like an image: double-click pans and
+      // zooms the fill within the shape (the crop overlay edits fills[0].crop).
+      const fill = (loc.node as unknown as { fills?: { type: string }[] }).fills?.[0];
+      if (fill?.type === "image") useEditor.getState().setCropping(hit.id);
     }
   }
 
-  // Drop an image dragged from the Uploads/Stock panel: into a frame under the
-  // cursor, otherwise as a new image centered on the drop point.
-  function onDrop(e: React.DragEvent) {
-    const page = api.toPage(localPoint(e));
-    const doc = useEditor.getState().doc;
+  // The node that would receive an image dropped at this page point: the frame
+  // under the cursor (or the frame owning the hit child), else a shape (which
+  // takes the image as its fill). Shared by the drop handler and the drag-over
+  // highlight so the hint always matches what a release would do.
+  function imageDropTargetAt(page: { x: number; y: number }): { id: string; kind: "frame" | "shape" } | null {
+    // Collab/brand/facilitator-locked nodes cannot receive the image (the
+    // store rejects the edit), so they are not offered as targets either -
+    // the drop falls through to placing a new image instead.
+    const blocked = (id: string) =>
+      usePresence.getState().collabLockedByOther(id) || useBrand.getState().isLockedRegion(id) || usePresence.getState().protectedByOther(id);
     const hit = api.scene()?.hitTest(page);
-    let frameId: string | null = null;
-    if (hit) {
-      const loc = locate(doc, hit.id);
-      if (hit.type === "frame") frameId = hit.id;
-      else if (loc?.parent?.type === "frame") frameId = loc.parent.id;
-    }
+    if (!hit) return null;
+    if (hit.type === "frame") return blocked(hit.id) ? null : { id: hit.id, kind: "frame" };
+    const loc = locate(useEditor.getState().doc, hit.id);
+    if (loc?.parent?.type === "frame") return blocked(loc.parent.id) ? null : { id: loc.parent.id, kind: "frame" };
+    if (hit.type === "shape") return blocked(hit.id) ? null : { id: hit.id, kind: "shape" };
+    return null;
+  }
+
+  // Live target highlight while dragging an image over the canvas. Read-only
+  // sessions never preventDefault, so the browser rejects the drop natively
+  // and no hint is shown.
+  const [dropHint, setDropHint] = useState<{ id: string; kind: "frame" | "shape" } | null>(null);
+  function onImageDragOver(e: React.DragEvent) {
+    const t = e.dataTransfer.types;
+    if (!t.includes("application/x-oc-image") && !t.includes("Files")) return;
+    if (!usePresence.getState().canEdit() || useEditor.getState().readonlyPreview()) return;
+    e.preventDefault();
+    const target = imageDropTargetAt(api.toPage(localPoint(e)));
+    setDropHint((prev) => (prev?.id === target?.id ? prev : target));
+  }
+  function onImageDragLeave(e: React.DragEvent) {
+    // Ignore dragleave fired by moving between the container's own children.
+    if (e.currentTarget.contains(e.relatedTarget as globalThis.Node | null)) return;
+    setDropHint(null);
+  }
+
+  // Drop an image dragged from the Uploads/Stock panel: into a frame under the
+  // cursor, otherwise as a new image centered on the drop point. Every branch
+  // (files AND in-app/URL drags) is edit-gated: read-only sessions must not
+  // mutate the doc through a drop.
+  function onDrop(e: React.DragEvent) {
+    setDropHint(null);
+    if (!usePresence.getState().canEdit() || useEditor.getState().readonlyPreview()) return;
+    const page = api.toPage(localPoint(e));
+    const target = imageDropTargetAt(page);
+    const frameId = target?.kind === "frame" ? target.id : null;
+    const hit = target?.kind === "shape" ? { id: target.id, type: "shape" } : null;
     // OS file drop (dragged from the desktop): read each image file and place it.
     const files = Array.from(e.dataTransfer.files || []).filter((f) => f.type.startsWith("image/"));
     if (files.length) {
       e.preventDefault();
-      if (!usePresence.getState().canEdit() || useEditor.getState().readonlyPreview()) return;
       files.forEach((file, i) => {
         const reader = new FileReader();
         reader.onload = () => {
@@ -2505,7 +2545,8 @@ export function Canvas() {
       onFocus={(e) => { surfaceFocused.current = e.target === e.currentTarget; }}
       onBlur={(e) => { if (e.target === e.currentTarget) surfaceFocused.current = false; }}
       onContextMenu={onContextMenu}
-      onDragOver={(e) => { const t = e.dataTransfer.types; if (t.includes("application/x-oc-image") || t.includes("Files")) e.preventDefault(); }}
+      onDragOver={onImageDragOver}
+      onDragLeave={onImageDragLeave}
       onDrop={onDrop}
     >
       {pageFrame && (
@@ -2843,6 +2884,62 @@ export function Canvas() {
           });
         });
         return <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">{els}</svg>;
+      })()}
+      {/* Image-placeholder cue: an editor-only photo glyph centered in every
+          empty clipping frame (single frames and photo-grid cells), so the
+          gray boxes read as "put an image here". Never part of the rendered
+          design, so exports stay clean. */}
+      {(() => {
+        const empties: { id: string }[] = [];
+        const walk = (ns: SchemaNode[]) => {
+          for (const n of ns) {
+            if (n.hidden) continue;
+            const rec = n as unknown as { clip?: boolean; children?: SchemaNode[] };
+            if (n.type === "frame" && rec.clip && !rec.children?.length) empties.push({ id: n.id });
+            if (rec.children?.length) walk(rec.children);
+          }
+        };
+        for (const p of useEditor.getState().doc.pages) walk(p.children);
+        if (!empties.length) return null;
+        const icons: React.ReactElement[] = [];
+        for (const f of empties) {
+          const b = api.scene()?.getBounds(f.id);
+          if (!b) continue;
+          const tl = api.toScreen({ x: b.x, y: b.y });
+          const br = api.toScreen({ x: b.x + b.width, y: b.y + b.height });
+          const w = br.x - tl.x;
+          const h = br.y - tl.y;
+          const s = Math.min(28, w * 0.45, h * 0.45);
+          if (s < 14) continue; // too small on screen for a legible glyph
+          const x = tl.x + (w - s) / 2;
+          const y = tl.y + (h - s) / 2;
+          icons.push(
+            <g key={f.id} transform={`translate(${x}, ${y})`} stroke={overlay.ruler} strokeWidth={1.5} fill="none" strokeLinecap="round" strokeLinejoin="round" opacity={0.9}>
+              <rect x={0.75} y={0.75} width={s - 1.5} height={s - 1.5} rx={s * 0.16} />
+              <circle cx={s * 0.34} cy={s * 0.32} r={s * 0.09} />
+              <path d={`M ${s * 0.08} ${s * 0.8} L ${s * 0.38} ${s * 0.5} L ${s * 0.58} ${s * 0.68} L ${s * 0.72} ${s * 0.56} L ${s * 0.92} ${s * 0.76}`} />
+            </g>,
+          );
+        }
+        if (!icons.length) return null;
+        return <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">{icons}</svg>;
+      })()}
+      {/* Drag-over drop hint: outline the frame/shape that would receive the
+          dragged image, so it is obvious which cell a release fills. */}
+      {dropHint && (() => {
+        const b = api.scene()?.getBounds(dropHint.id);
+        if (!b) return null;
+        const tl = api.toScreen({ x: b.x, y: b.y });
+        const br = api.toScreen({ x: b.x + b.width, y: b.y + b.height });
+        return (
+          <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
+            <rect
+              x={tl.x} y={tl.y} width={br.x - tl.x} height={br.y - tl.y} rx={3}
+              fill={overlay.guideActive} fillOpacity={0.12}
+              stroke={overlay.guideActive} strokeWidth={2.5}
+            />
+          </svg>
+        );
       })()}
       {tool === "pen" && penDraft.current && penPreview && (() => {
         const n = locate(useEditor.getState().doc, penDraft.current.id)?.node;

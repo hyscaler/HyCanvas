@@ -996,6 +996,42 @@ export function PropertiesPanel() {
       {single && single.node.type === "image" && (
         <ImageEffectsSection id={single.node.id} node={single.node} />
       )}
+      {single && single.node.type === "shape" && (single.node as unknown as { fills?: Fill[] }).fills?.[0]?.type === "image" && (() => {
+        const id = single.node.id;
+        const fill = (single.node as unknown as { fills: Fill[] }).fills[0] as Extract<Fill, { type: "image" }>;
+        const t = single.node.transform;
+        const croppable = t.rotation === 0 && Math.abs(t.scaleX) === 1 && Math.abs(t.scaleY) === 1;
+        return (
+          <Section title="Image fill" order={ORDER.type}>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => useEditor.getState().setCropping(id)}
+                disabled={!croppable}
+                title={croppable ? "Pan and zoom the image inside the shape" : "Reset rotation/scale to adjust"}
+                className="rounded-lg bg-neutral-100 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-200 disabled:opacity-40"
+              >
+                Adjust
+              </button>
+              {fill.crop != null && (
+                <button
+                  onClick={() => useEditor.getState().setImageCrop(id, undefined)}
+                  className="rounded-lg bg-neutral-100 py-1.5 text-xs font-medium text-neutral-500 transition hover:bg-neutral-200"
+                >
+                  Reset crop
+                </button>
+              )}
+              <button
+                onClick={() => useEditor.getState().setImageFill(id, "")}
+                title="Remove the image and return to a solid fill"
+                className="rounded-lg bg-neutral-100 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-200"
+              >
+                Remove image
+              </button>
+            </div>
+            <p className="text-[11px] text-neutral-400">Double-click the shape to adjust the image.</p>
+          </Section>
+        );
+      })()}
       {(() => {
         type StrokeT = { fill: Fill; width: number; align: "inside" | "center" | "outside"; cap: "butt" | "round" | "square"; join: "miter" | "round" | "bevel"; dash?: number[] };
         const SKIP = new Set(["text", "image", "group"]);

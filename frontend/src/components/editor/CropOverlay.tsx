@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Check, X } from "lucide-react";
-import type { ImageNode } from "@hc/schema";
+import type { CropRect, Fill, ImageNode, ImageSource } from "@hc/schema";
 import { locate, worldMatrix } from "@hc/editor";
 import { useEditor } from "@/store/editor";
 import { imageAssets } from "@/lib/assetProvider";
@@ -25,9 +25,26 @@ export function CropOverlay({ api, id }: { api: CanvasApi; id: string }) {
   const axisAligned =
     !!wm && Math.abs(wm.a - 1) < 1e-6 && Math.abs(wm.d - 1) < 1e-6 && Math.abs(wm.b) < 1e-6 && Math.abs(wm.c) < 1e-6;
 
+  // The croppable content: an image node's own source/crop, or a shape's
+  // image fill (fills[0]) - both use the same normalized-crop model, and
+  // setImageCrop routes the result to whichever one the node carries.
   // UnknownNode is not discriminated by `type`, so cast once we've checked it.
-  const node = loc?.node.type === "image" ? (loc.node as unknown as ImageNode) : null;
-  const src = node?.source ?? null;
+  let node: { size: { width: number; height: number } } | null = null;
+  let src: ImageSource | null = null;
+  let nodeCrop: CropRect | undefined;
+  if (loc?.node.type === "image") {
+    const img = loc.node as unknown as ImageNode;
+    node = img;
+    src = img.source;
+    nodeCrop = img.crop;
+  } else if (loc?.node.type === "shape") {
+    const fill = (loc.node as unknown as { fills?: Fill[] }).fills?.[0];
+    if (fill?.type === "image") {
+      node = loc.node as unknown as { size: { width: number; height: number } };
+      src = fill.source;
+      nodeCrop = fill.crop;
+    }
+  }
   const url = src ? imageAssets.url(src.assetId) : null;
 
   // Frame rectangle in screen space (axis-aligned; crop targets unrotated images).
@@ -35,13 +52,16 @@ export function CropOverlay({ api, id }: { api: CanvasApi; id: string }) {
   const fw = node ? node.size.width * api.viewport().zoom : 0;
   const fh = node ? node.size.height * api.viewport().zoom : 0;
 
-  const natW = src ? src.naturalWidth || 1 : 1;
-  const natH = src ? src.naturalHeight || 1 : 1;
+  // A shape fill's recorded natural size can lag the asset load; fall back to
+  // the loaded element's real dimensions.
+  const el = src ? (imageAssets.image(src.assetId) as { naturalWidth?: number; naturalHeight?: number } | null) : null;
+  const natW = (src ? src.naturalWidth : 0) || el?.naturalWidth || 1;
+  const natH = (src ? src.naturalHeight : 0) || el?.naturalHeight || 1;
   const minScale = Math.max(fw / natW, fh / natH);
 
   // Transform of the source image relative to the frame top-left.
   const [t, setT] = useState(() => {
-    const crop = node?.crop;
+    const crop = nodeCrop;
     if (crop && crop.width > 0) {
       const scale = fw / (crop.width * natW);
       return { scale, offX: -crop.x * natW * scale, offY: -crop.y * natH * scale };

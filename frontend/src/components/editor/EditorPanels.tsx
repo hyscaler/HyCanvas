@@ -167,6 +167,41 @@ const lineStroke = (cap: "round" | "butt") => ({ fill: DARK, width: 4, align: "c
 
 type ElementTile = { label: string; icon: typeof Square; run: () => void };
 
+// One photo-grid cell slot (mirrors the store's GridSpan).
+type GridSpan = { row: number; col: number; rowSpan: number; colSpan: number };
+
+const uniformSpans = (rows: number, cols: number): GridSpan[] =>
+  Array.from({ length: rows * cols }, (_, i) => ({ row: Math.floor(i / cols), col: i % cols, rowSpan: 1, colSpan: 1 }));
+
+/** Tile icon for a grid layout preset: a miniature of the actual cell layout,
+ *  so the tiles read like the layouts they insert rather than a generic glyph. */
+function gridPreviewIcon(rows: number, cols: number, spans?: GridSpan[]): typeof Square {
+  const cells = spans ?? uniformSpans(rows, cols);
+  const G = 2; // preview gap
+  const Preview = ({ size = 26 }: { size?: number | string }) => {
+    const s = typeof size === "number" ? size : 26;
+    const cw = (s - G * (cols - 1)) / cols;
+    const ch = (s - G * (rows - 1)) / rows;
+    return (
+      <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} aria-hidden="true">
+        {cells.map((c, i) => (
+          <rect
+            key={i}
+            x={c.col * (cw + G)}
+            y={c.row * (ch + G)}
+            width={cw * c.colSpan + G * (c.colSpan - 1)}
+            height={ch * c.rowSpan + G * (c.rowSpan - 1)}
+            rx={1.5}
+            fill="currentColor"
+            opacity={0.55}
+          />
+        ))}
+      </svg>
+    );
+  };
+  return Preview as unknown as typeof Square;
+}
+
 export function ElementsPanel() {
   const toast = useToast();
   const addNode = useEditor((s) => s.addNode);
@@ -180,7 +215,12 @@ export function ElementsPanel() {
   const insertFrame = (init: Partial<Node>) => { addNode("frame", init); afterInsert(toast, "frame"); };
   const insertTableEl = (rows: number, cols: number) => { insertTable(rows, cols); afterInsert(toast, "table"); };
   const insertChartEl = (type: ChartType, label: string) => { insertChart(type); afterInsert(toast, `${label} chart`); };
-  const insertGridEl = (rows: number, cols: number) => { useEditor.getState().insertPhotoGrid(rows, cols); afterInsert(toast, "photo grid"); };
+  const insertGridEl = (rows: number, cols: number, spans?: GridSpan[]) => { useEditor.getState().insertPhotoGrid(rows, cols, spans); afterInsert(toast, "photo grid"); };
+  // Feature layouts: one large cell with smaller companions.
+  const FEATURE_LEFT: GridSpan[] = [{ row: 0, col: 0, rowSpan: 2, colSpan: 1 }, { row: 0, col: 1, rowSpan: 1, colSpan: 1 }, { row: 1, col: 1, rowSpan: 1, colSpan: 1 }];
+  const FEATURE_RIGHT: GridSpan[] = [{ row: 0, col: 0, rowSpan: 1, colSpan: 1 }, { row: 1, col: 0, rowSpan: 1, colSpan: 1 }, { row: 0, col: 1, rowSpan: 2, colSpan: 1 }];
+  const FEATURE_TOP: GridSpan[] = [{ row: 0, col: 0, rowSpan: 1, colSpan: 2 }, { row: 1, col: 0, rowSpan: 1, colSpan: 1 }, { row: 1, col: 1, rowSpan: 1, colSpan: 1 }];
+  const FEATURE_HERO: GridSpan[] = [{ row: 0, col: 0, rowSpan: 2, colSpan: 2 }, { row: 0, col: 2, rowSpan: 1, colSpan: 1 }, { row: 1, col: 2, rowSpan: 1, colSpan: 1 }, { row: 2, col: 0, rowSpan: 1, colSpan: 1 }, { row: 2, col: 1, rowSpan: 1, colSpan: 1 }, { row: 2, col: 2, rowSpan: 1, colSpan: 1 }];
   // Tiles grouped into collapsible categories so the panel scans cleanly.
   const groups: { title: string; icon: typeof Square; defaultOpen?: boolean; tiles: ElementTile[] }[] = [
     {
@@ -202,18 +242,33 @@ export function ElementsPanel() {
       ],
     },
     {
+      // Image placeholders: single frames and photo-grid layouts. Drop or click
+      // a photo to fill a cell; it auto-covers the cell.
+      title: "Frames & grids",
+      icon: LayoutGrid,
+      defaultOpen: true,
+      tiles: [
+        { label: "Frame", icon: Frame, run: () => insertFrame({ name: "Frame", clip: true, transform: CENTER, size: { width: 260, height: 200 }, fills: [FRAME_FILL] } as Partial<Node>) },
+        { label: "Circle frame", icon: Circle, run: () => insertFrame({ name: "Circle frame", clip: true, maskShape: "ellipse", transform: CENTER, size: { width: 240, height: 240 }, fills: [FRAME_FILL] } as Partial<Node>) },
+        { label: "Rounded frame", icon: SquareRoundCorner, run: () => insertFrame({ name: "Rounded frame", clip: true, cornerRadius: { topLeft: 32, topRight: 32, bottomRight: 32, bottomLeft: 32 }, transform: CENTER, size: { width: 260, height: 200 }, fills: [FRAME_FILL] } as Partial<Node>) },
+        { label: "2 photos", icon: gridPreviewIcon(1, 2), run: () => insertGridEl(1, 2) },
+        { label: "3 photos", icon: gridPreviewIcon(1, 3), run: () => insertGridEl(1, 3) },
+        { label: "4 photos", icon: gridPreviewIcon(2, 2), run: () => insertGridEl(2, 2) },
+        { label: "6 photos", icon: gridPreviewIcon(2, 3), run: () => insertGridEl(2, 3) },
+        { label: "9 photos", icon: gridPreviewIcon(3, 3), run: () => insertGridEl(3, 3) },
+        { label: "Feature left", icon: gridPreviewIcon(2, 2, FEATURE_LEFT), run: () => insertGridEl(2, 2, FEATURE_LEFT) },
+        { label: "Feature right", icon: gridPreviewIcon(2, 2, FEATURE_RIGHT), run: () => insertGridEl(2, 2, FEATURE_RIGHT) },
+        { label: "Feature top", icon: gridPreviewIcon(2, 2, FEATURE_TOP), run: () => insertGridEl(2, 2, FEATURE_TOP) },
+        { label: "Hero mosaic", icon: gridPreviewIcon(3, 3, FEATURE_HERO), run: () => insertGridEl(3, 3, FEATURE_HERO) },
+      ],
+    },
+    {
       title: "Lines & arrows",
       icon: Minus,
       defaultOpen: true,
       tiles: [
         { label: "Line", icon: Minus, run: () => insertLineNode("Line", { name: "Line", points: [{ x: 0, y: 0 }, { x: 240, y: 0 }], transform: CENTER, size: { width: 240, height: 4 }, stroke: lineStroke("round"), startCap: "none", endCap: "none" } as Partial<Node>) },
         { label: "Arrow", icon: MoveUpRight, run: () => insertLineNode("Arrow", { name: "Arrow", points: [{ x: 0, y: 0 }, { x: 240, y: 0 }], transform: CENTER, size: { width: 240, height: 4 }, stroke: lineStroke("butt"), startCap: "none", endCap: "arrow" } as Partial<Node>) },
-        { label: "Frame", icon: Frame, run: () => insertFrame({ name: "Frame", clip: true, transform: CENTER, size: { width: 260, height: 200 }, fills: [FRAME_FILL] } as Partial<Node>) },
-        { label: "Circle frame", icon: Circle, run: () => insertFrame({ name: "Circle frame", clip: true, maskShape: "ellipse", transform: CENTER, size: { width: 240, height: 240 }, fills: [FRAME_FILL] } as Partial<Node>) },
-        { label: "Rounded frame", icon: SquareRoundCorner, run: () => insertFrame({ name: "Rounded frame", clip: true, cornerRadius: { topLeft: 32, topRight: 32, bottomRight: 32, bottomLeft: 32 }, transform: CENTER, size: { width: 260, height: 200 }, fills: [FRAME_FILL] } as Partial<Node>) },
-        { label: "Grid 2x2", icon: LayoutGrid, run: () => insertGridEl(2, 2) },
-        { label: "Grid 3x3", icon: LayoutGrid, run: () => insertGridEl(3, 3) },
-        { label: "Grid 2x3", icon: LayoutGrid, run: () => insertGridEl(2, 3) },
       ],
     },
     {
@@ -596,6 +651,14 @@ function placeImage(url: string, provenance?: Record<string, unknown>) {
   if (sel.length === 1) {
     const loc = locate(st.doc, sel[0]);
     if (loc?.node.type === "frame") { st.setFrameImage(sel[0], url, provenance); return; }
+    // A selected photo grid receives the image in its first empty cell, so
+    // clicking photos with the grid selected fills it cell by cell.
+    if (loc?.node.type === "grid") {
+      const empty = (loc.node as unknown as { children: Node[] }).children.find(
+        (n) => n.type === "frame" && !(n as unknown as { children?: Node[] }).children?.length,
+      );
+      if (empty) { st.setFrameImage(empty.id, url, provenance); return; }
+    }
   }
   st.addImage(url, undefined, provenance);
 }
