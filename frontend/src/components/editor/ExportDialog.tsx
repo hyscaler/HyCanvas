@@ -487,7 +487,7 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
                 <span className="block text-xs font-medium text-neutral-700">Accessible PDF (tagged)</span>
                 <span className="mt-0.5 block text-[11px] leading-snug text-neutral-500">
                   {designId
-                    ? "Real, selectable text a screen reader can follow in your reading order, with alt text and slide titles. Custom fonts fall back to standard ones, and the last saved version is exported."
+                    ? "Real, selectable text a screen reader can follow in your reading order, with alt text and slide titles. Fonts you uploaded are embedded; web fonts fall back to standard faces. The last saved version is exported."
                     : "Save the design first to export an accessible PDF."}
                 </span>
               </span>
