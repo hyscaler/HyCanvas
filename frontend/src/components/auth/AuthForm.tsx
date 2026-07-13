@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "rea
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { Sparkles, Play, Presentation, Image as ImageIcon, KeyRound } from "lucide-react";
-import { ApiError } from "@hc/sdk";
+import { ApiError, type AuthPolicy } from "@hc/sdk";
 import { oc, authStartUrl } from "@/lib/sdk";
 import { useAuth } from "@/store/auth";
 import { useToast } from "@/components/ui/Toast";
@@ -77,6 +77,17 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const redeemedRef = useRef(false);
   // Social sign-in providers (empty unless configured server-side).
   const [providers, setProviders] = useState<{ id: string; label: string }[]>([]);
+  // Which auth methods this instance allows (AUTH_*_ENABLED). Defaults to
+  // everything on, so the first paint of a normal install is unchanged; the
+  // server's real policy arrives from authConfig() and narrows it.
+  const [policy, setPolicy] = useState<AuthPolicy>({
+    passwordLogin: true,
+    passwordSignup: true,
+    magicLinkLogin: true,
+    magicLinkSignup: true,
+    oidcLogin: true,
+    oidcSignup: true,
+  });
 
   const isSignup = mode === "signup";
   // Where to land after a successful sign-in. Honors a `?next=` return path so a
@@ -128,13 +139,31 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     if (status === "authed") void router.replace(afterAuthPath);
   }, [status, router, afterAuthPath]);
 
-  // Which social providers are enabled (server-config-gated); buttons show only
-  // when at least one is configured.
+  // Load the instance auth config: the SSO providers and the method policy that
+  // decides which fields and buttons to show.
   useEffect(() => {
     let cancelled = false;
-    void oc.authProviders().then((p) => { if (!cancelled) setProviders(p); }).catch(() => {});
+    void oc.authConfig().then((c) => {
+      if (cancelled) return;
+      setProviders(c.providers);
+      setPolicy(c.policy);
+    }).catch(() => {});
     return () => { cancelled = true; };
   }, []);
+
+  // Method availability for the current mode.
+  const passwordOn = isSignup ? policy.passwordSignup : policy.passwordLogin;
+  const magicOn = isSignup ? policy.magicLinkSignup : policy.magicLinkLogin;
+  const oidcOn = policy.oidcLogin || policy.oidcSignup;
+  const anySignup = policy.passwordSignup || policy.magicLinkSignup || policy.oidcSignup;
+  const anyLogin = policy.passwordLogin || policy.magicLinkLogin || policy.oidcLogin;
+  // Nothing available for this mode (e.g. OIDC-only viewing /signup): show a
+  // notice instead of an empty pane.
+  const noMethod = !passwordOn && !magicOn && !(oidcOn && providers.length > 0);
+  // Effective magic-link mode: the user's toggle, or forced on when magic is the
+  // only local method (no password to fall back to), so submit takes the magic
+  // path rather than a disabled password endpoint.
+  const magicMode = magic || (!passwordOn && magicOn);
 
   // A failed social sign-in bounces back as ?error=sso; surface it (derived, so a
   // later inline error from the form takes precedence).
@@ -183,7 +212,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (magic) {
+    if (magicMode) {
       await sendMagicLink();
       return;
     }
@@ -384,7 +413,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
             {isSignup ? "Start designing in seconds - no card required." : "Sign in to pick up where you left off."}
           </p>
 
-          {providers.length > 0 && (
+          {oidcOn && providers.length > 0 && (
             <div className="mt-7 flex flex-col gap-2">
               {providers.map((p) => (
                 <a
@@ -396,96 +425,125 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
                   Continue with {p.label}
                 </a>
               ))}
-              <div className="my-1 flex items-center gap-3 text-xs text-neutral-400">
-                <span className="h-px flex-1 bg-neutral-200" /> or <span className="h-px flex-1 bg-neutral-200" />
-              </div>
+              {/* The "or" divider only makes sense when a local method follows. */}
+              {(passwordOn || magicOn) && (
+                <div className="my-1 flex items-center gap-3 text-xs text-neutral-400">
+                  <span className="h-px flex-1 bg-neutral-200" /> or <span className="h-px flex-1 bg-neutral-200" />
+                </div>
+              )}
             </div>
           )}
 
-          <form onSubmit={onSubmit} className={`flex flex-col gap-4 ${providers.length > 0 ? "" : "mt-7"}`}>
-            {isSignup && (
-              <Input label="Name" placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" autoFocus />
-            )}
-            <Input
-              label="Email"
-              type="email"
-              required
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              autoFocus={!isSignup}
-            />
-            {!magic && (
-              <div className="flex flex-col gap-1.5">
-                <Input
-                  label="Password"
-                  type="password"
-                  required
-                  minLength={8}
-                  placeholder="At least 8 characters"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete={isSignup ? "new-password" : "current-password"}
-                />
-                {!isSignup && (
-                  <button
-                    type="button"
-                    onClick={() => void forgotPassword()}
-                    disabled={busy}
-                    className="self-end text-xs font-medium text-brand-ink hover:underline disabled:opacity-50"
-                  >
-                    Forgot password?
-                  </button>
-                )}
-              </div>
-            )}
-            {(error ?? ssoError) && (
-              <div role="alert" className="rounded-xl bg-red-50 px-3.5 py-2.5 text-sm text-red-700">
-                {error ?? ssoError}
-              </div>
-            )}
-            <Button type="submit" size="lg" block disabled={busy}>
-              {busy
-                ? "Please wait…"
-                : magic
-                  ? "Email me a sign-in link"
-                  : isSignup
-                    ? "Create account"
-                    : "Sign in"}
-            </Button>
-          </form>
+          {/* No method available for this mode: say so rather than show an empty
+              pane. (e.g. an OIDC-only instance viewed at /signup, or a user who
+              navigated to /login with every login method disabled.) */}
+          {noMethod ? (
+            <div className="mt-7 rounded-xl bg-neutral-100 px-4 py-3 text-sm text-neutral-600">
+              {isSignup
+                ? "Account creation is disabled on this instance."
+                : "Sign-in is unavailable. Contact your administrator."}
+            </div>
+          ) : (
+            <>
+              {(passwordOn || magicOn) && (
+                <form onSubmit={onSubmit} className={`flex flex-col gap-4 ${oidcOn && providers.length > 0 ? "" : "mt-7"}`}>
+                  {isSignup && passwordOn && !magicMode && (
+                    <Input label="Name" placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" autoFocus />
+                  )}
+                  <Input
+                    label="Email"
+                    type="email"
+                    required
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                    autoFocus={!isSignup}
+                  />
+                  {passwordOn && !magicMode && (
+                    <div className="flex flex-col gap-1.5">
+                      <Input
+                        label="Password"
+                        type="password"
+                        required
+                        minLength={8}
+                        placeholder="At least 8 characters"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        autoComplete={isSignup ? "new-password" : "current-password"}
+                      />
+                      {!isSignup && policy.passwordLogin && (
+                        <button
+                          type="button"
+                          onClick={() => void forgotPassword()}
+                          disabled={busy}
+                          className="self-end text-xs font-medium text-brand-ink hover:underline disabled:opacity-50"
+                        >
+                          Forgot password?
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {(error ?? ssoError) && (
+                    <div role="alert" className="rounded-xl bg-red-50 px-3.5 py-2.5 text-sm text-red-700">
+                      {error ?? ssoError}
+                    </div>
+                  )}
+                  <Button type="submit" size="lg" block disabled={busy}>
+                    {busy
+                      ? "Please wait…"
+                      : magicMode
+                        ? isSignup
+                          ? "Email me a sign-up link"
+                          : "Email me a sign-in link"
+                        : isSignup
+                          ? "Create account"
+                          : "Sign in"}
+                  </Button>
+                </form>
+              )}
 
-          {!isSignup && (
-            <button
-              type="button"
-              onClick={() => {
-                setMagic((m) => !m);
-                setError(null);
-              }}
-              className="mt-3 w-full text-center text-sm font-medium text-brand-ink hover:underline"
-            >
-              {magic ? "Use a password instead" : "Sign in with a magic link"}
-            </button>
+              {/* Switch between password and magic-link when both are available in
+                  this mode; when only magic is on, the form already runs in magic
+                  mode (see the passwordOn guards) and no toggle is needed. */}
+              {passwordOn && magicOn && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMagic((m) => !m);
+                    setError(null);
+                  }}
+                  className="mt-3 w-full text-center text-sm font-medium text-brand-ink hover:underline"
+                >
+                  {magic
+                    ? "Use a password instead"
+                    : isSignup
+                      ? "Sign up with a magic link"
+                      : "Sign in with a magic link"}
+                </button>
+              )}
+            </>
           )}
 
-          <p className="mt-6 text-center text-sm text-neutral-500">
-            {isSignup ? (
-              <>
-                Already have an account?{" "}
-                <Link href="/login" className="font-semibold text-brand-ink hover:underline">
-                  Sign in
-                </Link>
-              </>
-            ) : (
-              <>
-                New to HyCanvas?{" "}
-                <Link href="/signup" className="font-semibold text-brand-ink hover:underline">
-                  Create a free account
-                </Link>
-              </>
-            )}
-          </p>
+          {((isSignup && anyLogin) || (!isSignup && anySignup)) && (
+            <p className="mt-6 text-center text-sm text-neutral-500">
+              {isSignup ? (
+                <>
+                  Already have an account?{" "}
+                  <Link href="/login" className="font-semibold text-brand-ink hover:underline">
+                    Sign in
+                  </Link>
+                </>
+              ) : (
+                <>
+                  New to HyCanvas?{" "}
+                  <Link href="/signup" className="font-semibold text-brand-ink hover:underline">
+                    Create a free account
+                  </Link>
+                </>
+              )}
+            </p>
+          )}
         </div>
       </div>
     </div>

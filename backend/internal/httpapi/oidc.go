@@ -12,6 +12,7 @@ import (
 
 	"hycanvas/backend/internal/accounts"
 	"hycanvas/backend/internal/oidc"
+	"hycanvas/backend/internal/platform/config"
 )
 
 const oidcStateCookie = "oc_oidc"
@@ -20,10 +21,23 @@ const oidcStateCookie = "oc_oidc"
 // authorization-code + PKCE redirect/callback. start sets a signed state cookie
 // and redirects to the IdP; callback verifies it, exchanges the code, links the
 // account (LoginWithOidc), sets the session cookies, and redirects to the app.
-func mountOIDC(api chi.Router, svc *oidc.Service, acct *accounts.Service, secure bool) {
-	api.Get("/auth/providers", oidcProvidersHandler(svc))
-	api.Get("/auth/oidc/start", oidcStartHandler(svc, secure))
-	api.Get("/auth/oidc/callback", oidcCallbackHandler(svc, acct, secure))
+func mountOIDC(api chi.Router, svc *oidc.Service, acct *accounts.Service, secure bool, policy config.AuthPolicy) {
+	// The providers endpoint doubles as the auth-config endpoint the login page
+	// reads, so it always mounts and reports the full policy.
+	api.Get("/auth/providers", oidcProvidersHandler(svc, policy))
+	// The sign-in flow is available when either OIDC toggle is on; the
+	// login-vs-signup split is enforced inside the callback.
+	oidcOn := policy.OidcLogin || policy.OidcSignup
+	oidcGate := func(h http.HandlerFunc) http.HandlerFunc {
+		if oidcOn {
+			return h
+		}
+		return func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, frontendURL()+"/login?error=oidc_disabled", http.StatusFound)
+		}
+	}
+	api.Get("/auth/oidc/start", oidcGate(oidcStartHandler(svc, secure)))
+	api.Get("/auth/oidc/callback", oidcGate(oidcCallbackHandler(svc, acct, secure, policy)))
 	// Connect/disconnect SSO for an already-authenticated user (link flow). The
 	// callback above handles both sign-in and connect via the signed state.
 	api.With(requireAuth(acct)).Get("/auth/oidc/link", oidcLinkStartHandler(svc, secure))
@@ -44,9 +58,22 @@ func frontendURL() string {
 	return "http://localhost:3000"
 }
 
-func oidcProvidersHandler(svc *oidc.Service) http.HandlerFunc {
+// oidcProvidersHandler is also the auth-config endpoint the sign-in page reads:
+// it returns the SSO provider list plus the full method policy, so the UI shows
+// exactly the methods this instance allows.
+func oidcProvidersHandler(svc *oidc.Service, policy config.AuthPolicy) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]any{"providers": svc.Providers()})
+		writeJSON(w, http.StatusOK, map[string]any{
+			"providers": svc.Providers(),
+			"policy": map[string]bool{
+				"passwordLogin":   policy.PasswordLogin,
+				"passwordSignup":  policy.PasswordSignup,
+				"magicLinkLogin":  policy.MagicLinkLogin,
+				"magicLinkSignup": policy.MagicLinkSignup,
+				"oidcLogin":       policy.OidcLogin,
+				"oidcSignup":      policy.OidcSignup,
+			},
+		})
 	}
 }
 
@@ -65,7 +92,7 @@ func oidcStartHandler(svc *oidc.Service, secure bool) http.HandlerFunc {
 	}
 }
 
-func oidcCallbackHandler(svc *oidc.Service, acct *accounts.Service, secure bool) http.HandlerFunc {
+func oidcCallbackHandler(svc *oidc.Service, acct *accounts.Service, secure bool, policy config.AuthPolicy) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		front := frontendURL()
 		// Clear the state cookie regardless of outcome.
@@ -109,9 +136,12 @@ func oidcCallbackHandler(svc *oidc.Service, acct *accounts.Service, secure bool)
 			return
 		}
 
+		// The policy splits the flow: signing an existing/linked identity in needs
+		// OidcLogin; provisioning a brand-new account needs OidcSignup. LoginWithOidc
+		// returns the matching sentinel when the relevant toggle is off.
 		_, tokens, mfaToken, err := acct.LoginWithOidc(r.Context(), accounts.OidcProfile{
 			Subject: profile.Subject, Email: profile.Email, EmailVerified: profile.EmailVerified, Name: profile.Name,
-		}, r.UserAgent(), clientIP(r))
+		}, r.UserAgent(), clientIP(r), policy.OidcLogin, policy.OidcSignup)
 		if err != nil {
 			switch {
 			case errors.Is(err, accounts.ErrMFARequired):
@@ -122,6 +152,10 @@ func oidcCallbackHandler(svc *oidc.Service, acct *accounts.Service, secure bool)
 				// An email-matching password account exists but the IdP is not a
 				// vouched authority for it; tell the user to sign in and link manually.
 				http.Redirect(w, r, front+"/login?error=sso_exists", http.StatusFound)
+			case errors.Is(err, accounts.ErrOidcLoginDisabled):
+				http.Redirect(w, r, front+"/login?error=oidc_login_disabled", http.StatusFound)
+			case errors.Is(err, accounts.ErrOidcSignupDisabled):
+				http.Redirect(w, r, front+"/login?error=oidc_signup_disabled", http.StatusFound)
 			default:
 				fail()
 			}

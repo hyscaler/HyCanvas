@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"hycanvas/backend/internal/accounts"
+	"hycanvas/backend/internal/platform/config"
 )
 
 type ctxKey string
@@ -22,25 +23,45 @@ type authedUser struct {
 }
 
 // mountAuth attaches the auth + me routes (matching /api/v1/auth/* and /api/v1/me).
-func mountAuth(api chi.Router, svc *accounts.Service, secure bool) {
+// `policy` decides which method-specific routes are live; a disabled route
+// answers 403 rather than being absent, so a client gets a clear reason.
+func mountAuth(api chi.Router, svc *accounts.Service, secure bool, policy config.AuthPolicy) {
+	// gate wraps a handler so it returns 403 when its method is turned off. The
+	// route still exists (a 404 would look like a version mismatch); the body
+	// says which method is disabled.
+	gate := func(enabled bool, h http.HandlerFunc) http.HandlerFunc {
+		if enabled {
+			return h
+		}
+		return func(w http.ResponseWriter, r *http.Request) {
+			Problem(w, r, http.StatusForbidden, "Forbidden", "this sign-in method is disabled on this instance")
+		}
+	}
 	api.Route("/auth", func(r chi.Router) {
-		r.Post("/signup", signupHandler(svc, secure))
-		r.Post("/login", loginHandler(svc, secure))
+		r.Post("/signup", gate(policy.PasswordSignup, signupHandler(svc, secure)))
+		r.Post("/login", gate(policy.PasswordLogin, loginHandler(svc, secure)))
 		r.Post("/refresh", refreshHandler(svc, secure))
 		r.With(requireAuth(svc)).Post("/logout", logoutHandler(svc, secure))
 		// MFA (doc 15 FR-5). enroll/confirm/disable are session-guarded; verify is
-		// public (it trades the login challenge token for a session).
+		// public (it trades the login challenge token for a session). Left ungated:
+		// an OIDC account can still carry a second factor.
 		r.With(requireAuth(svc)).Post("/mfa/enroll", mfaEnrollHandler(svc))
 		r.With(requireAuth(svc)).Post("/mfa/confirm", mfaConfirmHandler(svc))
 		r.With(requireAuth(svc)).Post("/mfa/disable", mfaDisableHandler(svc))
 		r.Post("/mfa/verify", mfaVerifyHandler(svc, secure))
 		// Email flows (doc 15 FR-1). Request endpoints are enumeration-safe (204).
+		// verify-email stays ungated (any account may confirm its address); reset
+		// follows password login (no point resetting a password you cannot use).
 		r.Post("/verify-email/request", emailRequestHandler(svc, "verify"))
 		r.Post("/verify-email", verifyEmailHandler(svc))
-		r.Post("/password-reset/request", emailRequestHandler(svc, "reset"))
-		r.Post("/password-reset", resetPasswordHandler(svc))
-		r.Post("/magic-link/request", emailRequestHandler(svc, "magic"))
-		r.Post("/magic-link", magicLinkHandler(svc, secure))
+		r.Post("/password-reset/request", gate(policy.PasswordLogin, emailRequestHandler(svc, "reset")))
+		r.Post("/password-reset", gate(policy.PasswordLogin, resetPasswordHandler(svc)))
+		// Magic-link request/redeem stay mounted whenever either magic toggle is on;
+		// the login-vs-signup decision lives inside the handlers, which consult the
+		// policy (an unknown email is a signup, gated by MagicLinkSignup).
+		magicOn := policy.MagicLinkLogin || policy.MagicLinkSignup
+		r.Post("/magic-link/request", gate(magicOn, magicRequestHandler(svc, policy)))
+		r.Post("/magic-link", gate(magicOn, magicLinkHandler(svc, secure, policy)))
 		// Dev-only mail outbox (no SMTP wired); forbidden when cookies are secure
 		// (production).
 		r.Get("/dev/outbox", devOutboxHandler(svc, secure))
@@ -270,7 +291,8 @@ func mfaVerifyHandler(svc *accounts.Service, secure bool) http.HandlerFunc {
 }
 
 // emailRequestHandler handles the enumeration-safe request endpoints (always
-// 204): verify-email/request, password-reset/request, magic-link/request.
+// 204): verify-email/request and password-reset/request. Magic-link requests go
+// through magicRequestHandler, which is signup-aware.
 func emailRequestHandler(svc *accounts.Service, kind string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var body struct {
@@ -284,8 +306,6 @@ func emailRequestHandler(svc *accounts.Service, kind string) http.HandlerFunc {
 		switch kind {
 		case "reset":
 			err = svc.RequestPasswordReset(r.Context(), body.Email)
-		case "magic":
-			err = svc.RequestMagicLink(r.Context(), body.Email)
 		default:
 			err = svc.RequestEmailVerification(r.Context(), body.Email)
 		}
@@ -337,7 +357,28 @@ func resetPasswordHandler(svc *accounts.Service) http.HandlerFunc {
 	}
 }
 
-func magicLinkHandler(svc *accounts.Service, secure bool) http.HandlerFunc {
+// magicRequestHandler issues a magic link. It is enumeration-safe (always 204):
+// for a known email it sends a sign-in link; for an unknown email it sends a
+// sign-up link only when magic-link signup is enabled, and otherwise does
+// nothing, so the response never reveals whether an account exists.
+func magicRequestHandler(svc *accounts.Service, policy config.AuthPolicy) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Email string `json:"email"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Email == "" {
+			Problem(w, r, http.StatusBadRequest, "Bad Request", "email is required")
+			return
+		}
+		if err := svc.RequestMagicLink(r.Context(), body.Email, policy.MagicLinkSignup); err != nil {
+			Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed")
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func magicLinkHandler(svc *accounts.Service, secure bool, policy config.AuthPolicy) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var body struct {
 			Token string `json:"token"`
@@ -346,7 +387,9 @@ func magicLinkHandler(svc *accounts.Service, secure bool) http.HandlerFunc {
 			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
 			return
 		}
-		user, tokens, err := svc.LoginWithMagicLink(r.Context(), body.Token, r.UserAgent(), clientIP(r))
+		// A redeem may create the account (sign-up link for a new email) only when
+		// magic-link signup is enabled; existing-user links always work.
+		user, tokens, err := svc.LoginWithMagicLink(r.Context(), body.Token, r.UserAgent(), clientIP(r), policy.MagicLinkSignup)
 		if err != nil {
 			Problem(w, r, http.StatusUnauthorized, "Unauthorized", "invalid or expired link")
 			return

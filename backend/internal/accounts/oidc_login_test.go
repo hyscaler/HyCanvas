@@ -31,7 +31,7 @@ func TestLoginWithOidc_DB(t *testing.T) {
 	email := "sso+" + uuid.NewString() + "@example.com"
 
 	// 1) New account: creates the user + workspace + identity, issues a session.
-	u1, tokens1, mfa1, err := svc.LoginWithOidc(ctx, OidcProfile{Subject: sub, Email: email, EmailVerified: true, Name: "SSO User"}, "d", "ip")
+	u1, tokens1, mfa1, err := svc.LoginWithOidc(ctx, OidcProfile{Subject: sub, Email: email, EmailVerified: true, Name: "SSO User"}, "d", "ip", true, true)
 	if err != nil || u1 == nil || tokens1 == nil || tokens1.Access == "" || mfa1 != "" {
 		t.Fatalf("new-account OIDC login: %v", err)
 	}
@@ -42,7 +42,7 @@ func TestLoginWithOidc_DB(t *testing.T) {
 	}
 
 	// 2) Returning subject: same identity -> same user, no duplicate.
-	u2, _, _, err := svc.LoginWithOidc(ctx, OidcProfile{Subject: sub, Email: email, EmailVerified: true}, "d", "ip")
+	u2, _, _, err := svc.LoginWithOidc(ctx, OidcProfile{Subject: sub, Email: email, EmailVerified: true}, "d", "ip", true, true)
 	if err != nil || u2 == nil || u2.ID != u1.ID {
 		t.Fatalf("returning OIDC login should reuse the user: %v", err)
 	}
@@ -59,30 +59,30 @@ func TestLoginWithOidc_DB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("signup: %v", err)
 	}
-	if _, _, _, err := svc.LoginWithOidc(ctx, OidcProfile{Subject: "sub-link-" + uuid.NewString(), Email: pwEmail, EmailVerified: true}, "d", "ip"); err != ErrOidcLinkRefused {
+	if _, _, _, err := svc.LoginWithOidc(ctx, OidcProfile{Subject: "sub-link-" + uuid.NewString(), Email: pwEmail, EmailVerified: true}, "d", "ip", true, true); err != ErrOidcLinkRefused {
 		t.Fatalf("linking SSO to a password account without an allowlist should be refused, got %v", err)
 	}
 
 	// 3b) With the domain allowlisted, linking to the password account succeeds.
 	t.Setenv("OIDC_ALLOWED_EMAIL_DOMAINS", "example.com")
 	linkSub := "sub-link2-" + uuid.NewString()
-	linked, ltokens, _, err := svc.LoginWithOidc(ctx, OidcProfile{Subject: linkSub, Email: pwEmail, EmailVerified: true}, "d", "ip")
+	linked, ltokens, _, err := svc.LoginWithOidc(ctx, OidcProfile{Subject: linkSub, Email: pwEmail, EmailVerified: true}, "d", "ip", true, true)
 	if err != nil || linked == nil || linked.ID != pwUser.ID || ltokens == nil {
 		t.Fatalf("allowlisted verified email should link to the existing account: %v", err)
 	}
 
 	// 4) Unverified email to an existing account is refused.
-	if _, _, _, err := svc.LoginWithOidc(ctx, OidcProfile{Subject: "sub-x-" + uuid.NewString(), Email: pwEmail, EmailVerified: false}, "d", "ip"); err != ErrOidcUnverified {
+	if _, _, _, err := svc.LoginWithOidc(ctx, OidcProfile{Subject: "sub-x-" + uuid.NewString(), Email: pwEmail, EmailVerified: false}, "d", "ip", true, true); err != ErrOidcUnverified {
 		t.Fatalf("unverified link should be refused, got %v", err)
 	}
 
 	// 5) No email at all is refused.
-	if _, _, _, err := svc.LoginWithOidc(ctx, OidcProfile{Subject: "sub-y-" + uuid.NewString(), Email: ""}, "d", "ip"); err != ErrOidcNoEmail {
+	if _, _, _, err := svc.LoginWithOidc(ctx, OidcProfile{Subject: "sub-y-" + uuid.NewString(), Email: ""}, "d", "ip", true, true); err != ErrOidcNoEmail {
 		t.Fatalf("missing email should be refused, got %v", err)
 	}
 
 	// 6) A domain outside the allowlist is refused.
-	if _, _, _, err := svc.LoginWithOidc(ctx, OidcProfile{Subject: "sub-z-" + uuid.NewString(), Email: "outsider@other.com", EmailVerified: true}, "d", "ip"); err != ErrOidcDomainNotAllowed {
+	if _, _, _, err := svc.LoginWithOidc(ctx, OidcProfile{Subject: "sub-z-" + uuid.NewString(), Email: "outsider@other.com", EmailVerified: true}, "d", "ip", true, true); err != ErrOidcDomainNotAllowed {
 		t.Fatalf("non-allowlisted domain should be refused, got %v", err)
 	}
 
@@ -91,7 +91,7 @@ func TestLoginWithOidc_DB(t *testing.T) {
 	if _, err := tx.Exec(ctx, `UPDATE "users" SET "mfa_enabled" = true WHERE id = $1`, pwUser.ID); err != nil {
 		t.Fatalf("enable mfa: %v", err)
 	}
-	mfaUser, mfaTokens, mfaTok, err := svc.LoginWithOidc(ctx, OidcProfile{Subject: linkSub, Email: pwEmail, EmailVerified: true}, "d", "ip")
+	mfaUser, mfaTokens, mfaTok, err := svc.LoginWithOidc(ctx, OidcProfile{Subject: linkSub, Email: pwEmail, EmailVerified: true}, "d", "ip", true, true)
 	if err != ErrMFARequired || mfaTok == "" || mfaTokens != nil || mfaUser != nil {
 		t.Fatalf("SSO into an MFA account must return an MFA challenge, got user=%v tokens=%v tok=%q err=%v", mfaUser, mfaTokens, mfaTok, err)
 	}
@@ -137,7 +137,7 @@ func TestLinkUnlinkOidc_DB(t *testing.T) {
 	}
 
 	// A subject already owned by another account cannot be stolen.
-	other, _, _, err := svc.LoginWithOidc(ctx, OidcProfile{Subject: "linksub-b-" + uuid.NewString(), Email: "other+" + uuid.NewString() + "@example.com", EmailVerified: true}, "d", "ip")
+	other, _, _, err := svc.LoginWithOidc(ctx, OidcProfile{Subject: "linksub-b-" + uuid.NewString(), Email: "other+" + uuid.NewString() + "@example.com", EmailVerified: true}, "d", "ip", true, true)
 	if err != nil {
 		t.Fatalf("create SSO-native other user: %v", err)
 	}

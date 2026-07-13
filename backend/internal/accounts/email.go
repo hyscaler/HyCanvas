@@ -8,6 +8,7 @@ package accounts
 
 import (
 	"context"
+	"errors"
 	"os"
 	"strings"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"hycanvas/backend/internal/platform/brand"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	"hycanvas/backend/internal/auth/secrets"
 )
@@ -225,33 +227,80 @@ func (s *Service) ResetPassword(ctx context.Context, raw, newPassword string) er
 }
 
 // RequestMagicLink sends a passwordless sign-in link; silent for unknown accounts.
-func (s *Service) RequestMagicLink(ctx context.Context, email string) error {
-	u, err := s.findUserByEmail(ctx, strings.ToLower(strings.TrimSpace(email)))
-	if err != nil || u == nil {
+// RequestMagicLink emails a magic link. For an existing account it sends a
+// sign-in link (a stored token keyed to the user). For an unknown email it sends
+// a sign-up link only when allowSignup is set; the link carries a signed,
+// self-contained signup token so no account is created until it is redeemed.
+// Enumeration-safe: an unknown email with signup disabled is a silent no-op.
+func (s *Service) RequestMagicLink(ctx context.Context, email string, allowSignup bool) error {
+	email = strings.ToLower(strings.TrimSpace(email))
+	u, err := s.findUserByEmail(ctx, email)
+	switch {
+	case err == nil && u != nil:
+		_, err = s.sendVerificationToken(ctx, u.ID, u.Email, "magic")
+		return err
+	case errors.Is(err, pgx.ErrNoRows):
+		// no account for this email; fall through to the signup path
+	case err != nil:
+		return err // a real lookup failure
+	}
+	if !allowSignup {
 		return nil
 	}
-	_, err = s.sendVerificationToken(ctx, u.ID, u.Email, "magic")
-	return err
+	// New email: deliver a signed signup link via the same magic link path.
+	raw := s.signMagicSignupToken(email)
+	msg := OutboxMessage{To: email, Subject: subjectFor("magic"), Link: s.linkFor("magic", raw)}
+	applyKindContent(&msg, "magic")
+	s.deliver(msg)
+	return nil
 }
 
 // LoginWithMagicLink consumes a magic token, marks the email verified (clicking
 // the link proves inbox control), and issues a normal session.
-func (s *Service) LoginWithMagicLink(ctx context.Context, raw, device, ip string) (*AuthUser, *Tokens, error) {
-	id, userID, ok := s.usableToken(ctx, raw, "magic")
-	if !ok {
-		return nil, nil, ErrToken
+//
+// A signed sign-up token (no stored row) is accepted only when allowSignup is
+// set: on redeem it creates a passwordless account for the token's email, or, if
+// one already exists (a replayed link, or a race), signs that account in. This
+// is the create-on-redeem path, so an un-clicked sign-up link creates nothing.
+func (s *Service) LoginWithMagicLink(ctx context.Context, raw, device, ip string, allowSignup bool) (*AuthUser, *Tokens, error) {
+	// Stored sign-in token for an existing account.
+	if id, userID, ok := s.usableToken(ctx, raw, "magic"); ok {
+		if err := s.consumeToken(ctx, id); err != nil {
+			return nil, nil, err
+		}
+		if _, err := s.db.Exec(ctx, `UPDATE "users" SET "email_verified" = true, "updated_at" = now() WHERE id = $1`, userID); err != nil {
+			return nil, nil, err
+		}
+		row, err := s.findUserByID(ctx, userID)
+		if err != nil || row == nil {
+			return nil, nil, ErrToken
+		}
+		return s.issueSession(ctx, row, device, ip)
 	}
-	if err := s.consumeToken(ctx, id); err != nil {
-		return nil, nil, err
+
+	// Signed sign-up token: create-or-login by email, only when signup is enabled.
+	if email, ok := s.parseMagicSignupToken(raw); ok && allowSignup {
+		u, err := s.findUserByEmail(ctx, email)
+		switch {
+		case err == nil && u != nil:
+			// The email already has an account (replayed link / race): just sign in.
+			return s.issueSession(ctx, u, device, ip)
+		case errors.Is(err, pgx.ErrNoRows):
+			userID, err := s.createUserWithWorkspace(ctx, email, "", true, nil)
+			if err != nil {
+				return nil, nil, err
+			}
+			row, err := s.findUserByID(ctx, userID)
+			if err != nil || row == nil {
+				return nil, nil, ErrToken
+			}
+			return s.issueSession(ctx, row, device, ip)
+		default:
+			return nil, nil, err
+		}
 	}
-	if _, err := s.db.Exec(ctx, `UPDATE "users" SET "email_verified" = true, "updated_at" = now() WHERE id = $1`, userID); err != nil {
-		return nil, nil, err
-	}
-	row, err := s.findUserByID(ctx, userID)
-	if err != nil || row == nil {
-		return nil, nil, ErrToken
-	}
-	return s.issueSession(ctx, row, device, ip)
+
+	return nil, nil, ErrToken
 }
 
 // Outbox returns a copy of the captured dev mail (newest last).
