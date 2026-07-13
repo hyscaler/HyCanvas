@@ -68,6 +68,11 @@ type pdfCtx struct {
 	src      ImageSource
 	images   []*pdfImage
 	imageByA map[string]*pdfImage
+	// Fonts the design embeds (doc 28 FR-22). `fonts` is every font available
+	// document-wide; `used` records the ones this page actually drew with, so a
+	// page's resource dictionary lists only what it needs.
+	fonts []*embeddedFont
+	used  map[*embeddedFont]bool
 }
 
 // imageBody draws an image node, embedding its asset the first time it is seen.
@@ -336,22 +341,51 @@ func (c *pdfCtx) textBody(node map[string]any) {
 				fc = pdfColor{r: 0, g: 0, b: 0, ok: true}
 			}
 			text := asStr(ro["text"])
-			// Pick a base-14 font from the run's family/style/weight, then use its
-			// real glyph metrics for an accurate advance (FR: faithful text PDF).
-			bold := asNum(style["weight"]) >= 600
-			font := selectFont(asStr(style["fontFamily"]), asStr(style["fontStyle"]), bold, asBool(style["italic"]))
 			ls := asNum(style["letterSpacing"])
+			family := asStr(style["fontFamily"])
+
+			// The design's own font wins when it is embeddable and has a glyph for
+			// every character in the run (doc 28 FR-22). A run that the font cannot
+			// fully cover falls back whole, so a line never renders half in the real
+			// typeface and half in Helvetica. Everything else keeps the base-14
+			// mapping, which is what this encoder has always done.
+			emb := findEmbedded(c.fonts, family)
+			if emb != nil && !emb.covers(text) {
+				emb = nil
+			}
+			if emb != nil {
+				c.used[emb] = true
+			}
+
+			var (
+				fontKey string
+				show    string
+				advance float64
+			)
+			if emb != nil {
+				// Identity-H addresses glyphs by id, so the string is raw glyph ids.
+				fontKey = emb.key
+				show = "<" + emb.hexGlyphs(text) + ">"
+				advance = emb.textWidth(text, size, ls)
+			} else {
+				bold := asNum(style["weight"]) >= 600
+				font := selectFont(family, asStr(style["fontStyle"]), bold, asBool(style["italic"]))
+				fontKey = font.key
+				show = "(" + pdfEscapeText(text) + ")"
+				advance = textAdvance(font, text, size, ls)
+			}
+
 			c.op("BT")
 			c.op(pn(fc.r) + " " + pn(fc.g) + " " + pn(fc.b) + " rg")
-			c.op("/" + font.key + " " + pn(size) + " Tf")
+			c.op("/" + fontKey + " " + pn(size) + " Tf")
 			if ls != 0 {
 				c.op(pn(ls) + " Tc")
 			}
 			// Tm: counter-flip the y axis (1 0 0 -1) and place the baseline at (x,y).
 			c.op("1 0 0 -1 " + pn(x) + " " + pn(y) + " Tm")
-			c.op("(" + pdfEscapeText(text) + ") Tj")
+			c.op(show + " Tj")
 			c.op("ET")
-			x += textAdvance(font, text, size, ls)
+			x += advance
 		}
 	}
 }
@@ -578,6 +612,7 @@ type pdfPage struct {
 	tags    []pdfTag
 	name    string
 	images  []*pdfImage
+	fonts   []*embeddedFont // the embedded fonts this page drew with
 }
 
 // ToPDF renders one page of a design to a single-page PDF document. An optional
@@ -588,7 +623,8 @@ func ToPDF(file Design, pageIndex int, src ...ImageSource) ([]byte, error) {
 	if pageIndex < 0 || pageIndex >= len(pages) {
 		return nil, ErrPageRange
 	}
-	return assemblePDF([]pdfPage{renderPDFPage(asObj(pages[pageIndex]), firstSource(src))}), nil
+	fonts := parseDesignFonts(file)
+	return assemblePDF([]pdfPage{renderPDFPage(asObj(pages[pageIndex]), firstSource(src), fonts)}, fonts), nil
 }
 
 func firstSource(src []ImageSource) ImageSource {
@@ -603,25 +639,26 @@ func firstSource(src []ImageSource) ImageSource {
 // skipped, matching present mode: a slide the author hid is not part of the
 // deck being delivered.
 func ToDeckPDF(file Design, src ...ImageSource) ([]byte, error) {
+	fonts := parseDesignFonts(file)
 	var out []pdfPage
 	for _, p := range asArr(file["pages"]) {
 		page := asObj(p)
 		if asBool(page["hidden"]) {
 			continue
 		}
-		out = append(out, renderPDFPage(page, firstSource(src)))
+		out = append(out, renderPDFPage(page, firstSource(src), fonts))
 	}
 	if len(out) == 0 {
 		return nil, ErrPageRange
 	}
-	return assemblePDF(out), nil
+	return assemblePDF(out, fonts), nil
 }
 
 // renderPDFPage draws one page and collects the structure tags it produced.
-func renderPDFPage(page map[string]any, src ImageSource) pdfPage {
+func renderPDFPage(page map[string]any, src ImageSource, fonts []*embeddedFont) pdfPage {
 	w, h := asNum(page["width"]), asNum(page["height"])
 
-	c := &pdfCtx{boxes: pageBoxMap(page), src: src}
+	c := &pdfCtx{boxes: pageBoxMap(page), src: src, fonts: fonts, used: map[*embeddedFont]bool{}}
 	// Flip to design space (top-left origin, y-down).
 	c.op("1 0 0 -1 0 " + pn(h) + " cm")
 	// Background. Purely presentational, so it is an artifact: a screen reader
@@ -655,7 +692,15 @@ func renderPDFPage(page map[string]any, src ImageSource) pdfPage {
 		}
 	}
 
-	return pdfPage{content: c.buf.Bytes(), w: w, h: h, tags: ordered, name: asStr(page["name"]), images: c.images}
+	// Keep the page's font list in the document's order, so the resource
+	// dictionary is deterministic rather than map-iteration order.
+	var pageFonts []*embeddedFont
+	for _, f := range fonts {
+		if c.used[f] {
+			pageFonts = append(pageFonts, f)
+		}
+	}
+	return pdfPage{content: c.buf.Bytes(), w: w, h: h, tags: ordered, name: asStr(page["name"]), images: c.images, fonts: pageFonts}
 }
 
 // assemblePDF writes a valid PDF over one or more pages, registering the base-14
@@ -672,7 +717,7 @@ func renderPDFPage(page map[string]any, src ImageSource) pdfPage {
 // one element per tag), and finally the number tree mapping marked content back
 // to its element. Marked-content ids restart at zero on every page, so a page's
 // /StructParents key is its index into that tree.
-func assemblePDF(pages []pdfPage) []byte {
+func assemblePDF(pages []pdfPage, embedded []*embeddedFont) []byte {
 	// Font objects come first so their numbers do not depend on the page count.
 	var fontDict strings.Builder
 	fontObjs := make([]string, len(pdfFontTable))
@@ -680,10 +725,23 @@ func assemblePDF(pages []pdfPage) []byte {
 		fmt.Fprintf(&fontDict, "/%s %d 0 R ", f.key, 3+i)
 		fontObjs[i] = fmt.Sprintf("<< /Type /Font /Subtype /Type1 /BaseFont /%s /Encoding /WinAnsiEncoding >>", f.baseFont)
 	}
-	// A page owns its own objects: the page, its contents, and an XObject (plus
-	// a soft mask, when the image has transparency) per embedded image. So the
-	// numbers are laid out by walking the pages rather than by a fixed stride.
+	// Each embedded font contributes five objects (Type0, CIDFontType2 descendant,
+	// descriptor, the font file, and the ToUnicode CMap). They are emitted after
+	// the base-14 set and shared by every page that draws with them. This runs
+	// after all pages have rendered, so each font's used-glyph set, and therefore
+	// its width array and CMap, is complete.
 	next := 3 + len(pdfFontTable)
+	var embObjs []string
+	embResource := make(map[*embeddedFont]string, len(embedded))
+	for _, e := range embedded {
+		if len(e.used) == 0 {
+			continue // parsed but never drawn with: embedding it would bloat the file
+		}
+		bodies, res := e.fontObjects(next)
+		embResource[e] = res
+		embObjs = append(embObjs, bodies...)
+		next += len(bodies)
+	}
 	pageObjNo := make([]int, len(pages))
 	imageObjNo := make([][]int, len(pages))
 	for i, p := range pages {
@@ -731,9 +789,15 @@ func assemblePDF(pages []pdfPage) []byte {
 			xobjects = fmt.Sprintf(" /XObject << %s>>", xobjDict.String())
 		}
 
+		// The page's font dictionary is the base-14 set plus whatever design
+		// fonts this page actually drew with.
+		pageFontDict := fontDict.String()
+		for _, e := range p.fonts {
+			pageFontDict += embResource[e]
+		}
 		pageObjs = append(pageObjs, fmt.Sprintf(
 			"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %s %s] /Resources << /Font << %s>>%s >> /Contents %d 0 R /StructParents %d /Tabs /S >>",
-			pn(p.w), pn(p.h), fontDict.String(), xobjects, pageObj(i)+1, i))
+			pn(p.w), pn(p.h), pageFontDict, xobjects, pageObj(i)+1, i))
 		contentObjs = append(contentObjs, fmt.Sprintf("<< /Length %d >>\nstream\n%s\nendstream", len(p.content)+1, p.content))
 
 		// One structure element per tag, in reading order, each pointing at its
@@ -776,6 +840,7 @@ func assemblePDF(pages []pdfPage) []byte {
 		fmt.Sprintf("<< /Type /Pages /Kids [%s] /Count %d >>", strings.TrimSpace(pageRefs.String()), len(pages)),
 	}
 	objs = append(objs, fontObjs...)
+	objs = append(objs, embObjs...)
 	for i := range pages {
 		objs = append(objs, pageObjs[i], contentObjs[i])
 		objs = append(objs, imageObjs[i]...)
