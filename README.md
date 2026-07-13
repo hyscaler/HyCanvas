@@ -260,7 +260,7 @@ See `CONTRIBUTING.md` for setup and the pull-request checklist, `CODE_OF_CONDUCT
 
 HyCanvas is licensed under the Elastic License 2.0 (see `LICENSE`). This is a source-available license: you may use, modify, self-host, and redistribute it freely, but you may not provide it to third parties as a hosted or managed service, circumvent the license-key functionality, or remove the licensing notices. Third-party and bundled-asset notices are in `NOTICE`.
 
-- **Hosting HyCanvas for your own customers?** That needs a [commercial license](COMMERCIAL.md) from NetTantra Technologies (India) Private Limited; internal use and self-hosting never do.
+- **Hosting HyCanvas for your own customers?** That needs a [commercial license](COMMERCIAL.md) from HyScaler; internal use and self-hosting never do.
 - **Contributing?** All contributions require a one-time [Contributor License Agreement](CLA.md), signed with a single comment on your first pull request.
 
-© 2026 NetTantra Technologies (India) Private Limited. HyCanvas is a product of NetTantra Technologies (India) Private Limited, doing business as HyScaler. HyScaler is a trading name (DBA) of that company and a registered trademark of it.
+© 2026 HyScaler. HyCanvas is a HyScaler product. HyScaler® is a registered trademark.
