@@ -6,6 +6,20 @@ HyCanvas is a free, self-hostable, AI-native design platform. Design anything - 
 
 The product spans a single-player editor, document types (presentations, video, whiteboard, docs, sheets), export, brand kits, and a bring-your-own-key AI layer. Work not yet built is tracked under `docs/roadmap/`.
 
+## See it in action
+
+Open a template and make it yours - edit text, restyle, and export, all in the browser:
+
+<p align="center">
+  <img src=".github/hycanvas-editor-demo.gif" alt="Editing a template in the HyCanvas editor" width="820">
+</p>
+
+Every design stays yours in an open format, exportable to PNG, PDF, and more, with no watermarks:
+
+<p align="center">
+  <img src=".github/hycanvas-design-sample.png" alt="A social card designed in HyCanvas" width="600">
+</p>
+
 ## Repository Layout
 
 The frontend and shared packages are an npm-workspaces monorepo (orchestrated with concurrently and dotenv-cli against a single shared root `.env`); the backend is a standalone Go module.
