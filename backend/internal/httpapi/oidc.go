@@ -21,10 +21,10 @@ const oidcStateCookie = "oc_oidc"
 // authorization-code + PKCE redirect/callback. start sets a signed state cookie
 // and redirects to the IdP; callback verifies it, exchanges the code, links the
 // account (LoginWithOidc), sets the session cookies, and redirects to the app.
-func mountOIDC(api chi.Router, svc *oidc.Service, acct *accounts.Service, secure bool, policy config.AuthPolicy) {
+func mountOIDC(api chi.Router, svc *oidc.Service, acct *accounts.Service, secure bool, policy config.AuthPolicy, cap config.CaptchaConfig) {
 	// The providers endpoint doubles as the auth-config endpoint the login page
-	// reads, so it always mounts and reports the full policy.
-	api.Get("/auth/providers", oidcProvidersHandler(svc, policy))
+	// reads, so it always mounts and reports the full policy plus captcha config.
+	api.Get("/auth/providers", oidcProvidersHandler(svc, policy, cap))
 	// The sign-in flow is available when either OIDC toggle is on; the
 	// login-vs-signup split is enforced inside the callback.
 	oidcOn := policy.OidcLogin || policy.OidcSignup
@@ -61,8 +61,14 @@ func frontendURL() string {
 // oidcProvidersHandler is also the auth-config endpoint the sign-in page reads:
 // it returns the SSO provider list plus the full method policy, so the UI shows
 // exactly the methods this instance allows.
-func oidcProvidersHandler(svc *oidc.Service, policy config.AuthPolicy) http.HandlerFunc {
+func oidcProvidersHandler(svc *oidc.Service, policy config.AuthPolicy, cap config.CaptchaConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// captcha is null when disabled; otherwise it carries the provider and the
+		// public site key the widget needs. The secret key never leaves the server.
+		var captchaBlock any
+		if cap.Enabled() {
+			captchaBlock = map[string]string{"provider": cap.Provider, "siteKey": cap.SiteKey}
+		}
 		writeJSON(w, http.StatusOK, map[string]any{
 			"providers": svc.Providers(),
 			"policy": map[string]bool{
@@ -73,6 +79,7 @@ func oidcProvidersHandler(svc *oidc.Service, policy config.AuthPolicy) http.Hand
 				"oidcLogin":       policy.OidcLogin,
 				"oidcSignup":      policy.OidcSignup,
 			},
+			"captcha": captchaBlock,
 		})
 	}
 }

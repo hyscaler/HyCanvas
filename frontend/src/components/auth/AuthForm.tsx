@@ -7,7 +7,8 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "rea
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { Sparkles, Play, Presentation, Image as ImageIcon, KeyRound } from "lucide-react";
-import { ApiError, type AuthPolicy } from "@hc/sdk";
+import { ApiError, type AuthPolicy, type CaptchaSettings } from "@hc/sdk";
+import { CaptchaWidget, type CaptchaHandle } from "./CaptchaWidget";
 import { oc, authStartUrl } from "@/lib/sdk";
 import { useAuth } from "@/store/auth";
 import { useToast } from "@/components/ui/Toast";
@@ -84,6 +85,12 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   // once the real policy arrives, which is the flash this null-gate prevents.
   const [policy, setPolicy] = useState<AuthPolicy | null>(null);
   const policyReady = policy !== null;
+  // CAPTCHA config for this instance (null when none). When set, the form shows
+  // the widget and holds its token; a submit is blocked until a token exists, and
+  // the widget resets after a failed attempt (tokens are single-use).
+  const [captcha, setCaptcha] = useState<CaptchaSettings | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<CaptchaHandle>(null);
 
   const isSignup = mode === "signup";
   // Where to land after a successful sign-in. Honors a `?next=` return path so a
@@ -143,6 +150,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       if (cancelled) return;
       setProviders(c.providers);
       setPolicy(c.policy);
+      setCaptcha(c.captcha);
     }).catch(() => {
       // If the config cannot be fetched, fall back to the classic
       // password + magic-link login so the page is never stuck loading. OIDC
@@ -177,6 +185,16 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   // path rather than a disabled password endpoint.
   const magicMode = magic || (!passwordOn && magicOn);
 
+  // Submit is allowed when there is no CAPTCHA, or the user has solved it.
+  const captchaOk = !captcha || !!captchaToken;
+  // Reset the widget after a failed submit: the token was consumed, so the user
+  // needs a fresh one to retry.
+  const resetCaptcha = () => {
+    setCaptchaToken(null);
+    captchaRef.current?.reset();
+  };
+  const captchaArg = captchaToken ?? undefined;
+
   // A failed social sign-in bounces back as ?error=sso; surface it (derived, so a
   // later inline error from the form takes precedence).
   const ssoError =
@@ -194,12 +212,13 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     setBusy(true);
     setError(null);
     try {
-      await oc.requestMagicLink(email);
+      await oc.requestMagicLink(email, captchaArg);
       // Non-enumerating: the API responds the same whether or not the account
       // exists, so the message is deliberately generic.
       toast.success("If that email has an account, a sign-in link is on its way.");
     } catch {
       toast.error("Couldn't send the link. Please try again.");
+      resetCaptcha();
     } finally {
       setBusy(false);
     }
@@ -213,10 +232,11 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     setBusy(true);
     setError(null);
     try {
-      await oc.requestPasswordReset(email);
+      await oc.requestPasswordReset(email, captchaArg);
       toast.success("If that email has an account, a reset link is on its way.");
     } catch {
       toast.error("Couldn't send the email. Please try again.");
+      resetCaptcha();
     } finally {
       setBusy(false);
     }
@@ -232,9 +252,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     setError(null);
     try {
       if (isSignup) {
-        await signup(email, password, name || undefined);
+        await signup(email, password, name || undefined, captchaArg);
       } else {
-        const challenge = await login(email, password);
+        const challenge = await login(email, password, captchaArg);
         if (challenge) {
           // Password was correct but the account needs a second factor: switch
           // to the code prompt rather than navigating.
@@ -249,6 +269,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       if (err instanceof ApiError) {
         if (err.status === 401) msg = "Invalid email or password.";
         else if (err.status === 409) msg = "An account with this email already exists.";
+        else if (err.status === 403) msg = "Couldn't verify the captcha. Please try again.";
         else {
           const body = err.body as { message?: string } | undefined;
           msg = body?.message ?? `Request failed (${err.status}).`;
@@ -259,6 +280,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         msg = "Couldn't reach the server. Make sure the backend is running.";
       }
       setError(msg);
+      resetCaptcha();
       setBusy(false);
     }
   }
@@ -505,12 +527,15 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
                       )}
                     </div>
                   )}
+                  {captcha && (
+                    <CaptchaWidget ref={captchaRef} captcha={captcha} onToken={setCaptchaToken} />
+                  )}
                   {(error ?? ssoError) && (
                     <div role="alert" className="rounded-xl bg-red-50 px-3.5 py-2.5 text-sm text-red-700">
                       {error ?? ssoError}
                     </div>
                   )}
-                  <Button type="submit" size="lg" block disabled={busy}>
+                  <Button type="submit" size="lg" block disabled={busy || !captchaOk}>
                     {busy
                       ? "Please wait…"
                       : magicMode

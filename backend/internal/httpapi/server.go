@@ -22,6 +22,7 @@ import (
 	"hycanvas/backend/internal/approvals"
 	"hycanvas/backend/internal/brand"
 	"hycanvas/backend/internal/bulkcreate"
+	"hycanvas/backend/internal/captcha"
 	"hycanvas/backend/internal/comments"
 	"hycanvas/backend/internal/convert"
 	"hycanvas/backend/internal/engagement"
@@ -43,34 +44,36 @@ import (
 
 // Deps holds the collaborators handlers need (extended as modules are ported).
 type Deps struct {
-	DB          *pgxpool.Pool
-	Logger      *slog.Logger
-	Version     string // build version stamped via -ldflags; "dev" when un-stamped
-	Accounts    *accounts.Service
-	Persistence *persistence.Service
-	Home        *home.Service
-	Sharing     *sharing.Service
-	Approvals   *approvals.Service
-	Comments    *comments.Service
-	Whiteboard  *whiteboard.Service
-	Engagement  *engagement.Service
-	Brand       *brand.Service
-	AI          *ai.Service
-	AIStudio    *aistudio.Service
-	Uploads     *uploads.Service
-	Realtime    *realtime.Hub
-	Templates   *templates.Service
-	Stock       *stock.Service
-	OIDC        *oidc.Service
-	Push        *push.Service
-	Jobs        *jobs.Registry
-	BulkCreate  *bulkcreate.Service
-	Convert     *convert.Service
-	Storage     storage.Driver
-	AccountData *accountdata.Service
-	Secure      bool              // set Secure on session cookies (production / HTTPS)
-	Auth        config.AuthPolicy // which sign-in methods and signups are enabled
-	PublicDir   string            // exported Next.js frontend to serve; empty = API only
+	DB            *pgxpool.Pool
+	Logger        *slog.Logger
+	Version       string // build version stamped via -ldflags; "dev" when un-stamped
+	Accounts      *accounts.Service
+	Persistence   *persistence.Service
+	Home          *home.Service
+	Sharing       *sharing.Service
+	Approvals     *approvals.Service
+	Comments      *comments.Service
+	Whiteboard    *whiteboard.Service
+	Engagement    *engagement.Service
+	Brand         *brand.Service
+	AI            *ai.Service
+	AIStudio      *aistudio.Service
+	Uploads       *uploads.Service
+	Realtime      *realtime.Hub
+	Templates     *templates.Service
+	Stock         *stock.Service
+	OIDC          *oidc.Service
+	Push          *push.Service
+	Jobs          *jobs.Registry
+	BulkCreate    *bulkcreate.Service
+	Convert       *convert.Service
+	Storage       storage.Driver
+	AccountData   *accountdata.Service
+	Secure        bool                 // set Secure on session cookies (production / HTTPS)
+	Auth          config.AuthPolicy    // which sign-in methods and signups are enabled
+	Captcha       captcha.Verifier     // optional CAPTCHA gate on the auth forms; nil = off
+	CaptchaConfig config.CaptchaConfig // public captcha config (provider/site key) for the sign-in page
+	PublicDir     string               // exported Next.js frontend to serve; empty = API only
 	// AllowOrigin gates CORS: it returns true for cross-origin Origins that may
 	// call the API with credentials (dev frontend). Nil disables CORS handling.
 	AllowOrigin func(origin string) bool
@@ -115,7 +118,7 @@ func NewRouter(d Deps) http.Handler {
 		// Ported: auth + accounts (login / logout / me). Other modules mount here
 		// as they are migrated; the reverse proxy keeps unported routes on Node.
 		if d.Accounts != nil {
-			mountAuth(api, d.Accounts, d.Secure, d.Auth)
+			mountAuth(api, d.Accounts, d.Secure, d.Auth, d.Captcha)
 			mountWorkspaces(api, d.Accounts)
 			mountMembers(api, d.Accounts)
 		}
@@ -123,7 +126,7 @@ func NewRouter(d Deps) http.Handler {
 			mountAccount(api, d.AccountData, d.Accounts, d.Secure)
 		}
 		if d.Accounts != nil && d.OIDC != nil {
-			mountOIDC(api, d.OIDC, d.Accounts, d.Secure, d.Auth)
+			mountOIDC(api, d.OIDC, d.Accounts, d.Secure, d.Auth, d.CaptchaConfig)
 		}
 		if d.Accounts != nil && d.Persistence != nil {
 			mountPersistence(api, d.Persistence, d.Accounts, d.Sharing)

@@ -134,6 +134,21 @@ AUTH_MAGICLINK_LOGIN_ENABLED=false
 
 Note when switching an existing instance to SSO-only: a user who already has a password account links their SSO identity to it automatically only when the provider's email domain is listed in `OIDC_ALLOWED_EMAIL_DOMAINS` (you are vouching that the provider owns those emails). Without that, their first SSO login creates a separate account. Set the allowlist before flipping the switch if you have existing password users.
 
+### CAPTCHA on the auth forms
+
+Protect login, signup, password-reset request, and magic-link request from automated abuse with Cloudflare Turnstile or Google reCAPTCHA. It is off until you set a provider:
+
+```bash
+CAPTCHA_PROVIDER=turnstile          # or "recaptcha"
+CAPTCHA_SITE_KEY=<public site key>  # from the provider dashboard
+CAPTCHA_SECRET_KEY=<secret key>
+# CAPTCHA_MIN_SCORE=0.5             # reCAPTCHA v3 only; Turnstile / v2 ignore it
+```
+
+The site key is sent to the browser (public by design) and the sign-in page renders the widget; the secret verifies each response server-side. The redeem endpoints (password-reset and magic-link, which carry a token from an email, not a form) are not gated.
+
+Two behaviors to know. It is **fail-closed**: if the provider is unreachable, the gated forms reject, so a solved challenge is always required once enabled; a provider outage blocks these forms, which is the correct default for a security control but is worth planning for. And a provider set without both keys is treated as disabled (and logged), so a half-configuration never 403s every login. Both instances behind Cloudflare make Turnstile the natural choice; reCAPTCHA works the same way via its keys.
+
 ### Moving from local storage to S3
 
 Started on local-disk storage and want object storage later? The binary migrates itself:
@@ -220,6 +235,7 @@ All configuration is read from the root `.env` (copy `.env.example`). The most i
 | `AI_SECRET` | optional | Encrypts stored per-workspace AI keys; falls back to `JWT_SECRET`. |
 | `OIDC_*` | optional | OIDC single sign-on (issuer, client id/secret). |
 | `AUTH_*_ENABLED` | optional | Enable/disable each sign-in method's login and signup (password, magic link, OIDC). Defaults preserve prior behavior. See [Choosing which sign-in methods are allowed](#choosing-which-sign-in-methods-are-allowed). |
+| `CAPTCHA_*` | optional | Turnstile / reCAPTCHA on the auth forms (`CAPTCHA_PROVIDER`, `CAPTCHA_SITE_KEY`, `CAPTCHA_SECRET_KEY`, `CAPTCHA_MIN_SCORE`). Off unless a provider is set. See [CAPTCHA on the auth forms](#captcha-on-the-auth-forms). |
 | `VAPID_*` | optional | Web-push keys for notifications. |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` / `COMPOSE_PROFILES` | docker | Used by the bundled Postgres in `docker-compose.yml`. |
 

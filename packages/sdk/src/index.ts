@@ -29,6 +29,18 @@ export interface AuthPolicy {
   oidcSignup: boolean;
 }
 
+/** CAPTCHA settings for the sign-in page when one is configured (null otherwise).
+ *  `siteKey` is the provider's public key; the secret stays server-side. */
+export interface CaptchaSettings {
+  provider: "turnstile" | "recaptcha";
+  siteKey: string;
+}
+
+/** The X-Captcha-Token header the auth endpoints check, or {} when no token. */
+function captchaHeaders(token?: string): { headers: Record<string, string> } | undefined {
+  return token ? { headers: { "x-captcha-token": token } } : undefined;
+}
+
 export interface JobStatusView<R = unknown> {
   id: string;
   name: string;
@@ -912,10 +924,17 @@ export class HyCanvasClient {
     this.token = token;
   }
 
-  private async request<T>(method: string, path: string, body?: unknown, retried = false): Promise<T> {
+  private async request<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+    opts?: { headers?: Record<string, string> },
+    retried = false,
+  ): Promise<T> {
     const headers: Record<string, string> = {};
     if (body !== undefined) headers["content-type"] = "application/json";
     if (this.token) headers.authorization = `Bearer ${this.token}`;
+    if (opts?.headers) Object.assign(headers, opts.headers);
     const res = await this.fetchImpl(`${this.baseUrl}${path}`, {
       method,
       headers,
@@ -928,7 +947,7 @@ export class HyCanvasClient {
     // auth failure mid-session. Auth endpoints are excluded to avoid loops (a
     // 401 from login/refresh is a real failure).
     if (res.status === 401 && !retried && !path.startsWith("/v1/auth/")) {
-      if (await this.tryRefresh()) return this.request<T>(method, path, body, true);
+      if (await this.tryRefresh()) return this.request<T>(method, path, body, opts, true);
     }
     if (!res.ok) {
       let parsed: unknown = undefined;
@@ -969,16 +988,20 @@ export class HyCanvasClient {
   }
 
   // --- auth -------------------------------------------------------
-  signup(input: { email: string; password: string; name?: string }): Promise<{ user: User; workspace: Workspace }> {
-    return this.request("POST", "/v1/auth/signup", input);
+  signup(
+    input: { email: string; password: string; name?: string },
+    captchaToken?: string,
+  ): Promise<{ user: User; workspace: Workspace }> {
+    return this.request("POST", "/v1/auth/signup", input, captchaHeaders(captchaToken));
   }
   /**
    * Sign in with email + password. If the account has MFA enabled the server
    * returns `{ mfaRequired: true, mfaToken }` and sets no session cookie; the
    * client must then call `verifyMfa(mfaToken, code)` to finish signing in.
+   * `captchaToken` is required when the instance has a CAPTCHA on the auth forms.
    */
-  login(input: { email: string; password: string }): Promise<LoginResult> {
-    return this.request("POST", "/v1/auth/login", input);
+  login(input: { email: string; password: string }, captchaToken?: string): Promise<LoginResult> {
+    return this.request("POST", "/v1/auth/login", input, captchaHeaders(captchaToken));
   }
 
   // --- MFA: TOTP + recovery codes ----------------------------
@@ -1044,16 +1067,16 @@ export class HyCanvasClient {
     return this.request("POST", "/v1/auth/verify-email", { token });
   }
   /** Request a password-reset link. Always resolves (no account enumeration). */
-  requestPasswordReset(email: string): Promise<void> {
-    return this.request("POST", "/v1/auth/password-reset/request", { email });
+  requestPasswordReset(email: string, captchaToken?: string): Promise<void> {
+    return this.request("POST", "/v1/auth/password-reset/request", { email }, captchaHeaders(captchaToken));
   }
   /** Set a new password using the token from the reset link. */
   resetPassword(token: string, password: string): Promise<void> {
     return this.request("POST", "/v1/auth/password-reset", { token, password });
   }
   /** Request a passwordless sign-in link. Always resolves (no enumeration). */
-  requestMagicLink(email: string): Promise<void> {
-    return this.request("POST", "/v1/auth/magic-link/request", { email });
+  requestMagicLink(email: string, captchaToken?: string): Promise<void> {
+    return this.request("POST", "/v1/auth/magic-link/request", { email }, captchaHeaders(captchaToken));
   }
   /** Complete a magic-link sign-in; sets the session cookies like login. */
   magicLink(token: string): Promise<{ user: User }> {
@@ -1068,8 +1091,8 @@ export class HyCanvasClient {
   /** The instance's auth configuration: the SSO providers plus which sign-in
    *  methods and account-creation paths are enabled (AUTH_*_ENABLED). The sign-in
    *  page renders only the methods the policy allows. */
-  authConfig(): Promise<{ providers: { id: string; label: string }[]; policy: AuthPolicy }> {
-    return this.request<{ providers: { id: string; label: string }[]; policy: AuthPolicy }>(
+  authConfig(): Promise<{ providers: { id: string; label: string }[]; policy: AuthPolicy; captcha: CaptchaSettings | null }> {
+    return this.request<{ providers: { id: string; label: string }[]; policy: AuthPolicy; captcha: CaptchaSettings | null }>(
       "GET",
       "/v1/auth/providers",
     );
