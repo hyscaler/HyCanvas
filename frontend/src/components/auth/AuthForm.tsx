@@ -101,11 +101,20 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const afterAuthPath = (() => {
     const next = router.query.next;
     const raw = typeof next === "string" ? next : "";
-    // Only same-origin absolute paths. The value must start with a single "/"
-    // whose next character is neither "/" (a protocol-relative "//host" URL) nor
-    // "\" (which browsers normalize to "/", so "/\host" resolves off-origin).
-    // Anything else falls back to the dashboard, closing the open-redirect.
-    return /^\/(?![/\\])/.test(raw) ? raw : "/dashboard";
+    if (!raw || typeof window === "undefined") return "/dashboard";
+    // Resolve the requested target against the current origin and keep it only
+    // when it stays on that origin, then hand back just the path/query/hash.
+    // This rejects absolute ("https://evil"), protocol-relative ("//evil"),
+    // backslash-normalized ("/\evil"), and scheme ("javascript:") targets, and
+    // the returned value carries no scheme, so it can neither redirect off-site
+    // nor execute as a URL. Invalid input falls back to the dashboard.
+    try {
+      const u = new URL(raw, window.location.origin);
+      if (u.origin !== window.location.origin) return "/dashboard";
+      return u.pathname + u.search + u.hash;
+    } catch {
+      return "/dashboard";
+    }
   })();
   const magicToken =
     mode === "login" && typeof router.query.token === "string" ? router.query.token : "";
