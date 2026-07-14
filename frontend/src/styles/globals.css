@@ -257,3 +257,10 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* Precision cursor for the pen tool: an open-center reticle (thin white-outlined
+   ticks + 1px center dot) instead of the OS crosshair, whose thick block hides
+   the anchor being placed. Hotspot dead center; falls back to crosshair. */
+.oc-cursor-pen {
+  cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23ffffff%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M12%202v6M12%2016v6M2%2012h6M16%2012h6%22%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23111827%22%20stroke-width%3D%221.4%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M12%202v6M12%2016v6M2%2012h6M16%2012h6%22%2F%3E%3C%2Fg%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%221.1%22%20fill%3D%22%23111827%22%20stroke%3D%22%23ffffff%22%20stroke-width%3D%220.8%22%2F%3E%3C%2Fsvg%3E") 12 12, crosshair;
+}

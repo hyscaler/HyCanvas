@@ -1375,6 +1375,9 @@ export function Canvas() {
   const snapGuides = useEditor((s) => s.snapGuides);
   useEditor((s) => s.rev);
   const penDraft = useRef<{ id: string } | null>(null);
+  // Double-clicked empty image frame awaiting a file from the hidden picker.
+  const frameFillTarget = useRef<string | null>(null);
+  const frameFileRef = useRef<HTMLInputElement>(null);
   const penDragging = useRef(false);
   const lineDraft = useRef<{ id: string; ox: number; oy: number } | null>(null);
   // Rectangle/ellipse drag-to-draw: the node id and the drag origin in page space.
@@ -1514,6 +1517,17 @@ export function Canvas() {
       // zooms the fill within the shape (the crop overlay edits fills[0].crop).
       const fill = (loc.node as unknown as { fills?: { type: string }[] }).fills?.[0];
       if (fill?.type === "image") useEditor.getState().setCropping(hit.id);
+    } else if (loc?.node.type === "frame") {
+      // An EMPTY image frame (single frame or photo-grid cell) is a photo
+      // placeholder: double-click opens the image picker and the chosen file
+      // fills the frame (cover), matching drop-to-fill.
+      const fr = loc.node as unknown as { clip?: boolean; children?: unknown[] };
+      // Mutating gesture: gated like drop-to-fill so read-only sessions never
+      // get a file dialog whose pick couldn't be applied.
+      if (fr.clip && !(fr.children && fr.children.length) && usePresence.getState().canEdit() && !useEditor.getState().readonlyPreview()) {
+        frameFillTarget.current = hit.id;
+        frameFileRef.current?.click();
+      }
     }
   }
 
@@ -2818,11 +2832,32 @@ export function Canvas() {
           <input type="color" value={brush.colorHex} onChange={(e) => useEditor.getState().setBrush({ colorHex: e.target.value })} className="oc-color h-7 w-8 shrink-0" title="Brush color" />
         </div>
       )}
+      {/* Hidden picker for double-clicked empty image frames: the chosen file
+          fills the frame (cover), exactly like drop-to-fill. */}
+      <input
+        ref={frameFileRef}
+        type="file"
+        accept="image/*"
+        hidden
+        data-oc="frame-image-picker"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          const id = frameFillTarget.current;
+          frameFillTarget.current = null;
+          if (!file || !id) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (typeof reader.result === "string") useEditor.getState().setFrameImage(id, reader.result);
+          };
+          reader.readAsDataURL(file);
+        }}
+      />
       <canvas
         ref={canvasRef}
         // relative z-0 keeps the canvas above the absolutely-positioned white
         // page backdrop (a static canvas would paint BEHIND it, hiding content).
-        className={`relative z-0 h-full w-full touch-none ${spaceCursor ? (panning.current ? "cursor-grabbing" : "cursor-grab") : tool === "text" ? "cursor-text" : tool !== "select" ? "cursor-crosshair" : hoverMove ? "cursor-move" : ""}`}
+        className={`relative z-0 h-full w-full touch-none ${spaceCursor ? (panning.current ? "cursor-grabbing" : "cursor-grab") : tool === "text" ? "cursor-text" : tool === "pen" ? "oc-cursor-pen" : tool !== "select" ? "cursor-crosshair" : hoverMove ? "cursor-move" : ""}`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -3151,16 +3186,32 @@ export function Canvas() {
           </svg>
         );
       })()}
-      {tool === "pen" && penDraft.current && penPreview && (() => {
+      {tool === "pen" && penDraft.current && (() => {
         const n = locate(useEditor.getState().doc, penDraft.current.id)?.node;
         if (!n || n.type !== "path") return null;
         const segs = (n as unknown as { transform: { x: number; y: number }; segments: { x: number; y: number }[] });
-        const last = segs.segments[segs.segments.length - 1];
-        if (!last) return null;
-        const a = api.toScreen({ x: segs.transform.x + last.x, y: segs.transform.y + last.y });
+        const pts = segs.segments.map((p) => api.toScreen({ x: segs.transform.x + p.x, y: segs.transform.y + p.y }));
+        const last = pts[pts.length - 1];
         return (
           <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
-            <line x1={a.x} y1={a.y} x2={penPreview.x} y2={penPreview.y} stroke={overlay.penPreview} strokeWidth={1.5} strokeDasharray="4 3" />
+            {/* Rubber-band preview from the last committed anchor to the cursor. */}
+            {penPreview && last && (
+              <line x1={last.x} y1={last.y} x2={penPreview.x} y2={penPreview.y} stroke={overlay.penPreview} strokeWidth={1.5} strokeDasharray="4 3" />
+            )}
+            {/* Committed anchors, so each placed point stays visible while
+                drawing. The FIRST anchor is highlighted: clicking it closes
+                the path (the pen's close affordance). */}
+            {pts.map((p, i) => (
+              <circle
+                key={i}
+                cx={p.x}
+                cy={p.y}
+                r={i === 0 && pts.length > 1 ? 5 : 3.5}
+                fill="#ffffff"
+                stroke={overlay.penPreview}
+                strokeWidth={i === 0 && pts.length > 1 ? 2 : 1.5}
+              />
+            ))}
           </svg>
         );
       })()}
