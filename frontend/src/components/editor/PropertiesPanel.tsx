@@ -605,6 +605,11 @@ export function PropertiesPanel() {
       useEditor.getState().applyLineGeometry(single.node.id, nextT, nextSz);
       return;
     }
+    // A photo grid lays its cells out from the grid box, so W/H edits re-lay them.
+    if (single.node.type === "grid") {
+      useEditor.getState().applyGridGeometry(single.node.id, nextT, nextSz);
+      return;
+    }
     useEditor.getState().runCommand({
       kind: "transform",
       nodes: [single.node.id],

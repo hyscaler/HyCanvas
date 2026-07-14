@@ -6,6 +6,7 @@
 import { useRef, useState } from "react";
 import type { Size, TextNode, Transform } from "@hc/schema";
 import { measuredTextHeight, minContentWidth } from "@/lib/textFit";
+import { relayGridCells } from "@/store/editor";
 import { overlay } from "@/lib/theme.generated";
 import {
   locate,
@@ -383,6 +384,7 @@ export function Gizmo({ api }: { api: CanvasApi }) {
     startMinW?: number; // narrowest reflow width (longest word) at the start font
     startMinH?: number; // natural content height at the start font + width
     startPoints?: { x: number; y: number }[]; // line polyline snapshot, scaled with the box on resize
+    startChildren?: unknown; // photo-grid cell snapshot, re-laid with the box on resize
   } | null>(null);
   // Equal-size match during a resize: the sibling width/height the dragged
   // dimension has snapped to (null = no match on that axis). The state drives
@@ -459,6 +461,7 @@ export function Gizmo({ api }: { api: CanvasApi }) {
       startMinW: loc!.node.type === "text" ? minContentWidth(loc!.node as unknown as TextNode) : undefined,
       startMinH: loc!.node.type === "text" ? measuredTextHeight(loc!.node as unknown as TextNode) : undefined,
       startPoints: loc!.node.type === "line" ? structuredClone((loc!.node as unknown as { points: { x: number; y: number }[] }).points) : undefined,
+      startChildren: loc!.node.type === "grid" ? structuredClone((loc!.node as unknown as { children: unknown }).children) : undefined,
     };
     useEditor.getState().setTransforming(true);
     window.addEventListener("pointermove", onMove);
@@ -494,6 +497,9 @@ export function Gizmo({ api }: { api: CanvasApi }) {
       }
       if (node.type === "line" && d.startPoints) {
         (node as unknown as { points: unknown }).points = structuredClone(d.startPoints);
+      }
+      if (node.type === "grid" && d.startChildren !== undefined) {
+        (node as unknown as { children: unknown }).children = structuredClone(d.startChildren);
       }
       store.tick();
     }
@@ -693,6 +699,11 @@ export function Gizmo({ api }: { api: CanvasApi }) {
         node.transform = tf;
         node.size = size;
       }
+      if (node.type === "grid") {
+        // A photo grid's cells are laid out from the grid box, so resizing the
+        // grid re-lays every cell (spans preserved, filled images re-cover).
+        relayGridCells(node as unknown as Parameters<typeof relayGridCells>[0], size);
+      }
     }
     store.tick();
   }
@@ -730,6 +741,10 @@ export function Gizmo({ api }: { api: CanvasApi }) {
     }
     if (node.type === "line" && d.handle !== "rotate") {
       store.pushNodeSnapshot(d.id, { transform: d.startTransform, size: d.startSize, points: d.startPoints });
+      return;
+    }
+    if (node.type === "grid" && d.handle !== "rotate") {
+      store.pushNodeSnapshot(d.id, { transform: d.startTransform, size: d.startSize, children: d.startChildren });
       return;
     }
     const cmd: EditCommand = {

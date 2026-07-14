@@ -692,7 +692,7 @@ interface EditorState {
   pushApplied(cmds: EditCommand[]): void;
   /** Record an already-applied transform/size/box/content change as one undo step
    *  (e.g. a text resize that also reflowed the box and scaled fonts). */
-  pushNodeSnapshot(id: string, before: { transform: Transform; size: { width: number; height: number }; box?: unknown; content?: unknown; points?: unknown }): void;
+  pushNodeSnapshot(id: string, before: { transform: Transform; size: { width: number; height: number }; box?: unknown; content?: unknown; points?: unknown; children?: unknown }): void;
   addNode(type: Exclude<NodeType, "model3d">, init?: Partial<Node>): void;
   /** Place an image node from a URL, registering it as a design asset. */
   /** Add an image; `at` (page point) centers it there (e.g. a drag-drop), else viewport-centered.
@@ -886,6 +886,10 @@ interface EditorState {
    *  box (a line draws from its points, so size alone changes nothing visible).
    *  An axis the polyline doesn't span stays locked. One undo step. */
   applyLineGeometry(id: string, transform: Transform, size: { width: number; height: number }): void;
+  /** Apply panel-entered geometry to a photo grid: the cell frames re-lay to
+   *  the new size (spans preserved, filled images keep covering their cells).
+   *  One undo step. */
+  applyGridGeometry(id: string, transform: Transform, size: { width: number; height: number }): void;
   renameNode(id: string, name: string): void;
 
   undo(): void;
@@ -912,7 +916,7 @@ function hexToColor(hex: string): { srgb: { r: number; g: number; b: number; a: 
 export type GridSpan = { row: number; col: number; rowSpan: number; colSpan: number };
 
 // The local-space box of a grid cell within a grid node's box.
-function gridCellBox(size: { width: number; height: number }, rows: number, cols: number, gap: number, s: GridSpan) {
+export function gridCellBox(size: { width: number; height: number }, rows: number, cols: number, gap: number, s: GridSpan) {
   const cellW = (size.width - gap * (cols - 1)) / cols;
   const cellH = (size.height - gap * (rows - 1)) / rows;
   return {
@@ -921,6 +925,36 @@ function gridCellBox(size: { width: number; height: number }, rows: number, cols
     width: cellW * s.colSpan + gap * (s.colSpan - 1),
     height: cellH * s.rowSpan + gap * (s.rowSpan - 1),
   };
+}
+
+/** Re-lay a photo grid's cell frames to a new grid size: each cell keeps its
+ *  span from `cells` and a filled cell's image child is resized to keep
+ *  covering it. Pure mutation of the given node (callers own undo). */
+export function relayGridCells(
+  g: { rows: number; cols: number; gap: number; cells: { row: number; col: number; rowSpan: number; colSpan: number; childId?: string }[]; children: Node[] },
+  size: { width: number; height: number },
+): void {
+  const byId = new Map(g.children.map((n) => [n.id, n]));
+  for (const cell of g.cells) {
+    const frame = (cell.childId ? byId.get(cell.childId) : undefined) as unknown as
+      | { transform: Transform; size: { width: number; height: number }; children?: Node[] }
+      | undefined;
+    if (!frame) continue;
+    const box = gridCellBox(size, g.rows, g.cols, g.gap, cell);
+    // Floor at 1px: a grid dragged smaller than its gaps would otherwise
+    // compute negative cell sizes.
+    const bw = Math.max(1, box.width);
+    const bh = Math.max(1, box.height);
+    frame.transform = { x: Math.max(0, box.x), y: Math.max(0, box.y), scaleX: 1, scaleY: 1, rotation: 0 };
+    frame.size = { width: bw, height: bh };
+    const img = frame.children?.length === 1 && frame.children[0].type === "image"
+      ? (frame.children[0] as unknown as { transform: Transform; size: { width: number; height: number } })
+      : null;
+    if (img) {
+      img.transform = { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 };
+      img.size = { width: bw, height: bh };
+    }
+  }
 }
 
 // Minimal view of a PathNode for the pen tool's in-place mutations.
@@ -3412,7 +3446,7 @@ export const useEditor = create<EditorState>((set, get) => {
       if (pr) for (const c of cmds) if (c.kind === "insert" && c.node) pr.mine.add(c.node.id);
     },
     pushNodeSnapshot: (id, before) => {
-      type Snap = { transform: Transform; size: { width: number; height: number }; box?: unknown; content?: unknown; points?: unknown };
+      type Snap = { transform: Transform; size: { width: number; height: number }; box?: unknown; content?: unknown; points?: unknown; children?: unknown };
       const apply = (snap: Snap) => {
         const l = locate(get().doc, id);
         if (!l) return;
@@ -3422,12 +3456,13 @@ export const useEditor = create<EditorState>((set, get) => {
         if (snap.box !== undefined) n.box = structuredClone(snap.box);
         if (snap.content !== undefined) n.content = structuredClone(snap.content);
         if (snap.points !== undefined) n.points = structuredClone(snap.points);
+        if (snap.children !== undefined) n.children = structuredClone(snap.children);
       };
       const l = locate(get().doc, id);
       if (!l) return;
       const cur = l.node as unknown as Snap;
-      const after: Snap = { transform: { ...cur.transform }, size: { ...cur.size }, box: cur.box !== undefined ? structuredClone(cur.box) : undefined, content: cur.content !== undefined ? structuredClone(cur.content) : undefined, points: cur.points !== undefined ? structuredClone(cur.points) : undefined };
-      const b: Snap = { transform: { ...before.transform }, size: { ...before.size }, box: before.box !== undefined ? structuredClone(before.box) : undefined, content: before.content !== undefined ? structuredClone(before.content) : undefined, points: before.points !== undefined ? structuredClone(before.points) : undefined };
+      const after: Snap = { transform: { ...cur.transform }, size: { ...cur.size }, box: cur.box !== undefined ? structuredClone(cur.box) : undefined, content: cur.content !== undefined ? structuredClone(cur.content) : undefined, points: cur.points !== undefined ? structuredClone(cur.points) : undefined, children: before.children !== undefined ? structuredClone(cur.children) : undefined };
+      const b: Snap = { transform: { ...before.transform }, size: { ...before.size }, box: before.box !== undefined ? structuredClone(before.box) : undefined, content: before.content !== undefined ? structuredClone(before.content) : undefined, points: before.points !== undefined ? structuredClone(before.points) : undefined, children: before.children !== undefined ? structuredClone(before.children) : undefined };
       set((s) => ({ rev: s.rev + 1, undoStack: [...s.undoStack, { undo: () => apply(b), redo: () => apply(after) }], redoStack: [] }));
     },
 
@@ -5289,6 +5324,16 @@ export const useEditor = create<EditorState>((set, get) => {
       node.points = node.points.map((p) => ({ ...p, x: p.x * kx, y: p.y * ky }));
       node.transform = { ...transform };
       node.size = next;
+      get().pushNodeSnapshot(id, before);
+    },
+    applyGridGeometry: (id, transform, size) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "grid" || loc.node.locked || editBlocked(id)) return;
+      const node = loc.node as unknown as { transform: Transform; size: { width: number; height: number }; rows: number; cols: number; gap: number; cells: { row: number; col: number; rowSpan: number; colSpan: number; childId?: string }[]; children: Node[] };
+      const before = { transform: { ...node.transform }, size: { ...node.size }, children: structuredClone(node.children) };
+      node.transform = { ...transform };
+      node.size = { width: Math.max(1, size.width), height: Math.max(1, size.height) };
+      relayGridCells(node, node.size);
       get().pushNodeSnapshot(id, before);
     },
     setStrokeSel: (stroke) => {
