@@ -29,7 +29,11 @@ function base32Encode(buf: Buffer): string {
 
 /** Decode an RFC 4648 base32 string (padding and case insensitive) to bytes. */
 function base32Decode(input: string): Buffer {
-  const clean = input.replace(/=+$/g, "").replace(/\s+/g, "").toUpperCase();
+  // Strip whitespace with a single-character class (no `+`, so no ReDoS), then
+  // trim trailing `=` padding with a loop rather than a `/=+$/` replace that is
+  // quadratic on an all-`=` input.
+  let clean = input.replace(/\s/g, "").toUpperCase();
+  while (clean.endsWith("=")) clean = clean.slice(0, -1);
   let bits = 0;
   let value = 0;
   const out: number[] = [];

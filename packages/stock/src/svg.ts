@@ -15,7 +15,9 @@ function parseAttrs(s: string): Attrs {
   const out: Attrs = {};
   // Decode entities in values: serialized outerHTML escapes the quotes in
   // `fill:url("#id")` to `&quot;`, which would otherwise defeat url() matching.
-  for (const m of s.matchAll(/([\w:-]+)\s*=\s*"([^"]*)"/g)) out[m[1]] = decodeEntities(m[2]);
+  // Bound the attribute-name run (real names are short); an unbounded `[\w:-]+`
+  // backtracks quadratically across a long name-like input that never reaches `=`.
+  for (const m of s.matchAll(/([\w:-]{1,64})\s*=\s*"([^"]*)"/g)) out[m[1]] = decodeEntities(m[2]);
   // CSS `style="fill:..;font-size:.."` overrides presentation attributes (SVG
   // spec). Most exporters put fill/font on style, so fold it in.
   if (out.style) {
@@ -356,7 +358,7 @@ export function svgToNodes(
   for (const m of svg.matchAll(re)) {
     if (m[3] !== undefined) {
       const attrs = withInherited(parseAttrs(m[3]));
-      const text = decodeEntities(m[4].replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
+      const text = decodeEntities(m[4].replace(/<[^<>]+>/g, " ")).replace(/\s+/g, " ").trim();
       if (!text) continue;
       const fontSize = num(attrs, "font-size", 16) || 16;
       const weight = weightFrom(attrs["font-weight"]);

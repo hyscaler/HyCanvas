@@ -5,7 +5,10 @@
 import { escapeAttr, escapeHtml } from "./html";
 import type { FormBlock, FormField, FormSubmission } from "./types";
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Disambiguated so the "." separator can't overlap the surrounding character
+// classes (the naive /^[^\s@]+@[^\s@]+\.[^\s@]+$/ backtracks quadratically on a
+// long dotless input). Each label excludes "." and "@", so there is one parse.
+const EMAIL_RE = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 
 /** Validate one field's value. Returns an error message, or null when valid.
  *  `submit` fields carry no value and never produce an error. */

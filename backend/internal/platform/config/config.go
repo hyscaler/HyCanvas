@@ -8,6 +8,8 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -32,6 +34,23 @@ type Config struct {
 	AutoMigrate bool
 	// Auth gates which sign-in methods and account-creation paths are available.
 	Auth AuthPolicy
+	// Captcha optionally protects the human-facing auth forms.
+	Captcha CaptchaConfig
+}
+
+// CaptchaConfig configures a CAPTCHA on the auth forms (login, signup,
+// password-reset request, magic-link request). Empty Provider disables it, so
+// the zero value is off and an existing install is unchanged.
+type CaptchaConfig struct {
+	Provider  string  // "" (off) | "turnstile" | "recaptcha" (CAPTCHA_PROVIDER)
+	SiteKey   string  // public key sent to the browser (CAPTCHA_SITE_KEY)
+	SecretKey string  // server-side siteverify key (CAPTCHA_SECRET_KEY)
+	MinScore  float64 // reCAPTCHA v3 pass threshold (CAPTCHA_MIN_SCORE, default 0.5)
+}
+
+// Enabled reports whether a usable CAPTCHA is configured.
+func (c CaptchaConfig) Enabled() bool {
+	return c.Provider != "" && c.SiteKey != "" && c.SecretKey != ""
 }
 
 // AuthPolicy is the per-instance switchboard for authentication. Each method has
@@ -68,11 +87,28 @@ func Load() (Config, error) {
 			OidcLogin:       envBool("AUTH_OIDC_LOGIN_ENABLED", true),
 			OidcSignup:      envBool("AUTH_OIDC_SIGNUP_ENABLED", true),
 		},
+		Captcha: CaptchaConfig{
+			Provider:  strings.ToLower(strings.TrimSpace(os.Getenv("CAPTCHA_PROVIDER"))),
+			SiteKey:   os.Getenv("CAPTCHA_SITE_KEY"),
+			SecretKey: os.Getenv("CAPTCHA_SECRET_KEY"),
+			MinScore:  envFloat("CAPTCHA_MIN_SCORE", 0.5),
+		},
 	}
 	if c.DatabaseURL == "" {
 		return c, ErrDatabaseURLMissing
 	}
 	return c, nil
+}
+
+// envFloat reads a float env var, keeping the default on empty or unparseable
+// input so a typo never silently changes the threshold.
+func envFloat(key string, def float64) float64 {
+	if v := os.Getenv(key); v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil {
+			return f
+		}
+	}
+	return def
 }
 
 // envBool reads a boolean env var. Only the exact strings "true" and "false"

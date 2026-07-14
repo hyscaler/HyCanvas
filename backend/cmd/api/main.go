@@ -24,6 +24,7 @@ import (
 	"hycanvas/backend/internal/approvals"
 	"hycanvas/backend/internal/brand"
 	"hycanvas/backend/internal/bulkcreate"
+	"hycanvas/backend/internal/captcha"
 	"hycanvas/backend/internal/comments"
 	"hycanvas/backend/internal/convert"
 	"hycanvas/backend/internal/daemon"
@@ -299,38 +300,50 @@ func main() {
 		authPolicy.PasswordLogin = true
 	}
 
+	// CAPTCHA on the auth forms (optional). A provider set without both keys is a
+	// half-configuration that would 403 every login with no way to pass, so treat
+	// it as disabled and say so, rather than locking users out.
+	captchaCfg := cfg.Captcha
+	if captchaCfg.Provider != "" && !captchaCfg.Enabled() {
+		logger.Error("CAPTCHA_PROVIDER set but CAPTCHA_SITE_KEY/CAPTCHA_SECRET_KEY missing; CAPTCHA disabled")
+		captchaCfg = config.CaptchaConfig{}
+	}
+	captchaVerifier := captcha.New(captchaCfg)
+
 	srv := &http.Server{
 		Addr: cfg.BindHost + ":" + cfg.Port,
 		Handler: httpapi.NewRouter(httpapi.Deps{
-			DB:          pool,
-			Logger:      logger,
-			Version:     version,
-			Accounts:    acct,
-			Persistence: persist,
-			Home:        homeSvc,
-			Sharing:     sharingSvc,
-			Approvals:   approvalsSvc,
-			Comments:    commentsSvc,
-			Whiteboard:  whiteboardSvc,
-			Engagement:  engagementSvc,
-			Brand:       brandSvc,
-			AI:          aiSvc,
-			AIStudio:    aiStudioSvc,
-			Uploads:     uploadsSvc,
-			Realtime:    rtHub,
-			Templates:   templatesSvc,
-			Stock:       stockSvc,
-			OIDC:        oidcSvc,
-			Push:        pushSvc,
-			Jobs:        jobRegistry,
-			BulkCreate:  bulkSvc,
-			Convert:     convertSvc,
-			Storage:     store,
-			AccountData: accountDataSvc,
-			Secure:      secureCookies,
-			Auth:        authPolicy,
-			PublicDir:   cfg.PublicDir,
-			AllowOrigin: allowOrigin,
+			DB:            pool,
+			Logger:        logger,
+			Version:       version,
+			Accounts:      acct,
+			Persistence:   persist,
+			Home:          homeSvc,
+			Sharing:       sharingSvc,
+			Approvals:     approvalsSvc,
+			Comments:      commentsSvc,
+			Whiteboard:    whiteboardSvc,
+			Engagement:    engagementSvc,
+			Brand:         brandSvc,
+			AI:            aiSvc,
+			AIStudio:      aiStudioSvc,
+			Uploads:       uploadsSvc,
+			Realtime:      rtHub,
+			Templates:     templatesSvc,
+			Stock:         stockSvc,
+			OIDC:          oidcSvc,
+			Push:          pushSvc,
+			Jobs:          jobRegistry,
+			BulkCreate:    bulkSvc,
+			Convert:       convertSvc,
+			Storage:       store,
+			AccountData:   accountDataSvc,
+			Secure:        secureCookies,
+			Auth:          authPolicy,
+			Captcha:       captchaVerifier,
+			CaptchaConfig: captchaCfg,
+			PublicDir:     cfg.PublicDir,
+			AllowOrigin:   allowOrigin,
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}

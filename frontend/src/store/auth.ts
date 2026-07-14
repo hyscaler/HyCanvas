@@ -21,9 +21,9 @@ interface AuthState {
   bootstrap: () => Promise<void>;
   // Resolves to a challenge token when the account requires a second factor;
   // the caller then prompts for a code and calls completeMfa to finish.
-  login: (email: string, password: string) => Promise<{ mfaToken: string } | void>;
+  login: (email: string, password: string, captchaToken?: string) => Promise<{ mfaToken: string } | void>;
   completeMfa: (mfaToken: string, code: string) => Promise<void>;
-  signup: (email: string, password: string, name?: string) => Promise<void>;
+  signup: (email: string, password: string, name?: string, captchaToken?: string) => Promise<void>;
   logout: () => Promise<void>;
   // Permanently delete the account (FR-17), then drop to the anon state. The
   // server clears the auth cookies; we clear local state and the active id.
@@ -93,9 +93,9 @@ export const useAuth = create<AuthState>((set, get) => ({
     return hydrating;
   },
 
-  async login(email, password) {
+  async login(email, password, captchaToken) {
     set({ error: null });
-    const res = await oc.login({ email, password });
+    const res = await oc.login({ email, password }, captchaToken);
     // MFA-gated accounts get a challenge instead of a session: hand the token
     // back so the form can prompt for a code, then call completeMfa.
     if ("mfaRequired" in res && res.mfaRequired) return { mfaToken: res.mfaToken };
@@ -110,9 +110,9 @@ export const useAuth = create<AuthState>((set, get) => ({
     set({ status: "authed", user, workspaces, activeWorkspaceId: pickActive(workspaces) });
   },
 
-  async signup(email, password, name) {
+  async signup(email, password, name, captchaToken) {
     set({ error: null });
-    await oc.signup({ email, password, name });
+    await oc.signup({ email, password, name }, captchaToken);
     const { user, workspaces } = await loadSession();
     set({ status: "authed", user, workspaces, activeWorkspaceId: pickActive(workspaces) });
   },

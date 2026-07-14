@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"hycanvas/backend/internal/accounts"
+	"hycanvas/backend/internal/captcha"
 	"hycanvas/backend/internal/platform/config"
 )
 
@@ -25,7 +26,7 @@ type authedUser struct {
 // mountAuth attaches the auth + me routes (matching /api/v1/auth/* and /api/v1/me).
 // `policy` decides which method-specific routes are live; a disabled route
 // answers 403 rather than being absent, so a client gets a clear reason.
-func mountAuth(api chi.Router, svc *accounts.Service, secure bool, policy config.AuthPolicy) {
+func mountAuth(api chi.Router, svc *accounts.Service, secure bool, policy config.AuthPolicy, cap captcha.Verifier) {
 	// gate wraps a handler so it returns 403 when its method is turned off. The
 	// route still exists (a 404 would look like a version mismatch); the body
 	// says which method is disabled.
@@ -37,9 +38,26 @@ func mountAuth(api chi.Router, svc *accounts.Service, secure bool, policy config
 			Problem(w, r, http.StatusForbidden, "Forbidden", "this sign-in method is disabled on this instance")
 		}
 	}
+	// protect wraps a human-facing auth form with the CAPTCHA check when one is
+	// configured. It runs before the handler reads the body, verifying the
+	// X-Captcha-Token header; a missing or invalid token is 403. When no CAPTCHA
+	// is configured (cap == nil) it is a pass-through, so nothing changes.
+	protect := func(h http.HandlerFunc) http.HandlerFunc {
+		if cap == nil {
+			return h
+		}
+		return func(w http.ResponseWriter, r *http.Request) {
+			token := r.Header.Get("X-Captcha-Token")
+			if err := cap.Verify(r.Context(), token, clientIP(r)); err != nil {
+				Problem(w, r, http.StatusForbidden, "Forbidden", "captcha verification failed; please try again")
+				return
+			}
+			h(w, r)
+		}
+	}
 	api.Route("/auth", func(r chi.Router) {
-		r.Post("/signup", gate(policy.PasswordSignup, signupHandler(svc, secure)))
-		r.Post("/login", gate(policy.PasswordLogin, loginHandler(svc, secure)))
+		r.Post("/signup", gate(policy.PasswordSignup, protect(signupHandler(svc, secure))))
+		r.Post("/login", gate(policy.PasswordLogin, protect(loginHandler(svc, secure))))
 		r.Post("/refresh", refreshHandler(svc, secure))
 		r.With(requireAuth(svc)).Post("/logout", logoutHandler(svc, secure))
 		// MFA (doc 15 FR-5). enroll/confirm/disable are session-guarded; verify is
@@ -54,13 +72,16 @@ func mountAuth(api chi.Router, svc *accounts.Service, secure bool, policy config
 		// follows password login (no point resetting a password you cannot use).
 		r.Post("/verify-email/request", emailRequestHandler(svc, "verify"))
 		r.Post("/verify-email", verifyEmailHandler(svc))
-		r.Post("/password-reset/request", gate(policy.PasswordLogin, emailRequestHandler(svc, "reset")))
+		// The reset REQUEST form is CAPTCHA-protected (a bot can spam reset emails);
+		// the redeem step is not (it carries a token from the email, not a form).
+		r.Post("/password-reset/request", gate(policy.PasswordLogin, protect(emailRequestHandler(svc, "reset"))))
 		r.Post("/password-reset", gate(policy.PasswordLogin, resetPasswordHandler(svc)))
 		// Magic-link request/redeem stay mounted whenever either magic toggle is on;
 		// the login-vs-signup decision lives inside the handlers, which consult the
-		// policy (an unknown email is a signup, gated by MagicLinkSignup).
+		// policy (an unknown email is a signup, gated by MagicLinkSignup). The
+		// request form is CAPTCHA-protected; the redeem step (token from email) is not.
 		magicOn := policy.MagicLinkLogin || policy.MagicLinkSignup
-		r.Post("/magic-link/request", gate(magicOn, magicRequestHandler(svc, policy)))
+		r.Post("/magic-link/request", gate(magicOn, protect(magicRequestHandler(svc, policy))))
 		r.Post("/magic-link", gate(magicOn, magicLinkHandler(svc, secure, policy)))
 		// Dev-only mail outbox (no SMTP wired); forbidden when cookies are secure
 		// (production).
