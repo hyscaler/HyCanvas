@@ -90,10 +90,17 @@ const FORBIDDEN = /<script|<foreignObject|javascript:|\son\w+\s*=/i;
  */
 function inlineCssClasses(text) {
   let css = "";
-  const stripped = text.replace(/<style[^>]*>([\s\S]*?)<\/style>/g, (_, body) => {
-    css += body + "\n";
-    return "";
-  });
+  // Loop until stable: a single pass can leave a residual `<style` when blocks
+  // are nested or overlap, so removing markup one pass is incomplete sanitization.
+  let stripped = text;
+  let prev;
+  do {
+    prev = stripped;
+    stripped = stripped.replace(/<style[^>]*>([\s\S]*?)<\/style>/g, (_, body) => {
+      css += body + "\n";
+      return "";
+    });
+  } while (stripped !== prev);
   if (!css.trim()) return text;
   const byClass = new Map();
   for (const rule of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
@@ -122,9 +129,16 @@ function sanitize(text) {
   if (FORBIDDEN.test(text)) return null;
   const inlined = inlineCssClasses(text);
   if (inlined === null || /<style[\s>]/i.test(inlined)) return null;
-  let s = inlined
+  // Strip comments to a fixed point: a single pass can leave a residual `<!--`
+  // when comments are nested, so repeat until nothing more is removed.
+  let noComments = inlined;
+  let prevComments;
+  do {
+    prevComments = noComments;
+    noComments = noComments.replace(/<!--[\s\S]*?-->/g, "");
+  } while (noComments !== prevComments);
+  let s = noComments
     .replace(/<\?xml[^>]*\?>/g, "")
-    .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/\sclass="[^"]*"/g, "")
     .replace(/\s(width|height)="\d+(px)?"(?=[^>]*viewBox)/g, (m, _a, _b, off) => m) // keep; handled below
     .replace(/\r?\n/g, " ")

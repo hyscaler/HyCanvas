@@ -75,8 +75,13 @@ export function evalExpression(input: string, current = 0): number | null {
   if (s === "") return null;
   try {
     let result: number;
-    const rel = /^([+\-*/])\s*(.+)$/.exec(s);
-    const bareNumber = rel ? /^[0-9]*\.?[0-9]+$/.test(rel[2].trim()) : false;
+    // No `\s*` before the capture: whitespace and `.` both match, which lets the
+    // two overlap and backtrack quadratically. The operand is trimmed below, so
+    // capturing any leading space is harmless. The number test splits the
+    // optional-fraction case out of a single class to remove the `[0-9]*`/`[0-9]+`
+    // ambiguity around the dot.
+    const rel = /^([+\-*/])(.+)$/.exec(s);
+    const bareNumber = rel ? /^[0-9]+$|^[0-9]*\.[0-9]+$/.test(rel[2].trim()) : false;
     if (rel && (rel[1] === "*" || rel[1] === "/") && bareNumber) {
       // Leading * or / is relative only for a bare number ("*2" doubles); a
       // compound like "*2+1" is ambiguous and rejected (caller keeps the value).

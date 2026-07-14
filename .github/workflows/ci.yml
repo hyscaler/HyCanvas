@@ -5,6 +5,10 @@ on:
     branches: [development]
   pull_request:
 
+# CI only reads the checkout; grant the GITHUB_TOKEN nothing more.
+permissions:
+  contents: read
+
 jobs:
   web:
     name: Packages + frontend
