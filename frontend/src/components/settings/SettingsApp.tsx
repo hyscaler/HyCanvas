@@ -9,6 +9,7 @@ import QRCode from "qrcode";
 import { Bell, BellRing, Check, ChevronLeft, Copy, Download, KeyRound, LogOut, Moon, MonitorSmartphone, ShieldCheck, Sun, Trash2, User as UserIcon } from "lucide-react";
 import { ApiError, type MfaEnrollment, type NotificationType, type SessionInfo, type TimeFormat, type WeekStart } from "@hc/sdk";
 import { oc, ssoLinkUrl } from "@/lib/sdk";
+import { browserTimezone } from "@/lib/datetime";
 import { getThemePreference, setThemePreference, type ThemePreference } from "@/lib/theme";
 import { disablePush, enablePush, getPushState, type PushState } from "@/lib/push";
 import { useAuth } from "@/store/auth";
@@ -116,7 +117,9 @@ export function SettingsApp() {
   // Profile form.
   const [name, setName] = useState(user?.name ?? "");
   const [locale, setLocale] = useState(user?.locale ?? "en-US");
-  const [timezone, setTimezone] = useState(user?.timezone ?? "");
+  // The default timezone comes from the browser when the account has none stored.
+  const defaultTimezone = user?.timezone || browserTimezone();
+  const [timezone, setTimezone] = useState(defaultTimezone);
   const [timeFormat, setTimeFormat] = useState<TimeFormat>(user?.timeFormat ?? "auto");
   const [weekStart, setWeekStart] = useState<WeekStart>(user?.weekStart ?? "auto");
   const [savingProfile, setSavingProfile] = useState(false);
@@ -133,7 +136,7 @@ export function SettingsApp() {
     !!user &&
     (name.trim() !== (user.name ?? "") ||
       locale !== (user.locale ?? "en-US") ||
-      timezone !== (user.timezone ?? "") ||
+      timezone !== defaultTimezone ||
       timeFormat !== (user.timeFormat ?? "auto") ||
       weekStart !== (user.weekStart ?? "auto"));
 
@@ -483,13 +486,12 @@ export function SettingsApp() {
                       onChange={(e) => setTimezone(e.target.value)}
                       className="h-11 rounded-xl border border-neutral-200 bg-surface px-3 text-sm text-neutral-800 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                     >
-                      <option value="">Automatic (browser default)</option>
                       {timezoneOptions.map((z) => (
                         <option key={z} value={z}>{z.replace(/_/g, " ")}</option>
                       ))}
                     </select>
                     <span className="text-xs font-normal text-neutral-500">
-                      Controls how dates and times are shown to you across HyCanvas.
+                      Defaults to your browser&rsquo;s timezone. Controls how dates and times are shown to you across HyCanvas.
                     </span>
                   </label>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

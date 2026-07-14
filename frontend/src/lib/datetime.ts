@@ -9,6 +9,16 @@ import { useAuth } from "@/store/auth";
 
 type WhenInput = string | number | Date;
 
+/** The browser's own IANA timezone (e.g. "Asia/Kolkata"), or "" if the runtime
+ *  cannot report one. Used as the default a user gets until they choose another. */
+export function browserTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+  } catch {
+    return "";
+  }
+}
+
 interface Resolved {
   locale: string | undefined;
   timeZone: string | undefined;
