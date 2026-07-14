@@ -3,7 +3,7 @@
 // are undoable. Uploads/stock images are placed via the image asset provider.
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type FormEvent } from "react";
-import { Square, SquareRoundCorner, Circle, Triangle, Pentagon, Hexagon, Star, Diamond, Octagon, Minus, MoveUpRight, Frame, QrCode, Type, Upload, Search, Table as TableIcon, BarChart3, LineChart, AreaChart, PieChart, Donut, ScatterChart, Radar, Wand2, ImagePlus, Settings2, Trash2, Folder, FolderPlus, Pencil, X, Tag, ChevronLeft, Link as LinkIcon, Mic, Video, CircleStop, Spline, Clock, LayoutGrid, Shapes, Sparkles, Stethoscope, AlignStartVertical, Play, ChevronDown, Send, Plus, RotateCcw } from "lucide-react";
+import { Square, SquareRoundCorner, Circle, Triangle, Pentagon, Hexagon, Star, Diamond, Octagon, Frame, QrCode, Type, Upload, Search, Table as TableIcon, BarChart3, LineChart, AreaChart, PieChart, Donut, ScatterChart, Radar, Wand2, ImagePlus, Settings2, Trash2, Folder, FolderPlus, Pencil, X, Tag, ChevronLeft, Link as LinkIcon, Mic, Video, CircleStop, Spline, Clock, LayoutGrid, Shapes, Sparkles, Stethoscope, AlignStartVertical, Play, ChevronDown, Send, Plus, RotateCcw } from "lucide-react";
 import { type ChartType, type Node, type Fill, type Color } from "@hc/schema";
 import { searchFonts, type FontCatalogEntry } from "@hc/text";
 import { toHex, fromHex, relativeLuminance } from "@hc/color";
@@ -160,10 +160,8 @@ export function CollapsibleSection({
 }
 
 const BRAND = { type: "solid", color: { srgb: { r: 0.38, g: 0.22, b: 0.86, a: 1 } } };
-const DARK = { type: "solid", color: { srgb: { r: 0.1, g: 0.12, b: 0.16, a: 1 } } };
 const FRAME_FILL = { type: "solid", color: { srgb: { r: 0.9, g: 0.91, b: 0.93, a: 1 } } };
 const CENTER = { x: 320, y: 320, scaleX: 1, scaleY: 1, rotation: 0 };
-const lineStroke = (cap: "round" | "butt") => ({ fill: DARK, width: 4, align: "center", cap, join: "round" });
 
 type ElementTile = { label: string; icon: typeof Square; run: () => void };
 
@@ -211,7 +209,6 @@ export function ElementsPanel() {
   // viewport and selects it, so afterInsert only confirms with a subtle toast
   // (no zoom - the view stays put).
   const insertShape = (label: string, init: Partial<Node>) => { addNode("shape", init); afterInsert(toast, label.toLowerCase()); };
-  const insertLineNode = (label: string, init: Partial<Node>) => { addNode("line", init); afterInsert(toast, label.toLowerCase()); };
   const insertFrame = (init: Partial<Node>) => { addNode("frame", init); afterInsert(toast, "frame"); };
   const insertTableEl = (rows: number, cols: number) => { insertTable(rows, cols); afterInsert(toast, "table"); };
   const insertChartEl = (type: ChartType, label: string) => { insertChart(type); afterInsert(toast, `${label} chart`); };
@@ -260,15 +257,6 @@ export function ElementsPanel() {
         { label: "Feature right", icon: gridPreviewIcon(2, 2, FEATURE_RIGHT), run: () => insertGridEl(2, 2, FEATURE_RIGHT) },
         { label: "Feature top", icon: gridPreviewIcon(2, 2, FEATURE_TOP), run: () => insertGridEl(2, 2, FEATURE_TOP) },
         { label: "Hero mosaic", icon: gridPreviewIcon(3, 3, FEATURE_HERO), run: () => insertGridEl(3, 3, FEATURE_HERO) },
-      ],
-    },
-    {
-      title: "Lines & arrows",
-      icon: Minus,
-      defaultOpen: true,
-      tiles: [
-        { label: "Line", icon: Minus, run: () => insertLineNode("Line", { name: "Line", points: [{ x: 0, y: 0 }, { x: 240, y: 0 }], transform: CENTER, size: { width: 240, height: 4 }, stroke: lineStroke("round"), startCap: "none", endCap: "none" } as Partial<Node>) },
-        { label: "Arrow", icon: MoveUpRight, run: () => insertLineNode("Arrow", { name: "Arrow", points: [{ x: 0, y: 0 }, { x: 240, y: 0 }], transform: CENTER, size: { width: 240, height: 4 }, stroke: lineStroke("butt"), startCap: "none", endCap: "arrow" } as Partial<Node>) },
       ],
     },
     {
