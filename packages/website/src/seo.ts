@@ -90,7 +90,10 @@ export function jsonLd(site: Site, page: Page, ctx: MetaContext = {}): string {
 }
 
 function joinUrl(base: string, path: string): string {
-  const b = base.replace(/\/+$/, "");
+  // Trim trailing slashes without a regex; a `/\/+$/` replace is quadratic on a
+  // string that is all slashes (ReDoS), and this runs on caller-supplied base URLs.
+  let b = base;
+  while (b.endsWith("/")) b = b.slice(0, -1);
   const p = path.startsWith("/") ? path : `/${path}`;
   return `${b}${p}`;
 }

@@ -102,8 +102,13 @@ func oidcStartHandler(svc *oidc.Service, secure bool) http.HandlerFunc {
 func oidcCallbackHandler(svc *oidc.Service, acct *accounts.Service, secure bool, policy config.AuthPolicy) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		front := frontendURL()
-		// Clear the state cookie regardless of outcome.
-		http.SetCookie(w, &http.Cookie{Name: oidcStateCookie, Value: "", Path: "/", MaxAge: -1})
+		// Clear the state cookie regardless of outcome. Mirror the attributes it
+		// was set with (HttpOnly/Secure/SameSite) so the deletion matches the
+		// original cookie and carries the same transport guarantees.
+		http.SetCookie(w, &http.Cookie{
+			Name: oidcStateCookie, Value: "", Path: "/", HttpOnly: true,
+			SameSite: http.SameSiteLaxMode, Secure: secure, MaxAge: -1,
+		})
 
 		fail := func() { http.Redirect(w, r, front+"/login?error=sso", http.StatusFound) }
 

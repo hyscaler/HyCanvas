@@ -32,9 +32,12 @@ function getAnonId(): string {
 }
 
 function newSessionId(): string {
-  return typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `s-${Math.random().toString(36).slice(2)}-${Date.now()}`;
+  // Called client-side only (from the effect below). Draw 128 bits from the
+  // platform CSPRNG via getRandomValues, which is available in both secure and
+  // insecure contexts (unlike crypto.randomUUID) and never uses Math.random.
+  const b = new Uint8Array(16);
+  crypto.getRandomValues(b);
+  return "s-" + Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
 }
 
 interface Options {

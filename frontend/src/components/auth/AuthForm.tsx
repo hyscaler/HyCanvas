@@ -101,7 +101,11 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const afterAuthPath = (() => {
     const next = router.query.next;
     const raw = typeof next === "string" ? next : "";
-    return raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
+    // Only same-origin absolute paths. The value must start with a single "/"
+    // whose next character is neither "/" (a protocol-relative "//host" URL) nor
+    // "\" (which browsers normalize to "/", so "/\host" resolves off-origin).
+    // Anything else falls back to the dashboard, closing the open-redirect.
+    return /^\/(?![/\\])/.test(raw) ? raw : "/dashboard";
   })();
   const magicToken =
     mode === "login" && typeof router.query.token === "string" ? router.query.token : "";

@@ -6,7 +6,12 @@ import { ROLE_RANK } from "./roles";
 import type { Membership, User, Workspace, WorkspaceRole } from "./types";
 
 function slugify(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || "workspace";
+  // Collapse runs of non-alphanumerics to a single "-", so at most one leading
+  // and one trailing "-" can remain; trim those with single-character anchored
+  // replaces instead of `/^-+|-+$/g`, whose two `+` quantifiers backtrack
+  // quadratically on an all-separator input.
+  const base = s.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  return base.replace(/^-/, "").replace(/-$/, "").slice(0, 48) || "workspace";
 }
 
 /** The personal workspace auto-provisioned on first sign-in (FR-2). */
