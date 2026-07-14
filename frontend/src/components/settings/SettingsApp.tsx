@@ -7,7 +7,7 @@ import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "
 import { useRouter } from "next/router";
 import QRCode from "qrcode";
 import { Bell, BellRing, Check, ChevronLeft, Copy, Download, KeyRound, LogOut, Moon, MonitorSmartphone, ShieldCheck, Sun, Trash2, User as UserIcon } from "lucide-react";
-import { ApiError, type MfaEnrollment, type NotificationType, type SessionInfo } from "@hc/sdk";
+import { ApiError, type MfaEnrollment, type NotificationType, type SessionInfo, type TimeFormat, type WeekStart } from "@hc/sdk";
 import { oc, ssoLinkUrl } from "@/lib/sdk";
 import { getThemePreference, setThemePreference, type ThemePreference } from "@/lib/theme";
 import { disablePush, enablePush, getPushState, type PushState } from "@/lib/push";
@@ -41,6 +41,37 @@ const LOCALES: { value: string; label: string }[] = [
   { value: "ja-JP", label: "日本語" },
   { value: "zh-CN", label: "中文 (简体)" },
 ];
+
+// Clock and week-start preferences. "auto" defers to the chosen language.
+const TIME_FORMATS: { value: TimeFormat; label: string }[] = [
+  { value: "auto", label: "Automatic (match language)" },
+  { value: "12h", label: "12-hour (1:30 PM)" },
+  { value: "24h", label: "24-hour (13:30)" },
+];
+const WEEK_STARTS: { value: WeekStart; label: string }[] = [
+  { value: "auto", label: "Automatic (match language)" },
+  { value: "sunday", label: "Sunday" },
+  { value: "monday", label: "Monday" },
+];
+
+// The full IANA zone list from the platform when available (all modern engines),
+// with a small fallback for older ones. "" is offered separately as "Automatic".
+const TIMEZONE_FALLBACK = [
+  "UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
+  "America/Sao_Paulo", "Europe/London", "Europe/Paris", "Europe/Berlin", "Europe/Moscow",
+  "Africa/Johannesburg", "Asia/Dubai", "Asia/Kolkata", "Asia/Singapore", "Asia/Shanghai",
+  "Asia/Tokyo", "Australia/Sydney", "Pacific/Auckland",
+];
+function timezoneList(): string[] {
+  try {
+    const sv = (Intl as unknown as { supportedValuesOf?: (k: string) => string[] }).supportedValuesOf;
+    const zones = sv?.("timeZone");
+    if (zones && zones.length) return zones;
+  } catch {
+    /* fall through to the curated list */
+  }
+  return TIMEZONE_FALLBACK;
+}
 
 const NOTIFICATION_PREF_TYPES: { type: NotificationType; label: string }[] = [
   { type: "mention", label: "Mentions" },
@@ -85,12 +116,26 @@ export function SettingsApp() {
   // Profile form.
   const [name, setName] = useState(user?.name ?? "");
   const [locale, setLocale] = useState(user?.locale ?? "en-US");
+  const [timezone, setTimezone] = useState(user?.timezone ?? "");
+  const [timeFormat, setTimeFormat] = useState<TimeFormat>(user?.timeFormat ?? "auto");
+  const [weekStart, setWeekStart] = useState<WeekStart>(user?.weekStart ?? "auto");
   const [savingProfile, setSavingProfile] = useState(false);
   const localeOptions = useMemo(() => {
     if (!locale || LOCALES.some((l) => l.value === locale)) return LOCALES;
     return [{ value: locale, label: locale }, ...LOCALES];
   }, [locale]);
-  const profileDirty = !!user && (name.trim() !== (user.name ?? "") || locale !== (user.locale ?? "en-US"));
+  const timezoneOptions = useMemo(() => {
+    const zones = timezoneList();
+    // Keep the user's stored zone selectable even if the platform list omits it.
+    return timezone && !zones.includes(timezone) ? [timezone, ...zones] : zones;
+  }, [timezone]);
+  const profileDirty =
+    !!user &&
+    (name.trim() !== (user.name ?? "") ||
+      locale !== (user.locale ?? "en-US") ||
+      timezone !== (user.timezone ?? "") ||
+      timeFormat !== (user.timeFormat ?? "auto") ||
+      weekStart !== (user.weekStart ?? "auto"));
 
   // MFA enrollment.
   const [step, setStep] = useState<Step>("idle");
@@ -192,7 +237,7 @@ export function SettingsApp() {
     if (!name.trim()) return;
     setSavingProfile(true);
     try {
-      const updated = await oc.updateProfile({ name: name.trim(), locale });
+      const updated = await oc.updateProfile({ name: name.trim(), locale, timezone, timeFormat, weekStart });
       setUser(updated);
       toast.success("Profile updated.");
     } catch (e) {
@@ -402,7 +447,7 @@ export function SettingsApp() {
         <div className="min-w-0 space-y-6">
           {tab === "account" && (
             <>
-              <Card title="Profile" description="Your name and language across HyCanvas.">
+              <Card title="Profile" description="Your name, language, and regional preferences across HyCanvas.">
                 <div className="flex items-center gap-4">
                   {user.avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element -- user-provided avatar URL
@@ -431,6 +476,48 @@ export function SettingsApp() {
                       ))}
                     </select>
                   </label>
+                  <label className="flex flex-col gap-1.5 text-sm font-medium text-neutral-700">
+                    Timezone
+                    <select
+                      value={timezone}
+                      onChange={(e) => setTimezone(e.target.value)}
+                      className="h-11 rounded-xl border border-neutral-200 bg-surface px-3 text-sm text-neutral-800 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                    >
+                      <option value="">Automatic (browser default)</option>
+                      {timezoneOptions.map((z) => (
+                        <option key={z} value={z}>{z.replace(/_/g, " ")}</option>
+                      ))}
+                    </select>
+                    <span className="text-xs font-normal text-neutral-500">
+                      Controls how dates and times are shown to you across HyCanvas.
+                    </span>
+                  </label>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <label className="flex flex-col gap-1.5 text-sm font-medium text-neutral-700">
+                      Time format
+                      <select
+                        value={timeFormat}
+                        onChange={(e) => setTimeFormat(e.target.value as TimeFormat)}
+                        className="h-11 rounded-xl border border-neutral-200 bg-surface px-3 text-sm text-neutral-800 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                      >
+                        {TIME_FORMATS.map((t) => (
+                          <option key={t.value} value={t.value}>{t.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="flex flex-col gap-1.5 text-sm font-medium text-neutral-700">
+                      Week starts on
+                      <select
+                        value={weekStart}
+                        onChange={(e) => setWeekStart(e.target.value as WeekStart)}
+                        className="h-11 rounded-xl border border-neutral-200 bg-surface px-3 text-sm text-neutral-800 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                      >
+                        {WEEK_STARTS.map((w) => (
+                          <option key={w.value} value={w.value}>{w.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
                   <div className="flex justify-end border-t border-neutral-100 pt-4">
                     <Button disabled={savingProfile || !profileDirty || !name.trim()} onClick={() => void saveProfile()}>
                       {savingProfile ? "Saving…" : "Save changes"}

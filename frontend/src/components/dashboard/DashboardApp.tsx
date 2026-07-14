@@ -47,6 +47,7 @@ import {
 import { createBlankDesign } from "@hc/schema";
 import type { DesignRecord, HomeItem, MyTask, StorageUsageView, TaskStatus, TemplateCollectionSummary, TemplateSummary, WorkspaceRole } from "@hc/sdk";
 import { formatBytes } from "@/lib/format";
+import { useDateFormat } from "@/lib/datetime";
 import { resolvedTheme, setThemePreference } from "@/lib/theme";
 import { oc } from "@/lib/sdk";
 import { useAuth } from "@/store/auth";
@@ -145,6 +146,7 @@ export function DashboardApp() {
   const router = useRouter();
   const toast = useToast();
   const { user, workspaces, activeWorkspaceId, setActiveWorkspace, logout, refreshWorkspaces } = useAuth();
+  const df = useDateFormat();
   const [items, setItems] = useState<HomeItem[]>([]);
   const [templates, setTemplates] = useState<TemplateSummary[]>([]);
   const [query, setQuery] = useState("");
@@ -480,7 +482,7 @@ export function DashboardApp() {
       <div className="flex items-center justify-between gap-2 px-3 py-2.5">
         <div className="min-w-0">
           <div className="truncate text-sm font-semibold text-neutral-800">{item.title}</div>
-          <div className="text-xs text-neutral-400">{new Date(item.updatedAt).toLocaleDateString()}</div>
+          <div className="text-xs text-neutral-400">{df.date(item.updatedAt)}</div>
         </div>
         {itemMenu(item)}
       </div>
@@ -492,7 +494,7 @@ export function DashboardApp() {
       <button onClick={() => void open(item.id)} className="h-10 w-14 shrink-0 overflow-hidden rounded-md border border-neutral-200 bg-neutral-100" title="Open"><DesignThumb designId={item.id} /></button>
       <button onClick={() => void open(item.id)} className="min-w-0 flex-1 text-left">
         <div className="truncate text-sm font-semibold text-neutral-800">{item.title}</div>
-        <div className="text-xs text-neutral-400">{new Date(item.updatedAt).toLocaleDateString()}</div>
+        <div className="text-xs text-neutral-400">{df.date(item.updatedAt)}</div>
       </button>
       <button onClick={() => void toggleFavorite(item)} aria-label={item.starred ? "Unfavorite" : "Favorite"} className={`grid h-8 w-8 place-items-center rounded-lg transition ${item.starred ? "text-amber-400" : "text-neutral-400 opacity-0 hover:bg-neutral-100 group-hover:opacity-100"}`}><Star size={15} fill={item.starred ? "currentColor" : "none"} /></button>
       {itemMenu(item)}
@@ -834,7 +836,7 @@ export function DashboardApp() {
                             <span className="block truncate text-sm font-medium text-neutral-800">{t.body}</span>
                             <span className="block truncate text-xs text-neutral-400">
                               {t.designTitle}
-                              {t.task?.dueAt ? ` · due ${new Date(t.task.dueAt).toLocaleDateString()}` : ""}
+                              {t.task?.dueAt ? ` · due ${df.date(t.task.dueAt)}` : ""}
                             </span>
                           </span>
                           <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${tone[status]}`}>{label[status]}</span>

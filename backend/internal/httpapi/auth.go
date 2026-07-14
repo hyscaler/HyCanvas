@@ -92,8 +92,9 @@ func mountAuth(api chi.Router, svc *accounts.Service, secure bool, policy config
 	api.With(requireAuth(svc)).Get("/auth/sessions", sessionsHandler(svc))
 }
 
-// updateMeHandler patches the caller's profile (name, avatarUrl, locale). Absent
-// fields are left unchanged; avatarUrl "" clears the avatar.
+// updateMeHandler patches the caller's profile (name, avatarUrl, locale, and the
+// regional preferences timezone/timeFormat/weekStart). Absent fields are left
+// unchanged; avatarUrl "" clears the avatar.
 func updateMeHandler(svc *accounts.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var raw map[string]json.RawMessage
@@ -111,11 +112,24 @@ func updateMeHandler(svc *accounts.Service) http.HandlerFunc {
 		if v, ok := raw["locale"]; ok {
 			_ = json.Unmarshal(v, &in.Locale)
 		}
+		if v, ok := raw["timezone"]; ok {
+			_ = json.Unmarshal(v, &in.Timezone)
+		}
+		if v, ok := raw["timeFormat"]; ok {
+			_ = json.Unmarshal(v, &in.TimeFormat)
+		}
+		if v, ok := raw["weekStart"]; ok {
+			_ = json.Unmarshal(v, &in.WeekStart)
+		}
 		u := userFrom(r.Context())
 		view, err := svc.UpdateProfile(r.Context(), u.ID, in)
 		if err != nil {
 			if errors.Is(err, accounts.ErrInvalidSignup) {
 				Problem(w, r, http.StatusBadRequest, "Bad Request", "name cannot be empty")
+				return
+			}
+			if errors.Is(err, accounts.ErrInvalidProfile) {
+				Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid timezone or preference value")
 				return
 			}
 			Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "could not update profile")
