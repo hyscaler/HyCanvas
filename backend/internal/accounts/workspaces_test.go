@@ -208,4 +208,34 @@ func TestUpdateProfile_DB(t *testing.T) {
 	if v.Name != "New Name" {
 		t.Fatalf("name should persist across avatar updates, got %q", v.Name)
 	}
+
+	// Fresh accounts default to the "auto" regional preferences.
+	if v.Timezone != "" || v.TimeFormat != "auto" || v.WeekStart != "auto" {
+		t.Fatalf("unexpected default regional prefs: tz=%q tf=%q ws=%q", v.Timezone, v.TimeFormat, v.WeekStart)
+	}
+
+	// Valid regional preferences persist.
+	tz, tf, ws := "Asia/Kolkata", "24h", "monday"
+	v, err = svc.UpdateProfile(ctx, user.ID, UpdateProfileInput{Timezone: &tz, TimeFormat: &tf, WeekStart: &ws})
+	if err != nil || v.Timezone != tz || v.TimeFormat != tf || v.WeekStart != ws {
+		t.Fatalf("regional prefs not persisted: %+v err=%v", v, err)
+	}
+
+	// Invalid values are rejected and leave the stored prefs untouched.
+	badTz := "Not/AZone"
+	if _, err := svc.UpdateProfile(ctx, user.ID, UpdateProfileInput{Timezone: &badTz}); err != ErrInvalidProfile {
+		t.Fatalf("bad timezone should be ErrInvalidProfile, got %v", err)
+	}
+	badTf := "13h"
+	if _, err := svc.UpdateProfile(ctx, user.ID, UpdateProfileInput{TimeFormat: &badTf}); err != ErrInvalidProfile {
+		t.Fatalf("bad time format should be ErrInvalidProfile, got %v", err)
+	}
+	badWs := "tuesday"
+	if _, err := svc.UpdateProfile(ctx, user.ID, UpdateProfileInput{WeekStart: &badWs}); err != ErrInvalidProfile {
+		t.Fatalf("bad week start should be ErrInvalidProfile, got %v", err)
+	}
+	// The valid prefs from before survived the rejected updates.
+	if again, _ := svc.GetUserByID(ctx, user.ID); again.Timezone != tz || again.TimeFormat != tf || again.WeekStart != ws {
+		t.Fatalf("prefs changed after rejected updates: %+v", again)
+	}
 }
