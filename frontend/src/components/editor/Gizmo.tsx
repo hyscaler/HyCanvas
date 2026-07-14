@@ -214,9 +214,13 @@ function SelectionGizmo({ api, ids }: { api: CanvasApi; ids: string[] }) {
         const den = Math.hypot(d.startHandle.x - d.anchor.x, d.startHandle.y - d.anchor.y) || 1;
         fX = fY = Math.max(0.02, num / den); // corners scale uniformly
       } else if (d.fx !== 0.5) {
-        fX = Math.max(0.02, (p.x - d.anchor.x) / ((d.startHandle.x - d.anchor.x) || 1));
+        // Signed: dragging through the anchor mirrors the selection (flip),
+        // with the magnitude floored so it never collapses to zero.
+        const f = (p.x - d.anchor.x) / ((d.startHandle.x - d.anchor.x) || 1);
+        fX = (f < 0 ? -1 : 1) * Math.max(0.02, Math.abs(f));
       } else {
-        fY = Math.max(0.02, (p.y - d.anchor.y) / ((d.startHandle.y - d.anchor.y) || 1));
+        const f = (p.y - d.anchor.y) / ((d.startHandle.y - d.anchor.y) || 1);
+        fY = (f < 0 ? -1 : 1) * Math.max(0.02, Math.abs(f));
       }
       for (const [id, t0] of d.before) {
         const loc = locate(store.doc, id);
@@ -550,9 +554,16 @@ export function Gizmo({ api }: { api: CanvasApi }) {
       // (non-aspect) resize of an unrotated, unit-scale, top-level node, where
       // the world box edges map straight to transform + size.
       const loc2 = locate(store.doc, d.id);
+      // Snap math maps tf.x/tf.y straight to the box's left/top edge, which
+      // only holds while the drag hasn't flipped through the anchor (a flip
+      // negates the scale, putting tf at the mirrored edge).
+      const flipped =
+        Math.sign(tf.scaleX) !== Math.sign(d.startTransform.scaleX) ||
+        Math.sign(tf.scaleY) !== Math.sign(d.startTransform.scaleY);
       const canSnap =
         !aspect &&
         !e.altKey &&
+        !flipped &&
         store.snapEnabled &&
         loc2 != null &&
         loc2.parent === null &&
@@ -690,8 +701,11 @@ export function Gizmo({ api }: { api: CanvasApi }) {
         const ys = d.startPoints.map((p) => p.y);
         const degX = Math.max(...xs) - Math.min(...xs) < 0.5;
         const degY = Math.max(...ys) - Math.min(...ys) < 0.5;
-        if (degX) { size = { ...size, width: d.startSize.width }; tf = { ...tf, x: d.handle.includes("w") || d.handle.includes("e") ? d.startTransform.x : tf.x }; }
-        if (degY) { size = { ...size, height: d.startSize.height }; tf = { ...tf, y: d.handle.includes("n") || d.handle.includes("s") ? d.startTransform.y : tf.y }; }
+        // The scale sign is restored too: a drag-through flip on an axis the
+        // polyline doesn't span would silently shift the stroke by the box
+        // extent (and dirty the undo stack) without changing the line's shape.
+        if (degX) { size = { ...size, width: d.startSize.width }; tf = { ...tf, scaleX: d.startTransform.scaleX, x: d.handle.includes("w") || d.handle.includes("e") ? d.startTransform.x : tf.x }; }
+        if (degY) { size = { ...size, height: d.startSize.height }; tf = { ...tf, scaleY: d.startTransform.scaleY, y: d.handle.includes("n") || d.handle.includes("s") ? d.startTransform.y : tf.y }; }
         const kx = degX || d.startSize.width <= 0 ? 1 : size.width / d.startSize.width;
         const ky = degY || d.startSize.height <= 0 ? 1 : size.height / d.startSize.height;
         (node as unknown as { points: { x: number; y: number }[] }).points =
