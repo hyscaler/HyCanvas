@@ -382,6 +382,7 @@ export function Gizmo({ api }: { api: CanvasApi }) {
     startBox?: unknown; // text box snapshot, kept in sync with size so text reflows
     startMinW?: number; // narrowest reflow width (longest word) at the start font
     startMinH?: number; // natural content height at the start font + width
+    startPoints?: { x: number; y: number }[]; // line polyline snapshot, scaled with the box on resize
   } | null>(null);
   // Equal-size match during a resize: the sibling width/height the dragged
   // dimension has snapped to (null = no match on that axis). The state drives
@@ -457,6 +458,7 @@ export function Gizmo({ api }: { api: CanvasApi }) {
       // resize (reflow, then scale past the fit) has a stable pivot per gesture.
       startMinW: loc!.node.type === "text" ? minContentWidth(loc!.node as unknown as TextNode) : undefined,
       startMinH: loc!.node.type === "text" ? measuredTextHeight(loc!.node as unknown as TextNode) : undefined,
+      startPoints: loc!.node.type === "line" ? structuredClone((loc!.node as unknown as { points: { x: number; y: number }[] }).points) : undefined,
     };
     useEditor.getState().setTransforming(true);
     window.addEventListener("pointermove", onMove);
@@ -489,6 +491,9 @@ export function Gizmo({ api }: { api: CanvasApi }) {
         const tn = node as unknown as { box: unknown; content: unknown };
         if (d.startBox !== undefined) tn.box = structuredClone(d.startBox);
         if (d.startContent !== undefined) tn.content = structuredClone(d.startContent);
+      }
+      if (node.type === "line" && d.startPoints) {
+        (node as unknown as { points: unknown }).points = structuredClone(d.startPoints);
       }
       store.tick();
     }
@@ -669,6 +674,25 @@ export function Gizmo({ api }: { api: CanvasApi }) {
           tn.box.mode = "fixed";
         }
       }
+      if (node.type === "line" && d.startPoints?.length) {
+        // A line is DRAWN from its points, not its size; resizeNode only moves
+        // the box, so scale the polyline to match or the handles do nothing
+        // visible. An axis the polyline doesn't span (a straight horizontal or
+        // vertical line) stays locked to its start box, otherwise the box
+        // would drift away from the stroke.
+        const xs = d.startPoints.map((p) => p.x);
+        const ys = d.startPoints.map((p) => p.y);
+        const degX = Math.max(...xs) - Math.min(...xs) < 0.5;
+        const degY = Math.max(...ys) - Math.min(...ys) < 0.5;
+        if (degX) { size = { ...size, width: d.startSize.width }; tf = { ...tf, x: d.handle.includes("w") || d.handle.includes("e") ? d.startTransform.x : tf.x }; }
+        if (degY) { size = { ...size, height: d.startSize.height }; tf = { ...tf, y: d.handle.includes("n") || d.handle.includes("s") ? d.startTransform.y : tf.y }; }
+        const kx = degX || d.startSize.width <= 0 ? 1 : size.width / d.startSize.width;
+        const ky = degY || d.startSize.height <= 0 ? 1 : size.height / d.startSize.height;
+        (node as unknown as { points: { x: number; y: number }[] }).points =
+          d.startPoints.map((p) => ({ x: p.x * kx, y: p.y * ky }));
+        node.transform = tf;
+        node.size = size;
+      }
     }
     store.tick();
   }
@@ -702,6 +726,10 @@ export function Gizmo({ api }: { api: CanvasApi }) {
     // content in the undo so it round-trips.
     if (node.type === "text" && d.handle !== "rotate") {
       store.pushNodeSnapshot(d.id, { transform: d.startTransform, size: d.startSize, box: d.startBox, content: d.startContent });
+      return;
+    }
+    if (node.type === "line" && d.handle !== "rotate") {
+      store.pushNodeSnapshot(d.id, { transform: d.startTransform, size: d.startSize, points: d.startPoints });
       return;
     }
     const cmd: EditCommand = {

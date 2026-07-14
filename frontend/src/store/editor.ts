@@ -692,7 +692,7 @@ interface EditorState {
   pushApplied(cmds: EditCommand[]): void;
   /** Record an already-applied transform/size/box/content change as one undo step
    *  (e.g. a text resize that also reflowed the box and scaled fonts). */
-  pushNodeSnapshot(id: string, before: { transform: Transform; size: { width: number; height: number }; box?: unknown; content?: unknown }): void;
+  pushNodeSnapshot(id: string, before: { transform: Transform; size: { width: number; height: number }; box?: unknown; content?: unknown; points?: unknown }): void;
   addNode(type: Exclude<NodeType, "model3d">, init?: Partial<Node>): void;
   /** Place an image node from a URL, registering it as a design asset. */
   /** Add an image; `at` (page point) centers it there (e.g. a drag-drop), else viewport-centered.
@@ -882,6 +882,10 @@ interface EditorState {
   setStrokeSel(stroke?: Stroke): void;
   /** Commit a text node's transform + size, reflowing its layout box, as one undo step. */
   applyTextGeometry(id: string, transform: Transform, size: { width: number; height: number }): void;
+  /** Apply panel-entered geometry to a line node: the polyline scales with the
+   *  box (a line draws from its points, so size alone changes nothing visible).
+   *  An axis the polyline doesn't span stays locked. One undo step. */
+  applyLineGeometry(id: string, transform: Transform, size: { width: number; height: number }): void;
   renameNode(id: string, name: string): void;
 
   undo(): void;
@@ -3408,7 +3412,7 @@ export const useEditor = create<EditorState>((set, get) => {
       if (pr) for (const c of cmds) if (c.kind === "insert" && c.node) pr.mine.add(c.node.id);
     },
     pushNodeSnapshot: (id, before) => {
-      type Snap = { transform: Transform; size: { width: number; height: number }; box?: unknown; content?: unknown };
+      type Snap = { transform: Transform; size: { width: number; height: number }; box?: unknown; content?: unknown; points?: unknown };
       const apply = (snap: Snap) => {
         const l = locate(get().doc, id);
         if (!l) return;
@@ -3417,12 +3421,13 @@ export const useEditor = create<EditorState>((set, get) => {
         n.size = { ...snap.size };
         if (snap.box !== undefined) n.box = structuredClone(snap.box);
         if (snap.content !== undefined) n.content = structuredClone(snap.content);
+        if (snap.points !== undefined) n.points = structuredClone(snap.points);
       };
       const l = locate(get().doc, id);
       if (!l) return;
       const cur = l.node as unknown as Snap;
-      const after: Snap = { transform: { ...cur.transform }, size: { ...cur.size }, box: cur.box !== undefined ? structuredClone(cur.box) : undefined, content: cur.content !== undefined ? structuredClone(cur.content) : undefined };
-      const b: Snap = { transform: { ...before.transform }, size: { ...before.size }, box: before.box !== undefined ? structuredClone(before.box) : undefined, content: before.content !== undefined ? structuredClone(before.content) : undefined };
+      const after: Snap = { transform: { ...cur.transform }, size: { ...cur.size }, box: cur.box !== undefined ? structuredClone(cur.box) : undefined, content: cur.content !== undefined ? structuredClone(cur.content) : undefined, points: cur.points !== undefined ? structuredClone(cur.points) : undefined };
+      const b: Snap = { transform: { ...before.transform }, size: { ...before.size }, box: before.box !== undefined ? structuredClone(before.box) : undefined, content: before.content !== undefined ? structuredClone(before.content) : undefined, points: before.points !== undefined ? structuredClone(before.points) : undefined };
       set((s) => ({ rev: s.rev + 1, undoStack: [...s.undoStack, { undo: () => apply(b), redo: () => apply(after) }], redoStack: [] }));
     },
 
@@ -5265,6 +5270,25 @@ export const useEditor = create<EditorState>((set, get) => {
       node.transform = { ...transform };
       node.size = { ...size };
       node.box = { ...node.box, width: size.width, height: size.height };
+      get().pushNodeSnapshot(id, before);
+    },
+    applyLineGeometry: (id, transform, size) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "line" || loc.node.locked || editBlocked(id)) return;
+      const node = loc.node as unknown as { transform: Transform; size: { width: number; height: number }; points: { x: number; y: number }[] };
+      const before = { transform: { ...node.transform }, size: { ...node.size }, points: structuredClone(node.points) };
+      const xs = node.points.map((p) => p.x);
+      const ys = node.points.map((p) => p.y);
+      const degX = Math.max(...xs) - Math.min(...xs) < 0.5;
+      const degY = Math.max(...ys) - Math.min(...ys) < 0.5;
+      const next = { ...size };
+      if (degX) next.width = node.size.width;
+      if (degY) next.height = node.size.height;
+      const kx = degX || node.size.width <= 0 ? 1 : next.width / node.size.width;
+      const ky = degY || node.size.height <= 0 ? 1 : next.height / node.size.height;
+      node.points = node.points.map((p) => ({ ...p, x: p.x * kx, y: p.y * ky }));
+      node.transform = { ...transform };
+      node.size = next;
       get().pushNodeSnapshot(id, before);
     },
     setStrokeSel: (stroke) => {

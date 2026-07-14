@@ -35,6 +35,25 @@ function text(id: string, x: number, y: number, w: number, h: number, fontSize: 
 }
 
 describe("resizePage (F22 FR-1/FR-2)", () => {
+  it("scales a line node's polyline with its mapped box (the stroke draws from points)", () => {
+    const line = createNode("line", {
+      id: "ln",
+      points: [{ x: 0, y: 0 }, { x: 240, y: 0 }],
+      transform: { x: 100, y: 100, scaleX: 1, scaleY: 1, rotation: 0 },
+      size: { width: 240, height: 4 },
+      stroke: { fill: { type: "solid", color: { srgb: { r: 0, g: 0, b: 0, a: 1 } } }, width: 4, align: "center", cap: "butt", join: "miter" },
+      startCap: "none",
+      endCap: "arrow",
+    } as Partial<Node>);
+    const src = pageOf(1000, 1000, [line]);
+    const out = resizePage(src, { width: 2000, height: 2000 });
+    const n = out.children[0] as unknown as { size: { width: number }; points: { x: number; y: number }[] };
+    // The polyline's reach must match the mapped box, not the source length.
+    expect(n.points[1].x).toBeCloseTo(n.size.width, 5);
+    expect(n.points[0].x).toBe(0);
+  });
+
+
   it("preserves node count, z-order, and ids", () => {
     const src = pageOf(1000, 1000, [shape("a", 10, 10, 100, 100), shape("b", 500, 500, 100, 100), shape("c", 800, 50, 50, 50)]);
     const out = resizePage(src, { width: 1920, height: 1080 });

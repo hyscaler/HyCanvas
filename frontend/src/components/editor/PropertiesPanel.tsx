@@ -600,6 +600,11 @@ export function PropertiesPanel() {
       useEditor.getState().applyTextGeometry(single.node.id, nextT, nextSz);
       return;
     }
+    // A line draws from its points, so W/H edits must scale the polyline too.
+    if (single.node.type === "line") {
+      useEditor.getState().applyLineGeometry(single.node.id, nextT, nextSz);
+      return;
+    }
     useEditor.getState().runCommand({
       kind: "transform",
       nodes: [single.node.id],
