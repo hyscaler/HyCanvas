@@ -19,8 +19,9 @@ import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
+import { settingsPath, type SettingsTab } from "./tabs";
 
-type Tab = "account" | "security" | "notifications";
+type Tab = SettingsTab;
 type Step = "idle" | "enrolling" | "codes";
 
 const TABS: { id: Tab; label: string; icon: typeof UserIcon }[] = [
@@ -97,7 +98,7 @@ function errMessage(e: unknown, fallback: string): string {
   return fallback;
 }
 
-export function SettingsApp() {
+export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
   const router = useRouter();
   const toast = useToast();
   const user = useAuth((s) => s.user);
@@ -107,12 +108,20 @@ export function SettingsApp() {
   const deleteAccount = useAuth((s) => s.deleteAccount);
   const enabled = !!user?.mfaEnabled;
 
-  // Returning from the SSO connect flow lands on /settings?sso=... ; open the
-  // Security tab (where the SSO card lives) so the result is visible. Safe to read
-  // window here: this component is client-only (ssr: false).
-  const [tab, setTab] = useState<Tab>(() =>
-    typeof window !== "undefined" && /[?&]sso=(connected|error)\b/.test(window.location.search) ? "security" : "account",
-  );
+  // The active tab comes from the URL (one static page per tab; see
+  // pages/settings/[[...tab]].tsx), so tabs are deep-linkable and survive a
+  // refresh. Returning from the SSO connect flow lands on /settings?sso=... ;
+  // the bare path defers to that and opens the Security tab (where the SSO
+  // card lives) so the result is visible. Safe to read window here: this
+  // component is client-only (ssr: false).
+  const tab: Tab =
+    urlTab ??
+    (typeof window !== "undefined" && /[?&]sso=(connected|error)\b/.test(window.location.search)
+      ? "security"
+      : "account");
+  // No-op when already there, so re-clicking the active tab can't stack
+  // duplicate history entries.
+  const gotoTab = (t: Tab) => { if (t !== tab) void router.push(settingsPath(t)); };
 
   // Profile form.
   const [name, setName] = useState(user?.name ?? "");
@@ -212,8 +221,11 @@ export function SettingsApp() {
   }, []);
 
   // Surface the connect-flow result (the backend redirects to ?sso=connected|error)
-  // and strip the param so a refresh doesn't re-toast. The on-mount fetch above
-  // already reflects the new linked state, so no optimistic update is needed.
+  // and replace the URL with the Security tab's own path, so the param can't
+  // re-toast on refresh and the address bar matches the visible tab. Not
+  // shallow: the replace must load the security page's props or the derived
+  // `tab` would fall back to Account. The on-mount fetch above already
+  // reflects the new linked state, so no optimistic update is needed.
   useEffect(() => {
     if (!router.isReady || ssoHandledRef.current) return;
     const result = router.query.sso;
@@ -221,9 +233,7 @@ export function SettingsApp() {
     ssoHandledRef.current = true;
     if (result === "connected") toast.success("Single sign-on connected.");
     else toast.error("Couldn't connect single sign-on. Please try again.");
-    const rest = { ...router.query };
-    delete rest.sso;
-    void router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
+    void router.replace(settingsPath("security"));
   }, [router, toast]);
 
   function resetMfaFlow() {
@@ -437,7 +447,7 @@ export function SettingsApp() {
           {TABS.map((t) => (
             <button
               key={t.id}
-              onClick={() => setTab(t.id)}
+              onClick={() => gotoTab(t.id)}
               className={`flex flex-1 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition md:flex-none ${tab === t.id ? "bg-brand-50 text-brand-ink" : "text-neutral-600 hover:bg-neutral-100"}`}
             >
               <t.icon size={16} className={tab === t.id ? "text-brand-ink" : "text-neutral-400"} />
