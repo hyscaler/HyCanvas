@@ -62,9 +62,33 @@ export function rotateAboutCenter(
   deltaDeg: number,
   snap = false,
 ): Transform {
+  return rotateAboutPoint(t, size, deltaDeg, { x: 0.5, y: 0.5 }, snap);
+}
+
+/** Rotate a node by a delta in degrees about an arbitrary LOCAL pivot, given
+ *  as a normalized box fraction (0..1 per axis; {0.5,0.5} is the center), and
+ *  recompute the translation so that pivot stays fixed in world space. This is
+ *  what makes the "Rotate around" origin picker take effect. Snap to 15-degree
+ *  increments when requested. Correct for scaled/flipped/skewed nodes too. */
+export function rotateAboutPoint(
+  t: Transform,
+  size: Size,
+  deltaDeg: number,
+  origin: { x: number; y: number },
+  snap = false,
+): Transform {
   let rotation = t.rotation + deltaDeg;
   if (snap) rotation = Math.round(rotation / 15) * 15;
-  return keepCenterFixed(t, { ...t, rotation }, size);
+  const px = size.width * origin.x;
+  const py = size.height * origin.y;
+  const pivotWorld = applyToPoint(fromTransform(t), { x: px, y: py });
+  const next = { ...t, rotation };
+  const m = fromTransform(next);
+  return {
+    ...next,
+    x: pivotWorld.x - (m.a * px + m.c * py),
+    y: pivotWorld.y - (m.b * px + m.d * py),
+  };
 }
 
 export function setSkew(t: Transform, skewX: number, skewY: number): Transform {

@@ -13,7 +13,7 @@ import {
   parentSpaceDelta,
   resizeNode,
   resizeSpacingSnap,
-  rotateAboutCenter,
+  rotateAboutPoint,
   unionAABB,
   worldAABB,
   worldMatrix,
@@ -448,8 +448,11 @@ export function Gizmo({ api }: { api: CanvasApi }) {
     // (and removes the move/up listeners) reliably.
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
     const startPage = api.toPage(toLocalScreen({ x: e.clientX, y: e.clientY }));
-    // Node center in page space (wm is the page-space world matrix).
-    const centerPage = apply(wm!, w / 2, h / 2);
+    // Rotation pivot in page space (wm is the page-space world matrix): the box
+    // center, or the node's chosen rotation origin (transform.origin,
+    // normalized 0..1) when rotating with one set.
+    const og = handle === "rotate" ? loc!.node.transform.origin : undefined;
+    const centerPage = apply(wm!, w * (og?.x ?? 0.5), h * (og?.y ?? 0.5));
     drag.current = {
       id,
       handle,
@@ -532,7 +535,14 @@ export function Gizmo({ api }: { api: CanvasApi }) {
         const n = Math.round(finalDeg / 45) * 45;
         if (Math.abs(finalDeg - n) < 3) deltaDeg += n - finalDeg;
       }
-      node.transform = rotateAboutCenter(d.startTransform, d.startSize, deltaDeg, e.shiftKey);
+      // Pivot on the node's rotation origin when set; the box center otherwise.
+      node.transform = rotateAboutPoint(
+        d.startTransform,
+        d.startSize,
+        deltaDeg,
+        d.startTransform.origin ?? { x: 0.5, y: 0.5 },
+        e.shiftKey,
+      );
     } else {
       // Convert the page-space drag into the node's parent space so resizing a
       // node inside a transformed group still tracks the cursor.

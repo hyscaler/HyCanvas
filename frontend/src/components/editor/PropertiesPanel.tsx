@@ -11,7 +11,7 @@ import type {
   TableConditionalRule, TableNode, TextEffect,
 } from "@hc/schema";
 import { colorHarmony, HARMONY_SCHEMES, type HarmonyScheme, extractPalette, toHex } from "@hc/color";
-import { evalExpression, locate } from "@hc/editor";
+import { evalExpression, locate, rotateAboutPoint } from "@hc/editor";
 import { isLowResolution, computeEffectivePpi } from "@hc/engine";
 import { FONT_CATALOG, type FontCategory } from "@hc/text";
 import {
@@ -592,8 +592,14 @@ export function PropertiesPanel() {
     if (!single || single.node.locked) return;
     const t = single.node.transform;
     const sz = single.node.size;
-    const nextT = { ...t, x: patch.x ?? t.x, y: patch.y ?? t.y, rotation: patch.rotation ?? t.rotation };
+    let nextT = { ...t, x: patch.x ?? t.x, y: patch.y ?? t.y };
     const nextSz = { width: Math.max(1, patch.w ?? sz.width), height: Math.max(1, patch.h ?? sz.height) };
+    // An angle edit pivots about the node's rotation origin (center by
+    // default), matching the rotate handle; writing rotation raw would swing
+    // the node around its top-left corner instead.
+    if (patch.rotation !== undefined && patch.rotation !== t.rotation) {
+      nextT = rotateAboutPoint(nextT, nextSz, patch.rotation - t.rotation, t.origin ?? { x: 0.5, y: 0.5 });
+    }
     // Text lays out to node.box, so a panel W/H edit must reflow the box too
     // (mirrors the resize gizmo). The store commits transform + size + box as one step.
     if (single.node.type === "text") {

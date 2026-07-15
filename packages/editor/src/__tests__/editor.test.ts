@@ -20,6 +20,7 @@ import {
   parentSpaceDelta,
   resizeNode,
   rotateAboutCenter,
+  rotateAboutPoint,
   rotateTransform,
   selectAll,
   selectSameType,
@@ -185,6 +186,30 @@ describe("transform ops (FR-6..FR-10)", () => {
     const after = applyToPoint(fromTransform(nt), { x: 40, y: 20 });
     expect(after.x).toBeCloseTo(before.x, 6);
     expect(after.y).toBeCloseTo(before.y, 6);
+  });
+
+  it("rotateAboutPoint keeps the chosen pivot fixed (rotation origin picker)", () => {
+    const t = { x: 100, y: 100, scaleX: 1, scaleY: 1, rotation: 0 };
+    const size = { width: 80, height: 40 };
+    // Pivot at the top-left corner: local (0,0) must stay put, so x/y are
+    // unchanged and the rest of the box swings around it.
+    const tl = rotateAboutPoint(t, size, 90, { x: 0, y: 0 });
+    expect(tl.rotation).toBe(90);
+    expect(tl.x).toBeCloseTo(100, 6);
+    expect(tl.y).toBeCloseTo(100, 6);
+    // Pivot at the bottom-right corner: local (80,40) stays at its world spot.
+    const before = applyToPoint(fromTransform(t), { x: 80, y: 40 });
+    const br = rotateAboutPoint(t, size, 45, { x: 1, y: 1 });
+    const after = applyToPoint(fromTransform(br), { x: 80, y: 40 });
+    expect(after.x).toBeCloseTo(before.x, 6);
+    expect(after.y).toBeCloseTo(before.y, 6);
+    // Center pivot is exactly rotateAboutCenter; holds for a scaled+rotated node.
+    const t2 = { x: 30, y: 60, scaleX: 2, scaleY: -1, rotation: 20 };
+    const a = rotateAboutPoint(t2, size, 33, { x: 0.5, y: 0.5 });
+    const b = rotateAboutCenter(t2, size, 33);
+    expect(a.x).toBeCloseTo(b.x, 6);
+    expect(a.y).toBeCloseTo(b.y, 6);
+    expect(a.rotation).toBeCloseTo(b.rotation, 6);
   });
 
   it("flip keeps the box center fixed for a ROTATED node", () => {
