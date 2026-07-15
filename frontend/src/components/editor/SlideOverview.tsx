@@ -50,7 +50,9 @@ export function SlideOverview({ open, onClose }: { open: boolean; onClose: () =>
   const groups = groupPagesBySection(doc);
 
   const openSlide = (i: number) => {
-    useEditor.getState().setActivePage(i);
+    // Activate AND scroll to the slide, or the canvas would still show the
+    // previously viewed page after the overview closes.
+    useEditor.getState().goToPage(i);
     onClose();
   };
 

@@ -1830,7 +1830,7 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
         st.setActivePage(base + h.pageIndex);
         st.addPageBackgroundImage(h.url);
       }
-      st.setActivePage(base); // land on the first new page
+      st.goToPage(base); // land on the first new page (and scroll it into view)
       return true;
     }
     case "critique":

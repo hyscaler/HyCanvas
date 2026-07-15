@@ -6,7 +6,6 @@ import { Plus, Copy, Trash2, Eye, EyeOff, ChevronDown, ChevronRight, Bookmark } 
 import { groupPagesBySection, type SectionGroup, type SlideSection } from "@hc/schema";
 import { useEditor } from "@/store/editor";
 import { SlideThumb } from "./SlideThumb";
-import { PAGE_GAP } from "@/lib/pageLayout";
 
 const THUMB_W = 80;
 const THUMB_H = 52;
@@ -63,15 +62,7 @@ export function PagesBar() {
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => { if (dragIdx !== null && dragIdx !== i) st().movePage(dragIdx, i); setDragIdx(null); }}
             onDragEnd={() => setDragIdx(null)}
-            onClick={() => {
-              const s = st();
-              s.setActivePage(i);
-              // Scroll the stacked canvas so this page sits near the top of the
-              // viewport (uses the shared PAGE_GAP so it tracks the renderer).
-              let off = 0;
-              for (let k = 0; k < i; k++) off += (s.doc.pages[k]?.height ?? 0) + PAGE_GAP;
-              s.setViewport({ panY: off - 40 / (s.viewport.zoom || 1) });
-            }}
+            onClick={() => st().goToPage(i)}
             title={`${p.name ?? `Page ${i + 1}`}${hidden ? " (hidden in present)" : ""}`}
             className={`relative grid place-items-center overflow-hidden rounded-md border bg-surface transition ${
               i === active ? "border-brand-500 ring-2 ring-brand-200" : "border-neutral-200 hover:border-neutral-300"

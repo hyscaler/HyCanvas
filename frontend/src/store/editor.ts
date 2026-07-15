@@ -402,6 +402,10 @@ interface EditorState {
   // pages
   /** Switch the active page (clamped); clears selection. */
   setActivePage(index: number): void;
+  /** Navigate to a page: activate it AND scroll its band into the viewport
+   *  (page top when it overflows the view, centered otherwise), so the page
+   *  under the viewport center is the page just chosen. */
+  goToPage(index: number): void;
   /** Mark a live move/resize gesture active so the canvas fades the selection
    *  (the page shows through it during the drag). Cleared on gesture end. */
   setTransforming(v: boolean): void;
@@ -1180,30 +1184,47 @@ export const useEditor = create<EditorState>((set, get) => {
     return -1;
   };
 
-  // Which page should a panel insert target, and where on it? A new element is
-  // placed at the CENTER OF THE PAGE artboard (not the viewport), so it always
-  // lands on the page regardless of how the user has panned or zoomed. Pages are
-  // stacked vertically in world space, so we first resolve which page the user
-  // is looking at: the page whose stacked band contains the viewport center
-  // (same half-gap rule as the canvas hit-testing). Wheel-scrolling does not
-  // update activePage, so resolving from the viewport (not activePage) is what
-  // makes "add on page 2" target page 2. Falls back to the active page before
-  // the viewport is measured. cx/cy are the target page's own center.
+  // The page the user is looking at: the page whose stacked band contains the
+  // viewport center (same half-gap rule as the canvas hit-testing). Null when
+  // the viewport is not measured yet.
+  const centeredPageIndex = (
+    doc: DesignFile,
+    vp: { zoom: number; panY: number },
+    vs: { height: number },
+  ): number | null => {
+    if (vs.height <= 0 || vp.zoom <= 0 || doc.pages.length === 0) return null;
+    // screen = zoom*(world - pan)  =>  world = screen/zoom + pan
+    const wy = vp.panY + vs.height / 2 / vp.zoom;
+    const offs = pageOffsets(doc);
+    for (let i = 0; i < doc.pages.length; i++) {
+      if (wy < offs[i] + doc.pages[i].height + PAGE_GAP / 2) return i;
+    }
+    return doc.pages.length - 1;
+  };
+
+  // Which page should a panel insert target, and where on it? A new element
+  // joins the ACTIVE page, at the CENTER OF ITS ARTBOARD (not the viewport),
+  // so it always lands on that page regardless of pan/zoom. Because the
+  // active page follows scrolling while nothing is selected, this is normally
+  // the page in view; but a page chosen explicitly (or pinned by a live
+  // selection) wins over whatever the viewport happens to show. When the
+  // active page is NOT the one in view, scroll it into view so the inserted
+  // element is actually visible. cx/cy are the target page's own center.
   const insertContext = () => {
-    const { zoom, panY } = get().viewport;
-    const vs = get().viewportSize;
     const doc = get().doc;
-    let index = curPageIndex();
-    if (vs.height > 0 && zoom > 0 && doc.pages.length > 0) {
-      // screen = zoom*(world - pan)  =>  world = screen/zoom + pan
-      const wy = panY + vs.height / 2 / zoom;
-      const offs = pageOffsets(doc);
-      index = doc.pages.length - 1;
-      for (let i = 0; i < doc.pages.length; i++) {
-        if (wy < offs[i] + doc.pages[i].height + PAGE_GAP / 2) { index = i; break; }
+    const index = curPageIndex();
+    const page = doc.pages[index];
+    if (page) {
+      const vp = get().viewport;
+      const vs = get().viewportSize;
+      const viewed = centeredPageIndex(doc, vp, vs);
+      if (viewed !== null && viewed !== index) {
+        get().setViewport({
+          panX: page.width / 2 - vs.width / 2 / vp.zoom,
+          panY: pageTop(doc, index) + page.height / 2 - vs.height / 2 / vp.zoom,
+        });
       }
     }
-    const page = doc.pages[index];
     return { index, page, cx: (page?.width ?? 0) / 2, cy: (page?.height ?? 0) / 2 };
   };
 
@@ -1344,6 +1365,22 @@ export const useEditor = create<EditorState>((set, get) => {
         selection: [],
         rev: s.rev + 1,
       })),
+    goToPage: (index) => {
+      get().setActivePage(index);
+      const doc = get().doc;
+      const i = Math.max(0, Math.min(index, doc.pages.length - 1));
+      const page = doc.pages[i];
+      if (!page) return;
+      const z = get().viewport.zoom || 1;
+      const vh = get().viewportSize.height;
+      const top = pageTop(doc, i);
+      // Page top just below the viewport top when the page overflows the view
+      // (reading position, with room for the page header row); centered when it
+      // fits. Both keep the viewport center inside this page's band, so the
+      // scroll-follow in setViewport agrees with the page just chosen.
+      const panY = vh > 0 && page.height * z >= vh ? top - 40 / z : top + page.height / 2 - vh / 2 / z;
+      get().setViewport({ panY });
+    },
     movePage: (from, to) => {
       const doc = get().doc;
       const n = doc.pages.length;
@@ -1868,7 +1905,21 @@ export const useEditor = create<EditorState>((set, get) => {
     setViewport: (v) =>
       set((s) => {
         const merged = { ...s.viewport, ...v };
-        return { viewport: { ...merged, zoom: Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, merged.zoom)) } };
+        const viewport = { ...merged, zoom: Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, merged.zoom)) };
+        // The edited page follows the scroll: the page under the viewport
+        // center becomes active, so the page indicator, header highlight, and
+        // panel inserts agree with what the user is looking at. Only while
+        // nothing is selected or in progress: the gizmo, crop, and text-edit
+        // overlays all measure in ACTIVE-page space and every selection path
+        // activates the selection's page first, so re-targeting activePage
+        // under a live selection would shift their coordinate origin.
+        const follow =
+          s.selection.length === 0 && !s.transforming && s.editingTextId === null && s.cropping === null;
+        const idx = follow ? centeredPageIndex(s.doc, viewport, s.viewportSize) : null;
+        return {
+          viewport,
+          ...(idx !== null && idx !== s.activePage ? { activePage: idx } : {}),
+        };
       }),
     setViewportSize: (width, height) =>
       set((s) => (s.viewportSize.width === width && s.viewportSize.height === height ? {} : { viewportSize: { width, height } })),

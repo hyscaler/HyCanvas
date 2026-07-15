@@ -68,15 +68,66 @@ describe("panel inserts on stacked pages", () => {
     expect(n.transform.y).toBeCloseTo(PAGE_H / 2 - n.size.height / 2, 1);
   });
 
-  it("inserts follow the viewed page even when activePage lags (wheel scroll)", () => {
-    // Wheel scrolling pans without updating activePage; the insert must land on
-    // the page under the viewport center and make it active.
+  it("scroll then insert: the element lands on the page scrolled into view", () => {
+    // Scrolling moves the active page (nothing selected) and inserts target
+    // the ACTIVE page, so the element lands on the page in view.
     useEditor.getState().setActivePage(0);
     lookAtPage(1);
     useEditor.getState().addNode("shape", {});
     expect(kids(0).length).toBe(0);
     expect(kids(1).length).toBe(1);
     expect(useEditor.getState().activePage).toBe(1);
+  });
+
+  it("scrolling makes the page under the viewport center active (no selection)", () => {
+    useEditor.getState().setActivePage(0);
+    lookAtPage(1); // selection is empty, so the active page follows the scroll
+    expect(useEditor.getState().activePage).toBe(1);
+    lookAtPage(0);
+    expect(useEditor.getState().activePage).toBe(0);
+  });
+
+  it("scrolling does NOT move the active page while a selection is live", () => {
+    // The gizmo (and crop/text overlays) measure in active-page space, and a
+    // selection always lives on the active page; a scroll must not break that.
+    useEditor.getState().setActivePage(1);
+    lookAtPage(1);
+    useEditor.getState().addNode("shape", {}); // selects the new node on page 2
+    expect(useEditor.getState().selection.length).toBe(1);
+    lookAtPage(0);
+    expect(useEditor.getState().activePage).toBe(1);
+  });
+
+  it("inserts go to the ACTIVE page, and the view scrolls back to it", () => {
+    // A live selection pins the active page; inserting while scrolled to
+    // another page must land on the ACTIVE page (not the viewed one) and
+    // bring that page back into view so the new element is visible.
+    useEditor.getState().setActivePage(1);
+    lookAtPage(1);
+    useEditor.getState().addNode("shape", {}); // selects on page 2, pinning it
+    lookAtPage(0); // active stays 1 (selection live)
+    expect(useEditor.getState().activePage).toBe(1);
+    useEditor.getState().addNode("shape", {});
+    expect(kids(0).length).toBe(0);
+    expect(kids(1).length).toBe(2);
+    // The insert scrolled page 2's band back under the viewport center.
+    const st = useEditor.getState();
+    const centerY = st.viewport.panY + 700 / 2 / st.viewport.zoom;
+    const top = 1 * (PAGE_H + PAGE_GAP);
+    expect(centerY).toBeGreaterThanOrEqual(top);
+    expect(centerY).toBeLessThanOrEqual(top + PAGE_H);
+  });
+
+  it("goToPage activates the page and scrolls its band into view", () => {
+    useEditor.getState().setActivePage(0);
+    lookAtPage(0);
+    useEditor.getState().goToPage(1);
+    const st = useEditor.getState();
+    expect(st.activePage).toBe(1);
+    const centerY = st.viewport.panY + 700 / 2 / st.viewport.zoom;
+    const top = 1 * (PAGE_H + PAGE_GAP);
+    expect(centerY).toBeGreaterThanOrEqual(top);
+    expect(centerY).toBeLessThanOrEqual(top + PAGE_H);
   });
 
   it("addIconSvg lands inside the viewed page's artboard", () => {
@@ -100,14 +151,16 @@ describe("panel inserts on stacked pages", () => {
     expect(g.transform.y + h / 2).toBeCloseTo(PAGE_H / 2, 1);
   });
 
-  it("undo removes the node and restores the previous active page", () => {
+  it("undo removes the node and restores the pre-insert active page", () => {
     useEditor.getState().setActivePage(0);
-    lookAtPage(1);
+    lookAtPage(1); // follow-scroll already makes page 2 active here
     useEditor.getState().addNode("shape", {});
     expect(useEditor.getState().activePage).toBe(1);
     useEditor.getState().undo();
     expect(kids(1).length).toBe(0);
-    expect(useEditor.getState().activePage).toBe(0);
+    // The pre-insert active page IS page 2 (the scroll moved it), so undo
+    // keeps it: undo reverts the edit, not the user's scrolling.
+    expect(useEditor.getState().activePage).toBe(1);
   });
 
   it("falls back to the active page's center before the viewport is measured", () => {
