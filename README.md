@@ -252,6 +252,7 @@ All configuration is read from the root `.env` (copy `.env.example`). The most i
 | `OIDC_*` | optional | OIDC single sign-on (issuer, client id/secret). |
 | `AUTH_*_ENABLED` | optional | Enable/disable each sign-in method's login and signup (password, magic link, OIDC). Defaults preserve prior behavior. See [Choosing which sign-in methods are allowed](#choosing-which-sign-in-methods-are-allowed). |
 | `CAPTCHA_*` | optional | Turnstile / reCAPTCHA on the auth forms (`CAPTCHA_PROVIDER`, `CAPTCHA_SITE_KEY`, `CAPTCHA_SECRET_KEY`, `CAPTCHA_MIN_SCORE`). Off unless a provider is set. See [CAPTCHA on the auth forms](#captcha-on-the-auth-forms). |
+| `GOOGLE_ANALYTICS_ID` | optional | GA4 measurement id (e.g. `G-XXXXXXXXXX`). When set, the server injects the gtag.js snippet into served HTML pages at runtime; empty means no analytics. |
 | `VAPID_*` | optional | Web-push keys for notifications. |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` / `COMPOSE_PROFILES` | docker | Used by the bundled Postgres in `docker-compose.yml`. |
 
