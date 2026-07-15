@@ -347,6 +347,7 @@ func main() {
 			Captcha:       captchaVerifier,
 			CaptchaConfig: captchaCfg,
 			PublicDir:     cfg.PublicDir,
+			AnalyticsGAID: cfg.AnalyticsGAID,
 			AllowOrigin:   allowOrigin,
 		}),
 		ReadHeaderTimeout: 10 * time.Second,

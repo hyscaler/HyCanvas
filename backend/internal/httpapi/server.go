@@ -74,6 +74,7 @@ type Deps struct {
 	Captcha       captcha.Verifier     // optional CAPTCHA gate on the auth forms; nil = off
 	CaptchaConfig config.CaptchaConfig // public captcha config (provider/site key) for the sign-in page
 	PublicDir     string               // exported Next.js frontend to serve; empty = API only
+	AnalyticsGAID string               // optional GA4 measurement id injected into served HTML; empty = no analytics
 	// AllowOrigin gates CORS: it returns true for cross-origin Origins that may
 	// call the API with credentials (dev frontend). Nil disables CORS handling.
 	AllowOrigin func(origin string) bool
@@ -197,11 +198,11 @@ func NewRouter(d Deps) http.Handler {
 	// back to a PUBLIC_DIR directory when no UI was embedded.
 	switch {
 	case webui.HasContent():
-		mountStaticFS(r, http.FS(webui.FS()))
+		mountStaticFS(r, http.FS(webui.FS()), d.AnalyticsGAID)
 		d.Logger.Info("serving embedded frontend")
 	case d.PublicDir != "":
 		if info, err := os.Stat(d.PublicDir); err == nil && info.IsDir() {
-			mountStatic(r, d.PublicDir)
+			mountStatic(r, d.PublicDir, d.AnalyticsGAID)
 			d.Logger.Info("serving frontend", "dir", d.PublicDir)
 		} else {
 			d.Logger.Warn("PUBLIC_DIR not found; serving API only", "dir", d.PublicDir)

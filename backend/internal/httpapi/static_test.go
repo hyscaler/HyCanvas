@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -31,7 +32,7 @@ func TestStaticServingFS(t *testing.T) {
 	write("_next/static/app.js", "console.log(1)")
 
 	r := chi.NewRouter()
-	mountStaticFS(r, http.FS(os.DirFS(dir)))
+	mountStaticFS(r, http.FS(os.DirFS(dir)), "")
 	srv := httptest.NewServer(r)
 	defer srv.Close()
 	get := func(path string) (int, string) {
@@ -137,7 +138,7 @@ func TestStaticServing(t *testing.T) {
 	r := chi.NewRouter()
 	// A real API route so the guard's namespace check is meaningful.
 	r.Get("/api/v1/ping", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200) })
-	mountStatic(r, dir)
+	mountStatic(r, dir, "")
 	srv := httptest.NewServer(r)
 	defer srv.Close()
 
@@ -187,5 +188,65 @@ func TestStaticServing(t *testing.T) {
 	// A matched API route still works.
 	if code, _, _ := get("/api/v1/ping"); code != 200 {
 		t.Fatalf("api ping: %d", code)
+	}
+}
+
+// TestStaticGAInjection verifies the Google Analytics snippet is injected into
+// served HTML pages (only) when a measurement id is configured, kept out
+// otherwise, and that an operator id is sanitized so it can't inject markup.
+func TestStaticGAInjection(t *testing.T) {
+	dir := t.TempDir()
+	writeFile := func(rel, body string) {
+		p := filepath.Join(dir, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeFile("index.html", "<html><head><title>x</title></head><body>hi</body></html>")
+	writeFile("_next/static/app.js", "console.log(1)")
+
+	body := func(r chi.Router, path string) string {
+		srv := httptest.NewServer(r)
+		defer srv.Close()
+		resp, err := http.Get(srv.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		b, _ := io.ReadAll(resp.Body)
+		return string(b)
+	}
+
+	// Enabled: HTML gets the snippet, assets do not.
+	rOn := chi.NewRouter()
+	mountStaticFS(rOn, http.FS(os.DirFS(dir)), "G-ABC12345")
+	html := body(rOn, "/")
+	if !strings.Contains(html, "googletagmanager.com/gtag/js?id=G-ABC12345") ||
+		!strings.Contains(html, "gtag('config','G-ABC12345')") {
+		t.Fatalf("html missing GA snippet: %q", html)
+	}
+	if !strings.Contains(html, "</head>") || strings.Index(html, "gtag") > strings.Index(html, "</head>") {
+		t.Fatalf("GA snippet not injected before </head>: %q", html)
+	}
+	if js := body(rOn, "/_next/static/app.js"); strings.Contains(js, "gtag") {
+		t.Fatalf("asset should not be injected: %q", js)
+	}
+
+	// Disabled: no snippet.
+	rOff := chi.NewRouter()
+	mountStaticFS(rOff, http.FS(os.DirFS(dir)), "")
+	if strings.Contains(body(rOff, "/"), "gtag") {
+		t.Fatal("GA snippet present when disabled")
+	}
+
+	// Sanitized: quotes/brackets stripped, so no markup can escape the script.
+	if got := sanitizeGAID(`G-X"><script>evil</script>`); strings.ContainsAny(got, `"<>'`) {
+		t.Fatalf("sanitizeGAID left unsafe chars: %q", got)
+	}
+	if sanitizeGAID("  G-ABC_123  ") != "G-ABC_123" {
+		t.Fatalf("sanitizeGAID mangled a valid id")
 	}
 }

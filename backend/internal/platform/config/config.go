@@ -36,6 +36,11 @@ type Config struct {
 	Auth AuthPolicy
 	// Captcha optionally protects the human-facing auth forms.
 	Captcha CaptchaConfig
+	// AnalyticsGAID is a Google Analytics 4 measurement id (e.g. "G-XXXXXXXXXX").
+	// When set, the server injects the gtag.js snippet into every served HTML
+	// page at runtime. Empty (the default) means no analytics, so a self-hosted
+	// instance ships tracking-free unless the operator opts in.
+	AnalyticsGAID string
 }
 
 // CaptchaConfig configures a CAPTCHA on the auth forms (login, signup,
@@ -93,6 +98,7 @@ func Load() (Config, error) {
 			SecretKey: os.Getenv("CAPTCHA_SECRET_KEY"),
 			MinScore:  envFloat("CAPTCHA_MIN_SCORE", 0.5),
 		},
+		AnalyticsGAID: strings.TrimSpace(os.Getenv("GOOGLE_ANALYTICS_ID")),
 	}
 	if c.DatabaseURL == "" {
 		return c, ErrDatabaseURLMissing
