@@ -222,6 +222,17 @@ body {
   scrollbar-color: var(--oc-scrollbar) transparent;
 }
 
+/* Scroll container with NO visible scrollbar, for strips that manage their
+   own scrolling (the pages bar keeps the active thumb in view); an overlay
+   scrollbar flashing over the thumbnails on every programmatic scroll reads
+   as UI flicker. */
+.oc-scroll-none {
+  scrollbar-width: none;
+}
+.oc-scroll-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* Clean, swatch-style native color inputs used across the editor panels. */
 .oc-color {
   -webkit-appearance: none;

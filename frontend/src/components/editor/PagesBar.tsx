@@ -1,7 +1,7 @@
 // Pages strip live thumbnails you can switch, drag to reorder,
 // add, duplicate, and delete.
 
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Plus, Copy, Trash2, Eye, EyeOff, ChevronDown, ChevronRight, Bookmark } from "lucide-react";
 import { groupPagesBySection, type SectionGroup, type SlideSection } from "@hc/schema";
 import { useEditor } from "@/store/editor";
@@ -32,6 +32,49 @@ export function PagesBar() {
   const [renaming, setRenaming] = useState<number | null>(null);
   const [sizeMenu, setSizeMenu] = useState(false);
 
+  // The size-preset menu is fixed-positioned and clamped to the viewport: an
+  // absolute popover anchored inside the bar is clipped by the bar's
+  // overflow-x scroll container and stacked beneath the panels above it
+  // (same fix as the color picker's popover). Placed imperatively in the
+  // layout pass so it never jumps.
+  const addWrapRef = useRef<HTMLDivElement>(null);
+  const sizeMenuRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (!sizeMenu) return;
+    const place = () => {
+      const r = addWrapRef.current?.getBoundingClientRect();
+      const el = sizeMenuRef.current;
+      if (!r || !el) return;
+      const pw = el.offsetWidth || 176;
+      const ph = el.offsetHeight || 260;
+      const left = Math.min(Math.max(8, r.left), Math.max(8, window.innerWidth - pw - 8));
+      el.style.left = `${left}px`;
+      el.style.top = `${Math.max(8, r.top - ph - 6)}px`;
+      el.style.visibility = "visible";
+    };
+    place();
+    // Track bar scrolls (capture) and resizes so the menu stays glued to the
+    // add-page button.
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [sizeMenu]);
+
+  // Only the thumbnail strip scrolls; the controls (section, duplicate, add
+  // page, counter) stay pinned at the bar's right edge, so adding many pages
+  // never pushes the add-page button off screen. Keep the active page's thumb
+  // in view as pages are added or navigation moves the active page.
+  const stripRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // Smooth, so the strip visibly glides to the thumb instead of jumping.
+    stripRef.current
+      ?.querySelector('[data-active="true"]')
+      ?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+  }, [active, pages.length]);
+
   // Section runs (doc 28 FR-5). The bar stays a flat strip; a divider chip is
   // injected at each group boundary, and a collapsed group hides its thumbs
   // (never its slides: collapse is a view preference, not a deletion).
@@ -44,7 +87,19 @@ export function PagesBar() {
   }
 
   return (
-    <div className="oc-scroll flex shrink-0 items-center gap-2 overflow-x-auto border-t border-neutral-200 bg-surface px-3 py-2">
+    <div className="flex shrink-0 items-center gap-2 border-t border-neutral-200 bg-surface px-3">
+      {/* Vertical padding lives INSIDE the scroll strip: the thumbs' hover
+          buttons overhang the tile tops, and top overflow in a scroll
+          container is clipped, not scrollable. */}
+      <div
+        ref={stripRef}
+        // A vertical mouse wheel scrolls the strip horizontally; trackpads
+        // already pan sideways natively.
+        onWheel={(e) => {
+          if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) e.currentTarget.scrollLeft += e.deltaY;
+        }}
+        className="oc-scroll-none flex min-w-0 items-center gap-2 overflow-x-auto py-2"
+      >
       {pages.map((p, i) => {
         const hidden = !!(p as { hidden?: boolean }).hidden;
         const startsGroup = groupStart.get(i);
@@ -55,7 +110,7 @@ export function PagesBar() {
         return (
         <Fragment key={`g${p.id}`}>
         {divider}
-        <div className="group relative shrink-0">
+        <div className="group relative shrink-0" data-active={i === active ? "true" : undefined}>
           <button
             draggable
             onDragStart={() => setDragIdx(i)}
@@ -113,6 +168,8 @@ export function PagesBar() {
         </Fragment>
         );
       })}
+      </div>
+      <div className="flex shrink-0 items-center gap-2 py-2">
       <button
         onClick={() => st().addSection(useEditor.getState().activePage)}
         title="Start a section at the current slide"
@@ -130,7 +187,7 @@ export function PagesBar() {
       >
         <Copy size={16} />
       </button>
-      <div className="relative flex shrink-0 items-stretch">
+      <div ref={addWrapRef} className="relative flex shrink-0 items-stretch">
         <button
           onClick={() => st().addPage()}
           title="Add page (same size)"
@@ -149,8 +206,8 @@ export function PagesBar() {
         </button>
         {sizeMenu && (
           <>
-            <div className="fixed inset-0 z-10" onClick={() => setSizeMenu(false)} />
-            <div className="absolute bottom-full left-0 z-20 mb-1 w-44 overflow-hidden rounded-lg border border-neutral-200 bg-surface py-1 shadow-lg">
+            <div className="fixed inset-0 z-40" onClick={() => setSizeMenu(false)} />
+            <div ref={sizeMenuRef} style={{ visibility: "hidden" }} className="fixed z-50 w-44 overflow-hidden rounded-lg border border-neutral-200 bg-surface py-1 shadow-lg">
               {PAGE_SIZE_PRESETS.map((p) => (
                 <button
                   key={p.label}
@@ -166,6 +223,7 @@ export function PagesBar() {
         )}
       </div>
       <span className="ml-1 shrink-0 text-xs text-neutral-400">Page {active + 1} of {pages.length}</span>
+      </div>
     </div>
   );
 }
