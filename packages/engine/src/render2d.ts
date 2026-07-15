@@ -784,8 +784,9 @@ function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, bo
         vShift = vAlign === "middle" ? slack / 2 : slack;
       }
       const isWs = (t: string) => t.length > 0 && t.trim() === "";
-      // Curved text: lay glyphs along a circular arc. Skips the
-      // normal line loop; effects/lists are not combined with curve.
+      // Curved text: lay glyphs along a circular arc. Skips the normal line
+      // loop; text effects still apply (per glyph, in the arc branch below),
+      // but lists/columns are not combined with curve.
       const arcCurv = node.flow?.kind === "arc" ? node.flow.curvature : 0;
       for (let li = 0; !arcCurv && li < lines.length; li++) {
         const line = lines[li];
@@ -942,6 +943,10 @@ function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, bo
       // Curved text: place each glyph on a circle so arc length == text width.
       // Positive curvature bows up (rainbow), negative bows down. Rotation keeps
       // each glyph tangent to the arc; composed via transform() (translate+rotate).
+      // Text effects apply per glyph with the same stack as the straight path
+      // above, so applying a curve never silently drops an effect. Gradient
+      // fills flatten to their first stop here (the per-glyph frame has no
+      // shared box for one gradient to span).
       if (arcCurv && ctx.save && ctx.restore && ctx.fillText) {
         const glyphs: { ch: string; style: Seg["style"] }[] = [];
         for (const p of node.content) for (const run of p.runs) {
@@ -956,6 +961,25 @@ function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, bo
           const cx = pad.l + contentW / 2;
           const yBase = h / 2;
           const cy = up ? yBase + R : yBase - R;
+          // Background highlight: the straight path draws a rect per line; on
+          // an arc the band follows the glyph circle as a stroked annulus.
+          if (hl && hlFill && ctx.arc && ctx.beginPath && ctx.stroke) {
+            const fsMax = glyphs.reduce((m, g) => Math.max(m, g.style.fontSize), 0) || 16;
+            const vpad = fsMax * 0.15;
+            const mid = fsMax * 0.32; // glyph vertical middle sits above the baseline
+            const bandR = Math.max(1, up ? R + mid : R - mid);
+            const half = W / 2 / R + (hlPad + 1) / R;
+            const a0 = up ? -half - Math.PI / 2 : Math.PI / 2 - half;
+            const a1 = up ? half - Math.PI / 2 : Math.PI / 2 + half;
+            const cctx = ctx as { lineCap?: string };
+            if ("lineCap" in (ctx as object)) cctx.lineCap = hlRad > 0 ? "round" : "butt";
+            ctx.beginPath();
+            ctx.arc(cx, cy, bandR, a0, a1);
+            ctx.lineWidth = fsMax + vpad * 2;
+            ctx.strokeStyle = hlFill;
+            ctx.stroke();
+            if ("lineCap" in (ctx as object)) cctx.lineCap = "butt";
+          }
           ctx.textAlign = "center";
           let s = 0;
           for (let i = 0; i < glyphs.length; i++) {
@@ -964,17 +988,56 @@ function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, bo
             const gx = cx + R * Math.sin(phi);
             const gy = up ? cy - R * Math.cos(phi) : cy + R * Math.cos(phi);
             const rot = up ? phi : -phi;
+            s += adv[i];
+            if (g.ch.trim() === "") continue; // whitespace: nothing to draw
             ctx.save();
             ctx.transform(Math.cos(rot), Math.sin(rot), -Math.sin(rot), Math.cos(rot), gx, gy);
             ctx.font = canvasFontString(g.style);
-            ctx.fillStyle = g.style.fill.type === "solid"
+            const fs = g.style.fontSize;
+            const css = g.style.fill.type === "solid"
               ? colorToCss(g.style.fill.color)
               : g.style.fill.type === "gradient" && g.style.fill.stops[0]
                 ? colorToCss(g.style.fill.stops[0].color)
                 : "rgba(0,0,0,1)";
-            ctx.fillText(g.ch, 0, 0);
+            // Hand-drawn offsets (echo/splice) are counter-rotated so the trail
+            // keeps one world direction along the whole arc, matching how the
+            // canvas shadow offsets behave (they ignore the CTM).
+            const worldOff = (o: number) => ({ x: o * (Math.cos(rot) + Math.sin(rot)), y: o * (Math.cos(rot) - Math.sin(rot)) });
+            if (eEcho) {
+              const ecol = flatColor(eEcho.color);
+              const n = Math.max(1, Math.min(8, Math.round(eEcho.count) || 3));
+              const off = eEcho.offset || fs * 0.12;
+              const gctx = ctx as { globalAlpha?: number };
+              for (let e = n; e >= 1; e--) {
+                const a = 0.3 * (1 - (e - 1) / (n + 1));
+                const prev = typeof gctx.globalAlpha === "number" ? gctx.globalAlpha : 1;
+                if (typeof gctx.globalAlpha === "number") gctx.globalAlpha = prev * a;
+                const d = worldOff(off * e);
+                ctx.fillStyle = ecol;
+                ctx.fillText(g.ch, d.x, d.y);
+                if (typeof gctx.globalAlpha === "number") gctx.globalAlpha = prev;
+              }
+            }
+            if (outline && ctx.strokeText) { ctx.lineWidth = outline.width; ctx.strokeStyle = colorToCss(outline.color); ctx.strokeText(g.ch, 0, 0); }
+            if (eOutlineFx && ctx.strokeText) { ctx.lineWidth = Math.max(0.5, eOutlineFx.width); ctx.strokeStyle = flatColor(eOutlineFx.color); ctx.strokeText(g.ch, 0, 0); }
+            if (eSplice && ctx.strokeText) { const d = worldOff(eSplice.offset || 0); ctx.lineWidth = Math.max(0.5, eSplice.thickness); ctx.strokeStyle = flatColor(eSplice.color); ctx.strokeText(g.ch, d.x, d.y); }
+            if (hasShadowApi) {
+              if (eGlow) { const gi = Math.max(0.2, eGlow.intensity || 1); sctx.shadowColor = flatColorAlpha(eGlow.color, gi); sctx.shadowBlur = Math.max(0, eGlow.radius); sctx.shadowOffsetX = 0; sctx.shadowOffsetY = 0; }
+              else if (eNeon) { sctx.shadowColor = flatColor(eNeon.color); sctx.shadowBlur = Math.max(4, fs * 0.5 * Math.max(0.2, eNeon.intensity || 1)); sctx.shadowOffsetX = 0; sctx.shadowOffsetY = 0; }
+              else if (eShadow) { sctx.shadowColor = flatColorAlpha(eShadow.color, eShadow.opacity ?? 1); sctx.shadowBlur = Math.max(0, eShadow.blur); sctx.shadowOffsetX = eShadow.dx; sctx.shadowOffsetY = eShadow.dy; }
+              else if (eLift) { const k = Math.max(0.1, eLift.intensity || 0.5); sctx.shadowColor = `rgba(0,0,0,${0.35 * k})`; sctx.shadowBlur = fs * 0.3 * k + 2; sctx.shadowOffsetX = 0; sctx.shadowOffsetY = fs * 0.06; }
+            }
+            if (fillVisible) {
+              ctx.fillStyle = css;
+              ctx.fillText(g.ch, 0, 0);
+              if (eGlow && hasShadowApi && (eGlow.intensity ?? 1) > 1) {
+                for (let gp = Math.min(2, Math.round(eGlow.intensity) - 1); gp > 0; gp--) ctx.fillText(g.ch, 0, 0);
+              }
+            }
+            clearShadow();
+            if (eNeon && fillVisible) { ctx.fillStyle = css; ctx.fillText(g.ch, 0, 0); }
+            if (eHollow && ctx.strokeText) { ctx.lineWidth = Math.max(0.5, eHollow.thickness || Math.max(1, fs / 16)); ctx.strokeStyle = css; ctx.strokeText(g.ch, 0, 0); }
             ctx.restore();
-            s += adv[i];
           }
           ctx.textAlign = "left";
         }

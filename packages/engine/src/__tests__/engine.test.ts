@@ -135,6 +135,9 @@ class RecordingCtx implements CanvasLike {
   }
   rect() {}
   ellipse() {}
+  arc() {
+    this.rec("arc");
+  }
   fill() {
     this.rec("fill");
   }
@@ -658,6 +661,30 @@ describe("Canvas2D render path (FR-1, FR-2, FR-5, AC-1)", () => {
     renderScene(createScene(d), ctx, defaultViewport(400, 400));
     expect(ctx.ops.some((o) => o.op === "strokeText")).toBe(true); // glyph outline drawn
     expect(ctx.ops.some((o) => o.op === "strokeRect")).toBe(false); // not the box outline
+  });
+
+  it("keeps text effects when the text is curved (arc flow)", () => {
+    const d = createBlankDesign();
+    d.pages[0].children = [
+      n("text", {
+        id: "t",
+        flow: { kind: "arc", curvature: 1 },
+        textEffects: [
+          { kind: "echo", offset: 4, count: 2, color: { type: "solid", color: { srgb: { r: 0, g: 0, b: 1, a: 1 } } } },
+          { kind: "hollow", thickness: 2 },
+          { kind: "highlight", color: { type: "solid", color: { srgb: { r: 1, g: 1, b: 0, a: 1 } } }, padding: 2, radius: 4 },
+        ],
+        content: [{ runs: [{ text: "Arc", style: { fontFamily: "system", fontStyle: "Regular", fontSize: 40, fill: { type: "solid", color: { srgb: { r: 1, g: 1, b: 1, a: 1 } } } } }], style: { align: "left", direction: "auto" } }],
+      } as Partial<Node>),
+    ];
+    const ctx = new RecordingCtx();
+    renderScene(createScene(d), ctx, defaultViewport(400, 400));
+    // Hollow strokes each of the 3 glyphs; echo adds 2 offset fills per glyph
+    // (hollow suppresses the base fill); the highlight band strokes an arc.
+    expect(ctx.ops.filter((o) => o.op === "strokeText").length).toBe(3);
+    expect(ctx.ops.filter((o) => o.op === "fillText").length).toBe(6);
+    expect(ctx.ops.some((o) => o.op === "arc")).toBe(true);
+    expect(ctx.ops.some((o) => o.op === "stroke")).toBe(true);
   });
 
   it("one-shot render() and a mounted renderer both paint and convert coords", () => {
