@@ -62,9 +62,33 @@ export function rotateAboutCenter(
   deltaDeg: number,
   snap = false,
 ): Transform {
+  return rotateAboutPoint(t, size, deltaDeg, { x: 0.5, y: 0.5 }, snap);
+}
+
+/** Rotate a node by a delta in degrees about an arbitrary LOCAL pivot, given
+ *  as a normalized box fraction (0..1 per axis; {0.5,0.5} is the center), and
+ *  recompute the translation so that pivot stays fixed in world space. This is
+ *  what makes the "Rotate around" origin picker take effect. Snap to 15-degree
+ *  increments when requested. Correct for scaled/flipped/skewed nodes too. */
+export function rotateAboutPoint(
+  t: Transform,
+  size: Size,
+  deltaDeg: number,
+  origin: { x: number; y: number },
+  snap = false,
+): Transform {
   let rotation = t.rotation + deltaDeg;
   if (snap) rotation = Math.round(rotation / 15) * 15;
-  return keepCenterFixed(t, { ...t, rotation }, size);
+  const px = size.width * origin.x;
+  const py = size.height * origin.y;
+  const pivotWorld = applyToPoint(fromTransform(t), { x: px, y: py });
+  const next = { ...t, rotation };
+  const m = fromTransform(next);
+  return {
+    ...next,
+    x: pivotWorld.x - (m.a * px + m.c * py),
+    y: pivotWorld.y - (m.b * px + m.d * py),
+  };
 }
 
 export function setSkew(t: Transform, skewX: number, skewY: number): Transform {
@@ -126,11 +150,19 @@ export function resizeNode(
   const syDir = fy === 1 ? 1 : fy === 0 ? -1 : 0;
   const factor = opts.fromCenter ? 2 : 1;
 
-  let w = Math.max(MIN_SIZE, w0 + sxDir * local.x * factor);
-  let h = Math.max(MIN_SIZE, h0 + syDir * local.y * factor);
+  // Raw (signed) extents: dragging past the anchor goes negative, which flips
+  // the node on that axis and keeps resizing mirrored (drag-through, like other
+  // design tools) instead of pinning at the minimum size.
+  const wRaw = w0 + sxDir * local.x * factor;
+  const hRaw = h0 + syDir * local.y * factor;
+  const flipX = wRaw < 0;
+  const flipY = hRaw < 0;
+  let w = Math.max(MIN_SIZE, Math.abs(wRaw));
+  let h = Math.max(MIN_SIZE, Math.abs(hRaw));
 
   if (opts.aspect && sxDir !== 0 && syDir !== 0) {
-    // Constrain to the original ratio using the larger relative change.
+    // Constrain to the original ratio using the larger relative change
+    // (magnitudes only; the flips above are independent of aspect).
     const ratio = w0 / h0;
     if (Math.abs(w / w0 - 1) >= Math.abs(h / h0 - 1)) h = w / ratio;
     else w = h * ratio;
@@ -142,14 +174,21 @@ export function resizeNode(
   const ay = opts.fromCenter ? 0.5 : fy === 0.5 ? 0.5 : 1 - fy;
   const anchorWorld = applyToPoint(m, { x: ax * w0, y: ay * h0 });
 
-  // Keep the linear part; recompute translation so the anchor stays fixed.
+  // Recompute translation so the anchor stays fixed, using the NEW linear part
+  // (a flip negates that axis' scale, which changes where local points land).
+  const tNew: Transform = {
+    ...t,
+    scaleX: flipX ? -t.scaleX : t.scaleX,
+    scaleY: flipY ? -t.scaleY : t.scaleY,
+  };
+  const mNew = fromTransform({ ...tNew, x: 0, y: 0 });
   const anchorLocalNew: Point = { x: ax * w, y: ay * h };
   const linearAnchor: Point = {
-    x: m.a * anchorLocalNew.x + m.c * anchorLocalNew.y,
-    y: m.b * anchorLocalNew.x + m.d * anchorLocalNew.y,
+    x: mNew.a * anchorLocalNew.x + mNew.c * anchorLocalNew.y,
+    y: mNew.b * anchorLocalNew.x + mNew.d * anchorLocalNew.y,
   };
   return {
-    transform: { ...t, x: anchorWorld.x - linearAnchor.x, y: anchorWorld.y - linearAnchor.y },
+    transform: { ...tNew, x: anchorWorld.x - linearAnchor.x, y: anchorWorld.y - linearAnchor.y },
     size: { width: w, height: h },
   };
 }

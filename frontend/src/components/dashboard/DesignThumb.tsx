@@ -8,11 +8,43 @@ import { createScene, renderScene, type CanvasLike, type Viewport } from "@hc/en
 import { oc } from "@/lib/sdk";
 import { imageAssets } from "@/lib/assetProvider";
 
+// Nearest scrollable ancestor, used as the observer root: the dashboard grids
+// scroll in an inner overflow-y-auto container, and a rootMargin only extends
+// past its clip edge when that container itself is the root.
+function scrollParent(el: HTMLElement): Element | null {
+  for (let p = el.parentElement; p; p = p.parentElement) {
+    if (/auto|scroll/.test(getComputedStyle(p).overflowY)) return p;
+  }
+  return null;
+}
+
 export function DesignThumb({ designId, templateId, trashed }: { designId?: string; templateId?: string; trashed?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [ok, setOk] = useState<boolean | null>(null);
+  // Each preview costs a full design-file download plus an engine render, so
+  // it must not start until the card is on (or near) the viewport: a grid of
+  // 100 templates or designs would otherwise fetch everything at once.
+  // Browsers without IntersectionObserver fall back to rendering eagerly.
+  const [near, setNear] = useState(() => typeof IntersectionObserver === "undefined");
 
   useEffect(() => {
+    if (near) return;
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) setNear(true);
+      },
+      // Start slightly ahead of the visible area so scrolling rarely catches
+      // a card still on its placeholder.
+      { root: scrollParent(el), rootMargin: "400px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [near]);
+
+  useEffect(() => {
+    if (!near) return;
     let cancelled = false;
     void (async () => {
       try {
@@ -23,7 +55,9 @@ export function DesignThumb({ designId, templateId, trashed }: { designId?: stri
         if (cancelled) return;
         const canvas = ref.current;
         if (!canvas) return;
-        const dpr = window.devicePixelRatio || 1;
+        // Cap the backing resolution: past 2x there is no visible gain on a
+        // card-sized preview, only a heavier render.
+        const dpr = Math.min(2, window.devicePixelRatio || 1);
         const cw = canvas.clientWidth || 260;
         const ch = canvas.clientHeight || 195;
         canvas.width = Math.round(cw * dpr);
@@ -47,7 +81,7 @@ export function DesignThumb({ designId, templateId, trashed }: { designId?: stri
     return () => {
       cancelled = true;
     };
-  }, [designId, templateId, trashed]);
+  }, [near, designId, templateId, trashed]);
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-neutral-100">

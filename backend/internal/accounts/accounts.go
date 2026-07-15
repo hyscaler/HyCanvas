@@ -37,6 +37,7 @@ var (
 	ErrReuseDetected      = errors.New("refresh token reuse detected; session revoked")
 	ErrEmailTaken         = errors.New("an account with this email already exists")
 	ErrInvalidSignup      = errors.New("a valid email and an 8+ character password are required")
+	ErrInvalidProfile     = errors.New("invalid profile field")
 	ErrForbidden          = errors.New("forbidden")
 	ErrReauth             = errors.New("re-authentication failed")
 	ErrToken              = errors.New("invalid or expired token")
@@ -229,6 +230,9 @@ type UserRow struct {
 	PasswordHash  *string
 	Locale        string
 	Theme         string
+	Timezone      string
+	TimeFormat    string
+	WeekStart     string
 	MFAEnabled    bool
 	CreatedAt     time.Time
 }
@@ -242,6 +246,9 @@ type AuthUser struct {
 	AvatarURL     *string        `json:"avatarUrl,omitempty"`
 	Locale        string         `json:"locale"`
 	Theme         string         `json:"theme"`
+	Timezone      string         `json:"timezone"`
+	TimeFormat    string         `json:"timeFormat"`
+	WeekStart     string         `json:"weekStart"`
 	Prefs         map[string]any `json:"prefs"`
 	MFAEnabled    bool           `json:"mfaEnabled"`
 	CreatedAt     string         `json:"createdAt"`
@@ -256,6 +263,9 @@ func toUser(u UserRow) AuthUser {
 		AvatarURL:     u.AvatarURL,
 		Locale:        u.Locale,
 		Theme:         u.Theme,
+		Timezone:      u.Timezone,
+		TimeFormat:    u.TimeFormat,
+		WeekStart:     u.WeekStart,
 		Prefs:         map[string]any{"accessibility": map[string]any{"reduceMotion": false, "highContrast": false}},
 		MFAEnabled:    u.MFAEnabled,
 		CreatedAt:     u.CreatedAt.UTC().Format("2006-01-02T15:04:05.000Z07:00"),
@@ -313,12 +323,12 @@ func (s *Service) WithMFASecret(secret string) *Service {
 
 // findUserByEmail loads a user by lowercased email.
 func (s *Service) findUserByEmail(ctx context.Context, email string) (*UserRow, error) {
-	const q = `SELECT id, email, "email_verified", name, "avatar_url", "password_hash", locale, theme, "mfa_enabled", "created_at"
+	const q = `SELECT id, email, "email_verified", name, "avatar_url", "password_hash", locale, theme, timezone, "time_format", "week_start", "mfa_enabled", "created_at"
 		FROM "users" WHERE email = $1`
 	var u UserRow
 	err := s.db.QueryRow(ctx, q, email).Scan(
 		&u.ID, &u.Email, &u.EmailVerified, &u.Name, &u.AvatarURL, &u.PasswordHash,
-		&u.Locale, &u.Theme, &u.MFAEnabled, &u.CreatedAt,
+		&u.Locale, &u.Theme, &u.Timezone, &u.TimeFormat, &u.WeekStart, &u.MFAEnabled, &u.CreatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -328,12 +338,12 @@ func (s *Service) findUserByEmail(ctx context.Context, email string) (*UserRow, 
 
 // findUserByID loads the full user row by id (for issuing a session post-MFA).
 func (s *Service) findUserByID(ctx context.Context, id string) (*UserRow, error) {
-	const q = `SELECT id, email, "email_verified", name, "avatar_url", "password_hash", locale, theme, "mfa_enabled", "created_at"
+	const q = `SELECT id, email, "email_verified", name, "avatar_url", "password_hash", locale, theme, timezone, "time_format", "week_start", "mfa_enabled", "created_at"
 		FROM "users" WHERE id = $1`
 	var u UserRow
 	err := s.db.QueryRow(ctx, q, id).Scan(
 		&u.ID, &u.Email, &u.EmailVerified, &u.Name, &u.AvatarURL, &u.PasswordHash,
-		&u.Locale, &u.Theme, &u.MFAEnabled, &u.CreatedAt,
+		&u.Locale, &u.Theme, &u.Timezone, &u.TimeFormat, &u.WeekStart, &u.MFAEnabled, &u.CreatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -343,12 +353,12 @@ func (s *Service) findUserByID(ctx context.Context, id string) (*UserRow, error)
 
 // GetUserByID loads a user view by id (for /me).
 func (s *Service) GetUserByID(ctx context.Context, id string) (*AuthUser, error) {
-	const q = `SELECT id, email, "email_verified", name, "avatar_url", "password_hash", locale, theme, "mfa_enabled", "created_at"
+	const q = `SELECT id, email, "email_verified", name, "avatar_url", "password_hash", locale, theme, timezone, "time_format", "week_start", "mfa_enabled", "created_at"
 		FROM "users" WHERE id = $1`
 	var u UserRow
 	if err := s.db.QueryRow(ctx, q, id).Scan(
 		&u.ID, &u.Email, &u.EmailVerified, &u.Name, &u.AvatarURL, &u.PasswordHash,
-		&u.Locale, &u.Theme, &u.MFAEnabled, &u.CreatedAt,
+		&u.Locale, &u.Theme, &u.Timezone, &u.TimeFormat, &u.WeekStart, &u.MFAEnabled, &u.CreatedAt,
 	); err != nil {
 		return nil, err
 	}
@@ -362,10 +372,26 @@ type UpdateProfileInput struct {
 	Name      *string
 	AvatarURL *string
 	Locale    *string
+	// Regional preferences. Timezone is an IANA name ("" = auto/browser);
+	// TimeFormat is one of auto|12h|24h; WeekStart is one of auto|sunday|monday.
+	Timezone   *string
+	TimeFormat *string
+	WeekStart  *string
 }
 
-// UpdateProfile updates the caller's display name, avatar, and/or locale and
-// returns the refreshed user view. A blank name is rejected.
+// validTimezone accepts the empty string ("auto, follow the browser") or any
+// IANA zone the embedded tz database recognizes.
+func validTimezone(tz string) bool {
+	if tz == "" {
+		return true
+	}
+	_, err := time.LoadLocation(tz)
+	return err == nil
+}
+
+// UpdateProfile updates the caller's display name, avatar, and/or regional
+// preferences and returns the refreshed user view. A blank name is rejected, as
+// is a timezone/time-format/week-start value outside the allowed set.
 func (s *Service) UpdateProfile(ctx context.Context, userID string, in UpdateProfileInput) (*AuthUser, error) {
 	var name, locale *string
 	if in.Name != nil {
@@ -380,6 +406,32 @@ func (s *Service) UpdateProfile(ctx context.Context, userID string, in UpdatePro
 			locale = &l
 		}
 	}
+	var timezone, timeFormat, weekStart *string
+	if in.Timezone != nil {
+		tz := strings.TrimSpace(*in.Timezone)
+		if !validTimezone(tz) {
+			return nil, ErrInvalidProfile
+		}
+		timezone = &tz
+	}
+	if in.TimeFormat != nil {
+		tf := strings.TrimSpace(*in.TimeFormat)
+		switch tf {
+		case "auto", "12h", "24h":
+			timeFormat = &tf
+		default:
+			return nil, ErrInvalidProfile
+		}
+	}
+	if in.WeekStart != nil {
+		ws := strings.TrimSpace(*in.WeekStart)
+		switch ws {
+		case "auto", "sunday", "monday":
+			weekStart = &ws
+		default:
+			return nil, ErrInvalidProfile
+		}
+	}
 	var avatar *string
 	avatarSet := in.AvatarURL != nil
 	if avatarSet {
@@ -390,9 +442,12 @@ func (s *Service) UpdateProfile(ctx context.Context, userID string, in UpdatePro
 		SET name = COALESCE($2, name),
 		    locale = COALESCE($3, locale),
 		    "avatar_url" = CASE WHEN $5 THEN NULLIF($4, '') ELSE "avatar_url" END,
+		    timezone = COALESCE($6, timezone),
+		    "time_format" = COALESCE($7, "time_format"),
+		    "week_start" = COALESCE($8, "week_start"),
 		    "updated_at" = now()
 		WHERE id = $1`
-	if _, err := s.db.Exec(ctx, q, userID, name, locale, avatar, avatarSet); err != nil {
+	if _, err := s.db.Exec(ctx, q, userID, name, locale, avatar, avatarSet, timezone, timeFormat, weekStart); err != nil {
 		return nil, err
 	}
 	return s.GetUserByID(ctx, userID)

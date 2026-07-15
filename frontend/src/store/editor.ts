@@ -402,6 +402,10 @@ interface EditorState {
   // pages
   /** Switch the active page (clamped); clears selection. */
   setActivePage(index: number): void;
+  /** Navigate to a page: activate it AND scroll its band into the viewport
+   *  (page top when it overflows the view, centered otherwise), so the page
+   *  under the viewport center is the page just chosen. */
+  goToPage(index: number): void;
   /** Mark a live move/resize gesture active so the canvas fades the selection
    *  (the page shows through it during the drag). Cleared on gesture end. */
   setTransforming(v: boolean): void;
@@ -692,7 +696,7 @@ interface EditorState {
   pushApplied(cmds: EditCommand[]): void;
   /** Record an already-applied transform/size/box/content change as one undo step
    *  (e.g. a text resize that also reflowed the box and scaled fonts). */
-  pushNodeSnapshot(id: string, before: { transform: Transform; size: { width: number; height: number }; box?: unknown; content?: unknown }): void;
+  pushNodeSnapshot(id: string, before: { transform: Transform; size: { width: number; height: number }; box?: unknown; content?: unknown; points?: unknown; children?: unknown }): void;
   addNode(type: Exclude<NodeType, "model3d">, init?: Partial<Node>): void;
   /** Place an image node from a URL, registering it as a design asset. */
   /** Add an image; `at` (page point) centers it there (e.g. a drag-drop), else viewport-centered.
@@ -882,6 +886,14 @@ interface EditorState {
   setStrokeSel(stroke?: Stroke): void;
   /** Commit a text node's transform + size, reflowing its layout box, as one undo step. */
   applyTextGeometry(id: string, transform: Transform, size: { width: number; height: number }): void;
+  /** Apply panel-entered geometry to a line node: the polyline scales with the
+   *  box (a line draws from its points, so size alone changes nothing visible).
+   *  An axis the polyline doesn't span stays locked. One undo step. */
+  applyLineGeometry(id: string, transform: Transform, size: { width: number; height: number }): void;
+  /** Apply panel-entered geometry to a photo grid: the cell frames re-lay to
+   *  the new size (spans preserved, filled images keep covering their cells).
+   *  One undo step. */
+  applyGridGeometry(id: string, transform: Transform, size: { width: number; height: number }): void;
   renameNode(id: string, name: string): void;
 
   undo(): void;
@@ -908,7 +920,7 @@ function hexToColor(hex: string): { srgb: { r: number; g: number; b: number; a: 
 export type GridSpan = { row: number; col: number; rowSpan: number; colSpan: number };
 
 // The local-space box of a grid cell within a grid node's box.
-function gridCellBox(size: { width: number; height: number }, rows: number, cols: number, gap: number, s: GridSpan) {
+export function gridCellBox(size: { width: number; height: number }, rows: number, cols: number, gap: number, s: GridSpan) {
   const cellW = (size.width - gap * (cols - 1)) / cols;
   const cellH = (size.height - gap * (rows - 1)) / rows;
   return {
@@ -917,6 +929,36 @@ function gridCellBox(size: { width: number; height: number }, rows: number, cols
     width: cellW * s.colSpan + gap * (s.colSpan - 1),
     height: cellH * s.rowSpan + gap * (s.rowSpan - 1),
   };
+}
+
+/** Re-lay a photo grid's cell frames to a new grid size: each cell keeps its
+ *  span from `cells` and a filled cell's image child is resized to keep
+ *  covering it. Pure mutation of the given node (callers own undo). */
+export function relayGridCells(
+  g: { rows: number; cols: number; gap: number; cells: { row: number; col: number; rowSpan: number; colSpan: number; childId?: string }[]; children: Node[] },
+  size: { width: number; height: number },
+): void {
+  const byId = new Map(g.children.map((n) => [n.id, n]));
+  for (const cell of g.cells) {
+    const frame = (cell.childId ? byId.get(cell.childId) : undefined) as unknown as
+      | { transform: Transform; size: { width: number; height: number }; children?: Node[] }
+      | undefined;
+    if (!frame) continue;
+    const box = gridCellBox(size, g.rows, g.cols, g.gap, cell);
+    // Floor at 1px: a grid dragged smaller than its gaps would otherwise
+    // compute negative cell sizes.
+    const bw = Math.max(1, box.width);
+    const bh = Math.max(1, box.height);
+    frame.transform = { x: Math.max(0, box.x), y: Math.max(0, box.y), scaleX: 1, scaleY: 1, rotation: 0 };
+    frame.size = { width: bw, height: bh };
+    const img = frame.children?.length === 1 && frame.children[0].type === "image"
+      ? (frame.children[0] as unknown as { transform: Transform; size: { width: number; height: number } })
+      : null;
+    if (img) {
+      img.transform = { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 };
+      img.size = { width: bw, height: bh };
+    }
+  }
 }
 
 // Minimal view of a PathNode for the pen tool's in-place mutations.
@@ -1142,30 +1184,47 @@ export const useEditor = create<EditorState>((set, get) => {
     return -1;
   };
 
-  // Which page should a panel insert target, and where on it? A new element is
-  // placed at the CENTER OF THE PAGE artboard (not the viewport), so it always
-  // lands on the page regardless of how the user has panned or zoomed. Pages are
-  // stacked vertically in world space, so we first resolve which page the user
-  // is looking at: the page whose stacked band contains the viewport center
-  // (same half-gap rule as the canvas hit-testing). Wheel-scrolling does not
-  // update activePage, so resolving from the viewport (not activePage) is what
-  // makes "add on page 2" target page 2. Falls back to the active page before
-  // the viewport is measured. cx/cy are the target page's own center.
+  // The page the user is looking at: the page whose stacked band contains the
+  // viewport center (same half-gap rule as the canvas hit-testing). Null when
+  // the viewport is not measured yet.
+  const centeredPageIndex = (
+    doc: DesignFile,
+    vp: { zoom: number; panY: number },
+    vs: { height: number },
+  ): number | null => {
+    if (vs.height <= 0 || vp.zoom <= 0 || doc.pages.length === 0) return null;
+    // screen = zoom*(world - pan)  =>  world = screen/zoom + pan
+    const wy = vp.panY + vs.height / 2 / vp.zoom;
+    const offs = pageOffsets(doc);
+    for (let i = 0; i < doc.pages.length; i++) {
+      if (wy < offs[i] + doc.pages[i].height + PAGE_GAP / 2) return i;
+    }
+    return doc.pages.length - 1;
+  };
+
+  // Which page should a panel insert target, and where on it? A new element
+  // joins the ACTIVE page, at the CENTER OF ITS ARTBOARD (not the viewport),
+  // so it always lands on that page regardless of pan/zoom. Because the
+  // active page follows scrolling while nothing is selected, this is normally
+  // the page in view; but a page chosen explicitly (or pinned by a live
+  // selection) wins over whatever the viewport happens to show. When the
+  // active page is NOT the one in view, scroll it into view so the inserted
+  // element is actually visible. cx/cy are the target page's own center.
   const insertContext = () => {
-    const { zoom, panY } = get().viewport;
-    const vs = get().viewportSize;
     const doc = get().doc;
-    let index = curPageIndex();
-    if (vs.height > 0 && zoom > 0 && doc.pages.length > 0) {
-      // screen = zoom*(world - pan)  =>  world = screen/zoom + pan
-      const wy = panY + vs.height / 2 / zoom;
-      const offs = pageOffsets(doc);
-      index = doc.pages.length - 1;
-      for (let i = 0; i < doc.pages.length; i++) {
-        if (wy < offs[i] + doc.pages[i].height + PAGE_GAP / 2) { index = i; break; }
+    const index = curPageIndex();
+    const page = doc.pages[index];
+    if (page) {
+      const vp = get().viewport;
+      const vs = get().viewportSize;
+      const viewed = centeredPageIndex(doc, vp, vs);
+      if (viewed !== null && viewed !== index) {
+        get().setViewport({
+          panX: page.width / 2 - vs.width / 2 / vp.zoom,
+          panY: pageTop(doc, index) + page.height / 2 - vs.height / 2 / vp.zoom,
+        });
       }
     }
-    const page = doc.pages[index];
     return { index, page, cx: (page?.width ?? 0) / 2, cy: (page?.height ?? 0) / 2 };
   };
 
@@ -1306,6 +1365,22 @@ export const useEditor = create<EditorState>((set, get) => {
         selection: [],
         rev: s.rev + 1,
       })),
+    goToPage: (index) => {
+      get().setActivePage(index);
+      const doc = get().doc;
+      const i = Math.max(0, Math.min(index, doc.pages.length - 1));
+      const page = doc.pages[i];
+      if (!page) return;
+      const z = get().viewport.zoom || 1;
+      const vh = get().viewportSize.height;
+      const top = pageTop(doc, i);
+      // Page top just below the viewport top when the page overflows the view
+      // (reading position, with room for the page header row); centered when it
+      // fits. Both keep the viewport center inside this page's band, so the
+      // scroll-follow in setViewport agrees with the page just chosen.
+      const panY = vh > 0 && page.height * z >= vh ? top - 40 / z : top + page.height / 2 - vh / 2 / z;
+      get().setViewport({ panY });
+    },
     movePage: (from, to) => {
       const doc = get().doc;
       const n = doc.pages.length;
@@ -1830,7 +1905,21 @@ export const useEditor = create<EditorState>((set, get) => {
     setViewport: (v) =>
       set((s) => {
         const merged = { ...s.viewport, ...v };
-        return { viewport: { ...merged, zoom: Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, merged.zoom)) } };
+        const viewport = { ...merged, zoom: Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, merged.zoom)) };
+        // The edited page follows the scroll: the page under the viewport
+        // center becomes active, so the page indicator, header highlight, and
+        // panel inserts agree with what the user is looking at. Only while
+        // nothing is selected or in progress: the gizmo, crop, and text-edit
+        // overlays all measure in ACTIVE-page space and every selection path
+        // activates the selection's page first, so re-targeting activePage
+        // under a live selection would shift their coordinate origin.
+        const follow =
+          s.selection.length === 0 && !s.transforming && s.editingTextId === null && s.cropping === null;
+        const idx = follow ? centeredPageIndex(s.doc, viewport, s.viewportSize) : null;
+        return {
+          viewport,
+          ...(idx !== null && idx !== s.activePage ? { activePage: idx } : {}),
+        };
       }),
     setViewportSize: (width, height) =>
       set((s) => (s.viewportSize.width === width && s.viewportSize.height === height ? {} : { viewportSize: { width, height } })),
@@ -3408,7 +3497,7 @@ export const useEditor = create<EditorState>((set, get) => {
       if (pr) for (const c of cmds) if (c.kind === "insert" && c.node) pr.mine.add(c.node.id);
     },
     pushNodeSnapshot: (id, before) => {
-      type Snap = { transform: Transform; size: { width: number; height: number }; box?: unknown; content?: unknown };
+      type Snap = { transform: Transform; size: { width: number; height: number }; box?: unknown; content?: unknown; points?: unknown; children?: unknown };
       const apply = (snap: Snap) => {
         const l = locate(get().doc, id);
         if (!l) return;
@@ -3417,12 +3506,14 @@ export const useEditor = create<EditorState>((set, get) => {
         n.size = { ...snap.size };
         if (snap.box !== undefined) n.box = structuredClone(snap.box);
         if (snap.content !== undefined) n.content = structuredClone(snap.content);
+        if (snap.points !== undefined) n.points = structuredClone(snap.points);
+        if (snap.children !== undefined) n.children = structuredClone(snap.children);
       };
       const l = locate(get().doc, id);
       if (!l) return;
       const cur = l.node as unknown as Snap;
-      const after: Snap = { transform: { ...cur.transform }, size: { ...cur.size }, box: cur.box !== undefined ? structuredClone(cur.box) : undefined, content: cur.content !== undefined ? structuredClone(cur.content) : undefined };
-      const b: Snap = { transform: { ...before.transform }, size: { ...before.size }, box: before.box !== undefined ? structuredClone(before.box) : undefined, content: before.content !== undefined ? structuredClone(before.content) : undefined };
+      const after: Snap = { transform: { ...cur.transform }, size: { ...cur.size }, box: cur.box !== undefined ? structuredClone(cur.box) : undefined, content: cur.content !== undefined ? structuredClone(cur.content) : undefined, points: cur.points !== undefined ? structuredClone(cur.points) : undefined, children: before.children !== undefined ? structuredClone(cur.children) : undefined };
+      const b: Snap = { transform: { ...before.transform }, size: { ...before.size }, box: before.box !== undefined ? structuredClone(before.box) : undefined, content: before.content !== undefined ? structuredClone(before.content) : undefined, points: before.points !== undefined ? structuredClone(before.points) : undefined, children: before.children !== undefined ? structuredClone(before.children) : undefined };
       set((s) => ({ rev: s.rev + 1, undoStack: [...s.undoStack, { undo: () => apply(b), redo: () => apply(after) }], redoStack: [] }));
     },
 
@@ -5265,6 +5356,35 @@ export const useEditor = create<EditorState>((set, get) => {
       node.transform = { ...transform };
       node.size = { ...size };
       node.box = { ...node.box, width: size.width, height: size.height };
+      get().pushNodeSnapshot(id, before);
+    },
+    applyLineGeometry: (id, transform, size) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "line" || loc.node.locked || editBlocked(id)) return;
+      const node = loc.node as unknown as { transform: Transform; size: { width: number; height: number }; points: { x: number; y: number }[] };
+      const before = { transform: { ...node.transform }, size: { ...node.size }, points: structuredClone(node.points) };
+      const xs = node.points.map((p) => p.x);
+      const ys = node.points.map((p) => p.y);
+      const degX = Math.max(...xs) - Math.min(...xs) < 0.5;
+      const degY = Math.max(...ys) - Math.min(...ys) < 0.5;
+      const next = { ...size };
+      if (degX) next.width = node.size.width;
+      if (degY) next.height = node.size.height;
+      const kx = degX || node.size.width <= 0 ? 1 : next.width / node.size.width;
+      const ky = degY || node.size.height <= 0 ? 1 : next.height / node.size.height;
+      node.points = node.points.map((p) => ({ ...p, x: p.x * kx, y: p.y * ky }));
+      node.transform = { ...transform };
+      node.size = next;
+      get().pushNodeSnapshot(id, before);
+    },
+    applyGridGeometry: (id, transform, size) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "grid" || loc.node.locked || editBlocked(id)) return;
+      const node = loc.node as unknown as { transform: Transform; size: { width: number; height: number }; rows: number; cols: number; gap: number; cells: { row: number; col: number; rowSpan: number; colSpan: number; childId?: string }[]; children: Node[] };
+      const before = { transform: { ...node.transform }, size: { ...node.size }, children: structuredClone(node.children) };
+      node.transform = { ...transform };
+      node.size = { width: Math.max(1, size.width), height: Math.max(1, size.height) };
+      relayGridCells(node, node.size);
       get().pushNodeSnapshot(id, before);
     },
     setStrokeSel: (stroke) => {

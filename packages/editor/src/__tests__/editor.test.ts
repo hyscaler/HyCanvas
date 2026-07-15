@@ -20,6 +20,7 @@ import {
   parentSpaceDelta,
   resizeNode,
   rotateAboutCenter,
+  rotateAboutPoint,
   rotateTransform,
   selectAll,
   selectSameType,
@@ -130,6 +131,38 @@ describe("reparent + history coalescing", () => {
 });
 
 describe("transform ops (FR-6..FR-10)", () => {
+  it("resize drags through the anchor: flips the axis and keeps the anchor fixed", () => {
+    const node = createNode("shape", {
+      shape: "rect",
+      transform: { x: 100, y: 100, scaleX: 1, scaleY: 1, rotation: 0 },
+      size: { width: 50, height: 40 },
+    } as Partial<Node>);
+    // East handle dragged 70 left: raw width -20 -> mirrored across the left
+    // edge (x=100): box spans [80,100], content flipped horizontally.
+    const r = resizeNode(node, "e", -70, 0);
+    expect(r.size.width).toBeCloseTo(20, 5);
+    expect(r.transform.scaleX).toBe(-1);
+    expect(r.transform.x).toBeCloseTo(100, 5); // local 0 still maps to the anchor
+    // Rendered extent: local [0,20] under scaleX -1 spans [x-20, x] = [80,100].
+    // West handle dragged 70 right: raw width -20 -> mirrored across the right
+    // edge (x=150): box spans [150,170].
+    const r2 = resizeNode(node, "w", 70, 0);
+    expect(r2.size.width).toBeCloseTo(20, 5);
+    expect(r2.transform.scaleX).toBe(-1);
+    expect(r2.transform.x).toBeCloseTo(170, 5); // local 20 maps back to 150
+    // South handle dragged 60 up: raw height -20 -> vertical mirror across the
+    // top edge (y=100).
+    const r3 = resizeNode(node, "s", 0, -60);
+    expect(r3.size.height).toBeCloseTo(20, 5);
+    expect(r3.transform.scaleY).toBe(-1);
+    expect(r3.transform.y).toBeCloseTo(100, 5);
+    // A non-crossing drag keeps positive scale (no accidental flips).
+    const r4 = resizeNode(node, "e", -30, 0);
+    expect(r4.size.width).toBeCloseTo(20, 5);
+    expect(r4.transform.scaleX).toBe(1);
+  });
+
+
   it("move respects axis lock", () => {
     const t = { x: 10, y: 20, scaleX: 1, scaleY: 1, rotation: 0 };
     expect(moveTransform(t, 5, 7)).toMatchObject({ x: 15, y: 27 });
@@ -153,6 +186,30 @@ describe("transform ops (FR-6..FR-10)", () => {
     const after = applyToPoint(fromTransform(nt), { x: 40, y: 20 });
     expect(after.x).toBeCloseTo(before.x, 6);
     expect(after.y).toBeCloseTo(before.y, 6);
+  });
+
+  it("rotateAboutPoint keeps the chosen pivot fixed (rotation origin picker)", () => {
+    const t = { x: 100, y: 100, scaleX: 1, scaleY: 1, rotation: 0 };
+    const size = { width: 80, height: 40 };
+    // Pivot at the top-left corner: local (0,0) must stay put, so x/y are
+    // unchanged and the rest of the box swings around it.
+    const tl = rotateAboutPoint(t, size, 90, { x: 0, y: 0 });
+    expect(tl.rotation).toBe(90);
+    expect(tl.x).toBeCloseTo(100, 6);
+    expect(tl.y).toBeCloseTo(100, 6);
+    // Pivot at the bottom-right corner: local (80,40) stays at its world spot.
+    const before = applyToPoint(fromTransform(t), { x: 80, y: 40 });
+    const br = rotateAboutPoint(t, size, 45, { x: 1, y: 1 });
+    const after = applyToPoint(fromTransform(br), { x: 80, y: 40 });
+    expect(after.x).toBeCloseTo(before.x, 6);
+    expect(after.y).toBeCloseTo(before.y, 6);
+    // Center pivot is exactly rotateAboutCenter; holds for a scaled+rotated node.
+    const t2 = { x: 30, y: 60, scaleX: 2, scaleY: -1, rotation: 20 };
+    const a = rotateAboutPoint(t2, size, 33, { x: 0.5, y: 0.5 });
+    const b = rotateAboutCenter(t2, size, 33);
+    expect(a.x).toBeCloseTo(b.x, 6);
+    expect(a.y).toBeCloseTo(b.y, 6);
+    expect(a.rotation).toBeCloseTo(b.rotation, 6);
   });
 
   it("flip keeps the box center fixed for a ROTATED node", () => {

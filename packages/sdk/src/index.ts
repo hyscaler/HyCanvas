@@ -3,13 +3,13 @@
 // integrators (bearer token). See docs 15/04/11/36.
 
 import type { Color, DesignFile } from "@hc/schema";
-import type { AccessMode, Capability, HomeItem, Membership, User, Workspace, WorkspaceRole } from "@hc/authz";
+import type { AccessMode, Capability, HomeItem, Membership, TimeFormat, User, WeekStart, Workspace, WorkspaceRole } from "@hc/authz";
 import type { BrandLintViolation } from "@hc/brandkit";
 
 // Re-export the shared domain types so the SDK is a single import surface for
 // consumers (the web app imports User/Workspace/HomeItem etc. from here).
 export type { DesignFile } from "@hc/schema";
-export type { HomeItem, Membership, User, Workspace, WorkspaceKind, WorkspaceRole } from "@hc/authz";
+export type { HomeItem, Membership, TimeFormat, User, WeekStart, Workspace, WorkspaceKind, WorkspaceRole } from "@hc/authz";
 // Sharing + permissions vocabulary lives in @hc/authz so client and
 // server share it verbatim.
 export type { AccessMode, Capability } from "@hc/authz";
@@ -1032,9 +1032,17 @@ export class HyCanvasClient {
   logout(all = false): Promise<void> {
     return this.request("POST", "/v1/auth/logout", { all });
   }
-  /** Update the signed-in user's profile (name, avatar, locale). Pass
-   *  `avatarUrl: ""` to clear the avatar. Returns the refreshed user. */
-  updateProfile(input: { name?: string; avatarUrl?: string; locale?: string }): Promise<User> {
+  /** Update the signed-in user's profile: name, avatar, locale, and the regional
+   *  preferences (timezone, timeFormat, weekStart). Pass `avatarUrl: ""` to clear
+   *  the avatar. Omitted fields are left unchanged. Returns the refreshed user. */
+  updateProfile(input: {
+    name?: string;
+    avatarUrl?: string;
+    locale?: string;
+    timezone?: string;
+    timeFormat?: TimeFormat;
+    weekStart?: WeekStart;
+  }): Promise<User> {
     return this.request("PATCH", "/v1/me", input);
   }
   me(): Promise<User> {

@@ -12,6 +12,11 @@ export interface AccountPrefs {
   defaultWorkspaceId?: string;
 }
 
+// Regional preferences. "auto" defers to the browser/locale at render time, so a
+// user who never sets these behaves exactly as before the fields existed.
+export type TimeFormat = "auto" | "12h" | "24h";
+export type WeekStart = "auto" | "sunday" | "monday";
+
 export interface User {
   id: string;
   email: string;
@@ -20,6 +25,10 @@ export interface User {
   avatarUrl?: string;
   locale: string;
   theme: "system" | "light" | "dark";
+  // IANA timezone name (e.g. "Asia/Kolkata"); "" means auto (follow the browser).
+  timezone: string;
+  timeFormat: TimeFormat;
+  weekStart: WeekStart;
   prefs: AccountPrefs;
   mfaEnabled: boolean;
   createdAt: string;

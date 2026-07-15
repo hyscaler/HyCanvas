@@ -5,7 +5,7 @@
 // background color is supplied), plus brand-palette/recent swatches and the
 // screen eyedropper. Pure client React; all color math comes from @hc/color.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Color } from "@hc/schema";
 import {
   toHex, fromHex, rgbToCmyk, gamutCheck, simulateCvd, wcag, type CvdType,
@@ -95,6 +95,40 @@ export function ColorField({
   const alpha = value.srgb.a ?? 1;
   const hex = toHex(value).toUpperCase();
 
+  // The popover is fixed-positioned and clamped to the viewport: an absolute
+  // popover anchored to the trigger gets clipped by the properties panel's
+  // scroll container whenever the trigger sits left of the panel's right edge
+  // (the panel is barely wider than the 240px picker). Fixed positioning
+  // escapes ancestor overflow clipping for every trigger position.
+  const popRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (!open) return;
+    // Position written imperatively (no state): measuring and placing in the
+    // same layout pass avoids a visible jump and re-render loops.
+    const place = () => {
+      const r = wrapRef.current?.getBoundingClientRect();
+      const el = popRef.current;
+      if (!r || !el) return;
+      const pw = el.offsetWidth || 240;
+      const ph = el.offsetHeight || 420;
+      const left = Math.min(Math.max(8, r.right - pw), Math.max(8, window.innerWidth - pw - 8));
+      let top = r.bottom + 6;
+      if (top + ph > window.innerHeight - 8) top = Math.max(8, r.top - ph - 6);
+      el.style.left = `${left}px`;
+      el.style.top = `${top}px`;
+      el.style.visibility = "visible";
+    };
+    place();
+    // Track ancestor scrolls (capture) and resizes so the popover stays glued
+    // to its trigger while the panel scrolls.
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [open]);
+
   // Close on outside click / Escape.
   useEffect(() => {
     if (!open) return;
@@ -170,7 +204,11 @@ export function ColorField({
         }}
       />
       {open && (
-        <div className="absolute right-0 z-50 mt-1.5 w-60 max-w-[calc(100vw-2rem)] rounded-xl border border-neutral-200 bg-surface p-3 shadow-xl">
+        <div
+          ref={popRef}
+          className="fixed z-50 w-60 max-w-[calc(100vw-2rem)] rounded-xl border border-neutral-200 bg-surface p-3 shadow-xl"
+          style={{ left: -9999, top: -9999, visibility: "hidden" }}
+        >
           {/* SV square */}
           <div
             ref={svRef}

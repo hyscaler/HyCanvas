@@ -16,6 +16,10 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	// Embed the IANA tz database so time.LoadLocation resolves every zone in the
+	// CGO-free, minimal-container binary (no reliance on system zoneinfo). Used to
+	// validate user-profile timezones and for any server-side local-time rendering.
+	_ "time/tzdata"
 
 	"hycanvas/backend/internal/accountdata"
 	"hycanvas/backend/internal/accounts"

@@ -166,16 +166,26 @@ export function resizePage(page: Page, target: ResizeTarget): Page {
 
   for (const node of out.children) {
     const t = node.transform;
-    const xPlan = inferAxis(t.x, node.size.width, sW);
-    const yPlan = inferAxis(t.y, node.size.height, sH);
-    const mx = mapAxis(xPlan, node.size.width, tW, factor);
-    const my = mapAxis(yPlan, node.size.height, tH, factor);
+    const w0 = node.size.width;
+    const h0 = node.size.height;
+    const xPlan = inferAxis(t.x, w0, sW);
+    const yPlan = inferAxis(t.y, h0, sH);
+    const mx = mapAxis(xPlan, w0, tW, factor);
+    const my = mapAxis(yPlan, h0, tH, factor);
 
     node.transform = { ...t, x: mx.pos, y: my.pos };
     node.size = { width: mx.extent, height: my.extent };
 
     if (node.type === "text") {
       reflowText(node as TextNode, factor);
+    }
+    // A line draws from its points, not its size, so the polyline must scale
+    // with the mapped box or the stroke keeps its old length.
+    if (node.type === "line") {
+      const rec = node as unknown as { points?: { x: number; y: number }[] };
+      const kx = w0 > 0 ? mx.extent / w0 : 1;
+      const ky = h0 > 0 ? my.extent / h0 : 1;
+      if (rec.points) rec.points = rec.points.map((p) => ({ ...p, x: p.x * kx, y: p.y * ky }));
     }
     // Images, groups, and everything else keep their internal data (fit/crop/
     // clip, children) untouched: changing only transform+size recrops images

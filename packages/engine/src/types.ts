@@ -103,6 +103,8 @@ export interface CanvasLike {
     start: number,
     end: number,
   ): void;
+  /** Circular arc path (optional; call sites capability-probe before use). */
+  arc?(x: number, y: number, radius: number, start: number, end: number): void;
   fill(fillRule?: "nonzero" | "evenodd"): void;
   stroke(): void;
   clip(fillRule?: "nonzero" | "evenodd"): void;

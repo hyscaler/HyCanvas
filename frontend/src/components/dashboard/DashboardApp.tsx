@@ -47,6 +47,7 @@ import {
 import { createBlankDesign } from "@hc/schema";
 import type { DesignRecord, HomeItem, MyTask, StorageUsageView, TaskStatus, TemplateCollectionSummary, TemplateSummary, WorkspaceRole } from "@hc/sdk";
 import { formatBytes } from "@/lib/format";
+import { useDateFormat } from "@/lib/datetime";
 import { resolvedTheme, setThemePreference } from "@/lib/theme";
 import { oc } from "@/lib/sdk";
 import { useAuth } from "@/store/auth";
@@ -57,6 +58,7 @@ import { Input } from "@/components/ui/Input";
 import { Logo, LogoMark } from "@/components/ui/Logo";
 import { Modal } from "@/components/ui/Modal";
 import { Spinner } from "@/components/ui/Spinner";
+import { dashboardPath, type DashboardView } from "./views";
 import { DesignThumb } from "./DesignThumb";
 import { BulkCreateModal } from "./BulkCreateModal";
 import { MembersPanel } from "./MembersPanel";
@@ -141,10 +143,11 @@ const SIZE_PRESETS: { label: string; w: number; h: number }[] = [
   { label: "Business Card", w: 1050, h: 600 },
 ];
 
-export function DashboardApp() {
+export function DashboardApp({ view }: { view: DashboardView }) {
   const router = useRouter();
   const toast = useToast();
   const { user, workspaces, activeWorkspaceId, setActiveWorkspace, logout, refreshWorkspaces } = useAuth();
+  const df = useDateFormat();
   const [items, setItems] = useState<HomeItem[]>([]);
   const [templates, setTemplates] = useState<TemplateSummary[]>([]);
   const [query, setQuery] = useState("");
@@ -160,7 +163,16 @@ export function DashboardApp() {
   const [customW, setCustomW] = useState(1080);
   const [customH, setCustomH] = useState(1080);
   const [wsName, setWsName] = useState("");
-  const [view, setView] = useState<"home" | "favorites" | "templates" | "trash" | "tasks" | "members">("home");
+  // The active section comes from the URL (one static page per view; see
+  // pages/dashboard/[[...view]].tsx). Every section renders that same page
+  // component, so navigating re-renders this mounted app with a new `view`
+  // prop and switching stays instant (no remount, no refetch).
+  // No-op when already there, so re-clicking the active rail item (or
+  // re-submitting a search from Home) can't stack duplicate history entries.
+  const gotoView = useCallback(
+    (v: DashboardView) => { if (v !== view) void router.push(dashboardPath(v)); },
+    [router, view],
+  );
   // Left rail collapse, remembered across visits. Lazy init: localStorage is
   // client-only and the static prerender falls back to expanded.
   const [railCollapsed, setRailCollapsed] = useState(
@@ -407,7 +419,7 @@ export function DashboardApp() {
 
   async function onSearch(e: FormEvent) {
     e.preventDefault();
-    setView("home"); // search always lands on the results in the home view
+    gotoView("home"); // search always lands on the results in the home view
     setLoading(true);
     setItems(await load(query));
     setLoading(false);
@@ -480,7 +492,7 @@ export function DashboardApp() {
       <div className="flex items-center justify-between gap-2 px-3 py-2.5">
         <div className="min-w-0">
           <div className="truncate text-sm font-semibold text-neutral-800">{item.title}</div>
-          <div className="text-xs text-neutral-400">{new Date(item.updatedAt).toLocaleDateString()}</div>
+          <div className="text-xs text-neutral-400">{df.date(item.updatedAt)}</div>
         </div>
         {itemMenu(item)}
       </div>
@@ -492,7 +504,7 @@ export function DashboardApp() {
       <button onClick={() => void open(item.id)} className="h-10 w-14 shrink-0 overflow-hidden rounded-md border border-neutral-200 bg-neutral-100" title="Open"><DesignThumb designId={item.id} /></button>
       <button onClick={() => void open(item.id)} className="min-w-0 flex-1 text-left">
         <div className="truncate text-sm font-semibold text-neutral-800">{item.title}</div>
-        <div className="text-xs text-neutral-400">{new Date(item.updatedAt).toLocaleDateString()}</div>
+        <div className="text-xs text-neutral-400">{df.date(item.updatedAt)}</div>
       </button>
       <button onClick={() => void toggleFavorite(item)} aria-label={item.starred ? "Unfavorite" : "Favorite"} className={`grid h-8 w-8 place-items-center rounded-lg transition ${item.starred ? "text-amber-400" : "text-neutral-400 opacity-0 hover:bg-neutral-100 group-hover:opacity-100"}`}><Star size={15} fill={item.starred ? "currentColor" : "none"} /></button>
       {itemMenu(item)}
@@ -566,12 +578,12 @@ export function DashboardApp() {
         )}
 
         <nav className="mt-5 flex flex-col gap-1 text-sm">
-          <RailItem icon={HomeIcon} label="Home" active={view === "home"} collapsed={railCollapsed} onClick={() => setView("home")} />
-          <RailItem icon={Star} label="Favorites" active={view === "favorites"} collapsed={railCollapsed} onClick={() => setView("favorites")} />
-          <RailItem icon={CheckSquare} label="My tasks" active={view === "tasks"} collapsed={railCollapsed} onClick={() => setView("tasks")} />
-          <RailItem icon={LayoutTemplate} label="Templates" active={view === "templates"} collapsed={railCollapsed} onClick={() => setView("templates")} />
-          <RailItem icon={Users} label="Members" active={view === "members"} collapsed={railCollapsed} onClick={() => setView("members")} />
-          <RailItem icon={Trash2} label="Trash" active={view === "trash"} collapsed={railCollapsed} onClick={() => setView("trash")} />
+          <RailItem icon={HomeIcon} label="Home" active={view === "home"} collapsed={railCollapsed} onClick={() => gotoView("home")} />
+          <RailItem icon={Star} label="Favorites" active={view === "favorites"} collapsed={railCollapsed} onClick={() => gotoView("favorites")} />
+          <RailItem icon={CheckSquare} label="My tasks" active={view === "tasks"} collapsed={railCollapsed} onClick={() => gotoView("tasks")} />
+          <RailItem icon={LayoutTemplate} label="Templates" active={view === "templates"} collapsed={railCollapsed} onClick={() => gotoView("templates")} />
+          <RailItem icon={Users} label="Members" active={view === "members"} collapsed={railCollapsed} onClick={() => gotoView("members")} />
+          <RailItem icon={Trash2} label="Trash" active={view === "trash"} collapsed={railCollapsed} onClick={() => gotoView("trash")} />
         </nav>
 
         {/* Storage meter pinned to the rail's bottom corner. */}
@@ -628,7 +640,7 @@ export function DashboardApp() {
                   <Button onClick={() => setSizeOpen(true)} disabled={busy || !activeWorkspaceId}>
                     <Plus size={16} /> Start a design
                   </Button>
-                  <Button variant="secondary" onClick={() => setView("templates")}>
+                  <Button variant="secondary" onClick={() => gotoView("templates")}>
                     <LayoutTemplate size={16} /> Browse templates
                   </Button>
                 </div>
@@ -834,7 +846,7 @@ export function DashboardApp() {
                             <span className="block truncate text-sm font-medium text-neutral-800">{t.body}</span>
                             <span className="block truncate text-xs text-neutral-400">
                               {t.designTitle}
-                              {t.task?.dueAt ? ` · due ${new Date(t.task.dueAt).toLocaleDateString()}` : ""}
+                              {t.task?.dueAt ? ` · due ${df.date(t.task.dueAt)}` : ""}
                             </span>
                           </span>
                           <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${tone[status]}`}>{label[status]}</span>
@@ -856,7 +868,7 @@ export function DashboardApp() {
                 workspaceKind={activeWs?.kind ?? "personal"}
                 myRole={(activeWs?.role ?? "viewer") as WorkspaceRole}
                 myUserId={user?.id ?? ""}
-                onExit={() => { setView("home"); void refreshWorkspaces(); }}
+                onExit={() => { gotoView("home"); void refreshWorkspaces(); }}
               />
             </section>
           )}

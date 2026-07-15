@@ -17,7 +17,13 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   }, [status, bootstrap]);
 
   useEffect(() => {
-    if (status === "anon") void router.replace("/login");
+    if (status !== "anon") return;
+    // Carry the current location as a return path so a deep link (e.g.
+    // /dashboard/templates) survives the login round-trip. AuthForm validates
+    // `next` as a same-origin relative path before honoring it.
+    const path = router.asPath;
+    const next = path && path !== "/" ? `?next=${encodeURIComponent(path)}` : "";
+    void router.replace(`/login${next}`);
   }, [status, router]);
 
   if (status !== "authed") {

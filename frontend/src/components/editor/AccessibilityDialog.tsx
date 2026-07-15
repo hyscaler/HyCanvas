@@ -30,9 +30,9 @@ export function AccessibilityDialog({ open, onClose }: { open: boolean; onClose:
 
   const jump = (i: A11yIssue) => {
     const st = useEditor.getState();
-    st.setActivePage(i.pageIndex);
-    // A slide-title issue points at a PAGE, not a node: there is nothing to
-    // select or zoom to, so just navigate to the slide.
+    // Activate AND scroll to the page (a slide-title issue points at a PAGE,
+    // not a node, so this scroll is all the navigation it gets).
+    st.goToPage(i.pageIndex);
     if (i.kind !== "slide-title") {
       st.select([i.nodeId]);
       st.zoomToSelection();

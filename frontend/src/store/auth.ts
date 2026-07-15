@@ -7,6 +7,7 @@
 import { create } from "zustand";
 import { ApiError, type User, type WorkspaceWithRole } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
+import { browserTimezone } from "@/lib/datetime";
 
 type Status = "loading" | "authed" | "anon";
 
@@ -55,6 +56,23 @@ async function loadSession(): Promise<{ user: User; workspaces: WorkspaceWithRol
 // singleton and bootstrap state is not renderable.
 let hydrating: Promise<void> | null = null;
 
+// One-time-per-session: when a signed-in user has no stored timezone, adopt the
+// browser's and persist it, so the default timezone is taken from the browser
+// (for every account type and existing users alike). Best-effort: display
+// already falls back to the browser zone, so a failed write is harmless.
+let tzBackfillDone = false;
+function ensureTimezone(user: User, apply: (u: User) => void) {
+  if (tzBackfillDone || typeof window === "undefined") return;
+  if (user.timezone) { tzBackfillDone = true; return; }
+  const tz = browserTimezone();
+  if (!tz) return;
+  tzBackfillDone = true;
+  void oc
+    .updateProfile({ timezone: tz })
+    .then((updated) => apply(updated))
+    .catch(() => { /* non-fatal; the browser zone is still used for display */ });
+}
+
 function pickActive(workspaces: WorkspaceWithRole[]): string | null {
   const saved = readActive();
   if (saved && workspaces.some((w) => w.id === saved)) return saved;
@@ -79,6 +97,7 @@ export const useAuth = create<AuthState>((set, get) => ({
         try {
           const { user, workspaces } = await loadSession();
           set({ status: "authed", user, workspaces, activeWorkspaceId: pickActive(workspaces), error: null });
+          ensureTimezone(user, (u) => set({ user: u }));
         } catch {
           // Any 401 already went through the SDK's single de-duped refresh and
           // retry; failing after that means there is no session. A second
@@ -101,6 +120,7 @@ export const useAuth = create<AuthState>((set, get) => ({
     if ("mfaRequired" in res && res.mfaRequired) return { mfaToken: res.mfaToken };
     const { user, workspaces } = await loadSession();
     set({ status: "authed", user, workspaces, activeWorkspaceId: pickActive(workspaces) });
+    ensureTimezone(user, (u) => set({ user: u }));
   },
 
   async completeMfa(mfaToken, code) {
@@ -108,6 +128,7 @@ export const useAuth = create<AuthState>((set, get) => ({
     await oc.verifyMfa(mfaToken, code);
     const { user, workspaces } = await loadSession();
     set({ status: "authed", user, workspaces, activeWorkspaceId: pickActive(workspaces) });
+    ensureTimezone(user, (u) => set({ user: u }));
   },
 
   async signup(email, password, name, captchaToken) {
@@ -115,6 +136,7 @@ export const useAuth = create<AuthState>((set, get) => ({
     await oc.signup({ email, password, name }, captchaToken);
     const { user, workspaces } = await loadSession();
     set({ status: "authed", user, workspaces, activeWorkspaceId: pickActive(workspaces) });
+    ensureTimezone(user, (u) => set({ user: u }));
   },
 
   async logout() {

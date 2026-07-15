@@ -6,6 +6,20 @@ HyCanvas is a free, self-hostable, AI-native design platform. Design anything - 
 
 The product spans a single-player editor, document types (presentations, video, whiteboard, docs, sheets), export, brand kits, and a bring-your-own-key AI layer. Work not yet built is tracked under `docs/roadmap/`.
 
+## See it in action
+
+Open a template and make it yours - edit text, restyle, and export, all in the browser:
+
+<p align="center">
+  <img src=".github/hycanvas-editor-demo.gif" alt="Editing a template in the HyCanvas editor" width="820">
+</p>
+
+Every design stays yours in an open format, exportable to PNG, PDF, and more, with no watermarks:
+
+<p align="center">
+  <img src=".github/hycanvas-design-sample.png" alt="A social card designed in HyCanvas" width="600">
+</p>
+
 ## Repository Layout
 
 The frontend and shared packages are an npm-workspaces monorepo (orchestrated with concurrently and dotenv-cli against a single shared root `.env`); the backend is a standalone Go module.
@@ -88,6 +102,8 @@ When writing `.env` by hand for production, set at minimum `NODE_ENV=production`
 ### Running behind a reverse proxy
 
 HyCanvas serves plain HTTP; put nginx, Caddy, or Traefik in front for TLS. Three settings matter: `APP_URL` is the external domain the proxy serves (used in generated links and the OIDC redirect), `PORT` is the internal port the proxy forwards to, and `BIND_HOST=127.0.0.1` keeps the app reachable only through the proxy. The setup wizard configures all three when you answer "Running HyCanvas behind a proxy?" in step 1. The proxy must forward the `Host` header and (for realtime collaboration) WebSocket upgrades on `/realtime`. With an https `APP_URL`, session cookies stay `Secure` automatically.
+
+Also raise the proxy's request-body limit: uploads travel as base64 JSON, about a third larger than the file on disk, and nginx's default `client_max_body_size` of 1 MB rejects anything bigger with a 413 before HyCanvas ever sees it. Set it to comfortably above the largest upload you expect, for example `client_max_body_size 100m;`. Caddy and Traefik impose no body limit by default.
 
 ### Sign in with Google (or any OIDC provider)
 

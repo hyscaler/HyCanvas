@@ -6,13 +6,14 @@
 import { useRef, useState } from "react";
 import type { Size, TextNode, Transform } from "@hc/schema";
 import { measuredTextHeight, minContentWidth } from "@/lib/textFit";
+import { relayGridCells } from "@/store/editor";
 import { overlay } from "@/lib/theme.generated";
 import {
   locate,
   parentSpaceDelta,
   resizeNode,
   resizeSpacingSnap,
-  rotateAboutCenter,
+  rotateAboutPoint,
   unionAABB,
   worldAABB,
   worldMatrix,
@@ -213,9 +214,13 @@ function SelectionGizmo({ api, ids }: { api: CanvasApi; ids: string[] }) {
         const den = Math.hypot(d.startHandle.x - d.anchor.x, d.startHandle.y - d.anchor.y) || 1;
         fX = fY = Math.max(0.02, num / den); // corners scale uniformly
       } else if (d.fx !== 0.5) {
-        fX = Math.max(0.02, (p.x - d.anchor.x) / ((d.startHandle.x - d.anchor.x) || 1));
+        // Signed: dragging through the anchor mirrors the selection (flip),
+        // with the magnitude floored so it never collapses to zero.
+        const f = (p.x - d.anchor.x) / ((d.startHandle.x - d.anchor.x) || 1);
+        fX = (f < 0 ? -1 : 1) * Math.max(0.02, Math.abs(f));
       } else {
-        fY = Math.max(0.02, (p.y - d.anchor.y) / ((d.startHandle.y - d.anchor.y) || 1));
+        const f = (p.y - d.anchor.y) / ((d.startHandle.y - d.anchor.y) || 1);
+        fY = (f < 0 ? -1 : 1) * Math.max(0.02, Math.abs(f));
       }
       for (const [id, t0] of d.before) {
         const loc = locate(store.doc, id);
@@ -382,6 +387,8 @@ export function Gizmo({ api }: { api: CanvasApi }) {
     startBox?: unknown; // text box snapshot, kept in sync with size so text reflows
     startMinW?: number; // narrowest reflow width (longest word) at the start font
     startMinH?: number; // natural content height at the start font + width
+    startPoints?: { x: number; y: number }[]; // line polyline snapshot, scaled with the box on resize
+    startChildren?: unknown; // photo-grid cell snapshot, re-laid with the box on resize
   } | null>(null);
   // Equal-size match during a resize: the sibling width/height the dragged
   // dimension has snapped to (null = no match on that axis). The state drives
@@ -441,8 +448,11 @@ export function Gizmo({ api }: { api: CanvasApi }) {
     // (and removes the move/up listeners) reliably.
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
     const startPage = api.toPage(toLocalScreen({ x: e.clientX, y: e.clientY }));
-    // Node center in page space (wm is the page-space world matrix).
-    const centerPage = apply(wm!, w / 2, h / 2);
+    // Rotation pivot in page space (wm is the page-space world matrix): the box
+    // center, or the node's chosen rotation origin (transform.origin,
+    // normalized 0..1) when rotating with one set.
+    const og = handle === "rotate" ? loc!.node.transform.origin : undefined;
+    const centerPage = apply(wm!, w * (og?.x ?? 0.5), h * (og?.y ?? 0.5));
     drag.current = {
       id,
       handle,
@@ -457,6 +467,8 @@ export function Gizmo({ api }: { api: CanvasApi }) {
       // resize (reflow, then scale past the fit) has a stable pivot per gesture.
       startMinW: loc!.node.type === "text" ? minContentWidth(loc!.node as unknown as TextNode) : undefined,
       startMinH: loc!.node.type === "text" ? measuredTextHeight(loc!.node as unknown as TextNode) : undefined,
+      startPoints: loc!.node.type === "line" ? structuredClone((loc!.node as unknown as { points: { x: number; y: number }[] }).points) : undefined,
+      startChildren: loc!.node.type === "grid" ? structuredClone((loc!.node as unknown as { children: unknown }).children) : undefined,
     };
     useEditor.getState().setTransforming(true);
     window.addEventListener("pointermove", onMove);
@@ -490,6 +502,12 @@ export function Gizmo({ api }: { api: CanvasApi }) {
         if (d.startBox !== undefined) tn.box = structuredClone(d.startBox);
         if (d.startContent !== undefined) tn.content = structuredClone(d.startContent);
       }
+      if (node.type === "line" && d.startPoints) {
+        (node as unknown as { points: unknown }).points = structuredClone(d.startPoints);
+      }
+      if (node.type === "grid" && d.startChildren !== undefined) {
+        (node as unknown as { children: unknown }).children = structuredClone(d.startChildren);
+      }
       store.tick();
     }
   }
@@ -517,7 +535,14 @@ export function Gizmo({ api }: { api: CanvasApi }) {
         const n = Math.round(finalDeg / 45) * 45;
         if (Math.abs(finalDeg - n) < 3) deltaDeg += n - finalDeg;
       }
-      node.transform = rotateAboutCenter(d.startTransform, d.startSize, deltaDeg, e.shiftKey);
+      // Pivot on the node's rotation origin when set; the box center otherwise.
+      node.transform = rotateAboutPoint(
+        d.startTransform,
+        d.startSize,
+        deltaDeg,
+        d.startTransform.origin ?? { x: 0.5, y: 0.5 },
+        e.shiftKey,
+      );
     } else {
       // Convert the page-space drag into the node's parent space so resizing a
       // node inside a transformed group still tracks the cursor.
@@ -539,9 +564,16 @@ export function Gizmo({ api }: { api: CanvasApi }) {
       // (non-aspect) resize of an unrotated, unit-scale, top-level node, where
       // the world box edges map straight to transform + size.
       const loc2 = locate(store.doc, d.id);
+      // Snap math maps tf.x/tf.y straight to the box's left/top edge, which
+      // only holds while the drag hasn't flipped through the anchor (a flip
+      // negates the scale, putting tf at the mirrored edge).
+      const flipped =
+        Math.sign(tf.scaleX) !== Math.sign(d.startTransform.scaleX) ||
+        Math.sign(tf.scaleY) !== Math.sign(d.startTransform.scaleY);
       const canSnap =
         !aspect &&
         !e.altKey &&
+        !flipped &&
         store.snapEnabled &&
         loc2 != null &&
         loc2.parent === null &&
@@ -669,6 +701,33 @@ export function Gizmo({ api }: { api: CanvasApi }) {
           tn.box.mode = "fixed";
         }
       }
+      if (node.type === "line" && d.startPoints?.length) {
+        // A line is DRAWN from its points, not its size; resizeNode only moves
+        // the box, so scale the polyline to match or the handles do nothing
+        // visible. An axis the polyline doesn't span (a straight horizontal or
+        // vertical line) stays locked to its start box, otherwise the box
+        // would drift away from the stroke.
+        const xs = d.startPoints.map((p) => p.x);
+        const ys = d.startPoints.map((p) => p.y);
+        const degX = Math.max(...xs) - Math.min(...xs) < 0.5;
+        const degY = Math.max(...ys) - Math.min(...ys) < 0.5;
+        // The scale sign is restored too: a drag-through flip on an axis the
+        // polyline doesn't span would silently shift the stroke by the box
+        // extent (and dirty the undo stack) without changing the line's shape.
+        if (degX) { size = { ...size, width: d.startSize.width }; tf = { ...tf, scaleX: d.startTransform.scaleX, x: d.handle.includes("w") || d.handle.includes("e") ? d.startTransform.x : tf.x }; }
+        if (degY) { size = { ...size, height: d.startSize.height }; tf = { ...tf, scaleY: d.startTransform.scaleY, y: d.handle.includes("n") || d.handle.includes("s") ? d.startTransform.y : tf.y }; }
+        const kx = degX || d.startSize.width <= 0 ? 1 : size.width / d.startSize.width;
+        const ky = degY || d.startSize.height <= 0 ? 1 : size.height / d.startSize.height;
+        (node as unknown as { points: { x: number; y: number }[] }).points =
+          d.startPoints.map((p) => ({ x: p.x * kx, y: p.y * ky }));
+        node.transform = tf;
+        node.size = size;
+      }
+      if (node.type === "grid") {
+        // A photo grid's cells are laid out from the grid box, so resizing the
+        // grid re-lays every cell (spans preserved, filled images re-cover).
+        relayGridCells(node as unknown as Parameters<typeof relayGridCells>[0], size);
+      }
     }
     store.tick();
   }
@@ -702,6 +761,14 @@ export function Gizmo({ api }: { api: CanvasApi }) {
     // content in the undo so it round-trips.
     if (node.type === "text" && d.handle !== "rotate") {
       store.pushNodeSnapshot(d.id, { transform: d.startTransform, size: d.startSize, box: d.startBox, content: d.startContent });
+      return;
+    }
+    if (node.type === "line" && d.handle !== "rotate") {
+      store.pushNodeSnapshot(d.id, { transform: d.startTransform, size: d.startSize, points: d.startPoints });
+      return;
+    }
+    if (node.type === "grid" && d.handle !== "rotate") {
+      store.pushNodeSnapshot(d.id, { transform: d.startTransform, size: d.startSize, children: d.startChildren });
       return;
     }
     const cmd: EditCommand = {

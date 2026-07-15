@@ -3,7 +3,7 @@
 // are undoable. Uploads/stock images are placed via the image asset provider.
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type FormEvent } from "react";
-import { Square, SquareRoundCorner, Circle, Triangle, Pentagon, Hexagon, Star, Diamond, Octagon, Minus, MoveUpRight, Frame, QrCode, Type, Upload, Search, Table as TableIcon, BarChart3, LineChart, AreaChart, PieChart, Donut, ScatterChart, Radar, Wand2, ImagePlus, Settings2, Trash2, Folder, FolderPlus, Pencil, X, Tag, ChevronLeft, Link as LinkIcon, Mic, Video, CircleStop, Spline, Clock, LayoutGrid, Shapes, Sparkles, Stethoscope, AlignStartVertical, Play, ChevronDown, Send, Plus, RotateCcw } from "lucide-react";
+import { Square, SquareRoundCorner, Circle, Triangle, Pentagon, Hexagon, Star, Diamond, Octagon, Frame, QrCode, Type, Upload, Search, Table as TableIcon, BarChart3, LineChart, AreaChart, PieChart, Donut, ScatterChart, Radar, Wand2, ImagePlus, Settings2, Trash2, Folder, FolderPlus, Pencil, X, Tag, ChevronLeft, Link as LinkIcon, Mic, Video, CircleStop, Spline, Clock, LayoutGrid, Shapes, Sparkles, Stethoscope, AlignStartVertical, Play, ChevronDown, Send, Plus, RotateCcw } from "lucide-react";
 import { type ChartType, type Node, type Fill, type Color } from "@hc/schema";
 import { searchFonts, type FontCatalogEntry } from "@hc/text";
 import { toHex, fromHex, relativeLuminance } from "@hc/color";
@@ -160,10 +160,8 @@ export function CollapsibleSection({
 }
 
 const BRAND = { type: "solid", color: { srgb: { r: 0.38, g: 0.22, b: 0.86, a: 1 } } };
-const DARK = { type: "solid", color: { srgb: { r: 0.1, g: 0.12, b: 0.16, a: 1 } } };
 const FRAME_FILL = { type: "solid", color: { srgb: { r: 0.9, g: 0.91, b: 0.93, a: 1 } } };
 const CENTER = { x: 320, y: 320, scaleX: 1, scaleY: 1, rotation: 0 };
-const lineStroke = (cap: "round" | "butt") => ({ fill: DARK, width: 4, align: "center", cap, join: "round" });
 
 type ElementTile = { label: string; icon: typeof Square; run: () => void };
 
@@ -211,7 +209,6 @@ export function ElementsPanel() {
   // viewport and selects it, so afterInsert only confirms with a subtle toast
   // (no zoom - the view stays put).
   const insertShape = (label: string, init: Partial<Node>) => { addNode("shape", init); afterInsert(toast, label.toLowerCase()); };
-  const insertLineNode = (label: string, init: Partial<Node>) => { addNode("line", init); afterInsert(toast, label.toLowerCase()); };
   const insertFrame = (init: Partial<Node>) => { addNode("frame", init); afterInsert(toast, "frame"); };
   const insertTableEl = (rows: number, cols: number) => { insertTable(rows, cols); afterInsert(toast, "table"); };
   const insertChartEl = (type: ChartType, label: string) => { insertChart(type); afterInsert(toast, `${label} chart`); };
@@ -260,15 +257,6 @@ export function ElementsPanel() {
         { label: "Feature right", icon: gridPreviewIcon(2, 2, FEATURE_RIGHT), run: () => insertGridEl(2, 2, FEATURE_RIGHT) },
         { label: "Feature top", icon: gridPreviewIcon(2, 2, FEATURE_TOP), run: () => insertGridEl(2, 2, FEATURE_TOP) },
         { label: "Hero mosaic", icon: gridPreviewIcon(3, 3, FEATURE_HERO), run: () => insertGridEl(3, 3, FEATURE_HERO) },
-      ],
-    },
-    {
-      title: "Lines & arrows",
-      icon: Minus,
-      defaultOpen: true,
-      tiles: [
-        { label: "Line", icon: Minus, run: () => insertLineNode("Line", { name: "Line", points: [{ x: 0, y: 0 }, { x: 240, y: 0 }], transform: CENTER, size: { width: 240, height: 4 }, stroke: lineStroke("round"), startCap: "none", endCap: "none" } as Partial<Node>) },
-        { label: "Arrow", icon: MoveUpRight, run: () => insertLineNode("Arrow", { name: "Arrow", points: [{ x: 0, y: 0 }, { x: 240, y: 0 }], transform: CENTER, size: { width: 240, height: 4 }, stroke: lineStroke("butt"), startCap: "none", endCap: "arrow" } as Partial<Node>) },
       ],
     },
     {
@@ -762,16 +750,22 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
     setFolders(await oc.listAssetFolders(workspaceId).catch(() => []));
   }, [workspaceId]);
 
-  // quotaErrorKind tells the two 413 causes apart: the per-workspace quota vs
-  // the global per-user account limit (problem+json detail carries which).
-  function quotaErrorKind(e: unknown): false | "workspace" | "account" {
+  // quotaErrorKind tells the 413 causes apart: the per-workspace quota and the
+  // global per-user account limit carry a problem+json detail saying which;
+  // anything else (the server's URL-import size cap, or a reverse proxy's
+  // request-body limit, which never sends problem+json) means this one
+  // file/request was too big, NOT that storage is full, so it must not tell
+  // the user to delete uploads.
+  function quotaErrorKind(e: unknown): false | "workspace" | "account" | "size" {
     const status = e instanceof ApiError ? e.status : (e as { status?: number } | null)?.status;
     if (status !== 413) return false;
     const detail =
       e instanceof ApiError
         ? ((e.body as { detail?: string } | undefined)?.detail ?? "")
         : ((e as { detail?: string } | null)?.detail ?? "");
-    return detail.includes("account storage") ? "account" : "workspace";
+    if (detail.includes("account storage")) return "account";
+    if (detail.includes("storage quota")) return "workspace";
+    return "size";
   }
 
   // Upload one or many image files (drag-drop or picker) into the open folder.
@@ -789,7 +783,7 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
       return cur.filter((x) => x.id !== id);
     });
     let ok = 0;
-    let overQuota: false | "workspace" | "account" = false;
+    let limit: false | "workspace" | "account" | "size" = false;
     for (const it of items) {
       try {
         const dataUrl = await readAsDataUrl(it.file);
@@ -807,15 +801,16 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
         remove(it.id);
       } catch (e) {
         const kind = quotaErrorKind(e);
-        if (kind) overQuota = kind;
+        if (kind) limit = kind;
         // Mark the tile failed, then clear it after a moment so the grid recovers.
         setUploading((cur) => cur.map((u) => (u.id === it.id ? { ...u, error: true } : u)));
         setTimeout(() => remove(it.id), 4000);
       }
     }
     if (ok) { toast.success(ok === 1 ? "Uploaded." : `Uploaded ${ok} images.`); await refresh(); }
-    if (overQuota === "account") toast.error("Your account storage limit is reached. Delete some uploads to free space.");
-    else if (overQuota) toast.error("Storage quota reached. Delete some uploads to free space.");
+    if (limit === "account") toast.error("Your account storage limit is reached. Delete some uploads to free space.");
+    else if (limit === "workspace") toast.error("Storage quota reached. Delete some uploads to free space.");
+    else if (limit === "size") toast.error("File too large: the server (or its reverse proxy) rejected the upload size.");
     else if (ok < imgs.length) toast.error(`${imgs.length - ok} upload(s) failed (unsupported type or too large?).`);
   }, [workspaceId, folderId, refresh, toast]);
 
@@ -830,7 +825,8 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
     } catch (e) {
       const kind = quotaErrorKind(e);
       if (kind === "account") toast.error("Your account storage limit is reached.");
-      else if (kind) toast.error("Storage quota reached.");
+      else if (kind === "workspace") toast.error("Storage quota reached.");
+      else if (kind === "size") toast.error("Recording too large: the server (or its reverse proxy) rejected the upload size.");
       else toast.error("Couldn't save the recording.");
     }
   }, [workspaceId, folderId, refresh, toast]);
@@ -847,7 +843,8 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
     } catch (e) {
       const kind = quotaErrorKind(e);
       if (kind === "account") toast.error("Your account storage limit is reached.");
-      else if (kind) toast.error("That image is too large or exceeds your storage quota.");
+      else if (kind === "workspace") toast.error("Storage quota reached. Delete some uploads to free space.");
+      else if (kind === "size") toast.error("That image is too large to import.");
       else if (e instanceof ApiError) toast.error("Couldn't import that URL (not an image, blocked host, or unreachable).");
       else toast.error("Couldn't import that URL.");
     }
@@ -1833,7 +1830,7 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
         st.setActivePage(base + h.pageIndex);
         st.addPageBackgroundImage(h.url);
       }
-      st.setActivePage(base); // land on the first new page
+      st.goToPage(base); // land on the first new page (and scroll it into view)
       return true;
     }
     case "critique":
