@@ -2387,14 +2387,29 @@ export function Canvas() {
   });
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    // Attached to the SURFACE, not the canvas: page headers, the "Add page"
+    // button, gizmos, and toolbars render above the canvas as pointer-events
+    // SIBLINGS, so a canvas-only listener leaves the wheel dead over them.
+    const surface = surfaceRef.current;
+    if (!surface) return;
+    // An overlay child that scrolls its own content (a dropdown list, a long
+    // menu) keeps native wheel scrolling instead of panning the canvas.
+    const scrollsItself = (t: EventTarget | null): boolean => {
+      for (let el = t instanceof Element ? t : null; el && el !== surface; el = el.parentElement) {
+        if (el instanceof HTMLElement && el.scrollHeight > el.clientHeight) {
+          const oy = getComputedStyle(el).overflowY;
+          if (oy === "auto" || oy === "scroll") return true;
+        }
+      }
+      return false;
+    };
     const handler = (e: WheelEvent) => {
+      if (scrollsItself(e.target)) return;
       e.preventDefault();
       onWheel(e);
     };
-    canvas.addEventListener("wheel", handler, { passive: false });
-    return () => canvas.removeEventListener("wheel", handler);
+    surface.addEventListener("wheel", handler, { passive: false });
+    return () => surface.removeEventListener("wheel", handler);
   }, [onWheel]);
 
   // Cancel any queued move frame if the canvas unmounts mid-drag, so the rAF
