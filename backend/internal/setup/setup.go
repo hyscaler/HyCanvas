@@ -164,7 +164,7 @@ func (s *server) router() http.Handler {
 		})
 	})
 
-	httpapi.MountStaticFS(r, s.opts.WebFS)
+	httpapi.MountStaticFS(r, s.opts.WebFS, "")
 	return r
 }
 
