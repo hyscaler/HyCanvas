@@ -38,7 +38,7 @@ import {
 } from "@/lib/assist";
 import { ApiError, type AiConfigView, type AssetFolder, type MiniAppSummary, type StockAssetSummary, type StockCollectionSummary, type StockFacetValue, type StockFiltersSummary, type StorageUsageView, type UploadedAsset } from "@hc/sdk";
 import { checkAppAction, type AppAction } from "@hc/stock";
-import { oc, resolveAssetUrl, stockProxyUrl, uploadAssetWithProgress } from "@/lib/sdk";
+import { directUploadWithProgress, oc, resolveAssetUrl, stockProxyUrl } from "@/lib/sdk";
 import type { BrandVoice, BrandLintViolation } from "@hc/sdk";
 import { useEditor, type BrandFixTarget } from "@/store/editor";
 import { useBrand } from "@/store/brand";
@@ -786,13 +786,15 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
     let limit: false | "workspace" | "account" | "size" = false;
     for (const it of items) {
       try {
-        const dataUrl = await readAsDataUrl(it.file);
         // Client-side thumbnail for the grid (perf): keeps full bytes server-side
         // but serves a tiny preview. Optional, so a decode failure is non-fatal.
         const thumbnail = await makeThumbnail(it.file);
-        const asset = await uploadAssetWithProgress(
+        // Direct (presigned) upload: raw bytes to storage, no base64 JSON body.
+        // Falls back to the legacy endpoint against an older server.
+        const asset = await directUploadWithProgress(
           workspaceId,
-          { filename: it.file.name, dataBase64: dataUrl.split(",")[1] ?? "", folderId, thumbnail },
+          it.file,
+          { filename: it.file.name, folderId, thumbnail },
           (pct) => setPct(it.id, pct),
         );
         ok++;
@@ -814,12 +816,12 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
     else if (ok < imgs.length) toast.error(`${imgs.length - ok} upload(s) failed (unsupported type or too large?).`);
   }, [workspaceId, folderId, refresh, toast]);
 
-  // Upload an arbitrary recorded Blob (audio/video) as an asset.
+  // Upload an arbitrary recorded Blob (audio/video) as an asset. Recordings
+  // are the largest uploads, so they benefit most from the direct path.
   const uploadBlob = useCallback(async (blob: Blob, filename: string) => {
     if (!workspaceId) return;
     try {
-      const dataUrl = await readAsDataUrl(blob);
-      await oc.uploadAsset(workspaceId, { filename, dataBase64: dataUrl.split(",")[1] ?? "", folderId });
+      await directUploadWithProgress(workspaceId, blob, { filename, folderId });
       toast.success("Recording saved.");
       await refresh();
     } catch (e) {

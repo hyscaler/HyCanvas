@@ -243,8 +243,10 @@ func main() {
 	// (schema validation + retry) plus persisted assistant sessions/provenance.
 	aiStudioSvc := aistudio.NewService(pool, aiSvc)
 	// Uploads: base64 upload + magic-byte sniff + quota + folders, over the same
-	// storage driver as Node (shared blobs).
+	// storage driver as Node (shared blobs). The janitor reclaims direct-upload
+	// grants that never completed (and their pending objects).
 	uploadsSvc := uploads.NewService(pool, store, acct)
+	uploadsSvc.StartDirectUploadJanitor(rtCtx, 15*time.Minute)
 	// Templates: catalog (embedded seed + DB), apply (deep-copy -> new design),
 	// save-as-template, collections. The adapter bridges the persistence service.
 	templatesSvc := templates.NewService(pool, acct, templatesPersist{persist})

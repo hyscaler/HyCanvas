@@ -711,6 +711,18 @@ export interface DesignInsights {
   perPage: { pageId: string; engagementMs: number }[];
 }
 
+/** Where and how to send a direct upload's raw bytes (see initDirectUpload). */
+export interface DirectUploadGrant {
+  id: string;
+  /** "s3-post": multipart POST to uploadUrl with fields + the file appended
+   *  last; "api-put": raw-body PUT to uploadUrl (token already embedded). */
+  kind: "s3-post" | "api-put";
+  uploadUrl?: string;
+  fields?: Record<string, string>;
+  maxBytes: number;
+  expiresAt: string;
+}
+
 export interface UploadedAsset {
   id: string;
   workspaceId: string;
@@ -1728,6 +1740,19 @@ export class HyCanvasClient {
   }
   uploadAsset(workspaceId: string, input: { filename: string; dataBase64: string; folderId?: string | null; thumbnail?: string }): Promise<UploadedAsset> {
     return this.request("POST", `/v1/workspaces/${workspaceId}/assets`, input);
+  }
+  /**
+   * Start a direct (presigned) upload: the returned grant says where to send
+   * the raw bytes (an S3 POST form or a streaming PUT to the API), bypassing
+   * the base64 JSON body entirely. Follow with completeDirectUpload.
+   */
+  initDirectUpload(workspaceId: string, input: { filename: string; byteSize: number; folderId?: string | null }): Promise<DirectUploadGrant> {
+    return this.request("POST", `/v1/workspaces/${workspaceId}/uploads/direct`, input);
+  }
+  /** Finish a direct upload: the server validates the stored bytes (size +
+   *  content sniff + quota) and returns the created asset. */
+  completeDirectUpload(id: string, input: { thumbnail?: string } = {}): Promise<UploadedAsset> {
+    return this.request("POST", `/v1/uploads/direct/${id}/complete`, input);
   }
   /**
    * Import an image from a remote URL. The server validates the host (SSRF) and

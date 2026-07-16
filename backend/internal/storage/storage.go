@@ -10,9 +10,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // PutResult mirrors the Node PutResult (doc 01 FR-5).
@@ -31,6 +33,35 @@ type Driver interface {
 	Get(key string) ([]byte, error) // returns (nil, nil) on a missing key
 	Delete(key string) error
 	Exists(key string) (bool, error)
+	// PutStream writes from a reader without buffering the whole object in
+	// memory (direct uploads stream request bodies through this). size is the
+	// expected byte count when known, or -1 to read until EOF.
+	PutStream(key string, r io.Reader, size int64) (PutResult, error)
+	// Stat returns the stored object's size; ok=false on a missing key.
+	Stat(key string) (size int64, ok bool, err error)
+	// GetRange returns up to n leading bytes of the object (type sniffing after
+	// a direct upload); (nil, nil) on a missing key.
+	GetRange(key string, n int64) ([]byte, error)
+	// Rename moves an object to a new key without the bytes passing through
+	// the caller (os.Rename locally; server-side copy + delete on S3).
+	Rename(from, to string) error
+}
+
+// PresignedPost is a browser-usable direct-upload grant: an HTTP POST to URL
+// with Fields as multipart form values plus the file. Only the S3 driver can
+// mint one; the local driver uploads through the API's streaming endpoint.
+type PresignedPost struct {
+	URL    string            `json:"url"`
+	Fields map[string]string `json:"fields"`
+}
+
+// Presigner is the optional direct-to-bucket capability. Callers probe for it
+// with a type assertion and fall back to streaming through the API.
+type Presigner interface {
+	// PresignPost mints a POST-policy grant for one key, capped to maxBytes and
+	// valid for expiry. publicURL (when non-empty) replaces the endpoint origin
+	// in the returned URL for deployments whose S3 endpoint is internal-only.
+	PresignPost(key string, maxBytes int64, expiry time.Duration, publicURL string) (PresignedPost, error)
 }
 
 // Local is the local-filesystem driver.
@@ -131,4 +162,90 @@ func (l *Local) Exists(key string) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+// PutStream copies the reader to a temp file in the destination directory and
+// renames it into place, so a client that aborts mid-upload never leaves a
+// half-written object under the final key.
+func (l *Local) PutStream(key string, r io.Reader, size int64) (PutResult, error) {
+	full, err := l.pathFor(key)
+	if err != nil {
+		return PutResult{}, err
+	}
+	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+		return PutResult{}, err
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(full), ".upload-*")
+	if err != nil {
+		return PutResult{}, err
+	}
+	h := sha256.New()
+	n, err := io.Copy(tmp, io.TeeReader(r, h))
+	if cerr := tmp.Close(); err == nil {
+		err = cerr
+	}
+	if err == nil && size >= 0 && n != size {
+		err = errors.New("storage: short write: got fewer bytes than declared")
+	}
+	if err == nil {
+		err = os.Rename(tmp.Name(), full)
+	}
+	if err != nil {
+		_ = os.Remove(tmp.Name())
+		return PutResult{}, err
+	}
+	return PutResult{Key: key, URL: "local:" + key, Size: n, Checksum: hex.EncodeToString(h.Sum(nil))}, nil
+}
+
+func (l *Local) Stat(key string) (int64, bool, error) {
+	full, err := l.pathFor(key)
+	if err != nil {
+		return 0, false, err
+	}
+	fi, err := os.Stat(full)
+	if errors.Is(err, os.ErrNotExist) {
+		return 0, false, nil
+	}
+	if err != nil {
+		return 0, false, err
+	}
+	return fi.Size(), true, nil
+}
+
+// Rename moves an object; the same-filesystem os.Rename is atomic and free.
+func (l *Local) Rename(from, to string) error {
+	src, err := l.pathFor(from)
+	if err != nil {
+		return err
+	}
+	dst, err := l.pathFor(to)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return err
+	}
+	return os.Rename(src, dst)
+}
+
+// GetRange returns up to n leading bytes; (nil, nil) on a missing key.
+func (l *Local) GetRange(key string, n int64) ([]byte, error) {
+	full, err := l.pathFor(key)
+	if err != nil {
+		return nil, err
+	}
+	f, err := os.Open(full)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = f.Close() }()
+	buf := make([]byte, n)
+	read, err := io.ReadFull(f, buf)
+	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, io.EOF) {
+		return nil, err
+	}
+	return buf[:read], nil
 }
