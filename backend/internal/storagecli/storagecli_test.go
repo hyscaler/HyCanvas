@@ -3,6 +3,7 @@ package storagecli
 import (
 	"bytes"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -37,6 +38,36 @@ func (f *fakeDriver) Delete(key string) error        { delete(f.objects, key); r
 func (f *fakeDriver) Exists(key string) (bool, error) {
 	_, ok := f.objects[key]
 	return ok, nil
+}
+func (f *fakeDriver) PutStream(key string, r io.Reader, _ int64) (storage.PutResult, error) {
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return storage.PutResult{}, err
+	}
+	return f.Put(key, data)
+}
+func (f *fakeDriver) Stat(key string) (int64, bool, error) {
+	b, ok := f.objects[key]
+	return int64(len(b)), ok, nil
+}
+func (f *fakeDriver) GetRange(key string, n int64) ([]byte, error) {
+	b, ok := f.objects[key]
+	if !ok {
+		return nil, nil
+	}
+	if int64(len(b)) > n {
+		b = b[:n]
+	}
+	return b, nil
+}
+func (f *fakeDriver) Rename(from, to string) error {
+	b, ok := f.objects[from]
+	if !ok {
+		return errors.New("missing source object")
+	}
+	f.objects[to] = b
+	delete(f.objects, from)
+	return nil
 }
 
 // seedTree writes a small local storage layout and returns its base.

@@ -1,8 +1,11 @@
 package storage
 
 import (
+	"bytes"
 	"os"
+	"strings"
 	"testing"
+	"time"
 )
 
 func envOr(k, d string) string {
@@ -70,6 +73,65 @@ func TestS3_RoundTrip_Integration(t *testing.T) {
 	}
 	if ok, _ := drv.Exists(key); ok {
 		t.Fatal("Exists after delete should be false")
+	}
+
+	// Direct-upload surface: PutStream (the api-put leg), Stat, GetRange (the
+	// complete-time sniff), and Rename (pending/ -> assets/ promotion).
+	const pendingKey = "test/direct-pending.bin"
+	const finalKey = "test/direct-final.bin"
+	stream := []byte("streamed direct upload payload with a head worth sniffing")
+	sres, err := drv.PutStream(pendingKey, bytes.NewReader(stream), -1)
+	if err != nil {
+		t.Fatalf("PutStream: %v", err)
+	}
+	if sres.Size != int64(len(stream)) || sres.Checksum == "" {
+		t.Fatalf("PutStream result wrong: %+v", sres)
+	}
+	size, ok, err := drv.Stat(pendingKey)
+	if err != nil || !ok || size != int64(len(stream)) {
+		t.Fatalf("Stat = %d, %v, %v", size, ok, err)
+	}
+	if _, ok, _ := drv.Stat("test/missing"); ok {
+		t.Fatal("Stat on missing key should be ok=false")
+	}
+	head, err := drv.GetRange(pendingKey, 8)
+	if err != nil || string(head) != string(stream[:8]) {
+		t.Fatalf("GetRange = %q, %v", head, err)
+	}
+	// A range longer than the object returns the whole object.
+	all, err := drv.GetRange(pendingKey, int64(len(stream))+100)
+	if err != nil || string(all) != string(stream) {
+		t.Fatalf("GetRange past end = %d bytes, %v", len(all), err)
+	}
+	if err := drv.Rename(pendingKey, finalKey); err != nil {
+		t.Fatalf("Rename: %v", err)
+	}
+	if ok, _ := drv.Exists(pendingKey); ok {
+		t.Fatal("source should be gone after Rename")
+	}
+	got, err = drv.Get(finalKey)
+	if err != nil || string(got) != string(stream) {
+		t.Fatalf("Get after Rename = %d bytes, %v", len(got), err)
+	}
+	if err := drv.Delete(finalKey); err != nil {
+		t.Fatalf("Delete final: %v", err)
+	}
+
+	// PresignPost mints a policy for the exact key; the URL must target the
+	// endpoint (or the public rewrite) and carry the signed fields.
+	post, err := drv.PresignPost("test/presigned.bin", 1024, time.Minute, "")
+	if err != nil {
+		t.Fatalf("PresignPost: %v", err)
+	}
+	if post.URL == "" || post.Fields["key"] != "test/presigned.bin" || post.Fields["policy"] == "" {
+		t.Fatalf("PresignPost grant wrong: url=%q fields=%v", post.URL, post.Fields)
+	}
+	rew, err := drv.PresignPost("test/presigned.bin", 1024, time.Minute, "https://cdn.example.com/s3")
+	if err != nil {
+		t.Fatalf("PresignPost rewrite: %v", err)
+	}
+	if !strings.HasPrefix(rew.URL, "https://cdn.example.com/s3/") {
+		t.Fatalf("public URL rewrite wrong: %q", rew.URL)
 	}
 }
 

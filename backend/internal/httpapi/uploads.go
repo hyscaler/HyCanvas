@@ -30,7 +30,14 @@ func mountUploads(api chi.Router, up *uploads.Service, acct *accounts.Service) {
 		r.Post("/workspaces/{id}/asset-folders", createFolderHandler(up))
 		r.Patch("/asset-folders/{id}", renameFolderHandler(up))
 		r.Delete("/asset-folders/{id}", deleteFolderHandler(up))
+		// Direct (presigned) uploads: init the handshake, then complete once the
+		// bytes are in storage.
+		r.Post("/workspaces/{id}/uploads/direct", directInitHandler(up))
+		r.Post("/uploads/direct/{id}/complete", directCompleteHandler(up))
 	})
+	// The api-put leg of a direct upload: raw bytes, authenticated by the
+	// grant's one-time token (presigned semantics: no session cookie needed).
+	api.Put("/uploads/direct/{id}", directReceiveHandler(up))
 	// Public content delivery (local/mock); the bytes are served to any caller.
 	// HEAD is mounted alongside GET (chi routes methods separately) so clients
 	// can probe existence/size without downloading; ServeContent handles both.
@@ -59,6 +66,9 @@ func uploadsProblem(w http.ResponseWriter, r *http.Request, err error) {
 		problemWithCode(w, r, http.StatusRequestEntityTooLarge, "Payload Too Large", err.Error(), "account_storage_full")
 	case errors.Is(err, uploads.ErrImportSize):
 		problemWithCode(w, r, http.StatusRequestEntityTooLarge, "Payload Too Large", err.Error(), "import_too_large")
+	case errors.Is(err, uploads.ErrUploadIncomplete):
+		// Complete arrived before the bytes did; the client can retry.
+		problemWithCode(w, r, http.StatusConflict, "Conflict", err.Error(), "upload_incomplete")
 	default:
 		problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed", "upload_failed")
 	}
@@ -271,5 +281,68 @@ func assetContentHandler(up *uploads.Service) http.HandlerFunc {
 		// which broke video scrubbing, filmstrips, and scene detection; it also
 		// lets <video> fetch only the parts it needs of large files.
 		http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(data))
+	}
+}
+
+// directInitHandler starts a direct upload: quota-gates the declared size and
+// returns the upload grant (presigned S3 POST or the API's streaming PUT).
+func directInitHandler(up *uploads.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Filename string  `json:"filename"`
+			ByteSize int64   `json:"byteSize"`
+			FolderID *string `json:"folderId"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.ByteSize <= 0 {
+			Problem(w, r, http.StatusBadRequest, "Bad Request", "missing or invalid byteSize")
+			return
+		}
+		u := userFrom(r.Context())
+		grant, err := up.InitDirectUpload(r.Context(), u.ID, chi.URLParam(r, "id"), body.Filename, body.ByteSize, body.FolderID)
+		if err != nil {
+			uploadsProblem(w, r, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, grant)
+	}
+}
+
+// directReceiveHandler streams the raw body into storage for an api-put grant.
+// MaxBytesReader caps the read at the ceiling a grant can carry, so an
+// oversized body fails fast instead of filling the disk; the exact per-grant
+// declared size is enforced at complete.
+func directReceiveHandler(up *uploads.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		body := http.MaxBytesReader(w, r.Body, uploads.MaxDirectUploadBytes())
+		err := up.ReceiveDirectUpload(r.Context(), chi.URLParam(r, "id"), r.URL.Query().Get("token"), body)
+		if err != nil {
+			var tooLarge *http.MaxBytesError
+			if errors.As(err, &tooLarge) {
+				Problem(w, r, http.StatusRequestEntityTooLarge, "Payload Too Large", "upload exceeds the maximum file size")
+				return
+			}
+			uploadsProblem(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+// directCompleteHandler validates the stored object and promotes it to an
+// asset, returning the same UploadedAsset shape as the legacy JSON upload.
+func directCompleteHandler(up *uploads.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Thumbnail string `json:"thumbnail"`
+		}
+		// The body is optional (thumbnail only), so a decode error is not fatal.
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		u := userFrom(r.Context())
+		asset, err := up.CompleteDirectUpload(r.Context(), u.ID, chi.URLParam(r, "id"), body.Thumbnail)
+		if err != nil {
+			uploadsProblem(w, r, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, asset)
 	}
 }
