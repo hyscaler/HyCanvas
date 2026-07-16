@@ -27,6 +27,7 @@ const (
 	ProviderOpenAI    Provider = "openai"
 	ProviderAnthropic Provider = "anthropic"
 	ProviderDeepSeek  Provider = "deepseek"
+	ProviderZhipu     Provider = "zhipu"
 	ProviderCustom    Provider = "custom"
 )
 

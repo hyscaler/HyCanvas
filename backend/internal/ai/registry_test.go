@@ -98,3 +98,30 @@ func TestCheckPolicy(t *testing.T) {
 		t.Fatal("under-cap should pass")
 	}
 }
+
+func TestZhipuPreset(t *testing.T) {
+	p := PresetFor("zhipu")
+	if p == nil {
+		t.Fatal("zhipu preset must exist")
+	}
+	if p.BaseURL != "https://api.z.ai/api/paas/v4" || p.DefaultModel != "glm-4.6" || p.DefaultImageModel != "cogview-4-250304" {
+		t.Fatalf("zhipu defaults wrong: %+v", p)
+	}
+	// GLM does text; CogView does image. Text + Image supported.
+	if !p.Capabilities.Text || !p.Capabilities.Image {
+		t.Fatalf("zhipu should support text and image: %+v", p.Capabilities)
+	}
+	// Image feature resolves to the CogView image model, not the text model.
+	if r := ResolveRoute("zhipu", "", "", FeatureImage); !r.Supported || r.Model != "cogview-4-250304" {
+		t.Fatalf("zhipu image route: %+v", r)
+	}
+	// An image call routes to the Zhipu endpoint with the CogView model.
+	req := buildImageRequest(CallConfig{Provider: ProviderZhipu, APIKey: "k", BaseURL: p.BaseURL, ImageModel: p.DefaultImageModel}, "a cat", "1024x1024")
+	if req.url != "https://api.z.ai/api/paas/v4/images/generations" {
+		t.Fatalf("zhipu image url wrong: %q", req.url)
+	}
+	body, _ := req.body.(map[string]any)
+	if m, _ := body["model"].(string); m != "cogview-4-250304" {
+		t.Fatalf("zhipu image model wrong: %v", body["model"])
+	}
+}
