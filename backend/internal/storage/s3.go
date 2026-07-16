@@ -216,3 +216,133 @@ func (s *S3) Exists(key string) (bool, error) {
 	}
 	return true, nil
 }
+
+// PutStream uploads from a reader; the MinIO client streams (multipart when the
+// size is unknown), so large direct uploads never buffer fully in memory. The
+// checksum is computed on the fly from the same read.
+func (s *S3) PutStream(key string, r io.Reader, size int64) (PutResult, error) {
+	key, err := normalizeKey(key)
+	if err != nil {
+		return PutResult{}, err
+	}
+	// No small-object timeout here: a large body legitimately takes longer, and
+	// the reader is already bounded by the HTTP request it streams from.
+	h := sha256.New()
+	info, err := s.client.PutObject(context.Background(), s.bucket, key, io.TeeReader(r, h), size, minio.PutObjectOptions{})
+	if err != nil {
+		return PutResult{}, err
+	}
+	return PutResult{Key: key, URL: "s3://" + s.bucket + "/" + key, Size: info.Size, Checksum: hex.EncodeToString(h.Sum(nil))}, nil
+}
+
+// Stat returns the object size; ok=false on a missing key.
+func (s *S3) Stat(key string) (int64, bool, error) {
+	key, err := normalizeKey(key)
+	if err != nil {
+		return 0, false, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), s3OpTimeout)
+	defer cancel()
+	info, err := s.client.StatObject(ctx, s.bucket, key, minio.StatObjectOptions{})
+	if err != nil {
+		if minio.ToErrorResponse(err).Code == "NoSuchKey" {
+			return 0, false, nil
+		}
+		return 0, false, err
+	}
+	return info.Size, true, nil
+}
+
+// GetRange returns up to n leading bytes; (nil, nil) on a missing key.
+func (s *S3) GetRange(key string, n int64) ([]byte, error) {
+	key, err := normalizeKey(key)
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), s3OpTimeout)
+	defer cancel()
+	opts := minio.GetObjectOptions{}
+	if err := opts.SetRange(0, n-1); err != nil {
+		return nil, err
+	}
+	obj, err := s.client.GetObject(ctx, s.bucket, key, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = obj.Close() }()
+	data, err := io.ReadAll(obj)
+	if err != nil {
+		if minio.ToErrorResponse(err).Code == "NoSuchKey" {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return data, nil
+}
+
+// Rename moves an object via a server-side copy + delete: the bytes never
+// leave the S3 store.
+func (s *S3) Rename(from, to string) error {
+	from, err := normalizeKey(from)
+	if err != nil {
+		return err
+	}
+	to, err = normalizeKey(to)
+	if err != nil {
+		return err
+	}
+	// Generous timeout: a server-side copy of a large object outlasts the
+	// small-object budget on some stores.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	_, err = s.client.CopyObject(ctx,
+		minio.CopyDestOptions{Bucket: s.bucket, Object: to},
+		minio.CopySrcOptions{Bucket: s.bucket, Object: from})
+	if err != nil {
+		return err
+	}
+	return s.client.RemoveObject(ctx, s.bucket, from, minio.RemoveObjectOptions{})
+}
+
+// PresignPost mints a browser-usable POST-policy grant for one object key. The
+// policy pins the exact key and caps the size to maxBytes, so the grant cannot
+// be reused for another path or a larger file. publicURL (when set) replaces
+// the endpoint origin for deployments whose S3 endpoint is not the URL the
+// browser should use (e.g. MinIO inside a compose network behind a proxy).
+func (s *S3) PresignPost(key string, maxBytes int64, expiry time.Duration, publicURL string) (PresignedPost, error) {
+	key, err := normalizeKey(key)
+	if err != nil {
+		return PresignedPost{}, err
+	}
+	policy := minio.NewPostPolicy()
+	if err := policy.SetBucket(s.bucket); err != nil {
+		return PresignedPost{}, err
+	}
+	if err := policy.SetKey(key); err != nil {
+		return PresignedPost{}, err
+	}
+	if err := policy.SetExpires(time.Now().UTC().Add(expiry)); err != nil {
+		return PresignedPost{}, err
+	}
+	if err := policy.SetContentLengthRange(1, maxBytes); err != nil {
+		return PresignedPost{}, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), s3OpTimeout)
+	defer cancel()
+	u, fields, err := s.client.PresignedPostPolicy(ctx, policy)
+	if err != nil {
+		return PresignedPost{}, err
+	}
+	if publicURL != "" {
+		pub, perr := url.Parse(publicURL)
+		if perr != nil || pub.Host == "" {
+			return PresignedPost{}, fmt.Errorf("invalid S3_PUBLIC_URL: %q", publicURL)
+		}
+		// Swap scheme+host and prepend any path prefix the public URL carries (a
+		// proxy route like /s3), keeping the bucket path the policy signed.
+		u.Scheme = pub.Scheme
+		u.Host = pub.Host
+		u.Path = strings.TrimSuffix(pub.Path, "/") + u.Path
+	}
+	return PresignedPost{URL: u.String(), Fields: fields}, nil
+}

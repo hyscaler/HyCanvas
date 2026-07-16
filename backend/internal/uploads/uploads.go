@@ -55,20 +55,38 @@ type Service struct {
 	storage   storage.Driver
 	access    Access
 	publicURL string
-	resolve   func(host string) ([]net.IP, error)                               // overridable for tests
-	dial      func(ctx context.Context, network, addr string) (net.Conn, error) // overridable for tests; addr carries the vetted IP
-	client    *http.Client
+	// Direct-upload routing: directToBucket switches S3/MinIO deployments to
+	// presigned browser->bucket POSTs (S3_DIRECT_UPLOADS, opt-in because the
+	// bucket needs a CORS config first); s3PublicBase optionally rewrites the
+	// presigned URL origin when the S3 endpoint is not browser-reachable
+	// (S3_PUBLIC_URL). Without the opt-in every driver uses the API's
+	// token-authenticated streaming PUT, which needs no storage-side setup.
+	directToBucket bool
+	s3PublicBase   string
+	resolve        func(host string) ([]net.IP, error)                               // overridable for tests
+	dial           func(ctx context.Context, network, addr string) (net.Conn, error) // overridable for tests; addr carries the vetted IP
+	client         *http.Client
 }
 
 // NewService wires the uploads service.
 func NewService(db DBTX, store storage.Driver, access Access) *Service {
 	return &Service{
 		db: db, storage: store, access: access,
-		publicURL: os.Getenv("BACKEND_PUBLIC_URL"),
-		resolve:   net.LookupIP,
-		dial:      (&net.Dialer{Timeout: 10 * time.Second}).DialContext,
-		client:    &http.Client{Timeout: 30 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }},
+		publicURL:      os.Getenv("BACKEND_PUBLIC_URL"),
+		directToBucket: truthyEnv(os.Getenv("S3_DIRECT_UPLOADS")),
+		s3PublicBase:   os.Getenv("S3_PUBLIC_URL"),
+		resolve:        net.LookupIP,
+		dial:           (&net.Dialer{Timeout: 10 * time.Second}).DialContext,
+		client:         &http.Client{Timeout: 30 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }},
 	}
+}
+
+func truthyEnv(v string) bool {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "1", "true", "yes", "on":
+		return true
+	}
+	return false
 }
 
 func quotaBytes() int64 {
