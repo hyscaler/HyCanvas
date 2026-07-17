@@ -8,10 +8,17 @@ import { cueAt, formatCaptionTime, toSrt, toVtt, withCues } from "./captions";
 import {
   activeClipsAt,
   activeTitleClipsAt,
+  applyEasing,
+  applyMotionPreset,
+  setTrackEasing,
   clipGainAt,
+  colorFilter,
+  colorIsNeutral,
+  COLOR_PRESETS,
   duckDbAtFrame,
   evalKeyframes,
   gainEnvelopeDb,
+  titleAnimAt,
   transitionFxAt,
   upsertPoseKeyframe,
   visibleVideoClipsAt,
@@ -78,13 +85,13 @@ describe("evalKeyframes", () => {
     expect(evalKeyframes(tracks, 999).opacity).toBe(1);
     expect(evalKeyframes(tracks, 10).scale).toBeCloseTo(1.5, 5);
     expect(evalKeyframes(tracks, 0).dx).toBe(-0.5); // single keyframe holds
-    expect(evalKeyframes(undefined, 3)).toEqual({ opacity: 1, dx: 0, dy: 0, scale: 1 });
+    expect(evalKeyframes(undefined, 3)).toEqual({ opacity: 1, dx: 0, dy: 0, scale: 1, rotation: 0 });
     // Non-numeric values are ignored, unknown properties too.
     const junk = [
       { property: "opacity", keyframes: [{ frame: 0, value: "x" }] },
       { property: "rotate", keyframes: [{ frame: 0, value: 1 }] },
     ];
-    expect(evalKeyframes(junk, 0)).toEqual({ opacity: 1, dx: 0, dy: 0, scale: 1 });
+    expect(evalKeyframes(junk, 0)).toEqual({ opacity: 1, dx: 0, dy: 0, scale: 1, rotation: 0 });
   });
 });
 
@@ -291,5 +298,139 @@ describe("clipGainAt + visibleVideoClipsAt", () => {
     const p = projectWith([bottom, hidden, audio, top]);
     const vis = visibleVideoClipsAt(p, 10);
     expect(vis.map((v) => v.clip.id)).toEqual(["b", "t"]);
+  });
+});
+
+describe("color adjustments", () => {
+  it("builds a ctx.filter string only from non-neutral values", () => {
+    expect(colorFilter(undefined)).toBe("");
+    expect(colorFilter({})).toBe("");
+    expect(colorFilter({ brightness: 1, contrast: 1, saturation: 1 })).toBe("");
+    expect(colorFilter({ brightness: 1.2 })).toBe("brightness(1.2)");
+    expect(colorFilter({ brightness: 1.2, contrast: 0.9, saturation: 0 })).toBe(
+      "brightness(1.2) contrast(0.9) saturate(0)",
+    );
+  });
+
+  it("treats zero saturation as a real adjustment, not neutral", () => {
+    expect(colorIsNeutral({ saturation: 0 })).toBe(false);
+    expect(colorIsNeutral({ temperature: 0 })).toBe(true);
+    expect(colorIsNeutral(undefined)).toBe(true);
+  });
+
+  it("ships presets whose values are non-neutral", () => {
+    for (const p of COLOR_PRESETS) expect(colorIsNeutral(p.color)).toBe(false);
+  });
+});
+
+describe("easing", () => {
+  it("keeps linear as the default and clamps endpoints", () => {
+    expect(applyEasing(0.25, undefined)).toBe(0.25);
+    expect(applyEasing(0, "easeInOut")).toBe(0);
+    expect(applyEasing(1, "easeInOut")).toBe(1);
+    expect(applyEasing(0.5, "easeIn")).toBe(0.25);
+    expect(applyEasing(0.5, "easeOut")).toBe(0.75);
+    expect(applyEasing(0.5, "easeInOut")).toBe(0.5);
+  });
+
+  it("shapes interpolation between keyframes by the departing keyframe's easing", () => {
+    const kfs = [
+      { property: "dx", keyframes: [{ frame: 0, value: 0, easing: "easeIn" }, { frame: 10, value: 1 }] },
+    ];
+    // Linear midpoint would be 0.5; easeIn at t=0.5 is 0.25.
+    expect(evalKeyframes(kfs, 5).dx).toBeCloseTo(0.25);
+    // Unknown easing names fall back to linear (older files unaffected).
+    const weird = [
+      { property: "dx", keyframes: [{ frame: 0, value: 0, easing: "bounce??" }, { frame: 10, value: 1 }] },
+    ];
+    expect(evalKeyframes(weird, 5).dx).toBeCloseTo(0.5);
+  });
+});
+
+describe("static pose fields", () => {
+  it("folds clip.opacity into the keyframed opacity", () => {
+    const c = clip({ opacity: 0.5, keyframes: [{ property: "opacity", keyframes: [{ frame: 0, value: 0.8 }] }] });
+    expect(evalKeyframes(c.keyframes, 0, c).opacity).toBeCloseTo(0.4);
+    // Without the clip argument (pure keyframe eval) the static part is ignored.
+    expect(evalKeyframes(c.keyframes, 0).opacity).toBeCloseTo(0.8);
+  });
+
+  it("adds static rotation to the keyframed rotation", () => {
+    const c = clip({
+      rotationDeg: 10,
+      keyframes: [{ property: "rotation", keyframes: [{ frame: 0, value: 0 }, { frame: 10, value: 20 }] }],
+    });
+    expect(evalKeyframes(c.keyframes, 5, c).rotation).toBeCloseTo(20);
+  });
+});
+
+describe("title animations", () => {
+  it("fades in over animFrames and is static without animIn", () => {
+    const t = { text: "Hello", animIn: "fade" as const, animFrames: 10 };
+    expect(titleAnimAt(t, 0, 100).alpha).toBeCloseTo(0.1);
+    expect(titleAnimAt(t, 9, 100).alpha).toBeCloseTo(1);
+    expect(titleAnimAt(t, 50, 100).alpha).toBe(1);
+    expect(titleAnimAt({ text: "Hello" }, 0, 100).alpha).toBe(1);
+  });
+
+  it("type-on reveals characters over the edge", () => {
+    const t = { text: "Hello", animIn: "type-on" as const, animFrames: 5 };
+    expect(titleAnimAt(t, 0, 100).revealChars).toBe(1);
+    expect(titleAnimAt(t, 4, 100).revealChars).toBe(5);
+    expect(titleAnimAt(t, 50, 100).revealChars).toBeUndefined();
+  });
+
+  it("slide-down exit offsets downward while fading", () => {
+    const t = { text: "Hi", animOut: "slide-down" as const, animFrames: 10 };
+    const nearEnd = titleAnimAt(t, 99, 100);
+    expect(nearEnd.alpha).toBeLessThan(0.2);
+    expect(nearEnd.offsetY).toBeGreaterThan(0);
+    // The animation edge never exceeds half the clip.
+    const short = titleAnimAt({ text: "Hi", animIn: "fade", animFrames: 50 }, 10, 20);
+    expect(short.alpha).toBe(1);
+  });
+});
+
+describe("motion presets", () => {
+  it("fade-in writes an opacity ramp over the entrance edge", () => {
+    const kfs = applyMotionPreset(undefined, "fade-in", 90);
+    const op = kfs.find((t) => t.property === "opacity")!;
+    expect(op.keyframes).toEqual([
+      { frame: 0, value: 0 },
+      { frame: 12, value: 1 },
+    ]);
+    expect(evalKeyframes(kfs, 6).opacity).toBeCloseTo(0.5);
+  });
+
+  it("entrance and exit presets compose on the same property", () => {
+    let kfs = applyMotionPreset(undefined, "fade-in", 90);
+    kfs = applyMotionPreset(kfs, "fade-out", 90);
+    const op = kfs.find((t) => t.property === "opacity")!;
+    expect(op.keyframes.map((k) => k.frame)).toEqual([0, 12, 77, 89]);
+    expect(evalKeyframes(kfs, 45).opacity).toBe(1);
+    expect(evalKeyframes(kfs, 89).opacity).toBe(0);
+  });
+
+  it("re-applying a preset overwrites only its own window", () => {
+    let kfs = applyMotionPreset(undefined, "slide-in", 90);
+    kfs = applyMotionPreset(kfs, "slide-in", 90);
+    const dx = kfs.find((t) => t.property === "dx")!;
+    expect(dx.keyframes.length).toBe(2);
+    expect(dx.keyframes[0]).toMatchObject({ frame: 0, value: -0.4, easing: "easeOut" });
+  });
+
+  it("pop-in eases the scale and the edge shrinks on short clips", () => {
+    const kfs = applyMotionPreset(undefined, "pop-in", 10);
+    const sc = kfs.find((t) => t.property === "scale")!;
+    expect(sc.keyframes[0].value).toBe(0.6);
+    expect(sc.keyframes[1].frame).toBe(5); // half the 10-frame clip, not 12
+  });
+
+  it("setTrackEasing stamps every keyframe of one property", () => {
+    let kfs = applyMotionPreset(undefined, "fade-in", 90);
+    kfs = setTrackEasing(kfs, "opacity", "easeInOut");
+    expect(kfs.find((t) => t.property === "opacity")!.keyframes.every((k) => k.easing === "easeInOut")).toBe(true);
+    kfs = setTrackEasing(kfs, "opacity", undefined);
+    expect(kfs.find((t) => t.property === "opacity")!.keyframes.every((k) => k.easing === undefined)).toBe(true);
   });
 });

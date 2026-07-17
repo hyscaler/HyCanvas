@@ -33,12 +33,33 @@ func mountExport(api chi.Router, p *persistence.Service, store storage.Driver, r
 func videoExportHandler(p *persistence.Service, store storage.Driver, reg *jobs.Registry, acct *accounts.Service, up *uploads.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var body struct {
-			Scale      float64 `json:"scale"`
-			CRF        int     `json:"crf"`
-			StartFrame float64 `json:"startFrame"`
-			EndFrame   float64 `json:"endFrame"`
+			Scale        float64 `json:"scale"`
+			CRF          int     `json:"crf"`
+			StartFrame   float64 `json:"startFrame"`
+			EndFrame     float64 `json:"endFrame"`
+			Format       string  `json:"format"`
+			Fps          float64 `json:"fps"`
+			SkipCaptions bool    `json:"skipCaptions"`
+			StemTrackId  string  `json:"stemTrackId"`
 		}
 		_ = json.NewDecoder(r.Body).Decode(&body) // optional knobs
+		format, ctype := "mp4", "video/mp4"
+		switch body.Format {
+		case "", "mp4":
+		case "webm":
+			format, ctype = "webm", "video/webm"
+		case "gif":
+			format, ctype = "gif", "image/gif"
+		case "mp3":
+			format, ctype = "mp3", "audio/mpeg"
+		default:
+			Problem(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "format must be mp4, webm, gif, or mp3")
+			return
+		}
+		if body.Fps != 0 && (body.Fps < 1 || body.Fps > 120) {
+			Problem(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "fps must be between 1 and 120")
+			return
+		}
 		id := chi.URLParam(r, "id")
 		ws, err := authorizeDesign(r, p, acct, id, "viewer")
 		if err != nil {
@@ -60,7 +81,7 @@ func videoExportHandler(p *persistence.Service, store storage.Driver, reg *jobs.
 		if project, terr := render.ParseTimeline(meta); terr == nil && up != nil {
 			// Nested sequences flatten into plain tracks before the graph builds.
 			project = render.FlattenSequences(project, render.ParseSequences(meta), 0)
-			storeKey := "designs/" + id + "/exports/video-" + job.ID + ".mp4"
+			storeKey := "designs/" + id + "/exports/video-" + job.ID + "." + format
 			go func() {
 				ctx := context.Background()
 				dir, derr := os.MkdirTemp("", "oc-timeline-assets-*")
@@ -87,20 +108,22 @@ func videoExportHandler(p *persistence.Service, store storage.Driver, reg *jobs.
 					stagedFiles[assetID] = sa
 					return sa, true
 				}
-				mp4, rerr := render.RenderTimeline(ctx, project, assetFile, render.TimelineOptions{
+				encoded, rerr := render.RenderTimeline(ctx, project, assetFile, render.TimelineOptions{
 					Scale: body.Scale, CRF: body.CRF,
 					RangeStartFrame: body.StartFrame, RangeEndFrame: body.EndFrame,
+					Format: format, OutFps: body.Fps,
+					SkipCaptions: body.SkipCaptions, StemTrackID: body.StemTrackId,
 				})
 				if rerr != nil {
 					reg.Fail(job.ID, "encode failed: "+rerr.Error())
 					return
 				}
-				if _, serr := store.Put(storeKey, mp4); serr != nil {
+				if _, serr := store.Put(storeKey, encoded); serr != nil {
 					reg.Fail(job.ID, "store failed")
 					return
 				}
-				reg.Complete(job.ID, map[string]any{"key": storeKey, "format": "mp4"},
-					&jobs.Blob{Key: storeKey, ContentType: "video/mp4", Filename: "export-" + id + ".mp4"})
+				reg.Complete(job.ID, map[string]any{"key": storeKey, "format": format},
+					&jobs.Blob{Key: storeKey, ContentType: ctype, Filename: "export-" + id + "." + format})
 			}()
 			writeJSON(w, http.StatusOK, map[string]any{"jobId": job.ID})
 			return

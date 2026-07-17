@@ -41,16 +41,41 @@ type TimelineTitle struct {
 	Color      string  `json:"color"`
 	Background string  `json:"background"`
 	Position   string  `json:"position"`
+	OffsetX    float64 `json:"offsetX"`
+	OffsetY    float64 `json:"offsetY"`
 	Weight     string  `json:"weight"`
+}
+
+// TimelineColor mirrors the clip's optional color adjustments. Brightness,
+// contrast, and saturation are pointers because absent means neutral (1)
+// while an explicit 0 saturation (grayscale) is meaningful.
+type TimelineColor struct {
+	Brightness  *float64 `json:"brightness"`
+	Contrast    *float64 `json:"contrast"`
+	Saturation  *float64 `json:"saturation"`
+	Temperature float64  `json:"temperature"`
+}
+
+type TimelineRect struct {
+	X      float64 `json:"x"`
+	Y      float64 `json:"y"`
+	Width  float64 `json:"width"`
+	Height float64 `json:"height"`
 }
 
 type TimelineClip struct {
 	ID            string              `json:"id"`
 	AssetID       string              `json:"assetId"`
+	Disabled      bool                `json:"disabled"`
+	Crop          *TimelineRect       `json:"crop"`
 	StartFrame    float64             `json:"startFrame"`
 	InFrame       float64             `json:"inFrame"`
 	OutFrame      float64             `json:"outFrame"`
 	Speed         float64             `json:"speed"`
+	Fit           string              `json:"fit"`
+	Opacity       *float64            `json:"opacity"`
+	RotationDeg   float64             `json:"rotationDeg"`
+	Color         *TimelineColor      `json:"color"`
 	TransitionIn  *TimelineTransition `json:"transitionIn"`
 	TransitionOut *TimelineTransition `json:"transitionOut"`
 	FadeInFrames  float64             `json:"fadeInFrames"`
@@ -67,7 +92,9 @@ type TimelineTrack struct {
 	Solo   bool           `json:"solo"`
 	Hidden bool           `json:"hidden"`
 	GainDb float64        `json:"gainDb"`
-	Clips  []TimelineClip `json:"clips"`
+	// -1 (left) .. 1 (right); 0 = center.
+	Pan   float64        `json:"pan"`
+	Clips []TimelineClip `json:"clips"`
 }
 
 type TimelineCue struct {
@@ -99,6 +126,7 @@ type TimelineProject struct {
 		Width  float64 `json:"width"`
 		Height float64 `json:"height"`
 	} `json:"stage"`
+	Background     string             `json:"background"`
 	Fps            float64            `json:"fps"`
 	DurationFrames float64            `json:"durationFrames"`
 	Tracks         []TimelineTrack    `json:"tracks"`
@@ -243,10 +271,26 @@ type TimelineOptions struct {
 	// build for the drawtext filter (absent on builds without libfreetype) and
 	// omits text overlays rather than failing the whole export.
 	DrawText bool
+	// ColorTemp enables the colortemperature filter for clip temperature
+	// adjustments; probed like DrawText and simply omitted when absent.
+	ColorTemp bool
 	// Optional export range in timeline frames (0/0 = whole timeline),
 	// applied with output seeking so all graph timings stay absolute.
 	RangeStartFrame float64
 	RangeEndFrame   float64
+	// Format selects the container/codec: "mp4" (default), "webm"
+	// (VP9/Opus), "gif" (palette two-stage, capped at 15fps, no audio), or
+	// "mp3" (audio only; the video graph is skipped entirely).
+	Format string
+	// OutFps overrides the OUTPUT frame rate only (duplicating/dropping
+	// frames); 0 keeps the project fps. Timeline timing math always uses the
+	// project fps.
+	OutFps float64
+	// SkipCaptions leaves caption burn-in out even when DrawText is available.
+	SkipCaptions bool
+	// StemTrackID renders ONLY this track's audio (pre-master, no ducking):
+	// per-track stems for the mp3 format.
+	StemTrackID string
 }
 
 func (c *TimelineClip) speedMag() float64 {
@@ -354,7 +398,53 @@ type StagedAsset struct {
 // an assetId to a staged local file; clips whose asset is missing are skipped
 // (the render is best-effort per clip, never fails the whole export because
 // one asset vanished).
+// applyXfadeTails mirrors the browser compositor's overlap trick for authored
+// cross-dissolve pairs at an exact cut: the LEFT clip's source window extends
+// past the cut at full alpha (its out-fade dropped) while the RIGHT clip keeps
+// its fade-in on top, so the composite is a true crossfade instead of a dip
+// through the background.
+func applyXfadeTails(p *TimelineProject) *TimelineProject {
+	out := *p
+	out.Tracks = make([]TimelineTrack, len(p.Tracks))
+	for ti, t := range p.Tracks {
+		nt := t
+		nt.Clips = append([]TimelineClip(nil), t.Clips...)
+		for i := range nt.Clips {
+			left := &nt.Clips[i]
+			if left.TransitionOut == nil || left.TransitionOut.Type != "crossDissolve" || left.Speed < 0 {
+				continue
+			}
+			leftEnd := left.endFrame()
+			for j := range nt.Clips {
+				if i == j {
+					continue
+				}
+				right := &nt.Clips[j]
+				if right.TransitionIn == nil || right.TransitionIn.Type != "crossDissolve" {
+					continue
+				}
+				if math.Abs(right.StartFrame-leftEnd) > 0.5 {
+					continue
+				}
+				window := math.Min(left.TransitionOut.DurationFrames, right.TransitionIn.DurationFrames)
+				if window < 1 {
+					continue
+				}
+				// Extend the left clip's source past the cut by the window
+				// (ffmpeg simply ends early if the media runs out) and drop
+				// its own fade so it holds at full alpha under the fade-in.
+				left.OutFrame += window * left.speedMag()
+				left.TransitionOut = nil
+				break
+			}
+		}
+		out.Tracks[ti] = nt
+	}
+	return &out
+}
+
 func BuildTimelineArgs(p *TimelineProject, assetFile func(assetID string) (StagedAsset, bool), opts TimelineOptions, outPath string) ([]string, error) {
+	p = applyXfadeTails(p)
 	if opts.Scale <= 0 {
 		opts.Scale = 1
 	}
@@ -363,6 +453,13 @@ func BuildTimelineArgs(p *TimelineProject, assetFile func(assetID string) (Stage
 	}
 	if opts.Preset == "" {
 		opts.Preset = "medium"
+	}
+	format := opts.Format
+	if format == "" {
+		format = "mp4"
+	}
+	if format == "webm" && opts.CRF == 0 {
+		opts.CRF = 32 // VP9's CRF scale runs higher than x264's
 	}
 	fps := p.Fps
 	// Even dimensions for yuv420p.
@@ -412,20 +509,28 @@ func BuildTimelineArgs(p *TimelineProject, assetFile func(assetID string) (Stage
 		return fmt.Sprintf("[%s%d]", prefix, label)
 	}
 
-	// Base canvas.
+	// Base canvas (the project's stage background; black by default). An
+	// audio-only export skips the whole video graph: nothing composites,
+	// nothing decodes needlessly.
 	base := "[base]"
-	fc = append(fc, fmt.Sprintf("color=c=black:s=%dx%d:r=%g:d=%.4f%s", W, H, fps, durS, base))
+	if format != "mp3" {
+		fc = append(fc, fmt.Sprintf("color=c=%s:s=%dx%d:r=%g:d=%.4f%s", cssColorToFF(p.Background, "black"), W, H, fps, durS, base))
+	}
 
 	// --- video compositing, track order = stacking order ------------------
 	current := base
-	for _, t := range p.Tracks {
+	videoTracks := p.Tracks
+	if format == "mp3" {
+		videoTracks = nil
+	}
+	for _, t := range videoTracks {
 		if t.Kind != "video" && t.Kind != "overlay" || t.Hidden {
 			continue
 		}
 		clips := append([]TimelineClip(nil), t.Clips...)
 		sort.Slice(clips, func(i, j int) bool { return clips[i].StartFrame < clips[j].StartFrame })
 		for _, c := range clips {
-			if c.AssetID == "" {
+			if c.AssetID == "" || c.Disabled {
 				continue
 			}
 			idx, sa, ok := addInput(c.AssetID)
@@ -441,12 +546,57 @@ func BuildTimelineArgs(p *TimelineProject, assetFile func(assetID string) (Stage
 				chain = append(chain, "reverse")
 			}
 			chain = append(chain, fmt.Sprintf("setpts=(PTS-STARTPTS)/%.4f", c.speedMag()))
-			chain = append(chain,
-				fmt.Sprintf("scale=%d:%d:force_original_aspect_ratio=increase", W, H),
-				fmt.Sprintf("crop=%d:%d", W, H),
-				fmt.Sprintf("fps=%g", fps),
-				"format=yuva420p",
-			)
+			// Source crop (media pixels) before any scaling, matching the
+			// browser compositor's source-rect draw.
+			if c.Crop != nil && c.Crop.Width >= 8 && c.Crop.Height >= 8 {
+				chain = append(chain, fmt.Sprintf("crop=%d:%d:%d:%d",
+					int(c.Crop.Width), int(c.Crop.Height), int(math.Max(0, c.Crop.X)), int(math.Max(0, c.Crop.Y))))
+			}
+			contain := c.Fit == "contain"
+			if contain {
+				chain = append(chain, fmt.Sprintf("scale=%d:%d:force_original_aspect_ratio=decrease", W, H))
+			} else {
+				chain = append(chain,
+					fmt.Sprintf("scale=%d:%d:force_original_aspect_ratio=increase", W, H),
+					fmt.Sprintf("crop=%d:%d", W, H),
+				)
+			}
+			chain = append(chain, fmt.Sprintf("fps=%g", fps))
+			// Color adjustments. eq mirrors the browser compositor approximately:
+			// CSS-style multiplicative brightness maps onto eq's additive
+			// brightness so the two match at mid-gray; contrast and saturation
+			// share the same pivot-based definition on both sides.
+			if c.Color != nil {
+				b, ct, s := 1.0, 1.0, 1.0
+				if c.Color.Brightness != nil {
+					b = *c.Color.Brightness
+				}
+				if c.Color.Contrast != nil {
+					ct = *c.Color.Contrast
+				}
+				if c.Color.Saturation != nil {
+					s = *c.Color.Saturation
+				}
+				if b != 1 || ct != 1 || s != 1 {
+					chain = append(chain, fmt.Sprintf("eq=brightness=%.4f:contrast=%.4f:saturation=%.4f",
+						math.Max(-1, math.Min(1, (b-1)*0.5)), math.Max(0, math.Min(3, ct)), math.Max(0, math.Min(3, s))))
+				}
+				if c.Color.Temperature != 0 && opts.ColorTemp {
+					chain = append(chain, fmt.Sprintf("colortemperature=temperature=%.0f", 6500-c.Color.Temperature*2500))
+				}
+			}
+			chain = append(chain, "format=yuva420p")
+			// Contain letterboxes with TRANSPARENT bars so lower tracks (and the
+			// stage background) show through, matching the browser compositor.
+			if contain {
+				chain = append(chain, fmt.Sprintf("pad=%d:%d:(ow-iw)/2:(oh-ih)/2:color=black@0", W, H))
+			}
+			if c.RotationDeg != 0 {
+				chain = append(chain, fmt.Sprintf("rotate=%.6f:c=black@0", c.RotationDeg*math.Pi/180))
+			}
+			if c.Opacity != nil && *c.Opacity < 1 {
+				chain = append(chain, fmt.Sprintf("format=rgba,colorchannelmixer=aa=%.4f,format=yuva420p", math.Max(0, *c.Opacity)))
+			}
 			// Transitions: fade family via alpha; dipToColor fades through the
 			// color; wipe/slide approximate as fades (documented).
 			addFade := func(tr *TimelineTransition, edge string) {
@@ -480,7 +630,7 @@ func BuildTimelineArgs(p *TimelineProject, assetFile func(assetID string) (Stage
 	// --- titles (text tracks) ---------------------------------------------
 	drawtexts := []string{}
 	textTracks := p.Tracks
-	if !opts.DrawText {
+	if !opts.DrawText || format == "mp3" {
 		textTracks = nil
 	}
 	for _, t := range textTracks {
@@ -488,7 +638,7 @@ func BuildTimelineArgs(p *TimelineProject, assetFile func(assetID string) (Stage
 			continue
 		}
 		for _, c := range t.Clips {
-			if c.Title == nil || strings.TrimSpace(c.Title.Text) == "" {
+			if c.Disabled || c.Title == nil || strings.TrimSpace(c.Title.Text) == "" {
 				continue
 			}
 			sizePct := c.Title.SizePct
@@ -512,11 +662,13 @@ func BuildTimelineArgs(p *TimelineProject, assetFile func(assetID string) (Stage
 			startS := c.StartFrame / fps
 			endS := c.endFrame() / fps
 			color := cssColorToFF(c.Title.Color, "white")
+			offX := int(c.Title.OffsetX * float64(W))
+			offY := int(c.Title.OffsetY * float64(H))
 			for i := len(lines) - 1; i >= 0; i-- {
-				y := lastBaseTop - (len(lines)-1-i)*lineH
+				y := lastBaseTop - (len(lines)-1-i)*lineH + offY
 				dt := fmt.Sprintf(
-					"drawtext=font=Sans:text='%s':fontsize=%d:fontcolor=%s:x=(w-text_w)/2:y=%d:expansion=none:enable='between(t,%.4f,%.4f)'",
-					escapeDrawtext(lines[i]), fontPx, color, y, startS, endS)
+					"drawtext=font=Sans:text='%s':fontsize=%d:fontcolor=%s:x=(w-text_w)/2+%d:y=%d:expansion=none:enable='between(t,%.4f,%.4f)'",
+					escapeDrawtext(lines[i]), fontPx, color, offX, y, startS, endS)
 				if c.Title.Background != "" {
 					dt += fmt.Sprintf(":box=1:boxcolor=%s:boxborderw=%d", cssColorToFF(c.Title.Background, "black@0.6"), fontPx/3)
 				}
@@ -526,7 +678,7 @@ func BuildTimelineArgs(p *TimelineProject, assetFile func(assetID string) (Stage
 	}
 
 	// --- captions (burn-in honoring the style) ------------------------------
-	if opts.DrawText && len(p.Captions) > 0 {
+	if opts.DrawText && !opts.SkipCaptions && format != "mp3" && len(p.Captions) > 0 {
 		cap := p.Captions[0]
 		burnIn := true
 		sizePct := 0.045
@@ -568,8 +720,17 @@ func BuildTimelineArgs(p *TimelineProject, assetFile func(assetID string) (Stage
 		fc = append(fc, current+strings.Join(drawtexts, ",")+out)
 		current = out
 	}
-	vout := next("vout")
-	fc = append(fc, current+"format=yuv420p"+vout)
+	vout := ""
+	if format == "gif" {
+		// Palette two-stage for real GIF quality, capped at 15fps for size.
+		vout = next("vout")
+		fc = append(fc, current+fmt.Sprintf(
+			"fps=%g,split[gs0][gs1];[gs0]palettegen=stats_mode=diff[gp];[gs1][gp]paletteuse=dither=bayer:bayer_scale=4",
+			math.Min(fps, 15))+vout)
+	} else if format != "mp3" {
+		vout = next("vout")
+		fc = append(fc, current+"format=yuv420p"+vout)
+	}
 
 	// --- audio: per-clip chains grouped per track, then duck + master mix ---
 	type trackMix struct {
@@ -577,8 +738,21 @@ func BuildTimelineArgs(p *TimelineProject, assetFile func(assetID string) (Stage
 		label string
 	}
 	var trackMixes []trackMix
-	for _, t := range p.Tracks {
-		if t.Kind != "audio" && t.Kind != "video" {
+	audioTracks := p.Tracks
+	if format == "gif" {
+		audioTracks = nil // a GIF carries no sound; skip the whole mix graph
+	}
+	if opts.StemTrackID != "" {
+		var only []TimelineTrack
+		for _, t := range audioTracks {
+			if t.ID == opts.StemTrackID {
+				only = append(only, t)
+			}
+		}
+		audioTracks = only
+	}
+	for _, t := range audioTracks {
+		if t.Kind != "audio" && t.Kind != "video" && t.Kind != "overlay" {
 			continue
 		}
 		if !audible(t, p.Tracks) {
@@ -586,7 +760,7 @@ func BuildTimelineArgs(p *TimelineProject, assetFile func(assetID string) (Stage
 		}
 		var clipLabels []string
 		for _, c := range t.Clips {
-			if c.AssetID == "" {
+			if c.AssetID == "" || c.Disabled {
 				continue
 			}
 			idx, sa, ok := addInput(c.AssetID)
@@ -624,17 +798,32 @@ func BuildTimelineArgs(p *TimelineProject, assetFile func(assetID string) (Stage
 		} else {
 			fc = append(fc, strings.Join(clipLabels, "")+fmt.Sprintf("amix=inputs=%d:duration=longest:normalize=0", len(clipLabels))+mix)
 		}
+		// Track pan: equal-power stereo balance, matching the preview's
+		// StereoPanner. pan filter gains: L*=cos(a), R*=sin(a), a=(p+1)*pi/4.
+		if t.Pan != 0 {
+			pv := math.Max(-1, math.Min(1, t.Pan))
+			a := (pv + 1) * math.Pi / 4
+			panned := next("pn")
+			fc = append(fc, mix+fmt.Sprintf("pan=stereo|c0=%.4f*c0|c1=%.4f*c1", math.Sqrt2*math.Cos(a), math.Sqrt2*math.Sin(a))+panned)
+			mix = panned
+		}
 		trackMixes = append(trackMixes, trackMix{id: t.ID, label: mix})
 	}
 
 	var aout string
-	if len(trackMixes) == 0 {
+	if format == "gif" {
+		// no audio stream at all
+	} else if len(trackMixes) == 0 {
+		if format == "mp3" {
+			return nil, errors.New("the timeline has no audible audio to export")
+		}
 		aout = next("aout")
 		fc = append(fc, fmt.Sprintf("anullsrc=r=44100:cl=stereo:d=%.4f%s", durS, aout))
 	} else {
 		// Sidechain ducking: compress the music track's mix keyed by the voice
-		// track's mix, mirroring the preview's automation behavior.
-		if d := p.Master.Ducking; d != nil {
+		// track's mix, mirroring the preview's automation behavior. Stems are
+		// pre-master: no ducking, no master gain.
+		if d := p.Master.Ducking; d != nil && opts.StemTrackID == "" {
 			var musicIdx, voiceIdx = -1, -1
 			for i, tm := range trackMixes {
 				if tm.id == d.MusicTrackID {
@@ -666,7 +855,7 @@ func BuildTimelineArgs(p *TimelineProject, assetFile func(assetID string) (Stage
 			aout = next("am")
 			fc = append(fc, strings.Join(labels, "")+fmt.Sprintf("amix=inputs=%d:duration=longest:normalize=0", len(labels))+aout)
 		}
-		if math.Abs(p.Master.GainDb) > 0.01 {
+		if math.Abs(p.Master.GainDb) > 0.01 && opts.StemTrackID == "" {
 			m := next("mg")
 			fc = append(fc, aout+fmt.Sprintf("volume=%.4f", dbToLinear(p.Master.GainDb))+m)
 			aout = m
@@ -680,22 +869,66 @@ func BuildTimelineArgs(p *TimelineProject, assetFile func(assetID string) (Stage
 		outStart = opts.RangeStartFrame / fps
 		outEnd = math.Min(durS, opts.RangeEndFrame/fps)
 	}
-	args = append(args,
-		"-filter_complex", strings.Join(fc, ";"),
-		"-map", vout,
-		"-map", aout,
-		"-ss", fmt.Sprintf("%.4f", outStart),
-		"-t", fmt.Sprintf("%.4f", outEnd-outStart),
-		"-r", fmt.Sprintf("%g", fps),
-		"-c:v", "libx264",
-		"-crf", fmt.Sprintf("%d", opts.CRF),
-		"-preset", opts.Preset,
-		"-pix_fmt", "yuv420p",
-		"-c:a", "aac",
-		"-b:a", "192k",
-		"-movflags", "+faststart",
-		"-y", outPath,
-	)
+	outFps := fps
+	if opts.OutFps > 0 {
+		outFps = opts.OutFps
+	}
+	args = append(args, "-filter_complex", strings.Join(fc, ";"))
+	switch format {
+	case "webm":
+		args = append(args,
+			"-map", vout,
+			"-map", aout,
+			"-ss", fmt.Sprintf("%.4f", outStart),
+			"-t", fmt.Sprintf("%.4f", outEnd-outStart),
+			"-r", fmt.Sprintf("%g", outFps),
+			"-c:v", "libvpx-vp9",
+			"-crf", fmt.Sprintf("%d", opts.CRF),
+			"-b:v", "0",
+			"-row-mt", "1",
+			"-deadline", "good",
+			"-cpu-used", "4", // realtime-ish encode; default 0 is minutes-per-second slow
+			"-c:a", "libopus",
+			"-b:a", "128k",
+			"-f", "webm",
+			"-y", outPath,
+		)
+	case "gif":
+		args = append(args,
+			"-map", vout,
+			"-ss", fmt.Sprintf("%.4f", outStart),
+			"-t", fmt.Sprintf("%.4f", outEnd-outStart),
+			"-f", "gif",
+			"-y", outPath,
+		)
+	case "mp3":
+		args = append(args,
+			"-map", aout,
+			"-ss", fmt.Sprintf("%.4f", outStart),
+			"-t", fmt.Sprintf("%.4f", outEnd-outStart),
+			"-vn",
+			"-c:a", "libmp3lame",
+			"-b:a", "192k",
+			"-f", "mp3",
+			"-y", outPath,
+		)
+	default:
+		args = append(args,
+			"-map", vout,
+			"-map", aout,
+			"-ss", fmt.Sprintf("%.4f", outStart),
+			"-t", fmt.Sprintf("%.4f", outEnd-outStart),
+			"-r", fmt.Sprintf("%g", outFps),
+			"-c:v", "libx264",
+			"-crf", fmt.Sprintf("%d", opts.CRF),
+			"-preset", opts.Preset,
+			"-pix_fmt", "yuv420p",
+			"-c:a", "aac",
+			"-b:a", "192k",
+			"-movflags", "+faststart",
+			"-y", outPath,
+		)
+	}
 	return args, nil
 }
 
@@ -724,7 +957,8 @@ func ProbeStreams(path string) (hasVideo, hasAudio bool) {
 	return strings.Contains(s, "video"), strings.Contains(s, "audio")
 }
 
-// RenderTimeline runs ffmpeg on the generated graph and returns the MP4 bytes.
+// RenderTimeline runs ffmpeg on the generated graph and returns the encoded
+// bytes (MP4 by default; GIF/MP3 via opts.Format).
 func RenderTimeline(ctx context.Context, p *TimelineProject, assetFile func(string) (StagedAsset, bool), opts TimelineOptions) ([]byte, error) {
 	bin, err := exec.LookPath("ffmpeg")
 	if err != nil {
@@ -733,7 +967,14 @@ func RenderTimeline(ctx context.Context, p *TimelineProject, assetFile func(stri
 	if !opts.DrawText {
 		opts.DrawText = ffmpegHasFilter(bin, "drawtext")
 	}
-	tmp, err := os.CreateTemp("", "oc-timeline-*.mp4")
+	if !opts.ColorTemp {
+		opts.ColorTemp = ffmpegHasFilter(bin, "colortemperature")
+	}
+	ext := opts.Format
+	if ext == "" {
+		ext = "mp4"
+	}
+	tmp, err := os.CreateTemp("", "oc-timeline-*."+ext)
 	if err != nil {
 		return nil, err
 	}

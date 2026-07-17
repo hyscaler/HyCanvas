@@ -55,6 +55,27 @@ export function DesignThumb({ designId, templateId, trashed }: { designId?: stri
         if (cancelled) return;
         const canvas = ref.current;
         if (!canvas) return;
+        // Video documents carry a user-chosen cover frame; the scene render
+        // below would show an empty page for them.
+        const poster = (file as { meta?: { videoPoster?: unknown } }).meta?.videoPoster;
+        if (typeof poster === "string" && poster.startsWith("data:image/")) {
+          const img = new Image();
+          img.onload = () => {
+            if (cancelled) return;
+            const dprP = Math.min(2, window.devicePixelRatio || 1);
+            canvas.width = Math.max(1, Math.round(canvas.clientWidth * dprP));
+            canvas.height = Math.max(1, Math.round(canvas.clientHeight * dprP));
+            const c2 = canvas.getContext("2d");
+            if (!c2) return;
+            const s = Math.max(canvas.width / img.width, canvas.height / img.height);
+            const w = img.width * s;
+            const h = img.height * s;
+            c2.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
+            setOk(true);
+          };
+          img.src = poster;
+          return;
+        }
         // Cap the backing resolution: past 2x there is no visible gain on a
         // card-sized preview, only a heavier render.
         const dpr = Math.min(2, window.devicePixelRatio || 1);

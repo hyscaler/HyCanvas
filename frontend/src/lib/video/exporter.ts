@@ -8,16 +8,20 @@ export interface RecorderTarget {
   extension: "mp4" | "webm";
 }
 
-/** The best MediaRecorder container/codec this browser supports. */
-export function pickRecorderTarget(): RecorderTarget | null {
+/** The best MediaRecorder container/codec this browser supports.
+ *  preferWebm reorders the candidates so WebM wins when available. */
+export function pickRecorderTarget(preferWebm = false): RecorderTarget | null {
   if (typeof MediaRecorder === "undefined") return null;
-  const candidates: RecorderTarget[] = [
+  const mp4: RecorderTarget[] = [
     { mimeType: "video/mp4;codecs=avc1,mp4a.40.2", extension: "mp4" },
     { mimeType: "video/mp4", extension: "mp4" },
+  ];
+  const webm: RecorderTarget[] = [
     { mimeType: "video/webm;codecs=vp9,opus", extension: "webm" },
     { mimeType: "video/webm;codecs=vp8,opus", extension: "webm" },
     { mimeType: "video/webm", extension: "webm" },
   ];
+  const candidates = preferWebm ? [...webm, ...mp4] : [...mp4, ...webm];
   return candidates.find((c) => MediaRecorder.isTypeSupported(c.mimeType)) ?? null;
 }
 

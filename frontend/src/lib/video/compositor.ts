@@ -10,6 +10,7 @@ import {
   sourceFrameAt,
   type Clip,
   type ClipTransition,
+  type ColorAdjust,
   type TitleCard,
   type Track,
   type VideoProject,
@@ -154,7 +155,8 @@ export function visibleVideoClipsAt(project: VideoProject, frame: number, opts: 
     (a) =>
       (a.track.kind === "video" || a.track.kind === "overlay") &&
       !a.track.hidden &&
-      !a.hiddenByParent,
+      !a.hiddenByParent &&
+      !a.clip.disabled,
   );
 }
 
@@ -162,7 +164,8 @@ export function visibleVideoClipsAt(project: VideoProject, frame: number, opts: 
 export function audibleClipsAt(project: VideoProject, frame: number, opts: ActiveOptions = {}): ActiveClip[] {
   return activeClipsAt(project, frame, opts).filter(
     (a) =>
-      (a.track.kind === "audio" || a.track.kind === "video") &&
+      (a.track.kind === "audio" || a.track.kind === "video" || a.track.kind === "overlay") &&
+      !a.clip.disabled &&
       (a.fromSequence ? (a.mixGain ?? 0) > 0 : isAudible(a.track, project.tracks)),
   );
 }
@@ -276,6 +279,46 @@ export function clipGainAt(
 }
 
 // ---------------------------------------------------------------------------
+// color adjustments
+// ---------------------------------------------------------------------------
+
+/** Named filter presets: applying one copies these values onto the clip so the
+ *  sliders always show (and can further tweak) the real numbers. */
+export const COLOR_PRESETS: { name: string; label: string; color: ColorAdjust }[] = [
+  { name: "vivid", label: "Vivid", color: { saturation: 1.35, contrast: 1.08 } },
+  { name: "warm", label: "Warm", color: { temperature: 0.5, saturation: 1.05 } },
+  { name: "cool", label: "Cool", color: { temperature: -0.5 } },
+  { name: "mono", label: "Mono", color: { saturation: 0, contrast: 1.05 } },
+  { name: "faded", label: "Faded", color: { contrast: 0.85, saturation: 0.85, brightness: 1.05 } },
+  { name: "noir", label: "Noir", color: { saturation: 0, contrast: 1.3, brightness: 0.95 } },
+];
+
+/** True when the adjustments draw identically to no adjustments. */
+export function colorIsNeutral(c: ColorAdjust | undefined): boolean {
+  if (!c) return true;
+  return (
+    (c.brightness ?? 1) === 1 &&
+    (c.contrast ?? 1) === 1 &&
+    (c.saturation ?? 1) === 1 &&
+    (c.temperature ?? 0) === 0
+  );
+}
+
+/** Canvas2D `ctx.filter` string for the brightness/contrast/saturation part
+ *  ("" = none). Temperature is drawn as a blend overlay, not a filter. */
+export function colorFilter(c: ColorAdjust | undefined): string {
+  if (!c) return "";
+  const parts: string[] = [];
+  const b = c.brightness ?? 1;
+  const ct = c.contrast ?? 1;
+  const s = c.saturation ?? 1;
+  if (b !== 1) parts.push(`brightness(${b})`);
+  if (ct !== 1) parts.push(`contrast(${ct})`);
+  if (s !== 1) parts.push(`saturate(${s})`);
+  return parts.join(" ");
+}
+
+// ---------------------------------------------------------------------------
 // keyframes
 // ---------------------------------------------------------------------------
 
@@ -288,14 +331,32 @@ export interface ClipPose {
   dy: number;
   /** Scale multiplier about the stage center. */
   scale: number;
+  /** Rotation in degrees about the clip center. */
+  rotation: number;
 }
 
-const POSE_DEFAULTS: ClipPose = { opacity: 1, dx: 0, dy: 0, scale: 1 };
+const POSE_DEFAULTS: ClipPose = { opacity: 1, dx: 0, dy: 0, scale: 1, rotation: 0 };
 
-/** Linear interpolation over one property's keyframes at a local frame. */
-function evalProperty(kf: { frame: number; value: unknown }[], frame: number, fallback: number): number {
+/** Easing curve for the segment LEAVING a keyframe (stored on that keyframe).
+ *  Unknown/absent names fall back to linear, so older files are unaffected. */
+export function applyEasing(t: number, easing: string | undefined): number {
+  switch (easing) {
+    case "easeIn":
+      return t * t;
+    case "easeOut":
+      return 1 - (1 - t) * (1 - t);
+    case "easeInOut":
+      return t < 0.5 ? 2 * t * t : 1 - ((-2 * t + 2) * (-2 * t + 2)) / 2;
+    default:
+      return t;
+  }
+}
+
+/** Interpolation over one property's keyframes at a local frame, honoring each
+ *  segment's easing (taken from the keyframe the segment departs from). */
+function evalProperty(kf: { frame: number; value: unknown; easing?: string }[], frame: number, fallback: number): number {
   const pts = kf
-    .map((k) => ({ frame: k.frame, value: typeof k.value === "number" ? k.value : NaN }))
+    .map((k) => ({ frame: k.frame, value: typeof k.value === "number" ? k.value : NaN, easing: k.easing }))
     .filter((k) => Number.isFinite(k.value))
     .sort((a, b) => a.frame - b.frame);
   if (!pts.length) return fallback;
@@ -306,22 +367,25 @@ function evalProperty(kf: { frame: number; value: unknown }[], frame: number, fa
       const b = pts[i];
       const span = b.frame - a.frame;
       const t = span > 0 ? (frame - a.frame) / span : 1;
-      return a.value + (b.value - a.value) * t;
+      return a.value + (b.value - a.value) * applyEasing(t, a.easing);
     }
   }
   return pts[pts.length - 1].value;
 }
 
-/** Evaluate a clip's keyframe tracks (opacity/dx/dy/scale) at a local frame. */
-export function evalKeyframes(tracks: Clip["keyframes"], frame: number): ClipPose {
-  if (!tracks?.length) return POSE_DEFAULTS;
+/** Evaluate a clip's keyframe tracks (opacity/dx/dy/scale/rotation) at a local
+ *  frame, folding in the clip's static opacity and rotation. */
+export function evalKeyframes(tracks: Clip["keyframes"], frame: number, clip?: Clip): ClipPose {
   const pose = { ...POSE_DEFAULTS };
-  for (const t of tracks) {
+  for (const t of tracks ?? []) {
     if (t.property === "opacity") pose.opacity = Math.max(0, Math.min(1, evalProperty(t.keyframes, frame, 1)));
     else if (t.property === "dx") pose.dx = evalProperty(t.keyframes, frame, 0);
     else if (t.property === "dy") pose.dy = evalProperty(t.keyframes, frame, 0);
     else if (t.property === "scale") pose.scale = Math.max(0.01, evalProperty(t.keyframes, frame, 1));
+    else if (t.property === "rotation") pose.rotation = evalProperty(t.keyframes, frame, 0);
   }
+  if (clip?.opacity !== undefined) pose.opacity *= Math.max(0, Math.min(1, clip.opacity));
+  if (clip?.rotationDeg) pose.rotation += clip.rotationDeg;
   return pose;
 }
 
@@ -354,12 +418,127 @@ export function upsertPoseKeyframe(
 }
 
 // ---------------------------------------------------------------------------
+// motion presets
+// ---------------------------------------------------------------------------
+
+export type MotionPreset = "fade-in" | "fade-out" | "pop-in" | "slide-in" | "slide-out";
+
+export const MOTION_PRESETS: { name: MotionPreset; label: string }[] = [
+  { name: "fade-in", label: "Fade in" },
+  { name: "pop-in", label: "Pop in" },
+  { name: "slide-in", label: "Slide in" },
+  { name: "fade-out", label: "Fade out" },
+  { name: "slide-out", label: "Slide out" },
+];
+
+/** Replace one property's keyframes inside [from, to] with the given entries,
+ *  keeping keyframes outside the window (so an entrance preset composes with
+ *  an exit preset on the same property). */
+function setEdgeKeys(
+  tracks: NonNullable<Clip["keyframes"]>,
+  property: string,
+  entries: { frame: number; value: number; easing?: string }[],
+  from: number,
+  to: number,
+): NonNullable<Clip["keyframes"]> {
+  const idx = tracks.findIndex((t) => t.property === property);
+  const kept = idx >= 0 ? tracks[idx].keyframes.filter((k) => k.frame < from || k.frame > to) : [];
+  const keyframes = [...kept, ...entries].sort((a, b) => a.frame - b.frame);
+  if (idx < 0) return [...tracks, { property, keyframes }];
+  const next = [...tracks];
+  next[idx] = { ...next[idx], keyframes };
+  return next;
+}
+
+/**
+ * Write a one-click motion preset as ordinary pose keyframes over the clip's
+ * entrance or exit window. Entrance and exit presets compose; re-applying a
+ * preset overwrites only its own window.
+ */
+export function applyMotionPreset(
+  tracks: Clip["keyframes"],
+  preset: MotionPreset,
+  durationFrames: number,
+  edgeFrames = 12,
+): NonNullable<Clip["keyframes"]> {
+  let out: NonNullable<Clip["keyframes"]> = tracks ? [...tracks] : [];
+  const edge = Math.max(2, Math.min(edgeFrames, Math.floor(durationFrames / 2)));
+  const inEnd = edge;
+  const outStart = Math.max(0, durationFrames - 1 - edge);
+  const last = Math.max(1, durationFrames - 1);
+  switch (preset) {
+    case "fade-in":
+      out = setEdgeKeys(out, "opacity", [{ frame: 0, value: 0 }, { frame: inEnd, value: 1 }], 0, inEnd);
+      break;
+    case "fade-out":
+      out = setEdgeKeys(out, "opacity", [{ frame: outStart, value: 1 }, { frame: last, value: 0 }], outStart, last);
+      break;
+    case "pop-in":
+      out = setEdgeKeys(out, "opacity", [{ frame: 0, value: 0 }, { frame: inEnd, value: 1 }], 0, inEnd);
+      out = setEdgeKeys(
+        out,
+        "scale",
+        [{ frame: 0, value: 0.6, easing: "easeOut" }, { frame: inEnd, value: 1 }],
+        0,
+        inEnd,
+      );
+      break;
+    case "slide-in":
+      out = setEdgeKeys(out, "opacity", [{ frame: 0, value: 0 }, { frame: inEnd, value: 1 }], 0, inEnd);
+      out = setEdgeKeys(
+        out,
+        "dx",
+        [{ frame: 0, value: -0.4, easing: "easeOut" }, { frame: inEnd, value: 0 }],
+        0,
+        inEnd,
+      );
+      break;
+    case "slide-out":
+      out = setEdgeKeys(out, "opacity", [{ frame: outStart, value: 1 }, { frame: last, value: 0 }], outStart, last);
+      out = setEdgeKeys(
+        out,
+        "dx",
+        [{ frame: outStart, value: 0, easing: "easeIn" }, { frame: last, value: 0.4 }],
+        outStart,
+        last,
+      );
+      break;
+  }
+  return out;
+}
+
+/** Set every keyframe's easing on one property track (segment shaping). */
+export function setTrackEasing(
+  tracks: Clip["keyframes"],
+  property: string,
+  easing: string | undefined,
+): NonNullable<Clip["keyframes"]> {
+  const list = tracks ? [...tracks] : [];
+  const idx = list.findIndex((t) => t.property === property);
+  if (idx < 0) return list;
+  list[idx] = {
+    ...list[idx],
+    keyframes: list[idx].keyframes.map((k) => ({ ...k, easing })),
+  };
+  return list;
+}
+
+// ---------------------------------------------------------------------------
 // drawing
 // ---------------------------------------------------------------------------
 
-/** Cover-fit a source rectangle into the stage. */
-function coverRect(sw: number, sh: number, dw: number, dh: number): { x: number; y: number; w: number; h: number } {
-  const scale = Math.max(dw / Math.max(1, sw), dh / Math.max(1, sh));
+/** Cover-fit (scale-crop) or contain-fit (letterbox) a source rect into the stage. */
+export function fitRect(
+  sw: number,
+  sh: number,
+  dw: number,
+  dh: number,
+  fit: "cover" | "contain",
+): { x: number; y: number; w: number; h: number } {
+  const scale =
+    fit === "contain"
+      ? Math.min(dw / Math.max(1, sw), dh / Math.max(1, sh))
+      : Math.max(dw / Math.max(1, sw), dh / Math.max(1, sh));
   const w = sw * scale;
   const h = sh * scale;
   return { x: (dw - w) / 2, y: (dh - h) / 2, w, h };
@@ -384,7 +563,7 @@ export function drawTimelineFrame(
   opts: ActiveOptions = {},
 ): void {
   const { width: W, height: H } = project.stage;
-  ctx.fillStyle = "#000000";
+  ctx.fillStyle = project.background ?? "#000000";
   ctx.fillRect(0, 0, W, H);
   for (const active of visibleVideoClipsAt(project, frame, opts)) {
     const src = resolve(active);
@@ -396,7 +575,7 @@ export function drawTimelineFrame(
     const fx = active.xfadeTail
       ? { alpha: 1 }
       : transitionFxAt(fxClip, active.localFrame, active.durationFrames);
-    const pose = evalKeyframes(active.clip.keyframes, active.localFrame);
+    const pose = evalKeyframes(active.clip.keyframes, active.localFrame, active.clip);
     if ((fx.alpha * pose.opacity <= 0.001 && !fx.dip)) continue;
     ctx.save();
     ctx.globalAlpha = Math.max(0, Math.min(1, fx.alpha * pose.opacity));
@@ -406,9 +585,10 @@ export function drawTimelineFrame(
       ctx.clip();
     }
     if (fx.slideX) ctx.translate(fx.slideX * W, 0);
-    // Keyframed pose: offset + scale about the stage center.
-    if (pose.dx || pose.dy || pose.scale !== 1) {
+    // Keyframed pose: offset + scale + rotation about the stage center.
+    if (pose.dx || pose.dy || pose.scale !== 1 || pose.rotation) {
       ctx.translate(W / 2 + pose.dx * W, H / 2 + pose.dy * H);
+      if (pose.rotation) ctx.rotate((pose.rotation * Math.PI) / 180);
       ctx.scale(pose.scale, pose.scale);
       ctx.translate(-W / 2, -H / 2);
     }
@@ -418,8 +598,21 @@ export function drawTimelineFrame(
     const sy = crop?.y ?? 0;
     const sw = crop?.width ?? src.width;
     const sh = crop?.height ?? src.height;
-    const d = coverRect(sw, sh, W, H);
+    const d = fitRect(sw, sh, W, H, active.clip.fit ?? "cover");
+    // Color adjustments: brightness/contrast/saturation via ctx.filter (a
+    // no-op string where the browser lacks support: graceful degrade), then
+    // temperature as a warm/cool overlay blended onto the drawn region.
+    const filter = colorFilter(active.clip.color);
+    if (filter) ctx.filter = filter;
     ctx.drawImage(src.el, sx, sy, sw, sh, d.x, d.y, d.w, d.h);
+    if (filter) ctx.filter = "none";
+    const temp = active.clip.color?.temperature ?? 0;
+    if (temp !== 0) {
+      ctx.globalCompositeOperation = "overlay";
+      ctx.globalAlpha *= Math.min(0.35, Math.abs(temp) * 0.35);
+      ctx.fillStyle = temp > 0 ? "#ff8c1e" : "#1e78ff";
+      ctx.fillRect(d.x, d.y, d.w, d.h);
+    }
     ctx.restore();
     if (fx.dip && fx.dip.alpha > 0.001) {
       ctx.save();
@@ -429,32 +622,74 @@ export function drawTimelineFrame(
       ctx.restore();
     }
   }
-  // Title cards draw over the media, honoring their fade/dissolve edges.
+  // Title cards draw over the media, honoring their fade/dissolve edges and
+  // their own entrance/exit animations.
   for (const active of activeTitleClipsAt(project, frame, opts)) {
     const fx = transitionFxAt(active.clip, active.localFrame, active.durationFrames);
-    if (fx.alpha <= 0.001) continue;
-    drawTitleCard(ctx, project, active.clip.title as TitleCard, fx.alpha);
+    const anim = titleAnimAt(active.clip.title as TitleCard, active.localFrame, active.durationFrames);
+    const alpha = fx.alpha * anim.alpha;
+    if (alpha <= 0.001) continue;
+    drawTitleCard(ctx, project, active.clip.title as TitleCard, alpha, anim);
   }
+}
+
+/** Entrance/exit animation state of a title card at a local frame. */
+export interface TitleAnim {
+  /** 0..1 opacity multiplier from the animation edges. */
+  alpha: number;
+  /** Vertical offset as a fraction of stage height (slide edges). */
+  offsetY: number;
+  /** Characters revealed so far (type-on entrance); undefined = all. */
+  revealChars?: number;
+}
+
+/** Compute a title's animation state. Cards without animIn/animOut are static. */
+export function titleAnimAt(title: TitleCard, localFrame: number, durationFrames: number): TitleAnim {
+  const anim: TitleAnim = { alpha: 1, offsetY: 0 };
+  const edge = Math.max(1, Math.min(title.animFrames ?? 12, Math.floor(durationFrames / 2)));
+  if (title.animIn && localFrame < edge) {
+    const p = Math.max(0, Math.min(1, (localFrame + 1) / edge));
+    if (title.animIn === "fade") anim.alpha *= p;
+    else if (title.animIn === "slide-up") {
+      anim.alpha *= p;
+      anim.offsetY += (1 - applyEasing(p, "easeOut")) * 0.06;
+    } else if (title.animIn === "type-on") {
+      anim.revealChars = Math.max(1, Math.round(title.text.length * p));
+    }
+  }
+  const fromEnd = durationFrames - localFrame;
+  if (title.animOut && fromEnd <= edge) {
+    const p = Math.max(0, Math.min(1, fromEnd / edge)); // 1 -> 0 toward the end
+    anim.alpha *= p;
+    if (title.animOut === "slide-down") anim.offsetY += (1 - applyEasing(p, "easeOut")) * 0.06;
+  }
+  return anim;
 }
 
 /** Title clips under the playhead on visible text tracks, in track order. */
 export function activeTitleClipsAt(project: VideoProject, frame: number, opts: ActiveOptions = {}): ActiveClip[] {
   return activeClipsAt(project, frame, opts).filter(
-    (a) => a.track.kind === "text" && !a.track.hidden && !a.hiddenByParent && !!a.clip.title?.text,
+    (a) => a.track.kind === "text" && !a.track.hidden && !a.hiddenByParent && !a.clip.disabled && !!a.clip.title?.text,
   );
 }
 
-/** Draw one title card (titles/lower-thirds) at the given opacity. */
+/** Draw one title card (titles/lower-thirds) at the given opacity, optionally
+ *  offset/truncated by an entrance/exit animation. */
 export function drawTitleCard(
   ctx: CanvasRenderingContext2D,
   project: VideoProject,
   title: TitleCard,
   alpha: number,
+  anim?: TitleAnim,
 ): void {
   const { width: W, height: H } = project.stage;
   const fontPx = Math.max(10, Math.round(H * (title.sizePct ?? 0.07)));
   const lineH = Math.round(fontPx * 1.25);
+  // Layout always uses the FULL text so a type-on reveal never reflows lines.
   const lines = title.text.split("\n");
+  // Characters still hidden by a type-on entrance, consumed from the last line up.
+  let hidden =
+    anim?.revealChars !== undefined ? Math.max(0, title.text.length - anim.revealChars) : 0;
   const pos = title.position ?? "center";
   // Baseline of the LAST line for each position preset.
   const blockH = lineH * (lines.length - 1);
@@ -464,6 +699,7 @@ export function drawTitleCard(
     : Math.round(H / 2 + fontPx / 2) + Math.round(blockH / 2);
   ctx.save();
   ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+  ctx.translate((title.offsetX ?? 0) * W, (title.offsetY ?? 0) * H + (anim?.offsetY ?? 0) * H);
   ctx.font = `${title.weight === "normal" ? 400 : 700} ${fontPx}px system-ui, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
@@ -471,16 +707,58 @@ export function drawTitleCard(
   let y = lastBaseline;
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i];
+    const cut = Math.min(hidden, line.length);
+    hidden = Math.max(0, hidden - line.length - 1); // the newline counts as hidden too
+    const shown = cut > 0 ? line.slice(0, line.length - cut) : line;
     if (title.background) {
       const w = ctx.measureText(line).width;
       ctx.fillStyle = title.background;
       ctx.fillRect(W / 2 - w / 2 - pad, y - fontPx - pad / 2, w + pad * 2, fontPx + pad);
     }
-    ctx.fillStyle = title.color ?? "#ffffff";
-    ctx.fillText(line, W / 2, y);
+    if (shown) {
+      ctx.fillStyle = title.color ?? "#ffffff";
+      // Left-anchor the revealed prefix inside the full line's centered box so
+      // type-on grows rightward instead of re-centering every frame.
+      const fullW = ctx.measureText(line).width;
+      ctx.textAlign = "left";
+      ctx.fillText(shown, W / 2 - fullW / 2, y);
+      ctx.textAlign = "center";
+    }
     y -= lineH;
   }
   ctx.restore();
+}
+
+/** Bounding box of a title card on the stage (canvas px), for hit-testing.
+ *  Mirrors drawTitleCard's layout math exactly. */
+export function titleBounds(
+  ctx: CanvasRenderingContext2D,
+  project: VideoProject,
+  title: TitleCard,
+): { x: number; y: number; w: number; h: number } {
+  const { width: W, height: H } = project.stage;
+  const fontPx = Math.max(10, Math.round(H * (title.sizePct ?? 0.07)));
+  const lineH = Math.round(fontPx * 1.25);
+  const lines = title.text.split("\n");
+  const pos = title.position ?? "center";
+  const blockH = lineH * (lines.length - 1);
+  const lastBaseline =
+    pos === "top" ? Math.round(H * 0.1) + fontPx + blockH
+    : pos === "lower-third" ? Math.round(H * 0.8)
+    : Math.round(H / 2 + fontPx / 2) + Math.round(blockH / 2);
+  ctx.save();
+  ctx.font = `${title.weight === "normal" ? 400 : 700} ${fontPx}px system-ui, sans-serif`;
+  let maxW = 0;
+  for (const line of lines) maxW = Math.max(maxW, ctx.measureText(line).width);
+  ctx.restore();
+  const pad = Math.round(fontPx * 0.35);
+  const top = lastBaseline - blockH - fontPx - pad / 2;
+  return {
+    x: W / 2 - maxW / 2 - pad + (title.offsetX ?? 0) * W,
+    y: top + (title.offsetY ?? 0) * H,
+    w: maxW + pad * 2,
+    h: blockH + fontPx + pad,
+  };
 }
 
 /** Draw the active caption cue (if any) bottom-center onto the stage. */

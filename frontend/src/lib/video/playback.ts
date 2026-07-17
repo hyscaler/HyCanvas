@@ -27,11 +27,24 @@ const DRIFT_PAUSED_S = 0.03;
 
 export class TimelinePlayer {
   private els = new Map<string, HTMLVideoElement | HTMLAudioElement>();
+  /** assetId behind each element, for re-resolving media URLs. */
+  private elAssets = new Map<string, string>();
   private keyer: ChromaKeyer | null = null;
   private gains = new Map<string, GainNode>();
+  private panners = new Map<string, StereoPannerNode>();
+  /** Per-track bus: a unity gain feeding master + a metering analyser. */
+  private trackBuses = new Map<string, { node: GainNode; analyser: AnalyserNode; buf: Uint8Array<ArrayBuffer> }>();
+  private clipTrack = new Map<string, string>();
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
+  /** Speaker tap AFTER the export tap: muting the preview never mutes exports. */
+  private monitor: GainNode | null = null;
+  private analyser: AnalyserNode | null = null;
+  private levelBuf: Uint8Array<ArrayBuffer> | null = null;
   private streamDest: MediaStreamAudioDestinationNode | null = null;
+  private muted = false;
+  /** Global preview playback rate multiplier (1 = realtime). */
+  private rate = 1;
 
   constructor(
     private resolveMedia: (assetId: string) => ResolvedMedia | null,
@@ -50,12 +63,46 @@ export class TimelinePlayer {
       const ctx = new AudioContext();
       this.ctx = ctx;
       this.master = ctx.createGain();
-      this.master.connect(ctx.destination);
+      this.monitor = ctx.createGain();
+      this.monitor.gain.value = this.muted ? 0 : 1;
+      this.master.connect(this.monitor);
+      this.monitor.connect(ctx.destination);
       this.streamDest = ctx.createMediaStreamDestination();
       this.master.connect(this.streamDest);
+      this.analyser = ctx.createAnalyser();
+      this.analyser.fftSize = 512;
+      this.levelBuf = new Uint8Array(this.analyser.fftSize);
+      this.master.connect(this.analyser);
     } catch {
       this.ctx = null; // no WebAudio: fall back to element.volume
     }
+  }
+
+  /** Mute/unmute the speakers only (the export mix keeps playing through). */
+  setMuted(muted: boolean): void {
+    this.muted = muted;
+    if (this.monitor) this.monitor.gain.value = muted ? 0 : 1;
+  }
+
+  isMuted(): boolean {
+    return this.muted;
+  }
+
+  /** Preview playback rate multiplier; exports force it back to 1. */
+  setRate(rate: number): void {
+    this.rate = Math.min(4, Math.max(0.25, rate || 1));
+  }
+
+  /** Instantaneous output peak 0..1 (pre-monitor, so it meters even muted). */
+  level(): number {
+    if (!this.analyser || !this.levelBuf) return 0;
+    this.analyser.getByteTimeDomainData(this.levelBuf);
+    let peak = 0;
+    for (let i = 0; i < this.levelBuf.length; i++) {
+      const v = Math.abs(this.levelBuf[i] - 128) / 128;
+      if (v > peak) peak = v;
+    }
+    return peak;
   }
 
   /** The recorded-mix audio stream for export (built on demand). */
@@ -73,6 +120,32 @@ export class TimelinePlayer {
         /* stays suspended until the next gesture */
       }
     }
+  }
+
+  private trackBus(trackId: string): GainNode | null {
+    if (!this.ctx || !this.master) return null;
+    const existing = this.trackBuses.get(trackId);
+    if (existing) return existing.node;
+    const node = this.ctx.createGain();
+    const analyser = this.ctx.createAnalyser();
+    analyser.fftSize = 256;
+    node.connect(this.master);
+    node.connect(analyser);
+    this.trackBuses.set(trackId, { node, analyser, buf: new Uint8Array(analyser.fftSize) });
+    return node;
+  }
+
+  /** Instantaneous peak 0..1 for one track's bus (0 when it has no bus yet). */
+  trackLevel(trackId: string): number {
+    const bus = this.trackBuses.get(trackId);
+    if (!bus) return 0;
+    bus.analyser.getByteTimeDomainData(bus.buf);
+    let peak = 0;
+    for (let i = 0; i < bus.buf.length; i++) {
+      const v = Math.abs(bus.buf[i] - 128) / 128;
+      if (v > peak) peak = v;
+    }
+    return peak;
   }
 
   private elementFor(clip: Clip): HTMLVideoElement | HTMLAudioElement | null {
@@ -95,15 +168,44 @@ export class TimelinePlayer {
         const src = this.ctx.createMediaElementSource(el);
         const gain = this.ctx.createGain();
         gain.gain.value = 0;
+        const panner = this.ctx.createStereoPanner();
         src.connect(gain);
-        gain.connect(this.master);
+        gain.connect(panner);
+        panner.connect(this.master);
         this.gains.set(clip.id, gain);
+        this.panners.set(clip.id, panner);
       } catch {
         /* element keeps direct output */
       }
     }
     this.els.set(clip.id, el);
+    this.elAssets.set(clip.id, clip.assetId);
     return el;
+  }
+
+  /**
+   * Re-resolve every element's media URL and swap sources that changed.
+   * The exact export flips the resolver from preview proxies to ORIGINALS and
+   * calls this, so the recording never captures a 540p proxy; the following
+   * syncAt re-seeks each element to the playhead.
+   */
+  refreshSources(): void {
+    for (const [clipId, el] of this.els) {
+      const assetId = this.elAssets.get(clipId);
+      if (!assetId) continue;
+      const media = this.resolveMedia(assetId);
+      if (!media) continue;
+      const abs = new URL(media.url, window.location.href).href;
+      if (el.src !== abs) {
+        const t = el.currentTime;
+        el.src = media.url;
+        try {
+          el.currentTime = t;
+        } catch {
+          /* not seekable yet; syncAt will seek once metadata lands */
+        }
+      }
+    }
   }
 
   /** Media kind for a clip, when it resolves. */
@@ -155,16 +257,29 @@ export class TimelinePlayer {
       // the mixer (mute/solo), not by visibility. Expanded sequence children
       // carry their absolute mix gain; an xfade tail is past its own span so
       // the fade envelope has already reached silence (gain 0 via localFrame).
-      const gain = a.xfadeTail
+      const gain = a.xfadeTail || clip.disabled
         ? 0
         : a.mixGain ?? clipGainAt(project, track, clip, a.localFrame, duckPoints);
       this.applyGain(clip.id, el, reversed ? 0 : gain);
+      const panner = this.panners.get(clip.id);
+      if (panner) {
+        panner.pan.value = Math.max(-1, Math.min(1, track.pan ?? 0));
+        // (Re)route to the owning track's bus for per-track metering.
+        if (this.clipTrack.get(clip.id) !== track.id) {
+          const bus = this.trackBus(track.id);
+          if (bus) {
+            panner.disconnect();
+            panner.connect(bus);
+            this.clipTrack.set(clip.id, track.id);
+          }
+        }
+      }
       if (wantS === null) {
         el.pause();
         continue;
       }
       if (playing && !reversed) {
-        el.playbackRate = Math.min(16, Math.max(0.0625, Math.abs(clip.speed)));
+        el.playbackRate = Math.min(16, Math.max(0.0625, Math.abs(clip.speed) * this.rate));
         if (Math.abs(el.currentTime - wantS) > DRIFT_PLAYING_S) el.currentTime = wantS;
         if (el.paused) void el.play().catch(() => undefined);
       } else {
@@ -223,11 +338,18 @@ export class TimelinePlayer {
       el.pause();
       el.src = "";
       this.els.delete(clipId);
+      this.elAssets.delete(clipId);
       const g = this.gains.get(clipId);
       if (g) {
         g.disconnect();
         this.gains.delete(clipId);
       }
+      const pn = this.panners.get(clipId);
+      if (pn) {
+        pn.disconnect();
+        this.panners.delete(clipId);
+      }
+      this.clipTrack.delete(clipId);
     }
   }
 
@@ -242,6 +364,9 @@ export class TimelinePlayer {
     void this.ctx?.close().catch(() => undefined);
     this.ctx = null;
     this.master = null;
+    this.monitor = null;
+    this.analyser = null;
+    this.levelBuf = null;
     this.streamDest = null;
   }
 }

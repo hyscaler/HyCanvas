@@ -301,3 +301,204 @@ func TestRenderTimeline_Integration(t *testing.T) {
 		}
 	}
 }
+
+func TestBuildTimelineArgs_ColorAndTransform(t *testing.T) {
+	one := 1.0
+	half := 0.5
+	sat := 1.35
+	bright := 1.2
+	p := timelineFixture()
+	c := &p.Tracks[0].Clips[0]
+	c.Color = &TimelineColor{Brightness: &bright, Saturation: &sat, Temperature: 0.5}
+	c.Fit = "contain"
+	c.Opacity = &half
+	c.RotationDeg = 90
+	p.Background = "#112233"
+	args, err := BuildTimelineArgs(p, fixtureAssets(t), TimelineOptions{ColorTemp: true}, "/tmp/out.mp4")
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	joined := strings.Join(args, " ")
+	// eq mirrors the browser values: additive brightness (1.2-1)*0.5, direct saturation.
+	if !strings.Contains(joined, "eq=brightness=0.1000:contrast=1.0000:saturation=1.3500") {
+		t.Fatalf("eq missing/wrong: %s", joined)
+	}
+	// Warm temperature 0.5 -> 6500 - 1250 = 5250K.
+	if !strings.Contains(joined, "colortemperature=temperature=5250") {
+		t.Fatalf("colortemperature missing: %s", joined)
+	}
+	// Contain letterboxes with a transparent pad instead of scale-crop.
+	if !strings.Contains(joined, "force_original_aspect_ratio=decrease") ||
+		!strings.Contains(joined, "pad=640:360:(ow-iw)/2:(oh-ih)/2:color=black@0") {
+		t.Fatalf("contain chain wrong: %s", joined)
+	}
+	if strings.Contains(joined, "crop=640:360,") {
+		t.Fatalf("contain clip must not scale-crop: %s", joined)
+	}
+	// Static opacity and rotation.
+	if !strings.Contains(joined, "colorchannelmixer=aa=0.5000") {
+		t.Fatalf("opacity chain missing: %s", joined)
+	}
+	if !strings.Contains(joined, "rotate=1.570796:c=black@0") {
+		t.Fatalf("rotate missing: %s", joined)
+	}
+	// Stage background comes from the project.
+	if !strings.Contains(joined, "color=c=0x112233:s=640x360") {
+		t.Fatalf("background missing: %s", joined)
+	}
+
+	// Without ColorTemp support the temperature filter is simply omitted.
+	args2, err := BuildTimelineArgs(p, fixtureAssets(t), TimelineOptions{}, "/tmp/out.mp4")
+	if err != nil {
+		t.Fatalf("build2: %v", err)
+	}
+	if strings.Contains(strings.Join(args2, " "), "colortemperature") {
+		t.Fatalf("colortemperature must be probe-gated")
+	}
+
+	// A neutral color object emits no eq at all.
+	c.Color = &TimelineColor{Brightness: &one}
+	c.Fit = ""
+	c.Opacity = nil
+	c.RotationDeg = 0
+	args3, err := BuildTimelineArgs(p, fixtureAssets(t), TimelineOptions{}, "/tmp/out.mp4")
+	if err != nil {
+		t.Fatalf("build3: %v", err)
+	}
+	j3 := strings.Join(args3, " ")
+	if strings.Contains(j3, "eq=") || strings.Contains(j3, "rotate=") || strings.Contains(j3, "colorchannelmixer") {
+		t.Fatalf("neutral clip must not add color/transform filters: %s", j3)
+	}
+}
+
+func TestBuildTimelineArgs_Formats(t *testing.T) {
+	p := timelineFixture()
+	// GIF: palette graph, no audio graph, no -map for audio, gif muxer.
+	gif, err := BuildTimelineArgs(p, fixtureAssets(t), TimelineOptions{Format: "gif"}, "/tmp/out.gif")
+	if err != nil {
+		t.Fatalf("gif build: %v", err)
+	}
+	jg := strings.Join(gif, " ")
+	if !strings.Contains(jg, "palettegen") || !strings.Contains(jg, "paletteuse") {
+		t.Fatalf("gif palette missing: %s", jg)
+	}
+	if strings.Contains(jg, "amix") || strings.Contains(jg, "anullsrc") || strings.Contains(jg, "atrim") {
+		t.Fatalf("gif must not build audio: %s", jg)
+	}
+	if !strings.Contains(jg, "-f gif") || !strings.Contains(jg, "fps=15") {
+		t.Fatalf("gif output args wrong: %s", jg)
+	}
+
+	// MP3: audio-only, no video graph at all, lame codec.
+	mp3, err := BuildTimelineArgs(p, fixtureAssets(t), TimelineOptions{Format: "mp3"}, "/tmp/out.mp3")
+	if err != nil {
+		t.Fatalf("mp3 build: %v", err)
+	}
+	jm := strings.Join(mp3, " ")
+	if strings.Contains(jm, "color=c=") || strings.Contains(jm, "overlay=") || strings.Contains(jm, "drawtext") {
+		t.Fatalf("mp3 must not build video: %s", jm)
+	}
+	if !strings.Contains(jm, "libmp3lame") || !strings.Contains(jm, "-vn") {
+		t.Fatalf("mp3 output args wrong: %s", jm)
+	}
+
+	// MP3 with nothing audible errors instead of producing silence.
+	silent := timelineFixture()
+	silent.Tracks = silent.Tracks[:1]
+	silent.Tracks[0].Clips[0].AssetID = "vid-noaudio"
+	if _, err := BuildTimelineArgs(silent, func(string) (StagedAsset, bool) {
+		return StagedAsset{Path: "/tmp/v.mp4", HasVideo: true, HasAudio: false}, true
+	}, TimelineOptions{Format: "mp3"}, "/tmp/out.mp3"); err == nil {
+		t.Fatalf("silent mp3 export must fail loudly")
+	}
+
+	// Default stays the mp4 pipeline.
+	mp4, err := BuildTimelineArgs(p, fixtureAssets(t), TimelineOptions{}, "/tmp/out.mp4")
+	if err != nil {
+		t.Fatalf("mp4 build: %v", err)
+	}
+	if !strings.Contains(strings.Join(mp4, " "), "libx264") {
+		t.Fatalf("mp4 output args wrong")
+	}
+}
+
+func TestBuildTimelineArgs_TrackPan(t *testing.T) {
+	p := timelineFixture()
+	p.Tracks[1].Pan = -1 // full left
+	args, err := BuildTimelineArgs(p, fixtureAssets(t), TimelineOptions{}, "/tmp/out.mp4")
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	joined := strings.Join(args, " ")
+	// Equal-power at p=-1: a=0 -> L gain sqrt2*cos(0)=1.4142, R gain 0.
+	if !strings.Contains(joined, "pan=stereo|c0=1.4142*c0|c1=0.0000*c1") {
+		t.Fatalf("pan chain missing/wrong: %s", joined)
+	}
+	// Center pan emits no pan filter at all.
+	p.Tracks[1].Pan = 0
+	args2, _ := BuildTimelineArgs(p, fixtureAssets(t), TimelineOptions{}, "/tmp/out.mp4")
+	if strings.Contains(strings.Join(args2, " "), "pan=stereo") {
+		t.Fatalf("center pan must not add a filter")
+	}
+}
+
+func TestBuildTimelineArgs_XfadeTailAndNewOpts(t *testing.T) {
+	p := timelineFixture()
+	// Two abutting clips with crossDissolve on both edges of the cut.
+	p.Tracks[0].Clips = []TimelineClip{
+		{ID: "l", AssetID: "vid", StartFrame: 0, InFrame: 0, OutFrame: 60, Speed: 1,
+			TransitionOut: &TimelineTransition{Type: "crossDissolve", DurationFrames: 12}},
+		{ID: "r", AssetID: "vid", StartFrame: 60, InFrame: 60, OutFrame: 120, Speed: 1,
+			TransitionIn: &TimelineTransition{Type: "crossDissolve", DurationFrames: 12}},
+	}
+	args, err := BuildTimelineArgs(p, fixtureAssets(t), TimelineOptions{}, "/tmp/out.mp4")
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	joined := strings.Join(args, " ")
+	// Left clip's trim extends past the cut by the 12-frame window (72/30=2.4s)
+	// and its own out-fade is GONE; the right keeps its fade-in.
+	if !strings.Contains(joined, "trim=start=0.0000:end=2.4000") {
+		t.Fatalf("left tail missing: %s", joined)
+	}
+	if strings.Count(joined, ",fade=t=out") != 0 { // video fades only; afade is audio
+		t.Fatalf("left out-fade should be dropped: %s", joined)
+	}
+	if strings.Count(joined, ",fade=t=in") != 1 {
+		t.Fatalf("right fade-in must remain: %s", joined)
+	}
+
+	// webm + fps override + captions skipped + stem.
+	p2 := timelineFixture()
+	args2, err := BuildTimelineArgs(p2, fixtureAssets(t), TimelineOptions{Format: "webm", OutFps: 60, DrawText: true, SkipCaptions: true}, "/tmp/out.webm")
+	if err != nil {
+		t.Fatalf("webm build: %v", err)
+	}
+	j2 := strings.Join(args2, " ")
+	if !strings.Contains(j2, "libvpx-vp9") || !strings.Contains(j2, "-r 60") || !strings.Contains(j2, "libopus") {
+		t.Fatalf("webm args wrong: %s", j2)
+	}
+	if strings.Contains(j2, "A caption") {
+		t.Fatalf("captions must be skippable: %s", j2)
+	}
+	stem, err := BuildTimelineArgs(p2, fixtureAssets(t), TimelineOptions{Format: "mp3", StemTrackID: "a1"}, "/tmp/out.mp3")
+	if err != nil {
+		t.Fatalf("stem build: %v", err)
+	}
+	js := strings.Join(stem, " ")
+	if !strings.Contains(js, "libmp3lame") || strings.Contains(js, "sidechain") {
+		t.Fatalf("stem args wrong: %s", js)
+	}
+}
+
+func TestBuildTimelineArgs_Crop(t *testing.T) {
+	p := timelineFixture()
+	p.Tracks[0].Clips[0].Crop = &TimelineRect{X: 100, Y: 50, Width: 640, Height: 360}
+	args, err := BuildTimelineArgs(p, fixtureAssets(t), TimelineOptions{}, "/tmp/out.mp4")
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	if !strings.Contains(strings.Join(args, " "), "crop=640:360:100:50") {
+		t.Fatalf("source crop missing: %s", strings.Join(args, " "))
+	}
+}

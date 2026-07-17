@@ -38,6 +38,21 @@ export interface ChromaKey {
   edgeFeather: number;
 }
 
+/** Per-clip color adjustments. All fields optional and additive; an absent
+ *  object (or neutral values) means the media draws untouched. */
+export interface ColorAdjust {
+  /** Multiplier, 1 = neutral (typical range 0.5..1.5). */
+  brightness?: number;
+  /** Multiplier, 1 = neutral. */
+  contrast?: number;
+  /** Multiplier, 1 = neutral; 0 = grayscale. */
+  saturation?: number;
+  /** -1 (cool) .. 1 (warm); 0 = neutral. */
+  temperature?: number;
+  /** Name of the filter preset these values came from (display only). */
+  preset?: string;
+}
+
 /**
  * A single keyframe track for one animated property. The interpolation
  * primitives live in the animation work; here we only carry the data
@@ -54,7 +69,17 @@ export interface TitleCard {
   /** CSS color drawn as a band behind each line; empty/undefined = none. */
   background?: string;
   position?: "top" | "center" | "lower-third";
+  /** Free positioning nudge from the preset position, as fractions of the
+   *  stage size (additive; set by dragging the title on the stage). */
+  offsetX?: number;
+  offsetY?: number;
   weight?: "normal" | "bold";
+  /** Entrance animation (additive; absent = the card just appears). */
+  animIn?: "fade" | "slide-up" | "type-on";
+  /** Exit animation (additive). */
+  animOut?: "fade" | "slide-down";
+  /** Length of each animation edge in timeline frames (default 12). */
+  animFrames?: number;
 }
 
 export interface KeyframeTrack {
@@ -64,6 +89,17 @@ export interface KeyframeTrack {
 
 export interface Clip {
   id: string;
+  /** User-facing display name (additive; defaults to the asset filename). */
+  name?: string;
+  /** Link group (additive): clips sharing a groupId move together (e.g. a
+   *  video clip and its detached audio). */
+  groupId?: string;
+  /** Disabled clips keep their slot but render/play nothing (additive). */
+  disabled?: boolean;
+  /** Per-clip lock: no edits, no drags (additive; track lock still wins). */
+  locked?: boolean;
+  /** Display color label (CSS color) overriding the track-kind chip color. */
+  colorLabel?: string;
   /** scene-graph node this clip renders (video/text/overlay). */
   nodeId?: string;
   /** source media asset (video/audio). */
@@ -78,8 +114,16 @@ export interface Clip {
   outFrame: number;
   /** 1 = normal; >1 faster; <1 slower; negative = reverse. Never 0. */
   speed: number;
-  frameBlend?: boolean;
   crop?: Rect;
+  /** How the media fills the stage: cover (scale-crop, default) or contain
+   *  (letterbox). Additive. */
+  fit?: "cover" | "contain";
+  /** Static opacity 0..1 (additive; multiplies any keyframed opacity). */
+  opacity?: number;
+  /** Static rotation in degrees about the clip center (additive). */
+  rotationDeg?: number;
+  /** Color adjustments / filter (additive). */
+  color?: ColorAdjust;
   transitionIn?: ClipTransition;
   transitionOut?: ClipTransition;
   chromaKey?: ChromaKey;
@@ -130,9 +174,14 @@ export interface CaptionTrack {
 
 export interface VideoProject {
   stage: { width: number; height: number };
+  /** Stage background color behind all clips (additive; default black). */
+  background?: string;
   fps: Fps;
   /** computed extent of the timeline, in frames. */
   durationFrames: number;
+  /** User-set duration floor (additive): the timeline never reports shorter
+   *  than this, so trailing space can hold black/audio after the last clip. */
+  minDurationFrames?: number;
   tracks: Track[];
   master: AudioMaster;
   /** Subtitle tracks (additive; older projects simply omit it). */

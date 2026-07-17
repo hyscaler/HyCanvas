@@ -1535,7 +1535,21 @@ export class HyCanvasClient {
    *  returned jobId via getJob, then download from videoExportDownloadUrl. */
   /** Start a server video export. For video documents this renders the full
    *  timeline (ffmpeg); opts tune the output (scale multiplier, x264 CRF). */
-  startVideoExport(designId: string, opts: { scale?: number; crf?: number; startFrame?: number; endFrame?: number } = {}): Promise<{ jobId: string }> {
+  startVideoExport(
+    designId: string,
+    opts: {
+      scale?: number;
+      crf?: number;
+      startFrame?: number;
+      endFrame?: number;
+      format?: "mp4" | "webm" | "gif" | "mp3";
+      /** Output frame rate override (frames duplicate/drop; timing holds). */
+      fps?: number;
+      skipCaptions?: boolean;
+      /** Render only this track's audio (pre-master stem), mp3 format. */
+      stemTrackId?: string;
+    } = {},
+  ): Promise<{ jobId: string }> {
     return this.request("POST", `/v1/designs/${designId}/export/video`, opts);
   }
   /** The authenticated download URL for a completed video export (cookie auth). */
