@@ -149,7 +149,7 @@ func NewRouter(d Deps) http.Handler {
 			mountConvert(api, d.Convert, d.Jobs, d.Accounts)
 		}
 		if d.Accounts != nil && d.Persistence != nil && d.Storage != nil && d.Jobs != nil {
-			mountExport(api, d.Persistence, d.Storage, d.Jobs, d.Accounts)
+			mountExport(api, d.Persistence, d.Storage, d.Jobs, d.Accounts, d.Uploads)
 		}
 		if d.Accounts != nil && d.Sharing != nil {
 			mountSharing(api, d.Sharing, d.Accounts)

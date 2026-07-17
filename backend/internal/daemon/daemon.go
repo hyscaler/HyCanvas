@@ -181,16 +181,22 @@ func (s *svc) start() error {
 	// Reap the child if it exits while this command still runs; otherwise a
 	// dead server would linger as a zombie and read as alive. This command
 	// exits right after anyway, at which point init adopts the server.
-	go func() { _ = cmd.Wait() }()
+	exited := make(chan struct{})
+	go func() { _ = cmd.Wait(); close(exited) }()
 
 	// Catch immediate failures (bad port, unreadable dir) so the operator is
-	// not told "started" about a process that already died.
-	time.Sleep(500 * time.Millisecond)
-	if !processAlive(pid) {
+	// not told "started" about a process that already died. Waiting on the
+	// child's own exit (not a PID liveness probe) is immune to the OS
+	// recycling the PID within the grace window. The window is generous
+	// because on a loaded machine even fork+exec+exit of a dying child can
+	// take the better part of a second; a daemon start can afford the wait.
+	select {
+	case <-exited:
 		_ = os.Remove(s.pidPath())
 		fmt.Fprintln(s.out, "server exited immediately; last log lines:")
 		s.printTail(80)
 		return fmt.Errorf("server failed to start")
+	case <-time.After(1500 * time.Millisecond):
 	}
 
 	fmt.Fprintf(s.out, "started (pid %d)\n", pid)
