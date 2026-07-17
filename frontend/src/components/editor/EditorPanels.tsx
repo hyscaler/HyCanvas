@@ -3,7 +3,7 @@
 // are undoable. Uploads/stock images are placed via the image asset provider.
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type FormEvent } from "react";
-import { Square, SquareRoundCorner, Circle, Triangle, Pentagon, Hexagon, Star, Diamond, Octagon, Frame, QrCode, Type, Upload, Search, Table as TableIcon, BarChart3, LineChart, AreaChart, PieChart, Donut, ScatterChart, Radar, Wand2, ImagePlus, Settings2, Trash2, Folder, FolderPlus, Pencil, X, Tag, ChevronLeft, Link as LinkIcon, Mic, Video, CircleStop, Spline, Clock, LayoutGrid, Shapes, Sparkles, Stethoscope, AlignStartVertical, Play, ChevronDown, Send, Plus, RotateCcw } from "lucide-react";
+import { Square, SquareRoundCorner, Circle, Triangle, Pentagon, Hexagon, Star, Diamond, Octagon, Frame, QrCode, Type, Upload, Search, Table as TableIcon, BarChart3, LineChart, AreaChart, PieChart, Donut, ScatterChart, Radar, Wand2, ImagePlus, Settings2, Trash2, Folder, FolderPlus, Pencil, X, Tag, ChevronLeft, Link as LinkIcon, Mic, Video, MonitorUp, CircleStop, Spline, Clock, LayoutGrid, Shapes, Sparkles, Stethoscope, AlignStartVertical, Play, ChevronDown, Send, Plus, RotateCcw } from "lucide-react";
 import { type ChartType, type Node, type Fill, type Color } from "@hc/schema";
 import { searchFonts, type FontCatalogEntry } from "@hc/text";
 import { toHex, fromHex, relativeLuminance } from "@hc/color";
@@ -1037,6 +1037,13 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
               onCapture={(blob, name) => void uploadBlob(blob, name)}
             />
           )}
+          {workspaceId && (
+            <Recorder
+              mode="screen"
+              disabled={!workspaceId}
+              onCapture={(blob, name) => void uploadBlob(blob, name)}
+            />
+          )}
         </CollapsibleSection>
 
         {/* Folders: All uploads + per-folder chips, with create/rename/delete. */}
@@ -1197,7 +1204,7 @@ function pickMimeType(kind: "audio" | "video"): string {
  * video rendering stays deferred; the clip is stored as a media asset.)
  */
 function Recorder({ mode, disabled, onCapture }: {
-  mode: "audio" | "video";
+  mode: "audio" | "video" | "screen";
   disabled?: boolean;
   onCapture: (blob: Blob, filename: string) => void;
 }) {
@@ -1211,7 +1218,10 @@ function Recorder({ mode, disabled, onCapture }: {
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const supported = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia && typeof MediaRecorder !== "undefined";
+  const supported =
+    typeof navigator !== "undefined" &&
+    typeof MediaRecorder !== "undefined" &&
+    (mode === "screen" ? !!navigator.mediaDevices?.getDisplayMedia : !!navigator.mediaDevices?.getUserMedia);
 
   const cleanup = useCallback(() => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
@@ -1228,18 +1238,32 @@ function Recorder({ mode, disabled, onCapture }: {
     if (!supported) { setError("Recording isn't supported in this browser."); return; }
     let stream: MediaStream;
     try {
-      stream = await navigator.mediaDevices.getUserMedia(mode === "audio" ? { audio: true } : { audio: true, video: true });
+      if (mode === "screen") {
+        // Screen capture; system/tab audio comes along where the browser
+        // offers it (the user picks in the share dialog).
+        stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      } else {
+        stream = await navigator.mediaDevices.getUserMedia(mode === "audio" ? { audio: true } : { audio: true, video: true });
+      }
     } catch {
-      setError("Couldn't access your microphone/camera. Check the browser permission and try again.");
+      setError(
+        mode === "screen"
+          ? "Screen sharing was cancelled or blocked."
+          : "Couldn't access your microphone/camera. Check the browser permission and try again.",
+      );
       return;
     }
     streamRef.current = stream;
-    if (mode === "video" && videoRef.current) {
+    // Stopping the share from the browser's own UI must also stop the recorder.
+    if (mode === "screen") {
+      stream.getVideoTracks()[0]?.addEventListener("ended", () => recorderRef.current?.stop());
+    }
+    if ((mode === "video" || mode === "screen") && videoRef.current) {
       videoRef.current.srcObject = stream;
       videoRef.current.muted = true;
       void videoRef.current.play().catch(() => {});
     }
-    const mimeType = pickMimeType(mode);
+    const mimeType = pickMimeType(mode === "audio" ? "audio" : "video");
     let rec: MediaRecorder;
     try {
       rec = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
@@ -1255,7 +1279,7 @@ function Recorder({ mode, disabled, onCapture }: {
       const blob = new Blob(chunksRef.current, { type });
       const ext = type.includes("mp4") ? "mp4" : type.includes("ogg") ? "ogg" : "webm";
       const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-      if (blob.size > 0) onCapture(blob, `${mode === "audio" ? "voice" : "webcam"}-${stamp}.${ext}`);
+      if (blob.size > 0) onCapture(blob, `${mode === "audio" ? "voice" : mode === "screen" ? "screen" : "webcam"}-${stamp}.${ext}`);
       cleanup();
       setRecording(false);
       setSeconds(0);
@@ -1272,8 +1296,8 @@ function Recorder({ mode, disabled, onCapture }: {
     recorderRef.current?.stop();
   }, []);
 
-  const Icon = mode === "audio" ? Mic : Video;
-  const label = mode === "audio" ? "Record voice" : "Record webcam";
+  const Icon = mode === "audio" ? Mic : mode === "screen" ? MonitorUp : Video;
+  const label = mode === "audio" ? "Record voice" : mode === "screen" ? "Record screen" : "Record webcam";
 
   return (
     <div className="mt-2">
@@ -1287,7 +1311,7 @@ function Recorder({ mode, disabled, onCapture }: {
             <span className="flex items-center gap-1.5"><Icon size={14} /> {label}</span>
             {!recording && <button onClick={() => { cleanup(); setOpen(false); setError(null); }} className="text-neutral-400 hover:text-neutral-700"><X size={13} /></button>}
           </div>
-          {mode === "video" && (
+          {(mode === "video" || mode === "screen") && (
             <video ref={videoRef} playsInline muted className="mb-2 aspect-video w-full rounded bg-neutral-900 object-cover" />
           )}
           {recording ? (

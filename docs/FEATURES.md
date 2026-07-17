@@ -34,7 +34,7 @@ A living checklist of what ships today versus what is planned. Shipped items are
 - [x] Whiteboards (sticky/frame/ink/connectors, 8 templates, facilitation, synced timer, dot voting, convert-to-deck)
 - [x] Sheets (~48-function formula engine, formatting, borders, sort)
 - [x] Docs (block editor, callouts, embeds, AI writing tools, DOCX/PDF export)
-- [x] Video (multi-track timeline, trim/split/transitions/audio mixing, server MP4 render)
+- [x] Video (multi-track timeline with real media clips, drag to move/trim across tracks with live trim preview, multi-select, context menus, on-stage reframe/scale of clips, track reordering, clip copy/paste/duplicate, true overlap cross-dissolves, nested sequences, volume envelopes, markers and export range, media panel with drag-drop and upload, 540p preview proxies, title cards, green-screen keying, clip keyframes, scene detection, detach audio, live compositing preview with audio mix, filmstrips/waveforms, styled captions with SRT/VTT, screen/webcam/voice recording, in-browser exact export plus server ffmpeg fast export)
 
 ### Collaboration
 - [x] Realtime CRDT (Yjs), presence cursors, follow mode, locks, per-user undo

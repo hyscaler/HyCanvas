@@ -43,6 +43,20 @@ export interface ChromaKey {
  * primitives live in the animation work; here we only carry the data
  * so timeline edits (split/move/ripple) can be made to preserve keyframes later.
  */
+/** A text card rendered by a clip on a "text" track (titles, lower thirds).
+ *  Additive: clips without it draw nothing, older projects are unaffected. */
+export interface TitleCard {
+  text: string;
+  /** Font size as a fraction of stage height (default 0.07). */
+  sizePct?: number;
+  /** CSS text color (default white). */
+  color?: string;
+  /** CSS color drawn as a band behind each line; empty/undefined = none. */
+  background?: string;
+  position?: "top" | "center" | "lower-third";
+  weight?: "normal" | "bold";
+}
+
 export interface KeyframeTrack {
   property: string;
   keyframes: { frame: number; value: unknown; easing?: Easing }[];
@@ -69,6 +83,8 @@ export interface Clip {
   transitionIn?: ClipTransition;
   transitionOut?: ClipTransition;
   chromaKey?: ChromaKey;
+  /** Text card for clips on "text" tracks. */
+  title?: TitleCard;
   keyframes?: KeyframeTrack[];
   /** audio */
   fadeInFrames?: number;
@@ -119,6 +135,12 @@ export interface VideoProject {
   durationFrames: number;
   tracks: Track[];
   master: AudioMaster;
+  /** Subtitle tracks (additive; older projects simply omit it). */
+  captions?: CaptionTrack[];
+  /** Ruler markers, in timeline frames (additive). */
+  markers?: number[];
+  /** Export/preview range (in/out marks), in timeline frames (additive). */
+  range?: { startFrame: number; endFrame: number };
 }
 
 // ---------------------------------------------------------------------------
