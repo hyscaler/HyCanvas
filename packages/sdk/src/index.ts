@@ -1533,8 +1533,10 @@ export class HyCanvasClient {
   }
   /** Enqueue an MP4 render of a design's video timeline. Poll the
    *  returned jobId via getJob, then download from videoExportDownloadUrl. */
-  startVideoExport(designId: string): Promise<{ jobId: string }> {
-    return this.request("POST", `/v1/designs/${designId}/export/video`);
+  /** Start a server video export. For video documents this renders the full
+   *  timeline (ffmpeg); opts tune the output (scale multiplier, x264 CRF). */
+  startVideoExport(designId: string, opts: { scale?: number; crf?: number; startFrame?: number; endFrame?: number } = {}): Promise<{ jobId: string }> {
+    return this.request("POST", `/v1/designs/${designId}/export/video`, opts);
   }
   /** The authenticated download URL for a completed video export (cookie auth). */
   videoExportDownloadUrl(designId: string, jobId: string): string {
