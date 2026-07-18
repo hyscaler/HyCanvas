@@ -223,6 +223,9 @@ export interface OutboxMessage {
 }
 
 export type SnapshotKind = "auto" | "checkpoint" | "named" | "restore" | "branch";
+/** Kinds a client may save. "branch" is minted by the branch endpoint only;
+ *  the snapshot route rejects it with 422. */
+export type SavableSnapshotKind = Exclude<SnapshotKind, "branch">;
 
 export interface TemplateSummary {
   id: string;
@@ -1193,7 +1196,7 @@ export class HyCanvasClient {
   getDesignFile(id: string, opts?: { trashed?: boolean }): Promise<DesignFile> {
     return this.request("GET", `/v1/designs/${id}/file${opts?.trashed ? "?trashed=1" : ""}`);
   }
-  saveSnapshot(id: string, input: { file: DesignFile; label?: string; kind?: SnapshotKind }): Promise<DesignRecord> {
+  saveSnapshot(id: string, input: { file: DesignFile; label?: string; kind?: SavableSnapshotKind }): Promise<DesignRecord> {
     return this.request("POST", `/v1/designs/${id}/snapshots`, input);
   }
   /** A page of a design's version history, newest first. Each

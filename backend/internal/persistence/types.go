@@ -32,6 +32,9 @@ type DiffSummary struct {
 	NodesAdded   int `json:"nodesAdded"`
 	NodesRemoved int `json:"nodesRemoved"`
 	NodesChanged int `json:"nodesChanged"`
+	// MetaChanged reports a change in doc.meta, where the meta-backed document
+	// kinds (video, doc, sheet, whiteboard extras) keep their content.
+	MetaChanged bool `json:"metaChanged"`
 }
 
 // VersionAuthor is the resolved author of a version (doc 04 FR-9).

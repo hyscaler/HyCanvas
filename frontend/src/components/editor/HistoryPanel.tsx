@@ -26,7 +26,7 @@ import {
 import type { BranchEntry, DesignUpdateEntry, VersionEntry } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
 import { useEditor } from "@/store/editor";
-import { applyRestoredFile, resyncFromLiveDoc } from "@/lib/useRealtime";
+import { applyRestoredFile, getDesignDoc, resyncFromLiveDoc } from "@/lib/useRealtime";
 import { foldUpdatesToFile } from "@/lib/historyFold";
 import { diffLabel } from "@hc/realtime";
 import { useToast } from "@/components/ui/Toast";
@@ -300,6 +300,21 @@ export function HistoryPanel({
     if (!activeId) return;
     setBusyId(activeId);
     try {
+      // Safety net: edits made after the last auto-save exist only in memory;
+      // land them as a version first so the restore never silently discards
+      // work. Prefer the live shared Y.Doc (peers may have edited during the
+      // preview) over the point-in-time stash. The server dedupes an unchanged
+      // AUTO save. If this save FAILS (offline, brand lock), abort the restore:
+      // proceeding would discard the only copy of that work.
+      const live = getDesignDoc()?.snapshot() ?? useEditor.getState().preview?.live;
+      if (live?.pages?.length) {
+        try {
+          await oc.saveSnapshot(designId, { file: live, kind: "auto" });
+        } catch {
+          toast.error("Couldn't back up your latest edits, so the restore was cancelled. Exit the preview and save first.");
+          return;
+        }
+      }
       await oc.restoreVersion(designId, activeId);
       const file = await oc.getDesignFile(designId);
       applyRestoredFile(file);

@@ -12,6 +12,7 @@ import (
 
 	"hycanvas/backend/internal/accounts"
 	"hycanvas/backend/internal/authz"
+	"hycanvas/backend/internal/brand"
 	"hycanvas/backend/internal/persistence"
 	"hycanvas/backend/internal/sharing"
 )
@@ -22,7 +23,7 @@ import (
 // NOT mounted here: it gates on the brand-lock validateSnapshot check, which is
 // not yet ported, so it stays on the Node service via the reverse proxy (no
 // brand-lock regression).
-func mountPersistence(api chi.Router, p *persistence.Service, acct *accounts.Service, sh *sharing.Service) {
+func mountPersistence(api chi.Router, p *persistence.Service, acct *accounts.Service, sh *sharing.Service, br *brand.Service) {
 	api.With(requireAuth(acct)).Post("/designs", createDesignHandler(p, acct))
 	api.With(requireAuth(acct)).Get("/designs/{id}", getDesignHandler(p, acct, sh))
 	api.With(requireAuth(acct)).Patch("/designs/{id}", renameDesignHandler(p, acct))
@@ -33,7 +34,7 @@ func mountPersistence(api chi.Router, p *persistence.Service, acct *accounts.Ser
 	api.With(requireAuth(acct)).Get("/designs/{id}/versions/{vid}/diff", diffHandler(p, acct, sh))
 	api.With(requireAuth(acct)).Get("/designs/{id}/updates", updateLogHandler(p, acct, sh))
 	api.With(requireAuth(acct)).Post("/designs/{id}/updates/checkpoint", checkpointUpdateLogHandler(p, acct))
-	api.With(requireAuth(acct)).Post("/designs/{id}/versions/{vid}/restore", restoreVersionHandler(p, acct))
+	api.With(requireAuth(acct)).Post("/designs/{id}/versions/{vid}/restore", restoreVersionHandler(p, acct, br))
 	api.With(requireAuth(acct)).Get("/designs/{id}/branches", branchesHandler(p, acct, sh))
 	api.With(requireAuth(acct)).Post("/designs/{id}/versions/{vid}/branch", branchHandler(p, acct))
 	api.With(requireAuth(acct)).Post("/designs/{id}/restore", restoreFromTrashHandler(p, acct))
@@ -318,7 +319,7 @@ func checkpointUpdateLogHandler(p *persistence.Service, acct *accounts.Service) 
 	}
 }
 
-func restoreVersionHandler(p *persistence.Service, acct *accounts.Service) http.HandlerFunc {
+func restoreVersionHandler(p *persistence.Service, acct *accounts.Service, br *brand.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
 		ws, err := authorizeDesign(r, p, acct, id, "member")
@@ -327,7 +328,27 @@ func restoreVersionHandler(p *persistence.Service, acct *accounts.Service) http.
 			return
 		}
 		u := userFrom(r.Context())
-		entry, err := p.Restore(r.Context(), id, ws, chi.URLParam(r, "vid"), &u.ID)
+		vid := chi.URLParam(r, "vid")
+		// Restore persists the historical file as the current version, so it is
+		// a save and must pass the same brand-lock gate as the snapshot route:
+		// a non-manage-brand member must not resurrect off-kit content while a
+		// lock is on. br is nil when brand kits are disabled.
+		if br != nil {
+			file, ferr := p.VersionFile(r.Context(), id, ws, vid)
+			if ferr != nil {
+				persistenceProblem(w, r, ferr)
+				return
+			}
+			if berr := br.ValidateSnapshot(r.Context(), id, ws, u.ID, file); berr != nil {
+				if errors.Is(berr, brand.ErrBrandLocked) {
+					Problem(w, r, http.StatusBadRequest, "Bad Request", berr.Error())
+					return
+				}
+				Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "brand validation failed")
+				return
+			}
+		}
+		entry, err := p.Restore(r.Context(), id, ws, vid, &u.ID)
 		if err != nil {
 			persistenceProblem(w, r, err)
 			return

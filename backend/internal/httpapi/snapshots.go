@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -49,13 +50,23 @@ func snapshotHandler(p *persistence.Service, br *brand.Service, acct *accounts.S
 			Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "brand validation failed")
 			return
 		}
-		kind := persistence.SnapshotKind(body.Kind)
-		if kind == "" {
+		// The storage layer uppercases kinds into the Postgres enum, so accept
+		// any casing here too; the allowlist below compares lowercase.
+		kind := persistence.SnapshotKind(strings.ToLower(body.Kind))
+		switch kind {
+		case "":
 			if body.Label != "" {
 				kind = persistence.KindNamed
 			} else {
 				kind = persistence.KindCheckpoint
 			}
+		case persistence.KindAuto, persistence.KindCheckpoint, persistence.KindNamed, persistence.KindRestore:
+			// user-savable kinds
+		default:
+			// KindBranch is minted by the branch endpoint only; anything else
+			// would fail at the enum INSERT as a 500 after the blob was stored.
+			Problem(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "kind must be auto, checkpoint, named, or restore")
+			return
 		}
 		var label *string
 		if body.Label != "" {

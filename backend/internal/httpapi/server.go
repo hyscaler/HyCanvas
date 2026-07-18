@@ -130,7 +130,7 @@ func NewRouter(d Deps) http.Handler {
 			mountOIDC(api, d.OIDC, d.Accounts, d.Secure, d.Auth, d.CaptchaConfig)
 		}
 		if d.Accounts != nil && d.Persistence != nil {
-			mountPersistence(api, d.Persistence, d.Accounts, d.Sharing)
+			mountPersistence(api, d.Persistence, d.Accounts, d.Sharing, d.Brand)
 			mountRender(api, d.Persistence, d.Accounts, d.Uploads)
 		}
 		if d.Accounts != nil && d.Home != nil {
