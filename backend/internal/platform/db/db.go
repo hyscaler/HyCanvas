@@ -12,9 +12,18 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Connect parses the DSN (handling Prisma's `schema` query param), opens a pool,
-// and verifies connectivity with a ping.
-func Connect(ctx context.Context, raw string) (*pgxpool.Pool, error) {
+// buildConfig parses the DSN (handling Prisma's `schema` query param) into a
+// pool config, pinning the session search_path and timezone.
+//
+// timezone is pinned to UTC on every connection. The `created_at`/`updated_at`
+// columns are `timestamp without time zone`, and pgx reads such values back as a
+// UTC-labelled time.Time; the whole codebase serializes with `.UTC()`. For that
+// to be truthful, the value written by `CURRENT_TIMESTAMP`/`now()` defaults must
+// also be UTC wall-clock, which only holds when the session runs in UTC. Without
+// this, a server whose default timezone is not UTC stores local wall-clock and
+// every timestamp comes back skewed by the offset (e.g. a just-created version
+// showing "7h ago" in Version history).
+func buildConfig(raw string) (*pgxpool.Config, error) {
 	schema := "public"
 	if u, err := url.Parse(raw); err == nil {
 		q := u.Query()
@@ -34,6 +43,17 @@ func Connect(ctx context.Context, raw string) (*pgxpool.Pool, error) {
 		cfg.ConnConfig.RuntimeParams = map[string]string{}
 	}
 	cfg.ConnConfig.RuntimeParams["search_path"] = schema
+	cfg.ConnConfig.RuntimeParams["timezone"] = "UTC"
+	return cfg, nil
+}
+
+// Connect parses the DSN (handling Prisma's `schema` query param), opens a pool,
+// and verifies connectivity with a ping.
+func Connect(ctx context.Context, raw string) (*pgxpool.Pool, error) {
+	cfg, err := buildConfig(raw)
+	if err != nil {
+		return nil, err
+	}
 
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
