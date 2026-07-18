@@ -816,6 +816,12 @@ interface EditorState {
   setVideoProps(id: string, patch: Partial<{ trimStartMs: number; trimEndMs: number; volume: number; muted: boolean; loop: boolean }>): void;
   /** Place an image into a frame (clipped to the frame), undoable. */
   setFrameImage(id: string, url: string, provenance?: Record<string, unknown>): void;
+  /** Drop an on-canvas IMAGE NODE onto a frame or shape: fill the target with
+   *  the image's asset and remove the dragged node, as ONE undo step (undo
+   *  restores the node at `restoreTransform`, its pre-drag position). Returns
+   *  false when either side is locked/blocked so the caller falls back to a
+   *  plain move. */
+  fillWithImageNode(targetId: string, kind: "frame" | "shape", imageId: string, restoreTransform?: Transform): boolean;
   /** Fill a shape with an image, clipped to its outline (undoable). Pass an
    *  empty url to clear the image fill back to a solid color. */
   setImageFill(id: string, url: string): void;
@@ -894,6 +900,9 @@ interface EditorState {
    *  the new size (spans preserved, filled images keep covering their cells).
    *  One undo step. */
   applyGridGeometry(id: string, transform: Transform, size: { width: number; height: number }): void;
+  /** Frame W/H/X/Y from the properties panel: the fill image scales with the
+   *  box (mirrors the resize gizmo), committed as one undo step. */
+  applyFrameGeometry(id: string, transform: Transform, size: { width: number; height: number }): void;
   renameNode(id: string, name: string): void;
 
   undo(): void;
@@ -958,6 +967,27 @@ export function relayGridCells(
       img.transform = { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 };
       img.size = { width: bw, height: bh };
     }
+  }
+}
+
+/** Scale a frame's IMAGE children with the frame box (from a gesture-start
+ *  snapshot so repeated live updates never compound). The image box scales;
+ *  the bitmap re-covers it (fit "cover"), so a grown frame stays filled and a
+ *  custom pan keeps its relative framing. Non-image children are untouched. */
+export function scaleFrameImageChildren(
+  frame: { children?: Node[] },
+  startChildren: Node[],
+  startSize: { width: number; height: number },
+  size: { width: number; height: number },
+): void {
+  const kids = frame.children ?? [];
+  const kx = size.width / Math.max(1, startSize.width);
+  const ky = size.height / Math.max(1, startSize.height);
+  for (let i = 0; i < kids.length && i < startChildren.length; i++) {
+    if (kids[i].type !== "image" || startChildren[i].type !== "image") continue;
+    const s = startChildren[i];
+    kids[i].transform = { ...s.transform, x: s.transform.x * kx, y: s.transform.y * ky };
+    kids[i].size = { width: s.size.width * kx, height: s.size.height * ky };
   }
 }
 
@@ -4152,6 +4182,60 @@ export const useEditor = create<EditorState>((set, get) => {
         });
       }
     },
+    fillWithImageNode: (targetId, kind, imageId, restoreTransform) => {
+      const doc = get().doc;
+      const imgLoc = locate(doc, imageId);
+      const tLoc = locate(doc, targetId);
+      if (!imgLoc || !tLoc || imgLoc.node.type !== "image") return false;
+      if (imgLoc.node.locked || editBlocked(imageId)) return false;
+      if (tLoc.node.locked || editBlocked(targetId)) return false;
+      if (kind === "frame" ? tLoc.node.type !== "frame" : tLoc.node.type !== "shape") return false;
+      const img = imgLoc.node as unknown as { source: { assetId: string; naturalWidth: number; naturalHeight: number }; data?: Record<string, unknown> };
+      // The asset ref already lives in doc.assets (added when the image was
+      // placed) and stays there, exactly like deleting the node would leave it;
+      // the fill just references the same assetId.
+      const siblings = imgLoc.siblings;
+      const removeIndex = imgLoc.index;
+      const removed = imgLoc.node;
+      const prevTransform = removed.transform;
+      const prevSelection = get().selection;
+      const takeOut = () => {
+        const i = siblings.indexOf(removed);
+        if (i >= 0) siblings.splice(i, 1);
+        set({ selection: [targetId] });
+      };
+      const putBack = () => {
+        removed.transform = restoreTransform ? { ...restoreTransform } : prevTransform;
+        siblings.splice(Math.min(removeIndex, siblings.length), 0, removed);
+        set({ selection: prevSelection });
+      };
+      if (kind === "frame") {
+        const frame = tLoc.node as unknown as { size: { width: number; height: number }; children: Node[]; clip?: boolean };
+        const beforeChildren = frame.children;
+        const beforeClip = frame.clip;
+        const child = createNode("image", {
+          source: { ...img.source },
+          fit: "cover",
+          transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+          size: { width: frame.size.width, height: frame.size.height },
+          // The credit follows the image into the frame, like drop-to-fill.
+          ...(img.data?.provenance ? { data: { provenance: img.data.provenance } } : {}),
+        } as Partial<Node>);
+        perform(
+          () => { takeOut(); frame.children = [child]; frame.clip = true; },
+          () => { frame.children = beforeChildren; frame.clip = beforeClip; putBack(); },
+        );
+      } else {
+        const shape = tLoc.node as unknown as { fills?: Fill[] };
+        const beforeFills = shape.fills;
+        const fill = { type: "image", source: { ...img.source }, fit: "cover" } as unknown as Fill;
+        perform(
+          () => { takeOut(); shape.fills = [fill]; },
+          () => { shape.fills = beforeFills; putBack(); },
+        );
+      }
+      return true;
+    },
     setFillColor: (id, hex) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.locked || editBlocked(id)) return;
@@ -5385,6 +5469,18 @@ export const useEditor = create<EditorState>((set, get) => {
       node.transform = { ...transform };
       node.size = { width: Math.max(1, size.width), height: Math.max(1, size.height) };
       relayGridCells(node, node.size);
+      get().pushNodeSnapshot(id, before);
+    },
+    applyFrameGeometry: (id, transform, size) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "frame" || loc.node.locked || editBlocked(id)) return;
+      const node = loc.node as unknown as { transform: Transform; size: { width: number; height: number }; children?: Node[] };
+      const before = { transform: { ...node.transform }, size: { ...node.size }, children: structuredClone(node.children ?? []) };
+      const startSize = { ...node.size };
+      const startChildren = structuredClone(node.children ?? []);
+      node.transform = { ...transform };
+      node.size = { width: Math.max(1, size.width), height: Math.max(1, size.height) };
+      scaleFrameImageChildren(node, startChildren, startSize, node.size);
       get().pushNodeSnapshot(id, before);
     },
     setStrokeSel: (stroke) => {
