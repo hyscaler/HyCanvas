@@ -113,6 +113,7 @@ import {
 import type { UploadedAsset } from "@hc/sdk";
 import { useEditor } from "@/store/editor";
 import { oc, resolveAssetUrl, uploadAssetWithProgress } from "@/lib/sdk";
+import { promptText } from "@/lib/promptDialog";
 import {
   drawTimelineFrame,
   drawCaption,
@@ -3457,9 +3458,15 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             title="Import a video or audio file from a URL"
             disabled={!workspaceId || uploadPct !== null}
             onClick={() => {
-              const url = window.prompt("Media URL (video or audio):");
-              if (!url) return;
               void (async () => {
+                // In-app modal (PromptHost), not the browser's native prompt.
+                const url = await promptText({
+                  title: "Import from URL",
+                  label: "Link to a video or audio file",
+                  placeholder: "https://example.com/clip.mp4",
+                  confirmText: "Import",
+                });
+                if (!url) return;
                 try {
                   await oc.importAssetFromUrl(workspaceId!, url);
                   await loadAssets();
