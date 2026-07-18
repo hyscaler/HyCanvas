@@ -459,6 +459,13 @@ interface EditorState {
    *  page size + background and creates the nodes as ONE undo step. Returns ids. */
   buildAiDesign(spec: AiDesignSpec, target: { width: number; height: number }): string[];
 
+  /** F39: apply an AI-generated design supplied as a complete SVG document onto
+   *  the active page, fully editable. The SVG (from a text model such as DeepSeek)
+   *  is drawn at the target size, so its flattened nodes land in page space with
+   *  no scaling. Sets the page size and replaces its nodes as ONE undo step.
+   *  Returns the new node ids (empty when the SVG yields no nodes). */
+  buildSvgDesign(svg: string, target: { width: number; height: number }): string[];
+
   /** F39 Phase 2: replace the whole document with a generated multi-page design
    *  (deck/doc/social set). Each DeckResult page becomes a page sized to target,
    *  with the engine-laid-out background + nodes. Applied as ONE undo step.
@@ -1620,6 +1627,48 @@ export const useEditor = create<EditorState>((set, get) => {
         () => { apply(structuredClone(after)); set({ selection: [] }); },
         () => { apply(before); set({ selection: get().selection.filter((s) => !ids.includes(s)) }); },
       );
+      return ids;
+    },
+    buildSvgDesign: (svg, target) => {
+      const doc = get().doc;
+      const idx = curPageIndex();
+      const page = doc.pages[idx];
+      if (!page) return [];
+      const w = Math.max(1, Math.round(target.width));
+      const h = Math.max(1, Math.round(target.height));
+
+      // The SVG is generated at exactly w x h, so its flattened nodes are already
+      // in page coordinates (no group wrapper, no scaling): every element stays
+      // individually selectable and editable. A full-bleed background <rect> in
+      // the SVG becomes the bottom node, so the page background is left as-is.
+      const { nodes, assets } = flattenSvgToNodes(svg);
+      if (!nodes.length) return [];
+      ensureDocArrays(doc);
+      const refs: AssetRef[] = assets.map((a) => ({ id: a.assetId, kind: "image", url: a.url, mime: "image/*", checksum: "" }));
+
+      // Snapshot page size + nodes so the whole design lands as ONE undo step
+      // (mirrors buildAiDesign). Assets are added/removed in the same step.
+      const before = structuredClone({ width: page.width, height: page.height, children: page.children });
+      const after = structuredClone({ width: w, height: h, children: nodes });
+      const apply = (snap: { width: number; height: number; children: Node[] }) => {
+        const p = get().doc.pages[curPageIndex()] as unknown as { width: number; height: number; children: Node[] };
+        if (!p) return;
+        p.width = snap.width;
+        p.height = snap.height;
+        p.children = structuredClone(snap.children);
+      };
+      const ids = nodes.map((n) => n.id);
+      perform(
+        () => { get().doc.assets.push(...refs); apply(structuredClone(after)); set({ selection: [] }); },
+        () => {
+          apply(before);
+          const live = get().doc.assets;
+          for (const r of refs) { const ai = live.findIndex((a) => a.id === r.id); if (ai >= 0) live.splice(ai, 1); }
+          set({ selection: get().selection.filter((s) => !ids.includes(s)) });
+        },
+      );
+      // Load any referenced image assets so they render (data URLs or remote urls).
+      if (typeof window !== "undefined") for (const a of assets) imageAssets.register(a.assetId, a.url);
       return ids;
     },
     buildDeckFromOutline: (deck, target) => {

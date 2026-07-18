@@ -2110,6 +2110,32 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     const el = inputRef.current;
     if (el) { el.focus(); el.setSelectionRange(prompt.length, prompt.length); }
   }
+  // Vector path (beta): the model draws the whole design as one editable SVG at
+  // the current page size; we flatten it onto this page as one undo turn. Unlike
+  // the outline flow this needs no image model, so it works with text-only
+  // providers (e.g. DeepSeek).
+  async function genVector(text?: string) {
+    const brief = (text ?? input).trim();
+    if (!brief || busy || !aiReady || !workspaceId) return;
+    setInput("");
+    if (inputRef.current) inputRef.current.style.height = "auto";
+    setTurns((t) => [...t, { role: "user", text: brief }]);
+    setBusy(true);
+    try {
+      const st = useEditor.getState();
+      const pg = st.doc.pages[st.activePage] ?? st.doc.pages[0];
+      const { svg, width, height } = await oc.aiDesignSvg({ workspaceId, designType: "design", prompt: brief, width: pg.width, height: pg.height });
+      let ids: string[] = [];
+      runAsTurn(() => { ids = useEditor.getState().buildSvgDesign(svg, { width, height }); });
+      if (!ids.length) throw new Error("no nodes");
+      setTurns((t) => [...t, { role: "assistant", text: "Drew an editable vector design on this page. Every element is a real shape or text you can select and edit.", steps: [{ action: "generateVector", ok: true }] }]);
+    } catch {
+      setTurns((t) => [...t, { role: "assistant", text: "Couldn't generate a vector design. Make sure an AI provider is connected in settings, then try again." }]);
+      toast.error("Vector generation failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
   const canSend = !!input.trim() && !busy && aiReady;
   const hasApplied = turns.some((t) => t.steps?.some((s) => s.ok));
   // Show art-direction follow-ups right after a design was generated.
@@ -2228,7 +2254,18 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
             <Send size={15} />
           </button>
         </div>
-        <p className="mt-1 px-1 text-[10px] text-neutral-400">Enter to send · Shift+Enter for a new line</p>
+        <div className="mt-1 flex items-center justify-between px-1">
+          <p className="text-[10px] text-neutral-400">Enter to send · Shift+Enter for a new line</p>
+          <button
+            onClick={() => void genVector()}
+            disabled={!canSend}
+            title="Draw the whole design as an editable vector on this page, using your text model. Works without an image model (beta)."
+            className="flex items-center gap-1 rounded-full border border-neutral-200 bg-surface px-2 py-0.5 text-[10px] text-neutral-500 hover:border-brand-300 hover:text-brand-ink disabled:opacity-40"
+          >
+            <Spline size={11} /> Vector design
+            <span className="rounded bg-brand-100 px-1 text-[9px] font-medium text-brand-ink">beta</span>
+          </button>
+        </div>
       </div>
     </div>
   );
