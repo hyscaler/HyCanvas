@@ -28,6 +28,7 @@ func mountAIStudio(api chi.Router, svc *aistudio.Service, acct *accounts.Service
 		r.Post("/ai/critique", aiStudioCritiqueHandler(svc, acct))
 		r.Post("/ai/generate-design", aiStudioGenerateHandler(svc, acct, reg))
 		r.Post("/ai/variations", aiStudioVariationsHandler(svc, acct, reg))
+		r.Post("/ai/design-svg", aiStudioSvgHandler(svc, acct))
 
 		// Session history (design-scoped; FR-9 / FR-27).
 		r.Get("/designs/{id}/ai-sessions", aiSessionsListHandler(svc, acct, p))
@@ -92,6 +93,35 @@ func aiStudioOutlineHandler(svc *aistudio.Service, acct *accounts.Service) http.
 			return
 		}
 		writeJSON(w, http.StatusOK, out)
+	}
+}
+
+// aiStudioSvgHandler generates one stylish, editable SVG design at the requested
+// artboard size. The client converts it to scene-graph nodes and creates a
+// design; unlike an AI image, the result is fully editable.
+func aiStudioSvgHandler(svc *aistudio.Service, acct *accounts.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			WorkspaceID string `json:"workspaceId"`
+			DesignType  string `json:"designType"`
+			Prompt      string `json:"prompt"`
+			Width       int    `json:"width"`
+			Height      int    `json:"height"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			return
+		}
+		if !aiAssert(r, acct, body.WorkspaceID, "member") {
+			Problem(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace")
+			return
+		}
+		design, err := svc.GenerateSvg(r.Context(), body.WorkspaceID, body.Prompt, body.DesignType, body.Width, body.Height)
+		if err != nil {
+			aiStudioProblem(w, r, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, design)
 	}
 }
 
