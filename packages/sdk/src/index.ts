@@ -1557,7 +1557,7 @@ export class HyCanvasClient {
   }
   /** The authenticated download URL for a completed video export (cookie auth). */
   videoExportDownloadUrl(designId: string, jobId: string): string {
-    return `${this.baseUrl}/v1/designs/${designId}/export/video/${jobId}/download`;
+    return `${this.baseUrl}/v1/designs/${encodeURIComponent(designId)}/export/video/${encodeURIComponent(jobId)}/download`;
   }
   /** Enqueue a DOCX or PDF render of a doc design. Poll via getJob,
    *  then download from docExportDownloadUrl. */
@@ -1566,14 +1566,14 @@ export class HyCanvasClient {
   }
   /** The authenticated download URL for a completed doc export (cookie auth). */
   docExportDownloadUrl(designId: string, jobId: string): string {
-    return `${this.baseUrl}/v1/designs/${designId}/export/doc/${jobId}/download`;
+    return `${this.baseUrl}/v1/designs/${encodeURIComponent(designId)}/export/doc/${encodeURIComponent(jobId)}/download`;
   }
   /** The authenticated URL for an accessibility-tagged PDF of the whole deck,
    *  rendered by the Go encoder (doc 28 FR-22). It serves the design as last
    *  saved, and its text is real text: selectable, searchable, and readable by
    *  assistive technology in the author's reading order. */
   taggedPdfUrl(designId: string): string {
-    return `${this.baseUrl}/v1/designs/${designId}/render.pdf?page=all`;
+    return `${this.baseUrl}/v1/designs/${encodeURIComponent(designId)}/render.pdf?page=all`;
   }
   /** Convert a whiteboard design into a presentation deck. Poll via
    *  getJob; the result carries the new design id to open. */

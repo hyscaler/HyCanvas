@@ -68,11 +68,18 @@ func (l *Local) Kind() string { return "local" }
 // pathFor resolves a key to an absolute path, refusing anything that escapes the
 // base or is itself absolute (mirrors the Node driver's guard).
 func (l *Local) pathFor(key string) (string, error) {
+	// Validate against the shared key policy first: this rejects an empty,
+	// absolute, or '..'-containing key outright, before the value is ever used to
+	// build a filesystem path. Both drivers use the same allowlist.
+	if _, err := normalizeKey(key); err != nil {
+		return "", err
+	}
 	if filepath.IsAbs(key) {
 		return "", errors.New("storage key must be relative: " + key)
 	}
 	clean := strings.TrimLeft(filepath.Clean(key), string(filepath.Separator))
 	full := filepath.Join(l.base, clean)
+	// Defense in depth: the resolved path must still stay within the base dir.
 	if full != l.base && !strings.HasPrefix(full, l.base+string(filepath.Separator)) {
 		return "", errors.New("invalid storage key escapes base: " + key)
 	}
