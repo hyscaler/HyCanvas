@@ -243,6 +243,14 @@ function liveSequences(): Record<string, VideoProject> {
   return (useEditor.getState().doc.meta.videoSequences as Record<string, VideoProject> | undefined) ?? {};
 }
 
+/** True for a server-minted identifier (design id, export job id) that is
+ *  safe to place in a URL path segment. Export job ids round-trip through
+ *  localStorage (the export history), so they are re-validated before any
+ *  request is built from them (SSRF/path traversal hardening). */
+function isSafePathId(value: string): boolean {
+  return /^[A-Za-z0-9_-]+$/.test(value);
+}
+
 /** The preview-proxy URL for a video asset (the content route with /proxy). */
 function proxyUrlFor(a: UploadedAsset): string {
   return resolveAssetUrl(a.url).replace(/\/content$/, "/proxy");
@@ -1408,6 +1416,10 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           startFrame: opts.useRange ? project?.range?.startFrame : undefined,
           endFrame: opts.useRange ? project?.range?.endFrame : undefined,
         });
+        if (!isSafePathId(jobId)) {
+          setExportMsg("Server export failed: malformed job id");
+          return;
+        }
         recordExport(jobId, opts.stemTrackId ? `${opts.format} stem` : opts.format);
         for (let i = 0; i < 800; i++) {
           const job = await oc.getJob<{ format?: string }>(jobId);
@@ -3890,6 +3902,12 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                             type="button"
                             onClick={() => {
                               void (async () => {
+                                // h.jobId comes from localStorage; a tampered
+                                // value must never steer the request path.
+                                if (!isSafePathId(h.jobId)) {
+                                  markExport(h.jobId, "expired");
+                                  return;
+                                }
                                 const res = await fetch(oc.videoExportDownloadUrl(props.designId!, h.jobId), { credentials: "include" });
                                 if (!res.ok) {
                                   markExport(h.jobId, "expired");
