@@ -70,9 +70,19 @@ export class DesignDoc {
   // collab-undo handle while this doc is bound.
   private readonly undoMgr: Y.UndoManager;
   private readonly undoHandle: CollabUndo;
+  // Pre-edit snapshot of the store doc, kept until the Y.Doc gains state. If
+  // the session's FIRST local edit lands before the room sync (or IndexedDB
+  // load) does, the seed reconcile would otherwise swallow that edit: the
+  // whole document enters the Y.Doc as one transaction and the seed clear()
+  // wipes it from the undo stack, making the first action non-undoable. With
+  // the baseline we seed the PRE-EDIT document first and let the edit
+  // reconcile as its own tracked diff. Cloned because edits mutate the store
+  // doc in place; nulled once any state lands (one-shot).
+  private seedBaseline: DesignFile | null;
 
   constructor(readonly designId: string) {
     this.lastRev = useEditor.getState().rev;
+    this.seedBaseline = structuredClone(useEditor.getState().doc);
 
     // Track only LOCAL_ORIGIN transactions (this client's reconciled edits).
     // Remote-peer updates (REMOTE_ORIGIN) and the manager's own undo/redo apply
@@ -133,12 +143,29 @@ export class DesignDoc {
         return;
       }
       this.lastRev = s.rev;
-      // A reconcile into an EMPTY Y.Doc is a full-document seed (no room sync or
-      // IndexedDB state yet), not an edit: drop it from the undo manager, or the
-      // first Cmd+Z would revert the entire document to nothing.
-      const seeding = this.ydoc.getMap(DESIGN_ROOT_KEY).size === 0;
+      // A reconcile into an EMPTY Y.Doc is a full-document seed (no room sync
+      // or IndexedDB state yet), never an undoable step: undoing it would
+      // revert the entire document to nothing. But when the rev bump is an
+      // EDIT made before any sync landed (the doc OBJECT is unchanged - edits
+      // mutate it in place, while loadDoc installs a new object), seed the
+      // pre-edit baseline first and clear, then reconcile the current doc so
+      // the edit itself diffs in as a normal tracked step and the session's
+      // first action stays undoable.
+      if (this.ydoc.getMap(DESIGN_ROOT_KEY).size === 0) {
+        const isEdit = s.doc === prev.doc && this.seedBaseline != null;
+        if (isEdit) {
+          reconcile(this.seedBaseline as DesignFile, this.ydoc);
+          this.undoMgr.clear();
+          reconcile(s.doc, this.ydoc);
+        } else {
+          reconcile(s.doc, this.ydoc);
+          this.undoMgr.clear();
+        }
+        this.seedBaseline = null;
+        return;
+      }
+      this.seedBaseline = null;
       reconcile(s.doc, this.ydoc);
-      if (seeding) this.undoMgr.clear();
     });
 
     // Bind IndexedDB persistence (browser only). It auto-loads any stored state
@@ -237,6 +264,7 @@ export class DesignDoc {
     // still land in the Y.Doc, and exiting preview rebuilds the store from it.
     if (useEditor.getState().preview) return;
     this.applyingRemote = true;
+    this.seedBaseline = null; // synced state arrived; the pre-edit baseline is stale
     try {
       const file = fromDoc(this.ydoc);
       // Mirror loadDoc's repaint, but preserve selection/viewport/undo: this is
