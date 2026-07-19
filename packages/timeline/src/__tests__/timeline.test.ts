@@ -381,3 +381,103 @@ describe("snapFrameToBeats", () => {
     expect(snapFrameToBeats(50, [], 100)).toBe(50);
   });
 });
+
+describe("splitClip edge effects", () => {
+  it("gives entrance effects to the left half and exit effects to the right", () => {
+    const t = track([
+      clip({
+        startFrame: 0,
+        inFrame: 0,
+        outFrame: 100,
+        speed: 1,
+        transitionIn: { type: "fade", durationFrames: 10 },
+        transitionOut: { type: "fade", durationFrames: 12 },
+        fadeInFrames: 8,
+        fadeOutFrames: 9,
+        title: { text: "Hi", animIn: "fade", animOut: "slide-down" },
+      }),
+    ]);
+    const [left, right] = splitClip(t, "c1", 40).clips;
+    expect(left.transitionIn?.durationFrames).toBe(10);
+    expect(left.transitionOut).toBeUndefined();
+    expect(left.fadeInFrames).toBe(8);
+    expect(left.fadeOutFrames).toBeUndefined();
+    expect(left.title?.animIn).toBe("fade");
+    expect(left.title?.animOut).toBeUndefined();
+    expect(right.transitionIn).toBeUndefined();
+    expect(right.transitionOut?.durationFrames).toBe(12);
+    expect(right.fadeInFrames).toBeUndefined();
+    expect(right.fadeOutFrames).toBe(9);
+    expect(right.title?.animIn).toBeUndefined();
+    expect(right.title?.animOut).toBe("slide-down");
+  });
+
+  it("shifts keyframes onto the right half so the curve continues across the cut", () => {
+    const t = track([
+      clip({
+        startFrame: 0,
+        inFrame: 0,
+        outFrame: 100,
+        speed: 1,
+        keyframes: [{ property: "dx", keyframes: [{ frame: 0, value: 0 }, { frame: 100, value: 1 }] }],
+      }),
+    ]);
+    const [left, right] = splitClip(t, "c1", 40).clips;
+    // Left keeps the original curve (it evaluates identically up to the cut).
+    expect(left.keyframes?.[0].keyframes.map((k) => k.frame)).toEqual([0, 100]);
+    // Right's frames shift by the cut offset: local 0 on the right half is
+    // local 40 of the original, so the curve value matches at the boundary.
+    expect(right.keyframes?.[0].keyframes.map((k) => k.frame)).toEqual([-40, 60]);
+  });
+});
+
+describe("trim units, reverse, and media clamp", () => {
+  it("in-trim moves the start by TIMELINE frames (source delta / |speed|)", () => {
+    // 2x speed: consuming 20 source frames shortens the timeline by 10.
+    const t = track([clip({ startFrame: 100, inFrame: 0, outFrame: 200, speed: 2 })]);
+    const c = trim(t, "c1", "in", 20).clips[0];
+    expect(c.inFrame).toBe(20);
+    expect(c.startFrame).toBe(110);
+    // The out edge stays anchored on the timeline.
+    expect(clipEndFrame(c)).toBe(clipEndFrame(t.clips[0]));
+  });
+
+  it("reversed clip: the timeline-in edge consumes the source OUT end", () => {
+    const t = track([clip({ startFrame: 50, inFrame: 0, outFrame: 100, speed: -1 })]);
+    // Trim the timeline-in edge 10 frames later: first-played content is the
+    // source out end, so outFrame shrinks and the start moves right.
+    const c = trim(t, "c1", "in", 10).clips[0];
+    expect(c.outFrame).toBe(90);
+    expect(c.inFrame).toBe(0);
+    expect(c.startFrame).toBe(60);
+    // And the timeline-out edge consumes the source in end.
+    const c2 = trim(t, "c1", "out", -10).clips[0];
+    expect(c2.inFrame).toBe(10);
+    expect(c2.outFrame).toBe(100);
+    expect(c2.startFrame).toBe(50);
+  });
+
+  it("out-trim clamps at the media's real length when provided", () => {
+    const t = track([clip({ startFrame: 0, inFrame: 0, outFrame: 90, speed: 1 })]);
+    const c = trim(t, "c1", "out", 60, { maxSourceFrames: 120 }).clips[0];
+    expect(c.outFrame).toBe(120); // not 150
+    const un = trim(t, "c1", "out", 60).clips[0];
+    expect(un.outFrame).toBe(150); // no clamp when unknown
+  });
+});
+
+describe("splitClip abutment at fractional speeds", () => {
+  it("the two halves tile with no gap or overlap for speed 0.5", () => {
+    const t = track([clip({ startFrame: 0, inFrame: 0, outFrame: 10, speed: 0.5 })]);
+    const [left, right] = splitClip(t, "c1", 5).clips;
+    expect(clipEndFrame(left)).toBe(right.startFrame);
+    expect(clipEndFrame(right)).toBe(clipEndFrame(t.clips[0]));
+  });
+
+  it("holds for reversed fractional speed too", () => {
+    const t = track([clip({ startFrame: 0, inFrame: 0, outFrame: 10, speed: -0.5 })]);
+    const [left, right] = splitClip(t, "c1", 7).clips;
+    expect(clipEndFrame(left)).toBe(right.startFrame);
+    expect(clipEndFrame(right)).toBe(clipEndFrame(t.clips[0]));
+  });
+});

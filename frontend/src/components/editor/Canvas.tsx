@@ -1550,6 +1550,22 @@ export function Canvas() {
     return null;
   }
 
+  // The fill target beneath a POINTER-dragged image node. The dragged node
+  // itself sits under the cursor, so hide it for the hit test (the scene wraps
+  // the live doc nodes, so the toggle is visible to hitTest and restored
+  // synchronously before anything repaints).
+  function moveDropTargetAt(page: { x: number; y: number }, excludeId: string): { id: string; kind: "frame" | "shape" } | null {
+    const node = locate(useEditor.getState().doc, excludeId)?.node as { hidden?: boolean } | undefined;
+    if (!node) return null;
+    const prev = node.hidden;
+    node.hidden = true;
+    try {
+      return imageDropTargetAt(page);
+    } finally {
+      node.hidden = prev;
+    }
+  }
+
   // Live target highlight while dragging an image over the canvas. Read-only
   // sessions never preventDefault, so the browser rejects the drop natively
   // and no hint is shown.
@@ -2036,6 +2052,14 @@ export function Canvas() {
     }
     store.setTransforming(true);
     store.tick();
+    // Fill-target hint while dragging a single IMAGE node (parity with the
+    // Uploads/Stock drag hint): outline the frame/shape a release would fill.
+    const singleImage = movedIds.length === 1 ? locate(doc, movedIds[0]) : null;
+    if (singleImage?.node.type === "image") {
+      const target = moveDropTargetAt(page, movedIds[0]);
+      const next = target && target.id !== singleImage.parent?.id ? target : null;
+      setDropHint((prev) => (prev?.id === next?.id ? prev : next));
+    }
   });
 
   // Run any queued move immediately (called on pointer up/cancel so the final
@@ -2068,6 +2092,7 @@ export function Canvas() {
     setMarquee(null);
     setGuides(null);
     setSpacingGuides([]);
+    setDropHint(null);
     useEditor.getState().setTransforming(false);
     return true;
   });
@@ -2307,6 +2332,30 @@ export function Canvas() {
     const store = useEditor.getState();
     if (g.type === "move") {
       const movedIds = [...g.before.keys()];
+      setDropHint(null);
+      // Releasing a dragged IMAGE node over a frame/shape fills that target
+      // with the image (same behavior as dragging from the Uploads/Stock
+      // panel) instead of leaving the image floating on top of it. Falls
+      // through to a plain move when there is no eligible target.
+      const filledTarget = (() => {
+        if (movedIds.length !== 1) return false;
+        const id = movedIds[0];
+        const loc = locate(store.doc, id);
+        const start = g.before.get(id)!;
+        if (loc?.node.type !== "image") return false;
+        if (loc.node.transform.x === start.x && loc.node.transform.y === start.y) return false; // click, not a drag
+        const target = moveDropTargetAt(api.toPage(localPoint(e)), id);
+        if (!target || target.id === loc.parent?.id) return false;
+        return store.fillWithImageNode(target.id, target.kind, id, start);
+      })();
+      if (filledTarget) {
+        gesture.current = { type: "none" };
+        setMarquee(null);
+        setGuides(null);
+        setSpacingGuides([]);
+        canvasRef.current?.releasePointerCapture(e.pointerId);
+        return;
+      }
       // Cross-page drop: if the pointer is released over a DIFFERENT page and the
         // moved nodes are all top-level, re-parent them into that page
       // move-to-page) as one undo step, instead of leaving them stranded in the

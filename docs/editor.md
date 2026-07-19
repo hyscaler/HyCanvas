@@ -8,6 +8,10 @@ The editor is HyCanvas's design surface: a custom rendering engine on an HTML ca
 
 Each entry opens a panel next to the rail; clicking the active entry collapses it.
 
+### Templates
+
+The template gallery, in the editor. Templates matching the current page size are suggested first (exact size, then the same aspect ratio), with search across the whole gallery and a size badge on every card. Clicking a template adds it as a new page of the design and jumps there; it never replaces existing pages, and one undo removes it. Design documents only.
+
 ### Elements
 
 Shapes (rectangle, rounded, ellipse, triangle, pentagon, hexagon, star, diamond, octagon, burst, pill), lines and arrows, image frames (rectangular, circle, rounded), layout grids, tables, a full chart set (bar, grouped bar, stacked bar, line, area, pie, donut, scatter, radar), and QR codes. Click to place or drag onto the canvas; a Recent row remembers what you use.

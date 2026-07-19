@@ -34,6 +34,10 @@ var PRESETS = []ProviderPreset{
 	{ID: "openai", Label: "OpenAI", BaseURL: "https://api.openai.com/v1", DefaultModel: "gpt-4o-mini", DefaultImageModel: "dall-e-3", Capabilities: Capabilities{Text: true, Image: true, DescribeImage: true, EditImage: true}},
 	{ID: "anthropic", Label: "Anthropic (Claude)", BaseURL: "https://api.anthropic.com", DefaultModel: "claude-opus-4-8", Capabilities: Capabilities{Text: true, DescribeImage: true}},
 	{ID: "deepseek", Label: "DeepSeek", BaseURL: "https://api.deepseek.com/v1", DefaultModel: "deepseek-chat", Capabilities: Capabilities{Text: true}},
+	// Zhipu AI (GLM). OpenAI-compatible; text via GLM chat models, image via the
+	// CogView models on the same /images/generations endpoint. DescribeImage/edit
+	// are left off (vision needs GLM-4V; CogView has no OpenAI-style edit route).
+	{ID: "zhipu", Label: "Zhipu AI (GLM)", BaseURL: "https://api.z.ai/api/paas/v4", DefaultModel: "glm-4.6", DefaultImageModel: "cogview-4-250304", Capabilities: Capabilities{Text: true, Image: true}},
 	{ID: "google", Label: "Google (Gemini)", BaseURL: "https://generativelanguage.googleapis.com/v1beta/openai", DefaultModel: "gemini-1.5-flash", Capabilities: Capabilities{Text: true, DescribeImage: true}},
 	{ID: "mistral", Label: "Mistral", BaseURL: "https://api.mistral.ai/v1", DefaultModel: "mistral-large-latest", Capabilities: Capabilities{Text: true}},
 	{ID: "groq", Label: "Groq", BaseURL: "https://api.groq.com/openai/v1", DefaultModel: "llama-3.3-70b-versatile", Capabilities: Capabilities{Text: true}},

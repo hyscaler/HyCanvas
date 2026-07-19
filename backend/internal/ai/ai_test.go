@@ -169,12 +169,20 @@ func TestAI_DB(t *testing.T) {
 		t.Fatalf("private baseUrl should be BadRequest, got %v", err)
 	}
 
-	// Image generation on anthropic is rejected (no image endpoint). First give it
-	// a key so callConfig passes, then assert the image-capable guard fires.
+	// Image generation on a text-only provider is rejected with a specific error
+	// (so the API can tell the user their provider can't do images, not that the
+	// request is malformed). First give it a key so callConfig passes, then assert
+	// the image-capable guard fires. anthropic and deepseek are both text-only.
 	if _, err := svc.SetConfig(ctx, ws.ID, ConfigInput{Provider: "anthropic", APIKey: "sk-ant"}); err != nil {
 		t.Fatalf("set anthropic key: %v", err)
 	}
-	if _, err := svc.Image(ctx, ws.ID, "a cat", ""); err != ErrBadRequest {
-		t.Fatalf("anthropic image should be BadRequest, got %v", err)
+	if _, err := svc.Image(ctx, ws.ID, "a cat", ""); err != ErrImageUnsupported {
+		t.Fatalf("anthropic image should be ErrImageUnsupported, got %v", err)
+	}
+	if _, err := svc.SetConfig(ctx, ws.ID, ConfigInput{Provider: "deepseek", APIKey: "sk-deepseek"}); err != nil {
+		t.Fatalf("set deepseek key: %v", err)
+	}
+	if _, err := svc.Image(ctx, ws.ID, "a cat", ""); err != ErrImageUnsupported {
+		t.Fatalf("deepseek image should be ErrImageUnsupported, got %v", err)
 	}
 }

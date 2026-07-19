@@ -223,6 +223,9 @@ export interface OutboxMessage {
 }
 
 export type SnapshotKind = "auto" | "checkpoint" | "named" | "restore" | "branch";
+/** Kinds a client may save. "branch" is minted by the branch endpoint only;
+ *  the snapshot route rejects it with 422. */
+export type SavableSnapshotKind = Exclude<SnapshotKind, "branch">;
 
 export interface TemplateSummary {
   id: string;
@@ -1193,7 +1196,7 @@ export class HyCanvasClient {
   getDesignFile(id: string, opts?: { trashed?: boolean }): Promise<DesignFile> {
     return this.request("GET", `/v1/designs/${id}/file${opts?.trashed ? "?trashed=1" : ""}`);
   }
-  saveSnapshot(id: string, input: { file: DesignFile; label?: string; kind?: SnapshotKind }): Promise<DesignRecord> {
+  saveSnapshot(id: string, input: { file: DesignFile; label?: string; kind?: SavableSnapshotKind }): Promise<DesignRecord> {
     return this.request("POST", `/v1/designs/${id}/snapshots`, input);
   }
   /** A page of a design's version history, newest first. Each
@@ -1533,12 +1536,28 @@ export class HyCanvasClient {
   }
   /** Enqueue an MP4 render of a design's video timeline. Poll the
    *  returned jobId via getJob, then download from videoExportDownloadUrl. */
-  startVideoExport(designId: string): Promise<{ jobId: string }> {
-    return this.request("POST", `/v1/designs/${designId}/export/video`);
+  /** Start a server video export. For video documents this renders the full
+   *  timeline (ffmpeg); opts tune the output (scale multiplier, x264 CRF). */
+  startVideoExport(
+    designId: string,
+    opts: {
+      scale?: number;
+      crf?: number;
+      startFrame?: number;
+      endFrame?: number;
+      format?: "mp4" | "webm" | "gif" | "mp3";
+      /** Output frame rate override (frames duplicate/drop; timing holds). */
+      fps?: number;
+      skipCaptions?: boolean;
+      /** Render only this track's audio (pre-master stem), mp3 format. */
+      stemTrackId?: string;
+    } = {},
+  ): Promise<{ jobId: string }> {
+    return this.request("POST", `/v1/designs/${designId}/export/video`, opts);
   }
   /** The authenticated download URL for a completed video export (cookie auth). */
   videoExportDownloadUrl(designId: string, jobId: string): string {
-    return `${this.baseUrl}/v1/designs/${designId}/export/video/${jobId}/download`;
+    return `${this.baseUrl}/v1/designs/${encodeURIComponent(designId)}/export/video/${encodeURIComponent(jobId)}/download`;
   }
   /** Enqueue a DOCX or PDF render of a doc design. Poll via getJob,
    *  then download from docExportDownloadUrl. */
@@ -1547,14 +1566,14 @@ export class HyCanvasClient {
   }
   /** The authenticated download URL for a completed doc export (cookie auth). */
   docExportDownloadUrl(designId: string, jobId: string): string {
-    return `${this.baseUrl}/v1/designs/${designId}/export/doc/${jobId}/download`;
+    return `${this.baseUrl}/v1/designs/${encodeURIComponent(designId)}/export/doc/${encodeURIComponent(jobId)}/download`;
   }
   /** The authenticated URL for an accessibility-tagged PDF of the whole deck,
    *  rendered by the Go encoder (doc 28 FR-22). It serves the design as last
    *  saved, and its text is real text: selectable, searchable, and readable by
    *  assistive technology in the author's reading order. */
   taggedPdfUrl(designId: string): string {
-    return `${this.baseUrl}/v1/designs/${designId}/render.pdf?page=all`;
+    return `${this.baseUrl}/v1/designs/${encodeURIComponent(designId)}/render.pdf?page=all`;
   }
   /** Convert a whiteboard design into a presentation deck. Poll via
    *  getJob; the result carries the new design id to open. */

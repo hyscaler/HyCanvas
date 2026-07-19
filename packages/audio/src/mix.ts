@@ -18,14 +18,15 @@ export function gainToDb(gain: number): number {
 }
 
 /**
- * Multiply any number of linear gains together, clamped into [0, 1]. Used to
- * combine independent stages (clip x track x master x fade) into one factor.
+ * Multiply any number of linear gains together, floored at 0. Used to combine
+ * independent stages (clip x track x master x fade) into one factor. Values
+ * ABOVE 1 pass through: positive dB boosts must be audible in the preview
+ * exactly as the server export applies them (WebAudio handles >1 gains).
  */
 export function mixGains(...gains: number[]): number {
   let product = 1;
   for (const g of gains) product *= g;
   if (product < 0) product = 0;
-  if (product > 1) product = 1;
   return product;
 }
 

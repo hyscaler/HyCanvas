@@ -47,30 +47,64 @@ export function trim(
   clipId: string,
   edge: "in" | "out",
   deltaFrames: number,
+  opts: {
+    /** Total source frames available in the media; the source window is
+     *  clamped so a trim can never extend past real footage. */
+    maxSourceFrames?: number;
+  } = {},
 ): Track {
   const clip = track.clips.find((c) => c.id === clipId);
   if (!clip) return track;
   const next = cloneClip(clip);
+  const mag = Math.abs(clip.speed) || 1;
+  const reversed = clip.speed < 0;
 
-  if (edge === "in") {
+  // The TIMELINE edge maps to a source edge: for forward clips in->inFrame and
+  // out->outFrame; a REVERSED clip plays its source window backwards, so its
+  // timeline in-edge consumes the source OUT end and vice versa.
+  const sourceEdge: "in" | "out" = reversed ? (edge === "in" ? "out" : "in") : edge;
+  // Positive deltaFrames always means "move the source boundary later in the
+  // source"; a reversed timeline-in trim must shrink from the source out end.
+  const sourceDelta = reversed ? -deltaFrames : deltaFrames;
+
+  if (sourceEdge === "in") {
     // New in-point, clamped to >= 0 and to leave at least 1 source frame.
-    let newIn = clip.inFrame + deltaFrames;
+    let newIn = clip.inFrame + sourceDelta;
     if (newIn < 0) newIn = 0;
     if (newIn > clip.outFrame - 1) newIn = clip.outFrame - 1;
-    const applied = newIn - clip.inFrame; // how far the in-point actually moved
     next.inFrame = newIn;
-    let newStart = clip.startFrame + applied;
+  } else {
+    let newOut = clip.outFrame + sourceDelta;
+    if (newOut < clip.inFrame + 1) newOut = clip.inFrame + 1;
+    if (opts.maxSourceFrames !== undefined && newOut > opts.maxSourceFrames) {
+      newOut = Math.max(clip.inFrame + 1, opts.maxSourceFrames);
+    }
+    next.outFrame = newOut;
+  }
+
+  if (edge === "in") {
+    // The clip's start moves by the TIMELINE-frame equivalent of however much
+    // the source window actually shrank/grew at the timeline-in side (source
+    // frames divided by |speed|), so the OUT edge stays anchored on the
+    // timeline for any speed.
+    const appliedSource = reversed
+      ? clip.outFrame - next.outFrame // reversed: timeline-in consumed from source out
+      : next.inFrame - clip.inFrame;
+    let newStart = clip.startFrame + Math.round(appliedSource / mag);
     if (newStart < 0) {
-      // Cannot move start below 0; pull the in-point back to compensate.
-      next.inFrame = Math.max(0, newIn - newStart);
+      // Cannot move start below 0; pull the source boundary back to compensate.
+      const giveBack = Math.round(-newStart * mag);
+      if (reversed) {
+        next.outFrame = Math.min(
+          opts.maxSourceFrames ?? Number.MAX_SAFE_INTEGER,
+          next.outFrame + giveBack,
+        );
+      } else {
+        next.inFrame = Math.max(0, next.inFrame - giveBack);
+      }
       newStart = 0;
-      if (next.inFrame > next.outFrame - 1) next.inFrame = next.outFrame - 1;
     }
     next.startFrame = newStart;
-  } else {
-    let newOut = clip.outFrame + deltaFrames;
-    if (newOut < clip.inFrame + 1) newOut = clip.inFrame + 1;
-    next.outFrame = newOut;
   }
 
   return replaceClip(track, clipId, next);
@@ -97,31 +131,53 @@ export function splitClip(track: Track, clipId: string, atFrame: number): Track 
   const local = atFrame - start;
   const speedMag = Math.abs(clip.speed);
 
+  // Edge effects belong to the edge they were authored on: the LEFT half keeps
+  // entrance effects (in transition, fade-in, title entrance) and the RIGHT
+  // half keeps exit effects, instead of both halves replaying everything.
+  // Clip-local keyframes shift onto the right half so any animation curve
+  // continues seamlessly across the cut.
+  const leftEdges: Partial<Clip> = { transitionOut: undefined, fadeOutFrames: undefined };
+  const rightEdges: Partial<Clip> = { transitionIn: undefined, fadeInFrames: undefined };
+  if (clip.title) {
+    leftEdges.title = { ...clip.title, animOut: undefined };
+    rightEdges.title = { ...clip.title, animIn: undefined };
+  }
+  if (clip.keyframes?.length) {
+    rightEdges.keyframes = clip.keyframes.map((t) => ({
+      ...t,
+      keyframes: t.keyframes.map((k) => ({ ...k, frame: k.frame - local })),
+    }));
+  }
+
   if (clip.speed < 0) {
     // Reverse: source walks down from outFrame. The cut source point separates
     // the upper (first-played) and lower (later-played) halves of the window.
     const splitSrc = clip.outFrame - Math.round(local * speedMag);
     const clampedSrc = Math.min(clip.outFrame - 1, Math.max(clip.inFrame + 1, splitSrc));
-    const left: Clip = { ...cloneClip(clip), inFrame: clampedSrc, outFrame: clip.outFrame };
+    const left: Clip = { ...cloneClip(clip), inFrame: clampedSrc, outFrame: clip.outFrame, ...leftEdges };
     const right: Clip = {
       ...cloneClip(clip),
       id: genId("clip"),
       inFrame: clip.inFrame,
       outFrame: clampedSrc,
-      startFrame: atFrame,
+      // Abut exactly after the left piece: ceil-rounded durations can differ
+      // from `local` by a frame at fractional speeds.
+      startFrame: start + clipDurationFrames(left),
+      ...rightEdges,
     };
     return replaceClip(track, clipId, left, [right]);
   }
 
   const splitSrc = clip.inFrame + Math.round(local * speedMag);
   const clampedSrc = Math.min(clip.outFrame - 1, Math.max(clip.inFrame + 1, splitSrc));
-  const left: Clip = { ...cloneClip(clip), inFrame: clip.inFrame, outFrame: clampedSrc };
+  const left: Clip = { ...cloneClip(clip), inFrame: clip.inFrame, outFrame: clampedSrc, ...leftEdges };
   const right: Clip = {
     ...cloneClip(clip),
     id: genId("clip"),
     inFrame: clampedSrc,
     outFrame: clip.outFrame,
-    startFrame: atFrame,
+    startFrame: start + clipDurationFrames(left),
+    ...rightEdges,
   };
   return replaceClip(track, clipId, left, [right]);
 }

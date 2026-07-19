@@ -127,6 +127,19 @@ func (s *Service) Create(ctx context.Context, workspaceID, title string, from De
 	file = withID(file, d.ID)
 	file["title"] = title
 	if _, _, err := s.writeSnapshot(ctx, d.ID, file, KindCheckpoint, nil, authorID); err != nil {
+		// Compensating cleanup: without a first snapshot the design row is a
+		// ghost card that lists on the dashboard but can never open. Row deletes
+		// cascade to any partial snapshot/version rows; blob deletion is
+		// best-effort (content-addressed, so an orphan blob is harmless).
+		// Detached from the request context: a client disconnect mid-write is a
+		// primary cause of the failure, and the cleanup must still run then.
+		cctx := context.WithoutCancel(ctx)
+		if snaps, lerr := s.listSnapshots(cctx, d.ID); lerr == nil {
+			for _, snap := range snaps {
+				_ = s.storage.Delete(snap.BlobURL)
+			}
+		}
+		_ = s.hardDeleteDesign(cctx, d.ID)
 		return DesignRecord{}, err
 	}
 	fresh, err := s.getDesign(ctx, d.ID)
@@ -302,7 +315,11 @@ func (s *Service) fileForVersion(ctx context.Context, designID, versionID string
 	if file == nil {
 		return nil, ErrNotFound
 	}
-	return file, nil
+	// Forward-migrate like loadFile does: a version snapshot written by an older
+	// build must preview, diff, restore, and branch as a current-schema file
+	// (migrations are forward-only and idempotent, so this never alters
+	// already-current files).
+	return migrateFile(file), nil
 }
 
 // VersionFile returns a historical version's file (read-only), workspace-scoped.

@@ -2,15 +2,16 @@
 // between Elements, Text, Uploads, Stock, and Layers.
 
 import { useState } from "react";
-import { Shapes, Type, Upload, ImagePlus, Layers, Sparkles, LayoutGrid, Palette } from "lucide-react";
+import { Shapes, Type, Upload, ImagePlus, Layers, Sparkles, LayoutGrid, LayoutTemplate, Palette } from "lucide-react";
 import { LayerPanel } from "./LayerPanel";
 import { ReadingOrderPane } from "./ReadingOrderPane";
-import { ElementsPanel, TextPanel, UploadsPanel, StockPanel, AppsPanel, AiPanel, PanelShell } from "./EditorPanels";
+import { ElementsPanel, TextPanel, UploadsPanel, StockPanel, AppsPanel, AiPanel, TemplatesPanel, PanelShell } from "./EditorPanels";
 import { BrandPanel } from "./BrandPanel";
 
-type Tool = "elements" | "text" | "ai" | "uploads" | "stock" | "apps" | "brand" | "layers";
+type Tool = "templates" | "elements" | "text" | "ai" | "uploads" | "stock" | "apps" | "brand" | "layers";
 
 const TOOLS: { id: Tool; icon: typeof Shapes; label: string }[] = [
+  { id: "templates", icon: LayoutTemplate, label: "Templates" },
   { id: "elements", icon: Shapes, label: "Elements" },
   { id: "text", icon: Type, label: "Text" },
   { id: "ai", icon: Sparkles, label: "AI" },
@@ -21,7 +22,7 @@ const TOOLS: { id: Tool; icon: typeof Shapes; label: string }[] = [
   { id: "layers", icon: Layers, label: "Layers" },
 ];
 
-export function ToolRail({ workspaceId, overlay = false, defaultCollapsed = false }: { workspaceId: string | null; overlay?: boolean; defaultCollapsed?: boolean }) {
+export function ToolRail({ workspaceId, overlay = false, defaultCollapsed = false, kind = "design" }: { workspaceId: string | null; overlay?: boolean; defaultCollapsed?: boolean; kind?: "design" | "whiteboard" }) {
   // null = panel collapsed (just the icon rail shows). Clicking the active tab
   // toggles it closed. Boards open with the panel collapsed for a canvas-first
   // start; the icon rail stays so any tool is one click away.
@@ -35,6 +36,7 @@ export function ToolRail({ workspaceId, overlay = false, defaultCollapsed = fals
   // already narrows its own width responsively below lg.
   const panel = (() => {
     switch (active) {
+      case "templates": return <TemplatesPanel />;
       case "elements": return <ElementsPanel />;
       case "text": return <TextPanel />;
       case "ai": return <AiPanel workspaceId={workspaceId} />;
@@ -55,7 +57,7 @@ export function ToolRail({ workspaceId, overlay = false, defaultCollapsed = fals
         aria-orientation="vertical"
         className="flex w-[68px] shrink-0 flex-col items-center gap-1 border-r border-neutral-200 bg-surface py-3"
       >
-        {TOOLS.map((t) => {
+        {TOOLS.filter((t) => kind === "design" || t.id !== "templates").map((t) => {
           const isActive = active === t.id;
           return (
             <button

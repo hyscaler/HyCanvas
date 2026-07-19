@@ -86,7 +86,7 @@ Code:
 Theming and branding:
 - The product/app accent (the application shell color identity) has ONE source of truth: `frontend/src/theme.config.mjs`. Edit colors there and run `npm run gen:theme`; it regenerates the CSS tokens, the canvas-overlay constants, and the Go presence palette. Never hardcode brand hex or raw `blue/indigo/sky/cyan` accent classes in components.
 - The app accent is global (shipped with the binary) and intentionally INDEPENDENT of the per-workspace Brand Kit. The Brand Kit themes design content only; it must never repaint the app chrome, and an app-accent change must never touch a customer's design colors.
-- Dark mode themes the APP CHROME only and is token-driven: the dark palette lives in `theme.config.mjs` (the generator emits a `.dark { }` override region into globals.css), and `lib/theme.ts` applies the stored preference as a `dark` class on `<html>`. Use `bg-surface` for elevated white cards (never raw `bg-white` on themable chrome), `text-brand-ink` for accent text on chrome, and the `light` class to pin a subtree light (document surfaces like sheets, docs, video, and present mode). Design content is never dark-moded.
+- Dark mode themes the APP CHROME only and is token-driven: the dark palette lives in `theme.config.mjs` (the generator emits a `.dark { }` override region into globals.css), and `lib/theme.ts` applies the stored preference as a `dark` class on `<html>`. Use `bg-surface` for elevated white cards (never raw `bg-white` on themable chrome), `text-brand-ink` for accent text on chrome, and the `light` class to pin a subtree light (document surfaces like sheets, docs, and present mode; the video editor's chrome follows the app theme). Design content is never dark-moded.
 
 ## Common Commands
 

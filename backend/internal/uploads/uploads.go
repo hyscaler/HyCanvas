@@ -218,6 +218,8 @@ func (s *Service) store(ctx context.Context, userID, workspaceID string, buf []b
 	if err != nil {
 		return UploadedAsset{}, err
 	}
+	// Large videos get a background preview proxy (best-effort).
+	s.maybeGenerateProxy(row.ID, buf, sniff.Mime)
 	return s.toUploaded(row), nil
 }
 
@@ -516,6 +518,8 @@ func (s *Service) Remove(ctx context.Context, userID, id string) error {
 		return ErrForbidden
 	}
 	_ = s.storage.Delete(rec.StorageKey)
+	// The preview proxy (when one was generated) goes with the asset.
+	_ = s.storage.Delete(proxyKey(id))
 	return s.deleteAsset(ctx, id)
 }
 

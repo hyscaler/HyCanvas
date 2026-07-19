@@ -28,6 +28,11 @@ const altTextInstruction = "Describe this image in a single concise sentence sui
 var (
 	ErrBadRequest = errors.New("bad request")
 	ErrBadGateway = errors.New("provider request failed")
+	// ErrImageUnsupported is returned when an image op is attempted on a provider
+	// the registry marks as text-only (DeepSeek, Anthropic, Google, Mistral,
+	// Groq, OpenRouter). Distinct from ErrBadRequest so the API can tell the user
+	// their provider can't do images, not that their request/config is malformed.
+	ErrImageUnsupported = errors.New("provider does not support image generation")
 )
 
 // DBTX is the query surface (satisfied by *pgxpool.Pool and pgx.Tx).
@@ -230,7 +235,7 @@ func (s *Service) Text(ctx context.Context, workspaceID, prompt, system string) 
 // as text-only (anthropic, google, mistral, groq, openrouter), not just one.
 func assertImageCapable(cfg CallConfig) error {
 	if !ResolveRoute(string(cfg.Provider), cfg.Model, cfg.ImageModel, FeatureImage).Supported {
-		return ErrBadRequest
+		return ErrImageUnsupported
 	}
 	return nil
 }

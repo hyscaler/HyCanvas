@@ -189,6 +189,17 @@ func computeDiff(from, to DesignFile) DiffSummary {
 			d.NodesRemoved++
 		}
 	}
+	// meta carries entire document models (video timeline, doc body, sheet
+	// cells), so a node-tree-only diff would report zero changes for real
+	// edits on those document kinds. An absent meta key and an empty meta
+	// object are the same document; don't report that as a change.
+	normMeta := func(f DesignFile) any {
+		if m := asObj(f["meta"]); len(m) > 0 {
+			return m
+		}
+		return nil
+	}
+	d.MetaChanged = !jsonEqual(normMeta(from), normMeta(to))
 	return d
 }
 

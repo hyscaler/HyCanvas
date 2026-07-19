@@ -616,6 +616,11 @@ export function PropertiesPanel() {
       useEditor.getState().applyGridGeometry(single.node.id, nextT, nextSz);
       return;
     }
+    // A frame's fill image is sized to the frame box, so W/H edits scale it too.
+    if (single.node.type === "frame") {
+      useEditor.getState().applyFrameGeometry(single.node.id, nextT, nextSz);
+      return;
+    }
     useEditor.getState().runCommand({
       kind: "transform",
       nodes: [single.node.id],

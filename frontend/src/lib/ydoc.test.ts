@@ -83,23 +83,32 @@ describe("undo through the collab bridge", () => {
     }
   });
 
-  it("a full-document seed is not undoable and undo cannot wipe the doc", () => {
-    // No room sync: the first edit reconciles the whole doc into the empty
-    // Y.Doc. That seed must not sit on the undo stack (undoing it would blank
-    // the document); undo right after is a safe no-op.
+  it("an edit before any sync is undoable, and undo cannot wipe the doc", () => {
+    // No room sync yet: the bridge seeds the PRE-EDIT baseline into the empty
+    // Y.Doc as a non-undoable transaction, then reconciles the edit as its own
+    // tracked step. Undo reverts the edit only; the seeded document itself can
+    // never be blanked by undo.
     const dd = new DesignDoc("undo-regression-3");
     try {
       const cu = useEditor.getState().collabUndo!;
+      const before = children();
       useEditor.getState().addNode("shape", {});
-      const after = children();
+      expect(children()).toBe(before + 1);
+      // The session's FIRST action is a normal undoable step (regression: the
+      // seed used to swallow it via undoMgr.clear()).
+      expect(cu.canUndo()).toBe(true);
+      useEditor.getState().undo();
+      expect(children()).toBe(before); // the edit reverted, not the document
+      // No further step: undo never reverts the seed (a blanked doc).
       expect(cu.canUndo()).toBe(false);
       useEditor.getState().undo();
-      expect(children()).toBe(after); // no-op, not a wipe
+      expect(children()).toBe(before); // safe no-op
+      expect(useEditor.getState().doc.pages.length).toBeGreaterThan(0);
       // The next edit is a normal tracked step and undoes cleanly.
       useEditor.getState().addNode("text", {});
       expect(cu.canUndo()).toBe(true);
       useEditor.getState().undo();
-      expect(children()).toBe(after);
+      expect(children()).toBe(before);
     } finally {
       dd.dispose();
     }

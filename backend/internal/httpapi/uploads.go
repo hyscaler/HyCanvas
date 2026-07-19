@@ -1,9 +1,11 @@
 package httpapi
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -30,7 +32,13 @@ func mountUploads(api chi.Router, up *uploads.Service, acct *accounts.Service) {
 		r.Delete("/asset-folders/{id}", deleteFolderHandler(up))
 	})
 	// Public content delivery (local/mock); the bytes are served to any caller.
+	// HEAD is mounted alongside GET (chi routes methods separately) so clients
+	// can probe existence/size without downloading; ServeContent handles both.
 	api.Get("/assets/{id}/content", assetContentHandler(up))
+	api.Head("/assets/{id}/content", assetContentHandler(up))
+	// Preview proxy (540p) for heavy videos; 404 when none exists.
+	api.Get("/assets/{id}/proxy", assetProxyHandler(up))
+	api.Head("/assets/{id}/proxy", assetProxyHandler(up))
 }
 
 func uploadsProblem(w http.ResponseWriter, r *http.Request, err error) {
@@ -232,15 +240,30 @@ func deleteFolderHandler(up *uploads.Service) http.HandlerFunc {
 	}
 }
 
+func assetProxyHandler(up *uploads.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		data, ok := up.ProxyContent(r.Context(), chi.URLParam(r, "id"))
+		if !ok {
+			Problem(w, r, http.StatusNotFound, "Not Found", "no proxy for this asset")
+			return
+		}
+		w.Header().Set("Content-Type", "video/mp4")
+		http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(data))
+	}
+}
+
 func assetContentHandler(up *uploads.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		bytes, mime, err := up.Content(r.Context(), chi.URLParam(r, "id"))
+		data, mime, err := up.Content(r.Context(), chi.URLParam(r, "id"))
 		if err != nil {
 			uploadsProblem(w, r, err)
 			return
 		}
 		w.Header().Set("Content-Type", mime)
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write(bytes)
+		// ServeContent adds Accept-Ranges/206 partial responses. Browsers treat
+		// media without Range support as UNSEEKABLE (currentTime snaps to 0),
+		// which broke video scrubbing, filmstrips, and scene detection; it also
+		// lets <video> fetch only the parts it needs of large files.
+		http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(data))
 	}
 }

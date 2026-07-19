@@ -73,10 +73,11 @@ describe("mix gain math", () => {
     expect(gainToDb(1)).toBeCloseTo(0, 9);
   });
 
-  it("mixGains multiplies and clamps to [0,1]", () => {
+  it("mixGains multiplies, floors at 0, and passes boosts above unity", () => {
     expect(mixGains(0.5, 0.5)).toBeCloseTo(0.25, 9);
-    expect(mixGains(2, 2)).toBe(1); // clamped
-    expect(mixGains(1, -0.5)).toBe(0); // clamped
+    // Boosts pass through so the preview matches the server export mix.
+    expect(mixGains(2, 2)).toBe(4);
+    expect(mixGains(1, -0.5)).toBe(0); // floored
     expect(mixGains()).toBe(1);
   });
 
@@ -107,11 +108,11 @@ describe("mix gain math", () => {
     // solo elsewhere mutes this track
     const other = track({ id: "other", solo: true });
     expect(effectiveClipGain(c, t, master, [t, other])).toBe(0);
-    // master gain folds in; a >0 dB boost would exceed unity so mixGains clamps to 1
+    // master gain folds in; a +6 dB boost is audible, matching the export
     const loudMaster: AudioMaster = { gainDb: 6 };
     const plain = track({ gainDb: 0 });
     const plainClip = clip({ audioGainDb: 0 });
-    expect(effectiveClipGain(plainClip, plain, loudMaster, [plain])).toBe(1);
+    expect(effectiveClipGain(plainClip, plain, loudMaster, [plain])).toBeCloseTo(Math.pow(10, 6 / 20), 9);
     // a master cut folds in unclamped
     const quietMaster: AudioMaster = { gainDb: -6 };
     expect(effectiveClipGain(plainClip, plain, quietMaster, [plain])).toBeCloseTo(

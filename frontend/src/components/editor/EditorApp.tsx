@@ -385,6 +385,10 @@ export function EditorApp() {
   // the already-open one closes it (returning to Properties). The Comments panel
   // lives in its own store, so it is included in both the open and the clear.
   const showPanel = (panel: "history" | "comments" | "activity" | "insights") => {
+    // While previewing a past version the History panel owns the flow (its
+    // footer holds Exit/Restore/Branch); closing or swapping panels under the
+    // preview would strand it, so route the user through Exit first.
+    if (useEditor.getState().preview) return;
     const wasOpen =
       panel === "history" ? historyOpen
       : panel === "comments" ? commentsOpen
@@ -653,6 +657,13 @@ export function EditorApp() {
 
   const save = useCallback(async () => {
     if (!designId) return;
+    // Never checkpoint a history preview: without realtime the store doc IS
+    // the previewed historical file, and saving it would silently move the
+    // design's current version back in time. Restore is the explicit path.
+    if (useEditor.getState().preview) {
+      toast.error("You're viewing a past version. Exit the preview to save, or use Restore.");
+      return;
+    }
     setSaving(true);
     useEditor.getState().setManualSaving(true); // auto-snapshot yields while this runs
     try {
@@ -910,10 +921,15 @@ export function EditorApp() {
         {(docKind === "design" || docKind === "whiteboard") && !inFocus && (
           // key by kind so switching surface re-applies its default; boards open
           // with the slide-out panel collapsed (canvas-first).
-          <ToolRail key={docKind} workspaceId={workspaceId} overlay={isCompact} defaultCollapsed={isBoard} />
+          <ToolRail key={docKind} workspaceId={workspaceId} overlay={isCompact} defaultCollapsed={isBoard} kind={docKind === "whiteboard" ? "whiteboard" : "design"} />
         )}
         {docKind !== "design" ? (
-          <DocumentSurface kind={docKind} workspaceId={workspaceId ?? undefined} designId={designId ?? undefined} />
+          // Same relative wrapper as the design canvas so overlays (the
+          // read-only history preview banner) cover every document surface.
+          <main className="relative flex min-w-0 flex-1">
+            <DocumentSurface kind={docKind} workspaceId={workspaceId ?? undefined} designId={designId ?? undefined} />
+            <PreviewBanner />
+          </main>
         ) : (
         <>
         <main className="relative min-w-0 flex-1">

@@ -6,7 +6,7 @@
 import { useRef, useState } from "react";
 import type { Size, TextNode, Transform } from "@hc/schema";
 import { measuredTextHeight, minContentWidth } from "@/lib/textFit";
-import { relayGridCells } from "@/store/editor";
+import { relayGridCells, scaleFrameImageChildren } from "@/store/editor";
 import { overlay } from "@/lib/theme.generated";
 import {
   locate,
@@ -468,7 +468,7 @@ export function Gizmo({ api }: { api: CanvasApi }) {
       startMinW: loc!.node.type === "text" ? minContentWidth(loc!.node as unknown as TextNode) : undefined,
       startMinH: loc!.node.type === "text" ? measuredTextHeight(loc!.node as unknown as TextNode) : undefined,
       startPoints: loc!.node.type === "line" ? structuredClone((loc!.node as unknown as { points: { x: number; y: number }[] }).points) : undefined,
-      startChildren: loc!.node.type === "grid" ? structuredClone((loc!.node as unknown as { children: unknown }).children) : undefined,
+      startChildren: loc!.node.type === "grid" || loc!.node.type === "frame" ? structuredClone((loc!.node as unknown as { children: unknown }).children) : undefined,
     };
     useEditor.getState().setTransforming(true);
     window.addEventListener("pointermove", onMove);
@@ -505,7 +505,7 @@ export function Gizmo({ api }: { api: CanvasApi }) {
       if (node.type === "line" && d.startPoints) {
         (node as unknown as { points: unknown }).points = structuredClone(d.startPoints);
       }
-      if (node.type === "grid" && d.startChildren !== undefined) {
+      if ((node.type === "grid" || node.type === "frame") && d.startChildren !== undefined) {
         (node as unknown as { children: unknown }).children = structuredClone(d.startChildren);
       }
       store.tick();
@@ -728,6 +728,18 @@ export function Gizmo({ api }: { api: CanvasApi }) {
         // grid re-lays every cell (spans preserved, filled images re-cover).
         relayGridCells(node as unknown as Parameters<typeof relayGridCells>[0], size);
       }
+      if (node.type === "frame" && d.startChildren) {
+        // A frame's fill image is sized to the frame box, so it must scale with
+        // the box (recomputed from the gesture-start snapshot each frame) or a
+        // grown frame renders the new area empty. Scaling the image BOX keeps a
+        // custom pan; the bitmap itself re-covers, so pixels never distort.
+        scaleFrameImageChildren(
+          node as unknown as Parameters<typeof scaleFrameImageChildren>[0],
+          d.startChildren as Parameters<typeof scaleFrameImageChildren>[1],
+          d.startSize,
+          size,
+        );
+      }
     }
     store.tick();
   }
@@ -767,7 +779,7 @@ export function Gizmo({ api }: { api: CanvasApi }) {
       store.pushNodeSnapshot(d.id, { transform: d.startTransform, size: d.startSize, points: d.startPoints });
       return;
     }
-    if (node.type === "grid" && d.handle !== "rotate") {
+    if ((node.type === "grid" || node.type === "frame") && d.handle !== "rotate") {
       store.pushNodeSnapshot(d.id, { transform: d.startTransform, size: d.startSize, children: d.startChildren });
       return;
     }

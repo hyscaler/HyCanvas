@@ -37,6 +37,8 @@ func aiProblem(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, ai.ErrPolicyBlocked):
 		Problem(w, r, http.StatusForbidden, "Forbidden", err.Error())
+	case errors.Is(err, ai.ErrImageUnsupported):
+		Problem(w, r, http.StatusBadRequest, "Bad Request", "your AI provider does not support image generation; switch to an image-capable provider (e.g. OpenAI or Together AI) in AI settings")
 	case errors.Is(err, ai.ErrBadRequest):
 		Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid AI request or no provider configured")
 	case errors.Is(err, ai.ErrBadGateway):
