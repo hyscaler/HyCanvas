@@ -44,6 +44,7 @@ import {
   type TextFlow,
   type Transform,
   type SlideSection,
+  type FontRef,
   moveInReadingOrder,
 } from "@hc/schema";
 import { contrastRatio, fixToAA, fromHex, nearestPaletteColor, seriesColorAt, toHex } from "@hc/color";
@@ -722,6 +723,12 @@ interface EditorState {
   /** Append imported pages (e.g. from a PDF), each sized to the source page with
    *  its editable nodes, and switch to the first new page. Undoable. */
   importPdfPages(pages: { width: number; height: number; nodes: Node[] }[]): void;
+  /** Apply a template into the CURRENT design: append its pages (fresh node and
+   *  page ids, assets and uploaded-font refs merged) and switch to the first
+   *  one. Additive by design, so applying a template never destroys existing
+   *  pages; one undo step. Returns false when nothing was applied (read-only
+   *  session, history preview, or an empty template). */
+  applyTemplateFile(file: DesignFile, title: string): boolean;
   /** Import a full SVG file (e.g. an SVG export from another design tool) as editable elements:
    *  shapes/paths/text/images, registered assets, scaled to fit the page and
    *  grouped (ungroup to edit each element). Undoable. */
@@ -3727,6 +3734,76 @@ export const useEditor = create<EditorState>((set, get) => {
         () => { doc.pages.push(...(made.map((m) => structuredClone(m)) as never[])); set({ activePage: at, selection: [] }); },
         () => { doc.pages.splice(at, made.length); set({ activePage: Math.min(prevPage, doc.pages.length - 1), selection: prevSel }); },
       );
+    },
+    applyTemplateFile: (file, title) => {
+      // Same gate as setDocMeta: read-only (viewer/comment) sessions and the
+      // read-only history preview must not mutate the document. The Templates
+      // rail stays clickable during a preview, so this is load-bearing.
+      if (!usePresence.getState().canEdit() || get().readonlyPreview()) return false;
+      const pages = (file.pages ?? []) as Page[];
+      if (!pages.length) return false;
+      const doc = get().doc;
+      ensureDocArrays(doc);
+      // Fresh ids everywhere: the module counter used by paste could collide
+      // with ids already persisted in this doc, and applying the same template
+      // twice must never mint duplicates.
+      const idGen = () => `n_${crypto.randomUUID().slice(0, 12)}`;
+      const made = pages.map((p, i) => {
+        const page = structuredClone(p) as Page & { name?: string; readingOrder?: string[] };
+        page.id = `page_${crypto.randomUUID().slice(0, 12)}`;
+        page.name = pages.length > 1 ? `${title} ${i + 1}` : title;
+        const remapped = remapIds(structuredClone(p.children ?? []) as Node[], idGen);
+        page.children = remapped.nodes as never[];
+        // The authored screen-reader order references the ORIGINAL node ids;
+        // carry it across the remap (dropping any id that no longer resolves)
+        // or the appended page would silently fall back to z-order.
+        if (Array.isArray(page.readingOrder)) {
+          const ro = page.readingOrder
+            .map((id) => remapped.idMap.get(id))
+            .filter((id): id is string => !!id);
+          if (ro.length) page.readingOrder = ro;
+          else delete page.readingOrder;
+        }
+        return page;
+      });
+      // Merge the template's asset refs (images render from doc.assets, which
+      // re-registers on every rev); refs the doc already has are skipped so a
+      // re-apply cannot duplicate them.
+      const have = new Set(doc.assets.map((a) => a.id));
+      const newAssets = structuredClone(((file.assets ?? []) as AssetRef[]).filter((a) => a?.id && !have.has(a.id)));
+      // Uploaded custom fonts ride doc.fonts (data-URL refs so they load
+      // cross-device); without the merge the appended text would render in a
+      // fallback face everywhere but the template author's browser. Same
+      // family dedupe as addDocFont.
+      const docFonts = (doc as unknown as { fonts: FontRef[] }).fonts;
+      const haveFamily = new Set(docFonts.map((f) => f.family.toLowerCase()));
+      const newFonts = structuredClone(
+        ((file.fonts ?? []) as FontRef[]).filter((f) => f?.family && !haveFamily.has(f.family.toLowerCase())),
+      );
+      const at = doc.pages.length;
+      const prevPage = get().activePage;
+      const prevSel = get().selection;
+      perform(
+        () => {
+          doc.assets.push(...newAssets);
+          docFonts.push(...newFonts);
+          doc.pages.push(...(made.map((m) => structuredClone(m)) as never[]));
+          set({ activePage: at, selection: [] });
+        },
+        () => {
+          doc.pages.splice(at, made.length);
+          for (const a of newAssets) {
+            const i = doc.assets.findIndex((x) => x.id === a.id);
+            if (i >= 0) doc.assets.splice(i, 1);
+          }
+          for (const f of newFonts) {
+            const i = docFonts.findIndex((x) => x.id === f.id && x.family === f.family);
+            if (i >= 0) docFonts.splice(i, 1);
+          }
+          set({ activePage: Math.min(prevPage, doc.pages.length - 1), selection: prevSel });
+        },
+      );
+      return true;
     },
     importSvg: (svg) => {
       // Flatten group transforms first so positions/scales/rotations are correct.

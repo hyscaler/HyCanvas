@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type FormEvent } from "react";
 import { Square, SquareRoundCorner, Circle, Triangle, Pentagon, Hexagon, Star, Diamond, Octagon, Frame, QrCode, Type, Upload, Search, Table as TableIcon, BarChart3, LineChart, AreaChart, PieChart, Donut, ScatterChart, Radar, Wand2, ImagePlus, Settings2, Trash2, Folder, FolderPlus, Pencil, X, Tag, ChevronLeft, Link as LinkIcon, Mic, Video, MonitorUp, CircleStop, Spline, Clock, LayoutGrid, Shapes, Sparkles, Stethoscope, AlignStartVertical, Play, ChevronDown, Send, Plus, RotateCcw } from "lucide-react";
-import { type ChartType, type Node, type Fill, type Color } from "@hc/schema";
+import { migrate, type ChartType, type Node, type Fill, type Color } from "@hc/schema";
 import { searchFonts, type FontCatalogEntry } from "@hc/text";
 import { toHex, fromHex, relativeLuminance } from "@hc/color";
 import { formatBytes } from "@/lib/format";
@@ -36,7 +36,8 @@ import {
   type AutoLayoutSuggestion,
   type AnimateStyle,
 } from "@/lib/assist";
-import { ApiError, type AiConfigView, type AssetFolder, type MiniAppSummary, type StockAssetSummary, type StockCollectionSummary, type StockFacetValue, type StockFiltersSummary, type StorageUsageView, type UploadedAsset } from "@hc/sdk";
+import { ApiError, type AiConfigView, type AssetFolder, type MiniAppSummary, type StockAssetSummary, type StockCollectionSummary, type StockFacetValue, type StockFiltersSummary, type StorageUsageView, type TemplateSummary, type UploadedAsset } from "@hc/sdk";
+import { DesignThumb } from "@/components/dashboard/DesignThumb";
 import { checkAppAction, type AppAction } from "@hc/stock";
 import { oc, resolveAssetUrl, stockProxyUrl, uploadAssetWithProgress } from "@/lib/sdk";
 import type { BrandVoice, BrandLintViolation } from "@hc/sdk";
@@ -90,6 +91,144 @@ function useArmedConfirm(timeoutMs = 3500) {
  *  at the current viewport center and selected by addNode, so it appears where
    *  the user is looking - we deliberately do NOT zoom (the view stays put
  *  stays put rather than jumping to frame the new element). */
+/** Templates panel: suggests templates for the CURRENT page size (exact size
+ *  first, then the same aspect ratio), with search over the full gallery.
+ *  Clicking a template appends its pages to the design (never replacing
+ *  existing pages) and jumps there; one undo removes them. */
+export function TemplatesPanel() {
+  const toast = useToast();
+  const [query, setQuery] = useState("");
+  const debouncedQuery = useDebouncedValue(query);
+  const [templates, setTemplates] = useState<TemplateSummary[] | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  // The active page's size drives the suggestions; re-read on page switches
+  // and doc edits (a stage resize changes what "matching" means).
+  const activePage = useEditor((s) => s.activePage);
+  const rev = useEditor((s) => s.rev);
+  const pageSize = useMemo(() => {
+    const d = useEditor.getState().doc;
+    const pg = d.pages[Math.min(activePage, d.pages.length - 1)];
+    return pg ? { w: Math.round(pg.width), h: Math.round(pg.height) } : null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePage, rev]);
+
+  useEffect(() => {
+    let cancelled = false;
+    // No workspace filter: the list endpoint's default scope is already
+    // everything the caller may see (public + own private + all member
+    // workspaces). Passing workspaceId NARROWS to that workspace only, which
+    // would hide public and cross-workspace templates from the gallery.
+    void oc
+      .listTemplates({ q: debouncedQuery.trim() || undefined })
+      .then((ts) => { if (!cancelled) setTemplates(ts); })
+      .catch(() => { if (!cancelled) setTemplates([]); });
+    return () => { cancelled = true; };
+  }, [debouncedQuery]);
+
+  // Rank: exact page-size matches, then same aspect ratio (within 2%), then the
+  // rest of the gallery, keeping the server's order within each bucket.
+  const { matched, rest } = useMemo(() => {
+    const all = templates ?? [];
+    if (!pageSize) return { matched: [] as TemplateSummary[], rest: all };
+    const aspect = pageSize.w / Math.max(1, pageSize.h);
+    const exact: TemplateSummary[] = [];
+    const similar: TemplateSummary[] = [];
+    const other: TemplateSummary[] = [];
+    for (const t of all) {
+      const tw = Math.round(t.format?.width ?? 0);
+      const th = Math.round(t.format?.height ?? 0);
+      if (tw === pageSize.w && th === pageSize.h) exact.push(t);
+      else if (tw > 0 && th > 0 && Math.abs(tw / th - aspect) / aspect < 0.02) similar.push(t);
+      else other.push(t);
+    }
+    return { matched: [...exact, ...similar], rest: other };
+  }, [templates, pageSize]);
+
+  const apply = async (t: TemplateSummary) => {
+    if (busyId) return;
+    setBusyId(t.id);
+    try {
+      // The template endpoint serves the stored file verbatim; a user-saved
+      // template from an older build needs the forward migration before its
+      // nodes may enter a current-schema document.
+      const file = migrate(await oc.getTemplateFile(t.id));
+      // The store refuses in read-only states (viewer/comment access, history
+      // preview) and for empty templates; never claim success for a no-op.
+      if (useEditor.getState().applyTemplateFile(file, t.title)) {
+        toast.success("Template added as a new page. Undo removes it.");
+      } else {
+        toast.error("Templates can't be added in a read-only view.");
+      }
+    } catch {
+      toast.error("Could not apply the template.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const card = (t: TemplateSummary) => (
+    <button
+      key={t.id}
+      type="button"
+      onClick={() => void apply(t)}
+      disabled={!!busyId}
+      title={`Add "${t.title}" (${Math.round(t.format?.width ?? 0)}x${Math.round(t.format?.height ?? 0)}) as a new page`}
+      className="group overflow-hidden rounded-xl border border-neutral-200 bg-surface text-left shadow-sm transition hover:border-brand-300 hover:shadow-md disabled:opacity-60"
+    >
+      <div className="relative aspect-[4/3] bg-neutral-100">
+        <DesignThumb templateId={t.id} />
+        <span className="absolute bottom-1 right-1 rounded bg-black/55 px-1 py-0.5 font-mono text-[9px] tabular-nums text-white/90">
+          {Math.round(t.format?.width ?? 0)}x{Math.round(t.format?.height ?? 0)}
+        </span>
+        {busyId === t.id && (
+          <span className="absolute inset-0 grid place-items-center bg-white/60"><Spinner /></span>
+        )}
+      </div>
+      <div className="truncate px-2 py-1.5 text-xs font-medium text-neutral-700">{t.title}</div>
+    </button>
+  );
+
+  const sectionCls = "mb-1.5 mt-3 text-xs font-semibold uppercase tracking-wide text-neutral-400";
+  return (
+    <PanelShell title="Templates">
+      <label className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-surface px-2.5 py-1.5 focus-within:border-brand-400">
+        <Search size={14} className="shrink-0 text-neutral-400" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search templates"
+          aria-label="Search templates"
+          className="w-full min-w-0 bg-transparent text-sm text-neutral-800 outline-none placeholder:text-neutral-400"
+        />
+      </label>
+      {templates === null ? (
+        <div className="flex justify-center py-8"><Spinner /></div>
+      ) : templates.length === 0 ? (
+        <p className="py-6 text-center text-sm text-neutral-400">
+          No templates{debouncedQuery.trim() ? " match this search" : " yet"}.
+        </p>
+      ) : (
+        <>
+          {matched.length > 0 && (
+            <>
+              <p className={sectionCls} data-testid="tpl-match-heading">
+                For this page{pageSize ? ` (${pageSize.w}x${pageSize.h})` : ""}
+              </p>
+              <div className="grid grid-cols-2 gap-2">{matched.map(card)}</div>
+            </>
+          )}
+          {rest.length > 0 && (
+            <>
+              <p className={sectionCls}>{matched.length > 0 ? "Other sizes" : "All templates"}</p>
+              <div className="grid grid-cols-2 gap-2">{rest.map(card)}</div>
+            </>
+          )}
+        </>
+      )}
+    </PanelShell>
+  );
+}
+
 function afterInsert(toast: ReturnType<typeof useToast>, label: string) {
   toast.success(`Added ${label}`);
 }

@@ -921,7 +921,7 @@ export function EditorApp() {
         {(docKind === "design" || docKind === "whiteboard") && !inFocus && (
           // key by kind so switching surface re-applies its default; boards open
           // with the slide-out panel collapsed (canvas-first).
-          <ToolRail key={docKind} workspaceId={workspaceId} overlay={isCompact} defaultCollapsed={isBoard} />
+          <ToolRail key={docKind} workspaceId={workspaceId} overlay={isCompact} defaultCollapsed={isBoard} kind={docKind === "whiteboard" ? "whiteboard" : "design"} />
         )}
         {docKind !== "design" ? (
           // Same relative wrapper as the design canvas so overlays (the
