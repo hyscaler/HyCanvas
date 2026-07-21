@@ -72,6 +72,12 @@ type ovResult struct {
 	} `json:"tags"`
 }
 
+// handles reports whether this provider actively serves the given kind. A
+// disabled provider reports false so callers treat it as absent (no provider)
+// and serve the bundled catalog on every page, rather than as a live-capable
+// kind that silently produces nothing.
+func (o *openverse) handles(kind string) bool { return o != nil && o.enabled && kind == "photo" }
+
 // search queries Openverse for photos matching q.Text, paged with the same
 // limit rules as searchStock. It returns nil on any failure (disabled,
 // network error, non-200, decode error): callers fall back to the seed.
@@ -180,7 +186,10 @@ func (o *openverse) toAsset(r ovResult) map[string]any {
 		"dominantColors": []any{},
 		"collectionIds":  []any{"openverse"},
 		"pack":           "openverse",
-		"category":       "photos",
+		// live marks an upstream-provider asset (not in the bundled catalog): the
+		// UI hides favorite/recents affordances and imports it on placement.
+		"live":     true,
+		"category": "photos",
 		"license": map[string]any{
 			"type":                licType,
 			"holder":              r.Creator,

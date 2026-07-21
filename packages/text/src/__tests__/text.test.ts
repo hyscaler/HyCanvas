@@ -22,7 +22,8 @@ import {
   FONT_CATALOG,
   searchFonts,
   getFontEntry,
-  googleFontsCssUrl,
+  fontCssUrl,
+  setFontCssProvider,
   isSystemFont,
 } from "../index";
 
@@ -39,12 +40,20 @@ describe("font catalog (FR-5)", () => {
     expect(searchFonts("", "serif").every((f) => f.category === "serif")).toBe(true);
     expect(searchFonts("mono", "monospace").length).toBeGreaterThan(0);
   });
-  it("builds a Google Fonts URL for web fonts and empty for system", () => {
-    const url = googleFontsCssUrl("Inter", [400, 700]);
+  it("builds a webfont CSS URL (Bunny by default) for web fonts and empty for system", () => {
+    const url = fontCssUrl("Inter", [400, 700]);
     expect(url).toContain("family=Inter");
     expect(url).toContain("wght@");
     expect(url).toContain("700");
-    expect(googleFontsCssUrl("system")).toBe("");
+    expect(url).toContain("fonts.bunny.net"); // privacy-friendly default
+    expect(fontCssUrl("system")).toBe("");
+  });
+
+  it("switches the webfont CSS host to Google when asked, and back to Bunny", () => {
+    setFontCssProvider("google");
+    expect(fontCssUrl("Inter")).toContain("fonts.googleapis.com");
+    setFontCssProvider("bunny");
+    expect(fontCssUrl("Inter")).toContain("fonts.bunny.net");
   });
 });
 

@@ -313,6 +313,10 @@ export interface StockAssetSummary {
   svg?: string;
   /** Bundled-library pack id (e.g. "twemoji"), when the asset ships with the app. */
   pack?: string;
+  /** True for a live upstream-provider asset (Openverse photo, Iconify icon) that
+   *  is not in the bundled catalog: favorites/recents don't apply and it is
+   *  imported/inlined on placement rather than drag-proxied. */
+  live?: boolean;
   /** License metadata; attribution-required assets are stamped with provenance
    *  on insert so credits compile from the design. */
   license?: { type?: string; holder?: string; url?: string; attributionRequired?: boolean; attributionText?: string; attributionUrl?: string };
@@ -325,6 +329,10 @@ export interface StockCollectionSummary {
   kind?: string;
   trending?: boolean;
   seasonal?: boolean;
+  /** "pack" for a bundled-library source (ManyPixels, Open Doodles, Tabler, ...),
+   *  absent for a curated theme. The browse UI shows curated themes as top-level
+   *  Collection chips and pack sources as a per-kind Source facet. */
+  source?: string;
   /** Curated seed collections list their members; bundled-pack collections
    *  omit this (assets point back via collectionIds instead). */
   assetIds?: string[];

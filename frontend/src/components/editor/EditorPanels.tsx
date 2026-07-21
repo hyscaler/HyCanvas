@@ -2881,9 +2881,11 @@ function FacetChips({ label, values, active, onPick }: { label: string; values: 
 
 type StockTab = "browse" | "favorites" | "recents";
 
-// Live-provider assets (Openverse photos) are not in the bundled catalog:
-// favorites/recents don't apply and placement imports the file first.
-const isProviderAsset = (a: StockAssetSummary) => a.pack === "openverse";
+// Live-provider assets (Openverse photos, Iconify icons) are not in the bundled
+// catalog: favorites/recents don't apply, drag-to-canvas is disabled, and
+// placement imports/inlines the asset rather than proxying a URL. The `live`
+// flag is the source of truth; the pack check keeps older cached photos working.
+const isProviderAsset = (a: StockAssetSummary) => a.live === true || a.pack === "openverse";
 
 // Provenance stamped on every stock insert (asset id + license) so
 // attribution-required assets compile into the design's credits.
@@ -2922,8 +2924,10 @@ async function placeStock(a: StockAssetSummary, toast: ReturnType<typeof useToas
     toast.toast("This asset isn't placeable.", "info");
     return;
   }
-  // Fire-and-forget: recording a recent should never block insertion.
-  void oc.recordStockRecent(a.id).catch(() => {});
+  // Fire-and-forget: recording a recent should never block insertion. Live
+  // provider assets aren't in the bundled catalog, so recents don't apply (the
+  // backend would 404 on their id); only record bundled assets.
+  if (!isProviderAsset(a)) void oc.recordStockRecent(a.id).catch(() => {});
 }
 
 function StockTile({ a, onPlace, onToggleStar }: { a: StockAssetSummary; onPlace: (a: StockAssetSummary) => void; onToggleStar: (a: StockAssetSummary) => void }) {
@@ -2945,13 +2949,15 @@ function StockTile({ a, onPlace, onToggleStar }: { a: StockAssetSummary; onPlace
         title={draggable ? "Click to place, or drag onto the canvas" : a.sourceUrl ? "Click to place" : a.title}
         className="grid aspect-square w-full place-items-center overflow-hidden rounded-lg border border-neutral-200 hover:border-brand-300"
       >
-        {a.previewUrl ? (
+        {a.svg ? (
+          // Vector assets (bundled packs AND live Iconify icons) carry inline
+          // SVG; render it directly. Preferring it over previewUrl keeps the
+          // preview crisp and recolorable, avoids a remote request per tile, and
+          // never leaks the viewer's IP to a provider host for a live icon.
+          <span aria-hidden className="block h-full w-full p-2 [&>svg]:h-full [&>svg]:w-full" dangerouslySetInnerHTML={{ __html: a.svg }} />
+        ) : a.previewUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={a.previewUrl} alt={a.title} className="h-full w-full object-cover" />
-        ) : a.svg ? (
-          // Bundled-library vectors carry inline SVG; render it directly so the
-          // preview is crisp with no data-URL blowup or extra request.
-          <span aria-hidden className="block h-full w-full p-2 [&>svg]:h-full [&>svg]:w-full" dangerouslySetInnerHTML={{ __html: a.svg }} />
         ) : (
           <span className="px-1 text-center text-[11px] text-neutral-500">{a.title}</span>
         )}
@@ -3012,10 +3018,14 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
   // Debounce the live search so a refetch fires after typing stops, not per key.
   const debouncedQuery = useDebouncedValue(query);
   const [kind, setKind] = useState("");
-  // Facet filters (category/style/orientation), kind-scoped; "" means all.
+  // Facet filters (category/style/orientation/source), kind-scoped; "" means all.
   const [category, setCategory] = useState("");
   const [style, setStyle] = useState("");
   const [orientation, setOrientation] = useState("");
+  // Source is a bundled-pack filter (ManyPixels, Open Doodles, Tabler, ...),
+  // offered as a facet once a kind is picked. Pack assets carry the pack id in
+  // collectionIds, so it rides the same collection query param.
+  const [source, setSource] = useState("");
   const [filters, setFilters] = useState<StockFiltersSummary | null>(null);
   const [collection, setCollection] = useState<StockCollectionSummary | null>(null);
   const [collections, setCollections] = useState<StockCollectionSummary[]>([]);
@@ -3058,6 +3068,12 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
   // "Load more" must drop its append when a filter/query change has already
   // replaced the grid (a stale page would violate the active filters).
   const fetchGen = useRef(0);
+  // Next page's offset, advanced by a fixed page size rather than results.length.
+  // The merged "All" search can return a page that id-dedups against what's
+  // already shown (a live provider flapping between pages); paging by
+  // results.length would then drift below the true backend offset and compound
+  // skips, so track the offset explicitly instead.
+  const nextOffset = useRef(STOCK_PAGE);
   useEffect(() => {
     let cancelled = false;
     fetchGen.current += 1;
@@ -3068,8 +3084,8 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
         let r: StockAssetSummary[];
         if (tab === "favorites") r = await oc.stockFavorites();
         else if (tab === "recents") r = await oc.stockRecent();
-        else r = await oc.stockSearch(intentQuery(debouncedQuery) || undefined, kind || undefined, { category: category || undefined, style: style || undefined, orientation: orientation || undefined, collection: collection?.id, limit: STOCK_PAGE });
-        if (!cancelled) { setResults(r); setHasMore(tab === "browse" && r.length === STOCK_PAGE); }
+        else r = await oc.stockSearch(intentQuery(debouncedQuery) || undefined, kind || undefined, { category: category || undefined, style: style || undefined, orientation: orientation || undefined, collection: collection?.id || source || undefined, limit: STOCK_PAGE });
+        if (!cancelled) { setResults(r); setHasMore(tab === "browse" && r.length === STOCK_PAGE); nextOffset.current = STOCK_PAGE; }
       } catch {
         if (!cancelled) { setResults([]); setError(true); setHasMore(false); }
       } finally {
@@ -3078,18 +3094,20 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
     })();
     return () => { cancelled = true; };
     // Re-run when the tab, filters, debounced query, or active collection change.
-  }, [tab, collection, debouncedQuery, kind, category, style, orientation, retryNonce]);
+  }, [tab, collection, debouncedQuery, kind, category, style, orientation, source, retryNonce]);
 
   async function loadMore() {
     if (loadingMore) return;
     setLoadingMore(true);
     const gen = fetchGen.current;
+    const offset = nextOffset.current;
     try {
       const next = await oc.stockSearch(intentQuery(debouncedQuery) || undefined, kind || undefined, {
         category: category || undefined, style: style || undefined, orientation: orientation || undefined,
-        collection: collection?.id, limit: STOCK_PAGE, offset: results.length,
+        collection: collection?.id || source || undefined, limit: STOCK_PAGE, offset,
       });
       if (gen !== fetchGen.current) return; // filters changed mid-flight; the grid was replaced
+      nextOffset.current = offset + STOCK_PAGE;
       setResults((cur) => [...cur, ...next.filter((n) => !cur.some((c) => c.id === n.id))]);
       setHasMore(next.length === STOCK_PAGE);
     } catch {
@@ -3107,7 +3125,7 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
   function setFilter(k: string) {
     setKind(k);
     // Facets are kind-scoped; switching kind resets them.
-    setCategory(""); setStyle(""); setOrientation("");
+    setCategory(""); setStyle(""); setOrientation(""); setSource("");
     setTab("browse");
   }
 
@@ -3131,6 +3149,11 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
     { id: "favorites", label: "Favorites", icon: Star },
     { id: "recents", label: "Recent", icon: Clock },
   ];
+
+  // Curated themes are the top-level Collection chips; bundled packs are a
+  // per-kind Source facet, kept out of the theme row so it stays scannable.
+  const curatedCollections = collections.filter((c) => c.source !== "pack");
+  const packSources = collections.filter((c) => c.source === "pack" && c.kind === kind);
 
   const emptyMessage =
     tab === "favorites" ? "No favorites yet. Tap the star on any asset." :
@@ -3175,6 +3198,20 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
           </div>
           {/* Kind-scoped facet rows; a selected collection is already a narrower
               container, so facets stay hidden until it's cleared. */}
+          {/* Source: the bundled packs for this kind (ManyPixels, Open Doodles,
+              Tabler, ...). Kept as a facet under the kind rather than in the
+              top-level Collections row so themes stay scannable. */}
+          {kind && !collection && packSources.length >= 2 && (
+            <div className="mb-2">
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Source</p>
+              <div className="flex flex-wrap gap-1">
+                <button onClick={() => setSource("")} className={stockChipCls(source === "")}>All</button>
+                {packSources.map((c) => (
+                  <button key={c.id} onClick={() => setSource(source === c.id ? "" : c.id)} title={c.description} className={stockChipCls(source === c.id)}>{c.title}</button>
+                ))}
+              </div>
+            </div>
+          )}
           {kind && !collection && filters && (
             <>
               <FacetChips label="Category" values={filters.categories.filter((v) => v.kind === kind)} active={category} onPick={setCategory} />
@@ -3191,11 +3228,11 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
             <button onClick={() => setCollection(null)} className="mb-2 flex items-center gap-1 text-xs font-medium text-brand-ink hover:underline">
               <ChevronLeft size={13} />Back to collections
             </button>
-          ) : !query && !kind && collections.length > 0 ? (
+          ) : !query && !kind && curatedCollections.length > 0 ? (
             <div className="mb-3">
               <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Collections</p>
               <div className="flex flex-wrap gap-1.5">
-                {collections.map((c) => (
+                {curatedCollections.map((c) => (
                   <button key={c.id} onClick={() => setCollection(c)} title={c.description} className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs text-neutral-600 hover:bg-brand-50 hover:text-brand-ink">{c.title}</button>
                 ))}
               </div>

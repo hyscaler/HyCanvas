@@ -5,7 +5,7 @@
 // will register here too once font upload lands.
 
 import type { DesignFile, Node } from "@hc/schema";
-import { getFontEntry, googleFontsCssUrl, isSystemFont } from "@hc/text";
+import { getFontEntry, fontCssUrl, isSystemFont } from "@hc/text";
 
 const CUSTOM_FONTS_KEY = "oc-custom-fonts";
 
@@ -97,7 +97,7 @@ class FontProvider {
     const link = document.createElement("link");
     link.rel = "stylesheet";
     link.id = id;
-    link.href = googleFontsCssUrl(family!, entry.weights);
+    link.href = fontCssUrl(family!, entry.weights);
     // Only load the face once the @font-face rules from the stylesheet exist.
     link.addEventListener("load", fetchFace);
     link.addEventListener("error", () => this.loading.delete(key));

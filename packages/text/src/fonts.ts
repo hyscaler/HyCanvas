@@ -96,12 +96,31 @@ export function searchFonts(query = "", category?: FontCategory): FontCatalogEnt
     });
 }
 
+// Where webfont CSS is loaded from. Bunny Fonts (fonts.bunny.net) is the
+// default: it is a keyless, GDPR-safe mirror that serves the SAME open-source
+// fonts as Google via a CSS2-compatible endpoint, but with a stated zero-
+// logging policy, so a self-hosted instance does not leak end-user IPs to
+// Google on every page. Self-hosters who prefer Google can switch the host.
+const FONT_CSS_HOSTS = {
+  bunny: "https://fonts.bunny.net/css2",
+  google: "https://fonts.googleapis.com/css2",
+} as const;
+export type FontCssProvider = keyof typeof FONT_CSS_HOSTS;
+let fontCssHost: string = FONT_CSS_HOSTS.bunny;
+
+/** Switch the webfont CSS source ("bunny" default, or "google"). */
+export function setFontCssProvider(provider: FontCssProvider): void {
+  fontCssHost = FONT_CSS_HOSTS[provider] ?? FONT_CSS_HOSTS.bunny;
+}
+
 /**
- * Google Fonts CSS2 URL to load a family's selected weights (and italics when
- * available). The browser provider injects this as a stylesheet, then waits for
- * the face via the CSS Font Loading API.
+ * Webfont CSS URL to load a family's selected weights (and italics when
+ * available), from the configured provider (Bunny by default, Google
+ * optional; the CSS2 request syntax is identical on both). The browser
+ * provider injects this as a stylesheet, then waits for the face via the CSS
+ * Font Loading API. Empty string for system/unknown families.
  */
-export function googleFontsCssUrl(family: string, weights: number[] = [400, 700]): string {
+export function fontCssUrl(family: string, weights: number[] = [400, 700]): string {
   const entry = getFontEntry(family);
   if (!entry || entry.system) return "";
   const name = family.replace(/\s+/g, "+");
@@ -116,5 +135,8 @@ export function googleFontsCssUrl(family: string, weights: number[] = [400, 700]
   } else {
     axis = `:wght@${ws.join(";")}`;
   }
-  return `https://fonts.googleapis.com/css2?family=${name}${axis}&display=swap`;
+  return `${fontCssHost}?family=${name}${axis}&display=swap`;
 }
+
+/** @deprecated use fontCssUrl; kept so existing imports keep compiling. */
+export const googleFontsCssUrl = fontCssUrl;

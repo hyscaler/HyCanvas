@@ -4,7 +4,8 @@
 // per-pack asset files + index.json + LICENSE/NOTICE manifests. Idempotent: a
 // re-run rebuilds the library dirs from the cached tarballs.
 //
-//   node scripts/ingest-stock.mjs            # download (if needed) + ingest
+//   node scripts/ingest-stock.mjs                     # all packs
+//   STOCK_PACKS=manypixels node scripts/ingest-stock.mjs  # one pack (fetches only its source)
 //   STOCK_CACHE=/path node scripts/ingest-stock.mjs
 //
 // Wave 1 packs (license verified in-tarball before ingest):
@@ -19,6 +20,8 @@
 //   openpeeps        CC0  openpeeps.com site CDN (92 composed peeps)
 //   lukaszadam       CC0  lukaszadam.com/illustrations (icon-sheet files excluded)
 //   illlustrations   MIT  realvjy/illlustrations pinned commit tarball
+//   manypixels       MIT  quentincaffeino/manypixels-illustrations pinned commit
+//                          (curated flatline subset; upstream gallery is CC0/free)
 
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -36,6 +39,7 @@ const SOURCES = [
   { name: "healthicons", url: "https://registry.npmjs.org/healthicons/-/healthicons-2.0.0.tgz" },
   { name: "emojinames", url: "https://registry.npmjs.org/unicode-emoji-json/-/unicode-emoji-json-0.9.0.tgz" },
   { name: "illlustrations", url: "https://codeload.github.com/realvjy/illlustrations/tar.gz/54f66072636350020142570071feb8efd4c8b6f6" },
+  { name: "manypixels", url: "https://codeload.github.com/quentincaffeino/manypixels-illustrations/tar.gz/d13c5678b9b5c26eaec3e6688e5a1fef5010e1c8" },
 ];
 
 // Site-hosted packs with no archive distribution: the canonical file lists
@@ -50,8 +54,9 @@ const FILE_SOURCES = [
   { name: "lukaszadam", base: "https://lukaszadam.com/images/free-illustrations/", files: LUKASZ_ADAM.map((n) => ({ url: `${n}.svg`, save: `${n}.svg` })) },
 ];
 
-function fetchFileSets() {
+function fetchFileSets(only) {
   for (const s of FILE_SOURCES) {
+    if (only && !only.has(s.name)) continue;
     const dir = join(CACHE, s.name);
     mkdirSync(dir, { recursive: true });
     const missing = s.files.filter((f) => !existsSync(join(dir, f.save)));
@@ -61,9 +66,10 @@ function fetchFileSets() {
   }
 }
 
-function fetchAll() {
+function fetchAll(only) {
   mkdirSync(CACHE, { recursive: true });
   for (const s of SOURCES) {
+    if (only && !only.has(s.name)) continue;
     const dir = join(CACHE, s.name);
     if (existsSync(dir) && readdirSync(dir).length) continue;
     const tgz = join(CACHE, `${s.name}.tgz`);
@@ -139,6 +145,11 @@ function sanitize(text) {
   } while (noComments !== prevComments);
   let s = noComments
     .replace(/<\?xml[^>]*\?>/g, "")
+    // Drop <text>/<tspan> runs: illustration text is bound to proprietary fonts
+    // (e.g. "Myriad Pro") we don't ship, so it renders in a substituted font.
+    // These are decorative labels; stripping them keeps the art self-contained.
+    .replace(/<text\b[^>]*>[\s\S]*?<\/text>/gi, "")
+    .replace(/<text\b[^>]*\/>/gi, "")
     .replace(/\sclass="[^"]*"/g, "")
     .replace(/\s(width|height)="\d+(px)?"(?=[^>]*viewBox)/g, (m, _a, _b, off) => m) // keep; handled below
     .replace(/\r?\n/g, " ")
@@ -313,10 +324,11 @@ function healthiconsPack() {
 // those files rather than ship art that renders wrong on the canvas.
 const UNSUPPORTED_EFFECTS = /<mask[\s>]|<clipPath[\s>]|<pattern[\s>]/i;
 
-function illustrationAssets({ dir, prefix, fixedTags, titleOf, normalize, exclude, fallbackSize }) {
+function illustrationAssets({ dir, prefix, fixedTags, titleOf, normalize, exclude, include, fallbackSize }) {
   const assets = [];
   for (const f of readdirSync(dir).filter((f) => f.endsWith(".svg")).sort()) {
     const name = basename(f, ".svg");
+    if (include && !include(name)) continue;
     if (exclude?.(name)) continue;
     const raw = readFileSync(join(dir, f), "utf8");
     if (UNSUPPORTED_EFFECTS.test(raw)) continue;
@@ -410,18 +422,92 @@ function illlustrationsPack() {
   }, assets, license, "illlustrations by vijay verma, https://illlustrations.co\nIngested from the pinned realvjy/illlustrations commit 54f6607; MIT licensed.\n");
 }
 
+// ManyPixels: a large, broad-subject flat illustration gallery. The gallery art
+// is free/CC0 per manypixels.co; this pinned mirror ships it MIT-licensed. We
+// bundle a CURATED flatline (colorful) subset of broadly-useful, brand-neutral
+// subjects, not the full 580-per-style set, to keep the binary lean. Edit
+// MANYPIXELS_PICK to bundle more; other styles live under packages/svg/src/*.
+const MANYPIXELS_PICK = new Set([
+  "Accountant", "Achievement", "Adventure", "Analysis", "Architect", "Astronaut", "Authentication",
+  "Beach", "Bicycle", "Birthday", "BookLover", "Brainstorming", "Breakfast", "BugFixing",
+  "BusinessConference", "Businessman", "Businesswoman", "Calendar", "CampaignLaunch", "Camping",
+  "Car", "CardPayment", "Career", "Chart", "Chat", "Chatting", "Checklist", "Chef", "CityBuildings",
+  "CleanInbox", "CodeDevelopment", "Coding", "Coffee", "Coins", "CompletedTask", "Consulting",
+  "ContentCreation", "Conversation", "Couple", "Coworking", "CreativeProcess", "CreditCard",
+  "CustomerService", "DataAnalytics", "DataCenter", "DataProcessing", "DataStorage",
+  "DataVisualization", "Designer", "DigitalNomad", "Diversity", "Doctor", "Dream", "Drone",
+  "Ecology", "EmailCampaign", "EmptyInbox", "Entrepreneurs", "Family", "FingerPrint", "Fishing",
+  "Fitness", "FocusedWorking", "Gaming", "Graduation", "GreatIdea", "Growth", "Handshake", "Health",
+  "HealthyMeal", "Hiking", "Idea", "Innovation", "JobInterview", "Knowledge", "LandingPage",
+  "Loading", "Logistics", "Lunch", "Manager", "Map", "MarketAnalysis", "Marketing", "Meditation",
+  "MindMap", "MobilePhone", "MoneyTransfer", "Motivation", "Mountain", "Music", "Navigation",
+  "Network", "NoteTaking", "Notifications", "Nurse", "OfficeWork", "OnlineLesson", "OnlinePayment",
+  "OnlineShopping", "OnlineStore", "PageNotFound404", "Party", "Password", "PieChart", "PiggyBank",
+  "Pizza", "Podcast", "Presentation", "ProblemSolving", "ProductManager", "Progress", "QRCode",
+  "QualityCheck", "Question", "ReadingABook", "RealEstateAgent", "Recycling", "Relaxing",
+  "ReportAnalysis", "Restaurant", "Revenue", "RoadTrip", "RocketLaunch", "Running", "SEO", "Salad",
+  "School", "Science", "Scientist", "Scooter", "ScrumBoard", "SearchEngine", "Security",
+  "SendingEmails", "Settings", "Share", "Shopping", "ShoppingCart", "SocialMedia", "Spotlight",
+  "Startup", "Success", "Target", "Teacher", "TeamBuilding", "TeamMeeting", "TeamPresentation",
+  "TeamWork", "TeamSuccess", "Thinking", "Time", "Timeline", "Traveling", "UIDesign",
+  "UserInterface", "UserProfile", "VideoCall", "VideoTutorial", "Voting", "Waiter", "Waiting",
+  "Wallet", "WateringPlant", "Weather", "WebDeveloper", "WebDevelopment", "Winner", "Wireframe",
+  "WorldConnection", "WorldMap", "Yoga",
+].map((n) => n.toLowerCase()));
+
+// PascalCase -> spaced words ("TeamWork2" -> "Team Work 2").
+const splitCamel = (name) =>
+  name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2").replace(/(\d+)/g, " $1").replace(/\s+/g, " ").trim();
+
+function manyPixelsPack() {
+  const root = join(CACHE, "manypixels", "manypixels-illustrations-d13c5678b9b5c26eaec3e6688e5a1fef5010e1c8");
+  const license = readFileSync(join(root, "LICENSE"), "utf8");
+  if (!/MIT License/i.test(license)) throw new Error("manypixels: unexpected license");
+  const assets = illustrationAssets({
+    dir: join(root, "packages", "svg", "src", "flatline"), prefix: "mp",
+    fixedTags: ["illustration", "flat", "colorful"],
+    include: (name) => MANYPIXELS_PICK.has(name.toLowerCase()),
+    titleOf: (name) => titleCase(splitCamel(name)),
+    normalize: (name) => splitCamel(name).replace(/\s+/g, "-"),
+    fallbackSize: 400,
+  });
+  return writePack("manypixels", {
+    title: "ManyPixels",
+    kind: "illustration",
+    category: "illustrations",
+    license: { type: "mit", holder: "ManyPixels", url: "https://www.manypixels.co/gallery", attributionRequired: false },
+    collection: { id: "manypixels", title: "ManyPixels", description: "Colorful flat illustrations for business, tech, and lifestyle (MIT)" },
+  }, assets, license, "ManyPixels illustration gallery, https://www.manypixels.co/gallery\nIngested from the pinned quentincaffeino/manypixels-illustrations mirror commit d13c567 (MIT). Curated flatline subset; brands and trademarked characters excluded.\n");
+}
+
 // --- run -----------------------------------------------------------------------
 
-fetchAll();
-fetchFileSets();
+// Pack registry: id -> the tarball SOURCES and FILE_SOURCES it needs plus its
+// builder. STOCK_PACKS="manypixels,healthicons" rebuilds only those packs (and
+// fetches only their sources), so one pack can be added or refreshed without
+// re-fetching or risking the others (each writePack rm's its own dir only).
+const PACKS = [
+  { id: "tabler", sources: ["tabler"], build: () => tablerPack("outline") + tablerPack("filled") },
+  { id: "twemoji", sources: ["twemoji-repo", "emojinames"], build: twemojiPack },
+  { id: "healthicons", sources: ["healthicons"], build: healthiconsPack },
+  { id: "opendoodles", files: ["opendoodles"], build: openDoodlesPack },
+  { id: "openpeeps", files: ["openpeeps"], build: openPeepsPack },
+  { id: "lukaszadam", files: ["lukaszadam"], build: lukaszAdamPack },
+  { id: "illlustrations", sources: ["illlustrations"], build: illlustrationsPack },
+  { id: "manypixels", sources: ["manypixels"], build: manyPixelsPack },
+];
+
+const ONLY = (process.env.STOCK_PACKS || "").split(",").map((x) => x.trim()).filter(Boolean);
+const selected = ONLY.length ? PACKS.filter((p) => ONLY.includes(p.id)) : PACKS;
+if (ONLY.length && selected.length !== ONLY.length) {
+  const known = PACKS.map((p) => p.id).join(", ");
+  throw new Error(`unknown STOCK_PACKS entry; known packs: ${known}`);
+}
+const srcNeeded = new Set(selected.flatMap((p) => p.sources ?? []));
+const fileNeeded = new Set(selected.flatMap((p) => p.files ?? []));
+fetchAll(ONLY.length ? srcNeeded : undefined);
+fetchFileSets(ONLY.length ? fileNeeded : undefined);
 mkdirSync(LIB, { recursive: true });
 let total = 0;
-total += tablerPack("outline");
-total += tablerPack("filled");
-total += twemojiPack();
-total += healthiconsPack();
-total += openDoodlesPack();
-total += openPeepsPack();
-total += lukaszAdamPack();
-total += illlustrationsPack();
-console.log(`library total: ${total} assets -> ${LIB}`);
+for (const p of selected) total += p.build();
+console.log(`library ${ONLY.length ? "(" + ONLY.join(",") + ") " : ""}total: ${total} assets -> ${LIB}`);

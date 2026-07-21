@@ -17,6 +17,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -115,6 +116,10 @@ func loadLibrary(d *seedData) {
 			if idx.Kind != "" {
 				idx.Collection["kind"] = idx.Kind
 			}
+			// Mark pack collections so the browse UI can separate curated themes
+			// (top-level Collection chips) from bundled-pack sources, which render
+			// as a per-kind Source facet instead of cluttering the theme row.
+			idx.Collection["source"] = "pack"
 			d.Collections = append(d.Collections, idx.Collection)
 		}
 	}
@@ -194,20 +199,45 @@ type DBTX interface {
 	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
 }
 
+// liveProvider is a live upstream stock source (Openverse photos, Iconify
+// icons, ...). Each provider serves one or more StockKinds; search returns
+// catalog-shaped assets (the same map[string]any shape as the bundled seed) or
+// nil on ANY failure (disabled, network error, decode error), so the caller
+// always has the seed to fall back to and a slow or broken upstream can never
+// break stock search. New providers register in NewService.
+type liveProvider interface {
+	// handles reports whether this provider serves the given StockKind.
+	handles(kind string) bool
+	// search queries the upstream for q. Returns nil to fall back to the seed.
+	search(ctx context.Context, q Query) []map[string]any
+}
+
 // Service is the stock module.
 type Service struct {
 	db     DBTX
 	client *http.Client
-	ov     *openverse
+	// live upstream providers, tried (first match by kind) for plain text
+	// searches; the bundled seed backs every kind and every failure.
+	live []liveProvider
 }
 
-// NewService wires the stock service.
+// NewService wires the stock service and its live providers.
 func NewService(db DBTX) *Service {
 	return &Service{
 		db:     db,
 		client: &http.Client{Timeout: 20 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }},
-		ov:     newOpenverse(),
+		live:   []liveProvider{newOpenverse(), newIconify()},
 	}
+}
+
+// liveFor returns the first registered provider that serves kind, or nil.
+func (s *Service) liveFor(kind string) liveProvider {
+	for _, p := range s.live {
+		if p.handles(kind) {
+			return p
+		}
+	}
+	return nil
 }
 
 // Query is the stock search query.
@@ -271,21 +301,76 @@ func colorMatches(a map[string]any, hex string) bool {
 	return false
 }
 
-// browseKindRank orders kinds for browsing: photos and illustrations lead,
-// icon packs trail, so an unfiltered browse opens on rich imagery instead of
-// thousands of monochrome glyphs.
-func browseKindRank(a map[string]any) int {
-	switch str(a["kind"]) {
-	case "photo":
-		return 0
-	case "illustration":
-		return 1
-	case "sticker":
-		return 2
-	case "icon":
-		return 3
+// sortByColorfulness orders one kind's browse results: most colorful first,
+// with a title tiebreak so the order is deterministic for offset paging.
+func sortByColorfulness(assets []map[string]any) {
+	score := make(map[string]float64, len(assets))
+	for _, a := range assets {
+		score[str(a["id"])] = colorfulness(a)
 	}
-	return 4
+	sort.SliceStable(assets, func(i, j int) bool {
+		si, sj := score[str(assets[i]["id"])], score[str(assets[j]["id"])]
+		if si != sj {
+			return si > sj
+		}
+		return str(assets[i]["title"]) < str(assets[j]["title"])
+	})
+}
+
+// interleaveByKind orders a mixed browse (no kind filter) by round-robin across
+// kinds (photo, illustration, sticker, icon, then any other kind in id order),
+// most colorful first within each kind. The first screen thus represents every
+// kind instead of opening on a wall of one, and the order is deterministic so
+// offset paging never overlaps.
+func interleaveByKind(assets []map[string]any) []map[string]any {
+	lead := []string{"photo", "illustration", "sticker", "icon"}
+	known := map[string]bool{"photo": true, "illustration": true, "sticker": true, "icon": true}
+	groups := map[string][]map[string]any{}
+	var extra []string
+	for _, a := range assets {
+		k := str(a["kind"])
+		if !known[k] {
+			if _, seen := groups[k]; !seen {
+				extra = append(extra, k)
+			}
+		}
+		groups[k] = append(groups[k], a)
+	}
+	sort.Strings(extra)
+	kinds := append(append([]string{}, lead...), extra...)
+	buckets := make([][]map[string]any, 0, len(kinds))
+	for _, k := range kinds {
+		if g := groups[k]; len(g) > 0 {
+			sortByColorfulness(g)
+			buckets = append(buckets, g)
+		}
+	}
+	return roundRobin(buckets)
+}
+
+// roundRobin merges pre-ordered buckets by taking one from each in turn (bucket
+// 0's first, bucket 1's first, ... then bucket 0's second, ...), preserving each
+// bucket's internal order. Deterministic given deterministic buckets, so offset
+// paging over the result never overlaps.
+func roundRobin(buckets [][]map[string]any) []map[string]any {
+	total := 0
+	for _, b := range buckets {
+		total += len(b)
+	}
+	out := make([]map[string]any, 0, total)
+	for round := 0; ; round++ {
+		progressed := false
+		for _, b := range buckets {
+			if round < len(b) {
+				out = append(out, b[round])
+				progressed = true
+			}
+		}
+		if !progressed {
+			break
+		}
+	}
+	return out
 }
 
 // colorfulness scores an asset's dominant palette: the widest channel spread
@@ -372,25 +457,14 @@ func searchStock(assets []map[string]any, q Query) []map[string]any {
 			}
 			return str(matched[i]["title"]) < str(matched[j]["title"])
 		})
+	} else if q.Kind == "" {
+		// Mixed browse (no kind filter, no text): interleave kinds round-robin so
+		// the first screen represents photos, illustrations, and icons instead of
+		// opening on a single kind. Deterministic so offset paging stays stable.
+		matched = interleaveByKind(matched)
 	} else {
-		// Browse order (no text to rank by): photos/illustrations before icon
-		// packs, most colorful first within a kind. Deterministic (title
-		// tiebreak) so offset paging stays stable across requests.
-		score := make(map[string]float64, len(matched))
-		for _, a := range matched {
-			score[str(a["id"])] = colorfulness(a)
-		}
-		sort.SliceStable(matched, func(i, j int) bool {
-			ri, rj := browseKindRank(matched[i]), browseKindRank(matched[j])
-			if ri != rj {
-				return ri < rj
-			}
-			si, sj := score[str(matched[i]["id"])], score[str(matched[j]["id"])]
-			if si != sj {
-				return si > sj
-			}
-			return str(matched[i]["title"]) < str(matched[j]["title"])
-		})
+		// Single-kind browse: most colorful first, deterministic title tiebreak.
+		sortByColorfulness(matched)
 	}
 	// Page the ranked results (see Query.Limit): an unbounded response over the
 	// bundled library would ship megabytes of inline SVG per request.
@@ -423,13 +497,90 @@ func searchStock(assets []map[string]any, q Query) []map[string]any {
 // bundled-only: the provider can't apply them, so an active facet keeps the
 // search local rather than returning results that silently ignore it.
 func (s *Service) Search(ctx context.Context, q Query, userID string) ([]map[string]any, error) {
-	if q.Kind == "photo" && strings.TrimSpace(q.Text) != "" && q.CollectionID == "" &&
+	// A plain text search (no bundled-only facet like collection/category/style/
+	// orientation/color) for a kind a live provider serves goes upstream first;
+	// the bundled seed is the fallback for everything else and every failure.
+	// Facets stay seed-only because upstream providers can't apply them.
+	if strings.TrimSpace(q.Text) != "" && q.CollectionID == "" &&
 		q.Category == "" && q.Style == "" && q.Orientation == "" && q.Color == "" {
-		if live := s.ov.search(ctx, q); live != nil {
-			return s.withFlags(ctx, live, userID)
+		// "All" (no kind) merges every kind so a default search spans live photos
+		// and icons plus the bundled illustrations/emoji, not just the bundle.
+		if q.Kind == "" {
+			return s.searchAllMerged(ctx, q, userID)
+		}
+		if p := s.liveFor(q.Kind); p != nil {
+			if live := p.search(ctx, q); live != nil {
+				return s.withFlags(ctx, live, userID)
+			}
 		}
 	}
 	return s.withFlags(ctx, searchStock(seed.Stock, q), userID)
+}
+
+// searchAllMerged serves an "All" (no kind) text search by querying every
+// searchable kind in parallel — the live provider where one serves the kind
+// (photos via Openverse, icons via Iconify), the bundled catalog otherwise
+// (illustrations, emoji, and any kind whose live provider fails) — then
+// interleaving the kinds so the results span all of them instead of opening on
+// one. Paging is over the merged, kind-interleaved order; each kind's bucket is
+// fetched for the whole window (offset+limit) so the slice is stable.
+func (s *Service) searchAllMerged(ctx context.Context, q Query, userID string) ([]map[string]any, error) {
+	limit := q.Limit
+	if limit <= 0 {
+		limit = defaultSearchLimit
+	}
+	if limit > maxSearchLimit {
+		limit = maxSearchLimit
+	}
+	offset := q.Offset
+	if offset < 0 {
+		offset = 0
+	}
+	need := offset + limit
+
+	// Fetch each kind's bucket concurrently; a fixed slot per kind keeps the
+	// merged order deterministic regardless of which fetch finishes first.
+	lead := []string{"photo", "illustration", "sticker", "icon"}
+	slots := make([][]map[string]any, len(lead))
+	var wg sync.WaitGroup
+	for i, k := range lead {
+		i, k := i, k
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			p := s.liveFor(k)
+			var bucket []map[string]any
+			if p != nil {
+				bucket = p.search(ctx, Query{Text: q.Text, Kind: k, Limit: need})
+			}
+			// Fall back to the bundled catalog when this kind has no live provider,
+			// or (only on the first page) when the live provider failed. On deeper
+			// pages a live kind stays live-or-empty: swapping in a differently
+			// sized/ordered bundled bucket mid-pagination would re-interleave the
+			// merged order and resurface or skip already-shown tiles.
+			if bucket == nil && (p == nil || offset == 0) {
+				bucket = searchStock(seed.Stock, Query{Text: q.Text, Kind: k, Limit: need})
+			}
+			slots[i] = bucket
+		}()
+	}
+	wg.Wait()
+
+	buckets := make([][]map[string]any, 0, len(slots))
+	for _, b := range slots {
+		if len(b) > 0 {
+			buckets = append(buckets, b)
+		}
+	}
+	merged := roundRobin(buckets)
+	if offset >= len(merged) {
+		return s.withFlags(ctx, nil, userID)
+	}
+	end := offset + limit
+	if end > len(merged) {
+		end = len(merged)
+	}
+	return s.withFlags(ctx, merged[offset:end], userID)
 }
 
 // Get returns one catalog asset.
