@@ -4,10 +4,11 @@
 
 import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
 import { useRouter } from "next/router";
-import { ChevronLeft, Undo2, Redo2, Download, Play, MonitorPlay, Ruler, Grid3x3, Magnet, LayoutTemplate, History, Eye, Share2, MessageSquare, ShieldCheck, Activity, BarChart3, MoreHorizontal, Send, Globe, Printer, PanelRightClose, PanelRightOpen, Keyboard, Info, X, Accessibility, Maximize2, Minimize2, LayoutGrid } from "lucide-react";
+import { ChevronLeft, Undo2, Redo2, Download, Play, MonitorPlay, Ruler, Grid3x3, Magnet, LayoutTemplate, History, Eye, Share2, MessageSquare, ShieldCheck, Activity, BarChart3, MoreHorizontal, Send, Globe, Printer, PanelRightClose, PanelRightOpen, Keyboard, Info, X, Accessibility, Maximize2, Minimize2, LayoutGrid, FileDown } from "lucide-react";
 import type { AccessMode } from "@hc/sdk";
 import { ApiError } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
+import { downloadHycFile } from "@/lib/hycFile";
 import { useEditor } from "@/store/editor";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
@@ -839,6 +840,13 @@ export function EditorApp() {
               ...(docKind === "design" && pageCount > 1
                 ? [{ icon: LayoutGrid as TopIcon, label: "Slide overview", onClick: () => setOverviewOpen(true) }]
                 : []),
+              // The document as a portable .hyc file (the open format as
+              // readable JSON): every kind, saved or not, downloads what is
+              // currently on screen.
+              { icon: FileDown as TopIcon, label: "Download .hyc file", onClick: () => {
+                const d = useEditor.getState().doc;
+                downloadHycFile(d, (d.title as string) || "design");
+              } },
               ...(designId ? [{ icon: History as TopIcon, label: "Version history", onClick: () => showPanel("history") }] : []),
               ...(designId ? [{ icon: Activity as TopIcon, label: "Activity feed", onClick: () => showPanel("activity") }] : []),
               ...(designId && canMember ? [{ icon: BarChart3 as TopIcon, label: "Engagement insights", onClick: () => showPanel("insights") }] : []),

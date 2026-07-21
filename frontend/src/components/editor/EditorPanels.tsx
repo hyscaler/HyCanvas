@@ -3,7 +3,7 @@
 // are undoable. Uploads/stock images are placed via the image asset provider.
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type FormEvent } from "react";
-import { Square, SquareRoundCorner, Circle, Triangle, Pentagon, Hexagon, Star, Diamond, Octagon, Frame, QrCode, Type, Upload, Search, Table as TableIcon, BarChart3, LineChart, AreaChart, PieChart, Donut, ScatterChart, Radar, Wand2, ImagePlus, Settings2, Trash2, Folder, FolderPlus, Pencil, X, Tag, ChevronLeft, Link as LinkIcon, Mic, Video, MonitorUp, CircleStop, Spline, Clock, LayoutGrid, Shapes, Sparkles, Stethoscope, AlignStartVertical, Play, ChevronDown, Send, Plus, RotateCcw } from "lucide-react";
+import { Square, SquareRoundCorner, Circle, Triangle, Pentagon, Hexagon, Star, Diamond, Octagon, Frame, QrCode, Type, Upload, Search, Table as TableIcon, BarChart3, LineChart, AreaChart, PieChart, Donut, ScatterChart, Radar, Wand2, ImagePlus, Settings2, Trash2, Folder, FolderPlus, Pencil, X, Tag, ChevronLeft, Link as LinkIcon, Mic, Video, MonitorUp, CircleStop, Spline, Clock, LayoutGrid, Shapes, Sparkles, Stethoscope, AlignStartVertical, Play, ChevronDown, Send, Plus, RotateCcw, FileDown } from "lucide-react";
 import { migrate, type ChartType, type Node, type Fill, type Color } from "@hc/schema";
 import { searchFonts, type FontCatalogEntry } from "@hc/text";
 import { toHex, fromHex, relativeLuminance } from "@hc/color";
@@ -17,6 +17,7 @@ import {
   toolCatalog, assistantSystemPrompt, parseAssistantReply, planMutates, summarizeDesign, type PlanStep,
 } from "@hc/aistudio";
 import { promptText } from "@/lib/promptDialog";
+import { downloadHycFile } from "@/lib/hycFile";
 import { generateAltText } from "@/lib/altText";
 import { fonts } from "@/lib/fontProvider";
 import { locate } from "@hc/editor";
@@ -166,26 +167,46 @@ export function TemplatesPanel() {
     }
   };
 
+  const downloadHyc = async (t: TemplateSummary) => {
+    try {
+      downloadHycFile(await oc.getTemplateFile(t.id), t.title);
+    } catch {
+      toast.error("Could not download the template.");
+    }
+  };
+
+  // The apply button and the .hyc download live side by side (never nested:
+  // a button inside a button is invalid markup), inside one hover group.
   const card = (t: TemplateSummary) => (
-    <button
-      key={t.id}
-      type="button"
-      onClick={() => void apply(t)}
-      disabled={!!busyId}
-      title={`Add "${t.title}" (${Math.round(t.format?.width ?? 0)}x${Math.round(t.format?.height ?? 0)}) as a new page`}
-      className="group overflow-hidden rounded-xl border border-neutral-200 bg-surface text-left shadow-sm transition hover:border-brand-300 hover:shadow-md disabled:opacity-60"
-    >
-      <div className="relative aspect-[4/3] bg-neutral-100">
-        <DesignThumb templateId={t.id} />
-        <span className="absolute bottom-1 right-1 rounded bg-black/55 px-1 py-0.5 font-mono text-[9px] tabular-nums text-white/90">
-          {Math.round(t.format?.width ?? 0)}x{Math.round(t.format?.height ?? 0)}
-        </span>
-        {busyId === t.id && (
-          <span className="absolute inset-0 grid place-items-center bg-white/60"><Spinner /></span>
-        )}
-      </div>
-      <div className="truncate px-2 py-1.5 text-xs font-medium text-neutral-700">{t.title}</div>
-    </button>
+    <div key={t.id} className="group relative overflow-hidden rounded-xl border border-neutral-200 bg-surface shadow-sm transition hover:border-brand-300 hover:shadow-md">
+      <button
+        type="button"
+        onClick={() => void apply(t)}
+        disabled={!!busyId}
+        title={`Add "${t.title}" (${Math.round(t.format?.width ?? 0)}x${Math.round(t.format?.height ?? 0)}) as a new page`}
+        className="block w-full text-left disabled:opacity-60"
+      >
+        <div className="relative aspect-[4/3] bg-neutral-100">
+          <DesignThumb templateId={t.id} />
+          <span className="absolute bottom-1 right-1 rounded bg-black/55 px-1 py-0.5 font-mono text-[9px] tabular-nums text-white/90">
+            {Math.round(t.format?.width ?? 0)}x{Math.round(t.format?.height ?? 0)}
+          </span>
+          {busyId === t.id && (
+            <span className="absolute inset-0 grid place-items-center bg-white/60"><Spinner /></span>
+          )}
+        </div>
+        <div className="truncate px-2 py-1.5 text-xs font-medium text-neutral-700">{t.title}</div>
+      </button>
+      <button
+        type="button"
+        onClick={() => void downloadHyc(t)}
+        title="Download as .hyc file"
+        aria-label={`Download "${t.title}" as .hyc file`}
+        className="absolute right-1 top-1 rounded-md border border-neutral-200 bg-surface p-1 text-neutral-600 opacity-0 shadow-sm transition hover:text-brand-ink focus-visible:opacity-100 group-hover:opacity-100"
+      >
+        <FileDown size={12} />
+      </button>
+    </div>
   );
 
   const sectionCls = "mb-1.5 mt-3 text-xs font-semibold uppercase tracking-wide text-neutral-400";

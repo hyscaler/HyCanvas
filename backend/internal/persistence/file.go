@@ -33,7 +33,11 @@ func checksum(buf []byte) string {
 }
 
 func snapshotKey(designID, checksum string) string {
-	return "designs/" + designID + "/snapshots/" + checksum + ".ocd"
+	// .hyc is the HyCanvas file extension (the open format as JSON). Older
+	// snapshots stored as .ocd stay readable forever: every read, delete, and
+	// purge resolves through the BlobURL persisted on the snapshot row, never
+	// through this function.
+	return "designs/" + designID + "/snapshots/" + checksum + ".hyc"
 }
 
 // validFile does a lightweight structural check: the file must have a string id

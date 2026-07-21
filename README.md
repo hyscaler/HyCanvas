@@ -14,7 +14,7 @@ Open a template and make it yours - edit text, restyle, and export, all in the b
   <img src=".github/hycanvas-editor-demo.gif" alt="Editing a template in the HyCanvas editor" width="820">
 </p>
 
-Every design stays yours in an open format, exportable to PNG, PDF, and more, with no watermarks:
+Every design stays yours in an open format: download any document as a portable `.hyc` file (readable JSON) and import it on any instance, or export to PNG, PDF, and more, with no watermarks:
 
 <p align="center">
   <img src=".github/hycanvas-design-sample.png" alt="A social card designed in HyCanvas" width="600">

@@ -8,6 +8,8 @@ import { useRouter } from "next/router";
 import {
   Home as HomeIcon,
   LayoutTemplate,
+  FileUp,
+  FileDown,
   PanelLeftClose,
   PanelLeftOpen,
   Trash2,
@@ -45,7 +47,8 @@ import {
   Sun,
 } from "lucide-react";
 import { createBlankDesign } from "@hc/schema";
-import type { DesignRecord, HomeItem, MyTask, StorageUsageView, TaskStatus, TemplateCollectionSummary, TemplateSummary, WorkspaceRole } from "@hc/sdk";
+import { HYC_ACCEPT, downloadHycFile, importedTitle, parseHycFile, readFileText } from "@/lib/hycFile";
+import { ApiError, type DesignRecord, type HomeItem, type MyTask, type StorageUsageView, type TaskStatus, type TemplateCollectionSummary, type TemplateSummary, type WorkspaceRole } from "@hc/sdk";
 import { formatBytes } from "@/lib/format";
 import { useDateFormat } from "@/lib/datetime";
 import { resolvedTheme, setThemePreference } from "@/lib/theme";
@@ -366,6 +369,73 @@ export function DashboardApp({ view }: { view: DashboardView }) {
     toast.success("Deleted permanently.");
   }
 
+  // Import a .hyc file (the open format as JSON) as a NEW design in the active
+  // workspace. Validation + forward migration happen client-side so the errors
+  // are immediate and specific; the server re-validates on create.
+  // Best user-facing message from a failed import: the server's problem+json
+  // `detail` (a validate() slip that reached the server, quota, etc.) beats the
+  // opaque "HyCanvas API 4xx" ApiError.message; a client-side Error keeps its
+  // own specific message.
+  const importErrorMessage = (e: unknown, fallback: string) => {
+    if (e instanceof ApiError) {
+      const detail = (e.body as { detail?: unknown } | null)?.detail;
+      if (typeof detail === "string" && detail) return detail;
+    }
+    return e instanceof Error ? e.message : fallback;
+  };
+  const importDesignRef = useRef<HTMLInputElement>(null);
+  async function importHycDesign(list: FileList | null) {
+    const f = list?.[0];
+    if (!f || !activeWorkspaceId || busy) return;
+    setBusy(true);
+    try {
+      const file = parseHycFile(await readFileText(f));
+      const title = importedTitle(file, f.name);
+      const rec = await oc.createDesign({ workspaceId: activeWorkspaceId, title, from: { ...file, title } });
+      toast.success(`Imported "${title}".`);
+      await open(rec.id);
+    } catch (e) {
+      toast.error(importErrorMessage(e, "Could not import the file."));
+      setBusy(false);
+    }
+  }
+
+  // Import a .hyc as a WORKSPACE template (same file format; templates are
+  // design files), so templates travel between instances as plain files.
+  const importTemplateRef = useRef<HTMLInputElement>(null);
+  async function importHycTemplate(list: FileList | null) {
+    const f = list?.[0];
+    if (!f || !activeWorkspaceId || busy) return;
+    setBusy(true);
+    try {
+      const file = parseHycFile(await readFileText(f));
+      const title = importedTitle(file, f.name);
+      await oc.saveAsTemplate({ workspaceId: activeWorkspaceId, file, title, visibility: "workspace" });
+      // Refresh with the SAME scope the Templates view loads under (workspace +
+      // active collection), so the new card appears without collapsing the
+      // view's scoping to an unfiltered global list.
+      setTemplates(
+        await oc
+          .listTemplates({ workspaceId: activeWorkspaceId, collection: tplCollection ?? undefined })
+          .catch(() => templates),
+      );
+      toast.success(`Template "${title}" imported.`);
+    } catch (e) {
+      toast.error(importErrorMessage(e, "Could not import the template."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Download a template as a portable .hyc file.
+  async function downloadTemplateHyc(t: TemplateSummary) {
+    try {
+      downloadHycFile(await oc.getTemplateFile(t.id), t.title);
+    } catch {
+      toast.error("Could not download the template.");
+    }
+  }
+
   async function createDesign(width = 1080, height = 1080, label = "Untitled design", kind?: string) {
     if (!activeWorkspaceId) return;
     setSizeOpen(false);
@@ -655,6 +725,21 @@ export function DashboardApp({ view }: { view: DashboardView }) {
               {[{ label: "Blank", icon: Plus, w: 1080, h: 1080 } as Format, ...FORMAT_GROUPS.flatMap((g) => g.items)].map((f) => (
                 <FormatTile key={f.label} f={f} disabled={busy} onClick={() => startFormat(f)} />
               ))}
+              <FormatTile
+                f={{ label: "Import .hyc", icon: FileUp, w: 1080, h: 1080 } as Format}
+                disabled={busy}
+                onClick={() => importDesignRef.current?.click()}
+              />
+              <input
+                ref={importDesignRef}
+                type="file"
+                accept={HYC_ACCEPT}
+                hidden
+                onChange={(e) => {
+                  void importHycDesign(e.target.files);
+                  e.target.value = ""; // allow re-picking the same file
+                }}
+              />
             </div>
           </section>
 
@@ -740,6 +825,20 @@ export function DashboardApp({ view }: { view: DashboardView }) {
               {/* Header row matches Favorites: title left, controls right. */}
               <div className="mb-3 flex items-center justify-between gap-3">
                 <h2 className="text-sm font-bold uppercase tracking-wide text-neutral-400">Templates</h2>
+                <Button variant="secondary" size="sm" disabled={busy} onClick={() => importTemplateRef.current?.click()} title="Import a template from a .hyc file">
+                  <FileUp size={15} /> Import template
+                </Button>
+                <input
+                  ref={importTemplateRef}
+                  type="file"
+                  accept={HYC_ACCEPT}
+                  hidden
+                  onChange={(e) => {
+                    void importHycTemplate(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+                <span className="flex-1" />
                 {collections.length > 0 && (
                   <select
                     value={tplCollection ?? ""}
@@ -788,6 +887,14 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                       >
                         <div className="aspect-[4/3] overflow-hidden rounded-t-2xl bg-neutral-100"><DesignThumb templateId={t.id} /></div>
                         <div className="truncate px-3 py-2.5 text-sm font-semibold text-neutral-800">{t.title}</div>
+                      </button>
+                      <button
+                        onClick={() => void downloadTemplateHyc(t)}
+                        title="Download as .hyc file"
+                        aria-label={`Download "${t.title}" as .hyc file`}
+                        className="absolute right-2 top-2 rounded-lg border border-neutral-200 bg-surface p-1.5 text-neutral-600 opacity-0 shadow-sm transition hover:text-brand-ink focus-visible:opacity-100 group-hover:opacity-100"
+                      >
+                        <FileDown size={14} />
                       </button>
                     </li>
                   ))}
@@ -1072,7 +1179,7 @@ function FormatTile({ f, disabled, onClick }: { f: Format; disabled?: boolean; o
       onClick={onClick}
       disabled={disabled}
       className="group flex w-24 flex-col items-center gap-2"
-      title={f.label === "Blank" ? f.label : `${f.label} · ${f.w}×${f.h}`}
+      title={f.label === "Blank" || f.label.startsWith("Import") ? f.label : `${f.label} · ${f.w}×${f.h}`}
     >
       <span className="relative grid h-[78px] w-full place-items-center rounded-xl border border-neutral-200 bg-surface shadow-sm transition group-hover:-translate-y-0.5 group-hover:border-brand-300 group-hover:shadow-md">
         <span className="rounded bg-brand-50 ring-1 ring-brand-100" style={{ width: boxW, height: boxH }} />
