@@ -44,6 +44,19 @@ function pad2(n: number): string {
 }
 
 const FONT_CATEGORIES: FontCategory[] = ["sans-serif", "serif", "display", "handwriting", "monospace"];
+
+// The font-family <option> list is derived purely from the static catalog (~2k
+// families now that the full library is bundled), so build it ONCE at module
+// scope. A stable element reference lets React skip re-reconciling the whole
+// option list on every PropertiesPanel render (each style tweak/slider drag while
+// a text node is selected), which otherwise janked text editing.
+const FONT_FAMILY_OPTIONS = FONT_CATEGORIES.map((cat) => (
+  <optgroup key={cat} label={cat} className="capitalize">
+    {FONT_CATALOG.filter((f) => f.category === cat && !f.system).map((f) => (
+      <option key={f.family} value={f.family}>{f.family}</option>
+    ))}
+  </optgroup>
+));
 const WEIGHTS: { v: number; label: string }[] = [
   { v: 300, label: "Light" },
   { v: 400, label: "Regular" },
@@ -1239,13 +1252,7 @@ export function PropertiesPanel() {
                 className={selectCls}
               >
                 <option value="system">System default</option>
-                {FONT_CATEGORIES.map((cat) => (
-                  <optgroup key={cat} label={cat} className="capitalize">
-                    {FONT_CATALOG.filter((f) => f.category === cat && !f.system).map((f) => (
-                      <option key={f.family} value={f.family}>{f.family}</option>
-                    ))}
-                  </optgroup>
-                ))}
+                {FONT_FAMILY_OPTIONS}
               </select>
             )}
             <div className="grid grid-cols-2 gap-2">

@@ -255,16 +255,59 @@ function afterInsert(toast: ReturnType<typeof useToast>, label: string) {
 }
 
 export function PanelShell({ title, children, fill }: { title: string; children: React.ReactNode; fill?: boolean }) {
-  // Width degrades gracefully on narrow screens (60vw, capped at 16rem) so the
-  // slide-out panel does not dominate a small viewport; at lg+ it is the full
-  // 18rem (w-72) it has always been. When overlaid on the canvas (below lg, see
-  // ToolRail) the narrower width keeps more of the canvas visible behind it.
-  // `fill` makes the panel a non-scrolling flex column so a child (e.g. the AI
-  // chat) can pin its own footer and scroll only its message area.
+  // Resizable width at lg+ (drag the right edge), clamped and persisted per-user
+  // (default 288px, the former fixed w-72). Below lg the panel keeps a responsive
+  // narrow width (60vw capped at 16rem) so it never dominates a small viewport or
+  // the canvas overlay (see ToolRail), and the drag handle is hidden. `fill` makes
+  // the body a non-scrolling flex column so a child (e.g. the AI chat) can pin its
+  // own footer and scroll only its message area.
+  const [width, setWidth] = useState<number>(() => {
+    if (typeof window === "undefined") return 288;
+    const v = Number(window.localStorage.getItem("oc-left-panel-width"));
+    return Number.isFinite(v) && v >= 220 && v <= 560 ? v : 288;
+  });
+  const resize = useRef<{ startX: number; startW: number } | null>(null);
+  const onResizeDown = (e: React.PointerEvent) => {
+    resize.current = { startX: e.clientX, startW: width };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    e.preventDefault();
+  };
+  const onResizeMove = (e: React.PointerEvent) => {
+    const r = resize.current;
+    if (!r) return;
+    // Panel sits on the left; dragging its right edge rightward widens it.
+    setWidth(Math.min(560, Math.max(220, r.startW + (e.clientX - r.startX))));
+  };
+  const onResizeUp = (e: React.PointerEvent) => {
+    if (!resize.current) return;
+    resize.current = null;
+    (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+    // Persist once on release, not on every pointermove.
+    try { window.localStorage.setItem("oc-left-panel-width", String(width)); } catch { /* ignore */ }
+  };
   return (
-    <div className={`oc-scroll flex h-full w-[min(16rem,60vw)] flex-col border-r border-neutral-200 bg-surface lg:w-72 ${fill ? "overflow-hidden" : "overflow-y-auto overflow-x-hidden"}`}>
-      <h3 className="px-4 pb-2 pt-4 text-sm font-bold text-neutral-800">{title}</h3>
-      <div className={fill ? "flex min-h-0 flex-1 flex-col px-4 pb-4" : "flex-1 px-4 pb-4"}>{children}</div>
+    <div
+      className="flex h-full w-[min(16rem,60vw)] shrink-0 lg:w-[var(--oc-left-w)]"
+      style={{ ["--oc-left-w"]: `${width}px` } as React.CSSProperties}
+    >
+      {/* Scroll area. Its right border shows below lg; at lg+ the drag handle to
+          its right carries the border so the two never double up. */}
+      <div className={`oc-scroll flex h-full min-w-0 flex-1 flex-col border-r border-neutral-200 bg-surface lg:border-r-0 ${fill ? "overflow-hidden" : "overflow-y-auto overflow-x-hidden"}`}>
+        <h3 className="px-4 pb-2 pt-4 text-sm font-bold text-neutral-800">{title}</h3>
+        <div className={fill ? "flex min-h-0 flex-1 flex-col px-4 pb-4" : "flex-1 px-4 pb-4"}>{children}</div>
+      </div>
+      {/* Resize handle: a thin column to the RIGHT of the scroll area (so it never
+          overlaps the vertical scrollbar), shown only at lg+ (inline layout). */}
+      <div
+        onPointerDown={onResizeDown}
+        onPointerMove={onResizeMove}
+        onPointerUp={onResizeUp}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize panel"
+        title="Drag to resize"
+        className="hidden w-1.5 shrink-0 cursor-col-resize touch-none border-r border-neutral-200 bg-transparent hover:bg-brand-300/50 lg:block"
+      />
     </div>
   );
 }
@@ -632,9 +675,26 @@ const PAIRINGS: { name: string; head: string; headFont: string; sub: string; sub
 
 /** A font row that lazy-loads its web font and previews the name in that font. */
 function FontRow({ entry, onPick }: { entry: FontCatalogEntry; onPick: (family: string) => void }) {
-  useEffect(() => { fonts.ensure(entry.family); }, [entry.family]);
+  const ref = useRef<HTMLButtonElement>(null);
+  // Lazy-load the preview font only when the row scrolls into view: the catalog
+  // is the full ~2k-family library, so eagerly loading every result would fire
+  // thousands of stylesheet + face requests. The IntersectionObserver root is
+  // the panel's own scroll container (.oc-scroll from PanelShell).
+  useEffect(() => {
+    if (entry.system) return;
+    const el = ref.current;
+    if (!el) return;
+    const root = el.closest(".oc-scroll");
+    const io = new IntersectionObserver(
+      (es) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); fonts.ensure(entry.family); } },
+      { root, rootMargin: "300px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [entry.family, entry.system]);
   return (
     <button
+      ref={ref}
       onClick={() => onPick(entry.family)}
       className="flex w-full items-center justify-between rounded-lg bg-neutral-50 px-3 py-2 text-left text-[15px] text-neutral-800 hover:bg-brand-50"
       style={{ fontFamily: cssStack(entry) }}
@@ -646,6 +706,24 @@ function FontRow({ entry, onPick }: { entry: FontCatalogEntry; onPick: (family: 
   );
 }
 
+/** Bottom sentinel: grows the rendered font list as it scrolls into view, so the
+ *  full library pages in on scroll instead of rendering ~2k rows at once. */
+function FontListSentinel({ onMore }: { onMore: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const root = el.closest(".oc-scroll");
+    const io = new IntersectionObserver(
+      (es) => { if (es.some((e) => e.isIntersecting)) onMore(); },
+      { root, rootMargin: "400px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [onMore]);
+  return <div ref={ref} aria-hidden className="h-2" />;
+}
+
 export function TextPanel() {
   const toast = useToast();
   const addNode = useEditor((s) => s.addNode);
@@ -655,6 +733,18 @@ export function TextPanel() {
   const [, force] = useReducer((x: number) => x + 1, 0);
   // Re-render previews as web fonts finish loading.
   useEffect(() => fonts.onChange(() => force()), []);
+  // Pairing preview cards render in their target fonts; eagerly load that small
+  // fixed set. The scrollable font list below lazy-loads per row, but the pairing
+  // cards sit above it and never enter that observer's range.
+  useEffect(() => { for (const p of PAIRINGS) { fonts.ensure(p.headFont); fonts.ensure(p.subFont); } }, []);
+  // Page the (full-library) results in on scroll; reset when the search changes.
+  // Resetting during render (comparing the previous query) rather than in an
+  // effect avoids an extra render pass.
+  const FONT_PAGE = 60;
+  const [fontLimit, setFontLimit] = useState(FONT_PAGE);
+  const [fontQuerySeen, setFontQuerySeen] = useState(debouncedQuery);
+  if (fontQuerySeen !== debouncedQuery) { setFontQuerySeen(debouncedQuery); setFontLimit(FONT_PAGE); }
+  const showMoreFonts = useCallback(() => setFontLimit((n) => n + FONT_PAGE), []);
   const fontFileRef = useRef<HTMLInputElement>(null);
 
   // Upload a custom font (FR-6): read the file, register it into document.fonts
@@ -783,8 +873,9 @@ export function TextPanel() {
             </div>
           )}
           <div className="flex flex-col gap-1">
-            {results.map((e) => <FontRow key={e.family} entry={e} onPick={applyFont} />)}
+            {results.slice(0, fontLimit).map((e) => <FontRow key={e.family} entry={e} onPick={applyFont} />)}
             {results.length === 0 && <p className="px-1 py-2 text-xs text-neutral-400">No fonts match “{debouncedQuery}”.</p>}
+            {fontLimit < results.length && <FontListSentinel onMore={showMoreFonts} />}
           </div>
         </CollapsibleSection>
       </div>
@@ -3027,7 +3118,8 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
   // collectionIds, so it rides the same collection query param.
   const [source, setSource] = useState("");
   const [filters, setFilters] = useState<StockFiltersSummary | null>(null);
-  const [collection, setCollection] = useState<StockCollectionSummary | null>(null);
+  // Loaded only to derive the per-kind Source facet (bundled packs); there is no
+  // curated-collections row.
   const [collections, setCollections] = useState<StockCollectionSummary[]>([]);
   const [results, setResults] = useState<StockAssetSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -3037,11 +3129,10 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
   // Bump to force a retry of the active tab's fetch effect.
   const [retryNonce, setRetryNonce] = useState(0);
 
-  // Load collections and filter facets; the browse landing state shows
-  // collections as a row, facets appear per kind. Keyed on retryNonce so the
-  // results-area Retry button also heals a failed load here (a miss would
-  // otherwise hide collections and facets for the panel's lifetime), keeping
-  // whatever already loaded when a refetch fails.
+  // Load the pack list (for the per-kind Source facet) and filter facets. Keyed
+  // on retryNonce so the results-area Retry button also heals a failed load here
+  // (a miss would otherwise hide the Source facet and facets for the panel's
+  // lifetime), keeping whatever already loaded when a refetch fails.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -3084,7 +3175,7 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
         let r: StockAssetSummary[];
         if (tab === "favorites") r = await oc.stockFavorites();
         else if (tab === "recents") r = await oc.stockRecent();
-        else r = await oc.stockSearch(intentQuery(debouncedQuery) || undefined, kind || undefined, { category: category || undefined, style: style || undefined, orientation: orientation || undefined, collection: collection?.id || source || undefined, limit: STOCK_PAGE });
+        else r = await oc.stockSearch(intentQuery(debouncedQuery) || undefined, kind || undefined, { category: category || undefined, style: style || undefined, orientation: orientation || undefined, collection: source || undefined, limit: STOCK_PAGE });
         if (!cancelled) { setResults(r); setHasMore(tab === "browse" && r.length === STOCK_PAGE); nextOffset.current = STOCK_PAGE; }
       } catch {
         if (!cancelled) { setResults([]); setError(true); setHasMore(false); }
@@ -3093,8 +3184,8 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
       }
     })();
     return () => { cancelled = true; };
-    // Re-run when the tab, filters, debounced query, or active collection change.
-  }, [tab, collection, debouncedQuery, kind, category, style, orientation, source, retryNonce]);
+    // Re-run when the tab, filters, debounced query, kind, or source change.
+  }, [tab, debouncedQuery, kind, category, style, orientation, source, retryNonce]);
 
   async function loadMore() {
     if (loadingMore) return;
@@ -3104,7 +3195,7 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
     try {
       const next = await oc.stockSearch(intentQuery(debouncedQuery) || undefined, kind || undefined, {
         category: category || undefined, style: style || undefined, orientation: orientation || undefined,
-        collection: collection?.id || source || undefined, limit: STOCK_PAGE, offset,
+        collection: source || undefined, limit: STOCK_PAGE, offset,
       });
       if (gen !== fetchGen.current) return; // filters changed mid-flight; the grid was replaced
       nextOffset.current = offset + STOCK_PAGE;
@@ -3150,15 +3241,13 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
     { id: "recents", label: "Recent", icon: Clock },
   ];
 
-  // Curated themes are the top-level Collection chips; bundled packs are a
-  // per-kind Source facet, kept out of the theme row so it stays scannable.
-  const curatedCollections = collections.filter((c) => c.source !== "pack");
+  // Bundled packs surface as a per-kind Source facet (e.g. illustration packs
+  // under the Illustrations kind); there is no curated-collections section.
   const packSources = collections.filter((c) => c.source === "pack" && c.kind === kind);
 
   const emptyMessage =
     tab === "favorites" ? "No favorites yet. Tap the star on any asset." :
     tab === "recents" ? "Nothing placed yet." :
-    collection ? `Nothing in ${collection.title}.` :
     // Name the facet as a cause alongside the query: with both active, the
     // facet is often the real constraint (and on photos it also switches the
     // search from the live provider to the bundled library).
@@ -3171,7 +3260,7 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
     <PanelShell title="Stock">
       <div className="mb-3 flex gap-1">
         {TABS.map((t) => (
-          <button key={t.id} onClick={() => { setTab(t.id); setCollection(null); }} className={`flex flex-1 items-center justify-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-medium ${tab === t.id ? "border-brand-500 bg-brand-50 text-brand-ink" : "border-neutral-200 text-neutral-600 hover:bg-neutral-100"}`}>
+          <button key={t.id} onClick={() => setTab(t.id)} className={`flex flex-1 items-center justify-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-medium ${tab === t.id ? "border-brand-500 bg-brand-50 text-brand-ink" : "border-neutral-200 text-neutral-600 hover:bg-neutral-100"}`}>
             <t.icon size={13} />{t.label}
           </button>
         ))}
@@ -3196,12 +3285,11 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
               <button key={f.label} onClick={() => setFilter(f.kind)} className={stockChipCls(kind === f.kind)}>{f.label}</button>
             ))}
           </div>
-          {/* Kind-scoped facet rows; a selected collection is already a narrower
-              container, so facets stay hidden until it's cleared. */}
-          {/* Source: the bundled packs for this kind (ManyPixels, Open Doodles,
-              Tabler, ...). Kept as a facet under the kind rather than in the
-              top-level Collections row so themes stay scannable. */}
-          {kind && !collection && packSources.length >= 2 && (
+          {/* Source: the bundled packs for this kind (illustrations -> Open
+              Doodles / ManyPixels / Open Peeps / Lukasz Adam; icons -> Tabler /
+              Health). Shown under the active kind; there is no separate
+              Collections section. */}
+          {kind && packSources.length >= 2 && (
             <div className="mb-2">
               <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Source</p>
               <div className="flex flex-wrap gap-1">
@@ -3212,7 +3300,7 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
               </div>
             </div>
           )}
-          {kind && !collection && filters && (
+          {kind && filters && (
             <>
               <FacetChips label="Category" values={filters.categories.filter((v) => v.kind === kind)} active={category} onPick={setCategory} />
               <FacetChips label="Style" values={filters.styles.filter((v) => v.kind === kind)} active={style} onPick={setStyle} />
@@ -3224,21 +3312,6 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
               )}
             </>
           )}
-          {collection ? (
-            <button onClick={() => setCollection(null)} className="mb-2 flex items-center gap-1 text-xs font-medium text-brand-ink hover:underline">
-              <ChevronLeft size={13} />Back to collections
-            </button>
-          ) : !query && !kind && curatedCollections.length > 0 ? (
-            <div className="mb-3">
-              <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Collections</p>
-              <div className="flex flex-wrap gap-1.5">
-                {curatedCollections.map((c) => (
-                  <button key={c.id} onClick={() => setCollection(c)} title={c.description} className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs text-neutral-600 hover:bg-brand-50 hover:text-brand-ink">{c.title}</button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-          {collection && <p className="mb-2 text-[11px] text-neutral-500">{collection.description}</p>}
         </>
       )}
 
