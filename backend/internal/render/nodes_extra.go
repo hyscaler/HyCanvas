@@ -379,16 +379,17 @@ func (rc *rctx) rasterTable(m mat, node map[string]any) {
 		return
 	}
 	// Bound the grid a crafted design file can ask us to render: no real table
-	// approaches these counts, and the cap keeps the axis allocations below
-	// small, fixed sizes regardless of the file's array lengths.
-	if len(colW) > maxTableAxis {
-		colW = colW[:maxTableAxis]
-	}
-	if len(rowH) > maxTableAxis {
-		rowH = rowH[:maxTableAxis]
-	}
+	// approaches these counts, and clamping the axis counts against the fixed
+	// maxTableAxis constant right before each allocation keeps the axis slices at
+	// small, provably bounded sizes regardless of the file's array lengths.
 	nCols := len(colW)
+	if nCols > maxTableAxis {
+		nCols = maxTableAxis
+	}
 	nRows := len(rowH)
+	if nRows > maxTableAxis {
+		nRows = maxTableAxis
+	}
 	xs := make([]float64, nCols+1)
 	for i := 0; i < nCols; i++ {
 		xs[i+1] = xs[i] + asNum(colW[i])
@@ -405,7 +406,7 @@ func (rc *rctx) rasterTable(m mat, node map[string]any) {
 		cell := asObj(cv)
 		col := int(asNum(cell["col"]))
 		row := int(asNum(cell["row"]))
-		if col < 0 || row < 0 || col >= len(colW) || row >= len(rowH) {
+		if col < 0 || row < 0 || col >= nCols || row >= nRows {
 			continue
 		}
 		colSpan := int(asNum(cell["colSpan"]))
@@ -418,11 +419,11 @@ func (rc *rctx) rasterTable(m mat, node map[string]any) {
 		}
 		c1 := col + colSpan
 		r1 := row + rowSpan
-		if c1 > len(colW) {
-			c1 = len(colW)
+		if c1 > nCols {
+			c1 = nCols
 		}
-		if r1 > len(rowH) {
-			r1 = len(rowH)
+		if r1 > nRows {
+			r1 = nRows
 		}
 		cx, cy := xs[col], ys[row]
 		cw, ch := xs[c1]-cx, ys[r1]-cy
