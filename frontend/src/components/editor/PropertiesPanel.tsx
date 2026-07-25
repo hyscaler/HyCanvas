@@ -2,8 +2,8 @@
 // input) and blend mode for the selection. Single selection edits geometry; a
 // multi-selection edits the shared fields (opacity, blend). Empty shows page info.
 
-import type { ComponentType } from "react";
-import { useEffect, useRef, useState } from "react";
+import type { ChangeEvent, ComponentType } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   BlendMode, CharStyle, ChartNode, ChartStyle, Color, DataBinding, DesignFile, Easing, Effect, ElementLink, EmphasisPreset,
   EntrancePreset, ExitPreset, Fill, GradientFill, GradientStop, ImageFit, ImageMotion, ImageNode,
@@ -33,7 +33,7 @@ import { lockSelection, unlockSelection } from "@/lib/useRealtime";
 import { CollapsibleSection } from "./EditorPanels";
 import { ColorField } from "./ColorField";
 import { imageAssets } from "@/lib/assetProvider";
-import { resolveAssetUrl } from "@/lib/sdk";
+import { oc, resolveAssetUrl, uploadAssetWithProgress } from "@/lib/sdk";
 import { MagicResizeButton } from "./MagicResizeDialog";
 import { useToast } from "@/components/ui/Toast";
 
@@ -504,7 +504,100 @@ function GradientEditor({ g, onChange }: { g: GradientFill; onChange: (patch: Pa
   );
 }
 
-export function PropertiesPanel() {
+/** QR center-logo control: upload a new image or pick an existing workspace
+ *  upload. The picked/uploaded asset id is set as the QR's logoAssetId (a real
+ *  workspace asset, so server exports can embed it); adding a logo raises error
+ *  correction to keep the code scannable. */
+function QrLogoControl({ id, logoAssetId, logoScale, workspaceId }: { id: string; logoAssetId?: string; logoScale?: number; workspaceId: string | null }) {
+  type UpAsset = { id: string; url: string; filename?: string; thumbnail?: string; mimeType?: string };
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [assets, setAssets] = useState<UpAsset[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const loadAssets = useCallback(() => {
+    if (!workspaceId) return;
+    void oc.listAssets(workspaceId)
+      .then((a) => setAssets((a as UpAsset[]).filter((x) => (x.mimeType ?? "").startsWith("image/"))))
+      .catch(() => setAssets([]));
+  }, [workspaceId]);
+  useEffect(() => { if (open) loadAssets(); }, [open, loadAssets]);
+  const pick = (assetId: string, url: string) => { useEditor.getState().setQrLogo(id, assetId, resolveAssetUrl(url)); setOpen(false); };
+  const onUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (fileRef.current) fileRef.current.value = "";
+    if (!file || !workspaceId) return;
+    setBusy(true);
+    try {
+      const dataUrl = await new Promise<string>((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(String(r.result));
+        r.onerror = () => rej(new Error("read failed"));
+        r.readAsDataURL(file);
+      });
+      const asset = await uploadAssetWithProgress(workspaceId, { filename: file.name, dataBase64: dataUrl.split(",")[1] ?? "" });
+      pick(asset.id, asset.url);
+    } catch { /* upload failed; leave the QR unchanged */ } finally { setBusy(false); }
+  };
+  const logoUrl = logoAssetId ? useEditor.getState().doc.assets.find((a) => a.id === logoAssetId)?.url : undefined;
+  const btn = "flex-1 rounded bg-neutral-100 px-2 py-1 text-[11px] text-neutral-700 hover:bg-neutral-200 disabled:opacity-50";
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-between text-[11px] text-neutral-400">
+        <span>Center logo</span>
+        {logoAssetId && (
+          <button onClick={() => useEditor.getState().setQrLogo(id, null)} className="text-[11px] text-neutral-500 hover:text-neutral-800">Remove</button>
+        )}
+      </div>
+      <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => void onUpload(e)} />
+      {logoAssetId ? (
+        <div className="flex items-center gap-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {logoUrl && <img src={logoUrl} alt="QR logo" className="h-10 w-10 rounded border border-neutral-200 object-contain" />}
+          <button onClick={() => fileRef.current?.click()} disabled={busy || !workspaceId} className={btn}>{busy ? "Uploading…" : "Replace…"}</button>
+        </div>
+      ) : (
+        <div className="flex gap-1.5">
+          <button onClick={() => fileRef.current?.click()} disabled={busy || !workspaceId} className={btn}>{busy ? "Uploading…" : "Upload logo"}</button>
+          <button onClick={() => setOpen((v) => !v)} disabled={!workspaceId} className={btn}>From uploads</button>
+        </div>
+      )}
+      {open && !logoAssetId && (
+        <div className="grid grid-cols-4 gap-1.5">
+          {assets.length === 0 && <span className="col-span-4 text-[11px] text-neutral-400">No image uploads yet.</span>}
+          {assets.map((a) => (
+            <button
+              key={a.id}
+              onClick={() => pick(a.id, a.url)}
+              title={a.filename ?? "asset"}
+              className="flex aspect-square items-center justify-center overflow-hidden rounded border border-neutral-200 hover:border-brand-300"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={a.thumbnail ?? resolveAssetUrl(a.url)} alt={a.filename ?? ""} className="max-h-full max-w-full object-contain" />
+            </button>
+          ))}
+        </div>
+      )}
+      {logoAssetId && (
+        <label className="flex items-center gap-2 text-[11px] text-neutral-400">
+          <span className="w-9 shrink-0">Size</span>
+          <input
+            type="range"
+            min={8}
+            max={40}
+            step={1}
+            value={Math.round((logoScale ?? 0.22) * 100)}
+            onChange={(e) => useEditor.getState().setQrLogoScale(id, Number(e.target.value) / 100)}
+            className="h-1 flex-1 cursor-pointer accent-brand-600"
+          />
+          <span className="w-8 shrink-0 text-right tabular-nums">{Math.round((logoScale ?? 0.22) * 100)}%</span>
+        </label>
+      )}
+      <p className="text-[11px] text-neutral-400">Error correction is raised so the code stays scannable with a logo.</p>
+    </div>
+  );
+}
+
+export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null } = {}) {
   useEditor((s) => s.rev);
   const selection = useEditor((s) => s.selection);
   const activePage = useEditor((s) => s.activePage);
@@ -1646,7 +1739,7 @@ export function PropertiesPanel() {
       })()}
       {single && single.node.type === "qr" && (() => {
         const id = single.node.id;
-        const qr = single.node as unknown as { value: string };
+        const qr = single.node as unknown as { value: string; logoAssetId?: string; logoScale?: number };
         return (
           <Section title="QR code" order={ORDER.type}>
             <label className="flex flex-col gap-1 text-[11px] text-neutral-400">
@@ -1660,6 +1753,7 @@ export function PropertiesPanel() {
               />
             </label>
             <p className="text-[11px] text-neutral-400">The code regenerates when you change the value.</p>
+            <QrLogoControl id={id} logoAssetId={qr.logoAssetId} logoScale={qr.logoScale} workspaceId={workspaceId ?? null} />
           </Section>
         );
       })()}

@@ -44,8 +44,11 @@ import { z } from "zod";
  *      it and open unchanged.
  *  v16: chart text size: ChartStyle gains optional `fontSize` (base size in px;
  *      all chart text scales from it, absence means the built-in 11). Additive:
- *      older files omit it and render unchanged. */
-export const CURRENT_SCHEMA_VERSION = 16;
+ *      older files omit it and render unchanged.
+ *  v17: QR center logo size: QRNode gains optional `logoScale` (logo size as a
+ *      fraction of the QR, absence means the default 0.22). Additive: a v16 file
+ *      omits it and its QR logo renders at the default size unchanged. */
+export const CURRENT_SCHEMA_VERSION = 17;
 
 /** Maximum container nesting depth; guards traversal against stack overflow (FR-4). */
 export const MAX_NESTING_DEPTH = 32;
@@ -1418,6 +1421,9 @@ export interface QRNode extends NodeBase {
   foreground: Color;
   background: Color;
   logoAssetId?: string;
+  /** Center-logo size as a fraction of the QR's min(width,height). Absent means
+   *  the default (0.22); renderers clamp it to a scannable range. */
+  logoScale?: number;
   /** Scannable module bit-matrix (row-major, true = dark). Derived from `value`
    *  by the editor; the renderer draws it. Absent until generated. */
   modules?: boolean[][];
@@ -1430,6 +1436,7 @@ export const QRNodeSchema = z.object({
   foreground: ColorSchema,
   background: ColorSchema,
   logoAssetId: z.string().optional(),
+  logoScale: z.number().optional(),
   modules: z.array(z.array(z.boolean())).optional(),
 });
 

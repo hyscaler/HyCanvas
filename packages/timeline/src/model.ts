@@ -2,8 +2,11 @@
 //
 // A video project lives in a Design whose `meta.kind === "video"`. The timeline
 // model defined here is NOT part of the scene graph: clips reference scene nodes
-// and assets by id. All times are INTEGER frames at the project frame rate; there
-// is no floating-point timecode anywhere in the model.
+// and assets by id, OR embed a footage-free design element (Clip.element). All
+// times are INTEGER frames at the project frame rate; there is no floating-point
+// timecode anywhere in the model.
+
+import type { Node } from "@hc/schema";
 
 /** Allowed project frame rates. */
 export type Fps = 24 | 25 | 30 | 50 | 60;
@@ -26,6 +29,10 @@ export interface ClipTransition {
   /** dipToColor target color. */
   color?: string;
   easing?: Easing;
+  /** Direction for slide/wipe (P4.7). The clip enters from this edge and, for
+   *  slide, exits back to it. Absent = the legacy left/horizontal behavior, so
+   *  older projects render unchanged (additive). Ignored by other types. */
+  direction?: "left" | "right" | "up" | "down";
 }
 
 export interface ChromaKey {
@@ -102,10 +109,19 @@ export interface Clip {
   colorLabel?: string;
   /** scene-graph node this clip renders (video/text/overlay). */
   nodeId?: string;
+  /** Embedded footage-free design element (image/shape/text/group) this clip
+   *  renders onto the stage, authored in stage coordinates. Rendered via the
+   *  shared engine node renderer (browser + server), so it composites like any
+   *  other clip (opacity/transition/pose apply). Additive; older clips omit it. */
+  element?: Node;
   /** source media asset (video/audio). */
   assetId?: string;
   /** nested sequence reference (another VideoProject). */
   sequenceId?: string;
+  /** Design-video "scene" (page) this element clip belongs to. Clips sharing a
+   *  sceneId form one timed page composed of layered elements; scenes are laid
+   *  out as contiguous blocks (see listScenes/packScenes). Additive. */
+  sceneId?: string;
   /** position of the clip on its track, in timeline frames. */
   startFrame: number;
   /** source in-point, in source frames. */

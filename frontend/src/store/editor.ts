@@ -819,6 +819,11 @@ interface EditorState {
   outpaintImage(id: string, url: string, width: number, height: number): void;
   /** Rebind a QR node's value and regenerate its module matrix, undoable. */
   setQrValue(id: string, value: string): void;
+  /** Set (or clear, with assetId=null) a QR node's center logo. Adding a logo
+   *  bumps error correction to "H" so the covered modules stay scannable. */
+  setQrLogo(id: string, assetId: string | null, url?: string): void;
+  /** Center-logo size as a fraction (0.08..0.4) of the QR's min dimension. */
+  setQrLogoScale(id: string, scale: number): void;
   /** Set a video node's trim/volume/loop/mute, undoable. */
   setVideoProps(id: string, patch: Partial<{ trimStartMs: number; trimEndMs: number; volume: number; muted: boolean; loop: boolean }>): void;
   /** Place an image into a frame (clipped to the frame), undoable. */
@@ -4085,6 +4090,40 @@ export const useEditor = create<EditorState>((set, get) => {
         () => { node.value = value; node.modules = modules; },
         () => { node.value = beforeV; node.modules = beforeM; },
       );
+    },
+    setQrLogo: (id, assetId, url) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "qr") return;
+      const node = loc.node as unknown as { logoAssetId?: string; ecLevel?: "L" | "M" | "Q" | "H"; value?: string; modules?: boolean[][] };
+      const doc = get().doc;
+      ensureDocArrays(doc);
+      const beforeLogo = node.logoAssetId;
+      const beforeEc = node.ecLevel;
+      const beforeM = node.modules;
+      if (assetId) {
+        // A center logo covers modules; bump error correction to "H" (30%) and
+        // regenerate the matrix so the code stays scannable under the logo.
+        const modules = qrModules(node.value ?? "", "H");
+        const ref: AssetRef | null = url && !doc.assets.some((a) => a.id === assetId) ? { id: assetId, kind: "image", url, mime: "image/*", checksum: "" } : null;
+        perform(
+          () => { node.logoAssetId = assetId; node.ecLevel = "H"; node.modules = modules; if (ref) doc.assets.push(ref); },
+          () => { node.logoAssetId = beforeLogo; node.ecLevel = beforeEc; node.modules = beforeM; if (ref) { const i = doc.assets.findIndex((a) => a.id === assetId); if (i >= 0) doc.assets.splice(i, 1); } },
+        );
+        if (url && typeof window !== "undefined") imageAssets.register(assetId, url);
+      } else {
+        perform(
+          () => { node.logoAssetId = undefined; },
+          () => { node.logoAssetId = beforeLogo; },
+        );
+      }
+    },
+    setQrLogoScale: (id, scale) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "qr") return;
+      const node = loc.node as unknown as { logoScale?: number };
+      const before = node.logoScale;
+      const v = Math.min(0.4, Math.max(0.08, scale));
+      perform(() => { node.logoScale = v; }, () => { node.logoScale = before; });
     },
     setFrameShape: (id, mask, radius) => {
       const loc = locate(get().doc, id);

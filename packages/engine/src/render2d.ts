@@ -1169,7 +1169,7 @@ function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, bo
       drawChart(ctx, node, w, h);
       break;
     case "qr":
-      drawQr(ctx, node, w, h);
+      drawQr(ctx, node, w, h, assets);
       break;
     case "icon":
     case "sticker":
@@ -1295,8 +1295,8 @@ function drawStamp(ctx: CanvasLike, node: Node, w: number, h: number): void {
 }
 
 /** Draw a QR code from its precomputed module matrix, with a quiet-zone margin. */
-function drawQr(ctx: CanvasLike, node: Node, w: number, h: number): void {
-  const qr = node as unknown as { modules?: boolean[][]; foreground?: { srgb: { r: number; g: number; b: number; a: number } }; background?: { srgb: { r: number; g: number; b: number; a: number } } };
+function drawQr(ctx: CanvasLike, node: Node, w: number, h: number, assets?: AssetProvider): void {
+  const qr = node as unknown as { modules?: boolean[][]; foreground?: { srgb: { r: number; g: number; b: number; a: number } }; background?: { srgb: { r: number; g: number; b: number; a: number } }; logoAssetId?: string; logoScale?: number };
   const m = qr.modules;
   if (!m || !m.length) {
     placeholderBox(ctx, w, h);
@@ -1314,6 +1314,22 @@ function drawQr(ctx: CanvasLike, node: Node, w: number, h: number): void {
   for (let r = 0; r < n; r++) {
     for (let c = 0; c < n; c++) {
       if (m[r][c]) ctx.fillRect(ox + c * cell, oy + r * cell, cell + 0.5, cell + 0.5);
+    }
+  }
+  // Center logo (the node's EC level is bumped to "H" when a logo is set, so the
+  // covered modules stay recoverable). A background-colored pad keeps contrast.
+  const logoId = qr.logoAssetId;
+  if (logoId && assets && assets.status(logoId) === "ready" && ctx.drawImage) {
+    const img = assets.image(logoId) as CanvasImageSource | null;
+    if (img) {
+      const scale = Math.min(0.4, Math.max(0.08, qr.logoScale ?? 0.22));
+      const box = Math.min(w, h) * scale;
+      const pad = box * 0.16;
+      const lx = (w - box) / 2;
+      const ly = (h - box) / 2;
+      ctx.fillStyle = qr.background ? colorToCss(qr.background) : "#ffffff";
+      ctx.fillRect(lx - pad, ly - pad, box + pad * 2, box + pad * 2);
+      ctx.drawImage(img, lx, ly, box, box);
     }
   }
 }

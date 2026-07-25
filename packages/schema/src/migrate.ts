@@ -334,6 +334,9 @@ export const migrations: Record<number, Migration> = {
   // v15 -> v16: chart text size (ChartStyle.fontSize). Purely additive: a v15
   // file carries no fontSize and every chart renders at the built-in base.
   15: (file: AnyObj) => ({ ...file, schemaVersion: 16 }),
+  // v16 -> v17: QR center logo size (QRNode.logoScale). Purely additive: a v16
+  // file carries no logoScale and its QR logo renders at the default size.
+  16: (file: AnyObj) => ({ ...file, schemaVersion: 17 }),
 };
 
 export class MigrationError extends Error {

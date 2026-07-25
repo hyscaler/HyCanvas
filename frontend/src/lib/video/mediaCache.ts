@@ -86,6 +86,33 @@ export function filmstrip(url: string, tiles = 6, tileW = 96, tileH = 48): Promi
   return p;
 }
 
+const decodeCache = new Map<string, Promise<{ samples: Float32Array; sampleRate: number }>>();
+
+/** Decode an audio (or video soundtrack) file to mono PCM once, cached by URL.
+ *  Used by beat detection (P7.3). Uses OfflineAudioContext (no user gesture). */
+export function decodeMono(url: string): Promise<{ samples: Float32Array; sampleRate: number }> {
+  let p = decodeCache.get(url);
+  if (!p) {
+    p = (async () => {
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error(`audio fetch failed (${res.status})`);
+      const raw = await res.arrayBuffer();
+      const ctx = new OfflineAudioContext(1, 1, 44100);
+      const buf = await ctx.decodeAudioData(raw);
+      // Down-mix to mono (average channels) so detection is channel-agnostic.
+      const ch = buf.numberOfChannels;
+      const out = new Float32Array(buf.length);
+      for (let c = 0; c < ch; c++) {
+        const d = buf.getChannelData(c);
+        for (let i = 0; i < d.length; i++) out[i] += d[i] / ch;
+      }
+      return { samples: out, sampleRate: buf.sampleRate };
+    })();
+    decodeCache.set(url, p);
+  }
+  return p;
+}
+
 /**
  * Extract normalized waveform peaks (0..1 max-abs per bucket) for an audio (or
  * video soundtrack) asset. Decodes the whole file once via WebAudio.

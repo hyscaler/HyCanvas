@@ -19,9 +19,12 @@ export function captionStyleOf(track: CaptionTrack | undefined): CaptionStyle {
   return (track?.style as CaptionStyle | undefined) ?? {};
 }
 
-/** Merge a style patch into the first caption track (created when missing). */
-export function withCaptionStyle(project: VideoProject, patch: Partial<CaptionStyle>): VideoProject {
-  const { project: base, track } = withCaptionTrack(project);
+const newCapId = (): string => `cap_${Math.random().toString(36).slice(2, 9)}`;
+
+/** Merge a style patch into a caption track (the target track by id, else the
+ *  first, created when missing). */
+export function withCaptionStyle(project: VideoProject, patch: Partial<CaptionStyle>, trackId?: string): VideoProject {
+  const { project: base, track } = withCaptionTrack(project, trackId);
   const style = { ...captionStyleOf(track), ...patch };
   return {
     ...base,
@@ -29,22 +32,40 @@ export function withCaptionStyle(project: VideoProject, patch: Partial<CaptionSt
   };
 }
 
-/** The first caption track, creating one (immutably) when missing. */
-export function withCaptionTrack(project: VideoProject): { project: VideoProject; track: CaptionTrack } {
-  const existing = project.captions?.[0];
+/** The caption track to edit: the one matching `trackId`, else the first,
+ *  creating one (immutably) when the project has none. */
+export function withCaptionTrack(project: VideoProject, trackId?: string): { project: VideoProject; track: CaptionTrack } {
+  const list = project.captions ?? [];
+  const existing = trackId ? list.find((t) => t.id === trackId) : list[0];
   if (existing) return { project, track: existing };
-  const track: CaptionTrack = { id: `cap_${Math.random().toString(36).slice(2, 9)}`, lang: "en", source: "manual", style: {}, cues: [] };
-  return { project: { ...project, captions: [...(project.captions ?? []), track] }, track };
+  const track: CaptionTrack = { id: newCapId(), lang: "en", source: "manual", style: {}, cues: [] };
+  return { project: { ...project, captions: [...list, track] }, track };
 }
 
-/** Replace the first caption track's cues (immutably), keeping them sorted. */
-export function withCues(project: VideoProject, cues: CaptionCue[]): VideoProject {
+/** Replace a caption track's cues (immutably), keeping them sorted. */
+export function withCues(project: VideoProject, cues: CaptionCue[], trackId?: string): VideoProject {
   const sorted = [...cues].sort((a, b) => a.startFrame - b.startFrame);
-  const { project: base, track } = withCaptionTrack(project);
+  const { project: base, track } = withCaptionTrack(project, trackId);
   return {
     ...base,
     captions: (base.captions ?? []).map((t) => (t.id === track.id ? { ...t, cues: sorted } : t)),
   };
+}
+
+/** Append a new caption track for a language (BCP-47). Returns the track too. */
+export function addCaptionTrack(project: VideoProject, lang = "en"): { project: VideoProject; track: CaptionTrack } {
+  const track: CaptionTrack = { id: newCapId(), lang, source: "manual", style: {}, cues: [] };
+  return { project: { ...project, captions: [...(project.captions ?? []), track] }, track };
+}
+
+/** Remove a caption track by id. */
+export function removeCaptionTrack(project: VideoProject, trackId: string): VideoProject {
+  return { ...project, captions: (project.captions ?? []).filter((t) => t.id !== trackId) };
+}
+
+/** Set a caption track's language tag (BCP-47). */
+export function setCaptionLang(project: VideoProject, trackId: string, lang: string): VideoProject {
+  return { ...project, captions: (project.captions ?? []).map((t) => (t.id === trackId ? { ...t, lang } : t)) };
 }
 
 /** The cue under a frame, or null. Later-starting cues win on overlap. */

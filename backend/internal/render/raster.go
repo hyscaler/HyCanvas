@@ -6,10 +6,11 @@
 //
 // Fidelity notes (v1, documented vs the browser @hc/engine): linear & radial
 // gradient fills are rasterized (objectBoundingBox, per-pixel); shape strokes are
-// not stroked (line nodes are drawn as thick quads); text uses the embedded Go font
-// (goregular), positioned by translation+scale (rotation not applied to glyphs)
-// - so text is legible and placed but not glyph-identical to the editor. Vector
-// fills, colors, and transforms are faithful.
+// not stroked (line nodes are drawn as thick quads); unregistered/"system" text
+// uses the embedded Arial-metric fallback (Liberation Sans, so width-driven
+// layout matches the editor), positioned by translation+scale (rotation not
+// applied to glyphs) - legible and placed but not glyph-identical. Vector fills,
+// colors, and transforms are faithful.
 package render
 
 import (
@@ -22,6 +23,7 @@ import (
 	"math"
 	"strings"
 
+	xdraw "golang.org/x/image/draw"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/gofont/goregular"
 	"golang.org/x/image/font/opentype"
@@ -154,8 +156,18 @@ func firstFill(node map[string]any) map[string]any {
 }
 
 // fillPolyPaint fills a device-space polygon with a fill that may be a gradient
-// (linear/radial) or a solid color; an unusable fill draws nothing.
-func (rc *rctx) fillPolyPaint(pts [][2]float64, fill map[string]any) {
+// (linear/radial/conic), an image, a pattern, or a solid color; an unusable fill
+// draws nothing. scale is the node's transform scale (used to size image
+// "none" fits and pattern tiles in device space).
+func (rc *rctx) fillPolyPaint(pts [][2]float64, fill map[string]any, scale float64) {
+	switch asStr(fill["type"]) {
+	case "image":
+		rc.fillPolyImage(pts, fill, scale)
+		return
+	case "pattern":
+		rc.fillPolyPattern(pts, fill, scale)
+		return
+	}
 	if g := parseGradient(fill); g.ok {
 		rc.fillPathSrc(pts, rc.paint(g.source(bboxOf(pts), rc.dst.Bounds())))
 		return
@@ -206,7 +218,7 @@ func (rc *rctx) rasterShape(m mat, node map[string]any) {
 	fill := firstFill(node)
 	switch asStr(node["shape"]) {
 	case "rect":
-		rc.fillPolyPaint(transformPts(m, [][2]float64{{0, 0}, {w, 0}, {w, h}, {0, h}}), fill)
+		rc.fillPolyPaint(transformPts(m, [][2]float64{{0, 0}, {w, 0}, {w, h}, {0, h}}), fill, avgScale(m))
 	case "ellipse":
 		rc.rasterEllipse(m, w, h, fill)
 	case "polygon":
@@ -214,9 +226,9 @@ func (rc *rctx) rasterShape(m mat, node map[string]any) {
 		if sides == 0 {
 			sides = 3
 		}
-		rc.fillPolyPaint(transformPts(m, polygonPoints(w, h, sides)), fill)
+		rc.fillPolyPaint(transformPts(m, polygonPoints(w, h, sides)), fill, avgScale(m))
 	case "triangle":
-		rc.fillPolyPaint(transformPts(m, polygonPoints(w, h, 3)), fill)
+		rc.fillPolyPaint(transformPts(m, polygonPoints(w, h, 3)), fill, avgScale(m))
 	case "star":
 		pts := int(asNum(node["sides"]))
 		if pts == 0 {
@@ -226,8 +238,71 @@ func (rc *rctx) rasterShape(m mat, node map[string]any) {
 		if ir == 0 {
 			ir = 0.5
 		}
-		rc.fillPolyPaint(transformPts(m, starPoints(w, h, pts, ir)), fill)
+		rc.fillPolyPaint(transformPts(m, starPoints(w, h, pts, ir)), fill, avgScale(m))
 	}
+}
+
+// rasterImage draws an image node into its (transformed) box. The pixel bytes
+// come from an embedded data URL on node["src"] (set by the video export handler
+// from the workspace asset); a node with only source.assetId and no embedded src
+// draws nothing (design PNG image export is a separate gap). Fit is cover
+// (default: fill the box, crop overflow) or contain (fit inside, letterbox).
+// Rotation is approximated by clipping to the rotated box, not rotating pixels.
+func (rc *rctx) rasterImage(m mat, node map[string]any) {
+	src := asStr(node["src"])
+	if src == "" {
+		return
+	}
+	raw, ok := dataURLBytes(src)
+	if !ok {
+		return
+	}
+	img, _, err := image.Decode(bytes.NewReader(raw))
+	if err != nil {
+		return
+	}
+	w, h := sizeOf(node)
+	if w <= 0 || h <= 0 {
+		return
+	}
+	pts := transformPts(m, [][2]float64{{0, 0}, {w, 0}, {w, h}, {0, h}})
+	minX, minY, maxX, maxY := pts[0][0], pts[0][1], pts[0][0], pts[0][1]
+	for _, p := range pts {
+		minX, minY = math.Min(minX, p[0]), math.Min(minY, p[1])
+		maxX, maxY = math.Max(maxX, p[0]), math.Max(maxY, p[1])
+	}
+	dst := image.Rect(int(math.Round(minX)), int(math.Round(minY)), int(math.Round(maxX)), int(math.Round(maxY)))
+	if dst.Dx() <= 0 || dst.Dy() <= 0 {
+		return
+	}
+	sb := img.Bounds()
+	sw, sh := sb.Dx(), sb.Dy()
+	if sw <= 0 || sh <= 0 {
+		return
+	}
+	canvas := image.NewRGBA(image.Rect(0, 0, rc.w, rc.h))
+	if asStr(node["fit"]) == "contain" {
+		scale := math.Min(float64(dst.Dx())/float64(sw), float64(dst.Dy())/float64(sh))
+		fw, fh := int(float64(sw)*scale), int(float64(sh)*scale)
+		ox := dst.Min.X + (dst.Dx()-fw)/2
+		oy := dst.Min.Y + (dst.Dy()-fh)/2
+		xdraw.CatmullRom.Scale(canvas, image.Rect(ox, oy, ox+fw, oy+fh), img, sb, xdraw.Over, nil)
+	} else {
+		// cover: center-crop the source to the box aspect, then scale to fill.
+		dstAspect := float64(dst.Dx()) / float64(dst.Dy())
+		var crop image.Rectangle
+		if float64(sw)/float64(sh) > dstAspect {
+			cw := int(float64(sh) * dstAspect)
+			x0 := sb.Min.X + (sw-cw)/2
+			crop = image.Rect(x0, sb.Min.Y, x0+cw, sb.Max.Y)
+		} else {
+			ch := int(float64(sw) / dstAspect)
+			y0 := sb.Min.Y + (sh-ch)/2
+			crop = image.Rect(sb.Min.X, y0, sb.Max.X, y0+ch)
+		}
+		xdraw.CatmullRom.Scale(canvas, dst, img, crop, xdraw.Over, nil)
+	}
+	rc.fillPathSrc(pts, rc.paint(canvas))
 }
 
 func (rc *rctx) rasterEllipse(m mat, w, h float64, fill map[string]any) {
@@ -242,13 +317,25 @@ func (rc *rctx) rasterEllipse(m mat, w, h float64, fill map[string]any) {
 		{tp(cx+rx, cy-oy), tp(cx+ox, cy-ry), tp(cx, cy-ry)},
 		{tp(cx-ox, cy-ry), tp(cx-rx, cy-oy), tp(cx-rx, cy)},
 	}
-	// Gradient-fill the ellipse like the polygon shapes (its bounding box drives
-	// the gradient extent); otherwise a flat color.
-	if g := parseGradient(fill); g.ok {
-		pts := [][2]float64{start}
-		for _, c := range cubics {
-			pts = append(pts, c[0], c[1], c[2])
+	pts := [][2]float64{start}
+	for _, c := range cubics {
+		pts = append(pts, c[0], c[1], c[2])
+	}
+	// Image / pattern / gradient / solid fill, clipped to the ellipse (its
+	// device bounding box drives the fill extent).
+	switch asStr(fill["type"]) {
+	case "image":
+		if src := rc.imageFillSrc(bboxOf(pts), fill, avgScale(m)); src != nil {
+			rc.fillBeziersSrc(start, cubics, rc.paint(src))
 		}
+		return
+	case "pattern":
+		if src := rc.patternFillSrc(bboxOf(pts), fill, avgScale(m)); src != nil {
+			rc.fillBeziersSrc(start, cubics, rc.paint(src))
+		}
+		return
+	}
+	if g := parseGradient(fill); g.ok {
 		rc.fillBeziersSrc(start, cubics, rc.paint(g.source(bboxOf(pts), rc.dst.Bounds())))
 		return
 	}
@@ -294,10 +381,6 @@ func (rc *rctx) rasterPath(m mat, node map[string]any) {
 	if len(segs) == 0 {
 		return
 	}
-	col := rasterColor(fillColorOf(node), rc.alpha)
-	if col.A == 0 {
-		return
-	}
 	closed := asBool(node["closed"])
 	// Extra contours of a compound path (schema v15): all filled together under
 	// the even-odd rule so interior contours cut holes.
@@ -312,10 +395,52 @@ func (rc *rctx) rasterPath(m mat, node map[string]any) {
 			contours = append(contours, contour{cs, asBool(co["closed"])})
 		}
 	}
+	// Fill source: solid color, gradient, image, or pattern. Its extent is the
+	// node's box (matching the browser's objectBoundingBox convention), or the
+	// path's device bounds when the node carries no size.
+	w, h := sizeOf(node)
+	var bb [4]float64
+	if w > 0 && h > 0 {
+		bb = bboxOf(transformPts(m, [][2]float64{{0, 0}, {w, 0}, {w, h}, {0, h}}))
+	} else {
+		var pts [][2]float64
+		for _, c := range contours {
+			for _, sv := range c.segs {
+				so := asObj(sv)
+				x, y := m.apply(asNum(so["x"]), asNum(so["y"]))
+				pts = append(pts, [2]float64{x, y})
+			}
+		}
+		if len(pts) == 0 {
+			return
+		}
+		bb = bboxOf(pts)
+	}
+	fill := firstFill(node)
+	var src image.Image
+	switch asStr(fill["type"]) {
+	case "image":
+		if isrc := rc.imageFillSrc(bb, fill, avgScale(m)); isrc != nil {
+			src = rc.paint(isrc)
+		}
+	case "pattern":
+		if psrc := rc.patternFillSrc(bb, fill, avgScale(m)); psrc != nil {
+			src = rc.paint(psrc)
+		}
+	default:
+		if g := parseGradient(fill); g.ok {
+			src = rc.paint(g.source(bb, rc.dst.Bounds()))
+		} else if col := rasterColor(pdfPaint(fill), rc.alpha); col.A != 0 {
+			src = image.NewUniform(col)
+		}
+	}
+	if src == nil {
+		return
+	}
 	if len(contours) == 1 {
 		r := vector.NewRasterizer(rc.w, rc.h)
 		tracePathContour(r, m, segs, closed)
-		r.Draw(rc.dst, rc.dst.Bounds(), image.NewUniform(col), image.Point{})
+		r.Draw(rc.dst, rc.dst.Bounds(), src, image.Point{})
 		return
 	}
 	// The vector rasterizer accumulates non-zero winding, which cannot cut a
@@ -339,7 +464,7 @@ func (rc *rctx) rasterPath(m mat, node map[string]any) {
 			acc.Pix[i] = uint8(d)
 		}
 	}
-	draw.DrawMask(rc.dst, rc.dst.Bounds(), image.NewUniform(col), image.Point{}, acc, image.Point{}, draw.Over)
+	draw.DrawMask(rc.dst, rc.dst.Bounds(), src, image.Point{}, acc, image.Point{}, draw.Over)
 }
 
 // rasterLine draws each polyline segment as a thick filled quad (stroke approx).
@@ -405,6 +530,40 @@ func runLineHeight(style map[string]any, size float64) float64 {
 	return size * 1.2
 }
 
+// textChunk is a word or a whitespace run; line breaking happens between them.
+type textChunk struct {
+	text string
+	ws   bool
+}
+
+// wrapChunks splits text into alternating word and whitespace chunks so greedy
+// word wrapping can break between words, matching @hc/text's layout. A newline
+// inside a run is treated as whitespace (not a hard break), as on the browser.
+func wrapChunks(s string) []textChunk {
+	var out []textChunk
+	if s == "" {
+		return out
+	}
+	var b strings.Builder
+	curWS := false
+	started := false
+	isWS := func(r rune) bool { return r == ' ' || r == '\t' || r == '\n' || r == '\r' }
+	for _, r := range s {
+		w := isWS(r)
+		if started && w != curWS {
+			out = append(out, textChunk{text: b.String(), ws: curWS})
+			b.Reset()
+		}
+		b.WriteRune(r)
+		curWS = w
+		started = true
+	}
+	if b.Len() > 0 {
+		out = append(out, textChunk{text: b.String(), ws: curWS})
+	}
+	return out
+}
+
 func (rc *rctx) rasterText(m mat, node map[string]any) {
 	scale := avgScale(m)
 	// Letter spacing means per-glyph drawing, so measuring shares the walk.
@@ -446,65 +605,109 @@ func (rc *rctx) rasterText(m mat, node map[string]any) {
 	if boxH == 0 {
 		boxH = asNum(asObj(node["size"])["height"])
 	}
+	pad := asObj(box["padding"])
+	padL, padR := asNum(pad["l"]), asNum(pad["r"])
+	padT, padB := asNum(pad["t"]), asNum(pad["b"])
+	contentW := boxW - padL - padR
+	if contentW < 0 {
+		contentW = 0
+	}
+	// Wrap to the content width (matches @hc/text: wrap unless the box auto-sizes
+	// its width). With no known width, fall back to no wrap (one line per
+	// paragraph) rather than breaking every word.
+	wrap := asStr(box["mode"]) != "autoWidth" && contentW > 0
 
-	// Measure pass: per paragraph, the line's height and total advance.
-	paras := asArr(node["content"])
-	lineHeights := make([]float64, len(paras))
-	lineWidths := make([]float64, len(paras))
-	for i, para := range paras {
+	// A drawn segment and a laid-out visual line.
+	type seg struct {
+		text  string
+		style map[string]any
+	}
+	type vline struct {
+		segs   []seg
+		width  float64
+		height float64
+		align  string
+	}
+	var lines []vline
+
+	// Layout pass: build visual lines per paragraph, wrapping between words.
+	for _, para := range asArr(node["content"]) {
 		po := asObj(para)
+		align := asStr(asObj(po["style"])["align"])
+		cur := vline{align: align}
+		firstSize := 0.0
+		flush := func() {
+			if cur.height == 0 {
+				if firstSize > 0 {
+					cur.height = firstSize * 1.2
+				} else {
+					cur.height = 16 * 1.2
+				}
+			}
+			lines = append(lines, cur)
+			cur = vline{align: align}
+		}
 		for _, run := range asArr(po["runs"]) {
 			ro := asObj(run)
 			style := asObj(ro["style"])
 			face, size := runFace(style)
-			lineHeights[i] = math.Max(lineHeights[i], runLineHeight(style, size))
+			if firstSize == 0 {
+				firstSize = size
+			}
+			lh := runLineHeight(style, size)
 			if face == nil {
+				cur.height = math.Max(cur.height, lh)
 				continue
 			}
-			lineWidths[i] += measure(face, runText(ro, style), asNum(style["letterSpacing"]))
+			ls := asNum(style["letterSpacing"])
+			for _, chunk := range wrapChunks(runText(ro, style)) {
+				w := measure(face, chunk.text, ls)
+				if wrap && cur.width > 0 && cur.width+w > contentW && !chunk.ws {
+					flush()
+				}
+				cur.segs = append(cur.segs, seg{text: chunk.text, style: style})
+				cur.width += w
+				cur.height = math.Max(cur.height, lh)
+			}
 			_ = face.Close()
 		}
-		if lineHeights[i] == 0 {
-			lineHeights[i] = 16 * 1.2
-		}
+		flush() // always emit at least one (possibly empty) line per paragraph
 	}
+
 	total := 0.0
-	for _, h := range lineHeights {
-		total += h
+	for _, ln := range lines {
+		total += ln.height
 	}
-	y := 0.0
+	y := padT
 	switch asStr(box["verticalAlign"]) {
 	case "middle":
-		y = (boxH - total) / 2
+		y = padT + (boxH-padT-padB-total)/2
 	case "bottom":
-		y = boxH - total
+		y = boxH - padB - total
 	}
 
 	// Draw pass: baseline sits near the line's bottom (ascent approximation).
-	for i, para := range paras {
-		po := asObj(para)
-		y += lineHeights[i]
-		x := 0.0
-		switch asStr(asObj(po["style"])["align"]) {
+	for _, ln := range lines {
+		y += ln.height
+		x := padL
+		switch ln.align {
 		case "center":
-			x = (boxW - lineWidths[i]) / 2
+			x = padL + (contentW-ln.width)/2
 		case "right":
-			x = boxW - lineWidths[i]
+			x = padL + (contentW - ln.width)
 		}
-		for _, run := range asArr(po["runs"]) {
-			ro := asObj(run)
-			style := asObj(ro["style"])
-			face, _ := runFace(style)
+		for _, sg := range ln.segs {
+			face, _ := runFace(sg.style)
 			if face == nil {
 				continue
 			}
-			col := pdfPaint(asObj(style["fill"]))
+			col := pdfPaint(asObj(sg.style["fill"]))
 			if !col.ok {
 				col = pdfColor{ok: true}
 			}
 			src := image.NewUniform(rasterColor(col, rc.alpha))
-			ls := asNum(style["letterSpacing"])
-			for _, r := range runText(ro, style) {
+			ls := asNum(sg.style["letterSpacing"])
+			for _, r := range sg.text {
 				dx, dy := m.apply(x, y)
 				d := &font.Drawer{Dst: rc.dst, Src: src, Face: face, Dot: fixed.P(int(math.Round(dx)), int(math.Round(dy)))}
 				d.DrawString(string(r))
@@ -539,13 +742,39 @@ func (rc *rctx) rasterNode(m mat, node map[string]any) {
 		rc.rasterLine(cm, node)
 	case "text":
 		rc.rasterText(cm, node)
+	case "image":
+		rc.rasterImage(cm, node)
 	case "ink":
 		rc.rasterInk(cm, node)
 	case "sticky":
 		rc.rasterSticky(cm, node)
 	case "connector":
 		rc.rasterConnector(node)
+	case "boolean":
+		rc.rasterBoolean(cm, node)
+	case "qr":
+		rc.rasterQR(cm, node)
+	case "table":
+		rc.rasterTable(cm, node)
+	case "chart":
+		rc.rasterChart(cm, node)
+	case "stamp":
+		rc.rasterStamp(cm, node)
+	case "sticker", "icon", "embed", "video":
+		// Not fully rasterized server-side; draw the same neutral skeleton the
+		// browser shows for these (sticker/icon/embed) or for a video whose
+		// poster frame isn't decoded, so nothing renders as an invisible hole.
+		rc.placeholderBox(cm, node)
 	case "group", "frame", "grid":
+		// A frame paints its own background fill behind its children (a group/grid
+		// has none), matching the browser which draws the frame fill then content.
+		if asStr(node["type"]) == "frame" {
+			if fill := firstFill(node); fill != nil {
+				if w, h := sizeOf(node); w > 0 && h > 0 {
+					rc.fillPolyPaint(transformPts(cm, [][2]float64{{0, 0}, {w, 0}, {w, h}, {0, h}}), fill, avgScale(cm))
+				}
+			}
+		}
 		for _, ch := range childrenOf(node) {
 			rc.rasterNode(cm, asObj(ch))
 		}
@@ -682,8 +911,19 @@ func (rc *rctx) rasterConnector(node map[string]any) {
 	}
 }
 
-// ToRaster rasterizes one page of a design at the given scale (1 = page pixels).
+// ToRaster rasterizes one page of a design at the given scale (1 = page pixels)
+// over an opaque white background, as a page/design export expects.
 func ToRaster(file Design, pageIndex int, scale float64) (*image.RGBA, error) {
+	return toRaster(file, pageIndex, scale, false)
+}
+
+// toRaster is the shared rasterizer. When transparent is true it skips the white
+// fill AND the page background, so only the page's own nodes (with their alpha)
+// are drawn onto transparency. That mode mirrors the browser element renderer's
+// `skipBackground: true` + transparent clear, and is what the video element
+// stager uses so a partial or faded element composites correctly as an overlay
+// (an opaque-white element PNG would occlude everything beneath it).
+func toRaster(file Design, pageIndex int, scale float64, transparent bool) (*image.RGBA, error) {
 	pages := asArr(file["pages"])
 	if pageIndex < 0 || pageIndex >= len(pages) {
 		return nil, ErrPageRange
@@ -701,9 +941,16 @@ func ToRaster(file Design, pageIndex int, scale float64) (*image.RGBA, error) {
 	if ph < 1 {
 		ph = 1
 	}
-	fnt, err := opentype.Parse(goregular.TTF)
-	if err != nil {
-		return nil, err
+	// Prefer the embedded Arial-metric fallback (Liberation Sans) so unregistered
+	// / "system" text matches the browser's width metrics; fall back to the Go
+	// font only if it somehow fails to parse.
+	fnt := fallbackFont
+	if fnt == nil {
+		var err error
+		fnt, err = opentype.Parse(goregular.TTF)
+		if err != nil {
+			return nil, err
+		}
 	}
 	dst := image.NewRGBA(image.Rect(0, 0, pw, ph))
 	rc := &rctx{dst: dst, w: pw, h: ph, font: fnt, boxes: pageBoxMap(page), alpha: 1}
@@ -712,11 +959,14 @@ func ToRaster(file Design, pageIndex int, scale float64) (*image.RGBA, error) {
 
 	// Background: opaque white default, then the page fill over it (solid or
 	// gradient). Pattern/image backgrounds are not rasterized (left white).
-	fullPage := [][2]float64{{0, 0}, {float64(pw), 0}, {float64(pw), float64(ph)}, {0, float64(ph)}}
-	rc.fillPath(fullPage, color.RGBA{R: 255, G: 255, B: 255, A: 255})
-	if bg := asObj(page["background"]); bg != nil {
-		if k := asStr(bg["type"]); k != "pattern" && k != "image" {
-			rc.fillPolyPaint(fullPage, bg)
+	// Skipped entirely in transparent mode (element overlays keep their alpha).
+	if !transparent {
+		fullPage := [][2]float64{{0, 0}, {float64(pw), 0}, {float64(pw), float64(ph)}, {0, float64(ph)}}
+		rc.fillPath(fullPage, color.RGBA{R: 255, G: 255, B: 255, A: 255})
+		if bg := asObj(page["background"]); bg != nil {
+			if k := asStr(bg["type"]); k != "pattern" && k != "image" {
+				rc.fillPolyPaint(fullPage, bg, scale)
+			}
 		}
 	}
 
@@ -724,6 +974,22 @@ func ToRaster(file Design, pageIndex int, scale float64) (*image.RGBA, error) {
 		rc.rasterNode(base, asObj(n))
 	}
 	return dst, nil
+}
+
+// ToElementPNG rasterizes a page's nodes onto a TRANSPARENT background and
+// encodes PNG bytes. Used to stage a footage-free video element (Clip.element)
+// for compositing as an overlay, so partial/faded/animated elements keep their
+// alpha instead of arriving on an opaque white card.
+func ToElementPNG(file Design, pageIndex int, scale float64) ([]byte, error) {
+	img, err := toRaster(file, pageIndex, scale, true)
+	if err != nil {
+		return nil, err
+	}
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 // ToPNG renders a page to PNG bytes.

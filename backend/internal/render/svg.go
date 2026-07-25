@@ -7,6 +7,9 @@
 package render
 
 import (
+	"bytes"
+	"encoding/base64"
+	"image"
 	"math"
 	"sort"
 	"strconv"
@@ -63,7 +66,10 @@ type paint struct {
 	opacity float64
 }
 
-func (c *svgCtx) paintOf(fill map[string]any) paint {
+// paintOf resolves a fill to an SVG paint (color or defs ref). w/h are the fill
+// box dims in user units (shape size); when known (>0) an image fill uses a
+// userSpaceOnUse pattern so cover/contain fit is exact for any aspect ratio.
+func (c *svgCtx) paintOf(fill map[string]any, w, h float64) paint {
 	if fill == nil {
 		return paint{ref: "none", opacity: 1}
 	}
@@ -95,16 +101,87 @@ func (c *svgCtx) paintOf(fill map[string]any) paint {
 			c.defs = append(c.defs, `<linearGradient id="`+id+`" x1="`+num(0.5-dx)+`" y1="`+num(0.5-dy)+`" x2="`+num(0.5+dx)+`" y2="`+num(0.5+dy)+`">`+stops.String()+`</linearGradient>`)
 		}
 		return paint{ref: "url(#" + id + ")", opacity: 1}
+	case "image":
+		href := asStr(fill["src"])
+		if href == "" {
+			return paint{ref: "none", opacity: 1}
+		}
+		c.gradID++
+		id := "img-" + strconv.Itoa(c.gradID)
+		// Fit -> SVG preserveAspectRatio: cover=slice, contain/none=meet, stretch=none.
+		par := "xMidYMid slice"
+		switch asStr(fill["fit"]) {
+		case "contain", "none":
+			par = "xMidYMid meet"
+		case "stretch":
+			par = "none"
+		}
+		if w > 0 && h > 0 {
+			// userSpaceOnUse: the image is sized in real user units, so
+			// preserveAspectRatio (cover/contain) is exact for any aspect ratio
+			// (objectBoundingBox squashes fit on a non-square box).
+			c.defs = append(c.defs, `<pattern id="`+id+`" patternUnits="userSpaceOnUse" width="`+num(w)+`" height="`+num(h)+`"><image href="`+esc(href)+`" x="0" y="0" width="`+num(w)+`" height="`+num(h)+`" preserveAspectRatio="`+par+`"/></pattern>`)
+		} else {
+			c.defs = append(c.defs, `<pattern id="`+id+`" patternUnits="objectBoundingBox" patternContentUnits="objectBoundingBox" width="1" height="1"><image href="`+esc(href)+`" x="0" y="0" width="1" height="1" preserveAspectRatio="`+par+`"/></pattern>`)
+		}
+		op := 1.0
+		if o, ok := fill["opacity"].(float64); ok {
+			op = o
+		}
+		return paint{ref: "url(#" + id + ")", opacity: op}
+	case "pattern":
+		href := asStr(fill["src"])
+		if href == "" {
+			return paint{ref: "none", opacity: 1}
+		}
+		iw, ih := dataURLDims(href)
+		if iw <= 0 || ih <= 0 {
+			iw, ih = 64, 64
+		}
+		scale := asNum(fill["scale"])
+		if scale <= 0 {
+			scale = 1
+		}
+		tw, th := float64(iw)*scale, float64(ih)*scale
+		c.gradID++
+		id := "pat-" + strconv.Itoa(c.gradID)
+		ptf := ""
+		if rot := asNum(fill["rotation"]); rot != 0 {
+			ptf = ` patternTransform="rotate(` + num(rot) + `)"`
+		}
+		c.defs = append(c.defs, `<pattern id="`+id+`" patternUnits="userSpaceOnUse" width="`+num(tw)+`" height="`+num(th)+`"`+ptf+`><image href="`+esc(href)+`" x="0" y="0" width="`+num(tw)+`" height="`+num(th)+`" preserveAspectRatio="none"/></pattern>`)
+		return paint{ref: "url(#" + id + ")", opacity: 1}
 	}
 	return paint{ref: "none", opacity: 1}
 }
 
-func (c *svgCtx) fillAttrs(fills []any) string {
+// dataURLDims decodes a "data:...;base64,..." image's pixel dimensions cheaply
+// (header only), for sizing a tiled SVG pattern. Returns 0,0 when undecodable.
+func dataURLDims(u string) (int, int) {
+	i := strings.Index(u, ",")
+	if i < 0 || !strings.HasPrefix(u, "data:") {
+		return 0, 0
+	}
+	raw, err := base64.StdEncoding.DecodeString(u[i+1:])
+	if err != nil {
+		return 0, 0
+	}
+	cfg, _, err := image.DecodeConfig(bytes.NewReader(raw))
+	if err != nil {
+		return 0, 0
+	}
+	return cfg.Width, cfg.Height
+}
+
+// fillAttrs emits the SVG fill attribute for the first fill. w/h are the fill
+// box dims (shape size) so an image fill's cover/contain fit is exact; pass 0,0
+// when the box is unknown or the fill is solid/gradient.
+func (c *svgCtx) fillAttrs(fills []any, w, h float64) string {
 	var first map[string]any
 	if len(fills) > 0 {
 		first = asObj(fills[0])
 	}
-	p := c.paintOf(first)
+	p := c.paintOf(first, w, h)
 	out := ` fill="` + p.ref + `"`
 	if p.opacity < 1 {
 		out += ` fill-opacity="` + num(p.opacity) + `"`
@@ -116,7 +193,7 @@ func (c *svgCtx) strokeAttrs(stroke map[string]any) string {
 	if stroke == nil {
 		return ""
 	}
-	p := c.paintOf(asObj(stroke["fill"]))
+	p := c.paintOf(asObj(stroke["fill"]), 0, 0)
 	out := ` stroke="` + p.ref + `" stroke-width="` + num(asNum(stroke["width"])) + `"`
 	if p.opacity < 1 {
 		out += ` stroke-opacity="` + num(p.opacity) + `"`
@@ -220,7 +297,7 @@ func starD(w, h float64, points int, innerRatio float64) string {
 
 func (c *svgCtx) shapeBody(node map[string]any) string {
 	w, h := sizeOf(node)
-	pnt := c.fillAttrs(asArr(node["fills"])) + c.strokeAttrs(asObj(node["stroke"]))
+	pnt := c.fillAttrs(asArr(node["fills"]), w, h) + c.strokeAttrs(asObj(node["stroke"]))
 	switch asStr(node["shape"]) {
 	case "rect":
 		rx := ""
@@ -314,7 +391,7 @@ func (c *svgCtx) pathBody(node map[string]any) string {
 	if compound {
 		rule = ` fill-rule="evenodd"`
 	}
-	pnt := c.fillAttrs(asArr(node["fills"])) + c.strokeAttrs(asObj(node["stroke"]))
+	pnt := c.fillAttrs(asArr(node["fills"]), 0, 0) + c.strokeAttrs(asObj(node["stroke"]))
 	return `<path d="` + d.String() + `"` + rule + pnt + `/>`
 }
 
@@ -347,7 +424,7 @@ func (c *svgCtx) textBody(node map[string]any) string {
 			if f := asStr(style["fontFamily"]); f != "" {
 				family = f
 			}
-			p := c.paintOf(asObj(style["fill"]))
+			p := c.paintOf(asObj(style["fill"]), 0, 0)
 			fo := ""
 			if p.opacity < 1 {
 				fo = ` fill-opacity="` + num(p.opacity) + `"`
@@ -365,19 +442,88 @@ func (c *svgCtx) textBody(node map[string]any) string {
 
 func imageBody(file Design, node map[string]any) string {
 	w, h := sizeOf(node)
-	href := ""
-	if src := asObj(node["source"]); src != nil {
-		if assetID := asStr(src["assetId"]); assetID != "" {
-			for _, a := range asArr(file["assets"]) {
-				ao := asObj(a)
-				if asStr(ao["id"]) == assetID {
-					href = asStr(ao["url"])
-					break
+	// Prefer an inlined data URL (set by the export handler's asset embedding);
+	// otherwise fall back to a url carried in the file's asset manifest.
+	href := asStr(node["src"])
+	if href == "" {
+		if src := asObj(node["source"]); src != nil {
+			if assetID := asStr(src["assetId"]); assetID != "" {
+				for _, a := range asArr(file["assets"]) {
+					ao := asObj(a)
+					if asStr(ao["id"]) == assetID {
+						href = asStr(ao["url"])
+						break
+					}
 				}
 			}
 		}
 	}
 	return `<image x="0" y="0" width="` + num(w) + `" height="` + num(h) + `" preserveAspectRatio="none" href="` + esc(href) + `"/>`
+}
+
+// qrBody emits a QR node as its background, module rects (one path), and an
+// optional center logo (bytes inlined by the export handler as node["logoSrc"]).
+func (c *svgCtx) qrBody(node map[string]any) string {
+	w, h := sizeOf(node)
+	rows := asArr(node["modules"])
+	n := len(rows)
+	if n == 0 {
+		return `<rect x="0" y="0" width="` + num(w) + `" height="` + num(h) + `" fill="rgb(244,244,245)" stroke="rgb(212,212,216)"/>`
+	}
+	quiet := 4.0
+	total := float64(n) + quiet*2
+	cell := math.Min(w, h) / total
+	ox := (w-cell*total)/2 + quiet*cell
+	oy := (h-cell*total)/2 + quiet*cell
+	bg := "rgb(255,255,255)"
+	if col := asObj(node["background"]); col != nil {
+		bg = rgbOf(col)
+	}
+	fg := "rgb(0,0,0)"
+	if col := asObj(node["foreground"]); col != nil {
+		fg = rgbOf(col)
+	}
+	var b strings.Builder
+	b.WriteString(`<rect x="0" y="0" width="` + num(w) + `" height="` + num(h) + `" fill="` + bg + `"/>`)
+	var d strings.Builder
+	for r := 0; r < n; r++ {
+		cols := asArr(rows[r])
+		for cc := 0; cc < len(cols); cc++ {
+			if !asBool(cols[cc]) {
+				continue
+			}
+			x := ox + float64(cc)*cell
+			y := oy + float64(r)*cell
+			d.WriteString("M" + num(x) + " " + num(y) + "h" + num(cell) + "v" + num(cell) + "h" + num(-cell) + "z")
+		}
+	}
+	b.WriteString(`<path d="` + d.String() + `" fill="` + fg + `"/>`)
+	if logo := asStr(node["logoSrc"]); logo != "" {
+		// Match rasterQR / browser drawQr: default 0.22 when unset, else clamp.
+		scale := 0.22
+		if _, ok := node["logoScale"]; ok {
+			scale = math.Max(0.08, math.Min(0.4, asNum(node["logoScale"])))
+		}
+		box := math.Min(w, h) * scale
+		pad := box * 0.16
+		lx := (w - box) / 2
+		ly := (h - box) / 2
+		b.WriteString(`<rect x="` + num(lx-pad) + `" y="` + num(ly-pad) + `" width="` + num(box+pad*2) + `" height="` + num(box+pad*2) + `" fill="` + bg + `"/>`)
+		b.WriteString(`<image href="` + esc(logo) + `" x="` + num(lx) + `" y="` + num(ly) + `" width="` + num(box) + `" height="` + num(box) + `" preserveAspectRatio="none"/>`)
+	}
+	return b.String()
+}
+
+// stampBody emits a stamp node as its glyph in an emoji font stack, so a browser
+// viewing the SVG renders the actual (color) emoji.
+func (c *svgCtx) stampBody(node map[string]any) string {
+	w, h := sizeOf(node)
+	glyph := asStr(node["glyph"])
+	if glyph == "" {
+		glyph = "\U0001F44D"
+	}
+	fs := math.Max(4, math.Min(w, h)*0.82)
+	return `<text x="` + num(w/2) + `" y="` + num(h/2) + `" font-size="` + num(fs) + `" text-anchor="middle" dominant-baseline="central" font-family="` + esc(`"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",system-ui,sans-serif`) + `">` + esc(glyph) + `</text>`
 }
 
 // --- F30 board nodes --------------------------------------------------------
@@ -405,7 +551,7 @@ func (c *svgCtx) inkBody(node map[string]any) string {
 func (c *svgCtx) stickyBody(node map[string]any) string {
 	w, h := sizeOf(node)
 	var b strings.Builder
-	fillP := c.paintOf(asObj(node["fill"]))
+	fillP := c.paintOf(asObj(node["fill"]), 0, 0)
 	fo := ""
 	if fillP.opacity < 1 {
 		fo = ` fill-opacity="` + num(fillP.opacity) + `"`
@@ -521,6 +667,10 @@ func (c *svgCtx) emitNode(file Design, node map[string]any) string {
 		body = c.stickyBody(node)
 	case "connector":
 		body = c.connectorBody(node)
+	case "qr":
+		body = c.qrBody(node)
+	case "stamp":
+		body = c.stampBody(node)
 	case "group", "frame", "grid":
 		var sb strings.Builder
 		for _, ch := range childrenOf(node) {
@@ -546,7 +696,7 @@ func ToSVG(file Design, pageIndex int) (string, error) {
 	bg := ""
 	if bgFill := asObj(page["background"]); bgFill != nil {
 		if k := asStr(bgFill["type"]); k != "pattern" && k != "image" {
-			bg = `<rect x="0" y="0" width="` + num(w) + `" height="` + num(h) + `"` + c.fillAttrs([]any{bgFill}) + `/>`
+			bg = `<rect x="0" y="0" width="` + num(w) + `" height="` + num(h) + `"` + c.fillAttrs([]any{bgFill}, 0, 0) + `/>`
 		}
 	}
 	var content strings.Builder

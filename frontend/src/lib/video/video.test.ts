@@ -4,7 +4,7 @@
 
 import { describe, it, expect } from "vitest";
 import { newProject, newTrack, type Clip, type Track } from "@hc/timeline";
-import { cueAt, formatCaptionTime, toSrt, toVtt, withCues } from "./captions";
+import { cueAt, formatCaptionTime, toSrt, toVtt, withCues, addCaptionTrack, removeCaptionTrack, setCaptionLang } from "./captions";
 import {
   activeClipsAt,
   activeTitleClipsAt,
@@ -71,6 +71,23 @@ describe("captions", () => {
     expect(p2.captions?.[0].cues.map((c) => c.id)).toEqual(["q1", "q2"]);
     const p3 = withCues(p2, []);
     expect(p3.captions).toHaveLength(1);
+  });
+
+  it("supports multiple language tracks addressed by id (P7.2)", () => {
+    const withEn = withCues(newProject({}), [cues[0]]); // creates track 0
+    const enId = withEn.captions![0].id;
+    const { project: withEs, track: es } = addCaptionTrack(withEn, "es");
+    expect(withEs.captions).toHaveLength(2);
+    // Editing the es track by id leaves the en track's cues untouched.
+    const edited = withCues(withEs, [cues[0], cues[1]], es.id);
+    expect(edited.captions?.find((t) => t.id === enId)?.cues).toHaveLength(1);
+    expect(edited.captions?.find((t) => t.id === es.id)?.cues).toHaveLength(2);
+    // Rename by id, then remove by id.
+    const renamed = setCaptionLang(edited, es.id, "es-MX");
+    expect(renamed.captions?.find((t) => t.id === es.id)?.lang).toBe("es-MX");
+    const removed = removeCaptionTrack(renamed, es.id);
+    expect(removed.captions).toHaveLength(1);
+    expect(removed.captions?.[0].id).toBe(enId);
   });
 });
 

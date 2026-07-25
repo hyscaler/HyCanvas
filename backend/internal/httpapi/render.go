@@ -18,10 +18,10 @@ import (
 // PDF/PNG/JPG/video follow as the engine grows. Membership-gated like the rest
 // of the persistence surface.
 func mountRender(api chi.Router, p *persistence.Service, acct *accounts.Service, up *uploads.Service) {
-	api.With(requireAuth(acct)).Get("/designs/{id}/render.svg", renderSVGHandler(p, acct))
+	api.With(requireAuth(acct)).Get("/designs/{id}/render.svg", renderSVGHandler(p, acct, up))
 	api.With(requireAuth(acct)).Get("/designs/{id}/render.pdf", renderPDFHandler(p, acct, up))
-	api.With(requireAuth(acct)).Get("/designs/{id}/render.png", renderRasterHandler(p, acct, "png"))
-	api.With(requireAuth(acct)).Get("/designs/{id}/render.jpg", renderRasterHandler(p, acct, "jpg"))
+	api.With(requireAuth(acct)).Get("/designs/{id}/render.png", renderRasterHandler(p, acct, up, "png"))
+	api.With(requireAuth(acct)).Get("/designs/{id}/render.jpg", renderRasterHandler(p, acct, up, "jpg"))
 	api.With(requireAuth(acct)).Get("/designs/{id}/render.mp4", renderVideoHandler(p, acct))
 }
 
@@ -70,7 +70,7 @@ func atoiOr(s string, def int) int {
 	return def
 }
 
-func renderRasterHandler(p *persistence.Service, acct *accounts.Service, format string) http.HandlerFunc {
+func renderRasterHandler(p *persistence.Service, acct *accounts.Service, up *uploads.Service, format string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
 		ws, err := authorizeDesign(r, p, acct, id, "viewer")
@@ -95,6 +95,13 @@ func renderRasterHandler(p *persistence.Service, acct *accounts.Service, format 
 			persistenceProblem(w, r, err)
 			return
 		}
+		// Inline referenced image/pattern asset bytes so images render (the raster
+		// exporter draws from embedded bytes, not workspace asset ids).
+		var fetch assetContent
+		if up != nil {
+			fetch = func(aid string) ([]byte, string, error) { return up.ContentInWorkspace(r.Context(), ws, aid) }
+		}
+		file := embedDesignFileAssets(fetch, loaded.File)
 		var out []byte
 		var mime string
 		if format == "jpg" {
@@ -104,10 +111,10 @@ func renderRasterHandler(p *persistence.Service, acct *accounts.Service, format 
 					quality = n
 				}
 			}
-			out, err = render.ToJPEG(render.Design(loaded.File), page, scale, quality)
+			out, err = render.ToJPEG(render.Design(file), page, scale, quality)
 			mime = "image/jpeg"
 		} else {
-			out, err = render.ToPNG(render.Design(loaded.File), page, scale)
+			out, err = render.ToPNG(render.Design(file), page, scale)
 			mime = "image/png"
 		}
 		if err != nil {
@@ -125,12 +132,12 @@ func renderRasterHandler(p *persistence.Service, acct *accounts.Service, format 
 // nil service, or an asset that will not load, yields no pixels rather than an
 // error, so one broken upload degrades a single image instead of failing the
 // export.
-func pdfImageSource(r *http.Request, up *uploads.Service) render.ImageSource {
+func pdfImageSource(r *http.Request, up *uploads.Service, ws string) render.ImageSource {
 	if up == nil {
 		return nil
 	}
 	return func(assetID string) ([]byte, bool) {
-		data, _, err := up.Content(r.Context(), assetID)
+		data, _, err := up.ContentInWorkspace(r.Context(), ws, assetID)
 		if err != nil || len(data) == 0 {
 			return nil, false
 		}
@@ -162,7 +169,7 @@ func renderPDFHandler(p *persistence.Service, acct *accounts.Service, up *upload
 			return
 		}
 		var pdf []byte
-		src := pdfImageSource(r, up)
+		src := pdfImageSource(r, up, ws)
 		if deck {
 			pdf, err = render.ToDeckPDF(render.Design(loaded.File), src)
 		} else {
@@ -178,7 +185,7 @@ func renderPDFHandler(p *persistence.Service, acct *accounts.Service, up *upload
 	}
 }
 
-func renderSVGHandler(p *persistence.Service, acct *accounts.Service) http.HandlerFunc {
+func renderSVGHandler(p *persistence.Service, acct *accounts.Service, up *uploads.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
 		ws, err := authorizeDesign(r, p, acct, id, "viewer")
@@ -197,7 +204,11 @@ func renderSVGHandler(p *persistence.Service, acct *accounts.Service) http.Handl
 			persistenceProblem(w, r, err)
 			return
 		}
-		svg, err := render.ToSVG(render.Design(loaded.File), page)
+		var fetch assetContent
+		if up != nil {
+			fetch = func(aid string) ([]byte, string, error) { return up.ContentInWorkspace(r.Context(), ws, aid) }
+		}
+		svg, err := render.ToSVG(render.Design(embedDesignFileAssets(fetch, loaded.File)), page)
 		if err != nil {
 			Problem(w, r, http.StatusBadRequest, "Bad Request", "page index out of range")
 			return

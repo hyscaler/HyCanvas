@@ -1,7 +1,8 @@
-// Optional real-font registry for the raster exporter. By default text draws
-// in the embedded fallback (goregular); a host can register actual font files
-// (e.g. the design's Google Fonts) so server-side rasters are glyph-true.
-// Lookup never fails: an unregistered family falls back to the embedded font.
+// Optional real-font registry for the raster exporter. By default text draws in
+// the embedded Arial-metric fallback (Liberation Sans, see fallbackfont.go); a
+// host can register actual font files (e.g. the design's Google Fonts) so
+// server-side rasters are glyph-true. Lookup never fails: an unregistered family
+// falls back to the embedded font.
 package render
 
 import (

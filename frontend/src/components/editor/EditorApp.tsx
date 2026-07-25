@@ -4,11 +4,12 @@
 
 import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
 import { useRouter } from "next/router";
-import { ChevronLeft, Undo2, Redo2, Download, Play, MonitorPlay, Ruler, Grid3x3, Magnet, LayoutTemplate, History, Eye, Share2, MessageSquare, ShieldCheck, Activity, BarChart3, MoreHorizontal, Send, Globe, Printer, PanelRightClose, PanelRightOpen, Keyboard, Info, X, Accessibility, Maximize2, Minimize2, LayoutGrid, FileDown } from "lucide-react";
+import { ChevronLeft, Undo2, Redo2, Download, Play, MonitorPlay, Ruler, Grid3x3, Magnet, LayoutTemplate, History, Eye, Share2, MessageSquare, ShieldCheck, Activity, BarChart3, MoreHorizontal, Send, Globe, Printer, PanelRightClose, PanelRightOpen, Keyboard, Info, X, Accessibility, Maximize2, Minimize2, LayoutGrid, FileDown, Film } from "lucide-react";
 import type { AccessMode } from "@hc/sdk";
 import { ApiError } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
 import { downloadHycFile } from "@/lib/hycFile";
+import { deckToVideoFile } from "@/lib/video/deckToVideo";
 import { useEditor } from "@/store/editor";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
@@ -708,6 +709,21 @@ export function EditorApp() {
     }
   }
 
+  // Convert this deck (a multi-page design) into a new video document: each page
+  // becomes an animated scene (P5.3). Client-side (the deck is already loaded),
+  // non-destructive (the source deck is untouched); opens the new video.
+  async function convertToVideo() {
+    if (!workspaceId) return;
+    try {
+      const file = deckToVideoFile(useEditor.getState().doc);
+      const rec = await oc.createDesign({ workspaceId, title: file.title, from: file });
+      toast.success("Created a video from this deck.");
+      void router.push({ pathname: "/editor", query: { id: rec.id } });
+    } catch {
+      toast.error("Couldn't convert this deck to video.");
+    }
+  }
+
   if (status === "loading") {
     return <div className="grid h-screen place-items-center text-neutral-400"><Spinner className="text-2xl" /></div>;
   }
@@ -838,7 +854,10 @@ export function EditorApp() {
                   ]
                 : []),
               ...(docKind === "design" && pageCount > 1
-                ? [{ icon: LayoutGrid as TopIcon, label: "Slide overview", onClick: () => setOverviewOpen(true) }]
+                ? [
+                    { icon: LayoutGrid as TopIcon, label: "Slide overview", onClick: () => setOverviewOpen(true) },
+                    { icon: Film as TopIcon, label: "Convert to video", onClick: () => void convertToVideo(), disabled: !workspaceId },
+                  ]
                 : []),
               // The document as a portable .hyc file (the open format as
               // readable JSON): every kind, saved or not, downloads what is
@@ -1032,7 +1051,7 @@ export function EditorApp() {
                 </button>
               </div>
               <div className="oc-scroll min-h-0 flex-1 overflow-y-auto">
-                <PropertiesPanel />
+                <PropertiesPanel workspaceId={workspaceId} />
               </div>
             </aside>
           ) : (
