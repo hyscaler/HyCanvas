@@ -379,24 +379,25 @@ func (rc *rctx) rasterTable(m mat, node map[string]any) {
 		return
 	}
 	// Bound the grid a crafted design file can ask us to render: no real table
-	// approaches these counts. Bail to a placeholder when either axis exceeds the
-	// cap so the axis allocations below are only ever reached with a provably
-	// small, fixed-bounded size (the guard cuts the path, not just the value).
+	// approaches these counts, so clamp each axis to maxTableAxis and render only
+	// the first that many columns/rows.
 	nCols := len(colW)
 	if nCols > maxTableAxis {
-		rc.placeholderBox(m, node)
-		return
+		nCols = maxTableAxis
 	}
 	nRows := len(rowH)
 	if nRows > maxTableAxis {
-		rc.placeholderBox(m, node)
-		return
+		nRows = maxTableAxis
 	}
-	xs := make([]float64, nCols+1)
+	// Allocate the axis accumulators at a fixed constant size (the cap + 1) and
+	// use only the first nCols+1 / nRows+1 entries. The make() size is a
+	// compile-time constant, so the allocation never depends on the file's array
+	// lengths; the clamps above keep the reslice indices in range.
+	xs := make([]float64, maxTableAxis+1)[:nCols+1]
 	for i := 0; i < nCols; i++ {
 		xs[i+1] = xs[i] + asNum(colW[i])
 	}
-	ys := make([]float64, nRows+1)
+	ys := make([]float64, maxTableAxis+1)[:nRows+1]
 	for i := 0; i < nRows; i++ {
 		ys[i+1] = ys[i] + asNum(rowH[i])
 	}
