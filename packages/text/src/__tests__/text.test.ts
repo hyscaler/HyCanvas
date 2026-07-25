@@ -49,6 +49,18 @@ describe("font catalog (FR-5)", () => {
     expect(fontCssUrl("system")).toBe("");
   });
 
+  it("encodes a multi-word family with '+' and never leaks unknown/hostile input", () => {
+    // A catalog family with a space stays "+"-encoded (CSS2 request syntax).
+    expect(fontCssUrl("Open Sans")).toContain("family=Open+Sans");
+    // Anything not in the curated catalog (including anything with markup or URL
+    // meta-characters) resolves to no URL at all, so the DOM sink stays safe.
+    expect(fontCssUrl('Nope"<script>alert(1)</script>')).toBe("");
+    expect(fontCssUrl("../../evil")).toBe("");
+    // Every returned URL is on the fixed host allowlist, never derived host.
+    const url = fontCssUrl("Playfair Display");
+    expect(url === "" || /^https:\/\/(fonts\.bunny\.net|fonts\.googleapis\.com)\//.test(url)).toBe(true);
+  });
+
   it("switches the webfont CSS host to Google when asked, and back to Bunny", () => {
     setFontCssProvider("google");
     expect(fontCssUrl("Inter")).toContain("fonts.googleapis.com");

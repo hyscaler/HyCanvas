@@ -144,7 +144,15 @@ func (i *iconify) search(ctx context.Context, q Query) []map[string]any {
 	}
 
 	// 4. emit in search-result order (relevance), applying offset + limit.
-	assets := make([]map[string]any, 0, limit)
+	// Cap the capacity hint by how many results actually exist, so the
+	// allocation can never exceed the real result set even if limit were large
+	// (it is already clamped to maxSearchLimit above; this keeps the bound local
+	// and obvious at the allocation site).
+	capHint := limit
+	if capHint > len(built) {
+		capHint = len(built)
+	}
+	assets := make([]map[string]any, 0, capHint)
 	skipped := 0
 	for _, id := range names {
 		a, ok := built[id]

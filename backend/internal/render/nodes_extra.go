@@ -23,6 +23,12 @@ import (
 	"golang.org/x/image/vector"
 )
 
+// maxTableAxis bounds how many columns or rows the raster table renderer will
+// lay out from a design file's colWidths/rowHeights arrays. Real tables are far
+// under this; the cap keeps a crafted file from driving large allocations
+// during export (defense in depth alongside the persistence write validator).
+const maxTableAxis = 1000
+
 // --- shared helpers ---------------------------------------------------------
 
 // face builds an opentype face for family/weight at the given DEVICE pixel size
@@ -372,12 +378,23 @@ func (rc *rctx) rasterTable(m mat, node map[string]any) {
 		rc.placeholderBox(m, node)
 		return
 	}
-	xs := make([]float64, len(colW)+1)
-	for i := range colW {
+	// Bound the grid a crafted design file can ask us to render: no real table
+	// approaches these counts, and the cap keeps the axis allocations below
+	// small, fixed sizes regardless of the file's array lengths.
+	if len(colW) > maxTableAxis {
+		colW = colW[:maxTableAxis]
+	}
+	if len(rowH) > maxTableAxis {
+		rowH = rowH[:maxTableAxis]
+	}
+	nCols := len(colW)
+	nRows := len(rowH)
+	xs := make([]float64, nCols+1)
+	for i := 0; i < nCols; i++ {
 		xs[i+1] = xs[i] + asNum(colW[i])
 	}
-	ys := make([]float64, len(rowH)+1)
-	for i := range rowH {
+	ys := make([]float64, nRows+1)
+	for i := 0; i < nRows; i++ {
 		ys[i+1] = ys[i] + asNum(rowH[i])
 	}
 	scale := avgScale(m)
