@@ -383,8 +383,12 @@ func (rc *rctx) rasterTable(m mat, node map[string]any) {
 	// cap so the axis allocations below are only ever reached with a provably
 	// small, fixed-bounded size (the guard cuts the path, not just the value).
 	nCols := len(colW)
+	if nCols > maxTableAxis {
+		rc.placeholderBox(m, node)
+		return
+	}
 	nRows := len(rowH)
-	if nCols > maxTableAxis || nRows > maxTableAxis {
+	if nRows > maxTableAxis {
 		rc.placeholderBox(m, node)
 		return
 	}
