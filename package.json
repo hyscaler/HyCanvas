@@ -45,8 +45,9 @@
     "vite": "^7.3.6",
     "esbuild": ">=0.28.1",
     "shell-quote": ">=1.9.0",
-    "postcss": ">=8.5.10",
-    "protobufjs": ">=7.6.5"
+    "postcss": ">=8.5.18",
+    "protobufjs": ">=7.6.5",
+    "sharp": ">=0.35.0"
   },
   "engines": {
     "node": ">=20.0.0"
