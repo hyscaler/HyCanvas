@@ -144,7 +144,11 @@ func (i *iconify) search(ctx context.Context, q Query) []map[string]any {
 	}
 
 	// 4. emit in search-result order (relevance), applying offset + limit.
-	assets := make([]map[string]any, 0, limit)
+	// Preallocate with the fixed maxSearchLimit constant: limit is clamped to it
+	// above, so the result never exceeds it, and using the constant (not the
+	// request-derived limit) keeps the allocation size independent of any
+	// user-provided value. append grows the slice in the unreachable case.
+	assets := make([]map[string]any, 0, maxSearchLimit)
 	skipped := 0
 	for _, id := range names {
 		a, ok := built[id]

@@ -14,7 +14,11 @@ type assetContent func(assetID string) (data []byte, contentType string, err err
 // rather than from a workspace asset id. Never mutates the input; a nil fetch
 // copies the tree without embedding.
 func embedNodeAssets(fetch assetContent, node map[string]any) map[string]any {
-	n2 := make(map[string]any, len(node)+1)
+	// Capacity hint is exactly the source size: n2 is a copy of node plus at
+	// most a couple of added keys, and len(node) bounds the hint by an
+	// already-allocated map, so it cannot overflow. Growth for the extra keys is
+	// negligible and handled by the runtime.
+	n2 := make(map[string]any, len(node))
 	for k, v := range node {
 		n2[k] = v
 	}
@@ -70,7 +74,7 @@ func embedNodeAssets(fetch assetContent, node map[string]any) map[string]any {
 				nf[i] = fv
 				continue
 			}
-			f2 := make(map[string]any, len(fo)+1)
+			f2 := make(map[string]any, len(fo))
 			for k, v := range fo {
 				f2[k] = v
 			}

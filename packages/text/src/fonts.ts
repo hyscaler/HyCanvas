@@ -114,8 +114,16 @@ export function setFontCssProvider(provider: FontCssProvider): void {
 export function fontCssUrl(family: string, weights: number[] = [400, 700]): string {
   const entry = getFontEntry(family);
   if (!entry || entry.system) return "";
-  const name = family.replace(/\s+/g, "+");
-  const ws = [...new Set(weights.length ? weights : entry.weights)].sort((a, b) => a - b);
+  // Build the URL from the CANONICAL catalog family (entry.family), never the
+  // raw caller input: getFontEntry already rejected anything not in the curated
+  // library, so entry.family is a trusted, fixed string. Encode it so a family
+  // with spaces (or any other reserved char) is a well-formed query value and
+  // no untrusted text can ever reach the URL sink. Weights are numeric.
+  const name = encodeURIComponent(entry.family).replace(/%20/g, "+");
+  const ws = [...new Set(weights.length ? weights : entry.weights)]
+    .filter((w) => Number.isFinite(w))
+    .map((w) => Math.trunc(w))
+    .sort((a, b) => a - b);
   let axis: string;
   if (entry.italics) {
     const tuples = [

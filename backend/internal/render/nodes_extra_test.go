@@ -513,6 +513,32 @@ func TestRasterTable(t *testing.T) {
 	}
 }
 
+// TestRasterTableOversizedAxis: a design file that claims an absurd number of
+// columns/rows must render without attempting a giant allocation. The renderer
+// caps the axis at maxTableAxis, so this completes quickly and does not panic.
+func TestRasterTableOversizedAxis(t *testing.T) {
+	cols := make([]any, maxTableAxis+5000)
+	rows := make([]any, maxTableAxis+5000)
+	for i := range cols {
+		cols[i] = 1.0
+	}
+	for i := range rows {
+		rows[i] = 1.0
+	}
+	node := map[string]any{
+		"type":       "table",
+		"transform":  map[string]any{"x": 0.0, "y": 0.0, "scaleX": 1.0, "scaleY": 1.0, "rotation": 0.0},
+		"size":       map[string]any{"width": 200.0, "height": 80.0},
+		"colWidths":  cols,
+		"rowHeights": rows,
+		"cells":      []any{},
+	}
+	// Must not panic or hang; the axis cap keeps the allocation bounded.
+	if _, err := ToPNG(page(200, 80, node), 0, 1); err != nil {
+		t.Fatalf("oversized table render: %v", err)
+	}
+}
+
 // TestRasterChartBar: a bar chart draws series-colored bars, taller for larger
 // values (bar for value 3 covers more area than the bar for value 1).
 func TestRasterChartBar(t *testing.T) {

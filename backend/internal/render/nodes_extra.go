@@ -23,6 +23,12 @@ import (
 	"golang.org/x/image/vector"
 )
 
+// maxTableAxis bounds how many columns or rows the raster table renderer will
+// lay out from a design file's colWidths/rowHeights arrays. Real tables are far
+// under this; the cap keeps a crafted file from driving large allocations
+// during export (defense in depth alongside the persistence write validator).
+const maxTableAxis = 1000
+
 // --- shared helpers ---------------------------------------------------------
 
 // face builds an opentype face for family/weight at the given DEVICE pixel size
@@ -372,12 +378,27 @@ func (rc *rctx) rasterTable(m mat, node map[string]any) {
 		rc.placeholderBox(m, node)
 		return
 	}
-	xs := make([]float64, len(colW)+1)
-	for i := range colW {
+	// Bound the grid a crafted design file can ask us to render: no real table
+	// approaches these counts, so clamp each axis to maxTableAxis and render only
+	// the first that many columns/rows.
+	nCols := len(colW)
+	if nCols > maxTableAxis {
+		nCols = maxTableAxis
+	}
+	nRows := len(rowH)
+	if nRows > maxTableAxis {
+		nRows = maxTableAxis
+	}
+	// Allocate the axis accumulators at a fixed constant size (the cap + 1) and
+	// use only the first nCols+1 / nRows+1 entries. The make() size is a
+	// compile-time constant, so the allocation never depends on the file's array
+	// lengths; the clamps above keep the reslice indices in range.
+	xs := make([]float64, maxTableAxis+1)[:nCols+1]
+	for i := 0; i < nCols; i++ {
 		xs[i+1] = xs[i] + asNum(colW[i])
 	}
-	ys := make([]float64, len(rowH)+1)
-	for i := range rowH {
+	ys := make([]float64, maxTableAxis+1)[:nRows+1]
+	for i := 0; i < nRows; i++ {
 		ys[i+1] = ys[i] + asNum(rowH[i])
 	}
 	scale := avgScale(m)
@@ -388,7 +409,7 @@ func (rc *rctx) rasterTable(m mat, node map[string]any) {
 		cell := asObj(cv)
 		col := int(asNum(cell["col"]))
 		row := int(asNum(cell["row"]))
-		if col < 0 || row < 0 || col >= len(colW) || row >= len(rowH) {
+		if col < 0 || row < 0 || col >= nCols || row >= nRows {
 			continue
 		}
 		colSpan := int(asNum(cell["colSpan"]))
@@ -401,11 +422,11 @@ func (rc *rctx) rasterTable(m mat, node map[string]any) {
 		}
 		c1 := col + colSpan
 		r1 := row + rowSpan
-		if c1 > len(colW) {
-			c1 = len(colW)
+		if c1 > nCols {
+			c1 = nCols
 		}
-		if r1 > len(rowH) {
-			r1 = len(rowH)
+		if r1 > nRows {
+			r1 = nRows
 		}
 		cx, cy := xs[col], ys[row]
 		cw, ch := xs[c1]-cx, ys[r1]-cy
