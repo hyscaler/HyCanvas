@@ -1890,7 +1890,17 @@ export function Canvas() {
           before.set(id, { ...loc.node.transform });
         }
       }
-      gesture.current = { type: "move", startX: page.x, startY: page.y, before };
+      if (before.size) {
+        gesture.current = { type: "move", startX: page.x, startY: page.y, before };
+      } else {
+        // Everything under the cursor is locked (statically, by a collaborator,
+        // or as a brand region), so there is nothing a drag could move. Rubber-band
+        // instead: a locked full-page background would otherwise make marquee
+        // selection unreachable anywhere on the page. A plain click (no drag)
+        // changes nothing here, so the locked node selected above keeps its
+        // Unlock affordances.
+        gesture.current = { type: "marquee", startX: screen.x, startY: screen.y };
+      }
     } else {
       if (!e.shiftKey) store.clearSelection();
       gesture.current = { type: "marquee", startX: screen.x, startY: screen.y };
