@@ -193,5 +193,14 @@ export function resizePage(page: Page, target: ResizeTarget): Page {
     void (node as Node);
   }
 
+  // Ruler guides follow their axis proportionally: an "x" guide is a vertical
+  // line measured along the width, a "y" guide a horizontal line along the
+  // height. Without this they would sit at the source page's pixel offsets.
+  if (out.guides) {
+    for (const g of out.guides) {
+      g.position = g.axis === "x" ? (g.position / sW) * tW : (g.position / sH) * tH;
+    }
+  }
+
   return out;
 }

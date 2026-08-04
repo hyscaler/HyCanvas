@@ -725,9 +725,12 @@ interface EditorState {
   importPdfPages(pages: { width: number; height: number; nodes: Node[] }[]): void;
   /** Apply a template into the CURRENT design: append its pages (fresh node and
    *  page ids, assets and uploaded-font refs merged) and switch to the first
-   *  one. Additive by design, so applying a template never destroys existing
-   *  pages; one undo step. Returns false when nothing was applied (read-only
-   *  session, history preview, or an empty template). */
+   *  one. Pages authored at a different size are resized to the active page's
+   *  dimensions on insert (the design-resize mapping), so applying any gallery
+   *  template never creates a mixed-size document. Additive by design, so
+   *  applying a template never destroys existing pages; one undo step. Returns
+   *  false when nothing was applied (read-only session, history preview, or an
+   *  empty template). */
   applyTemplateFile(file: DesignFile, title: string): boolean;
   /** Import a full SVG file (e.g. an SVG export from another design tool) as editable elements:
    *  shapes/paths/text/images, registered assets, scaled to fit the page and
@@ -836,8 +839,11 @@ interface EditorState {
   fillWithImageNode(targetId: string, kind: "frame" | "shape", imageId: string, restoreTransform?: Transform): boolean;
   /** True when the node is an image serving as its page's background: flagged
    *  via `data.background` (set by setImageAsBackground), or a hand-built
-   *  background - a locked, bottom-of-stack, top-level image covering the
-   *  whole page. */
+   *  background - a bottom-of-stack, top-level image covering the whole page.
+   *  Background status always requires the node to be LOCKED: unlocking a
+   *  background suspends it (the image acts like a plain element and "Set as
+   *  background" reappears); re-setting a still-flagged image keeps its
+   *  original pre-background state for detach. */
   isBackgroundImage(id: string): boolean;
   /** Make a top-level image the page background as ONE undo step: reshape it
    *  to a page-sized box at scale 1 with the source covering it (fit "cover",
@@ -1780,9 +1786,30 @@ export const useEditor = create<EditorState>((set, get) => {
       const w = Math.max(1, Math.round(width));
       const h = Math.max(1, Math.round(height));
       if (before.width === w && before.height === h) return;
+      // Background images are PAGE-SIZED cover boxes; they follow the page so
+      // a manual W/H change never leaves the background at the old bounds.
+      // Only the flagged, still-locked ones move - this raw path deliberately
+      // repositions no other content (the design-resize flow maps everything).
+      const bgs = page.children
+        .filter((n) => n.type === "image" && n.locked && (n.data as { background?: unknown } | undefined)?.background === true)
+        .map((n) => ({ n, transform: { ...n.transform }, size: { ...n.size } }));
       perform(
-        () => { page.width = w; page.height = h; },
-        () => { page.width = before.width; page.height = before.height; },
+        () => {
+          page.width = w;
+          page.height = h;
+          for (const b of bgs) {
+            b.n.transform = { ...b.n.transform, x: b.n.transform.scaleX < 0 ? w : 0, y: b.n.transform.scaleY < 0 ? h : 0 };
+            b.n.size = { width: w, height: h };
+          }
+        },
+        () => {
+          page.width = before.width;
+          page.height = before.height;
+          for (const b of bgs) {
+            b.n.transform = { ...b.transform };
+            b.n.size = { ...b.size };
+          }
+        },
       );
     },
     setPageBackground: (fill) => {
@@ -3772,6 +3799,12 @@ export const useEditor = create<EditorState>((set, get) => {
       // with ids already persisted in this doc, and applying the same template
       // twice must never mint duplicates.
       const idGen = () => `n_${crypto.randomUUID().slice(0, 12)}`;
+      // A template authored at a different size is resized to the ACTIVE
+      // page's dimensions on insert (the same smart mapping as the design
+      // resize feature), so applying any gallery template never creates a
+      // mixed-size document.
+      const cur = doc.pages[Math.min(get().activePage, Math.max(0, doc.pages.length - 1))];
+      const target = cur && cur.width > 0 && cur.height > 0 ? { width: cur.width, height: cur.height } : null;
       const made = pages.map((p, i) => {
         const page = structuredClone(p) as Page & { name?: string; readingOrder?: string[] };
         page.id = `page_${crypto.randomUUID().slice(0, 12)}`;
@@ -3787,6 +3820,14 @@ export const useEditor = create<EditorState>((set, get) => {
             .filter((id): id is string => !!id);
           if (ro.length) page.readingOrder = ro;
           else delete page.readingOrder;
+        }
+        if (
+          target &&
+          page.width > 0 &&
+          page.height > 0 &&
+          (Math.round(page.width) !== Math.round(target.width) || Math.round(page.height) !== Math.round(target.height))
+        ) {
+          return resizePage(page, target) as typeof page;
         }
         return page;
       });
@@ -4384,12 +4425,16 @@ export const useEditor = create<EditorState>((set, get) => {
     isBackgroundImage: (id) => {
       const doc = get().doc;
       const loc = locate(doc, id);
-      if (!loc || loc.node.type !== "image" || loc.parent) return false;
+      // Background status always requires the lock: unlocking a background
+      // (panel/menu lock toggle) suspends it, so the freed image acts like a
+      // plain element again and "Set as background" reappears. The flag stays
+      // on the node, so re-setting it keeps the original pre-background state.
+      if (!loc || loc.node.type !== "image" || loc.parent || !loc.node.locked) return false;
       if ((loc.node.data as { background?: unknown } | undefined)?.background === true) return true;
       // Hand-built background (no flag): a locked, bottom-of-stack image
       // covering the whole page, i.e. what "set as background" produces when
       // done by hand. Detach then simply unlocks it.
-      if (!loc.node.locked || loc.index !== 0) return false;
+      if (loc.index !== 0) return false;
       const box = worldAABB(doc, id);
       const eps = 1;
       return (
@@ -4431,11 +4476,27 @@ export const useEditor = create<EditorState>((set, get) => {
       const prevIndex = loc.index;
       const prevLocked = !!node.locked;
       const prevData = node.data;
-      // The image currently serving as this page's background (flagged or
-      // hand-built) is detached in the same undo step; otherwise it would sit
-      // full-page directly above the new background and hide it.
+      // Re-setting a still-flagged image (its background status was suspended
+      // by an unlock, never detached) keeps the ORIGINAL pre-background state,
+      // so a later detach restores the true pre-background spot instead of the
+      // suspended cover box.
+      const dataRec = prevData as { background?: unknown; backgroundRestore?: unknown } | undefined;
+      const keptRestore =
+        dataRec?.background === true && typeof dataRec.backgroundRestore === "object" && dataRec.backgroundRestore !== null
+          ? dataRec.backgroundRestore
+          : null;
+      // The image currently serving as this page's background is detached in
+      // the same undo step; otherwise it would sit full-page directly above
+      // the new background and hide it. A stale-flagged bottom image (its
+      // background suspended by an unlock) is cleaned up the same way.
       const bottom = page.children[0];
-      const oldBg = bottom && bottom.id !== id && get().isBackgroundImage(bottom.id) ? bottom : null;
+      const oldBg =
+        bottom &&
+        bottom.id !== id &&
+        bottom.type === "image" &&
+        (get().isBackgroundImage(bottom.id) || (bottom.data as { background?: unknown } | undefined)?.background === true)
+          ? bottom
+          : null;
       const oldBgPrev = oldBg
         ? {
             locked: !!oldBg.locked,
@@ -4460,7 +4521,7 @@ export const useEditor = create<EditorState>((set, get) => {
           node.data = {
             ...(prevData ?? {}),
             background: true,
-            backgroundRestore: { transform: prevTransform, size: prevSize, fit: prevFit, index: prevIndex },
+            backgroundRestore: keptRestore ?? { transform: prevTransform, size: prevSize, fit: prevFit, index: prevIndex },
           };
         },
         () => {

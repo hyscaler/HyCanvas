@@ -7,7 +7,7 @@ import { createBlankDesign } from "@hc/schema";
 import { useEditor } from "./editor";
 import { usePresence } from "./presence";
 
-function templateFile(nodeIds: string[]): DesignFile {
+function templateFile(nodeIds: string[], size?: { width: number; height: number }): DesignFile {
   return {
     schemaVersion: useEditor.getState().doc.schemaVersion,
     id: "tpl-1",
@@ -17,8 +17,8 @@ function templateFile(nodeIds: string[]): DesignFile {
     pages: [
       {
         id: "tpl-page-1",
-        width: 500,
-        height: 400,
+        width: size?.width ?? 500,
+        height: size?.height ?? 400,
         // Authored screen-reader order (reversed on purpose): must survive the
         // id remap on apply instead of pointing at the template's old ids.
         readingOrder: [...nodeIds].reverse(),
@@ -88,6 +88,31 @@ describe("applyTemplateFile", () => {
     expect(doc.pages.length).toBe(1);
     expect(doc.assets.some((a) => a.id === "asset-tpl-1")).toBe(false);
     expect((doc.fonts ?? []).some((f) => f.family === "Studio Sans")).toBe(false);
+  });
+
+  it("resizes differently-sized template pages to the active page's dimensions", () => {
+    useEditor.getState().loadDoc(createBlankDesign({ width: 800, height: 600 }));
+    const st = useEditor.getState();
+    // Template authored at 500x400 lands as an 800x600 page (no mixed sizes),
+    // with its content scaled up by the resize mapping rather than left small.
+    expect(st.applyTemplateFile(templateFile(["t1"]), "Tpl")).toBe(true);
+    const applied = useEditor.getState().doc.pages[1];
+    expect(applied.width).toBe(800);
+    expect(applied.height).toBe(600);
+    const box = applied.children[0].size;
+    expect(box.width).toBeGreaterThan(10);
+    expect(box.height).toBeGreaterThan(10);
+  });
+
+  it("leaves same-size template pages untouched", () => {
+    useEditor.getState().loadDoc(createBlankDesign({ width: 800, height: 600 }));
+    const st = useEditor.getState();
+    expect(st.applyTemplateFile(templateFile(["t1"], { width: 800, height: 600 }), "Tpl")).toBe(true);
+    const applied = useEditor.getState().doc.pages[1];
+    expect(applied.width).toBe(800);
+    expect(applied.height).toBe(600);
+    expect(applied.children[0].size).toEqual({ width: 10, height: 10 });
+    expect(applied.children[0].transform).toEqual({ x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 });
   });
 
   it("no-ops in a history preview and for non-edit access", () => {

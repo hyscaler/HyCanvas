@@ -102,6 +102,10 @@ export function TemplatesPanel() {
   const debouncedQuery = useDebouncedValue(query);
   const [templates, setTemplates] = useState<TemplateSummary[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // "Other sizes" is collapsed by default: the default view is templates that
+  // fit this page. Searching expands it (hiding search hits would read as "no
+  // results"), and so does having no matches at all (never an empty panel).
+  const [showOther, setShowOther] = useState(false);
   // The active page's size drives the suggestions; re-read on page switches
   // and doc edits (a stage resize changes what "matching" means).
   const activePage = useEditor((s) => s.activePage);
@@ -156,7 +160,18 @@ export function TemplatesPanel() {
       // The store refuses in read-only states (viewer/comment access, history
       // preview) and for empty templates; never claim success for a no-op.
       if (useEditor.getState().applyTemplateFile(file, t.title)) {
-        toast.success("Template added as a new page. Undo removes it.");
+        // The store resizes differently-sized template pages to this design's
+        // page size on insert; say so, so the size badge never reads as a
+        // warning. A summary without format metadata (0x0) proves nothing, so
+        // it gets the plain message rather than a false "resized" claim.
+        const tw = Math.round(t.format?.width ?? 0);
+        const th = Math.round(t.format?.height ?? 0);
+        const resized = !!pageSize && tw > 0 && th > 0 && (tw !== pageSize.w || th !== pageSize.h);
+        toast.success(
+          resized
+            ? "Template added as a new page, resized to fit this design. Undo removes it."
+            : "Template added as a new page. Undo removes it.",
+        );
       } else {
         toast.error("Templates can't be added in a read-only view.");
       }
@@ -238,12 +253,29 @@ export function TemplatesPanel() {
               <div className="grid grid-cols-2 gap-2">{matched.map(card)}</div>
             </>
           )}
-          {rest.length > 0 && (
-            <>
-              <p className={sectionCls}>{matched.length > 0 ? "Other sizes" : "All templates"}</p>
-              <div className="grid grid-cols-2 gap-2">{rest.map(card)}</div>
-            </>
-          )}
+          {rest.length > 0 && (() => {
+            const searching = !!debouncedQuery.trim();
+            const collapsible = matched.length > 0 && !searching;
+            const open = !collapsible || showOther;
+            return (
+              <>
+                {collapsible ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowOther((v) => !v)}
+                    aria-expanded={open}
+                    className={`${sectionCls} flex w-full items-center gap-1 text-left hover:text-neutral-600`}
+                  >
+                    <ChevronDown size={12} className={`shrink-0 transition-transform ${open ? "" : "-rotate-90"}`} />
+                    Other sizes ({rest.length})
+                  </button>
+                ) : (
+                  <p className={sectionCls}>{matched.length > 0 ? "Other sizes" : "All templates"}</p>
+                )}
+                {open && <div className="grid grid-cols-2 gap-2">{rest.map(card)}</div>}
+              </>
+            );
+          })()}
         </>
       )}
     </PanelShell>

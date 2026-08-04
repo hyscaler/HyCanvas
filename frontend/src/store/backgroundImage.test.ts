@@ -134,6 +134,55 @@ describe("adjusting the background image", () => {
   });
 });
 
+describe("suspending a background by unlocking it", () => {
+  beforeEach(() => loadDocWith([createNode("shape", { id: "shape" }), image("img")]));
+
+  it("an unlocked background is not a background (Set as background reappears)", () => {
+    useEditor.getState().setImageAsBackground("img");
+    useEditor.getState().setNodeLocked("img", false);
+    expect(useEditor.getState().isBackgroundImage("img")).toBe(false);
+  });
+
+  it("re-setting a still-flagged image keeps the original restore state", () => {
+    const st = useEditor.getState();
+    st.setImageAsBackground("img");
+    st.setNodeLocked("img", false);
+    st.setImageAsBackground("img"); // re-lock via re-set; flag was never detached
+    expect(useEditor.getState().isBackgroundImage("img")).toBe(true);
+    st.detachImageBackground("img");
+    // Detach lands on the TRUE pre-background state, not the suspended cover box.
+    const img = node("img");
+    expect(img.transform).toEqual(IMG_TRANSFORM);
+    expect(img.size).toEqual(IMG_SIZE);
+    expect(kids().map((n) => n.id)).toEqual(["shape", "img"]);
+  });
+});
+
+describe("page size changes", () => {
+  beforeEach(() => loadDocWith([createNode("shape", { id: "shape" }), image("img")]));
+
+  it("setPageSize keeps the background glued to the page as one undo step", () => {
+    const st = useEditor.getState();
+    st.setImageAsBackground("img");
+    st.setPageSize(1000, 500);
+    const img = node("img");
+    expect(img.size).toEqual({ width: 1000, height: 500 });
+    expect(img.transform.x).toBe(0);
+    expect(img.transform.y).toBe(0);
+    // Undo restores the page AND the background box together.
+    useEditor.getState().undo();
+    expect(useEditor.getState().doc.pages[0].width).toBe(PAGE_W);
+    expect(node("img").size).toEqual({ width: PAGE_W, height: PAGE_H });
+  });
+
+  it("setPageSize leaves non-background content alone", () => {
+    const st = useEditor.getState();
+    st.setPageSize(1000, 500);
+    expect(node("img").size).toEqual(IMG_SIZE);
+    expect(node("img").transform).toEqual(IMG_TRANSFORM);
+  });
+});
+
 describe("hand-built background (no flag)", () => {
   beforeEach(() =>
     loadDocWith([
