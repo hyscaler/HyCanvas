@@ -780,7 +780,35 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
           );
         })()}
       </div>
-      {single?.node.locked && <p className="rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-700">This object is locked. Unlock it to edit.</p>}
+      {single?.node.locked && (() => {
+        // The page background image is locked by design; instead of the bare
+        // "unlock to edit" hint it gets its two supported actions: adjust
+        // (pan/zoom within the page via the crop overlay) and detach.
+        const st = useEditor.getState();
+        if (!st.isBackgroundImage(single.node.id)) {
+          return <p className="rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-700">This object is locked. Unlock it to edit.</p>;
+        }
+        const id = single.node.id;
+        return (
+          <>
+            <p className="rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-700">Page background. Adjust it, or detach it to edit freely.</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => st.setCropping(id)}
+                className="rounded-lg bg-neutral-100 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-200"
+              >
+                Adjust background
+              </button>
+              <button
+                onClick={() => st.detachImageBackground(id)}
+                className="rounded-lg bg-neutral-100 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-200"
+              >
+                Detach
+              </button>
+            </div>
+          </>
+        );
+      })()}
       {brandLocked && (
         <p className="flex items-center gap-1.5 rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-700">
           <Lock size={12} /> Locked by brand template. Only brand admins can edit it.

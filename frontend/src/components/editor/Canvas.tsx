@@ -3,7 +3,7 @@
 // gesture = one undo step), and wheel pan / ctrl-wheel zoom about the cursor.
 
 import { useEffect, useRef, useState } from "react";
-import { MousePointer2, PenTool, Pencil, Minus, MoveUpRight, Square, Circle, Type, MessageSquarePlus, Copy, ClipboardPaste, CopyPlus, Trash2, Group, Ungroup, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, FlipHorizontal2, FlipVertical2, Paintbrush, PaintBucket, Lock, LockOpen, Eye, EyeOff, BoxSelect } from "lucide-react";
+import { MousePointer2, PenTool, Pencil, Minus, MoveUpRight, Square, Circle, Type, MessageSquarePlus, Copy, ClipboardPaste, CopyPlus, Trash2, Group, Ungroup, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown, FlipHorizontal2, FlipVertical2, Paintbrush, PaintBucket, Lock, LockOpen, Eye, EyeOff, BoxSelect, Wallpaper, ImageUp, Crop } from "lucide-react";
 import type { CharStyle, Color, Node as SchemaNode, Page, Paragraph, ParagraphStyle, TextNode, Transform } from "@hc/schema";
 import { isDecorative, resolveReadingOrder } from "@hc/schema";
 import { locate, moveTransform, marqueeSelect, parentSpaceDelta, worldMatrix, worldAABB, unionAABB, snap, spacingSnap, type SpacingGuide, type EditCommand } from "@hc/editor";
@@ -1499,9 +1499,13 @@ export function Canvas() {
     // Double-click selects the leaf under the cursor - entering a group to grab
     // a child - even when it is locked, so its Unlock affordances appear.
     useEditor.getState().select([hit.id]);
-    // Locked (static flag), collab-locked by another user, or a brand locked
-    // region for this caller: no edit/crop entry.
-    if (loc?.node.locked || usePresence.getState().collabLockedByOther(hit.id) || useBrand.getState().isLockedRegion(hit.id) || usePresence.getState().protectedByOther(hit.id)) return;
+    // Collab-locked by another user or a brand locked region for this caller:
+    // no edit/crop entry.
+    if (usePresence.getState().collabLockedByOther(hit.id) || useBrand.getState().isLockedRegion(hit.id) || usePresence.getState().protectedByOther(hit.id)) return;
+    // Statically locked: same, EXCEPT the page background image, which is
+    // locked by design yet stays adjustable - double-click opens the crop
+    // overlay to pan/zoom it within the page, like a shape's image fill.
+    if (loc?.node.locked && !useEditor.getState().isBackgroundImage(hit.id)) return;
     if (loc?.node.type === "text") {
       setEditing(hit.id);
     } else if (loc?.node.type === "sticky") {
@@ -3365,6 +3369,10 @@ export function Canvas() {
         const allLocked = hasSel && sel.every((n) => n!.locked);
         const allHidden = hasSel && sel.every((n) => n!.hidden);
         const isGroup = selection.length === 1 && locate(st.doc, selection[0])?.node.type === "group";
+        // Background options apply to a single TOP-LEVEL image: nested images
+        // (inside a group/frame) cannot become the page background as-is.
+        const soloImage = selection.length === 1 && sel[0]?.type === "image" && !locate(st.doc, selection[0])?.parent;
+        const isBgImage = soloImage && st.isBackgroundImage(selection[0]);
         return (
           <div
             role="menu"
@@ -3392,6 +3400,9 @@ export function Canvas() {
                 {ctxItem(<ArrowDown size={15} />, "Send backward", () => st.orderSelection("backward"), "⌘[")}
                 {ctxItem(<ChevronsUp size={15} />, "Bring to front", () => st.orderSelection("front"))}
                 {ctxItem(<ChevronsDown size={15} />, "Send to back", () => st.orderSelection("back"))}
+                {soloImage && !isBgImage && ctxItem(<Wallpaper size={15} />, "Set as background", () => st.setImageAsBackground(selection[0]))}
+                {soloImage && isBgImage && ctxItem(<Crop size={15} />, "Adjust background", () => st.setCropping(selection[0]))}
+                {soloImage && isBgImage && ctxItem(<ImageUp size={15} />, "Detach from background", () => st.detachImageBackground(selection[0]))}
                 <div className="my-1 h-px bg-neutral-100" />
                 {ctxItem(<FlipHorizontal2 size={15} />, "Flip horizontal", () => st.flipSelection("h"))}
                 {ctxItem(<FlipVertical2 size={15} />, "Flip vertical", () => st.flipSelection("v"))}

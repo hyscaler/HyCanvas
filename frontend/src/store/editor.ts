@@ -834,6 +834,25 @@ interface EditorState {
    *  false when either side is locked/blocked so the caller falls back to a
    *  plain move. */
   fillWithImageNode(targetId: string, kind: "frame" | "shape", imageId: string, restoreTransform?: Transform): boolean;
+  /** True when the node is an image serving as its page's background: flagged
+   *  via `data.background` (set by setImageAsBackground), or a hand-built
+   *  background - a locked, bottom-of-stack, top-level image covering the
+   *  whole page. */
+  isBackgroundImage(id: string): boolean;
+  /** Make a top-level image the page background as ONE undo step: reshape it
+   *  to a page-sized box at scale 1 with the source covering it (fit "cover",
+   *  flips preserved), send it to the back, lock it, and flag it via
+   *  `data.background`. The prior transform/size/fit and z-index are saved in
+   *  `data.backgroundRestore` so detach can put the image back. The scale-1
+   *  box is what the crop overlay requires, so the background stays
+   *  adjustable (pan/zoom via setImageCrop) while locked. An image currently
+   *  serving as this page's background is detached in the same step, so the
+   *  new background is not buried under it. */
+  setImageAsBackground(id: string): void;
+  /** Reverse of setImageAsBackground: unlock the image, restore the saved
+   *  pre-background transform/size/fit and z-index when present (a hand-built
+   *  background just unlocks in place), and clear the background flag. */
+  detachImageBackground(id: string): void;
   /** Fill a shape with an image, clipped to its outline (undoable). Pass an
    *  empty url to clear the image fill back to a solid color. */
   setImageFill(id: string, url: string): void;
@@ -3906,8 +3925,14 @@ export const useEditor = create<EditorState>((set, get) => {
             };
             n.source.naturalWidth = img.naturalWidth;
             n.source.naturalHeight = img.naturalHeight ?? n.size.height;
-            const aspect = img.naturalWidth / (img.naturalHeight || img.naturalWidth);
-            n.size = { width: n.size.width, height: Math.max(1, Math.round(n.size.width / aspect)) };
+            // A node made the page background while its image was still loading
+            // keeps its page-sized box: the aspect snap below would pull it off
+            // the page. Stock photos load through the proxy (slow), so that
+            // race is easy to hit; the natural size above is still patched.
+            if ((loc.node.data as { background?: unknown } | undefined)?.background !== true) {
+              const aspect = img.naturalWidth / (img.naturalHeight || img.naturalWidth);
+              n.size = { width: n.size.width, height: Math.max(1, Math.round(n.size.width / aspect)) };
+            }
             get().tick();
           }
           off(); // ready or missing: stop listening either way
@@ -4018,8 +4043,11 @@ export const useEditor = create<EditorState>((set, get) => {
             const n = l.node as unknown as { source: { naturalWidth: number; naturalHeight: number }; size: { width: number; height: number } };
             n.source.naturalWidth = img.naturalWidth;
             n.source.naturalHeight = img.naturalHeight ?? n.size.height;
-            const aspect = img.naturalWidth / (img.naturalHeight || img.naturalWidth);
-            n.size = { width: n.size.width, height: Math.max(1, Math.round(n.size.width / aspect)) };
+            // Keep a page background's page-sized box; see addImage above.
+            if ((l.node.data as { background?: unknown } | undefined)?.background !== true) {
+              const aspect = img.naturalWidth / (img.naturalHeight || img.naturalWidth);
+              n.size = { width: n.size.width, height: Math.max(1, Math.round(n.size.width / aspect)) };
+            }
             get().tick();
           }
           off();
@@ -4351,6 +4379,145 @@ export const useEditor = create<EditorState>((set, get) => {
         );
       }
       return true;
+    },
+
+    isBackgroundImage: (id) => {
+      const doc = get().doc;
+      const loc = locate(doc, id);
+      if (!loc || loc.node.type !== "image" || loc.parent) return false;
+      if ((loc.node.data as { background?: unknown } | undefined)?.background === true) return true;
+      // Hand-built background (no flag): a locked, bottom-of-stack image
+      // covering the whole page, i.e. what "set as background" produces when
+      // done by hand. Detach then simply unlocks it.
+      if (!loc.node.locked || loc.index !== 0) return false;
+      const box = worldAABB(doc, id);
+      const eps = 1;
+      return (
+        !!box &&
+        box.x <= eps &&
+        box.y <= eps &&
+        box.x + box.width >= loc.page.width - eps &&
+        box.y + box.height >= loc.page.height - eps
+      );
+    },
+
+    setImageAsBackground: (id) => {
+      const doc = get().doc;
+      const loc = locate(doc, id);
+      if (!loc || loc.node.type !== "image" || loc.parent || editBlocked(id)) return;
+      if (get().isBackgroundImage(id)) return;
+      const node = loc.node;
+      const page = loc.page;
+      if (node.size.width <= 0 || node.size.height <= 0 || page.width <= 0 || page.height <= 0) return;
+      // The background is a PAGE-SIZED box at scale 1 with the source covering
+      // it (fit "cover"), not a scaled-up transform: that is how every other
+      // image box is modeled, and it is the shape the crop overlay requires,
+      // so the background stays adjustable (pan/zoom via crop) while locked.
+      // A negative scale (flip) keeps its sign so the background stays
+      // mirrored; the box still spans the page exactly.
+      const sx = node.transform.scaleX < 0 ? -1 : 1;
+      const sy = node.transform.scaleY < 0 ? -1 : 1;
+      const cover: Transform = {
+        x: sx < 0 ? page.width : 0,
+        y: sy < 0 ? page.height : 0,
+        scaleX: sx,
+        scaleY: sy,
+        rotation: 0,
+      };
+      const img = node as unknown as { fit: ImageFit };
+      const prevTransform = { ...node.transform };
+      const prevSize = { ...node.size };
+      const prevFit = img.fit;
+      const prevIndex = loc.index;
+      const prevLocked = !!node.locked;
+      const prevData = node.data;
+      // The image currently serving as this page's background (flagged or
+      // hand-built) is detached in the same undo step; otherwise it would sit
+      // full-page directly above the new background and hide it.
+      const bottom = page.children[0];
+      const oldBg = bottom && bottom.id !== id && get().isBackgroundImage(bottom.id) ? bottom : null;
+      const oldBgPrev = oldBg
+        ? {
+            locked: !!oldBg.locked,
+            data: oldBg.data,
+            transform: { ...oldBg.transform },
+            size: { ...oldBg.size },
+            fit: (oldBg as unknown as { fit: ImageFit }).fit,
+          }
+        : null;
+      perform(
+        () => {
+          if (oldBg) applyBackgroundDetach(oldBg, page);
+          const i = page.children.indexOf(node);
+          if (i > 0) {
+            page.children.splice(i, 1);
+            page.children.unshift(node);
+          }
+          node.transform = { ...cover };
+          node.size = { width: page.width, height: page.height };
+          img.fit = "cover";
+          node.locked = true;
+          node.data = {
+            ...(prevData ?? {}),
+            background: true,
+            backgroundRestore: { transform: prevTransform, size: prevSize, fit: prevFit, index: prevIndex },
+          };
+        },
+        () => {
+          // Re-bottom the old background FIRST: prevIndex was measured while it
+          // sat at index 0, so the new node's slot is only correct after it is back.
+          if (oldBg && oldBgPrev) {
+            oldBg.locked = oldBgPrev.locked;
+            oldBg.data = oldBgPrev.data;
+            oldBg.transform = oldBgPrev.transform;
+            oldBg.size = oldBgPrev.size;
+            (oldBg as unknown as { fit: ImageFit }).fit = oldBgPrev.fit;
+            const j = page.children.indexOf(oldBg);
+            if (j > 0) {
+              page.children.splice(j, 1);
+              page.children.unshift(oldBg);
+            }
+          }
+          node.data = prevData;
+          node.locked = prevLocked;
+          node.transform = { ...prevTransform };
+          node.size = { ...prevSize };
+          img.fit = prevFit;
+          const i = page.children.indexOf(node);
+          if (i >= 0) page.children.splice(i, 1);
+          page.children.splice(Math.min(prevIndex, page.children.length), 0, node);
+        },
+      );
+    },
+
+    detachImageBackground: (id) => {
+      const doc = get().doc;
+      const loc = locate(doc, id);
+      if (!loc || loc.node.type !== "image" || loc.parent || editBlocked(id)) return;
+      if (!get().isBackgroundImage(id)) return;
+      const node = loc.node;
+      const page = loc.page;
+      const prevLocked = !!node.locked;
+      const prevData = node.data;
+      const prevTransform = { ...node.transform };
+      const prevSize = { ...node.size };
+      const prevFit = (node as unknown as { fit: ImageFit }).fit;
+      const prevIndex = loc.index;
+      perform(
+        () => {
+          applyBackgroundDetach(node, page);
+        },
+        () => {
+          node.locked = prevLocked;
+          node.data = prevData;
+          node.transform = { ...prevTransform };
+          node.size = { ...prevSize };
+          (node as unknown as { fit: ImageFit }).fit = prevFit;
+          const i = page.children.indexOf(node);
+          if (i >= 0) page.children.splice(i, 1);
+          page.children.splice(Math.min(prevIndex, page.children.length), 0, node);
+        },
+      );
     },
     setFillColor: (id, hex) => {
       const loc = locate(get().doc, id);
@@ -5019,7 +5186,12 @@ export const useEditor = create<EditorState>((set, get) => {
     },
     setImageCrop: (id, crop) => {
       const loc = locate(get().doc, id);
-      if (!loc || loc.node.locked || editBlocked(id)) return;
+      if (!loc || editBlocked(id)) return;
+      // A background image is locked by design (it must not catch canvas
+      // drags), but the crop overlay is exactly how it is adjusted: pan/zoom
+      // within the page box. Only the static lock is bypassed for it;
+      // collab/brand/facilitator locks above still block.
+      if (loc.node.locked && !get().isBackgroundImage(id)) return;
       // The crop lives on the image node itself, or on a shape's image fill
       // (fills[0]) - the same normalized-crop model either way, so the crop
       // overlay serves both.
@@ -5696,6 +5868,43 @@ function applyDeltas(
   }
   if (nodes.length) get().runCommand({ kind: "transform", nodes, before, after });
   void set;
+}
+
+// Forward mutation shared by "detach from background" and the auto-detach a
+// new background applies to the previous one: unlock the image, restore the
+// pre-background transform and z-index saved by setImageAsBackground (values
+// are validated first - `data` round-trips through saved files, so it is
+// untrusted), and strip the background keys from `data`. A hand-built
+// background carries no saved state and just unlocks in place. Callers own
+// the undo closure.
+function applyBackgroundDetach(node: Node, page: Page): void {
+  const data = (node.data ?? {}) as Record<string, unknown>;
+  const saved = data.backgroundRestore as
+    | { transform?: Partial<Transform>; size?: Partial<{ width: number; height: number }>; fit?: string; index?: number }
+    | undefined;
+  const t = saved?.transform;
+  if (t && [t.x, t.y, t.scaleX, t.scaleY, t.rotation].every((v) => Number.isFinite(v))) {
+    node.transform = { x: t.x!, y: t.y!, scaleX: t.scaleX!, scaleY: t.scaleY!, rotation: t.rotation! };
+  }
+  const sz = saved?.size;
+  if (sz && Number.isFinite(sz.width) && Number.isFinite(sz.height) && sz.width! > 0 && sz.height! > 0) {
+    node.size = { width: sz.width!, height: sz.height! };
+  }
+  if (saved?.fit === "cover" || saved?.fit === "contain" || saved?.fit === "stretch" || saved?.fit === "none") {
+    (node as unknown as { fit: ImageFit }).fit = saved.fit;
+  }
+  if (typeof saved?.index === "number" && Number.isInteger(saved.index) && saved.index >= 0) {
+    const i = page.children.indexOf(node);
+    if (i >= 0) {
+      page.children.splice(i, 1);
+      page.children.splice(Math.min(saved.index, page.children.length), 0, node);
+    }
+  }
+  node.locked = false;
+  const rest = { ...data };
+  delete rest.background;
+  delete rest.backgroundRestore;
+  node.data = Object.keys(rest).length ? rest : undefined;
 }
 
 // Register commands that were already applied (the layer ops mutate as they
