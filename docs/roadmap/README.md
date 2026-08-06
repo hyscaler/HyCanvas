@@ -15,6 +15,29 @@ For the product-wide north star (the goals and differentiators we hold ourselves
 | Presentations | [28-presentations.md](28-presentations.md) | Core + a long interop/AI/live tail shipped (PPTX export, deck-to-video MP4, present-and-record, live audience Q&A/polls/reactions, whole-deck translation, AI speaker notes, doc/URL/file ingestion, tagged PDF); PPTX import now ships too (full round-trip); masters/layouts UI and live-data charts/bulk merge remain |
 | Whiteboard | [30-whiteboard.md](30-whiteboard.md) | Core, infinite canvas, ink, the full facilitation suite, and the Phase 3 AI canvas (diagram-from-prompt, clustering, summarize, Mermaid round-trip) shipped; agent deep-end and guest rate limiting remain |
 | Accessibility, i18n, security, compliance, self-host, NFR | [38-accessibility-i18n-security-compliance-selfhost-nfr.md](38-accessibility-i18n-security-compliance-selfhost-nfr.md) | Self-host baseline strong; i18n, compliance, and enterprise controls remain |
+| Procedural node graph and non-destructive editing | [40-procedural-node-graph.md](40-procedural-node-graph.md) | Not started; the core of the creation-depth set (layers and graph as two views of one document) |
+| Vector authoring depth | [41-vector-authoring.md](41-vector-authoring.md) | Not started; a pen and a node editor exist, but booleans bake, path effects do not exist, and `mask`/`boolean` have no export path |
+| Raster imaging and digital painting | [42-raster-and-painting.md](42-raster-and-painting.md) | Not started; ink is a vector ribbon, there is no brush engine, and the one existing pixels-in-document path writes base64 into the CRDT |
+| Real-time and procedural motion graphics | [43-motion-graphics.md](43-motion-graphics.md) | Not started; a preset animation model and a Go poser ship, but there is no timeline panel, no curve editor, and nothing procedural |
+| GPU-accelerated rendering | [44-gpu-rendering.md](44-gpu-rendering.md) | Not started; the seam exists but is inert (`gpuAvailable()` returns false), and render parity across the four output paths is currently unmet and untested |
+| Creative interop, colour management, asset libraries | [45-creative-interop-and-color.md](45-creative-interop-and-color.md) | Not started; PPTX/PDF/SVG ship, but PSD/AI/EPS/DXF import, ICC and CMYK, and shared libraries do not |
+
+### Schema version allocation
+
+Five of the creation-depth specs bump `CURRENT_SCHEMA_VERSION`, and several were drafted in parallel each claiming "17 to 18". A version is a single global counter mirrored in Go (`backend/internal/persistence/file.go`), so it has to be allocated centrally, in the order the work actually lands, not per document. Whoever starts a bump claims the next free number here first and edits their spec to match:
+
+| Version | Owner | Carries |
+| --- | --- | --- |
+| 17 | current | shipped |
+| 18 | F40 | `NodeBase.graph` plus the bake |
+| 19 | F41 | vector op node types and `PathNode.pathEffects` |
+| 20 | F42 | `ImageNode.raster` tile manifests |
+| 21 | F43 | the `MotionNode` payload |
+| 22 | F45 | colour, print, and library records |
+
+F44 bumps nothing by design.
+
+One more thing to fix before anyone codes: the six header tables use a single "Depends on" field for two different relationships, which makes the graph look cyclic (F40 lists F41 through F45, and each of those lists F40). Read it as **Requires** (must exist first) versus **Serves** (is consumed by). F40 requires nothing from F42, F43, or F45; F44 requires nothing from F42 or F43; F41 requires the geometry kernels that F40 Phase 1 re-homes into the engine. Split the field when each spec is next touched. The table is the claim, not the specs: if the build order changes, renumber here and fix the specs, never the other way round.
 
 Each spec follows the original 15-section template (context, requirements, data model, API, acceptance criteria, tests). Read the spec before picking up its area, and keep it in sync if scope changes.
 
@@ -39,6 +62,16 @@ Remaining:
 ### AI media (23)
 
 Not started. Captions, TTS, music, avatars, lip-sync, and image-to-video are all blocked on the video media pipeline and on audio/video model endpoints in the AI layer.
+
+### Creation depth: the 2D content-creation set (40 to 45)
+
+Six specs that together take the platform from a layout tool to a comprehensive 2D content-creation suite for graphic design, digital art, and interactive real-time motion graphics. They close two north-star differentiators that have never had specs behind them: a GPU-accelerated engine, and a real vector editor with print-grade colour.
+
+All six are Not started. They are written to be built roughly in this order, which is not their numeric order: a minimal F40 core together with F41, because parametric path effects are graph operations and building the pen destructively first means building it twice; then F44, because F42 and F43 are impractical at professional scale on Canvas2D alone; then F42, then F43, then F45 last, since interop matters most once there is depth worth importing into.
+
+Two constraints run through all six. Progressive disclosure: direct manipulation stays the default and writes into the graph behind the scenes, and a task that can only be completed through the graph panel is a defect, not a power feature. Render parity: every path already disagrees today, so the parity suite in F44 Phase 0 is a prerequisite for the rest rather than a later hardening pass.
+
+The audits behind these specs also recorded defects in shipped code, each tracked in the spec that owns the area: the Go export renderer implements no drop shadows, no blend modes, and no shape strokes, so those export wrong from the current product; `MaskNode` is in the schema and rendered by nothing; group opacity multiplies per child instead of compositing the group as a layer; background removal writes a base64 cutout into the document and therefore into the CRDT, every snapshot, and IndexedDB; and `matte.ts`, `tiles.ts`, the `EngineConfig` tiling knobs, and the `Scene` dirty API are all dead code.
 
 ### Presentations (28)
 
