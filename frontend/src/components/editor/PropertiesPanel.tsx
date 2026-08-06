@@ -1194,7 +1194,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
         </Section>
       )}
       {single && single.node.type === "image" && (
-        <ImageEffectsSection id={single.node.id} node={single.node} />
+        <ImageEffectsSection id={single.node.id} node={single.node} workspaceId={workspaceId ?? null} />
       )}
       {single && single.node.type === "shape" && (single.node as unknown as { fills?: Fill[] }).fills?.[0]?.type === "image" && (() => {
         const id = single.node.id;
@@ -2646,7 +2646,7 @@ function effectLabel(e: Effect): string {
   }
 }
 
-function ImageEffectsSection({ id, node }: { id: string; node: Node }) {
+function ImageEffectsSection({ id, node, workspaceId }: { id: string; node: Node; workspaceId: string | null }) {
   const [tab, setTab] = useState<"filters" | "adjust" | "effects">("adjust");
   const [intensity, setIntensity] = useState(1);
   const [activePreset, setActivePreset] = useState("original");
@@ -2730,7 +2730,25 @@ function ImageEffectsSection({ id, node }: { id: string; node: Node }) {
         blob = await rasterizeToPng(blob, src.naturalWidth ?? 0, src.naturalHeight ?? 0);
       }
       const { dataUrl } = await removeBackground(blob, (f) => setBgProgress(f));
-      useEditor.getState().setImageSource(id, dataUrl);
+      // Store the cutout as a real uploaded asset, never as a data URL: the
+      // document carries its assets inline, so embedding megabytes of base64
+      // here pushes them into the CRDT, every snapshot, and IndexedDB, and they
+      // are re-sent to every collaborator on load. Falling back to the data URL
+      // keeps the feature working offline or without a workspace, which is the
+      // lesser evil of the two.
+      let nextUrl = dataUrl;
+      if (workspaceId) {
+        try {
+          const asset = await uploadAssetWithProgress(workspaceId, {
+            filename: `cutout-${Date.now()}.png`,
+            dataBase64: dataUrl.split(",")[1] ?? "",
+          });
+          nextUrl = asset.url;
+        } catch {
+          // Upload failed: keep the inline result rather than losing the work.
+        }
+      }
+      useEditor.getState().setImageSource(id, nextUrl);
       setBgState("idle");
     } catch (err) {
       setBgState("error");
