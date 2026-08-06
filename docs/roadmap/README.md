@@ -10,10 +10,10 @@ For the product-wide north star (the goals and differentiators we hold ourselves
 
 | Area | Spec | State |
 | --- | --- | --- |
-| Realtime collaboration | [16-realtime-collaboration.md](16-realtime-collaboration.md) | Core and multi-instance shipped; scale and deep-enforcement work remains |
+| Realtime collaboration | [16-realtime-collaboration.md](16-realtime-collaboration.md) | Core, multi-instance, server-side CRDT fold + last-leave snapshot, in-CRDT branches, and the measured scale story all shipped; only on-wire per-node enforcement remains (deferred on per-frame decode cost) |
 | AI media | [23-ai-media.md](23-ai-media.md) | Not started (blocked on the video media pipeline and audio/video model endpoints) |
-| Presentations | [28-presentations.md](28-presentations.md) | Core shipped; PPTX round-trip, presenter display, live audience, and a11y leadership remain |
-| Whiteboard | [30-whiteboard.md](30-whiteboard.md) | Core shipped; infinite canvas, ink, facilitation suite, and scale remain |
+| Presentations | [28-presentations.md](28-presentations.md) | Core + a long interop/AI/live tail shipped (PPTX export, deck-to-video MP4, present-and-record, live audience Q&A/polls/reactions, whole-deck translation, AI speaker notes, doc/URL/file ingestion, tagged PDF); PPTX import now ships too (full round-trip); masters/layouts UI and live-data charts/bulk merge remain |
+| Whiteboard | [30-whiteboard.md](30-whiteboard.md) | Core, infinite canvas, ink, the full facilitation suite, and the Phase 3 AI canvas (diagram-from-prompt, clustering, summarize, Mermaid round-trip) shipped; agent deep-end and guest rate limiting remain |
 | Accessibility, i18n, security, compliance, self-host, NFR | [38-accessibility-i18n-security-compliance-selfhost-nfr.md](38-accessibility-i18n-security-compliance-selfhost-nfr.md) | Self-host baseline strong; i18n, compliance, and enterprise controls remain |
 
 Each spec follows the original 15-section template (context, requirements, data model, API, acceptance criteria, tests). Read the spec before picking up its area, and keep it in sync if scope changes.
@@ -28,10 +28,13 @@ Shipped:
 - Horizontal scale: Redis fan-out, cross-instance roster catchup, Redis-CAS lock authority.
 - CRDT history scrubber and restore, automatic snapshots, update-log compaction.
 
+Shipped since the last audit:
+- The server decodes the CRDT (`backend/internal/crdt`: the client fold bundled and embedded under a pure-Go JS engine, byte-identical output) and materializes a server-authoritative last-leave snapshot (catch-up-only, dedup-safe).
+- True in-CRDT named branches with live switching: branch-scoped update-log lineages inside one design, branch realtime rooms, History-panel switcher + "Branch from here", compaction fork-guards, and main-lineage write protection during branch sessions.
+- The scale story: page-granular incremental projection (a peer's edit re-projects one page, not the deck) and the AC-10 browser paint proof (p50 120fps on the 50-page x 1000-node deck at dpr 2; `npm run bench:paint`). True per-page Y.Doc subdocuments were deliberately rejected: a per-room protocol change that old clients sharing the live room cannot survive.
+
 Remaining:
-- Per-page subdocuments and lazy load at scale (plus the GPU-paint AC-10 proof).
-- True in-CRDT branches; server-authoritative last-leave snapshot.
-- On-the-wire per-node enforcement (needs a server-side CRDT decoder; deferred).
+- On-the-wire per-node enforcement (the decoder now exists; deferred on per-frame decode cost pending a pooled/incremental design).
 
 ### AI media (23)
 
@@ -45,12 +48,18 @@ Shipped:
 - Present mode with 9 transitions including id/name-matched Magic Move morph, laser/pen/spotlight tools, autopilot, and a presenter HUD with rehearsal timer.
 - AI prompt-to-deck (F39), charts and tables, sharing with per-page engagement insights, image/PDF/SVG/APNG/GIF export.
 
+Shipped since the last audit:
+- PPTX EXPORT (`@hc/export` OOXML writer: editable text/shapes/images/notes, engine-rasterized fallback for the rest, surfaced in ExportDialog).
+- One-click deck-to-video MP4 (client deck-to-video conversion rendered on the server video pipeline via an inline-file override) and present-and-record (slides + ink + mic narration to a local .webm).
+- Live audience: share-link viewers (anonymous OK) ask/upvote questions, vote on presenter polls, and send emoji reactions that float over the presenter's slides live; presenter moderation drawer in present mode.
+- The FR-23 AI trio: whole-deck translation (per-run, styling preserved), AI speaker notes, and doc/URL/file-to-deck ingestion (SSRF-hardened URL extractor, PDF/text/markdown attach).
+- Confirmed already shipped despite stale spec rows: second-display presenter view, tagged selectable-text PDF, sections/layout plumbing, the Go animation core.
+
+Shipped since: PPTX IMPORT (dependency-free OOXML parser: editable text/shapes/images/notes/backgrounds, round-trip proven against our exporter; the dashboard Import tile accepts .pptx) and presenter-driven slide-follow (the shared player mirrors the live presenter's slide).
+
 Remaining:
-- PPTX import/export round-trip; slide masters, layouts, themes, and sections.
-- A true second-display presenter view; present-and-record plus full-deck video export.
-- Live audience Q&A, polls, reactions, captions.
-- AI design autopilot, whole-deck translation, speaker-note generation, doc/URL/file ingestion.
-- Live data-linked charts and bulk merge; accessibility leadership (alt text, reading order, checker integration, tagged PDF, reduced motion); 60fps present at scale.
+- Slide master/layout editing UI (the schema shipped at v11).
+- Live data-linked charts and bulk data-merge; live captions (deferred to the AI-media pipeline); the present-and-record camera bubble; Keynote/Google/ODP interop; 60fps present-at-scale measurement.
 
 ### Whiteboard (30)
 
@@ -58,10 +67,13 @@ Shipped:
 - The whiteboard document type: `@hc/whiteboard` routing/layout/templates/sessions over the shared canvas, sticky/connector/frame schema nodes.
 - Realtime collaboration with presence, reactions, and cursor chat; comments and sharing; dot-voting, the session timer, convert-to-deck.
 
+Shipped since the last audit (the spec's own header was fresher than these rows):
+- True infinite canvas, board-native ink, free connectors, quadtree culling/LOD, and touch/stylus input (Phase 1).
+- The facilitation suite: private mode (hidden-until-reveal rounds), protected facilitator lock with handoff, spotlight/summon/take-control, server-authoritative voting, kick/ban moderation, timer, named views/deep-links.
+- Phase 3 AI canvas core: diagram-from-prompt (native stickies + connectors, auto-laid-out, one undo), sticky clustering into labeled theme frames, board summarize to a canvas note, all via the conversational assistant; Mermaid import (pasted source parses directly) and "Copy as Mermaid" export.
+
 Remaining:
-- True infinite canvas; board-native ink and free-draw connectors.
-- The full facilitation suite: private mode, spotlight/take-control, server-authoritative voting, breakouts.
-- AI canvas agents; diagram-as-code round-trip; performance at 10k+ objects; accessibility leadership.
+- The canvas-agent deep end (viewport-screenshot context, streaming multi-step actions, computation-graph cards); breakout rooms; anonymous-guest rate limiting and first-run onboarding polish; PlantUML/DOT interop; 10k+ object measurement beyond the shipped spatial index.
 
 ### Accessibility, i18n, security, compliance, self-host, NFR (38)
 
