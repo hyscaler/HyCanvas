@@ -49,6 +49,7 @@ import {
   Users,
   Vote,
   Workflow,
+  FileCode2,
 } from "lucide-react";
 import {
   buildTemplate,
@@ -72,6 +73,8 @@ import {
   type TimerState,
   type VoteSession,
   type WhiteboardMeta,
+  normalizeDiagramSpec,
+  diagramToMermaid,
 } from "@hc/whiteboard";
 import {
   applyCommand,
@@ -493,6 +496,51 @@ export function WhiteboardSurface(props: {
   const designId = props.designId;
   const router = useRouter();
   const toast = useToast();
+
+  // Copy the board's diagram (stickies/shapes + connectors) as Mermaid source
+  // (doc 30 Phase 3, diagram-as-code round-trip). Selection scopes it; with
+  // nothing selected the whole board serializes.
+  const copyAsMermaid = useCallback(() => {
+    const st = useEditor.getState();
+    const page = st.doc.pages[Math.min(st.activePage, st.doc.pages.length - 1)];
+    if (!page) return;
+    const scope = st.selection.length ? new Set(st.selection) : null;
+    const labelOf = (n: Node): string => {
+      if (n.type === "sticky") return ((n as unknown as { text?: string }).text ?? "").trim() || n.id.slice(0, 6);
+      if (n.type === "text") {
+        const paras = (n as unknown as { content?: { runs?: { text?: string }[] }[] }).content ?? [];
+        const t = paras.map((pp) => (pp.runs ?? []).map((r) => r.text ?? "").join("")).join(" ").trim();
+        return t || n.id.slice(0, 6);
+      }
+      return ((n as unknown as { name?: string }).name ?? "").trim() || n.id.slice(0, 6);
+    };
+    const nodes: { id: string; label: string }[] = [];
+    const boxTypes = new Set(["sticky", "shape", "text", "frame"]);
+    for (const n of page.children as Node[]) {
+      if (!boxTypes.has(n.type)) continue;
+      if (scope && !scope.has(n.id)) continue;
+      nodes.push({ id: n.id, label: labelOf(n) });
+    }
+    const known = new Set(nodes.map((n) => n.id));
+    const edges: { from: string; to: string; label?: string }[] = [];
+    for (const n of page.children as Node[]) {
+      if (n.type !== "connector") continue;
+      const c = n as unknown as { start?: { attach?: { nodeId?: string } }; end?: { attach?: { nodeId?: string } }; label?: string };
+      const from = c.start?.attach?.nodeId;
+      const to = c.end?.attach?.nodeId;
+      if (!from || !to || !known.has(from) || !known.has(to)) continue;
+      edges.push({ from, to, ...(c.label?.trim() ? { label: c.label.trim() } : {}) });
+    }
+    const spec = normalizeDiagramSpec({ kind: "flowchart", nodes, edges });
+    if (!spec) {
+      toast.toast("Nothing diagram-shaped here yet: add stickies or shapes connected by arrows.", "info");
+      return;
+    }
+    void navigator.clipboard.writeText(diagramToMermaid(spec)).then(
+      () => toast.success(`Copied ${spec.nodes.length} nodes / ${spec.edges.length} edges as Mermaid.`),
+      () => toast.error("Clipboard unavailable."),
+    );
+  }, [toast]);
 
   // Convert the board to a presentation deck (server job -> new design).
   const [converting, setConverting] = useState(false);
@@ -1521,6 +1569,9 @@ export function WhiteboardSurface(props: {
         </IconButton>
         <IconButton onClick={runMindMap} tooltip="Mind-map layout (arranges connected nodes)" aria-label="Mind-map layout">
           <Network size={18} />
+        </IconButton>
+        <IconButton onClick={copyAsMermaid} tooltip="Copy as Mermaid (selection, or the whole board)" aria-label="Copy as Mermaid code">
+          <FileCode2 size={18} />
         </IconButton>
 
         {designId && (
