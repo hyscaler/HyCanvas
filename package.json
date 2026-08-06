@@ -50,7 +50,12 @@
     "shell-quote": ">=1.9.0",
     "postcss": ">=8.5.18",
     "protobufjs": ">=7.6.5",
-    "sharp": ">=0.35.0"
+    "sharp": ">=0.35.0",
+    "fast-uri": ">=3.1.5",
+    "brace-expansion": ">=5.0.9",
+    "minimatch@3": {
+      "brace-expansion": "1.1.18"
+    }
   },
   "engines": {
     "node": ">=20.0.0"
