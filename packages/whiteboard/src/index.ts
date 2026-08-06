@@ -11,3 +11,4 @@ export * from "./templates";
 export * from "./region";
 export * from "./session";
 export * from "./deck";
+export * from "./diagram";
