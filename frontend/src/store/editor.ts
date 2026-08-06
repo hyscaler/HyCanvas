@@ -99,6 +99,7 @@ import { layoutDesign, type AiDesignSpec, type DeckResult } from "@hc/aistudio";
 import { qrModules } from "@/lib/qr";
 import { frameMaskFor } from "@/lib/maskPath";
 import { flattenSvgToNodes } from "@/lib/svgFlatten";
+import { layoutFlowchart, layoutMindMap, type DiagramSpec as WbDiagramSpec } from "@hc/whiteboard";
 import { parseCsvMatrix } from "@/lib/csv";
 import { tabularToChart } from "@/lib/magicDesign";
 import { usePresence } from "@/store/presence";
@@ -196,6 +197,18 @@ export type OcLink = { kind: "url" | "page" | "anchor" | "email"; target: string
 /** The brand inputs a re-skin maps a design onto. `palette` is the
  *  flat list of approved brand colors; `fonts` are the approved family names
  *  (heading first by convention). Empty arrays leave that dimension untouched. */
+/** A stable address for one translatable string in the design (doc 28 FR-23):
+ *  a text run (so styling boundaries survive translation), a sticky note's
+ *  text, or a page's speaker notes. */
+export type DeckTextRef =
+  | { kind: "run"; nodeId: string; para: number; run: number }
+  | { kind: "sticky"; nodeId: string }
+  | { kind: "notes"; page: number };
+export interface DeckTextEntry {
+  ref: DeckTextRef;
+  text: string;
+}
+
 export type ReskinBrand = { palette: Color[]; fonts: string[] };
 /** One color remap a re-skin applied (from hex -> to hex), for the override UI. */
 export type ReskinColorMap = { from: string; to: string };
@@ -426,6 +439,23 @@ interface EditorState {
   setPageSize(width: number, height: number): void;
   /** Set (or clear) the active page's background fill, undoable. */
   setPageBackground(fill: Fill | undefined): void;
+  /** Slide layouts (doc 28 FR-3/FR-4, materialization model): capture the
+   *  ACTIVE page as a named reusable layout (background + text placeholders).
+   *  Ensures a default master exists. Returns the new layout id. */
+  savePageAsLayout(name: string): string | null;
+  /** Link a page to a layout (null unlinks) and materialize it: the layout's
+   *  background applies and missing placeholders land as editable text boxes
+   *  (tagged via data.placeholderId). One undo step. */
+  applyLayoutToPage(layoutId: string | null, pageIndex?: number): boolean;
+  /** Re-capture the layout's background + placeholders from the active page. */
+  updateLayoutFromPage(layoutId: string): boolean;
+  /** Re-apply a layout to EVERY page linked to it (background + missing
+   *  placeholders), one undo step. Returns how many pages changed. */
+  syncLayoutPages(layoutId: string): number;
+  /** Bulk data-merge into slides (doc 28): duplicate the ACTIVE page once per
+   *  row, replacing {{column}} tokens in text runs and sticky notes with the
+   *  row's values. One undo step; returns the number of pages created. */
+  bulkMergePages(rows: Record<string, string>[]): number;
   /** Reorder pages (move page at `from` to index `to`), undoable. */
   movePage(from: number, to: number): void;
   /** Start a new section at `pageIndex`, adopting the run that follows (FR-5). */
@@ -514,6 +544,20 @@ interface EditorState {
    *  to two nodes (auto anchors by default) as one undo step; selects + returns
    *  it, or null if the nodes are missing/identical. */
   connectNodes(fromId: string, toId: string, fromAnchor?: string, toAnchor?: string): string | null;
+  /** Materialize a diagram spec (doc 30 Phase 3: AI diagram-from-prompt or a
+   *  pasted Mermaid graph) as native board nodes: one sticky per node laid out
+   *  by the pure flowchart/mind-map engine, one connector per edge, all as ONE
+   *  undo step. Returns false when the spec is empty. */
+  insertDiagramSpec(spec: WbDiagramSpec): boolean;
+  /** Every unlocked sticky on the active page (id + text), for AI clustering
+   *  and summarize (doc 30 Phase 3). */
+  collectBoardStickies(): { id: string; text: string }[];
+  /** Cluster stickies into labeled frames (doc 30 Phase 3): one frame per
+   *  cluster laid out below the existing content, member stickies arranged in
+   *  a grid inside it. One undo step; unknown ids are skipped. */
+  applyStickyClusters(clusters: { title: string; ids: string[] }[]): boolean;
+  /** Drop an AI summary as a text note below the existing board content. */
+  insertSummaryNote(text: string): boolean;
   /** Set the route style (straight/elbow/curved) on the selected connector(s),
    *  the board connector style picker (F30 FR-7). One undo step. */
   setConnectorRoute(route: "straight" | "elbow" | "curved"): void;
@@ -739,6 +783,14 @@ interface EditorState {
   /** Set node-level fills to a single solid color (hex), undoable. */
   setFillColor(id: string, hex: string): void;
   /** Replace a text node's first-run text, undoable. */
+  /** Every translatable string in the design with a stable address: each text
+   *  run (styling boundaries preserved), each sticky note, and each page's
+   *  speaker notes. Locked subtrees are skipped. Powers whole-deck translation
+   *  (doc 28 FR-23): translate the strings, then applyDeckTexts the results. */
+  collectDeckTexts(): DeckTextEntry[];
+  /** Write translated/rewritten strings back to their collected addresses as
+   *  ONE undo step. Refs that no longer resolve are skipped, never fatal. */
+  applyDeckTexts(entries: DeckTextEntry[]): void;
   setText(id: string, text: string): void;
   /** Set a whiteboard sticky note's text (and optional auto-fit scale) as one
    *  undo step. */
@@ -1200,6 +1252,24 @@ function normalizeLoadedDoc(file: DesignFile): DesignFile {
 function ensureDocArrays(doc: DesignFile): void {
   if (!Array.isArray(doc.assets)) (doc as { assets: AssetRef[] }).assets = [];
   if (!Array.isArray(doc.fonts)) (doc as { fonts: DesignFile["fonts"] }).fonts = [];
+}
+
+/** Reject a "refresh" that clearly did not return data. A URL that starts
+ *  serving an HTML error page, a login redirect, or a JSON blob still parses
+ *  (every line becomes a row), and writing that over a chart replaces real
+ *  numbers with wreckage.
+ *
+ *  Deliberately narrow: it only refuses content that looks like MARKUP, never
+ *  judges shape. Single-column tables, one-row datasets, ragged rows, and
+ *  trailing blank lines are all legitimate here (parseCsvMatrix tolerates
+ *  ragged rows by design, and the UI accepts pasted TSV), so a shape rule
+ *  would silently stop existing bindings from refreshing. */
+function looksLikeData(matrix: string[][]): boolean {
+  const cells = matrix.flat();
+  if (!cells.some((c) => c.trim() !== "")) return false; // nothing at all
+  const head = (matrix[0] ?? []).join(" ").trim().toLowerCase();
+  if (head.startsWith("<") || head.startsWith("{") || head.startsWith("[")) return false;
+  return true;
 }
 
 export const useEditor = create<EditorState>((set, get) => {
@@ -1812,6 +1882,217 @@ export const useEditor = create<EditorState>((set, get) => {
         },
       );
     },
+    savePageAsLayout: (name) => {
+      const doc = get().doc as unknown as {
+        masters?: { id: string; name?: string; placeholders: unknown[] }[];
+        layouts?: { id: string; masterId: string; name: string; background?: Fill; placeholders: unknown[] }[];
+        pages: Page[];
+      };
+      const page = doc.pages[curPageIndex()] as unknown as { background?: Fill; children: Node[]; layoutId?: string };
+      const title = name.trim();
+      if (!page || !title) return null;
+      // Placeholders: every top-level text box becomes a positioned slot. The
+      // largest font is the title, the rest body (a useful default; the layout
+      // stays editable by re-capturing).
+      const texts = (page.children as Node[]).filter((n) => n.type === "text" && !n.hidden);
+      const fontOf = (n: Node) => {
+        const paras = (n as unknown as { content?: { runs?: { style?: { fontSize?: number } }[] }[] }).content ?? [];
+        return Math.max(0, ...paras.flatMap((pp) => (pp.runs ?? []).map((r) => r.style?.fontSize ?? 0)));
+      };
+      const titleNode = texts.length ? texts.reduce((a, b) => (fontOf(b) > fontOf(a) ? b : a)) : null;
+      const placeholders = texts.map((n, i) => ({
+        id: `ph-${i + 1}`,
+        role: n === titleNode ? "title" : "body",
+        rect: { x: n.transform.x, y: n.transform.y, width: Math.abs(n.size.width * n.transform.scaleX), height: Math.abs(n.size.height * n.transform.scaleY) },
+      }));
+      const layoutId = `layout-${crypto.randomUUID().slice(0, 8)}`;
+      const layout = {
+        id: layoutId,
+        masterId: (doc.masters ?? [])[0]?.id ?? "master-default",
+        name: title,
+        ...(page.background ? { background: structuredClone(page.background) } : {}),
+        placeholders,
+      };
+      const prevMasters = doc.masters;
+      const prevLayouts = doc.layouts;
+      const prevPageLayout = page.layoutId;
+      perform(
+        () => {
+          // Re-check the DOC on every run (redo included): reading a closure
+          // variable here would skip re-adding the default master on redo and
+          // leave the layout pointing at a master that no longer exists.
+          if (!(doc.masters ?? []).some((m) => m.id === layout.masterId)) {
+            doc.masters = [...(doc.masters ?? []), { id: layout.masterId, name: "Default master", placeholders: [] }];
+          }
+          doc.layouts = [...(doc.layouts ?? []), layout];
+          page.layoutId = layoutId; // the source page uses its own layout
+        },
+        () => {
+          doc.masters = prevMasters;
+          doc.layouts = prevLayouts;
+          page.layoutId = prevPageLayout;
+        },
+      );
+      return layoutId;
+    },
+
+    applyLayoutToPage: (layoutId, pageIndex) => {
+      const doc = get().doc as unknown as {
+        masters?: { id: string; background?: Fill }[];
+        layouts?: { id: string; masterId: string; background?: Fill; placeholders: { id: string; role: string; rect: { x: number; y: number; width: number; height: number } }[] }[];
+        pages: Page[];
+      };
+      const idx = pageIndex ?? curPageIndex();
+      const page = doc.pages[idx] as unknown as { background?: Fill; children: Node[]; layoutId?: string };
+      if (!page) return false;
+      const prevLayoutId = page.layoutId;
+      if (layoutId === null) {
+        // Unlink only: the materialized content stays (nothing is destroyed).
+        perform(
+          () => { delete page.layoutId; },
+          () => { if (prevLayoutId) page.layoutId = prevLayoutId; },
+        );
+        return true;
+      }
+      const layout = (doc.layouts ?? []).find((l) => l.id === layoutId);
+      if (!layout) return false;
+      const master = (doc.masters ?? []).find((m) => m.id === layout.masterId);
+      const bg = layout.background ?? master?.background;
+      const prevBg = page.background;
+      // Placeholders materialize as editable text boxes, matched by the tag so
+      // re-applying never duplicates one that already exists on the page.
+      const have = new Set(
+        (page.children as Node[])
+          .map((n) => (n.data as { placeholderId?: string } | undefined)?.placeholderId)
+          .filter((v): v is string => !!v),
+      );
+      const made: Node[] = [];
+      for (const ph of layout.placeholders ?? []) {
+        if (have.has(ph.id)) continue;
+        made.push(createNode("text", {
+          name: ph.role === "title" ? "Title" : "Text",
+          transform: { x: ph.rect.x, y: ph.rect.y, scaleX: 1, scaleY: 1, rotation: 0 },
+          size: { width: ph.rect.width, height: ph.rect.height },
+          box: { mode: "fixed", width: ph.rect.width, height: ph.rect.height, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
+          data: { placeholderId: ph.id },
+          content: [{
+            runs: [{ text: ph.role === "title" ? "Title" : "Text", style: { fontFamily: "system", fontStyle: ph.role === "title" ? "Bold" : "Regular", fontSize: ph.role === "title" ? 44 : 20, fill: { type: "solid", color: { srgb: { r: 0.12, g: 0.14, b: 0.18, a: 1 } } } } }],
+            style: { align: "left", direction: "auto" },
+          }],
+        } as Partial<Node>));
+      }
+      perform(
+        () => {
+          page.layoutId = layoutId;
+          if (bg) page.background = structuredClone(bg);
+          page.children.push(...(made as never[]));
+        },
+        () => {
+          if (prevLayoutId) page.layoutId = prevLayoutId; else delete page.layoutId;
+          page.background = prevBg;
+          for (const n of made) {
+            const i = page.children.findIndex((c) => c.id === n.id);
+            if (i >= 0) page.children.splice(i, 1);
+          }
+        },
+      );
+      return true;
+    },
+
+    updateLayoutFromPage: (layoutId) => {
+      const doc = get().doc as unknown as {
+        layouts?: { id: string; background?: Fill; placeholders: unknown[] }[];
+        pages: Page[];
+      };
+      const layout = (doc.layouts ?? []).find((l) => l.id === layoutId);
+      const page = doc.pages[curPageIndex()] as unknown as { background?: Fill; children: Node[] };
+      if (!layout || !page) return false;
+      const texts = (page.children as Node[]).filter((n) => n.type === "text" && !n.hidden);
+      const nextPh = texts.map((n, i) => ({
+        id: (n.data as { placeholderId?: string } | undefined)?.placeholderId ?? `ph-${i + 1}`,
+        role: i === 0 ? "title" : "body",
+        rect: { x: n.transform.x, y: n.transform.y, width: Math.abs(n.size.width * n.transform.scaleX), height: Math.abs(n.size.height * n.transform.scaleY) },
+      }));
+      const prevBg = layout.background;
+      const prevPh = layout.placeholders;
+      const nextBg = page.background ? structuredClone(page.background) : undefined;
+      perform(
+        () => {
+          if (nextBg) layout.background = nextBg; else delete layout.background;
+          layout.placeholders = nextPh;
+        },
+        () => {
+          if (prevBg) layout.background = prevBg; else delete layout.background;
+          layout.placeholders = prevPh;
+        },
+      );
+      return true;
+    },
+
+    syncLayoutPages: (layoutId) => {
+      const doc = get().doc as unknown as { pages: (Page & { layoutId?: string })[] };
+      const targets = doc.pages
+        .map((pg, i) => ({ pg, i }))
+        .filter(({ pg }) => pg.layoutId === layoutId);
+      let changed = 0;
+      // One gesture, one undo step. Each applyLayoutToPage is its own perform,
+      // so without the fold "Update + sync" would need N undos to walk back a
+      // single click (collab mode only hid this because the Yjs capture window
+      // merged them).
+      get().runAsTurn(() => {
+        for (const { i } of targets) {
+          if (get().applyLayoutToPage(layoutId, i)) changed++;
+        }
+      });
+      return changed;
+    },
+
+    bulkMergePages: (rows) => {
+      const doc = get().doc;
+      ensureDocArrays(doc);
+      const idx = curPageIndex();
+      const template = doc.pages[idx];
+      if (!template || !rows.length) return 0;
+      const capped = rows.slice(0, 100); // one deck stays navigable
+      const idGen = () => `n_${crypto.randomUUID().slice(0, 12)}`;
+      const madePages: Page[] = [];
+      for (const row of capped) {
+        const clone = structuredClone(template) as Page & { name?: string };
+        clone.id = `page_${crypto.randomUUID().slice(0, 12)}`;
+        const remapped = remapIds(structuredClone(template.children ?? []) as Node[], idGen);
+        clone.children = remapped.nodes as never[];
+        const sub = (text: string) => text.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (m, key: string) => (Object.hasOwn(row, key) ? row[key] : m));
+        const walk = (nodes: Node[]) => {
+          for (const n of nodes) {
+            if (n.type === "text") {
+              const paras = (n as unknown as { content?: { runs?: { text?: string }[] }[] }).content ?? [];
+              for (const pp of paras) for (const r of pp.runs ?? []) if (typeof r.text === "string") r.text = sub(r.text);
+            } else if (n.type === "sticky") {
+              const rec = n as unknown as { text?: string };
+              if (typeof rec.text === "string") rec.text = sub(rec.text);
+            }
+            const kids = (n as unknown as { children?: Node[] }).children;
+            if (kids?.length) walk(kids);
+          }
+        };
+        walk(clone.children as Node[]);
+        madePages.push(clone);
+      }
+      const at = idx + 1;
+      const prevActive = get().activePage;
+      perform(
+        () => {
+          doc.pages.splice(at, 0, ...madePages);
+          set({ activePage: at });
+        },
+        () => {
+          doc.pages.splice(at, madePages.length);
+          set({ activePage: prevActive });
+        },
+      );
+      return madePages.length;
+    },
+
     setPageBackground: (fill) => {
       const page = get().doc.pages[curPageIndex()] as unknown as { background?: Fill };
       if (!page) return;
@@ -2224,6 +2505,198 @@ export const useEditor = create<EditorState>((set, get) => {
       get().privateRound?.mine.add(node.id); // private mode: my own text (FR-15)
       return node.id;
     },
+    insertDiagramSpec: (spec) => {
+      if (!spec.nodes.length) return false;
+      const doc = get().doc;
+      ensureDocArrays(doc);
+      const page = doc.pages[curPageIndex()];
+      if (!page) return false;
+      // Positions from the pure layout engine (page-local, around the origin).
+      const graph = { nodes: spec.nodes.map((n) => n.id), edges: spec.edges.map((e) => [e.from, e.to] as [string, string]) };
+      const pos = spec.kind === "mindmap"
+        ? layoutMindMap(spec.nodes[0].id, graph, { radiusStep: 240 })
+        : layoutFlowchart(graph, { direction: spec.direction ?? "down", layerGap: 220, nodeGap: 210 });
+      // Anchor the diagram below existing content (or at the page origin area
+      // on an empty board), normalized so the layout's min corner starts there.
+      const STICKY = 170;
+      let minX = Infinity;
+      let minY = Infinity;
+      for (const id of graph.nodes) {
+        const p = pos[id] ?? { x: 0, y: 0 };
+        minX = Math.min(minX, p.x);
+        minY = Math.min(minY, p.y);
+      }
+      if (!Number.isFinite(minX)) { minX = 0; minY = 0; }
+      let baseY = 80;
+      for (const n of page.children as Node[]) {
+        const t = n.transform;
+        baseY = Math.max(baseY, t.y + Math.abs(n.size.height * t.scaleY) + 120);
+      }
+      const baseX = 120;
+      const idMap = new Map<string, string>();
+      const made: Node[] = [];
+      for (const dn of spec.nodes) {
+        const p = pos[dn.id] ?? { x: 0, y: 0 };
+        const node = createNode("sticky", {
+          text: dn.label,
+          transform: { x: baseX + (p.x - minX), y: baseY + (p.y - minY), scaleX: 1, scaleY: 1, rotation: 0 },
+          size: { width: STICKY, height: STICKY },
+        } as Partial<Node>);
+        idMap.set(dn.id, node.id);
+        made.push(node);
+      }
+      for (const e of spec.edges) {
+        const fromId = idMap.get(e.from);
+        const toId = idMap.get(e.to);
+        if (!fromId || !toId) continue;
+        made.push(createNode("connector", {
+          route: spec.kind === "mindmap" ? "curved" : "elbow",
+          start: { attach: { nodeId: fromId, anchor: "auto" } },
+          end: { attach: { nodeId: toId, anchor: "auto" } },
+          ...(e.label ? { label: e.label } : {}),
+          transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+          stroke: {
+            fill: { type: "solid", color: { srgb: { r: 0.28, g: 0.33, b: 0.41, a: 1 } } },
+            width: 3,
+            align: "center",
+            cap: "round",
+            join: "round",
+          },
+          endCap: { kind: "arrow", size: 12 },
+        } as Partial<Node>));
+      }
+      const prevSel = get().selection;
+      perform(
+        () => {
+          page.children.push(...(made as never[]));
+          set({ selection: made.filter((n) => n.type === "sticky").map((n) => n.id) });
+        },
+        () => {
+          for (const n of made) {
+            const i = page.children.findIndex((c) => c.id === n.id);
+            if (i >= 0) page.children.splice(i, 1);
+          }
+          set({ selection: prevSel });
+        },
+      );
+      return true;
+    },
+
+    collectBoardStickies: () => {
+      const page = get().doc.pages[curPageIndex()];
+      const out: { id: string; text: string }[] = [];
+      if (!page) return out;
+      for (const n of page.children as Node[]) {
+        if (n.type !== "sticky" || n.locked) continue;
+        const text = (n as unknown as { text?: string }).text ?? "";
+        if (text.trim()) out.push({ id: n.id, text: text.trim() });
+      }
+      return out;
+    },
+
+    applyStickyClusters: (clusters) => {
+      const doc = get().doc;
+      const page = doc.pages[curPageIndex()];
+      if (!page) return false;
+      const STICKY = 170;
+      const GAP = 24;
+      const COLS = 3;
+      const PAD = 28;
+      const TITLE = 44;
+      // Lay clusters in a row below the existing content extent.
+      let baseY = 80;
+      for (const n of page.children as Node[]) {
+        const t = n.transform;
+        baseY = Math.max(baseY, t.y + Math.abs(n.size.height * t.scaleY) + 140);
+      }
+      let x = 120;
+      const moves: { node: Node; to: { x: number; y: number }; from: { x: number; y: number } }[] = [];
+      const frames: Node[] = [];
+      for (const cluster of clusters) {
+        const members = cluster.ids
+          .map((id) => (page.children as Node[]).find((n) => n.id === id && n.type === "sticky" && !n.locked))
+          .filter((n): n is Node => !!n);
+        if (!members.length) continue;
+        const cols = Math.min(COLS, members.length);
+        const rows = Math.ceil(members.length / cols);
+        const w = PAD * 2 + cols * STICKY + (cols - 1) * GAP;
+        const h = PAD * 2 + TITLE + rows * STICKY + (rows - 1) * GAP;
+        frames.push(createNode("frame", {
+          name: (cluster.title || "Theme").slice(0, 80),
+          transform: { x, y: baseY, scaleX: 1, scaleY: 1, rotation: 0 },
+          size: { width: w, height: h },
+        } as Partial<Node>));
+        members.forEach((m, i) => {
+          const col = i % cols;
+          const row = Math.floor(i / cols);
+          moves.push({
+            node: m,
+            from: { x: m.transform.x, y: m.transform.y },
+            to: { x: x + PAD + col * (STICKY + GAP), y: baseY + PAD + TITLE + row * (STICKY + GAP) },
+          });
+        });
+        x += w + 60;
+      }
+      if (!frames.length) return false;
+      perform(
+        () => {
+          // Frames go BEHIND the stickies they group (start of the paint order).
+          page.children.unshift(...(frames as never[]));
+          for (const mv of moves) {
+            mv.node.transform.x = mv.to.x;
+            mv.node.transform.y = mv.to.y;
+          }
+        },
+        () => {
+          for (const f of frames) {
+            const i = page.children.findIndex((c) => c.id === f.id);
+            if (i >= 0) page.children.splice(i, 1);
+          }
+          for (const mv of moves) {
+            mv.node.transform.x = mv.from.x;
+            mv.node.transform.y = mv.from.y;
+          }
+        },
+      );
+      return true;
+    },
+
+    insertSummaryNote: (text) => {
+      const t = text.trim();
+      if (!t) return false;
+      const doc = get().doc;
+      const page = doc.pages[curPageIndex()];
+      if (!page) return false;
+      let baseY = 80;
+      for (const n of page.children as Node[]) {
+        const tr = n.transform;
+        baseY = Math.max(baseY, tr.y + Math.abs(n.size.height * tr.scaleY) + 120);
+      }
+      const node = createNode("text", {
+        name: "Summary",
+        transform: { x: 120, y: baseY, scaleX: 1, scaleY: 1, rotation: 0 },
+        size: { width: 520, height: 200 },
+        box: { mode: "fixed", width: 520, height: 200, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
+        content: t.split("\n").map((line) => ({
+          runs: [{ text: line, style: { fontFamily: "system", fontStyle: "Regular", fontSize: 18, fill: { type: "solid", color: { srgb: { r: 0.12, g: 0.14, b: 0.18, a: 1 } } } } }],
+          style: { align: "left", direction: "auto" },
+        })),
+      } as Partial<Node>);
+      const prevSel = get().selection;
+      perform(
+        () => {
+          page.children.push(node as never);
+          set({ selection: [node.id] });
+        },
+        () => {
+          const i = page.children.findIndex((c) => c.id === node.id);
+          if (i >= 0) page.children.splice(i, 1);
+          set({ selection: prevSel });
+        },
+      );
+      return true;
+    },
+
     connectNodes: (fromId, toId, fromAnchor = "auto", toAnchor = "auto") => {
       if (fromId === toId) return null;
       const d = get().doc;
@@ -3249,16 +3722,28 @@ export const useEditor = create<EditorState>((set, get) => {
       if (!b) return false;
       let csv = b.csv ?? "";
       if (b.kind === "url" && b.url) {
+        // Direct fetch first (works for CORS-enabled hosts and same-origin
+        // files); fall back to the server's SSRF-guarded data proxy, which
+        // covers the common case of a source with no CORS headers.
+        let text: string | null = null;
         try {
           const res = await fetch(b.url);
-          if (!res.ok) return false;
-          csv = await res.text();
+          if (res.ok) text = await res.text();
         } catch {
-          return false;
+          text = null;
         }
+        if (text === null) {
+          try {
+            const { oc } = await import("@/lib/sdk");
+            text = (await oc.dataFetch({ url: b.url })).text;
+          } catch {
+            return false;
+          }
+        }
+        csv = text;
       }
       const matrix = parseCsvMatrix(csv);
-      if (!matrix.length) return false;
+      if (!looksLikeData(matrix)) return false; // markup in: keep the stored data
       if (node.type === "chart") {
         const cd = tabularToChart(matrix, node.chartType ?? "bar");
         get().setChart(id, { chartType: cd.chartType, categories: cd.categories, series: cd.series });
@@ -4614,6 +5099,75 @@ export const useEditor = create<EditorState>((set, get) => {
         () => {
           rec.fills = before;
         },
+      );
+    },
+
+    collectDeckTexts: () => {
+      const { doc } = get();
+      const out: DeckTextEntry[] = [];
+      const walk = (nodes: Node[]) => {
+        for (const n of nodes) {
+          if (n.locked) continue; // a locked subtree is not editable; skip whole branch
+          if (n.type === "text") {
+            const paras = (n as unknown as { content?: { runs?: { text?: string }[] }[] }).content ?? [];
+            paras.forEach((p, pi) =>
+              (p.runs ?? []).forEach((r, ri) => {
+                if (typeof r.text === "string" && r.text.trim()) {
+                  out.push({ ref: { kind: "run", nodeId: n.id, para: pi, run: ri }, text: r.text });
+                }
+              }),
+            );
+          } else if (n.type === "sticky") {
+            const t = (n as unknown as { text?: string }).text;
+            if (typeof t === "string" && t.trim()) out.push({ ref: { kind: "sticky", nodeId: n.id }, text: t });
+          }
+          const kids = (n as unknown as { children?: Node[] }).children;
+          if (kids?.length) walk(kids);
+        }
+      };
+      doc.pages.forEach((pg, i) => {
+        walk(pg.children as Node[]);
+        const notes = (pg as unknown as { notes?: string }).notes;
+        if (typeof notes === "string" && notes.trim()) out.push({ ref: { kind: "notes", page: i }, text: notes });
+      });
+      return out;
+    },
+
+    applyDeckTexts: (entries) => {
+      const { doc } = get();
+      // Resolve every target up front and snapshot its prior value; the whole
+      // batch then applies (and reverts) as ONE undo step. Refs that no longer
+      // resolve (node deleted since collection, run gone after an edit) are
+      // skipped rather than failing the batch.
+      const changes: { apply: () => void; revert: () => void }[] = [];
+      for (const e of entries) {
+        const next = e.text;
+        if (typeof next !== "string") continue;
+        if (e.ref.kind === "notes") {
+          const pg = doc.pages[e.ref.page] as unknown as { notes?: string } | undefined;
+          if (!pg) continue;
+          const before = pg.notes;
+          changes.push({ apply: () => { pg.notes = next; }, revert: () => { pg.notes = before; } });
+        } else {
+          const loc = locate(doc, e.ref.nodeId);
+          if (!loc || loc.node.locked || editBlocked(e.ref.nodeId)) continue;
+          if (e.ref.kind === "sticky" && loc.node.type === "sticky") {
+            const rec = loc.node as unknown as { text?: string };
+            const before = rec.text;
+            changes.push({ apply: () => { rec.text = next; }, revert: () => { rec.text = before; } });
+          } else if (e.ref.kind === "run" && loc.node.type === "text") {
+            const paras = (loc.node as unknown as { content?: { runs?: { text?: string }[] }[] }).content;
+            const run = paras?.[e.ref.para]?.runs?.[e.ref.run];
+            if (!run || typeof run.text !== "string") continue;
+            const before = run.text;
+            changes.push({ apply: () => { run.text = next; }, revert: () => { run.text = before; } });
+          }
+        }
+      }
+      if (!changes.length) return;
+      perform(
+        () => { for (const c of changes) c.apply(); },
+        () => { for (const c of [...changes].reverse()) c.revert(); },
       );
     },
 

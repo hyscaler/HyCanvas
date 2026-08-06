@@ -651,6 +651,51 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
           <MagicResizeButton />
         </Section>
         {(() => {
+          // Slide layouts (doc 28 FR-3/FR-4): link this page to a reusable
+          // layout, capture the page AS a layout, push edits back, and sync
+          // every linked page. Materialization model: applying copies the
+          // background and creates missing placeholder text boxes.
+          const st2 = useEditor.getState();
+          const layouts = (doc as unknown as { layouts?: { id: string; name: string }[] }).layouts ?? [];
+          const pageLayoutId = (page as unknown as { layoutId?: string }).layoutId ?? "";
+          const saveAs = async () => {
+            const name = await promptText({ title: "Save page as layout", label: "Layout name", placeholder: "Title + body", confirmText: "Save layout" });
+            if (name) useEditor.getState().savePageAsLayout(name);
+          };
+          return (
+            <Section title="Slide layout">
+              <select
+                value={pageLayoutId}
+                onChange={(e) => useEditor.getState().applyLayoutToPage(e.target.value || null)}
+                className={selectCls}
+                aria-label="Slide layout"
+              >
+                <option value="">No layout</option>
+                {layouts.map((l) => (
+                  <option key={l.id} value={l.id}>{l.name}</option>
+                ))}
+              </select>
+              <div className="flex gap-1.5">
+                <button onClick={() => void saveAs()} className="flex-1 rounded-md border border-neutral-200 px-2 py-1 text-[11px] font-medium text-neutral-700 transition hover:bg-neutral-50">
+                  Save page as layout
+                </button>
+                {pageLayoutId && (
+                  <>
+                    <button
+                      onClick={() => { if (st2.updateLayoutFromPage(pageLayoutId)) st2.syncLayoutPages(pageLayoutId); }}
+                      title="Re-capture this page's background and text slots into the layout, then update every page using it"
+                      className="flex-1 rounded-md border border-neutral-200 px-2 py-1 text-[11px] font-medium text-brand-ink transition hover:bg-brand-50"
+                    >
+                      Update + sync
+                    </button>
+                  </>
+                )}
+              </div>
+              <p className="text-[11px] text-neutral-400">Layouts keep repeated slides consistent: apply one to reuse its background and text slots.</p>
+            </Section>
+          );
+        })()}
+        {(() => {
           const bg = (page as unknown as { background?: Fill }).background;
           const bgHex = bg?.type === "solid" ? colorHex(bg.color) : "#ffffff";
           return (

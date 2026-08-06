@@ -4,12 +4,13 @@
 
 import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
 import { useRouter } from "next/router";
-import { ChevronLeft, Undo2, Redo2, Download, Play, MonitorPlay, Ruler, Grid3x3, Magnet, LayoutTemplate, History, Eye, Share2, MessageSquare, ShieldCheck, Activity, BarChart3, MoreHorizontal, Send, Globe, Printer, PanelRightClose, PanelRightOpen, Keyboard, Info, X, Accessibility, Maximize2, Minimize2, LayoutGrid, FileDown, Film } from "lucide-react";
+import { ChevronLeft, Undo2, Redo2, Download, Play, MonitorPlay, Ruler, Grid3x3, Magnet, LayoutTemplate, History, Eye, Share2, MessageSquare, ShieldCheck, Activity, BarChart3, MoreHorizontal, Send, Globe, Printer, PanelRightClose, PanelRightOpen, Keyboard, Info, X, Accessibility, Maximize2, Minimize2, LayoutGrid, FileDown, Film, Table2 } from "lucide-react";
 import type { AccessMode } from "@hc/sdk";
 import { ApiError } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
 import { downloadHycFile } from "@/lib/hycFile";
 import { deckToVideoFile } from "@/lib/video/deckToVideo";
+import { parseCsvMatrix } from "@/lib/csv";
 import { useEditor } from "@/store/editor";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
@@ -44,7 +45,7 @@ import { ApprovalBanner } from "./ApprovalBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { PromptHost } from "@/components/ui/PromptHost";
 import { useRealtime, getDesignDoc, resyncFromLiveDoc } from "@/lib/useRealtime";
-import { useAutoSnapshot } from "@/lib/useAutoSnapshot";
+import { useAutoSnapshot, CHECKPOINT_MAX_BYTES } from "@/lib/useAutoSnapshot";
 import { onCommentChanged, onRoleChanged } from "@/lib/realtime";
 import { useViewBeat } from "@/lib/useViewBeat";
 import { useComments } from "@/store/comments";
@@ -657,6 +658,66 @@ export function EditorApp() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Live data bindings (doc 28 / F27): once per design open, refresh every
+  // URL-bound chart/table so the design shows current data, not the numbers
+  // from the last edit session. Best-effort; failures keep the stored data.
+  // Viewers are skipped (they cannot persist the refreshed numbers anyway), and
+  // the doc's saved marker is restored afterwards so simply OPENING a design
+  // never leaves it dirty for autosave or puts a refresh on the undo stack
+  // ahead of the user's first real edit.
+  const refreshedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (status !== "ready" || !designId || refreshedRef.current === designId) return;
+    if (accessMode !== "edit") return;
+    refreshedRef.current = designId;
+    const st = useEditor.getState();
+    const bound: string[] = [];
+    for (const pg of st.doc.pages) {
+      const walk = (nodes: typeof pg.children) => {
+        for (const n of nodes as { id: string; binding?: { kind?: string }; children?: typeof pg.children }[]) {
+          if (n.binding?.kind === "url") bound.push(n.id);
+          if (n.children?.length) walk(n.children);
+        }
+      };
+      walk(pg.children);
+    }
+    if (!bound.length) return;
+    void (async () => {
+      const before = useEditor.getState();
+      const wasClean = before.rev === before.savedRev;
+      const revBefore = before.rev;
+      let applied = 0;
+      for (const id of bound) if (await st.refreshBinding(id).catch(() => false)) applied++;
+      // Only absorb OUR OWN revisions. If the user edited while the fetches
+      // were in flight the rev moved further than the refreshes account for,
+      // and marking clean would hide their edit from autosave entirely.
+      const after = useEditor.getState();
+      if (applied > 0 && wasClean && after.rev === revBefore + applied) after.markClean();
+    })();
+  }, [status, designId, accessMode]);
+
+  // Bulk data-merge into slides (doc 28): pick a CSV whose header row names
+  // the {{tokens}} used on the CURRENT page; one new slide lands per row.
+  const mergeCsvRef = useRef<HTMLInputElement>(null);
+  async function bulkMergeFromCsv(list: FileList | null) {
+    const f = list?.[0];
+    if (!f) return;
+    try {
+      const matrix = parseCsvMatrix(await f.text());
+      if (matrix.length < 2) {
+        toast.error("The CSV needs a header row plus at least one data row.");
+        return;
+      }
+      const headers = matrix[0].map((h) => h.trim());
+      const rows = matrix.slice(1).map((r) => Object.fromEntries(headers.map((h, i) => [h, r[i] ?? ""])));
+      const n = useEditor.getState().bulkMergePages(rows);
+      if (n) toast.success(`Created ${n} slide${n === 1 ? "" : "s"} from ${f.name} (tokens: ${headers.map((h) => `{{${h}}}`).join(", ")}).`);
+      else toast.error("Nothing merged - is the current page the template?");
+    } catch {
+      toast.error("Could not read that CSV.");
+    }
+  }
+
   const save = useCallback(async () => {
     if (!designId) return;
     // Never checkpoint a history preview: without realtime the store doc IS
@@ -669,6 +730,41 @@ export function EditorApp() {
     setSaving(true);
     useEditor.getState().setManualSaving(true); // auto-snapshot yields while this runs
     try {
+      // On an in-CRDT BRANCH (FR-10) a design-level snapshot would rotate the
+      // design's CURRENT file to branch state. The branch's journal is already
+      // durable; Save uploads a branch-scoped checkpoint (bounding its log) so
+      // the gesture still means "my work is safe".
+      const branch = usePresence.getState().branch;
+      if (branch) {
+        const doc = getDesignDoc();
+        if (!doc) {
+          // Nothing to checkpoint yet: the branch document has not loaded, so
+          // there is no state to upload and no basis to call the work saved.
+          toast.error("The branch is still loading; try again in a moment.");
+          return;
+        }
+        // A checkpoint COMPACTS the lineage: the server drops rows older than
+        // it. It captures this client's state at one instant, so a peer's edits
+        // journaled while it uploads would be compacted away. Only checkpoint
+        // when alone (same rule the auto-snapshot follows); with company the
+        // journal is already durable and the log simply stays longer.
+        const solo = Object.keys(usePresence.getState().peers).length === 0;
+        const cpFrame = solo ? doc.checkpointFrame(CHECKPOINT_MAX_BYTES) : null;
+        if (cpFrame) await oc.checkpointDesign(designId, cpFrame, branch);
+        if (!mounted.current) return;
+        // Durability on a branch is the journal, and the journal only has the
+        // edits the socket actually delivered. Claiming "saved" while
+        // disconnected would disarm the unsaved-changes guard over work that
+        // exists in this browser profile alone.
+        if (usePresence.getState().connection !== "connected") {
+          toast.error("Offline: your branch edits are on this device only until you reconnect.");
+          return;
+        }
+        useEditor.getState().markClean();
+        setSavedAt(new Date().toLocaleTimeString());
+        toast.success("Branch saved.");
+        return;
+      }
       // When realtime is live, snapshot the shared Y.Doc (the source of truth
       // for collaborative edits); otherwise fall back to the local store doc.
       const file = getDesignDoc()?.snapshot() ?? useEditor.getState().doc;
@@ -859,6 +955,12 @@ export function EditorApp() {
                     { icon: Film as TopIcon, label: "Convert to video", onClick: () => void convertToVideo(), disabled: !workspaceId },
                   ]
                 : []),
+              // Merge clones the ACTIVE slide once per CSV row, so it is at its
+              // most useful on a one-slide template deck: never gate it on page
+              // count.
+              ...(docKind === "design"
+                ? [{ icon: Table2 as TopIcon, label: "Bulk slides from CSV", onClick: () => mergeCsvRef.current?.click() }]
+                : []),
               // The document as a portable .hyc file (the open format as
               // readable JSON): every kind, saved or not, downloads what is
               // currently on screen.
@@ -936,6 +1038,16 @@ export function EditorApp() {
       {websiteOpen && <WebsiteDialog open onClose={() => setWebsiteOpen(false)} designId={designId ?? undefined} workspaceId={workspaceId ?? undefined} />}
       {printOpen && <PrintDialog open onClose={() => setPrintOpen(false)} />}
       {a11yOpen && <AccessibilityDialog open onClose={() => setA11yOpen(false)} />}
+      <input
+        ref={mergeCsvRef}
+        type="file"
+        accept=".csv,text/csv"
+        hidden
+        onChange={(e) => {
+          void bulkMergeFromCsv(e.target.files);
+          e.target.value = "";
+        }}
+      />
       <SlideOverview open={overviewOpen} onClose={() => setOverviewOpen(false)} />
       {presenting && <PresentMode onClose={() => { useEditor.getState().setPresenting(false); setPresenting(false); }} />}
       <PromptHost />
