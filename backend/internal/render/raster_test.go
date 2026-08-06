@@ -98,7 +98,7 @@ func TestRasterEllipseGradient(t *testing.T) {
 		"children": []any{map[string]any{
 			"type": "shape", "shape": "ellipse",
 			"transform": map[string]any{"x": 0.0, "y": 0.0, "scaleX": 1.0, "scaleY": 1.0, "rotation": 0.0},
-			"size": map[string]any{"width": 100.0, "height": 100.0},
+			"size":      map[string]any{"width": 100.0, "height": 100.0},
 			"fills": []any{map[string]any{
 				"type": "gradient", "gradient": "linear", "angle": 90.0,
 				"stops": []any{
