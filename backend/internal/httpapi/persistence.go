@@ -37,6 +37,8 @@ func mountPersistence(api chi.Router, p *persistence.Service, acct *accounts.Ser
 	api.With(requireAuth(acct)).Post("/designs/{id}/versions/{vid}/restore", restoreVersionHandler(p, acct, br))
 	api.With(requireAuth(acct)).Get("/designs/{id}/branches", branchesHandler(p, acct, sh))
 	api.With(requireAuth(acct)).Post("/designs/{id}/versions/{vid}/branch", branchHandler(p, acct))
+	api.With(requireAuth(acct)).Get("/designs/{id}/crdt-branches", listCrdtBranchesHandler(p, acct, sh))
+	api.With(requireAuth(acct)).Post("/designs/{id}/crdt-branches", createCrdtBranchHandler(p, acct))
 	api.With(requireAuth(acct)).Post("/designs/{id}/restore", restoreFromTrashHandler(p, acct))
 	api.With(requireAuth(acct)).Get("/workspaces/{wid}/trash", trashHandler(p, acct))
 	api.With(requireAuth(acct)).Get("/workspaces/{id}/designs", listWorkspaceDesignsHandler(p, acct))
@@ -55,6 +57,8 @@ func persistenceProblem(w http.ResponseWriter, r *http.Request, err error) {
 		// 422 into a diagnosable one.
 		slog.Warn("design file rejected", "path", r.URL.Path, "reason", err.Error())
 		Problem(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "the design file is structurally invalid: "+err.Error())
+	case errors.Is(err, persistence.ErrInvalidBranch):
+		Problem(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", err.Error())
 	default:
 		Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed")
 	}
@@ -270,7 +274,10 @@ func updateLogHandler(p *persistence.Service, acct *accounts.Service, sh *sharin
 		}
 		afterSeq, _ := strconv.ParseInt(r.URL.Query().Get("afterSeq"), 10, 64)
 		limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-		page, err := p.ListUpdates(r.Context(), id, ws, afterSeq, limit)
+		// ?branch= selects an in-CRDT branch lineage (FR-10): the parent prefix up
+		// to the fork plus the branch's own rows, one ascending seq stream. Empty =
+		// the main lineage, exactly as before.
+		page, err := p.ListBranchUpdates(r.Context(), id, ws, r.URL.Query().Get("branch"), afterSeq, limit)
 		if err != nil {
 			persistenceProblem(w, r, err)
 			return
@@ -311,7 +318,15 @@ func checkpointUpdateLogHandler(p *persistence.Service, acct *accounts.Service) 
 			return
 		}
 		u := userFrom(r.Context())
-		if err := p.AppendCheckpoint(r.Context(), id, raw, u.ID); err != nil {
+		// ?branch= scopes the checkpoint (and its compaction) to that in-CRDT
+		// branch's lineage; empty = main. An unknown branch must 404 rather than
+		// silently journaling into a dead scope.
+		branch := r.URL.Query().Get("branch")
+		if branch != "" && !p.BranchBelongsToDesign(r.Context(), id, branch) {
+			Problem(w, r, http.StatusNotFound, "Not Found", "unknown branch")
+			return
+		}
+		if err := p.AppendCheckpoint(r.Context(), id, branch, raw, u.ID); err != nil {
 			persistenceProblem(w, r, err)
 			return
 		}
@@ -354,6 +369,55 @@ func restoreVersionHandler(p *persistence.Service, acct *accounts.Service, br *b
 			return
 		}
 		writeJSON(w, http.StatusOK, entry)
+	}
+}
+
+// listCrdtBranchesHandler serves the design's in-CRDT named branches (FR-10),
+// distinct from the fork-model /branches (designs copied from a version).
+func listCrdtBranchesHandler(p *persistence.Service, acct *accounts.Service, sh *sharing.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		ws, err := authorizeDesignRead(r, p, acct, sh, id)
+		if err != nil {
+			authProblem(w, r, err)
+			return
+		}
+		branches, err := p.ListCrdtBranches(r.Context(), id, ws)
+		if err != nil {
+			persistenceProblem(w, r, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, branches)
+	}
+}
+
+// createCrdtBranchHandler forks a named in-CRDT branch from a history point
+// (FR-10): {name, forkedFromSeq, parentBranchId?}. Member-gated like other
+// design mutations; never touches existing history (purely additive).
+func createCrdtBranchHandler(p *persistence.Service, acct *accounts.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		ws, err := authorizeDesign(r, p, acct, id, "member")
+		if err != nil {
+			authProblem(w, r, err)
+			return
+		}
+		var body struct {
+			Name           string  `json:"name"`
+			ForkedFromSeq  int64   `json:"forkedFromSeq"`
+			ParentBranchID *string `json:"parentBranchId"`
+		}
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 8192)).Decode(&body); err != nil {
+			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			return
+		}
+		u := userFrom(r.Context())
+		branch, err := p.CreateCrdtBranch(r.Context(), id, ws, body.Name, body.ForkedFromSeq, body.ParentBranchID, &u.ID)
+		if err != nil {
+			persistenceProblem(w, r, err)
+			return
+		}
+		writeJSON(w, http.StatusCreated, branch)
 	}
 }
 

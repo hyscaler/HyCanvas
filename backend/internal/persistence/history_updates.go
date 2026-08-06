@@ -1,10 +1,11 @@
 // CRDT edit-history update log (doc 16 FR-9, the history "time machine").
 // The append-only DesignUpdateLog (journaled by the realtime hub) is served in
 // seq order so a client can fold the raw Yjs update frames into an ephemeral
-// Y.Doc and preview/scrub any point in history. The server never decodes the
-// CRDT payload (there is no pure-Go Yjs decoder; that would need a cgo Rust
-// dependency and break the single-binary build), so folding stays client-side;
-// here we only page out the opaque frames with author + timestamp metadata.
+// Y.Doc and preview/scrub any point in history. The interactive scrubber folds
+// client-side (where Yjs lives); the SERVER can now also fold when it must -
+// internal/crdt embeds the same fold under a pure-Go JS engine (see
+// leave_snapshot.go for the last-leave materialization) - so here we only page
+// out the opaque frames with author + timestamp metadata.
 package persistence
 
 import (
@@ -35,17 +36,31 @@ type UpdateLogPage struct {
 
 const updateLogPageSize = 500
 
-// ListUpdates returns DesignUpdateLog rows with seq > afterSeq in ascending seq
-// order (oldest first, the order a client folds them), workspace-scoped.
+// ListUpdates returns the MAIN lineage's rows with seq > afterSeq in ascending
+// seq order (oldest first, the order a client folds them), workspace-scoped.
 // afterSeq = 0 starts from the beginning of history.
 func (s *Service) ListUpdates(ctx context.Context, designID, workspaceID string, afterSeq int64, limit int) (UpdateLogPage, error) {
+	return s.ListBranchUpdates(ctx, designID, workspaceID, "", afterSeq, limit)
+}
+
+// ListBranchUpdates is ListUpdates for an in-CRDT branch lineage (doc 16
+// FR-10): the parent lineage's prefix (rows up to each fork point) followed by
+// the branch's own rows. All rows share the design-global seq space and every
+// prefix row predates the fork, so the combined stream is a single ascending
+// seq order and pages with the same afterSeq cursor as main history. branchID
+// "" is the main lineage.
+func (s *Service) ListBranchUpdates(ctx context.Context, designID, workspaceID, branchID string, afterSeq int64, limit int) (UpdateLogPage, error) {
 	if _, err := s.requireDesign(ctx, designID, workspaceID, false); err != nil {
+		return UpdateLogPage{}, err
+	}
+	scopes, err := s.crdtLineageScopes(ctx, designID, branchID)
+	if err != nil {
 		return UpdateLogPage{}, err
 	}
 	if limit <= 0 || limit > updateLogPageSize {
 		limit = updateLogPageSize
 	}
-	rows, err := s.listUpdateRows(ctx, designID, afterSeq, limit+1)
+	rows, err := s.listUpdateRows(ctx, designID, scopes, afterSeq, limit+1)
 	if err != nil {
 		return UpdateLogPage{}, err
 	}
@@ -99,13 +114,16 @@ type updateLogRow struct {
 	isCheckpoint bool
 }
 
-func (s *Service) listUpdateRows(ctx context.Context, designID string, afterSeq int64, limit int) ([]updateLogRow, error) {
+func (s *Service) listUpdateRows(ctx context.Context, designID string, scopes []crdtScope, afterSeq int64, limit int) ([]updateLogRow, error) {
 	// id is the tiebreak so a same-seq pair (possible under the racy MAX(seq)+1
 	// assignment with no unique constraint) folds in a stable, deterministic order.
-	const q = `SELECT seq, update, "blob_url", "author_id", "created_at", "is_checkpoint" FROM "design_update_logs"
-		WHERE "design_id" = $1 AND seq > $2
+	// The scope predicate selects the lineage: main (branch NULL, uncapped) or a
+	// branch's parent-prefix segments plus its own rows (branches_crdt.go).
+	args := []any{designID, afterSeq, limit}
+	q := `SELECT seq, update, "blob_url", "author_id", "created_at", "is_checkpoint" FROM "design_update_logs"
+		WHERE "design_id" = $1 AND seq > $2 AND ` + scopeConds(scopes, &args) + `
 		ORDER BY seq ASC, id ASC LIMIT $3`
-	rows, err := s.db.Query(ctx, q, designID, afterSeq, limit)
+	rows, err := s.db.Query(ctx, q, args...)
 	if err != nil {
 		return nil, err
 	}

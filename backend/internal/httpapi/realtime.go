@@ -69,6 +69,18 @@ func realtimeHandler(hub *realtime.Hub, acct *accounts.Service, sh *sharing.Serv
 			Color:    "", // assigned by the hub palette
 			Role:     realtime.Role(role),
 		}
-		hub.Serve(r.Context(), ws, id, designID)
+		// ?branch= joins an in-CRDT branch session (FR-10): its own room (sync,
+		// presence, and locks fully isolated from main) journaling to the branch's
+		// lineage. The branch must belong to this design; permissions are the
+		// design's own (already resolved above).
+		roomKey := designID
+		if branch := r.URL.Query().Get("branch"); branch != "" {
+			if !persist.BranchBelongsToDesign(r.Context(), designID, branch) {
+				_ = ws.Close(websocket.StatusPolicyViolation, "unknown branch")
+				return
+			}
+			roomKey = realtime.RoomKey(designID, branch)
+		}
+		hub.Serve(r.Context(), ws, id, roomKey)
 	}
 }

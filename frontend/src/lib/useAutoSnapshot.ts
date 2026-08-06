@@ -23,7 +23,7 @@ import { getDesignDoc } from "@/lib/useRealtime";
 const IDLE_MS = 4000; // snapshot this long after the last edit
 const MAX_INTERVAL_MS = 90_000; // ...and at least this often during nonstop editing
 const CHECKPOINT_INTERVAL_MS = 5 * 60_000; // compact the CRDT update log at most this often
-const CHECKPOINT_MAX_BYTES = 20 * 1024 * 1024 - 4096; // stay just under the server's 20MiB cap
+export const CHECKPOINT_MAX_BYTES = 20 * 1024 * 1024 - 4096; // stay just under the server's 20MiB cap
 
 /**
  * Drive automatic "auto"-kind snapshots off real document mutations. Pass a
@@ -54,7 +54,34 @@ export function useAutoSnapshot(designId: string | null, onSaved?: () => void) {
       saving = true;
       const revAtSave = ed.rev;
       const doc = getDesignDoc(); // live shared Y.Doc, or null when not collaborating
+      const branch = usePresence.getState().branch;
       try {
+        // On an in-CRDT BRANCH (FR-10), the branch's journaled lineage is the
+        // persistence: a design-level snapshot here would rotate the design's
+        // CURRENT file to branch state and corrupt main. Instead, durability
+        // comes from the journal itself plus a periodic branch-scoped
+        // checkpoint upload (which also bounds the branch log).
+        if (branch) {
+          if (doc && Date.now() - lastCheckpointAt > CHECKPOINT_INTERVAL_MS) {
+            const solo = Object.keys(usePresence.getState().peers).length === 0;
+            const cpFrame = solo ? doc.checkpointFrame(CHECKPOINT_MAX_BYTES) : null;
+            if (cpFrame) {
+              await oc.checkpointDesign(designId, cpFrame, branch);
+              lastCheckpointAt = Date.now();
+            }
+          }
+          // "Journaled = durable" holds only for edits that actually reached
+          // the journal: the socket must be up AND the branch doc must exist
+          // (a failed seed leaves it null, so edits never entered Y and nothing
+          // was ever sent). Marking clean without both hides real work behind a
+          // silent unload.
+          if (!doc || usePresence.getState().connection !== "connected") return;
+          lastSavedAt = Date.now(); // else the 90s interval cap fires every edit
+          const now = useEditor.getState();
+          if (now.rev === revAtSave) now.markClean(); // journaled = durable
+          onSavedRef.current?.();
+          return;
+        }
         // Prefer the shared Y.Doc when realtime is live (the collaborative source
         // of truth); fall back to the local store doc otherwise. Mirrors save().
         const file = doc?.snapshot() ?? ed.doc;

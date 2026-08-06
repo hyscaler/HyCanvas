@@ -688,6 +688,52 @@ export function fromDoc(ydoc: Y.Doc): DesignFile {
 }
 
 /**
+ * fromDoc with PAGE-GRANULAR reuse (doc 16 FR-2/FR-7 incremental apply at
+ * scale). Projecting a large multi-page document on every remote update is the
+ * client's scale bottleneck: a peer's one-shape move re-serializes all 50
+ * pages. This variant projects only pages absent from `reusable`; for the rest
+ * it emits the caller's existing JS page objects untouched (the caller
+ * guarantees they are in sync with the Y state - i.e. it tracked which pages a
+ * transaction actually changed). Page ORDER always comes from the live __ord
+ * ranks, so reordering works even against fully reused bodies. Everything
+ * outside `pages` projects normally.
+ */
+export function fromDocWithPageReuse(ydoc: Y.Doc, reusable: ReadonlyMap<string, unknown>): DesignFile {
+  const root = ydoc.getMap(DESIGN_ROOT_KEY);
+  const out: JsonObject = {};
+  for (const [k, v] of root.entries()) {
+    if (k === ORDER_KEY || k === RUNS_STASH_KEY) continue;
+    if (k === "pages" && v instanceof Y.Array && reusable.size > 0) {
+      out[k] = projectPagesWithReuse(v, reusable);
+    } else {
+      out[k] = yToJson(v);
+    }
+  }
+  return out as unknown as DesignFile;
+}
+
+/** Project a keyed pages array, substituting reusable bodies; mirrors yToJson's
+ *  keyed-array rank sort (ascending __ord, id tiebreak, unranked last). */
+function projectPagesWithReuse(pages: Y.Array<unknown>, reusable: ReadonlyMap<string, unknown>): unknown[] {
+  const raw = pages.toArray();
+  let ranked = false;
+  const entries = raw.map((src) => {
+    const id = src instanceof Y.Map ? src.get("id") : undefined;
+    const o = src instanceof Y.Map ? src.get(ORDER_KEY) : undefined;
+    const hasRank = typeof o === "number" && Number.isFinite(o);
+    if (hasRank) ranked = true;
+    const cached = typeof id === "string" ? reusable.get(id) : undefined;
+    return { obj: cached ?? yToJson(src), rank: hasRank ? (o as number) : Number.POSITIVE_INFINITY, id: typeof id === "string" ? id : "" };
+  });
+  // Match yToJson exactly: a keyed array presents in rank order only when at
+  // least one item carries a rank; otherwise insertion order stands.
+  if (ranked && entries.length > 0 && entries.every((e) => e.id !== "")) {
+    entries.sort((a, b) => (a.rank !== b.rank ? a.rank - b.rank : a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  }
+  return entries.map((e) => e.obj);
+}
+
+/**
  * Reconcile a single node's plain-JSON state into an existing Y.Map with minimal
  * ops (the same structural diff `reconcile` applies to the whole tree, scoped to
  * one node). Used by the server-side lock enforcement (`enforce.ts`) to revert a

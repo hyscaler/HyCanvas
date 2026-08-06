@@ -23,9 +23,10 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import type { BranchEntry, DesignUpdateEntry, VersionEntry } from "@hc/sdk";
+import type { BranchEntry, CrdtBranch, DesignUpdateEntry, VersionEntry } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
 import { useEditor } from "@/store/editor";
+import { usePresence } from "@/store/presence";
 import { applyRestoredFile, getDesignDoc, resyncFromLiveDoc } from "@/lib/useRealtime";
 import { foldUpdatesToFile } from "@/lib/historyFold";
 import { diffLabel } from "@hc/realtime";
@@ -117,6 +118,11 @@ export function HistoryPanel({
   // CRDT scrubber (FR-9): the raw update log, grouped into op stops. Loaded
   // lazily when the scrubber is opened. scrubIndex null = live/now.
   const [updates, setUpdates] = useState<DesignUpdateEntry[]>([]);
+  // In-CRDT branches (FR-10): the design's named live branches plus the active
+  // one (presence store; switching rebinds the realtime session to the branch's
+  // own room and lineage).
+  const activeBranch = usePresence((st) => st.branch);
+  const [crdtBranches, setCrdtBranches] = useState<CrdtBranch[]>([]);
   const [scrubOpen, setScrubOpen] = useState(false);
   const [scrubLoading, setScrubLoading] = useState(false);
   const [scrubIndex, setScrubIndex] = useState<number | null>(null);
@@ -149,8 +155,18 @@ export function HistoryPanel({
     });
   }, []);
 
+  // Refresh the in-CRDT branch list (after creating one; the mount effect
+  // below fetches the initial list alongside versions and forks).
+  const loadCrdtBranches = useCallback(async () => {
+    try {
+      setCrdtBranches(await oc.listCrdtBranches(designId));
+    } catch {
+      setCrdtBranches([]); // non-fatal: the section just hides
+    }
+  }, [designId]);
+
   const MAX_PAGES = 40;
-  const loadUpdates = useCallback(async () => {
+  const loadUpdates = useCallback(async (branchArg: string | null = activeBranch) => {
     setScrubLoading(true);
     try {
       const all: DesignUpdateEntry[] = [];
@@ -160,7 +176,9 @@ export function HistoryPanel({
       // panel. If the cap is hit with more rows remaining, we are missing the
       // NEWEST edits -> mark truncated so the UI never presents the end as live.
       for (let page = 0; page < MAX_PAGES; page++) {
-        const res = await oc.designUpdates(designId, after);
+        // On a branch, the timeline is the BRANCH lineage (parent prefix up to
+        // the fork + the branch's own edits), same fold, same cursor.
+        const res = await oc.designUpdates(designId, after, 0, branchArg ?? undefined);
         all.push(...res.items);
         if (!res.nextSeq) break;
         after = res.nextSeq;
@@ -175,13 +193,14 @@ export function HistoryPanel({
     } finally {
       setScrubLoading(false);
     }
-  }, [designId, toast]);
+  }, [designId, toast, activeBranch]);
 
   function toggleScrub() {
     const next = !scrubOpen;
     setScrubOpen(next);
     if (next && !scrubLoaded.current && !scrubLoading) void loadUpdates();
   }
+
 
   // Fold the update prefix up to a stop and preview it read-only; null = live.
   // Folding is client-side (Yjs); re-folds the prefix each commit (fine for
@@ -258,9 +277,10 @@ export function HistoryPanel({
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const [page, branchList] = await Promise.all([
+      const [page, branchList, crdtList] = await Promise.all([
         oc.listVersions(designId).catch(() => null),
         oc.listBranches(designId).catch(() => []),
+        oc.listCrdtBranches(designId).catch(() => []),
       ]);
       if (cancelled) return;
       if (page) {
@@ -271,6 +291,7 @@ export function HistoryPanel({
         toast.error("Could not load history.");
       }
       setBranches(branchList);
+      setCrdtBranches(crdtList);
       setLoading(false);
     })();
     return () => {
@@ -297,6 +318,9 @@ export function HistoryPanel({
   // Restore the previewed version as a NEW snapshot, then make it the live doc
   // (reconciled into the shared Y.Doc when connected) (AC-7).
   async function restore() {
+    // Defense in depth: restore rotates the design's CURRENT (main) file and is
+    // gated in the UI while a branch session is active.
+    if (usePresence.getState().branch) return;
     if (!activeId) return;
     setBusyId(activeId);
     try {
@@ -359,13 +383,65 @@ export function HistoryPanel({
     setScrubFile(null);
   }
 
+  // Switch the live session to a branch lineage (null = main). The realtime
+  // hook rebinds (own room + IndexedDB namespace) and seeds the doc from the
+  // branch's folded journal; any preview or scrub state belongs to the old
+  // lineage and is dropped.
+  function switchBranch(id: string | null) {
+    if (id === activeBranch) return;
+    if (preview) {
+      exitPreview();
+    }
+    // The loaded timeline and any scrub preview belong to the OLD lineage.
+    setActiveId(null);
+    setScrubIndex(null);
+    setScrubFile(null);
+    setScrubLabel(null);
+    setUpdates([]);
+    setTruncated(false);
+    scrubLoaded.current = false;
+    usePresence.getState().setBranch(id);
+    if (scrubOpen) void loadUpdates(id); // refetch the new lineage in place
+    toast.success(id ? "Switched to the branch. Edits now stay on it." : "Back on the main lineage.");
+  }
+
+  // Fork a named in-CRDT branch at the scrubbed point (FR-10) and switch to it.
+  // Never touches existing history: main keeps every row, the branch adds its
+  // own from here on.
+  async function branchFromScrub() {
+    if (scrubIndex === null || !ops[scrubIndex] || truncated || busyId) return;
+    const name = await promptText({
+      title: "Branch from here",
+      label: "Branch name",
+      placeholder: "Big rework idea",
+      confirmText: "Create branch",
+    });
+    if (!name) return;
+    setBusyId("scrub-branch");
+    try {
+      const created = await oc.createCrdtBranch(designId, {
+        name,
+        forkedFromSeq: ops[scrubIndex].lastSeq,
+        ...(activeBranch ? { parentBranchId: activeBranch } : {}),
+      });
+      await loadCrdtBranches();
+      switchBranch(created.id);
+    } catch {
+      toast.error("Could not create the branch.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   // Restore the currently-scrubbed point as a NEW snapshot (non-destructive,
   // AC-7), then make it live. Unlike version restore there is no versionId: we
   // persist the folded file directly (kind "restore") and reconcile it in.
   async function restoreScrub() {
     // Never restore from a truncated timeline: scrubFile is folded from a stale
     // prefix (newest edits not loaded), so persisting it would roll the doc back.
-    if (!scrubFile || busyId || truncated) return;
+    // And never from a BRANCH session: restore rotates the design's CURRENT
+    // (main) file, which must never receive branch-lineage state.
+    if (!scrubFile || busyId || truncated || activeBranch) return;
     setBusyId("scrub");
     try {
       await oc.saveSnapshot(designId, { file: scrubFile, kind: "restore", label: "Restored from history" });
@@ -389,6 +465,7 @@ export function HistoryPanel({
   // Save a named checkpoint of the CURRENT live state (AC-6), not a preview.
   async function saveCheckpoint() {
     if (preview) return; // never checkpoint a preview
+    if (activeBranch) return; // a named snapshot is main-lineage state; gated in the UI too
     const label = await promptText({
       title: "Save a checkpoint",
       label: "Name this version",
@@ -422,8 +499,14 @@ export function HistoryPanel({
           size="sm"
           block
           onClick={() => void saveCheckpoint()}
-          disabled={!!preview}
-          title={preview ? "Exit preview to save a checkpoint" : "Save a named checkpoint of the current version"}
+          disabled={!!preview || !!activeBranch}
+          title={
+            activeBranch
+              ? "Checkpoints capture the main lineage; switch back to Main first"
+              : preview
+                ? "Exit preview to save a checkpoint"
+                : "Save a named checkpoint of the current version"
+          }
         >
           <Bookmark size={16} /> Save checkpoint
         </Button>
@@ -486,10 +569,47 @@ export function HistoryPanel({
         )}
       </div>
 
-      {branches.length > 0 && (
+      {(crdtBranches.length > 0 || activeBranch) && (
         <div className="border-b border-neutral-100 p-3">
           <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-neutral-400">
             <GitBranch size={13} /> Branches
+          </p>
+          <ul className="flex flex-col gap-1">
+            <li>
+              <button
+                onClick={() => switchBranch(null)}
+                className={`w-full truncate rounded-lg px-2 py-1.5 text-left text-sm transition ${
+                  activeBranch === null ? "bg-brand-50 font-semibold text-brand-ink ring-1 ring-brand-200" : "text-neutral-700 hover:bg-neutral-100"
+                }`}
+                title="The design's main lineage"
+              >
+                Main
+              </button>
+            </li>
+            {crdtBranches.map((b) => (
+              <li key={b.id}>
+                <button
+                  onClick={() => switchBranch(b.id)}
+                  className={`w-full truncate rounded-lg px-2 py-1.5 text-left text-sm transition ${
+                    activeBranch === b.id ? "bg-brand-50 font-semibold text-brand-ink ring-1 ring-brand-200" : "text-neutral-700 hover:bg-neutral-100"
+                  }`}
+                  title={`Switch to branch "${b.name}" (its own live session and history)`}
+                >
+                  {b.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-1.5 text-[11px] text-neutral-400">
+            Branches live inside this design. Scrub the timeline and use &quot;Branch from here&quot; to fork one; switching never discards anything.
+          </p>
+        </div>
+      )}
+
+      {branches.length > 0 && (
+        <div className="border-b border-neutral-100 p-3">
+          <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-neutral-400">
+            <GitBranch size={13} /> Forked designs
           </p>
           <ul className="flex flex-col gap-1">
             {branches.map((b) => (
@@ -571,7 +691,12 @@ export function HistoryPanel({
           {activeId ? (
             <>
               <div className="flex gap-2">
-                <Button size="sm" onClick={() => void restore()} disabled={!!busyId} title="Make this the current version">
+                <Button
+                  size="sm"
+                  onClick={() => void restore()}
+                  disabled={!!busyId || !!activeBranch}
+                  title={activeBranch ? "Restore targets the main lineage; switch back to Main first" : "Make this the current version"}
+                >
                   <RotateCcw size={15} /> Restore
                 </Button>
                 <Button variant="secondary" size="sm" onClick={() => void branch()} disabled={!!busyId} title="Create a branch from here">
@@ -588,10 +713,25 @@ export function HistoryPanel({
               <Button
                 size="sm"
                 onClick={() => void restoreScrub()}
-                disabled={!!busyId || !scrubFile || truncated}
-                title={truncated ? "Restore is disabled on a truncated timeline (the newest edits aren't loaded)" : "Make this point the current version"}
+                disabled={!!busyId || !scrubFile || truncated || !!activeBranch}
+                title={
+                  activeBranch
+                    ? "Restore targets the main lineage; switch back to Main first"
+                    : truncated
+                      ? "Restore is disabled on a truncated timeline (the newest edits aren't loaded)"
+                      : "Make this point the current version"
+                }
               >
                 <RotateCcw size={15} /> Restore
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => void branchFromScrub()}
+                disabled={!!busyId || scrubIndex === null || truncated}
+                title={truncated ? "Branching is disabled on a truncated timeline" : "Fork a named branch at this point (FR-10); nothing is discarded"}
+              >
+                <GitBranch size={15} /> Branch from here
               </Button>
               <Button variant="ghost" size="sm" onClick={exit} disabled={!!busyId}>
                 Return to now
