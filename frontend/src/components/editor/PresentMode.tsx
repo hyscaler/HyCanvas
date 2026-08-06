@@ -25,6 +25,12 @@ import {
   HelpCircle,
   Undo2,
   Trash2,
+  Disc,
+  MessageSquare,
+  ThumbsUp,
+  CheckCircle2,
+  EyeOff,
+  BarChart3,
 } from "lucide-react";
 import {
   createScene,
@@ -60,6 +66,10 @@ import { nextSectionStart, prevSectionStart } from "@hc/schema";
 import { useEditor } from "@/store/editor";
 import { imageAssets } from "@/lib/assetProvider";
 import { useBrand } from "@/store/brand";
+import { oc } from "@/lib/sdk";
+import { onAudienceEvent } from "@/lib/realtime";
+import { useToast } from "@/components/ui/Toast";
+import type { AudienceState } from "@hc/sdk";
 import { AudienceLink, openAudienceWindow } from "@/lib/audienceWindow";
 import {
   adjustSpotlightRadius,
@@ -72,6 +82,7 @@ import {
   prevVisibleIndex,
   RehearsalTimer,
   seekVisible,
+  LIVE_HEARTBEAT_MS,
   SPOTLIGHT_DEFAULT_RADIUS,
   spotlightGeom,
   stepZoom,
@@ -350,6 +361,102 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null); // presenter-only tools layer
+
+  // Present-and-record (doc 28 FR-19): capture a composite of the slide canvas
+  // + the presenter ink/laser overlay at 30fps, mix in mic narration when the
+  // user grants it (declining still records video-only), and save a .webm on
+  // stop. Everything is client-side MediaRecorder; nothing uploads.
+  const [recording, setRecording] = useState(false);
+  const recRef = useRef<{ rec: MediaRecorder; raf: number; stream: MediaStream; audio: MediaStream | null } | null>(null);
+  // Set while start-up is in flight (the mic permission prompt can sit open for
+  // as long as the user ignores it) and cleared on unmount. Without it a second
+  // click starts a second pipeline that the first recRef write orphans, and an
+  // exit during the prompt leaves a live mic and a rAF loop with no UI to stop
+  // them.
+  const recStartingRef = useRef(false);
+  const presentAliveRef = useRef(true);
+  const toggleRecording = useCallback(async () => {
+    const active = recRef.current;
+    if (active) {
+      active.rec.stop();
+      return;
+    }
+    if (recStartingRef.current) return;
+    const slide = canvasRef.current;
+    if (!slide || typeof MediaRecorder === "undefined") return;
+    recStartingRef.current = true;
+    const comp = document.createElement("canvas");
+    comp.width = slide.width || 1920;
+    comp.height = slide.height || 1080;
+    const cctx = comp.getContext("2d");
+    if (!cctx) {
+      recStartingRef.current = false;
+      return;
+    }
+    let raf = 0;
+    const draw = () => {
+      cctx.fillStyle = "#000";
+      cctx.fillRect(0, 0, comp.width, comp.height);
+      const sl = canvasRef.current;
+      const ov = overlayRef.current;
+      if (sl) cctx.drawImage(sl, 0, 0, comp.width, comp.height);
+      if (ov && ov.width > 0) cctx.drawImage(ov, 0, 0, comp.width, comp.height);
+      raf = requestAnimationFrame(draw);
+    };
+    draw();
+    let audio: MediaStream | null = null;
+    try {
+      audio = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      audio = null; // no mic permission: record the slides silently
+    }
+    recStartingRef.current = false;
+    // Present mode may have closed while the permission prompt was open. Drop
+    // everything we just acquired rather than recording into a dead component.
+    if (!presentAliveRef.current) {
+      cancelAnimationFrame(raf);
+      audio?.getTracks().forEach((t) => t.stop());
+      return;
+    }
+    const stream = comp.captureStream(30);
+    if (audio) for (const t of audio.getAudioTracks()) stream.addTrack(t);
+    const mime = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"].find((m) => MediaRecorder.isTypeSupported(m));
+    const rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 8_000_000 } : undefined);
+    const chunks: Blob[] = [];
+    rec.ondataavailable = (e) => {
+      if (e.data.size) chunks.push(e.data);
+    };
+    rec.onstop = () => {
+      cancelAnimationFrame(raf);
+      audio?.getTracks().forEach((t) => t.stop());
+      stream.getTracks().forEach((t) => t.stop());
+      recRef.current = null;
+      setRecording(false);
+      if (!chunks.length) return;
+      const container = (rec.mimeType || "video/webm").split(";")[0];
+      const ext = container.includes("mp4") ? "mp4" : container.includes("webm") ? "webm" : (container.split("/")[1] ?? "webm");
+      const blob = new Blob(chunks, { type: container });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      const base = (useEditor.getState().doc.title || "presentation").replace(/[^\w.-]+/g, "-") || "presentation";
+      a.download = `${base}-recording.${ext}`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    };
+    rec.start(1000);
+    recRef.current = { rec, raf, stream, audio };
+    setRecording(true);
+  }, []);
+  // Leaving present mode stops (and saves) an in-flight recording, and tells a
+  // start-up still waiting on the mic prompt to abandon itself.
+  useEffect(() => {
+    presentAliveRef.current = true;
+    return () => {
+      presentAliveRef.current = false;
+      recRef.current?.rec.stop();
+    };
+  }, []);
+
   const [interactiveCursor, setInteractiveCursor] = useState(false);
 
   // Presenter magic tools (FR-8). All of this is presenter-only and ephemeral: it
@@ -387,6 +494,64 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
   // can be blocked, so this only gates the affordance; the same-window overlay
   // keeps working either way (AC-3).
   const designId = useBrand((s) => s.designId);
+
+  // Live audience (doc 28): questions/polls arrive over the realtime socket
+  // (the editor session stays connected beneath present mode); reactions float
+  // as ephemeral emoji. The drawer refetches on events and on open.
+  const [qaOpen, setQaOpen] = useState(false);
+  const [audState, setAudState] = useState<AudienceState | null>(null);
+  const [unseen, setUnseen] = useState(0);
+  const [floaters, setFloaters] = useState<{ id: number; emoji: string; left: number }[]>([]);
+  const qaOpenRef = useRef(false);
+  useEffect(() => {
+    qaOpenRef.current = qaOpen;
+  }, [qaOpen]);
+  const floaterSeq = useRef(0);
+  // Slide-follow (doc 28): publish the current slide so share-link viewers
+  // can follow along; -1 on exit ends the live session. Best-effort.
+  useEffect(() => {
+    if (!designId) return;
+    void oc.presenterSetLiveSlide(designId, idx).catch(() => {});
+    // Republish on a heartbeat, not only on slide change. Followers treat the
+    // live position as stale after LIVE_STALE_MS so a presenter who closed the tab stops
+    // dragging the audience around, and talking over one slide for longer than
+    // that is the normal case, not the exception: without this the banner and
+    // slide-follow drop out mid-presentation and flap back on the next slide.
+    const beat = setInterval(() => {
+      void oc.presenterSetLiveSlide(designId, idx).catch(() => {});
+    }, LIVE_HEARTBEAT_MS);
+    return () => clearInterval(beat);
+  }, [designId, idx]);
+  useEffect(() => {
+    if (!designId) return;
+    return () => void oc.presenterSetLiveSlide(designId, -1).catch(() => {});
+  }, [designId]);
+
+  const refreshAudience = useCallback(async () => {
+    if (!designId) return;
+    try {
+      setAudState(await oc.presenterAudienceState(designId));
+    } catch {
+      // best-effort; the drawer shows the last known state
+    }
+  }, [designId]);
+  useEffect(() => {
+    if (!designId) return;
+    return onAudienceEvent((e) => {
+      if (e.kind === "reaction" && e.emoji) {
+        const id = ++floaterSeq.current;
+        setFloaters((f) => [...f.slice(-11), { id, emoji: e.emoji!, left: 8 + Math.random() * 84 }]);
+        setTimeout(() => setFloaters((f) => f.filter((x) => x.id !== id)), 2600);
+        return;
+      }
+      // "live" is this presenter's own slide publish echoing back; refetching
+      // the whole board on every heartbeat would be pure churn.
+      if (e.kind === "live") return;
+      if (e.kind === "question" && !qaOpenRef.current) setUnseen((n) => n + 1);
+      void refreshAudience();
+    });
+  }, [designId, refreshAudience]);
+
   const [audienceOpen, setAudienceOpen] = useState(false);
   const [popupBlocked, setPopupBlocked] = useState(false);
   const audienceLink = useRef<AudienceLink | null>(null);
@@ -1195,8 +1360,58 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
             {audienceOpen ? <MonitorX size={16} /> : <MonitorPlay size={16} />}
           </ToolButton>
         )}
+        <ToolButton active={recording} onClick={() => void toggleRecording()} title={recording ? "Stop recording and save the file" : "Record the presentation: slides + ink + narration"}>
+          <Disc size={16} className={recording ? "animate-pulse text-red-400" : undefined} />
+        </ToolButton>
+        {designId && (
+          <ToolButton
+            active={qaOpen}
+            onClick={() => {
+              const next = !qaOpen;
+              setQaOpen(next);
+              if (next) {
+                setUnseen(0); // opening marks everything seen
+                void refreshAudience();
+              }
+            }}
+            title="Audience Q&A and polls"
+          >
+            <span className="relative">
+              <MessageSquare size={16} />
+              {unseen > 0 && (
+                <span className="absolute -right-2 -top-2 grid h-4 min-w-4 place-items-center rounded-full bg-red-500 px-0.5 text-[9px] font-bold text-white">{unseen > 9 ? "9+" : unseen}</span>
+              )}
+            </span>
+          </ToolButton>
+        )}
         <ToolButton active={showHelp} onClick={() => setShowHelp((v) => !v)} title="Shortcuts (?)"><HelpCircle size={16} /></ToolButton>
       </div>
+
+      {recording && (
+        <div className="pointer-events-none absolute left-4 top-4 z-50 flex items-center gap-1.5 rounded-full bg-red-600/90 px-2.5 py-1 text-[11px] font-semibold text-white shadow-lg">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-white" /> REC
+        </div>
+      )}
+
+      {/* Audience reactions float up from the bottom edge (ephemeral). */}
+      {floaters.length > 0 && (
+        <div className="pointer-events-none absolute inset-0 z-40 overflow-hidden" aria-hidden>
+          {floaters.map((f) => (
+            <span key={f.id} className="absolute bottom-16 animate-bounce text-3xl drop-shadow-lg" style={{ left: `${f.left}%` }}>
+              {f.emoji}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {qaOpen && designId && (
+        <PresenterAudience
+          designId={designId}
+          state={audState}
+          onRefresh={() => void refreshAudience()}
+          onClose={() => setQaOpen(false)}
+        />
+      )}
 
       {showHelp && <ShortcutHelp onClose={() => setShowHelp(false)} />}
 
@@ -1720,4 +1935,146 @@ function compositeTransition(
       renderScene(createScene(tempDoc, to.pageIndex), destCtx as unknown as CanvasLike, vp, { assets: imageAssets });
     } catch { /* a cross-origin image can throw; skip the morphed layer */ }
   }
+}
+
+// Presenter-side audience drawer (doc 28): moderate viewer questions (answer /
+// dismiss), launch and close live polls, and clear the board between sessions.
+// Renders over present mode but never over the audience display (that window
+// only mirrors the slide canvas).
+function PresenterAudience({ designId, state, onRefresh, onClose }: {
+  designId: string;
+  state: AudienceState | null;
+  onRefresh: () => void;
+  onClose: () => void;
+}) {
+  const toast = useToast();
+  const [pollQ, setPollQ] = useState("");
+  const [pollOpts, setPollOpts] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function createPoll() {
+    const options = pollOpts.split("\n").map((o) => o.trim()).filter(Boolean);
+    if (!pollQ.trim() || options.length < 2 || busy) return;
+    // The server accepts 2..6 options; say so here rather than letting the
+    // request 422 with nothing shown to the presenter.
+    if (options.length > 6) {
+      toast.error("A poll takes at most 6 options.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await oc.presenterCreatePoll(designId, { question: pollQ.trim(), options });
+      setPollQ("");
+      setPollOpts("");
+      onRefresh();
+    } catch {
+      toast.error("Could not launch that poll.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const questions = state?.questions ?? [];
+  const polls = state?.polls ?? [];
+  return (
+    <aside className="light pointer-events-auto absolute bottom-16 right-4 top-4 z-50 flex w-80 flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xl">
+      <header className="flex items-center justify-between border-b border-neutral-100 px-3 py-2">
+        <span className="text-sm font-semibold text-neutral-800">Audience</span>
+        <span className="flex items-center gap-1">
+          <button
+            onClick={() => { void oc.presenterClearAudience(designId).then(onRefresh).catch(() => {}); }}
+            title="Clear all questions and polls (new session)"
+            className="rounded px-1.5 py-0.5 text-[11px] text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
+          >
+            Clear
+          </button>
+          <button onClick={onClose} aria-label="Close" className="rounded p-1 text-neutral-400 hover:bg-neutral-100"><X size={16} /></button>
+        </span>
+      </header>
+      <div className="oc-scroll flex-1 overflow-y-auto p-3">
+        {/* Poll launcher */}
+        <div className="mb-3 rounded-xl border border-neutral-200 p-2.5">
+          <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-neutral-400"><BarChart3 size={12} /> New poll</p>
+          <input
+            value={pollQ}
+            onChange={(e) => setPollQ(e.target.value)}
+            placeholder="Poll question…"
+            className="mb-1.5 w-full rounded-lg border border-neutral-200 px-2 py-1.5 text-xs outline-none focus:border-brand-400"
+          />
+          <textarea
+            value={pollOpts}
+            onChange={(e) => setPollOpts(e.target.value)}
+            placeholder={"One option per line (2-6)"}
+            rows={2}
+            className="mb-1.5 w-full resize-none rounded-lg border border-neutral-200 px-2 py-1.5 text-xs outline-none focus:border-brand-400"
+          />
+          <button
+            onClick={() => void createPoll()}
+            disabled={busy || !pollQ.trim() || pollOpts.split("\n").filter((o) => o.trim()).length < 2}
+            className="w-full rounded-lg bg-neutral-900 py-1.5 text-xs font-medium text-white disabled:opacity-40"
+          >
+            Launch poll
+          </button>
+        </div>
+
+        {polls.map((p) => {
+          const total = p.counts.reduce((s, n) => s + n, 0);
+          return (
+            <div key={p.id} className="mb-3 rounded-xl border border-neutral-200 p-2.5">
+              <p className="mb-1 flex items-center justify-between text-sm font-medium text-neutral-800">
+                <span className="truncate">{p.question}</span>
+                <button
+                  onClick={() => { void oc.presenterSetPollOpen(designId, p.id, !p.open).then(onRefresh).catch(() => {}); }}
+                  className={`ml-2 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${p.open ? "bg-emerald-100 text-emerald-700" : "bg-neutral-100 text-neutral-500"}`}
+                >
+                  {p.open ? "Open" : "Closed"}
+                </button>
+              </p>
+              {p.options.map((opt, i) => {
+                const pct = total ? Math.round((p.counts[i] / total) * 100) : 0;
+                return (
+                  <div key={i} className="relative mb-1 overflow-hidden rounded-lg border border-neutral-100 px-2 py-1 text-xs text-neutral-700">
+                    <span className="absolute inset-y-0 left-0 bg-brand-100/70" style={{ width: `${pct}%` }} aria-hidden />
+                    <span className="relative flex justify-between">
+                      <span className="truncate">{opt}</span>
+                      <span className="ml-2 shrink-0 tabular-nums text-neutral-500">{p.counts[i]} · {pct}%</span>
+                    </span>
+                  </div>
+                );
+              })}
+              <p className="text-right text-[10px] text-neutral-400">{total} vote{total === 1 ? "" : "s"}</p>
+            </div>
+          );
+        })}
+
+        {/* Questions, hottest first (server orders by votes). */}
+        {questions.map((q) => (
+          <div key={q.id} className={`mb-1.5 rounded-lg px-2 py-1.5 ${q.dismissed ? "bg-neutral-50 opacity-60" : "bg-neutral-50"}`}>
+            <p className="text-xs text-neutral-800">{q.text}</p>
+            <p className="mt-0.5 flex items-center gap-2 text-[10px] text-neutral-400">
+              <span className="flex items-center gap-0.5"><ThumbsUp size={10} /> {q.votes}</span>
+              <span className="truncate">{q.authorName || "Anonymous"}</span>
+              <span className="ml-auto flex gap-1">
+                <button
+                  onClick={() => { void oc.presenterModerateQuestion(designId, q.id, { answered: !q.answered }).then(onRefresh).catch(() => {}); }}
+                  title={q.answered ? "Mark unanswered" : "Mark answered"}
+                  className={`rounded p-0.5 ${q.answered ? "text-emerald-600" : "text-neutral-400 hover:text-neutral-600"}`}
+                >
+                  <CheckCircle2 size={12} />
+                </button>
+                <button
+                  onClick={() => { void oc.presenterModerateQuestion(designId, q.id, { dismissed: !q.dismissed }).then(onRefresh).catch(() => {}); }}
+                  title={q.dismissed ? "Restore" : "Dismiss (hides from the audience)"}
+                  className="rounded p-0.5 text-neutral-400 hover:text-neutral-600"
+                >
+                  <EyeOff size={12} />
+                </button>
+              </span>
+            </p>
+          </div>
+        ))}
+        {questions.length === 0 && <p className="py-3 text-center text-xs text-neutral-400">No questions yet. Share the link and ask the room to interact.</p>}
+      </div>
+    </aside>
+  );
 }

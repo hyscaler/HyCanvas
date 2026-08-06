@@ -20,6 +20,7 @@ import (
 	"hycanvas/backend/internal/ai"
 	"hycanvas/backend/internal/aistudio"
 	"hycanvas/backend/internal/approvals"
+	"hycanvas/backend/internal/audience"
 	"hycanvas/backend/internal/brand"
 	"hycanvas/backend/internal/bulkcreate"
 	"hycanvas/backend/internal/captcha"
@@ -60,6 +61,7 @@ type Deps struct {
 	AIStudio      *aistudio.Service
 	Uploads       *uploads.Service
 	Realtime      *realtime.Hub
+	Audience      *audience.Service
 	Templates     *templates.Service
 	Stock         *stock.Service
 	OIDC          *oidc.Service
@@ -177,6 +179,12 @@ func NewRouter(d Deps) http.Handler {
 		}
 		if d.Accounts != nil && d.AI != nil {
 			mountAI(api, d.AI, d.Accounts)
+		}
+		if d.Accounts != nil {
+			mountExtractURL(api, d.Accounts)
+		}
+		if d.Accounts != nil && d.Audience != nil && d.Sharing != nil && d.Persistence != nil {
+			mountAudience(api, d.Audience, d.Sharing, d.Persistence, d.Accounts)
 		}
 		if d.Accounts != nil && d.Uploads != nil {
 			mountUploads(api, d.Uploads, d.Accounts)

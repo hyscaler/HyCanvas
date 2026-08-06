@@ -26,7 +26,9 @@ import {
 } from "@hc/engine";
 import { imageAssets } from "@/lib/assetProvider";
 import { useViewBeat } from "@/lib/useViewBeat";
-import { nextVisibleIndex, prevVisibleIndex, firstVisibleIndex, visiblePosition } from "@/lib/present";
+import { AudiencePanel } from "@/components/AudiencePanel";
+import { oc } from "@/lib/sdk";
+import { nextVisibleIndex, prevVisibleIndex, firstVisibleIndex, visiblePosition, LIVE_STALE_MS } from "@/lib/present";
 
 type Transition = NonNullable<DesignFile["pages"][number]["transition"]>;
 
@@ -46,6 +48,42 @@ export function DeckPlayer({ doc, token, password }: { doc: DesignFile; token?: 
   const raf = useRef<number | null>(null);
 
   useViewBeat({ token, password, enabled: !!token, getPageId: () => doc.pages[index]?.id ?? null });
+
+  // Slide-follow (doc 28): while the presenter is live, offer to follow. The
+  // player polls the audience state (viewers hold no socket); a fresh live row
+  // (< LIVE_STALE_MS) shows the banner, and following mirrors the presenter's slide.
+  const [live, setLive] = useState<{ slide: number; at: number } | null>(null);
+  const [following, setFollowing] = useState(false);
+  const followingRef = useRef(false);
+  useEffect(() => {
+    followingRef.current = following;
+  }, [following]);
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    // Poll callbacks run async (never synchronously in the effect body), so
+    // the setState calls here satisfy the effects rule.
+    const poll = async () => {
+      try {
+        const st = await oc.audienceState(token, { voterKey: "follow-probe", password });
+        if (cancelled) return;
+        const fresh = st.live && Date.now() - new Date(st.live.updatedAt).getTime() < LIVE_STALE_MS ? st.live : null;
+        setLive(fresh ? { slide: fresh.slide, at: Date.now() } : null);
+        if (fresh && followingRef.current) {
+          const target = Math.max(0, Math.min(fresh.slide, doc.pages.length - 1));
+          setIndex((cur) => (cur === target ? cur : target));
+        }
+      } catch {
+        if (!cancelled) setLive(null);
+      }
+    };
+    void poll();
+    const t = setInterval(() => void poll(), 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [token, password, doc.pages.length]);
 
   const total = doc.pages.length;
   const { position, total: visibleTotal } = visiblePosition(doc.pages, index);
@@ -277,6 +315,27 @@ export function DeckPlayer({ doc, token, password }: { doc: DesignFile; token?: 
           </button>
         </div>
       </div>
+      {/* Live audience (doc 28): share-link viewers can react, ask questions,
+          and vote on the presenter's polls. Only on tokened (shared) views. */}
+      {token && <AudiencePanel token={token} password={password} />}
+      {token && live && (
+        <button
+          onClick={() => {
+            const next = !following;
+            setFollowing(next);
+            if (next && live) {
+              const target = Math.max(0, Math.min(live.slide, doc.pages.length - 1));
+              setIndex((cur) => (cur === target ? cur : target));
+            }
+          }}
+          className={`fixed left-1/2 top-4 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-xl backdrop-blur transition ${
+            following ? "bg-red-600/90 text-white" : "bg-neutral-900/85 text-white hover:bg-neutral-800"
+          }`}
+        >
+          <span className={`h-2 w-2 rounded-full ${following ? "animate-pulse bg-white" : "bg-red-500"}`} />
+          {following ? "Following the presenter - click to stop" : "Presenter is live - follow along"}
+        </button>
+      )}
     </div>
   );
 }

@@ -26,6 +26,7 @@ import (
 	"hycanvas/backend/internal/ai"
 	"hycanvas/backend/internal/aistudio"
 	"hycanvas/backend/internal/approvals"
+	"hycanvas/backend/internal/audience"
 	"hycanvas/backend/internal/brand"
 	"hycanvas/backend/internal/bulkcreate"
 	"hycanvas/backend/internal/captcha"
@@ -182,9 +183,30 @@ func main() {
 		func(ctx context.Context, designID, userID string) (string, error) {
 			return sharingSvc.ResolveGatewayRole(ctx, designID, userID, nil)
 		})
+	// Server-authoritative last-leave snapshot (doc 16 FR-11): when a design's
+	// room empties (10s grace for transient reconnects), fold its journaled
+	// update log server-side and materialize an AUTO snapshot. Catch-up-only:
+	// SnapshotFoldedUpdateLog skips when a client's own leave snapshot (or any
+	// newer write) already landed, so it acts exactly when a client died
+	// mid-edit and its journaled changes were never materialized.
+	rtHub = rtHub.WithLastLeaveHook(func(designID string) {
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+		created, err := persist.SnapshotFoldedUpdateLog(ctx, designID)
+		if err != nil {
+			slog.Warn("realtime: last-leave fold-and-snapshot failed", "design", designID, "err", err)
+			return
+		}
+		if created {
+			slog.Info("realtime: last-leave snapshot materialized from update log", "design", designID)
+		}
+	}, 10*time.Second)
 	// Approvals push a live role refresh to connected clients on lock/unlock via
 	// the realtime hub (F16 AC-9).
 	approvalsSvc := approvals.NewService(pool, sharingSvc, acct, rtHub, emitter)
+	// Live audience (doc 28): questions/polls/reactions from share-link viewers,
+	// fanned to the presenter over the realtime hub.
+	audienceSvc := audience.NewService(pool, rtHub)
 	// Horizontal scaling (optional): when REDIS_URL is set, fan relay/awareness
 	// frames out across gateway instances via Redis pub/sub so clients on
 	// different instances converge (roadmap doc 16, section 8). Unset = single
@@ -333,6 +355,7 @@ func main() {
 			AIStudio:      aiStudioSvc,
 			Uploads:       uploadsSvc,
 			Realtime:      rtHub,
+			Audience:      audienceSvc,
 			Templates:     templatesSvc,
 			Stock:         stockSvc,
 			OIDC:          oidcSvc,
