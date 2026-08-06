@@ -5,8 +5,15 @@
 // composes onto it.
 //
 // Fidelity notes (v1, documented vs the browser @hc/engine): linear & radial
-// gradient fills are rasterized (objectBoundingBox, per-pixel); shape strokes are
-// not stroked (line nodes are drawn as thick quads); unregistered/"system" text
+// gradient fills are rasterized (objectBoundingBox, per-pixel); shape strokes
+// follow the shape outline as thick quads with filled joins (see strokeOutline),
+// blend modes, drop shadows, and node effects (colour adjustments, blur, glow,
+// outline, duotone) composite through an isolated layer (see composite.go and
+// effects.go; shadow `spread` is not applied, inner shadows are skipped, blur is
+// a three-pass box approximation of a Gaussian, a node's effects apply to its
+// whole subtree where the browser resets them before children, and stroke dash
+// and align are ignored by both renderers alike);
+// unregistered/"system" text
 // uses the embedded Arial-metric fallback (Liberation Sans, so width-driven
 // layout matches the editor), positioned by translation+scale (rotation not
 // applied to glyphs) - legible and placed but not glyph-identical. Vector fills,
@@ -99,6 +106,8 @@ type rctx struct {
 	boxes map[string]rbox // page node world-boxes, for connector endpoint routing
 	base  mat             // output-scale matrix (page->device), for page-space connectors
 	alpha float64         // effective opacity of the node subtree being drawn
+	// Reusable page-sized buffers for blend/shadow layer isolation.
+	layerPool []*image.RGBA
 }
 
 // paint wraps a gradient/pattern source with the current subtree opacity.
@@ -216,30 +225,184 @@ func fillColorOf(node map[string]any) pdfColor {
 func (rc *rctx) rasterShape(m mat, node map[string]any) {
 	w, h := sizeOf(node)
 	fill := firstFill(node)
+	// The outline the shape is stroked along, in local space. Kept so the stroke
+	// can follow the same geometry the fill used; an ellipse is flattened to a
+	// polyline for stroking only.
+	var outline [][2]float64
 	switch asStr(node["shape"]) {
 	case "rect":
-		rc.fillPolyPaint(transformPts(m, [][2]float64{{0, 0}, {w, 0}, {w, h}, {0, h}}), fill, avgScale(m))
+		outline = [][2]float64{{0, 0}, {w, 0}, {w, h}, {0, h}}
+		rc.fillPolyPaint(transformPts(m, outline), fill, avgScale(m))
 	case "ellipse":
 		rc.rasterEllipse(m, w, h, fill)
+		if asObj(node["stroke"]) != nil {
+			outline = ellipseOutline(w, h, avgScale(m)) // only needed to stroke
+		}
 	case "polygon":
-		sides := int(asNum(node["sides"]))
-		if sides == 0 {
-			sides = 3
-		}
-		rc.fillPolyPaint(transformPts(m, polygonPoints(w, h, sides)), fill, avgScale(m))
+		sides := boundedSides(node["sides"], 3)
+		outline = polygonPoints(w, h, sides)
+		rc.fillPolyPaint(transformPts(m, outline), fill, avgScale(m))
 	case "triangle":
-		rc.fillPolyPaint(transformPts(m, polygonPoints(w, h, 3)), fill, avgScale(m))
+		outline = polygonPoints(w, h, 3)
+		rc.fillPolyPaint(transformPts(m, outline), fill, avgScale(m))
 	case "star":
-		pts := int(asNum(node["sides"]))
-		if pts == 0 {
-			pts = 5
-		}
+		pts := boundedSides(node["sides"], 5)
 		ir := asNum(node["innerRadius"])
 		if ir == 0 {
 			ir = 0.5
 		}
-		rc.fillPolyPaint(transformPts(m, starPoints(w, h, pts, ir)), fill, avgScale(m))
+		outline = starPoints(w, h, pts, ir)
+		rc.fillPolyPaint(transformPts(m, outline), fill, avgScale(m))
 	}
+	// Shapes were previously filled and never stroked, so a stroked rectangle
+	// exported without its border. Stroke the closed outline the same way a line
+	// node is stroked (thick quads per segment, round-ish joins).
+	rc.strokeOutline(m, node, outline, true)
+}
+
+// maxShapeSides bounds a polygon or star's point count. Beyond this the shape
+// is a circle to the eye, and the count comes from the file, so leaving it
+// unbounded lets one integer multiply into the per-segment stroke cost.
+const maxShapeSides = 512
+
+func boundedSides(v any, def int) int {
+	n := int(asNum(v))
+	if n <= 0 {
+		return def
+	}
+	if n < 3 {
+		return 3
+	}
+	if n > maxShapeSides {
+		return maxShapeSides
+	}
+	return n
+}
+
+// ellipseOutline flattens an ellipse to a polyline for stroking. The step count
+// follows the DEVICE radius: a fixed count leaves a visible wobble once the
+// exported ellipse is large (the sagitta grows with the radius), and the fill
+// itself is drawn from exact cubics, so the stroke would drift off its own edge.
+func ellipseOutline(w, h, scale float64) [][2]float64 {
+	cx, cy := w/2, h/2
+	r := math.Max(math.Abs(cx), math.Abs(cy)) * math.Max(scale, 0.01)
+	// Keep the chord sagitta under ~1/3 device pixel: steps = pi / acos(1 - t/r).
+	steps := 72
+	if r > 1 {
+		if want := int(math.Ceil(math.Pi / math.Acos(math.Max(-1, 1-0.33/r)))); want > steps {
+			steps = want
+		}
+	}
+	if steps > 2048 {
+		steps = 2048
+	}
+	pts := make([][2]float64, 0, steps)
+	for i := 0; i < steps; i++ {
+		t := 2 * math.Pi * float64(i) / float64(steps)
+		pts = append(pts, [2]float64{cx + cx*math.Cos(t), cy + cy*math.Sin(t)})
+	}
+	return pts
+}
+
+// strokeOutline draws a node's stroke along the given local-space outline.
+// Joins are filled dots, matching how ink and line nodes are stroked, so a
+// corner does not leave a notch.
+func (rc *rctx) strokeOutline(m mat, node map[string]any, outline [][2]float64, closed bool) {
+	if len(outline) < 2 {
+		return
+	}
+	stroke := asObj(node["stroke"])
+	if stroke == nil {
+		return
+	}
+	paint := pdfPaint(asObj(stroke["fill"]))
+	if !paint.ok {
+		return
+	}
+	width := asNum(stroke["width"])
+	if width <= 0 {
+		return
+	}
+	rc.strokePolyline(transformPts(m, outline), width*avgScale(m), rasterColor(paint, rc.alpha), closed)
+}
+
+// strokePolyline strokes a device-space polyline as one thick quad per segment
+// with filled joins, the same approximation line and ink nodes use. Shared by
+// shape strokes and outline effects so both agree.
+func (rc *rctx) strokePolyline(dev [][2]float64, widthDev float64, col color.RGBA, closed bool) {
+	if len(dev) < 2 || widthDev <= 0 {
+		return
+	}
+	if col.A == 0 {
+		return
+	}
+	hw := widthDev / 2
+	if hw < 0.4 {
+		hw = 0.4 // keep a hairline visible instead of dropping out
+	}
+	n := len(dev)
+	last := n - 1
+	if closed {
+		last = n
+	}
+	// One rasterizer for the whole stroke. Filling each segment separately
+	// allocates a full-canvas rasterizer per segment, which for a flattened
+	// ellipse is well over a hundred full-canvas passes and gigabytes of churn.
+	// Non-zero winding also means the overlapping quads and joins merge into a
+	// single shape, so a translucent stroke no longer double-darkens at joins.
+	subpaths := make([][][2]float64, 0, last*2)
+	for i := 0; i < last; i++ {
+		p0 := dev[i]
+		p1 := dev[(i+1)%n]
+		dx, dy := p1[0]-p0[0], p1[1]-p0[1]
+		length := math.Hypot(dx, dy)
+		if length == 0 {
+			continue
+		}
+		nx, ny := -dy/length*hw, dx/length*hw
+		subpaths = append(subpaths, [][2]float64{{p0[0] + nx, p0[1] + ny}, {p1[0] + nx, p1[1] + ny}, {p1[0] - nx, p1[1] - ny}, {p0[0] - nx, p0[1] - ny}})
+		if hw > 0.75 {
+			subpaths = append(subpaths, octagon(p1[0], p1[1], hw)) // join
+		}
+	}
+	rc.fillSubpaths(subpaths, col)
+}
+
+// fillSubpaths fills many polygons in ONE rasterizer pass (non-zero winding, so
+// overlaps merge instead of compounding).
+func (rc *rctx) fillSubpaths(polys [][][2]float64, col color.RGBA) {
+	if col.A == 0 || len(polys) == 0 {
+		return
+	}
+	r := vector.NewRasterizer(rc.w, rc.h)
+	drew := false
+	for _, pts := range polys {
+		if len(pts) < 3 {
+			continue
+		}
+		r.MoveTo(float32(pts[0][0]), float32(pts[0][1]))
+		for _, p := range pts[1:] {
+			r.LineTo(float32(p[0]), float32(p[1]))
+		}
+		r.ClosePath()
+		drew = true
+	}
+	if drew {
+		r.Draw(rc.dst, rc.dst.Bounds(), image.NewUniform(col), image.Point{})
+	}
+}
+
+// octagon returns the round-ish join polygon, wound the SAME direction as the
+// stroke quads. Winding matters because the whole stroke is one non-zero-winding
+// rasterizer pass: a join wound the other way cancels the quads it overlaps and
+// punches a hole clean through the stroke at every corner.
+func octagon(cx, cy, r float64) [][2]float64 {
+	pts := make([][2]float64, 0, 8)
+	for i := 7; i >= 0; i-- {
+		t := math.Pi * 2 * float64(i) / 8
+		pts = append(pts, [2]float64{cx + r*math.Cos(t), cy + r*math.Sin(t)})
+	}
+	return pts
 }
 
 // rasterImage draws an image node into its (transformed) box. The pixel bytes
@@ -723,12 +886,141 @@ func (rc *rctx) rasterNode(m mat, node map[string]any) {
 	if asBool(node["hidden"]) {
 		return
 	}
+	// Blend modes and drop shadows need the node drawn in isolation before it
+	// meets the page, so they get a transparent layer and a composite step. The
+	// browser gets this from Canvas2D for free; without it a multiply layer
+	// exports as normal and a shadow exports as nothing. Nodes with neither draw
+	// straight into the page buffer, so the common path is unchanged.
+	mode, shadows, effects := blendModeOf(node), shadowsOf(node), effectsOf(node)
+	if mode != "" || len(shadows) > 0 || hasLayerEffect(effects) {
+		rc.rasterLayered(m, node, mode, shadows, effects)
+		return
+	}
+	rc.rasterNodeDirect(m, node)
+}
+
+// rasterLayered draws the node into its own transparent layer, paints any drop
+// shadows beneath it, then composites the layer with its blend mode.
+func (rc *rctx) rasterLayered(m mat, node map[string]any, mode string, shadows []shadowSpec, effects []effectSpec) {
+	page := rc.dst
+	layer := rc.takeLayer()
+	defer rc.releaseLayer(layer)
+	// The node's OWN opacity is applied inside the layer, because
+	// rasterNodeDirect applies it while drawing the subtree (which also keeps
+	// group opacity behaving exactly as it did before isolation existed).
+	// Only the INHERITED alpha is applied on the way back in; multiplying by the
+	// node's opacity again here would darken it twice.
+	prevAlpha := rc.alpha
+	rc.dst, rc.alpha = layer, 1
+	rc.rasterNodeDirect(m, node)
+	rc.dst, rc.alpha = page, prevAlpha
+	// Colour and spatial effects transform the node's own pixels, in the order
+	// they are declared (CSS filters compose in sequence, so the order is part
+	// of the result). Adjustments fold into one matrix per run so a stack of
+	// sliders is a single pass.
+	cm := m.compose(nodeMat(node))
+	xf := offsetXformOf(cm)
+	scale := xf.scale
+	pending := identityMatrix()
+	flush := func() {
+		applyColorMatrix(layer, pending)
+		pending = identityMatrix()
+	}
+	for _, e := range effects {
+		switch e.kind {
+		case "adjustment":
+			ops, _ := e.raw["ops"].([]any)
+			for _, o := range ops {
+				oo := asObj(o)
+				if oo == nil {
+					continue
+				}
+				mtx, blurPx, known := adjustmentMatrix(asStr(oo["name"]), asNum(oo["value"]))
+				if !known {
+					continue
+				}
+				pending = pending.mul(mtx)
+				if blurPx > 0 {
+					flush()
+					blurLayer(layer, blurPx*scale)
+				}
+			}
+		case "blur":
+			if r := asNum(e.raw["radius"]); r > 0 {
+				flush()
+				blurLayer(layer, r*scale)
+			}
+		case "duotone":
+			flush()
+			applyDuotoneLayer(layer, e.raw)
+		}
+	}
+	flush()
+	// The outline strokes the node's box OVER its own content (the browser
+	// strokes it after painting the node), so it belongs in the layer and
+	// participates in the node's blend mode and opacity.
+	drawOutlineNow := func() {
+		if !hasOutline(effects) {
+			return
+		}
+		into, prevA := rc.dst, rc.alpha
+		// Inside the layer the node's own opacity is the only alpha in force;
+		// the inherited part is applied to the finished layer below. Tinting
+		// with rc.alpha here would apply the inherited alpha a second time.
+		rc.dst, rc.alpha = layer, nodeOpacity(node)
+		rc.outlineBox(cm, node, effects)
+		rc.dst, rc.alpha = into, prevA
+	}
+	// Shadows and glows belong to the node's own image, not to the page: the
+	// browser puts them in the CSS filter, which runs BEFORE the composite
+	// operation, so a shadow under a screen-blended node is screened too.
+	// Painting them straight onto the page would exempt them from the blend and
+	// would also let the node blend against its own shadow.
+	if len(shadows) > 0 || hasGlow(effects) {
+		// The outline is stroked after the shadow is cast, because the browser
+		// strokes it once the filter is cleared: an outline does not thicken
+		// the silhouette its own node's shadow comes from.
+		under := rc.takeLayer()
+		defer rc.releaseLayer(under)
+		for _, e := range effects {
+			if e.kind == "glow" {
+				drawGlow(under, layer, e.raw, xf, 1)
+			}
+		}
+		if len(shadows) > 0 {
+			// The silhouette already carries the node's opacity, so the shadow
+			// fades with the node for free.
+			drawShadows(under, layer, shadows, xf, 1)
+		}
+		compositeLayer(under, layer, "normal") // the node over its own shadow
+		layer = under
+	}
+	drawOutlineNow()
+	if prevAlpha < 1 {
+		scaleLayerAlpha(layer, prevAlpha)
+	}
+	if mode == "" {
+		mode = "normal"
+	}
+	compositeLayer(page, layer, mode)
+}
+
+// nodeOpacity is a node's own opacity, clamped, defaulting to fully opaque.
+func nodeOpacity(node map[string]any) float64 {
+	o, ok := node["opacity"].(float64)
+	if !ok || o >= 1 {
+		return 1
+	}
+	if o < 0 {
+		return 0
+	}
+	return o
+}
+
+func (rc *rctx) rasterNodeDirect(m mat, node map[string]any) {
 	// Node opacity multiplies down the subtree (groups included, via recursion).
 	prev := rc.alpha
-	if o, ok := node["opacity"].(float64); ok && o < 1 {
-		if o < 0 {
-			o = 0
-		}
+	if o := nodeOpacity(node); o < 1 {
 		rc.alpha = prev * o
 	}
 	defer func() { rc.alpha = prev }()
