@@ -28,6 +28,12 @@ Prior scope decisions bound this document. F30 section 18 records "WebGL/WebGPU 
 
 Status legend: **Built** (ships today, code-referenced), **Partial** (some of it ships, gaps noted), **Seam only** (a type, config field, or stub exists but nothing consumes it), **Not started**.
 
+## Sequencing
+
+**F38 (accessibility, i18n, security, compliance, self-host, NFR) precedes this spec.** That ordering was set in August 2026 on adoption evidence: internationalisation and accessibility show more evidence of blocking adoption than creative depth does, and both are axes a desktop-native incumbent cannot follow the product onto. The reasoning is recorded in `README.md` under "Why F38 precedes the creation-depth set" and in F38's own Priority section.
+
+This does not reduce the value of the work below; it places it second, and it means Phase 0 is the exception that should be pulled forward regardless: it contains no GPU code, it fixes export defects users hit today, and it is the parity net every later spec depends on. Note also that canvas rendering forfeits the accessibility the browser provides for free, an obligation F38 owns through its derived accessibility tree, which is a further reason F38 lands first.
+
 ## 1. Context and Goal
 
 HyCanvas renders every document type through one Canvas2D scene-graph renderer that runs unchanged in the browser, in a worker, and headless. That uniformity is the reason the animation core, present mode, and animated export agree, and it is worth defending. The measured browser paint proof says Canvas2D comfortably clears 60fps on a 1000-node page at devicePixelRatio 2, so nothing that ships today needs a GPU.

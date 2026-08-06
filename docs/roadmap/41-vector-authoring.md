@@ -40,6 +40,12 @@ Export parity. `raster.go` `rasterNode` (736-780) handles `path` and `boolean` (
 
 Status legend: **Built** (ships today, code-referenced), **Partial** (some of it ships, gaps noted), **Planned (doc 40)** (the mechanism is owned by the procedural-core spec), **Planned (doc 44)** (depends on the GPU path), **Not started**.
 
+## Sequencing
+
+**F38 (accessibility, i18n, security, compliance, self-host, NFR) precedes this spec.** That ordering was set in August 2026 on adoption evidence: internationalisation and accessibility show more evidence of blocking adoption than creative depth does, and both are axes a desktop-native incumbent cannot follow the product onto. The reasoning is recorded in `README.md` under "Why F38 precedes the creation-depth set" and in F38's own Priority section.
+
+This does not reduce the value of the work below; it places it second, and it means the parts worth pulling forward early are the ones that serve the existing audience. Measured demand from a template-first audience for pen and path authoring is very low; the exceptions with real pull are text on a simple arc and ingesting vector assets a user already owns. Treat the full authoring toolset as a deliberate move toward a different, more professional audience, made with open eyes, rather than as a natural continuation of the current product.
+
 ## 1. Context and Goal
 
 The market bar for professional vector authoring is well established and has been stable for years: a pen tool with three handle modes and endpoint continuation; direct selection with marquee, nudge, align, join, split, average, and simplify; live booleans whose operands remain editable indefinitely; a stack of parametric path effects (offset, outline, corner, roughen, warp, variable width) that can be reordered and re-tuned at any time and expanded to plain geometry only on demand; a shape builder for drawing regions in and out of overlapping art; text on a path, text in a shape, and text converted to outlines; gradient meshes; raster-to-vector tracing with tunable parameters; and, in the technical-drawing corner of the market, a constraint solver that holds parallel, perpendicular, equal-length, tangent, and coincident relations while the rest of the drawing moves. Free and open tools cover parts of this; the complete set, in one tool, with a documented file format, does not exist for free.

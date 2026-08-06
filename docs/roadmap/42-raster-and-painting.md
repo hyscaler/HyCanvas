@@ -30,6 +30,12 @@ What does not exist, at all: a brush engine (stamps, spacing, flow, hardness, ti
 
 Status legend: **Built** (ships today, code-referenced), **Partial** (some of it ships, gaps noted), **Planned (doc 40)** / **Planned (doc 44)** / **Planned (doc 23)** (depends on the sibling spec named), **Not started**.
 
+## Sequencing
+
+**F38 (accessibility, i18n, security, compliance, self-host, NFR) precedes this spec.** That ordering was set in August 2026 on adoption evidence: internationalisation and accessibility show more evidence of blocking adoption than creative depth does, and both are axes a desktop-native incumbent cannot follow the product onto. The reasoning is recorded in `README.md` under "Why F38 precedes the creation-depth set" and in F38's own Priority section.
+
+This does not reduce the value of the work below; it places it second, and it means the parts worth pulling forward early are the ones that serve the existing audience. For raster that is AI-assisted work (background removal, object erase, image-to-editable-layers) plus basic adjustments, which is where the demand actually sits; the brush engine, pixel selections, and liquify serve a different audience and compete with free incumbents.
+
 ## 1. Context and Goal
 
 A design platform that cannot paint is a layout tool. Professional imaging splits into two markets that both sit outside HyCanvas today: digital painting and illustration (brush engines, pressure and tilt, custom tips, canvas rotation, stabilization) and photo work (selections, masks, adjustment layers, retouching, warp). The tools that own those markets are desktop-first, mostly closed, mostly per-seat, and none of them are a collaborative web canvas that a team can self-host. Meanwhile the tools that own the collaborative web canvas cannot paint a stroke. The opening is the intersection: pixel work that is native to the same document as the vector work, editable by the same collaborators, exportable through the same open format, and running on the buyer's own hardware.

@@ -22,6 +22,12 @@ Three further facts shape the design. First, the product already carries THREE i
 
 Status legend: **Built** (ships today, code-referenced), **Partial** (some of it ships, gaps noted), **Planned (doc 40)** (depends on the F40 parameter/evaluation model), **Not started**.
 
+## Sequencing
+
+**F38 (accessibility, i18n, security, compliance, self-host, NFR) precedes this spec.** That ordering was set in August 2026 on adoption evidence: internationalisation and accessibility show more evidence of blocking adoption than creative depth does, and both are axes a desktop-native incumbent cannot follow the product onto. The reasoning is recorded in `README.md` under "Why F38 precedes the creation-depth set" and in F38's own Priority section.
+
+This does not reduce the value of the work below; it places it second, and it means the parts worth pulling forward early are the ones that serve the existing audience. For motion that is the SEQUENCING tier (per-element order, duration, delay, trigger, and reliable animated export with alpha), which is where measured demand stops. The timeline, curve editor, drivers, and expressions serve motion designers, and a cautionary case exists of a mainstream tool harming its core audience by retrofitting a professional timeline.
+
 ## 1. Context and Goal
 
 Professional motion tooling splits into three camps and HyCanvas sits in none of them. Compositors and motion-design suites give deep keyframing, a graph editor, expressions, and procedural noise, but they are desktop applications that produce rendered video and a proprietary project file. Vector-animation runtimes give small, scalable, interactive output that ships inside real products, but authoring is either a plugin on top of a compositor or a separate tool with its own closed format. Web design tools give scroll and hover motion, but only over their own DOM output, not over a design document, and nothing they produce is editable outside the tool. Across all three, the thing that separates a motion designer from an animator is procedural control: a wiggle expression, an oscillator, an offset applied across 200 instances, a parameter driven by another parameter, so a change to one number restyles the whole motion instead of forcing a re-key of every element.
@@ -37,6 +43,7 @@ In scope:
 - A design-document timeline panel: playhead, time ruler, per-target lanes, keyframes, an editable bezier curve / graph editor over value-versus-time, and keyframe workflows (insert, move, scale, copy, retime, hold).
 - Onion skinning for frame-by-frame work, on the design canvas.
 - Drivers and expressions: parameter-to-parameter binding, time drivers, a restricted deterministic expression language, and baked audio-amplitude envelopes.
+- Hardware control surfaces (MIDI) as an AUTHORING input: knobs and faders drive parameters live while you work, and a performance can be recorded into a channel. What lands in the document is always baked data, never a live device binding.
 - Procedural motion: seeded noise and wiggle, oscillators, stagger/offset across instanced or repeated elements, and motion sourced from the F40 procedural graph.
 - Interactive and real-time output: triggers (click, hover, view-enter, scroll, state, time), state machines for interactive components, a real-time playback runtime, and a published interactive document served through the existing sharing/publishing path.
 - Export and import: animated SVG (SMIL and a CSS/WAAPI variant), a real Lottie exporter (upgrading the shipped rectangle-proxy exporter) and a Lottie importer, plus reuse of the existing video/GIF/APNG paths.
@@ -130,6 +137,7 @@ The heart of this spec. Status values: **Built**, **Partial**, **Planned (doc 40
 | Stagger / offset across instanced or repeated elements | Not started | n/a | P0. One rule (step ms, ordering by index, spatial distance from a point, or seeded shuffle) applied over a set. `magicAnimatePage` writing literal increasing `delayMs` is the crude precedent and stays for presets. |
 | Motion from the procedural graph | Planned (doc 40) | n/a | P1. A graph output feeds a channel target; an instancer's per-instance index and position are the stagger ordering inputs. Requires F40's instancing to exist. |
 | Baked audio-amplitude envelope driver | Not started | n/a | P1. Amplitude is analysed once at bind time into a quantized, versioned envelope stored with the document; both the browser and the server read the SAME envelope, which is the only way audio-driven motion can render identically headless. |
+| MIDI control surface (authoring input) | Not started | n/a | P2. Web MIDI knobs/faders/pads bound to parameters for live tweaking, and a record mode that captures a performance into a channel as keyframes. The binding is a workstation preference, NOT document data: a document that only renders correctly with a particular controller plugged in is not a document. Follows the audio-envelope precedent (bake at capture, store the result). Requires a user gesture and a permission prompt; unavailable in Safari and in the headless renderer, where it is simply absent rather than degraded. |
 | Driver graph validation (acyclic, bounded, typed) | Not started | n/a | P0. Cycles rejected at write time and re-checked at load; a cyclic or over-budget driver set never blocks opening the document, it degrades to the rest pose with a surfaced warning. |
 
 ### Interactivity, triggers, and state machines
@@ -253,6 +261,7 @@ Data integrity:
 Accessibility:
 - FR-27: `prefers-reduced-motion` is a hard requirement in the real-time runtime and the published document. The runtime resolves a reduced evaluation mode that freezes looping, oscillator, noise, and audio drivers at their frame-0 value, collapses transitions to a cross-fade, and disables autoplaying loops. A document cannot override it. Export honors it when the export is requested with the flag, reusing the shipped `planDeckFrames({reducedMotion})` behaviour.
 - FR-28: The timeline, transport, keyframe editing, and curve-handle manipulation are fully keyboard operable with announced values: playhead by arrow keys with a frame-step modifier, keyframe next/previous, set/delete key, and exact numeric entry for time, value, and tangents. Every control has an accessible name and an announced state.
+- FR-29: A MIDI control surface can be bound to any animatable parameter for AUTHORING: a control change moves the parameter live in the editor, and a record mode captures the movement into a channel as keyframes (rate-limited and simplified on commit, so a thirty-second knob sweep does not become nine hundred keys). Bindings live in workstation preferences, never in the document, and the captured keyframes are ordinary channel data indistinguishable from hand-authored ones. Absence of a device, of the Web MIDI API, or of permission changes nothing about how a document opens, renders, or exports.
 
 ## 7. Data model / schema changes
 
@@ -421,6 +430,8 @@ All motion AI builds on the shipped F39 AI Creative Studio (`@hc/aistudio`): the
 
 Expressions are user code. That is the defining security fact of this spec, and it is compounded by the requirement that the same code must also run server-side during a headless render. Cross-cutting SSO/compliance/observability infrastructure is owned by F38; this section covers the motion-specific posture.
 
+Web MIDI (FR-29) is the one device-access surface added here, and it is deliberately small: it is requested only on an explicit user gesture when a control surface is first bound, it is never requested at page load, SysEx is never requested (the permission prompt is materially scarier with it and nothing here needs it), and no device identifier reaches the document or the server. Because the binding is a workstation preference and the captured output is ordinary keyframes, an attacker who somehow forged MIDI input could move a slider in someone's editor and nothing more; there is no path from a device message to stored data that a normal edit could not also produce.
+
 - The expression language is not JavaScript and is not evaluated by a JavaScript engine. It is a small grammar (numeric and colour literals, named inputs, arithmetic and comparison operators, a ternary, and an allowlisted pure function set) parsed into an AST and interpreted by hand-written evaluators in TypeScript and Go. There is no property access, no member call, no loop, no assignment, no string-to-code path, and no host object in scope. `eval`, `new Function`, and dynamic `import` appear nowhere in the runtime, which also makes the published bundle CSP-safe under a strict policy.
 - Resource bounds are enforced at parse time and at evaluation time: a maximum AST node count per expression, a maximum input-reference count, a maximum evaluation depth, a maximum total driver-graph node count per document, and a per-frame evaluation budget. Exceeding a budget degrades that driver to its rest value and surfaces a warning; it never hangs a frame, and it never fails a document open (FR-15).
 - The driver graph is proven acyclic at write time and re-proven at load, because a document can arrive from an import, from another client, or from an older binary. A cycle is a rejection at write and a degrade-to-rest at load.
@@ -514,6 +525,7 @@ These sample representative, testable criteria across the phases; a requirement 
 - AC-20: A document with 2,000 animated parameters evaluates within the 4ms budget and plays at 60fps with dirty-parameter rendering; a 10-minute timeline scrolls and zooms without materializing per-frame UI (section 10).
 - AC-21: The motion-safety checker flags a driver whose resolved motion flashes above 3 Hz and a full-bleed parallax, each with a one-click fix (section 12).
 - AC-22: No motion feature (timeline, curve editor, drivers, expressions, state machines, the real-time runtime, Lottie/SVG export, publishing) is gated behind a tier or watermarked, and the whole motion document exports to the open format and runs self-hosted (differentiator 1).
+- AC-23: Recording a MIDI knob sweep onto a parameter produces channel keyframes that play back identically with the controller unplugged, in a browser with no Web MIDI support, and in the headless server render; the document contains no reference to the device, and re-opening it on a machine that has never seen a controller shows the same motion (FR-29).
 
 ## 16. Test plan
 

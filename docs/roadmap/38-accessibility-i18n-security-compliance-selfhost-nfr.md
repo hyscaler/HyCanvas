@@ -5,7 +5,17 @@
 | Feature ID | F38 |
 | Phase | 9 Cross-cutting |
 | Sequence | 38 |
-| Status | Not started |
+| Status | Not started. **Prioritized ahead of the creation-depth set (F40 to F45)** as of August 2026; see "Priority" below |
+
+## Priority
+
+This spec is the next programme of work, ahead of F40 to F45, on adoption evidence rather than preference. A demand review found that internationalisation and accessibility show more evidence of BLOCKING adoption than creative-depth capabilities do, and that both are axes a desktop-native incumbent cannot easily follow us onto.
+
+The short version. Measured demand for creative depth from a template-first audience is weak (a pen tool scores single-digit votes on the closest vote-counted analogue board, against four figures for "let me export something a professional can open"), while language support is stated by real teams as the single reason they cannot adopt a tool, to the point that a paid industry exists to pre-fix right-to-left text for products that lack shaping. Accessibility behaves differently again: it is a procurement gate, not a popularity contest. Public buyers are required to demand conformance evidence and to prefer a conforming product where one exists, several universities restrict competing tools specifically over the accessibility of their EXPORTS rather than any missing feature, and the leading products' published conformance records are either years out of date or absent. Vote counts understate this badly, because one blocked institution is one lost contract.
+
+Two consequences for how this document is read. First, the export-accessibility half (reading order, tagging, and preservation through format transformation) outranks the in-editor half, because that is where competitors actually fail and where procurement actually looks. Second, the RTL and Indic work in the i18n section share a root cause in text shaping, so they are one investment and should be scheduled together rather than as separate locales.
+
+Nothing here reduces the value of F40 to F45. It sequences them second, and it means the parts of that set worth pulling forward early are the ones serving the existing audience (F44's Phase 0 parity work, outbound layered export, basic print mechanics, motion at the sequencing tier) rather than the ones that pursue a new one.
 
 ## 1. Context and Goal
 

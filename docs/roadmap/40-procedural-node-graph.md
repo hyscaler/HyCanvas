@@ -33,6 +33,12 @@ What does not exist. There is no graph anywhere in the file format, no evaluator
 
 Status legend: **Built** (ships today, code-referenced), **Partial** (some of it ships, gaps noted), **Not started**. Priorities are marked P0 (required for the phase to be usable), P1 (expected), P2 (later).
 
+## Sequencing
+
+**F38 (accessibility, i18n, security, compliance, self-host, NFR) precedes this spec.** That ordering was set in August 2026 on adoption evidence: internationalisation and accessibility show more evidence of blocking adoption than creative depth does, and both are axes a desktop-native incumbent cannot follow the product onto. The reasoning is recorded in `README.md` under "Why F38 precedes the creation-depth set" and in F38's own Priority section.
+
+This does not reduce the value of the work below; it places it second, and it means the parts worth pulling forward early are the ones that serve the existing audience. For this spec that is non-destructive BEHAVIOUR (a re-editable effect stack presented as an ordinary list), not the graph panel. Note also that no demand evidence for a surfaced node graph was found from a template-first audience, which is why FR-3's progressive-disclosure rule is a hard contract rather than a preference.
+
 ## 1. Context and Goal
 
 Professional 2D tooling has converged on the same idea from three directions. Compositing and VFX tools have been node graphs for decades because a shot is re-graded, re-timed, and re-delivered constantly and nobody can afford to re-do the work. Photo and raster tools moved to non-destructive adjustment layers and smart objects for the same reason. Motion tools express an animation as a graph of effects over time. What every one of them shares is that the artwork is data and the render is a consequence, so changing a decision from three hours ago costs one parameter edit. What almost none of them share is that the graph is also approachable: in most of these products the graph is either the only way to work (which excludes most designers) or a bolted-on expert mode disconnected from the layer view (which means the two views drift).

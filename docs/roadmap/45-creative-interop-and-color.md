@@ -32,6 +32,12 @@ One more current-state fact matters for zero data loss and is easy to miss. `wra
 
 Status legend: **Built** (ships today, code-referenced), **Partial** (some of it ships, gaps noted), **Declared** (types or flags exist with no implementation behind them), **Not started**.
 
+## Sequencing
+
+**F38 (accessibility, i18n, security, compliance, self-host, NFR) precedes this spec.** That ordering was set in August 2026 on adoption evidence: internationalisation and accessibility show more evidence of blocking adoption than creative depth does, and both are axes a desktop-native incumbent cannot follow the product onto. The reasoning is recorded in `README.md` under "Why F38 precedes the creation-depth set" and in F38's own Priority section.
+
+This does not reduce the value of the work below; it places it second, and it means the parts worth pulling forward early are the ones that serve the existing audience. That is OUTBOUND interop (layered export a professional can open), which is the single largest measured request in this segment, plus basic print mechanics (bleed, crop marks, 300dpi, RGB to CMYK on export). Full colour management and the inbound professional-format importers rank lower: the deepest browser imaging tool added colour profiles only long after it was already large, and the market leader already ships PSD and AI import.
+
 ## 1. Context and Goal
 
 The product goal sheet lists "a real vector editor and print-grade CMYK/ICC color built in" as differentiator 5. Half of that is F41's job. This spec is the other half, plus the reason anyone would move their existing work here at all.
