@@ -48,6 +48,7 @@ import {
 } from "lucide-react";
 import { createBlankDesign } from "@hc/schema";
 import { HYC_ACCEPT, downloadHycFile, importedTitle, parseHycFile, readFileText } from "@/lib/hycFile";
+import { pptxToDesign } from "@hc/export";
 import { ApiError, type DesignRecord, type HomeItem, type MyTask, type StorageUsageView, type TaskStatus, type TemplateCollectionSummary, type TemplateSummary, type WorkspaceRole } from "@hc/sdk";
 import { formatBytes } from "@/lib/format";
 import { useDateFormat } from "@/lib/datetime";
@@ -389,7 +390,14 @@ export function DashboardApp({ view }: { view: DashboardView }) {
     if (!f || !activeWorkspaceId || busy) return;
     setBusy(true);
     try {
-      const file = parseHycFile(await readFileText(f));
+      // .pptx imports through the client-side OOXML parser (doc 28 interop):
+      // slides land as editable pages, embedded media as self-contained data
+      // URLs the server ingests like any pasted image. Everything else is the
+      // open .hyc format.
+      const isPptx = /\.pptx$/i.test(f.name) || f.type === "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+      const file = isPptx
+        ? await pptxToDesign(new Uint8Array(await f.arrayBuffer()), { title: f.name.replace(/\.pptx$/i, "") })
+        : parseHycFile(await readFileText(f));
       const title = importedTitle(file, f.name);
       const rec = await oc.createDesign({ workspaceId: activeWorkspaceId, title, from: { ...file, title } });
       toast.success(`Imported "${title}".`);
@@ -726,14 +734,14 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                 <FormatTile key={f.label} f={f} disabled={busy} onClick={() => startFormat(f)} />
               ))}
               <FormatTile
-                f={{ label: "Import .hyc", icon: FileUp, w: 1080, h: 1080 } as Format}
+                f={{ label: "Import (.hyc, .pptx)", icon: FileUp, w: 1080, h: 1080 } as Format}
                 disabled={busy}
                 onClick={() => importDesignRef.current?.click()}
               />
               <input
                 ref={importDesignRef}
                 type="file"
-                accept={HYC_ACCEPT}
+                accept={`${HYC_ACCEPT},.pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation`}
                 hidden
                 onChange={(e) => {
                   void importHycDesign(e.target.files);

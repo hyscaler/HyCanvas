@@ -3,7 +3,7 @@
 // are undoable. Uploads/stock images are placed via the image asset provider.
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type FormEvent } from "react";
-import { Square, SquareRoundCorner, Circle, Triangle, Pentagon, Hexagon, Star, Diamond, Octagon, Frame, QrCode, Type, Upload, Search, Table as TableIcon, BarChart3, LineChart, AreaChart, PieChart, Donut, ScatterChart, Radar, Wand2, ImagePlus, Settings2, Trash2, Folder, FolderPlus, Pencil, X, Tag, ChevronLeft, Link as LinkIcon, Mic, Video, MonitorUp, CircleStop, Spline, Clock, LayoutGrid, Shapes, Sparkles, Stethoscope, AlignStartVertical, Play, ChevronDown, Send, Plus, RotateCcw, FileDown } from "lucide-react";
+import { Square, SquareRoundCorner, Circle, Triangle, Pentagon, Hexagon, Star, Diamond, Octagon, Frame, QrCode, Type, Upload, Search, Table as TableIcon, BarChart3, LineChart, AreaChart, PieChart, Donut, ScatterChart, Radar, Wand2, ImagePlus, Settings2, Trash2, Folder, FolderPlus, Pencil, X, Tag, ChevronLeft, Link as LinkIcon, Mic, Video, MonitorUp, CircleStop, Spline, Clock, LayoutGrid, Shapes, Sparkles, Stethoscope, AlignStartVertical, Play, ChevronDown, Send, Plus, RotateCcw, FileDown, FileText, Paperclip } from "lucide-react";
 import { migrate, type ChartType, type Node, type Fill, type Color } from "@hc/schema";
 import { searchFonts, type FontCatalogEntry } from "@hc/text";
 import { toHex, fromHex, relativeLuminance } from "@hc/color";
@@ -41,8 +41,10 @@ import { ApiError, type AiConfigView, type AssetFolder, type MiniAppSummary, typ
 import { DesignThumb } from "@/components/dashboard/DesignThumb";
 import { checkAppAction, type AppAction } from "@hc/stock";
 import { oc, resolveAssetUrl, stockProxyUrl, uploadAssetWithProgress } from "@/lib/sdk";
+import { pdfFileToText } from "@/lib/pdfImport";
+import { mermaidToDiagram, normalizeDiagramSpec, type DiagramSpec } from "@hc/whiteboard";
 import type { BrandVoice, BrandLintViolation } from "@hc/sdk";
-import { useEditor, type BrandFixTarget } from "@/store/editor";
+import { useEditor, type BrandFixTarget, type DeckTextEntry } from "@/store/editor";
 import { useBrand } from "@/store/brand";
 import { useComments } from "@/store/comments";
 import { useToast } from "@/components/ui/Toast";
@@ -1810,7 +1812,28 @@ type ResolvedPayload =
   | { kind: "text"; text: string; targetId?: string }
   | { kind: "image"; image: string; targetId?: string }
   | { kind: "bgimage"; image: string }
+  | { kind: "decktexts"; entries: DeckTextEntry[] }
+  | { kind: "notes"; notes: string[] }
+  | { kind: "diagram"; spec: DiagramSpec }
+  | { kind: "clusters"; clusters: { title: string; ids: string[] }[] }
+  | { kind: "summary"; text: string }
   | { kind: "outline"; outline: DesignOutline; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroImages: { pageIndex: number; url: string }[]; append: boolean };
+
+/** Parse a model reply that must be a JSON array of exactly `n` strings.
+ *  Tolerates markdown fences; anything else (wrong shape, wrong length,
+ *  non-string entries) returns null so the caller surfaces a clean error
+ *  instead of applying garbage to the document. */
+function parseStringArray(reply: string, n: number): string[] | null {
+  const cleaned = reply.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  try {
+    const parsed: unknown = JSON.parse(cleaned);
+    if (!Array.isArray(parsed) || parsed.length !== n) return null;
+    if (!parsed.every((s) => typeof s === "string")) return null;
+    return parsed as string[];
+  } catch {
+    return null;
+  }
+}
 
 interface AssistantDeps {
   workspaceId: string;
@@ -1818,6 +1841,10 @@ interface AssistantDeps {
   brandPalette: string[];
   brandFonts: { heading?: string; body?: string };
   imageCapable: boolean;
+  /** Attached source content (doc 28 FR-23 doc/URL/file-to-deck ingestion):
+   *  generateDesign grounds its outline strictly in this text when present. */
+  sourceText?: string;
+  sourceName?: string;
 }
 
 // Outline roles that get a generated hero background image (the high-impact
@@ -1917,6 +1944,134 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       if (!text.trim()) return { error: "no text returned" };
       return { payload: { kind: "text", text: text.trim(), targetId: sel } };
     }
+    case "translateDeck": {
+      const language = String(a.language ?? "").trim();
+      if (!language) return { error: "which language?" };
+      const entries = st.collectDeckTexts();
+      if (!entries.length) return { error: "there's no text to translate" };
+      // Translate as ordered JSON string arrays in bounded batches: order and
+      // length are the contract, so each string maps back to its collected
+      // address (text run / sticky / notes) and styling is untouched.
+      const translated: string[] = [];
+      const BATCH = 60;
+      for (let i = 0; i < entries.length; i += BATCH) {
+        const batch = entries.slice(i, i + BATCH).map((e) => e.text);
+        const system = [
+          `You are a professional translator. Translate every string in the user's JSON array into ${language}.`,
+          "The strings are labels and copy on a designed layout: keep meaning and tone, and keep each translation close to the original's length.",
+          "Preserve numbers, URLs, emails, emoji, and proper nouns. Never merge, split, reorder, drop, or add entries.",
+          "Return ONLY a JSON array of strings with exactly the same length and order as the input. No prose, no markdown fences.",
+        ].join(" ");
+        const { text } = await oc.aiText({ workspaceId: deps.workspaceId, prompt: JSON.stringify(batch), system });
+        const parsed = parseStringArray(text, batch.length);
+        if (!parsed) return { error: "the translation came back malformed - try again" };
+        translated.push(...parsed);
+      }
+      return { payload: { kind: "decktexts", entries: entries.map((e, i) => ({ ref: e.ref, text: translated[i] })) } };
+    }
+    case "generateSpeakerNotes": {
+      const pages = st.doc.pages;
+      if (!pages.length) return { error: "there are no slides yet" };
+      // One compact text summary per slide (what's visibly on it), capped so a
+      // dense deck stays inside a single prompt.
+      const entries = st.collectDeckTexts();
+      const perPage = new Map<number, string[]>();
+      const pageIndexByNode = new Map<string, number>();
+      pages.forEach((pg, i) => {
+        const walk = (ns: { id?: string; children?: unknown[] }[]) => {
+          for (const n of ns) {
+            if (typeof n.id === "string") pageIndexByNode.set(n.id, i);
+            if (Array.isArray(n.children) && n.children.length) walk(n.children as { id?: string; children?: unknown[] }[]);
+          }
+        };
+        walk(pg.children as { id?: string; children?: unknown[] }[]);
+      });
+      for (const e of entries) {
+        if (e.ref.kind === "notes") continue; // existing notes are being replaced
+        const idx = e.ref.kind === "run" || e.ref.kind === "sticky" ? (pageIndexByNode.get(e.ref.nodeId) ?? -1) : -1;
+        if (idx < 0) continue;
+        const list = perPage.get(idx) ?? [];
+        if (list.join(" ").length < 800) list.push(e.text);
+        perPage.set(idx, list);
+      }
+      const summaries = pages.map((_, i) => (perPage.get(i) ?? []).join(" · ") || "(a visual slide with no text)");
+      const guidance = String(a.instruction ?? "").trim();
+      const notes: string[] = [];
+      const BATCH = 20;
+      for (let i = 0; i < summaries.length; i += BATCH) {
+        const batch = summaries.slice(i, i + BATCH);
+        const system = [
+          "You write speaker notes a presenter reads while showing each slide.",
+          "For each slide summary in the user's JSON array, write natural spoken-style notes: 2-4 short sentences that add context and delivery cues beyond what the slide already says. Do not simply restate the slide text.",
+          guidance ? `Extra guidance from the presenter: ${guidance}.` : "",
+          deps.voiceClause,
+          "Return ONLY a JSON array of strings with exactly the same length and order as the input. No prose, no markdown fences.",
+        ].filter(Boolean).join(" ");
+        const { text } = await oc.aiText({ workspaceId: deps.workspaceId, prompt: JSON.stringify(batch), system });
+        const parsed = parseStringArray(text, batch.length);
+        if (!parsed) return { error: "the notes came back malformed - try again" };
+        notes.push(...parsed);
+      }
+      return { payload: { kind: "notes", notes } };
+    }
+    case "generateDiagram": {
+      const prompt = String(a.prompt ?? "").trim();
+      if (!prompt) return { error: "what should the diagram show?" };
+      // Pasted Mermaid source imports directly - no AI round-trip (doc 30
+      // diagram-as-code). Anything else asks the model for a spec.
+      const direct = mermaidToDiagram(prompt);
+      if (direct) return { payload: { kind: "diagram", spec: direct } };
+      const kind = String(a.kind ?? "").toLowerCase() === "mindmap" ? "mindmap" : "flowchart";
+      const system = [
+        `You design ${kind === "mindmap" ? "mind maps" : "flowcharts"}. From the user's description, return ONLY a JSON object:`,
+        `{"kind":"${kind}","nodes":[{"id":"a","label":"Short label"}],"edges":[{"from":"a","to":"b","label":"optional"}]}`,
+        kind === "mindmap"
+          ? "The FIRST node is the central topic; edges go parent to child, forming a tree."
+          : "Order nodes roughly in flow order; edges follow the process direction; label branch edges (yes/no, pass/fail).",
+        "6-25 nodes, short labels (2-6 words). No prose, no markdown fences.",
+      ].join(" ");
+      const { text } = await oc.aiText({ workspaceId: deps.workspaceId, prompt, system });
+      const spec = normalizeDiagramSpec(parseModelJson(text));
+      if (!spec) return { error: "the diagram came back malformed - try again" };
+      spec.kind = kind;
+      return { payload: { kind: "diagram", spec } };
+    }
+    case "clusterStickies": {
+      const stickies = st.collectBoardStickies();
+      if (stickies.length < 3) return { error: "add at least 3 sticky notes to cluster" };
+      const guidance = String(a.instruction ?? "").trim();
+      const system = [
+        "You run affinity clustering on brainstorm sticky notes. Group the user's JSON array of {id,text} into 2-8 coherent themes.",
+        guidance ? `Clustering guidance: ${guidance}.` : "",
+        'Return ONLY a JSON array like [{"title":"Theme name","ids":["id1","id2"]}]. Every sticky id appears in exactly one theme. Short, specific titles. No prose, no markdown fences.',
+      ].filter(Boolean).join(" ");
+      const { text } = await oc.aiText({ workspaceId: deps.workspaceId, prompt: JSON.stringify(stickies), system });
+      const parsed = parseModelJson(text);
+      if (!Array.isArray(parsed)) return { error: "the clustering came back malformed - try again" };
+      const known = new Set(stickies.map((sk) => sk.id));
+      const clusters = parsed
+        .map((c) => {
+          const o = c as { title?: unknown; ids?: unknown };
+          const ids = Array.isArray(o.ids) ? o.ids.filter((i): i is string => typeof i === "string" && known.has(i)) : [];
+          return { title: typeof o.title === "string" ? o.title : "Theme", ids };
+        })
+        .filter((c) => c.ids.length > 0);
+      if (!clusters.length) return { error: "no usable clusters came back - try again" };
+      return { payload: { kind: "clusters", clusters } };
+    }
+    case "summarizeStickies": {
+      const stickies = st.collectBoardStickies();
+      if (!stickies.length) return { error: "there are no sticky notes to summarize" };
+      const system = [
+        "You summarize a brainstorm board's sticky notes.",
+        "Write a concise summary: 2-4 key themes as short lines, then decisions and action items if any are implied.",
+        "Plain text with line breaks; no markdown syntax.",
+        deps.voiceClause,
+      ].filter(Boolean).join(" ");
+      const { text } = await oc.aiText({ workspaceId: deps.workspaceId, prompt: stickies.map((sk) => `- ${sk.text}`).join("\n"), system });
+      if (!text.trim()) return { error: "no summary returned" };
+      return { payload: { kind: "summary", text: text.trim() } };
+    }
     case "generateImage": {
       if (!deps.imageCapable) return { error: "this provider can't generate images - connect an image-capable provider (e.g. OpenAI)" };
       const logo = String(a.style ?? "").toLowerCase().includes("logo");
@@ -1962,7 +2117,13 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       const brandClause = [deps.voiceClause, deps.brandPalette.length ? `Use this brand palette: ${deps.brandPalette.join(", ")}.` : ""].filter(Boolean).join(" ").trim();
       const pageCount = typeof a.pageCount === "number" ? a.pageCount : dt === "poster" ? 1 : undefined;
       const append = String(a.mode ?? "").toLowerCase() === "append";
-      const outline = await fetchAssistantOutline(deps.workspaceId, dt, String(a.prompt), brandClause, pageCount);
+      // Document/URL/file-to-deck (FR-23): with attached source content, the
+      // outline is grounded strictly in it rather than invented from the brief.
+      let brief = String(a.prompt);
+      if (deps.sourceText) {
+        brief = `${brief}\n\nGround every page STRICTLY in this source content ("${deps.sourceName ?? "attached document"}"): keep its structure, facts, and key points, and do not invent material that is not in it.\n--- SOURCE START ---\n${deps.sourceText.slice(0, 24000)}\n--- SOURCE END ---`;
+      }
+      const outline = await fetchAssistantOutline(deps.workspaceId, dt, brief, brandClause, pageCount);
       if (!outline) return { error: "couldn't plan that design" };
       // Defensive page cap (the server caps too, but the sync-fallback outline
       // and a non-compliant model can still over-produce): a poster is exactly
@@ -2104,6 +2265,35 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       st.setText(ctx.payload.targetId, ctx.payload.text);
       return true;
     }
+    case "translateDeck": {
+      // Whole-deck translation (doc 28 FR-23): the resolve pass translated every
+      // collected string; write each back to its exact address (text run /
+      // sticky / notes) in one undo step, styling untouched.
+      if (ctx?.payload?.kind !== "decktexts") return false;
+      st.applyDeckTexts(ctx.payload.entries);
+      return true;
+    }
+    case "generateSpeakerNotes": {
+      // AI speaker notes (doc 28 FR-23): one note per slide into Page.notes,
+      // surfaced in presenter view and the notes panel.
+      if (ctx?.payload?.kind !== "notes") return false;
+      ctx.payload.notes.forEach((n, i) => {
+        if (typeof n === "string" && n.trim()) st.setPageNotes(n.trim(), i);
+      });
+      return true;
+    }
+    case "generateDiagram": {
+      if (ctx?.payload?.kind !== "diagram") return false;
+      return st.insertDiagramSpec(ctx.payload.spec);
+    }
+    case "clusterStickies": {
+      if (ctx?.payload?.kind !== "clusters") return false;
+      return st.applyStickyClusters(ctx.payload.clusters);
+    }
+    case "summarizeStickies": {
+      if (ctx?.payload?.kind !== "summary") return false;
+      return st.insertSummaryNote(ctx.payload.text);
+    }
     case "generateImage": {
       if (ctx?.payload?.kind !== "image") return false;
       placeImage(ctx.payload.image);
@@ -2162,6 +2352,11 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   const [input, setInput] = useState("");
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [busy, setBusy] = useState(false);
+  // Attached source content for create-from-document/URL/file (FR-23).
+  const [source, setSource] = useState<{ name: string; text: string } | null>(null);
+  const [attachOpen, setAttachOpen] = useState(false);
+  const [attachUrl, setAttachUrl] = useState("");
+  const [attachBusy, setAttachBusy] = useState(false);
   // FR-8: a plan awaiting confirmation before it mutates the document.
   const [pending, setPending] = useState<{ plan: PlanStep[]; reply: string } | null>(null);
   // FR-9/FR-27: persisted session id for this design (created lazily).
@@ -2239,7 +2434,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
           // best-effort; the applyBrand step will simply report nothing to fix
         }
       }
-      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable };
+      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, sourceText: source?.text, sourceName: source?.name };
       const payloads: (ResolvedPayload | undefined)[] = [];
       const skips: (string | undefined)[] = [];
       for (let i = 0; i < plan.length; i++) {
@@ -2316,15 +2511,20 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       // Prefer the backend orchestrator (server-side validation/retry, FR-12);
       // fall back to the free-text path. Either way the client re-validates arg
       // types via parseAssistantReply before anything executes.
+      // With a source attached, tell the planner it exists (the executor does
+      // the grounding); the user's words alone often don't mention it.
+      const plannerText = source
+        ? `${userText}\n[Note: the user attached source content "${source.name}" (${source.text.length} chars). To create a deck/design from it, plan generateDesign - the executor grounds the outline in the attachment automatically.]`
+        : userText;
       let res;
       try {
-        const r = await oc.aiAssistant({ workspaceId, designSummary: summary, history, message: userText });
+        const r = await oc.aiAssistant({ workspaceId, designSummary: summary, history, message: plannerText });
         res = parseAssistantReply(r, ASSISTANT_CATALOG);
       } catch (e) {
         if (e instanceof ApiError && !endpointUnavailable(e)) throw e; // surface provider/policy errors
         try {
           const system = assistantSystemPrompt(ASSISTANT_CATALOG, summary);
-          const { text } = await oc.aiText({ workspaceId, prompt: history ? `${history}\nuser: ${userText}` : userText, system });
+          const { text } = await oc.aiText({ workspaceId, prompt: history ? `${history}\nuser: ${plannerText}` : plannerText, system });
           res = parseAssistantReply(parseModelJson(text), ASSISTANT_CATALOG);
         } catch (e2) {
           if (e2 instanceof ApiError) throw e2; // a provider/policy error surfaces via the outer catch
@@ -2494,9 +2694,87 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
         </div>
       )}
 
+      {/* Source attachment (FR-23): paste text, fetch a URL, or pick a file;
+          the next "create a deck from this" grounds its outline in it. */}
+      {source && (
+        <div className="mt-2 flex shrink-0 items-center gap-2 rounded-lg border border-brand-200 bg-brand-50 px-2.5 py-1.5 text-[11px] text-brand-ink">
+          <FileText size={12} className="shrink-0" />
+          <span className="min-w-0 flex-1 truncate" title={source.name}>{source.name} · {Math.round(source.text.length / 1000)}k chars</span>
+          <button onClick={() => setSource(null)} aria-label="Remove attached content" className="rounded p-0.5 hover:bg-brand-100"><X size={12} /></button>
+        </div>
+      )}
+      {attachOpen && !source && (
+        <div className="mt-2 flex shrink-0 flex-col gap-1.5 rounded-lg border border-neutral-200 bg-neutral-50 p-2">
+          <textarea
+            placeholder="Paste text or notes to build from…"
+            rows={3}
+            className="w-full resize-none rounded-md border border-neutral-200 bg-surface px-2 py-1.5 text-xs outline-none focus:border-brand-400"
+            onBlur={(e) => {
+              const t = e.target.value.trim();
+              if (t) { setSource({ name: "Pasted text", text: t }); setAttachOpen(false); }
+            }}
+          />
+          <div className="flex items-center gap-1.5">
+            <input
+              value={attachUrl}
+              onChange={(e) => setAttachUrl(e.target.value)}
+              placeholder="https://a-page-to-import…"
+              className="min-w-0 flex-1 rounded-md border border-neutral-200 bg-surface px-2 py-1.5 text-xs outline-none focus:border-brand-400"
+            />
+            <button
+              disabled={attachBusy || !/^https?:\/\//i.test(attachUrl.trim())}
+              onClick={() => {
+                const url = attachUrl.trim();
+                setAttachBusy(true);
+                void oc.aiExtractUrl({ url })
+                  .then((r) => { setSource({ name: r.title || url, text: r.text }); setAttachOpen(false); setAttachUrl(""); })
+                  .catch(() => toast.error("Couldn't read that page."))
+                  .finally(() => setAttachBusy(false));
+              }}
+              className="rounded-md bg-neutral-900 px-2.5 py-1.5 text-xs font-medium text-surface disabled:opacity-40"
+            >
+              {attachBusy ? "Fetching…" : "Fetch"}
+            </button>
+            <label className="cursor-pointer rounded-md border border-neutral-200 bg-surface px-2.5 py-1.5 text-xs text-neutral-700 hover:bg-neutral-100">
+              File
+              <input
+                type="file"
+                accept=".txt,.md,.markdown,.pdf,text/plain,text/markdown,application/pdf"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!f) return;
+                  setAttachBusy(true);
+                  const finish = (text: string) => {
+                    const t = text.trim();
+                    if (t) { setSource({ name: f.name, text: t.slice(0, 60000) }); setAttachOpen(false); }
+                    else toast.error("No readable text in that file.");
+                    setAttachBusy(false);
+                  };
+                  if (/\.pdf$/i.test(f.name) || f.type === "application/pdf") {
+                    void pdfFileToText(f).then(finish).catch(() => { toast.error("Couldn't read that PDF."); setAttachBusy(false); });
+                  } else {
+                    void f.text().then(finish).catch(() => { toast.error("Couldn't read that file."); setAttachBusy(false); });
+                  }
+                }}
+              />
+            </label>
+          </div>
+        </div>
+      )}
+
       {/* Composer, pinned to the bottom. */}
       <div className="mt-2 shrink-0">
         <div className="flex items-end gap-1.5 rounded-2xl border border-neutral-300 bg-surface px-2 py-1.5 focus-within:border-brand-400">
+          <button
+            onClick={() => setAttachOpen((v) => !v)}
+            title="Attach content to build from (paste, URL, or file)"
+            aria-label="Attach content"
+            className={`mb-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg ${attachOpen || source ? "bg-brand-50 text-brand-ink" : "text-neutral-400 hover:bg-neutral-100"}`}
+          >
+            <Paperclip size={15} />
+          </button>
           <textarea
             ref={inputRef}
             value={input}

@@ -5,9 +5,12 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { compileAttribution, attributionText } from "@hc/stock";
-import { AlertTriangle, ShieldAlert, ChevronDown, Check, Image as ImageIcon, FileText, Shapes, Download } from "lucide-react";
-import { toSvg, rasterDimensions, encodeApng, encodeGif, designPageToLottie } from "@hc/export";
+import { AlertTriangle, ShieldAlert, ChevronDown, Check, Image as ImageIcon, FileText, Shapes, Download, Film } from "lucide-react";
+import { toSvg, rasterDimensions, encodeApng, encodeGif, designPageToLottie, deckToPptx, type PptxImage, type PptxRaster } from "@hc/export";
+import { worldAABB } from "@hc/editor";
+import { resolveAssetUrl } from "@/lib/sdk";
 import { zipFiles, type ZipEntry } from "@/lib/zip";
+import { deckToVideoFile } from "@/lib/video/deckToVideo";
 import type { BrandLintResult } from "@hc/sdk";
 import {
   createScene,
@@ -28,7 +31,7 @@ import { imageAssets } from "@/lib/assetProvider";
 import { oc } from "@/lib/sdk";
 import { useToast } from "@/components/ui/Toast";
 
-type Format = "png" | "jpg" | "pdf" | "svg" | "apng" | "gif" | "lottie";
+type Format = "png" | "jpg" | "pdf" | "svg" | "apng" | "gif" | "lottie" | "mp4" | "pptx";
 
 const FORMATS: { value: Format; label: string; suffix: string; desc: string; icon: typeof ImageIcon; badge?: string }[] = [
   { value: "png", label: "PNG", suffix: "png", desc: "High quality, supports transparency", icon: ImageIcon, badge: "Recommended" },
@@ -38,6 +41,8 @@ const FORMATS: { value: Format; label: string; suffix: string; desc: string; ico
   { value: "apng", label: "Animated PNG", suffix: "apng", desc: "Plays the deck (or page) with transitions, lossless", icon: ImageIcon },
   { value: "gif", label: "Animated GIF", suffix: "gif", desc: "Plays the deck (or page) with transitions, widely supported", icon: ImageIcon },
   { value: "lottie", label: "Lottie", suffix: "json", desc: "Vector animation JSON (lottie-web, After Effects)", icon: Shapes },
+  { value: "mp4", label: "Video (MP4)", suffix: "mp4", desc: "The whole deck as a video: slide timing, element animations, and transitions (renders on the server)", icon: Film },
+  { value: "pptx", label: "PowerPoint (PPTX)", suffix: "pptx", desc: "Editable slides for PowerPoint, Keynote, and Google Slides; text and shapes stay editable, complex elements embed as images", icon: FileText },
 ];
 
 /** Render one page to an offscreen canvas at `scale`. Fills white when opaque
@@ -61,6 +66,84 @@ function renderPageCanvas(doc: import("@hc/schema").DesignFile, index: number, s
   // not just the white canvas prefill, or the PNG comes out opaque.
   renderScene(createScene(doc, index), ctx as unknown as CanvasLike, vp, { assets: imageAssets, skipBackground: !opaque });
   return canvas;
+}
+
+/** Image-asset bytes for the PPTX exporter: fetch the asset URL; PowerPoint
+ *  accepts png/jpeg natively, anything else transcodes to PNG via a canvas. */
+async function pptxImageResolver(doc: import("@hc/schema").DesignFile, assetId: string): Promise<PptxImage | null> {
+  const ref = doc.assets?.find((a) => a.id === assetId);
+  if (!ref?.url) return null;
+  try {
+    const res = await fetch(resolveAssetUrl(ref.url), { credentials: "include" });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    const mime = blob.type || ref.mime || "image/png";
+    if (mime === "image/png" || mime === "image/jpeg") {
+      return { data: new Uint8Array(await blob.arrayBuffer()), mime };
+    }
+    // Transcode (webp/svg/...) to PNG so the package stays universally openable.
+    const bmp = await createImageBitmap(blob);
+    const canvas = document.createElement("canvas");
+    canvas.width = bmp.width;
+    canvas.height = bmp.height;
+    canvas.getContext("2d")?.drawImage(bmp, 0, 0);
+    const png: Blob | null = await new Promise((r) => canvas.toBlob(r, "image/png"));
+    return png ? { data: new Uint8Array(await png.arrayBuffer()), mime: "image/png" } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Raster fallback for PPTX: render ONE node (its rendered bounds, ancestors'
+ *  transforms applied) to a PNG at 2x, hiding every unrelated node. Keeps
+ *  charts/paths/ink/tables visually intact inside the exported slides. */
+async function pptxNodeRasterizer(doc: import("@hc/schema").DesignFile, pageIndex: number, nodeId: string): Promise<PptxRaster | null> {
+  const box = worldAABB(doc, nodeId);
+  const pg = doc.pages[pageIndex];
+  if (!box || !pg || box.width <= 0 || box.height <= 0) return null;
+  // Visible set: the node, its descendants, and its ancestor chain (so nested
+  // targets render); everything else on the page hides.
+  const keep = new Set<string>([nodeId]);
+  const chain = (nodes: import("@hc/schema").Node[], anc: string[]): boolean => {
+    for (const n of nodes) {
+      const kids = (n as { children?: import("@hc/schema").Node[] }).children ?? [];
+      if (n.id === nodeId || chain(kids, [...anc, n.id])) {
+        for (const a of anc) keep.add(a);
+        if (n.id === nodeId) {
+          const collect = (ns: import("@hc/schema").Node[]) => {
+            for (const k of ns) { keep.add(k.id); collect((k as { children?: import("@hc/schema").Node[] }).children ?? []); }
+          };
+          collect(kids);
+          keep.add(n.id);
+        }
+        return true;
+      }
+    }
+    return false;
+  };
+  chain(pg.children as import("@hc/schema").Node[], []);
+  const hiddenIds = new Set<string>();
+  const walkAll = (ns: import("@hc/schema").Node[]) => {
+    for (const n of ns) {
+      if (!keep.has(n.id)) hiddenIds.add(n.id);
+      walkAll(((n as { children?: import("@hc/schema").Node[] }).children ?? []) as import("@hc/schema").Node[]);
+    }
+  };
+  walkAll(pg.children as import("@hc/schema").Node[]);
+
+  const RASTER_SCALE = 2;
+  const w = Math.max(1, Math.round(box.width * RASTER_SCALE));
+  const h = Math.max(1, Math.round(box.height * RASTER_SCALE));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  const vp: Viewport = { zoom: RASTER_SCALE, panX: box.x, panY: box.y, dpr: 1, width: box.width, height: box.height };
+  renderScene(createScene(doc, pageIndex), ctx as unknown as CanvasLike, vp, { assets: imageAssets, skipBackground: true, hiddenIds });
+  const blob: Blob | null = await new Promise((r) => canvas.toBlob(r, "image/png"));
+  if (!blob) return null;
+  return { png: new Uint8Array(await blob.arrayBuffer()), x: box.x, y: box.y, width: box.width, height: box.height };
 }
 
 /**
@@ -245,14 +328,14 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
   const isRaster = format === "png" || format === "jpg";
   // Animated/vector-anim formats export a single file of the active page only.
   const isSingleAnimated = format === "apng" || format === "gif" || format === "lottie";
-  const sizable = format !== "svg" && format !== "lottie" && !(format === "pdf" && taggedPdf); // resolution-independent
+  const sizable = format !== "svg" && format !== "lottie" && format !== "mp4" && format !== "pptx" && !(format === "pdf" && taggedPdf); // resolution-independent
   // The page(s) that will actually be exported, sorted; PDF always uses all
   // selected, raster/svg emit one file per selected page.
   const pages = selected.length ? [...selected].sort((a, b) => a - b) : [Math.min(activePage, pageCount - 1)];
   // Live pixel dimensions for the first exported page (design tools commonly show this).
   const refPage = doc.pages[pages[0]] ?? doc.pages[0];
   const dim = rasterDimensions(refPage, { scale }, doc.dpi ?? 96);
-  const fileCount = format === "pdf" || isSingleAnimated ? 1 : pages.length;
+  const fileCount = format === "pdf" || format === "mp4" || format === "pptx" || isSingleAnimated ? 1 : pages.length;
 
   function togglePage(i: number) {
     setSelected((prev) => (prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]));
@@ -303,7 +386,43 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
       const safeBase = (doc.title || "design").replace(/[^\w.-]+/g, "-").replace(/^-+|-+$/g, "") || "design";
       const nameFor = (i: number, suffix: string) => (fileCount > 1 ? `${safeBase}-${i + 1}.${suffix}` : `${safeBase}.${suffix}`);
 
-      if (format === "pdf" && taggedPdf && designId) {
+      if (format === "pptx") {
+        // PPTX interop export (doc 28): fully client-side; text and mappable
+        // shapes stay editable in PowerPoint, everything else embeds as a
+        // correctly-placed PNG via the per-node rasterizer.
+        const bytes = await deckToPptx(doc, {
+          title: doc.title,
+          resolveImage: (assetId) => pptxImageResolver(doc, assetId),
+          rasterizeNode: (pi, nodeId) => pptxNodeRasterizer(doc, pi, nodeId),
+        });
+        download(new Blob([bytes as unknown as BlobPart], { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" }), `${safeBase}.pptx`);
+        toast.success(`Downloaded ${safeBase}.pptx`);
+      } else if (format === "mp4") {
+        // Whole-deck video export (doc 28 FR-19): convert the deck to a video
+        // project client-side (each slide a scene with its timing, animations,
+        // and transition) and render it on the server video pipeline via the
+        // inline-file override - nothing new is persisted. Slide duration comes
+        // from each page's autoAdvanceMs (default applies otherwise).
+        if (!designId) {
+          toast.error("Save the design first - video renders on the server.");
+          return;
+        }
+        const videoFile = deckToVideoFile(doc);
+        const { jobId } = await oc.startVideoExport(designId, { file: videoFile });
+        // Server render takes a while for long decks; poll up to ~5 minutes.
+        let done = false;
+        for (let i = 0; i < 150; i++) {
+          await new Promise((res) => setTimeout(res, 2000));
+          const job = await oc.getJob(jobId);
+          if (job.status === "completed") { done = true; break; }
+          if (job.status === "failed") throw new Error(job.error || "video render failed");
+        }
+        if (!done) throw new Error("video render timed out");
+        const res = await fetch(oc.videoExportDownloadUrl(designId, jobId), { credentials: "include" });
+        if (!res.ok) throw new Error(`video download failed (${res.status})`);
+        download(await res.blob(), `${safeBase}.mp4`);
+        toast.success(`Downloaded ${safeBase}.mp4`);
+      } else if (format === "pdf" && taggedPdf && designId) {
         // The server renders the design as last saved, so it is fetched rather
         // than built here. Its text is real text in the author's reading order.
         const res = await fetch(oc.taggedPdfUrl(designId), { credentials: "include" });

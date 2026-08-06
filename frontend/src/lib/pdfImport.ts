@@ -45,6 +45,29 @@ function textNode(str: string, x: number, top: number, fontSize: number, width: 
   } as Partial<Node>);
 }
 
+/** Extract a PDF's plain text (doc 28 FR-23 file-to-deck ingestion): all
+ *  pages' text items joined with line/page breaks, for grounding an outline.
+ *  Caps at maxPages so a giant PDF can't hang the tab. */
+export async function pdfFileToText(file: File, maxPages = 60): Promise<string> {
+  const pdfjs = (await import("pdfjs-dist")) as unknown as PdfjsModule;
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
+  const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
+  const parts: string[] = [];
+  try {
+    const pages = Math.min(doc.numPages, maxPages);
+    for (let i = 1; i <= pages; i++) {
+      const page = await doc.getPage(i);
+      const content = await page.getTextContent();
+      const line = content.items.map((it) => (it.str ?? "").trim()).filter(Boolean).join(" ");
+      if (line) parts.push(line);
+      page.cleanup?.();
+    }
+  } finally {
+    await doc.destroy?.();
+  }
+  return parts.join("\n\n");
+}
+
 /** Parse a PDF into editable pages (text only). */
 export async function pdfToPages(data: ArrayBuffer): Promise<PdfImportedPage[]> {
   const pdfjs = (await import("pdfjs-dist")) as unknown as PdfjsModule;
