@@ -19,11 +19,11 @@ Nothing here reduces the value of F40 to F45. It sequences them second, and it m
 
 ## 1. Context and Goal
 
-Every feature doc before this one carries its own accessibility, performance, and security notes. This document consolidates those cross-cutting concerns into one enforceable specification and adds the enterprise and operational layer that turns HyCanvas from a working product into a production-grade, enterprise-ready, self-hostable platform. It covers four things: making the editor and its outputs accessible (WCAG 2.2 AA) and internationalized (100+ languages and RTL); securing and governing the platform for organizations (SSO/SCIM/MFA, RBAC, audit, DLP, encryption and customer-managed keys); meeting compliance and data-residency obligations (SOC 2, GDPR, CCPA, ISO 27001, HIPAA); and delivering the self-host/private-cloud option plus the non-functional targets (availability, scalability, reliability, observability, backups/DR) that all of the above depend on.
+Every feature doc before this one carries its own accessibility, performance, and security notes. This document consolidates those cross-cutting concerns into one enforceable specification and adds the enterprise and operational layer that turns HyCanvas from a working product into a production-grade, enterprise-ready, self-hostable platform. It covers four things: making the editor and its outputs accessible (WCAG 2.2 AA) and internationalized (100+ languages and RTL); securing and governing the platform for organizations (OIDC SSO, MFA, RBAC, a workspace audit trail, and encryption in transit and at rest); meeting compliance and data-residency obligations (SOC 2, GDPR, CCPA, ISO 27001, HIPAA); and delivering the self-host/private-cloud option plus the non-functional targets (availability, scalability, reliability, observability, backups/DR) that all of the above depend on.
 
 This doc depends on all others because it cuts across them: accessibility applies to every editor surface, i18n to all UI strings and exports, security and audit to every action, and the NFR targets to every service. It does not re-specify feature behavior; it specifies the standards, controls, and infrastructure that every feature must satisfy, and the shared services (accessibility checker, localization runtime, audit log, key management, deployment topology) that implement them once for the whole product. Consistent with the product principle that everything is free, every capability here, including SSO, audit, compliance posture, and self-host, is available to organizations at no license cost.
 
-Intended outcome: the editor is fully keyboard-navigable and screen-reader-usable, designs can be checked and exported as accessible artifacts, the UI runs in 100+ languages including RTL, organizations can enforce SSO/SCIM/MFA/RBAC/DLP with a complete audit trail, the platform meets the named compliance frameworks with data-residency options, and the entire system can be self-hosted with customer-managed keys while meeting a 99.9%+ SLA with defined RPO/RTO.
+Intended outcome: the editor is fully keyboard-navigable and screen-reader-usable, designs can be checked and exported as accessible artifacts, the UI runs in 100+ languages including RTL, organizations can enforce SSO, MFA and RBAC with a workspace audit trail, the platform meets the named compliance frameworks with data-residency options, and the entire system can be self-hosted while meeting a 99.9%+ SLA with defined RPO/RTO.
 
 ## 2. Scope
 
@@ -31,17 +31,28 @@ In scope:
 - Accessibility of the application: WCAG 2.2 AA conformance for the editor and all product UI, full keyboard navigation, screen reader support, focus management, reduced-motion and high-contrast modes.
 - Accessibility of outputs: a built-in accessibility checker for designs (color contrast, alt text, reading order, tap-target size), auto alt-text generation (composing with AI), and tagged/accessible PDF export (extending the export engine).
 - Internationalization and localization: UI localization in 100+ languages, RTL layout mirroring, locale-aware formatting, and correct complex-script shaping in content (composing with the text engine).
-- Identity and access for organizations: SSO (SAML 2.0 and OIDC), SCIM 2.0 provisioning, MFA, and the RBAC model spanning workspaces, folders, designs, and admin functions (extending accounts and workspaces).
-- Governance: audit logging of security-relevant actions across all features, DLP/content controls, and brand-governance enforcement hooks (composing with brand controls).
-- Encryption and key management: encryption in transit and at rest everywhere, and customer-managed encryption keys (CMEK) for organizations and self-hosters.
+- Identity and access for organizations: SSO via OIDC, MFA, and the RBAC model spanning workspaces, folders, designs, and admin functions (extending accounts and workspaces).
+- Governance: a workspace-scoped audit trail of security-relevant actions, and brand-governance enforcement hooks (composing with brand controls).
+- Encryption: encryption in transit and at rest everywhere.
 - Compliance: the controls and evidence needed for SOC 2 Type II, GDPR, CCPA, ISO 27001, and HIPAA (where applicable), plus data-residency region pinning and full data portability/export.
 - Self-host and private cloud: the deployment topology, configuration, and operations for running the whole platform (the whole product) on customer infrastructure via docker-compose and Helm (extending the architecture baseline).
 - Non-functional requirements: availability/SLA, scalability, reliability (autosave/no data loss), observability, and backups/disaster recovery with defined RPO/RTO targets.
 
+Deliberately out of scope, decided August 2026. These were in the original enterprise-governance sweep and are being dropped rather than deferred, because they target a buyer a free, self-hostable product is not pursuing, and each carries permanent cost:
+
+- **SAML 2.0.** OIDC ships and covers every modern identity provider (Okta, Entra, Google, Auth0, Keycloak). SAML serves legacy IdPs and is expensive in the worst way: XML signature validation is one of the most reliably vulnerable surfaces in enterprise auth, and adopting it means owning that risk permanently. An operator who must have SAML can put an OIDC-speaking gateway in front.
+- **SCIM 2.0.** Its real value is automated DEPROVISIONING. Without it an admin removes a departed user by hand, which is a genuine security gap rather than a mere inconvenience, and it is recorded here as a known one. For self-hosted teams whose admin knows their users, manual removal plus the API is enough.
+- **DLP and content controls.** A policy engine for restricting downloads, copy-out, and app installs is enterprise governance for a buyer we are not selling to. One idea survives it, and is NOT DLP: a per-workspace toggle that disables external sharing. That is a checkbox and belongs with the sharing feature.
+- **Customer-managed encryption keys (CMEK).** CMEK exists so a HOSTED tenant can control a key the vendor holds. A self-hoster already owns the database, the object storage, and the keys, so this would be elaborate machinery granting control the operator already has. The revocation semantics ("renders data inaccessible when revoked") are also a poor fit for a product whose first rule is zero data loss.
+
+Deferred rather than dropped:
+
+- **WebAuthn and passkeys.** TOTP ships, so the MFA requirement is satisfied and nothing is blocked. Passkeys are becoming the default expectation and the implementation cost is modest, so this stays on the list at low priority rather than being deleted.
+
 Out of scope:
 - The per-feature behaviors themselves; this doc sets the standards each feature must meet and the shared services that implement them, not the features.
 - The base architecture, packaging skeleton, and open file format (the architecture baseline); this doc extends the self-host and NFR baseline established there.
-- Account and workspace mechanics (accounts and workspaces); this doc extends them with SSO/SCIM/RBAC/audit specifics.
+- Account and workspace mechanics (accounts and workspaces); this doc extends them with SSO, RBAC and audit-trail specifics.
 - The funding model (grants/sponsorships/at-cost print); this doc covers the technical NFRs, not the funding mechanism.
 
 Deferred:
@@ -55,8 +66,8 @@ Deferred:
 - As a designer, I want a one-click accessibility check that tells me where my design fails contrast, alt text, reading order, or tap-target size so I can fix it before publishing.
 - As a publisher, I want my PDF export to be properly tagged so it is accessible to assistive technology.
 - As a user in any country, I want the whole app in my language with correct right-to-left layout.
-- As an IT admin, I want to enforce SSO and MFA and provision/deprovision users automatically via SCIM so access stays controlled.
-- As a security officer, I want a complete, tamper-evident audit log and DLP controls so I can prove and enforce governance.
+- As an IT admin, I want to enforce SSO and MFA so access stays controlled, and to remove a departed member's access in one place (deprovisioning is manual: SCIM is out of scope, see section 2).
+- As a security officer, I want a workspace audit trail of who shared, exported, deleted, or changed permissions on what, so I can answer questions after the fact.
 - As a compliance lead, I want the platform to meet SOC 2, GDPR, CCPA, ISO 27001, and HIPAA so I can adopt it in a regulated org.
 - As a data-sovereignty-bound org, I want my data pinned to a region or hosted on my own infrastructure with my own encryption keys.
 - As an SRE, I want defined SLA, RPO, and RTO and the observability and backups to meet them.
@@ -81,17 +92,21 @@ Internationalization:
 - FR-11: The localization pipeline supports translator contribution, pseudo-localization in CI to catch hard-coded strings and truncation, and fallback to a base locale for missing keys.
 
 Identity, access, and governance:
-- FR-12: Organizations can require SSO via SAML 2.0 and OIDC; on enforcement, password login is disabled for managed members (extending accounts and workspaces).
-- FR-13: SCIM 2.0 endpoints support automated provisioning, updates, and deprovisioning of users and groups, mapping IdP groups to roles/teams.
-- FR-14: MFA (TOTP and WebAuthn/passkeys) can be required org-wide or per role.
+- FR-12 (OIDC ships): Organizations can require SSO via OIDC; on enforcement, password login is disabled for managed members (extending accounts and workspaces). SAML 2.0 is out of scope (see section 2).
+- FR-13 (dropped): SCIM 2.0 provisioning is out of scope (see section 2). Members are managed through the admin UI and the API. The known gap this leaves is automated deprovisioning on offboarding, which stays a manual admin step.
+- FR-14 (TOTP ships; passkeys deferred): MFA can be required org-wide or per role. TOTP is implemented (`mfa_enabled` on the account, `ErrMFARequired` on the auth path); WebAuthn and passkeys are deferred at low priority, not dropped.
 - FR-15: RBAC defines roles (owner, admin, member, viewer, plus custom roles) with permissions scoped to workspace, folder, and design, and to admin functions (billing-free, but key/app/policy management); every API and editor action checks the actor's effective permission.
-- FR-16: A tamper-evident audit log records security- and governance-relevant events from all features (sign-in/SSO, permission changes, sharing/publishing, exports, key and app management, admin policy changes, data export/deletion) with actor, target, timestamp, IP, and request id; logs are append-only, exportable, and streamable to a SIEM.
-- FR-17: DLP/content controls let admins restrict external sharing, downloads/exports, copy-out, and which integrations/apps (apps and integrations) may be installed, with policy violations logged and optionally blocked.
+- FR-16 (reduced; extends what already ships): A workspace-scoped audit trail records security- and governance-relevant events with actor, target, timestamp, and request id, and is readable by workspace admins and exportable as a file.
+
+  This EXTENDS existing machinery rather than building a subsystem: `activity_events` (table), `engagement.Emitter.EmitActivity`, the paging service, and the editor's `ActivityPanel` all ship today, and comments, sharing, and approvals already emit into them. The work is widening scope from per-design to per-workspace and adding the event kinds that are missing: sign-in and SSO, permission and role changes, external sharing and publishing, exports and downloads, and admin policy changes.
+
+  Explicitly NOT in this requirement: hash-chained tamper evidence and SIEM streaming. Both were enterprise framing for a buyer that is out of scope. The bar here is that an admin can answer "who shared this externally", "who deleted it", and "who exported the data".
+- FR-17 (dropped, with one survivor): DLP and content controls are out of scope (see section 2). The one piece worth keeping is not DLP: a per-workspace setting that disables external sharing outright, enforced at the sharing layer and recorded by FR-16. It belongs with the sharing feature rather than here.
 - FR-18: Brand-governance enforcement (composing with brand controls) can lock fonts/colors/templates org-wide and is enforced at edit and export time.
 
 Encryption and key management:
 - FR-19: All data is encrypted in transit (TLS 1.2+; mTLS for service-to-service) and at rest (database, object storage, backups).
-- FR-20: The platform supports customer-managed encryption keys (CMEK): an organization or self-hoster supplies/controls a KMS key used to wrap data-encryption keys, with key rotation and revocation that renders data inaccessible when revoked.
+- FR-20 (dropped): Customer-managed encryption keys are out of scope (see section 2). A self-hoster already controls the database, the object storage, and their keys, so the requirement grants control the operator has by construction. FR-19 (encryption in transit and at rest) stands unchanged.
 
 Compliance and data lifecycle:
 - FR-21: The platform implements the controls required for SOC 2 Type II, ISO 27001, GDPR, and CCPA, and a HIPAA-eligible configuration (BAA-supported, with PHI handling controls) for applicable deployments.
@@ -120,11 +135,11 @@ Localization and RTL:
 - Pseudo-locale (available in non-production builds) visibly flags untranslated strings and layout truncation.
 
 Org administration (admin console, extending accounts and workspaces):
-- SSO/SCIM setup wizards (upload IdP metadata, set ACS/entity id, test a login, enable enforcement) with a connection-test and clear error surfacing.
+- An SSO setup wizard (OIDC issuer, client id and secret, test a login, enable enforcement) with a connection test and clear error surfacing.
 - An access page to manage roles/custom roles and see effective permissions.
 - An audit log viewer with filters (actor, action, target, time, IP), export, and SIEM streaming config.
-- DLP/governance policy editor (sharing, export, app allowlist, brand locks) with a preview of impact and a violation log.
-- A security page for MFA enforcement, CMEK configuration, key rotation, and data-residency region selection.
+- A governance settings panel limited to what remains in scope: the external-sharing toggle (FR-17) and the brand locks (FR-18), each showing its impact before it is applied and recording the change in the audit trail.
+- A security page for SSO enforcement, MFA enforcement, and data-residency region selection.
 - A data page for data-subject export and deletion requests with status tracking.
 
 Self-host/ops surfaces:
@@ -179,41 +194,33 @@ export interface Role {
 export type Permission =
   | "design:read" | "design:write" | "design:delete"
   | "folder:manage" | "share:external" | "export"
-  | "admin:sso" | "admin:scim" | "admin:audit"
-  | "admin:dlp" | "admin:keys" | "admin:apps";
+  | "admin:sso" | "admin:audit" | "admin:apps";
 
-// Audit
+// Audit trail (FR-16). This is the EXISTING `activity_events` row widened,
+// not a new table: it gains a workspace scope so events that are not about one
+// design have somewhere to live, and the security fields below. No chained
+// hash: tamper evidence was enterprise framing and is out of scope.
 export interface AuditEvent {
   id: string;
-  workspaceId: string;
+  workspaceId: string;      // NEW: today's rows are design-scoped only
+  designId?: string;        // still set for design-scoped events
   actorId: string;
-  action: string;           // e.g. "design.share.external", "key.rotate"
+  action: string;           // e.g. "design.share.external", "member.role.change"
   targetType: string;
   targetId: string;
-  ip?: string;
   requestId?: string;
   metadata?: Record<string, unknown>;
-  hash: string;             // chained hash of prev+current for tamper-evidence
   createdAt: string;
 }
 
-// SSO / SCIM
+// SSO (OIDC only; SAML is out of scope, see section 2)
 export interface SsoConfig {
   workspaceId: string;
-  protocol: "saml" | "oidc";
-  metadata: Record<string, unknown>; // entity id, ACS, issuer, jwks, etc.
+  issuer: string;
+  clientId: string;
+  clientSecretRef: string;  // stored encrypted, never returned by the API
   enforced: boolean;
   groupRoleMap: Record<string, string>; // IdP group -> role id
-}
-
-// Encryption / CMEK
-export interface KeyConfig {
-  workspaceId: string;
-  mode: "platform-managed" | "customer-managed";
-  kmsProvider?: "aws-kms" | "gcp-kms" | "azure-kv" | "vault" | "external";
-  kmsKeyRef?: string;
-  rotationPolicyDays?: number;
-  status: "active" | "rotating" | "revoked";
 }
 
 // Data residency & lifecycle
@@ -290,19 +297,15 @@ GET    /i18n/catalogs/{locale}             served to clients; cached
 GET/POST/PATCH/DELETE /workspaces/{id}/roles
 POST   /workspaces/{id}/role-assignments
 
-# SSO / SCIM
-POST   /workspaces/{id}/sso                 configure SAML/OIDC
-POST   /sso/saml/acs   /sso/oidc/callback   IdP callbacks
-/scim/v2/Users  /scim/v2/Groups             SCIM 2.0 (token-auth)
+# SSO (OIDC only; SAML and SCIM are out of scope, see section 2)
+POST   /workspaces/{id}/sso                 configure OIDC
+POST   /sso/oidc/callback                   IdP callback
 
 # Governance
-GET    /workspaces/{id}/audit               filter/export audit events
-POST   /workspaces/{id}/audit/stream        configure SIEM streaming
-PUT    /workspaces/{id}/dlp                  set DLP policy
+GET    /workspaces/{id}/audit               filter and export audit events
+PUT    /workspaces/{id}/sharing-policy      the external-sharing toggle (FR-17)
 
-# Keys / residency / data lifecycle
-PUT    /workspaces/{id}/keys                 configure CMEK
-POST   /workspaces/{id}/keys/rotate
+# Residency / data lifecycle
 PUT    /workspaces/{id}/residency
 POST   /workspaces/{id}/data-requests        export | delete (GDPR/CCPA)
 GET    /workspaces/{id}/data-requests/{rid}
@@ -362,11 +365,11 @@ Internal contracts:
 - AC-2: The accessibility checker reports contrast, alt-text, reading-order, and tap-target issues per element, supports jump-to-fix, and updates its score as issues are resolved.
 - AC-3: An accessible (tagged, PDF/UA-aligned) PDF export validates in an accessibility checker with correct tags, alt text, reading order, language, and title.
 - AC-4: The UI runs in at least 100 locales with a runtime switch, RTL locales fully mirror the chrome while content directionality stays correct, and a CI pseudo-locale run finds no hard-coded strings.
-- AC-5: An organization can enforce SAML and OIDC SSO and MFA, and SCIM provisioning creates, updates, and deprovisions users/groups mapped to roles, with deprovisioning revoking sessions.
+- AC-5: An organization can enforce OIDC SSO and MFA; enforcing SSO disables password login for managed members, and removing a member through the admin UI or API revokes their sessions immediately. (SCIM is out of scope, so deprovisioning is that manual step and must be immediate when taken.)
 - AC-6: RBAC blocks an out-of-permission action at both the API and the editor, and a custom role with a restricted permission set behaves as configured.
-- AC-7: Security-relevant actions across features appear in an append-only, hash-chained audit log that exports and streams to a SIEM; tampering is detectable.
-- AC-8: A DLP policy blocking external sharing/export is enforced server-side and logged.
-- AC-9: CMEK can be configured against a KMS; rotating the key continues to serve data, and revoking it renders data inaccessible without service crash.
+- AC-7: Sign-in, permission and role changes, external sharing and publishing, exports, and admin policy changes all appear in the workspace audit trail with actor, target, timestamp, and request id, readable by a workspace admin and exportable as a file. An event recorded against a design also remains visible in that design's activity feed.
+- AC-8: Turning off external sharing for a workspace is enforced server-side (an existing external link stops resolving and a new one cannot be created) and the change itself is recorded in the audit trail.
+- AC-9: Data is encrypted in transit (TLS 1.2 or better) and at rest across the database, object storage, and backups, verified by configuration test rather than by a key-management feature (CMEK is out of scope, see section 2).
 - AC-10: A region-pinned workspace keeps its data, backups, and processing in-region; a cross-region access attempt fails closed.
 - AC-11: A GDPR/CCPA data export returns all of a subject's data in open and standard formats, and a deletion request verifiably erases it (honoring legal hold) including from backups within the defined window.
 - AC-12: The full platform deploys via docker-compose (single-node) and Helm (Kubernetes) with MinIO and a self-hosted/BYO AI model, passing health checks and a smoke run of core flows.
