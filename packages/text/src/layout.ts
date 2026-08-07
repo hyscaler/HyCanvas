@@ -4,6 +4,7 @@
 // layout via HarfBuzz is deferred; this produces correct line structure.
 
 import type { CharStyle, Paragraph, TextNode } from "@hc/schema";
+import { orderLinePieces, resolveBaseDirection } from "./bidi";
 import { resolveParagraphStyle } from "./cascade";
 import { wrapChunks } from "./segment";
 
@@ -54,6 +55,10 @@ export interface LineBox {
    *  content box, and the column's width. Absent for single-column layout. */
   colLeft?: number;
   colWidth?: number;
+  /** The paragraph's resolved base direction (F38 FR-10). `segments` are in
+   *  DISPLAY order, so a renderer draws them left to right regardless; this is
+   *  here so alignment and caret placement can respect the base direction. */
+  direction: "ltr" | "rtl";
 }
 export interface LayoutResult {
   lines: LineBox[];
@@ -106,7 +111,15 @@ export function layoutText(node: TextNode, opts: LayoutOptions = {}): LayoutResu
 
   node.content.forEach((para: Paragraph, pi) => {
     const ps = resolveParagraphStyle(para);
-    const align = ps.align;
+    // Base direction per UAX #9: an explicit setting wins, "auto" follows the
+    // first strong character in the paragraph.
+    const paraText = para.runs.map((r) => r.text).join("");
+    const dir = resolveBaseDirection(paraText, ps.direction ?? "auto");
+    // A right-to-left paragraph reads from the right, so the default alignment
+    // flips with it. An author who explicitly chose an alignment keeps it; only
+    // the untouched default (the style's "left") follows the text.
+    const authoredAlign = para.style?.align ?? para.overrides?.align;
+    const align = dir === "rtl" && !authoredAlign && ps.align === "left" ? "right" : ps.align;
     const firstStyle = para.runs[0]?.style;
     const em = firstStyle?.fontSize ?? 16;
     const level = ps.list?.level ?? 0;
@@ -144,9 +157,12 @@ export function layoutText(node: TextNode, opts: LayoutOptions = {}): LayoutResu
         height: h,
         width: lineWidth,
         align,
-        segments: segs,
+        // Display order, so every renderer draws left to right and none of
+        // them needs to know about bidi.
+        segments: orderLinePieces(segs, dir).map((p) => ({ text: p.text, style: p.item.style })),
         x,
         marker: firstLine ? marker : undefined,
+        direction: dir,
       });
       maxLineWidth = Math.max(maxLineWidth, lineWidth + x);
       y += h;
