@@ -10,12 +10,14 @@
 //	Password verification: the state endpoint is POLLED every few seconds by
 //	every viewer, and a password-protected link runs scrypt (16 MiB, N=16384)
 //	on each call. A few hundred attendees would peg the CPU. Successful
-//	resolutions are memoized briefly, keyed by the token plus a hash of the
-//	supplied password; FAILURES are never cached, so guessing stays as
-//	expensive as it was.
+//	resolutions are memoized briefly, keyed by the token plus a process-keyed
+//	MAC of the supplied password; FAILURES are never cached, so guessing stays
+//	as expensive as it was.
 package httpapi
 
 import (
+	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"net"
@@ -149,11 +151,38 @@ var (
 	audienceResolveCache = map[string]resolvedLink{}
 )
 
+// audienceResolvePepper keys the resolve-cache MAC. It is generated once per
+// process and never persisted or logged.
+//
+// The cache has to bind an entry to the exact password presented, so the
+// password unavoidably enters the cache key. A bare digest of it would be the
+// wrong way to do that: a share-link password is short and drawn from a small
+// keyspace, so an unsalted SHA-256 of one sitting in a long-lived map is an
+// offline-crackable record of a live credential to anyone who can read process
+// memory or a core dump. Keying the MAC with a secret that exists only in this
+// process makes those entries inert on their own - without the pepper there is
+// nothing to guess against - while costing no more than the plain digest did,
+// which matters because the entire point of this cache is to keep scrypt off
+// the poll path.
+//
+// Losing the pepper on restart only discards a 60s memoization; the next poll
+// re-runs scrypt and repopulates.
+var audienceResolvePepper = func() []byte {
+	k := make([]byte, 32)
+	if _, err := rand.Read(k); err != nil {
+		panic(err) // crypto/rand failing means the host is unusable
+	}
+	return k
+}()
+
 // audienceResolveKey binds a cache entry to both the token and the exact
 // password presented, so a wrong password can never ride a right one's entry.
 func audienceResolveKey(token, password string) string {
-	sum := sha256.Sum256([]byte(token + "\x1f" + password))
-	return hex.EncodeToString(sum[:])
+	m := hmac.New(sha256.New, audienceResolvePepper)
+	m.Write([]byte(token))
+	m.Write([]byte{0x1f}) // separator, so tok+"\x1fp" cannot collide with "tok\x1f"+p
+	m.Write([]byte(password))
+	return hex.EncodeToString(m.Sum(nil))
 }
 
 func cachedResolve(token, password string, now time.Time) (string, bool) {

@@ -1,6 +1,8 @@
 package httpapi
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"testing"
 	"time"
@@ -110,5 +112,28 @@ func TestAudienceResolveCache(t *testing.T) {
 	rememberResolve("tok2", "", "design-2", now)
 	if _, ok := cachedResolve("tok2", "", now); ok {
 		t.Fatal("passwordless resolution was cached")
+	}
+}
+
+// The password has to enter the cache key for the check above to work, so the
+// key must not be a bare digest of it: a share-link password is short and drawn
+// from a small keyspace, and an unpeppered digest in a long-lived map is an
+// offline-crackable record of a live credential. Guard the pepper against a
+// revert to a plain hash, without giving up the properties the cache needs.
+func TestAudienceResolveKeyIsPeppered(t *testing.T) {
+	bare := sha256.Sum256([]byte("tok\x1fhunter2"))
+	if audienceResolveKey("tok", "hunter2") == hex.EncodeToString(bare[:]) {
+		t.Fatal("resolve key is an unpeppered digest of token+password")
+	}
+	// Stable within the process, or the cache would never hit at all.
+	if audienceResolveKey("tok", "hunter2") != audienceResolveKey("tok", "hunter2") {
+		t.Fatal("resolve key is not stable within a process")
+	}
+	// Still separates the inputs it exists to separate.
+	if audienceResolveKey("tok", "a") == audienceResolveKey("tok", "b") {
+		t.Fatal("two passwords share a key")
+	}
+	if audienceResolveKey("a", "b") == audienceResolveKey("b", "a") {
+		t.Fatal("token and password are not delimited")
 	}
 }
