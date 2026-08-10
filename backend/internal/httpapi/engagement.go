@@ -35,19 +35,19 @@ func mountEngagement(api chi.Router, en *engagement.Service, acct *accounts.Serv
 func engagementProblem(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, engagement.ErrForbidden):
-		Problem(w, r, http.StatusForbidden, "Forbidden", "you do not have permission for this action")
+		problemWithCode(w, r, http.StatusForbidden, "Forbidden", "you do not have permission for this action", "forbidden_action")
 	case errors.Is(err, engagement.ErrNotFound):
-		Problem(w, r, http.StatusNotFound, "Not Found", "not found")
+		problemWithCode(w, r, http.StatusNotFound, "Not Found", "not found", "not_found")
 	case errors.Is(err, sharing.ErrLinkGone):
-		Problem(w, r, http.StatusGone, "Gone", "this link has expired")
+		problemWithCode(w, r, http.StatusGone, "Gone", "this link has expired", "this_link_has_expired")
 	case errors.Is(err, sharing.ErrLinkNotAvail):
-		Problem(w, r, http.StatusNotFound, "Not Found", "this link is no longer available")
+		problemWithCode(w, r, http.StatusNotFound, "Not Found", "this link is no longer available", "link_unavailable")
 	case errors.Is(err, sharing.ErrLinkPassword):
 		problemWithCode(w, r, http.StatusForbidden, "Forbidden", "incorrect password", "link_password_required")
 	case errors.Is(err, sharing.ErrLinkSigninReq):
 		problemWithCode(w, r, http.StatusForbidden, "Forbidden", "this link requires sign-in", "link_signin_required")
 	default:
-		Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed")
+		problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed", "request_failed")
 	}
 }
 
@@ -126,7 +126,7 @@ func setPrefsHandler(en *engagement.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var raw map[string]json.RawMessage
 		if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		in := engagement.SetPrefsInput{}
@@ -156,7 +156,7 @@ func viewBeatHandler(en *engagement.Service) http.HandlerFunc {
 			Ms        int     `json:"ms"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())
@@ -190,7 +190,7 @@ func sharedViewBeatHandler(en *engagement.Service) http.HandlerFunc {
 			Password  string  `json:"password"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		if err := en.RecordSharedViewBeat(r.Context(), chi.URLParam(r, "token"), body.Password, engagement.AnonViewBeat{AnonID: body.AnonID, SessionID: body.SessionID, PageID: body.PageID, Ms: body.Ms}); err != nil {

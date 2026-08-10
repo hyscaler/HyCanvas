@@ -67,11 +67,11 @@ func mountStaticFS(r chi.Router, root http.FileSystem, gaID string) {
 		p := req.URL.Path
 		serve := func(name string) { serveFile(w, req, root, name, gaID) }
 		if req.Method != http.MethodGet && req.Method != http.MethodHead {
-			Problem(w, req, http.StatusNotFound, "Not Found", "no route for "+req.Method+" "+p)
+			problemWithCode(w, req, http.StatusNotFound, "Not Found", "no route for "+req.Method+" "+p, "no_route")
 			return
 		}
 		if strings.HasPrefix(p, "/api/") || p == "/api" || strings.HasPrefix(p, "/realtime") {
-			Problem(w, req, http.StatusNotFound, "Not Found", "no route for "+p)
+			problemWithCode(w, req, http.StatusNotFound, "Not Found", "no route for "+p, "no_route")
 			return
 		}
 
@@ -170,20 +170,20 @@ func mountAPIOnlyNotice(r chi.Router) {
 			_, _ = w.Write([]byte(apiOnlyNotice))
 			return
 		}
-		Problem(w, req, http.StatusNotFound, "Not Found", "no route for "+req.Method+" "+p)
+		problemWithCode(w, req, http.StatusNotFound, "Not Found", "no route for "+req.Method+" "+p, "no_route")
 	})
 }
 
 func serveFile(w http.ResponseWriter, req *http.Request, root http.FileSystem, name string, gaID string) {
 	f, err := root.Open(name)
 	if err != nil {
-		Problem(w, req, http.StatusNotFound, "Not Found", "no route for "+req.URL.Path)
+		problemWithCode(w, req, http.StatusNotFound, "Not Found", "no route for "+req.URL.Path, "no_route")
 		return
 	}
 	defer f.Close()
 	info, err := f.Stat()
 	if err != nil || info.IsDir() {
-		Problem(w, req, http.StatusNotFound, "Not Found", "no route for "+req.URL.Path)
+		problemWithCode(w, req, http.StatusNotFound, "Not Found", "no route for "+req.URL.Path, "no_route")
 		return
 	}
 	// HTML pages get the analytics snippet injected at serve time (when enabled),

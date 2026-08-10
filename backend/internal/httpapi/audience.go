@@ -52,11 +52,11 @@ func mountAudience(api chi.Router, aud *audience.Service, sh *sharing.Service, p
 func audienceProblem(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, audience.ErrNotFound):
-		Problem(w, r, http.StatusNotFound, "Not Found", "not found")
+		problemWithCode(w, r, http.StatusNotFound, "Not Found", "not found", "not_found")
 	case errors.Is(err, audience.ErrInvalid):
-		Problem(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", err.Error())
+		problemWithCode(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", err.Error(), "audience_request_failed")
 	default:
-		Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed")
+		problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed", "request_failed")
 	}
 }
 
@@ -94,7 +94,7 @@ func audienceAskHandler(aud *audience.Service, sh *sharing.Service, acct *accoun
 			Text     string `json:"text"`
 		}
 		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 8192)).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		designID, err := resolveAudienceDesign(r, sh, acct, body.Password)
@@ -118,7 +118,7 @@ func audienceVoteQuestionHandler(aud *audience.Service, sh *sharing.Service, acc
 			VoterKey string `json:"voterKey"`
 		}
 		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		designID, err := resolveAudienceDesign(r, sh, acct, body.Password)
@@ -142,7 +142,7 @@ func audienceVotePollHandler(aud *audience.Service, sh *sharing.Service, acct *a
 			Option   int    `json:"option"`
 		}
 		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		designID, err := resolveAudienceDesign(r, sh, acct, body.Password)
@@ -165,7 +165,7 @@ func audienceReactHandler(aud *audience.Service, sh *sharing.Service, acct *acco
 			Emoji    string `json:"emoji"`
 		}
 		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		designID, err := resolveAudienceDesign(r, sh, acct, body.Password)
@@ -190,7 +190,7 @@ func audienceStateHandler(aud *audience.Service, sh *sharing.Service, acct *acco
 			VoterKey string `json:"voterKey"`
 		}
 		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		designID, err := resolveAudienceDesign(r, sh, acct, body.Password)
@@ -237,7 +237,7 @@ func presenterModerateHandler(aud *audience.Service, p *persistence.Service, acc
 			Dismissed *bool `json:"dismissed"`
 		}
 		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		if err := aud.ModerateQuestion(r.Context(), id, chi.URLParam(r, "qid"), body.Answered, body.Dismissed); err != nil {
@@ -260,7 +260,7 @@ func presenterCreatePollHandler(aud *audience.Service, p *persistence.Service, a
 			Options  []string `json:"options"`
 		}
 		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 8192)).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		poll, err := aud.CreatePoll(r.Context(), id, body.Question, body.Options)
@@ -283,7 +283,7 @@ func presenterPollOpenHandler(aud *audience.Service, p *persistence.Service, acc
 			Open bool `json:"open"`
 		}
 		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		if err := aud.SetPollOpen(r.Context(), id, chi.URLParam(r, "pid"), body.Open); err != nil {
@@ -307,7 +307,7 @@ func presenterLiveHandler(aud *audience.Service, p *persistence.Service, acct *a
 			Slide int `json:"slide"`
 		}
 		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		if err := aud.SetLivePosition(r.Context(), id, body.Slide); err != nil {

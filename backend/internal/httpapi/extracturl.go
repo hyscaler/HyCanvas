@@ -54,7 +54,7 @@ func dataFetchHandler() http.HandlerFunc {
 			URL string `json:"url"`
 		}
 		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&body); err != nil || body.URL == "" {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "missing url")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "missing url", "missing_url")
 			return
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), extractTimeout)
@@ -63,17 +63,17 @@ func dataFetchHandler() http.HandlerFunc {
 			"HyCanvas-Data/1.0 (+live chart binding)",
 			"text/csv, text/tab-separated-values, application/json, text/plain;q=0.9")
 		if err != nil {
-			Problem(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", err.Error())
+			problemWithCode(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", err.Error(), "data_fetch_failed")
 			return
 		}
 		defer func() { _ = res.Body.Close() }()
 		if res.StatusCode < 200 || res.StatusCode >= 300 {
-			Problem(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", fmt.Sprintf("the source returned %d", res.StatusCode))
+			problemWithCode(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", fmt.Sprintf("the source returned %d", res.StatusCode), "data_source_status")
 			return
 		}
 		ctype := res.Header.Get("Content-Type")
 		if strings.Contains(ctype, "text/html") {
-			Problem(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "that URL returns a web page, not data (use a raw CSV/JSON link)")
+			problemWithCode(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "that URL returns a web page, not data (use a raw CSV/JSON link)", "data_url_is_web_page")
 			return
 		}
 		// Read one byte past the cap so an oversized source is REJECTED rather
@@ -81,11 +81,11 @@ func dataFetchHandler() http.HandlerFunc {
 		// it were the whole dataset.
 		raw, err := io.ReadAll(io.LimitReader(res.Body, dataMaxBytes+1))
 		if err != nil || len(raw) == 0 {
-			Problem(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "could not read that source")
+			problemWithCode(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "could not read that source", "could_not_read_that_source")
 			return
 		}
 		if len(raw) > dataMaxBytes {
-			Problem(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "that source is larger than 2 MiB")
+			problemWithCode(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "that source is larger than 2 MiB", "data_source_too_large")
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]string{"text": string(raw)})
@@ -184,31 +184,31 @@ func extractURLHandler() http.HandlerFunc {
 			URL string `json:"url"`
 		}
 		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&body); err != nil || body.URL == "" {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "missing url")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "missing url", "missing_url")
 			return
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), extractTimeout)
 		defer cancel()
 		res, err := fetchVetted(ctx, body.URL, "HyCanvas-Ingest/1.0 (+deck import)", "text/html, text/plain;q=0.9")
 		if err != nil {
-			Problem(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", err.Error())
+			problemWithCode(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", err.Error(), "url_extract_failed")
 			return
 		}
 		defer func() { _ = res.Body.Close() }()
 		if res.StatusCode < 200 || res.StatusCode >= 300 {
-			Problem(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", fmt.Sprintf("the page returned %d", res.StatusCode))
+			problemWithCode(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", fmt.Sprintf("the page returned %d", res.StatusCode), "url_page_status")
 			return
 		}
 		ctype := res.Header.Get("Content-Type")
 		isHTML := strings.Contains(ctype, "text/html") || strings.Contains(ctype, "application/xhtml")
 		isPlain := strings.Contains(ctype, "text/plain")
 		if !isHTML && !isPlain {
-			Problem(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "only web pages and plain text can be imported")
+			problemWithCode(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "only web pages and plain text can be imported", "unsupported_content_type")
 			return
 		}
 		raw, err := io.ReadAll(io.LimitReader(res.Body, extractMaxBytes))
 		if err != nil {
-			Problem(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "could not read that page")
+			problemWithCode(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "could not read that page", "could_not_read_that_page")
 			return
 		}
 
@@ -223,7 +223,7 @@ func extractURLHandler() http.HandlerFunc {
 			text = text[:extractMaxText]
 		}
 		if text == "" {
-			Problem(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "no readable text on that page")
+			problemWithCode(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "no readable text on that page", "page_no_readable_text")
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]string{"title": title, "text": text})

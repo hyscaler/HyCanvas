@@ -48,10 +48,10 @@ func renderVideoHandler(p *persistence.Service, acct *accounts.Service) http.Han
 		mp4, err := render.ToVideo(r.Context(), render.Design(loaded.File), page, opts)
 		if err != nil {
 			if errors.Is(err, render.ErrNoFFmpeg) {
-				Problem(w, r, http.StatusServiceUnavailable, "Service Unavailable", "video encoding is unavailable (ffmpeg not installed)")
+				problemWithCode(w, r, http.StatusServiceUnavailable, "Service Unavailable", "video encoding is unavailable (ffmpeg not installed)", "ffmpeg_unavailable")
 				return
 			}
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "could not render video")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "could not render video", "could_not_render_video")
 			return
 		}
 		w.Header().Set("Content-Type", "video/mp4")
@@ -118,7 +118,7 @@ func renderRasterHandler(p *persistence.Service, acct *accounts.Service, up *upl
 			mime = "image/png"
 		}
 		if err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "page index out of range")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "page index out of range", "page_index_out_of_range")
 			return
 		}
 		w.Header().Set("Content-Type", mime)
@@ -176,7 +176,7 @@ func renderPDFHandler(p *persistence.Service, acct *accounts.Service, up *upload
 			pdf, err = render.ToPDF(render.Design(loaded.File), page, src)
 		}
 		if err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "page index out of range")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "page index out of range", "page_index_out_of_range")
 			return
 		}
 		w.Header().Set("Content-Type", "application/pdf")
@@ -210,7 +210,7 @@ func renderSVGHandler(p *persistence.Service, acct *accounts.Service, up *upload
 		}
 		svg, err := render.ToSVG(render.Design(embedDesignFileAssets(fetch, loaded.File)), page)
 		if err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "page index out of range")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "page index out of range", "page_index_out_of_range")
 			return
 		}
 		w.Header().Set("Content-Type", "image/svg+xml")

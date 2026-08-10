@@ -34,13 +34,13 @@ func mountTemplates(api chi.Router, tm *templates.Service, acct *accounts.Servic
 func templatesProblem(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, templates.ErrForbidden):
-		Problem(w, r, http.StatusForbidden, "Forbidden", "you do not have permission for this action")
+		problemWithCode(w, r, http.StatusForbidden, "Forbidden", "you do not have permission for this action", "forbidden_action")
 	case errors.Is(err, templates.ErrNotFound):
-		Problem(w, r, http.StatusNotFound, "Not Found", "template not found")
+		problemWithCode(w, r, http.StatusNotFound, "Not Found", "template not found", "template_not_found")
 	case errors.Is(err, templates.ErrBadRequest):
-		Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid request")
+		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid request", "invalid_request")
 	default:
-		Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed")
+		problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed", "request_failed")
 	}
 }
 
@@ -75,7 +75,7 @@ func templatesSaveHandler(tm *templates.Service) http.HandlerFunc {
 			CollectionID string         `json:"collectionId"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())
@@ -134,7 +134,7 @@ func templatesApplyHandler(tm *templates.Service) http.HandlerFunc {
 			WorkspaceID string `json:"workspaceId"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.WorkspaceID == "" {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "missing workspaceId")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "missing workspaceId", "missing_workspaceid")
 			return
 		}
 		u := userFrom(r.Context())
@@ -166,7 +166,7 @@ func templatesCreateCollectionHandler(tm *templates.Service) http.HandlerFunc {
 			Name        string `json:"name"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())

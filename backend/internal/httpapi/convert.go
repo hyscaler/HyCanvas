@@ -19,7 +19,7 @@ func mountConvert(api chi.Router, svc *convert.Service, reg *jobs.Registry, acct
 		u := userFrom(r.Context())
 		res, err := svc.WhiteboardToDeck(r.Context(), u.ID, chi.URLParam(r, "id"))
 		if errors.Is(err, accounts.ErrForbidden) {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "not permitted")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not permitted", "not_permitted")
 			return
 		}
 		job := reg.Start(u.ID, "whiteboard-to-deck")

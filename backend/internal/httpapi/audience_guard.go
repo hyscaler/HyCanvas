@@ -124,7 +124,7 @@ func audienceRateLimit(kind string, rate, burst float64) func(http.HandlerFunc) 
 			key := kind + "\x1f" + audienceRateKey(r, chi.URLParam(r, "token"))
 			if !allowAudience(key, time.Now(), rate, burst) {
 				w.Header().Set("Retry-After", "5")
-				Problem(w, r, http.StatusTooManyRequests, "Too Many Requests", "you are sending requests too quickly; slow down and try again")
+				problemWithCode(w, r, http.StatusTooManyRequests, "Too Many Requests", "you are sending requests too quickly; slow down and try again", "rate_limited")
 				return
 			}
 			next(w, r)

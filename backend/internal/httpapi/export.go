@@ -173,7 +173,7 @@ func videoExportHandler(p *persistence.Service, store storage.Driver, reg *jobs.
 		// was sent and could not be read is not: silently exporting the STORED
 		// design instead hands back a plausible artifact of the wrong thing.
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil && !errors.Is(err, io.EOF) {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "could not read the export request")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "could not read the export request", "export_request_unreadable")
 			return
 		}
 		format, ctype := "mp4", "video/mp4"
@@ -186,11 +186,11 @@ func videoExportHandler(p *persistence.Service, store storage.Driver, reg *jobs.
 		case "mp3":
 			format, ctype = "mp3", "audio/mpeg"
 		default:
-			Problem(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "format must be mp4, webm, gif, or mp3")
+			problemWithCode(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "format must be mp4, webm, gif, or mp3", "video_format_invalid")
 			return
 		}
 		if body.Fps != 0 && (body.Fps < 1 || body.Fps > 120) {
-			Problem(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "fps must be between 1 and 120")
+			problemWithCode(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "fps must be between 1 and 120", "fps_out_of_range")
 			return
 		}
 		id := chi.URLParam(r, "id")
@@ -444,7 +444,7 @@ func docExportHandler(p *persistence.Service, store storage.Driver, reg *jobs.Re
 		}
 		_ = json.NewDecoder(r.Body).Decode(&body)
 		if body.Format != "docx" && body.Format != "pdf" {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", `format must be "docx" or "pdf"`)
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", `format must be "docx" or "pdf"`, "doc_export_format_invalid")
 			return
 		}
 		id := chi.URLParam(r, "id")
@@ -507,16 +507,16 @@ func exportDownloadHandler(p *persistence.Service, store storage.Driver, reg *jo
 		u := userFrom(r.Context())
 		job, ok := reg.Get(u.ID, chi.URLParam(r, "jobId"))
 		if !ok || job.Name != jobName || job.Status != jobs.StatusCompleted || job.Blob == nil {
-			Problem(w, r, http.StatusNotFound, "Not Found", "export not found")
+			problemWithCode(w, r, http.StatusNotFound, "Not Found", "export not found", "export_not_found")
 			return
 		}
 		if !strings.HasPrefix(job.Blob.Key, "designs/"+id+"/") {
-			Problem(w, r, http.StatusNotFound, "Not Found", "export not found")
+			problemWithCode(w, r, http.StatusNotFound, "Not Found", "export not found", "export_not_found")
 			return
 		}
 		data, err := store.Get(job.Blob.Key)
 		if err != nil || data == nil {
-			Problem(w, r, http.StatusNotFound, "Not Found", "export not found")
+			problemWithCode(w, r, http.StatusNotFound, "Not Found", "export not found", "export_not_found")
 			return
 		}
 		w.Header().Set("Content-Type", job.Blob.ContentType)

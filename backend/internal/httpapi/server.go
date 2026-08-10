@@ -101,7 +101,7 @@ func NewRouter(d Deps) http.Handler {
 		ctx, cancel := context.WithTimeout(req.Context(), 3*time.Second)
 		defer cancel()
 		if err := d.DB.Ping(ctx); err != nil {
-			Problem(w, req, http.StatusServiceUnavailable, "Not Ready", "database unavailable")
+			problemWithCode(w, req, http.StatusServiceUnavailable, "Not Ready", "database unavailable", "database_unavailable")
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})

@@ -73,7 +73,7 @@ func uploadHandler(up *uploads.Service) http.HandlerFunc {
 			Thumbnail  string  `json:"thumbnail"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.DataBase64 == "" {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "missing dataBase64")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "missing dataBase64", "missing_database64")
 			return
 		}
 		u := userFrom(r.Context())
@@ -93,7 +93,7 @@ func importURLHandler(up *uploads.Service) http.HandlerFunc {
 			FolderID *string `json:"folderId"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.URL == "" {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "missing url")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "missing url", "missing_url")
 			return
 		}
 		u := userFrom(r.Context())
@@ -144,7 +144,7 @@ func updateAssetHandler(up *uploads.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var raw map[string]json.RawMessage
 		if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		var filename *string
@@ -203,7 +203,7 @@ func createFolderHandler(up *uploads.Service) http.HandlerFunc {
 			ParentID *string `json:"parentId"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())
@@ -222,7 +222,7 @@ func renameFolderHandler(up *uploads.Service) http.HandlerFunc {
 			Name string `json:"name"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())
@@ -250,7 +250,7 @@ func assetProxyHandler(up *uploads.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		data, ok := up.ProxyContent(r.Context(), chi.URLParam(r, "id"))
 		if !ok {
-			Problem(w, r, http.StatusNotFound, "Not Found", "no proxy for this asset")
+			problemWithCode(w, r, http.StatusNotFound, "Not Found", "no proxy for this asset", "no_proxy_for_this_asset")
 			return
 		}
 		w.Header().Set("Content-Type", "video/mp4")

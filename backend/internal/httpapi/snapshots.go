@@ -30,7 +30,7 @@ func snapshotHandler(p *persistence.Service, br *brand.Service, acct *accounts.S
 			Kind  string                 `json:"kind"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.File == nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "missing file")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "missing file", "missing_file")
 			return
 		}
 		id := chi.URLParam(r, "id")
@@ -44,10 +44,10 @@ func snapshotHandler(p *persistence.Service, br *brand.Service, acct *accounts.S
 		// non-manage-brand saver while a lock is on.
 		if err := br.ValidateSnapshot(r.Context(), id, ws, u.ID, body.File); err != nil {
 			if errors.Is(err, brand.ErrBrandLocked) {
-				Problem(w, r, http.StatusBadRequest, "Bad Request", err.Error())
+				problemWithCode(w, r, http.StatusBadRequest, "Bad Request", err.Error(), "snapshot_failed")
 				return
 			}
-			Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "brand validation failed")
+			problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "brand validation failed", "brand_validation_failed")
 			return
 		}
 		// The storage layer uppercases kinds into the Postgres enum, so accept
@@ -65,7 +65,7 @@ func snapshotHandler(p *persistence.Service, br *brand.Service, acct *accounts.S
 		default:
 			// KindBranch is minted by the branch endpoint only; anything else
 			// would fail at the enum INSERT as a 500 after the blob was stored.
-			Problem(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "kind must be auto, checkpoint, named, or restore")
+			problemWithCode(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "kind must be auto, checkpoint, named, or restore", "snapshot_kind_invalid")
 			return
 		}
 		var label *string

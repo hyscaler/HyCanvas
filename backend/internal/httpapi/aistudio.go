@@ -41,14 +41,14 @@ func mountAIStudio(api chi.Router, svc *aistudio.Service, acct *accounts.Service
 // mapping for provider/policy errors.
 func aiStudioProblem(w http.ResponseWriter, r *http.Request, err error) {
 	if errors.Is(err, aistudio.ErrInvalidOutput) {
-		Problem(w, r, http.StatusBadGateway, "AI output invalid", "the model did not return a valid result; try again")
+		problemWithCode(w, r, http.StatusBadGateway, "AI output invalid", "the model did not return a valid result; try again", "model_bad_result")
 		return
 	}
 	if errors.Is(err, ai.ErrPolicyBlocked) || errors.Is(err, ai.ErrBadRequest) || errors.Is(err, ai.ErrBadGateway) {
 		aiProblem(w, r, err)
 		return
 	}
-	Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "generation failed")
+	problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "generation failed", "generation_failed")
 }
 
 // jobFailMessage gives a job's failure a specific, user-meaningful reason instead
@@ -79,11 +79,11 @@ func aiStudioOutlineHandler(svc *aistudio.Service, acct *accounts.Service) http.
 			PageCount   int    `json:"pageCount"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		if !aiAssert(r, acct, body.WorkspaceID, "member") {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace", "not_workspace_member")
 			return
 		}
 		out, err := svc.Outline(r.Context(), body.WorkspaceID, body.DesignType, body.Prompt, body.BrandClause, body.PageCount)
@@ -102,11 +102,11 @@ func aiStudioChartHandler(svc *aistudio.Service, acct *accounts.Service) http.Ha
 			Description string `json:"description"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		if !aiAssert(r, acct, body.WorkspaceID, "member") {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace", "not_workspace_member")
 			return
 		}
 		spec, err := svc.Chart(r.Context(), body.WorkspaceID, body.Description)
@@ -127,11 +127,11 @@ func aiStudioAssistantHandler(svc *aistudio.Service, acct *accounts.Service) htt
 			Message       string `json:"message"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		if !aiAssert(r, acct, body.WorkspaceID, "member") {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace", "not_workspace_member")
 			return
 		}
 		reply, err := svc.Assistant(r.Context(), body.WorkspaceID, body.DesignSummary, body.History, body.Message)
@@ -151,11 +151,11 @@ func aiStudioStyleHandler(svc *aistudio.Service, acct *accounts.Service) http.Ha
 			SeedPalette   []string `json:"seedPalette"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		if !aiAssert(r, acct, body.WorkspaceID, "member") {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace", "not_workspace_member")
 			return
 		}
 		profile, err := svc.StyleProfile(r.Context(), body.WorkspaceID, body.ReferenceText, body.SeedPalette)
@@ -174,11 +174,11 @@ func aiStudioCritiqueHandler(svc *aistudio.Service, acct *accounts.Service) http
 			DesignSummary string `json:"designSummary"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		if !aiAssert(r, acct, body.WorkspaceID, "member") {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace", "not_workspace_member")
 			return
 		}
 		text, err := svc.Critique(r.Context(), body.WorkspaceID, body.DesignSummary)
@@ -202,11 +202,11 @@ func aiStudioGenerateHandler(svc *aistudio.Service, acct *accounts.Service, reg 
 			PageCount   int    `json:"pageCount"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		if !aiAssert(r, acct, body.WorkspaceID, "member") {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace", "not_workspace_member")
 			return
 		}
 		u := userFrom(r.Context())
@@ -231,11 +231,11 @@ func aiStudioVariationsHandler(svc *aistudio.Service, acct *accounts.Service, re
 			Count       int    `json:"count"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		if !aiAssert(r, acct, body.WorkspaceID, "member") {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace", "not_workspace_member")
 			return
 		}
 		u := userFrom(r.Context())
@@ -257,12 +257,12 @@ func aiSessionsListHandler(svc *aistudio.Service, acct *accounts.Service, p *per
 		designID := chi.URLParam(r, "id")
 		ws, err := authorizeDesign(r, p, acct, designID, "viewer")
 		if err != nil {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "not permitted")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not permitted", "not_permitted")
 			return
 		}
 		list, err := svc.ListSessions(r.Context(), ws, designID)
 		if err != nil {
-			Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "could not list sessions")
+			problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "could not list sessions", "could_not_list_sessions")
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"sessions": list})
@@ -274,12 +274,12 @@ func aiSessionsCreateHandler(svc *aistudio.Service, acct *accounts.Service, p *p
 		designID := chi.URLParam(r, "id")
 		ws, err := authorizeDesign(r, p, acct, designID, "member")
 		if err != nil {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "not permitted")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not permitted", "not_permitted")
 			return
 		}
 		sess, err := svc.CreateSession(r.Context(), ws, designID)
 		if err != nil {
-			Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "could not create session")
+			problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "could not create session", "could_not_create_session")
 			return
 		}
 		writeJSON(w, http.StatusOK, sess)
@@ -291,12 +291,12 @@ func aiTurnsListHandler(svc *aistudio.Service, acct *accounts.Service, p *persis
 		designID := chi.URLParam(r, "id")
 		ws, err := authorizeDesign(r, p, acct, designID, "viewer")
 		if err != nil {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "not permitted")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not permitted", "not_permitted")
 			return
 		}
 		turns, err := svc.ListTurns(r.Context(), ws, designID, chi.URLParam(r, "sid"))
 		if err != nil {
-			Problem(w, r, http.StatusNotFound, "Not Found", "session not found")
+			problemWithCode(w, r, http.StatusNotFound, "Not Found", "session not found", "session_not_found")
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"turns": turns})
@@ -308,7 +308,7 @@ func aiTurnsCreateHandler(svc *aistudio.Service, acct *accounts.Service, p *pers
 		designID := chi.URLParam(r, "id")
 		ws, err := authorizeDesign(r, p, acct, designID, "member")
 		if err != nil {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "not permitted")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not permitted", "not_permitted")
 			return
 		}
 		var body struct {
@@ -318,11 +318,11 @@ func aiTurnsCreateHandler(svc *aistudio.Service, acct *accounts.Service, p *pers
 			Provenance json.RawMessage `json:"provenance"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		if body.Role != "user" && body.Role != "assistant" {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "role must be user or assistant")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "role must be user or assistant", "role_invalid")
 			return
 		}
 		turn, err := svc.AppendTurn(r.Context(), ws, designID, aistudio.AiTurn{
@@ -333,7 +333,7 @@ func aiTurnsCreateHandler(svc *aistudio.Service, acct *accounts.Service, p *pers
 			Provenance: body.Provenance,
 		})
 		if err != nil {
-			Problem(w, r, http.StatusNotFound, "Not Found", "session not found")
+			problemWithCode(w, r, http.StatusNotFound, "Not Found", "session not found", "session_not_found")
 			return
 		}
 		writeJSON(w, http.StatusOK, turn)

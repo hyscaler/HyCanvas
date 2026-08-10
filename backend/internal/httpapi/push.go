@@ -31,12 +31,12 @@ func pushSubscribeHandler(ps *push.Service) http.HandlerFunc {
 			} `json:"keys"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Endpoint == "" {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid subscription")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid subscription", "invalid_subscription")
 			return
 		}
 		u := userFrom(r.Context())
 		if err := ps.Subscribe(r.Context(), u.ID, body.Endpoint, body.Keys.P256dh, body.Keys.Auth); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "could not save subscription")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "could not save subscription", "could_not_save_subscription")
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
@@ -49,11 +49,11 @@ func pushUnsubscribeHandler(ps *push.Service) http.HandlerFunc {
 			Endpoint string `json:"endpoint"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Endpoint == "" {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "missing endpoint")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "missing endpoint", "missing_endpoint")
 			return
 		}
 		if err := ps.Unsubscribe(r.Context(), body.Endpoint); err != nil {
-			Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "could not unsubscribe")
+			problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "could not unsubscribe", "could_not_unsubscribe")
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})

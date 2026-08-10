@@ -68,13 +68,13 @@ func brandLintGateHandler(br *brand.Service) http.HandlerFunc {
 func brandProblem(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, brand.ErrForbidden):
-		Problem(w, r, http.StatusForbidden, "Forbidden", "you do not have permission to manage brand kits")
+		problemWithCode(w, r, http.StatusForbidden, "Forbidden", "you do not have permission to manage brand kits", "brand_kit_forbidden")
 	case errors.Is(err, brand.ErrNotFound):
-		Problem(w, r, http.StatusNotFound, "Not Found", "brand kit not found")
+		problemWithCode(w, r, http.StatusNotFound, "Not Found", "brand kit not found", "brand_kit_not_found")
 	case errors.Is(err, brand.ErrBadRequest):
-		Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid request")
+		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid request", "invalid_request")
 	default:
-		Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed")
+		problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed", "request_failed")
 	}
 }
 
@@ -97,7 +97,7 @@ func brandCreateHandler(br *brand.Service) http.HandlerFunc {
 			IsDefault *bool  `json:"isDefault"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())
@@ -126,7 +126,7 @@ func brandUpdateHandler(br *brand.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var raw map[string]json.RawMessage
 		if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		in := brand.UpdateInput{}
@@ -206,7 +206,7 @@ func brandRestoreHandler(br *brand.Service) http.HandlerFunc {
 			Version int `json:"version"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())
@@ -237,7 +237,7 @@ func brandAssignHandler(br *brand.Service) http.HandlerFunc {
 			BrandKitID *string `json:"brandKitId"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		id := ""
@@ -260,7 +260,7 @@ func brandVersionPinHandler(br *brand.Service) http.HandlerFunc {
 			Version *int `json:"version"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		// null / omitted -> track latest (-1).
@@ -294,7 +294,7 @@ func brandLockedRegionsHandler(br *brand.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var raw map[string]json.RawMessage
 		if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		var nodeIDs []string
