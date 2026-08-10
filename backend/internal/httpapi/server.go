@@ -76,6 +76,7 @@ type Deps struct {
 	Captcha       captcha.Verifier     // optional CAPTCHA gate on the auth forms; nil = off
 	CaptchaConfig config.CaptchaConfig // public captcha config (provider/site key) for the sign-in page
 	PublicDir     string               // exported Next.js frontend to serve; empty = API only
+	LocalesDir    string               // optional dir of /locales/<tag>.json translations that overrides the embedded copy
 	AnalyticsGAID string               // optional GA4 measurement id injected into served HTML; empty = no analytics
 	// AllowOrigin gates CORS: it returns true for cross-origin Origins that may
 	// call the API with credentials (dev frontend). Nil disables CORS handling.
@@ -206,8 +207,11 @@ func NewRouter(d Deps) http.Handler {
 	// back to a PUBLIC_DIR directory when no UI was embedded.
 	switch {
 	case webui.HasContent():
-		mountStaticFS(r, http.FS(webui.FS()), d.AnalyticsGAID)
-		d.Logger.Info("serving embedded frontend")
+		// The locales overlay goes on FIRST so a translation dropped next to the
+		// binary beats the embedded copy; adding a language must not require a
+		// rebuild.
+		mountStaticFS(r, withLocalesDir(http.FS(webui.FS()), d.LocalesDir), d.AnalyticsGAID)
+		d.Logger.Info("serving embedded frontend", "localesDir", d.LocalesDir)
 	case d.PublicDir != "":
 		if info, err := os.Stat(d.PublicDir); err == nil && info.IsDir() {
 			mountStatic(r, d.PublicDir, d.AnalyticsGAID)
