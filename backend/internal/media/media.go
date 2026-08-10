@@ -5,6 +5,7 @@
 package media
 
 import (
+	"net"
 	"regexp"
 	"strconv"
 	"strings"
@@ -212,7 +213,10 @@ func ipv4Parts(host string) []int {
 }
 
 // IsPrivateIP reports whether an IP literal (v4/v6) is private, loopback,
-// link-local, or reserved.
+// link-local, or reserved. IPv6 forms that carry an IPv4 address inside them
+// are judged by the address they actually reach, not by how they are written.
+// A hostname is not an address and always reports false; callers that accept
+// one must resolve it and re-check every address it answers with.
 func IsPrivateIP(host string) bool {
 	if v4 := ipv4Parts(host); v4 != nil {
 		a, b := v4[0], v4[1]
@@ -249,11 +253,63 @@ func IsPrivateIP(host string) bool {
 			if ipv4Parts(mapped) != nil {
 				return IsPrivateIP(mapped)
 			}
-			return false
+			// A v4-mapped address written in HEX ("::ffff:7f00:1") reaches the
+			// same host as the dotted form but has no dotted quad to hand back,
+			// so it falls through to the decoder below rather than being waved
+			// past as unrecognized.
 		}
-		return false
+		return embeddedV4IsPrivate(h)
 	}
 	return false
+}
+
+// embeddedV4IsPrivate judges the IPv6 forms that CARRY an IPv4 address inside
+// them. Every check above reads these as ordinary global unicast, but a host
+// with NAT64/DNS64 or 6to4 configured - the norm on IPv6-only networks - has
+// the stack translate them into a real IPv4 connection, so "64:ff9b::7f00:1"
+// reaches 127.0.0.1 and "2002:7f00:1::" reaches it via a 6to4 relay. Judge the
+// address the connection actually lands on, not the one it is written as.
+//
+// Refusing more can only ever cost a fetch that should not have been made:
+// these are translation and transition ranges, not addresses a public asset or
+// page is served from.
+func embeddedV4IsPrivate(h string) bool {
+	ip := net.ParseIP(h)
+	if ip == nil {
+		return false // a hostname, not an address; the callers resolve those
+	}
+	// v4-mapped ("::ffff:7f00:1"): judge the IPv4 it actually reaches.
+	if v4 := ip.To4(); v4 != nil {
+		return IsPrivateIP(v4.String())
+	}
+	b := ip.To16()
+	if b == nil {
+		return false
+	}
+	switch {
+	// 64:ff9b::/32 covers the RFC 6052 well-known prefix and the RFC 8215
+	// local-use range. Where the IPv4 sits depends on the prefix length, so
+	// rather than decode every embedding, refuse the block outright.
+	case b[0] == 0x00 && b[1] == 0x64 && b[2] == 0xff && b[3] == 0x9b:
+		return true
+	// 2002::/16 (6to4): the IPv4 is bytes 2-5, by definition.
+	case b[0] == 0x20 && b[1] == 0x02:
+		return IsPrivateIP(net.IP(b[2:6]).String())
+	// ::/96 (deprecated IPv4-compatible): the IPv4 is the low 32 bits. "::" and
+	// "::1" are already refused above; this catches the rest, e.g. "::7f00:1".
+	case allZero(b[:12]):
+		return IsPrivateIP(net.IP(b[12:16]).String())
+	}
+	return false
+}
+
+func allZero(b []byte) bool {
+	for _, c := range b {
+		if c != 0 {
+			return false
+		}
+	}
+	return true
 }
 
 // URLValidation is the result of validating an import URL.

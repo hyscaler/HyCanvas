@@ -7,8 +7,9 @@
 // deployment, so it must never become an internal-network probe. Scheme is
 // http(s) only; the HOSTNAME resolves first and every resolved address must be
 // public (loopback, RFC1918, link-local incl. 169.254.169.254 metadata, ULA,
-// and unspecified ranges all refuse); redirects re-validate each hop; the
-// response is size-capped and time-limited; only html/plain content parses.
+// unspecified, and the IPv6 ranges that carry an IPv4 inside them so NAT64 or
+// 6to4 cannot translate a way back in, all refuse); redirects re-validate each
+// hop; the response is size-capped and time-limited; only html/plain parses.
 package httpapi
 
 import (
