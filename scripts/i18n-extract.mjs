@@ -97,6 +97,36 @@ function translatable(text) {
  * case), because this only has to be right enough to fail a build and point a
  * person at the line. Returns the offending text, never rewrites.
  */
+/**
+ * Prose ATTRIBUTE values the rewrite pass rejects. The attribute regex matches
+ * them fine, but `translatable()` then refuses anything containing ; = " ' [ ]
+ * or a backtick and they land in `skipped`, i.e. counted as legitimately
+ * non-translatable. These are aria-label, title and placeholder, which is what
+ * assistive technology speaks, so a silent miss here is worse than in a text
+ * node. Reports only; the rewrite stays as conservative as it was.
+ */
+function unseenAttrValues(src, attrs) {
+  const out = [];
+  for (const a of attrs) {
+    // Anchored so `label="` cannot match inside `aria-label="`.
+    const rx = new RegExp(`(?:^|[\\s{])${a}="([^"\\n]+)"`, "g");
+    let m;
+    while ((m = rx.exec(src)) !== null) {
+      const t = m[1].trim();
+      if (!/[;=[\]'`]/.test(t)) continue; // the rewrite pass already covers these
+      if (t.length < 6 || !/\s/.test(t) || !/^[A-Z]/.test(t)) continue;
+      if (!/[A-Za-z]{2}/.test(t)) continue;
+      if (/^(https?:|\/|#)/.test(t)) continue;
+      const lineStart = src.lastIndexOf("\n", m.index) + 1;
+      const prevStart = src.lastIndexOf("\n", lineStart - 2) + 1;
+      const lineEnd = src.indexOf("\n", m.index);
+      if (src.slice(prevStart, lineEnd === -1 ? src.length : lineEnd).includes("i18n-ignore")) continue;
+      out.push(t);
+    }
+  }
+  return out;
+}
+
 function unseenProse(src) {
   const out = [];
   const re = /([^\s=!<>-]|\n[ \t]*)>(\s*)([^<>{}\n]+?)(\s*)</g;
@@ -390,7 +420,7 @@ for (const file of targets.flatMap(files)) {
   // hundreds of files, so these are reported and fixed by hand; reporting them
   // is what makes the ratchet in i18n.catalog.test.ts honest rather than green.
   if (isJsx) {
-    const unseen = unseenProse(src);
+    const unseen = [...unseenProse(src), ...unseenAttrValues(src, ATTRS)];
     totalUnseen += unseen.length;
     for (const t of unseen) console.log(`  ${rel}: UNSEEN ${JSON.stringify(t)}`);
   }

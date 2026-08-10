@@ -1342,7 +1342,7 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
         <ToolButton active={tool === "laser"} onClick={() => selectTool("laser")} title={tr("editor.laser_pointer_l")}><MousePointer2 size={16} /></ToolButton>
         <ToolButton active={tool === "pen"} onClick={() => selectTool("pen")} title={tr("editor.pen_draw_d")}><Pencil size={16} /></ToolButton>
         <ToolButton active={tool === "spotlight"} onClick={() => selectTool("spotlight")} title={tr("editor.spotlight_o")}><Lightbulb size={16} /></ToolButton>
-        <ToolButton active={zoom.scale > 1} onClick={() => setZoom((z) => (z.scale > 1 ? fitZoom() : stepZoom(z, ZOOM_STEP * 2, 0.5, 0.5)))} title="Zoom (Z, +/-, wheel; 0 resets)"><ZoomIn size={16} /></ToolButton>
+        <ToolButton active={zoom.scale > 1} onClick={() => setZoom((z) => (z.scale > 1 ? fitZoom() : stepZoom(z, ZOOM_STEP * 2, 0.5, 0.5)))} title={tr("editor.present_zoom_hint")}><ZoomIn size={16} /></ToolButton>
         <ToolButton active={blank === "black"} onClick={() => setBlank((v) => (v === "black" ? "none" : "black"))} title={tr("editor.black_screen_b")}><Square size={16} fill="currentColor" /></ToolButton>
         <ToolButton active={blank === "white"} onClick={() => setBlank((v) => (v === "white" ? "none" : "white"))} title={tr("editor.white_screen_w")}><Square size={16} /></ToolButton>
         <ToolButton active={paletteOpen} onClick={() => setPaletteOpen(true)} title={tr("editor.jump_to_slide_g_or")}><LayoutGrid size={16} /></ToolButton>

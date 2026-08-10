@@ -1127,7 +1127,7 @@ export function SheetSurface(props: {
             // commit and tear down the edit; the cell mouse handler manages it.
             if (editing && !insertingRef) commitDraft(activeKey, draft);
           }}
-          placeholder="Enter a value or =FORMULA"
+          placeholder={tr("editor.enter_value_or_formula_placeholder")}
           className="flex-1 rounded border border-transparent px-2 py-1 font-mono text-sm text-neutral-800 hover:border-neutral-200 focus:border-blue-400 focus:outline-none"
         />
       </div>

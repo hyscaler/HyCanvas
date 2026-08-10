@@ -1263,7 +1263,7 @@ function ConnectorEditLayer({
           <button
             key={`wp-${i}`}
             type="button"
-            title="Drag to bend; double-click to remove"
+            title={tr("editor.drag_to_bend_double_click_remove")}
             aria-label={`Connector bend ${i + 1}`}
             className="pointer-events-auto absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-amber-500 shadow ring-1 ring-amber-300 transition hover:scale-125"
             style={{ left: p.x, top: p.y, touchAction: "none" }}

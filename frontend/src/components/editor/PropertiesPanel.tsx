@@ -1132,7 +1132,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
         <Section title={tr("editor.image")} order={ORDER.type}>
           <ImagePalette assetId={(single.node as unknown as { source: { assetId: string } }).source.assetId} />
           {isLowResolution(single.node as ImageNode, doc) && (
-            <div className="rounded-lg bg-amber-50 px-2.5 py-1.5 text-[11px] font-medium text-amber-700" title="The image's resolution is low for its placed size; it may look soft when exported or printed.">
+            <div className="rounded-lg bg-amber-50 px-2.5 py-1.5 text-[11px] font-medium text-amber-700" title={tr("editor.image_resolution_low_hint")}>
               Low resolution (~{Math.round(computeEffectivePpi(single.node as ImageNode, doc))} PPI). Use a larger image or scale this down.
             </div>
           )}
@@ -2941,7 +2941,7 @@ function DataBindingControls({ node }: { node: Node }) {
         <span className="text-[11px] font-medium text-neutral-600">{tr("editor.data_source")}</span>
         {binding ? <button onClick={() => store().setDataBinding(id, undefined)} className="text-[10px] text-neutral-400 hover:text-rose-600">{tr("editor.unbind")}</button> : <button onClick={() => setOpen(false)} className="text-[10px] text-neutral-400 hover:text-neutral-700">{tr("editor.cancel")}</button>}
       </div>
-      <textarea value={csv} onChange={(e) => setCsv(e.target.value)} rows={3} placeholder="Paste CSV or TSV (first row = headers)…" className="w-full resize-y rounded-md border border-neutral-200 px-2 py-1 font-mono text-[11px] outline-none focus:border-brand-400" />
+      <textarea value={csv} onChange={(e) => setCsv(e.target.value)} rows={3} placeholder={tr("editor.paste_csv_or_tsv_placeholder")} className="w-full resize-y rounded-md border border-neutral-200 px-2 py-1 font-mono text-[11px] outline-none focus:border-brand-400" />
       <button onClick={useCsv} disabled={!csv.trim() || busy} className="rounded-md border border-neutral-200 px-2 py-1 text-[11px] font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-40">{tr("editor.use_csv")}</button>
       <div className="text-center text-[10px] text-neutral-400">{tr("editor.or_a_remote_csv_url")}</div>
       <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…/data.csv" className={`${inputCls} text-[11px]`} />

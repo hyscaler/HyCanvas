@@ -4302,7 +4302,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           onPointerDown={onSideResizeDown("left")}
           onPointerMove={onSideResizeMove}
           onPointerUp={onSideResizeUp}
-          title="Drag to resize the media panel; double-click to reset"
+          title={tr("editor.drag_resize_media_panel")}
           className="absolute inset-y-0 -right-0.5 z-20 w-1.5 cursor-col-resize hover:bg-brand-600/60"
         />
         <div className="flex items-center justify-between border-b border-neutral-200 px-3 py-2">
@@ -5177,7 +5177,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           </ToolbarButton>
           <div className="mx-1 h-5 w-px bg-neutral-300" />
           <ToolbarButton
-            title="Zoom out (anchored on the playhead); Ctrl+wheel zooms at the cursor"
+            title={tr("editor.zoom_out_playhead_hint")}
             onClick={() => applyZoom(pxPerFrame / 1.4)}
           >
             <ZoomOut size={13} />
@@ -5186,7 +5186,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             {pxPerFrame.toFixed(2)} px/f
           </span>
           <ToolbarButton
-            title="Zoom in (anchored on the playhead); Ctrl+wheel zooms at the cursor"
+            title={tr("editor.zoom_in_playhead_hint")}
             onClick={() => applyZoom(pxPerFrame * 1.4)}
           >
             <ZoomIn size={13} />
@@ -6051,7 +6051,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             onPointerDown={onSideResizeDown("right")}
             onPointerMove={onSideResizeMove}
             onPointerUp={onSideResizeUp}
-            title="Drag to resize the inspector; double-click to reset"
+            title={tr("editor.drag_resize_inspector")}
             className="absolute inset-y-0 -left-0.5 z-20 w-1.5 cursor-col-resize hover:bg-brand-600/60"
           />
           <div className="flex items-center justify-between border-b border-neutral-200 px-3 py-2">
@@ -6151,7 +6151,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                         min={16}
                         max={7680}
                         defaultValue={project.stage.width}
-                        title="Width (px); commits on Enter or focus-out" aria-label="Width (px); commits on Enter or focus-out"
+                        title={tr("editor.stage_width_px_hint")} aria-label={tr("editor.stage_width_px_hint")}
                         onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
                         onBlur={(e) => {
                           const w = clampStageDim(parseInt(e.target.value, 10) || project.stage.width);
@@ -6166,7 +6166,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                         min={16}
                         max={7680}
                         defaultValue={project.stage.height}
-                        title="Height (px); commits on Enter or focus-out" aria-label="Height (px); commits on Enter or focus-out"
+                        title={tr("editor.stage_height_px_hint")} aria-label={tr("editor.stage_height_px_hint")}
                         onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
                         onBlur={(e) => {
                           const h = clampStageDim(parseInt(e.target.value, 10) || project.stage.height);
@@ -6202,7 +6202,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                     <select
                       value={previewQuality}
                       onChange={(e) => setPreviewQuality(e.target.value === "original" ? "original" : "auto")}
-                      title="Auto scrubs the 540p preview proxy when one exists; exports always use originals" aria-label="Auto scrubs the 540p preview proxy when one exists; exports always use originals"
+                      title={tr("editor.preview_proxy_scrub_hint")} aria-label={tr("editor.preview_proxy_scrub_hint")}
                       className="rounded border border-neutral-300 bg-neutral-200 px-1.5 py-1 text-neutral-900"
                     >
                       <option value="auto">{tr("editor.auto_proxy")}</option>
@@ -6362,7 +6362,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                         key={`dur-${durationFrames}`}
                         type="text"
                         defaultValue={formatTimecode(durationFrames, fps)}
-                        title="Type a time (mm:ss or mm:ss:ff) to extend the timeline with trailing space; shorter than the clips snaps back to the clip extent" aria-label="Type a time (mm:ss or mm:ss:ff) to extend the timeline with trailing space; shorter than the clips snaps back to the clip extent"
+                        title={tr("editor.timeline_extend_time_hint")} aria-label={tr("editor.timeline_extend_time_hint")}
                         onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
                         onBlur={(e) => {
                           const f = parseTimecode(e.target.value, fps);
@@ -8396,7 +8396,7 @@ function KeyframeRows({ clip, playhead, editDisabled, onSetKeyframes }: {
             type="button"
             disabled={editDisabled}
             onClick={() => onSetKeyframes(applyMotionPreset(clip.keyframes, p.name, dur))}
-            title="Writes pose keyframes over the clip edge; entrance and exit presets combine"
+            title={tr("editor.pose_keyframes_clip_edge_hint")}
             className="rounded bg-neutral-200 px-1.5 py-0.5 text-[10px] text-neutral-700 hover:bg-neutral-300 disabled:opacity-40"
           >
             {p.label}

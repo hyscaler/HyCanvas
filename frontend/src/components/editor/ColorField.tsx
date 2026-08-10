@@ -275,7 +275,7 @@ export function ColorField({
               CMYK {Math.round(cmyk.c * 100)} {Math.round(cmyk.m * 100)} {Math.round(cmyk.y * 100)} {Math.round(cmyk.k * 100)}
             </span>
             {!inGamut && (
-              <span className="rounded bg-amber-100 px-1.5 py-0.5 font-medium text-amber-700" title="Outside the CMYK print gamut; will shift in print">
+              <span className="rounded bg-amber-100 px-1.5 py-0.5 font-medium text-amber-700" title={tr("editor.outside_cmyk_print_gamut")}>
                 {tr("editor.out_of_gamut")}
               </span>
             )}
