@@ -8,11 +8,11 @@
 // compositing). Gradient/solid fills are handled; image/pattern backgrounds are
 // treated as unknown and skipped for contrast.
 
-import { needsAltText, walkNodes, type Color, type DesignFile, type Fill } from "@hc/schema";
+import { isDecorative, needsAltText, resolveReadingOrder, walkNodes, type Color, type DesignFile, type Fill, type Node } from "@hc/schema";
 import { contrastRatio } from "@hc/color";
 
 export type A11ySeverity = "error" | "warning";
-export type A11yKind = "contrast" | "alt-text" | "small-text" | "touch-target" | "slide-title";
+export type A11yKind = "contrast" | "alt-text" | "small-text" | "touch-target" | "slide-title" | "reading-order";
 
 export interface A11yIssue {
   nodeId: string;
@@ -20,7 +20,14 @@ export interface A11yIssue {
   pageIndex: number;
   kind: A11yKind;
   severity: A11ySeverity;
+  /** English, always present: this package is framework-agnostic and its
+   *  callers include logs and tests. A UI should prefer `messageCode`. */
   message: string;
+  /** Catalog key for the same message, translated at the display boundary
+   *  (the same split `CodedError` uses for thrown errors). `messageParams`
+   *  carries the numbers the sentence interpolates. */
+  messageCode: string;
+  messageParams?: Record<string, string | number>;
   /** Contrast issues: the measured ratio and the WCAG AA minimum it missed. */
   ratio?: number;
   required?: number;
@@ -64,10 +71,75 @@ export function checkAccessibility(doc: DesignFile): A11yIssue[] {
           kind: "slide-title",
           severity: "warning",
           message: `Slide ${pageIndex + 1} has no title. Name the slide so screen readers can navigate the deck.`,
+          messageCode: "a11y.slide_has_no_title",
+          messageParams: { slide: pageIndex + 1 },
         });
       }
     });
   }
+  // Reading order (FR-5): flag a page whose announced order (FR-7's resolved
+  // reading order) repeatedly jumps BACKWARD against the visual flow. A
+  // screen reader follows the order, a sighted reader follows the layout;
+  // when the two disagree this much, one of them is being misled.
+  // RTL scripts: Arabic, Hebrew, Persian, Urdu, Pashto, Sindhi, Uyghur,
+  // Divehi, Yiddish, Kurdish (Sorani).
+  const rtl = /^(ar|he|fa|ur|ps|sd|ug|dv|yi|ckb)\b/i.test((doc as { language?: string }).language ?? "");
+  doc.pages.forEach((page, pageIndex) => {
+    const ordered = resolveReadingOrder(page).filter(
+      (n) => !isDecorative(n) && !(n as { hidden?: boolean }).hidden,
+    ) as Node[];
+    if (ordered.length < 3) return;
+    // The VISUAL box, not the raw one: scale/rotation/flip compose about the
+    // local origin before translating (same convention as the engine), so a
+    // scaled, flipped, or rotated node is judged where the user sees it.
+    const center = (n: Node) => {
+      const t = (n as { transform?: { x?: number; y?: number; scaleX?: number; scaleY?: number; rotation?: number } }).transform ?? {};
+      const s = (n as { size?: { width?: number; height?: number } }).size ?? {};
+      const rad = ((t.rotation ?? 0) * Math.PI) / 180;
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+      const sx = t.scaleX ?? 1;
+      const sy = t.scaleY ?? 1;
+      const w = s.width ?? 0;
+      const h = s.height ?? 0;
+      let top = Infinity;
+      let cx = 0;
+      let cy = 0;
+      for (const [px, py] of [[0, 0], [w, 0], [w, h], [0, h]] as const) {
+        const x = (t.x ?? 0) + cos * sx * px - sin * sy * py;
+        const y = (t.y ?? 0) + sin * sx * px + cos * sy * py;
+        top = Math.min(top, y);
+        cx += x / 4;
+        cy += y / 4;
+      }
+      return { cx, top, cy };
+    };
+    let backward = 0;
+    for (let i = 1; i < ordered.length; i++) {
+      const prev = center(ordered[i - 1]);
+      const next = center(ordered[i]);
+      // A clear backward jump: the next announced element sits entirely ABOVE
+      // the previous one's row, or on the same row but behind it in the
+      // document's reading direction. Column layouts survive: reading a
+      // second column top-to-bottom produces only ONE upward jump.
+      const above = next.cy < prev.top;
+      const sameRow = !above && Math.abs(next.cy - prev.cy) < 8;
+      const behind = sameRow && (rtl ? next.cx > prev.cx : next.cx < prev.cx);
+      if (above || behind) backward++;
+    }
+    if (backward >= 2 && backward / (ordered.length - 1) > 0.34) {
+      issues.push({
+        nodeId: page.id,
+        nodeName: page.name,
+        pageIndex,
+        kind: "reading-order",
+        severity: "warning",
+        message: `Reading order jumps against the layout ${backward} times. Reorder it in the Reading Order pane so screen readers follow the visual flow.`,
+        messageCode: "a11y.reading_order_jumps",
+        messageParams: { count: backward },
+      });
+    }
+  });
   doc.pages.forEach((page, pageIndex) => {
     const bg = solidOf(page.background) ?? WHITE;
     walkNodes(
@@ -97,6 +169,8 @@ export function checkAccessibility(doc: DesignFile): A11yIssue[] {
               kind: "contrast",
               severity: worst.ratio < 3 ? "error" : "warning",
               message: `Low text contrast (${worst.ratio.toFixed(1)}:1; WCAG AA needs ${worst.required}:1)`,
+              messageCode: "a11y.low_text_contrast",
+              messageParams: { ratio: worst.ratio.toFixed(1), required: worst.required },
               ratio: worst.ratio,
               required: worst.required,
             });
@@ -109,6 +183,8 @@ export function checkAccessibility(doc: DesignFile): A11yIssue[] {
               kind: "small-text",
               severity: "warning",
               message: `Very small text (${Math.round(minFont)}px) is hard to read`,
+              messageCode: "a11y.very_small_text",
+              messageParams: { size: Math.round(minFont) },
             });
           }
         } else if (needsAltText(node)) {
@@ -121,6 +197,7 @@ export function checkAccessibility(doc: DesignFile): A11yIssue[] {
             kind: "alt-text",
             severity: "warning",
             message: "Image has no alt text for screen readers",
+            messageCode: "a11y.image_has_no_alt_text",
           });
         }
         // Interactive elements (a link or pointer interaction) must meet the
@@ -137,6 +214,8 @@ export function checkAccessibility(doc: DesignFile): A11yIssue[] {
               kind: "touch-target",
               severity: "warning",
               message: `Interactive target is small (${Math.round(w)}x${Math.round(h)}px; WCAG needs ${MIN_TOUCH_TARGET}x${MIN_TOUCH_TARGET}px)`,
+              messageCode: "a11y.touch_target_too_small",
+              messageParams: { w: Math.round(w), h: Math.round(h), min: MIN_TOUCH_TARGET },
             });
           }
         }
@@ -158,7 +237,7 @@ export interface A11ySummary {
 
 /** Roll up an issue list into counts for the accessibility panel/score. */
 export function summarizeAccessibility(issues: A11yIssue[]): A11ySummary {
-  const byKind: Record<A11yKind, number> = { contrast: 0, "alt-text": 0, "small-text": 0, "touch-target": 0, "slide-title": 0 };
+  const byKind: Record<A11yKind, number> = { contrast: 0, "alt-text": 0, "small-text": 0, "touch-target": 0, "slide-title": 0, "reading-order": 0 };
   let errors = 0;
   let warnings = 0;
   for (const i of issues) {
