@@ -91,6 +91,30 @@ function translatable(text) {
 }
 
 /**
+ * JSX text nodes the rewrite pattern cannot see, because its run excludes the
+ * five characters listed at the call site. Relaxed on exactly those five and
+ * nothing else, and stricter about what counts as prose (two words, sentence
+ * case), because this only has to be right enough to fail a build and point a
+ * person at the line. Returns the offending text, never rewrites.
+ */
+function unseenProse(src) {
+  const out = [];
+  const re = /([^\s=!<>-]|\n[ \t]*)>(\s*)([^<>{}\n]+?)(\s*)</g;
+  let m;
+  while ((m = re.exec(src)) !== null) {
+    const t = m[3].trim();
+    if (!/[;="'`]/.test(t)) continue; // the rewrite pass already covers these
+    if (t.length < 6 || !/\s/.test(t) || !/^[A-Z]/.test(t)) continue;
+    if (!/[A-Za-z]{2}/.test(t)) continue;
+    if (/=>|\?\?|\+\+|===|!==/.test(t)) continue;
+    if (/^(import|export|const|let|return|function)\b/.test(t)) continue;
+    if (/\breturn\b|\btypeof\b|\bawait\b/.test(t)) continue;
+    out.push(t);
+  }
+  return out;
+}
+
+/**
  * Ranges covered by comments, so prose in a comment is never mistaken for a
  * string the user reads. Quotes are tracked too, because a "//" inside a string
  * does not start a comment.
@@ -204,10 +228,10 @@ const EXPR_EXCLUDE_BEFORE =
 const catalog = JSON.parse(readFileSync(CATALOG, "utf8"));
 /** Reverse index so identical text in an area reuses one key. */
 const byAreaText = new Map();
-for (const [k, v] of Object.entries(catalog)) byAreaText.set(`${k.split(".")[0]} ${v}`, k);
+for (const [k, v] of Object.entries(catalog)) byAreaText.set(`${k.split(".")[0]}\x1f${v}`, k);
 
 function keyFor(area, text) {
-  const memo = `${area} ${text}`;
+  const memo = `${area}\x1f${text}`;
   const seen = byAreaText.get(memo);
   if (seen) return seen;
   const stem = `${area}.${slug(text)}`;
@@ -234,6 +258,7 @@ function files(target) {
 let totalText = 0;
 let totalAttr = 0;
 let totalExpr = 0;
+let totalUnseen = 0;
 let skipped = 0;
 const touched = [];
 
@@ -351,6 +376,25 @@ for (const file of targets.flatMap(files)) {
     }
   }
 
+  // Detection only, never a rewrite, and it MUST run before the early exit
+  // below: every clean file leaves there, so a detection pass placed after it
+  // would silently never run (it did, until a mutation test caught it).
+  //
+  // The text-node pattern above excludes ; = " ' and a backtick from the run
+  // itself, on the stated reasoning that those "never appear in a plain JSX
+  // text node". That is false for prose: English UI text uses semicolons and
+  // apostrophes, and EVERY HTML entity ends in ";". Such a node never matched,
+  // so it was not even counted as skipped, and this tool reported a clean run
+  // over strings it had never examined (26 of them, found August 2026).
+  // Widening the REWRITE is not worth the risk of a bad automated edit across
+  // hundreds of files, so these are reported and fixed by hand; reporting them
+  // is what makes the ratchet in i18n.catalog.test.ts honest rather than green.
+  if (isJsx) {
+    const unseen = unseenProse(src);
+    totalUnseen += unseen.length;
+    for (const t of unseen) console.log(`  ${rel}: UNSEEN ${JSON.stringify(t)}`);
+  }
+
   if (nText + nAttr + nExpr === 0) continue;
 
   // Import `tr` once, after the last top-level import so a multi-line import
@@ -387,7 +431,7 @@ if (!dry) {
 
 for (const line of touched) console.log("  " + line);
 console.log(
-  `${dry ? "[dry] " : ""}${totalText} text nodes + ${totalAttr} attributes + ${totalExpr} expressions -> ${
-    Object.keys(catalog).length
-  } catalog keys across ${touched.length} files (${skipped} non-translatable skipped)`,
+  `${dry ? "[dry] " : ""}${totalText} text nodes + ${totalAttr} attributes + ${totalExpr} expressions + ${
+    totalUnseen
+  } unseen -> ${Object.keys(catalog).length} catalog keys across ${touched.length} files (${skipped} non-translatable skipped)`,
 );

@@ -572,7 +572,7 @@ export function CommentsPanel({ onClose }: { onClose: () => void }) {
         <>
           <div className="oc-scroll flex-1 space-y-2 overflow-y-auto p-3">
             {!canComment && (
-              <p className="rounded-lg bg-sky-50 px-3 py-2 text-xs text-sky-800">You have view-only access; you can read comments but not post.</p>
+              <p className="rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-ink">{tr("editor.view_only_can_read_comments")}</p>
             )}
             {loading && threads.length === 0 ? (
               <div className="space-y-2">

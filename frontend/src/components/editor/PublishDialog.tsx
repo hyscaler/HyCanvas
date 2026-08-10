@@ -371,7 +371,7 @@ export function PublishDialog({
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-3.5">
-          <h2 className="text-base font-semibold text-neutral-900">Publish &amp; schedule</h2>
+          <h2 className="text-base font-semibold text-neutral-900">{tr("editor.publish_and_schedule")}</h2>
           <IconButton size="sm" aria-label={tr("editor.close")} onClick={onClose}>
             <X size={16} />
           </IconButton>

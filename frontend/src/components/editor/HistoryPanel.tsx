@@ -561,7 +561,7 @@ export function HistoryPanel({
                 </div>
                 {truncated && (
                   <p className="mt-1.5 text-[11px] text-amber-700">
-                    History is long; only the oldest edits are loaded, so the newest state isn&apos;t shown here and restoring from this timeline is disabled.
+                    {tr("editor.history_truncated_notice")}
                   </p>
                 )}
               </>
@@ -602,7 +602,7 @@ export function HistoryPanel({
             ))}
           </ul>
           <p className="mt-1.5 text-[11px] text-neutral-400">
-            Branches live inside this design. Scrub the timeline and use &quot;Branch from here&quot; to fork one; switching never discards anything.
+            {tr("editor.branches_hint")}
           </p>
         </div>
       )}

@@ -1646,7 +1646,7 @@ export function WhiteboardSurface(props: {
                 ))}
               </ul>
               <p className="mt-2 px-1 text-[11px] leading-relaxed text-neutral-400">
-                Remove disconnects a participant; Ban also blocks them from rejoining this board.
+                {tr("editor.remove_versus_ban_hint")}
               </p>
             </Popover>
           </div>
@@ -1831,7 +1831,7 @@ export function WhiteboardSurface(props: {
                 <div className="flex items-center gap-2">
                   {roundOpen ? (
                     <Button size="sm" block onClick={doCloseVote}>
-                      Close &amp; reveal
+                      {tr("editor.close_and_reveal")}
                     </Button>
                   ) : (
                     <Button size="sm" block variant="secondary" onClick={doNewRound}>

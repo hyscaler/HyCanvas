@@ -1634,7 +1634,7 @@ function Recorder({ mode, disabled, onCapture }: {
                 {String(Math.floor(seconds / 60)).padStart(2, "0")}:{String(seconds % 60).padStart(2, "0")}
               </span>
               <button onClick={stop} className="ms-auto flex items-center gap-1 rounded-md bg-red-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-red-700">
-                <CircleStop size={14} /> Stop &amp; save
+                <CircleStop size={14} /> {tr("editor.stop_and_save")}
               </button>
             </div>
           ) : (
@@ -2663,7 +2663,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
             <div className="grid h-11 w-11 place-items-center rounded-full bg-brand-600 text-white shadow-sm"><Sparkles size={20} /></div>
             <div>
               <p className="text-sm font-semibold text-neutral-800">{tr("editor.create_a_design_with_ai")}</p>
-              <p className="mx-auto mt-1 max-w-[16rem] text-xs text-neutral-500">Describe what you want and I&apos;ll design it, or pick a type to start.</p>
+              <p className="mx-auto mt-1 max-w-[16rem] text-xs text-neutral-500">{tr("editor.assistant_start_hint")}</p>
             </div>
             {/* Primary: design-creation starters. */}
             <div className="grid w-full max-w-[16rem] grid-cols-2 gap-1.5">
@@ -3254,7 +3254,7 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
           {!imageCapable && (
             <div className="flex shrink-0 items-start gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-700">
               <ImagePlus size={12} className="mt-px shrink-0" />
-              <span>This provider is text-only, generated designs won&apos;t include images. Connect an image-capable provider (e.g. OpenAI) for designs with imagery.</span>
+              <span>{tr("editor.provider_text_only_hint")}</span>
             </div>
           )}
           {/* Brand-voice grounding indicator (F21 FR-6/FR-7). Shows when the
@@ -3668,7 +3668,7 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
         <div className="grid place-items-center py-8 text-neutral-400"><Spinner /></div>
       ) : error ? (
         <div className="mt-6 flex flex-col items-center gap-2 text-center">
-          <p className="text-xs text-neutral-500">Couldn&apos;t reach the stock library.</p>
+          <p className="text-xs text-neutral-500">{tr("editor.stock_library_unreachable")}</p>
           <button onClick={() => setRetryNonce((n) => n + 1)} className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink">
             {tr("editor.retry")}
           </button>
@@ -3818,7 +3818,7 @@ export function AppsPanel() {
         <div className="grid place-items-center py-8 text-neutral-400"><Spinner /></div>
       ) : error ? (
         <div className="mt-6 flex flex-col items-center gap-2 text-center">
-          <p className="text-xs text-neutral-500">Couldn&apos;t load apps.</p>
+          <p className="text-xs text-neutral-500">{tr("editor.apps_load_failed")}</p>
           <button onClick={() => setRetryNonce((n) => n + 1)} className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink">
             {tr("editor.retry")}
           </button>

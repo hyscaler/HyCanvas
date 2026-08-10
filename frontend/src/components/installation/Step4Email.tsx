@@ -109,7 +109,7 @@ export function Step4Email() {
               <Input label={tr("installation.from_address")} type="email" placeholder={tr("installation.noreply_example_com")} value={smtp.from} onChange={(e) => setSMTP({ from: e.target.value })} />
               <Input label={tr("installation.from_name")} placeholder={tr("installation.hycanvas_2")} value={smtp.fromName} onChange={(e) => setSMTP({ fromName: e.target.value })} />
             </div>
-            <p className="text-xs text-neutral-400">Port 465 uses implicit TLS; other ports upgrade with STARTTLS when the server offers it.</p>
+            <p className="text-xs text-neutral-400">{tr("installation.smtp_tls_port_hint")}</p>
           </>
         )}
 

@@ -50,7 +50,7 @@ export default function VerifyEmailPage() {
             <>
               <CheckCircle2 size={40} className="mx-auto text-emerald-500" />
               <h1 className="mt-4 text-lg font-bold text-neutral-900">{tr("page.email_verified")}</h1>
-              <p className="mt-1.5 text-sm text-neutral-500">Your email is confirmed. You&apos;re all set.</p>
+              <p className="mt-1.5 text-sm text-neutral-500">{tr("page.email_confirmed")}</p>
               <Button block size="lg" className="mt-6" onClick={() => void router.push("/dashboard")}>
                 {tr("page.go_to_dashboard")}
               </Button>

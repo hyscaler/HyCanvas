@@ -528,7 +528,7 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
                       ))}
                     </select>
                     <span className="text-xs font-normal text-neutral-500">
-                      Defaults to your browser&rsquo;s timezone. Controls how dates and times are shown to you across HyCanvas.
+                      {tr("settings.timezone_default_hint")}
                     </span>
                   </label>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

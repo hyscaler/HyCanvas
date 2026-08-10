@@ -306,7 +306,7 @@ export function MembersPanel({
           <Users size={28} className="mx-auto mb-3 text-neutral-400" />
           <p className="text-sm font-medium text-neutral-700">{tr("dashboard.this_is_your_personal_workspace")}</p>
           <p className="mx-auto mt-1 max-w-sm text-sm text-neutral-500">
-            It&apos;s just for you. Create a team workspace to invite people and collaborate in real time.
+            {tr("dashboard.solo_workspace_invite_hint")}
           </p>
         </div>
       ) : (

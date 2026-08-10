@@ -191,7 +191,7 @@ function ImagePalette({ assetId }: { assetId: string }) {
           {colors.map((c, i) => <Swatch key={`${c}-${i}`} color={c} title={`${c} (added to recent colors)`} onClick={() => rememberColor(c)} />)}
         </div>
       )}
-      {colors && colors.length === 0 && <span className="text-[11px] text-neutral-400">Couldn&apos;t read this image (it may be cross-origin).</span>}
+      {colors && colors.length === 0 && <span className="text-[11px] text-neutral-400">{tr("editor.image_read_failed_cross_origin")}</span>}
     </div>
   );
 }
@@ -2389,7 +2389,7 @@ function PageLayoutSection({ page }: { page: Page }) {
         ))}
       </select>
       <p className="mt-1.5 text-[11px] text-neutral-500">
-        The layout supplies this slide&apos;s title and content regions.
+        {tr("editor.layout_supplies_regions")}
       </p>
     </Section>
   );
@@ -2451,7 +2451,7 @@ function DeckThemeSection() {
         )}
       </div>
       <p className="mt-1.5 text-[11px] leading-relaxed text-neutral-500">
-        Themes set the deck&apos;s palette and fonts. Your slide content is not restyled.
+        {tr("editor.theme_palette_scope_hint")}
       </p>
     </Section>
   );
@@ -2606,7 +2606,7 @@ function PagePresentSection({ page }: { page: Page }) {
           <span className="text-xs text-neutral-400">s</span>
         </span>
       </label>
-      <p className="text-[11px] text-neutral-400">Autopilot uses this dwell; blank falls back to the default.</p>
+      <p className="text-[11px] text-neutral-400">{tr("editor.autopilot_dwell_hint")}</p>
     </Section>
   );
 }

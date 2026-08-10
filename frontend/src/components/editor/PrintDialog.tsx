@@ -129,7 +129,7 @@ export function PrintDialog({ open, onClose }: { open: boolean; onClose: () => v
         <h2 className="mb-1 flex items-center gap-2 text-base font-semibold text-neutral-900">
           <Printer size={18} className="text-neutral-500" /> {tr("editor.print")}
         </h2>
-        <p className="mb-4 text-[12px] text-neutral-500">Opens your system print dialog. Choose a printer, or pick &ldquo;Save as PDF&rdquo; there to get a file.</p>
+        <p className="mb-4 text-[12px] text-neutral-500">{tr("editor.print_system_dialog_hint")}</p>
 
         {pageCount > 1 && (
           <div className="mb-4">

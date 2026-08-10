@@ -91,7 +91,7 @@ export function MagicResizeDialog({ open, onClose }: { open: boolean; onClose: (
       <div className="fixed inset-0 z-40 bg-black/20" onClick={onClose} />
       <div role="dialog" aria-label={tr("editor.magic_resize")} className="fixed left-1/2 top-1/2 z-50 max-h-[80vh] w-[26rem] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-neutral-200 bg-surface p-4 shadow-2xl">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="flex items-center gap-1.5 text-base font-semibold text-neutral-900"><Wand2 size={16} className="text-brand-ink" /> Resize &amp; Switch</h2>
+          <h2 className="flex items-center gap-1.5 text-base font-semibold text-neutral-900"><Wand2 size={16} className="text-brand-ink" /> {tr("editor.resize_and_switch")}</h2>
           <button onClick={onClose} className="grid h-7 w-7 place-items-center rounded-lg text-neutral-400 hover:bg-neutral-100"><X size={16} /></button>
         </div>
         {/* Magic Switch: one-click format targets (incl. a multi-size social set). */}
@@ -111,7 +111,7 @@ export function MagicResizeDialog({ open, onClose }: { open: boolean; onClose: (
         </div>
 
         <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">{tr("editor.or_pick_exact_sizes")}</div>
-        <p className="mb-2 text-xs text-neutral-500">One size resizes this page in place; pick several to add re-laid-out copies.</p>
+        <p className="mb-2 text-xs text-neutral-500">{tr("editor.magic_resize_hint")}</p>
 
         {groups().map((g) => (
           <div key={g.name} className="mb-3">

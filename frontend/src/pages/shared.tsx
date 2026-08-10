@@ -166,7 +166,7 @@ export default function SharedLinkPage() {
           <header className="flex shrink-0 items-center gap-3 border-b border-neutral-200 bg-surface px-4 py-2.5">
             <Logo size={26} />
             <span className="min-w-0 truncate text-sm font-semibold text-neutral-800">{designTitle}</span>
-            <span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">{tr("page.view_only")}</span>
+            <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-ink">{tr("page.view_only")}</span>
             <div className="ms-auto flex items-center gap-3">
               {unlock && (
                 <Link
@@ -244,7 +244,7 @@ export default function SharedLinkPage() {
           {state.kind === "denied" && (
             <>
               <AlertCircle size={40} className="mx-auto text-red-500" />
-              <h1 className="mt-4 text-lg font-bold text-neutral-900">Can&apos;t open this link</h1>
+              <h1 className="mt-4 text-lg font-bold text-neutral-900">{tr("page.cant_open_this_link")}</h1>
               <p className="mt-1.5 text-sm text-neutral-500">{state.reason}</p>
               <Link
                 href={authStatus === "authed" ? "/dashboard" : "/"}

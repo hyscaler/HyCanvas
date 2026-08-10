@@ -140,9 +140,13 @@ describe("no hard-coded user-visible strings", () => {
       ],
       { encoding: "utf8" },
     );
-    const m = out.match(/\[dry\] (\d+) text nodes \+ (\d+) attributes \+ (\d+) expressions/);
+    // "unseen" counts prose the REWRITE pattern cannot match (its text run
+    // excludes ; = " ' and a backtick). Those are reported rather than rewritten
+    // and must be counted here, or the ratchet reports clean over strings it
+    // never examined, which is exactly how 26 of them survived to August 2026.
+    const m = out.match(/\[dry\] (\d+) text nodes \+ (\d+) attributes \+ (\d+) expressions \+ (\d+) unseen/);
     expect(m, `unexpected extractor output:\n${out}`).toBeTruthy();
-    const found = Number(m![1]) + Number(m![2]) + Number(m![3]);
+    const found = Number(m![1]) + Number(m![2]) + Number(m![3]) + Number(m![4]);
     expect(found, `${found} hard-coded strings:\n${out}`).toBe(0);
   });
 

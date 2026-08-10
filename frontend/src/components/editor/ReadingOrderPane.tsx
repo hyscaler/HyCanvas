@@ -55,7 +55,7 @@ export function ReadingOrderPane() {
         )}
       </div>
       <p className="border-b border-neutral-100 px-3 py-2 text-[11px] leading-relaxed text-neutral-500">
-        Screen readers announce elements in this order. Drag to reorder; it does not change what is drawn on top.
+        {tr("editor.reading_order_hint")}
       </p>
       <div className="flex-1 overflow-auto py-1">
         {ordered.length === 0 && (

@@ -6466,7 +6466,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           >
             <div className="mb-2 text-sm font-semibold text-neutral-900">{tr("editor.replace_media")}</div>
             <p className="mb-2 text-[11px] text-neutral-500">
-              The clip keeps its position, trim, and effects; only the footage swaps.
+              {tr("editor.replace_footage_hint")}
             </p>
             {(() => {
               const track = project.tracks.find((t) => t.id === replaceTarget.trackId);
@@ -6631,7 +6631,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                   <div className="py-6 text-center text-xs text-neutral-500">
                     No {wanted} uploads in this workspace yet.
                     <br />
-                    Upload media (or record a clip) in the design editor&apos;s Uploads panel.
+                    {tr("editor.upload_media_in_uploads_panel")}
                   </div>
                 );
               }
