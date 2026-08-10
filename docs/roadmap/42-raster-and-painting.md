@@ -324,6 +324,9 @@ Accessibility and security:
 
 ## 7. Data model / schema changes
 
+Schema version numbers below are PROVISIONAL. They were written when each spec expected to be the next bump, and several specs claimed the same number. The allocation table in the roadmap README is authoritative: claim the next free number there when this work actually starts, then correct the numbers here. F38 shipped v18, so every number in this document is at least one low.
+
+
 This section is the core of the spec. It answers where painted pixels live.
 
 ### 7.1 The constraint

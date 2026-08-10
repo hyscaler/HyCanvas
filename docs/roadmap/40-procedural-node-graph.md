@@ -351,7 +351,7 @@ interface GraphPreset {
 Bake semantics. A graph-bearing node is an ordinary node whose visible content is the evaluated output. For a group, `children` hold the bake; for a leaf, the node's own geometry or image content is the bake. `graph.bake.hash` is the hash of the canonical graph plus the hashes of its external inputs. On open, a graph-aware client compares the stored hash against a freshly computed one: equal means the bake is trustworthy and can be used until something dirties it; unequal means either the graph changed (re-evaluate) or the bake was edited by a client that did not know about the graph (FR-26 divergence prompt). Writing a graph always writes a matching bake, so the format never contains a graph without renderable artwork.
 
 Migration plan. Each batch is one additive bump with one registered step in `migrate.ts`, and every step is a pure, idempotent no-op on documents that have no graphs:
-- v18: `NodeBase.graph` plus the effect-stack lowering. No existing field changes meaning. `Effect[]` and `TextEffect[]` stay exactly where they are and keep their current semantics; the graph reads them, it does not move them. A v17 file opens with no graphs and renders identically.
+- v19: `NodeBase.graph` plus the effect-stack lowering. No existing field changes meaning. `Effect[]` and `TextEffect[]` stay exactly where they are and keep their current semantics; the graph reads them, it does not move them. A v17 file opens with no graphs and renders identically.
 - v19: `DesignFile.graphPresets` and subgraph/exposed-parameter support. Additive.
 - v20: generator and instancer op families. No schema shape change beyond new op ids, which are data rather than types, so this bump exists only to record the catalog level in the version history.
 - Downgrade posture: migration is forward-only (`migrate.ts` throws `MigrationError` on a downgrade). A rollback to a previous binary is safe because the previous binary opens the file as an older-client case (FR-25): it reads the bake, ignores the `graph` field, and preserves it.
@@ -453,7 +453,7 @@ Phase 1: the evaluation core and the effect stack (the pragmatic entry point).
 - `@hc/procgraph`: op catalog, typed sockets, dependency graph, dirty-set recompute, topological evaluation, cycle detection with per-op diagnostics, content-addressed cache with a byte budget, resource bounds, and the determinism harness. Generalized from the algorithm shape proven in `packages/formula/src/graph.ts`, not written from scratch.
 - The effect stack: `Effect[]` and `TextEffect[]` lower into an ordered op chain; the properties panel becomes a drag-reorderable stack with per-op enable, collapse, and inline parameters; effects can be interleaved with masks and fills.
 - The bake model, the divergence hash, and the older-client degradation path, proven against a database seeded with pre-change documents.
-- Schema v18 (`NodeBase.graph`) with the Go mirror bump and the forward migration, or the `NodeBase.data` prototype route first if the shape is still moving.
+- Schema v19 (`NodeBase.graph`) with the Go mirror bump and the forward migration, or the `NodeBase.data` prototype route first if the shape is still moving. (v18 went to F38's `DesignFile.language`; check the allocation table in the roadmap README before bumping, and claim the number there first.)
 - `boolean` becomes recomputable in the engine rather than a cached-result-only node, which retires the placeholder-box fallback at `render2d.ts:1100`.
 
 Phase 2: the dual view.

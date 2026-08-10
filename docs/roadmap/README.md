@@ -29,12 +29,20 @@ Five of the creation-depth specs bump `CURRENT_SCHEMA_VERSION`, and several were
 
 | Version | Owner | Carries |
 | --- | --- | --- |
-| 17 | current | shipped |
-| 18 | F40 | `NodeBase.graph` plus the bake |
-| 19 | F41 | vector op node types and `PathNode.pathEffects` |
-| 20 | F42 | `ImageNode.raster` tile manifests |
-| 21 | F43 | the `MotionNode` payload |
-| 22 | F45 | colour, print, and library records |
+| 17 | shipped | |
+| 18 | shipped | `DesignFile.language` (F38, August 2026) |
+| 19 | F40 | `NodeBase.graph` plus the bake |
+| 20 | F41 | vector op node types and `PathNode.pathEffects` |
+| 21 | F42 | `ImageNode.raster` tile manifests |
+| 22 | F43 | the `MotionNode` payload |
+| 23 | F45 | colour, print, and library records |
+
+This table was already wrong once, which is the case for keeping it. F38
+shipped `DesignFile.language` as v18 in August 2026 without reclaiming the
+number here, so the table went on offering 18 to F40 while the code had
+already used it. Anyone implementing F40 Phase 1 from the spec text would have
+bumped to a version that exists, and the Go write boundary would have started
+rejecting files. Claim the number HERE first, then edit the spec.
 
 F44 bumps nothing by design.
 
