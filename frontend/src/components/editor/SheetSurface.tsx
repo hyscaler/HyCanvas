@@ -940,7 +940,7 @@ export function SheetSurface(props: {
       className={[
         "inline-flex h-7 w-7 items-center justify-center rounded-md border text-xs",
         active
-          ? "border-blue-400 bg-blue-50 text-blue-600"
+          ? "border-brand-400 bg-brand-50 text-brand-ink"
           : "border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-100",
       ].join(" ")}
     >
@@ -976,7 +976,7 @@ export function SheetSurface(props: {
         <select
           value={activeFormatValue}
           onChange={(e) => setActiveNumberFormat(e.target.value)}
-          className="rounded-md border border-neutral-200 bg-surface px-1.5 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100 focus:outline-none focus:ring-1 focus:ring-blue-400"
+          className="rounded-md border border-neutral-200 bg-surface px-1.5 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100 focus:outline-none focus:ring-1 focus:ring-brand-400"
           title={tr("editor.number_format_for_the_active_cell")} aria-label={tr("editor.number_format_for_the_active_cell")}
         >
           {numberFormats().map((nf) => (
@@ -1031,7 +1031,7 @@ export function SheetSurface(props: {
             const n = Number(e.target.value);
             patchActiveFmt({ font: { size: e.target.value === "" || !Number.isFinite(n) ? undefined : n } });
           }}
-          className="w-14 rounded-md border border-neutral-200 px-1.5 py-1 text-xs text-neutral-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+          className="w-14 rounded-md border border-neutral-200 px-1.5 py-1 text-xs text-neutral-700 focus:outline-none focus:ring-1 focus:ring-brand-400"
           title={tr("editor.font_size")} aria-label={tr("editor.font_size")}
         />
 
@@ -1058,7 +1058,7 @@ export function SheetSurface(props: {
           <button
             type="button"
             onClick={() => setBordersOpen((v) => !v)}
-            className={`inline-flex h-7 items-center gap-1 rounded-md border px-2 text-xs ${bordersOpen ? "border-blue-400 bg-blue-50 text-blue-600" : "border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-100"}`}
+            className={`inline-flex h-7 items-center gap-1 rounded-md border px-2 text-xs ${bordersOpen ? "border-brand-400 bg-brand-50 text-brand-ink" : "border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-100"}`}
             title={tr("editor.borders")}
             aria-expanded={bordersOpen}
           >

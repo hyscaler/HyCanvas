@@ -218,9 +218,9 @@ function AccessBanner({ mode, suppressed }: { mode: AccessMode; suppressed?: boo
   const isComment = mode === "comment";
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center p-3">
-      <div className="pointer-events-auto flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 shadow-md">
-        {isComment ? <MessageSquare size={16} className="text-sky-600" /> : <Eye size={16} className="text-sky-600" />}
-        <span className="text-sm font-medium text-sky-900">
+      <div className="pointer-events-auto flex items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-4 py-2 shadow-md">
+        {isComment ? <MessageSquare size={16} className="text-brand-ink" /> : <Eye size={16} className="text-brand-ink" />}
+        <span className="text-sm font-medium text-brand-ink">
           {isComment ? tr("editor.you_can_comment_on_this_design_but_not_edit") : tr("editor.you_have_view_only_access_to_this_design")}
         </span>
       </div>

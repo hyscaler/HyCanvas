@@ -25,6 +25,12 @@ const ALLOW = [
   "components/editor/VideoSurface.tsx", // per-track KIND_COLOR map
   "components/editor/ColorField.tsx", // rainbow hue slider
   "lib/theme.generated.ts", // generated
+  "components/editor/PublishDialog.tsx", // STATUS_COLOR: one hue per post state
+  "components/dashboard/DashboardApp.tsx", // one hue per task state
+  // The remaining hit is the selection-range fill in the grid. theme.config.mjs
+  // keeps selection a cool hue DISTINCT from the accent on purpose, so that one
+  // must not become a brand token; the chips and focus rings here already did.
+  "components/editor/SheetSurface.tsx",
 ];
 
 let hardFail = false;

@@ -124,7 +124,7 @@ export function ShortcutsHelp({ open, onClose }: { open: boolean; onClose: () =>
           className={
             "flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] font-medium shadow-sm " +
             (customizing
-              ? "border-blue-400 bg-blue-50 text-blue-600"
+              ? "border-brand-400 bg-brand-50 text-brand-ink"
               : "border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-100")
           }
         >

@@ -400,7 +400,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
               <div className="mt-1.5 h-1.5 w-1/2 rounded bg-neutral-300" />
               <div className="mt-3 flex gap-1.5">
                 <div className="h-10 flex-1 rounded bg-brand-100" />
-                <div className="h-10 flex-1 rounded bg-sky-100" />
+                <div className="h-10 flex-1 rounded bg-accent-100" />
                 <div className="h-10 flex-1 rounded bg-amber-100" />
               </div>
             </div>
