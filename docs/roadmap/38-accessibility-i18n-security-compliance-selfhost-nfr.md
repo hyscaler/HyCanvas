@@ -5,7 +5,7 @@
 | Feature ID | F38 |
 | Phase | 9 Cross-cutting |
 | Sequence | 38 |
-| Status | **In progress.** The accessibility, i18n, export-fidelity and RTL programme has shipped, and the FR-13 ratchet blind spot found in August 2026 is closed (26 strings externalized, detection widened, mutation-tested). See the per-requirement notes in section 4 and `docs/audits/2026-08-accessibility-and-export-audit.md`. Server-composed `problem+json` messages now localize too (see FR-9). Still open before this can close: a manual screen-reader pass, passkeys (deferred, TOTP ships), and the compliance and audit-trail requirements, which are genuinely unbuilt rather than partial: there is no audit package, table, or hash chain in the backend today, so AC-7 is a feature to build and not a gap to close. **Prioritized ahead of the creation-depth set (F40 to F45)** as of August 2026; see "Priority" below |
+| Status | **In progress.** The accessibility, i18n, export-fidelity and RTL programme has shipped, and the FR-13 ratchet blind spot found in August 2026 is closed (26 strings externalized, detection widened, mutation-tested). See the per-requirement notes in section 4 and `docs/audits/2026-08-accessibility-and-export-audit.md`. Server-composed `problem+json` messages now localize too (see FR-9). Still open before this can close: a manual screen-reader pass, passkeys (deferred, TOTP ships), and the workspace-scoped half of the audit trail (FR-16/AC-7), deferred August 2026 as useful but not pressing. That last one is smaller than it sounds: the design-scoped machinery already ships, and hash-chaining and SIEM were cut earlier as enterprise framing, so what remains is widening scope and adding emissions rather than building a subsystem. **Prioritized ahead of the creation-depth set (F40 to F45)** as of August 2026; see "Priority" below |
 
 ## Priority
 
@@ -32,7 +32,7 @@ In scope:
 - Accessibility of outputs: a built-in accessibility checker for designs (color contrast, alt text, reading order, tap-target size), auto alt-text generation (composing with AI), and tagged/accessible PDF export (extending the export engine).
 - Internationalization and localization: UI localization in 100+ languages, RTL layout mirroring, locale-aware formatting, and correct complex-script shaping in content (composing with the text engine).
 - Identity and access for organizations: SSO via OIDC, MFA, and the RBAC model spanning workspaces, folders, designs, and admin functions (extending accounts and workspaces).
-- Governance: a workspace-scoped audit trail of security-relevant actions, and brand-governance enforcement hooks (composing with brand controls).
+- Governance: a workspace-scoped audit trail of security-relevant actions (deferred August 2026, see below; the design-scoped half ships), and brand-governance enforcement hooks (composing with brand controls).
 - Encryption: encryption in transit and at rest everywhere.
 - Compliance: the controls and evidence needed for SOC 2 Type II, GDPR, CCPA, ISO 27001, and HIPAA (where applicable), plus data-residency region pinning and full data portability/export.
 - Self-host and private cloud: the deployment topology, configuration, and operations for running the whole platform (the whole product) on customer infrastructure via docker-compose and Helm (extending the architecture baseline).
@@ -48,6 +48,11 @@ Deliberately out of scope, decided August 2026. These were in the original enter
 Deferred rather than dropped:
 
 - **WebAuthn and passkeys.** TOTP ships, so the MFA requirement is satisfied and nothing is blocked. Passkeys are becoming the default expectation and the implementation cost is modest, so this stays on the list at low priority rather than being deleted.
+- **The workspace-scoped audit trail (FR-16, AC-7).** Deferred August 2026 as useful but not pressing, not dropped, because unlike the four items above it is a product question rather than a compliance one: an admin wanting to know who shared or deleted something is a fair thing to ask in any multi-user tool.
+
+  What already ships does most of it. `activity_events` carries `actor_id` and `created_at`, `engagement.Emitter.EmitActivity` has seven call sites, and the editor's `ActivityPanel` reads them, so "who changed this design" is answerable today. Snapshots and versions carry `AuthorID` independently, and comments, sharing, brand and whiteboard all record an actor.
+
+  What remains is therefore narrow, and smaller than an early survey of this suggested (that survey searched for "audit" and missed machinery named "activity"): widen the event scope from design to workspace, emit on the security-relevant actions that currently do not (permission and role changes, external sharing, exports, admin policy), and give a workspace admin a filtered read view. No new subsystem, and explicitly no hash chain or SIEM, which were already cut as enterprise framing.
 
 Out of scope:
 - The per-feature behaviors themselves; this doc sets the standards each feature must meet and the shared services that implement them, not the features.
@@ -141,7 +146,7 @@ Identity, access, and governance:
 - FR-13 (dropped): SCIM 2.0 provisioning is out of scope (see section 2). Members are managed through the admin UI and the API. The known gap this leaves is automated deprovisioning on offboarding, which stays a manual admin step.
 - FR-14 (TOTP ships; passkeys deferred): MFA can be required org-wide or per role. TOTP is implemented (`mfa_enabled` on the account, `ErrMFARequired` on the auth path); WebAuthn and passkeys are deferred at low priority, not dropped.
 - FR-15: RBAC defines roles (owner, admin, member, viewer, plus custom roles) with permissions scoped to workspace, folder, and design, and to admin functions (billing-free, but key/app/policy management); every API and editor action checks the actor's effective permission.
-- FR-16 (reduced; extends what already ships): A workspace-scoped audit trail records security- and governance-relevant events with actor, target, timestamp, and request id, and is readable by workspace admins and exportable as a file.
+- FR-16 (reduced, then DEFERRED August 2026; see section 2): A workspace-scoped audit trail records security- and governance-relevant events with actor, target, timestamp, and request id, and is readable by workspace admins and exportable as a file. The design-scoped half of this ships today; the workspace-scoped extension is deferred as useful but not pressing, and it is the only thing standing between F38 and closure.
 
   This EXTENDS existing machinery rather than building a subsystem: `activity_events` (table), `engagement.Emitter.EmitActivity`, the paging service, and the editor's `ActivityPanel` all ship today, and comments, sharing, and approvals already emit into them. The work is widening scope from per-design to per-workspace and adding the event kinds that are missing: sign-in and SSO, permission and role changes, external sharing and publishing, exports and downloads, and admin policy changes.
 
@@ -182,7 +187,7 @@ Localization and RTL:
 Org administration (admin console, extending accounts and workspaces):
 - An SSO setup wizard (OIDC issuer, client id and secret, test a login, enable enforcement) with a connection test and clear error surfacing.
 - An access page to manage roles/custom roles and see effective permissions.
-- An audit log viewer with filters (actor, action, target, time, IP), export, and SIEM streaming config.
+- An activity viewer with filters (actor, action, target, time), scoped to the workspace, deferred with FR-16. No SIEM streaming config: that was cut with the enterprise framing.
 - A governance settings panel limited to what remains in scope: the external-sharing toggle (FR-17) and the brand locks (FR-18), each showing its impact before it is applied and recording the change in the audit trail.
 - A security page for SSO enforcement, MFA enforcement, and data-residency region selection.
 - A data page for data-subject export and deletion requests with status tracking.
@@ -192,7 +197,6 @@ Self-host/ops surfaces:
 
 States and degradation:
 - When SSO is enforced, password login is hidden for managed members with a clear "Sign in with your organization" path.
-- When CMEK is revoked, affected data is rendered inaccessible with an explicit, non-data-losing-from-the-customer-perspective explanation.
 - Reduced-motion and high-contrast preferences are detected from the OS and overridable in settings.
 
 ## 6. Data Model
@@ -306,13 +310,14 @@ locale_catalogs(locale, direction, messages jsonb, fallback, updated_at)
 roles(id, workspace_id, name, builtin bool, permissions jsonb)
 role_assignments(user_id, workspace_id, role_id, scope jsonb)
 
-audit_events(id, workspace_id, actor_id, action, target_type, target_id,
-             ip, request_id, metadata jsonb, hash, prev_hash, created_at)
-                                              -- append-only; hash-chained
+-- Deferred (FR-16). The shipped table is design-scoped `activity_events`;
+-- this is the workspace-scoped widening, WITHOUT hash/prev_hash, which were
+-- cut with the tamper-evidence framing (section 2).
+activity_events(id, workspace_id, design_id, actor_id, action, target_type,
+                target_id, request_id, metadata jsonb, created_at)
 
 sso_configs(workspace_id, protocol, metadata jsonb, enforced bool,
             group_role_map jsonb, updated_at)
-scim_tokens(id, workspace_id, hashed_token, created_at, revoked_at)
 
 key_configs(workspace_id, mode, kms_provider, kms_key_ref,
             rotation_policy_days, status, updated_at)
@@ -324,7 +329,7 @@ data_requests(id, workspace_id, subject_id, kind, status,
               result_url, created_at, completed_at)
 ```
 
-Audit logs are append-only and hash-chained (each row stores the prior row's hash) for tamper-evidence; they can be streamed to an external SIEM. Encryption metadata (wrapped DEKs) lives alongside the data it protects in Postgres/S3, with the wrapping key controlled by `key_configs`. Residency is enforced at the storage and query layer so a region-pinned workspace never has data written outside its region.
+Activity events are append-only by convention (nothing updates them) but are NOT hash-chained and do not stream to a SIEM; both were cut as enterprise framing, and neither is meaningful when the operator owns the database. Residency is enforced at the storage and query layer so a region-pinned workspace never has data written outside its region.
 
 ## 7. API and Interfaces
 
@@ -364,16 +369,15 @@ Internal contracts:
 - `@hc/a11y`: `check(file: DesignFile): A11yReport` (runs in browser for live checking and on a worker for export gating).
 - `@hc/i18n`: locale catalog loader, `t(key, vars)`, direction resolver, and a pseudo-locale generator for CI.
 - `@hc/authz`: `can(actor, permission, scope)` used by every API route and editor action.
-- `@hc/audit`: `record(event)` with hash-chaining; used by all feature services.
-- `@hc/crypto`: envelope encryption with pluggable KMS providers for CMEK.
+- Activity events: `engagement.Emitter.EmitActivity` writes to `activity_events`, read by the editor's `ActivityPanel`. Design-scoped today; the workspace-scoped extension is deferred (section 2). There is no `@hc/audit` package and no hash chain, both having been cut as enterprise framing.
 
 ## 8. Technical Approach and Architecture
 
 - Accessibility is built as a shared `@hc/a11y` service plus an accessibility tree the editor derives from the scene model, so screen readers see a meaningful, navigable structure that mirrors the canvas. The same `check()` function runs live in the editor (incremental, debounced) and on a worker to gate exports when policy requires. Tagged-PDF generation extends the export pipeline by mapping reading order, structure, alt text, and language into PDF structure tags.
 - i18n uses an externalized catalog loaded at runtime; the build runs pseudo-localization in CI to catch hard-coded strings and truncation. RTL is handled with logical CSS properties and a direction resolver so the chrome mirrors automatically; canvas content directionality and complex-script shaping are owned by the text engine and only consumed here.
-- Identity extends accounts and workspaces: a pluggable SSO module (SAML and OIDC) and SCIM 2.0 endpoints provision users/groups and map to roles. RBAC is a single `@hc/authz` `can()` check enforced uniformly at the API and in the editor; per-workspace isolation already exists at the query layer and RBAC layers on top.
-- Audit is a shared `@hc/audit` service invoked by every feature on security-relevant actions, writing append-only, hash-chained events that can stream to a SIEM. DLP/governance policies are evaluated at the relevant choke points (share, export, copy, app install) and produce audit entries and optional blocks; brand locks compose with brand controls.
-- Encryption uses envelope encryption: per-workspace data-encryption keys wrapped by a key-encryption key. For CMEK, the KEK lives in the customer's KMS (AWS KMS, GCP KMS, Azure Key Vault, HashiCorp Vault, or an external interface); revoking it makes wrapped data unreadable. TLS terminates at the edge with mTLS internally.
+- Identity extends accounts and workspaces: an OIDC SSO module maps users to roles. SAML and SCIM are out of scope (section 2), so members are managed through the admin UI and the API. RBAC is a single `@hc/authz` `can()` check enforced uniformly at the API and in the editor; per-workspace isolation already exists at the query layer and RBAC layers on top.
+- Activity recording reuses the shipped emitter rather than adding a subsystem: a feature calls `EmitActivity` on a notable action and the panel reads it back. No hash chain, no SIEM, and no DLP choke points; all three were cut (section 2). Brand locks still compose with brand controls.
+- Encryption relies on the storage layer: TLS in transit (terminating at the edge, mTLS internally) and at-rest encryption provided by Postgres and the object store. There is no envelope-encryption or CMEK layer; a self-hoster already controls the database, the object storage and the keys (section 2).
 - Compliance is achieved by composing these controls (access control, audit, encryption, data lifecycle, residency) and operating them under documented policies; the platform produces the evidence (logs, configs, reports) that SOC 2/ISO audits require, and a HIPAA-eligible configuration enables stricter PHI handling and BAA coverage.
 - Data residency is enforced by routing a region-pinned workspace's storage (Postgres shard/cluster and S3 bucket) and backups to that region and blocking cross-region reads/writes at the data layer.
 - Self-host packages the full system (extending the architecture's compose + Helm baseline) so every service across the platform runs on customer infrastructure: object storage via MinIO, AI via BYO/self-hosted models (the AI platform), and CMEK via the operator's KMS or Vault. The Helm chart parameterizes replicas, storage class, ingress/TLS, key management, and AI configuration.
@@ -388,7 +392,6 @@ Internal contracts:
 - SSO enforcement must not lock out the last org owner; a documented break-glass recovery path exists.
 - SCIM deprovisioning must revoke sessions and tokens promptly and reassign or preserve the deprovisioned user's content per policy, never orphaning shared designs.
 - Audit log must remain append-only and tamper-evident even under high write volume; the hash chain must survive partitioning, and gaps must be detectable.
-- CMEK revocation must fail closed (data inaccessible) without crashing services or leaking plaintext from caches; key rotation must not interrupt active sessions.
 - Data deletion must honor legal holds and must propagate to backups within the defined window while keeping DR integrity.
 - Region-pinned data must never transit another region for processing (including AI and export); region-local workers and storage are required, and a cross-region request fails closed.
 - Self-host without external KMS must still encrypt at rest using a platform-managed key from the operator's secret store.
@@ -399,7 +402,7 @@ Internal contracts:
 - Localization catalogs are cached and code-split per locale so switching language and loading RTL does not regress the sub-1s load budget.
 - Authorization checks (`can()`) are O(1) against a cached effective-permission set with short TTL; a permission change invalidates promptly.
 - All data encrypted in transit (TLS 1.2+, mTLS internally) and at rest (DB, object storage, backups); secrets via secret manager, never in repo or client bundle.
-- Audit logs are append-only, hash-chained, access-controlled, and streamable to a SIEM; they capture actor, target, IP, and request id without storing sensitive payloads.
+- Activity events are access-controlled and capture actor, target and request id without storing sensitive payloads. They are append-only by convention, not hash-chained.
 - Least-privilege IAM for storage, queues, and KMS; the platform is pen-tested and runs a bug-bounty program; dependency and container scanning gate every release.
 - DLP choke points block disallowed share/export/copy/app-install actions server-side, not only in the UI, and log every decision.
 - HIPAA-eligible configuration adds stricter access logging, encryption assertions, and PHI-handling controls; BAA coverage is configuration-gated.
@@ -412,7 +415,7 @@ Internal contracts:
 - AC-4: The UI runs in at least 100 locales with a runtime switch, RTL locales fully mirror the chrome while content directionality stays correct, and a CI pseudo-locale run finds no hard-coded strings.
 - AC-5: An organization can enforce OIDC SSO and MFA; enforcing SSO disables password login for managed members, and removing a member through the admin UI or API revokes their sessions immediately. (SCIM is out of scope, so deprovisioning is that manual step and must be immediate when taken.)
 - AC-6: RBAC blocks an out-of-permission action at both the API and the editor, and a custom role with a restricted permission set behaves as configured.
-- AC-7: Sign-in, permission and role changes, external sharing and publishing, exports, and admin policy changes all appear in the workspace audit trail with actor, target, timestamp, and request id, readable by a workspace admin and exportable as a file. An event recorded against a design also remains visible in that design's activity feed.
+- AC-7 (deferred with FR-16): Sign-in, permission and role changes, external sharing and publishing, exports, and admin policy changes all appear in the workspace audit trail with actor, target, timestamp, and request id, readable by a workspace admin and exportable as a file. An event recorded against a design also remains visible in that design's activity feed. The design-scoped half of this holds today; the workspace-scoped half is what is deferred.
 - AC-8: Turning off external sharing for a workspace is enforced server-side (an existing external link stops resolving and a new one cannot be created) and the change itself is recorded in the audit trail.
 - AC-9: Data is encrypted in transit (TLS 1.2 or better) and at rest across the database, object storage, and backups, verified by configuration test rather than by a key-management feature (CMEK is out of scope, see section 2).
 - AC-10: A region-pinned workspace keeps its data, backups, and processing in-region; a cross-region access attempt fails closed.
@@ -424,17 +427,17 @@ Internal contracts:
 
 ## 12. Test and Verification Plan
 
-- Unit: `can()` authorization matrix; audit hash-chaining and gap detection; accessibility rule evaluators (contrast math, tap-target sizing, alt-text presence, reading-order derivation); envelope-encryption wrap/unwrap and CMEK revocation; locale catalog loading and fallback.
+- Unit: `can()` authorization matrix; accessibility rule evaluators (contrast math, tap-target sizing, alt-text presence, reading-order derivation); locale catalog loading and fallback; the problem-code contract (`problem_code_test.go`) and the code-to-catalog seam.
 - Integration: SSO (SAML/OIDC) against a mock IdP; SCIM provisioning/deprovisioning lifecycle; DLP enforcement at share/export/copy/app-install choke points; residency routing of storage and workers; data export/delete propagation to backups; tagged-PDF generation through the export pipeline.
 - E2E: automated axe-core/WCAG scans across all primary surfaces; keyboard-only and screen-reader walkthroughs of core editing flows; RTL and pseudo-locale UI runs; full self-host deploy via compose and Helm with MinIO and a BYO model, then a smoke suite of create/edit/render/share.
 - Resilience/NFR: load tests to validate horizontal scaling toward the concurrency targets; chaos/fault-injection for autosave-no-data-loss; backup-and-restore DR drill measuring RPO/RTO; SLA/uptime monitoring validation.
 - Security/compliance: third-party penetration test and bug-bounty intake; control-evidence collection mapped to SOC 2/ISO 27001; GDPR/CCPA data-rights flows; HIPAA-eligible configuration review.
-- Manual: assistive-technology testing with real screen readers (NVDA, VoiceOver, TalkBack); admin-console walkthroughs for SSO/SCIM/RBAC/DLP/keys/residency/data-requests; self-host operator guide on a clean environment.
+- Manual: assistive-technology testing with real screen readers (NVDA, VoiceOver, TalkBack); admin-console walkthroughs for SSO/RBAC/residency/data-requests; self-host operator guide on a clean environment.
 
 ## 13. Differentiators
 
-- Enterprise-grade governance (SSO/SCIM/MFA, custom RBAC, tamper-evident audit, DLP) and full compliance posture provided to organizations at no license cost, where these are paid-tier or enterprise-only elsewhere.
-- A first-class self-host/private-cloud option for the entire platform with customer-managed encryption keys and data-residency pinning, so organizations fully own their data, plus complete data portability in an open format.
+- Organization-grade access control (OIDC SSO, TOTP MFA, custom RBAC) provided at no license cost, where it is paid-tier or enterprise-only elsewhere. Note what this deliberately does NOT claim: SCIM, DLP, CMEK and tamper-evident audit were all cut in August 2026 (section 2), so they must not reappear in positioning. The claim is that the access control an ordinary team needs is free, not that the compliance checklist is complete.
+- A first-class self-host/private-cloud option for the entire platform, so organizations fully own their data, plus complete data portability in an open format. CMEK is deliberately not part of this (section 2): a self-hoster already holds the database, the object storage and the keys, so claiming it would be selling back control they have.
 - Built-in, actionable accessibility checking of designs (contrast, alt text, reading order, tap targets) with AI alt-text and properly tagged accessible PDF export, going beyond Canva's checks, paired with a fully keyboard- and screen-reader-operable editor.
 - Best-in-class internationalization: 100+ UI locales, true RTL mirroring, and correct complex-script content shaping (composing with the text engine).
 - Operational rigor by default: 99.9%+ SLA, multi-region redundancy, zero-data-loss autosave, observability, and tested backups/DR with defined RPO/RTO, all without paywalling reliability behind a tier.
@@ -444,6 +447,5 @@ Internal contracts:
 - The exact RPO/RTO numbers and multi-region write strategy (single-region write with region pinning in v1) need to be finalized against cost and the SLA commitment.
 - Achieving genuine WCAG 2.2 AA on an infinite, free-form canvas (especially screen-reader semantics for spatial layout and a live keyframe timeline) is hard and may need iterative AT testing and a documented conformance scope.
 - HIPAA eligibility scope (which deployments and surfaces are in scope, BAA terms) requires legal review; AI features touching PHI need explicit handling rules.
-- CMEK revocation semantics across cached/in-flight data and active realtime sessions need a careful design to fail closed without data corruption.
 - Region-local processing for AI and export (so region-pinned data never leaves its region) constrains where workers and models run; self-host with BYO models simplifies this but the hosted multi-region story needs a topology spike.
 - Risk: as a terminal cross-cutting doc depending on all others, drift in upstream features can silently break these guarantees; the audit, authz, a11y, and i18n shared services must be wired into every feature in review, not bolted on later.
