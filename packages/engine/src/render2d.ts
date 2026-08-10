@@ -22,6 +22,7 @@ import {
   type TextEffect,
 } from "@hc/schema";
 import { fitRect } from "./image";
+import { booleanGeometry } from "./booleanGeom";
 import { buildClipFromPathData } from "./pathclip";
 import { autoFitNode, layoutText, isTabRun, tabRunWidth, type MeasureFn } from "@hc/text";
 import { colorToCss } from "./color";
@@ -1098,7 +1099,10 @@ function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, bo
       break;
     }
     case "boolean": {
-      const r = node.result;
+      // Prefer the stored result; derive it from the operands when it is
+      // absent, so a document whose result was never computed draws its real
+      // artwork instead of the placeholder box this used to fall back to.
+      const r = node.result && node.result.subpaths.length > 0 ? node.result : booleanGeometry(node);
       if (r && r.subpaths.length > 0) {
         ctx.beginPath();
         for (const sp of r.subpaths) {

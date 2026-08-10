@@ -16,6 +16,7 @@ export * from "./tiles";
 export * from "./color";
 export * from "./fonts";
 export * from "./image";
+export * from "./booleanGeom";
 export * from "./animation";
 export * from "./chart";
 export { resolveFill } from "./fills";
