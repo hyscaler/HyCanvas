@@ -170,3 +170,55 @@ describe("no hard-coded user-visible strings", () => {
     expect(offenders).toEqual([]);
   });
 });
+
+// The API half of FR-9. The Go backend cannot localize its own error prose, so
+// it ships a stable `code` and the client resolves `errors.api_<code>`. That
+// only works while the two sides agree, and nothing else checks the seam: a new
+// coded error compiles, passes every Go test, and silently reaches users in
+// English because the catalog was never told about it.
+//
+// Go-side rules (a code must exist, be literal, and be unique per message) are
+// enforced in backend/internal/httpapi/problem_code_test.go. This is the other
+// half: every code that exists must be translatable.
+describe("api error codes", () => {
+  const BACKEND = join(ROOT, "backend", "internal");
+
+  function goFiles(dir: string, out: string[] = []): string[] {
+    for (const name of readdirSync(dir)) {
+      const p = join(dir, name);
+      if (statSync(p).isDirectory()) goFiles(p, out);
+      else if (name.endsWith(".go") && !name.endsWith("_test.go")) out.push(p);
+    }
+    return out;
+  }
+
+  const codes = new Set<string>();
+  for (const f of goFiles(BACKEND)) {
+    const src = readFileSync(f, "utf8");
+    // The code is the last argument of a 6-argument call, so it is the string
+    // literal immediately before the closing paren.
+    for (const m of src.matchAll(/\b(?:problemWithCode|ProblemCode)\([\s\S]*?"([a-z0-9_]+)"\s*\)/g)) {
+      codes.add(m[1]);
+    }
+  }
+
+  it("finds the codes at all", () => {
+    // Guards against the scan silently matching nothing after a refactor, which
+    // would make every assertion below vacuously pass.
+    expect(codes.size).toBeGreaterThan(100);
+  });
+
+  it("has a catalog entry for every problem code the API can return", () => {
+    const missing = [...codes].filter((c) => !(`errors.api_${c}` in CATALOG)).sort();
+    expect(missing, `add errors.api_<code> for: ${missing.join(", ")}`).toEqual([]);
+  });
+
+  it("carries no errors.api_* key for a code the API no longer returns", () => {
+    const orphans = Object.keys(CATALOG)
+      .filter((k) => k.startsWith("errors.api_"))
+      .map((k) => k.slice("errors.api_".length))
+      .filter((c) => !codes.has(c))
+      .sort();
+    expect(orphans, `remove or re-point: ${orphans.join(", ")}`).toEqual([]);
+  });
+});
