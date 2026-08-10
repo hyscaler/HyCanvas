@@ -69,6 +69,7 @@ Out of scope (owned elsewhere):
 - Cross-cutting SSO, audit, compliance, and observability (F38).
 
 Deferred (explicitly not in this plan; revisit only with a dedicated spec):
+- A history brush (painting a region back to an earlier history state). It needs per-region history snapshots rather than the per-document snapshots that ship, so its cost sits in the history model and not in the brush. The clone stamp (FR-27) covers the common repair case.
 - RAW photo processing. Demosaicing, camera-specific colour profiles, lens correction databases, highlight recovery, and a 16/32-bit-float scene-referred pipeline are a product of their own, and every one of them needs precision the 8-bit path in this spec does not have. Deferred until the 16-bit pipeline in section 14 Phase 5 lands and a separate spec covers it.
 - The heaviest photo-compositing tail: HDR merge, panorama stitching, focus stacking, frequency separation as a first-class workflow, advanced content-aware fill and scale, perspective crop with automatic vanishing-point detection, and colour-managed soft proofing against printer profiles. Individually reasonable, collectively a second product.
 - Animated raster (frame-by-frame animation on paint layers, onion skinning). Interacts with F25/timeline in ways this spec does not model.

@@ -72,6 +72,11 @@ Out of scope (owned elsewhere):
 - SSO, audit, observability, and compliance are F38; this spec adds the resource-bound and untrusted-evaluation posture.
 
 Deferred:
+- A data panel for graphical introspection (inspecting the actual list/geometry values flowing along an edge, not just the rendered result). Valuable for debugging a graph and cheap next to the evaluator itself, but it needs the list data model below to settle first.
+- First-class custom attributes on list data (user-named per-instance fields carried alongside geometry). The instancer already varies parameters per instance; arbitrary attributes are the general form and should follow real usage rather than precede it.
+- A node-graph outliner (a tree view of the graph itself). The LAYER tree view is P1 in the matrix above; a second tree over the graph is a different panel and is not committed.
+- Compiling a graph to a standalone parametric program that runs outside the editor. The evaluator is already pure and portable, so this is reachable, but it is a distribution and sandboxing question rather than an evaluation one.
+- Procedural PBR material generation. It presumes a lighting and shading model this product does not have, and adding one to serve a texture generator is the wrong order.
 - User-authored custom nodes (JavaScript/WASM op definitions). Specified here for the sandbox and threat model so the earlier phases do not paint us into a corner, but not committed before Phase 5.
 - Simulation domains (particles, softbody, fluid-like advection, physics-driven layout), which require a stateful, frame-ordered evaluation model that the stateless pull-based evaluator deliberately does not have.
 - Graph-first documents, where a page has no tree at all and is only a graph. Specified as the migration target in section 18, not built.

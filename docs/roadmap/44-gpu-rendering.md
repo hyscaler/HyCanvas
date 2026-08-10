@@ -66,6 +66,8 @@ Out of scope (owned elsewhere):
 - On-device AI inference (section 9).
 
 Deferred:
+- Signed distance field rendering as a general geometry path. It is attractive for resolution-independent shapes and effects, but it is a second rasterization model to keep at parity with Canvas2D and the Go renderer, and this spec's central promise is that all paths agree.
+- Multi-device distributed rendering (splitting one frame across machines). The export path is already CPU-only, bit-reproducible, and job-backed; distribution is a throughput optimization whose coordination cost exceeds its benefit at the scales this product renders at.
 - WebGPU compute-shader paths for anything other than image effects and procedural evaluation. Compute-based path tessellation and compute-based text rasterization are known techniques and both are deferred until the render path is stable and measured.
 - HDR output beyond a tone-mapped SDR presentation of wide-gamut content (section 4, colour). Real HDR authoring needs a schema-level colour model, which this spec explicitly refuses to open.
 - A GPU-accelerated Go export renderer (section 4, headless). Deferred with a documented reason, not silently dropped.

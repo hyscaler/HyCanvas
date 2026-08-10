@@ -61,6 +61,7 @@ Out of scope (owned elsewhere):
 - Cross-cutting SSO/observability/compliance/self-host NFR (F38; this spec adds the reduced-motion and keyboard-timeline requirements that hook into it).
 
 Deferred:
+- Live video stream compositing (treating a camera or screen capture as an animatable input). The shipped video editor composites recorded media; a live source adds a real-time capture, latency, and permissions surface that has nothing to do with the deterministic evaluator this spec is built around.
 - Physics simulation (rigid bodies, cloth, particles, collisions). A deterministic cross-language solver is a much larger commitment than a deterministic expression evaluator; revisit after the parity harness proves itself.
 - 3D, cameras, and depth. The engine is 2D by design.
 - Rigging: bones, inverse kinematics, mesh/puppet deformation. Depends on F41 mesh work landing first.

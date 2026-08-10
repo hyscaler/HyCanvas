@@ -63,6 +63,8 @@ In scope:
 - Parametric path effects: offset path, outline (stroke to path), corner rounding, roughen and zigzag, warp and envelope distortion, variable-width profiles, and a dash and arrowhead system, all reorderable in a stack, all re-tunable, all expandable to plain geometry on demand.
 - The shape builder: drag across overlapping art to add or subtract regions interactively.
 - Text as vector: text on a path, text flowed into a shape, and conversion of text to editable outlines with glyph contours available to both renderers.
+- Typographic control over that text: OpenType feature selection, kerning and tracking, justification and hyphenation, and per-glyph style overrides. Placement without typographic quality is half a text tool, and the half users notice is the one that sets ligatures and stops rivers appearing in justified copy.
+- Blending between shapes: a re-editable operation that interpolates geometry and style across a number of steps, optionally along a spine path, with both operands remaining editable.
 - Vector mesh and gradient mesh: a new node type, its editing model, and its rendering (browser and headless).
 - Image trace: raster to editable vector with tunable thresholding, path fitting, colour quantization, and corner handling.
 - A geometric constraint solver (parallel, perpendicular, equal length, tangent, coincident, horizontal, vertical, fixed distance, fixed angle) over anchors and segments, with a documented failure mode when a system is over-constrained.
@@ -77,6 +79,7 @@ Out of scope (owned elsewhere):
 - Professional file interop breadth and colour management (F45). This spec owns SVG fidelity for the geometry it introduces; AI/EPS/PDF-as-source ingestion and ICC/CMYK are F45.
 - The base CRDT, presence, and lock mechanics (F16). This spec specifies how anchor-level edits behave under merge and what F16 must expose to make that work.
 - Cross-cutting a11y, i18n, security, and self-host infrastructure (F38).
+- Responsive container layout (direction, padding, gap, and resize rules that reflow children when a frame changes size). It is a real and currently unspecced gap, recorded in the roadmap README, but it is a layout system over arbitrary content rather than vector-geometry authoring, and folding it in here because F41 happens to own the geometric constraint solver would put two unrelated solvers in one spec.
 
 Deferred:
 - Full-document parametric symmetry and pattern-along-path (repeat an object along a curve with spacing and rotation rules). It is a natural F40 operator but adds a second dependent-instances model; revisit after the effect stack ships.
@@ -177,6 +180,10 @@ Status values: **Built**, **Partial**, **Planned (doc 40)**, **Planned (doc 44)*
 | Text on a path | Not started | n/a | Baseline follows a path with offset, alignment, flip, and spacing controls; text stays editable. P1, FR-29. |
 | Text in a shape (area type) | Not started | `TextNode` is a rectangle box | Flow text into an arbitrary closed path with correct line-length solving per line box. P1, FR-30. |
 | Convert text to outlines | Not started | `@hc/text` exposes no glyph outlines; Go `pdfttf.go` `hasTrueTypeOutlines` only checks the `glyf` table exists | Needs a real `glyf` and CFF outline extractor usable by both `@hc/text` and the Go renderer, or the export path diverges. P0, FR-31. |
+| OpenType feature control (ligatures, alternates, small caps, figure style, stylistic sets) | Not started | `@hc/text` shapes runs but exposes no feature toggles | P1, FR-54. The shaper already resolves features internally; this exposes them per run. |
+| Justification and language-aware hyphenation | Not started | `@hc/text` wraps greedily on measured width | P1, FR-55. Greedy wrapping is why justified copy shows rivers today. |
+| Kerning (metric and optical) and tracking | Not started | n/a | P1, FR-56. Metric kerning reads the font's `kern`/`GPOS`; optical is computed. |
+| Per-glyph style overrides | Not started | FR-29 covers per-glyph SPACING only | P2, FR-57. Per-glyph colour, size, and baseline, not just advance. |
 | Outlined text keeps alt text and reading order | Not started | `NodeBase.altText` / `Page.readingOrder` ship (schema v12) | Conversion must carry the original string forward or accessibility silently regresses. P0, FR-31. |
 
 ### Meshes and advanced fills
@@ -339,6 +346,17 @@ Rendering, hit testing, and parity:
 Accessibility:
 - FR-50: Node mode is fully operable by keyboard: enter and leave node mode, traverse anchors along and across contours, extend the anchor selection, move anchors by a step and by a typed value, and insert, convert, and delete anchors.
 - FR-51: Every anchor, handle, effect, and constraint exposes a screen-reader label, role, and value (anchor index of total, corner or smooth, coordinates, effect name and parameters), and geometry-mutating operations that could lose semantics (outline conversion, boolean combine, expand appearance) carry alt text and reading-order membership forward.
+
+Typography:
+- FR-54: A text run may select OpenType features by tag (at minimum `liga`, `dlig`, `smcp`, `c2sc`, `onum`, `lnum`, `tnum`, `pnum`, `frac`, `ordn`, `swsh`, and `ss01` to `ss20`), and the shaper applies them where the font provides them and reports, rather than silently ignores, a feature the font lacks. The selected set is part of the run's style and survives round-trip through the open format and both renderers.
+- FR-55: A paragraph declares an alignment that includes justified, plus a hyphenation mode (off, or a language-tagged dictionary) and a minimum-word-length and minimum-leading/trailing-character rule. Justification distributes space by a documented priority (word spacing first, then letter spacing within a stated bound, then glyph scaling only if explicitly enabled) so a justified paragraph does not develop rivers. The line-breaking result is identical in the browser, the worker, and the Go renderer for the same text, font, and width.
+- FR-56: Kerning is selectable per run as metric (from the font's `kern` table or `GPOS`) or optical (computed from glyph outlines), with a tracking value applied on top in thousandths of an em. Both are resolution-independent and identical across renderers.
+- FR-57: A per-glyph style override may set colour, size, baseline shift, and tracking for a glyph range, extending FR-29's per-glyph spacing. Overrides are stored as ranges over the run rather than by splitting the run, so editing the text does not shatter its styling.
+
+Blending:
+- FR-58: A blend operation takes two or more geometry operands and produces a number of interpolated steps between them, interpolating anchor positions (after a documented correspondence rule for differing anchor counts), fill, stroke, and opacity. The operands remain individually selectable and editable, and editing either re-evaluates the blend, on the same live-operand model as booleans in FR-13.
+- FR-59: A blend may be bound to a spine path, distributing its steps along that path with a spacing rule (even by arc length, or by specified step count) and an orientation rule (fixed, or rotated to the path tangent). Editing the spine re-evaluates the blend.
+- FR-60: Blend step count, spacing, and correspondence are ordinary animatable parameters (F43) and ordinary graph parameters (F40), and the blend carries a baked-geometry fallback per FR-26 so an older client renders the correct artwork.
 
 Data and parity:
 - FR-52: Every geometry type this spec introduces either renders in `backend/internal/render` for PNG, SVG, and PDF, or the export path documents an explicit, visible degradation (never a silent hole). The existing gaps this spec inherits (`boolean` missing from `svg.go` and `pdf.go`, `mask` missing everywhere) are closed or explicitly reserved as part of it.
@@ -579,6 +597,9 @@ Representative and testable; a requirement not pinned to a numbered AC here is v
 - AC-21: A 10,000-anchor path enters node mode without a visible stall and pans and zooms at 60fps; a 100,000-anchor document renders at 60fps (section 10).
 - AC-22: A boolean node, a mesh node, a text-on-path node, and an effected path all export to PNG, SVG, and PDF from the Go renderer with geometry matching the browser within the stated flattening tolerance, and no export path emits a silent hole (FR-52, FR-53).
 - AC-23: An SVG containing `textPath`, markers, dashes with a phase, and a compound path imports to native editable nodes, and re-exporting yields an SVG that re-imports to equivalent geometry (section 13).
+- AC-25: A justified paragraph of mixed-width words hyphenates at dictionary-valid points, shows no river wider than a stated threshold, and breaks to identical lines in the browser and in the Go renderer for the same font and width.
+- AC-26: Enabling `liga` and `onum` on a run visibly changes the rendered glyphs where the font supports them, reports clearly where it does not, and survives save, reload, and PDF export.
+- AC-27: A blend between two paths of differing anchor counts produces the documented correspondence, remains editable through both operands, follows a spine when bound to one, and renders identically from the Go export path.
 - AC-24: No vector authoring capability (booleans, effects, meshes, trace, constraints) is gated behind a tier, watermarked, or unavailable on a self-hosted instance.
 
 ## 16. Test plan

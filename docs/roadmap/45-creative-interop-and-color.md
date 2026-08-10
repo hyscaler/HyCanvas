@@ -58,6 +58,7 @@ In scope:
 - Colour parity across the Canvas2D path, the F44 GPU path, and the Go headless renderer, proven by shared golden vectors.
 - Print-ready output: bleed and slug boxes, trim/crop/registration marks, colour bars, overprint and knockout attributes, separations preview, ink coverage limits, and PDF/X-1a and PDF/X-4 conformance from the Go writer.
 - Asset libraries: workspace-scoped reusable components with instance overrides, shared colour/text/effect/stroke styles, and linked assets that propagate updates across documents, all under per-workspace data isolation.
+- Design variables: named, typed values (colour, number, string, boolean) resolvable per mode, referenced by node properties instead of being copied into them, so a change propagates rather than being re-applied by hand.
 - The security posture for parsing untrusted binary formats, which this spec treats as the highest-risk surface in the product.
 
 Out of scope (owned elsewhere):
@@ -235,6 +236,9 @@ Export and print:
 Libraries:
 - FR-19: A component is a named definition (in the document or the workspace library) plus instances that reference it; an instance renders the definition with per-instance overrides for text, fills, and image sources, and overrides survive a definition update. Shared colour, text, effect, and stroke styles are named records referenced by nodes; editing a style restyles every referencing node in one undoable action, and a local edit detaches that node from the style.
 - FR-20: A linked asset references a workspace library item by id and version; a document opens at its last-accepted version; a library update surfaces as a reviewable, per-document, undoable action listing the affected objects; auto-update is opt-in per link; detaching is always available and never modifies the library.
+- FR-28: A design variable is a named, typed value (colour, number, string, or boolean) living in the document or the workspace library. Any node property of a matching type may hold a reference to one instead of a literal, and resolution happens at render time so changing the variable updates every referencing property at once. This is the same substitution the Brand Kit performs for a fixed set of slots, generalized to arbitrary properties, and it must not repaint app chrome (F38's separation of app accent from design content holds).
+- FR-29: Variables may be grouped into named modes (for example light and dark, or compact and comfortable), and a document or a subtree selects a mode. Resolving a reference is (variable, mode) to value, with a documented fallback to the default mode when a mode omits a variable, so a missing mode degrades rather than failing to render.
+- FR-30: A variable reference is preserved end to end: it survives save, reload, CRDT merge, and export, and an older client that does not understand variables renders the RESOLVED value rather than an empty property, by the same baked-fallback rule this spec applies to components. A newer client re-resolves on open.
 - FR-21: Export reciprocates import where feasible: SVG with filters and clips, layered TIFF, PSD-compatible layered output, and DXF, each with a documented mapping table stating what does not survive.
 
 Jobs, performance, and security:
@@ -522,6 +526,8 @@ These sample representative, testable criteria; a requirement not pinned to a nu
 - AC-19: A decompression bomb, a PSD with a layer count field of 2^31, a TIFF with strip offsets outside the buffer, and a PDF with a `/JavaScript` action each fail safely: bounded memory, bounded time, a specific error, nothing written, nothing executed, and a logged event (FR-23, FR-24).
 - AC-20: An import running in the browser worker and the same import running as a server job produce equivalent documents from the same input file (FR-25).
 - AC-21: Print pre-flight runs before a print export and blocks on un-overridden errors and unacknowledged warnings, with each check naming the offending object (FR-18).
+- AC-23: Changing one colour variable updates every node that references it, in one undoable step, across pages, and the change survives save, reload, and export.
+- AC-24: A document authored with variables opens on a client that predates them and renders the correct resolved colours rather than empty properties; re-saving there and reopening on a current client restores live references.
 - AC-22: No import, export, colour management, print, or library capability is gated behind a paid tier or watermarked, and all of it runs on a self-hosted instance with no external service call (differentiator 1).
 
 ## 16. Test plan
