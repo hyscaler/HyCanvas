@@ -337,6 +337,16 @@ export const migrations: Record<number, Migration> = {
   // v16 -> v17: QR center logo size (QRNode.logoScale). Purely additive: a v16
   // file carries no logoScale and its QR logo renders at the default size.
   16: (file: AnyObj) => ({ ...file, schemaVersion: 17 }),
+  // v17 -> v18: document language (DesignFile.language). Additive; the legacy
+  // `meta.language` (written by importers for the tagged-PDF /Lang) is COPIED
+  // up, never removed, so older readers keep finding it where they look.
+  17: (file: AnyObj) => {
+    const legacy = (file.meta as AnyObj | undefined)?.language;
+    const language = file.language ?? (typeof legacy === "string" && legacy ? legacy : undefined);
+    return language !== undefined
+      ? { ...file, language, schemaVersion: 18 }
+      : { ...file, schemaVersion: 18 };
+  },
 };
 
 export class MigrationError extends Error {

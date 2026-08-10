@@ -47,8 +47,13 @@ import { z } from "zod";
  *      older files omit it and render unchanged.
  *  v17: QR center logo size: QRNode gains optional `logoScale` (logo size as a
  *      fraction of the QR, absence means the default 0.22). Additive: a v16 file
- *      omits it and its QR logo renders at the default size unchanged. */
-export const CURRENT_SCHEMA_VERSION = 17;
+ *      omits it and its QR logo renders at the default size unchanged.
+ *  v18: document language (F38 FR-8): DesignFile gains optional `language`
+ *      (a BCP 47 tag) naming the document's primary language for assistive
+ *      technology and the tagged-PDF /Lang. Additive: a v17 file omits it and
+ *      exports fall back to en-US as before. The migration copies a legacy
+ *      `meta.language` up (importers wrote it there); meta keeps its copy. */
+export const CURRENT_SCHEMA_VERSION = 18;
 
 /** Maximum container nesting depth; guards traversal against stack overflow (FR-4). */
 export const MAX_NESTING_DEPTH = 32;
@@ -1941,6 +1946,10 @@ export interface DesignFile {
   /** Slide sections (doc 28 FR-5). Order here is presentational only; the deck
    *  sequence is `pages`. A section with no pages is legal (just empty). */
   sections?: SlideSection[];
+  /** Document's primary language as a BCP 47 tag (F38 FR-8), announced to
+   *  assistive technology and written as the tagged-PDF /Lang. Absent means
+   *  unset; exports fall back to en-US. */
+  language?: string;
   meta: Record<string, unknown>;
 }
 export const DesignFileSchema = z.object({
@@ -1956,6 +1965,7 @@ export const DesignFileSchema = z.object({
   layouts: z.array(SlideLayoutSchema).optional(),
   theme: ThemeSchema.optional(),
   sections: z.array(SlideSectionSchema).optional(),
+  language: z.string().optional(),
   assets: z.array(AssetRefSchema),
   fonts: z.array(FontRefSchema),
   palette: z.array(ColorSwatchSchema).optional(),

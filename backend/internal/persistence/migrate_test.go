@@ -149,3 +149,25 @@ func TestNormalizePageDimsLeavesValidUntouched(t *testing.T) {
 		t.Fatalf("valid dims changed: %vx%v", p["width"], p["height"])
 	}
 }
+
+// v17 -> v18 mirrors the TS migration: a legacy meta.language is COPIED up to
+// the first-class field, never removed.
+func TestMigratePromotesDocumentLanguage(t *testing.T) {
+	file := DesignFile{
+		"format": "hycanvas.design", "schemaVersion": float64(17),
+		"id": "d1", "title": "t", "unit": "px", "dpi": float64(96),
+		"pages":  []any{map[string]any{"id": "p1", "width": float64(100), "height": float64(100), "children": []any{}}},
+		"assets": []any{}, "fonts": []any{},
+		"meta": map[string]any{"language": "ar-SA"},
+	}
+	out := migrateFile(file)
+	if got := asNum(out["schemaVersion"]); got != 18 {
+		t.Fatalf("schemaVersion = %v, want 18", got)
+	}
+	if got := asStr(out["language"]); got != "ar-SA" {
+		t.Fatalf("language = %q, want ar-SA (promoted from meta)", got)
+	}
+	if got := asStr(asObj(out["meta"])["language"]); got != "ar-SA" {
+		t.Fatalf("meta.language = %q, want ar-SA (copied, not moved)", got)
+	}
+}
