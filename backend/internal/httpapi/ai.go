@@ -34,17 +34,19 @@ func mountAI(api chi.Router, svc *ai.Service, acct *accounts.Service) {
 }
 
 func aiProblem(w http.ResponseWriter, r *http.Request, err error) {
+	// Each branch carries a stable `code` so the frontend can translate the
+	// failure (F38 FR-9); the English detail stays as the fallback wording.
 	switch {
 	case errors.Is(err, ai.ErrPolicyBlocked):
-		Problem(w, r, http.StatusForbidden, "Forbidden", err.Error())
+		problemWithCode(w, r, http.StatusForbidden, "Forbidden", err.Error(), "ai_policy_blocked")
 	case errors.Is(err, ai.ErrImageUnsupported):
-		Problem(w, r, http.StatusBadRequest, "Bad Request", "your AI provider does not support image generation; switch to an image-capable provider (e.g. OpenAI or Together AI) in AI settings")
+		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "your AI provider does not support image generation; switch to an image-capable provider (e.g. OpenAI or Together AI) in AI settings", "ai_image_unsupported")
 	case errors.Is(err, ai.ErrBadRequest):
-		Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid AI request or no provider configured")
+		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid AI request or no provider configured", "ai_not_configured")
 	case errors.Is(err, ai.ErrBadGateway):
-		Problem(w, r, http.StatusBadGateway, "Bad Gateway", "the AI provider request failed")
+		problemWithCode(w, r, http.StatusBadGateway, "Bad Gateway", "the AI provider request failed", "ai_provider_failed")
 	default:
-		Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed")
+		problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed", "ai_failed")
 	}
 }
 

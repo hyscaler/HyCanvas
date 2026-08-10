@@ -42,19 +42,25 @@ func mountUploads(api chi.Router, up *uploads.Service, acct *accounts.Service) {
 }
 
 func uploadsProblem(w http.ResponseWriter, r *http.Request, err error) {
+	// Each branch carries a stable `code` so the frontend can translate the
+	// failure (F38 FR-9); the English detail stays as the fallback wording.
 	switch {
 	case errors.Is(err, uploads.ErrForbidden):
-		Problem(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace")
+		problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace", "upload_forbidden")
 	case errors.Is(err, uploads.ErrNotFound):
-		Problem(w, r, http.StatusNotFound, "Not Found", "not found")
+		problemWithCode(w, r, http.StatusNotFound, "Not Found", "not found", "upload_not_found")
 	case errors.Is(err, uploads.ErrBadRequest):
-		Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid upload request")
-	case errors.Is(err, uploads.ErrQuota), errors.Is(err, uploads.ErrUserQuota), errors.Is(err, uploads.ErrImportSize):
+		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid upload request", "upload_invalid")
+	case errors.Is(err, uploads.ErrQuota):
 		// The detail distinguishes the workspace quota from the global
 		// per-user limit so clients can word the error accordingly.
-		Problem(w, r, http.StatusRequestEntityTooLarge, "Payload Too Large", err.Error())
+		problemWithCode(w, r, http.StatusRequestEntityTooLarge, "Payload Too Large", err.Error(), "workspace_storage_full")
+	case errors.Is(err, uploads.ErrUserQuota):
+		problemWithCode(w, r, http.StatusRequestEntityTooLarge, "Payload Too Large", err.Error(), "account_storage_full")
+	case errors.Is(err, uploads.ErrImportSize):
+		problemWithCode(w, r, http.StatusRequestEntityTooLarge, "Payload Too Large", err.Error(), "import_too_large")
 	default:
-		Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed")
+		problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed", "upload_failed")
 	}
 }
 
