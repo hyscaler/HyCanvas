@@ -6,17 +6,19 @@ import { Plus, Copy, Trash2, Eye, EyeOff, ChevronDown, ChevronRight, Bookmark } 
 import { groupPagesBySection, type SectionGroup, type SlideSection } from "@hc/schema";
 import { useEditor } from "@/store/editor";
 import { SlideThumb } from "./SlideThumb";
+import { MIRROR_IN_RTL } from "@/lib/locale";
+import { tr } from "@/lib/i18n";
 
 const THUMB_W = 80;
 const THUMB_H = 52;
 
 // Preset page sizes offered when adding a page (mirrors the Magic Resize presets).
-const PAGE_SIZE_PRESETS: { label: string; w: number; h: number }[] = [
-  { label: "Instagram Post", w: 1080, h: 1080 },
-  { label: "Instagram Story", w: 1080, h: 1920 },
-  { label: "Presentation 16:9", w: 1920, h: 1080 },
-  { label: "Facebook Post", w: 1200, h: 630 },
-  { label: "Poster", w: 1080, h: 1350 },
+const pageSizePresets = (): { label: string; w: number; h: number }[] => [
+  { label: tr("editor.instagram_post"), w: 1080, h: 1080 },
+  { label: tr("editor.instagram_story"), w: 1080, h: 1920 },
+  { label: tr("editor.presentation_16_9"), w: 1920, h: 1080 },
+  { label: tr("editor.facebook_post"), w: 1200, h: 630 },
+  { label: tr("editor.poster"), w: 1080, h: 1350 },
   { label: "A4 Portrait", w: 1240, h: 1754 },
   { label: "A4 Landscape", w: 1754, h: 1240 },
 ];
@@ -63,6 +65,15 @@ export function PagesBar() {
     };
   }, [sizeMenu]);
 
+  // Escape dismisses the size-preset menu. Bound on the window so it works
+  // wherever focus sits (the menu items are plain buttons).
+  useEffect(() => {
+    if (!sizeMenu) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setSizeMenu(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sizeMenu]);
+
   // Only the thumbnail strip scrolls; the controls (section, duplicate, add
   // page, counter) stay pinned at the bar's right edge, so adding many pages
   // never pushes the add-page button off screen. Keep the active page's thumb
@@ -87,7 +98,8 @@ export function PagesBar() {
   }
 
   return (
-    <div className="flex shrink-0 items-center gap-2 border-t border-neutral-200 bg-surface px-3">
+    // A navigation landmark: this strip is how a user moves between pages.
+    <nav aria-label={tr("editor.pages")} className="flex shrink-0 items-center gap-2 border-t border-neutral-200 bg-surface px-3">
       {/* Vertical padding lives INSIDE the scroll strip: the thumbs' hover
           buttons overhang the tile tops, and top overflow in a scroll
           container is clipped, not scrollable. */}
@@ -118,6 +130,8 @@ export function PagesBar() {
             onDrop={() => { if (dragIdx !== null && dragIdx !== i) st().movePage(dragIdx, i); setDragIdx(null); }}
             onDragEnd={() => setDragIdx(null)}
             onClick={() => st().goToPage(i)}
+            aria-current={i === active ? "page" : undefined}
+            aria-label={p.name ? tr("editor.page_n_name", { n: i + 1, name: p.name }) : tr("editor.page_n", { n: i + 1 })}
             title={`${p.name ?? `Page ${i + 1}`}${hidden ? " (hidden in present)" : ""}`}
             className={`relative grid place-items-center overflow-hidden rounded-md border bg-surface transition ${
               i === active ? "border-brand-500 ring-2 ring-brand-200" : "border-neutral-200 hover:border-neutral-300"
@@ -127,13 +141,14 @@ export function PagesBar() {
             <SlideThumb index={i} width={THUMB_W} height={THUMB_H} />
             {hidden && (
               <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-0.5 bg-neutral-900/70 py-0.5 text-[9px] font-medium text-white">
-                <EyeOff size={9} /> Hidden
+                <EyeOff size={9} /> {tr("editor.hidden")}
               </span>
             )}
           </button>
           {renaming === i ? (
             <input
               autoFocus
+              aria-label={tr("editor.rename_page")}
               defaultValue={p.name ?? `Page ${i + 1}`}
               onBlur={(e) => { st().setPageName(i, e.target.value.trim() || `Page ${i + 1}`); setRenaming(null); }}
               onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setRenaming(null); }}
@@ -143,23 +158,25 @@ export function PagesBar() {
           ) : (
             <span
               onDoubleClick={() => setRenaming(i)}
-              title="Double-click to rename"
+              title={tr("editor.double_click_to_rename")}
               className="mt-0.5 block max-w-full truncate px-1 text-center text-[10px] text-neutral-400"
               style={{ maxWidth: THUMB_W }}
             >{p.name ?? i + 1}</span>
           )}
+          {/* Visible-but-transparent (not display:none) so the action stays
+              Tab-reachable and reappears on keyboard focus. */}
           <button
             onClick={() => st().setPageHidden(!hidden, i)}
-            title={hidden ? "Show slide while presenting" : "Hide slide while presenting"}
-            className="absolute -left-1.5 -top-1.5 hidden h-5 w-5 place-items-center rounded-full bg-surface text-neutral-400 shadow group-hover:grid hover:text-brand-ink"
+            title={hidden ? tr("editor.show_slide_while_presenting") : tr("editor.hide_slide_while_presenting")}
+            className="absolute -start-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-surface text-neutral-400 opacity-0 shadow focus-visible:opacity-100 group-hover:opacity-100 hover:text-brand-ink"
           >
             {hidden ? <EyeOff size={12} /> : <Eye size={12} />}
           </button>
           {pages.length > 1 && (
             <button
               onClick={() => st().deletePage(i)}
-              title="Delete page"
-              className="absolute -right-1.5 -top-1.5 hidden h-5 w-5 place-items-center rounded-full bg-surface text-neutral-400 shadow group-hover:grid hover:text-red-600"
+              title={tr("editor.delete_page")}
+              className="absolute -end-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-surface text-neutral-400 opacity-0 shadow focus-visible:opacity-100 group-hover:opacity-100 hover:text-red-600"
             >
               <Trash2 size={12} />
             </button>
@@ -172,7 +189,7 @@ export function PagesBar() {
       <div className="flex shrink-0 items-center gap-2 py-2">
       <button
         onClick={() => st().addSection(useEditor.getState().activePage)}
-        title="Start a section at the current slide"
+        title={tr("editor.start_a_section_at_the_current_slide")}
         data-testid="add-section"
         className="grid shrink-0 place-items-center rounded-md border border-neutral-200 text-neutral-500 hover:border-brand-300 hover:text-brand-ink"
         style={{ width: 40, height: THUMB_H }}
@@ -181,7 +198,7 @@ export function PagesBar() {
       </button>
       <button
         onClick={() => st().duplicatePage()}
-        title="Duplicate current page"
+        title={tr("editor.duplicate_current_page")}
         className="grid shrink-0 place-items-center rounded-md border border-neutral-200 text-neutral-500 hover:border-brand-300 hover:text-brand-ink"
         style={{ width: 40, height: THUMB_H }}
       >
@@ -190,16 +207,18 @@ export function PagesBar() {
       <div ref={addWrapRef} className="relative flex shrink-0 items-stretch">
         <button
           onClick={() => st().addPage()}
-          title="Add page (same size)"
-          className="grid place-items-center rounded-l-md border border-dashed border-neutral-300 text-neutral-500 hover:border-brand-400 hover:text-brand-ink"
+          title={tr("editor.add_page_same_size")}
+          className="grid place-items-center rounded-s-md border border-dashed border-neutral-300 text-neutral-500 hover:border-brand-400 hover:text-brand-ink"
           style={{ width: 34, height: THUMB_H }}
         >
           <Plus size={18} />
         </button>
         <button
           onClick={() => setSizeMenu((v) => !v)}
-          title="Add page with a preset size"
-          className="grid w-5 place-items-center rounded-r-md border border-l-0 border-dashed border-neutral-300 text-neutral-400 hover:border-brand-400 hover:text-brand-ink"
+          title={tr("editor.add_page_with_a_preset_size")}
+          aria-haspopup="menu"
+          aria-expanded={sizeMenu}
+          className="grid w-5 place-items-center rounded-e-md border border-s-0 border-dashed border-neutral-300 text-neutral-400 hover:border-brand-400 hover:text-brand-ink"
           style={{ height: THUMB_H }}
         >
           <ChevronDown size={12} />
@@ -207,12 +226,13 @@ export function PagesBar() {
         {sizeMenu && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setSizeMenu(false)} />
-            <div ref={sizeMenuRef} style={{ visibility: "hidden" }} className="fixed z-50 w-44 overflow-hidden rounded-lg border border-neutral-200 bg-surface py-1 shadow-lg">
-              {PAGE_SIZE_PRESETS.map((p) => (
+            <div ref={sizeMenuRef} role="menu" aria-label={tr("editor.add_page_with_a_preset_size")} style={{ visibility: "hidden" }} className="fixed z-50 w-44 overflow-hidden rounded-lg border border-neutral-200 bg-surface py-1 shadow-lg">
+              {pageSizePresets().map((p) => (
                 <button
                   key={p.label}
+                  role="menuitem"
                   onClick={() => { st().addPage({ width: p.w, height: p.h }); setSizeMenu(false); }}
-                  className="flex w-full items-center justify-between px-3 py-1.5 text-left text-xs text-neutral-700 hover:bg-brand-50 hover:text-brand-ink"
+                  className="flex w-full items-center justify-between px-3 py-1.5 text-start text-xs text-neutral-700 hover:bg-brand-50 hover:text-brand-ink"
                 >
                   <span>{p.label}</span>
                   <span className="text-[10px] text-neutral-400">{p.w}×{p.h}</span>
@@ -222,9 +242,9 @@ export function PagesBar() {
           </>
         )}
       </div>
-      <span className="ml-1 shrink-0 text-xs text-neutral-400">Page {active + 1} of {pages.length}</span>
+      <span className="ms-1 shrink-0 text-xs text-neutral-400">{tr("editor.page_n_of_total", { n: active + 1, total: pages.length })}</span>
       </div>
-    </div>
+    </nav>
   );
 }
 
@@ -241,15 +261,16 @@ function SectionChip({ section, count }: { section: SlideSection; count: number 
     >
       <button
         onClick={() => st().toggleSectionCollapsed(section.id)}
-        title={section.collapsed ? "Expand section" : "Collapse section"}
+        title={section.collapsed ? tr("editor.expand_section") : tr("editor.collapse_section")}
         data-testid={`section-toggle-${section.id}`}
         className="grid h-5 w-5 place-items-center rounded text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700"
       >
-        {section.collapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
+        {section.collapsed ? <ChevronRight size={13} className={MIRROR_IN_RTL} /> : <ChevronDown size={13} />}
       </button>
       {renaming ? (
         <input
           autoFocus
+          aria-label={tr("editor.rename_section")}
           defaultValue={section.name}
           onBlur={(e) => { st().renameSection(section.id, e.target.value); setRenaming(false); }}
           onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setRenaming(false); }}
@@ -258,7 +279,7 @@ function SectionChip({ section, count }: { section: SlideSection; count: number 
       ) : (
         <button
           onDoubleClick={() => setRenaming(true)}
-          title="Double-click to rename"
+          title={tr("editor.double_click_to_rename")}
           className="max-w-28 truncate text-[11px] font-medium text-neutral-600"
         >
           {section.name}
@@ -267,7 +288,7 @@ function SectionChip({ section, count }: { section: SlideSection; count: number 
       <span className="text-[10px] tabular-nums text-neutral-400">{count}</span>
       <button
         onClick={() => st().removeSection(section.id)}
-        title="Remove section (slides are kept)"
+        title={tr("editor.remove_section_slides_are_kept")}
         data-testid={`section-remove-${section.id}`}
         className="grid h-5 w-5 place-items-center rounded text-neutral-300 hover:bg-neutral-200 hover:text-red-600"
       >

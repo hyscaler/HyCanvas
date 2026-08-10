@@ -19,6 +19,7 @@ import { commandForEvent } from "@/lib/shortcuts";
 import { Gizmo } from "./Gizmo";
 import { SelectionToolbar } from "./SelectionToolbar";
 import { MiniMap } from "./MiniMap";
+import { A11yTree, SelectionAnnouncer } from "./A11yTree";
 import { PageOverlays } from "./PageOverlays";
 import { PathEditor } from "./PathEditor";
 import { CropOverlay } from "./CropOverlay";
@@ -29,6 +30,8 @@ import { serverNow } from "@/lib/realtime";
 import { usePresence } from "@/store/presence";
 import { useBrand } from "@/store/brand";
 import { useComments } from "@/store/comments";
+import { DESIGN_SURFACE_DIR } from "@/lib/locale";
+import { tr } from "@/lib/i18n";
 
 function srgbCss(c: Color): string {
   const s = c.srgb;
@@ -71,19 +74,24 @@ function Ruler({ axis, api, page }: { axis: "x" | "y"; api: CanvasApi; page: { w
 type ToolName = "select" | "pen" | "pencil" | "ink" | "laser" | "eraser" | "line" | "arrow" | "rect" | "ellipse" | "text" | "comment";
 
 // Canvas tool palette (top-left). "sep" draws a divider.
-const TOOLBAR: ({ tool: ToolName; title: string; icon: typeof MousePointer2 } | "sep")[] = [
-  { tool: "select", title: "Select (V)", icon: MousePointer2 },
+const toolbar = (): ({ tool: ToolName; title: string; icon: typeof MousePointer2 } | "sep")[] => [
+  { tool: "select", title: tr("editor.select_v"), icon: MousePointer2 },
   "sep",
-  { tool: "text", title: "Text (T)", icon: Type },
-  { tool: "rect", title: "Rectangle (R) - drag to draw", icon: Square },
-  { tool: "ellipse", title: "Ellipse (E) - drag to draw", icon: Circle },
-  { tool: "line", title: "Line (L)", icon: Minus },
-  { tool: "arrow", title: "Arrow (A)", icon: MoveUpRight },
-  { tool: "pen", title: "Pen (P)", icon: PenTool },
-  { tool: "pencil", title: "Pencil (B) - drag to draw freehand", icon: Pencil },
+  { tool: "text", title: tr("editor.text_t"), icon: Type },
+  { tool: "rect", title: tr("editor.rectangle_r_drag_to_draw"), icon: Square },
+  { tool: "ellipse", title: tr("editor.ellipse_e_drag_to_draw"), icon: Circle },
+  { tool: "line", title: tr("editor.line_l"), icon: Minus },
+  { tool: "arrow", title: tr("editor.arrow_a"), icon: MoveUpRight },
+  { tool: "pen", title: tr("editor.pen_p"), icon: PenTool },
+  { tool: "pencil", title: tr("editor.pencil_b_drag_to_draw_freehand"), icon: Pencil },
 ];
 
 // Single-key canvas tool shortcuts.
+// `fontStyle` values are file-format tokens ("Regular", "Bold Italic"), never
+// localized: the engine parses weight/italic out of them by ENGLISH name, and
+// they persist into the design file, so a translated token corrupts the doc.
+const regularFontStyle = "Regular";
+
 const TOOL_KEYS: Record<string, ToolName> = {
   v: "select",
   p: "pen",
@@ -268,7 +276,7 @@ function layoutToHtml(content: EditPara[], breaks: Map<number, number[]>, zoom: 
       out += runSpan(r.text.slice(local), r.style, zoom);
       pos += r.text.length;
     }
-    if (!p.runs.length) out += runSpan("", DEFAULT_CHAR, zoom);
+    if (!p.runs.length) out += runSpan("", defaultChar(), zoom);
     return out;
   });
   // Join paragraphs with a hard "\n", each wrapped in a span styled like the
@@ -278,7 +286,7 @@ function layoutToHtml(content: EditPara[], breaks: Map<number, number[]>, zoom: 
   let joined = "";
   for (let i = 0; i < parts.length; i++) {
     joined += parts[i];
-    if (i < parts.length - 1) joined += runSpan("\n", content[i].runs[0]?.style ?? DEFAULT_CHAR, zoom);
+    if (i < parts.length - 1) joined += runSpan("\n", content[i].runs[0]?.style ?? defaultChar(), zoom);
   }
   return joined;
 }
@@ -293,17 +301,17 @@ function buildEditorHtml(node: TextNode, model: EditPara[], zoom: number): { htm
   return { html: layoutToHtml(model, breaks, zoom), sig: JSON.stringify(Array.from(breaks.entries())) };
 }
 
-const DEFAULT_CHAR: CharStyle = {
+const defaultChar = (): CharStyle => ({
   fontFamily: "system",
   fontStyle: "Regular",
   fontSize: 16,
   fill: { type: "solid", color: { srgb: { r: 0, g: 0, b: 0, a: 1 } } },
-};
+});
 
 function htmlToContent(el: HTMLElement, prev: EditPara[]): EditPara[] {
   // Always a concrete style so typed text is never dropped and we never persist
   // a paragraph with zero runs (downstream code assumes runs[0] exists).
-  const fallback: CharStyle = prev[0]?.runs?.[0]?.style ?? DEFAULT_CHAR;
+  const fallback: CharStyle = prev[0]?.runs?.[0]?.style ?? defaultChar();
   const paras: { runs: EditRun[] }[] = [{ runs: [] }];
   const push = (text: string, style: CharStyle) => {
     const cur = paras[paras.length - 1].runs;
@@ -619,7 +627,7 @@ function TextEditOverlay({ api, id, onClose }: { api: CanvasApi; id: string; onC
       off -= 1; // the "\n" separator
       if (off < 0) break;
     }
-    return model[0]?.runs[0]?.style ?? DEFAULT_CHAR;
+    return model[0]?.runs[0]?.style ?? defaultChar();
   };
   const isBold = (s: CharStyle) => (s.axes?.wght ?? weightFromFontStyle(s.fontStyle)) >= 600;
   const isItal = (s: CharStyle) => /italic|oblique/i.test(s.fontStyle ?? "");
@@ -631,7 +639,7 @@ function TextEditOverlay({ api, id, onClose }: { api: CanvasApi; id: string; onC
     const s = selStyle();
     // Toggle only the italic token so a named weight ("SemiBold Italic") keeps
     // its weight when italics come off.
-    const base = (s.fontStyle ?? "Regular").replace(/\s*italic\s*/i, " ").replace(/\s+/g, " ").trim();
+    const base = (s.fontStyle ?? regularFontStyle).replace(/\s*italic\s*/i, " ").replace(/\s+/g, " ").trim();
     applyRange({ fontStyle: isItal(s) ? base || "Regular" : `${base && base !== "Regular" ? base + " " : ""}Italic` });
   };
   const toggleDeco = (d: "underline" | "strikethrough") => {
@@ -800,12 +808,12 @@ function TextEditOverlay({ api, id, onClose }: { api: CanvasApi; id: string; onC
           style={{ left: tl.x, top: tl.y - 44 }}
           onMouseDown={(e) => e.preventDefault()}
         >
-          <button onClick={toggleBold} className="h-7 w-7 rounded text-sm font-bold text-neutral-700 hover:bg-neutral-100" title="Bold (Cmd/Ctrl+B)">B</button>
-          <button onClick={toggleItalic} className="h-7 w-7 rounded text-sm italic text-neutral-700 hover:bg-neutral-100" title="Italic (Cmd/Ctrl+I)">I</button>
-          <button onClick={() => toggleDeco("underline")} className="h-7 w-7 rounded text-sm text-neutral-700 underline hover:bg-neutral-100" title="Underline (Cmd/Ctrl+U)">U</button>
-          <button onClick={() => toggleDeco("strikethrough")} className="h-7 w-7 rounded text-sm text-neutral-700 line-through hover:bg-neutral-100" title="Strikethrough (Cmd/Ctrl+Shift+X)">S</button>
+          <button onClick={toggleBold} className="h-7 w-7 rounded text-sm font-bold text-neutral-700 hover:bg-neutral-100" title={tr("editor.bold_cmd_ctrl_b")}>B</button>
+          <button onClick={toggleItalic} className="h-7 w-7 rounded text-sm italic text-neutral-700 hover:bg-neutral-100" title={tr("editor.italic_cmd_ctrl_i")}>I</button>
+          <button onClick={() => toggleDeco("underline")} className="h-7 w-7 rounded text-sm text-neutral-700 underline hover:bg-neutral-100" title={tr("editor.underline_cmd_ctrl_u")}>U</button>
+          <button onClick={() => toggleDeco("strikethrough")} className="h-7 w-7 rounded text-sm text-neutral-700 line-through hover:bg-neutral-100" title={tr("editor.strikethrough_cmd_ctrl_shift_x")}>S</button>
           <span className="mx-0.5 h-5 w-px bg-neutral-200" />
-          <button onClick={() => stepFontSize(-1)} className="h-7 w-6 rounded text-sm text-neutral-600 hover:bg-neutral-100" title="Smaller (Cmd/Ctrl+Shift+,)">-</button>
+          <button onClick={() => stepFontSize(-1)} className="h-7 w-6 rounded text-sm text-neutral-600 hover:bg-neutral-100" title={tr("editor.smaller_cmd_ctrl_shift")}>-</button>
           <input
             key={`fs-${selStyle().fontSize ?? 16}`}
             defaultValue={Math.round(selStyle().fontSize ?? 16)}
@@ -821,9 +829,9 @@ function TextEditOverlay({ api, id, onClose }: { api: CanvasApi; id: string; onC
               if (Number.isFinite(n) && Math.round(n) !== Math.round(cur)) applyRange({ fontSize: Math.max(4, Math.min(512, n)) });
             }}
             className="h-7 w-10 rounded border border-neutral-200 bg-surface text-center text-xs text-neutral-700 outline-none focus:border-brand-400"
-            title="Font size"
+            title={tr("editor.font_size")} aria-label={tr("editor.font_size")}
           />
-          <button onClick={() => stepFontSize(1)} className="h-7 w-6 rounded text-sm text-neutral-600 hover:bg-neutral-100" title="Larger (Cmd/Ctrl+Shift+.)">+</button>
+          <button onClick={() => stepFontSize(1)} className="h-7 w-6 rounded text-sm text-neutral-600 hover:bg-neutral-100" title={tr("editor.larger_cmd_ctrl_shift")}>+</button>
           <span className="mx-0.5 h-5 w-px bg-neutral-200" />
           <button
             onClick={() => {
@@ -841,19 +849,19 @@ function TextEditOverlay({ api, id, onClose }: { api: CanvasApi; id: string; onC
             defaultValue={baseColor.startsWith("#") ? baseColor : "#111827"}
             onChange={(e) => applyRange({ fill: { type: "solid", color: { srgb: { ...hexToRgb(e.target.value), a: 1 } } } })}
             className="h-6 w-7 cursor-pointer rounded border border-neutral-300"
-            title="Color"
+            title={tr("editor.color")} aria-label={tr("editor.color")}
           />
           <span className="mx-0.5 h-5 w-px bg-neutral-200" />
           <button
             onClick={() => {
               suppressCommitRef.current = true;
-              const url = window.prompt("Link URL (leave empty to remove):", "");
+              const url = window.prompt(tr("editor.link_url_leave_empty_to_remove"), "");
               suppressCommitRef.current = false;
               if (url !== null) applyRange({ link: url.trim() || undefined });
               ref.current?.focus();
             }}
             className="h-7 w-7 rounded text-sm text-neutral-700 hover:bg-neutral-100"
-            title="Link selected text"
+            title={tr("editor.link_selected_text")}
           >🔗</button>
         </div>
       )}
@@ -1114,8 +1122,8 @@ function ConnectorDragLayer({
           <button
             key={m.anchor}
             type="button"
-            title="Drag to connect to another node"
-            aria-label={`Connect from ${m.anchor}`}
+            title={tr("editor.drag_to_connect_to_another_node")}
+            aria-label={tr("editor.connect_from_anchor", { anchor: m.anchor })}
             className="pointer-events-auto absolute h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-[color:var(--color-selection)] shadow ring-1 ring-[color:var(--color-selection)] transition hover:scale-125"
             style={{ left: s.x + d.x, top: s.y + d.y, touchAction: "none" }}
             onPointerDown={onNubDown(m.anchor, m.p)}
@@ -1160,8 +1168,8 @@ function ConnectorLabelOverlay({ api, id, onClose }: { api: CanvasApi; id: strin
         if (e.key === "Escape") { e.preventDefault(); onClose(); }
         else if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); commit(); }
       }}
-      placeholder="Label"
-      aria-label="Connector label"
+      placeholder={tr("editor.label")}
+      aria-label={tr("editor.connector_label")}
       className="absolute z-30 rounded-md border-2 border-[color:var(--color-selection)] bg-surface px-1.5 py-0.5 text-center text-xs text-neutral-800 shadow outline-none"
       style={{ left: c.x, top: c.y, width: 120, transform: "translate(-50%, -50%)" }}
     />
@@ -1269,8 +1277,8 @@ function ConnectorEditLayer({
       {addPt && !drag && (
         <button
           type="button"
-          title="Add a bend"
-          aria-label="Add connector bend"
+          title={tr("editor.add_a_bend")}
+          aria-label={tr("editor.add_connector_bend")}
           className="pointer-events-auto absolute grid h-4 w-4 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-white bg-amber-400/80 text-[10px] font-bold text-white shadow hover:scale-125"
           style={{ left: addPt.x, top: addPt.y, touchAction: "none" }}
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); addBend(); }}
@@ -1300,6 +1308,20 @@ export function Canvas() {
   // Connector whose label is being edited (F30 FR-8); opened by double-click.
   const [editingConnectorLabel, setEditingConnectorLabel] = useState<string | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
+  // Context-menu focus management (a11y): focus the first item when the menu
+  // opens so its arrow-key navigation works immediately, and return focus to
+  // the canvas surface when it closes so keyboard flow is never dropped.
+  const ctxMenuRef = useRef<HTMLDivElement | null>(null);
+  const ctxMenuWasOpen = useRef(false);
+  useEffect(() => {
+    if (ctxMenu) {
+      ctxMenuWasOpen.current = true;
+      ctxMenuRef.current?.querySelector("button")?.focus();
+    } else if (ctxMenuWasOpen.current) {
+      ctxMenuWasOpen.current = false;
+      surfaceRef.current?.focus();
+    }
+  }, [ctxMenu]);
   const [guides, setGuides] = useState<{ x: number[]; y: number[] } | null>(null);
   const [spacingGuides, setSpacingGuides] = useState<SpacingGuide[]>([]);
   // Pen rubber-band: cursor position (screen) for the preview from the last anchor.
@@ -2510,6 +2532,13 @@ export function Canvas() {
       // shortcuts (delete/undo/nudge/...) mutate the doc underneath them. A
       // history preview is read-only too, so the same gate applies.
       if (store.cropping || store.presenting || store.preview) return;
+      // An OPEN DIALOG owns the keyboard too. Focus can sit on a button inside
+      // a modal (where the target guard above does not fire, because a button
+      // is neither an input nor contentEditable), and Delete or an arrow would
+      // then edit the design behind the dialog. Any visible element with
+      // role="dialog" counts, which covers ui/Modal and the hand-rolled
+      // overlays alike.
+      if (document.querySelector('[role="dialog"]')) return;
       // Collab access gate (FR-9): a comment/view user (or a
       // design locked by an approval) is read-only, so every document-mutating
       // shortcut is refused here, mirroring the disabled Save button and the
@@ -2546,7 +2575,7 @@ export function Canvas() {
           if (!e.shiftKey && k === "i") {
             e.preventDefault();
             const ital = /italic|oblique/i.test(s?.fontStyle ?? "");
-            const base = (s?.fontStyle ?? "Regular").replace(/\s*italic\s*/i, " ").replace(/\s+/g, " ").trim();
+            const base = (s?.fontStyle ?? regularFontStyle).replace(/\s*italic\s*/i, " ").replace(/\s+/g, " ").trim();
             patchAll({ fontStyle: ital ? base || "Regular" : `${base && base !== "Regular" ? base + " " : ""}Italic` });
             return;
           }
@@ -2575,13 +2604,19 @@ export function Canvas() {
         const ids = tabbableIds(store.doc.pages[Math.min(store.activePage, store.doc.pages.length - 1)]);
         // Nothing to cycle: let Tab move browser focus out to the panels.
         if (ids.length) {
-          e.preventDefault();
           const cur = store.selection.length === 1 ? ids.indexOf(store.selection[0]) : -1;
-          let next: string;
-          if (cur < 0) next = e.shiftKey ? ids[ids.length - 1] : ids[0];
-          else next = ids[(cur + (e.shiftKey ? -1 : 1) + ids.length) % ids.length];
-          store.select([next]);
-          return;
+          // Past either end the key is RELEASED instead of wrapping: Tab on
+          // the last object (or Shift+Tab on the first) lets browser focus
+          // move on, so a keyboard user can leave the canvas and reach the
+          // toolbar and the offscreen object list instead of being trapped
+          // in an endless cycle.
+          const atEnd = cur >= 0 && (e.shiftKey ? cur === 0 : cur === ids.length - 1);
+          if (!atEnd) {
+            e.preventDefault();
+            const next = cur < 0 ? (e.shiftKey ? ids[ids.length - 1] : ids[0]) : ids[cur + (e.shiftKey ? -1 : 1)];
+            store.select([next]);
+            return;
+          }
         }
       }
       if (e.key === "Enter" && surfaceFocused.current && !penDraft.current && store.selection.length === 1) {
@@ -2663,9 +2698,20 @@ export function Canvas() {
         const s = e.shiftKey ? 10 : 1;
         const d: Record<string, [number, number]> = { ArrowLeft: [-s, 0], ArrowRight: [s, 0], ArrowUp: [0, -s], ArrowDown: [0, s] };
         const v = d[e.key];
-        if (v) store.nudge(v[0], v[1]);
+        // Alt+arrow resizes (right/down grow, left/up shrink); plain arrows nudge.
+        if (v && e.altKey) store.growSelection(v[0], v[1]);
+        else if (v) store.nudge(v[0], v[1]);
+      } else if ((e.key === "," || e.key === "." || e.key === "<" || e.key === ">") && !e.metaKey && !e.ctrlKey && !e.shiftKey && store.selection.length) {
+        // Keyboard rotate (a11y): comma/period turn 1 degree (Alt: 15) about
+        // each node's own origin, mirroring the rotate handle. Shift+,/. is
+        // the text font-size step, so Shift stays excluded here; a live
+        // gizmo gesture owns the transform, so rotate is ignored mid-drag.
+        if (!canEdit || useEditor.getState().transforming) return;
+        e.preventDefault();
+        const step = e.altKey ? 15 : 1;
+        store.rotateSelection(e.key === "." || e.key === ">" ? step : -step);
       } else if (/^[0-9]$/.test(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && store.selection.length) {
-        // Type a digit to set the selection's opacity (Figma-style): a single
+        // Type a digit to set the selection's opacity: a single
         // digit is tens (1 = 10% ... 9 = 90%, 0 = 100%); a second digit within
         // 600ms combines into an exact percent ("2" then "5" -> 25%).
         if (!canEdit) return;
@@ -2816,6 +2862,7 @@ export function Canvas() {
     danger?: boolean,
   ) => (
     <button
+      role="menuitem"
       onClick={() => { fn(); setCtxMenu(null); }}
       className={`flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-[13px] ${danger ? "text-red-600 hover:bg-red-50" : "text-neutral-700 hover:bg-neutral-100"}`}
     >
@@ -2836,10 +2883,16 @@ export function Canvas() {
       role="application"
       aria-label={
         apg
-          ? `Design canvas - page ${Math.min(activePage, useEditor.getState().doc.pages.length - 1) + 1} of ${useEditor.getState().doc.pages.length}; use Tab to cycle objects, Enter to edit, Delete to remove`
-          : "Design canvas"
+          ? tr("editor.design_canvas_page_hint", {
+              page: Math.min(activePage, useEditor.getState().doc.pages.length - 1) + 1,
+              total: useEditor.getState().doc.pages.length,
+            })
+          : tr("editor.design_canvas")
       }
       className="relative h-full w-full overflow-hidden bg-neutral-200 outline-none"
+      // The design and every overlay positioned over it live in the design's own
+      // coordinate space, so the shell's direction must not reach them.
+      dir={DESIGN_SURFACE_DIR}
       // onFocus/onBlur bubble from children, so only treat focus as "on the
       // canvas" when the wrapper itself is the target. Focusing a child control
       // (a toolbar button, a text-edit overlay) reports a different target and
@@ -2865,7 +2918,7 @@ export function Canvas() {
         />
       )}
       <div className="absolute left-3 top-3 z-10 flex flex-col gap-1 rounded-xl border border-neutral-200 bg-surface p-1 shadow-md">
-        {TOOLBAR.map((b, i) =>
+        {toolbar().map((b, i) =>
           b === "sep" ? (
             <div key={`sep${i}`} className="my-0.5 h-px w-7 self-center bg-neutral-200" />
           ) : (
@@ -2886,7 +2939,7 @@ export function Canvas() {
             <div className="my-0.5 h-px w-7 self-center bg-neutral-200" />
             <button
               onClick={() => useEditor.getState().setTool("comment")}
-              title="Comment (C) - click the canvas to drop a pin"
+              title={tr("editor.comment_c_click_the_canvas_to_drop_a_pin")}
               className={`grid h-9 w-9 place-items-center rounded-lg ${tool === "comment" ? "bg-brand-50 text-brand-ink" : "text-neutral-500 hover:bg-neutral-100"}`}
             >
               <MessageSquarePlus size={18} />
@@ -2899,15 +2952,15 @@ export function Canvas() {
       {(tool === "pencil" || tool === "ink") && (
         <div className="absolute left-16 top-3 z-10 flex items-center gap-3 rounded-xl border border-neutral-200 bg-surface px-3 py-2 shadow-md">
           <label className="flex items-center gap-1.5 text-[11px] text-neutral-500">
-            Size
+            {tr("editor.size")}
             <input type="range" min={1} max={40} value={brush.width} onChange={(e) => useEditor.getState().setBrush({ width: Number(e.target.value) })} className="w-20 accent-brand-600" />
             <span className="w-6 text-neutral-400">{brush.width}</span>
           </label>
           <label className="flex items-center gap-1.5 text-[11px] text-neutral-500">
-            Opacity
+            {tr("editor.opacity")}
             <input type="range" min={10} max={100} value={Math.round(brush.opacity * 100)} onChange={(e) => useEditor.getState().setBrush({ opacity: Number(e.target.value) / 100 })} className="w-20 accent-brand-600" />
           </label>
-          <input type="color" value={brush.colorHex} onChange={(e) => useEditor.getState().setBrush({ colorHex: e.target.value })} className="oc-color h-7 w-8 shrink-0" title="Brush color" />
+          <input type="color" value={brush.colorHex} onChange={(e) => useEditor.getState().setBrush({ colorHex: e.target.value })} className="oc-color h-7 w-8 shrink-0" title={tr("editor.brush_color")} aria-label={tr("editor.brush_color")} />
         </div>
       )}
       {/* Hidden picker for double-clicked empty image frames: the chosen file
@@ -3013,7 +3066,7 @@ export function Canvas() {
             className="absolute top-0 z-10 cursor-ns-resize bg-surface"
             style={{ left: RULER, right: 0, height: RULER, borderBottom: "1px solid var(--color-neutral-200)" }}
             onPointerDown={(e) => beginGuide(e, "y", null)}
-            title="Drag down to add a horizontal guide"
+            title={tr("editor.drag_down_to_add_a_horizontal_guide")}
           >
             <Ruler axis="x" api={api} page={apg} />
           </div>
@@ -3022,7 +3075,7 @@ export function Canvas() {
             className="absolute left-0 z-10 cursor-ew-resize bg-surface"
             style={{ top: RULER, bottom: 0, width: RULER, borderRight: "1px solid var(--color-neutral-200)" }}
             onPointerDown={(e) => beginGuide(e, "x", null)}
-            title="Drag right to add a vertical guide"
+            title={tr("editor.drag_right_to_add_a_vertical_guide")}
           >
             <Ruler axis="y" api={api} page={apg} />
           </div>
@@ -3353,6 +3406,10 @@ export function Canvas() {
       <PageOverlays api={api} />
       {/* Zoom overview: a corner thumbnail with a draggable viewport rectangle. */}
       <MiniMap />
+      {/* Offscreen mirror of the page's objects for assistive technology, plus
+          a polite live region announcing selection changes (F38). */}
+      <A11yTree />
+      <SelectionAnnouncer />
       {/* Remote collaborators' cursors and selections. */}
       <PresenceOverlay api={api} />
       {/* Comment pins anchored to nodes/regions, tracking pan/zoom. */}
@@ -3376,47 +3433,77 @@ export function Canvas() {
         return (
           <div
             role="menu"
+            ref={ctxMenuRef}
             className="oc-scroll absolute z-30 max-h-[80vh] w-56 overflow-y-auto rounded-xl border border-neutral-200 bg-surface p-1.5 shadow-xl ring-1 ring-black/5"
             style={{ left: ctxMenu.x, top: ctxMenu.y }}
             onClick={(e) => e.stopPropagation()}
+            // Menu keyboard model (a11y): arrows move between items, Home/End
+            // jump, Escape closes. Stop propagation so the canvas surface's own
+            // arrow (nudge) and Escape (clear selection) handlers stay out of it.
+            onKeyDown={(e) => {
+              const items = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>("button"));
+              const idx = items.indexOf(document.activeElement as HTMLButtonElement);
+              const focusAt = (i: number) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (items.length) items[((i % items.length) + items.length) % items.length].focus();
+              };
+              switch (e.key) {
+                case "Escape":
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setCtxMenu(null);
+                  return;
+                case "Tab":
+                  // A menu is transient: tabbing away closes it (the close
+                  // effect returns focus to the canvas surface) instead of
+                  // leaving an orphaned menu open behind the moved focus.
+                  setCtxMenu(null);
+                  return;
+                case "ArrowDown": focusAt(idx + 1); return;
+                case "ArrowUp": focusAt(idx - 1); return;
+                case "Home": focusAt(0); return;
+                case "End": focusAt(items.length - 1); return;
+              }
+            }}
           >
             {/* With nothing selected only Paste / Select all make sense; the
                 editing actions below are gated behind a selection. */}
-            {!hasSel && ctxItem(<ClipboardPaste size={15} />, "Paste", () => st.paste(), "⌘V")}
-            {!hasSel && ctxItem(<BoxSelect size={15} />, "Select all", () => st.selectAll(), "⌘A")}
-            {!hasSel && ctxItem(<Lock size={15} />, "Lock all on page", () => st.lockAllOnPage(true))}
-            {!hasSel && ctxItem(<LockOpen size={15} />, "Unlock all on page", () => st.lockAllOnPage(false))}
+            {!hasSel && ctxItem(<ClipboardPaste size={15} />, tr("editor.paste"), () => st.paste(), "⌘V")}
+            {!hasSel && ctxItem(<BoxSelect size={15} />, tr("editor.select_all"), () => st.selectAll(), "⌘A")}
+            {!hasSel && ctxItem(<Lock size={15} />, tr("editor.lock_all_on_page"), () => st.lockAllOnPage(true))}
+            {!hasSel && ctxItem(<LockOpen size={15} />, tr("editor.unlock_all_on_page"), () => st.lockAllOnPage(false))}
             {hasSel && (
               <>
-                {ctxItem(<Copy size={15} />, "Copy", () => st.copySelection(), "⌘C")}
-                {ctxItem(<ClipboardPaste size={15} />, "Paste", () => st.paste(), "⌘V")}
-                {ctxItem(<CopyPlus size={15} />, "Duplicate", () => st.duplicateSelection(), "⌘D")}
-                {ctxItem(<Trash2 size={15} />, "Delete", () => st.deleteSelection(), "⌫", true)}
-                <div className="my-1 h-px bg-neutral-100" />
-                {ctxItem(<BoxSelect size={15} />, "Select all of type", () => st.selectSameType())}
-                {selection.length > 1 && ctxItem(<Group size={15} />, "Group", () => st.group(), "⌘G")}
-                {isGroup && ctxItem(<Ungroup size={15} />, "Ungroup", () => st.ungroupSelection(), "⇧⌘G")}
-                {ctxItem(<ArrowUp size={15} />, "Bring forward", () => st.orderSelection("forward"), "⌘]")}
-                {ctxItem(<ArrowDown size={15} />, "Send backward", () => st.orderSelection("backward"), "⌘[")}
-                {ctxItem(<ChevronsUp size={15} />, "Bring to front", () => st.orderSelection("front"))}
-                {ctxItem(<ChevronsDown size={15} />, "Send to back", () => st.orderSelection("back"))}
-                {soloImage && !isBgImage && ctxItem(<Wallpaper size={15} />, "Set as background", () => st.setImageAsBackground(selection[0]))}
-                {soloImage && isBgImage && ctxItem(<Crop size={15} />, "Adjust background", () => st.setCropping(selection[0]))}
-                {soloImage && isBgImage && ctxItem(<ImageUp size={15} />, "Detach from background", () => st.detachImageBackground(selection[0]))}
-                <div className="my-1 h-px bg-neutral-100" />
-                {ctxItem(<FlipHorizontal2 size={15} />, "Flip horizontal", () => st.flipSelection("h"))}
-                {ctxItem(<FlipVertical2 size={15} />, "Flip vertical", () => st.flipSelection("v"))}
-                <div className="my-1 h-px bg-neutral-100" />
-                {ctxItem(<Paintbrush size={15} />, "Copy style", () => st.copyStyle())}
-                {ctxItem(<PaintBucket size={15} />, "Paste style", () => st.pasteStyle())}
+                {ctxItem(<Copy size={15} />, tr("editor.copy"), () => st.copySelection(), "⌘C")}
+                {ctxItem(<ClipboardPaste size={15} />, tr("editor.paste"), () => st.paste(), "⌘V")}
+                {ctxItem(<CopyPlus size={15} />, tr("editor.duplicate"), () => st.duplicateSelection(), "⌘D")}
+                {ctxItem(<Trash2 size={15} />, tr("editor.delete"), () => st.deleteSelection(), "⌫", true)}
+                <div role="separator" className="my-1 h-px bg-neutral-100" />
+                {ctxItem(<BoxSelect size={15} />, tr("editor.select_all_of_type"), () => st.selectSameType())}
+                {selection.length > 1 && ctxItem(<Group size={15} />, tr("editor.group"), () => st.group(), "⌘G")}
+                {isGroup && ctxItem(<Ungroup size={15} />, tr("editor.ungroup"), () => st.ungroupSelection(), "⇧⌘G")}
+                {ctxItem(<ArrowUp size={15} />, tr("editor.bring_forward"), () => st.orderSelection("forward"), "⌘]")}
+                {ctxItem(<ArrowDown size={15} />, tr("editor.send_backward"), () => st.orderSelection("backward"), "⌘[")}
+                {ctxItem(<ChevronsUp size={15} />, tr("editor.bring_to_front"), () => st.orderSelection("front"))}
+                {ctxItem(<ChevronsDown size={15} />, tr("editor.send_to_back"), () => st.orderSelection("back"))}
+                {soloImage && !isBgImage && ctxItem(<Wallpaper size={15} />, tr("editor.set_as_background"), () => st.setImageAsBackground(selection[0]))}
+                {soloImage && isBgImage && ctxItem(<Crop size={15} />, tr("editor.adjust_background"), () => st.setCropping(selection[0]))}
+                {soloImage && isBgImage && ctxItem(<ImageUp size={15} />, tr("editor.detach_from_background"), () => st.detachImageBackground(selection[0]))}
+                <div role="separator" className="my-1 h-px bg-neutral-100" />
+                {ctxItem(<FlipHorizontal2 size={15} />, tr("editor.flip_horizontal"), () => st.flipSelection("h"))}
+                {ctxItem(<FlipVertical2 size={15} />, tr("editor.flip_vertical"), () => st.flipSelection("v"))}
+                <div role="separator" className="my-1 h-px bg-neutral-100" />
+                {ctxItem(<Paintbrush size={15} />, tr("editor.copy_style"), () => st.copyStyle())}
+                {ctxItem(<PaintBucket size={15} />, tr("editor.paste_style"), () => st.pasteStyle())}
                 {/* Lock/Hide are two-way: show the inverse action when the
                     selection is already locked/hidden so it can be reversed. */}
                 {allLocked
-                  ? ctxItem(<LockOpen size={15} />, "Unlock", () => st.setLockedSel(false))
-                  : ctxItem(<Lock size={15} />, "Lock", () => st.setLockedSel(true))}
+                  ? ctxItem(<LockOpen size={15} />, tr("editor.unlock"), () => st.setLockedSel(false))
+                  : ctxItem(<Lock size={15} />, tr("editor.lock"), () => st.setLockedSel(true))}
                 {allHidden
-                  ? ctxItem(<Eye size={15} />, "Show", () => st.setHiddenSel(false))
-                  : ctxItem(<EyeOff size={15} />, "Hide", () => st.setHiddenSel(true))}
+                  ? ctxItem(<Eye size={15} />, tr("editor.show"), () => st.setHiddenSel(false))
+                  : ctxItem(<EyeOff size={15} />, tr("editor.hide"), () => st.setHiddenSel(true))}
               </>
             )}
           </div>

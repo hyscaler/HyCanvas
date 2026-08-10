@@ -94,6 +94,7 @@ import { onModerated, onVoteChanged, serverNow } from "@/lib/realtime";
 import { getRealtimeClient } from "@/lib/useRealtime";
 import { Canvas } from "./Canvas";
 import { ZoomControl } from "./ZoomControl";
+import { tr } from "@/lib/i18n";
 
 // Ephemeral reaction palette: a fixed set of one-shot pings.
 const REACTION_EMOJIS = ["👍", "❤️", "😂", "🎉", "👀", "✅"] as const;
@@ -292,7 +293,7 @@ function addStickyGrid(): void {
 function addFrame(): void {
   const node = createNode("frame", {
     id: newId(),
-    name: "Section",
+    name: tr("editor.section"),
     clip: false,
     children: [],
     size: { width: 480, height: 360 },
@@ -308,7 +309,7 @@ function addTextBox(): void {
     {
       runs: [
         {
-          text: "Text",
+          text: tr("editor.text"),
           style: {
             fontFamily: "Inter",
             fontStyle: "normal",
@@ -533,12 +534,12 @@ export function WhiteboardSurface(props: {
     }
     const spec = normalizeDiagramSpec({ kind: "flowchart", nodes, edges });
     if (!spec) {
-      toast.toast("Nothing diagram-shaped here yet: add stickies or shapes connected by arrows.", "info");
+      toast.toast(tr("editor.nothing_diagram_shaped_here_yet_add_stickies"), "info");
       return;
     }
     void navigator.clipboard.writeText(diagramToMermaid(spec)).then(
       () => toast.success(`Copied ${spec.nodes.length} nodes / ${spec.edges.length} edges as Mermaid.`),
-      () => toast.error("Clipboard unavailable."),
+      () => toast.error(tr("editor.clipboard_unavailable")),
     );
   }, [toast]);
 
@@ -557,14 +558,14 @@ export function WhiteboardSurface(props: {
           return;
         }
         if (job.status === "failed") {
-          toast.error(job.error || "Conversion failed.");
+          toast.error(job.error || tr("editor.conversion_failed"));
           return;
         }
         await new Promise((r) => setTimeout(r, 1200));
       }
-      toast.error("Conversion timed out.");
+      toast.error(tr("editor.conversion_timed_out"));
     } catch {
-      toast.error("Conversion failed.");
+      toast.error(tr("editor.conversion_failed"));
     } finally {
       setConverting(false);
     }
@@ -602,12 +603,12 @@ export function WhiteboardSurface(props: {
   // board with no connected nodes gives clear feedback instead of a silent no-op.
   const runFlowchart = useCallback(() => {
     const n = autoLayoutFlowchart();
-    if (n === 0) toast.toast("Connect nodes with arrows first - auto-layout arranges the connected diagram.", "info");
+    if (n === 0) toast.toast(tr("editor.connect_nodes_with_arrows_first_auto_layout"), "info");
     else toast.success(`Arranged ${n} connected node${n === 1 ? "" : "s"} into a flowchart.`);
   }, [toast]);
   const runMindMap = useCallback(() => {
     const n = autoLayoutMindMap();
-    if (n === 0) toast.toast("Connect nodes with arrows first - mind-map layout arranges the connected diagram.", "info");
+    if (n === 0) toast.toast(tr("editor.connect_nodes_with_arrows_first_mind_map_lay"), "info");
     else toast.success(`Arranged ${n} connected node${n === 1 ? "" : "s"} into a mind map.`);
   }, [toast]);
 
@@ -731,8 +732,8 @@ export function WhiteboardSurface(props: {
       onModerated((action) =>
         toast.error(
           action === "ban"
-            ? "You were banned from this board by a facilitator."
-            : "You were removed from this board by a facilitator.",
+            ? tr("editor.you_were_banned_from_this_board_by_a_facilit")
+            : tr("editor.you_were_removed_from_this_board_by_a_facili"),
         ),
       ),
     [toast],
@@ -999,8 +1000,8 @@ export function WhiteboardSurface(props: {
     const designId = typeof router.query.id === "string" ? router.query.id : "";
     const url = `${window.location.origin}${window.location.pathname}?id=${encodeURIComponent(designId)}&view=${encodeURIComponent(id)}`;
     void navigator.clipboard?.writeText(url).then(
-      () => toast.success("View link copied"),
-      () => toast.error("Could not copy link"),
+      () => toast.success(tr("editor.view_link_copied")),
+      () => toast.error(tr("editor.could_not_copy_link")),
     );
   }, [router.query.id, toast]);
 
@@ -1104,7 +1105,7 @@ export function WhiteboardSurface(props: {
         setServerTally({ session: s, counts: {}, mine: [], remainingBudget: s.budgetPerUser });
         patchMeta({ voteSessionId: s.id }); // merge into fresh meta (post-await)
       },
-      () => toast.error("Could not open the vote round"),
+      () => toast.error(tr("editor.could_not_open_the_vote_round")),
     );
   }, [designIdQ, patchMeta, toast]);
 
@@ -1117,7 +1118,7 @@ export function WhiteboardSurface(props: {
       () => {
         // 409 (over budget / closed) or transient: resync to the true standings
         // so the displayed counts/remaining never drift from the server.
-        toast.error("Out of votes, or the round is closed");
+        toast.error(tr("editor.out_of_votes_or_the_round_is_closed"));
         refreshTally(serverSessionId);
       },
     );
@@ -1127,7 +1128,7 @@ export function WhiteboardSurface(props: {
     if (!designIdQ || !serverSessionId) return;
     void oc.setVoteSessionState(designIdQ, serverSessionId, { open: false, revealed: true }).then(
       () => refreshTally(serverSessionId),
-      () => toast.error("Could not close the round"),
+      () => toast.error(tr("editor.could_not_close_the_round")),
     );
   }, [designIdQ, serverSessionId, refreshTally, toast]);
 
@@ -1190,9 +1191,9 @@ export function WhiteboardSurface(props: {
       {isEmpty && onboarded && (
         <div className="pointer-events-none absolute inset-0 grid place-items-center">
           <div className="rounded-2xl border border-dashed border-neutral-300 bg-surface/70 px-6 py-5 text-center backdrop-blur-sm">
-            <p className="text-sm font-medium text-neutral-700">Your board is empty</p>
+            <p className="text-sm font-medium text-neutral-700">{tr("editor.your_board_is_empty")}</p>
             <p className="mt-1 text-xs text-neutral-500">
-              Add a sticky, or pick a template to get started.
+              {tr("editor.add_a_sticky_or_pick_a_template_to_get_start")}
             </p>
           </div>
         </div>
@@ -1205,13 +1206,13 @@ export function WhiteboardSurface(props: {
           <div className="pointer-events-auto w-full max-w-md rounded-2xl border border-neutral-200 bg-surface/95 p-5 shadow-xl backdrop-blur">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-base font-semibold text-neutral-800">Welcome to your whiteboard</p>
-                <p className="mt-0.5 text-xs text-neutral-500">Brainstorm, diagram, and run workshops together. Pick a quick start:</p>
+                <p className="text-base font-semibold text-neutral-800">{tr("editor.welcome_to_your_whiteboard")}</p>
+                <p className="mt-0.5 text-xs text-neutral-500">{tr("editor.brainstorm_diagram_and_run_workshops_togethe")}</p>
               </div>
               <button
                 type="button"
                 onClick={dismissOnboarding}
-                aria-label="Dismiss"
+                aria-label={tr("editor.dismiss")}
                 className="shrink-0 rounded-lg px-1.5 py-0.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
               >
                 ✕
@@ -1223,28 +1224,28 @@ export function WhiteboardSurface(props: {
                 onClick={() => { addSticky(); dismissOnboarding(); }}
                 className="flex flex-col items-center gap-1.5 rounded-xl border border-neutral-200 px-2 py-3 text-xs font-medium text-neutral-700 hover:border-brand-300 hover:bg-brand-50"
               >
-                <StickyNote size={20} className="text-brand-ink" /> Add a sticky
+                <StickyNote size={20} className="text-brand-ink" /> {tr("editor.add_a_sticky")}
               </button>
               <button
                 type="button"
                 onClick={() => { dismissOnboarding(); setMenu("templates"); }}
                 className="flex flex-col items-center gap-1.5 rounded-xl border border-neutral-200 px-2 py-3 text-xs font-medium text-neutral-700 hover:border-brand-300 hover:bg-brand-50"
               >
-                <LayoutTemplate size={20} className="text-brand-ink" /> Use a template
+                <LayoutTemplate size={20} className="text-brand-ink" /> {tr("editor.use_a_template")}
               </button>
               <button
                 type="button"
                 onClick={() => { pickInk("pen"); dismissOnboarding(); }}
                 className="flex flex-col items-center gap-1.5 rounded-xl border border-neutral-200 px-2 py-3 text-xs font-medium text-neutral-700 hover:border-brand-300 hover:bg-brand-50"
               >
-                <Pen size={20} className="text-brand-ink" /> Draw
+                <Pen size={20} className="text-brand-ink" /> {tr("editor.draw")}
               </button>
             </div>
             <p className="mt-4 text-[11px] leading-relaxed text-neutral-500">
-              The top toolbar has sticky, frame, text, ink, shapes, connectors, and the stamp wheel. The bottom bar runs the workshop: countdown timer, dot voting, present-to-everyone, reactions, and Cmd/Ctrl+F to search.
+              {tr("editor.the_top_toolbar_has_sticky_frame_text_ink_sh")}
             </p>
             <div className="mt-3 text-right">
-              <Button size="sm" variant="secondary" onClick={dismissOnboarding}>Got it</Button>
+              <Button size="sm" variant="secondary" onClick={dismissOnboarding}>{tr("editor.got_it")}</Button>
             </div>
           </div>
         </div>
@@ -1261,7 +1262,7 @@ export function WhiteboardSurface(props: {
             onClick={() => usePresence.getState().setFollowing(null)}
             className="rounded-full bg-surface/70 px-2 py-0.5 text-[11px] text-brand-ink hover:bg-surface"
           >
-            Exit (Esc)
+            {tr("editor.exit_esc")}
           </button>
         </div>
       )}
@@ -1271,14 +1272,14 @@ export function WhiteboardSurface(props: {
       {privateActive && !privateRevealed && (
         <div className="pointer-events-auto absolute left-1/2 top-12 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-amber-200 bg-amber-50/95 px-3 py-1.5 text-xs font-medium text-amber-800 shadow-md backdrop-blur">
           <EyeOff size={14} />
-          <span>Private mode: new notes are hidden from others until reveal</span>
+          <span>{tr("editor.private_mode_new_notes_are_hidden_from_other")}</span>
           {canFacilitate && (
             <button
               type="button"
               onClick={revealPrivate}
               className="rounded-full bg-surface/80 px-2 py-0.5 text-[11px] text-amber-800 hover:bg-surface"
             >
-              Reveal
+              {tr("editor.reveal")}
             </button>
           )}
         </div>
@@ -1303,22 +1304,22 @@ export function WhiteboardSurface(props: {
           onPointerDown={onToolbarHandleDown}
           onPointerMove={onToolbarHandleMove}
           onPointerUp={onToolbarHandleUp}
-          title="Drag toolbar"
-          aria-label="Drag toolbar"
+          title={tr("editor.drag_toolbar")}
+          aria-label={tr("editor.drag_toolbar")}
           className="grid h-8 w-5 shrink-0 cursor-grab touch-none place-items-center rounded text-neutral-300 hover:text-neutral-500 active:cursor-grabbing"
         >
           <GripVertical size={16} />
         </button>
-        <IconButton onClick={addSticky} tooltip="Add sticky note (S)" aria-label="Add sticky note">
+        <IconButton onClick={addSticky} tooltip={tr("editor.add_sticky_note_s")} aria-label={tr("editor.add_sticky_note")}>
           <StickyNote size={18} />
         </IconButton>
-        <IconButton onClick={addStickyGrid} tooltip="Add a grid of sticky notes" aria-label="Add sticky grid">
+        <IconButton onClick={addStickyGrid} tooltip={tr("editor.add_a_grid_of_sticky_notes")} aria-label={tr("editor.add_sticky_grid")}>
           <LayoutGrid size={18} />
         </IconButton>
-        <IconButton onClick={addFrame} tooltip="Add frame / section (F)" aria-label="Add frame">
+        <IconButton onClick={addFrame} tooltip={tr("editor.add_frame_section_f")} aria-label={tr("editor.add_frame")}>
           <LayoutTemplate size={18} />
         </IconButton>
-        <IconButton onClick={addTextBox} tooltip="Add text (T)" aria-label="Add text">
+        <IconButton onClick={addTextBox} tooltip={tr("editor.add_text_t")} aria-label={tr("editor.add_text")}>
           <Type size={18} />
         </IconButton>
 
@@ -1327,40 +1328,40 @@ export function WhiteboardSurface(props: {
         <IconButton
           active={tool === "ink" && inkMode === "pen"}
           onClick={() => pickInk("pen")}
-          tooltip="Pen (P) - thin, opaque"
-          aria-label="Pen"
+          tooltip={tr("editor.pen_p_thin_opaque")}
+          aria-label={tr("editor.pen")}
         >
           <Pen size={18} />
         </IconButton>
         <IconButton
           active={tool === "ink" && inkMode === "marker"}
           onClick={() => pickInk("marker")}
-          tooltip="Marker - thick, opaque"
-          aria-label="Marker"
+          tooltip={tr("editor.marker_thick_opaque")}
+          aria-label={tr("editor.marker")}
         >
           <Brush size={18} />
         </IconButton>
         <IconButton
           active={tool === "ink" && inkMode === "highlighter"}
           onClick={() => pickInk("highlighter")}
-          tooltip="Highlighter - wide, semi-transparent"
-          aria-label="Highlighter"
+          tooltip={tr("editor.highlighter_wide_semi_transparent")}
+          aria-label={tr("editor.highlighter")}
         >
           <Highlighter size={18} />
         </IconButton>
         <IconButton
           active={tool === "laser"}
           onClick={() => useEditor.getState().setTool(tool === "laser" ? "select" : "laser")}
-          tooltip="Laser pointer (L) - ephemeral, never saved"
-          aria-label="Laser pointer"
+          tooltip={tr("editor.laser_pointer_l_ephemeral_never_saved")}
+          aria-label={tr("editor.laser_pointer")}
         >
           <Pointer size={18} />
         </IconButton>
         <IconButton
           active={tool === "eraser"}
           onClick={() => useEditor.getState().setTool(tool === "eraser" ? "select" : "eraser")}
-          tooltip="Eraser - click or drag over strokes/objects to remove them"
-          aria-label="Eraser"
+          tooltip={tr("editor.eraser_click_or_drag_over_strokes_objects_to")}
+          aria-label={tr("editor.eraser")}
         >
           <Eraser size={18} />
         </IconButton>
@@ -1375,8 +1376,8 @@ export function WhiteboardSurface(props: {
               if (tool !== "stamp") useEditor.getState().setTool("stamp");
               setMenu(menu === "stamp" ? null : "stamp");
             }}
-            title="Stamp (emoji / dot-vote)"
-            aria-label="Stamp"
+            title={tr("editor.stamp_emoji_dot_vote")}
+            aria-label={tr("editor.stamp")}
             className={`grid h-8 w-8 place-items-center rounded-lg text-base leading-none ${
               tool === "stamp" ? "bg-brand-100 text-brand-ink" : "text-neutral-600 hover:bg-neutral-100"
             }`}
@@ -1408,23 +1409,23 @@ export function WhiteboardSurface(props: {
             <IconButton
               active={presentingSelf}
               onClick={togglePresent}
-              tooltip={presentingSelf ? "Stop presenting" : "Present to everyone (drive their view)"}
-              aria-label={presentingSelf ? "Stop presenting" : "Present to everyone"}
+              tooltip={presentingSelf ? tr("editor.stop_presenting") : tr("editor.present_to_everyone_drive_their_view")}
+              aria-label={presentingSelf ? tr("editor.stop_presenting") : tr("editor.present_to_everyone")}
             >
               <Presentation size={18} />
             </IconButton>
             <IconButton
               onClick={summonEveryone}
-              tooltip="Bring everyone to my view"
-              aria-label="Bring everyone to my view"
+              tooltip={tr("editor.bring_everyone_to_my_view")}
+              aria-label={tr("editor.bring_everyone_to_my_view")}
             >
               <Users size={18} />
             </IconButton>
             <IconButton
               active={privateActive}
               onClick={privateActive ? revealPrivate : startPrivate}
-              tooltip={privateActive ? "Reveal (end private mode)" : "Private mode (hide others' new notes until reveal)"}
-              aria-label={privateActive ? "Reveal private mode" : "Start private mode"}
+              tooltip={privateActive ? tr("editor.reveal_end_private_mode") : tr("editor.private_mode_hide_others_new_notes_until_rev")}
+              aria-label={privateActive ? tr("editor.reveal_private_mode") : tr("editor.start_private_mode")}
             >
               <EyeOff size={18} />
             </IconButton>
@@ -1432,8 +1433,8 @@ export function WhiteboardSurface(props: {
               active={amFacilitator}
               disabled={otherFacilitator}
               onClick={toggleFacilitate}
-              tooltip={otherFacilitator ? `${facilitator?.name} is facilitating` : amFacilitator ? "Stop facilitating" : "Become facilitator (run the session)"}
-              aria-label="Facilitator"
+              tooltip={otherFacilitator ? `${facilitator?.name} is facilitating` : amFacilitator ? tr("editor.stop_facilitating") : tr("editor.become_facilitator_run_the_session")}
+              aria-label={tr("editor.facilitator")}
             >
               <Crown size={18} />
             </IconButton>
@@ -1442,8 +1443,8 @@ export function WhiteboardSurface(props: {
                 active={selProtected}
                 disabled={selection.length === 0}
                 onClick={toggleProtect}
-                tooltip={selection.length === 0 ? "Select nodes to protect" : selProtected ? "Unprotect selection" : "Protect selection (facilitator lock)"}
-                aria-label="Protect selection"
+                tooltip={selection.length === 0 ? tr("editor.select_nodes_to_protect") : selProtected ? tr("editor.unprotect_selection") : tr("editor.protect_selection_facilitator_lock")}
+                aria-label={tr("editor.protect_selection")}
               >
                 <Lock size={18} />
               </IconButton>
@@ -1456,8 +1457,8 @@ export function WhiteboardSurface(props: {
           <IconButton
             active={menu === "shapes"}
             onClick={() => setMenu(menu === "shapes" ? null : "shapes")}
-            tooltip="Add shape"
-            aria-label="Add shape"
+            tooltip={tr("editor.add_shape")}
+            aria-label={tr("editor.add_shape")}
           >
             <Square size={18} />
           </IconButton>
@@ -1470,7 +1471,7 @@ export function WhiteboardSurface(props: {
                 closeMenu();
               }}
             >
-              <Square size={16} /> Rectangle
+              <Square size={16} /> {tr("editor.rectangle")}
             </button>
             <button
               type="button"
@@ -1480,7 +1481,7 @@ export function WhiteboardSurface(props: {
                 closeMenu();
               }}
             >
-              <Circle size={16} /> Ellipse
+              <Circle size={16} /> {tr("editor.ellipse")}
             </button>
           </Popover>
         </div>
@@ -1496,15 +1497,15 @@ export function WhiteboardSurface(props: {
               (menu === "templates" ? "bg-brand-50 text-brand-ink" : "")
             }
             onClick={() => setMenu(menu === "templates" ? null : "templates")}
-            title="Insert a template"
+            title={tr("editor.insert_a_template")}
           >
             <LayoutTemplate size={16} />
-            Templates
+            {tr("editor.templates")}
             <ChevronDown size={14} />
           </button>
           <Popover open={menu === "templates"} onClose={closeMenu} className="left-0 w-56">
             <p className="px-2 pb-1 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-              Templates
+              {tr("editor.templates")}
             </p>
             <div className="grid">
               {WHITEBOARD_TEMPLATES.map((t) => (
@@ -1530,19 +1531,19 @@ export function WhiteboardSurface(props: {
         <IconButton
           onClick={addConnector}
           disabled={!canConnect}
-          tooltip={canConnect ? "Connect the two selected nodes (C)" : "Select two nodes to connect (or drag a node's blue handle)"}
-          aria-label="Connect selected nodes"
+          tooltip={canConnect ? tr("editor.connect_the_two_selected_nodes_c") : tr("editor.select_two_nodes_to_connect_or_drag_a_nodes")}
+          aria-label={tr("editor.connect_selected_nodes")}
         >
           <Spline size={18} />
         </IconButton>
 
         {/* Connector style picker (FR-7): appears while a connector is selected. */}
         {selectedRoute && (
-          <div className="flex items-center gap-0.5" role="group" aria-label="Connector style">
+          <div className="flex items-center gap-0.5" role="group" aria-label={tr("editor.connector_style")}>
             {([
-              { route: "straight" as const, icon: Minus, label: "Straight" },
-              { route: "elbow" as const, icon: CornerDownRight, label: "Elbow" },
-              { route: "curved" as const, icon: Spline, label: "Curved" },
+              { route: "straight" as const, icon: Minus, label: tr("editor.straight") },
+              { route: "elbow" as const, icon: CornerDownRight, label: tr("editor.elbow") },
+              { route: "curved" as const, icon: Spline, label: tr("editor.curved") },
             ]).map(({ route, icon: Icon, label }) => (
               <IconButton
                 key={route}
@@ -1562,15 +1563,15 @@ export function WhiteboardSurface(props: {
         {/* Auto-layout */}
         <IconButton
           onClick={runFlowchart}
-          tooltip="Auto-layout flowchart (arranges connected nodes)"
-          aria-label="Auto-layout flowchart"
+          tooltip={tr("editor.auto_layout_flowchart_arranges_connected_nod")}
+          aria-label={tr("editor.auto_layout_flowchart")}
         >
           <Workflow size={18} />
         </IconButton>
-        <IconButton onClick={runMindMap} tooltip="Mind-map layout (arranges connected nodes)" aria-label="Mind-map layout">
+        <IconButton onClick={runMindMap} tooltip={tr("editor.mind_map_layout_arranges_connected_nodes")} aria-label={tr("editor.mind_map_layout")}>
           <Network size={18} />
         </IconButton>
-        <IconButton onClick={copyAsMermaid} tooltip="Copy as Mermaid (selection, or the whole board)" aria-label="Copy as Mermaid code">
+        <IconButton onClick={copyAsMermaid} tooltip={tr("editor.copy_as_mermaid_selection_or_the_whole_board")} aria-label={tr("editor.copy_as_mermaid_code")}>
           <FileCode2 size={18} />
         </IconButton>
 
@@ -1580,8 +1581,8 @@ export function WhiteboardSurface(props: {
             <IconButton
               onClick={convertToDeck}
               disabled={converting}
-              tooltip="Convert this board into a presentation deck"
-              aria-label="Convert to deck"
+              tooltip={tr("editor.convert_this_board_into_a_presentation_deck")}
+              aria-label={tr("editor.convert_to_deck")}
             >
               {converting ? <Loader2 size={18} className="animate-spin" /> : <Presentation size={18} />}
             </IconButton>
@@ -1595,8 +1596,8 @@ export function WhiteboardSurface(props: {
         <IconButton
           active={boardFocus}
           onClick={toggleBoardFocus}
-          tooltip={boardFocus ? "Exit focus mode (Esc)" : "Focus mode - hide panels (full screen)"}
-          aria-label={boardFocus ? "Exit focus mode" : "Enter focus mode"}
+          tooltip={boardFocus ? tr("editor.exit_focus_mode_esc") : tr("editor.focus_mode_hide_panels_full_screen_2")}
+          aria-label={boardFocus ? tr("editor.exit_focus_mode") : tr("editor.enter_focus_mode")}
         >
           {boardFocus ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
         </IconButton>
@@ -1614,13 +1615,13 @@ export function WhiteboardSurface(props: {
                 (menu === "participants" ? "bg-brand-50 text-brand-ink" : "")
               }
               onClick={() => setMenu(menu === "participants" ? null : "participants")}
-              title="Participants / moderation"
+              title={tr("editor.participants_moderation")}
             >
               <UserX size={16} />
             </button>
             <Popover open={menu === "participants"} onClose={closeMenu} className="left-0 w-64">
               <p className="px-1 pb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-                Participants
+                {tr("editor.participants")}
               </p>
               <ul className="max-h-56 space-y-0.5 overflow-y-auto">
                 {Object.values(peers).map((p) => (
@@ -1628,18 +1629,18 @@ export function WhiteboardSurface(props: {
                     <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: p.color }} aria-hidden />
                     <span className="flex-1 truncate text-neutral-700">
                       {p.name}
-                      {facilitator?.clientId === p.clientId && <span className="ml-1 text-[10px] font-semibold uppercase text-amber-600">facilitator</span>}
+                      {facilitator?.clientId === p.clientId && <span className="ml-1 text-[10px] font-semibold uppercase text-amber-700">{tr("editor.facilitator_2")}</span>}
                     </span>
                     {amFacilitator && facilitator?.clientId !== p.clientId && (
-                      <button type="button" onClick={() => getRealtimeClient()?.sendFacilitator("handoff", p.clientId)} title="Make facilitator" className="rounded px-1.5 py-0.5 text-[11px] text-amber-700 hover:bg-amber-50">
-                        Make facilitator
+                      <button type="button" onClick={() => getRealtimeClient()?.sendFacilitator("handoff", p.clientId)} title={tr("editor.make_facilitator")} className="rounded px-1.5 py-0.5 text-[11px] text-amber-700 hover:bg-amber-50">
+                        {tr("editor.make_facilitator")}
                       </button>
                     )}
-                    <button type="button" onClick={() => moderate("kick", p.userId)} title="Remove from board" className="rounded px-1.5 py-0.5 text-[11px] text-neutral-500 hover:bg-neutral-200">
-                      Remove
+                    <button type="button" onClick={() => moderate("kick", p.userId)} title={tr("editor.remove_from_board")} className="rounded px-1.5 py-0.5 text-[11px] text-neutral-500 hover:bg-neutral-200">
+                      {tr("editor.remove")}
                     </button>
-                    <button type="button" onClick={() => moderate("ban", p.userId)} title="Ban (block rejoin)" className="rounded px-1.5 py-0.5 text-[11px] text-red-600 hover:bg-red-50">
-                      Ban
+                    <button type="button" onClick={() => moderate("ban", p.userId)} title={tr("editor.ban_block_rejoin")} className="rounded px-1.5 py-0.5 text-[11px] text-red-600 hover:bg-red-50">
+                      {tr("editor.ban")}
                     </button>
                   </li>
                 ))}
@@ -1660,16 +1661,16 @@ export function WhiteboardSurface(props: {
               (menu === "views" ? "bg-brand-50 text-brand-ink" : "")
             }
             onClick={() => setMenu(menu === "views" ? null : "views")}
-            title="Saved views / agenda"
+            title={tr("editor.saved_views_agenda")}
           >
             <Bookmark size={16} />
           </button>
           <Popover open={menu === "views"} onClose={closeMenu} className="left-0 w-64">
             <p className="px-1 pb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-              Saved views
+              {tr("editor.saved_views")}
             </p>
             {views.length === 0 && (
-              <p className="px-1 pb-2 text-xs text-neutral-500">Save the current viewport to recall or step through it as an agenda.</p>
+              <p className="px-1 pb-2 text-xs text-neutral-500">{tr("editor.save_the_current_viewport_to_recall_or_step")}</p>
             )}
             {views.length > 0 && (
               <ul className="mb-2 max-h-48 space-y-0.5 overflow-y-auto">
@@ -1678,26 +1679,26 @@ export function WhiteboardSurface(props: {
                     key={vw.id}
                     className={"flex items-center gap-1 rounded-lg px-1.5 py-1 text-sm hover:bg-neutral-100 " + (vw.id === agendaId ? "bg-brand-50" : "")}
                   >
-                    <button type="button" onClick={() => recallView(vw)} className="flex-1 truncate text-left text-neutral-700" title="Recall this view">
+                    <button type="button" onClick={() => recallView(vw)} className="flex-1 truncate text-left text-neutral-700" title={tr("editor.recall_this_view")}>
                       {vw.name}
                     </button>
-                    <button type="button" onClick={() => copyViewLink(vw.id)} title="Copy deep link" aria-label="Copy deep link" className="rounded p-1 text-neutral-400 hover:text-neutral-700">
+                    <button type="button" onClick={() => copyViewLink(vw.id)} title={tr("editor.copy_deep_link")} aria-label={tr("editor.copy_deep_link")} className="rounded p-1 text-neutral-400 hover:text-neutral-700">
                       <Copy size={13} />
                     </button>
-                    <button type="button" onClick={() => deleteView(vw.id)} title="Delete view" aria-label="Delete view" className="rounded p-1 text-neutral-400 hover:text-red-600">
+                    <button type="button" onClick={() => deleteView(vw.id)} title={tr("editor.delete_view")} aria-label={tr("editor.delete_view")} className="rounded p-1 text-neutral-400 hover:text-red-600">
                       <Minus size={13} />
                     </button>
                   </li>
                 ))}
               </ul>
             )}
-            <Button size="sm" block onClick={saveCurrentView}>Save current view</Button>
+            <Button size="sm" block onClick={saveCurrentView}>{tr("editor.save_current_view")}</Button>
             {views.length > 1 && (
               <div className="mt-2 flex items-center justify-between gap-2 border-t border-neutral-100 pt-2">
-                <span className="px-1 text-xs text-neutral-500">Agenda</span>
+                <span className="px-1 text-xs text-neutral-500">{tr("editor.agenda")}</span>
                 <div className="flex items-center gap-1">
-                  <IconButton onClick={() => stepAgenda(-1)} title="Previous view" aria-label="Previous view"><ChevronLeft size={16} /></IconButton>
-                  <IconButton onClick={() => stepAgenda(1)} title="Next view" aria-label="Next view"><ChevronRight size={16} /></IconButton>
+                  <IconButton onClick={() => stepAgenda(-1)} title={tr("editor.previous_view")} aria-label={tr("editor.previous_view")}><ChevronLeft size={16} /></IconButton>
+                  <IconButton onClick={() => stepAgenda(1)} title={tr("editor.next_view")} aria-label={tr("editor.next_view")}><ChevronRight size={16} /></IconButton>
                 </div>
               </div>
             )}
@@ -1713,14 +1714,14 @@ export function WhiteboardSurface(props: {
               (menu === "timer" ? "bg-brand-50 text-brand-ink" : "")
             }
             onClick={() => setMenu(menu === "timer" ? null : "timer")}
-            title="Countdown timer"
+            title={tr("editor.countdown_timer")}
           >
             <TimerIcon size={16} />
             {fmt2(remMin)}:{fmt2(remSec)}
           </button>
           <Popover open={menu === "timer"} onClose={closeMenu} className="left-0 w-64">
             <p className="px-1 pb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-              Countdown timer
+              {tr("editor.countdown_timer")}
             </p>
             <div className="mb-3 text-center text-3xl font-semibold tabular-nums text-neutral-800">
               {fmt2(remMin)}:{fmt2(remSec)}
@@ -1730,7 +1731,7 @@ export function WhiteboardSurface(props: {
                 <button
                   key={m}
                   type="button"
-                  title={m === 25 ? "Pomodoro" : `${m} minutes`}
+                  title={m === 25 ? tr("editor.pomodoro") : `${m} minutes`}
                   className="flex-1 rounded-lg border border-neutral-200 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
                   onClick={() => setTimerMinutes(m)}
                 >
@@ -1741,14 +1742,14 @@ export function WhiteboardSurface(props: {
             <div className="flex items-center gap-2">
               {timer.running ? (
                 <Button size="sm" variant="secondary" block onClick={onTimerPause}>
-                  <Pause size={14} /> Pause
+                  <Pause size={14} /> {tr("editor.pause")}
                 </Button>
               ) : (
                 <Button size="sm" block onClick={onTimerStart}>
-                  <Play size={14} /> Start
+                  <Play size={14} /> {tr("editor.start")}
                 </Button>
               )}
-              <IconButton onClick={onTimerReset} title="Reset" aria-label="Reset timer">
+              <IconButton onClick={onTimerReset} title={tr("editor.reset")} aria-label={tr("editor.reset_timer")}>
                 <RotateCcw size={16} />
               </IconButton>
             </div>
@@ -1764,7 +1765,7 @@ export function WhiteboardSurface(props: {
               (menu === "vote" ? "bg-brand-50 text-brand-ink" : "")
             }
             onClick={() => setMenu(menu === "vote" ? null : "vote")}
-            title="Dot voting"
+            title={tr("editor.dot_voting")}
           >
             <Vote size={16} />
             Vote
@@ -1781,14 +1782,14 @@ export function WhiteboardSurface(props: {
             {!hasRound && <VoteSetup onOpen={doOpenVote} />}
             {hasRound && roundPending && (
               <p className="flex items-center gap-2 px-1 py-3 text-xs text-neutral-500">
-                <Loader2 size={14} className="animate-spin" /> Loading round…
+                <Loader2 size={14} className="animate-spin" /> {tr("editor.loading_round")}
               </p>
             )}
             {hasRound && !roundPending && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-xs text-neutral-600">
                   <span>
-                    {roundOpen ? "Round open" : "Round closed"}
+                    {roundOpen ? tr("editor.round_open") : tr("editor.round_closed")}
                     {roundAnon ? " · anonymous" : ""}
                   </span>
                   <span className="font-medium tabular-nums">
@@ -1798,14 +1799,14 @@ export function WhiteboardSurface(props: {
 
                 {roundOpen && (
                   <Button size="sm" block variant="secondary" onClick={doVoteSelection}>
-                    <Share2 size={14} /> Vote for selected node
+                    <Share2 size={14} /> {tr("editor.vote_for_selected_node")}
                   </Button>
                 )}
 
                 <div className="max-h-40 overflow-auto rounded-lg border border-neutral-100">
                   {Object.keys(displayCounts).length === 0 ? (
                     <p className="px-2 py-3 text-center text-xs text-neutral-400">
-                      No votes yet. Select a node and vote.
+                      {tr("editor.no_votes_yet_select_a_node_and_vote")}
                     </p>
                   ) : (
                     <ul className="divide-y divide-neutral-100">
@@ -1834,7 +1835,7 @@ export function WhiteboardSurface(props: {
                     </Button>
                   ) : (
                     <Button size="sm" block variant="secondary" onClick={doNewRound}>
-                      New round
+                      {tr("editor.new_round")}
                     </Button>
                   )}
                 </div>
@@ -1847,7 +1848,7 @@ export function WhiteboardSurface(props: {
             echoed locally so the sender always sees feedback. Available even
             offline (the local echo plays; the broadcast is a no-op). */}
         <span className="mx-1 h-6 w-px bg-neutral-200" aria-hidden />
-        <div className="flex items-center gap-0.5" role="group" aria-label="Send a reaction">
+        <div className="flex items-center gap-0.5" role="group" aria-label={tr("editor.send_a_reaction")}>
           {REACTION_EMOJIS.map((emoji) => (
             <button
               key={emoji}
@@ -1905,18 +1906,18 @@ function BoardSearch({ onClose }: { onClose: () => void }): React.ReactElement {
             if (e.key === "Escape") { e.preventDefault(); onClose(); }
             else if (e.key === "Enter" && matches.length) { e.preventDefault(); jump(matches[0].nodeId); }
           }}
-          placeholder="Find on board"
-          aria-label="Find on board"
+          placeholder={tr("editor.find_on_board")}
+          aria-label={tr("editor.find_on_board")}
           className="min-w-0 flex-1 bg-transparent text-sm text-neutral-800 outline-none placeholder:text-neutral-400"
         />
-        <button onClick={onClose} aria-label="Close search" className="shrink-0 rounded px-1 text-neutral-400 hover:text-neutral-600">
-          Esc
+        <button onClick={onClose} aria-label={tr("editor.close_search")} className="shrink-0 rounded px-1 text-neutral-400 hover:text-neutral-600">
+          {tr("editor.esc")}
         </button>
       </div>
       {q.trim() && (
         <div className="max-h-72 overflow-auto py-1">
           {matches.length === 0 ? (
-            <p className="px-3 py-2 text-xs text-neutral-400">No matches</p>
+            <p className="px-3 py-2 text-xs text-neutral-400">{tr("editor.no_matches")}</p>
           ) : (
             matches.map((m) => (
               <button
@@ -1944,7 +1945,7 @@ function VoteSetup(props: {
   return (
     <div className="space-y-3">
       <label className="flex items-center justify-between text-sm text-neutral-700">
-        Votes per person
+        {tr("editor.votes_per_person")}
         <input
           type="number"
           min={1}
@@ -1955,7 +1956,7 @@ function VoteSetup(props: {
         />
       </label>
       <label className="flex items-center justify-between text-sm text-neutral-700">
-        Anonymous
+        {tr("editor.anonymous")}
         <input
           type="checkbox"
           checked={anonymous}
@@ -1964,7 +1965,7 @@ function VoteSetup(props: {
         />
       </label>
       <Button size="sm" block onClick={() => props.onOpen(budget, anonymous)}>
-        <Vote size={14} /> Open round
+        <Vote size={14} /> {tr("editor.open_round")}
       </Button>
     </div>
   );

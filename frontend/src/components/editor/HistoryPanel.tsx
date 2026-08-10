@@ -34,6 +34,7 @@ import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { promptText } from "@/lib/promptDialog";
+import { tr } from "@/lib/i18n";
 
 // A scrub "op": consecutive updates by one author within a short window, folded
 // into a single timeline stop. prefixCount is how many updates (from the start)
@@ -50,7 +51,7 @@ function groupOps(updates: DesignUpdateEntry[]): ScrubOp[] {
   const ops: ScrubOp[] = [];
   for (let i = 0; i < updates.length; i++) {
     const u = updates[i];
-    const name = u.authorName || "Unknown";
+    const name = u.authorName || tr("editor.unknown");
     const t = new Date(u.createdAt).getTime();
     const last = ops[ops.length - 1];
     if (last && last.authorName === name && t - last.lastMs <= SCRUB_WINDOW_MS) {
@@ -79,16 +80,16 @@ function relativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString();
 }
 
-const KIND_LABEL: Record<string, string> = {
-  auto: "Auto-saved",
-  checkpoint: "Saved",
-  named: "Checkpoint",
-  restore: "Restored",
-  branch: "Branched",
-};
+const kindLabel = (): Record<string, string> => ({
+  auto: tr("editor.auto_saved"),
+  checkpoint: tr("editor.saved_2"),
+  named: tr("editor.checkpoint"),
+  restore: tr("editor.restored"),
+  branch: tr("editor.branched"),
+});
 
 function authorName(v: VersionEntry): string {
-  return v.author?.name ?? "Unknown";
+  return v.author?.name ?? tr("editor.unknown");
 }
 
 /** The History side panel. `designId` is the live design; null disables it. */
@@ -189,7 +190,7 @@ export function HistoryPanel({
       scrubLoaded.current = true;
       if (wasTruncated) toast.toast("Timeline is long; showing the oldest edits. Scrub-restore is disabled here.", "info");
     } catch {
-      toast.error("Could not load the timeline.");
+      toast.error(tr("editor.could_not_load_the_timeline"));
     } finally {
       setScrubLoading(false);
     }
@@ -224,7 +225,7 @@ export function HistoryPanel({
       try {
         const file = foldUpdatesToFile(prefix);
         if (!file?.pages?.length) {
-          toast.error("Nothing to preview that early in history.");
+          toast.error(tr("editor.nothing_to_preview_that_early_in_history"));
           return;
         }
         setActiveId(null);
@@ -242,7 +243,7 @@ export function HistoryPanel({
           setScrubLabel(null);
         }
       } catch {
-        toast.error("Could not reconstruct that point in history.");
+        toast.error(tr("editor.could_not_reconstruct_that_point_in_history"));
       }
     },
     [ops, updates, preview, exitPreview, enterPreview, toast],
@@ -264,7 +265,7 @@ export function HistoryPanel({
         setCursor(page.nextCursor);
         setHasMore(!!page.nextCursor);
       } catch {
-        toast.error("Could not load history.");
+        toast.error(tr("editor.could_not_load_history"));
       } finally {
         setLoading(false);
       }
@@ -288,7 +289,7 @@ export function HistoryPanel({
         setCursor(page.nextCursor);
         setHasMore(!!page.nextCursor);
       } else {
-        toast.error("Could not load history.");
+        toast.error(tr("editor.could_not_load_history"));
       }
       setBranches(branchList);
       setCrdtBranches(crdtList);
@@ -309,7 +310,7 @@ export function HistoryPanel({
       enterPreview(file, `${when} by ${authorName(v)}`);
       setActiveId(v.id);
     } catch {
-      toast.error("Could not load that version.");
+      toast.error(tr("editor.could_not_load_that_version"));
     } finally {
       setBusyId(null);
     }
@@ -335,7 +336,7 @@ export function HistoryPanel({
         try {
           await oc.saveSnapshot(designId, { file: live, kind: "auto" });
         } catch {
-          toast.error("Couldn't back up your latest edits, so the restore was cancelled. Exit the preview and save first.");
+          toast.error(tr("editor.couldnt_back_up_your_latest_edits_so_the_res"));
           return;
         }
       }
@@ -344,9 +345,9 @@ export function HistoryPanel({
       applyRestoredFile(file);
       setActiveId(null);
       await loadPage(undefined); // the restore added a new version
-      toast.success("Restored. This is now the current version.");
+      toast.success(tr("editor.restored_this_is_now_the_current_version"));
     } catch {
-      toast.error("Restore failed.");
+      toast.error(tr("editor.restore_failed"));
     } finally {
       setBusyId(null);
     }
@@ -356,20 +357,20 @@ export function HistoryPanel({
   async function branch() {
     if (!activeId) return;
     const name = await promptText({
-      title: "Branch from this version",
-      label: "Name the new branch",
-      placeholder: "Variation",
-      confirmText: "Create branch",
+      title: tr("editor.branch_from_this_version"),
+      label: tr("editor.name_the_new_branch"),
+      placeholder: tr("editor.variation"),
+      confirmText: tr("editor.create_branch"),
     });
     if (name === null) return;
     setBusyId(activeId);
     try {
       const created = await oc.branchFromVersion(designId, activeId, name || undefined);
       setBranches(await oc.listBranches(designId).catch(() => branches));
-      toast.success("Branch created.");
+      toast.success(tr("editor.branch_created"));
       void router.push(`/editor?id=${created.id}`);
     } catch {
-      toast.error("Branch failed.");
+      toast.error(tr("editor.branch_failed"));
     } finally {
       setBusyId(null);
     }
@@ -402,7 +403,7 @@ export function HistoryPanel({
     scrubLoaded.current = false;
     usePresence.getState().setBranch(id);
     if (scrubOpen) void loadUpdates(id); // refetch the new lineage in place
-    toast.success(id ? "Switched to the branch. Edits now stay on it." : "Back on the main lineage.");
+    toast.success(id ? tr("editor.switched_to_the_branch_edits_now_stay_on_it") : tr("editor.back_on_the_main_lineage"));
   }
 
   // Fork a named in-CRDT branch at the scrubbed point (FR-10) and switch to it.
@@ -411,10 +412,10 @@ export function HistoryPanel({
   async function branchFromScrub() {
     if (scrubIndex === null || !ops[scrubIndex] || truncated || busyId) return;
     const name = await promptText({
-      title: "Branch from here",
-      label: "Branch name",
-      placeholder: "Big rework idea",
-      confirmText: "Create branch",
+      title: tr("editor.branch_from_here"),
+      label: tr("editor.branch_name"),
+      placeholder: tr("editor.big_rework_idea"),
+      confirmText: tr("editor.create_branch"),
     });
     if (!name) return;
     setBusyId("scrub-branch");
@@ -427,7 +428,7 @@ export function HistoryPanel({
       await loadCrdtBranches();
       switchBranch(created.id);
     } catch {
-      toast.error("Could not create the branch.");
+      toast.error(tr("editor.could_not_create_the_branch"));
     } finally {
       setBusyId(null);
     }
@@ -444,7 +445,7 @@ export function HistoryPanel({
     if (!scrubFile || busyId || truncated || activeBranch) return;
     setBusyId("scrub");
     try {
-      await oc.saveSnapshot(designId, { file: scrubFile, kind: "restore", label: "Restored from history" });
+      await oc.saveSnapshot(designId, { file: scrubFile, kind: "restore", label: tr("editor.restored_from_history") });
       const current = await oc.getDesignFile(designId);
       applyRestoredFile(current);
       exitPreview();
@@ -454,9 +455,9 @@ export function HistoryPanel({
       await loadPage(undefined); // the restore added a new version
       scrubLoaded.current = false; // the timeline gained an entry; reload if open
       if (scrubOpen) void loadUpdates();
-      toast.success("Restored. This is now the current version.");
+      toast.success(tr("editor.restored_this_is_now_the_current_version"));
     } catch {
-      toast.error("Restore failed.");
+      toast.error(tr("editor.restore_failed"));
     } finally {
       setBusyId(null);
     }
@@ -467,28 +468,28 @@ export function HistoryPanel({
     if (preview) return; // never checkpoint a preview
     if (activeBranch) return; // a named snapshot is main-lineage state; gated in the UI too
     const label = await promptText({
-      title: "Save a checkpoint",
-      label: "Name this version",
-      placeholder: "Client approved",
-      confirmText: "Save checkpoint",
+      title: tr("editor.save_a_checkpoint"),
+      label: tr("editor.name_this_version"),
+      placeholder: tr("editor.client_approved"),
+      confirmText: tr("editor.save_checkpoint"),
     });
     if (!label) return;
     try {
       const file = useEditor.getState().doc;
       await oc.saveSnapshot(designId, { file, kind: "named", label });
       await loadPage(undefined);
-      toast.success("Checkpoint saved.");
+      toast.success(tr("editor.checkpoint_saved"));
     } catch {
-      toast.error("Could not save checkpoint.");
+      toast.error(tr("editor.could_not_save_checkpoint"));
     }
   }
 
   return (
-    <aside className="oc-scroll flex w-80 shrink-0 flex-col overflow-y-auto border-l border-neutral-200 bg-surface">
+    <aside className="oc-scroll flex w-80 shrink-0 flex-col overflow-y-auto border-s border-neutral-200 bg-surface">
       <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-neutral-200 bg-surface px-3 py-2.5">
         <History size={18} className="text-brand-ink" />
-        <h2 className="text-sm font-semibold text-neutral-800">Version history</h2>
-        <IconButton aria-label="Close history" onClick={onClose} className="ml-auto">
+        <h2 className="text-sm font-semibold text-neutral-800">{tr("editor.version_history")}</h2>
+        <IconButton aria-label={tr("editor.close_history")} onClick={onClose} className="ms-auto">
           <X size={18} />
         </IconButton>
       </header>
@@ -504,11 +505,11 @@ export function HistoryPanel({
             activeBranch
               ? "Checkpoints capture the main lineage; switch back to Main first"
               : preview
-                ? "Exit preview to save a checkpoint"
-                : "Save a named checkpoint of the current version"
+                ? tr("editor.exit_preview_to_save_a_checkpoint")
+                : tr("editor.save_a_named_checkpoint_of_the_current_versi")
           }
         >
-          <Bookmark size={16} /> Save checkpoint
+          <Bookmark size={16} /> {tr("editor.save_checkpoint")}
         </Button>
       </div>
 
@@ -520,17 +521,17 @@ export function HistoryPanel({
           className="flex w-full items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-neutral-400 transition hover:text-neutral-600"
         >
           <SlidersHorizontal size={13} /> Scrub timeline
-          {scrubOpen ? <ChevronUp size={14} className="ml-auto" /> : <ChevronDown size={14} className="ml-auto" />}
+          {scrubOpen ? <ChevronUp size={14} className="ms-auto" /> : <ChevronDown size={14} className="ms-auto" />}
         </button>
         {scrubOpen && (
           <div className="mt-3">
             {scrubLoading ? (
               <div className="flex items-center gap-2 py-1 text-xs text-neutral-400">
-                <Loader2 size={14} className="animate-spin" /> Loading timeline…
+                <Loader2 size={14} className="animate-spin" /> {tr("editor.loading_timeline")}
               </div>
             ) : ops.length === 0 ? (
               <p className="py-1 text-xs text-neutral-400">
-                No live edits recorded yet. Edits made with the realtime connection on build a scrubbable timeline.
+                {tr("editor.no_live_edits_recorded_yet_edits_made_with_t")}
               </p>
             ) : (
               <>
@@ -542,15 +543,15 @@ export function HistoryPanel({
                   value={scrubIndex ?? ops.length}
                   onChange={(e) => onScrub(Number(e.target.value))}
                   className="w-full accent-brand-600"
-                  aria-label="Scrub edit history"
+                  aria-label={tr("editor.scrub_edit_history")}
                 />
                 <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-neutral-500">
                   <span className="shrink-0">{ops.length} edit {ops.length === 1 ? "burst" : "bursts"}</span>
-                  <span className="truncate text-right">
+                  <span className="truncate text-end">
                     {scrubIndex === null || !ops[scrubIndex]
                       ? truncated
-                        ? "Latest loaded (older edits only)"
-                        : "Now (live)"
+                        ? tr("editor.latest_loaded_older_edits_only")
+                        : tr("editor.now_live")
                       : `${ops[scrubIndex].authorName} · ${
                           scrubLabel && scrubLabel.idx === scrubIndex && scrubLabel.text
                             ? scrubLabel.text
@@ -559,7 +560,7 @@ export function HistoryPanel({
                   </span>
                 </div>
                 {truncated && (
-                  <p className="mt-1.5 text-[11px] text-amber-600">
+                  <p className="mt-1.5 text-[11px] text-amber-700">
                     History is long; only the oldest edits are loaded, so the newest state isn&apos;t shown here and restoring from this timeline is disabled.
                   </p>
                 )}
@@ -572,25 +573,25 @@ export function HistoryPanel({
       {(crdtBranches.length > 0 || activeBranch) && (
         <div className="border-b border-neutral-100 p-3">
           <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-            <GitBranch size={13} /> Branches
+            <GitBranch size={13} /> {tr("editor.branches")}
           </p>
           <ul className="flex flex-col gap-1">
             <li>
               <button
                 onClick={() => switchBranch(null)}
-                className={`w-full truncate rounded-lg px-2 py-1.5 text-left text-sm transition ${
+                className={`w-full truncate rounded-lg px-2 py-1.5 text-start text-sm transition ${
                   activeBranch === null ? "bg-brand-50 font-semibold text-brand-ink ring-1 ring-brand-200" : "text-neutral-700 hover:bg-neutral-100"
                 }`}
-                title="The design's main lineage"
+                title={tr("editor.the_designs_main_lineage")}
               >
-                Main
+                {tr("editor.main")}
               </button>
             </li>
             {crdtBranches.map((b) => (
               <li key={b.id}>
                 <button
                   onClick={() => switchBranch(b.id)}
-                  className={`w-full truncate rounded-lg px-2 py-1.5 text-left text-sm transition ${
+                  className={`w-full truncate rounded-lg px-2 py-1.5 text-start text-sm transition ${
                     activeBranch === b.id ? "bg-brand-50 font-semibold text-brand-ink ring-1 ring-brand-200" : "text-neutral-700 hover:bg-neutral-100"
                   }`}
                   title={`Switch to branch "${b.name}" (its own live session and history)`}
@@ -609,14 +610,14 @@ export function HistoryPanel({
       {branches.length > 0 && (
         <div className="border-b border-neutral-100 p-3">
           <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-            <GitBranch size={13} /> Forked designs
+            <GitBranch size={13} /> {tr("editor.forked_designs")}
           </p>
           <ul className="flex flex-col gap-1">
             {branches.map((b) => (
               <li key={b.id}>
                 <button
                   onClick={() => void router.push(`/editor?id=${b.id}`)}
-                  className="w-full truncate rounded-lg px-2 py-1.5 text-left text-sm text-neutral-700 hover:bg-neutral-100"
+                  className="w-full truncate rounded-lg px-2 py-1.5 text-start text-sm text-neutral-700 hover:bg-neutral-100"
                   title={`Open branch "${b.title}"`}
                 >
                   {b.title}
@@ -629,7 +630,7 @@ export function HistoryPanel({
 
       <ol className="flex flex-1 flex-col p-2">
         {versions.length === 0 && !loading && (
-          <li className="px-3 py-8 text-center text-sm text-neutral-400">History starts here.</li>
+          <li className="px-3 py-8 text-center text-sm text-neutral-400">{tr("editor.history_starts_here")}</li>
         )}
         {versions.map((v) => {
           const named = v.kind === "named";
@@ -639,7 +640,7 @@ export function HistoryPanel({
               <button
                 onClick={() => void previewVersion(v)}
                 disabled={!!busyId}
-                className={`flex w-full items-start gap-2 rounded-lg px-2.5 py-2 text-left transition hover:bg-neutral-100 ${
+                className={`flex w-full items-start gap-2 rounded-lg px-2.5 py-2 text-start transition hover:bg-neutral-100 ${
                   isActive ? "bg-brand-50 ring-1 ring-brand-200" : ""
                 }`}
               >
@@ -654,7 +655,7 @@ export function HistoryPanel({
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1.5">
                     <span className={`truncate text-sm ${named ? "font-semibold text-neutral-900" : "font-medium text-neutral-700"}`}>
-                      {v.label ?? KIND_LABEL[v.kind ?? "checkpoint"] ?? "Version"}
+                      {v.label ?? kindLabel()[v.kind ?? "checkpoint"] ?? tr("editor.version")}
                     </span>
                     {busyId === v.id && <Loader2 size={13} className="animate-spin text-neutral-400" />}
                   </span>
@@ -675,7 +676,7 @@ export function HistoryPanel({
               onClick={() => void loadPage(cursor)}
               disabled={loading}
             >
-              {loading ? "Loading…" : "Load older versions"}
+              {loading ? tr("editor.loading") : tr("editor.load_older_versions")}
             </Button>
           </li>
         )}
@@ -686,7 +687,7 @@ export function HistoryPanel({
       {preview && (
         <footer className="sticky bottom-0 border-t border-neutral-200 bg-surface p-3">
           <p className="mb-2 flex items-center gap-1.5 text-xs text-neutral-500">
-            <Eye size={13} /> {activeId ? "Previewing a past version (read-only)" : "Scrubbing history (read-only)"}
+            <Eye size={13} /> {activeId ? tr("editor.previewing_a_past_version_read_only") : tr("editor.scrubbing_history_read_only")}
           </p>
           {activeId ? (
             <>
@@ -695,18 +696,18 @@ export function HistoryPanel({
                   size="sm"
                   onClick={() => void restore()}
                   disabled={!!busyId || !!activeBranch}
-                  title={activeBranch ? "Restore targets the main lineage; switch back to Main first" : "Make this the current version"}
+                  title={activeBranch ? "Restore targets the main lineage; switch back to Main first" : tr("editor.make_this_the_current_version")}
                 >
-                  <RotateCcw size={15} /> Restore
+                  <RotateCcw size={15} /> {tr("editor.restore")}
                 </Button>
-                <Button variant="secondary" size="sm" onClick={() => void branch()} disabled={!!busyId} title="Create a branch from here">
-                  <GitBranch size={15} /> Branch
+                <Button variant="secondary" size="sm" onClick={() => void branch()} disabled={!!busyId} title={tr("editor.create_a_branch_from_here")}>
+                  <GitBranch size={15} /> {tr("editor.branch")}
                 </Button>
                 <Button variant="ghost" size="sm" onClick={exit} disabled={!!busyId}>
-                  Exit
+                  {tr("editor.exit")}
                 </Button>
               </div>
-              {!workspaceId && <p className="mt-1 text-[11px] text-neutral-400">Branching needs a saved design.</p>}
+              {!workspaceId && <p className="mt-1 text-[11px] text-neutral-400">{tr("editor.branching_needs_a_saved_design")}</p>}
             </>
           ) : (
             <div className="flex gap-2">
@@ -718,23 +719,23 @@ export function HistoryPanel({
                   activeBranch
                     ? "Restore targets the main lineage; switch back to Main first"
                     : truncated
-                      ? "Restore is disabled on a truncated timeline (the newest edits aren't loaded)"
-                      : "Make this point the current version"
+                      ? tr("editor.restore_is_disabled_on_a_truncated_timeline")
+                      : tr("editor.make_this_point_the_current_version")
                 }
               >
-                <RotateCcw size={15} /> Restore
+                <RotateCcw size={15} /> {tr("editor.restore")}
               </Button>
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => void branchFromScrub()}
                 disabled={!!busyId || scrubIndex === null || truncated}
-                title={truncated ? "Branching is disabled on a truncated timeline" : "Fork a named branch at this point (FR-10); nothing is discarded"}
+                title={truncated ? tr("editor.branching_is_disabled_on_a_truncated_timelin") : "Fork a named branch at this point (FR-10); nothing is discarded"}
               >
-                <GitBranch size={15} /> Branch from here
+                <GitBranch size={15} /> {tr("editor.branch_from_here")}
               </Button>
               <Button variant="ghost" size="sm" onClick={exit} disabled={!!busyId}>
-                Return to now
+                {tr("editor.return_to_now")}
               </Button>
             </div>
           )}

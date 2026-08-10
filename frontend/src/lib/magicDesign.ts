@@ -7,6 +7,7 @@
 // store + panel turn the validated shapes into native, editable scene nodes.
 
 import type { ChartType } from "@hc/schema";
+import { tr } from "@/lib/i18n";
 
 /** Thrown when the model returned text we cannot turn into the expected shape.
  *  The message is user-facing (surfaced via a toast). */
@@ -20,7 +21,7 @@ export class MagicParseError extends Error {}
  */
 export function parseModelJson(raw: string): unknown {
   const text = (raw ?? "").trim();
-  if (!text) throw new MagicParseError("The AI returned an empty response. Try again.");
+  if (!text) throw new MagicParseError(tr("app.the_ai_returned_an_empty_response_try_again"));
 
   // Prefer a fenced code block (```json ... ``` or ``` ... ```), using its body.
   const fence = /```(?:json)?\s*([\s\S]*?)```/i.exec(text);
@@ -38,7 +39,7 @@ export function parseModelJson(raw: string): unknown {
       // try the next candidate
     }
   }
-  throw new MagicParseError("The AI response wasn't valid JSON. Try again or rephrase your prompt.");
+  throw new MagicParseError(tr("app.the_ai_response_wasnt_valid_json_try_again_o"));
 }
 
 /** Return the first balanced {...} or [...] substring, or null. Tolerates braces
@@ -103,7 +104,7 @@ const HEX_RE = /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
 function asObject(v: unknown): Record<string, unknown> {
   if (!v || typeof v !== "object" || Array.isArray(v)) {
-    throw new MagicParseError("The AI response wasn't in the expected format. Try again.");
+    throw new MagicParseError(tr("app.the_ai_response_wasnt_in_the_expected_format"));
   }
   return v as Record<string, unknown>;
 }
@@ -156,7 +157,7 @@ export function normalizeMagicDesign(parsed: unknown): MagicDesignSpec {
   }
 
   if (elements.length === 0) {
-    throw new MagicParseError("The AI didn't return any usable design elements. Try a more specific prompt.");
+    throw new MagicParseError(tr("app.the_ai_didnt_return_any_usable_design_elemen"));
   }
   return { background, elements };
 }
@@ -197,12 +198,12 @@ export function parseNumber(cell: string): number {
 export function tabularToChart(matrix: string[][], chartType: ChartType = "bar"): ChartData {
   const rows = matrix.filter((r) => r.some((c) => (c ?? "").trim() !== ""));
   if (rows.length < 2) {
-    throw new MagicParseError("Need a header row plus at least one data row. Check your data and try again.");
+    throw new MagicParseError(tr("app.need_a_header_row_plus_at_least_one_data_row"));
   }
   const header = rows[0].map((h) => (h ?? "").trim());
   const cols = header.length;
   if (cols < 2) {
-    throw new MagicParseError("Need at least two columns: labels plus one or more value columns.");
+    throw new MagicParseError(tr("app.need_at_least_two_columns_labels_plus_one_or"));
   }
   const dataRows = rows.slice(1);
   const categories = dataRows.map((r, i) => (r[0] ?? "").trim() || `Row ${i + 1}`);
@@ -227,7 +228,7 @@ export function normalizeChartData(parsed: unknown): ChartData {
     ? root.categories.map((c) => String(c))
     : [];
   if (categories.length === 0) {
-    throw new MagicParseError("The AI didn't return any chart categories. Try rephrasing your description.");
+    throw new MagicParseError(tr("app.the_ai_didnt_return_any_chart_categories_try"));
   }
   const rawSeries = Array.isArray(root.series) ? root.series : [];
   const series: { name: string; values: number[] }[] = [];
@@ -245,7 +246,7 @@ export function normalizeChartData(parsed: unknown): ChartData {
     series.push({ name, values });
   });
   if (series.length === 0 || series.every((s) => s.values.every((v) => v === 0))) {
-    throw new MagicParseError("The AI didn't return any chart values. Try rephrasing your description.");
+    throw new MagicParseError(tr("app.the_ai_didnt_return_any_chart_values_try_rep"));
   }
   return { chartType, categories, series };
 }

@@ -47,6 +47,7 @@ import {
   AlignCenter,
   AlignRight,
   X,
+  Languages,
 } from "lucide-react";
 import {
   newParagraph,
@@ -81,6 +82,7 @@ import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { cn } from "@/lib/cn";
+import { tr } from "@/lib/i18n";
 
 // ---------------------------------------------------------------------------
 // Doc meta shape stored under doc.meta.doc
@@ -90,6 +92,9 @@ interface DocMetaLike {
   kind: "doc";
   blocks: DocBlock[];
   blockOrder?: string[];
+  /** Document text direction. "auto" (default) resolves per block from its
+   *  first strong character, which is what a mixed Hebrew/English doc needs. */
+  direction?: "ltr" | "rtl" | "auto";
 }
 
 /** Read a possibly-untyped meta.doc into a normalized blocks array. */
@@ -126,20 +131,20 @@ interface InserterOption {
   make: () => DocBlock;
 }
 
-const INSERTERS: InserterOption[] = [
-  { label: "Text", icon: Type, make: () => newParagraph("") },
-  { label: "Heading 1", icon: Heading1, make: () => newHeading(1, "") },
-  { label: "Heading 2", icon: Heading2, make: () => newHeading(2, "") },
-  { label: "Heading 3", icon: Heading3, make: () => newHeading(3, "") },
-  { label: "Bullet list", icon: ListIcon, make: () => newList("bullet", [newListItem("")]) },
-  { label: "Numbered list", icon: ListOrdered, make: () => newList("numbered", [newListItem("")]) },
-  { label: "Checklist", icon: CheckSquare, make: () => newList("checklist", [newListItem("")]) },
-  { label: "Quote", icon: QuoteIcon, make: () => newQuote("") },
-  { label: "Code", icon: Code2, make: () => newCode("", "text") },
-  { label: "Divider", icon: Minus, make: () => newDivider() },
-  { label: "Image", icon: ImageIcon, make: () => newImage({ url: "" }) },
+const inserters = (): InserterOption[] => [
+  { label: tr("editor.text"), icon: Type, make: () => newParagraph("") },
+  { label: tr("editor.heading_1"), icon: Heading1, make: () => newHeading(1, "") },
+  { label: tr("editor.heading_2"), icon: Heading2, make: () => newHeading(2, "") },
+  { label: tr("editor.heading_3"), icon: Heading3, make: () => newHeading(3, "") },
+  { label: tr("editor.bullet_list"), icon: ListIcon, make: () => newList("bullet", [newListItem("")]) },
+  { label: tr("editor.numbered_list"), icon: ListOrdered, make: () => newList("numbered", [newListItem("")]) },
+  { label: tr("editor.checklist"), icon: CheckSquare, make: () => newList("checklist", [newListItem("")]) },
+  { label: tr("editor.quote"), icon: QuoteIcon, make: () => newQuote("") },
+  { label: tr("editor.code"), icon: Code2, make: () => newCode("", "text") },
+  { label: tr("editor.divider"), icon: Minus, make: () => newDivider() },
+  { label: tr("editor.image"), icon: ImageIcon, make: () => newImage({ url: "" }) },
   {
-    label: "Table",
+    label: tr("editor.table"),
     icon: TableIcon,
     make: () =>
       newTable(
@@ -151,26 +156,26 @@ const INSERTERS: InserterOption[] = [
         true,
       ),
   },
-  { label: "Callout", icon: Info, make: () => newCallout("info", "") },
-  { label: "Embed", icon: Link2, make: () => newEmbed("") },
+  { label: tr("editor.callout"), icon: Info, make: () => newCallout("info", "") },
+  { label: tr("editor.embed"), icon: Link2, make: () => newEmbed("") },
 ];
 
 // Block types offered by the per-block "change type" switcher. Only text-bearing
 // types convert cleanly via convertBlock; we expose that compatible set.
-const CONVERT_TYPES: { type: DocBlockType; label: string }[] = [
-  { type: "paragraph", label: "Text" },
-  { type: "heading", label: "Heading" },
-  { type: "quote", label: "Quote" },
-  { type: "callout", label: "Callout" },
-  { type: "list", label: "List" },
-  { type: "code", label: "Code" },
+const convertTypes = (): { type: DocBlockType; label: string }[] => [
+  { type: "paragraph", label: tr("editor.text") },
+  { type: "heading", label: tr("editor.heading") },
+  { type: "quote", label: tr("editor.quote") },
+  { type: "callout", label: tr("editor.callout") },
+  { type: "list", label: tr("editor.list") },
+  { type: "code", label: tr("editor.code") },
 ];
 
-const AI_ACTIONS = [
+const aiActions = () => [
   { key: "rewrite", label: "Rewrite", prompt: "Rewrite the following text to read more clearly while keeping its meaning" },
-  { key: "shorten", label: "Make shorter", prompt: "Shorten the following text, keeping the key points" },
+  { key: "shorten", label: tr("editor.make_shorter"), prompt: "Shorten the following text, keeping the key points" },
   { key: "expand", label: "Expand", prompt: "Expand the following text with more detail and supporting context" },
-  { key: "grammar", label: "Fix grammar", prompt: "Fix any spelling and grammar mistakes in the following text, changing nothing else" },
+  { key: "grammar", label: tr("editor.fix_grammar"), prompt: "Fix any spelling and grammar mistakes in the following text, changing nothing else" },
   { key: "summarize", label: "Summarize", prompt: "Summarize the following text in one or two sentences" },
 ] as const;
 
@@ -192,10 +197,22 @@ export function DocSurface(props: { workspaceId?: string; designId?: string }): 
   // block must not clobber a concurrent edit committed by another block.
   const liveBlocks = useCallback(() => readBlocks(useEditor.getState().doc.meta.doc as unknown), []);
 
-  // Persist a new block list as one undoable step.
+  // Persist a new block list as one undoable step. The existing meta is
+  // SPREAD, not rebuilt: rebuilding from known fields would silently drop any
+  // optional key (direction today, whatever a newer client wrote tomorrow),
+  // which is exactly the data-loss shape the file-format rules forbid.
   const commit = useCallback((next: DocBlock[]) => {
-    const meta: DocMetaLike = { kind: "doc", blocks: next, blockOrder: next.map((b) => b.id) };
+    const prev = (useEditor.getState().doc.meta.doc ?? {}) as Record<string, unknown>;
+    const meta: DocMetaLike = { ...prev, kind: "doc", blocks: next, blockOrder: next.map((b) => b.id) };
     useEditor.getState().setDocMeta({ doc: meta });
+  }, []);
+
+  // Per-document text direction, persisted in meta so it travels with the file.
+  const direction = ((useEditor.getState().doc.meta.doc as Partial<DocMetaLike> | undefined)?.direction ?? "auto") as
+    "ltr" | "rtl" | "auto";
+  const setDirection = useCallback((dir: "ltr" | "rtl" | "auto") => {
+    const prev = (useEditor.getState().doc.meta.doc ?? {}) as Record<string, unknown>;
+    useEditor.getState().setDocMeta({ doc: { ...prev, direction: dir } });
   }, []);
 
   // Mutate the live block list via an updater, so every commit path reads the
@@ -316,14 +333,14 @@ export function DocSurface(props: { workspaceId?: string; designId?: string }): 
             return;
           }
           if (job.status === "failed") {
-            toast.error(job.error || "Export failed.");
+            toast.error(job.error || tr("editor.export_failed"));
             return;
           }
           await new Promise((r) => setTimeout(r, 1200));
         }
-        toast.error("Export timed out.");
+        toast.error(tr("editor.export_timed_out"));
       } catch {
-        toast.error("Export failed.");
+        toast.error(tr("editor.export_failed"));
       } finally {
         setDocExporting(null);
       }
@@ -340,7 +357,7 @@ export function DocSurface(props: { workspaceId?: string; designId?: string }): 
       if (!props.workspaceId) return;
       const text = blockPlainText(block);
       if (!text.trim()) {
-        toast.toast("This block has no text for AI to work on.", "info");
+        toast.toast(tr("editor.this_block_has_no_text_for_ai_to_work_on"), "info");
         return;
       }
       setAiBusy(block.id);
@@ -352,7 +369,7 @@ export function DocSurface(props: { workspaceId?: string; designId?: string }): 
         });
         const out = (res?.text ?? "").trim();
         if (!out) {
-          toast.error("The assistant returned nothing. Try again.");
+          toast.error(tr("editor.the_assistant_returned_nothing_try_again"));
           return;
         }
         // Re-read the LIVE block by id at apply time: the user may have typed
@@ -361,13 +378,13 @@ export function DocSurface(props: { workspaceId?: string; designId?: string }): 
         // (same id) preserves the block's latest type while replacing its text.
         const live = liveBlocks().find((b) => b.id === block.id);
         if (!live) {
-          toast.error("That block no longer exists.");
+          toast.error(tr("editor.that_block_no_longer_exists"));
           return;
         }
         replaceBlock(live.id, setBlockPlainText(live, out));
-        toast.success("Applied AI suggestion.");
+        toast.success(tr("editor.applied_ai_suggestion"));
       } catch {
-        toast.error("AI request failed. Please try again.");
+        toast.error(tr("editor.ai_request_failed_please_try_again"));
       } finally {
         setAiBusy(null);
       }
@@ -380,16 +397,20 @@ export function DocSurface(props: { workspaceId?: string; designId?: string }): 
   return (
     <div className="light flex flex-1 flex-col overflow-hidden bg-neutral-100">
       <DocToolbar
+        direction={direction}
+        onDirectionChange={setDirection}
         aiEnabled={aiEnabled}
         onExport={exportMarkdown}
         onExportDoc={designId ? exportDoc : undefined}
         docExporting={docExporting}
       />
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto my-10 w-full max-w-[760px] px-4">
+        {/* Explicit direction sets the whole page; "auto" lets each block
+            resolve from its own first strong character (native dir=auto). */}
+        <div className="mx-auto my-10 w-full max-w-[760px] px-4" dir={direction === "auto" ? undefined : direction}>
           <div className="rounded-2xl bg-surface px-12 py-14 shadow-sm ring-1 ring-neutral-200">
             {blocks.length === 0 ? (
-              <p className="text-sm text-neutral-400">Loading document...</p>
+              <p className="text-sm text-neutral-400">{tr("editor.loading_document")}</p>
             ) : (
               <div className="flex flex-col">
                 {blocks.map((block, i) => (
@@ -427,29 +448,42 @@ function DocToolbar({
   onExport,
   onExportDoc,
   docExporting,
+  direction,
+  onDirectionChange,
 }: {
   aiEnabled: boolean;
   onExport: () => void;
   onExportDoc?: (format: "docx" | "pdf") => void;
   docExporting: "docx" | "pdf" | null;
+  direction: "ltr" | "rtl" | "auto";
+  onDirectionChange: (d: "ltr" | "rtl" | "auto") => void;
 }): React.ReactElement {
   return (
     <div className="flex shrink-0 items-center gap-2 border-b border-neutral-200 bg-surface px-4 py-2">
-      <span className="text-sm font-semibold text-neutral-700">Document</span>
+      <span className="text-sm font-semibold text-neutral-700">{tr("editor.document")}</span>
       <div className="flex-1" />
+      <button
+        type="button"
+        onClick={() => onDirectionChange(direction === "auto" ? "rtl" : direction === "rtl" ? "ltr" : "auto")}
+        className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-700"
+        title={tr("editor.text_direction_auto_follows_the_text_itself")}
+      >
+        <Languages size={14} />
+        {direction === "auto" ? tr("editor.direction_auto") : direction === "rtl" ? tr("editor.direction_rtl") : tr("editor.direction_ltr")}
+      </button>
       <span
         className={cn(
           "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium",
           aiEnabled ? "text-brand-ink" : "text-neutral-400",
         )}
-        title={aiEnabled ? "Inline AI is available per block" : "AI needs a workspace"}
+        title={aiEnabled ? tr("editor.inline_ai_is_available_per_block") : tr("editor.ai_needs_a_workspace")}
       >
         <Sparkles size={14} />
-        {aiEnabled ? "AI ready" : "AI unavailable"}
+        {aiEnabled ? tr("editor.ai_ready") : tr("editor.ai_unavailable")}
       </span>
       <Button variant="secondary" size="sm" onClick={onExport}>
         <Download size={15} />
-        Markdown
+        {tr("editor.markdown")}
       </Button>
       {onExportDoc && (
         <>
@@ -458,7 +492,7 @@ function DocToolbar({
             size="sm"
             disabled={docExporting !== null}
             onClick={() => onExportDoc("docx")}
-            title="Export as a Word document"
+            title={tr("editor.export_as_a_word_document")}
           >
             {docExporting === "docx" ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
             DOCX
@@ -468,7 +502,7 @@ function DocToolbar({
             size="sm"
             disabled={docExporting !== null}
             onClick={() => onExportDoc("pdf")}
-            title="Export as a PDF"
+            title={tr("editor.export_as_a_pdf")}
           >
             {docExporting === "pdf" ? <Loader2 size={15} className="animate-spin" /> : <FileType2 size={15} />}
             PDF
@@ -520,7 +554,7 @@ function BlockRow({
       <div className="absolute -left-11 top-0 flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
         <IconButton
           size="sm"
-          aria-label="Insert block below"
+          aria-label={tr("editor.insert_block_below")}
           onClick={() => setInserterOpen((v) => !v)}
         >
           <Plus size={16} />
@@ -547,7 +581,7 @@ function BlockRow({
           <div className="relative">
             <IconButton
               size="sm"
-              aria-label="Ask AI"
+              aria-label={tr("editor.ask_ai_2")}
               active={aiOpen}
               disabled={aiBusy}
               onClick={() => setAiOpen((v) => !v)}
@@ -557,9 +591,9 @@ function BlockRow({
             {aiOpen && (
               <Popover onClose={() => setAiOpen(false)} className="right-0 top-9">
                 <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
-                  Ask AI
+                  {tr("editor.ask_ai_2")}
                 </div>
-                {AI_ACTIONS.map((a) => (
+                {aiActions().map((a) => (
                   <MenuItem
                     key={a.key}
                     onClick={() => {
@@ -576,15 +610,15 @@ function BlockRow({
           </div>
         )}
         <div className="relative">
-          <IconButton size="sm" aria-label="Block menu" active={menuOpen} onClick={() => setMenuOpen((v) => !v)}>
+          <IconButton size="sm" aria-label={tr("editor.block_menu")} active={menuOpen} onClick={() => setMenuOpen((v) => !v)}>
             <Replace size={15} />
           </IconButton>
           {menuOpen && (
             <Popover onClose={() => setMenuOpen(false)} className="right-0 top-9">
               <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
-                Turn into
+                {tr("editor.turn_into")}
               </div>
-              {CONVERT_TYPES.map((c) => (
+              {convertTypes().map((c) => (
                 <MenuItem
                   key={c.type}
                   active={block.type === c.type}
@@ -598,14 +632,14 @@ function BlockRow({
               ))}
               <div className="my-1 h-px bg-neutral-100" />
               <MenuItem disabled={index === 0} onClick={() => { setMenuOpen(false); onMove(-1); }}>
-                <ChevronUp size={14} /> Move up
+                <ChevronUp size={14} /> {tr("editor.move_up")}
               </MenuItem>
               <MenuItem disabled={index === count - 1} onClick={() => { setMenuOpen(false); onMove(1); }}>
-                <ChevronDown size={14} /> Move down
+                <ChevronDown size={14} /> {tr("editor.move_down")}
               </MenuItem>
               <div className="my-1 h-px bg-neutral-100" />
               <MenuItem danger onClick={() => { setMenuOpen(false); onDelete(); }}>
-                <Trash2 size={14} /> Delete
+                <Trash2 size={14} /> {tr("editor.delete")}
               </MenuItem>
             </Popover>
           )}
@@ -637,7 +671,7 @@ function BlockBody({
       return (
         <TextEditable
           value={richTextToPlain(block.text)}
-          placeholder="Type here, or use the + to add a block."
+          placeholder={tr("editor.type_here_or_use_the_to_add_a_block")}
           className="text-[15px] leading-7 text-neutral-800"
           onCommit={(t) => onChange({ ...block, text: plainToRichText(t) })}
           onEnter={() => onInsertAfter(newParagraph(""))}
@@ -662,7 +696,7 @@ function BlockBody({
         <div className="border-l-4 border-neutral-300 pl-4">
           <TextEditable
             value={richTextToPlain(block.text)}
-            placeholder="Quote"
+            placeholder={tr("editor.quote")}
             className="text-[15px] italic leading-7 text-neutral-600"
             onCommit={(t) => onChange({ ...block, text: plainToRichText(t) })}
             onEnter={() => onInsertAfter(newParagraph(""))}
@@ -677,7 +711,7 @@ function BlockBody({
           <div className="flex items-center justify-between border-b border-neutral-700 px-3 py-1">
             <input
               value={block.language ?? ""}
-              placeholder="language"
+              placeholder={tr("editor.language")}
               onChange={(e) => onChange({ ...block, language: e.target.value })}
               className="w-32 bg-transparent text-xs text-neutral-300 placeholder:text-neutral-500 focus:outline-none"
             />
@@ -685,7 +719,7 @@ function BlockBody({
           </div>
           <TextEditable
             value={block.code}
-            placeholder="Code"
+            placeholder={tr("editor.code")}
             multiline
             className="px-3 py-2 font-mono text-[13px] leading-6 text-neutral-100"
             onCommit={(t) => onChange({ ...block, code: t })}
@@ -710,7 +744,7 @@ function BlockBody({
     case "embed":
       return <EmbedBody block={block} onChange={onChange} />;
     default:
-      return <div className="text-sm text-red-500">Unknown block</div>;
+      return <div className="text-sm text-red-500">{tr("editor.unknown_block")}</div>;
   }
 }
 
@@ -735,16 +769,16 @@ function CalloutBody({
           value={block.tone}
           onChange={(e) => onChange({ ...block, tone: e.target.value as CalloutBlock["tone"] })}
           className="cursor-pointer rounded bg-surface/60 text-[10px] focus:outline-none"
-          aria-label="Callout tone"
+          aria-label={tr("editor.callout_tone")}
         >
-          <option value="info">info</option>
-          <option value="warn">warn</option>
-          <option value="success">success</option>
+          <option value="info">{tr("editor.info")}</option>
+          <option value="warn">{tr("editor.warn")}</option>
+          <option value="success">{tr("editor.success")}</option>
         </select>
       </div>
       <TextEditable
         value={richTextToPlain(block.text)}
-        placeholder="Callout text"
+        placeholder={tr("editor.callout_text")}
         className="flex-1 text-[15px] leading-7"
         onCommit={(t) => onChange({ ...block, text: plainToRichText(t) })}
       />
@@ -791,7 +825,7 @@ function ListBody({
           )}
           <TextEditable
             value={richTextToPlain(item.text)}
-            placeholder="List item"
+            placeholder={tr("editor.list_item")}
             className={cn(
               "flex-1 text-[15px] leading-7 text-neutral-800",
               item.checked && "text-neutral-400 line-through",
@@ -829,20 +863,20 @@ function ImageBody({
       )}
       <input
         value={block.url}
-        placeholder="Paste an image URL (asset upload deferred)"
+        placeholder={tr("editor.paste_an_image_url_asset_upload_deferred")}
         onChange={(e) => onChange({ ...block, url: e.target.value })}
         className="w-full rounded border border-neutral-200 px-2 py-1 text-xs text-neutral-600 focus:border-brand-400 focus:outline-none"
       />
       <input
         value={block.alt ?? ""}
-        placeholder="Alt text (describe the image for screen readers)"
-        aria-label="Image alt text"
+        placeholder={tr("editor.alt_text_describe_the_image_for_screen_reade")}
+        aria-label={tr("editor.image_alt_text")}
         onChange={(e) => onChange({ ...block, alt: e.target.value || undefined })}
         className="w-full rounded border border-neutral-200 px-2 py-1 text-xs text-neutral-600 focus:border-brand-400 focus:outline-none"
       />
       <input
         value={richTextToPlain(block.caption ?? { runs: [] })}
-        placeholder="Caption"
+        placeholder={tr("editor.caption")}
         onChange={(e) =>
           onChange({ ...block, caption: e.target.value ? plainToRichText(e.target.value) : undefined })
         }
@@ -868,7 +902,7 @@ function EmbedBody({
             {block.url}
           </a>
         ) : (
-          <span className="text-neutral-400">No URL yet</span>
+          <span className="text-neutral-400">{tr("editor.no_url_yet")}</span>
         )}
       </div>
       <input
@@ -961,7 +995,7 @@ function TableBody({
                       type="button"
                       onClick={() => removeColumn(ci)}
                       disabled={cols <= 1}
-                      title="Remove column"
+                      title={tr("editor.remove_column")}
                       aria-label={`Remove column ${ci + 1}`}
                       className="grid h-6 w-6 place-items-center rounded text-neutral-400 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30"
                     >
@@ -991,7 +1025,7 @@ function TableBody({
                       <input
                         value={richTextToPlain(cell)}
                         onChange={(e) => setCell(ri, ci, e.target.value)}
-                        placeholder={isHeader ? "Header" : ""}
+                        placeholder={isHeader ? tr("editor.header") : ""}
                         className={cn("w-full bg-transparent focus:outline-none", alignClass(block.columns[ci]?.align ?? "left"))}
                       />
                     </td>
@@ -1002,7 +1036,7 @@ function TableBody({
                       type="button"
                       onClick={() => removeRow(ri)}
                       disabled={block.rows.length <= 1}
-                      title="Remove row"
+                      title={tr("editor.remove_row")}
                       aria-label={`Remove row ${ri + 1}`}
                       className="grid h-6 w-6 place-items-center rounded text-neutral-400 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30"
                     >
@@ -1017,10 +1051,10 @@ function TableBody({
       </div>
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="sm" onClick={addRow}>
-          <Plus size={14} /> Row
+          <Plus size={14} /> {tr("editor.row")}
         </Button>
         <Button variant="ghost" size="sm" onClick={addColumn}>
-          <Plus size={14} /> Column
+          <Plus size={14} /> {tr("editor.column")}
         </Button>
         <label className="ml-auto flex items-center gap-1.5 text-xs text-neutral-500">
           <input
@@ -1029,7 +1063,7 @@ function TableBody({
             onChange={(e) => onChange({ ...block, headerRow: e.target.checked })}
             className="h-3.5 w-3.5 accent-brand-600"
           />
-          Header row
+          {tr("editor.header_row")}
         </label>
       </div>
     </div>
@@ -1113,6 +1147,10 @@ function TextEditable({
       rows={1}
       value={display}
       placeholder={placeholder}
+      // Each block resolves its own direction from its first strong character,
+      // so a Hebrew paragraph inside an English doc lays out right-to-left.
+      // An explicit document-level dir on the page container overrides this.
+      dir="auto"
       spellCheck
       className={cn(
         "w-full resize-none overflow-hidden bg-transparent placeholder:text-neutral-300 focus:outline-none",
@@ -1159,7 +1197,7 @@ function TrailingInserter({ onInsert }: { onInsert: (b: DocBlock) => void }): Re
         className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm text-neutral-400 transition hover:bg-neutral-50 hover:text-neutral-600"
       >
         <Plus size={16} />
-        Add a block
+        {tr("editor.add_a_block")}
       </button>
       {open && (
         <Popover onClose={() => setOpen(false)} className="left-0 top-10">
@@ -1178,7 +1216,7 @@ function TrailingInserter({ onInsert }: { onInsert: (b: DocBlock) => void }): Re
 function InserterList({ onPick }: { onPick: (make: () => DocBlock) => void }): React.ReactElement {
   return (
     <div className="max-h-72 w-52 overflow-y-auto">
-      {INSERTERS.map((opt) => {
+      {inserters().map((opt) => {
         const Icon = opt.icon;
         return (
           <MenuItem key={opt.label} onClick={() => onPick(opt.make)}>

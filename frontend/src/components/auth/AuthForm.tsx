@@ -17,9 +17,10 @@ import { Input } from "@/components/ui/Input";
 import { CanvasBackdrop } from "@/components/ui/CanvasBackdrop";
 import { CanvasFloor } from "@/components/ui/CanvasFloor";
 import { Logo } from "@/components/ui/Logo";
+import { tr } from "@/lib/i18n";
 
 // Capability chips that position the breadth of the product on the brand panel.
-const CHIPS = ["Templates", "Photos & video", "AI Magic", "Docs", "Whiteboards", "Brand kit", "Print"];
+const chips = () => [tr("auth.templates"), tr("auth.photos_video"), tr("auth.ai_magic"), tr("auth.docs"), tr("auth.whiteboards"), tr("auth.brand_kit"), tr("auth.print")];
 
 // Monochrome Google "G" glyph (single path, fills currentColor) so the social
 // button reads as one system with the rest of the outline UI.
@@ -138,7 +139,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         await bootstrap(); // hydrate the session from the new cookies
         await router.replace(afterAuthPath);
       } catch {
-        setError("This sign-in link is no longer valid. Request a new one below.");
+        setError(tr("auth.this_sign_in_link_is_no_longer_valid_request"));
         setMagicFailed(true);
         // Drop the spent token from the URL so a refresh doesn't retry it.
         void router.replace("/login", undefined, { shallow: true });
@@ -212,14 +213,14 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   // later inline error from the form takes precedence).
   const ssoError =
     router.query.error === "sso"
-      ? "Couldn't complete social sign-in. Please try again."
+      ? tr("auth.couldnt_complete_social_sign_in_please_try_a")
       : router.query.error === "sso_exists"
-        ? "An account with this email already exists. Sign in with your password, then connect SSO from Settings."
+        ? tr("auth.an_account_with_this_email_already_exists_si")
         : null;
 
   async function sendMagicLink() {
     if (!email) {
-      setError("Enter your email first.");
+      setError(tr("auth.enter_your_email_first"));
       return;
     }
     setBusy(true);
@@ -228,9 +229,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       await oc.requestMagicLink(email, captchaArg);
       // Non-enumerating: the API responds the same whether or not the account
       // exists, so the message is deliberately generic.
-      toast.success("If that email has an account, a sign-in link is on its way.");
+      toast.success(tr("auth.if_that_email_has_an_account_a_sign_in_link"));
     } catch {
-      toast.error("Couldn't send the link. Please try again.");
+      toast.error(tr("auth.couldnt_send_the_link_please_try_again"));
       resetCaptcha();
     } finally {
       setBusy(false);
@@ -239,16 +240,16 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
   async function forgotPassword() {
     if (!email) {
-      setError("Enter your email, then tap “Forgot password?” again.");
+      setError(tr("auth.enter_your_email_then_tap_forgot_password_ag"));
       return;
     }
     setBusy(true);
     setError(null);
     try {
       await oc.requestPasswordReset(email, captchaArg);
-      toast.success("If that email has an account, a reset link is on its way.");
+      toast.success(tr("auth.if_that_email_has_an_account_a_reset_link_is"));
     } catch {
-      toast.error("Couldn't send the email. Please try again.");
+      toast.error(tr("auth.couldnt_send_the_email_please_try_again"));
       resetCaptcha();
     } finally {
       setBusy(false);
@@ -278,11 +279,11 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       }
       await router.push(afterAuthPath);
     } catch (err) {
-      let msg = "Something went wrong. Please try again.";
+      let msg = tr("auth.something_went_wrong_please_try_again");
       if (err instanceof ApiError) {
-        if (err.status === 401) msg = "Invalid email or password.";
-        else if (err.status === 409) msg = "An account with this email already exists.";
-        else if (err.status === 403) msg = "Couldn't verify the captcha. Please try again.";
+        if (err.status === 401) msg = tr("auth.invalid_email_or_password");
+        else if (err.status === 409) msg = tr("auth.an_account_with_this_email_already_exists");
+        else if (err.status === 403) msg = tr("auth.couldnt_verify_the_captcha_please_try_again");
         else {
           const body = err.body as { message?: string } | undefined;
           msg = body?.message ?? `Request failed (${err.status}).`;
@@ -290,7 +291,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       } else {
         // Not an HTTP error -> the request never reached the API (server down,
         // wrong URL, or a CORS block).
-        msg = "Couldn't reach the server. Make sure the backend is running.";
+        msg = tr("auth.couldnt_reach_the_server_make_sure_the_backe");
       }
       setError(msg);
       resetCaptcha();
@@ -310,9 +311,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       const msg =
         err instanceof ApiError && (err.status === 401 || err.status === 400)
           ? useRecovery
-            ? "That recovery code isn't valid. Try another."
-            : "That code isn't valid. Check your authenticator app and try again."
-          : "Couldn't verify the code. Please try again.";
+            ? tr("auth.that_recovery_code_isnt_valid_try_another")
+            : tr("auth.that_code_isnt_valid_check_your_authenticato")
+          : tr("auth.couldnt_verify_the_code_please_try_again");
       setError(msg);
       setBusy(false);
     }
@@ -326,7 +327,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         <div className="flex flex-col items-center text-center">
           <Logo size={32} />
           <div className="mt-6 h-7 w-7 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600" />
-          <p className="mt-4 text-sm text-neutral-500">Signing you in…</p>
+          <p className="mt-4 text-sm text-neutral-500">{tr("auth.signing_you_in")}</p>
         </div>
       </AuthShell>
     );
@@ -339,15 +340,15 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         <div className="mb-6">
           <Logo size={32} />
         </div>
-        <h2 className="text-[1.7rem] font-bold tracking-tight text-neutral-900">Two-step verification</h2>
+        <h2 className="text-[1.7rem] font-bold tracking-tight text-neutral-900">{tr("auth.two_step_verification")}</h2>
           <p className="mt-1.5 text-sm text-neutral-500">
             {useRecovery
-              ? "Enter one of your saved recovery codes to sign in."
-              : "Enter the 6-digit code from your authenticator app."}
+              ? tr("auth.enter_one_of_your_saved_recovery_codes_to_si")
+              : tr("auth.enter_the_6_digit_code_from_your_authenticat")}
           </p>
           <form onSubmit={onSubmitMfa} className="mt-7 flex flex-col gap-4">
             <Input
-              label={useRecovery ? "Recovery code" : "Authentication code"}
+              label={useRecovery ? tr("auth.recovery_code") : tr("auth.authentication_code")}
               required
               autoFocus
               inputMode={useRecovery ? "text" : "numeric"}
@@ -362,7 +363,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
               </div>
             )}
             <Button type="submit" size="lg" block disabled={busy || !mfaCode}>
-              {busy ? "Verifying…" : "Verify and sign in"}
+              {busy ? tr("auth.verifying") : tr("auth.verify_and_sign_in")}
             </Button>
           </form>
           <button
@@ -374,7 +375,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
             }}
             className="mt-3 w-full text-center text-sm font-medium text-brand-ink hover:underline"
           >
-            {useRecovery ? "Use your authenticator app instead" : "Use a recovery code"}
+            {useRecovery ? tr("auth.use_your_authenticator_app_instead") : tr("auth.use_a_recovery_code")}
           </button>
       </AuthShell>
     );
@@ -392,9 +393,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         {/* Floating collage: a glimpse of what you can make. */}
         <div aria-hidden className="relative z-10 mx-auto my-2 h-60 w-full max-w-md">
           {/* Presentation slide */}
-          <div className="absolute left-1 top-3 w-48 rotate-[-7deg]">
+          <div className="absolute start-1 top-3 w-48 rotate-[-7deg]">
             <div className="oc-float rounded-2xl bg-surface p-3 text-neutral-800 shadow-2xl ring-1 ring-black/5">
-              <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold text-brand-ink"><Presentation size={12} /> Presentation</div>
+              <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold text-brand-ink"><Presentation size={12} /> {tr("auth.presentation")}</div>
               <div className="h-1.5 w-2/3 rounded bg-neutral-800" />
               <div className="mt-1.5 h-1.5 w-1/2 rounded bg-neutral-300" />
               <div className="mt-3 flex gap-1.5">
@@ -405,17 +406,17 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
             </div>
           </div>
           {/* Social / photo post */}
-          <div className="absolute right-2 top-0 w-40 rotate-[6deg]">
+          <div className="absolute end-2 top-0 w-40 rotate-[6deg]">
             <div className="oc-float overflow-hidden rounded-2xl bg-surface shadow-2xl ring-1 ring-black/5" style={{ animationDelay: "1.2s" }}>
               <div className="grid h-24 place-items-center bg-gradient-to-br from-pink-400 via-fuchsia-500 to-brand-500 text-white"><ImageIcon size={22} /></div>
               <div className="p-2.5"><div className="h-1.5 w-3/4 rounded bg-neutral-800" /><div className="mt-1.5 h-1.5 w-1/2 rounded bg-neutral-300" /></div>
             </div>
           </div>
           {/* Video */}
-          <div className="absolute bottom-0 left-24 w-44 rotate-[3deg]">
+          <div className="absolute bottom-0 start-24 w-44 rotate-[3deg]">
             <div className="oc-float overflow-hidden rounded-2xl bg-neutral-900 text-white shadow-2xl ring-1 ring-white/10" style={{ animationDelay: "0.6s" }}>
               <div className="oc-gradient grid h-20 place-items-center">
-                <span className="grid h-8 w-8 place-items-center rounded-full bg-surface/90 text-neutral-900"><Play size={14} className="ml-0.5" fill="currentColor" /></span>
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-surface/90 text-neutral-900"><Play size={14} className="ms-0.5" fill="currentColor" /></span>
               </div>
               <div className="flex items-center gap-1.5 p-2"><div className="h-1 flex-1 rounded bg-white/30" /><span className="text-[9px] text-white/60">0:12</span></div>
             </div>
@@ -424,24 +425,24 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
         <div className="relative z-10">
           <span className="oc-fade-up inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold tracking-wide ring-1 ring-white/20" style={{ animationDelay: "0.05s" }}>
-            <Sparkles size={13} /> 100% free · self-hostable · no watermarks
+            <Sparkles size={13} /> {tr("auth.100_free_self_hostable_no_watermarks")}
           </span>
           <h1 className="oc-fade-up mt-5 max-w-md text-[2.7rem] font-extrabold leading-[1.05]" style={{ animationDelay: "0.12s" }}>
-            Everything you need to design anything.
+            {tr("auth.everything_you_need_to_design_anything")}
           </h1>
           <p className="oc-fade-up mt-3 max-w-sm text-white/80" style={{ animationDelay: "0.18s" }}>
-            Templates, photos, video, docs, whiteboards, and AI - one free, open design platform. No tiers, no limits.
+            {tr("auth.templates_photos_video_docs_whiteboards_and")}
           </p>
           <div className="oc-fade-up mt-6 flex max-w-md flex-wrap gap-2" style={{ animationDelay: "0.24s" }}>
-            {CHIPS.map((c) => (
+            {chips().map((c) => (
               <span key={c} className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white/90 ring-1 ring-white/15">{c}</span>
             ))}
           </div>
         </div>
 
         <p className="relative z-10 text-sm text-white/60">
-          Your designs, your data - open format, full export, forever.
-          <span className="mt-1 block text-xs text-white/40">© 2026 HyScaler. HyCanvas is a HyScaler® product.</span>
+          {tr("auth.your_designs_your_data_open_format_full_expo")}
+          <span className="mt-1 block text-xs text-white/40">{tr("auth.2026_hyscaler_hycanvas_is_a_hyscaler_product")}</span>
         </p>
       </div>
 
@@ -454,17 +455,17 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           </div>
 
           <h2 className="text-[1.7rem] font-bold tracking-tight text-neutral-900">
-            {isSignup ? "Create your free account" : "Welcome back"}
+            {isSignup ? tr("auth.create_your_free_account") : tr("auth.welcome_back")}
           </h2>
           <p className="mt-1.5 text-sm text-neutral-500">
-            {isSignup ? "Start designing in seconds - no card required." : "Sign in to pick up where you left off."}
+            {isSignup ? tr("auth.start_designing_in_seconds_no_card_required") : tr("auth.sign_in_to_pick_up_where_you_left_off")}
           </p>
 
           {/* Hold the method UI until the policy loads, so a disabled method is
               never shown and then removed. The spinner keeps its height so the
               pane does not jump when the real controls arrive. */}
           {!policyReady ? (
-            <div className="mt-7 grid h-40 place-items-center" role="status" aria-label="Loading sign-in options">
+            <div className="mt-7 grid h-40 place-items-center" role="status" aria-label={tr("auth.loading_sign_in_options")}>
               <span className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-300 border-t-brand-500" />
             </div>
           ) : (
@@ -478,13 +479,13 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
                   className="flex items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-surface px-4 py-2.5 text-sm font-semibold text-neutral-700 transition hover:border-neutral-400 hover:bg-neutral-50"
                 >
                   <ProviderIcon label={p.label} />
-                  Continue with {p.label}
+                  {tr("auth.continue_with_provider", { provider: p.label })}
                 </a>
               ))}
               {/* The "or" divider only makes sense when a local method follows. */}
               {(passwordOn || magicOn) && (
                 <div className="my-1 flex items-center gap-3 text-xs text-neutral-400">
-                  <span className="h-px flex-1 bg-neutral-200" /> or <span className="h-px flex-1 bg-neutral-200" />
+                  <span className="h-px flex-1 bg-neutral-200" /> {tr("auth.or")} <span className="h-px flex-1 bg-neutral-200" />
                 </div>
               )}
             </div>
@@ -496,21 +497,21 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           {noMethod ? (
             <div className="mt-7 rounded-xl bg-neutral-100 px-4 py-3 text-sm text-neutral-600">
               {isSignup
-                ? "Account creation is disabled on this instance."
-                : "Sign-in is unavailable. Contact your administrator."}
+                ? tr("auth.account_creation_is_disabled_on_this_instanc")
+                : tr("auth.sign_in_is_unavailable_contact_your_administ")}
             </div>
           ) : (
             <>
               {(passwordOn || magicOn) && (
                 <form onSubmit={onSubmit} className={`flex flex-col gap-4 ${oidcOn && providers.length > 0 ? "" : "mt-7"}`}>
                   {isSignup && passwordOn && !magicMode && (
-                    <Input label="Name" placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" autoFocus />
+                    <Input label={tr("auth.name")} placeholder={tr("auth.your_name")} value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" autoFocus />
                   )}
                   <Input
-                    label="Email"
+                    label={tr("auth.email")}
                     type="email"
                     required
-                    placeholder="you@example.com"
+                    placeholder={tr("auth.you_example_com")}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     autoComplete="email"
@@ -519,11 +520,11 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
                   {passwordOn && !magicMode && (
                     <div className="flex flex-col gap-1.5">
                       <Input
-                        label="Password"
+                        label={tr("auth.password")}
                         type="password"
                         required
                         minLength={8}
-                        placeholder="At least 8 characters"
+                        placeholder={tr("auth.at_least_8_characters")}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         autoComplete={isSignup ? "new-password" : "current-password"}
@@ -535,7 +536,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
                           disabled={busy}
                           className="self-end text-xs font-medium text-brand-ink hover:underline disabled:opacity-50"
                         >
-                          Forgot password?
+                          {tr("auth.forgot_password")}
                         </button>
                       )}
                     </div>
@@ -550,14 +551,14 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
                   )}
                   <Button type="submit" size="lg" block disabled={busy || !captchaOk}>
                     {busy
-                      ? "Please wait…"
+                      ? tr("auth.please_wait")
                       : magicMode
                         ? isSignup
-                          ? "Email me a sign-up link"
-                          : "Email me a sign-in link"
+                          ? tr("auth.email_me_a_sign_up_link")
+                          : tr("auth.email_me_a_sign_in_link")
                         : isSignup
-                          ? "Create account"
-                          : "Sign in"}
+                          ? tr("auth.create_account")
+                          : tr("auth.sign_in")}
                   </Button>
                 </form>
               )}
@@ -575,10 +576,10 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
                   className="mt-3 w-full text-center text-sm font-medium text-brand-ink hover:underline"
                 >
                   {magic
-                    ? "Use a password instead"
+                    ? tr("auth.use_a_password_instead")
                     : isSignup
-                      ? "Sign up with a magic link"
-                      : "Sign in with a magic link"}
+                      ? tr("auth.sign_up_with_a_magic_link")
+                      : tr("auth.sign_in_with_a_magic_link")}
                 </button>
               )}
             </>
@@ -588,16 +589,16 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
             <p className="mt-6 text-center text-sm text-neutral-500">
               {isSignup ? (
                 <>
-                  Already have an account?{" "}
+                  {tr("auth.already_have_an_account")}{" "}
                   <Link href="/login" className="font-semibold text-brand-ink hover:underline">
-                    Sign in
+                    {tr("auth.sign_in")}
                   </Link>
                 </>
               ) : (
                 <>
-                  New to HyCanvas?{" "}
+                  {tr("auth.new_to_hycanvas")}{" "}
                   <Link href="/signup" className="font-semibold text-brand-ink hover:underline">
-                    Create a free account
+                    {tr("auth.create_a_free_account")}
                   </Link>
                 </>
               )}

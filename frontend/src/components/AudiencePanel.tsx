@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Hand, Send, ThumbsUp, X, CheckCircle2 } from "lucide-react";
 import type { AudienceState } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
+import { tr } from "@/lib/i18n";
 
 const REACTIONS = ["👏", "❤️", "😂", "🎉", "🤯", "👍"];
 const POLL_MS = 5000;
@@ -64,10 +65,10 @@ export function AudiencePanel({ token, password }: { token: string; password?: s
     try {
       await oc.audienceAsk(token, { name: name.trim() || undefined, text, password });
       setQuestion("");
-      setNote("Question sent");
+      setNote(tr("app.question_sent"));
       await refresh();
     } catch {
-      setNote("Couldn't send that");
+      setNote(tr("app.couldnt_send_that"));
     } finally {
       setBusy(false);
     }
@@ -77,20 +78,20 @@ export function AudiencePanel({ token, password }: { token: string; password?: s
     return (
       <button
         onClick={() => setOpen(true)}
-        title="Interact: react, ask a question, vote"
-        aria-label="Open audience interaction"
-        className="fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-full bg-neutral-900/90 px-4 py-2.5 text-sm font-medium text-white shadow-xl backdrop-blur hover:bg-neutral-800"
+        title={tr("app.interact_react_ask_a_question_vote")}
+        aria-label={tr("app.open_audience_interaction")}
+        className="fixed bottom-4 end-4 z-40 flex items-center gap-2 rounded-full bg-neutral-900/90 px-4 py-2.5 text-sm font-medium text-white shadow-xl backdrop-blur hover:bg-neutral-800"
       >
-        <Hand size={16} /> Interact
+        <Hand size={16} /> {tr("app.interact")}
       </button>
     );
   }
 
   return (
-    <aside className="light fixed bottom-4 right-4 z-40 flex max-h-[70vh] w-80 flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xl">
+    <aside className="light fixed bottom-4 end-4 z-40 flex max-h-[70vh] w-80 flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xl">
       <header className="flex items-center justify-between border-b border-neutral-100 px-3 py-2">
-        <span className="text-sm font-semibold text-neutral-800">Audience</span>
-        <button onClick={() => setOpen(false)} aria-label="Close" className="rounded p-1 text-neutral-400 hover:bg-neutral-100">
+        <span className="text-sm font-semibold text-neutral-800">{tr("app.audience")}</span>
+        <button onClick={() => setOpen(false)} aria-label={tr("app.close")} className="rounded p-1 text-neutral-400 hover:bg-neutral-100">
           <X size={16} />
         </button>
       </header>
@@ -107,7 +108,7 @@ export function AudiencePanel({ token, password }: { token: string; password?: s
                 void oc
                   .audienceReact(token, { emoji: e, password })
                   .then(() => setNote(`Sent ${e}`))
-                  .catch(() => setNote("Could not send that reaction."));
+                  .catch(() => setNote(tr("app.could_not_send_that_reaction")));
               }}
               className="rounded-full p-1.5 text-xl transition hover:scale-125 hover:bg-neutral-100"
               aria-label={`React ${e}`}
@@ -124,7 +125,7 @@ export function AudiencePanel({ token, password }: { token: string; password?: s
             <div key={p.id} className="mb-3 rounded-xl border border-neutral-200 p-2.5">
               <p className="mb-1.5 text-sm font-medium text-neutral-800">
                 {p.question}
-                {!p.open && <span className="ml-1.5 rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-neutral-500">closed</span>}
+                {!p.open && <span className="ms-1.5 rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-neutral-500">{tr("app.closed")}</span>}
               </p>
               <div className="flex flex-col gap-1">
                 {p.options.map((opt, i) => {
@@ -137,14 +138,14 @@ export function AudiencePanel({ token, password }: { token: string; password?: s
                       onClick={() => {
                         void oc.audienceVotePoll(token, p.id, { voterKey: key.current, option: i, password }).then(refresh).catch(() => {});
                       }}
-                      className={`relative overflow-hidden rounded-lg border px-2 py-1.5 text-left text-xs transition ${
+                      className={`relative overflow-hidden rounded-lg border px-2 py-1.5 text-start text-xs transition ${
                         mine ? "border-brand-400 font-semibold text-brand-ink" : "border-neutral-200 text-neutral-700 hover:border-neutral-300"
                       } ${!p.open ? "opacity-80" : ""}`}
                     >
-                      <span className="absolute inset-y-0 left-0 bg-brand-100/70" style={{ width: `${pct}%` }} aria-hidden />
+                      <span className="absolute inset-y-0 start-0 bg-brand-100/70" style={{ width: `${pct}%` }} aria-hidden />
                       <span className="relative flex items-center justify-between">
                         <span className="truncate">{opt}</span>
-                        <span className="ml-2 shrink-0 tabular-nums text-neutral-500">{pct}%</span>
+                        <span className="ms-2 shrink-0 tabular-nums text-neutral-500">{pct}%</span>
                       </span>
                     </button>
                   );
@@ -160,17 +161,17 @@ export function AudiencePanel({ token, password }: { token: string; password?: s
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Your name (optional)"
+              placeholder={tr("app.your_name_optional")}
               className="w-28 rounded-lg border border-neutral-200 px-2 py-1.5 text-xs outline-none focus:border-brand-400"
             />
             <input
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") void ask(); }}
-              placeholder="Ask a question…"
+              placeholder={tr("app.ask_a_question")}
               className="min-w-0 flex-1 rounded-lg border border-neutral-200 px-2 py-1.5 text-xs outline-none focus:border-brand-400"
             />
-            <button onClick={() => void ask()} disabled={busy || !question.trim()} aria-label="Send question" className="rounded-lg bg-neutral-900 px-2.5 text-white disabled:opacity-40">
+            <button onClick={() => void ask()} disabled={busy || !question.trim()} aria-label={tr("app.send_question")} className="rounded-lg bg-neutral-900 px-2.5 text-white disabled:opacity-40">
               <Send size={13} />
             </button>
           </div>
@@ -179,7 +180,7 @@ export function AudiencePanel({ token, password }: { token: string; password?: s
               <button
                 onClick={() => { void oc.audienceVoteQuestion(token, q.id, { voterKey: key.current, password }).then(refresh).catch(() => {}); }}
                 disabled={q.voted}
-                title={q.voted ? "You upvoted this" : "Upvote"}
+                title={q.voted ? tr("app.you_upvoted_this") : tr("app.upvote")}
                 className={`mt-0.5 flex shrink-0 items-center gap-1 rounded px-1 py-0.5 text-[11px] tabular-nums ${q.voted ? "text-brand-ink" : "text-neutral-500 hover:bg-neutral-200"}`}
               >
                 <ThumbsUp size={11} /> {q.votes}
@@ -187,16 +188,16 @@ export function AudiencePanel({ token, password }: { token: string; password?: s
               <span className="min-w-0 flex-1 text-xs text-neutral-700">
                 {q.text}
                 <span className="mt-0.5 block text-[10px] text-neutral-400">
-                  {q.authorName || "Anonymous"}
+                  {q.authorName || tr("app.anonymous")}
                   {q.answered && (
-                    <span className="ml-1.5 inline-flex items-center gap-0.5 text-emerald-600"><CheckCircle2 size={10} /> answered</span>
+                    <span className="ms-1.5 inline-flex items-center gap-0.5 text-emerald-600"><CheckCircle2 size={10} /> {tr("app.answered")}</span>
                   )}
                 </span>
               </span>
             </div>
           ))}
           {state && state.questions.length === 0 && (
-            <p className="py-2 text-center text-xs text-neutral-400">No questions yet. Ask the first one!</p>
+            <p className="py-2 text-center text-xs text-neutral-400">{tr("app.no_questions_yet_ask_the_first_one")}</p>
           )}
         </div>
       </div>

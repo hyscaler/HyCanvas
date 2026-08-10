@@ -1,4 +1,5 @@
 // In-browser timeline export: record the preview compositor's canvas plus the
+import { CodedError } from "../errors";
 // WebAudio mix in real time via MediaRecorder. MP4 where the browser can mux
 // it, WebM (VP9/VP8) everywhere else. A realtime pass is the honest tradeoff
 // for a dependency-free exporter: a 60s video takes 60s to render.
@@ -54,7 +55,7 @@ export function startRecording(
       if (e.data.size > 0) chunks.push(e.data);
     };
     recorder.onstop = () => resolve(new Blob(chunks, { type: target.mimeType.split(";")[0] }));
-    recorder.onerror = () => reject(new Error("Recording failed."));
+    recorder.onerror = () => reject(new CodedError("errors.recording_failed", "Recording failed."));
   });
   recorder.start(1000);
   return {

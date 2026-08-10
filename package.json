@@ -10,6 +10,8 @@
   ],
   "scripts": {
     "gen:theme": "node scripts/gen-theme.mjs",
+    "i18n:extract": "node scripts/i18n-extract.mjs frontend/src/components frontend/src/pages frontend/src/lib frontend/src/store",
+    "i18n:coverage": "node scripts/i18n-coverage.mjs",
     "gen:theme:check": "node scripts/gen-theme.mjs --check",
     "gen:crdt-fold": "node scripts/build-crdt-fold.mjs",
     "lint:theme": "node scripts/check-theme-tokens.mjs",

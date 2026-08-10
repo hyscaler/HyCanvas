@@ -2,6 +2,7 @@
 // in-browser background remover. Presets are pure data (bundles of adjustment
 // ops) so applying one is a single `setEffects` undo step; the engine maps the
 // ops to its CSS-filter path (see @hc/engine effectsFilter / adjustmentOpToFilters).
+import { CodedError } from "./errors";
 
 /** One adjustment op: a named scalar the engine maps to a CSS filter. */
 export interface AdjOp {
@@ -132,7 +133,7 @@ export async function rasterizeToPng(blob: Blob, width: number, height: number):
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {
       const el = new Image();
       el.onload = () => resolve(el);
-      el.onerror = () => reject(new Error("Couldn't decode the image."));
+      el.onerror = () => reject(new CodedError("errors.image_decode_failed", "Couldn't decode the image."));
       el.src = url;
     });
     let w = Math.max(1, Math.round(width || img.naturalWidth || 1024));
@@ -144,10 +145,10 @@ export async function rasterizeToPng(blob: Blob, width: number, height: number):
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("Canvas is unavailable.");
+    if (!ctx) throw new CodedError("errors.canvas_unavailable", "Canvas is unavailable in this browser.");
     ctx.drawImage(img, 0, 0, w, h);
     return await new Promise<Blob>((resolve, reject) =>
-      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Couldn't rasterize the image."))), "image/png"),
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new CodedError("errors.image_rasterize_failed", "Couldn't rasterize the image."))), "image/png"),
     );
   } finally {
     URL.revokeObjectURL(url);
@@ -171,7 +172,7 @@ export async function removeBackground(
   onProgress?: (fraction: number) => void,
 ): Promise<BgRemovalResult> {
   if (typeof window === "undefined") {
-    throw new Error("Background removal runs in the browser only.");
+    throw new CodedError("errors.bg_removal_browser_only", "Background removal runs in the browser only.");
   }
   let removeBackgroundFn: (
     input: string | Blob,
@@ -181,7 +182,7 @@ export async function removeBackground(
     const mod = await import("@imgly/background-removal");
     removeBackgroundFn = (mod as unknown as { removeBackground: typeof removeBackgroundFn }).removeBackground;
   } catch {
-    throw new Error("Could not load the background remover. Check your connection and try again.");
+    throw new CodedError("errors.bg_remover_load_failed", "Could not load the background remover. Check your connection and try again.");
   }
   try {
     const blob = await removeBackgroundFn(input, {
@@ -196,8 +197,11 @@ export async function removeBackground(
     const dataUrl = await blobToDataUrl(blob);
     return { dataUrl };
   } catch (err) {
+    // The library's own errors are cryptic (fetch/wasm internals), so the code
+    // translates to a friendly message at the display boundary while the
+    // English message keeps the detail for logs.
     const detail = err instanceof Error ? err.message : String(err);
-    throw new Error(`Background removal failed: ${detail}`);
+    throw new CodedError("errors.background_removal_failed", `Background removal failed: ${detail}`);
   }
 }
 

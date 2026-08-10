@@ -50,6 +50,9 @@ import { useEditor } from "@/store/editor";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { useToast } from "@/components/ui/Toast";
+import { MIRROR_IN_RTL } from "@/lib/locale";
+import { tr } from "@/lib/i18n";
+import { userMessage } from "@/lib/errors";
 
 type Tab = "publish" | "planner" | "qr";
 
@@ -63,15 +66,15 @@ const ALL_PLATFORMS: SocialPlatform[] = [
   "youtube",
 ];
 
-const PLATFORM_LABEL: Record<SocialPlatform, string> = {
-  instagram: "Instagram",
-  facebook: "Facebook",
+const platformLabel = (): Record<SocialPlatform, string> => ({
+  instagram: tr("editor.instagram"),
+  facebook: tr("editor.facebook"),
   x: "X",
-  linkedin: "LinkedIn",
-  tiktok: "TikTok",
-  pinterest: "Pinterest",
-  youtube: "YouTube",
-};
+  linkedin: tr("editor.linkedin"),
+  tiktok: tr("editor.tiktok"),
+  pinterest: tr("editor.pinterest"),
+  youtube: tr("editor.youtube"),
+});
 
 // Status -> chip color, used in the planner and its legend.
 const STATUS_COLOR: Record<PostStatus, string> = {
@@ -83,12 +86,12 @@ const STATUS_COLOR: Record<PostStatus, string> = {
   canceled: "bg-neutral-100 text-neutral-400 line-through",
 };
 
-const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+const monthNames = () => [
+  tr("editor.january"), tr("editor.february"), tr("editor.march"), tr("editor.april"), tr("editor.may"), tr("editor.june"),
+  tr("editor.july"), tr("editor.august"), tr("editor.september"), tr("editor.october"), tr("editor.november"), tr("editor.december"),
 ];
 
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const weekdays = () => [tr("editor.mon"), tr("editor.tue"), tr("editor.wed"), tr("editor.thu"), tr("editor.fri"), tr("editor.sat"), tr("editor.sun")];
 
 function download(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -223,7 +226,7 @@ export function PublishDialog({
 
   function submitPublish() {
     if (selected.length === 0) {
-      toast.error("Pick at least one platform.");
+      toast.error(tr("editor.pick_at_least_one_platform"));
       return;
     }
     const nowMs = clockMs();
@@ -236,7 +239,7 @@ export function PublishDialog({
     let dueOffsetMin = tzNote().offsetMin;
     if (mode === "schedule") {
       if (!scheduledLocal) {
-        toast.error("Choose a date and time to schedule.");
+        toast.error(tr("editor.choose_a_date_and_time_to_schedule"));
         return;
       }
       scheduledAtIso = scheduledLocal; // already a local wall-clock ISO-ish string
@@ -279,8 +282,8 @@ export function PublishDialog({
     setPosts((cur) => [...cur, post]);
     toast.success(
       status === "scheduled"
-        ? "Post queued locally for its scheduled time. Connecting real accounts is coming soon."
-        : "Post recorded locally. Actual delivery to accounts is coming soon.",
+        ? tr("editor.post_queued_locally_for_its_scheduled_time_c")
+        : tr("editor.post_recorded_locally_actual_delivery_to_acc"),
     );
     // Jump to the planner so the user sees what they just created.
     setTab("planner");
@@ -296,7 +299,7 @@ export function PublishDialog({
       cur.map((p) => (p.id === id ? { ...p, status: "canceled" as PostStatus } : p)),
     );
     setOpenPostId(null);
-    toast.toast("Post canceled.", "info");
+    toast.toast(tr("editor.post_canceled"), "info");
   }
 
   // ---- Planner derived data ----
@@ -343,7 +346,7 @@ export function PublishDialog({
       qrSvg = qrToSvg(encodeQr(qrText, qrEc), { fg: qrFg, bg: qrBg, moduleSize: 6 });
     }
   } catch (e) {
-    qrError = e instanceof Error ? e.message : "Could not encode this value as a QR code.";
+    qrError = userMessage(e, tr("editor.could_not_encode_this_value_as_a_qr_code"));
   }
 
   function downloadQr() {
@@ -352,9 +355,9 @@ export function PublishDialog({
   }
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: "publish", label: "Publish", icon: <Send size={15} /> },
-    { id: "planner", label: "Planner", icon: <CalendarDays size={15} /> },
-    { id: "qr", label: "QR code", icon: <QrCodeIcon size={15} /> },
+    { id: "publish", label: tr("editor.publish"), icon: <Send size={15} /> },
+    { id: "planner", label: tr("editor.planner"), icon: <CalendarDays size={15} /> },
+    { id: "qr", label: tr("editor.qr_code"), icon: <QrCodeIcon size={15} /> },
   ];
 
   return (
@@ -369,7 +372,7 @@ export function PublishDialog({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-3.5">
           <h2 className="text-base font-semibold text-neutral-900">Publish &amp; schedule</h2>
-          <IconButton size="sm" aria-label="Close" onClick={onClose}>
+          <IconButton size="sm" aria-label={tr("editor.close")} onClick={onClose}>
             <X size={16} />
           </IconButton>
         </div>
@@ -408,7 +411,7 @@ export function PublishDialog({
             <div className="space-y-5">
               {/* Platform multi-select */}
               <div>
-                <div className="mb-2 text-sm font-medium text-neutral-700">Platforms</div>
+                <div className="mb-2 text-sm font-medium text-neutral-700">{tr("editor.platforms")}</div>
                 <div className="flex flex-wrap gap-2">
                   {ALL_PLATFORMS.map((p) => {
                     const on = selected.includes(p);
@@ -423,7 +426,7 @@ export function PublishDialog({
                             : "border-neutral-300 text-neutral-600 hover:border-neutral-400")
                         }
                       >
-                        {PLATFORM_LABEL[p]}
+                        {platformLabel()[p]}
                       </button>
                     );
                   })}
@@ -434,8 +437,8 @@ export function PublishDialog({
               {selected.length > 0 && (
                 <div>
                   <div className="mb-2 text-sm font-medium text-neutral-700">
-                    Proposed export sizes
-                    <span className="ml-2 font-normal text-neutral-400">
+                    {tr("editor.proposed_export_sizes")}
+                    <span className="ms-2 font-normal text-neutral-400">
                       source {sourceW}&times;{sourceH}
                     </span>
                   </div>
@@ -445,10 +448,10 @@ export function PublishDialog({
                         key={r.platform}
                         className="flex items-center justify-between rounded-md bg-neutral-50 px-3 py-1.5 text-sm"
                       >
-                        <span className="text-neutral-700">{PLATFORM_LABEL[r.platform]}</span>
+                        <span className="text-neutral-700">{platformLabel()[r.platform]}</span>
                         <span className="text-neutral-500">
                           {r.width}&times;{r.height}
-                          <span className="ml-2 rounded bg-neutral-200 px-1.5 py-0.5 text-[11px] uppercase text-neutral-600">
+                          <span className="ms-2 rounded bg-neutral-200 px-1.5 py-0.5 text-[11px] uppercase text-neutral-600">
                             {r.mode}
                           </span>
                         </span>
@@ -466,7 +469,7 @@ export function PublishDialog({
               {/* Caption */}
               <div>
                 <div className="mb-2 flex items-center justify-between text-sm font-medium text-neutral-700">
-                  <span>Caption</span>
+                  <span>{tr("editor.caption")}</span>
                   {strictest && strictValidation && (
                     <span
                       className={
@@ -474,7 +477,7 @@ export function PublishDialog({
                         (strictValidation.ok ? "text-neutral-400" : "text-red-600")
                       }
                     >
-                      {strictValidation.length}/{strictValidation.limit} ({PLATFORM_LABEL[strictest]})
+                      {strictValidation.length}/{strictValidation.limit} ({platformLabel()[strictest]})
                     </span>
                   )}
                 </div>
@@ -482,11 +485,11 @@ export function PublishDialog({
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   rows={4}
-                  placeholder="Write your caption. Use #hashtags inline."
+                  placeholder={tr("editor.write_your_caption_use_hashtags_inline")}
                   className="w-full resize-y rounded-md border border-neutral-300 p-2.5 text-sm outline-none focus:border-neutral-500"
                 />
                 {strictValidation && !strictValidation.ok && (
-                  <ul className="mt-1 list-disc pl-4 text-[11px] text-red-600">
+                  <ul className="mt-1 list-disc ps-4 text-[11px] text-red-600">
                     {strictValidation.errors.map((err, i) => (
                       <li key={i}>{err}</li>
                     ))}
@@ -521,7 +524,7 @@ export function PublishDialog({
                           : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200")
                       }
                     >
-                      {m === "now" ? "Publish now" : "Schedule"}
+                      {m === "now" ? tr("editor.publish_now") : tr("editor.schedule")}
                     </button>
                   ))}
                 </div>
@@ -542,10 +545,10 @@ export function PublishDialog({
 
               <div className="flex justify-end gap-2">
                 <Button variant="ghost" onClick={onClose}>
-                  Cancel
+                  {tr("editor.cancel")}
                 </Button>
                 <Button onClick={submitPublish}>
-                  {mode === "now" ? "Publish now" : "Schedule"}
+                  {mode === "now" ? tr("editor.publish_now") : tr("editor.schedule")}
                 </Button>
               </div>
             </div>
@@ -556,14 +559,14 @@ export function PublishDialog({
               {/* Calendar nav + filter */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <IconButton size="sm" aria-label="Previous month" onClick={prevMonth}>
-                    <ChevronLeft size={16} />
+                  <IconButton size="sm" aria-label={tr("editor.previous_month")} onClick={prevMonth}>
+                    <ChevronLeft size={16} className={MIRROR_IN_RTL} />
                   </IconButton>
                   <span className="min-w-[9rem] text-center text-sm font-medium text-neutral-800">
-                    {MONTH_NAMES[calMonth - 1]} {calYear}
+                    {monthNames()[calMonth - 1]} {calYear}
                   </span>
-                  <IconButton size="sm" aria-label="Next month" onClick={nextMonth}>
-                    <ChevronRight size={16} />
+                  <IconButton size="sm" aria-label={tr("editor.next_month")} onClick={nextMonth}>
+                    <ChevronRight size={16} className={MIRROR_IN_RTL} />
                   </IconButton>
                 </div>
                 <select
@@ -571,10 +574,10 @@ export function PublishDialog({
                   onChange={(e) => setPlanFilter(e.target.value as SocialPlatform | "all")}
                   className="rounded border border-neutral-300 px-2 py-1 text-sm"
                 >
-                  <option value="all">All platforms</option>
+                  <option value="all">{tr("editor.all_platforms")}</option>
                   {ALL_PLATFORMS.map((p) => (
                     <option key={p} value={p}>
-                      {PLATFORM_LABEL[p]}
+                      {platformLabel()[p]}
                     </option>
                   ))}
                 </select>
@@ -582,7 +585,7 @@ export function PublishDialog({
 
               {/* Weekday header */}
               <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-neutral-400">
-                {WEEKDAYS.map((d) => (
+                {weekdays().map((d) => (
                   <div key={d}>{d}</div>
                 ))}
               </div>
@@ -595,7 +598,7 @@ export function PublishDialog({
                     <div
                       key={cell.dateIso}
                       className={
-                        "min-h-[4.5rem] rounded-md border p-1 text-left " +
+                        "min-h-[4.5rem] rounded-md border p-1 text-start " +
                         (cell.inMonth
                           ? "border-neutral-200 bg-surface"
                           : "border-neutral-100 bg-neutral-50 text-neutral-300")
@@ -610,12 +613,12 @@ export function PublishDialog({
                             key={p.id}
                             onClick={() => setOpenPostId(p.id)}
                             className={
-                              "block w-full truncate rounded px-1 py-0.5 text-left text-[10px] " +
+                              "block w-full truncate rounded px-1 py-0.5 text-start text-[10px] " +
                               STATUS_COLOR[p.status]
                             }
-                            title={p.targets.map((t) => PLATFORM_LABEL[t.platform]).join(", ")}
+                            title={p.targets.map((t) => platformLabel()[t.platform]).join(", ")}
                           >
-                            {p.targets.map((t) => PLATFORM_LABEL[t.platform]).join(", ")}
+                            {p.targets.map((t) => platformLabel()[t.platform]).join(", ")}
                           </button>
                         ))}
                       </div>
@@ -638,7 +641,7 @@ export function PublishDialog({
 
               {posts.length === 0 && (
                 <p className="pt-2 text-center text-sm text-neutral-400">
-                  No posts yet. Create one from the Publish tab.
+                  {tr("editor.no_posts_yet_create_one_from_the_publish_tab")}
                 </p>
               )}
 
@@ -657,13 +660,13 @@ export function PublishDialog({
                       onClick={() => setOpenPostId(null)}
                       className="text-[11px] text-neutral-400 hover:text-neutral-700"
                     >
-                      Close
+                      {tr("editor.close")}
                     </button>
                   </div>
                   <div className="mb-1 text-xs text-neutral-500">
-                    {openPost.targets.map((t) => PLATFORM_LABEL[t.platform]).join(", ")}
+                    {openPost.targets.map((t) => platformLabel()[t.platform]).join(", ")}
                     {openPost.scheduledAt && (
-                      <span className="ml-2">
+                      <span className="ms-2">
                         scheduled {openPost.scheduledAt.replace("T", " ")} ({openPost.timezone})
                       </span>
                     )}
@@ -676,7 +679,7 @@ export function PublishDialog({
                       onClick={() => cancelPost(openPost.id)}
                       className="mt-2 flex items-center gap-1 text-xs font-medium text-red-600 hover:underline"
                     >
-                      <Trash2 size={13} /> Cancel post
+                      <Trash2 size={13} /> {tr("editor.cancel_post")}
                     </button>
                   )}
                 </div>
@@ -688,7 +691,7 @@ export function PublishDialog({
             <div className="space-y-4">
               <div>
                 <label className="mb-1 block text-sm font-medium text-neutral-700">
-                  Target URL or text
+                  {tr("editor.target_url_or_text")}
                 </label>
                 <input
                   type="text"
@@ -700,7 +703,7 @@ export function PublishDialog({
 
               <div className="flex flex-wrap gap-4">
                 <label className="flex items-center gap-2 text-sm text-neutral-600">
-                  Error correction
+                  {tr("editor.error_correction")}
                   <select
                     value={qrEc}
                     onChange={(e) => setQrEc(e.target.value as QrEcLevel)}
@@ -713,7 +716,7 @@ export function PublishDialog({
                   </select>
                 </label>
                 <label className="flex items-center gap-2 text-sm text-neutral-600">
-                  Foreground
+                  {tr("editor.foreground")}
                   <input
                     type="color"
                     value={qrFg}
@@ -722,7 +725,7 @@ export function PublishDialog({
                   />
                 </label>
                 <label className="flex items-center gap-2 text-sm text-neutral-600">
-                  Background
+                  {tr("editor.background")}
                   <input
                     type="color"
                     value={qrBg}
@@ -740,19 +743,19 @@ export function PublishDialog({
                     // eslint-disable-next-line @next/next/no-img-element -- inline data-URL SVG, not a remote asset
                     <img
                       src={`data:image/svg+xml;utf8,${encodeURIComponent(qrSvg)}`}
-                      alt="QR code preview"
+                      alt={tr("editor.qr_code_preview")}
                       width={216}
                       height={216}
                     />
                   ) : (
-                    <p className="text-sm text-neutral-400">Enter a value to generate a code.</p>
+                    <p className="text-sm text-neutral-400">{tr("editor.enter_a_value_to_generate_a_code")}</p>
                   )}
                 </div>
                 {qrText.trim() && !qrError && (
                   <p className="max-w-full truncate text-[11px] text-neutral-400">{qrText}</p>
                 )}
                 <Button variant="ghost" onClick={downloadQr} disabled={!qrSvg}>
-                  <Download size={15} className="mr-1.5" /> Download SVG
+                  <Download size={15} className="me-1.5" /> {tr("editor.download_svg")}
                 </Button>
               </div>
             </div>

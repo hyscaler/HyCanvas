@@ -7,19 +7,20 @@ import { LayerPanel } from "./LayerPanel";
 import { ReadingOrderPane } from "./ReadingOrderPane";
 import { ElementsPanel, TextPanel, UploadsPanel, StockPanel, AppsPanel, AiPanel, TemplatesPanel, PanelShell } from "./EditorPanels";
 import { BrandPanel } from "./BrandPanel";
+import { tr } from "@/lib/i18n";
 
 type Tool = "templates" | "elements" | "text" | "ai" | "uploads" | "stock" | "apps" | "brand" | "layers";
 
-const TOOLS: { id: Tool; icon: typeof Shapes; label: string }[] = [
-  { id: "templates", icon: LayoutTemplate, label: "Templates" },
-  { id: "elements", icon: Shapes, label: "Elements" },
-  { id: "text", icon: Type, label: "Text" },
+const tools = (): { id: Tool; icon: typeof Shapes; label: string }[] => [
+  { id: "templates", icon: LayoutTemplate, label: tr("editor.templates") },
+  { id: "elements", icon: Shapes, label: tr("editor.elements") },
+  { id: "text", icon: Type, label: tr("editor.text") },
   { id: "ai", icon: Sparkles, label: "AI" },
-  { id: "uploads", icon: Upload, label: "Uploads" },
-  { id: "stock", icon: ImagePlus, label: "Stock" },
-  { id: "apps", icon: LayoutGrid, label: "Apps" },
-  { id: "brand", icon: Palette, label: "Brand" },
-  { id: "layers", icon: Layers, label: "Layers" },
+  { id: "uploads", icon: Upload, label: tr("editor.uploads") },
+  { id: "stock", icon: ImagePlus, label: tr("editor.stock") },
+  { id: "apps", icon: LayoutGrid, label: tr("editor.apps") },
+  { id: "brand", icon: Palette, label: tr("editor.brand") },
+  { id: "layers", icon: Layers, label: tr("editor.layers") },
 ];
 
 export function ToolRail({ workspaceId, overlay = false, defaultCollapsed = false, kind = "design" }: { workspaceId: string | null; overlay?: boolean; defaultCollapsed?: boolean; kind?: "design" | "whiteboard" }) {
@@ -44,20 +45,22 @@ export function ToolRail({ workspaceId, overlay = false, defaultCollapsed = fals
       case "stock": return <StockPanel workspaceId={workspaceId} />;
       case "apps": return <AppsPanel />;
       case "brand": return <BrandPanel workspaceId={workspaceId} />;
-      case "layers": return <PanelShell title="Layers"><LayersTabs /></PanelShell>;
+      case "layers": return <PanelShell title={tr("editor.layers")}><LayersTabs /></PanelShell>;
       default: return null;
     }
   })();
 
   return (
-    <div className="relative flex h-full shrink-0">
+    // A landmark, so the rail and its slide-out panel are reachable as a
+    // region rather than announced as loose content outside any landmark.
+    <aside aria-label={tr("editor.editor_tools")} className="relative flex h-full shrink-0">
       <div
         role="toolbar"
-        aria-label="Editor tools"
+        aria-label={tr("editor.editor_tools")}
         aria-orientation="vertical"
-        className="flex w-[68px] shrink-0 flex-col items-center gap-1 border-r border-neutral-200 bg-surface py-3"
+        className="flex w-[68px] shrink-0 flex-col items-center gap-1 border-e border-neutral-200 bg-surface py-3"
       >
-        {TOOLS.filter((t) => kind === "design" || t.id !== "templates").map((t) => {
+        {tools().filter((t) => kind === "design" || t.id !== "templates").map((t) => {
           const isActive = active === t.id;
           return (
             <button
@@ -81,11 +84,11 @@ export function ToolRail({ workspaceId, overlay = false, defaultCollapsed = fals
           Inline mode (lg+): the panel is a normal flex sibling that pushes the
           canvas. */}
       {overlay && panel ? (
-        <div className="absolute left-full top-0 z-30 h-full shadow-xl">{panel}</div>
+        <div className="absolute start-full top-0 z-30 h-full shadow-xl">{panel}</div>
       ) : (
         panel
       )}
-    </div>
+    </aside>
   );
 }
 
@@ -105,10 +108,10 @@ function LayersTabs() {
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 border-b border-neutral-200">
         <button type="button" onClick={() => setTab("layers")} className={tabCls(tab === "layers")} data-testid="tab-layers">
-          Layers
+          {tr("editor.layers")}
         </button>
         <button type="button" onClick={() => setTab("reading")} className={tabCls(tab === "reading")} data-testid="tab-reading-order">
-          Reading order
+          {tr("editor.reading_order")}
         </button>
       </div>
       <div className="min-h-0 flex-1">{tab === "layers" ? <LayerPanel /> : <ReadingOrderPane />}</div>

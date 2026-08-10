@@ -36,12 +36,20 @@ import { imageAssets } from "@/lib/assetProvider";
 import { oc, resolveAssetUrl, uploadAssetWithProgress } from "@/lib/sdk";
 import { MagicResizeButton } from "./MagicResizeDialog";
 import { useToast } from "@/components/ui/Toast";
+import { tr } from "@/lib/i18n";
+import { CodedError, userMessage } from "@/lib/errors";
 
 type IconType = ComponentType<{ size?: number | string; strokeWidth?: number; className?: string }>;
 
 function pad2(n: number): string {
   return Math.max(0, Math.min(255, Math.round(n * 255))).toString(16).padStart(2, "0");
 }
+
+// `fontStyle` values are file-format tokens, never localized: the engine
+// parses weight/italic out of them by ENGLISH name and they persist into the
+// design file, so a translated token corrupts the doc for every collaborator.
+const regularFontStyle = "Regular";
+const italicFontStyle = "Italic";
 
 const FONT_CATEGORIES: FontCategory[] = ["sans-serif", "serif", "display", "handwriting", "monospace"];
 
@@ -57,13 +65,13 @@ const FONT_FAMILY_OPTIONS = FONT_CATEGORIES.map((cat) => (
     ))}
   </optgroup>
 ));
-const WEIGHTS: { v: number; label: string }[] = [
-  { v: 300, label: "Light" },
-  { v: 400, label: "Regular" },
-  { v: 500, label: "Medium" },
-  { v: 600, label: "Semibold" },
-  { v: 700, label: "Bold" },
-  { v: 800, label: "Extrabold" },
+const weights = (): { v: number; label: string }[] => [
+  { v: 300, label: tr("editor.light") },
+  { v: 400, label: tr("editor.regular") },
+  { v: 500, label: tr("editor.medium") },
+  { v: 600, label: tr("editor.semibold") },
+  { v: 700, label: tr("editor.bold") },
+  { v: 800, label: tr("editor.extrabold") },
 ];
 
 /** Style of the first run / first paragraph (the panel edits the whole node). */
@@ -121,7 +129,7 @@ function RecentColors({ onPick }: { onPick: (hex: string) => void }) {
   if (!recents.length) return null;
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-[10px] uppercase tracking-wide text-neutral-400">Recent</span>
+      <span className="text-[10px] uppercase tracking-wide text-neutral-400">{tr("editor.recent")}</span>
       <div className="flex flex-wrap gap-1.5">
         {recents.map((c) => <Swatch key={c} color={c} onClick={() => onPick(c)} />)}
       </div>
@@ -135,7 +143,7 @@ function ColorHarmony({ baseHex, onPick }: { baseHex: string; onPick: (hex: stri
   const swatches = colorHarmony(colorFromHex(baseHex), scheme).map((c) => colorHex(c));
   return (
     <div className="flex flex-col gap-1">
-      <select value={scheme} onChange={(e) => setScheme(e.target.value as HarmonyScheme)} className="self-start rounded-md border border-neutral-200 bg-surface px-1.5 py-0.5 text-[11px] text-neutral-500 outline-none">
+      <select aria-label={tr("editor.color_harmony")} value={scheme} onChange={(e) => setScheme(e.target.value as HarmonyScheme)} className="self-start rounded-md border border-neutral-200 bg-surface px-1.5 py-0.5 text-[11px] text-neutral-500 outline-none">
         {HARMONY_SCHEMES.map((s) => <option key={s} value={s}>{s.replace("-", " ")}</option>)}
       </select>
       <div className="flex flex-wrap gap-1.5">
@@ -176,7 +184,7 @@ function ImagePalette({ assetId }: { assetId: string }) {
   return (
     <div className="flex flex-col gap-1.5">
       <button onClick={extract} disabled={busy} className="self-start rounded-lg bg-neutral-100 px-2.5 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-200 disabled:opacity-40">
-        {busy ? "Reading…" : colors ? "Re-extract palette" : "Extract palette"}
+        {busy ? tr("editor.reading") : colors ? tr("editor.re_extract_palette") : tr("editor.extract_palette")}
       </button>
       {colors && colors.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
@@ -209,7 +217,7 @@ function ChartDataTable({ node }: { node: ChartNode }) {
   const cell = "rounded border border-neutral-200 px-1 py-0.5 text-[11px] outline-none focus:border-brand-400";
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="text-[11px] text-neutral-400">Data</span>
+      <span className="text-[11px] text-neutral-400">{tr("editor.data")}</span>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-[11px]">
           <thead>
@@ -218,8 +226,8 @@ function ChartDataTable({ node }: { node: ChartNode }) {
               {series.map((s, j) => (
                 <th key={`sh-${j}`} className="p-0.5">
                   <div className="flex items-center gap-0.5">
-                    <input defaultValue={s.name} key={`sn-${id}-${j}-${s.name}`} onBlur={(e) => setSeriesName(j, e.target.value.trim() || `Series ${j + 1}`)} className={`${cell} w-16`} />
-                    {series.length > 1 && <button onClick={() => removeSeries(j)} className="text-neutral-300 hover:text-red-600" title="Remove series">×</button>}
+                    <input defaultValue={s.name} key={`sn-${id}-${j}-${s.name}`} aria-label={tr("editor.series_n_name", { n: j + 1 })} onBlur={(e) => setSeriesName(j, e.target.value.trim() || `Series ${j + 1}`)} className={`${cell} w-16`} />
+                    {series.length > 1 && <button onClick={() => removeSeries(j)} className="text-neutral-300 hover:text-red-600" title={tr("editor.remove_series")}>×</button>}
                   </div>
                 </th>
               ))}
@@ -230,13 +238,13 @@ function ChartDataTable({ node }: { node: ChartNode }) {
               <tr key={`row-${r}`}>
                 <td className="p-0.5">
                   <div className="flex items-center gap-0.5">
-                    <input defaultValue={c} key={`cn-${id}-${r}-${c}`} onBlur={(e) => setCat(r, e.target.value.trim() || `Item ${r + 1}`)} className={`${cell} w-16`} />
-                    {cats.length > 1 && <button onClick={() => removeRow(r)} className="text-neutral-300 hover:text-red-600" title="Remove row">×</button>}
+                    <input defaultValue={c} key={`cn-${id}-${r}-${c}`} aria-label={tr("editor.row_n_label", { n: r + 1 })} onBlur={(e) => setCat(r, e.target.value.trim() || `Item ${r + 1}`)} className={`${cell} w-16`} />
+                    {cats.length > 1 && <button onClick={() => removeRow(r)} className="text-neutral-300 hover:text-red-600" title={tr("editor.remove_row")}>×</button>}
                   </div>
                 </td>
                 {series.map((s, j) => (
                   <td key={`c-${r}-${j}`} className="p-0.5">
-                    <input type="number" defaultValue={s.values[r] ?? 0} key={`v-${id}-${r}-${j}-${s.values[r] ?? 0}`} onBlur={(e) => setCell(r, j, Number(e.target.value) || 0)} className={`${cell} w-14`} />
+                    <input type="number" defaultValue={s.values[r] ?? 0} key={`v-${id}-${r}-${j}-${s.values[r] ?? 0}`} aria-label={tr("editor.row_n_series_m_value", { n: r + 1, m: j + 1 })} onBlur={(e) => setCell(r, j, Number(e.target.value) || 0)} className={`${cell} w-14`} />
                   </td>
                 ))}
               </tr>
@@ -298,23 +306,23 @@ function VideoSection({ node }: { node: Node }) {
   };
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
   return (
-    <Section title="Video" order={ORDER.type}>
-      {!el() && <p className="text-[11px] text-neutral-400">Loading video…</p>}
+    <Section title={tr("editor.video")} order={ORDER.type}>
+      {!el() && <p className="text-[11px] text-neutral-400">{tr("editor.loading_video")}</p>}
       <div className="flex items-center gap-2">
-        <button onClick={play} className="grid h-8 w-8 place-items-center rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200" title={playing ? "Pause" : "Play"}>{playing ? "❚❚" : "▶"}</button>
-        <input type="range" min={0} max={Math.max(0.1, dur)} step={0.05} value={time} onChange={(e) => seek(Number(e.target.value))} className="flex-1 accent-brand-600" />
-        <span className="w-16 shrink-0 text-right text-[10px] tabular-nums text-neutral-400">{fmt(time)} / {fmt(dur)}</span>
+        <button onClick={play} className="grid h-8 w-8 place-items-center rounded-lg bg-neutral-100 text-neutral-700 hover:bg-neutral-200" title={playing ? tr("editor.pause") : tr("editor.play")}>{playing ? "❚❚" : "▶"}</button>
+        <input type="range" min={0} max={Math.max(0.1, dur)} step={0.05} value={time} aria-label={tr("editor.scrub_video")} onChange={(e) => seek(Number(e.target.value))} className="flex-1 accent-brand-600" />
+        <span className="w-16 shrink-0 text-end text-[10px] tabular-nums text-neutral-400">{fmt(time)} / {fmt(dur)}</span>
       </div>
       <div className="flex items-center gap-2">
-        <button onClick={() => st.setVideoProps(id, { trimStartMs: Math.round(time * 1000) })} className="flex-1 rounded-lg bg-neutral-100 px-2 py-1.5 text-[11px] text-neutral-600 hover:bg-neutral-200" title="Trim start to playhead">Set start ({fmt(trimStart)})</button>
-        <button onClick={() => st.setVideoProps(id, { trimEndMs: Math.round(time * 1000) })} className="flex-1 rounded-lg bg-neutral-100 px-2 py-1.5 text-[11px] text-neutral-600 hover:bg-neutral-200" title="Trim end to playhead">Set end ({fmt(trimEnd)})</button>
+        <button onClick={() => st.setVideoProps(id, { trimStartMs: Math.round(time * 1000) })} className="flex-1 rounded-lg bg-neutral-100 px-2 py-1.5 text-[11px] text-neutral-600 hover:bg-neutral-200" title={tr("editor.trim_start_to_playhead")}>Set start ({fmt(trimStart)})</button>
+        <button onClick={() => st.setVideoProps(id, { trimEndMs: Math.round(time * 1000) })} className="flex-1 rounded-lg bg-neutral-100 px-2 py-1.5 text-[11px] text-neutral-600 hover:bg-neutral-200" title={tr("editor.trim_end_to_playhead")}>Set end ({fmt(trimEnd)})</button>
         {((v.trimStartMs ?? 0) > 0 || (v.trimEndMs ?? 0) > 0) && (
-          <button onClick={() => st.setVideoProps(id, { trimStartMs: 0, trimEndMs: 0 })} className="rounded-lg bg-neutral-100 px-2 py-1.5 text-[11px] text-neutral-500 hover:bg-neutral-200" title="Clear trim">↺</button>
+          <button onClick={() => st.setVideoProps(id, { trimStartMs: 0, trimEndMs: 0 })} className="rounded-lg bg-neutral-100 px-2 py-1.5 text-[11px] text-neutral-500 hover:bg-neutral-200" title={tr("editor.clear_trim")}>↺</button>
         )}
       </div>
       <div className="flex items-center gap-4 text-[11px] text-neutral-600">
-        <label className="flex items-center gap-1.5"><input type="checkbox" checked={!!v.muted} onChange={(e) => st.setVideoProps(id, { muted: e.target.checked })} /> Mute</label>
-        <label className="flex items-center gap-1.5"><input type="checkbox" checked={!!v.loop} onChange={(e) => st.setVideoProps(id, { loop: e.target.checked })} /> Loop</label>
+        <label className="flex items-center gap-1.5"><input type="checkbox" checked={!!v.muted} onChange={(e) => st.setVideoProps(id, { muted: e.target.checked })} /> {tr("editor.mute")}</label>
+        <label className="flex items-center gap-1.5"><input type="checkbox" checked={!!v.loop} onChange={(e) => st.setVideoProps(id, { loop: e.target.checked })} /> {tr("editor.loop")}</label>
       </div>
     </Section>
   );
@@ -454,10 +462,10 @@ function GradientEditor({ g, onChange }: { g: GradientFill; onChange: (patch: Pa
       <div className="flex flex-col gap-1">
         {g.stops.map((s, i) => (
           <div key={i} className="flex items-center gap-1.5">
-            <input type="color" value={colorHex(s.color)} onChange={(e) => setStop(i, { color: { srgb: { ...colorFromHex(e.target.value).srgb, a: s.color.srgb.a ?? 1 } } })} className="oc-color h-7 w-8 shrink-0" title="Stop color" />
-            <input type="range" min={0} max={100} value={Math.round(s.position * 100)} onChange={(e) => setStop(i, { position: Number(e.target.value) / 100 })} className="flex-1" title={`Position ${Math.round(s.position * 100)}%`} />
-            <input type="range" min={0} max={100} value={Math.round((s.color.srgb.a ?? 1) * 100)} onChange={(e) => setStop(i, { color: { srgb: { ...s.color.srgb, a: Number(e.target.value) / 100 } } })} className="w-12 shrink-0 accent-neutral-400" title={`Opacity ${Math.round((s.color.srgb.a ?? 1) * 100)}%`} />
-            <button onClick={() => removeStop(i)} disabled={g.stops.length <= 2} className="text-neutral-300 hover:text-red-600 disabled:opacity-30" title="Remove stop">×</button>
+            <input type="color" value={colorHex(s.color)} onChange={(e) => setStop(i, { color: { srgb: { ...colorFromHex(e.target.value).srgb, a: s.color.srgb.a ?? 1 } } })} className="oc-color h-7 w-8 shrink-0" title={tr("editor.stop_color")} aria-label={tr("editor.stop_color")} />
+            <input type="range" min={0} max={100} value={Math.round(s.position * 100)} aria-label={tr("editor.position")} onChange={(e) => setStop(i, { position: Number(e.target.value) / 100 })} className="flex-1" title={`Position ${Math.round(s.position * 100)}%`} />
+            <input type="range" min={0} max={100} value={Math.round((s.color.srgb.a ?? 1) * 100)} aria-label={tr("editor.opacity")} onChange={(e) => setStop(i, { color: { srgb: { ...s.color.srgb, a: Number(e.target.value) / 100 } } })} className="w-12 shrink-0 accent-neutral-400" title={`Opacity ${Math.round((s.color.srgb.a ?? 1) * 100)}%`} />
+            <button onClick={() => removeStop(i)} disabled={g.stops.length <= 2} className="text-neutral-300 hover:text-red-600 disabled:opacity-30" title={tr("editor.remove_stop")}>×</button>
           </div>
         ))}
       </div>
@@ -473,17 +481,17 @@ function GradientEditor({ g, onChange }: { g: GradientFill; onChange: (patch: Pa
         return (
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-2">
-              <span className="w-12 shrink-0 text-[11px] text-neutral-400">Center X</span>
-              <input type="range" min={0} max={100} value={Math.round(c.x * 100)} onChange={(e) => setCenter({ x: Number(e.target.value) / 100 })} className="flex-1 accent-brand-600" />
+              <span className="w-12 shrink-0 text-[11px] text-neutral-400">{tr("editor.center_x")}</span>
+              <input type="range" min={0} max={100} value={Math.round(c.x * 100)} aria-label={tr("editor.center_x")} onChange={(e) => setCenter({ x: Number(e.target.value) / 100 })} className="flex-1 accent-brand-600" />
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-12 shrink-0 text-[11px] text-neutral-400">Center Y</span>
-              <input type="range" min={0} max={100} value={Math.round(c.y * 100)} onChange={(e) => setCenter({ y: Number(e.target.value) / 100 })} className="flex-1 accent-brand-600" />
+              <span className="w-12 shrink-0 text-[11px] text-neutral-400">{tr("editor.center_y")}</span>
+              <input type="range" min={0} max={100} value={Math.round(c.y * 100)} aria-label={tr("editor.center_y")} onChange={(e) => setCenter({ y: Number(e.target.value) / 100 })} className="flex-1 accent-brand-600" />
             </div>
             {g.gradient === "radial" && (
               <div className="flex items-center gap-2">
-                <span className="w-12 shrink-0 text-[11px] text-neutral-400">Radius</span>
-                <input type="range" min={5} max={150} value={Math.round((g.radius ?? 0.5) * 100)} onChange={(e) => onChange({ radius: Number(e.target.value) / 100 })} className="flex-1 accent-brand-600" />
+                <span className="w-12 shrink-0 text-[11px] text-neutral-400">{tr("editor.radius")}</span>
+                <input type="range" min={5} max={150} value={Math.round((g.radius ?? 0.5) * 100)} aria-label={tr("editor.radius")} onChange={(e) => onChange({ radius: Number(e.target.value) / 100 })} className="flex-1 accent-brand-600" />
               </div>
             )}
           </div>
@@ -496,7 +504,7 @@ function GradientEditor({ g, onChange }: { g: GradientFill; onChange: (patch: Pa
             onClick={() => onChange({ stops: [{ position: 0, color: colorFromHex(a) }, { position: 1, color: colorFromHex(b) }] })}
             style={{ background: `linear-gradient(90deg, ${a}, ${b})` }}
             className="h-5 w-7 rounded border border-neutral-300"
-            title="Apply preset"
+            title={tr("editor.apply_preset")}
           />
         ))}
       </div>
@@ -531,7 +539,7 @@ function QrLogoControl({ id, logoAssetId, logoScale, workspaceId }: { id: string
       const dataUrl = await new Promise<string>((res, rej) => {
         const r = new FileReader();
         r.onload = () => res(String(r.result));
-        r.onerror = () => rej(new Error("read failed"));
+        r.onerror = () => rej(new CodedError("errors.file_read_failed", "Could not read the file."));
         r.readAsDataURL(file);
       });
       const asset = await uploadAssetWithProgress(workspaceId, { filename: file.name, dataBase64: dataUrl.split(",")[1] ?? "" });
@@ -543,27 +551,27 @@ function QrLogoControl({ id, logoAssetId, logoScale, workspaceId }: { id: string
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between text-[11px] text-neutral-400">
-        <span>Center logo</span>
+        <span>{tr("editor.center_logo")}</span>
         {logoAssetId && (
-          <button onClick={() => useEditor.getState().setQrLogo(id, null)} className="text-[11px] text-neutral-500 hover:text-neutral-800">Remove</button>
+          <button onClick={() => useEditor.getState().setQrLogo(id, null)} className="text-[11px] text-neutral-500 hover:text-neutral-800">{tr("editor.remove")}</button>
         )}
       </div>
       <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => void onUpload(e)} />
       {logoAssetId ? (
         <div className="flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          {logoUrl && <img src={logoUrl} alt="QR logo" className="h-10 w-10 rounded border border-neutral-200 object-contain" />}
-          <button onClick={() => fileRef.current?.click()} disabled={busy || !workspaceId} className={btn}>{busy ? "Uploading…" : "Replace…"}</button>
+          {logoUrl && <img src={logoUrl} alt={tr("editor.qr_logo")} className="h-10 w-10 rounded border border-neutral-200 object-contain" />}
+          <button onClick={() => fileRef.current?.click()} disabled={busy || !workspaceId} className={btn}>{busy ? tr("editor.uploading") : tr("editor.replace_2")}</button>
         </div>
       ) : (
         <div className="flex gap-1.5">
-          <button onClick={() => fileRef.current?.click()} disabled={busy || !workspaceId} className={btn}>{busy ? "Uploading…" : "Upload logo"}</button>
-          <button onClick={() => setOpen((v) => !v)} disabled={!workspaceId} className={btn}>From uploads</button>
+          <button onClick={() => fileRef.current?.click()} disabled={busy || !workspaceId} className={btn}>{busy ? tr("editor.uploading") : tr("editor.upload_logo")}</button>
+          <button onClick={() => setOpen((v) => !v)} disabled={!workspaceId} className={btn}>{tr("editor.from_uploads")}</button>
         </div>
       )}
       {open && !logoAssetId && (
         <div className="grid grid-cols-4 gap-1.5">
-          {assets.length === 0 && <span className="col-span-4 text-[11px] text-neutral-400">No image uploads yet.</span>}
+          {assets.length === 0 && <span className="col-span-4 text-[11px] text-neutral-400">{tr("editor.no_image_uploads_yet")}</span>}
           {assets.map((a) => (
             <button
               key={a.id}
@@ -579,7 +587,7 @@ function QrLogoControl({ id, logoAssetId, logoScale, workspaceId }: { id: string
       )}
       {logoAssetId && (
         <label className="flex items-center gap-2 text-[11px] text-neutral-400">
-          <span className="w-9 shrink-0">Size</span>
+          <span className="w-9 shrink-0">{tr("editor.size")}</span>
           <input
             type="range"
             min={8}
@@ -589,10 +597,10 @@ function QrLogoControl({ id, logoAssetId, logoScale, workspaceId }: { id: string
             onChange={(e) => useEditor.getState().setQrLogoScale(id, Number(e.target.value) / 100)}
             className="h-1 flex-1 cursor-pointer accent-brand-600"
           />
-          <span className="w-8 shrink-0 text-right tabular-nums">{Math.round((logoScale ?? 0.22) * 100)}%</span>
+          <span className="w-8 shrink-0 text-end tabular-nums">{Math.round((logoScale ?? 0.22) * 100)}%</span>
         </label>
       )}
-      <p className="text-[11px] text-neutral-400">Error correction is raised so the code stays scannable with a logo.</p>
+      <p className="text-[11px] text-neutral-400">{tr("editor.error_correction_is_raised_so_the_code_stays")}</p>
     </div>
   );
 }
@@ -631,8 +639,8 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
     const cur = `${Math.round(page.width)}x${Math.round(page.height)}`;
     return (
       <Wrap>
-        <Section title="Page size">
-          <select
+        <Section title={tr("editor.page_size")}>
+          <select aria-label={tr("editor.page_size")}
             value={PAGE_PRESETS.some((p) => `${p.w}x${p.h}` === cur) ? cur : "custom"}
             onChange={(e) => {
               const p = PAGE_PRESETS.find((x) => `${x.w}x${x.h}` === e.target.value);
@@ -659,39 +667,39 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
           const layouts = (doc as unknown as { layouts?: { id: string; name: string }[] }).layouts ?? [];
           const pageLayoutId = (page as unknown as { layoutId?: string }).layoutId ?? "";
           const saveAs = async () => {
-            const name = await promptText({ title: "Save page as layout", label: "Layout name", placeholder: "Title + body", confirmText: "Save layout" });
+            const name = await promptText({ title: tr("editor.save_page_as_layout"), label: tr("editor.layout_name"), placeholder: tr("editor.title_body"), confirmText: tr("editor.save_layout") });
             if (name) useEditor.getState().savePageAsLayout(name);
           };
           return (
-            <Section title="Slide layout">
+            <Section title={tr("editor.slide_layout")}>
               <select
                 value={pageLayoutId}
                 onChange={(e) => useEditor.getState().applyLayoutToPage(e.target.value || null)}
                 className={selectCls}
-                aria-label="Slide layout"
+                aria-label={tr("editor.slide_layout")}
               >
-                <option value="">No layout</option>
+                <option value="">{tr("editor.no_layout")}</option>
                 {layouts.map((l) => (
                   <option key={l.id} value={l.id}>{l.name}</option>
                 ))}
               </select>
               <div className="flex gap-1.5">
                 <button onClick={() => void saveAs()} className="flex-1 rounded-md border border-neutral-200 px-2 py-1 text-[11px] font-medium text-neutral-700 transition hover:bg-neutral-50">
-                  Save page as layout
+                  {tr("editor.save_page_as_layout")}
                 </button>
                 {pageLayoutId && (
                   <>
                     <button
                       onClick={() => { if (st2.updateLayoutFromPage(pageLayoutId)) st2.syncLayoutPages(pageLayoutId); }}
-                      title="Re-capture this page's background and text slots into the layout, then update every page using it"
+                      title={tr("editor.re_capture_this_pages_background_and_text_sl")}
                       className="flex-1 rounded-md border border-neutral-200 px-2 py-1 text-[11px] font-medium text-brand-ink transition hover:bg-brand-50"
                     >
-                      Update + sync
+                      {tr("editor.update_sync")}
                     </button>
                   </>
                 )}
               </div>
-              <p className="text-[11px] text-neutral-400">Layouts keep repeated slides consistent: apply one to reuse its background and text slots.</p>
+              <p className="text-[11px] text-neutral-400">{tr("editor.layouts_keep_repeated_slides_consistent_appl")}</p>
             </Section>
           );
         })()}
@@ -699,7 +707,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
           const bg = (page as unknown as { background?: Fill }).background;
           const bgHex = bg?.type === "solid" ? colorHex(bg.color) : "#ffffff";
           return (
-            <Section title="Background">
+            <Section title={tr("editor.background")}>
               {brandSwatches ? (
                 <>
                   <BrandLockHint />
@@ -707,14 +715,14 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
                     {brandSwatches.map((c) => (
                       <Swatch key={c} color={c} onClick={() => st.setPageBackground(solidFromHex(c))} />
                     ))}
-                    <button onClick={() => st.setPageBackground(undefined)} title="No background (transparent)" className="rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs font-medium text-neutral-500 transition hover:bg-neutral-100">None</button>
+                    <button onClick={() => st.setPageBackground(undefined)} title={tr("editor.no_background_transparent")} className="rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs font-medium text-neutral-500 transition hover:bg-neutral-100">{tr("editor.none")}</button>
                   </div>
                 </>
               ) : (
                 <>
                   <div className="flex items-center gap-2">
-                    <input type="color" value={bgHex} onChange={(e) => st.setPageBackground(solidFromHex(e.target.value))} className="oc-color h-8 flex-1" />
-                    <button onClick={() => st.setPageBackground(undefined)} title="No background (transparent)" className="rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs font-medium text-neutral-500 transition hover:bg-neutral-100">None</button>
+                    <input type="color" value={bgHex} aria-label={tr("editor.background_color")} onChange={(e) => st.setPageBackground(solidFromHex(e.target.value))} className="oc-color h-8 flex-1" />
+                    <button onClick={() => st.setPageBackground(undefined)} title={tr("editor.no_background_transparent")} className="rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs font-medium text-neutral-500 transition hover:bg-neutral-100">{tr("editor.none")}</button>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {PALETTE.map((c) => (
@@ -729,7 +737,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
         <PageLayoutSection page={page} />
         <DeckThemeSection />
         <PageTransitionSection page={page} />
-        <Section title="Build order" defaultOpen={false}>
+        <Section title={tr("editor.build_order")} defaultOpen={false}>
           <BuildOrderSection />
         </Section>
         <PagePresentSection page={page} />
@@ -815,10 +823,10 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
           const btn = "grid h-7 w-7 place-items-center rounded-lg border transition";
           return (
             <div className="flex gap-1">
-              <button title={hidden ? "Show" : "Hide"} aria-label={hidden ? "Show" : "Hide"} onClick={() => st.setNodeHidden(n.id, !hidden)} className={`${btn} border-neutral-200 text-neutral-500 hover:bg-neutral-100`}>
+              <button title={hidden ? tr("editor.show") : tr("editor.hide")} aria-label={hidden ? tr("editor.show") : tr("editor.hide")} onClick={() => st.setNodeHidden(n.id, !hidden)} className={`${btn} border-neutral-200 text-neutral-500 hover:bg-neutral-100`}>
                 {hidden ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
-              <button title={locked ? "Unlock" : "Lock"} aria-label={locked ? "Unlock" : "Lock"} onClick={() => st.setNodeLocked(n.id, !locked)} className={`${btn} ${locked ? "border-amber-200 bg-amber-50 text-amber-600" : "border-neutral-200 text-neutral-500 hover:bg-neutral-100"}`}>
+              <button title={locked ? tr("editor.unlock") : tr("editor.lock")} aria-label={locked ? tr("editor.unlock") : tr("editor.lock")} onClick={() => st.setNodeLocked(n.id, !locked)} className={`${btn} ${locked ? "border-amber-200 bg-amber-50 text-amber-700" : "border-neutral-200 text-neutral-500 hover:bg-neutral-100"}`}>
                 {locked ? <Lock size={14} /> : <Unlock size={14} />}
               </button>
             </div>
@@ -831,24 +839,24 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
         // (pan/zoom within the page via the crop overlay) and detach.
         const st = useEditor.getState();
         if (!st.isBackgroundImage(single.node.id)) {
-          return <p className="rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-700">This object is locked. Unlock it to edit.</p>;
+          return <p className="rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-700">{tr("editor.this_object_is_locked_unlock_it_to_edit")}</p>;
         }
         const id = single.node.id;
         return (
           <>
-            <p className="rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-700">Page background. Adjust it, or detach it to edit freely.</p>
+            <p className="rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-700">{tr("editor.page_background_adjust_it_or_detach_it_to_ed")}</p>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => st.setCropping(id)}
                 className="rounded-lg bg-neutral-100 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-200"
               >
-                Adjust background
+                {tr("editor.adjust_background")}
               </button>
               <button
                 onClick={() => st.detachImageBackground(id)}
                 className="rounded-lg bg-neutral-100 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-200"
               >
-                Detach
+                {tr("editor.detach")}
               </button>
             </div>
           </>
@@ -856,7 +864,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
       })()}
       {brandLocked && (
         <p className="flex items-center gap-1.5 rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-700">
-          <Lock size={12} /> Locked by brand template. Only brand admins can edit it.
+          <Lock size={12} /> {tr("editor.locked_by_brand_template_only_brand_admins_c")}
         </p>
       )}
       {/* Collaborative lock. Only meaningful while connected to a
@@ -874,9 +882,9 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
           <button
             onClick={() => (selfHoldsAll ? unlockSelection() : lockSelection())}
             className={`flex w-full items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-xs font-medium transition ${selfHoldsAll ? "border-brand-200 bg-brand-50 text-brand-ink hover:bg-brand-100" : "border-neutral-200 text-neutral-600 hover:bg-neutral-100"}`}
-            title={selfHoldsAll ? "Release your collaborative lock" : "Lock so only you can edit this"}
+            title={selfHoldsAll ? tr("editor.release_your_collaborative_lock") : tr("editor.lock_so_only_you_can_edit_this")}
           >
-            {selfHoldsAll ? <><Unlock size={13} /> Unlock for others</> : <><Lock size={13} /> Lock for me</>}
+            {selfHoldsAll ? <><Unlock size={13} /> {tr("editor.unlock_for_others")}</> : <><Lock size={13} /> {tr("editor.lock_for_me")}</>}
           </button>
         )
       )}
@@ -897,7 +905,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
         const cur = og ?? { x: 0.5, y: 0.5 };
         return (
           <div style={{ order: ORDER.position }} className="flex items-center gap-2">
-            <span className="text-[11px] text-neutral-400">Rotate around</span>
+            <span className="text-[11px] text-neutral-400">{tr("editor.rotate_around")}</span>
             <div className="grid grid-cols-3 gap-0.5 rounded-md border border-neutral-200 p-0.5">
               {[0, 0.5, 1].flatMap((y) => [0, 0.5, 1].map((x) => {
                 const active = Math.abs(cur.x - x) < 0.01 && Math.abs(cur.y - y) < 0.01;
@@ -911,7 +919,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
                 );
               }))}
             </div>
-            {og && <button onClick={() => useEditor.getState().setRotationOrigin(id, undefined)} className="text-[11px] text-neutral-400 hover:text-neutral-700" title="Reset to center">↺</button>}
+            {og && <button onClick={() => useEditor.getState().setRotationOrigin(id, undefined)} className="text-[11px] text-neutral-400 hover:text-neutral-700" title={tr("editor.reset_to_center")}>↺</button>}
           </div>
         );
       })()}
@@ -920,41 +928,41 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
         const multi = selection.length > 1;
         const canDistribute = selection.length > 2;
         return (
-          <Section title="Arrange" order={ORDER.arrange} defaultOpen={false}>
+          <Section title={tr("editor.arrange")} order={ORDER.arrange} defaultOpen={false}>
             {/* Align (to page for one object, to selection for many). */}
             <div className="flex gap-1">
-              <IconBtn icon={AlignStartVertical} title="Align left" onClick={() => st.alignSelection("left")} />
-              <IconBtn icon={AlignCenterVertical} title="Align center" onClick={() => st.alignSelection("hcenter")} />
-              <IconBtn icon={AlignEndVertical} title="Align right" onClick={() => st.alignSelection("right")} />
-              <IconBtn icon={AlignStartHorizontal} title="Align top" onClick={() => st.alignSelection("top")} />
-              <IconBtn icon={AlignCenterHorizontal} title="Align middle" onClick={() => st.alignSelection("vmiddle")} />
-              <IconBtn icon={AlignEndHorizontal} title="Align bottom" onClick={() => st.alignSelection("bottom")} />
+              <IconBtn icon={AlignStartVertical} title={tr("editor.align_left")} onClick={() => st.alignSelection("left")} />
+              <IconBtn icon={AlignCenterVertical} title={tr("editor.align_center")} onClick={() => st.alignSelection("hcenter")} />
+              <IconBtn icon={AlignEndVertical} title={tr("editor.align_right")} onClick={() => st.alignSelection("right")} />
+              <IconBtn icon={AlignStartHorizontal} title={tr("editor.align_top")} onClick={() => st.alignSelection("top")} />
+              <IconBtn icon={AlignCenterHorizontal} title={tr("editor.align_middle")} onClick={() => st.alignSelection("vmiddle")} />
+              <IconBtn icon={AlignEndHorizontal} title={tr("editor.align_bottom")} onClick={() => st.alignSelection("bottom")} />
             </div>
             {/* Distribute (needs 3+) + tidy. */}
             <div className="flex gap-1">
-              <IconBtn icon={AlignHorizontalDistributeCenter} title="Distribute horizontally" onClick={() => st.distributeSelection("h", "gap")} disabled={!canDistribute} />
-              <IconBtn icon={AlignVerticalDistributeCenter} title="Distribute vertically" onClick={() => st.distributeSelection("v", "gap")} disabled={!canDistribute} />
-              <IconBtn icon={FlipHorizontal2} title="Flip horizontal" onClick={() => st.flipSelection("h")} />
-              <IconBtn icon={FlipVertical2} title="Flip vertical" onClick={() => st.flipSelection("v")} />
-              <IconBtn icon={Sparkles} title="Tidy up spacing" onClick={() => st.tidySelection()} disabled={!multi} />
+              <IconBtn icon={AlignHorizontalDistributeCenter} title={tr("editor.distribute_horizontally")} onClick={() => st.distributeSelection("h", "gap")} disabled={!canDistribute} />
+              <IconBtn icon={AlignVerticalDistributeCenter} title={tr("editor.distribute_vertically")} onClick={() => st.distributeSelection("v", "gap")} disabled={!canDistribute} />
+              <IconBtn icon={FlipHorizontal2} title={tr("editor.flip_horizontal")} onClick={() => st.flipSelection("h")} />
+              <IconBtn icon={FlipVertical2} title={tr("editor.flip_vertical")} onClick={() => st.flipSelection("v")} />
+              <IconBtn icon={Sparkles} title={tr("editor.tidy_up_spacing")} onClick={() => st.tidySelection()} disabled={!multi} />
             </div>
             {/* Z-order. */}
             <div className="flex gap-1">
-              <IconBtn icon={BringToFront} title="Bring to front" onClick={() => st.orderSelection("front")} />
-              <IconBtn icon={ArrowUp} title="Bring forward" onClick={() => st.orderSelection("forward")} />
-              <IconBtn icon={ArrowDown} title="Send backward" onClick={() => st.orderSelection("backward")} />
-              <IconBtn icon={SendToBack} title="Send to back" onClick={() => st.orderSelection("back")} />
+              <IconBtn icon={BringToFront} title={tr("editor.bring_to_front")} onClick={() => st.orderSelection("front")} />
+              <IconBtn icon={ArrowUp} title={tr("editor.bring_forward")} onClick={() => st.orderSelection("forward")} />
+              <IconBtn icon={ArrowDown} title={tr("editor.send_backward")} onClick={() => st.orderSelection("backward")} />
+              <IconBtn icon={SendToBack} title={tr("editor.send_to_back")} onClick={() => st.orderSelection("back")} />
             </div>
             {(multi || single?.node.type === "group") && (
               <div className="flex gap-2">
                 {multi && (
                   <button onClick={() => st.group()} className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-neutral-100 py-1.5 text-xs font-medium text-neutral-600 transition hover:bg-neutral-200">
-                    <GroupIcon size={14} /> Group
+                    <GroupIcon size={14} /> {tr("editor.group")}
                   </button>
                 )}
                 {single?.node.type === "group" && (
                   <button onClick={() => st.ungroupSelection()} className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-neutral-100 py-1.5 text-xs font-medium text-neutral-600 transition hover:bg-neutral-200">
-                    <Ungroup size={14} /> Ungroup
+                    <Ungroup size={14} /> {tr("editor.ungroup")}
                   </button>
                 )}
               </div>
@@ -978,12 +986,12 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
         const applySolid = (hex: string) => { rememberColor(hex); return single ? st.setFillColor(id, hex) : st.setFillColorSel(hex); };
         const applyFills = (fills: Fill[]) => (single ? st.setFills(id, fills) : st.setFillsSel(fills));
         return (
-          <Section title="Fill" order={ORDER.fill} badge={!single ? fillNodes.length : undefined} dim={locked}>
+          <Section title={tr("editor.fill")} order={ORDER.fill} badge={!single ? fillNodes.length : undefined} dim={locked}>
             <div className="flex items-center justify-end">
               {!brandSwatches && (
                 <div className="flex gap-1 rounded-lg bg-neutral-100 p-0.5">
-                  <button onClick={() => applySolid(baseHex)} className={chipCls(!isGradient && fill?.type !== "image")}>Solid</button>
-                  <button onClick={() => applyFills([makeGradient(baseHex)])} className={chipCls(!!isGradient)}>Gradient</button>
+                  <button onClick={() => applySolid(baseHex)} className={chipCls(!isGradient && fill?.type !== "image")}>{tr("editor.solid")}</button>
+                  <button onClick={() => applyFills([makeGradient(baseHex)])} className={chipCls(!!isGradient)}>{tr("editor.gradient")}</button>
                 </div>
               )}
             </div>
@@ -991,13 +999,13 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
             {single && single.node.type === "shape" && !brandSwatches && (
               <div className="flex items-center gap-1.5">
                 <button
-                  onClick={async () => { const u = await promptText({ title: "Image fill", label: "Image URL", placeholder: "https://…", confirmText: "Apply" }); if (u) st.setImageFill(id, u); }}
+                  onClick={async () => { const u = await promptText({ title: tr("editor.image_fill"), label: tr("editor.image_url"), placeholder: "https://…", confirmText: tr("editor.apply") }); if (u) st.setImageFill(id, u); }}
                   className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium transition ${fill?.type === "image" ? "bg-brand-50 text-brand-ink" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
                 >
-                  <ImagePlus size={14} /> {fill?.type === "image" ? "Replace image" : "Image fill"}
+                  <ImagePlus size={14} /> {fill?.type === "image" ? tr("editor.replace_image") : tr("editor.image_fill")}
                 </button>
                 {fill?.type === "image" && (
-                  <button onClick={() => st.setImageFill(id, "")} className="rounded-lg bg-neutral-100 px-2.5 py-1.5 text-xs text-neutral-500 hover:bg-neutral-200" title="Remove image fill">Clear</button>
+                  <button onClick={() => st.setImageFill(id, "")} className="rounded-lg bg-neutral-100 px-2.5 py-1.5 text-xs text-neutral-500 hover:bg-neutral-200" title={tr("editor.remove_image_fill")}>{tr("editor.clear")}</button>
                 )}
               </div>
             )}
@@ -1008,19 +1016,19 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center gap-1.5">
                     <button
-                      onClick={async () => { const u = await promptText({ title: "Pattern fill", label: "Image URL", placeholder: "https://…", confirmText: "Apply" }); if (u) st.setPatternFill(id, u); }}
+                      onClick={async () => { const u = await promptText({ title: tr("editor.pattern_fill"), label: tr("editor.image_url"), placeholder: "https://…", confirmText: tr("editor.apply") }); if (u) st.setPatternFill(id, u); }}
                       className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium transition ${pat ? "bg-brand-50 text-brand-ink" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
                     >
-                      <ImagePlus size={14} /> {pat ? "Replace pattern" : "Pattern fill"}
+                      <ImagePlus size={14} /> {pat ? tr("editor.replace_pattern") : tr("editor.pattern_fill")}
                     </button>
                     {pat && (
-                      <button onClick={() => st.setPatternFill(id, "")} className="rounded-lg bg-neutral-100 px-2.5 py-1.5 text-xs text-neutral-500 hover:bg-neutral-200" title="Remove pattern fill">Clear</button>
+                      <button onClick={() => st.setPatternFill(id, "")} className="rounded-lg bg-neutral-100 px-2.5 py-1.5 text-xs text-neutral-500 hover:bg-neutral-200" title={tr("editor.remove_pattern_fill")}>{tr("editor.clear")}</button>
                     )}
                   </div>
                   {pat && (
                     <div className="flex items-center gap-2">
-                      <span className="w-12 shrink-0 text-[11px] text-neutral-400">Scale</span>
-                      <input type="range" min={10} max={300} value={Math.round((pat.scale ?? 1) * 100)} onChange={(e) => st.setPatternParams(id, { scale: Number(e.target.value) / 100 })} className="flex-1 accent-brand-600" />
+                      <span className="w-12 shrink-0 text-[11px] text-neutral-400">{tr("editor.scale_2")}</span>
+                      <input type="range" min={10} max={300} value={Math.round((pat.scale ?? 1) * 100)} aria-label={tr("editor.scale_2")} onChange={(e) => st.setPatternParams(id, { scale: Number(e.target.value) / 100 })} className="flex-1 accent-brand-600" />
                     </div>
                   )}
                 </div>
@@ -1047,7 +1055,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
                     bg={pageBgOf(doc, activePage)}
                     palette={PALETTE}
                     recents={recentColorList()}
-                    title="Fill color"
+                    title={tr("editor.fill_color")}
                   />
                   <span className="font-mono text-xs uppercase text-neutral-400">{baseHex}</span>
                 </div>
@@ -1068,7 +1076,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
         const id = single.node.id;
         return (
           <div style={{ order: ORDER.type }} className="flex flex-col gap-1.5">
-            <span className="text-[10px] uppercase tracking-wide text-neutral-400">Swap shape</span>
+            <span className="text-[10px] uppercase tracking-wide text-neutral-400">{tr("editor.swap_shape")}</span>
             <div className="grid grid-cols-5 gap-1.5">
               {([
                 { k: "rect", label: "▭" },
@@ -1092,10 +1100,10 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
         <button
           style={{ order: ORDER.type }}
           onClick={() => useEditor.getState().convertToFrame(single.node.id)}
-          title="Turn this shape into a frame you can drop an image into"
+          title={tr("editor.turn_this_shape_into_a_frame_you_can_drop_an")}
           className="flex items-center justify-center gap-1.5 rounded-lg border border-neutral-200 px-2 py-2 text-xs font-medium text-neutral-700 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink"
         >
-          Use as image frame
+          {tr("editor.use_as_image_frame")}
         </button>
       )}
       {/* Vector ops (F26): outline a stroke into a filled shape; recognize a
@@ -1104,24 +1112,24 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
         <button
           style={{ order: ORDER.type }}
           onClick={() => useEditor.getState().strokeToOutlineSelection()}
-          title="Convert the stroke into a filled outline shape"
+          title={tr("editor.convert_the_stroke_into_a_filled_outline_sha")}
           className="flex items-center justify-center gap-1.5 rounded-lg border border-neutral-200 px-2 py-2 text-xs font-medium text-neutral-700 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink"
         >
-          Outline stroke
+          {tr("editor.outline_stroke")}
         </button>
       ) : null}
       {single && single.node.type === "path" && (
         <button
           style={{ order: ORDER.type }}
           onClick={() => useEditor.getState().recognizeSelectedPath()}
-          title="Snap this freehand path to a clean shape (rectangle, ellipse, line, polygon)"
+          title={tr("editor.snap_this_freehand_path_to_a_clean_shape_rec")}
           className="flex items-center justify-center gap-1.5 rounded-lg border border-neutral-200 px-2 py-2 text-xs font-medium text-neutral-700 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink"
         >
-          Recognize shape
+          {tr("editor.recognize_shape")}
         </button>
       )}
       {single && single.node.type === "image" && (
-        <Section title="Image" order={ORDER.type}>
+        <Section title={tr("editor.image")} order={ORDER.type}>
           <ImagePalette assetId={(single.node as unknown as { source: { assetId: string } }).source.assetId} />
           {isLowResolution(single.node as ImageNode, doc) && (
             <div className="rounded-lg bg-amber-50 px-2.5 py-1.5 text-[11px] font-medium text-amber-700" title="The image's resolution is low for its placed size; it may look soft when exported or printed.">
@@ -1129,51 +1137,51 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
             </div>
           )}
           <label className="flex items-center justify-between text-sm text-neutral-600">
-            <span>Fit</span>
+            <span>{tr("editor.fit")}</span>
             <select
               value={(single.node as unknown as { fit?: ImageFit }).fit ?? "cover"}
               onChange={(e) => useEditor.getState().setImageFit(single.node.id, e.target.value as ImageFit)}
               className="w-32 rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
             >
-              <option value="cover">Cover</option>
-              <option value="contain">Contain</option>
-              <option value="stretch">Stretch</option>
-              <option value="none">None</option>
+              <option value="cover">{tr("editor.cover")}</option>
+              <option value="contain">{tr("editor.contain")}</option>
+              <option value="stretch">{tr("editor.stretch")}</option>
+              <option value="none">{tr("editor.none")}</option>
             </select>
           </label>
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => useEditor.getState().setCropping(single.node.id)}
               disabled={single.node.transform.rotation !== 0 || Math.abs(single.node.transform.scaleX) !== 1 || Math.abs(single.node.transform.scaleY) !== 1}
-              title={single.node.transform.rotation !== 0 ? "Reset rotation/scale to crop" : "Crop image"}
+              title={single.node.transform.rotation !== 0 ? tr("editor.reset_rotation_scale_to_crop") : tr("editor.crop_image")}
               className="rounded-lg bg-neutral-100 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-200 disabled:opacity-40"
             >
-              Crop
+              {tr("editor.crop")}
             </button>
             {(single.node as unknown as { crop?: unknown }).crop != null && (
               <button
                 onClick={() => useEditor.getState().setImageCrop(single.node.id, undefined)}
                 className="rounded-lg bg-neutral-100 py-1.5 text-xs font-medium text-neutral-500 transition hover:bg-neutral-200"
               >
-                Reset crop
+                {tr("editor.reset_crop")}
               </button>
             )}
             <button
               onClick={async () => {
-                const t = await promptText({ title: "Replace image", label: "Image URL", placeholder: "https://…", confirmText: "Replace" });
+                const t = await promptText({ title: tr("editor.replace_image"), label: tr("editor.image_url"), placeholder: "https://…", confirmText: tr("editor.replace") });
                 if (!t) return;
                 if (/^https?:\/\//i.test(t)) useEditor.getState().setImageSource(single.node.id, t);
-                else await alertText("Please enter an http(s) image URL.");
+                else await alertText(tr("editor.please_enter_an_http_s_image_url"));
               }}
               className="rounded-lg bg-neutral-100 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-200"
             >
-              Replace URL
+              {tr("editor.replace_url")}
             </button>
             <label
-              title="Replace from a file on your device"
+              title={tr("editor.replace_from_a_file_on_your_device")}
               className="cursor-pointer rounded-lg bg-neutral-100 py-1.5 text-center text-xs font-medium text-neutral-700 transition hover:bg-neutral-200"
             >
-              Upload
+              {tr("editor.upload")}
               <input
                 type="file"
                 accept="image/*"
@@ -1202,33 +1210,33 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
         const t = single.node.transform;
         const croppable = t.rotation === 0 && Math.abs(t.scaleX) === 1 && Math.abs(t.scaleY) === 1;
         return (
-          <Section title="Image fill" order={ORDER.type}>
+          <Section title={tr("editor.image_fill")} order={ORDER.type}>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => useEditor.getState().setCropping(id)}
                 disabled={!croppable}
-                title={croppable ? "Pan and zoom the image inside the shape" : "Reset rotation/scale to adjust"}
+                title={croppable ? tr("editor.pan_and_zoom_the_image_inside_the_shape") : tr("editor.reset_rotation_scale_to_adjust")}
                 className="rounded-lg bg-neutral-100 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-200 disabled:opacity-40"
               >
-                Adjust
+                {tr("editor.adjust")}
               </button>
               {fill.crop != null && (
                 <button
                   onClick={() => useEditor.getState().setImageCrop(id, undefined)}
                   className="rounded-lg bg-neutral-100 py-1.5 text-xs font-medium text-neutral-500 transition hover:bg-neutral-200"
                 >
-                  Reset crop
+                  {tr("editor.reset_crop")}
                 </button>
               )}
               <button
                 onClick={() => useEditor.getState().setImageFill(id, "")}
-                title="Remove the image and return to a solid fill"
+                title={tr("editor.remove_the_image_and_return_to_a_solid_fill")}
                 className="rounded-lg bg-neutral-100 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-200"
               >
-                Remove image
+                {tr("editor.remove_image")}
               </button>
             </div>
-            <p className="text-[11px] text-neutral-400">Double-click the shape to adjust the image.</p>
+            <p className="text-[11px] text-neutral-400">{tr("editor.double_click_the_shape_to_adjust_the_image")}</p>
           </Section>
         );
       })()}
@@ -1254,9 +1262,9 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
         const applyStroke = (s?: StrokeT) => (single ? st.setStroke(id, s as never) : st.setStrokeSel(s as never));
         const dashed = !!stroke?.dash?.length;
         return (
-          <Section title="Style" order={ORDER.style} badge={!single ? strokeNodes.length : undefined} dim={locked}>
+          <Section title={tr("editor.style")} order={ORDER.style} badge={!single ? strokeNodes.length : undefined} dim={locked}>
             <label className="flex items-center justify-between text-sm text-neutral-600">
-              <span>Border</span>
+              <span>{tr("editor.border")}</span>
               <Toggle
                 checked={!!stroke}
                 onChange={(on) => applyStroke(on ? { fill: solidFromHex(brandSwatches?.[0] ?? "#111827"), width: 2, align: "center", cap: "butt", join: "miter" } : undefined)}
@@ -1286,14 +1294,14 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
                             onChange={(c) => applyStroke({ ...stroke, fill: { type: "solid", color: c } })}
                             palette={PALETTE}
                             recents={recentColorList()}
-                            title="Stroke color"
+                            title={tr("editor.stroke_color")}
                           />
                         </div>
                       )}
                       <div className="flex-1"><Field key={`sw${stroke.width}`} label="W" value={stroke.width} onCommit={(n) => applyStroke({ ...stroke, width: Math.max(0, n) })} /></div>
                     </div>
                     <label className="flex items-center justify-between text-xs text-neutral-500">
-                      <span>Gradient border</span>
+                      <span>{tr("editor.gradient_border")}</span>
                       <Toggle
                         checked={stroke.fill.type === "gradient"}
                         onChange={(on) => {
@@ -1314,24 +1322,24 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
                 )}
                 <div className="grid grid-cols-2 gap-2">
                   <label className="flex flex-col gap-1 text-[11px] text-neutral-400">
-                    Align
+                    {tr("editor.align")}
                     <select value={stroke.align} onChange={(e) => applyStroke({ ...stroke, align: e.target.value as StrokeT["align"] })} className={selectCls}>
-                      <option value="inside">Inside</option>
-                      <option value="center">Center</option>
-                      <option value="outside">Outside</option>
+                      <option value="inside">{tr("editor.inside")}</option>
+                      <option value="center">{tr("editor.center")}</option>
+                      <option value="outside">{tr("editor.outside")}</option>
                     </select>
                   </label>
                   <label className="flex flex-col gap-1 text-[11px] text-neutral-400">
-                    Cap
-                    <select value={stroke.cap} onChange={(e) => applyStroke({ ...stroke, cap: e.target.value as StrokeT["cap"] })} className={selectCls}>
-                      <option value="butt">Butt</option>
-                      <option value="round">Round</option>
-                      <option value="square">Square</option>
+                    {tr("editor.cap")}
+                    <select aria-label={tr("editor.line_cap")} value={stroke.cap} onChange={(e) => applyStroke({ ...stroke, cap: e.target.value as StrokeT["cap"] })} className={selectCls}>
+                      <option value="butt">{tr("editor.butt")}</option>
+                      <option value="round">{tr("editor.round")}</option>
+                      <option value="square">{tr("editor.square")}</option>
                     </select>
                   </label>
                 </div>
                 <label className="flex items-center justify-between text-sm text-neutral-600">
-                  <span>Dashed</span>
+                  <span>{tr("editor.dashed")}</span>
                   <Toggle checked={dashed} onChange={(on) => applyStroke({ ...stroke, dash: on ? [stroke.width * 2, stroke.width * 2] : undefined })} />
                 </label>
               </>
@@ -1346,7 +1354,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
               if (!crRep) return null;
               const cur = (crRep as unknown as { cornerRadius?: { topLeft: number } }).cornerRadius?.topLeft ?? 0;
               return (
-                <Field key={`cr${cur}`} label="Radius" value={cur} onCommit={(n) => (single ? st.setCornerRadius(crRep.id, n) : st.setCornerRadiusSel(n))} />
+                <Field key={`cr${cur}`} label={tr("editor.radius")} value={cur} onCommit={(n) => (single ? st.setCornerRadius(crRep.id, n) : st.setCornerRadiusSel(n))} />
               );
             })()}
             {/* Single node: full effects control (presets + shadow/outline/glow,
@@ -1356,7 +1364,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
               <NodeEffects id={id} effects={node.effects} />
             ) : (
               <label className="flex items-center justify-between text-sm text-neutral-600">
-                <span>Shadow</span>
+                <span>{tr("editor.shadow")}</span>
                 <Toggle checked={hasShadow} onChange={(on) => st.setShadowSel(on)} />
               </label>
             )}
@@ -1373,7 +1381,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
         const isItalic = /italic|oblique/i.test(cs?.fontStyle ?? "");
         const lineHeight = typeof cs?.lineHeight === "number" ? cs.lineHeight : 1.2;
         return (
-          <Section title="Text" order={ORDER.type}>
+          <Section title={tr("editor.text")} order={ORDER.type}>
             <textarea
               key={`txt-${id}`}
               defaultValue={textOf(single.node)}
@@ -1384,9 +1392,9 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
             {/* Quick styles: apply a heading/subheading/body preset to the selection. */}
             <div className="flex gap-1.5">
               {([
-                { label: "Heading", size: 48, wght: 800 },
-                { label: "Subheading", size: 28, wght: 600 },
-                { label: "Body", size: 16, wght: 400 },
+                { label: tr("editor.heading"), size: 48, wght: 800 },
+                { label: tr("editor.subheading"), size: 28, wght: 600 },
+                { label: tr("editor.body"), size: 16, wght: 400 },
               ] as const).map((p) => (
                 <button
                   key={p.label}
@@ -1401,7 +1409,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
             {brandFonts ? (
               <>
                 <BrandLockHint />
-                <select
+                <select aria-label={tr("editor.font_family")}
                   value={brandFonts.includes(cs?.fontFamily ?? "") ? cs?.fontFamily : brandFonts[0]}
                   onChange={(e) => { fonts.ensure(e.target.value); setChar({ fontFamily: e.target.value }); }}
                   className={selectCls}
@@ -1412,40 +1420,40 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
                 </select>
               </>
             ) : (
-              <select
+              <select aria-label={tr("editor.font_family")}
                 value={cs?.fontFamily ?? "system"}
                 onChange={(e) => { fonts.ensure(e.target.value); setChar({ fontFamily: e.target.value }); }}
                 className={selectCls}
               >
-                <option value="system">System default</option>
+                <option value="system">{tr("editor.system_default")}</option>
                 {FONT_FAMILY_OPTIONS}
               </select>
             )}
             <div className="grid grid-cols-2 gap-2">
               {/* Weight */}
-              <select
+              <select aria-label={tr("editor.font_weight")}
                 value={curWeight}
                 onChange={(e) => setChar({ axes: { ...(cs?.axes ?? {}), wght: Number(e.target.value) } })}
                 className={selectCls}
               >
-                {WEIGHTS.map((w) => <option key={w.v} value={w.v}>{w.label}</option>)}
+                {weights().map((w) => <option key={w.v} value={w.v}>{w.label}</option>)}
               </select>
               {/* Size */}
-              <Field key={`fs${cs?.fontSize}`} label="Aa" value={cs?.fontSize ?? 16} onCommit={(n) => setChar({ fontSize: Math.max(1, n) })} />
+              <Field key={`fs${cs?.fontSize}`} label={tr("editor.aa")} value={cs?.fontSize ?? 16} onCommit={(n) => setChar({ fontSize: Math.max(1, n) })} />
             </div>
             {/* Width axis (variable fonts): mapped to a CSS font-stretch keyword the
                 canvas applies to the wdth axis. Static fonts ignore it. */}
             <div className="flex items-center gap-2">
-              <span className="w-12 shrink-0 text-[11px] text-neutral-400">Width</span>
-              <input type="range" min={50} max={200} step={12.5} value={cs?.axes?.wdth ?? 100} onChange={(e) => setChar({ axes: { ...(cs?.axes ?? {}), wdth: Number(e.target.value) } })} className="flex-1 accent-brand-600" title="Variable-font width (condensed to expanded)" />
-              {(cs?.axes?.wdth ?? 100) !== 100 && <button onClick={() => setChar({ axes: { ...(cs?.axes ?? {}), wdth: 100 } })} className="text-[11px] text-neutral-400 hover:text-neutral-700" title="Reset width">↺</button>}
+              <span className="w-12 shrink-0 text-[11px] text-neutral-400">{tr("editor.width")}</span>
+              <input type="range" min={50} max={200} step={12.5} value={cs?.axes?.wdth ?? 100} onChange={(e) => setChar({ axes: { ...(cs?.axes ?? {}), wdth: Number(e.target.value) } })} className="flex-1 accent-brand-600" title={tr("editor.variable_font_width_condensed_to_expanded")} aria-label={tr("editor.variable_font_width_condensed_to_expanded")} />
+              {(cs?.axes?.wdth ?? 100) !== 100 && <button onClick={() => setChar({ axes: { ...(cs?.axes ?? {}), wdth: 100 } })} className="text-[11px] text-neutral-400 hover:text-neutral-700" title={tr("editor.reset_width")}>↺</button>}
             </div>
             <div className="flex flex-wrap items-center gap-1">
               {/* Italic */}
               <button
-                onClick={() => setChar({ fontStyle: isItalic ? "Regular" : "Italic" })}
+                onClick={() => setChar({ fontStyle: isItalic ? regularFontStyle : italicFontStyle })}
                 className={`grid h-8 w-9 place-items-center rounded-lg border text-sm italic transition ${isItalic ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
-                title="Italic"
+                title={tr("editor.italic")}
               >I</button>
               {/* Underline / strikethrough (per-run decoration). */}
               {([
@@ -1462,7 +1470,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
                     }}
                     style={{ textDecoration: deco }}
                     className={`grid h-8 w-9 place-items-center rounded-lg border text-sm transition ${on ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
-                    title={d === "underline" ? "Underline" : "Strikethrough"}
+                    title={d === "underline" ? tr("editor.underline") : tr("editor.strikethrough")}
                   >{label}</button>
                 );
               })}
@@ -1485,18 +1493,18 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
               <button
                 onClick={() => { const rtl = ps?.direction === "rtl"; setPara({ direction: rtl ? "ltr" : "rtl", align: rtl ? "left" : "right" }); }}
                 className={`grid h-8 w-9 place-items-center rounded-lg border text-xs font-semibold transition ${ps?.direction === "rtl" ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
-                title="Right-to-left"
+                title={tr("editor.right_to_left")}
               >RTL</button>
               {/* Color: freeform unless the brand locks colors for this member. */}
               {!brandSwatches && (
-                <div className="ml-auto w-10">
+                <div className="ms-auto w-10">
                   <ColorField
                     value={cs?.fill?.type === "solid" ? cs.fill.color : colorFromHex(cs ? runColorHex(cs) : "#111827")}
                     onChange={(c) => { rememberColor(colorHex(c)); setChar({ fill: { type: "solid", color: c } }); }}
                     bg={pageBgOf(doc, activePage)}
                     palette={PALETTE}
                     recents={recentColorList()}
-                    title="Text color"
+                    title={tr("editor.text_color")}
                   />
                 </div>
               )}
@@ -1509,7 +1517,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
               return (
                 <div className="flex flex-col gap-1.5">
                   <label className="flex items-center justify-between text-xs text-neutral-500">
-                    <span>Gradient text</span>
+                    <span>{tr("editor.gradient_text")}</span>
                     <Toggle
                       checked={!!isGrad}
                       onChange={(on) => {
@@ -1532,14 +1540,14 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
                 <BrandLockHint />
                 <div className="flex flex-wrap gap-1.5">
                   {brandSwatches.map((c) => (
-                    <Swatch key={c} color={c} title="Text color" onClick={() => setChar({ fill: solidFromHex(c) })} />
+                    <Swatch key={c} color={c} title={tr("editor.text_color")} onClick={() => setChar({ fill: solidFromHex(c) })} />
                   ))}
                 </div>
               </>
             )}
             <div className="grid grid-cols-2 gap-2">
-              <Field key={`lh${lineHeight}`} label="Line" value={lineHeight} onCommit={(n) => setChar({ lineHeight: Math.max(0.5, n) })} />
-              <Field key={`ls${cs?.letterSpacing ?? 0}`} label="Letter" value={cs?.letterSpacing ?? 0} onCommit={(n) => setChar({ letterSpacing: n })} />
+              <Field key={`lh${lineHeight}`} label={tr("editor.line")} value={lineHeight} onCommit={(n) => setChar({ lineHeight: Math.max(0.5, n) })} />
+              <Field key={`ls${cs?.letterSpacing ?? 0}`} label={tr("editor.letter")} value={cs?.letterSpacing ?? 0} onCommit={(n) => setChar({ letterSpacing: n })} />
             </div>
             {/* Underline / strikethrough (applies to the selection when the
                 inline editor is open, else the whole box). */}
@@ -1554,32 +1562,32 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
                       setChar({ decoration: active ? (rest.length ? rest : undefined) : [...rest, deco] });
                     }}
                     className={`h-8 min-w-[32px] rounded-lg border px-2 text-sm ${cls === "underline" ? "underline" : "line-through"} transition ${active ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
-                    title={deco === "underline" ? "Underline (Cmd/Ctrl+U)" : "Strikethrough (Cmd/Ctrl+Shift+X)"}
+                    title={deco === "underline" ? tr("editor.underline_cmd_ctrl_u") : tr("editor.strikethrough_cmd_ctrl_shift_x")}
                   >{label}</button>
                 );
               })}
             </div>
             {/* Paragraph spacing and indents (engine lays these out per paragraph). */}
             <div className="grid grid-cols-2 gap-2">
-              <Field key={`sb${ps?.spaceBefore ?? 0}`} label="Before" value={ps?.spaceBefore ?? 0} onCommit={(n) => setPara({ spaceBefore: Math.max(0, n) || undefined })} />
-              <Field key={`sa${ps?.spaceAfter ?? 0}`} label="After" value={ps?.spaceAfter ?? 0} onCommit={(n) => setPara({ spaceAfter: Math.max(0, n) || undefined })} />
-              <Field key={`in${ps?.indentStart ?? 0}`} label="Indent" value={ps?.indentStart ?? 0} onCommit={(n) => setPara({ indentStart: Math.max(0, n) || undefined })} />
-              <Field key={`fi${ps?.firstLineIndent ?? 0}`} label="1st line" value={ps?.firstLineIndent ?? 0} onCommit={(n) => setPara({ firstLineIndent: n || undefined })} />
+              <Field key={`sb${ps?.spaceBefore ?? 0}`} label={tr("editor.before")} value={ps?.spaceBefore ?? 0} onCommit={(n) => setPara({ spaceBefore: Math.max(0, n) || undefined })} />
+              <Field key={`sa${ps?.spaceAfter ?? 0}`} label={tr("editor.after")} value={ps?.spaceAfter ?? 0} onCommit={(n) => setPara({ spaceAfter: Math.max(0, n) || undefined })} />
+              <Field key={`in${ps?.indentStart ?? 0}`} label={tr("editor.indent")} value={ps?.indentStart ?? 0} onCommit={(n) => setPara({ indentStart: Math.max(0, n) || undefined })} />
+              <Field key={`fi${ps?.firstLineIndent ?? 0}`} label={tr("editor.1st_line")} value={ps?.firstLineIndent ?? 0} onCommit={(n) => setPara({ firstLineIndent: n || undefined })} />
             </div>
-            <select
+            <select aria-label={tr("editor.indent")}
               value={cs?.case ?? "none"}
               onChange={(e) => setChar({ case: e.target.value as CharStyle["case"] })}
               className={selectCls}
             >
-              <option value="none">Case: as typed</option>
+              <option value="none">{tr("editor.case_as_typed")}</option>
               <option value="upper">UPPERCASE</option>
-              <option value="lower">lowercase</option>
-              <option value="title">Title Case</option>
-              <option value="smallcaps">Small Caps</option>
+              <option value="lower">{tr("editor.lowercase")}</option>
+              <option value="title">{tr("editor.title_case")}</option>
+              <option value="smallcaps">{tr("editor.small_caps")}</option>
             </select>
             {/* Ligatures: OpenType ligatures on/off (canvas applies default vs none). */}
             <label className="flex items-center justify-between text-sm text-neutral-600">
-              <span>Ligatures</span>
+              <span>{tr("editor.ligatures")}</span>
               <Toggle
                 checked={(cs?.features?.liga ?? 1) !== 0}
                 onChange={(on) => setChar({ features: { ...(cs?.features ?? {}), liga: on ? 1 : 0 } })}
@@ -1588,7 +1596,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
             {/* Per-run hyperlink: applies to the selected text range (clickable in
                 present/preview; the first linked run also makes the node clickable). */}
             <label className="flex flex-col gap-1 text-[11px] text-neutral-400">
-              Link
+              {tr("editor.link")}
               <input
                 key={`lnk-${id}-${cs?.link ?? ""}`}
                 defaultValue={cs?.link ?? ""}
@@ -1600,20 +1608,20 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
             </label>
             {/* Language tag (BCP-47): drives locale-aware browser spellcheck. */}
             <label className="flex flex-col gap-1 text-[11px] text-neutral-400">
-              Language
+              {tr("editor.language_2")}
               <input
                 key={`lang-${id}`}
                 defaultValue={((single.node as unknown as { data?: { lang?: string } }).data?.lang) ?? ""}
                 onBlur={(e) => useEditor.getState().setTextLang(id, e.target.value)}
-                placeholder="e.g. en, es, fr-CA"
+                placeholder={tr("editor.e_g_en_es_fr_ca")}
                 className={inputCls}
               />
             </label>
             {/* Lists */}
             <div className="flex flex-wrap items-center gap-1">
-              <span className="mr-1 text-xs text-neutral-400">List</span>
+              <span className="me-1 text-xs text-neutral-400">{tr("editor.list")}</span>
               {([
-                { key: undefined, label: "None" },
+                { key: undefined, label: tr("editor.none") },
                 { key: "bullet", label: "•" },
                 { key: "number", label: "1." },
                 { key: "checklist", label: "☐" },
@@ -1624,7 +1632,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
                     key={opt.label}
                     onClick={() => setPara({ list: opt.key ? { type: opt.key, level: ps?.list?.level ?? 0 } : undefined })}
                     className={`h-8 min-w-[32px] rounded-lg border px-1.5 text-xs transition ${active ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
-                    title={opt.key ? `${opt.key} list` : "No list"}
+                    title={opt.key ? `${opt.key} list` : tr("editor.no_list")}
                   >{opt.label}</button>
                 );
               })}
@@ -1635,13 +1643,13 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
                     onClick={() => setPara({ list: { type: ps.list!.type, level: Math.max(0, (ps.list!.level ?? 0) - 1) } })}
                     disabled={(ps.list.level ?? 0) <= 0}
                     className="h-8 min-w-[32px] rounded-lg border border-transparent bg-neutral-100 px-1.5 text-sm text-neutral-600 transition hover:bg-neutral-200 disabled:opacity-40"
-                    title="Outdent"
+                    title={tr("editor.outdent")}
                   >⇤</button>
                   <button
                     onClick={() => setPara({ list: { type: ps.list!.type, level: Math.min(5, (ps.list!.level ?? 0) + 1) } })}
                     disabled={(ps.list.level ?? 0) >= 5}
                     className="h-8 min-w-[32px] rounded-lg border border-transparent bg-neutral-100 px-1.5 text-sm text-neutral-600 transition hover:bg-neutral-200 disabled:opacity-40"
-                    title="Indent"
+                    title={tr("editor.indent")}
                   >⇥</button>
                 </>
               )}
@@ -1649,7 +1657,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
             {/* Bullet marker style: pick a custom glyph for an unordered list. */}
             {ps?.list && ps.list.type === "bullet" && (
               <div className="flex flex-wrap items-center gap-1">
-                <span className="mr-1 text-xs text-neutral-400">Bullet</span>
+                <span className="me-1 text-xs text-neutral-400">{tr("editor.bullet")}</span>
                 {["•", "◦", "▪", "–", "➤", "✓"].map((m) => {
                   const on = (ps.list!.marker ?? "•") === m;
                   return (
@@ -1682,14 +1690,14 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
               return (
                 <div className="flex flex-col gap-2">
                   <label className="flex items-center justify-between text-sm text-neutral-600">
-                    <span>Background</span>
+                    <span>{tr("editor.background")}</span>
                     <Toggle checked={!!hl} onChange={(on) => setBg(on ? (colorFromHex("#fde047")) : null)} />
                   </label>
                   {hl && (
                     <>
                       <div className="flex items-center gap-2">
-                        <span className="w-12 shrink-0 text-[11px] text-neutral-400">Color</span>
-                        <input type="color" value={hlColor ? colorHex(hlColor) : "#fde047"} onChange={(e) => setBg(colorFromHex(e.target.value))} className="oc-color h-8 w-9 shrink-0" title="Background color" />
+                        <span className="w-12 shrink-0 text-[11px] text-neutral-400">{tr("editor.color")}</span>
+                        <input type="color" value={hlColor ? colorHex(hlColor) : "#fde047"} onChange={(e) => setBg(colorFromHex(e.target.value))} className="oc-color h-8 w-9 shrink-0" aria-label={tr("editor.background_color")} title={tr("editor.background_color")} />
                       </div>
                       <TextHighlightLevels id={id} hl={hl} />
                     </>
@@ -1705,15 +1713,15 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
               const set = (effect: TextEffect | null) => useEditor.getState().setTextEffect(id, effect);
               const black = solidFromHex("#000000");
               const PRESETS: { key: string; label: string; make: () => TextEffect | null }[] = [
-                { key: "none", label: "None", make: () => null },
-                { key: "shadow", label: "Shadow", make: () => ({ kind: "shadow", dx: 4, dy: 4, blur: 6, color: black, opacity: 0.4 }) },
-                { key: "lift", label: "Lift", make: () => ({ kind: "lift", intensity: 0.5 }) },
-                { key: "hollow", label: "Hollow", make: () => ({ kind: "hollow", thickness: 2 }) },
-                { key: "splice", label: "Splice", make: () => ({ kind: "splice", thickness: 2, offset: 4, color: black }) },
-                { key: "echo", label: "Echo", make: () => ({ kind: "echo", offset: 6, count: 3, color: solidFromHex("#9ca3af") }) },
-                { key: "glow", label: "Glow", make: () => ({ kind: "glow", radius: 12, color: solidFromHex("#22d3ee"), intensity: 1 }) },
-                { key: "neon", label: "Neon", make: () => ({ kind: "neon", color: solidFromHex("#22d3ee"), intensity: 1 }) },
-                { key: "outline", label: "Outline", make: () => ({ kind: "outline", width: 2, color: black, join: "round" }) },
+                { key: "none", label: tr("editor.none"), make: () => null },
+                { key: "shadow", label: tr("editor.shadow"), make: () => ({ kind: "shadow", dx: 4, dy: 4, blur: 6, color: black, opacity: 0.4 }) },
+                { key: "lift", label: tr("editor.lift"), make: () => ({ kind: "lift", intensity: 0.5 }) },
+                { key: "hollow", label: tr("editor.hollow"), make: () => ({ kind: "hollow", thickness: 2 }) },
+                { key: "splice", label: tr("editor.splice"), make: () => ({ kind: "splice", thickness: 2, offset: 4, color: black }) },
+                { key: "echo", label: tr("editor.echo"), make: () => ({ kind: "echo", offset: 6, count: 3, color: solidFromHex("#9ca3af") }) },
+                { key: "glow", label: tr("editor.glow"), make: () => ({ kind: "glow", radius: 12, color: solidFromHex("#22d3ee"), intensity: 1 }) },
+                { key: "neon", label: tr("editor.neon"), make: () => ({ kind: "neon", color: solidFromHex("#22d3ee"), intensity: 1 }) },
+                { key: "outline", label: tr("editor.outline"), make: () => ({ kind: "outline", width: 2, color: black, join: "round" }) },
               ];
               const curve = tn.flow?.kind === "arc" ? Math.round(((tn.flow.curvature ?? 0) / 2.5) * 100) : 0;
               const vAlign = tn.box?.verticalAlign ?? "top";
@@ -1721,7 +1729,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
               const ebtn = (a: boolean) => `rounded-lg border px-1.5 py-1.5 text-[11px] font-medium transition ${a ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`;
               return (
                 <div className="flex flex-col gap-2">
-                  <span className="text-[10px] uppercase tracking-wide text-neutral-400">Effects</span>
+                  <span className="text-[10px] uppercase tracking-wide text-neutral-400">{tr("editor.effects")}</span>
                   <div className="grid grid-cols-3 gap-1.5">
                     {PRESETS.map((p) => (
                       <button key={p.key} onClick={() => set(p.make())} className={ebtn(active === p.key)} title={p.label}>{p.label}</button>
@@ -1731,22 +1739,22 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
                   {fx && <TextEffectControls id={id} fx={fx} />}
                   {/* Curve */}
                   <div className="flex items-center gap-2">
-                    <span className="w-12 shrink-0 text-[11px] text-neutral-400">Curve</span>
-                    <input type="range" min={-100} max={100} value={curve} onChange={(e) => useEditor.getState().setCurve(id, (Number(e.target.value) / 100) * 2.5)} className="flex-1 accent-brand-600" />
-                    {curve !== 0 && <button onClick={() => useEditor.getState().setCurve(id, 0)} className="text-[11px] text-neutral-400 hover:text-neutral-700" title="Straighten">↺</button>}
+                    <span className="w-12 shrink-0 text-[11px] text-neutral-400">{tr("editor.curve")}</span>
+                    <input type="range" min={-100} max={100} value={curve} aria-label={tr("editor.curve")} onChange={(e) => useEditor.getState().setCurve(id, (Number(e.target.value) / 100) * 2.5)} className="flex-1 accent-brand-600" />
+                    {curve !== 0 && <button onClick={() => useEditor.getState().setCurve(id, 0)} className="text-[11px] text-neutral-400 hover:text-neutral-700" title={tr("editor.straighten")}>↺</button>}
                   </div>
                   {/* Box sizing mode: fixed / grow height / grow width. */}
                   {(() => {
                     const mode = (single.node as unknown as { box?: { mode?: "fixed" | "autoHeight" | "autoWidth" } }).box?.mode ?? "fixed";
                     return (
                       <div className="flex items-center gap-1.5">
-                        <span className="w-12 shrink-0 text-[11px] text-neutral-400">Box</span>
+                        <span className="w-12 shrink-0 text-[11px] text-neutral-400">{tr("editor.box")}</span>
                         {([
-                          { m: "fixed", label: "Fixed" },
-                          { m: "autoHeight", label: "Auto H" },
-                          { m: "autoWidth", label: "Auto W" },
+                          { m: "fixed", label: tr("editor.fixed_3") },
+                          { m: "autoHeight", label: tr("editor.auto_h") },
+                          { m: "autoWidth", label: tr("editor.auto_w") },
                         ] as const).map(({ m, label }) => (
-                          <button key={m} onClick={() => useEditor.getState().setTextBoxMode(id, m)} className={`flex-1 ${ebtn(mode === m)}`} title={m === "fixed" ? "Fixed size box" : m === "autoHeight" ? "Grow height to fit text" : "Grow width to fit text"}>{label}</button>
+                          <button key={m} onClick={() => useEditor.getState().setTextBoxMode(id, m)} className={`flex-1 ${ebtn(mode === m)}`} title={m === "fixed" ? tr("editor.fixed_size_box") : m === "autoHeight" ? tr("editor.grow_height_to_fit_text") : tr("editor.grow_width_to_fit_text")}>{label}</button>
                         ))}
                       </div>
                     );
@@ -1758,7 +1766,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
                     if ((box?.mode ?? "fixed") !== "fixed") return null;
                     return (
                       <label className="flex items-center justify-between text-sm text-neutral-600">
-                        <span title="Scale text down so it never overflows the box">Shrink to fit</span>
+                        <span title={tr("editor.scale_text_down_so_it_never_overflows_the_bo")}>{tr("editor.shrink_to_fit")}</span>
                         <Toggle
                           checked={box?.autoFit?.enabled ?? false}
                           onChange={(on) => useEditor.getState().setTextAutoFit(id, on)}
@@ -1771,7 +1779,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
                     const cols = (single.node as unknown as { box?: { columns?: { count: number } } }).box?.columns?.count ?? 1;
                     return (
                       <div className="flex items-center gap-1.5">
-                        <span className="w-12 shrink-0 text-[11px] text-neutral-400">Columns</span>
+                        <span className="w-12 shrink-0 text-[11px] text-neutral-400">{tr("editor.columns")}</span>
                         {[1, 2, 3].map((n) => (
                           <button key={n} onClick={() => useEditor.getState().setTextColumns(id, n)} className={`flex-1 ${ebtn(cols === n)}`} title={`${n} column${n > 1 ? "s" : ""}`}>{n}</button>
                         ))}
@@ -1780,13 +1788,13 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
                   })()}
                   {/* Vertical align + sub/superscript */}
                   <div className="flex items-center gap-1.5">
-                    <span className="w-12 shrink-0 text-[11px] text-neutral-400">Align</span>
+                    <span className="w-12 shrink-0 text-[11px] text-neutral-400">{tr("editor.align")}</span>
                     {(["top", "middle", "bottom"] as const).map((v) => (
                       <button key={v} onClick={() => useEditor.getState().setVerticalAlign(id, v)} className={`flex-1 ${ebtn(vAlign === v)}`} title={`Vertical: ${v}`}>{v[0].toUpperCase()}</button>
                     ))}
                     <span className="mx-0.5 h-5 w-px bg-neutral-200" />
-                    <button onClick={() => setChar({ script: script === "super" ? "normal" : "super" })} className={ebtn(script === "super")} title="Superscript">x²</button>
-                    <button onClick={() => setChar({ script: script === "sub" ? "normal" : "sub" })} className={ebtn(script === "sub")} title="Subscript">x₂</button>
+                    <button onClick={() => setChar({ script: script === "super" ? "normal" : "super" })} className={ebtn(script === "super")} title={tr("editor.superscript")}>x²</button>
+                    <button onClick={() => setChar({ script: script === "sub" ? "normal" : "sub" })} className={ebtn(script === "sub")} title={tr("editor.subscript")}>x₂</button>
                   </div>
                 </div>
               );
@@ -1800,13 +1808,13 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
         const g = single.node as unknown as { rows: number; cols: number; gap: number };
         const set = (patch: { rows?: number; cols?: number; gap?: number }) => useEditor.getState().setGridLayout(id, patch);
         return (
-          <Section title="Photo grid" order={ORDER.type}>
+          <Section title={tr("editor.photo_grid")} order={ORDER.type}>
             <div className="grid grid-cols-3 gap-2">
-              <Field key={`gr-${g.rows}`} label="Rows" value={g.rows} onCommit={(n) => set({ rows: Math.max(1, Math.min(6, Math.round(n))) })} />
-              <Field key={`gc-${g.cols}`} label="Cols" value={g.cols} onCommit={(n) => set({ cols: Math.max(1, Math.min(6, Math.round(n))) })} />
-              <Field key={`gg-${g.gap}`} label="Gap" value={g.gap} onCommit={(n) => set({ gap: Math.max(0, n) })} />
+              <Field key={`gr-${g.rows}`} label={tr("editor.rows")} value={g.rows} onCommit={(n) => set({ rows: Math.max(1, Math.min(6, Math.round(n))) })} />
+              <Field key={`gc-${g.cols}`} label={tr("editor.cols")} value={g.cols} onCommit={(n) => set({ cols: Math.max(1, Math.min(6, Math.round(n))) })} />
+              <Field key={`gg-${g.gap}`} label={tr("editor.gap")} value={g.gap} onCommit={(n) => set({ gap: Math.max(0, n) })} />
             </div>
-            <p className="text-[11px] text-neutral-400">Drag a photo onto a cell to fill it.</p>
+            <p className="text-[11px] text-neutral-400">{tr("editor.drag_a_photo_onto_a_cell_to_fill_it")}</p>
           </Section>
         );
       })()}
@@ -1814,9 +1822,9 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
         const id = single.node.id;
         const qr = single.node as unknown as { value: string; logoAssetId?: string; logoScale?: number };
         return (
-          <Section title="QR code" order={ORDER.type}>
+          <Section title={tr("editor.qr_code")} order={ORDER.type}>
             <label className="flex flex-col gap-1 text-[11px] text-neutral-400">
-              Links to
+              {tr("editor.links_to")}
               <input
                 key={`qr-${id}`}
                 defaultValue={qr.value}
@@ -1825,7 +1833,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
                 className={inputCls}
               />
             </label>
-            <p className="text-[11px] text-neutral-400">The code regenerates when you change the value.</p>
+            <p className="text-[11px] text-neutral-400">{tr("editor.the_code_regenerates_when_you_change_the_val")}</p>
             <QrLogoControl id={id} logoAssetId={qr.logoAssetId} logoScale={qr.logoScale} workspaceId={workspaceId ?? null} />
           </Section>
         );
@@ -1838,13 +1846,13 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
         const isRounded = !isEllipse && (fr.cornerRadius?.topLeft ?? 0) > 0;
         const chip = (active: boolean) => `flex-1 rounded-lg border py-1.5 text-xs font-medium transition ${active ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`;
         return (
-          <Section title="Frame" order={ORDER.type}>
+          <Section title={tr("editor.frame")} order={ORDER.type}>
             <div className="flex gap-1">
-              <button onClick={() => st.setFrameShape(id, "rect", 0)} className={chip(!isEllipse && !isRounded)}>Rectangle</button>
-              <button onClick={() => st.setFrameShape(id, "rect", 28)} className={chip(isRounded)}>Rounded</button>
-              <button onClick={() => st.setFrameShape(id, "ellipse", 0)} className={chip(isEllipse)}>Circle</button>
+              <button onClick={() => st.setFrameShape(id, "rect", 0)} className={chip(!isEllipse && !isRounded)}>{tr("editor.rectangle")}</button>
+              <button onClick={() => st.setFrameShape(id, "rect", 28)} className={chip(isRounded)}>{tr("editor.rounded")}</button>
+              <button onClick={() => st.setFrameShape(id, "ellipse", 0)} className={chip(isEllipse)}>{tr("editor.circle")}</button>
             </div>
-            <p className="text-[11px] text-neutral-400">Click an image in Uploads to drop it into this frame (clipped to the shape).</p>
+            <p className="text-[11px] text-neutral-400">{tr("editor.click_an_image_in_uploads_to_drop_it_into_th")}</p>
           </Section>
         );
       })()}
@@ -1854,44 +1862,44 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
         const ch = single.node as unknown as ChartNode;
         const style: ChartStyle = ch.style ?? {};
         const TYPES: ChartNode["chartType"][] = ["bar", "barGrouped", "barStacked", "line", "area", "pie", "donut", "scatter", "radar"];
-        const LABELS: Record<string, string> = { bar: "Bar", barGrouped: "Bar (grouped)", barStacked: "Bar (stacked)", line: "Line", area: "Area", pie: "Pie", donut: "Donut", scatter: "Scatter", radar: "Radar" };
+        const LABELS: Record<string, string> = { bar: tr("editor.bar_2"), barGrouped: tr("editor.bar_grouped"), barStacked: tr("editor.bar_stacked"), line: tr("editor.line"), area: tr("editor.area"), pie: tr("editor.pie"), donut: tr("editor.donut"), scatter: tr("editor.scatter"), radar: tr("editor.radar") };
         const legend = style.legend ?? { show: false, position: "bottom" as const };
         return (
-          <Section title="Chart" order={ORDER.type}>
-            <select value={ch.chartType} onChange={(e) => st.setChart(id, { chartType: e.target.value as never })} className={selectCls}>
+          <Section title={tr("editor.chart")} order={ORDER.type}>
+            <select aria-label={tr("editor.chart_type")} value={ch.chartType} onChange={(e) => st.setChart(id, { chartType: e.target.value as never })} className={selectCls}>
               {TYPES.map((tp) => <option key={tp} value={tp}>{LABELS[tp] ?? tp}</option>)}
             </select>
-            <label className="flex flex-col gap-1 text-[11px] text-neutral-400">Title
-              <input key={`title-${id}`} defaultValue={style.title ?? ""} placeholder="Chart title" onBlur={(e) => st.setChart(id, { style: { ...style, title: e.target.value.trim() || undefined } })} className={inputCls} />
+            <label className="flex flex-col gap-1 text-[11px] text-neutral-400">{tr("editor.title")}
+              <input key={`title-${id}`} defaultValue={style.title ?? ""} placeholder={tr("editor.chart_title")} onBlur={(e) => st.setChart(id, { style: { ...style, title: e.target.value.trim() || undefined } })} className={inputCls} />
             </label>
             <ChartDataTable node={ch} />
             <DataBindingControls node={single.node} />
             <div className="flex items-center justify-between text-[11px] text-neutral-500">
-              <span>Legend</span>
-              <Toggle checked={legend.show} onChange={(v) => st.setChart(id, { style: { ...style, legend: { ...legend, show: v } } })} />
+              <span>{tr("editor.legend")}</span>
+              <Toggle checked={legend.show} ariaLabel={tr("editor.legend")} onChange={(v) => st.setChart(id, { style: { ...style, legend: { ...legend, show: v } } })} />
             </div>
             {legend.show && (
-              <select value={legend.position} onChange={(e) => st.setChart(id, { style: { ...style, legend: { show: true, position: e.target.value as never } } })} className={selectCls}>
+              <select aria-label={tr("editor.legend_position")} value={legend.position} onChange={(e) => st.setChart(id, { style: { ...style, legend: { show: true, position: e.target.value as never } } })} className={selectCls}>
                 {["top", "right", "bottom", "left"].map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
             )}
             <div className="flex items-center justify-between text-[11px] text-neutral-500">
-              <span>Show values</span>
-              <Toggle checked={style.valueLabels === true} onChange={(v) => st.setChart(id, { style: { ...style, valueLabels: v } })} />
+              <span>{tr("editor.show_values")}</span>
+              <Toggle checked={style.valueLabels === true} ariaLabel={tr("editor.show_values")} onChange={(v) => st.setChart(id, { style: { ...style, valueLabels: v } })} />
             </div>
             {/* Base size for all chart text; title, legend, axis and value
                 labels scale proportionally from it (11 is the built-in base). */}
             <Field
               key={`cfs-${id}-${style.fontSize ?? 11}`}
-              label="Text size"
+              label={tr("editor.text_size")}
               value={style.fontSize ?? 11}
               onCommit={(n) => st.setChart(id, { style: { ...style, fontSize: Math.max(6, Math.min(44, Math.round(n))) } })}
             />
             <div className="flex flex-col gap-1.5">
-              <span className="text-[11px] text-neutral-400">Series colors</span>
+              <span className="text-[11px] text-neutral-400">{tr("editor.series_colors")}</span>
               {(ch.series ?? []).map((s, i) => (
                 <div key={`scol-${id}-${i}`} className="flex items-center gap-2">
-                  <input type="color" value={s.color ? colorHex(s.color) : "#6366f1"} onChange={(e) => st.setChartSeriesColor(id, i, colorFromHex(e.target.value))} className="oc-color h-7 w-8 shrink-0" />
+                  <input type="color" value={s.color ? colorHex(s.color) : "#6366f1"} aria-label={tr("editor.series_n_color", { n: i + 1 })} onChange={(e) => st.setChartSeriesColor(id, i, colorFromHex(e.target.value))} className="oc-color h-7 w-8 shrink-0" />
                   <span className="truncate text-xs text-neutral-600">{s.name || `Series ${i + 1}`}</span>
                 </div>
               ))}
@@ -1911,8 +1919,8 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
         const selCell = tb.cells.find((c) => c.row === sel.row && c.col === sel.col);
         const btnCls = "flex-1 rounded-md border border-neutral-200 bg-surface px-2 py-1 text-[11px] text-neutral-700 transition hover:bg-neutral-50 disabled:opacity-40";
         return (
-          <Section title="Table data" order={ORDER.type}>
-            <p className="text-[11px] text-neutral-400">One row per line, cells comma-separated.</p>
+          <Section title={tr("editor.table_data")} order={ORDER.type}>
+            <p className="text-[11px] text-neutral-400">{tr("editor.one_row_per_line_cells_comma_separated")}</p>
             <textarea
               key={`tb-${id}-${tb.rows}x${tb.cols}`}
               defaultValue={grid.map((r) => r.join(", ")).join("\n")}
@@ -1920,48 +1928,48 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
               onBlur={(e) => st.setTableData(id, e.target.value.split("\n").map((line) => line.split(",").map((s) => s.trim())))}
               className={`${inputCls} resize-none`}
             />
-            <span className="text-[11px] text-neutral-400">Rows</span>
+            <span className="text-[11px] text-neutral-400">{tr("editor.rows")}</span>
             <div className="flex gap-1.5">
               <button type="button" className={btnCls} onClick={() => st.addTableRow(id)}>+ Row</button>
-              <button type="button" className={btnCls} disabled={tb.rows <= 1} onClick={() => st.removeTableRow(id, tb.rows - 1)}>- Row</button>
+              <button type="button" className={btnCls} disabled={tb.rows <= 1} onClick={() => st.removeTableRow(id, tb.rows - 1)}>{tr("editor.row_2")}</button>
             </div>
-            <span className="text-[11px] text-neutral-400">Columns</span>
+            <span className="text-[11px] text-neutral-400">{tr("editor.columns")}</span>
             <div className="flex gap-1.5">
               <button type="button" className={btnCls} onClick={() => st.addTableColumn(id)}>+ Column</button>
-              <button type="button" className={btnCls} disabled={tb.cols <= 1} onClick={() => st.removeTableColumn(id, tb.cols - 1)}>- Column</button>
+              <button type="button" className={btnCls} disabled={tb.cols <= 1} onClick={() => st.removeTableColumn(id, tb.cols - 1)}>{tr("editor.column_2")}</button>
             </div>
 
-            <Heading>Header row</Heading>
+            <Heading>{tr("editor.header_row")}</Heading>
             <div className="flex items-center justify-between text-[11px] text-neutral-500">
-              <span>Styled header</span>
-              <Toggle checked={header.enabled} onChange={(v) => st.setTableStyle(id, { headerStyle: { ...header, enabled: v, fill: header.fill ?? solidFromHex("#f4f4f5"), bold: header.bold ?? true } })} />
+              <span>{tr("editor.styled_header")}</span>
+              <Toggle checked={header.enabled} ariaLabel={tr("editor.styled_header")} onChange={(v) => st.setTableStyle(id, { headerStyle: { ...header, enabled: v, fill: header.fill ?? solidFromHex("#f4f4f5"), bold: header.bold ?? true } })} />
             </div>
             {header.enabled && (
               <div className="flex items-center gap-2 text-[11px] text-neutral-500">
-                <span>Fill</span>
-                <input type="color" value={header.fill && header.fill.type === "solid" ? colorHex(header.fill.color) : "#f4f4f5"} onChange={(e) => st.setTableStyle(id, { headerStyle: { ...header, enabled: true, fill: solidFromHex(e.target.value) } })} className="oc-color h-7 w-8 shrink-0" />
-                <span>Text</span>
-                <input type="color" value={header.textColor ? colorHex(header.textColor) : "#18181b"} onChange={(e) => st.setTableStyle(id, { headerStyle: { ...header, enabled: true, textColor: colorFromHex(e.target.value) } })} className="oc-color h-7 w-8 shrink-0" />
+                <span>{tr("editor.fill")}</span>
+                <input type="color" value={header.fill && header.fill.type === "solid" ? colorHex(header.fill.color) : "#f4f4f5"} aria-label={tr("editor.header_fill_color")} onChange={(e) => st.setTableStyle(id, { headerStyle: { ...header, enabled: true, fill: solidFromHex(e.target.value) } })} className="oc-color h-7 w-8 shrink-0" />
+                <span>{tr("editor.text")}</span>
+                <input type="color" value={header.textColor ? colorHex(header.textColor) : "#18181b"} aria-label={tr("editor.header_text_color")} onChange={(e) => st.setTableStyle(id, { headerStyle: { ...header, enabled: true, textColor: colorFromHex(e.target.value) } })} className="oc-color h-7 w-8 shrink-0" />
               </div>
             )}
 
-            <Heading>Borders</Heading>
+            <Heading>{tr("editor.borders")}</Heading>
             <div className="flex items-center justify-between text-[11px] text-neutral-500">
-              <span>Show borders</span>
-              <Toggle checked={border.show} onChange={(v) => st.setTableStyle(id, { borderStyle: { ...border, show: v } })} />
+              <span>{tr("editor.show_borders")}</span>
+              <Toggle checked={border.show} ariaLabel={tr("editor.show_borders")} onChange={(v) => st.setTableStyle(id, { borderStyle: { ...border, show: v } })} />
             </div>
             {border.show && (
               <div className="flex items-center gap-2 text-[11px] text-neutral-500">
-                <span>Color</span>
-                <input type="color" value={border.color ? colorHex(border.color) : "#d4d4d8"} onChange={(e) => st.setTableStyle(id, { borderStyle: { ...border, show: true, color: colorFromHex(e.target.value) } })} className="oc-color h-7 w-8 shrink-0" />
-                <span>Width</span>
+                <span>{tr("editor.color")}</span>
+                <input type="color" value={border.color ? colorHex(border.color) : "#d4d4d8"} aria-label={tr("editor.border_color")} onChange={(e) => st.setTableStyle(id, { borderStyle: { ...border, show: true, color: colorFromHex(e.target.value) } })} className="oc-color h-7 w-8 shrink-0" />
+                <span>{tr("editor.width")}</span>
                 <input type="number" min={0} max={8} step={0.5} value={border.width ?? 1} onChange={(e) => st.setTableStyle(id, { borderStyle: { ...border, show: true, width: Math.max(0, Number(e.target.value)) } })} className={`${inputCls} w-16`} />
               </div>
             )}
 
-            <Heading>Cell formatting</Heading>
+            <Heading>{tr("editor.cell_formatting")}</Heading>
             <div className="flex items-center gap-2 text-[11px] text-neutral-500">
-              <span>Cell</span>
+              <span>{tr("editor.cell")}</span>
               <span>r</span>
               <input type="number" min={0} max={tb.rows - 1} value={sel.row} onChange={(e) => setTableCell({ row: Math.max(0, Math.min(tb.rows - 1, Number(e.target.value))), col: sel.col })} className={`${inputCls} w-14`} />
               <span>c</span>
@@ -1973,17 +1981,17 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
               ))}
             </div>
             <div className="flex items-center gap-2 text-[11px] text-neutral-500">
-              <span>Fill</span>
-              <input type="color" value={selCell?.fill && selCell.fill.type === "solid" ? colorHex(selCell.fill.color) : "#ffffff"} onChange={(e) => st.setTableCellStyle(id, sel.row, sel.col, { fill: solidFromHex(e.target.value) })} className="oc-color h-7 w-8 shrink-0" />
-              <span>Text</span>
-              <input type="color" value={selCell?.textColor ? colorHex(selCell.textColor) : "#18181b"} onChange={(e) => st.setTableCellStyle(id, sel.row, sel.col, { textColor: colorFromHex(e.target.value) })} className="oc-color h-7 w-8 shrink-0" />
+              <span>{tr("editor.fill")}</span>
+              <input type="color" value={selCell?.fill && selCell.fill.type === "solid" ? colorHex(selCell.fill.color) : "#ffffff"} aria-label={tr("editor.cell_fill")} onChange={(e) => st.setTableCellStyle(id, sel.row, sel.col, { fill: solidFromHex(e.target.value) })} className="oc-color h-7 w-8 shrink-0" />
+              <span>{tr("editor.text")}</span>
+              <input type="color" value={selCell?.textColor ? colorHex(selCell.textColor) : "#18181b"} aria-label={tr("editor.cell_text_color")} onChange={(e) => st.setTableCellStyle(id, sel.row, sel.col, { textColor: colorFromHex(e.target.value) })} className="oc-color h-7 w-8 shrink-0" />
             </div>
             {/* Merge / split the selected cell (engine renders row/col spans). */}
             <div className="flex flex-wrap gap-1.5">
-              <button type="button" className={btnCls} onClick={() => st.mergeTableCell(id, sel.row, sel.col, "right")}>Merge →</button>
-              <button type="button" className={btnCls} onClick={() => st.mergeTableCell(id, sel.row, sel.col, "down")}>Merge ↓</button>
+              <button type="button" className={btnCls} onClick={() => st.mergeTableCell(id, sel.row, sel.col, "right")}>{tr("editor.merge")}</button>
+              <button type="button" className={btnCls} onClick={() => st.mergeTableCell(id, sel.row, sel.col, "down")}>{tr("editor.merge_2")}</button>
               {selCell && ((selCell.rowSpan ?? 1) > 1 || (selCell.colSpan ?? 1) > 1) && (
-                <button type="button" className={btnCls} onClick={() => st.splitTableCell(id, sel.row, sel.col)}>Split</button>
+                <button type="button" className={btnCls} onClick={() => st.splitTableCell(id, sel.row, sel.col)}>{tr("editor.split")}</button>
               )}
             </div>
 
@@ -1992,10 +2000,10 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
           </Section>
         );
       })()}
-      <Section title="Appearance" order={ORDER.appearance}>
+      <Section title={tr("editor.appearance")} order={ORDER.appearance}>
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between text-sm text-neutral-600">
-            <span>Opacity</span>
+            <span>{tr("editor.opacity")}</span>
             <span className="font-mono text-xs text-neutral-400">{Math.round(opacity * 100)}%</span>
           </div>
           <input
@@ -2003,12 +2011,13 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
             min={0}
             max={100}
             value={Math.round(opacity * 100)}
+            aria-label={tr("editor.opacity")}
             onChange={(e) => useEditor.getState().setOpacitySel(Math.max(0, Math.min(1, Number(e.target.value) / 100)))}
             className="w-full accent-brand-600"
           />
         </div>
         <label className="flex flex-col gap-1 text-[11px] text-neutral-400">
-          Blend mode
+          {tr("editor.blend_mode")}
           <select
             value={blend}
             onChange={(e) => useEditor.getState().setBlendSel(e.target.value as BlendMode)}
@@ -2030,31 +2039,31 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
 
 // --- F25 animation / interactivity / motion / page-transition controls ------
 
-const EASINGS: { v: Easing; label: string }[] = [
-  { v: "linear", label: "Linear" },
-  { v: "ease-in", label: "Ease in" },
-  { v: "ease-out", label: "Ease out" },
-  { v: "ease-in-out", label: "Ease in-out" },
-  { v: "spring", label: "Spring" },
-  { v: "ease-in-cubic", label: "Ease in (cubic)" },
-  { v: "ease-out-cubic", label: "Ease out (cubic)" },
-  { v: "ease-out-back", label: "Back" },
-  { v: "bounce", label: "Bounce" },
+const easings = (): { v: Easing; label: string }[] => [
+  { v: "linear", label: tr("editor.linear") },
+  { v: "ease-in", label: tr("editor.ease_in") },
+  { v: "ease-out", label: tr("editor.ease_out") },
+  { v: "ease-in-out", label: tr("editor.ease_in_out") },
+  { v: "spring", label: tr("editor.spring") },
+  { v: "ease-in-cubic", label: tr("editor.ease_in_cubic") },
+  { v: "ease-out-cubic", label: tr("editor.ease_out_cubic") },
+  { v: "ease-out-back", label: tr("editor.back") },
+  { v: "bounce", label: tr("editor.bounce") },
 ];
-const ENTRANCE_PRESETS: { v: EntrancePreset; label: string }[] = [
-  { v: "fade", label: "Fade" }, { v: "rise", label: "Rise" }, { v: "pan", label: "Pan" },
-  { v: "pop", label: "Pop" }, { v: "drift", label: "Drift" }, { v: "breathe-in", label: "Breathe in" },
-  { v: "tumble", label: "Tumble" }, { v: "stomp", label: "Stomp" }, { v: "zoom-in", label: "Zoom" },
+const entrancePresets = (): { v: EntrancePreset; label: string }[] => [
+  { v: "fade", label: tr("editor.fade") }, { v: "rise", label: tr("editor.rise") }, { v: "pan", label: tr("editor.pan") },
+  { v: "pop", label: tr("editor.pop") }, { v: "drift", label: tr("editor.drift") }, { v: "breathe-in", label: tr("editor.breathe_in") },
+  { v: "tumble", label: tr("editor.tumble") }, { v: "stomp", label: tr("editor.stomp") }, { v: "zoom-in", label: tr("editor.zoom") },
 ];
-const EXIT_PRESETS: { v: ExitPreset; label: string }[] = [
-  { v: "fade-out", label: "Fade out" }, { v: "sink", label: "Sink" },
-  { v: "pop-out", label: "Pop out" }, { v: "drift-out", label: "Drift out" },
-  { v: "tumble-out", label: "Tumble out" }, { v: "zoom-out", label: "Zoom out" },
+const exitPresets = (): { v: ExitPreset; label: string }[] => [
+  { v: "fade-out", label: tr("editor.fade_out") }, { v: "sink", label: tr("editor.sink") },
+  { v: "pop-out", label: tr("editor.pop_out") }, { v: "drift-out", label: tr("editor.drift_out") },
+  { v: "tumble-out", label: tr("editor.tumble_out") }, { v: "zoom-out", label: tr("editor.zoom_out") },
 ];
-const EMPHASIS_PRESETS: { v: EmphasisPreset; label: string }[] = [
-  { v: "pulse", label: "Pulse" }, { v: "wiggle", label: "Wiggle" }, { v: "spin", label: "Spin" },
-  { v: "breathe", label: "Breathe" }, { v: "tada", label: "Tada" },
-  { v: "flicker", label: "Flicker" }, { v: "jiggle", label: "Jiggle" }, { v: "bob", label: "Bob" },
+const emphasisPresets = (): { v: EmphasisPreset; label: string }[] => [
+  { v: "pulse", label: tr("editor.pulse") }, { v: "wiggle", label: tr("editor.wiggle") }, { v: "spin", label: tr("editor.spin") },
+  { v: "breathe", label: tr("editor.breathe") }, { v: "tada", label: tr("editor.tada") },
+  { v: "flicker", label: tr("editor.flicker") }, { v: "jiggle", label: tr("editor.jiggle") }, { v: "bob", label: tr("editor.bob") },
 ];
 
 type AnimTab = "entrance" | "exit" | "emphasis";
@@ -2094,9 +2103,9 @@ function KeyframeEditor({ node }: { node: Node }) {
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-neutral-200 p-2">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-medium text-neutral-600">Keyframes</span>
+        <span className="text-[11px] font-medium text-neutral-600">{tr("editor.keyframes")}</span>
         <label className="flex items-center gap-1 text-[10px] text-neutral-500">
-          <input type="checkbox" checked={!!track.loop} onChange={(e) => set({ ...track, loop: e.target.checked })} className="h-3 w-3 accent-brand-600" />loop
+          <input type="checkbox" checked={!!track.loop} onChange={(e) => set({ ...track, loop: e.target.checked })} className="h-3 w-3 accent-brand-600" />{tr("editor.loop_2")}
         </label>
       </div>
       <div className="relative h-6 rounded bg-neutral-100">
@@ -2110,19 +2119,19 @@ function KeyframeEditor({ node }: { node: Node }) {
       </div>
       <div className="flex gap-1.5">
         <button onClick={addKf} className="flex-1 rounded-md border border-neutral-200 px-2 py-1 text-[11px] hover:bg-neutral-50">+ Keyframe</button>
-        <button onClick={delKf} className="rounded-md border border-neutral-200 px-2 py-1 text-[11px] text-rose-600 hover:bg-rose-50">Delete</button>
+        <button onClick={delKf} className="rounded-md border border-neutral-200 px-2 py-1 text-[11px] text-rose-600 hover:bg-rose-50">{tr("editor.delete")}</button>
       </div>
       <div className="grid grid-cols-2 gap-1.5">
-        <Field key={`dur${track.durationMs}`} label="Dur" value={track.durationMs} onCommit={(n) => set({ ...track, durationMs: Math.max(1, n) })} />
-        <Field key={`t${curIdx}-${cur.t}`} label="t(ms)" value={cur.t} onCommit={(n) => upd({ t: Math.max(0, Math.min(track.durationMs, n)) })} />
-        <Field key={`dx${curIdx}-${cur.dx}`} label="dx" value={cur.dx ?? 0} onCommit={(n) => upd({ dx: n })} />
-        <Field key={`dy${curIdx}-${cur.dy}`} label="dy" value={cur.dy ?? 0} onCommit={(n) => upd({ dy: n })} />
-        <Field key={`sc${curIdx}-${cur.scale}`} label="scale" value={cur.scale ?? 1} onCommit={(n) => upd({ scale: n })} />
-        <Field key={`rot${curIdx}-${cur.rotate}`} label="rotate" value={cur.rotate ?? 0} onCommit={(n) => upd({ rotate: n })} />
-        <Field key={`op${curIdx}-${cur.opacity}`} label="opacity" value={cur.opacity ?? 1} onCommit={(n) => upd({ opacity: Math.max(0, Math.min(1, n)) })} />
+        <Field key={`dur${track.durationMs}`} label={tr("editor.dur")} value={track.durationMs} onCommit={(n) => set({ ...track, durationMs: Math.max(1, n) })} />
+        <Field key={`t${curIdx}-${cur.t}`} label={tr("editor.t_ms")} value={cur.t} onCommit={(n) => upd({ t: Math.max(0, Math.min(track.durationMs, n)) })} />
+        <Field key={`dx${curIdx}-${cur.dx}`} label={tr("editor.dx")} value={cur.dx ?? 0} onCommit={(n) => upd({ dx: n })} />
+        <Field key={`dy${curIdx}-${cur.dy}`} label={tr("editor.dy")} value={cur.dy ?? 0} onCommit={(n) => upd({ dy: n })} />
+        <Field key={`sc${curIdx}-${cur.scale}`} label={tr("editor.scale")} value={cur.scale ?? 1} onCommit={(n) => upd({ scale: n })} />
+        <Field key={`rot${curIdx}-${cur.rotate}`} label={tr("editor.rotate")} value={cur.rotate ?? 0} onCommit={(n) => upd({ rotate: n })} />
+        <Field key={`op${curIdx}-${cur.opacity}`} label={tr("editor.opacity_2")} value={cur.opacity ?? 1} onCommit={(n) => upd({ opacity: Math.max(0, Math.min(1, n)) })} />
       </div>
-      <select value={cur.easing ?? "linear"} onChange={(e) => upd({ easing: e.target.value as Easing })} className={selectCls}>
-        {EASINGS.map((es) => <option key={es.v} value={es.v}>{es.label}</option>)}
+      <select aria-label={tr("editor.easing")} value={cur.easing ?? "linear"} onChange={(e) => upd({ easing: e.target.value as Easing })} className={selectCls}>
+        {easings().map((es) => <option key={es.v} value={es.v}>{es.label}</option>)}
       </select>
     </div>
   );
@@ -2137,25 +2146,25 @@ function AnimateSection({ node }: { node: Node }) {
   const id = node.id;
   const anim = (node as { animation?: NodeAnimation }).animation ?? {};
   // Typewriter reveal only makes sense for text, so offer it only there.
-  const entrancePresets = node.type === "text" ? [...ENTRANCE_PRESETS, { v: "typewriter" as EntrancePreset, label: "Typewriter" }, { v: "word-wipe" as EntrancePreset, label: "Word wipe" }] : ENTRANCE_PRESETS;
-  const presets = tab === "entrance" ? entrancePresets : tab === "exit" ? EXIT_PRESETS : EMPHASIS_PRESETS;
+  const entranceOptions = node.type === "text" ? [...entrancePresets(), { v: "typewriter" as EntrancePreset, label: tr("editor.typewriter") }, { v: "word-wipe" as EntrancePreset, label: tr("editor.word_wipe") }] : entrancePresets();
+  const presets = tab === "entrance" ? entranceOptions : tab === "exit" ? exitPresets() : emphasisPresets();
   const clip = anim[tab];
   const set = (next: NonNullable<NodeAnimation[AnimTab]> | undefined) => {
     st.setNodeAnimation(id, { ...anim, [tab]: next } as NodeAnimation);
   };
   return (
-    <Section title="Animate" order={ORDER.interactivity} defaultOpen={false}>
+    <Section title={tr("editor.animate")} order={ORDER.interactivity} defaultOpen={false}>
       <div className="flex items-center justify-end">
         <button
           onClick={() => st.previewNodeAnimation(id)}
           className="rounded-md border border-neutral-200 px-2 py-0.5 text-[11px] font-medium text-neutral-600 transition hover:bg-neutral-100"
-        >Preview</button>
+        >{tr("editor.preview")}</button>
       </div>
       {/* Magic Animate: one click animates every element on the page with a
           staggered build-in (no AI; tasteful defaults by element kind). */}
       <div className="flex gap-1.5">
-        <button onClick={() => st.magicAnimatePage()} className="flex-1 rounded-lg bg-brand-50 px-2 py-1.5 text-[11px] font-medium text-brand-ink transition hover:bg-brand-100">✨ Animate all</button>
-        <button onClick={() => st.magicAnimatePage(true)} className="rounded-lg bg-neutral-100 px-2 py-1.5 text-[11px] text-neutral-500 transition hover:bg-neutral-200" title="Remove animations from all elements on this page">Clear all</button>
+        <button onClick={() => st.magicAnimatePage()} className="flex-1 rounded-lg bg-brand-50 px-2 py-1.5 text-[11px] font-medium text-brand-ink transition hover:bg-brand-100">{tr("editor.animate_all")}</button>
+        <button onClick={() => st.magicAnimatePage(true)} className="rounded-lg bg-neutral-100 px-2 py-1.5 text-[11px] text-neutral-500 transition hover:bg-neutral-200" title={tr("editor.remove_animations_from_all_elements_on_this")}>{tr("editor.clear_all")}</button>
       </div>
       <div className="flex rounded-lg bg-neutral-100 p-0.5 text-xs">
         {(["entrance", "exit", "emphasis"] as AnimTab[]).map((t) => (
@@ -2166,7 +2175,7 @@ function AnimateSection({ node }: { node: Node }) {
           >{t}</button>
         ))}
       </div>
-      <select
+      <select aria-label={tr("editor.animation_preset")}
         value={clip?.preset ?? "none"}
         onChange={(e) => {
           const v = e.target.value;
@@ -2175,14 +2184,14 @@ function AnimateSection({ node }: { node: Node }) {
         }}
         className={selectCls}
       >
-        <option value="none">None</option>
+        <option value="none">{tr("editor.none")}</option>
         {presets.map((p) => <option key={p.v} value={p.v}>{p.label}</option>)}
       </select>
       {clip && (
         <>
           <div className="grid grid-cols-2 gap-2">
-            <Field key={`${tab}d${clip.durationMs}`} label="Dur" value={clip.durationMs} onCommit={(n) => set({ ...clip, durationMs: Math.max(0, n) })} />
-            <Field key={`${tab}l${clip.delayMs}`} label="Delay" value={clip.delayMs} onCommit={(n) => set({ ...clip, delayMs: Math.max(0, n) })} />
+            <Field key={`${tab}d${clip.durationMs}`} label={tr("editor.dur")} value={clip.durationMs} onCommit={(n) => set({ ...clip, durationMs: Math.max(0, n) })} />
+            <Field key={`${tab}l${clip.delayMs}`} label={tr("editor.delay")} value={clip.delayMs} onCommit={(n) => set({ ...clip, delayMs: Math.max(0, n) })} />
           </div>
           {/* Custom cubic-bezier curve: when enabled it overrides the named easing
               (4 control values, CSS-style). Picking a named easing clears it. */}
@@ -2191,13 +2200,13 @@ function AnimateSection({ node }: { node: Node }) {
             return (
               <div className="flex flex-col gap-1.5">
                 <label className="flex items-center justify-between text-[11px] text-neutral-500">
-                  <span>Custom curve</span>
+                  <span>{tr("editor.custom_curve")}</span>
                   <Toggle checked={!!bz} onChange={(on) => set({ ...clip, bezier: on ? [0.42, 0, 0.58, 1] : undefined })} />
                 </label>
                 {bz && (
                   <div className="grid grid-cols-4 gap-1">
                     {(["x1", "y1", "x2", "y2"] as const).map((lbl, i) => (
-                      <input key={lbl} type="number" step={0.05} value={bz[i]} title={lbl}
+                      <input key={lbl} type="number" step={0.05} value={bz[i]} title={lbl} aria-label={lbl}
                         onChange={(e) => { const n = [...bz] as [number, number, number, number]; n[i] = Number(e.target.value); set({ ...clip, bezier: n }); }}
                         className="rounded border border-neutral-200 px-1 py-0.5 text-[11px] outline-none focus:border-brand-400" />
                     ))}
@@ -2206,21 +2215,21 @@ function AnimateSection({ node }: { node: Node }) {
               </div>
             );
           })()}
-          <select value={clip.easing} disabled={!!(clip as { bezier?: unknown }).bezier} onChange={(e) => set({ ...clip, easing: e.target.value as Easing, bezier: undefined })} className={`${selectCls} disabled:opacity-40`}>
-            {EASINGS.map((es) => <option key={es.v} value={es.v}>{es.label}</option>)}
+          <select aria-label={tr("editor.easing")} value={clip.easing} disabled={!!(clip as { bezier?: unknown }).bezier} onChange={(e) => set({ ...clip, easing: e.target.value as Easing, bezier: undefined })} className={`${selectCls} disabled:opacity-40`}>
+            {easings().map((es) => <option key={es.v} value={es.v}>{es.label}</option>)}
           </select>
           {/* Entrance sequencing across siblings: start with/after the previous
               animated element ("with/after previous" timing). */}
           {tab === "entrance" && (
-            <label className="flex flex-col gap-1 text-[11px] text-neutral-400">Start
+            <label className="flex flex-col gap-1 text-[11px] text-neutral-400">{tr("editor.start")}
               <select value={(clip as { startMode?: string }).startMode ?? "delay"} onChange={(e) => set({ ...clip, startMode: e.target.value as "delay" | "with-previous" | "after-previous" })} className={selectCls}>
-                <option value="delay">On delay</option>
-                <option value="with-previous">With previous</option>
-                <option value="after-previous">After previous</option>
+                <option value="delay">{tr("editor.on_delay")}</option>
+                <option value="with-previous">{tr("editor.with_previous")}</option>
+                <option value="after-previous">{tr("editor.after_previous")}</option>
               </select>
             </label>
           )}
-          {tab === "emphasis" && <p className="text-[11px] text-neutral-400">Loops while the slide is shown.</p>}
+          {tab === "emphasis" && <p className="text-[11px] text-neutral-400">{tr("editor.loops_while_the_slide_is_shown")}</p>}
         </>
       )}
       <KeyframeEditor node={node} />
@@ -2234,8 +2243,8 @@ function ImageMotionSection({ node }: { node: Node }) {
   const id = node.id;
   const motion = (node as { motion?: ImageMotion }).motion;
   return (
-    <Section title="Motion" order={ORDER.interactivity}>
-      <select
+    <Section title={tr("editor.motion")} order={ORDER.interactivity}>
+      <select aria-label={tr("editor.motion")}
         value={motion?.kind ?? "none"}
         onChange={(e) => {
           const v = e.target.value;
@@ -2244,13 +2253,13 @@ function ImageMotionSection({ node }: { node: Node }) {
         }}
         className={selectCls}
       >
-        <option value="none">None</option>
-        <option value="kenburns">Ken Burns (zoom + pan)</option>
-        <option value="parallax">Parallax (pan)</option>
+        <option value="none">{tr("editor.none")}</option>
+        <option value="kenburns">{tr("editor.ken_burns_zoom_pan")}</option>
+        <option value="parallax">{tr("editor.parallax_pan")}</option>
       </select>
       {motion && (
         <label className="flex flex-col gap-1 text-[11px] text-neutral-400">
-          Intensity
+          {tr("editor.intensity")}
           <input
             type="range" min={0} max={100} value={Math.round(motion.intensity * 100)}
             onChange={(e) => st.setImageMotion(id, { ...motion, intensity: Number(e.target.value) / 100 })}
@@ -2258,7 +2267,7 @@ function ImageMotionSection({ node }: { node: Node }) {
           />
         </label>
       )}
-      <p className="text-[11px] text-neutral-400">Plays during present mode.</p>
+      <p className="text-[11px] text-neutral-400">{tr("editor.plays_during_present_mode")}</p>
     </Section>
   );
 }
@@ -2274,18 +2283,18 @@ function InteractionSection({ node, doc }: { node: Node; doc: DesignFile }) {
     st.setInteraction(id, { trigger: interaction?.trigger ?? "click", action: next });
   };
   return (
-    <Section title="Interaction" order={ORDER.interactivity} defaultOpen={false}>
+    <Section title={tr("editor.interaction")} order={ORDER.interactivity} defaultOpen={false}>
       <div className="grid grid-cols-2 gap-2">
-        <select
+        <select aria-label={tr("editor.interaction")}
           value={interaction?.trigger ?? "click"}
           onChange={(e) => interaction && st.setInteraction(id, { ...interaction, trigger: e.target.value as Interaction["trigger"] })}
           disabled={!interaction}
           className={`${selectCls} disabled:opacity-50`}
         >
-          <option value="click">On click</option>
-          <option value="hover">On hover</option>
+          <option value="click">{tr("editor.on_click")}</option>
+          <option value="hover">{tr("editor.on_hover")}</option>
         </select>
-        <select
+        <select aria-label={tr("editor.on_hover")}
           value={action.kind}
           onChange={(e) => {
             const k = e.target.value;
@@ -2295,13 +2304,13 @@ function InteractionSection({ node, doc }: { node: Node; doc: DesignFile }) {
           }}
           className={selectCls}
         >
-          <option value="none">None</option>
-          <option value="navigate">Go to page</option>
-          <option value="open-link">Open link</option>
+          <option value="none">{tr("editor.none")}</option>
+          <option value="navigate">{tr("editor.go_to_page")}</option>
+          <option value="open-link">{tr("editor.open_link")}</option>
         </select>
       </div>
       {action.kind === "navigate" && (
-        <select
+        <select aria-label={tr("editor.go_to_page")}
           value={action.to === "page" ? `page:${action.pageId ?? ""}` : action.to}
           onChange={(e) => {
             const v = e.target.value;
@@ -2310,10 +2319,10 @@ function InteractionSection({ node, doc }: { node: Node; doc: DesignFile }) {
           }}
           className={selectCls}
         >
-          <option value="next">Next page</option>
-          <option value="prev">Previous page</option>
-          <option value="first">First page</option>
-          <option value="last">Last page</option>
+          <option value="next">{tr("editor.next_page")}</option>
+          <option value="prev">{tr("editor.previous_page")}</option>
+          <option value="first">{tr("editor.first_page")}</option>
+          <option value="last">{tr("editor.last_page")}</option>
           {doc.pages.map((p, i) => <option key={p.id} value={`page:${p.id}`}>{p.name ?? `Page ${i + 1}`}</option>)}
         </select>
       )}
@@ -2352,27 +2361,27 @@ function PageLayoutSection({ page }: { page: Page }) {
 
   if (!layouts.length) {
     return (
-      <Section title="Layout">
+      <Section title={tr("editor.layout")}>
         <p className="mb-2 text-[11px] leading-relaxed text-neutral-500">
           Slide layouts give each slide a title and content placeholders, and make slide titles readable by screen
           readers.
         </p>
         <button type="button" onClick={() => st.ensureSlideLayouts()} className={actionBtnCls} data-testid="add-layouts">
-          Add slide layouts
+          {tr("editor.add_slide_layouts")}
         </button>
       </Section>
     );
   }
   return (
-    <Section title="Layout">
+    <Section title={tr("editor.layout")}>
       <select
         value={known ? current : "none"}
         onChange={(e) => st.setPageLayout(e.target.value === "none" ? undefined : e.target.value)}
         className={selectCls}
         data-testid="layout-select"
-        aria-label="Slide layout"
+        aria-label={tr("editor.slide_layout")}
       >
-        <option value="none">None</option>
+        <option value="none">{tr("editor.none")}</option>
         {layouts.map((l) => (
           <option key={l.id} value={l.id}>
             {l.name}
@@ -2389,10 +2398,10 @@ function PageLayoutSection({ page }: { page: Page }) {
 /** Deck theme swap (doc 28 FR-4). Adopting a theme restyles the deck's palette
  *  and font pair in one undoable action; it never rewrites page content, which
  *  is what keeps it reversible (recoloring nodes is the Brand panel's re-skin). */
-const BUILTIN_THEMES: { id: string; name: string; colors: string[]; fontHeading: string; fontBody: string }[] = [
-  { id: "theme-plum", name: "Plum", colors: ["#9B2C72", "#C84B9A", "#3E1030", "#FBEFF7", "#18181b", "#ffffff"], fontHeading: "Plus Jakarta Sans", fontBody: "Plus Jakarta Sans" },
-  { id: "theme-slate", name: "Slate", colors: ["#0f172a", "#334155", "#64748b", "#e2e8f0", "#020617", "#ffffff"], fontHeading: "Inter", fontBody: "Inter" },
-  { id: "theme-forest", name: "Forest", colors: ["#14532d", "#16a34a", "#4ade80", "#dcfce7", "#052e16", "#ffffff"], fontHeading: "Inter", fontBody: "Inter" },
+const builtinThemes = (): { id: string; name: string; colors: string[]; fontHeading: string; fontBody: string }[] => [
+  { id: "theme-plum", name: tr("editor.plum"), colors: ["#9B2C72", "#C84B9A", "#3E1030", "#FBEFF7", "#18181b", "#ffffff"], fontHeading: "Plus Jakarta Sans", fontBody: "Plus Jakarta Sans" },
+  { id: "theme-slate", name: tr("editor.slate"), colors: ["#0f172a", "#334155", "#64748b", "#e2e8f0", "#020617", "#ffffff"], fontHeading: "Inter", fontBody: "Inter" },
+  { id: "theme-forest", name: tr("editor.forest"), colors: ["#14532d", "#16a34a", "#4ade80", "#dcfce7", "#052e16", "#ffffff"], fontHeading: "Inter", fontBody: "Inter" },
 ];
 
 function DeckThemeSection() {
@@ -2402,9 +2411,9 @@ function DeckThemeSection() {
   const current = doc.theme?.id;
   void rev;
   return (
-    <Section title="Deck theme">
-      <div className="flex flex-col gap-1.5" role="radiogroup" aria-label="Deck theme">
-        {BUILTIN_THEMES.map((t) => {
+    <Section title={tr("editor.deck_theme")}>
+      <div className="flex flex-col gap-1.5" role="radiogroup" aria-label={tr("editor.deck_theme")}>
+        {builtinThemes().map((t) => {
           const active = current === t.id;
           return (
             <button
@@ -2422,7 +2431,7 @@ function DeckThemeSection() {
                   fontBody: t.fontBody,
                 })
               }
-              className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-left text-sm transition ${
+              className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-start text-sm transition ${
                 active ? "border-brand-500 bg-brand-50 text-brand-ink" : "border-neutral-200 hover:bg-neutral-50"
               }`}
             >
@@ -2436,8 +2445,8 @@ function DeckThemeSection() {
           );
         })}
         {current && (
-          <button type="button" onClick={() => st.setDeckTheme(undefined)} className="mt-0.5 text-left text-[11px] text-neutral-500 hover:underline" data-testid="clear-theme">
-            Clear theme
+          <button type="button" onClick={() => st.setDeckTheme(undefined)} className="mt-0.5 text-start text-[11px] text-neutral-500 hover:underline" data-testid="clear-theme">
+            {tr("editor.clear_theme")}
           </button>
         )}
       </div>
@@ -2461,9 +2470,9 @@ function NodeAccessibilitySection({ node }: { node: Node }) {
   // file's description is visible rather than appearing to have vanished.
   const value = rec.altText ?? (node.type === "image" ? rec.alt : undefined) ?? "";
   return (
-    <Section title="Accessibility" order={ORDER.accessibility}>
+    <Section title={tr("editor.accessibility")} order={ORDER.accessibility}>
       <label className="mb-1 block text-[11px] font-medium text-neutral-500" htmlFor="a11y-alt">
-        Description (alt text)
+        {tr("editor.description_alt_text")}
       </label>
       <textarea
         id="a11y-alt"
@@ -2471,7 +2480,7 @@ function NodeAccessibilitySection({ node }: { node: Node }) {
         rows={2}
         disabled={decorative}
         value={value}
-        placeholder={decorative ? "Not needed for decorative elements" : "Describe this element for screen readers"}
+        placeholder={decorative ? tr("editor.not_needed_for_decorative_elements") : tr("editor.describe_this_element_for_screen_readers")}
         onChange={(e) => st.setNodeAltText(node.id, e.target.value)}
         className="w-full resize-y rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm text-neutral-800 outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100 disabled:opacity-50"
       />
@@ -2483,7 +2492,7 @@ function NodeAccessibilitySection({ node }: { node: Node }) {
           onChange={(e) => st.setNodeDecorative(node.id, e.target.checked)}
           className="h-4 w-4 rounded border-neutral-300 accent-brand-600"
         />
-        Decorative (skip for screen readers)
+        {tr("editor.decorative_skip_for_screen_readers")}
       </label>
     </Section>
   );
@@ -2495,8 +2504,8 @@ function PageTransitionSection({ page }: { page: Page }) {
   const t = (page as { transition?: import("@hc/schema").PageTransition }).transition;
   type TransitionType = import("@hc/schema").PageTransition["type"];
   return (
-    <Section title="Transition">
-      <select
+    <Section title={tr("editor.transition")}>
+      <select aria-label={tr("editor.transition")}
         value={t?.type ?? "none"}
         onChange={(e) => {
           const v = e.target.value as TransitionType;
@@ -2505,35 +2514,35 @@ function PageTransitionSection({ page }: { page: Page }) {
         }}
         className={selectCls}
       >
-        <option value="none">None</option>
-        <option value="fade">Fade</option>
-        <option value="slide">Slide</option>
-        <option value="push">Push</option>
-        <option value="dissolve">Dissolve</option>
-        <option value="morph-lite">Morph (lite)</option>
-        <option value="morph">Morph (magic move)</option>
-        <option value="wipe">Wipe</option>
-        <option value="flip">Flip</option>
-        <option value="zoom">Zoom</option>
+        <option value="none">{tr("editor.none")}</option>
+        <option value="fade">{tr("editor.fade")}</option>
+        <option value="slide">{tr("editor.slide")}</option>
+        <option value="push">{tr("editor.push")}</option>
+        <option value="dissolve">{tr("editor.dissolve")}</option>
+        <option value="morph-lite">{tr("editor.morph_lite")}</option>
+        <option value="morph">{tr("editor.morph_magic_move")}</option>
+        <option value="wipe">{tr("editor.wipe")}</option>
+        <option value="flip">{tr("editor.flip")}</option>
+        <option value="zoom">{tr("editor.zoom")}</option>
       </select>
       {t && t.type !== "none" && (
         <div className="grid grid-cols-2 gap-2">
           {(t.type === "slide" || t.type === "push" || t.type === "wipe") && (
-            <select
+            <select aria-label={tr("editor.direction")}
               value={t.direction ?? "left"}
               onChange={(e) => st.setPageTransition({ ...t, direction: e.target.value as NonNullable<typeof t.direction> })}
               className={selectCls}
             >
-              <option value="left">Left</option>
-              <option value="right">Right</option>
-              <option value="up">Up</option>
-              <option value="down">Down</option>
+              <option value="left">{tr("editor.left")}</option>
+              <option value="right">{tr("editor.right")}</option>
+              <option value="up">{tr("editor.up")}</option>
+              <option value="down">{tr("editor.down")}</option>
             </select>
           )}
-          <Field key={`pt${t.durationMs}`} label="Dur" value={t.durationMs} onCommit={(n) => st.setPageTransition({ ...t, durationMs: Math.max(0, n) })} />
+          <Field key={`pt${t.durationMs}`} label={tr("editor.dur")} value={t.durationMs} onCommit={(n) => st.setPageTransition({ ...t, durationMs: Math.max(0, n) })} />
         </div>
       )}
-      <p className="text-[11px] text-neutral-400">Plays when advancing to this page in present mode.</p>
+      <p className="text-[11px] text-neutral-400">{tr("editor.plays_when_advancing_to_this_page_in_present")}</p>
       {/* Apply-to-all (doc 28 FR-10): PowerPoint's "Apply To All", one undo step. */}
       <button
         type="button"
@@ -2541,7 +2550,7 @@ function PageTransitionSection({ page }: { page: Page }) {
         onClick={() => st.applyTransitionToAllPages()}
         className="mt-2 w-full rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
       >
-        Apply to all slides
+        {tr("editor.apply_to_all_slides")}
       </button>
     </Section>
   );
@@ -2557,9 +2566,9 @@ function PagePresentSection({ page }: { page: Page }) {
   const hidden = !!(page as { hidden?: boolean }).hidden;
   const autoSec = typeof autoMs === "number" ? Math.round(autoMs / 100) / 10 : "";
   return (
-    <Section title="Present">
+    <Section title={tr("editor.present")}>
       <label className="flex items-center justify-between gap-2 text-sm text-neutral-700">
-        <span>Hide slide while presenting</span>
+        <span>{tr("editor.hide_slide_while_presenting")}</span>
         <input
           type="checkbox"
           checked={hidden}
@@ -2568,18 +2577,18 @@ function PagePresentSection({ page }: { page: Page }) {
         />
       </label>
       <div>
-        <div className="mb-1 text-[11px] font-medium text-neutral-400">Speaker notes</div>
+        <div className="mb-1 text-[11px] font-medium text-neutral-400">{tr("editor.speaker_notes")}</div>
         <textarea
           key={`notes-${page.id}`}
           defaultValue={notes}
           onBlur={(e) => st.setPageNotes(e.target.value)}
-          placeholder="Notes for the presenter view (not shown to the audience)."
+          placeholder={tr("editor.notes_for_the_presenter_view_not_shown_to_th")}
           rows={4}
           className="w-full resize-y rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm leading-relaxed outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
         />
       </div>
       <label className="flex items-center justify-between gap-2 text-sm text-neutral-700">
-        <span>Auto-advance after</span>
+        <span>{tr("editor.auto_advance_after")}</span>
         <span className="flex items-center gap-1">
           <input
             key={`adv-${page.id}-${String(autoSec)}`}
@@ -2587,12 +2596,12 @@ function PagePresentSection({ page }: { page: Page }) {
             min={0}
             step={0.5}
             defaultValue={autoSec}
-            placeholder="off"
+            placeholder={tr("editor.off")}
             onBlur={(e) => {
               const v = e.target.value.trim();
               st.setPageAutoAdvance(v === "" ? null : Math.max(0, Number(v) || 0) * 1000);
             }}
-            className="w-16 rounded-lg border border-neutral-200 bg-surface px-2 py-1 text-right text-sm tabular-nums outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+            className="w-16 rounded-lg border border-neutral-200 bg-surface px-2 py-1 text-end text-sm tabular-nums outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
           />
           <span className="text-xs text-neutral-400">s</span>
         </span>
@@ -2611,37 +2620,37 @@ function Wrap({ children }: { children: React.ReactNode }) {
 type AdjEffect = { kind: "adjustment"; ops: AdjOp[] };
 type DuotoneEffect = { kind: "duotone"; shadows: Color; highlights: Color; intensity: number };
 
-const ADJUST_GROUPS: { group: string; sliders: { name: string; label: string; min: number; max: number; def: number; step?: number }[] }[] = [
-  { group: "Light", sliders: [
-    { name: "brightness", label: "Brightness", min: 0, max: 2, def: 1 },
-    { name: "exposure", label: "Exposure", min: -1, max: 1, def: 0 },
-    { name: "contrast", label: "Contrast", min: 0, max: 2, def: 1 },
-    { name: "highlights", label: "Highlights", min: -1, max: 1, def: 0 },
-    { name: "shadows", label: "Shadows", min: -1, max: 1, def: 0 },
+const adjustGroups = (): { group: string; sliders: { name: string; label: string; min: number; max: number; def: number; step?: number }[] }[] => [
+  { group: tr("editor.light"), sliders: [
+    { name: "brightness", label: tr("editor.brightness"), min: 0, max: 2, def: 1 },
+    { name: "exposure", label: tr("editor.exposure"), min: -1, max: 1, def: 0 },
+    { name: "contrast", label: tr("editor.contrast"), min: 0, max: 2, def: 1 },
+    { name: "highlights", label: tr("editor.highlights"), min: -1, max: 1, def: 0 },
+    { name: "shadows", label: tr("editor.shadows"), min: -1, max: 1, def: 0 },
   ] },
-  { group: "Color", sliders: [
-    { name: "saturate", label: "Saturation", min: 0, max: 2, def: 1 },
-    { name: "vibrance", label: "Vibrance", min: -1, max: 1, def: 0 },
-    { name: "warmth", label: "Warmth", min: -1, max: 1, def: 0 },
-    { name: "tint", label: "Tint", min: -1, max: 1, def: 0 },
-    { name: "hue-rotate", label: "Hue", min: -180, max: 180, def: 0, step: 1 },
+  { group: tr("editor.color"), sliders: [
+    { name: "saturate", label: tr("editor.saturation"), min: 0, max: 2, def: 1 },
+    { name: "vibrance", label: tr("editor.vibrance"), min: -1, max: 1, def: 0 },
+    { name: "warmth", label: tr("editor.warmth"), min: -1, max: 1, def: 0 },
+    { name: "tint", label: tr("editor.tint"), min: -1, max: 1, def: 0 },
+    { name: "hue-rotate", label: tr("editor.hue"), min: -180, max: 180, def: 0, step: 1 },
   ] },
-  { group: "Detail", sliders: [
-    { name: "grayscale", label: "Grayscale", min: 0, max: 1, def: 0 },
-    { name: "sepia", label: "Sepia", min: 0, max: 1, def: 0 },
-    { name: "blur", label: "Blur", min: 0, max: 20, def: 0, step: 0.5 },
+  { group: tr("editor.detail"), sliders: [
+    { name: "grayscale", label: tr("editor.grayscale"), min: 0, max: 1, def: 0 },
+    { name: "sepia", label: tr("editor.sepia"), min: 0, max: 1, def: 0 },
+    { name: "blur", label: tr("editor.blur"), min: 0, max: 20, def: 0, step: 0.5 },
   ] },
 ];
 
 /** Human label for an effect entry in the stack list. */
 function effectLabel(e: Effect): string {
   switch (e.kind) {
-    case "adjustment": return "Adjustments";
-    case "duotone": return "Duotone";
-    case "blur": return "Blur";
-    case "shadow": return (e.type ?? "drop") === "drop" ? "Drop shadow" : "Inner shadow";
-    case "glow": return "Glow";
-    case "outline": return "Outline";
+    case "adjustment": return tr("editor.adjustments");
+    case "duotone": return tr("editor.duotone");
+    case "blur": return tr("editor.blur");
+    case "shadow": return (e.type ?? "drop") === "drop" ? tr("editor.drop_shadow") : tr("editor.inner_shadow");
+    case "glow": return tr("editor.glow");
+    case "outline": return tr("editor.outline");
     default: return (e as { kind: string }).kind;
   }
 }
@@ -2711,7 +2720,7 @@ function ImageEffectsSection({ id, node, workspaceId }: { id: string; node: Node
     const url = doc.assets.find((a) => a.id === src.assetId)?.url;
     if (!url) {
       setBgState("error");
-      setBgError("This image has no resolvable source URL.");
+      setBgError(tr("editor.this_image_has_no_resolvable_source_url"));
       return;
     }
     setBgState("working");
@@ -2722,7 +2731,7 @@ function ImageEffectsSection({ id, node, workspaceId }: { id: string; node: Node
       // and hand the bytes to the remover as a Blob, so it never has to fetch a
       // relative/cross-origin URL itself (the main reason removal used to fail).
       const resp = await fetch(resolveAssetUrl(url), { credentials: "include" });
-      if (!resp.ok) throw new Error(`Couldn't load the image (${resp.status}).`);
+      if (!resp.ok) throw new CodedError("errors.image_load_failed", `Couldn't load the image (${resp.status}).`, { status: resp.status });
       let blob = await resp.blob();
       // The model only accepts raster images; rasterize a vector (SVG) or any
       // non-raster to a PNG first (otherwise it throws "Invalid format").
@@ -2752,7 +2761,7 @@ function ImageEffectsSection({ id, node, workspaceId }: { id: string; node: Node
       setBgState("idle");
     } catch (err) {
       setBgState("error");
-      setBgError(err instanceof Error ? err.message : "Background removal failed.");
+      setBgError(userMessage(err, tr("editor.background_removal_failed")));
     }
   };
 
@@ -2760,11 +2769,11 @@ function ImageEffectsSection({ id, node, workspaceId }: { id: string; node: Node
     `flex-1 rounded-md py-1 text-xs font-medium transition ${on ? "bg-surface text-neutral-800 shadow-sm" : "text-neutral-500 hover:text-neutral-700"}`;
 
   return (
-    <Section title="Image effects" order={ORDER.type}>
+    <Section title={tr("editor.image_effects")} order={ORDER.type}>
       <div className="flex gap-0.5 rounded-lg bg-neutral-100 p-0.5">
-        <button onClick={() => setTab("filters")} className={tabCls(tab === "filters")}>Filters</button>
-        <button onClick={() => setTab("adjust")} className={tabCls(tab === "adjust")}>Adjust</button>
-        <button onClick={() => setTab("effects")} className={tabCls(tab === "effects")}>Effects</button>
+        <button onClick={() => setTab("filters")} aria-pressed={tab === "filters"} className={tabCls(tab === "filters")}>{tr("editor.filters")}</button>
+        <button onClick={() => setTab("adjust")} aria-pressed={tab === "adjust"} className={tabCls(tab === "adjust")}>{tr("editor.adjust")}</button>
+        <button onClick={() => setTab("effects")} aria-pressed={tab === "effects"} className={tabCls(tab === "effects")}>{tr("editor.effects")}</button>
       </div>
 
       {tab === "filters" && (
@@ -2781,7 +2790,7 @@ function ImageEffectsSection({ id, node, workspaceId }: { id: string; node: Node
             ))}
           </div>
           <label className="flex items-center gap-2 text-xs">
-            <span className="w-16 shrink-0 text-neutral-500">Intensity</span>
+            <span className="w-16 shrink-0 text-neutral-500">{tr("editor.intensity")}</span>
             <input
               type="range" min={0} max={1} step={0.01} value={intensity}
               onChange={(e) => { const k = Number(e.target.value); setIntensity(k); applyPreset(activePreset, k); }}
@@ -2792,14 +2801,14 @@ function ImageEffectsSection({ id, node, workspaceId }: { id: string; node: Node
             onClick={() => useEditor.getState().setEffects(id, autoEnhanceWith(effects) as never)}
             className="rounded-lg bg-brand-600 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700"
           >
-            Auto-enhance
+            {tr("editor.auto_enhance")}
           </button>
         </div>
       )}
 
       {tab === "adjust" && (
         <div className="flex flex-col gap-3">
-          {ADJUST_GROUPS.map((g) => (
+          {adjustGroups().map((g) => (
             <div key={g.group} className="flex flex-col gap-2">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">{g.group}</span>
               {g.sliders.map((s) => (
@@ -2811,7 +2820,7 @@ function ImageEffectsSection({ id, node, workspaceId }: { id: string; node: Node
                     onChange={(e) => setOp(s.name, Number(e.target.value))}
                     onPointerUp={endDrag}
                     onDoubleClick={() => { beginDrag(); setOp(s.name, s.def); endDrag(); }}
-                    title="Double-click to reset"
+                    title={tr("editor.double_click_to_reset")} aria-label={tr("editor.double_click_to_reset")}
                     className="flex-1"
                   />
                 </label>
@@ -2826,19 +2835,19 @@ function ImageEffectsSection({ id, node, workspaceId }: { id: string; node: Node
           {/* Duotone control */}
           <div className="flex flex-col gap-2 rounded-lg border border-neutral-200 p-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-neutral-700">Duotone</span>
-              <Toggle checked={!!duo} onChange={(on) => (on ? setDuotone({}) : removeDuotone())} />
+              <span className="text-xs font-medium text-neutral-700">{tr("editor.duotone")}</span>
+              <Toggle checked={!!duo} ariaLabel={tr("editor.duotone")} onChange={(on) => (on ? setDuotone({}) : removeDuotone())} />
             </div>
             {duo && (
               <>
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="w-16 shrink-0 text-neutral-500">Shadows</span>
-                  <input type="color" value={colorHex(duo.shadows)} onChange={(e) => setDuotone({ shadows: colorFromHex(e.target.value) })} className="oc-color h-8 w-9 shrink-0" />
-                  <span className="w-16 shrink-0 text-neutral-500">Lights</span>
-                  <input type="color" value={colorHex(duo.highlights)} onChange={(e) => setDuotone({ highlights: colorFromHex(e.target.value) })} className="oc-color h-8 w-9 shrink-0" />
+                  <span className="w-16 shrink-0 text-neutral-500">{tr("editor.shadows")}</span>
+                  <input type="color" value={colorHex(duo.shadows)} aria-label={tr("editor.shadows")} onChange={(e) => setDuotone({ shadows: colorFromHex(e.target.value) })} className="oc-color h-8 w-9 shrink-0" />
+                  <span className="w-16 shrink-0 text-neutral-500">{tr("editor.lights")}</span>
+                  <input type="color" value={colorHex(duo.highlights)} aria-label={tr("editor.lights")} onChange={(e) => setDuotone({ highlights: colorFromHex(e.target.value) })} className="oc-color h-8 w-9 shrink-0" />
                 </div>
                 <label className="flex items-center gap-2 text-xs">
-                  <span className="w-16 shrink-0 text-neutral-500">Intensity</span>
+                  <span className="w-16 shrink-0 text-neutral-500">{tr("editor.intensity")}</span>
                   <input type="range" min={0} max={1} step={0.01} value={duo.intensity} onChange={(e) => setDuotone({ intensity: Number(e.target.value) })} className="flex-1" />
                 </label>
               </>
@@ -2847,35 +2856,35 @@ function ImageEffectsSection({ id, node, workspaceId }: { id: string; node: Node
 
           {/* Background remover (free, in-browser) */}
           <div className="flex flex-col gap-1.5 rounded-lg border border-neutral-200 p-2.5">
-            <span className="text-xs font-medium text-neutral-700">Remove background</span>
+            <span className="text-xs font-medium text-neutral-700">{tr("editor.remove_background")}</span>
             <button
               onClick={runBgRemoval}
               disabled={bgState === "working"}
               className="rounded-lg bg-neutral-100 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-200 disabled:opacity-50"
             >
-              {bgState === "working" ? `Processing ${Math.round(bgProgress * 100)}%` : "Remove background"}
+              {bgState === "working" ? `Processing ${Math.round(bgProgress * 100)}%` : tr("editor.remove_background")}
             </button>
             <p className="text-[10px] leading-snug text-neutral-400">
-              Runs in your browser. The model downloads on first use, then replaces the image with a transparent cutout (undoable).
+              {tr("editor.runs_in_your_browser_the_model_downloads_on")}
             </p>
             {bgState === "error" && bgError && <p className="text-[11px] text-red-600">{bgError}</p>}
           </div>
 
           {/* Active effects stack: toggle/remove each entry */}
           <div className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Active effects</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">{tr("editor.active_effects")}</span>
             {effects.length === 0 ? (
-              <p className="text-[11px] text-neutral-400">No effects yet.</p>
+              <p className="text-[11px] text-neutral-400">{tr("editor.no_effects_yet")}</p>
             ) : (
               effects.map((e, i) => (
                 <div key={`${e.kind}-${i}`} className="flex items-center justify-between rounded-lg bg-neutral-50 px-2.5 py-1.5">
                   <span className="text-xs text-neutral-700">{effectLabel(e)}</span>
                   <button
                     onClick={() => removeEffect(i)}
-                    title="Remove"
+                    title={tr("editor.remove")}
                     className="rounded px-1.5 text-xs font-medium text-neutral-400 transition hover:bg-neutral-200 hover:text-neutral-700"
                   >
-                    Remove
+                    {tr("editor.remove")}
                   </button>
                 </div>
               ))
@@ -2904,41 +2913,41 @@ function DataBindingControls({ node }: { node: Node }) {
   const [url, setUrl] = useState(binding?.kind === "url" ? binding.url ?? "" : "");
   const [busy, setBusy] = useState(false);
   const store = () => useEditor.getState();
-  const applyResult = (label: string) => (ok: boolean) => { setBusy(false); if (ok) toast.success(label); else toast.error("Could not load the data"); };
+  const applyResult = (label: string) => (ok: boolean) => { setBusy(false); if (ok) toast.success(label); else toast.error(tr("editor.could_not_load_the_data")); };
   const useCsv = () => {
     if (!csv.trim()) return;
     store().setDataBinding(id, { kind: "inline", csv, hasHeaderRow: true });
     setBusy(true);
-    void store().refreshBinding(id).then(applyResult("Data applied"));
+    void store().refreshBinding(id).then(applyResult(tr("editor.data_applied")));
   };
   const fetchUrl = () => {
     if (!url.trim()) return;
     store().setDataBinding(id, { kind: "url", url: url.trim(), hasHeaderRow: true });
     setBusy(true);
-    void store().refreshBinding(id).then(applyResult("Data fetched"));
+    void store().refreshBinding(id).then(applyResult(tr("editor.data_fetched")));
   };
-  const refresh = () => { setBusy(true); void store().refreshBinding(id).then(applyResult("Refreshed")); };
+  const refresh = () => { setBusy(true); void store().refreshBinding(id).then(applyResult(tr("editor.refreshed"))); };
 
   if (!open) {
     return (
       <button onClick={() => setOpen(true)} className="rounded-md border border-neutral-200 px-2 py-1 text-[11px] font-medium text-neutral-700 transition hover:bg-neutral-50">
-        Bind live data
+        {tr("editor.bind_live_data")}
       </button>
     );
   }
   return (
     <div className="flex flex-col gap-1.5 rounded-lg border border-neutral-200 p-2">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-medium text-neutral-600">Data source</span>
-        {binding ? <button onClick={() => store().setDataBinding(id, undefined)} className="text-[10px] text-neutral-400 hover:text-rose-600">Unbind</button> : <button onClick={() => setOpen(false)} className="text-[10px] text-neutral-400 hover:text-neutral-700">Cancel</button>}
+        <span className="text-[11px] font-medium text-neutral-600">{tr("editor.data_source")}</span>
+        {binding ? <button onClick={() => store().setDataBinding(id, undefined)} className="text-[10px] text-neutral-400 hover:text-rose-600">{tr("editor.unbind")}</button> : <button onClick={() => setOpen(false)} className="text-[10px] text-neutral-400 hover:text-neutral-700">{tr("editor.cancel")}</button>}
       </div>
       <textarea value={csv} onChange={(e) => setCsv(e.target.value)} rows={3} placeholder="Paste CSV or TSV (first row = headers)…" className="w-full resize-y rounded-md border border-neutral-200 px-2 py-1 font-mono text-[11px] outline-none focus:border-brand-400" />
-      <button onClick={useCsv} disabled={!csv.trim() || busy} className="rounded-md border border-neutral-200 px-2 py-1 text-[11px] font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-40">Use CSV</button>
-      <div className="text-center text-[10px] text-neutral-400">or a remote CSV URL</div>
+      <button onClick={useCsv} disabled={!csv.trim() || busy} className="rounded-md border border-neutral-200 px-2 py-1 text-[11px] font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-40">{tr("editor.use_csv")}</button>
+      <div className="text-center text-[10px] text-neutral-400">{tr("editor.or_a_remote_csv_url")}</div>
       <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…/data.csv" className={`${inputCls} text-[11px]`} />
       <div className="flex gap-1.5">
-        <button onClick={fetchUrl} disabled={!url.trim() || busy} className="flex-1 rounded-md border border-neutral-200 px-2 py-1 text-[11px] font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-40">Fetch URL</button>
-        {binding?.kind === "url" && <button onClick={refresh} disabled={busy} className="rounded-md border border-neutral-200 px-2 py-1 text-[11px] font-medium text-brand-ink hover:bg-brand-50 disabled:opacity-40">Refresh</button>}
+        <button onClick={fetchUrl} disabled={!url.trim() || busy} className="flex-1 rounded-md border border-neutral-200 px-2 py-1 text-[11px] font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-40">{tr("editor.fetch_url")}</button>
+        {binding?.kind === "url" && <button onClick={refresh} disabled={busy} className="rounded-md border border-neutral-200 px-2 py-1 text-[11px] font-medium text-brand-ink hover:bg-brand-50 disabled:opacity-40">{tr("editor.refresh")}</button>}
       </div>
     </div>
   );
@@ -2951,7 +2960,7 @@ function TableConditional({ id, table }: { id: string; table: TableNode }) {
   const rules = table.conditional ?? [];
   const apply = (next: TableConditionalRule[]) => useEditor.getState().setTableConditional(id, next);
   const setRule = (i: number, r: TableConditionalRule) => apply(rules.map((x, j) => (j === i ? r : x)));
-  const colOptions = ["All columns", ...Array.from({ length: table.cols }, (_, c) => `Col ${c + 1}`)];
+  const colOptions = [tr("editor.all_columns"), ...Array.from({ length: table.cols }, (_, c) => `Col ${c + 1}`)];
   const add = (kind: TableConditionalRule["kind"]) => {
     const r: TableConditionalRule =
       kind === "highlight" ? { kind: "highlight", op: ">", value: 0, fill: solidFromHex("#fee2e2"), textColor: colorFromHex("#b91c1c") }
@@ -2962,35 +2971,35 @@ function TableConditional({ id, table }: { id: string; table: TableNode }) {
   const cls = "flex-1 rounded-md border border-neutral-200 px-2 py-1 text-[11px] text-neutral-700 transition hover:bg-neutral-50";
   return (
     <div className="flex flex-col gap-2 border-t border-neutral-100 pt-3.5">
-      <Heading>Conditional formatting</Heading>
+      <Heading>{tr("editor.conditional_formatting")}</Heading>
       {rules.map((r, i) => (
         <div key={i} className="flex flex-col gap-1.5 rounded-lg border border-neutral-200 p-2">
           <div className="flex items-center gap-1.5">
-            <span className="flex-1 text-[11px] font-medium text-neutral-600">{r.kind === "colorScale" ? "Color scale" : r.kind === "dataBar" ? "Data bar" : "Highlight"}</span>
-            <select value={r.column ?? -1} onChange={(e) => { const v = Number(e.target.value); setRule(i, { ...r, column: v < 0 ? undefined : v }); }} className={`${selectCls} w-24 py-1 text-[11px]`}>
+            <span className="flex-1 text-[11px] font-medium text-neutral-600">{r.kind === "colorScale" ? tr("editor.color_scale") : r.kind === "dataBar" ? tr("editor.data_bar") : tr("editor.highlight")}</span>
+            <select aria-label={tr("editor.column")} value={r.column ?? -1} onChange={(e) => { const v = Number(e.target.value); setRule(i, { ...r, column: v < 0 ? undefined : v }); }} className={`${selectCls} w-24 py-1 text-[11px]`}>
               {colOptions.map((label, idx) => <option key={idx} value={idx === 0 ? -1 : idx - 1}>{label}</option>)}
             </select>
-            <button onClick={() => apply(rules.filter((_, j) => j !== i))} className="grid h-6 w-6 place-items-center rounded text-neutral-400 transition hover:bg-neutral-100 hover:text-rose-600" title="Remove rule">×</button>
+            <button onClick={() => apply(rules.filter((_, j) => j !== i))} className="grid h-6 w-6 place-items-center rounded text-neutral-400 transition hover:bg-neutral-100 hover:text-rose-600" title={tr("editor.remove_rule")}>×</button>
           </div>
           {r.kind === "highlight" && (
             <div className="flex items-center gap-1.5">
-              <select value={r.op} onChange={(e) => setRule(i, { ...r, op: e.target.value as typeof r.op })} className={`${selectCls} w-14 py-1 text-[11px]`}>
+              <select aria-label={tr("editor.comparison_operator")} value={r.op} onChange={(e) => setRule(i, { ...r, op: e.target.value as typeof r.op })} className={`${selectCls} w-14 py-1 text-[11px]`}>
                 {([">", "<", ">=", "<=", "==", "!="] as const).map((o) => <option key={o} value={o}>{o}</option>)}
               </select>
               <input type="number" value={r.value} onChange={(e) => setRule(i, { ...r, value: Number(e.target.value) })} className={`${inputCls} w-16 py-1 text-[11px]`} />
-              <div className="w-7"><ColorField value={r.fill?.type === "solid" ? r.fill.color : colorFromHex("#fee2e2")} onChange={(c) => setRule(i, { ...r, fill: { type: "solid", color: c } })} title="Cell fill" /></div>
-              <div className="w-7"><ColorField value={r.textColor ?? colorFromHex("#b91c1c")} onChange={(c) => setRule(i, { ...r, textColor: c })} title="Text color" /></div>
+              <div className="w-7"><ColorField value={r.fill?.type === "solid" ? r.fill.color : colorFromHex("#fee2e2")} onChange={(c) => setRule(i, { ...r, fill: { type: "solid", color: c } })} title={tr("editor.cell_fill")} /></div>
+              <div className="w-7"><ColorField value={r.textColor ?? colorFromHex("#b91c1c")} onChange={(c) => setRule(i, { ...r, textColor: c })} title={tr("editor.text_color")} /></div>
             </div>
           )}
           {r.kind === "colorScale" && (
             <div className="flex items-center gap-1.5 text-[11px] text-neutral-500">
-              <span>min</span><div className="w-7"><ColorField value={r.min} onChange={(c) => setRule(i, { ...r, min: c })} title="Min color" /></div>
-              <span>max</span><div className="w-7"><ColorField value={r.max} onChange={(c) => setRule(i, { ...r, max: c })} title="Max color" /></div>
+              <span>{tr("editor.min")}</span><div className="w-7"><ColorField value={r.min} onChange={(c) => setRule(i, { ...r, min: c })} title={tr("editor.min_color")} /></div>
+              <span>{tr("editor.max")}</span><div className="w-7"><ColorField value={r.max} onChange={(c) => setRule(i, { ...r, max: c })} title={tr("editor.max_color")} /></div>
             </div>
           )}
           {r.kind === "dataBar" && (
             <div className="flex items-center gap-1.5 text-[11px] text-neutral-500">
-              <span>bar</span><div className="w-7"><ColorField value={r.color} onChange={(c) => setRule(i, { ...r, color: c })} title="Bar color" /></div>
+              <span>{tr("editor.bar")}</span><div className="w-7"><ColorField value={r.color} onChange={(c) => setRule(i, { ...r, color: c })} title={tr("editor.bar_color")} /></div>
             </div>
           )}
         </div>
@@ -3043,23 +3052,26 @@ const ORDER = {
 function BrandLockHint() {
   return (
     <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-700">
-      <Lock size={11} /> Locked to brand
+      <Lock size={11} /> {tr("editor.locked_to_brand")}
     </span>
   );
 }
 
-/** A pill switch, replacing native checkboxes. */
-function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
+/** A pill switch, replacing native checkboxes. `ariaLabel` names the switch for
+ *  assistive technology when the adjacent row text is not programmatically
+ *  associated (the common layout here is a sibling span, not a label). */
+function Toggle({ checked, onChange, disabled, ariaLabel }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean; ariaLabel?: string }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
+      aria-label={ariaLabel}
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={`relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-40 ${checked ? "bg-brand-600" : "bg-neutral-300"}`}
     >
-      <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-surface shadow-sm transition-all ${checked ? "left-[18px]" : "left-0.5"}`} />
+      <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-surface shadow-sm transition-all ${checked ? "start-[18px]" : "start-0.5"}`} />
     </button>
   );
 }
@@ -3113,8 +3125,8 @@ function TextEffectControls({ id, fx }: { id: string; fx: TextEffect }) {
   const fxHex = (f?: { type: string; color?: Color }) => (f?.type === "solid" && f.color ? colorHex(f.color) : "#000000");
   const colorRow = (color?: { type: string; color?: Color }) => (
     <div className="flex items-center gap-2">
-      <span className="w-12 shrink-0 text-[11px] text-neutral-400">Color</span>
-      <input type="color" value={fxHex(color)} onChange={(e) => pickColor(e.target.value)} className="oc-color h-8 w-9 shrink-0" />
+      <span className="w-12 shrink-0 text-[11px] text-neutral-400">{tr("editor.color")}</span>
+      <input type="color" value={fxHex(color)} aria-label={tr("editor.color")} onChange={(e) => pickColor(e.target.value)} className="oc-color h-8 w-9 shrink-0" />
     </div>
   );
   const slider = (label: string, min: number, max: number, value: number, patch: (n: number) => object, opts: { step?: number; fmt?: (n: number) => string } = {}) => (
@@ -3125,33 +3137,33 @@ function TextEffectControls({ id, fx }: { id: string; fx: TextEffect }) {
     case "shadow": return (<>
       {slider("X", -50, 50, Math.round(fx.dx), (n) => ({ dx: n }))}
       {slider("Y", -50, 50, Math.round(fx.dy), (n) => ({ dy: n }))}
-      {slider("Blur", 0, 40, Math.round(fx.blur), (n) => ({ blur: n }))}
-      {slider("Opacity", 0, 100, Math.round(fx.opacity * 100), (n) => ({ opacity: n / 100 }), { fmt: pct })}
+      {slider(tr("editor.blur"), 0, 40, Math.round(fx.blur), (n) => ({ blur: n }))}
+      {slider(tr("editor.opacity"), 0, 100, Math.round(fx.opacity * 100), (n) => ({ opacity: n / 100 }), { fmt: pct })}
       {colorRow(fx.color)}
     </>);
-    case "lift": return slider("Intensity", 10, 100, Math.round(fx.intensity * 100), (n) => ({ intensity: n / 100 }), { fmt: pct });
-    case "hollow": return slider("Thickness", 0.5, 8, fx.thickness, (n) => ({ thickness: n }), { step: 0.5 });
+    case "lift": return slider(tr("editor.intensity"), 10, 100, Math.round(fx.intensity * 100), (n) => ({ intensity: n / 100 }), { fmt: pct });
+    case "hollow": return slider(tr("editor.thickness"), 0.5, 8, fx.thickness, (n) => ({ thickness: n }), { step: 0.5 });
     case "splice": return (<>
-      {slider("Thickness", 0.5, 8, fx.thickness, (n) => ({ thickness: n }), { step: 0.5 })}
-      {slider("Offset", 0, 30, Math.round(fx.offset), (n) => ({ offset: n }))}
+      {slider(tr("editor.thickness"), 0.5, 8, fx.thickness, (n) => ({ thickness: n }), { step: 0.5 })}
+      {slider(tr("editor.offset"), 0, 30, Math.round(fx.offset), (n) => ({ offset: n }))}
       {colorRow(fx.color)}
     </>);
     case "echo": return (<>
-      {slider("Offset", 1, 30, Math.round(fx.offset), (n) => ({ offset: n }))}
-      {slider("Copies", 2, 6, Math.round(fx.count), (n) => ({ count: n }))}
+      {slider(tr("editor.offset"), 1, 30, Math.round(fx.offset), (n) => ({ offset: n }))}
+      {slider(tr("editor.copies"), 2, 6, Math.round(fx.count), (n) => ({ count: n }))}
       {colorRow(fx.color)}
     </>);
     case "glow": return (<>
-      {slider("Size", 0, 60, Math.round(fx.radius), (n) => ({ radius: n }))}
-      {slider("Intensity", 20, 200, Math.round(fx.intensity * 100), (n) => ({ intensity: n / 100 }), { fmt: pct })}
+      {slider(tr("editor.size"), 0, 60, Math.round(fx.radius), (n) => ({ radius: n }))}
+      {slider(tr("editor.intensity"), 20, 200, Math.round(fx.intensity * 100), (n) => ({ intensity: n / 100 }), { fmt: pct })}
       {colorRow(fx.color)}
     </>);
     case "neon": return (<>
-      {slider("Intensity", 20, 200, Math.round(fx.intensity * 100), (n) => ({ intensity: n / 100 }), { fmt: pct })}
+      {slider(tr("editor.intensity"), 20, 200, Math.round(fx.intensity * 100), (n) => ({ intensity: n / 100 }), { fmt: pct })}
       {colorRow(fx.color)}
     </>);
     case "outline": return (<>
-      {slider("Width", 0.5, 12, fx.width, (n) => ({ width: n }), { step: 0.5 })}
+      {slider(tr("editor.width"), 0.5, 12, fx.width, (n) => ({ width: n }), { step: 0.5 })}
       {colorRow(fx.color)}
     </>);
     default: return null;
@@ -3168,8 +3180,8 @@ function TextHighlightLevels({ id, hl }: { id: string; hl: { padding?: number; r
   const preview = (patch: object) => st().previewTextEffects(id, liveList().map((e) => (e.kind === "highlight" ? ({ ...e, ...patch } as TextEffect) : e)));
   const commit = () => st().commitTextEffects(id, before.current);
   return (<>
-    <FxSlider label="Round" min={0} max={40} value={Math.round(hl.radius ?? 8)} onStart={snapshot} onCommit={commit} onChange={(n) => preview({ radius: n })} />
-    <FxSlider label="Padding" min={0} max={40} value={Math.round(hl.padding ?? 8)} onStart={snapshot} onCommit={commit} onChange={(n) => preview({ padding: n })} />
+    <FxSlider label={tr("editor.round")} min={0} max={40} value={Math.round(hl.radius ?? 8)} onStart={snapshot} onCommit={commit} onChange={(n) => preview({ radius: n })} />
+    <FxSlider label={tr("editor.padding")} min={0} max={40} value={Math.round(hl.padding ?? 8)} onStart={snapshot} onCommit={commit} onChange={(n) => preview({ padding: n })} />
   </>);
 }
 
@@ -3183,12 +3195,13 @@ function FxSlider({ label, min, max, step = 1, value, onChange, onStart, onCommi
       <span className="w-12 shrink-0 text-[11px] text-neutral-400">{label}</span>
       <input
         type="range" min={min} max={max} step={step} value={value}
+        aria-label={label}
         onChange={(e) => onChange(Number(e.target.value))}
         onPointerDown={onStart} onPointerUp={onCommit}
         onKeyDown={(e) => { if (!e.repeat) onStart?.(); }} onKeyUp={onCommit} onBlur={onCommit}
         className="flex-1 accent-brand-600"
       />
-      <span className="w-9 shrink-0 text-right text-[11px] tabular-nums text-neutral-500">{fmt ? fmt(value) : value}</span>
+      <span className="w-9 shrink-0 text-end text-[11px] tabular-nums text-neutral-500">{fmt ? fmt(value) : value}</span>
     </div>
   );
 }
@@ -3224,27 +3237,32 @@ function NodeEffects({ id, effects }: { id: string; effects?: readonly { kind: s
   const cls = (on: boolean) => `flex-1 rounded-lg border py-1.5 text-xs font-medium transition ${on ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`;
   // Recoloring keeps the color's alpha: the Opacity slider owns it, and a
   // swatch change must not silently reset a 35% shadow to full strength.
+  const colorLabels: Record<string, string> = {
+    shadow: tr("editor.shadow_color"),
+    outline: tr("editor.outline_color"),
+    glow: tr("editor.glow_color"),
+  };
   const colorInput = (k: string, c?: Color) => (
-    <input type="color" value={c ? colorHex(c) : "#000000"} onChange={(e) => update(k, { color: { srgb: { ...colorFromHex(e.target.value).srgb, a: c?.srgb.a ?? 1 } } })} className="oc-color h-8 w-9 shrink-0" />
+    <input type="color" value={c ? colorHex(c) : "#000000"} aria-label={colorLabels[k] ?? tr("editor.color")} onChange={(e) => update(k, { color: { srgb: { ...colorFromHex(e.target.value).srgb, a: c?.srgb.a ?? 1 } } })} className="oc-color h-8 w-9 shrink-0" />
   );
   const sh = find("shadow");
   const ol = find("outline");
   const gl = find("glow");
   const bl = find("blur");
   const presets: { id: string; label: string; build: () => EffectItem[] }[] = [
-    { id: "none", label: "None", build: () => [] },
-    { id: "shadow", label: "Shadow", build: () => [{ kind: "shadow", type: "drop", color: { srgb: { r: 0, g: 0, b: 0, a: 0.35 } }, offsetX: 0, offsetY: 4, blur: 6, spread: 0 }] },
-    { id: "lift", label: "Lift", build: () => [{ kind: "shadow", type: "drop", color: { srgb: { r: 0, g: 0, b: 0, a: 0.28 } }, offsetX: 0, offsetY: 10, blur: 24, spread: 0 }] },
-    { id: "hollow", label: "Hollow", build: () => [{ kind: "outline", color: { srgb: { r: 0, g: 0, b: 0, a: 1 } }, width: 2 }] },
-    { id: "splice", label: "Splice", build: () => [{ kind: "outline", color: { srgb: { r: 0, g: 0, b: 0, a: 1 } }, width: 2 }, { kind: "shadow", type: "drop", color: { srgb: { r: 0, g: 0, b: 0, a: 0.4 } }, offsetX: 4, offsetY: 4, blur: 0, spread: 0 }] },
-    { id: "glow", label: "Glow", build: () => [{ kind: "glow", color: { srgb: { r: 0.45, g: 0.5, b: 1, a: 0.9 } }, radius: 12 }] },
-    { id: "neon", label: "Neon", build: () => [{ kind: "glow", color: { srgb: { r: 0.2, g: 0.9, b: 1, a: 0.95 } }, radius: 16 }, { kind: "outline", color: { srgb: { r: 0.2, g: 0.9, b: 1, a: 1 } }, width: 1.5 }] },
+    { id: "none", label: tr("editor.none"), build: () => [] },
+    { id: "shadow", label: tr("editor.shadow"), build: () => [{ kind: "shadow", type: "drop", color: { srgb: { r: 0, g: 0, b: 0, a: 0.35 } }, offsetX: 0, offsetY: 4, blur: 6, spread: 0 }] },
+    { id: "lift", label: tr("editor.lift"), build: () => [{ kind: "shadow", type: "drop", color: { srgb: { r: 0, g: 0, b: 0, a: 0.28 } }, offsetX: 0, offsetY: 10, blur: 24, spread: 0 }] },
+    { id: "hollow", label: tr("editor.hollow"), build: () => [{ kind: "outline", color: { srgb: { r: 0, g: 0, b: 0, a: 1 } }, width: 2 }] },
+    { id: "splice", label: tr("editor.splice"), build: () => [{ kind: "outline", color: { srgb: { r: 0, g: 0, b: 0, a: 1 } }, width: 2 }, { kind: "shadow", type: "drop", color: { srgb: { r: 0, g: 0, b: 0, a: 0.4 } }, offsetX: 4, offsetY: 4, blur: 0, spread: 0 }] },
+    { id: "glow", label: tr("editor.glow"), build: () => [{ kind: "glow", color: { srgb: { r: 0.45, g: 0.5, b: 1, a: 0.9 } }, radius: 12 }] },
+    { id: "neon", label: tr("editor.neon"), build: () => [{ kind: "glow", color: { srgb: { r: 0.2, g: 0.9, b: 1, a: 0.95 } }, radius: 16 }, { kind: "outline", color: { srgb: { r: 0.2, g: 0.9, b: 1, a: 1 } }, width: 1.5 }] },
   ];
   const kindsOf = (es: { kind: string }[]) => es.map((e) => e.kind).sort().join(",");
   const activePreset = presets.find((p) => kindsOf(p.build()) === kindsOf(eff))?.id;
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">Effects</span>
+      <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">{tr("editor.effects")}</span>
       <div className="grid grid-cols-4 gap-1">
         {presets.map((p) => (
           <button
@@ -3254,12 +3272,12 @@ function NodeEffects({ id, effects }: { id: string; effects?: readonly { kind: s
           >{p.label}</button>
         ))}
       </div>
-      <span className="mt-1 text-[10px] uppercase tracking-wide text-neutral-400">Fine-tune</span>
+      <span className="mt-1 text-[10px] uppercase tracking-wide text-neutral-400">{tr("editor.fine_tune")}</span>
       <div className="flex gap-1">
-        <button onClick={() => toggle("shadow")} className={cls(has("shadow"))}>Shadow</button>
-        <button onClick={() => toggle("outline")} className={cls(has("outline"))}>Outline</button>
-        <button onClick={() => toggle("glow")} className={cls(has("glow"))}>Glow</button>
-        <button onClick={() => toggle("blur")} className={cls(has("blur"))}>Blur</button>
+        <button onClick={() => toggle("shadow")} className={cls(has("shadow"))}>{tr("editor.shadow")}</button>
+        <button onClick={() => toggle("outline")} className={cls(has("outline"))}>{tr("editor.outline")}</button>
+        <button onClick={() => toggle("glow")} className={cls(has("glow"))}>{tr("editor.glow")}</button>
+        <button onClick={() => toggle("blur")} className={cls(has("blur"))}>{tr("editor.blur")}</button>
       </div>
       {sh && (
         <>
@@ -3268,8 +3286,8 @@ function NodeEffects({ id, effects }: { id: string; effects?: readonly { kind: s
             <Field key={`shx${sh.offsetX}`} label="X" value={sh.offsetX ?? 0} onCommit={(n) => update("shadow", { offsetX: n })} />
             <Field key={`shy${sh.offsetY}`} label="Y" value={sh.offsetY ?? 0} onCommit={(n) => update("shadow", { offsetY: n })} />
           </div>
-          <FxSlider label="Blur" min={0} max={60} value={Math.round(sh.blur ?? 0)} onStart={snapshot} onCommit={commit} onChange={(n) => previewUpdate("shadow", { blur: n })} />
-          <FxSlider label="Opacity" min={0} max={100} value={Math.round(((sh.color?.srgb.a ?? 1) as number) * 100)} fmt={(n) => `${n}%`} onStart={snapshot} onCommit={commit}
+          <FxSlider label={tr("editor.blur")} min={0} max={60} value={Math.round(sh.blur ?? 0)} onStart={snapshot} onCommit={commit} onChange={(n) => previewUpdate("shadow", { blur: n })} />
+          <FxSlider label={tr("editor.opacity")} min={0} max={100} value={Math.round(((sh.color?.srgb.a ?? 1) as number) * 100)} fmt={(n) => `${n}%`} onStart={snapshot} onCommit={commit}
             onChange={(n) => sh.color && previewUpdate("shadow", { color: { ...sh.color, srgb: { ...sh.color.srgb, a: n / 100 } } })} />
         </>
       )}
@@ -3282,16 +3300,16 @@ function NodeEffects({ id, effects }: { id: string; effects?: readonly { kind: s
       {gl && (
         <>
           <div className="flex items-center gap-2">
-            <span className="w-12 shrink-0 text-[11px] text-neutral-400">Color</span>
+            <span className="w-12 shrink-0 text-[11px] text-neutral-400">{tr("editor.color")}</span>
             {colorInput("glow", gl.color)}
           </div>
-          <FxSlider label="Size" min={0} max={60} value={Math.round(gl.radius ?? 0)} onStart={snapshot} onCommit={commit} onChange={(n) => previewUpdate("glow", { radius: n })} />
-          <FxSlider label="Opacity" min={0} max={100} value={Math.round(((gl.color?.srgb.a ?? 1) as number) * 100)} fmt={(n) => `${n}%`} onStart={snapshot} onCommit={commit}
+          <FxSlider label={tr("editor.size")} min={0} max={60} value={Math.round(gl.radius ?? 0)} onStart={snapshot} onCommit={commit} onChange={(n) => previewUpdate("glow", { radius: n })} />
+          <FxSlider label={tr("editor.opacity")} min={0} max={100} value={Math.round(((gl.color?.srgb.a ?? 1) as number) * 100)} fmt={(n) => `${n}%`} onStart={snapshot} onCommit={commit}
             onChange={(n) => gl.color && previewUpdate("glow", { color: { ...gl.color, srgb: { ...gl.color.srgb, a: n / 100 } } })} />
         </>
       )}
       {bl && (
-        <FxSlider label="Amount" min={0} max={40} value={Math.round(bl.radius ?? 0)} onStart={snapshot} onCommit={commit} onChange={(n) => previewUpdate("blur", { radius: n })} />
+        <FxSlider label={tr("editor.amount")} min={0} max={40} value={Math.round(bl.radius ?? 0)} onStart={snapshot} onCommit={commit} onChange={(n) => previewUpdate("blur", { radius: n })} />
       )}
     </div>
   );

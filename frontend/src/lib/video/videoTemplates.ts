@@ -6,6 +6,7 @@
 // preview, the exact export, and the server MP4 like any other element.
 
 import { createNode, type Node } from "@hc/schema";
+import { tr } from "@/lib/i18n";
 
 /** One scene (page) of a template: a stack of element nodes shown for a duration.
  *  layers[0] is the bottom (background); later entries draw on top. */
@@ -87,20 +88,20 @@ export const VIDEO_TEMPLATES: VideoTemplate[] = [
         durationFrames: Math.round(fps * 4),
         layers: [
           bg(w, h, WHITE),
-          text(w, h, { text: "Your Title", yFrac: 0.36, sizeFrac: 0.11, color: INK, weight: 800, entrance: "rise" }),
-          text(w, h, { text: "A short subtitle goes here", yFrac: 0.54, sizeFrac: 0.05, color: { r: 0.35, g: 0.38, b: 0.44, a: 1 }, weight: 500, entrance: "fade", entranceDelayMs: 300 }),
+          text(w, h, { text: tr("app.your_title"), yFrac: 0.36, sizeFrac: 0.11, color: INK, weight: 800, entrance: "rise" }),
+          text(w, h, { text: tr("app.a_short_subtitle_goes_here"), yFrac: 0.54, sizeFrac: 0.05, color: { r: 0.35, g: 0.38, b: 0.44, a: 1 }, weight: 500, entrance: "fade", entranceDelayMs: 300 }),
         ],
       },
     ],
   },
   {
     id: "promo",
-    name: "Promo (3 scenes)",
-    description: "Hook, feature, and call-to-action scenes on bold color pages.",
+    name: tr("app.promo_3_scenes"),
+    description: tr("app.hook_feature_and_call_to_action_scenes_on_bo"),
     build: (w, h, fps) => [
       {
         durationFrames: Math.round(fps * 3),
-        layers: [bg(w, h, DEEP), text(w, h, { text: "Introducing", yFrac: 0.42, sizeFrac: 0.12, color: WHITE, weight: 800, entrance: "pop" })],
+        layers: [bg(w, h, DEEP), text(w, h, { text: tr("app.introducing"), yFrac: 0.42, sizeFrac: 0.12, color: WHITE, weight: 800, entrance: "pop" })],
       },
       {
         durationFrames: Math.round(fps * 3),
@@ -110,7 +111,7 @@ export const VIDEO_TEMPLATES: VideoTemplate[] = [
         durationFrames: Math.round(fps * 3),
         layers: [
           bg(w, h, INK),
-          text(w, h, { text: "Get started today", yFrac: 0.4, sizeFrac: 0.09, color: WHITE, weight: 800, entrance: "zoom-in" }),
+          text(w, h, { text: tr("app.get_started_today"), yFrac: 0.4, sizeFrac: 0.09, color: WHITE, weight: 800, entrance: "zoom-in" }),
           text(w, h, { text: "yoursite.example", yFrac: 0.56, sizeFrac: 0.045, color: WARM, weight: 600, entrance: "fade", entranceDelayMs: 400 }),
         ],
       },
@@ -118,13 +119,13 @@ export const VIDEO_TEMPLATES: VideoTemplate[] = [
   },
   {
     id: "slideshow",
-    name: "Animated slideshow",
-    description: "Three light content pages with animated headings and body text.",
+    name: tr("app.animated_slideshow"),
+    description: tr("app.three_light_content_pages_with_animated_head"),
     build: (w, h, fps) => {
       const pages = [
-        { title: "First point", body: "Say something worth remembering." },
-        { title: "Second point", body: "Keep each slide to one idea." },
-        { title: "Third point", body: "End on the thing you want them to do." },
+        { title: tr("app.first_point"), body: tr("app.say_something_worth_remembering") },
+        { title: tr("app.second_point"), body: tr("app.keep_each_slide_to_one_idea") },
+        { title: tr("app.third_point"), body: tr("app.end_on_the_thing_you_want_them_to_do") },
       ];
       return pages.map((p) => ({
         durationFrames: Math.round(fps * 3.5),
@@ -138,8 +139,8 @@ export const VIDEO_TEMPLATES: VideoTemplate[] = [
   },
   {
     id: "lower-third",
-    name: "Bold statement",
-    description: "One full-bleed color page with a large centered statement.",
+    name: tr("app.bold_statement"),
+    description: tr("app.one_full_bleed_color_page_with_a_large_cente"),
     build: (w, h, fps) => [
       {
         durationFrames: Math.round(fps * 4),

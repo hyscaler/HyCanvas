@@ -3,9 +3,9 @@
 // toBlob (the client-side fast path); PDF embeds rendered pages via jsPDF. The
 // worker/skia path and animated formats remain deferred.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { compileAttribution, attributionText } from "@hc/stock";
-import { AlertTriangle, ShieldAlert, ChevronDown, Check, Image as ImageIcon, FileText, Shapes, Download, Film } from "lucide-react";
+import { AlertTriangle, ShieldAlert, Image as ImageIcon, FileText, Shapes, Download, Film } from "lucide-react";
 import { toSvg, rasterDimensions, encodeApng, encodeGif, designPageToLottie, deckToPptx, type PptxImage, type PptxRaster } from "@hc/export";
 import { worldAABB } from "@hc/editor";
 import { resolveAssetUrl } from "@/lib/sdk";
@@ -26,23 +26,38 @@ import {
   type DeckFrame,
 } from "@hc/engine";
 import { useEditor } from "@/store/editor";
+import { prefersReducedMotion } from "@/lib/theme";
 import { useBrand } from "@/store/brand";
+import { CodedError, userMessage } from "@/lib/errors";
 import { imageAssets } from "@/lib/assetProvider";
 import { oc } from "@/lib/sdk";
 import { useToast } from "@/components/ui/Toast";
+import { tr } from "@/lib/i18n";
 
 type Format = "png" | "jpg" | "pdf" | "svg" | "apng" | "gif" | "lottie" | "mp4" | "pptx";
 
-const FORMATS: { value: Format; label: string; suffix: string; desc: string; icon: typeof ImageIcon; badge?: string }[] = [
-  { value: "png", label: "PNG", suffix: "png", desc: "High quality, supports transparency", icon: ImageIcon, badge: "Recommended" },
-  { value: "jpg", label: "JPG", suffix: "jpg", desc: "Small file size, best for photos", icon: ImageIcon },
-  { value: "pdf", label: "PDF", suffix: "pdf", desc: "Best for documents and printing", icon: FileText },
-  { value: "svg", label: "SVG", suffix: "svg", desc: "Editable vector graphic", icon: Shapes },
-  { value: "apng", label: "Animated PNG", suffix: "apng", desc: "Plays the deck (or page) with transitions, lossless", icon: ImageIcon },
-  { value: "gif", label: "Animated GIF", suffix: "gif", desc: "Plays the deck (or page) with transitions, widely supported", icon: ImageIcon },
-  { value: "lottie", label: "Lottie", suffix: "json", desc: "Vector animation JSON (lottie-web, After Effects)", icon: Shapes },
-  { value: "mp4", label: "Video (MP4)", suffix: "mp4", desc: "The whole deck as a video: slide timing, element animations, and transitions (renders on the server)", icon: Film },
-  { value: "pptx", label: "PowerPoint (PPTX)", suffix: "pptx", desc: "Editable slides for PowerPoint, Keynote, and Google Slides; text and shapes stay editable, complex elements embed as images", icon: FileText },
+// `acronym` is the chip label: a file-format name, never translated. `label`
+// stays the full human name used in toasts and the selected-format line.
+// `group` buckets the nine formats so the grid reads as three small decisions
+// (what KIND of file) rather than one nine-way one.
+type FormatGroup = "image" | "document" | "motion";
+
+const formats = (): { value: Format; label: string; acronym: string; group: FormatGroup; suffix: string; desc: string; icon: typeof ImageIcon; badge?: string }[] => [
+  { value: "png", label: "PNG", acronym: "PNG", group: "image", suffix: "png", desc: tr("editor.high_quality_supports_transparency"), icon: ImageIcon, badge: tr("editor.recommended") },
+  { value: "jpg", label: "JPG", acronym: "JPG", group: "image", suffix: "jpg", desc: tr("editor.small_file_size_best_for_photos"), icon: ImageIcon },
+  { value: "svg", label: "SVG", acronym: "SVG", group: "image", suffix: "svg", desc: tr("editor.editable_vector_graphic"), icon: Shapes },
+  { value: "pdf", label: "PDF", acronym: "PDF", group: "document", suffix: "pdf", desc: tr("editor.best_for_documents_and_printing"), icon: FileText },
+  { value: "pptx", label: tr("editor.powerpoint_pptx"), acronym: "PPTX", group: "document", suffix: "pptx", desc: tr("editor.editable_slides_for_powerpoint_keynote_google"), icon: FileText },
+  { value: "apng", label: tr("editor.animated_png"), acronym: "APNG", group: "motion", suffix: "apng", desc: tr("editor.plays_the_deck_or_page_with_transitions_loss"), icon: ImageIcon },
+  { value: "gif", label: tr("editor.animated_gif"), acronym: "GIF", group: "motion", suffix: "gif", desc: tr("editor.plays_the_deck_or_page_with_transitions_wide"), icon: ImageIcon },
+  { value: "lottie", label: tr("editor.lottie"), acronym: "Lottie", group: "motion", suffix: "json", desc: tr("editor.vector_animation_json_lottie_web_after_effec"), icon: Shapes },
+  { value: "mp4", label: tr("editor.video_mp4"), acronym: "MP4", group: "motion", suffix: "mp4", desc: tr("editor.the_whole_deck_as_a_video_slide_timing_eleme"), icon: Film },
+];
+
+const formatGroups = (): { id: FormatGroup; label: string }[] => [
+  { id: "image", label: tr("editor.format_group_image") },
+  { id: "document", label: tr("editor.format_group_document") },
+  { id: "motion", label: tr("editor.format_group_animation_video") },
 ];
 
 /** Render one page to an offscreen canvas at `scale`. Fills white when opaque
@@ -226,6 +241,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const SIZE_STEPS = [0.5, 1, 2, 3] as const;
 
+// Natively focusable, currently-enabled elements within the panel (same focus
+// trap contract as ui/Modal).
+const FOCUSABLE =
+  'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, object, embed, [tabindex]:not([tabindex="-1"]), [contenteditable="true"]';
+
 export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const toast = useToast();
   const activePage = useEditor((s) => s.activePage);
@@ -246,13 +266,16 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
   const [quality, setQuality] = useState(92); // jpg quality 0..100
   const [zipBatch, setZipBatch] = useState(true); // bundle multi-page non-PDF exports into one .zip
   const [selected, setSelected] = useState<number[]>([]); // page indices to export
-  const [formatOpen, setFormatOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   // Brand pre-export gate. 'block' policy with violations refuses
   // the export; 'warn' shows a dismissible warning; 'off' is invisible.
   const [gate, setGate] = useState<BrandLintResult | null>(null);
   const [warnDismissed, setWarnDismissed] = useState(false);
-  const formatRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  // Stable ids tying the visual-only field labels to their controls.
+  const baseId = useId();
+  const formatLabelId = `${baseId}-format`;
+  const sizeLabelId = `${baseId}-size`;
 
   const doc = useEditor.getState().doc;
   const pageCount = doc.pages.length;
@@ -277,16 +300,6 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
     });
     return () => { cancelled = true; };
   }, [open, activePage, pageCount, animatedDeck]);
-
-  // Close the format dropdown on outside click / Escape.
-  useEffect(() => {
-    if (!formatOpen) return;
-    const onDown = (e: MouseEvent) => { if (formatRef.current && !formatRef.current.contains(e.target as Node)) setFormatOpen(false); };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setFormatOpen(false); };
-    window.addEventListener("mousedown", onDown);
-    window.addEventListener("keydown", onKey);
-    return () => { window.removeEventListener("mousedown", onDown); window.removeEventListener("keydown", onKey); };
-  }, [formatOpen]);
 
   // Run the gate when the panel opens for a saved design. All state updates run
   // inside the async flow (Promise callbacks) so the effect body stays clean.
@@ -318,13 +331,27 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rev]);
 
+  // Dialog focus contract: on open, remember the opener and move focus onto the
+  // panel; on close, return focus so keyboard users don't drop to <body>.
+  useEffect(() => {
+    if (!open) return;
+    if (typeof document === "undefined") return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    panelRef.current?.focus();
+    return () => {
+      if (previouslyFocused && typeof previouslyFocused.focus === "function" && previouslyFocused.isConnected) {
+        previouslyFocused.focus();
+      }
+    };
+  }, [open]);
+
   if (!open) return null;
 
   const gateActive = !!gate && gate.policy !== "off" && gate.violations.length > 0;
   const blocked = !!gate && gate.blocked; // policy 'block' with violations
   const showWarn = gateActive && gate!.policy === "warn" && !warnDismissed;
 
-  const fmt = FORMATS.find((f) => f.value === format)!;
+  const fmt = formats().find((f) => f.value === format)!;
   const isRaster = format === "png" || format === "jpg";
   // Animated/vector-anim formats export a single file of the active page only.
   const isSingleAnimated = format === "apng" || format === "gif" || format === "lottie";
@@ -354,8 +381,7 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
     // selected page means "export just that page's own animation".
     const wholeDeck = pageCount > 1 && pages.length > 1;
     if (wholeDeck) {
-      const reducedMotion =
-        typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+      const reducedMotion = prefersReducedMotion();
       return planDeckFrames(doc, { fps, reducedMotion, maxFrames: 900, pageIndices: pages });
     }
     const idx = pages[0] ?? Math.min(activePage, pageCount - 1);
@@ -377,7 +403,7 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
       try {
         const fresh = await oc.brandLintGate(designId);
         setGate(fresh);
-        if (fresh.blocked) { toast.error("Resolve the brand violations before downloading."); return; }
+        if (fresh.blocked) { toast.error(tr("editor.resolve_the_brand_violations_before_download")); return; }
       } catch { /* best effort; fall through to local gate */ }
     }
     if (blocked) return;
@@ -396,7 +422,7 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
           rasterizeNode: (pi, nodeId) => pptxNodeRasterizer(doc, pi, nodeId),
         });
         download(new Blob([bytes as unknown as BlobPart], { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" }), `${safeBase}.pptx`);
-        toast.success(`Downloaded ${safeBase}.pptx`);
+        toast.success(tr("editor.downloaded_file", { file: `${safeBase}.pptx` }));
       } else if (format === "mp4") {
         // Whole-deck video export (doc 28 FR-19): convert the deck to a video
         // project client-side (each slide a scene with its timing, animations,
@@ -404,7 +430,7 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
         // inline-file override - nothing new is persisted. Slide duration comes
         // from each page's autoAdvanceMs (default applies otherwise).
         if (!designId) {
-          toast.error("Save the design first - video renders on the server.");
+          toast.error(tr("editor.save_the_design_first_video_renders_on_the_s"));
           return;
         }
         const videoFile = deckToVideoFile(doc);
@@ -415,20 +441,22 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
           await new Promise((res) => setTimeout(res, 2000));
           const job = await oc.getJob(jobId);
           if (job.status === "completed") { done = true; break; }
-          if (job.status === "failed") throw new Error(job.error || "video render failed");
+          // A server-provided failure detail is shown as-is; only the generic
+          // fallback carries a code for translation.
+          if (job.status === "failed") throw job.error ? new Error(job.error) : new CodedError("errors.video_render_failed", "video render failed");
         }
-        if (!done) throw new Error("video render timed out");
+        if (!done) throw new CodedError("errors.video_render_timed_out", "video render timed out");
         const res = await fetch(oc.videoExportDownloadUrl(designId, jobId), { credentials: "include" });
-        if (!res.ok) throw new Error(`video download failed (${res.status})`);
+        if (!res.ok) throw new CodedError("errors.video_download_failed", `video download failed (${res.status})`, { status: res.status });
         download(await res.blob(), `${safeBase}.mp4`);
-        toast.success(`Downloaded ${safeBase}.mp4`);
+        toast.success(tr("editor.downloaded_file", { file: `${safeBase}.mp4` }));
       } else if (format === "pdf" && taggedPdf && designId) {
         // The server renders the design as last saved, so it is fetched rather
         // than built here. Its text is real text in the author's reading order.
         const res = await fetch(oc.taggedPdfUrl(designId), { credentials: "include" });
-        if (!res.ok) throw new Error(`tagged PDF export failed (${res.status})`);
+        if (!res.ok) throw new CodedError("errors.tagged_pdf_export_failed", `tagged PDF export failed (${res.status})`, { status: res.status });
         download(await res.blob(), `${safeBase}.pdf`);
-        toast.success(`Downloaded ${safeBase}.pdf`);
+        toast.success(tr("editor.downloaded_file", { file: `${safeBase}.pdf` }));
       } else if (format === "pdf") {
         const { jsPDF } = await import("jspdf");
         let pdf: import("jspdf").jsPDF | undefined;
@@ -444,7 +472,7 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
           pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, w, h);
         }
         if (pdf) pdf.save(`${safeBase}.pdf`);
-        toast.success(`Downloaded ${safeBase}.pdf`);
+        toast.success(tr("editor.downloaded_file", { file: `${safeBase}.pdf` }));
       } else if (format === "apng") {
         // Animated PNG. A multi-page deck exports its whole playthrough,
         // transitions included, via the pure deck planner + compositor (doc 28
@@ -458,10 +486,10 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
           if (blob) frames.push({ png: new Uint8Array(await blob.arrayBuffer()), delayMs: f.delayMs });
         }
         if (frames.length < 2) {
-          toast.error("Nothing to animate. Add an animation or a slide transition, or add a page.");
+          toast.error(tr("editor.nothing_to_animate_add_an_animation_or_a_sli"));
         } else {
           download(new Blob([encodeApng(frames, { loops: 0 }) as BlobPart], { type: "image/apng" }), `${safeBase}.apng`);
-          toast.success(`Downloaded ${safeBase}.apng (${frames.length} frames)`);
+          toast.success(tr("editor.downloaded_file_n_frames", { file: `${safeBase}.apng`, count: frames.length }));
         }
       } else if (format === "gif") {
         // Animated GIF: same deck plan as APNG (whole playthrough with
@@ -482,18 +510,18 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
           frames.push({ rgba: new Uint8Array(img.data.buffer.slice(0)), delayMs: f.delayMs });
         }
         if (frames.length < 2 || !gw || !gh) {
-          toast.error("Nothing to animate. Add an animation or a slide transition, or add a page.");
+          toast.error(tr("editor.nothing_to_animate_add_an_animation_or_a_sli"));
         } else {
           const gif = encodeGif(frames, { width: gw, height: gh, loops: 0, transparentAlpha: transparent ? 128 : 0 });
           download(new Blob([gif as BlobPart], { type: "image/gif" }), `${safeBase}.gif`);
-          toast.success(`Downloaded ${safeBase}.gif (${frames.length} frames)`);
+          toast.success(tr("editor.downloaded_file_n_frames", { file: `${safeBase}.gif`, count: frames.length }));
         }
       } else if (format === "lottie") {
         // Vector Lottie JSON of the active page (transforms baked to keyframes).
         const idx = pages[0] ?? Math.min(activePage, pageCount - 1);
         const lottie = designPageToLottie(doc, idx, { fps: 30 });
         download(new Blob([JSON.stringify(lottie)], { type: "application/json" }), `${safeBase}.json`);
-        toast.success(`Downloaded ${safeBase}.json (Lottie)`);
+        toast.success(tr("editor.downloaded_file", { file: `${safeBase}.json` }));
       } else {
         // svg / png / jpg: one rendered file per page. With >1 page and the zip
         // option on, bundle them into a single .zip (batch export, FR); otherwise
@@ -520,71 +548,138 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
         }
         if (useZip) {
           download(zipFiles(entries), `${safeBase}.zip`);
-          toast.success(`Downloaded ${safeBase}.zip (${entries.length} ${fmt.label} pages)`);
+          toast.success(tr("editor.downloaded_zip_n_pages", { file: `${safeBase}.zip`, count: entries.length, format: fmt.label }));
         } else {
-          toast.success(fileCount > 1 ? `Downloaded ${fileCount} ${fmt.label} files` : `Downloaded ${safeBase}.${fmt.suffix}`);
+          toast.success(fileCount > 1 ? tr("editor.downloaded_n_format_files", { count: fileCount, format: fmt.label }) : tr("editor.downloaded_file", { file: `${safeBase}.${fmt.suffix}` }));
         }
       }
       onClose();
-    } catch {
-      toast.error("Download failed - an image from another site may have blocked it. Try uploading that image, or download as SVG.");
+    } catch (e) {
+      // Coded failures (render timeout, download status) show their translated
+      // detail. Everything else keeps the generic cross-origin hint: the
+      // common anonymous failure here is a tainted-canvas SecurityError, whose
+      // raw browser message would be far less useful than the hint.
+      const fallback = tr("editor.download_failed_an_image_from_another_site_m");
+      toast.error(e instanceof CodedError ? userMessage(e, fallback) : fallback);
     } finally {
       setBusy(false);
     }
   }
+
+  // Escape closes the dialog (unless the format dropdown is open, which owns
+  // Escape via its own window handler); Tab/Shift+Tab wrap within the panel so
+  // focus never escapes it (same trap as ui/Modal).
+  const onPanelKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Escape") {
+      e.stopPropagation();
+      onClose();
+      return;
+    }
+    if (e.key !== "Tab") return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    const focusables = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+      (el) => el.offsetParent !== null || el === document.activeElement,
+    );
+    if (focusables.length === 0) {
+      e.preventDefault();
+      panel.focus();
+      return;
+    }
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const activeEl = document.activeElement;
+    if (e.shiftKey) {
+      if (activeEl === first || activeEl === panel) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else {
+      if (activeEl === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  };
 
   return (
     <>
       {/* Click-away backdrop (transparent; the panel is anchored top-right). */}
       <div className="fixed inset-0 z-40" onClick={onClose} />
       <div
+        ref={panelRef}
         role="dialog"
-        aria-label="Download"
-        className="fixed right-3 top-14 z-50 max-h-[calc(100vh-5rem)] w-[22rem] overflow-y-auto rounded-2xl border border-neutral-200 bg-surface p-4 shadow-2xl ring-1 ring-black/5"
+        aria-modal="true"
+        aria-label={tr("editor.download")}
+        tabIndex={-1}
+        className="fixed end-3 top-14 z-50 max-h-[calc(100vh-5rem)] w-[22rem] overflow-y-auto rounded-2xl border border-neutral-200 bg-surface p-4 shadow-2xl outline-none ring-1 ring-black/5"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={onPanelKeyDown}
       >
-        <h2 className="mb-3 text-base font-semibold text-neutral-900">Download</h2>
+        <h2 className="mb-3 text-base font-semibold text-neutral-900">{tr("editor.download")}</h2>
 
-        {/* File type: rich dropdown (icon + name + description + recommended badge). */}
-        <div className="relative mb-3" ref={formatRef}>
-          <label className="mb-1 block text-xs font-medium text-neutral-500">File type</label>
-          <button
-            type="button"
-            aria-haspopup="listbox"
-            aria-expanded={formatOpen}
-            onClick={() => setFormatOpen((v) => !v)}
-            className="flex w-full items-center gap-2.5 rounded-xl border border-neutral-300 px-3 py-2.5 text-left hover:border-neutral-400"
-          >
-            <fmt.icon size={18} className="shrink-0 text-neutral-500" />
-            <span className="flex-1">
-              <span className="block text-sm font-medium text-neutral-800">{fmt.label}</span>
-              <span className="block text-[11px] text-neutral-400">{fmt.desc}</span>
-            </span>
-            <ChevronDown size={16} className={`shrink-0 text-neutral-400 transition-transform ${formatOpen ? "rotate-180" : ""}`} />
-          </button>
-          {formatOpen && (
-            <ul role="listbox" className="absolute z-10 mt-1 w-full overflow-hidden rounded-xl border border-neutral-200 bg-surface p-1 shadow-xl ring-1 ring-black/5">
-              {FORMATS.map((f) => (
-                <li key={f.value} role="option" aria-selected={f.value === format}>
-                  <button
-                    type="button"
-                    onClick={() => { setFormat(f.value); setFormatOpen(false); }}
-                    className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left hover:bg-neutral-50 ${f.value === format ? "bg-brand-50" : ""}`}
-                  >
-                    <f.icon size={18} className="shrink-0 text-neutral-500" />
-                    <span className="flex-1">
-                      <span className="flex items-center gap-1.5 text-sm font-medium text-neutral-800">
-                        {f.label}
-                        {f.badge && <span className="rounded-full bg-brand-100 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-brand-ink">{f.badge}</span>}
-                      </span>
-                      <span className="block text-[11px] text-neutral-400">{f.desc}</span>
-                    </span>
-                    {f.value === format && <Check size={15} className="shrink-0 text-brand-ink" />}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+        {/* File type. A grid of chips rather than a dropdown: the format IS
+            the decision this panel exists for, so all nine stay visible and
+            cost one click. Grouping by output kind turns a nine-way choice
+            into three small ones, and the description shows once, for the
+            current selection, instead of being repeated on every row.
+            Native radios carry the roving focus and arrow-key movement, so
+            the group needs no keyboard code of its own. */}
+        <div className="mb-3">
+          <span id={formatLabelId} className="mb-1.5 block text-xs font-medium text-neutral-500">{tr("editor.file_type")}</span>
+          <div role="radiogroup" aria-labelledby={formatLabelId} className="flex flex-col gap-2">
+            {formatGroups().map((group) => {
+              const items = formats().filter((f) => f.group === group.id);
+              if (!items.length) return null;
+              return (
+                <div key={group.id}>
+                  <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-neutral-400">{group.label}</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {items.map((f) => {
+                      const on = f.value === format;
+                      return (
+                        <label key={f.value} className="cursor-pointer" title={f.desc}>
+                          <input
+                            type="radio"
+                            name={`${baseId}-format-choice`}
+                            value={f.value}
+                            checked={on}
+                            onChange={() => setFormat(f.value)}
+                            // The chip shows only the acronym, so the
+                            // description rides on the accessible name:
+                            // arrowing through the group otherwise announces
+                            // "PNG, JPG, SVG" with no way to tell them apart.
+                            // The acronym leads so the visible text is still
+                            // the start of the name (WCAG 2.5.3).
+                            aria-label={`${f.acronym}. ${f.badge ? `${f.badge}. ` : ""}${f.desc}`}
+                            className="peer sr-only"
+                          />
+                          <span
+                            className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition peer-focus-visible:ring-2 peer-focus-visible:ring-brand-400 ${
+                              on
+                                ? "border-brand-500 bg-brand-50 text-brand-ink"
+                                : "border-neutral-200 text-neutral-700 hover:border-neutral-300 hover:bg-neutral-50"
+                            }`}
+                          >
+                            <f.icon size={14} className="shrink-0" />
+                            {f.acronym}
+                            {/* The recommendation is a dot here and a word in
+                                the line below, so the chip stays narrow while
+                                the meaning is still spelled out somewhere. */}
+                            {f.badge && <span aria-hidden className={`h-1.5 w-1.5 shrink-0 rounded-full ${on ? "bg-brand-500" : "bg-brand-300"}`} />}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[11px] leading-snug text-neutral-500" data-testid="format-desc">
+            {fmt.badge && <span className="font-semibold text-brand-ink">{fmt.badge} · </span>}
+            {fmt.desc}
+          </p>
         </div>
 
         {/* Accessible PDF (doc 28 FR-22). The two PDF paths are a real
@@ -603,11 +698,11 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
                 className="mt-0.5 h-3.5 w-3.5 accent-brand-500"
               />
               <span className="min-w-0">
-                <span className="block text-xs font-medium text-neutral-700">Accessible PDF (tagged)</span>
+                <span className="block text-xs font-medium text-neutral-700">{tr("editor.accessible_pdf_tagged")}</span>
                 <span className="mt-0.5 block text-[11px] leading-snug text-neutral-500">
                   {designId
                     ? "Real, selectable text a screen reader can follow in your reading order, with alt text and slide titles. Fonts you uploaded are embedded; web fonts fall back to standard faces. The last saved version is exported."
-                    : "Save the design first to export an accessible PDF."}
+                    : tr("editor.save_the_design_first_to_export_an_accessibl")}
                 </span>
               </span>
             </label>
@@ -618,14 +713,15 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
         {sizable && (
           <div className="mb-3">
             <div className="mb-1 flex items-center justify-between">
-              <label className="text-xs font-medium text-neutral-500">Size</label>
+              <label id={sizeLabelId} className="text-xs font-medium text-neutral-500">{tr("editor.size")}</label>
               <span className="text-[11px] tabular-nums text-neutral-400">{dim.width} × {dim.height} px</span>
             </div>
-            <div className="flex gap-1">
+            <div role="group" aria-labelledby={sizeLabelId} className="flex gap-1">
               {SIZE_STEPS.map((s) => (
                 <button
                   key={s}
                   type="button"
+                  aria-pressed={scale === s}
                   onClick={() => setScale(s)}
                   className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition ${scale === s ? "bg-brand-600 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}
                 >
@@ -640,17 +736,17 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
         {format === "jpg" && (
           <div className="mb-3">
             <div className="mb-1 flex items-center justify-between">
-              <label className="text-xs font-medium text-neutral-500">Quality</label>
+              <label className="text-xs font-medium text-neutral-500">{tr("editor.quality")}</label>
               <span className="text-[11px] tabular-nums text-neutral-400">{quality}%</span>
             </div>
-            <input type="range" min={40} max={100} step={1} value={quality} onChange={(e) => setQuality(Number(e.target.value))} className="w-full accent-brand-600" />
+            <input type="range" min={40} max={100} step={1} value={quality} aria-label={tr("editor.quality")} onChange={(e) => setQuality(Number(e.target.value))} className="w-full accent-brand-600" />
           </div>
         )}
 
         {/* PNG transparency. */}
         {format === "png" && (
           <label className="mb-3 flex cursor-pointer items-center justify-between text-sm">
-            <span className="text-neutral-600">Transparent background</span>
+            <span className="text-neutral-600">{tr("editor.transparent_background")}</span>
             <input type="checkbox" checked={transparent} onChange={(e) => setTransparent(e.target.checked)} className="h-4 w-4 accent-brand-600" />
           </label>
         )}
@@ -658,7 +754,7 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
         {/* Batch: bundle multiple pages into one .zip (non-PDF formats). */}
         {format !== "pdf" && pages.length > 1 && (
           <label className="mb-3 flex cursor-pointer items-center justify-between text-sm">
-            <span className="text-neutral-600">Combine pages into a .zip</span>
+            <span className="text-neutral-600">{tr("editor.combine_pages_into_a_zip")}</span>
             <input type="checkbox" checked={zipBatch} onChange={(e) => setZipBatch(e.target.checked)} className="h-4 w-4 accent-brand-600" />
           </label>
         )}
@@ -669,11 +765,11 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
             <div className="mb-1.5 flex items-center justify-between">
               <label className="text-xs font-medium text-neutral-500">Pages ({pages.length}/{pageCount})</label>
               <div className="flex gap-2 text-[11px] font-medium">
-                <button type="button" onClick={() => setSelected(doc.pages.map((_, i) => i))} className="text-brand-ink hover:underline">All</button>
-                <button type="button" onClick={() => setSelected([Math.min(activePage, pageCount - 1)])} className="text-neutral-500 hover:underline">Current</button>
+                <button type="button" onClick={() => setSelected(doc.pages.map((_, i) => i))} className="text-brand-ink hover:underline">{tr("editor.all")}</button>
+                <button type="button" onClick={() => setSelected([Math.min(activePage, pageCount - 1)])} className="text-neutral-500 hover:underline">{tr("editor.current")}</button>
               </div>
             </div>
-            <div className="flex flex-wrap gap-1.5">
+            <div role="group" aria-label={tr("editor.pages")} className="flex flex-wrap gap-1.5">
               {doc.pages.map((_, i) => {
                 const on = selected.includes(i);
                 return (
@@ -690,8 +786,8 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
                 );
               })}
             </div>
-            {!isRaster && format === "pdf" && <p className="mt-1.5 text-[11px] text-neutral-400">Exported as one PDF.</p>}
-            {(isRaster || format === "svg") && pages.length > 1 && <p className="mt-1.5 text-[11px] text-neutral-400">{pages.length} separate files.</p>}
+            {!isRaster && format === "pdf" && <p className="mt-1.5 text-[11px] text-neutral-400">{tr("editor.exported_as_one_pdf")}</p>}
+            {(isRaster || format === "svg") && pages.length > 1 && <p className="mt-1.5 text-[11px] text-neutral-400">{tr("editor.n_separate_files", { count: pages.length })}</p>}
           </div>
         )}
 
@@ -699,51 +795,51 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
         {blocked && (
           <div className="mb-3 rounded-xl bg-red-50 p-2.5 text-xs text-red-700">
             <div className="mb-1 flex items-center gap-1.5 font-semibold">
-              <ShieldAlert size={14} /> Off-brand: download blocked
+              <ShieldAlert size={14} /> {tr("editor.off_brand_download_blocked")}
             </div>
-            <p className="mb-1">{gate!.violations.length} brand violation{gate!.violations.length === 1 ? "" : "s"} must be resolved first.</p>
-            <ul className="mb-1 max-h-24 list-disc overflow-y-auto pl-4 text-[11px]">
+            <p className="mb-1">{tr("editor.n_brand_violations_must_be_resolved", { count: gate!.violations.length })}</p>
+            <ul className="mb-1 max-h-24 list-disc overflow-y-auto ps-4 text-[11px]">
               {gate!.violations.slice(0, 5).map((v) => (<li key={v.id}>{v.message}</li>))}
             </ul>
-            <span className="text-[11px] text-red-600">Review them in the Brand panel.</span>
+            <span className="text-[11px] text-red-600">{tr("editor.review_them_in_the_brand_panel")}</span>
           </div>
         )}
         {showWarn && (
           <div className="mb-3 rounded-xl bg-amber-50 p-2.5 text-xs text-amber-800">
             <div className="mb-1 flex items-center justify-between">
-              <span className="flex items-center gap-1.5 font-semibold"><AlertTriangle size={14} /> Off-brand warning</span>
-              <button onClick={() => setWarnDismissed(true)} className="text-[11px] font-medium text-amber-700 hover:underline">Dismiss</button>
+              <span className="flex items-center gap-1.5 font-semibold"><AlertTriangle size={14} /> {tr("editor.off_brand_warning")}</span>
+              <button onClick={() => setWarnDismissed(true)} className="text-[11px] font-medium text-amber-700 hover:underline">{tr("editor.dismiss")}</button>
             </div>
-            <p>{gate!.violations.length} brand violation{gate!.violations.length === 1 ? "" : "s"} found. You can still download.</p>
+            <p>{tr("editor.n_brand_violations_found_can_download", { count: gate!.violations.length })}</p>
           </div>
         )}
 
         {credits.length > 0 && (
           <div className="mb-3 rounded-xl bg-neutral-50 p-2.5 text-xs text-neutral-600">
             <div className="mb-1 flex items-center justify-between">
-              <span className="font-semibold">Credits</span>
+              <span className="font-semibold">{tr("editor.credits")}</span>
               <button
-                onClick={() => { void navigator.clipboard.writeText(attributionText(credits)); toast.success("Credits copied"); }}
+                onClick={() => { void navigator.clipboard.writeText(attributionText(credits)); toast.success(tr("editor.credits_copied")); }}
                 className="text-[11px] font-medium text-brand-ink hover:underline"
               >
-                Copy
+                {tr("editor.copy")}
               </button>
             </div>
             <ul className="max-h-20 overflow-y-auto">
               {credits.map((c) => (<li key={c.assetId}>{c.attributionText}</li>))}
             </ul>
-            <p className="mt-1 text-[11px] text-neutral-400">This design uses assets that require attribution when published.</p>
+            <p className="mt-1 text-[11px] text-neutral-400">{tr("editor.this_design_uses_assets_that_require_attribu")}</p>
           </div>
         )}
 
         <button
           onClick={() => void run()}
           disabled={busy || blocked}
-          title={blocked ? "Resolve brand violations to download" : undefined}
+          title={blocked ? tr("editor.resolve_brand_violations_to_download") : undefined}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
         >
           <Download size={16} />
-          {busy ? "Preparing…" : fileCount > 1 ? `Download ${fileCount} files` : "Download"}
+          {busy ? tr("editor.preparing") : fileCount > 1 ? `Download ${fileCount} files` : tr("editor.download")}
         </button>
       </div>
     </>

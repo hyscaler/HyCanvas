@@ -4,12 +4,13 @@
 
 import Head from "next/head";
 import { NotFoundScreen } from "@/components/ui/NotFound";
+import { tr } from "@/lib/i18n";
 
 export default function NotFound() {
   return (
     <>
       <Head>
-        <title>Page not found · HyCanvas</title>
+        <title>{tr("page.page_not_found_hycanvas")}</title>
         <meta name="robots" content="noindex" />
       </Head>
       <NotFoundScreen />

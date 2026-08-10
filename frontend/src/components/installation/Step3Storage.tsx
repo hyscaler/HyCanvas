@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { WizardShell, ErrorBanner, SuccessBanner, useSecretGate } from "./WizardShell";
 import { getAnswers, setupPost, setupStatus, updateAnswers, type StorageAnswers } from "./wizard";
+import { tr } from "@/lib/i18n";
+import { userMessage } from "@/lib/errors";
 
 const STORAGE_DEFAULTS: StorageAnswers = {
   driver: "local",
@@ -52,7 +54,7 @@ export function Step3Storage() {
       await setupPost("s3/test", storage.s3);
       setTested(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "S3 check failed.");
+      setError(userMessage(err, tr("installation.s3_check_failed")));
     } finally {
       setBusy(false);
     }
@@ -67,7 +69,7 @@ export function Step3Storage() {
       await updateAnswers({ storage });
       await router.push("/installation/step-4");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't save. Please try again.");
+      setError(userMessage(err, tr("installation.couldnt_save_please_try_again")));
       setBusy(false);
     }
   }
@@ -75,15 +77,15 @@ export function Step3Storage() {
   return (
     <WizardShell
       step={3}
-      title="Asset storage"
-      subtitle="Uploads, stock caches, and exports are stored here."
+      title={tr("installation.asset_storage")}
+      subtitle={tr("installation.uploads_stock_caches_and_exports_are_stored")}
     >
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Storage driver">
+        <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label={tr("installation.storage_driver")}>
           {(
             [
-              { id: "local", label: "Local disk", desc: "Simplest; a folder next to the server", icon: HardDrive },
-              { id: "s3", label: "S3-compatible", desc: "AWS S3, MinIO, R2, …", icon: Cloud },
+              { id: "local", label: tr("installation.local_disk"), desc: "Simplest; a folder next to the server", icon: HardDrive },
+              { id: "s3", label: "S3-compatible", desc: tr("installation.aws_s3_minio_r2"), icon: Cloud },
             ] as const
           ).map((opt) => (
             <button
@@ -93,7 +95,7 @@ export function Step3Storage() {
               aria-checked={storage.driver === opt.id}
               onClick={() => setStorage({ driver: opt.id })}
               className={cn(
-                "flex flex-col items-start gap-1 rounded-xl border p-4 text-left transition",
+                "flex flex-col items-start gap-1 rounded-xl border p-4 text-start transition",
                 storage.driver === opt.id
                   ? "border-brand-400 bg-brand-50/60 ring-2 ring-brand-100"
                   : "border-neutral-200 bg-surface hover:border-neutral-300",
@@ -109,7 +111,7 @@ export function Step3Storage() {
 
         {storage.driver === "local" ? (
           <Input
-            label="Storage directory"
+            label={tr("installation.storage_directory")}
             required
             placeholder="/srv/hycanvas/storage"
             value={storage.localPath}
@@ -117,14 +119,14 @@ export function Step3Storage() {
           />
         ) : (
           <>
-            <Input label="Endpoint" required placeholder="https://s3.amazonaws.com or minio:9000" value={storage.s3.endpoint} onChange={(e) => setS3({ endpoint: e.target.value })} />
+            <Input label={tr("installation.endpoint")} required placeholder="https://s3.amazonaws.com or minio:9000" value={storage.s3.endpoint} onChange={(e) => setS3({ endpoint: e.target.value })} />
             <div className="grid grid-cols-2 gap-3">
-              <Input label="Region" placeholder="us-east-1" value={storage.s3.region} onChange={(e) => setS3({ region: e.target.value })} />
-              <Input label="Bucket" required placeholder="hycanvas" value={storage.s3.bucket} onChange={(e) => setS3({ bucket: e.target.value })} />
+              <Input label={tr("installation.region")} placeholder={tr("installation.us_east_1")} value={storage.s3.region} onChange={(e) => setS3({ region: e.target.value })} />
+              <Input label={tr("installation.bucket")} required placeholder={tr("installation.hycanvas")} value={storage.s3.bucket} onChange={(e) => setS3({ bucket: e.target.value })} />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Input label="Access key ID" required value={storage.s3.accessKey} onChange={(e) => setS3({ accessKey: e.target.value })} autoComplete="off" />
-              <Input label="Secret access key" required type="password" value={storage.s3.secretKey} onChange={(e) => setS3({ secretKey: e.target.value })} autoComplete="off" />
+              <Input label={tr("installation.access_key_id")} required value={storage.s3.accessKey} onChange={(e) => setS3({ accessKey: e.target.value })} autoComplete="off" />
+              <Input label={tr("installation.secret_access_key")} required type="password" value={storage.s3.secretKey} onChange={(e) => setS3({ secretKey: e.target.value })} autoComplete="off" />
             </div>
             <label className="flex items-center gap-2 text-sm text-neutral-700">
               <input
@@ -133,26 +135,26 @@ export function Step3Storage() {
                 onChange={(e) => setS3({ forcePathStyle: e.target.checked })}
                 className="h-4 w-4 rounded border-neutral-300 accent-[var(--color-brand-600)]"
               />
-              Path-style addressing (required by most MinIO setups)
+              {tr("installation.path_style_addressing_required_by_most_minio")}
             </label>
           </>
         )}
 
         {error && <ErrorBanner>{error}</ErrorBanner>}
-        {storage.driver === "s3" && tested && <SuccessBanner>Bucket reachable.</SuccessBanner>}
+        {storage.driver === "s3" && tested && <SuccessBanner>{tr("installation.bucket_reachable")}</SuccessBanner>}
 
         <div className="flex items-center justify-between gap-3">
           <Button type="button" variant="ghost" onClick={() => void router.push("/installation/step-2")}>
-            Back
+            {tr("installation.back")}
           </Button>
           <div className="flex gap-2">
             {storage.driver === "s3" && (
               <Button type="button" variant="secondary" onClick={() => void test()} disabled={busy}>
-                {busy ? "Working…" : "Test bucket"}
+                {busy ? tr("installation.working") : tr("installation.test_bucket")}
               </Button>
             )}
             <Button type="submit" disabled={!canContinue || busy}>
-              Continue
+              {tr("installation.continue")}
             </Button>
           </div>
         </div>

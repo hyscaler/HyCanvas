@@ -11,6 +11,8 @@
 // assets keep their URLs (which resolve only on the origin instance).
 
 import { CURRENT_SCHEMA_VERSION, migrate, validate, type DesignFile } from "@hc/schema";
+import { tr } from "@/lib/i18n";
+import { CodedError } from "./errors";
 
 export const HYC_EXTENSION = ".hyc";
 /** What the import file pickers accept: .hyc first, plain .json as a fallback
@@ -38,17 +40,17 @@ export function parseHycFile(text: string): DesignFile {
   try {
     parsed = JSON.parse(text);
   } catch {
-    throw new Error("This file is not a HyCanvas design file (not valid JSON).");
+    throw new CodedError("errors.hyc_not_json", "This file is not a HyCanvas design file (not valid JSON).");
   }
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw new Error("This file is not a HyCanvas design file.");
+    throw new CodedError("errors.hyc_not_design_file", "This file is not a HyCanvas design file.");
   }
   const file = parsed as DesignFile;
   if (typeof file.schemaVersion !== "number" || !Array.isArray(file.pages) || file.pages.length === 0) {
-    throw new Error("This file is not a HyCanvas design file (missing pages or schema version).");
+    throw new CodedError("errors.hyc_missing_fields", "This file is not a HyCanvas design file (missing pages or schema version).");
   }
   if (file.schemaVersion > CURRENT_SCHEMA_VERSION) {
-    throw new Error("This file was made by a newer version of HyCanvas. Update this instance to open it.");
+    throw new CodedError("errors.hyc_newer_version", "This file was made by a newer version of HyCanvas. Update this instance to open it.");
   }
   // Older files forward-migrate (forward-only and idempotent); a current file
   // passes through untouched.
@@ -61,10 +63,10 @@ export function parseHycFile(text: string): DesignFile {
   // poison template that fails on every use and cannot be deleted. Both paths
   // eventually assign their own id/title, so placeholders satisfy the top-level
   // required fields and validation focuses on the document body.
-  const probe = { ...migrated, id: (migrated.id as string) || "import-probe", title: (migrated.title as string) || "Imported" } as DesignFile;
+  const probe = { ...migrated, id: (migrated.id as string) || "import-probe", title: (migrated.title as string) || tr("app.imported") } as DesignFile;
   const result = validate(probe);
   if (!result.ok) {
-    throw new Error(`This file is not a valid HyCanvas design (${result.message}).`);
+    throw new CodedError("errors.hyc_invalid_design", `This file is not a valid HyCanvas design (${result.message}).`, { detail: result.message });
   }
   return migrated;
 }
@@ -74,7 +76,7 @@ export function readFileText(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result ?? ""));
-    reader.onerror = () => reject(new Error("Could not read the file."));
+    reader.onerror = () => reject(new CodedError("errors.file_read_failed", "Could not read the file."));
     reader.readAsText(file);
   });
 }
@@ -85,5 +87,5 @@ export function importedTitle(file: DesignFile, filename: string): string {
   const own = typeof file.title === "string" ? file.title.trim() : "";
   if (own) return own;
   const stem = filename.replace(/\.[^.]*$/, "").trim();
-  return stem || "Imported design";
+  return stem || tr("app.imported_design");
 }

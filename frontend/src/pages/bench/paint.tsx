@@ -13,6 +13,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createBlankDesign, createNode, type DesignFile, type Node } from "@hc/schema";
 import { createScene, renderScene, type CanvasLike, type Scene } from "@hc/engine";
+import { tr } from "@/lib/i18n";
 
 const PAGES = 50;
 const NODES_PER_PAGE = 1000;
@@ -49,7 +50,7 @@ function buildNodes(n: number): Node[] {
 }
 
 function buildDeck(): DesignFile {
-  const file = createBlankDesign({ title: "AC-10 bench", width: 1920, height: 1080 });
+  const file = createBlankDesign({ title: tr("page.ac_10_bench"), width: 1920, height: 1080 });
   const template = file.pages[0];
   file.pages = Array.from({ length: PAGES }, (_, p) => ({
     ...structuredClone(template),
@@ -173,7 +174,7 @@ export default function PaintBench() {
 
   return (
     <main className="light min-h-screen bg-white p-4 font-mono text-sm text-neutral-800">
-      <h1 className="mb-1 text-base font-semibold">AC-10 paint benchmark</h1>
+      <h1 className="mb-1 text-base font-semibold">{tr("page.ac_10_paint_benchmark")}</h1>
       <p className="mb-2" data-testid="bench-status">
         {status}
         {result &&

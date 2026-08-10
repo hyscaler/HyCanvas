@@ -3,6 +3,8 @@
 // previous sample spikes. No AI, no server; good enough to propose split
 // points which the user can always undo.
 
+import { CodedError } from "../errors";
+
 const SAMPLE_W = 64;
 const SAMPLE_H = 36;
 
@@ -27,7 +29,7 @@ export async function detectSceneSeconds(url: string, opts: SceneDetectOptions =
   video.muted = true;
   await new Promise<void>((resolve, reject) => {
     video.onloadedmetadata = () => resolve();
-    video.onerror = () => reject(new Error("video load failed"));
+    video.onerror = () => reject(new CodedError("errors.video_load_failed", "video load failed"));
     video.src = url;
   });
   const dur = video.duration;

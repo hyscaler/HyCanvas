@@ -14,6 +14,7 @@
 import { CURRENT_SCHEMA_VERSION, type DesignFile, type Node, type Page, type PageTransition } from "@hc/schema";
 import { pageAnimationDuration } from "@hc/engine";
 import { newProject, newTrack, type Clip, type Track, type VideoProject, type ClipTransition } from "@hc/timeline";
+import { tr } from "@/lib/i18n";
 
 /** A solid rect element filling the stage with a page's background color (solid
  *  fills only; gradients/images fall back to white so the scene is never empty). */
@@ -27,7 +28,7 @@ function backgroundNode(page: Page, w: number, h: number): Node {
   return {
     id: `bg_${page.id}`,
     type: "shape",
-    name: "Background",
+    name: tr("app.background"),
     transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
     size: { width: w, height: h },
     opacity: 1,
@@ -87,14 +88,14 @@ export function deckToVideoProject(doc: DesignFile, opts: DeckToVideoOpts = {}):
       ? Math.max(Math.round(0.3 * fps), Math.round((page.autoAdvanceMs / 1000) * fps))
       : Math.max(Math.round(minS * fps), Math.round((animMs / 1000 + hold) * fps));
     const sceneId = `scene_${page.id}`;
-    const tr = clipTransitionFor(page.transition, fps);
+    const transition = clipTransitionFor(page.transition, fps);
     // Layer 0: the page background. Layers 1..N: the page's top-level nodes, in
     // z-order, each carrying its own animation.
     const layers: Node[] = [backgroundNode(page, w, h), ...page.children];
     layers.forEach((node, li) => {
       const clip: Clip = {
         id: `clip_${page.id}_${li}`,
-        name: li === 0 ? "Background" : (node as { name?: string }).name || `Element ${li}`,
+        name: li === 0 ? tr("app.background") : (node as { name?: string }).name || `Element ${li}`,
         startFrame: run,
         inFrame: 0,
         outFrame: durFrames,
@@ -104,7 +105,7 @@ export function deckToVideoProject(doc: DesignFile, opts: DeckToVideoOpts = {}):
         // The scene's entrance transition rides on every layer (matches the
         // scene-transition model), except the very first page which has nothing
         // to transition from.
-        ...(tr && pi > 0 ? { transitionIn: tr } : {}),
+        ...(transition && pi > 0 ? { transitionIn: transition } : {}),
       };
       tracks[li] = { ...tracks[li], clips: [...tracks[li].clips, clip] };
     });
@@ -123,7 +124,7 @@ export function deckToVideoFile(doc: DesignFile, opts: DeckToVideoOpts = {}): De
     format: "hycanvas.design",
     schemaVersion: CURRENT_SCHEMA_VERSION,
     id: `video_${doc.id}`,
-    title: `${doc.title || "Design"} (video)`,
+    title: `${doc.title || tr("app.design")} (video)`,
     unit: doc.unit ?? "px",
     dpi: doc.dpi ?? 96,
     // A single stage-sized page keeps the file valid for scene-backed tooling; the

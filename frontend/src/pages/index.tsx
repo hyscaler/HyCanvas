@@ -6,6 +6,7 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import { useAuth } from "@/store/auth";
 import { FullScreenLoader } from "@/components/ui/BrandLoader";
+import { tr } from "@/lib/i18n";
 
 export default function Home() {
   const router = useRouter();
@@ -24,10 +25,10 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>HyCanvas</title>
-        <meta name="description" content="A free, AI-native visual design platform." />
+        <title>{tr("page.hycanvas_2")}</title>
+        <meta name="description" content={tr("page.a_free_ai_native_visual_design_platform")} />
       </Head>
-      <FullScreenLoader label="HyCanvas…" />
+      <FullScreenLoader label={tr("page.hycanvas")} />
     </>
   );
 }

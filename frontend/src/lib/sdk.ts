@@ -2,6 +2,7 @@
 // (credentials: "include"), so the SPA never handles tokens directly.
 
 import { HyCanvasClient, type UploadedAsset } from "@hc/sdk";
+import { CodedError } from "./errors";
 
 const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8005/api";
 
@@ -20,6 +21,8 @@ export function uploadAssetWithProgress(
     const xhr = new XMLHttpRequest();
     xhr.open("POST", `${baseUrl}/v1/workspaces/${workspaceId}/assets`);
     xhr.withCredentials = true;
+    // Protocol token, not UI text: translating a header NAME produces an
+    // illegal token and setRequestHeader throws (i18n-ignore).
     xhr.setRequestHeader("Content-Type", "application/json");
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) onProgress(Math.min(100, Math.round((e.loaded / e.total) * 100)));
@@ -30,25 +33,36 @@ export function uploadAssetWithProgress(
           if (onProgress) onProgress(100);
           resolve(JSON.parse(xhr.responseText) as UploadedAsset);
         } catch {
-          reject(new Error("Upload succeeded but the response was unreadable."));
+          reject(new CodedError("errors.upload_response_unreadable", "Upload succeeded but the response was unreadable."));
         }
       } else if (xhr.status === 401) {
         // Session likely needs a refresh; the fetch client handles that for us.
         oc.uploadAsset(workspaceId, input).then(resolve, reject);
       } else {
-        const err = new Error(`Upload failed (${xhr.status}).`) as Error & { status?: number; detail?: string };
-        err.status = xhr.status;
-        // Surface the problem+json detail so callers can word quota errors
-        // (workspace cap vs the global account limit) accurately.
+        // CodedError so the toast translates. A problem+json `code` from the
+        // server (quota, membership) becomes the translation key; the English
+        // detail is the fallback message. `status`/`detail` stay attached
+        // because callers word quota errors from the problem+json detail.
+        let detail: string | undefined;
+        let code: string | undefined;
         try {
-          err.detail = (JSON.parse(xhr.responseText) as { detail?: string }).detail;
+          const body = JSON.parse(xhr.responseText) as { detail?: string; code?: string };
+          detail = body.detail;
+          code = body.code;
         } catch {
           /* non-JSON error body */
         }
+        const err = new CodedError(
+          code ? `errors.api_${code}` : "errors.upload_failed_status",
+          detail || `Upload failed (${xhr.status}).`,
+          { status: xhr.status },
+        ) as CodedError & { status?: number; detail?: string };
+        err.status = xhr.status;
+        err.detail = detail;
         reject(err);
       }
     };
-    xhr.onerror = () => reject(new Error("Network error during upload."));
+    xhr.onerror = () => reject(new CodedError("errors.upload_network_error", "Network error during upload."));
     xhr.send(JSON.stringify(input));
   });
 }

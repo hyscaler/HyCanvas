@@ -14,6 +14,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
 ) {
   const autoId = useId();
   const inputId = id ?? autoId;
+  // The error text is ASSOCIATED, not merely adjacent: without
+  // aria-describedby a screen reader announces the field as valid and the
+  // reason for the rejection is never spoken (WCAG 3.3.1).
+  const errorId = `${inputId}-error`;
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
@@ -24,6 +28,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       <input
         ref={ref}
         id={inputId}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? errorId : undefined}
         className={cn(
           "h-11 rounded-xl border border-neutral-200 bg-surface px-3.5 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100",
           error && "border-red-400 focus:border-red-500 focus:ring-red-100",
@@ -31,7 +37,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         )}
         {...props}
       />
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p id={errorId} className="text-xs text-red-600">{error}</p>}
     </div>
   );
 });

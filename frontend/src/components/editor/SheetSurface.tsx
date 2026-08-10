@@ -53,6 +53,7 @@ import {
 import { cellKey, indexToCol, parseRef } from "@hc/formula";
 import { useEditor } from "@/store/editor";
 import { useToast } from "@/components/ui/Toast";
+import { tr } from "@/lib/i18n";
 
 // Render cap. True windowed virtualization (for 100k-row grids) is deferred; to
 // avoid the everyday dead-end where added rows/columns are unreachable we render
@@ -73,12 +74,12 @@ interface NumberFormatOption {
   value: string; // empty string === General
 }
 
-const NUMBER_FORMATS: NumberFormatOption[] = [
-  { label: "General", value: "" },
-  { label: "Number (0.00)", value: "#,##0.00" },
-  { label: "Percent (0%)", value: "0%" },
+const numberFormats = (): NumberFormatOption[] => [
+  { label: tr("editor.general"), value: "" },
+  { label: tr("editor.number_0_00"), value: "#,##0.00" },
+  { label: tr("editor.percent_0"), value: "0%" },
   { label: "Currency ($)", value: "$#,##0.00" },
-  { label: "Date (yyyy-mm-dd)", value: "yyyy-mm-dd" },
+  { label: tr("editor.date_yyyy_mm_dd"), value: "yyyy-mm-dd" },
 ];
 
 // ---- pure helpers -----------------------------------------------------------
@@ -87,7 +88,7 @@ const NUMBER_FORMATS: NumberFormatOption[] = [
 function initialSheetMeta(): SheetMeta {
   return {
     kind: "sheet",
-    grids: [createGrid("grid-1", "Sheet 1", DEFAULT_ROWS, DEFAULT_COLS)],
+    grids: [createGrid("grid-1", tr("editor.sheet_1"), DEFAULT_ROWS, DEFAULT_COLS)],
   };
 }
 
@@ -683,7 +684,7 @@ export function SheetSurface(props: {
     try {
       await navigator.clipboard.writeText(selectionToTsv());
     } catch {
-      toast.error("Clipboard copy blocked by the browser. Grant clipboard permission.");
+      toast.error(tr("editor.clipboard_copy_blocked_by_the_browser_grant"));
     }
   }, [selectionToTsv, toast]);
 
@@ -706,7 +707,7 @@ export function SheetSurface(props: {
     try {
       await navigator.clipboard.writeText(selectionToTsv());
     } catch {
-      toast.error("Clipboard cut blocked by the browser. Grant clipboard permission.");
+      toast.error(tr("editor.clipboard_cut_blocked_by_the_browser_grant_c"));
       return;
     }
     commitGrid(clearSelectionGrid(grid));
@@ -718,7 +719,7 @@ export function SheetSurface(props: {
     try {
       text = await navigator.clipboard.readText();
     } catch {
-      toast.error("Clipboard paste blocked by the browser. Grant clipboard permission.");
+      toast.error(tr("editor.clipboard_paste_blocked_by_the_browser_grant"));
       return;
     }
     if (text === "") return;
@@ -882,7 +883,7 @@ export function SheetSurface(props: {
   if (!grid) {
     return (
       <div className="grid flex-1 place-items-center bg-neutral-50 text-sm text-neutral-500">
-        Preparing sheet...
+        {tr("editor.preparing_sheet")}
       </div>
     );
   }
@@ -956,17 +957,17 @@ export function SheetSurface(props: {
           type="button"
           onClick={addRow}
           className="inline-flex items-center gap-1 rounded-md border border-neutral-200 bg-surface px-2 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100"
-          title="Add row"
+          title={tr("editor.add_row")}
         >
-          <Rows3 className="h-3.5 w-3.5" /> Row
+          <Rows3 className="h-3.5 w-3.5" /> {tr("editor.row")}
         </button>
         <button
           type="button"
           onClick={addColumn}
           className="inline-flex items-center gap-1 rounded-md border border-neutral-200 bg-surface px-2 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100"
-          title="Add column"
+          title={tr("editor.add_column")}
         >
-          <Columns3 className="h-3.5 w-3.5" /> Column
+          <Columns3 className="h-3.5 w-3.5" /> {tr("editor.column")}
         </button>
 
         <div className="mx-0.5 h-5 w-px bg-neutral-200" />
@@ -976,9 +977,9 @@ export function SheetSurface(props: {
           value={activeFormatValue}
           onChange={(e) => setActiveNumberFormat(e.target.value)}
           className="rounded-md border border-neutral-200 bg-surface px-1.5 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100 focus:outline-none focus:ring-1 focus:ring-blue-400"
-          title="Number format for the active cell"
+          title={tr("editor.number_format_for_the_active_cell")} aria-label={tr("editor.number_format_for_the_active_cell")}
         >
-          {NUMBER_FORMATS.map((nf) => (
+          {numberFormats().map((nf) => (
             <option key={nf.label} value={nf.value}>{nf.label}</option>
           ))}
         </select>
@@ -988,7 +989,7 @@ export function SheetSurface(props: {
           type="button"
           onClick={() => stepDecimals(1)}
           className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-100"
-          title="Increase decimal places"
+          title={tr("editor.increase_decimal_places")}
         >
           <DecimalsArrowRight className="h-3.5 w-3.5" />
         </button>
@@ -996,7 +997,7 @@ export function SheetSurface(props: {
           type="button"
           onClick={() => stepDecimals(-1)}
           className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-100"
-          title="Decrease decimal places"
+          title={tr("editor.decrease_decimal_places")}
         >
           <DecimalsArrowLeft className="h-3.5 w-3.5" />
         </button>
@@ -1007,16 +1008,16 @@ export function SheetSurface(props: {
         {iconToggle(
           !!activeFmt?.font?.bold,
           () => patchActiveFmt({ font: { bold: activeFmt?.font?.bold ? undefined : true } }),
-          "Bold",
+          tr("editor.bold"),
           <Bold className="h-3.5 w-3.5" />,
         )}
         {iconToggle(
           !!activeFmt?.font?.italic,
           () => patchActiveFmt({ font: { italic: activeFmt?.font?.italic ? undefined : true } }),
-          "Italic",
+          tr("editor.italic"),
           <Italic className="h-3.5 w-3.5" />,
         )}
-        <label className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-neutral-200 bg-surface hover:bg-neutral-100" title="Text color" style={{ color: fontColor }}>
+        <label className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-neutral-200 bg-surface hover:bg-neutral-100" title={tr("editor.text_color")} style={{ color: fontColor }}>
           <Type className="h-3.5 w-3.5" />
           <input type="color" value={fontColor} onChange={(e) => patchActiveFmt({ font: { color: e.target.value } })} className="sr-only" />
         </label>
@@ -1025,31 +1026,31 @@ export function SheetSurface(props: {
           min={6}
           max={96}
           value={activeFmt?.font?.size ?? ""}
-          placeholder="Size"
+          placeholder={tr("editor.size")}
           onChange={(e) => {
             const n = Number(e.target.value);
             patchActiveFmt({ font: { size: e.target.value === "" || !Number.isFinite(n) ? undefined : n } });
           }}
           className="w-14 rounded-md border border-neutral-200 px-1.5 py-1 text-xs text-neutral-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
-          title="Font size"
+          title={tr("editor.font_size")} aria-label={tr("editor.font_size")}
         />
 
         <div className="mx-0.5 h-5 w-px bg-neutral-200" />
 
         {/* Alignment */}
-        {iconToggle(alignH === "left", () => patchActiveFmt({ align: { h: alignH === "left" ? undefined : "left" } }), "Align left", <AlignLeft className="h-3.5 w-3.5" />)}
-        {iconToggle(alignH === "center", () => patchActiveFmt({ align: { h: alignH === "center" ? undefined : "center" } }), "Align center", <AlignCenter className="h-3.5 w-3.5" />)}
-        {iconToggle(alignH === "right", () => patchActiveFmt({ align: { h: alignH === "right" ? undefined : "right" } }), "Align right", <AlignRight className="h-3.5 w-3.5" />)}
+        {iconToggle(alignH === "left", () => patchActiveFmt({ align: { h: alignH === "left" ? undefined : "left" } }), tr("editor.align_left"), <AlignLeft className="h-3.5 w-3.5" />)}
+        {iconToggle(alignH === "center", () => patchActiveFmt({ align: { h: alignH === "center" ? undefined : "center" } }), tr("editor.align_center"), <AlignCenter className="h-3.5 w-3.5" />)}
+        {iconToggle(alignH === "right", () => patchActiveFmt({ align: { h: alignH === "right" ? undefined : "right" } }), tr("editor.align_right"), <AlignRight className="h-3.5 w-3.5" />)}
 
         <div className="mx-0.5 h-5 w-px bg-neutral-200" />
 
         {/* Fill */}
-        <label className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-neutral-200 bg-surface hover:bg-neutral-100" title="Fill color" style={{ color: fillColor }}>
+        <label className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-neutral-200 bg-surface hover:bg-neutral-100" title={tr("editor.fill_color")} style={{ color: fillColor }}>
           <PaintBucket className="h-3.5 w-3.5" />
           <input type="color" value={fillColor} onChange={(e) => patchActiveFmt({ fill: e.target.value })} className="sr-only" />
         </label>
         {activeFmt?.fill && (
-          <button type="button" onClick={() => patchActiveFmt({ fill: undefined })} className="rounded-md border border-neutral-200 bg-surface px-1.5 py-1 text-[11px] text-neutral-600 hover:bg-neutral-100" title="Clear fill">Clear</button>
+          <button type="button" onClick={() => patchActiveFmt({ fill: undefined })} className="rounded-md border border-neutral-200 bg-surface px-1.5 py-1 text-[11px] text-neutral-600 hover:bg-neutral-100" title={tr("editor.clear_fill")}>{tr("editor.clear")}</button>
         )}
 
         {/* Borders dropdown */}
@@ -1058,7 +1059,7 @@ export function SheetSurface(props: {
             type="button"
             onClick={() => setBordersOpen((v) => !v)}
             className={`inline-flex h-7 items-center gap-1 rounded-md border px-2 text-xs ${bordersOpen ? "border-blue-400 bg-blue-50 text-blue-600" : "border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-100"}`}
-            title="Borders"
+            title={tr("editor.borders")}
             aria-expanded={bordersOpen}
           >
             <Square className="h-3.5 w-3.5" /> <ChevronDown className="h-3 w-3" />
@@ -1066,15 +1067,15 @@ export function SheetSurface(props: {
           {bordersOpen && (
             <div className="absolute left-0 z-30 mt-1 flex flex-col gap-2 rounded-lg border border-neutral-200 bg-surface p-2 shadow-lg">
               <div className="flex items-center gap-1.5">
-                {iconToggle(!!activeFmt?.border?.top, () => toggleBorderEdge("top"), "Top border", <span className="text-[10px] font-semibold">T</span>)}
-                {iconToggle(!!activeFmt?.border?.right, () => toggleBorderEdge("right"), "Right border", <span className="text-[10px] font-semibold">R</span>)}
-                {iconToggle(!!activeFmt?.border?.bottom, () => toggleBorderEdge("bottom"), "Bottom border", <span className="text-[10px] font-semibold">B</span>)}
-                {iconToggle(!!activeFmt?.border?.left, () => toggleBorderEdge("left"), "Left border", <span className="text-[10px] font-semibold">L</span>)}
+                {iconToggle(!!activeFmt?.border?.top, () => toggleBorderEdge("top"), tr("editor.top_border"), <span className="text-[10px] font-semibold">T</span>)}
+                {iconToggle(!!activeFmt?.border?.right, () => toggleBorderEdge("right"), tr("editor.right_border"), <span className="text-[10px] font-semibold">R</span>)}
+                {iconToggle(!!activeFmt?.border?.bottom, () => toggleBorderEdge("bottom"), tr("editor.bottom_border"), <span className="text-[10px] font-semibold">B</span>)}
+                {iconToggle(!!activeFmt?.border?.left, () => toggleBorderEdge("left"), tr("editor.left_border"), <span className="text-[10px] font-semibold">L</span>)}
               </div>
               <div className="flex items-center gap-2">
-                <button type="button" onClick={setAllBorders} className="rounded-md border border-neutral-200 bg-surface px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-100">All</button>
-                <button type="button" onClick={() => patchActiveFmt({ border: undefined })} className="rounded-md border border-neutral-200 bg-surface px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-100">None</button>
-                <label className="ml-auto inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-neutral-200" title="Border color" style={{ color: borderColor }}>
+                <button type="button" onClick={setAllBorders} className="rounded-md border border-neutral-200 bg-surface px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-100">{tr("editor.all")}</button>
+                <button type="button" onClick={() => patchActiveFmt({ border: undefined })} className="rounded-md border border-neutral-200 bg-surface px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-100">{tr("editor.none")}</button>
+                <label className="ml-auto inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-neutral-200" title={tr("editor.border_color")} style={{ color: borderColor }}>
                   <Square className="h-3.5 w-3.5" />
                   <input
                     type="color"
@@ -1102,7 +1103,7 @@ export function SheetSurface(props: {
         <span className="min-w-12 rounded border border-neutral-200 bg-neutral-50 px-2 py-1 text-center font-mono text-xs font-semibold text-neutral-700">
           {activeKey}
         </span>
-        <span className="select-none text-sm text-neutral-400">fx</span>
+        <span className="select-none text-sm text-neutral-400">{tr("editor.fx")}</span>
         <input
           // Editing through the formula bar uses the same draft as the cell.
           value={editing ? draft : rawText(activeCell)}
@@ -1145,7 +1146,11 @@ export function SheetSurface(props: {
           <thead>
             <tr>
               {/* Corner */}
+              {/* The corner cell heads nothing: it sits above the row numbers
+                  and left of the column letters. Presentational, so a screen
+                  reader does not announce an empty column header. */}
               <th
+                role="presentation"
                 className="sticky left-0 top-0 z-30 border border-neutral-200 bg-neutral-100"
                 style={{
                   width: ROW_HEADER_WIDTH,
@@ -1327,6 +1332,10 @@ export function SheetSurface(props: {
                       {isEditingThis ? (
                         <input
                           ref={editorRef}
+                          // A Hebrew or Arabic cell edits right-to-left; the
+                          // grid itself stays left-to-right (column order is
+                          // data, not prose).
+                          dir="auto"
                           value={draft}
                           onChange={(e) => {
                             caretRef.current =
@@ -1347,6 +1356,10 @@ export function SheetSurface(props: {
                         />
                       ) : (
                         <span
+                          // Text cells resolve their own direction; numbers
+                          // are direction-neutral and keep the numeric right
+                          // alignment below.
+                          dir="auto"
                           className={[
                             "block truncate",
                             error ? "text-red-600" : "",
@@ -1394,7 +1407,7 @@ export function SheetSurface(props: {
                   setHeaderMenu(null);
                 }}
               >
-                Insert row above
+                {tr("editor.insert_row_above")}
               </button>
               <button
                 type="button"
@@ -1404,7 +1417,7 @@ export function SheetSurface(props: {
                   setHeaderMenu(null);
                 }}
               >
-                Insert row below
+                {tr("editor.insert_row_below")}
               </button>
               <button
                 type="button"
@@ -1415,7 +1428,7 @@ export function SheetSurface(props: {
                   setHeaderMenu(null);
                 }}
               >
-                Delete row
+                {tr("editor.delete_row")}
               </button>
             </>
           ) : (
@@ -1428,7 +1441,7 @@ export function SheetSurface(props: {
                   setHeaderMenu(null);
                 }}
               >
-                Insert column left
+                {tr("editor.insert_column_left")}
               </button>
               <button
                 type="button"
@@ -1438,7 +1451,7 @@ export function SheetSurface(props: {
                   setHeaderMenu(null);
                 }}
               >
-                Insert column right
+                {tr("editor.insert_column_right")}
               </button>
               <button
                 type="button"
@@ -1449,7 +1462,7 @@ export function SheetSurface(props: {
                   setHeaderMenu(null);
                 }}
               >
-                Delete column
+                {tr("editor.delete_column")}
               </button>
             </>
           )}

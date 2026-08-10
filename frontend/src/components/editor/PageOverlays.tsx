@@ -9,6 +9,7 @@ import { useEditor } from "@/store/editor";
 import { promptText } from "@/lib/promptDialog";
 import type { CanvasApi } from "@/lib/useEditorCanvas";
 import { PAGE_GAP } from "@/lib/pageLayout";
+import { tr } from "@/lib/i18n";
 
 function HdrBtn({ icon: Icon, title, onClick, disabled, danger }: { icon: typeof ChevronUp; title: string; onClick: () => void; disabled?: boolean; danger?: boolean }) {
   return (
@@ -74,18 +75,18 @@ export function PageOverlays({ api }: { api: CanvasApi }) {
           >
             <button onClick={() => st.setActivePage(i)} className={`shrink-0 font-semibold ${isActive ? "text-neutral-800" : "text-neutral-400 hover:text-neutral-700"}`}>Page {i + 1}</button>
             <button
-              onClick={async () => { const t = await promptText({ title: `Page ${i + 1} title`, label: "Title", placeholder: "Add page title", defaultValue: p.name ?? "", confirmText: "Save" }); if (t !== null) st.setPageName(i, t); }}
+              onClick={async () => { const t = await promptText({ title: `Page ${i + 1} title`, label: tr("editor.title"), placeholder: tr("editor.add_page_title"), defaultValue: p.name ?? "", confirmText: "Save" }); if (t !== null) st.setPageName(i, t); }}
               className="min-w-0 truncate text-neutral-400 hover:text-neutral-700"
-              title="Rename page"
+              title={tr("editor.rename_page")}
             >{p.name ? `- ${p.name}` : "- Add page title"}</button>
             <span className="flex-1" />
             <div className={`flex shrink-0 items-center gap-0.5 rounded-lg bg-surface/90 px-0.5 shadow-sm ring-1 ring-black/5 transition-opacity ${isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-              <HdrBtn icon={ChevronUp} title="Move up" disabled={i === 0} onClick={() => st.movePage(i, i - 1)} />
-              <HdrBtn icon={ChevronDown} title="Move down" disabled={i === n - 1} onClick={() => st.movePage(i, i + 1)} />
-              <HdrBtn icon={hidden ? EyeOff : Eye} title={hidden ? "Unhide while presenting" : "Hide while presenting"} onClick={() => st.setPageHidden(!hidden, i)} />
-              <HdrBtn icon={allLocked ? Lock : LockOpen} title={allLocked ? "Unlock all on page" : "Lock all on page"} onClick={() => st.setPageLocked(i, !allLocked)} />
-              <HdrBtn icon={CopyPlus} title="Duplicate page" onClick={() => st.duplicatePage(i)} />
-              <HdrBtn icon={Trash2} title="Delete page" danger disabled={n <= 1} onClick={() => st.deletePage(i)} />
+              <HdrBtn icon={ChevronUp} title={tr("editor.move_up")} disabled={i === 0} onClick={() => st.movePage(i, i - 1)} />
+              <HdrBtn icon={ChevronDown} title={tr("editor.move_down")} disabled={i === n - 1} onClick={() => st.movePage(i, i + 1)} />
+              <HdrBtn icon={hidden ? EyeOff : Eye} title={hidden ? tr("editor.unhide_while_presenting") : tr("editor.hide_while_presenting")} onClick={() => st.setPageHidden(!hidden, i)} />
+              <HdrBtn icon={allLocked ? Lock : LockOpen} title={allLocked ? tr("editor.unlock_all_on_page") : tr("editor.lock_all_on_page")} onClick={() => st.setPageLocked(i, !allLocked)} />
+              <HdrBtn icon={CopyPlus} title={tr("editor.duplicate_page")} onClick={() => st.duplicatePage(i)} />
+              <HdrBtn icon={Trash2} title={tr("editor.delete_page")} danger disabled={n <= 1} onClick={() => st.deletePage(i)} />
             </div>
           </div>
         );
@@ -95,7 +96,7 @@ export function PageOverlays({ api }: { api: CanvasApi }) {
           onClick={() => st.addPage()}
           className="flex w-full items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-surface py-2.5 text-sm font-medium text-neutral-600 shadow-sm transition hover:border-brand-400 hover:text-brand-ink"
         >
-          <Plus size={16} /> Add page
+          <Plus size={16} /> {tr("editor.add_page")}
         </button>
       </div>
     </div>

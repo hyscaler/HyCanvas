@@ -8,6 +8,7 @@ import { MailWarning, X } from "lucide-react";
 import { oc } from "@/lib/sdk";
 import { useAuth } from "@/store/auth";
 import { useToast } from "@/components/ui/Toast";
+import { tr } from "@/lib/i18n";
 
 export function VerifyEmailBanner() {
   const user = useAuth((s) => s.user);
@@ -22,9 +23,9 @@ export function VerifyEmailBanner() {
     setBusy(true);
     try {
       await oc.requestEmailVerification(user.email);
-      toast.success("Verification email sent. Check your inbox.");
+      toast.success(tr("auth.verification_email_sent_check_your_inbox"));
     } catch {
-      toast.error("Couldn't send the email. Please try again.");
+      toast.error(tr("auth.couldnt_send_the_email_please_try_again"));
     } finally {
       setBusy(false);
     }
@@ -32,21 +33,21 @@ export function VerifyEmailBanner() {
 
   return (
     <div className="mb-6 flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-      <MailWarning size={18} className="shrink-0 text-amber-600" />
+      <MailWarning size={18} className="shrink-0 text-amber-700" />
       <span className="flex-1">
-        Verify your email <span className="font-semibold">{user.email}</span> to secure your account.
+        {tr("auth.verify_your_email")} <span className="font-semibold">{user.email}</span> {tr("auth.to_secure_your_account")}
       </span>
       <button
         onClick={() => void resend()}
         disabled={busy}
         className="font-semibold text-amber-800 underline-offset-2 hover:underline disabled:opacity-50"
       >
-        {busy ? "Sending…" : "Resend email"}
+        {busy ? tr("auth.sending") : tr("auth.resend_email")}
       </button>
       <button
         onClick={() => setDismissed(true)}
         className="text-amber-500 hover:text-amber-700"
-        aria-label="Dismiss"
+        aria-label={tr("auth.dismiss")}
       >
         <X size={16} />
       </button>

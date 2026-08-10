@@ -50,6 +50,11 @@ import { useComments } from "@/store/comments";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
+import { MIRROR_IN_RTL } from "@/lib/locale";
+import { tr } from "@/lib/i18n";
+import { stickerLabel, stickerCategoryLabel } from "@/lib/stickers";
+import { documentDirection } from "@/lib/locale";
+import { apiCodeMessage, CodedError, userMessage } from "@/lib/errors";
 
 /**
  * Debounce a rapidly-changing value (search boxes, filters) so dependent work
@@ -171,14 +176,14 @@ export function TemplatesPanel() {
         const resized = !!pageSize && tw > 0 && th > 0 && (tw !== pageSize.w || th !== pageSize.h);
         toast.success(
           resized
-            ? "Template added as a new page, resized to fit this design. Undo removes it."
-            : "Template added as a new page. Undo removes it.",
+            ? tr("editor.template_added_as_a_new_page_resized_to_fit")
+            : tr("editor.template_added_as_a_new_page_undo_removes_it"),
         );
       } else {
-        toast.error("Templates can't be added in a read-only view.");
+        toast.error(tr("editor.templates_cant_be_added_in_a_read_only_view"));
       }
     } catch {
-      toast.error("Could not apply the template.");
+      toast.error(tr("editor.could_not_apply_the_template"));
     } finally {
       setBusyId(null);
     }
@@ -188,7 +193,7 @@ export function TemplatesPanel() {
     try {
       downloadHycFile(await oc.getTemplateFile(t.id), t.title);
     } catch {
-      toast.error("Could not download the template.");
+      toast.error(tr("editor.could_not_download_the_template"));
     }
   };
 
@@ -201,11 +206,11 @@ export function TemplatesPanel() {
         onClick={() => void apply(t)}
         disabled={!!busyId}
         title={`Add "${t.title}" (${Math.round(t.format?.width ?? 0)}x${Math.round(t.format?.height ?? 0)}) as a new page`}
-        className="block w-full text-left disabled:opacity-60"
+        className="block w-full text-start disabled:opacity-60"
       >
         <div className="relative aspect-[4/3] bg-neutral-100">
           <DesignThumb templateId={t.id} />
-          <span className="absolute bottom-1 right-1 rounded bg-black/55 px-1 py-0.5 font-mono text-[9px] tabular-nums text-white/90">
+          <span className="absolute bottom-1 end-1 rounded bg-black/55 px-1 py-0.5 font-mono text-[9px] tabular-nums text-white/90">
             {Math.round(t.format?.width ?? 0)}x{Math.round(t.format?.height ?? 0)}
           </span>
           {busyId === t.id && (
@@ -217,9 +222,9 @@ export function TemplatesPanel() {
       <button
         type="button"
         onClick={() => void downloadHyc(t)}
-        title="Download as .hyc file"
+        title={tr("editor.download_as_hyc_file")}
         aria-label={`Download "${t.title}" as .hyc file`}
-        className="absolute right-1 top-1 rounded-md border border-neutral-200 bg-surface p-1 text-neutral-600 opacity-0 shadow-sm transition hover:text-brand-ink focus-visible:opacity-100 group-hover:opacity-100"
+        className="absolute end-1 top-1 rounded-md border border-neutral-200 bg-surface p-1 text-neutral-600 opacity-0 shadow-sm transition hover:text-brand-ink focus-visible:opacity-100 group-hover:opacity-100"
       >
         <FileDown size={12} />
       </button>
@@ -228,14 +233,14 @@ export function TemplatesPanel() {
 
   const sectionCls = "mb-1.5 mt-3 text-xs font-semibold uppercase tracking-wide text-neutral-400";
   return (
-    <PanelShell title="Templates">
+    <PanelShell title={tr("editor.templates")}>
       <label className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-surface px-2.5 py-1.5 focus-within:border-brand-400">
         <Search size={14} className="shrink-0 text-neutral-400" />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search templates"
-          aria-label="Search templates"
+          placeholder={tr("editor.search_templates")}
+          aria-label={tr("editor.search_templates")}
           className="w-full min-w-0 bg-transparent text-sm text-neutral-800 outline-none placeholder:text-neutral-400"
         />
       </label>
@@ -266,13 +271,13 @@ export function TemplatesPanel() {
                     type="button"
                     onClick={() => setShowOther((v) => !v)}
                     aria-expanded={open}
-                    className={`${sectionCls} flex w-full items-center gap-1 text-left hover:text-neutral-600`}
+                    className={`${sectionCls} flex w-full items-center gap-1 text-start hover:text-neutral-600`}
                   >
                     <ChevronDown size={12} className={`shrink-0 transition-transform ${open ? "" : "-rotate-90"}`} />
                     Other sizes ({rest.length})
                   </button>
                 ) : (
-                  <p className={sectionCls}>{matched.length > 0 ? "Other sizes" : "All templates"}</p>
+                  <p className={sectionCls}>{matched.length > 0 ? tr("editor.other_sizes") : tr("editor.all_templates")}</p>
                 )}
                 {open && <div className="grid grid-cols-2 gap-2">{rest.map(card)}</div>}
               </>
@@ -309,8 +314,12 @@ export function PanelShell({ title, children, fill }: { title: string; children:
   const onResizeMove = (e: React.PointerEvent) => {
     const r = resize.current;
     if (!r) return;
-    // Panel sits on the left; dragging its right edge rightward widens it.
-    setWidth(Math.min(560, Math.max(220, r.startW + (e.clientX - r.startX))));
+    // The panel sits at the INLINE START, so its drag edge faces the middle of
+    // the screen: rightward widens it in a left-to-right interface and narrows
+    // it in a mirrored one. Pointer coordinates are always physical, so the
+    // sign has to be flipped by hand.
+    const towardCentre = (e.clientX - r.startX) * (documentDirection() === "rtl" ? -1 : 1);
+    setWidth(Math.min(560, Math.max(220, r.startW + towardCentre)));
   };
   const onResizeUp = (e: React.PointerEvent) => {
     if (!resize.current) return;
@@ -326,8 +335,10 @@ export function PanelShell({ title, children, fill }: { title: string; children:
     >
       {/* Scroll area. Its right border shows below lg; at lg+ the drag handle to
           its right carries the border so the two never double up. */}
-      <div className={`oc-scroll flex h-full min-w-0 flex-1 flex-col border-r border-neutral-200 bg-surface lg:border-r-0 ${fill ? "overflow-hidden" : "overflow-y-auto overflow-x-hidden"}`}>
-        <h3 className="px-4 pb-2 pt-4 text-sm font-bold text-neutral-800">{title}</h3>
+      <div className={`oc-scroll flex h-full min-w-0 flex-1 flex-col border-e border-neutral-200 bg-surface lg:border-e-0 ${fill ? "overflow-hidden" : "overflow-y-auto overflow-x-hidden"}`}>
+        {/* h2: the page's h1 is the design title, so panel titles are the
+            next level down and heading navigation stays ordered. */}
+        <h2 className="px-4 pb-2 pt-4 text-sm font-bold text-neutral-800">{title}</h2>
         <div className={fill ? "flex min-h-0 flex-1 flex-col px-4 pb-4" : "flex-1 px-4 pb-4"}>{children}</div>
       </div>
       {/* Resize handle: a thin column to the RIGHT of the scroll area (so it never
@@ -338,9 +349,9 @@ export function PanelShell({ title, children, fill }: { title: string; children:
         onPointerUp={onResizeUp}
         role="separator"
         aria-orientation="vertical"
-        aria-label="Resize panel"
-        title="Drag to resize"
-        className="hidden w-1.5 shrink-0 cursor-col-resize touch-none border-r border-neutral-200 bg-transparent hover:bg-brand-300/50 lg:block"
+        aria-label={tr("editor.resize_panel")}
+        title={tr("editor.drag_to_resize")}
+        className="hidden w-1.5 shrink-0 cursor-col-resize touch-none border-e border-neutral-200 bg-transparent hover:bg-brand-300/50 lg:block"
       />
     </div>
   );
@@ -380,7 +391,7 @@ export function CollapsibleSection({
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="group flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-left hover:bg-neutral-50"
+        className="group flex w-full items-center gap-2 rounded-md px-1 py-1.5 text-start hover:bg-neutral-50"
       >
         {Icon && <Icon size={14} className="shrink-0 text-neutral-400 group-hover:text-brand-500" />}
         <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{title}</span>
@@ -458,63 +469,63 @@ export function ElementsPanel() {
   // Tiles grouped into collapsible categories so the panel scans cleanly.
   const groups: { title: string; icon: typeof Square; defaultOpen?: boolean; tiles: ElementTile[] }[] = [
     {
-      title: "Shapes",
+      title: tr("editor.shapes"),
       icon: Shapes,
       defaultOpen: true,
       tiles: [
-        { label: "Rectangle", icon: Square, run: () => insertShape("Rectangle", { name: "Rectangle", shape: "rect", transform: CENTER, size: { width: 240, height: 160 }, fills: [BRAND] } as Partial<Node>) },
-        { label: "Rounded", icon: SquareRoundCorner, run: () => insertShape("Rounded rectangle", { name: "Rounded rectangle", shape: "rect", cornerRadius: { topLeft: 28, topRight: 28, bottomRight: 28, bottomLeft: 28 }, transform: CENTER, size: { width: 240, height: 160 }, fills: [BRAND] } as Partial<Node>) },
-        { label: "Ellipse", icon: Circle, run: () => insertShape("Ellipse", { name: "Ellipse", shape: "ellipse", transform: CENTER, size: { width: 200, height: 200 }, fills: [BRAND] } as Partial<Node>) },
-        { label: "Triangle", icon: Triangle, run: () => insertShape("Triangle", { name: "Triangle", shape: "triangle", sides: 3, transform: CENTER, size: { width: 200, height: 200 }, fills: [BRAND] } as Partial<Node>) },
-        { label: "Pentagon", icon: Pentagon, run: () => insertShape("Pentagon", { name: "Pentagon", shape: "polygon", sides: 5, transform: CENTER, size: { width: 200, height: 200 }, fills: [BRAND] } as Partial<Node>) },
-        { label: "Hexagon", icon: Hexagon, run: () => insertShape("Hexagon", { name: "Hexagon", shape: "polygon", sides: 6, transform: CENTER, size: { width: 200, height: 200 }, fills: [BRAND] } as Partial<Node>) },
-        { label: "Star", icon: Star, run: () => insertShape("Star", { name: "Star", shape: "star", sides: 5, innerRadius: 0.5, transform: CENTER, size: { width: 200, height: 200 }, fills: [BRAND] } as Partial<Node>) },
-        { label: "Diamond", icon: Diamond, run: () => insertShape("Diamond", { name: "Diamond", shape: "polygon", sides: 4, transform: CENTER, size: { width: 200, height: 200 }, fills: [BRAND] } as Partial<Node>) },
-        { label: "Octagon", icon: Octagon, run: () => insertShape("Octagon", { name: "Octagon", shape: "polygon", sides: 8, transform: CENTER, size: { width: 200, height: 200 }, fills: [BRAND] } as Partial<Node>) },
-        { label: "Burst", icon: Sparkles, run: () => insertShape("Burst", { name: "Burst", shape: "star", sides: 12, innerRadius: 0.62, transform: CENTER, size: { width: 200, height: 200 }, fills: [BRAND] } as Partial<Node>) },
-        { label: "Pill", icon: SquareRoundCorner, run: () => insertShape("Pill", { name: "Pill", shape: "rect", cornerRadius: { topLeft: 999, topRight: 999, bottomRight: 999, bottomLeft: 999 }, transform: CENTER, size: { width: 260, height: 120 }, fills: [BRAND] } as Partial<Node>) },
+        { label: tr("editor.rectangle"), icon: Square, run: () => insertShape(tr("editor.rectangle"), { name: tr("editor.rectangle"), shape: "rect", transform: CENTER, size: { width: 240, height: 160 }, fills: [BRAND] } as Partial<Node>) },
+        { label: tr("editor.rounded"), icon: SquareRoundCorner, run: () => insertShape(tr("editor.rounded_rectangle"), { name: tr("editor.rounded_rectangle"), shape: "rect", cornerRadius: { topLeft: 28, topRight: 28, bottomRight: 28, bottomLeft: 28 }, transform: CENTER, size: { width: 240, height: 160 }, fills: [BRAND] } as Partial<Node>) },
+        { label: tr("editor.ellipse"), icon: Circle, run: () => insertShape(tr("editor.ellipse"), { name: tr("editor.ellipse"), shape: "ellipse", transform: CENTER, size: { width: 200, height: 200 }, fills: [BRAND] } as Partial<Node>) },
+        { label: tr("editor.triangle"), icon: Triangle, run: () => insertShape(tr("editor.triangle"), { name: tr("editor.triangle"), shape: "triangle", sides: 3, transform: CENTER, size: { width: 200, height: 200 }, fills: [BRAND] } as Partial<Node>) },
+        { label: tr("editor.pentagon"), icon: Pentagon, run: () => insertShape(tr("editor.pentagon"), { name: tr("editor.pentagon"), shape: "polygon", sides: 5, transform: CENTER, size: { width: 200, height: 200 }, fills: [BRAND] } as Partial<Node>) },
+        { label: tr("editor.hexagon"), icon: Hexagon, run: () => insertShape(tr("editor.hexagon"), { name: tr("editor.hexagon"), shape: "polygon", sides: 6, transform: CENTER, size: { width: 200, height: 200 }, fills: [BRAND] } as Partial<Node>) },
+        { label: tr("editor.star"), icon: Star, run: () => insertShape(tr("editor.star"), { name: tr("editor.star"), shape: "star", sides: 5, innerRadius: 0.5, transform: CENTER, size: { width: 200, height: 200 }, fills: [BRAND] } as Partial<Node>) },
+        { label: tr("editor.diamond"), icon: Diamond, run: () => insertShape(tr("editor.diamond"), { name: tr("editor.diamond"), shape: "polygon", sides: 4, transform: CENTER, size: { width: 200, height: 200 }, fills: [BRAND] } as Partial<Node>) },
+        { label: tr("editor.octagon"), icon: Octagon, run: () => insertShape(tr("editor.octagon"), { name: tr("editor.octagon"), shape: "polygon", sides: 8, transform: CENTER, size: { width: 200, height: 200 }, fills: [BRAND] } as Partial<Node>) },
+        { label: tr("editor.burst"), icon: Sparkles, run: () => insertShape(tr("editor.burst"), { name: tr("editor.burst"), shape: "star", sides: 12, innerRadius: 0.62, transform: CENTER, size: { width: 200, height: 200 }, fills: [BRAND] } as Partial<Node>) },
+        { label: tr("editor.pill"), icon: SquareRoundCorner, run: () => insertShape(tr("editor.pill"), { name: tr("editor.pill"), shape: "rect", cornerRadius: { topLeft: 999, topRight: 999, bottomRight: 999, bottomLeft: 999 }, transform: CENTER, size: { width: 260, height: 120 }, fills: [BRAND] } as Partial<Node>) },
       ],
     },
     {
       // Image placeholders: single frames and photo-grid layouts. Drop or click
       // a photo to fill a cell; it auto-covers the cell.
-      title: "Frames & grids",
+      title: tr("editor.frames_grids"),
       icon: LayoutGrid,
       defaultOpen: true,
       tiles: [
-        { label: "Frame", icon: Frame, run: () => insertFrame({ name: "Frame", clip: true, transform: CENTER, size: { width: 260, height: 200 }, fills: [FRAME_FILL] } as Partial<Node>) },
-        { label: "Circle frame", icon: Circle, run: () => insertFrame({ name: "Circle frame", clip: true, maskShape: "ellipse", transform: CENTER, size: { width: 240, height: 240 }, fills: [FRAME_FILL] } as Partial<Node>) },
-        { label: "Rounded frame", icon: SquareRoundCorner, run: () => insertFrame({ name: "Rounded frame", clip: true, cornerRadius: { topLeft: 32, topRight: 32, bottomRight: 32, bottomLeft: 32 }, transform: CENTER, size: { width: 260, height: 200 }, fills: [FRAME_FILL] } as Partial<Node>) },
+        { label: tr("editor.frame"), icon: Frame, run: () => insertFrame({ name: tr("editor.frame"), clip: true, transform: CENTER, size: { width: 260, height: 200 }, fills: [FRAME_FILL] } as Partial<Node>) },
+        { label: tr("editor.circle_frame"), icon: Circle, run: () => insertFrame({ name: tr("editor.circle_frame"), clip: true, maskShape: "ellipse", transform: CENTER, size: { width: 240, height: 240 }, fills: [FRAME_FILL] } as Partial<Node>) },
+        { label: tr("editor.rounded_frame"), icon: SquareRoundCorner, run: () => insertFrame({ name: tr("editor.rounded_frame"), clip: true, cornerRadius: { topLeft: 32, topRight: 32, bottomRight: 32, bottomLeft: 32 }, transform: CENTER, size: { width: 260, height: 200 }, fills: [FRAME_FILL] } as Partial<Node>) },
         { label: "2 photos", icon: gridPreviewIcon(1, 2), run: () => insertGridEl(1, 2) },
         { label: "3 photos", icon: gridPreviewIcon(1, 3), run: () => insertGridEl(1, 3) },
         { label: "4 photos", icon: gridPreviewIcon(2, 2), run: () => insertGridEl(2, 2) },
         { label: "6 photos", icon: gridPreviewIcon(2, 3), run: () => insertGridEl(2, 3) },
         { label: "9 photos", icon: gridPreviewIcon(3, 3), run: () => insertGridEl(3, 3) },
-        { label: "Feature left", icon: gridPreviewIcon(2, 2, FEATURE_LEFT), run: () => insertGridEl(2, 2, FEATURE_LEFT) },
-        { label: "Feature right", icon: gridPreviewIcon(2, 2, FEATURE_RIGHT), run: () => insertGridEl(2, 2, FEATURE_RIGHT) },
-        { label: "Feature top", icon: gridPreviewIcon(2, 2, FEATURE_TOP), run: () => insertGridEl(2, 2, FEATURE_TOP) },
-        { label: "Hero mosaic", icon: gridPreviewIcon(3, 3, FEATURE_HERO), run: () => insertGridEl(3, 3, FEATURE_HERO) },
+        { label: tr("editor.feature_left"), icon: gridPreviewIcon(2, 2, FEATURE_LEFT), run: () => insertGridEl(2, 2, FEATURE_LEFT) },
+        { label: tr("editor.feature_right"), icon: gridPreviewIcon(2, 2, FEATURE_RIGHT), run: () => insertGridEl(2, 2, FEATURE_RIGHT) },
+        { label: tr("editor.feature_top"), icon: gridPreviewIcon(2, 2, FEATURE_TOP), run: () => insertGridEl(2, 2, FEATURE_TOP) },
+        { label: tr("editor.hero_mosaic"), icon: gridPreviewIcon(3, 3, FEATURE_HERO), run: () => insertGridEl(3, 3, FEATURE_HERO) },
       ],
     },
     {
-      title: "Data & codes",
+      title: tr("editor.data_codes"),
       icon: BarChart3,
       tiles: [
-        { label: "Table", icon: TableIcon, run: () => insertTableEl(3, 3) },
-        { label: "Bar chart", icon: BarChart3, run: () => insertChartEl("bar", "bar") },
-        { label: "Grouped bar", icon: BarChart3, run: () => insertChartEl("barGrouped", "grouped bar") },
-        { label: "Stacked bar", icon: BarChart3, run: () => insertChartEl("barStacked", "stacked bar") },
-        { label: "Line chart", icon: LineChart, run: () => insertChartEl("line", "line") },
-        { label: "Area chart", icon: AreaChart, run: () => insertChartEl("area", "area") },
-        { label: "Pie chart", icon: PieChart, run: () => insertChartEl("pie", "pie") },
-        { label: "Donut chart", icon: Donut, run: () => insertChartEl("donut", "donut") },
-        { label: "Scatter", icon: ScatterChart, run: () => insertChartEl("scatter", "scatter") },
-        { label: "Radar", icon: Radar, run: () => insertChartEl("radar", "radar") },
-        { label: "QR code", icon: QrCode, run: async () => {
-          const t = await promptText({ title: "Add QR code", label: "Links to (URL or text)", placeholder: "https://", defaultValue: "https://", confirmText: "Add" });
+        { label: tr("editor.table"), icon: TableIcon, run: () => insertTableEl(3, 3) },
+        { label: tr("editor.bar_chart"), icon: BarChart3, run: () => insertChartEl("bar", "bar") },
+        { label: tr("editor.grouped_bar"), icon: BarChart3, run: () => insertChartEl("barGrouped", "grouped bar") },
+        { label: tr("editor.stacked_bar"), icon: BarChart3, run: () => insertChartEl("barStacked", "stacked bar") },
+        { label: tr("editor.line_chart"), icon: LineChart, run: () => insertChartEl("line", "line") },
+        { label: tr("editor.area_chart"), icon: AreaChart, run: () => insertChartEl("area", "area") },
+        { label: tr("editor.pie_chart"), icon: PieChart, run: () => insertChartEl("pie", "pie") },
+        { label: tr("editor.donut_chart"), icon: Donut, run: () => insertChartEl("donut", "donut") },
+        { label: tr("editor.scatter"), icon: ScatterChart, run: () => insertChartEl("scatter", "scatter") },
+        { label: tr("editor.radar"), icon: Radar, run: () => insertChartEl("radar", "radar") },
+        { label: tr("editor.qr_code"), icon: QrCode, run: async () => {
+          const t = await promptText({ title: tr("editor.add_qr_code"), label: tr("editor.links_to_url_or_text"), placeholder: "https://", defaultValue: "https://", confirmText: tr("editor.add") });
           if (!t) return;
-          addNode("qr", { name: "QR code", value: t, ecLevel: "M", foreground: { srgb: { r: 0, g: 0, b: 0, a: 1 } }, background: { srgb: { r: 1, g: 1, b: 1, a: 1 } }, modules: qrModules(t, "M"), transform: CENTER, size: { width: 220, height: 220 } } as Partial<Node>);
-          afterInsert(toast, "QR code");
+          addNode("qr", { name: tr("editor.qr_code"), value: t, ecLevel: "M", foreground: { srgb: { r: 0, g: 0, b: 0, a: 1 } }, background: { srgb: { r: 1, g: 1, b: 1, a: 1 } }, modules: qrModules(t, "M"), transform: CENTER, size: { width: 220, height: 220 } } as Partial<Node>);
+          afterInsert(toast, tr("editor.qr_code"));
         } },
       ],
     },
@@ -543,19 +554,19 @@ export function ElementsPanel() {
   const stickerTile = (s: Sticker) => (
     <button
       key={s.id}
-      onClick={() => { useEditor.getState().addIconSvg(s.svg); afterInsert(toast, s.label.toLowerCase()); }}
-      title={s.label}
-      aria-label={s.label}
+      onClick={() => { useEditor.getState().addIconSvg(s.svg); afterInsert(toast, stickerLabel(s).toLowerCase()); }}
+      title={stickerLabel(s)}
+      aria-label={stickerLabel(s)}
       className="grid aspect-square place-items-center rounded-lg bg-neutral-50 p-1.5 transition hover:bg-brand-50 [&>span>svg]:h-full [&>span>svg]:w-full"
     >
       <span className="block h-full w-full" dangerouslySetInnerHTML={{ __html: s.svg }} />
     </button>
   );
   return (
-    <PanelShell title="Elements">
+    <PanelShell title={tr("editor.elements")}>
       <div className="flex flex-col gap-2.5">
         {recentTiles.length > 0 && (
-          <CollapsibleSection title="Recently used" icon={Clock} defaultOpen>
+          <CollapsibleSection title={tr("editor.recently_used")} icon={Clock} defaultOpen>
             <div className="grid grid-cols-2 gap-2">
               {recentTiles.map((t) => (
                 <button key={`recent-${t.label}`} onClick={() => runTile(t)} className="flex aspect-square flex-col items-center justify-center gap-2 rounded-xl bg-neutral-50 text-neutral-600 transition hover:bg-brand-50 hover:text-brand-ink">
@@ -581,12 +592,12 @@ export function ElementsPanel() {
         {/* Graphics: bundled, free, editable-vector stickers (insert via addIconSvg).
             Searchable across label/category/keywords; browsable by category with
             a per-category "Show all" so the DOM stays small at 400+ assets. */}
-        <CollapsibleSection title="Graphics" icon={Sparkles} defaultOpen badge={String(STICKERS.length)}>
+        <CollapsibleSection title={tr("editor.graphics")} icon={Sparkles} defaultOpen badge={String(STICKERS.length)}>
           <div className="mb-2">
             <input
               value={stickerQuery}
               onChange={(e) => setStickerQuery(e.target.value)}
-              placeholder="Search graphics"
+              placeholder={tr("editor.search_graphics")}
               className="w-full rounded-lg border border-neutral-200 px-2.5 py-1.5 text-sm outline-none focus:border-brand-400"
             />
           </div>
@@ -595,7 +606,12 @@ export function ElementsPanel() {
               const q = stickerQuery.trim().toLowerCase();
               const matches = STICKERS.filter(
                 (s) =>
+                  // Match the TRANSLATED label and category as well as the
+                  // English ones, so search works in the user's language and
+                  // still finds a row whose translation is missing.
+                  stickerLabel(s).toLowerCase().includes(q) ||
                   s.label.toLowerCase().includes(q) ||
+                  stickerCategoryLabel(s.category).toLowerCase().includes(q) ||
                   s.category.toLowerCase().includes(q) ||
                   (s.keywords ?? []).some((k) => k.includes(q)),
               );
@@ -636,7 +652,7 @@ export function ElementsPanel() {
                           }
                           className="text-[11px] font-medium text-brand-ink hover:text-brand-ink"
                         >
-                          {expanded ? "Show less" : "Show all"}
+                          {expanded ? tr("editor.show_less") : tr("editor.show_all")}
                         </button>
                       )}
                     </div>
@@ -649,9 +665,9 @@ export function ElementsPanel() {
         </CollapsibleSection>
         {/* Animated stickers: editable vectors that insert with a looping emphasis
             animation already applied (play/present to see them move). */}
-        <CollapsibleSection title="Animated" icon={Play} defaultOpen={false}>
+        <CollapsibleSection title={tr("editor.animated")} icon={Play} defaultOpen={false}>
           <div className="grid grid-cols-4 gap-2">
-            {ANIMATED_STICKERS.map((s) => (
+            {animatedStickers().map((s) => (
               <button
                 key={s.id}
                 onClick={() => {
@@ -659,10 +675,10 @@ export function ElementsPanel() {
                   st.addIconSvg(s.svg);
                   const id = st.selection[0];
                   if (id) st.setNodeAnimation(id, { emphasis: { preset: s.preset, durationMs: 1400, delayMs: 0, easing: "ease-in-out" } });
-                  afterInsert(toast, `${s.label} (animated)`);
+                  afterInsert(toast, tr("editor.name_animated", { name: stickerLabel(s) }));
                 }}
-                title={`${s.label} (animated)`}
-                aria-label={s.label}
+                title={tr("editor.name_animated", { name: stickerLabel(s) })}
+                aria-label={stickerLabel(s)}
                 className="grid aspect-square place-items-center rounded-lg bg-neutral-50 p-1.5 transition hover:bg-brand-50 [&>span>svg]:h-full [&>span>svg]:w-full"
               >
                 <span className="block h-full w-full" dangerouslySetInnerHTML={{ __html: s.svg }} />
@@ -692,19 +708,19 @@ const cssStack = (e: { family: string; category: string; system?: boolean }) =>
   e.system ? "system-ui, sans-serif" : `'${e.family}', ${e.category === "serif" ? "serif" : e.category === "monospace" ? "monospace" : "sans-serif"}`;
 
 // Curated heading + subheading font pairings (inserted as one two-paragraph box).
-const PAIRINGS: { name: string; head: string; headFont: string; sub: string; subFont: string }[] = [
-  { name: "Bold & clean", head: "Heading", headFont: "Montserrat", sub: "Your subheading here", subFont: "Open Sans" },
-  { name: "Elegant serif", head: "Heading", headFont: "Playfair Display", sub: "Your subheading here", subFont: "Lato" },
-  { name: "Modern", head: "Heading", headFont: "Poppins", sub: "Your subheading here", subFont: "Inter" },
-  { name: "Editorial", head: "Heading", headFont: "Lora", sub: "Your subheading here", subFont: "Work Sans" },
-  { name: "Impact", head: "HEADING", headFont: "Anton", sub: "Your subheading here", subFont: "Roboto" },
-  { name: "Statement", head: "HEADING", headFont: "Oswald", sub: "Your subheading here", subFont: "Merriweather" },
-  { name: "Friendly", head: "Heading", headFont: "Nunito", sub: "Your subheading here", subFont: "Lora" },
-  { name: "Display", head: "HEADING", headFont: "Bebas Neue", sub: "Your subheading here", subFont: "Work Sans" },
-  { name: "Classic", head: "Heading", headFont: "Merriweather", sub: "Your subheading here", subFont: "Montserrat" },
-  { name: "Minimal", head: "Heading", headFont: "Manrope", sub: "Your subheading here", subFont: "Manrope" },
-  { name: "Playful", head: "Heading", headFont: "Pacifico", sub: "Your subheading here", subFont: "Nunito" },
-  { name: "Refined", head: "Heading", headFont: "PT Serif", sub: "Your subheading here", subFont: "Raleway" },
+const pairings = (): { name: string; head: string; headFont: string; sub: string; subFont: string }[] => [
+  { name: tr("editor.bold_clean"), head: tr("editor.heading"), headFont: "Montserrat", sub: tr("editor.your_subheading_here"), subFont: "Open Sans" },
+  { name: tr("editor.elegant_serif"), head: tr("editor.heading"), headFont: "Playfair Display", sub: tr("editor.your_subheading_here"), subFont: "Lato" },
+  { name: tr("editor.modern"), head: tr("editor.heading"), headFont: "Poppins", sub: tr("editor.your_subheading_here"), subFont: "Inter" },
+  { name: tr("editor.editorial"), head: tr("editor.heading"), headFont: "Lora", sub: tr("editor.your_subheading_here"), subFont: "Work Sans" },
+  { name: tr("editor.impact"), head: "HEADING", headFont: "Anton", sub: tr("editor.your_subheading_here"), subFont: "Roboto" },
+  { name: tr("editor.statement"), head: "HEADING", headFont: "Oswald", sub: tr("editor.your_subheading_here"), subFont: "Merriweather" },
+  { name: tr("editor.friendly"), head: tr("editor.heading"), headFont: "Nunito", sub: tr("editor.your_subheading_here"), subFont: "Lora" },
+  { name: tr("editor.display"), head: "HEADING", headFont: "Bebas Neue", sub: tr("editor.your_subheading_here"), subFont: "Work Sans" },
+  { name: tr("editor.classic"), head: tr("editor.heading"), headFont: "Merriweather", sub: tr("editor.your_subheading_here"), subFont: "Montserrat" },
+  { name: tr("editor.minimal"), head: tr("editor.heading"), headFont: "Manrope", sub: tr("editor.your_subheading_here"), subFont: "Manrope" },
+  { name: tr("editor.playful"), head: tr("editor.heading"), headFont: "Pacifico", sub: tr("editor.your_subheading_here"), subFont: "Nunito" },
+  { name: tr("editor.refined"), head: tr("editor.heading"), headFont: "PT Serif", sub: tr("editor.your_subheading_here"), subFont: "Raleway" },
 ];
 
 /** A font row that lazy-loads its web font and previews the name in that font. */
@@ -730,12 +746,12 @@ function FontRow({ entry, onPick }: { entry: FontCatalogEntry; onPick: (family: 
     <button
       ref={ref}
       onClick={() => onPick(entry.family)}
-      className="flex w-full items-center justify-between rounded-lg bg-neutral-50 px-3 py-2 text-left text-[15px] text-neutral-800 hover:bg-brand-50"
+      className="flex w-full items-center justify-between rounded-lg bg-neutral-50 px-3 py-2 text-start text-[15px] text-neutral-800 hover:bg-brand-50"
       style={{ fontFamily: cssStack(entry) }}
       title={`Use ${entry.family}`}
     >
-      <span className="truncate">{entry.system ? "System default" : entry.family}</span>
-      <span className="ml-2 shrink-0 text-[10px] uppercase tracking-wide text-neutral-300">{entry.category}</span>
+      <span className="truncate">{entry.system ? tr("editor.system_default") : entry.family}</span>
+      <span className="ms-2 shrink-0 text-[10px] uppercase tracking-wide text-neutral-300">{entry.category}</span>
     </button>
   );
 }
@@ -770,7 +786,7 @@ export function TextPanel() {
   // Pairing preview cards render in their target fonts; eagerly load that small
   // fixed set. The scrollable font list below lazy-loads per row, but the pairing
   // cards sit above it and never enter that observer's range.
-  useEffect(() => { for (const p of PAIRINGS) { fonts.ensure(p.headFont); fonts.ensure(p.subFont); } }, []);
+  useEffect(() => { for (const p of pairings()) { fonts.ensure(p.headFont); fonts.ensure(p.subFont); } }, []);
   // Page the (full-library) results in on scroll; reset when the search changes.
   // Resetting during render (comparing the previous query) rather than in an
   // effect avoids an extra render pass.
@@ -797,7 +813,7 @@ export function TextPanel() {
           // the design is opened elsewhere, not just in this browser's localStorage.
           useEditor.getState().addDocFont({ id: `font-${crypto.randomUUID()}`, family, url: dataUrl });
           applyFont(family); force(); toast.success(`Added font “${family}”.`);
-        } else toast.error("Couldn't load that font file.");
+        } else toast.error(tr("editor.couldnt_load_that_font_file"));
       });
     };
     reader.readAsDataURL(file);
@@ -831,10 +847,10 @@ export function TextPanel() {
     force();
     const id = selectedTextId();
     if (id) { useEditor.getState().setTextStyle(id, { fontFamily: family }); toast.success(`Applied ${family}`); }
-    else addText("Your text", 32, 400, family); // addText toasts + frames the new box
+    else addText(tr("editor.your_text"), 32, 400, family); // addText toasts + frames the new box
   };
 
-  const addPairing = (p: (typeof PAIRINGS)[number]) => {
+  const addPairing = (p: (ReturnType<typeof pairings>)[number]) => {
     fonts.ensure(p.headFont);
     fonts.ensure(p.subFont);
     addNode("text", {
@@ -855,54 +871,54 @@ export function TextPanel() {
   const customFams = fonts.customFamilies().filter((f) => !debouncedQuery || f.toLowerCase().includes(debouncedQuery.toLowerCase()));
 
   return (
-    <PanelShell title="Text">
+    <PanelShell title={tr("editor.text")}>
       <div className="flex flex-col gap-2.5">
-        <CollapsibleSection title="Add text" icon={Type} defaultOpen>
-          <button onClick={() => addText("Your text here", 28, 400)} className="flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-700">
-            <Type size={16} /> Add a text box
+        <CollapsibleSection title={tr("editor.add_text")} icon={Type} defaultOpen>
+          <button onClick={() => addText(tr("editor.your_text_here"), 28, 400)} className="flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-700">
+            <Type size={16} /> {tr("editor.add_a_text_box")}
           </button>
-          <button onClick={() => addText("Add a heading", 56, 800)} className="rounded-xl bg-neutral-50 px-4 py-3 text-left text-2xl font-extrabold text-neutral-800 hover:border-brand-300 hover:bg-brand-50">Add a heading</button>
-          <button onClick={() => addText("Add a subheading", 36, 600)} className="rounded-xl bg-neutral-50 px-4 py-3 text-left text-lg font-semibold text-neutral-800 hover:border-brand-300 hover:bg-brand-50">Add a subheading</button>
-          <button onClick={() => addText("Add body text", 20, 400)} className="rounded-xl bg-neutral-50 px-4 py-3 text-left text-sm text-neutral-800 hover:border-brand-300 hover:bg-brand-50">Add body text</button>
+          <button onClick={() => addText(tr("editor.add_a_heading"), 56, 800)} className="rounded-xl bg-neutral-50 px-4 py-3 text-start text-2xl font-extrabold text-neutral-800 hover:border-brand-300 hover:bg-brand-50">{tr("editor.add_a_heading")}</button>
+          <button onClick={() => addText(tr("editor.add_a_subheading"), 36, 600)} className="rounded-xl bg-neutral-50 px-4 py-3 text-start text-lg font-semibold text-neutral-800 hover:border-brand-300 hover:bg-brand-50">{tr("editor.add_a_subheading")}</button>
+          <button onClick={() => addText(tr("editor.add_body_text"), 20, 400)} className="rounded-xl bg-neutral-50 px-4 py-3 text-start text-sm text-neutral-800 hover:border-brand-300 hover:bg-brand-50">{tr("editor.add_body_text")}</button>
         </CollapsibleSection>
 
-        <CollapsibleSection title="Font pairings" icon={Sparkles} defaultOpen>
-          {PAIRINGS.map((p) => (
-            <button key={p.name} onClick={() => addPairing(p)} className="rounded-xl bg-neutral-50 px-4 py-2.5 text-left hover:bg-brand-50">
+        <CollapsibleSection title={tr("editor.font_pairings")} icon={Sparkles} defaultOpen>
+          {pairings().map((p) => (
+            <button key={p.name} onClick={() => addPairing(p)} className="rounded-xl bg-neutral-50 px-4 py-2.5 text-start hover:bg-brand-50">
               <span className="block text-lg font-bold text-neutral-800" style={{ fontFamily: `'${p.headFont}', sans-serif` }}>{p.head}</span>
               <span className="block text-xs text-neutral-500" style={{ fontFamily: `'${p.subFont}', sans-serif` }}>{p.sub}</span>
             </button>
           ))}
         </CollapsibleSection>
 
-        <CollapsibleSection title="Fonts" icon={Search} defaultOpen>
+        <CollapsibleSection title={tr("editor.fonts")} icon={Search} defaultOpen>
           <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search fonts" className="w-full rounded-lg border border-neutral-200 py-2 pl-8 pr-8 text-sm outline-none focus:border-brand-400" />
+            <Search size={14} className="absolute start-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={tr("editor.search_fonts")} className="w-full rounded-lg border border-neutral-200 py-2 ps-8 pe-8 text-sm outline-none focus:border-brand-400" />
             {query && (
-              <button onClick={() => setQuery("")} title="Clear search" className="absolute right-2 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded text-neutral-400 hover:text-neutral-700">
+              <button onClick={() => setQuery("")} title={tr("editor.clear_search")} className="absolute end-2 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded text-neutral-400 hover:text-neutral-700">
                 <X size={13} />
               </button>
             )}
           </div>
           <input ref={fontFileRef} type="file" accept=".ttf,.otf,.woff,.woff2,font/*" hidden onChange={(e) => void onFontFile(e)} />
           <button onClick={() => fontFileRef.current?.click()} className="flex items-center justify-center gap-1.5 rounded-lg border border-neutral-200 py-2 text-xs font-medium text-neutral-600 hover:border-brand-300 hover:text-brand-ink">
-            <Upload size={13} /> Upload a font
+            <Upload size={13} /> {tr("editor.upload_a_font")}
           </button>
           {customFams.length > 0 && (
             <div className="flex flex-col gap-1">
-              <span className="px-1 text-[10px] uppercase tracking-wide text-neutral-300">Your fonts</span>
+              <span className="px-1 text-[10px] uppercase tracking-wide text-neutral-300">{tr("editor.your_fonts")}</span>
               {customFams.map((f) => (
-                <button key={`c-${f}`} onClick={() => applyFont(f)} style={{ fontFamily: `'${f}', sans-serif` }} className="flex w-full items-center justify-between rounded-lg bg-neutral-50 px-3 py-2 text-left text-[15px] text-neutral-800 hover:bg-brand-50" title={`Use ${f}`}>
+                <button key={`c-${f}`} onClick={() => applyFont(f)} style={{ fontFamily: `'${f}', sans-serif` }} className="flex w-full items-center justify-between rounded-lg bg-neutral-50 px-3 py-2 text-start text-[15px] text-neutral-800 hover:bg-brand-50" title={`Use ${f}`}>
                   <span className="truncate">{f}</span>
-                  <span className="ml-2 shrink-0 text-[10px] uppercase tracking-wide text-neutral-300">custom</span>
+                  <span className="ms-2 shrink-0 text-[10px] uppercase tracking-wide text-neutral-300">{tr("editor.custom")}</span>
                 </button>
               ))}
             </div>
           )}
           {!query && recents.length > 0 && (
             <div className="flex flex-col gap-1">
-              <span className="px-1 text-[10px] uppercase tracking-wide text-neutral-300">Recent</span>
+              <span className="px-1 text-[10px] uppercase tracking-wide text-neutral-300">{tr("editor.recent")}</span>
               {recents.map((e) => <FontRow key={`r-${e.family}`} entry={e} onPick={applyFont} />)}
             </div>
           )}
@@ -966,7 +982,7 @@ async function makeThumbnail(file: File): Promise<string | undefined> {
     const img = await new Promise<HTMLImageElement>((res, rej) => {
       const el = new Image();
       el.onload = () => res(el);
-      el.onerror = () => rej(new Error("decode failed"));
+      el.onerror = () => rej(new CodedError("errors.image_decode_failed", "Couldn't decode the image."));
       el.src = dataUrl;
     });
     const w = img.naturalWidth || img.width;
@@ -1044,6 +1060,14 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
   function quotaErrorKind(e: unknown): false | "workspace" | "account" | "size" {
     const status = e instanceof ApiError ? e.status : (e as { status?: number } | null)?.status;
     if (status !== 413) return false;
+    // Prefer the stable problem code; the English-detail sniff stays as the
+    // fallback so a newer client still words errors from an older binary.
+    const code = (e instanceof ApiError
+      ? (e.body as { code?: string } | undefined)?.code
+      : (e as { code?: string } | null)?.code?.replace(/^errors\.api_/, "")) ?? "";
+    if (code === "account_storage_full") return "account";
+    if (code === "workspace_storage_full") return "workspace";
+    if (code === "import_too_large") return "size";
     const detail =
       e instanceof ApiError
         ? ((e.body as { detail?: string } | undefined)?.detail ?? "")
@@ -1057,7 +1081,7 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
   const uploadFiles = useCallback(async (files: File[]) => {
     if (!workspaceId) return;
     const imgs = files.filter((f) => f.type.startsWith("image/"));
-    if (!imgs.length) { if (files.length) toast.error("Only image files can be uploaded."); return; }
+    if (!imgs.length) { if (files.length) toast.error(tr("editor.only_image_files_can_be_uploaded")); return; }
     // Show a placeholder tile per file immediately, with a live progress %.
     const items = imgs.map((file) => ({ id: `up-${crypto.randomUUID()}`, name: file.name, preview: URL.createObjectURL(file), progress: 0, error: false, file }));
     setUploading((cur) => [...items.map((it) => ({ id: it.id, name: it.name, preview: it.preview, progress: it.progress, error: it.error })), ...cur]);
@@ -1092,11 +1116,11 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
         setTimeout(() => remove(it.id), 4000);
       }
     }
-    if (ok) { toast.success(ok === 1 ? "Uploaded." : `Uploaded ${ok} images.`); await refresh(); }
-    if (limit === "account") toast.error("Your account storage limit is reached. Delete some uploads to free space.");
-    else if (limit === "workspace") toast.error("Storage quota reached. Delete some uploads to free space.");
-    else if (limit === "size") toast.error("File too large: the server (or its reverse proxy) rejected the upload size.");
-    else if (ok < imgs.length) toast.error(`${imgs.length - ok} upload(s) failed (unsupported type or too large?).`);
+    if (ok) { toast.success(ok === 1 ? tr("editor.uploaded") : tr("editor.uploaded_n_images", { count: ok })); await refresh(); }
+    if (limit === "account") toast.error(tr("editor.your_account_storage_limit_is_reached_delete"));
+    else if (limit === "workspace") toast.error(tr("editor.storage_quota_reached_delete_some_uploads_to"));
+    else if (limit === "size") toast.error(tr("editor.file_too_large_the_server_or_its_reverse_pro"));
+    else if (ok < imgs.length) toast.error(tr("editor.n_uploads_failed_unsupported", { count: imgs.length - ok }));
   }, [workspaceId, folderId, refresh, toast]);
 
   // Upload an arbitrary recorded Blob (audio/video) as an asset.
@@ -1105,33 +1129,33 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
     try {
       const dataUrl = await readAsDataUrl(blob);
       await oc.uploadAsset(workspaceId, { filename, dataBase64: dataUrl.split(",")[1] ?? "", folderId });
-      toast.success("Recording saved.");
+      toast.success(tr("editor.recording_saved"));
       await refresh();
     } catch (e) {
       const kind = quotaErrorKind(e);
-      if (kind === "account") toast.error("Your account storage limit is reached.");
-      else if (kind === "workspace") toast.error("Storage quota reached.");
-      else if (kind === "size") toast.error("Recording too large: the server (or its reverse proxy) rejected the upload size.");
-      else toast.error("Couldn't save the recording.");
+      if (kind === "account") toast.error(tr("editor.your_account_storage_limit_is_reached"));
+      else if (kind === "workspace") toast.error(tr("editor.storage_quota_reached"));
+      else if (kind === "size") toast.error(tr("editor.recording_too_large_the_server_or_its_revers"));
+      else toast.error(tr("editor.couldnt_save_the_recording"));
     }
   }, [workspaceId, folderId, refresh, toast]);
 
   // Import an image from a remote URL (server-side, SSRF-guarded).
   const importUrl = useCallback(async () => {
     if (!workspaceId) return;
-    const url = await promptText({ title: "Import from URL", label: "Image URL", placeholder: "https://…/image.png", confirmText: "Import" });
+    const url = await promptText({ title: tr("editor.import_from_url"), label: tr("editor.image_url"), placeholder: "https://…/image.png", confirmText: tr("editor.import") });
     if (!url) return;
     try {
       await oc.importAssetFromUrl(workspaceId, url.trim(), folderId);
-      toast.success("Imported.");
+      toast.success(tr("editor.imported"));
       await refresh();
     } catch (e) {
       const kind = quotaErrorKind(e);
-      if (kind === "account") toast.error("Your account storage limit is reached.");
-      else if (kind === "workspace") toast.error("Storage quota reached. Delete some uploads to free space.");
-      else if (kind === "size") toast.error("That image is too large to import.");
-      else if (e instanceof ApiError) toast.error("Couldn't import that URL (not an image, blocked host, or unreachable).");
-      else toast.error("Couldn't import that URL.");
+      if (kind === "account") toast.error(tr("editor.your_account_storage_limit_is_reached"));
+      else if (kind === "workspace") toast.error(tr("editor.storage_quota_reached_delete_some_uploads_to"));
+      else if (kind === "size") toast.error(tr("editor.that_image_is_too_large_to_import"));
+      else if (e instanceof ApiError) toast.error(tr("editor.couldnt_import_that_url_not_an_image_blocked"));
+      else toast.error(tr("editor.couldnt_import_that_url"));
     }
   }, [workspaceId, folderId, refresh, toast]);
 
@@ -1141,11 +1165,11 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
     try {
       const res = await fetch(resolveAssetUrl(a.url), { credentials: "include" });
       const svg = await res.text();
-      if (!svg.includes("<svg")) { toast.error("That file isn't a valid SVG."); return; }
+      if (!svg.includes("<svg")) { toast.error(tr("editor.that_file_isnt_a_valid_svg")); return; }
       useEditor.getState().addIconSvg(svg);
-      toast.success("Inserted as editable vectors.");
+      toast.success(tr("editor.inserted_as_editable_vectors"));
     } catch {
-      toast.error("Couldn't load that SVG.");
+      toast.error(tr("editor.couldnt_load_that_svg"));
     }
   }, [toast]);
 
@@ -1155,42 +1179,42 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
       setAssets((a) => a.filter((x) => x.id !== id));
       if (workspaceId) setUsage(await oc.assetUsage(workspaceId).catch(() => null));
     } catch {
-      toast.error("Couldn't delete that upload.");
+      toast.error(tr("editor.couldnt_delete_that_upload"));
     }
   }, [toast, workspaceId]);
 
   const renameAsset = useCallback(async (a: UploadedAsset) => {
-    const name = await promptText({ title: "Rename upload", label: "Name", defaultValue: a.filename ?? "", confirmText: "Rename" });
+    const name = await promptText({ title: tr("editor.rename_upload"), label: tr("editor.name"), defaultValue: a.filename ?? "", confirmText: "Rename" });
     if (!name || name === a.filename) return;
     try {
       const updated = await oc.updateAsset(a.id, { filename: name });
       setAssets((list) => list.map((x) => (x.id === a.id ? updated : x)));
-    } catch { toast.error("Couldn't rename that upload."); }
+    } catch { toast.error(tr("editor.couldnt_rename_that_upload")); }
   }, [toast]);
 
   const setTags = useCallback(async (id: string, tags: string[]) => {
     try {
       const updated = await oc.updateAsset(id, { tags });
       setAssets((list) => list.map((x) => (x.id === id ? updated : x)));
-    } catch { toast.error("Couldn't update tags."); }
+    } catch { toast.error(tr("editor.couldnt_update_tags")); }
   }, [toast]);
 
   const createFolder = useCallback(async () => {
     if (!workspaceId) return;
-    const name = await promptText({ title: "New folder", label: "Folder name", placeholder: "e.g. Logos", confirmText: "Create" });
+    const name = await promptText({ title: tr("editor.new_folder"), label: tr("editor.folder_name"), placeholder: "e.g. Logos", confirmText: tr("editor.create") });
     if (!name) return;
     try {
       const f = await oc.createAssetFolder(workspaceId, { name });
       await refreshFolders();
       setFolderId(f.id);
-    } catch { toast.error("Couldn't create that folder."); }
+    } catch { toast.error(tr("editor.couldnt_create_that_folder")); }
   }, [workspaceId, refreshFolders, toast]);
 
   const renameFolder = useCallback(async (f: AssetFolder) => {
-    const name = await promptText({ title: "Rename folder", label: "Folder name", defaultValue: f.name, confirmText: "Rename" });
+    const name = await promptText({ title: tr("editor.rename_folder"), label: tr("editor.folder_name"), defaultValue: f.name, confirmText: tr("editor.rename") });
     if (!name || name === f.name) return;
     try { await oc.renameAssetFolder(f.id, name); await refreshFolders(); }
-    catch { toast.error("Couldn't rename that folder."); }
+    catch { toast.error(tr("editor.couldnt_rename_that_folder")); }
   }, [refreshFolders, toast]);
 
   const deleteFolder = useCallback(async (f: AssetFolder) => {
@@ -1199,8 +1223,8 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
       if (folderId === f.id) setFolderId(null);
       await refreshFolders();
       await refresh();
-      toast.success("Folder deleted. Its uploads moved to All uploads.");
-    } catch { toast.error("Couldn't delete that folder."); }
+      toast.success(tr("editor.folder_deleted_its_uploads_moved_to_all_uplo"));
+    } catch { toast.error(tr("editor.couldnt_delete_that_folder")); }
   }, [folderId, refreshFolders, refresh, toast]);
 
   useEffect(() => {
@@ -1242,9 +1266,9 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
     if (svgRef.current) svgRef.current.value = "";
     if (!file) return;
     const text = await file.text();
-    if (!text.includes("<svg")) { toast.error("That file isn't a valid SVG."); return; }
+    if (!text.includes("<svg")) { toast.error(tr("editor.that_file_isnt_a_valid_svg")); return; }
     useEditor.getState().importSvg(text);
-    toast.success("Imported SVG as editable elements.");
+    toast.success(tr("editor.imported_svg_as_editable_elements"));
   }
 
   // Import a PDF (e.g. a PDF export from another design tool) as editable pages (text). pdf.js loads
@@ -1256,12 +1280,12 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
     try {
       const { pdfToPages } = await import("@/lib/pdfImport");
       const pages = await pdfToPages(await file.arrayBuffer());
-      if (!pages.length) { toast.error("Couldn't read any pages from that PDF."); return; }
+      if (!pages.length) { toast.error(tr("editor.couldnt_read_any_pages_from_that_pdf")); return; }
       const elements = pages.reduce((n, p) => n + p.nodes.length, 0);
       useEditor.getState().importPdfPages(pages);
       toast.success(`Imported ${pages.length} page${pages.length > 1 ? "s" : ""} (${elements} text elements).`);
     } catch {
-      toast.error("Couldn't import that PDF.");
+      toast.error(tr("editor.couldnt_import_that_pdf"));
     }
   }
 
@@ -1272,13 +1296,13 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
   const userPct = usage && usage.userQuotaBytes > 0 ? Math.min(100, (usage.userUsedBytes / usage.userQuotaBytes) * 100) : 0;
 
   return (
-    <PanelShell title="Uploads">
+    <PanelShell title={tr("editor.uploads")}>
       <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => void onFile(e)} />
       <input ref={svgRef} type="file" accept=".svg,image/svg+xml" hidden onChange={(e) => void onSvgFile(e)} />
       <input ref={pdfRef} type="file" accept=".pdf,application/pdf" hidden onChange={(e) => void onPdfFile(e)} />
 
       <div className="flex flex-col gap-2.5">
-        <CollapsibleSection title="Upload" icon={Upload} defaultOpen>
+        <CollapsibleSection title={tr("editor.upload")} icon={Upload} defaultOpen>
           <div
             onDragOver={(e) => { e.preventDefault(); if (!dragOver) setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
@@ -1286,22 +1310,22 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
             className={`rounded-xl border-2 border-dashed p-3 text-center transition ${dragOver ? "border-brand-400 bg-brand-50" : "border-neutral-200"}`}
           >
             <Button block onClick={() => fileRef.current?.click()} disabled={!workspaceId}>
-              <Upload size={16} /> {selectedFolder ? `Upload to ${selectedFolder.name}` : "Upload images"}
+              <Upload size={16} /> {selectedFolder ? `Upload to ${selectedFolder.name}` : tr("editor.upload_images")}
             </Button>
-            <p className="mt-2 text-[11px] text-neutral-400">or drop images here</p>
+            <p className="mt-2 text-[11px] text-neutral-400">{tr("editor.or_drop_images_here")}</p>
             {/* Compact one-word labels so the three cells hold one line at
                 every panel width and font metric (the previous nowrap labels
                 overflowed their neighbors on narrow panels / wider fonts);
                 the icons and tooltips carry the full meaning. Wrap-safe as a
                 fallback: no nowrap, min-w-0, centered. */}
             <div className="mt-2.5 grid grid-cols-3 gap-1.5">
-              <button onClick={() => void importUrl()} disabled={!workspaceId} title="Import an image from a URL" className="flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-tight text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink disabled:opacity-40">
-                <LinkIcon size={15} className="shrink-0" /> <span className="text-center">From URL</span>
+              <button onClick={() => void importUrl()} disabled={!workspaceId} title={tr("editor.import_an_image_from_a_url")} className="flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-tight text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink disabled:opacity-40">
+                <LinkIcon size={15} className="shrink-0" /> <span className="text-center">{tr("editor.from_url")}</span>
               </button>
-              <button onClick={() => svgRef.current?.click()} title="Import an SVG (e.g. an SVG export from another design tool) as editable elements" className="flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-tight text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink">
+              <button onClick={() => svgRef.current?.click()} title={tr("editor.import_an_svg_e_g_an_svg_export_from_another")} className="flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-tight text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink">
                 <Upload size={15} className="shrink-0" /> <span className="text-center">SVG</span>
               </button>
-              <button onClick={() => pdfRef.current?.click()} title="Import a PDF (e.g. a PDF export from another design tool) as editable pages (text)" className="flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-tight text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink">
+              <button onClick={() => pdfRef.current?.click()} title={tr("editor.import_a_pdf_e_g_a_pdf_export_from_another_d")} className="flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 px-1 py-2 text-[11px] font-medium leading-tight text-neutral-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink">
                 <Upload size={15} className="shrink-0" /> <span className="text-center">PDF</span>
               </button>
             </div>
@@ -1332,24 +1356,26 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
         </CollapsibleSection>
 
         {/* Folders: All uploads + per-folder chips, with create/rename/delete. */}
-        <CollapsibleSection title="Folders" icon={Folder} defaultOpen>
+        <CollapsibleSection title={tr("editor.folders")} icon={Folder} defaultOpen>
           <button onClick={() => void createFolder()} disabled={!workspaceId} className="flex items-center gap-1.5 self-start rounded-md px-2 py-1 text-xs font-medium text-neutral-500 hover:bg-neutral-100 hover:text-brand-ink disabled:opacity-40">
-            <FolderPlus size={14} /> New folder
+            <FolderPlus size={14} /> {tr("editor.new_folder")}
           </button>
           <div className="flex flex-col gap-0.5">
-            <button onClick={() => setFolderId(null)} className={`flex items-center gap-2 rounded-md px-2 py-1 text-left text-sm ${folderId === null ? "bg-brand-50 font-medium text-brand-ink" : "text-neutral-600 hover:bg-neutral-100"}`}>
-              <Folder size={14} /> All uploads
+            <button onClick={() => setFolderId(null)} className={`flex items-center gap-2 rounded-md px-2 py-1 text-start text-sm ${folderId === null ? "bg-brand-50 font-medium text-brand-ink" : "text-neutral-600 hover:bg-neutral-100"}`}>
+              <Folder size={14} /> {tr("editor.all_uploads")}
             </button>
             {folders.map((f) => (
               <div key={f.id} className={`group flex items-center gap-1 rounded-md px-2 py-1 text-sm ${folderId === f.id ? "bg-brand-50 text-brand-ink" : "text-neutral-600 hover:bg-neutral-100"}`}>
-                <button onClick={() => setFolderId(f.id)} className="flex flex-1 items-center gap-2 text-left">
+                <button onClick={() => setFolderId(f.id)} className="flex flex-1 items-center gap-2 text-start">
                   <Folder size={14} /> <span className="truncate">{f.name}</span>
                 </button>
-                <button onClick={() => void renameFolder(f)} title="Rename folder" className="hidden h-5 w-5 place-items-center rounded text-neutral-400 hover:text-brand-ink group-hover:grid"><Pencil size={12} /></button>
+                {/* Visible-but-transparent (not display:none) so the actions stay
+                    Tab-reachable and reappear on keyboard focus. */}
+                <button onClick={() => void renameFolder(f)} title={tr("editor.rename_folder")} className="grid h-5 w-5 place-items-center rounded text-neutral-400 opacity-0 hover:text-brand-ink focus-visible:opacity-100 group-hover:opacity-100"><Pencil size={12} /></button>
                 <button
                   onClick={() => confirmDelete.confirm(`folder:${f.id}`, () => void deleteFolder(f))}
-                  title={confirmDelete.armed === `folder:${f.id}` ? "Click again to delete" : "Delete folder"}
-                  className={`h-5 w-5 place-items-center rounded ${confirmDelete.armed === `folder:${f.id}` ? "grid bg-red-600 text-white" : "hidden text-neutral-400 hover:text-red-600 group-hover:grid"}`}
+                  title={confirmDelete.armed === `folder:${f.id}` ? tr("editor.click_again_to_delete") : tr("editor.delete_folder")}
+                  className={`grid h-5 w-5 place-items-center rounded ${confirmDelete.armed === `folder:${f.id}` ? "bg-red-600 text-white" : "text-neutral-400 opacity-0 hover:text-red-600 focus-visible:opacity-100 group-hover:opacity-100"}`}
                 >
                   <Trash2 size={12} />
                 </button>
@@ -1358,20 +1384,20 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
           </div>
         </CollapsibleSection>
 
-        <CollapsibleSection title="Your media" icon={ImagePlus} defaultOpen>
+        <CollapsibleSection title={tr("editor.your_media")} icon={ImagePlus} defaultOpen>
           {/* Search by name or tag (debounced). */}
           <div className="relative">
-            <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <Search size={14} className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-neutral-400" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search uploads"
-              className="w-full rounded-lg border border-neutral-200 py-1.5 pl-8 pr-8 text-sm outline-none focus:border-brand-400"
+              placeholder={tr("editor.search_uploads")}
+              className="w-full rounded-lg border border-neutral-200 py-1.5 ps-8 pe-8 text-sm outline-none focus:border-brand-400"
             />
-            <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
+            <div className="absolute end-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
               {searching && !loading && <Spinner className="text-[13px] text-neutral-400" />}
               {query && (
-                <button onClick={() => setQuery("")} title="Clear search" className="grid h-5 w-5 place-items-center rounded text-neutral-400 hover:text-neutral-700">
+                <button onClick={() => setQuery("")} title={tr("editor.clear_search")} className="grid h-5 w-5 place-items-center rounded text-neutral-400 hover:text-neutral-700">
                   <X size={13} />
                 </button>
               )}
@@ -1381,7 +1407,7 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
           {loading && workspaceId && uploading.length === 0 ? (
             <div className="grid place-items-center py-8 text-neutral-400"><Spinner /></div>
           ) : assets.length === 0 && uploading.length === 0 ? (
-            <p className="py-6 text-center text-xs text-neutral-400">{debouncedQuery.trim() ? "No matching uploads." : "No uploads yet."}</p>
+            <p className="py-6 text-center text-xs text-neutral-400">{debouncedQuery.trim() ? tr("editor.no_matching_uploads") : tr("editor.no_uploads_yet")}</p>
           ) : (
             <div className="grid grid-cols-2 gap-2">
               {uploading.map((u) => (
@@ -1390,7 +1416,7 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
                   <img src={u.preview} alt="" className="aspect-square w-full object-cover opacity-40" />
                   <div className="absolute inset-0 grid place-items-center">
                     {u.error
-                      ? <span className="text-[11px] font-semibold text-red-600">Failed</span>
+                      ? <span className="text-[11px] font-semibold text-red-600">{tr("editor.failed")}</span>
                       : <span className="text-sm font-semibold tabular-nums text-neutral-700">{u.progress}%</span>}
                   </div>
                   {!u.error && (
@@ -1406,21 +1432,23 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
                 onClick={() => placeImage(resolveAssetUrl(a.url))}
                 draggable
                 onDragStart={(e) => e.dataTransfer.setData("application/x-oc-image", resolveAssetUrl(a.url))}
-                title="Click to place, or drag onto the canvas"
+                title={tr("editor.click_to_place_or_drag_onto_the_canvas")}
                 className="block w-full"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={a.thumbnail ?? resolveAssetUrl(a.url)} alt={a.filename ?? "upload"} className="aspect-square w-full object-cover" />
               </button>
-              <div className="absolute right-1 top-1 hidden gap-1 group-hover:flex">
+              {/* Visible-but-transparent (not display:none) so the actions stay
+                  Tab-reachable; focus-within reveals them for keyboard users. */}
+              <div className="absolute end-1 top-1 flex gap-1 opacity-0 focus-within:opacity-100 group-hover:opacity-100">
                 {isSvgAsset(a) && (
-                  <button onClick={() => void insertSvgEditable(a)} title="Insert as editable vectors" className="grid h-6 w-6 place-items-center rounded-full bg-surface/90 text-neutral-500 shadow hover:text-brand-ink"><Spline size={12} /></button>
+                  <button onClick={() => void insertSvgEditable(a)} title={tr("editor.insert_as_editable_vectors")} className="grid h-6 w-6 place-items-center rounded-full bg-surface/90 text-neutral-500 shadow hover:text-brand-ink"><Spline size={12} /></button>
                 )}
-                <button onClick={() => setEditing((id) => (id === a.id ? null : a.id))} title="Edit tags" className="grid h-6 w-6 place-items-center rounded-full bg-surface/90 text-neutral-500 shadow hover:text-brand-ink"><Tag size={12} /></button>
-                <button onClick={() => void renameAsset(a)} title="Rename" className="grid h-6 w-6 place-items-center rounded-full bg-surface/90 text-neutral-500 shadow hover:text-brand-ink"><Pencil size={12} /></button>
+                <button onClick={() => setEditing((id) => (id === a.id ? null : a.id))} title={tr("editor.edit_tags")} className="grid h-6 w-6 place-items-center rounded-full bg-surface/90 text-neutral-500 shadow hover:text-brand-ink"><Tag size={12} /></button>
+                <button onClick={() => void renameAsset(a)} title={tr("editor.rename")} className="grid h-6 w-6 place-items-center rounded-full bg-surface/90 text-neutral-500 shadow hover:text-brand-ink"><Pencil size={12} /></button>
                 <button
                   onClick={() => confirmDelete.confirm(`asset:${a.id}`, () => void removeAsset(a.id))}
-                  title={confirmDelete.armed === `asset:${a.id}` ? "Click again to delete" : "Delete upload"}
+                  title={confirmDelete.armed === `asset:${a.id}` ? tr("editor.click_again_to_delete") : tr("editor.delete_upload")}
                   className={`grid h-6 w-6 place-items-center rounded-full shadow ${confirmDelete.armed === `asset:${a.id}` ? "bg-red-600 text-white" : "bg-surface/90 text-neutral-500 hover:text-red-600"}`}
                 >
                   <Trash2 size={13} />
@@ -1433,7 +1461,7 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
                   ))}
                 </div>
               )}
-                  {editing === a.id && <TagEditor asset={a} folders={folders} onClose={() => setEditing(null)} onSetTags={(tags) => void setTags(a.id, tags)} onMove={async (fid) => { try { const u = await oc.updateAsset(a.id, { folderId: fid }); setAssets((list) => folderId !== null && u.folderId !== folderId ? list.filter((x) => x.id !== a.id) : list.map((x) => (x.id === a.id ? u : x))); } catch { toast.error("Couldn't move that upload."); } }} />}
+                  {editing === a.id && <TagEditor asset={a} folders={folders} onClose={() => setEditing(null)} onSetTags={(tags) => void setTags(a.id, tags)} onMove={async (fid) => { try { const u = await oc.updateAsset(a.id, { folderId: fid }); setAssets((list) => folderId !== null && u.folderId !== folderId ? list.filter((x) => x.id !== a.id) : list.map((x) => (x.id === a.id ? u : x))); } catch { toast.error(tr("editor.couldnt_move_that_upload")); } }} />}
                 </div>
               ))}
             </div>
@@ -1443,7 +1471,7 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
           {usage && (
             <div className="mt-2 border-t border-neutral-100 pt-3">
               <div className="mb-1 flex items-center justify-between text-[11px] text-neutral-500">
-                <span>Storage</span>
+                <span>{tr("editor.storage")}</span>
                 <span>{formatBytes(usage.usedBytes)} {usage.quotaBytes > 0 ? `of ${formatBytes(usage.quotaBytes)}` : "used"}</span>
               </div>
               {usage.quotaBytes > 0 && (
@@ -1455,7 +1483,7 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
               {usage.userQuotaBytes > 0 && (
                 <>
                   <div className="mb-1 mt-2 flex items-center justify-between text-[11px] text-neutral-500">
-                    <span>Your storage (all workspaces)</span>
+                    <span>{tr("editor.your_storage_all_workspaces")}</span>
                     <span>{formatBytes(usage.userUsedBytes)} of {formatBytes(usage.userQuotaBytes)}</span>
                   </div>
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
@@ -1520,7 +1548,7 @@ function Recorder({ mode, disabled, onCapture }: {
 
   const start = useCallback(async () => {
     setError(null);
-    if (!supported) { setError("Recording isn't supported in this browser."); return; }
+    if (!supported) { setError(tr("editor.recording_isnt_supported_in_this_browser")); return; }
     let stream: MediaStream;
     try {
       if (mode === "screen") {
@@ -1533,8 +1561,8 @@ function Recorder({ mode, disabled, onCapture }: {
     } catch {
       setError(
         mode === "screen"
-          ? "Screen sharing was cancelled or blocked."
-          : "Couldn't access your microphone/camera. Check the browser permission and try again.",
+          ? tr("editor.screen_sharing_was_cancelled_or_blocked")
+          : tr("editor.couldnt_access_your_microphone_camera_check"),
       );
       return;
     }
@@ -1553,7 +1581,7 @@ function Recorder({ mode, disabled, onCapture }: {
     try {
       rec = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
     } catch {
-      setError("Couldn't start recording in this browser.");
+      setError(tr("editor.couldnt_start_recording_in_this_browser"));
       cleanup();
       return;
     }
@@ -1582,7 +1610,7 @@ function Recorder({ mode, disabled, onCapture }: {
   }, []);
 
   const Icon = mode === "audio" ? Mic : mode === "screen" ? MonitorUp : Video;
-  const label = mode === "audio" ? "Record voice" : mode === "screen" ? "Record screen" : "Record webcam";
+  const label = mode === "audio" ? tr("editor.record_voice") : mode === "screen" ? tr("editor.record_screen") : tr("editor.record_webcam");
 
   return (
     <div className="mt-2">
@@ -1605,13 +1633,13 @@ function Recorder({ mode, disabled, onCapture }: {
                 <span className="h-2 w-2 animate-pulse rounded-full bg-red-600" />
                 {String(Math.floor(seconds / 60)).padStart(2, "0")}:{String(seconds % 60).padStart(2, "0")}
               </span>
-              <button onClick={stop} className="ml-auto flex items-center gap-1 rounded-md bg-red-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-red-700">
+              <button onClick={stop} className="ms-auto flex items-center gap-1 rounded-md bg-red-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-red-700">
                 <CircleStop size={14} /> Stop &amp; save
               </button>
             </div>
           ) : (
             <Button block onClick={() => void start()} disabled={!supported}>
-              <Icon size={14} /> Start recording
+              <Icon size={14} /> {tr("editor.start_recording")}
             </Button>
           )}
           {error && <p className="mt-1.5 text-[11px] text-red-600">{error}</p>}
@@ -1639,7 +1667,7 @@ function TagEditor({ asset, folders, onClose, onSetTags, onMove }: {
   return (
     <div className="absolute inset-0 flex flex-col gap-1.5 bg-surface/97 p-2 text-xs">
       <div className="flex items-center justify-between">
-        <span className="font-semibold text-neutral-700">Tags</span>
+        <span className="font-semibold text-neutral-700">{tr("editor.tags")}</span>
         <button onClick={onClose} className="grid h-5 w-5 place-items-center rounded text-neutral-400 hover:text-neutral-700"><X size={13} /></button>
       </div>
       <div className="flex flex-wrap gap-1">
@@ -1654,17 +1682,17 @@ function TagEditor({ asset, folders, onClose, onSetTags, onMove }: {
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
-        placeholder="Add tag, Enter"
+        placeholder={tr("editor.add_tag_enter")}
         className="w-full rounded border border-neutral-200 px-1.5 py-1 text-[11px] outline-none focus:border-brand-400"
       />
       <label className="mt-auto flex items-center gap-1 text-[10px] text-neutral-500">
-        <ChevronLeft size={11} className="rotate-180" />
+        <ChevronLeft size={11} className={`rotate-180 ${MIRROR_IN_RTL}`} />
         <select
           value={asset.folderId ?? ""}
           onChange={(e) => onMove(e.target.value === "" ? null : e.target.value)}
           className="min-w-0 flex-1 rounded border border-neutral-200 px-1 py-0.5 text-[10px] outline-none"
         >
-          <option value="">No folder</option>
+          <option value="">{tr("editor.no_folder")}</option>
           {folders.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
         </select>
       </label>
@@ -1674,11 +1702,14 @@ function TagEditor({ asset, folders, onClose, onSetTags, onMove }: {
 
 function aiErr(e: unknown): string {
   if (e instanceof ApiError) {
+    const coded = apiCodeMessage(e.body);
+    if (coded) return coded;
     const detail = (e.body as { detail?: string } | undefined)?.detail;
-    return detail ?? `Request failed (${e.status}).`;
+    return detail ?? tr("editor.request_failed_status", { status: e.status });
   }
-  if (e instanceof Error && e.message) return e.message;
-  return "AI request failed.";
+  // Translates a CodedError's code at this display boundary; a plain Error's
+  // message passes through unchanged.
+  return userMessage(e, tr("editor.ai_request_failed"));
 }
 
 // --- AI brand-voice grounding (F21 FR-6, FR-7) ----------------------------
@@ -1724,7 +1755,7 @@ async function imageUrlToPngDataUrl(url: string): Promise<string> {
   img.crossOrigin = "anonymous";
   await new Promise<void>((res, rej) => {
     img.onload = () => res();
-    img.onerror = () => rej(new Error("Couldn't read this image (it may block cross-origin access)."));
+    img.onerror = () => rej(new CodedError("errors.image_unreadable_cross_origin", "Couldn't read this image (it may block cross-origin access)."));
     img.src = url;
   });
   const w = img.naturalWidth || 1;
@@ -1733,12 +1764,12 @@ async function imageUrlToPngDataUrl(url: string): Promise<string> {
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas is unavailable in this browser.");
+  if (!ctx) throw new CodedError("errors.canvas_unavailable", "Canvas is unavailable in this browser.");
   ctx.drawImage(img, 0, 0);
   try {
     return canvas.toDataURL("image/png");
   } catch {
-    throw new Error("This image can't be edited because it's loaded cross-origin.");
+    throw new CodedError("errors.image_edit_cross_origin", "This image can't be edited because it's loaded cross-origin.");
   }
 }
 
@@ -1749,13 +1780,15 @@ async function pollJob<R>(jobId: string, tries = 12): Promise<R> {
   for (let i = 0; i < tries; i++) {
     const job = await oc.getJob<R>(jobId);
     if (job.status === "completed") {
-      if (job.result === undefined) throw new Error("job completed without a result");
+      if (job.result === undefined) throw new CodedError("errors.generation_failed", "job completed without a result");
       return job.result;
     }
-    if (job.status === "failed") throw new Error(job.error || "generation failed");
+    // A server-provided failure detail is shown as-is; only the generic
+    // fallback carries a code for translation.
+    if (job.status === "failed") throw job.error ? new Error(job.error) : new CodedError("errors.generation_failed", "generation failed");
     await new Promise((r) => setTimeout(r, 400));
   }
-  throw new Error("generation timed out");
+  throw new CodedError("errors.generation_timed_out", "generation timed out");
 }
 
 // True only when the backend orchestration endpoint is genuinely absent (older
@@ -1780,24 +1813,24 @@ const ASSISTANT_CATALOG = toolCatalog();
 
 // Design-creation is the primary intent: one-tap starters that prefill a brief
 // the user completes (the assistant routes these to generateDesign).
-const DESIGN_TYPES: { label: string; prompt: string }[] = [
-  { label: "Poster", prompt: "Create a professional poster about " },
-  { label: "Presentation", prompt: "Create a presentation deck about " },
-  { label: "Social post", prompt: "Create a social media post about " },
-  { label: "Document", prompt: "Create a document about " },
+const designTypes = (): { label: string; prompt: string }[] => [
+  { label: tr("editor.poster"), prompt: "Create a professional poster about " },
+  { label: tr("editor.presentation"), prompt: "Create a presentation deck about " },
+  { label: tr("editor.social_post"), prompt: "Create a social media post about " },
+  { label: tr("editor.document"), prompt: "Create a document about " },
 ];
 
 // Secondary one-tap actions (edits on the current design), shown smaller.
-const ASSISTANT_SUGGESTIONS = [
-  "Write a punchy headline",
-  "Add a background image",
-  "Turn this into a bar chart",
-  "Critique this page",
+const assistantSuggestions = () => [
+  tr("editor.write_a_punchy_headline"),
+  tr("editor.add_a_background_image"),
+  tr("editor.turn_this_into_a_bar_chart"),
+  tr("editor.critique_this_page"),
 ];
 
 // Contextual follow-ups offered right after a design is generated, so the user
 // can art-direct without retyping the brief.
-const DESIGN_FOLLOWUPS = ["Try another style", "Make it bolder", "Make it more minimal", "Add a matching image"];
+const designFollowups = () => [tr("editor.try_another_style"), tr("editor.make_it_bolder"), tr("editor.make_it_more_minimal"), tr("editor.add_a_matching_image")];
 
 interface ChatTurn {
   role: "user" | "assistant";
@@ -1921,6 +1954,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
   const st = useEditor.getState();
   switch (step.action) {
     case "writeText": {
+      // i18n-ignore: model system prompt, never translated.
       const system = [
         "You write copy that goes directly into a single design text box.",
         "Return ONLY the final text, ready to display: no preamble, no explanation, no markdown, no surrounding quotes, and no list of alternatives - pick the single best option.",
@@ -1956,7 +1990,8 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       const BATCH = 60;
       for (let i = 0; i < entries.length; i += BATCH) {
         const batch = entries.slice(i, i + BATCH).map((e) => e.text);
-        const system = [
+        // i18n-ignore: model system prompt, never translated.
+      const system = [
           `You are a professional translator. Translate every string in the user's JSON array into ${language}.`,
           "The strings are labels and copy on a designed layout: keep meaning and tone, and keep each translation close to the original's length.",
           "Preserve numbers, URLs, emails, emoji, and proper nouns. Never merge, split, reorder, drop, or add entries.",
@@ -2000,7 +2035,8 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       const BATCH = 20;
       for (let i = 0; i < summaries.length; i += BATCH) {
         const batch = summaries.slice(i, i + BATCH);
-        const system = [
+        // i18n-ignore: model system prompt, never translated.
+      const system = [
           "You write speaker notes a presenter reads while showing each slide.",
           "For each slide summary in the user's JSON array, write natural spoken-style notes: 2-4 short sentences that add context and delivery cues beyond what the slide already says. Do not simply restate the slide text.",
           guidance ? `Extra guidance from the presenter: ${guidance}.` : "",
@@ -2022,9 +2058,10 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       const direct = mermaidToDiagram(prompt);
       if (direct) return { payload: { kind: "diagram", spec: direct } };
       const kind = String(a.kind ?? "").toLowerCase() === "mindmap" ? "mindmap" : "flowchart";
+      // i18n-ignore: model system prompt, never translated.
       const system = [
         `You design ${kind === "mindmap" ? "mind maps" : "flowcharts"}. From the user's description, return ONLY a JSON object:`,
-        `{"kind":"${kind}","nodes":[{"id":"a","label":"Short label"}],"edges":[{"from":"a","to":"b","label":"optional"}]}`,
+        `{"kind":"${kind}","nodes":[{"id":"a","label":tr("editor.short_label")}],"edges":[{"from":"a","to":"b","label":"optional"}]}`,
         kind === "mindmap"
           ? "The FIRST node is the central topic; edges go parent to child, forming a tree."
           : "Order nodes roughly in flow order; edges follow the process direction; label branch edges (yes/no, pass/fail).",
@@ -2040,10 +2077,11 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       const stickies = st.collectBoardStickies();
       if (stickies.length < 3) return { error: "add at least 3 sticky notes to cluster" };
       const guidance = String(a.instruction ?? "").trim();
+      // i18n-ignore: model system prompt, never translated.
       const system = [
         "You run affinity clustering on brainstorm sticky notes. Group the user's JSON array of {id,text} into 2-8 coherent themes.",
         guidance ? `Clustering guidance: ${guidance}.` : "",
-        'Return ONLY a JSON array like [{"title":"Theme name","ids":["id1","id2"]}]. Every sticky id appears in exactly one theme. Short, specific titles. No prose, no markdown fences.',
+        'Return ONLY a JSON array like [{"title":tr("editor.theme_name"),"ids":["id1","id2"]}]. Every sticky id appears in exactly one theme. Short, specific titles. No prose, no markdown fences.',
       ].filter(Boolean).join(" ");
       const { text } = await oc.aiText({ workspaceId: deps.workspaceId, prompt: JSON.stringify(stickies), system });
       const parsed = parseModelJson(text);
@@ -2053,7 +2091,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
         .map((c) => {
           const o = c as { title?: unknown; ids?: unknown };
           const ids = Array.isArray(o.ids) ? o.ids.filter((i): i is string => typeof i === "string" && known.has(i)) : [];
-          return { title: typeof o.title === "string" ? o.title : "Theme", ids };
+          return { title: typeof o.title === "string" ? o.title : tr("editor.theme"), ids };
         })
         .filter((c) => c.ids.length > 0);
       if (!clusters.length) return { error: "no usable clusters came back - try again" };
@@ -2062,6 +2100,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
     case "summarizeStickies": {
       const stickies = st.collectBoardStickies();
       if (!stickies.length) return { error: "there are no sticky notes to summarize" };
+      // i18n-ignore: model system prompt, never translated.
       const system = [
         "You summarize a brainstorm board's sticky notes.",
         "Write a concise summary: 2-4 key themes as short lines, then decisions and action items if any are implied.",
@@ -2252,7 +2291,7 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
         ? { srgb: { r: 1, g: 1, b: 1, a: 1 } }
         : { srgb: { r: 0.1, g: 0.12, b: 0.16, a: 1 } };
       st.addNode("text", {
-        name: "AI text",
+        name: tr("editor.ai_text"),
         transform: { x: 300, y: 320, scaleX: 1, scaleY: 1, rotation: 0 },
         size: { width: 480, height: 120 },
         box: { mode: "fixed", width: 480, height: 120, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
@@ -2473,11 +2512,11 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       }
       const skipNote = skips.find(Boolean);
       const done = results.filter((r) => r.ok).length;
-      const text = (reply || "Done.") + extra + (done === 0 && skipNote ? ` (${skipNote})` : "");
+      const text = (reply || tr("editor.done_2")) + extra + (done === 0 && skipNote ? ` (${skipNote})` : "");
       setTurns((t) => [...t, { role: "assistant", text, steps: results }]);
       void persistTurn("assistant", text, plan);
       if (done) toast.success(`Applied ${done} step${done === 1 ? "" : "s"} (one undo reverts the turn).`);
-      else if (!extra) toast.error(skipNote ? `Nothing applied: ${skipNote}.` : "Nothing was applied. Try selecting an element or rephrasing.");
+      else if (!extra) toast.error(skipNote ? `Nothing applied: ${skipNote}.` : tr("editor.nothing_was_applied_try_selecting_an_element"));
     } catch (e) {
       toast.error(aiErr(e));
     } finally {
@@ -2528,7 +2567,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
           res = parseAssistantReply(parseModelJson(text), ASSISTANT_CATALOG);
         } catch (e2) {
           if (e2 instanceof ApiError) throw e2; // a provider/policy error surfaces via the outer catch
-          setTurns((t) => [...t, { role: "assistant", text: "Sorry, I couldn't understand that. Try rephrasing." }]);
+          setTurns((t) => [...t, { role: "assistant", text: tr("editor.sorry_i_couldnt_understand_that_try_rephrasi") }]);
           return;
         }
       }
@@ -2547,7 +2586,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
           void persistTurn("assistant", msg);
           return;
         }
-        const reply = res.reply || "I couldn't map that to an action.";
+        const reply = res.reply || tr("editor.i_couldnt_map_that_to_an_action");
         setTurns((t) => [...t, { role: "assistant", text: reply }]);
         void persistTurn("assistant", reply);
         return;
@@ -2560,7 +2599,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       const heavy = res.plan.some((s) => s.action === "generateDesign");
       if (heavy || (res.plan.length >= 2 && planMutates(res.plan, ASSISTANT_CATALOG))) {
         setPending({ plan: res.plan, reply: res.reply });
-        setTurns((t) => [...t, { role: "assistant", text: res.reply || "Here's my plan - confirm to apply.", steps: res.plan.map((s) => ({ action: s.action, ok: true })) }]);
+        setTurns((t) => [...t, { role: "assistant", text: res.reply || tr("editor.heres_my_plan_confirm_to_apply"), steps: res.plan.map((s) => ({ action: s.action, ok: true })) }]);
         return;
       }
       await execute(res.plan, res.reply);
@@ -2607,12 +2646,12 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       {/* Thread toolbar: undo the last applied turn + start a new chat. */}
       {turns.length > 0 && (
         <div className="flex shrink-0 items-center justify-between pb-1.5">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Assistant</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">{tr("editor.assistant")}</span>
           <div className="flex items-center gap-1">
             {hasApplied && (
-              <button onClick={() => { undo(); toast.success("Reverted last turn."); }} disabled={busy} title="Undo the last applied turn" className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 disabled:opacity-40"><RotateCcw size={12} /> Undo</button>
+              <button onClick={() => { undo(); toast.success(tr("editor.reverted_last_turn")); }} disabled={busy} title={tr("editor.undo_the_last_applied_turn")} className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 disabled:opacity-40"><RotateCcw size={12} /> {tr("editor.undo")}</button>
             )}
-            <button onClick={startNewChat} disabled={busy} title="Start a new chat" className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 disabled:opacity-40"><Plus size={12} /> New</button>
+            <button onClick={startNewChat} disabled={busy} title={tr("editor.start_a_new_chat")} className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 disabled:opacity-40"><Plus size={12} /> {tr("editor.new")}</button>
           </div>
         </div>
       )}
@@ -2623,18 +2662,18 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
           <div className="flex h-full flex-col items-center justify-center gap-4 px-2 text-center">
             <div className="grid h-11 w-11 place-items-center rounded-full bg-brand-600 text-white shadow-sm"><Sparkles size={20} /></div>
             <div>
-              <p className="text-sm font-semibold text-neutral-800">Create a design with AI</p>
+              <p className="text-sm font-semibold text-neutral-800">{tr("editor.create_a_design_with_ai")}</p>
               <p className="mx-auto mt-1 max-w-[16rem] text-xs text-neutral-500">Describe what you want and I&apos;ll design it, or pick a type to start.</p>
             </div>
             {/* Primary: design-creation starters. */}
             <div className="grid w-full max-w-[16rem] grid-cols-2 gap-1.5">
-              {DESIGN_TYPES.map((t) => (
+              {designTypes().map((t) => (
                 <button key={t.label} onClick={() => startFromType(t.prompt)} disabled={!aiReady} className="rounded-lg border border-neutral-200 bg-surface px-2 py-2 text-xs font-medium text-neutral-700 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink disabled:opacity-50">{t.label}</button>
               ))}
             </div>
             {/* Secondary: quick edits on the current design. */}
             <div className="flex flex-wrap justify-center gap-1.5">
-              {ASSISTANT_SUGGESTIONS.map((s) => (
+              {assistantSuggestions().map((s) => (
                 <button key={s} onClick={() => { setInput(s); inputRef.current?.focus(); }} disabled={!aiReady} className="rounded-full border border-neutral-200 bg-surface px-2.5 py-1 text-[11px] text-neutral-500 hover:border-brand-300 hover:text-brand-ink disabled:opacity-50">{s}</button>
               ))}
             </div>
@@ -2679,8 +2718,8 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
         <div className="mt-2 flex shrink-0 items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-800">
           <span>Apply {pending.plan.length} step{pending.plan.length === 1 ? "" : "s"}?</span>
           <span className="flex gap-1">
-            <button onClick={() => { const p = pending; setPending(null); void execute(p.plan, p.reply); }} className="rounded bg-amber-600 px-2 py-0.5 font-medium text-white hover:bg-amber-700">Confirm</button>
-            <button onClick={() => { setPending(null); setTurns((t) => [...t, { role: "assistant", text: "Cancelled." }]); }} className="rounded border border-amber-300 px-2 py-0.5 hover:bg-amber-100">Cancel</button>
+            <button onClick={() => { const p = pending; setPending(null); void execute(p.plan, p.reply); }} className="rounded bg-amber-600 px-2 py-0.5 font-medium text-white hover:bg-amber-700">{tr("editor.confirm")}</button>
+            <button onClick={() => { setPending(null); setTurns((t) => [...t, { role: "assistant", text: tr("editor.cancelled") }]); }} className="rounded border border-amber-300 px-2 py-0.5 hover:bg-amber-100">{tr("editor.cancel")}</button>
           </span>
         </div>
       )}
@@ -2688,7 +2727,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       {/* Art-direction follow-ups, shown right after a design was generated. */}
       {lastWasDesign && !pending && !busy && (
         <div className="mt-2 flex shrink-0 flex-wrap gap-1.5">
-          {DESIGN_FOLLOWUPS.map((f) => (
+          {designFollowups().map((f) => (
             <button key={f} onClick={() => void send(f)} className="rounded-full border border-neutral-200 bg-surface px-2.5 py-1 text-[11px] text-neutral-600 hover:border-brand-300 hover:text-brand-ink">{f}</button>
           ))}
         </div>
@@ -2700,18 +2739,18 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
         <div className="mt-2 flex shrink-0 items-center gap-2 rounded-lg border border-brand-200 bg-brand-50 px-2.5 py-1.5 text-[11px] text-brand-ink">
           <FileText size={12} className="shrink-0" />
           <span className="min-w-0 flex-1 truncate" title={source.name}>{source.name} · {Math.round(source.text.length / 1000)}k chars</span>
-          <button onClick={() => setSource(null)} aria-label="Remove attached content" className="rounded p-0.5 hover:bg-brand-100"><X size={12} /></button>
+          <button onClick={() => setSource(null)} aria-label={tr("editor.remove_attached_content")} className="rounded p-0.5 hover:bg-brand-100"><X size={12} /></button>
         </div>
       )}
       {attachOpen && !source && (
         <div className="mt-2 flex shrink-0 flex-col gap-1.5 rounded-lg border border-neutral-200 bg-neutral-50 p-2">
           <textarea
-            placeholder="Paste text or notes to build from…"
+            placeholder={tr("editor.paste_text_or_notes_to_build_from")}
             rows={3}
             className="w-full resize-none rounded-md border border-neutral-200 bg-surface px-2 py-1.5 text-xs outline-none focus:border-brand-400"
             onBlur={(e) => {
               const t = e.target.value.trim();
-              if (t) { setSource({ name: "Pasted text", text: t }); setAttachOpen(false); }
+              if (t) { setSource({ name: tr("editor.pasted_text"), text: t }); setAttachOpen(false); }
             }}
           />
           <div className="flex items-center gap-1.5">
@@ -2728,15 +2767,15 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                 setAttachBusy(true);
                 void oc.aiExtractUrl({ url })
                   .then((r) => { setSource({ name: r.title || url, text: r.text }); setAttachOpen(false); setAttachUrl(""); })
-                  .catch(() => toast.error("Couldn't read that page."))
+                  .catch(() => toast.error(tr("editor.couldnt_read_that_page")))
                   .finally(() => setAttachBusy(false));
               }}
               className="rounded-md bg-neutral-900 px-2.5 py-1.5 text-xs font-medium text-surface disabled:opacity-40"
             >
-              {attachBusy ? "Fetching…" : "Fetch"}
+              {attachBusy ? tr("editor.fetching") : tr("editor.fetch")}
             </button>
             <label className="cursor-pointer rounded-md border border-neutral-200 bg-surface px-2.5 py-1.5 text-xs text-neutral-700 hover:bg-neutral-100">
-              File
+              {tr("editor.file")}
               <input
                 type="file"
                 accept=".txt,.md,.markdown,.pdf,text/plain,text/markdown,application/pdf"
@@ -2749,13 +2788,13 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                   const finish = (text: string) => {
                     const t = text.trim();
                     if (t) { setSource({ name: f.name, text: t.slice(0, 60000) }); setAttachOpen(false); }
-                    else toast.error("No readable text in that file.");
+                    else toast.error(tr("editor.no_readable_text_in_that_file"));
                     setAttachBusy(false);
                   };
                   if (/\.pdf$/i.test(f.name) || f.type === "application/pdf") {
-                    void pdfFileToText(f).then(finish).catch(() => { toast.error("Couldn't read that PDF."); setAttachBusy(false); });
+                    void pdfFileToText(f).then(finish).catch(() => { toast.error(tr("editor.couldnt_read_that_pdf")); setAttachBusy(false); });
                   } else {
-                    void f.text().then(finish).catch(() => { toast.error("Couldn't read that file."); setAttachBusy(false); });
+                    void f.text().then(finish).catch(() => { toast.error(tr("editor.couldnt_read_that_file")); setAttachBusy(false); });
                   }
                 }}
               />
@@ -2769,8 +2808,8 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
         <div className="flex items-end gap-1.5 rounded-2xl border border-neutral-300 bg-surface px-2 py-1.5 focus-within:border-brand-400">
           <button
             onClick={() => setAttachOpen((v) => !v)}
-            title="Attach content to build from (paste, URL, or file)"
-            aria-label="Attach content"
+            title={tr("editor.attach_content_to_build_from_paste_url_or_fi")}
+            aria-label={tr("editor.attach_content")}
             className={`mb-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg ${attachOpen || source ? "bg-brand-50 text-brand-ink" : "text-neutral-400 hover:bg-neutral-100"}`}
           >
             <Paperclip size={15} />
@@ -2781,15 +2820,15 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
             onChange={(e) => { setInput(e.target.value); autosize(e.currentTarget); }}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send(); } }}
             rows={1}
-            placeholder="Ask anything…"
+            placeholder={tr("editor.ask_anything")}
             disabled={!aiReady}
             className="max-h-[140px] flex-1 resize-none bg-transparent py-1 text-sm outline-none placeholder:text-neutral-400 disabled:opacity-50"
           />
-          <button onClick={() => void send()} disabled={!canSend} title="Send (Enter)" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-600 text-white transition hover:bg-brand-700 disabled:opacity-40">
+          <button onClick={() => void send()} disabled={!canSend} title={tr("editor.send_enter")} className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-600 text-white transition hover:bg-brand-700 disabled:opacity-40">
             <Send size={15} />
           </button>
         </div>
-        <p className="mt-1 px-1 text-[10px] text-neutral-400">Enter to send · Shift+Enter for a new line</p>
+        <p className="mt-1 px-1 text-[10px] text-neutral-400">{tr("editor.enter_to_send_shift_enter_for_a_new_line")}</p>
       </div>
     </div>
   );
@@ -2839,7 +2878,7 @@ function CritiqueSection() {
     if (f.kind === "set_text_color") st.setTextColor(f.nodeId, f.hex);
     else if (f.kind === "move_into_bounds") st.moveNodeBy(f.nodeId, f.dx, f.dy);
     else if (f.kind === "align_nudge") st.moveNodeBy(f.nodeId, f.dx, f.dy);
-    toast.success("Fixed.");
+    toast.success(tr("editor.fixed_2"));
   }, [toast]);
 
   const groups = (() => {
@@ -2857,14 +2896,14 @@ function CritiqueSection() {
     <section className="border-b border-neutral-100 pb-3 last:border-b-0 last:pb-0">
       <div className="mb-2 flex items-center justify-between">
         <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
-          <Stethoscope size={14} /> Design critique
+          <Stethoscope size={14} /> {tr("editor.design_critique")}
         </span>
         <button onClick={run} className="rounded-md bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-600 hover:bg-brand-50 hover:text-brand-ink">
-          {issues === null ? "Analyze" : "Re-analyze"}
+          {issues === null ? tr("editor.analyze") : tr("editor.re_analyze")}
         </button>
       </div>
-      {issues === null && <p className="text-xs text-neutral-400">Analyze this page for contrast, off-canvas, alignment, spacing, and readability issues.</p>}
-      {clean && <p className="flex items-center gap-1.5 rounded bg-emerald-50 px-2 py-1 text-xs text-emerald-700"><Sparkles size={13} /> Looks good. No issues found.</p>}
+      {issues === null && <p className="text-xs text-neutral-400">{tr("editor.analyze_this_page_for_contrast_off_canvas_al")}</p>}
+      {clean && <p className="flex items-center gap-1.5 rounded bg-emerald-50 px-2 py-1 text-xs text-emerald-700"><Sparkles size={13} /> {tr("editor.looks_good_no_issues_found")}</p>}
       {issues !== null && issues.length > 0 && (
         <div className="flex flex-col gap-3">
           {groups.map(([cat, items]) => (
@@ -2873,12 +2912,12 @@ function CritiqueSection() {
               <ul className="flex flex-col gap-1">
                 {items.map((i) => (
                   <li key={i.id} className="rounded-lg border border-neutral-100 bg-neutral-50 px-2 py-1.5 text-xs">
-                    <button onClick={() => i.nodeId && highlightNode(i.nodeId)} disabled={!i.nodeId} className="flex w-full items-start gap-1.5 text-left text-neutral-600 hover:text-brand-ink disabled:cursor-default disabled:hover:text-neutral-600" title={i.nodeId ? "Show on canvas" : undefined}>
+                    <button onClick={() => i.nodeId && highlightNode(i.nodeId)} disabled={!i.nodeId} className="flex w-full items-start gap-1.5 text-start text-neutral-600 hover:text-brand-ink disabled:cursor-default disabled:hover:text-neutral-600" title={i.nodeId ? tr("editor.show_on_canvas") : undefined}>
                       <span className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${ISSUE_DOT[i.severity]}`} />
                       <span>{i.message}</span>
                     </button>
                     {i.fix && (
-                      <button onClick={() => applyFix(i)} className="mt-1 pl-3 text-[11px] font-medium text-brand-ink hover:underline">Fix</button>
+                      <button onClick={() => applyFix(i)} className="mt-1 ps-3 text-[11px] font-medium text-brand-ink hover:underline">{tr("editor.fix")}</button>
                     )}
                   </li>
                 ))}
@@ -2915,13 +2954,13 @@ function HarmonizeSection() {
     <section className="border-b border-neutral-100 pb-3 last:border-b-0 last:pb-0">
       <div className="mb-2 flex items-center justify-between">
         <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
-          <Sparkles size={14} /> Harmonize styles
+          <Sparkles size={14} /> {tr("editor.harmonize_styles")}
         </span>
-        <button onClick={preview} className="rounded-md bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-600 hover:bg-brand-50 hover:text-brand-ink">Preview</button>
+        <button onClick={preview} className="rounded-md bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-600 hover:bg-brand-50 hover:text-brand-ink">{tr("editor.preview")}</button>
       </div>
-      {proposal === null && <p className="text-xs text-neutral-400">Collapse fonts, snap colors to a few roles, and unify corner radii across the page.</p>}
+      {proposal === null && <p className="text-xs text-neutral-400">{tr("editor.collapse_fonts_snap_colors_to_a_few_roles_an")}</p>}
       {proposal !== null && !hasHarmonizeChanges(proposal) && (
-        <p className="flex items-center gap-1.5 rounded bg-emerald-50 px-2 py-1 text-xs text-emerald-700"><Sparkles size={13} /> Styles already consistent.</p>
+        <p className="flex items-center gap-1.5 rounded bg-emerald-50 px-2 py-1 text-xs text-emerald-700"><Sparkles size={13} /> {tr("editor.styles_already_consistent")}</p>
       )}
       {proposal !== null && hasHarmonizeChanges(proposal) && (
         <div className="flex flex-col gap-2 text-xs text-neutral-600">
@@ -2929,7 +2968,7 @@ function HarmonizeSection() {
             <div>
               <div className="mb-0.5 font-medium text-neutral-500">Fonts ({proposal.fonts.length})</div>
               <ul className="flex flex-col gap-0.5">
-                {proposal.fonts.map((c, i) => <li key={i}>{c.from} <span className="text-neutral-400">to</span> {c.to}</li>)}
+                {proposal.fonts.map((c, i) => <li key={i}>{c.from} <span className="text-neutral-400">{tr("editor.to")}</span> {c.to}</li>)}
               </ul>
             </div>
           )}
@@ -2940,7 +2979,7 @@ function HarmonizeSection() {
                 {proposal.colors.map((c, i) => (
                   <li key={i} className="flex items-center gap-1.5">
                     <span className="h-3 w-3 rounded-sm border border-neutral-300" style={{ background: c.from }} />
-                    <span className="text-neutral-400">to</span>
+                    <span className="text-neutral-400">{tr("editor.to")}</span>
                     <span className="h-3 w-3 rounded-sm border border-neutral-300" style={{ background: c.to }} />
                     <span className="text-neutral-400">({c.count})</span>
                   </li>
@@ -2952,7 +2991,7 @@ function HarmonizeSection() {
             <div>
               <div className="mb-0.5 font-medium text-neutral-500">Corner radius ({proposal.radii.length})</div>
               <ul className="flex flex-col gap-0.5">
-                {proposal.radii.map((c, i) => <li key={i}>{Math.round(c.from)} <span className="text-neutral-400">to</span> {Math.round(c.to)}</li>)}
+                {proposal.radii.map((c, i) => <li key={i}>{Math.round(c.from)} <span className="text-neutral-400">{tr("editor.to")}</span> {Math.round(c.to)}</li>)}
               </ul>
             </div>
           )}
@@ -2994,20 +3033,20 @@ function AutoLayoutSection() {
     <section className="border-b border-neutral-100 pb-3 last:border-b-0 last:pb-0">
       <div className="mb-2 flex items-center justify-between">
         <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
-          <AlignStartVertical size={14} /> Auto-layout
+          <AlignStartVertical size={14} /> {tr("editor.auto_layout")}
         </span>
-        <button onClick={run} className="rounded-md bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-600 hover:bg-brand-50 hover:text-brand-ink">Suggest</button>
+        <button onClick={run} className="rounded-md bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-600 hover:bg-brand-50 hover:text-brand-ink">{tr("editor.suggest")}</button>
       </div>
-      {suggestions === null && <p className="text-xs text-neutral-400">Detect misaligned, unevenly spaced, or stray elements and fix them with one click.</p>}
+      {suggestions === null && <p className="text-xs text-neutral-400">{tr("editor.detect_misaligned_unevenly_spaced_or_stray_e")}</p>}
       {suggestions !== null && suggestions.length === 0 && (
-        <p className="flex items-center gap-1.5 rounded bg-emerald-50 px-2 py-1 text-xs text-emerald-700"><Sparkles size={13} /> Layout looks tidy.</p>
+        <p className="flex items-center gap-1.5 rounded bg-emerald-50 px-2 py-1 text-xs text-emerald-700"><Sparkles size={13} /> {tr("editor.layout_looks_tidy")}</p>
       )}
       {suggestions !== null && suggestions.length > 0 && (
         <ul className="flex flex-col gap-1">
           {suggestions.map((s) => (
             <li key={s.op} className="flex items-center justify-between gap-2 rounded-lg border border-neutral-100 bg-neutral-50 px-2 py-1.5 text-xs text-neutral-600">
               <span>{s.label}</span>
-              <button onClick={() => apply(s)} className="shrink-0 rounded-md border border-neutral-200 px-2 py-0.5 text-[11px] font-medium text-brand-ink hover:bg-surface">Apply</button>
+              <button onClick={() => apply(s)} className="shrink-0 rounded-md border border-neutral-200 px-2 py-0.5 text-[11px] font-medium text-brand-ink hover:bg-surface">{tr("editor.apply")}</button>
             </li>
           ))}
         </ul>
@@ -3029,21 +3068,21 @@ function AutoAnimateSection() {
       toast.success(`Animated ${n} element${n === 1 ? "" : "s"}.`);
       st.playAnimations();
     } else {
-      toast.toast("No elements to animate.", "info");
+      toast.toast(tr("editor.no_elements_to_animate"), "info");
     }
   }, [style, toast]);
 
   const clear = useCallback(() => {
     const n = useEditor.getState().clearPageAnimations();
-    toast.success(n > 0 ? "Animations cleared." : "No animations to clear.");
+    toast.success(n > 0 ? tr("editor.animations_cleared") : tr("editor.no_animations_to_clear"));
   }, [toast]);
 
   return (
     <section className="border-b border-neutral-100 pb-3 last:border-b-0 last:pb-0">
       <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
-        <Play size={14} /> Auto-animate
+        <Play size={14} /> {tr("editor.auto_animate")}
       </div>
-      <p className="mb-2 text-xs text-neutral-400">Add a coherent, staggered entrance to every element in reading order.</p>
+      <p className="mb-2 text-xs text-neutral-400">{tr("editor.add_a_coherent_staggered_entrance_to_every_e")}</p>
       <div className="mb-2 grid grid-cols-3 gap-1">
         {ANIMATE_STYLES.map((s) => (
           <button
@@ -3056,8 +3095,8 @@ function AutoAnimateSection() {
         ))}
       </div>
       <div className="flex gap-2">
-        <Button className="flex-1" onClick={apply}><Play size={15} /> Animate</Button>
-        <Button variant="secondary" onClick={clear}>Clear</Button>
+        <Button className="flex-1" onClick={apply}><Play size={15} /> {tr("editor.animate")}</Button>
+        <Button variant="secondary" onClick={clear}>{tr("editor.clear")}</Button>
       </div>
     </section>
   );
@@ -3147,9 +3186,9 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
       setConfig(c);
       setApiKey("");
       setShowConfig(false);
-      toast.success("AI provider saved.");
+      toast.success(tr("editor.ai_provider_saved"));
     } catch {
-      toast.error("Could not save AI settings.");
+      toast.error(tr("editor.could_not_save_ai_settings"));
     }
   }
 
@@ -3163,40 +3202,40 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
   return (
     <PanelShell title="AI" fill={chatView}>
       {!workspaceId ? (
-        <p className="mt-4 text-center text-xs text-neutral-400">Open a saved design to use AI.</p>
+        <p className="mt-4 text-center text-xs text-neutral-400">{tr("editor.open_a_saved_design_to_use_ai")}</p>
       ) : loading ? (
         <div className="grid place-items-center py-8 text-neutral-400"><Spinner /></div>
       ) : showConfig || !config?.hasKey ? (
         <div className="flex flex-col gap-3">
           <div>
             <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-neutral-700">
-              <Settings2 size={14} className="text-brand-500" /> Connect an AI provider
+              <Settings2 size={14} className="text-brand-500" /> {tr("editor.connect_an_ai_provider")}
             </div>
-            <p className="mb-2.5 text-[11px] text-neutral-500">Bring your own key. It is stored encrypted and never leaves the server.</p>
+            <p className="mb-2.5 text-[11px] text-neutral-500">{tr("editor.bring_your_own_key_it_is_stored_encrypted_an")}</p>
             <p className="mb-2.5 flex items-start gap-1.5 rounded-md bg-brand-50 px-2 py-1.5 text-[11px] text-brand-ink">
               <Wand2 size={12} className="mt-px shrink-0" />
-              <span>Connect a provider to unlock <span className="font-medium">Magic Design</span> (text to a finished page) and image generation. The tools below work without AI.</span>
+              <span>{tr("editor.connect_a_provider_to_unlock")} <span className="font-medium">{tr("editor.magic_design")}</span> (text to a finished page) and image generation. The tools below work without AI.</span>
             </p>
             <div className="flex flex-col gap-2">
               <select value={provider} onChange={(e) => setProvider(e.target.value)} className="rounded border border-neutral-300 px-2 py-1.5 text-sm">
-                <option value="openai">OpenAI (or compatible)</option>
-                <option value="anthropic">Anthropic</option>
-                <option value="deepseek">DeepSeek</option>
-                <option value="custom">Custom endpoint</option>
+                <option value="openai">{tr("editor.openai_or_compatible")}</option>
+                <option value="anthropic">{tr("editor.anthropic")}</option>
+                <option value="deepseek">{tr("editor.deepseek")}</option>
+                <option value="custom">{tr("editor.custom_endpoint")}</option>
               </select>
-              <input value={model} onChange={(e) => setModel(e.target.value)} placeholder={DEFAULT_MODEL_HINT[provider] ? `Model (optional, default ${DEFAULT_MODEL_HINT[provider]})` : "Model (optional)"} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
+              <input value={model} onChange={(e) => setModel(e.target.value)} placeholder={DEFAULT_MODEL_HINT[provider] ? `Model (optional, default ${DEFAULT_MODEL_HINT[provider]})` : tr("editor.model_optional")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
               {provider === "custom" && (
-                <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="Base URL (https://…/v1)" className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
+                <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder={tr("editor.base_url_https_v1")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
               )}
-              <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={config?.hasKey ? "API key (leave blank to keep)" : "API key"} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
-              <Button block onClick={() => void saveConfig()} disabled={!workspaceId}>Save provider</Button>
+              <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={config?.hasKey ? tr("editor.api_key_leave_blank_to_keep") : tr("editor.api_key")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
+              <Button block onClick={() => void saveConfig()} disabled={!workspaceId}>{tr("editor.save_provider")}</Button>
               {config?.hasKey && (
-                <button onClick={() => setShowConfig(false)} className="text-xs text-neutral-500 hover:underline">Cancel</button>
+                <button onClick={() => setShowConfig(false)} className="text-xs text-neutral-500 hover:underline">{tr("editor.cancel")}</button>
               )}
             </div>
           </div>
           {/* Deterministic polish tools that work with no provider connected. */}
-          <CollapsibleSection title="Assist (no AI needed)" icon={Stethoscope}>
+          <CollapsibleSection title={tr("editor.assist_no_ai_needed")} icon={Stethoscope}>
             <PolishPanel />
           </CollapsibleSection>
         </div>
@@ -3206,9 +3245,9 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
           <div className="flex shrink-0 items-center justify-between rounded-lg bg-neutral-50 px-2.5 py-1.5 text-xs">
             <span className="flex items-center gap-1.5 text-neutral-500">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              Provider <span className="font-medium text-neutral-700">{config.provider}</span>
+              {tr("editor.provider")} <span className="font-medium text-neutral-700">{config.provider}</span>
             </span>
-            <button onClick={() => setShowConfig(true)} title="AI settings" className="text-neutral-400 hover:text-neutral-700"><Settings2 size={15} /></button>
+            <button onClick={() => setShowConfig(true)} title={tr("editor.ai_settings")} className="text-neutral-400 hover:text-neutral-700"><Settings2 size={15} /></button>
           </div>
           {/* Capability nudge: this provider can't generate images, so designs
               come out text + color only. Point the user at an image-capable one. */}
@@ -3224,14 +3263,14 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
             <div className="flex shrink-0 items-center justify-between gap-2 rounded-lg border border-brand-200 bg-brand-50 px-2.5 py-1.5 text-[11px] text-brand-ink">
               <span className="flex items-center gap-1.5">
                 <Wand2 size={12} />
-                {ignoreVoice ? "Brand voice off" : `Using brand voice: ${brandVoiceLabel(brandVoice)}`}
+                {ignoreVoice ? tr("editor.brand_voice_off") : `Using brand voice: ${brandVoiceLabel(brandVoice)}`}
               </span>
               <button
                 onClick={() => setIgnoreVoice((v) => !v)}
-                title={ignoreVoice ? "Use the brand voice in AI writing again" : "Stop grounding AI writing in the brand voice"}
+                title={ignoreVoice ? tr("editor.use_the_brand_voice_in_ai_writing_again") : tr("editor.stop_grounding_ai_writing_in_the_brand_voice")}
                 className="shrink-0 rounded px-1 font-medium underline-offset-2 hover:underline"
               >
-                {ignoreVoice ? "Turn on" : "Turn off"}
+                {ignoreVoice ? tr("editor.turn_on") : tr("editor.turn_off")}
               </button>
             </div>
           )}
@@ -3246,12 +3285,12 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
   );
 }
 
-const STOCK_KINDS: { label: string; kind: string }[] = [
-  { label: "All", kind: "" },
-  { label: "Photos", kind: "photo" },
-  { label: "Illustrations", kind: "illustration" },
-  { label: "Icons", kind: "icon" },
-  { label: "Emoji", kind: "sticker" },
+const stockKinds = (): { label: string; kind: string }[] => [
+  { label: tr("editor.all"), kind: "" },
+  { label: tr("editor.photos"), kind: "photo" },
+  { label: tr("editor.illustrations"), kind: "illustration" },
+  { label: tr("editor.icons"), kind: "icon" },
+  { label: tr("editor.emoji"), kind: "sticker" },
 ];
 
 const stockChipCls = (active: boolean) =>
@@ -3271,7 +3310,7 @@ function FacetChips({ label, values, active, onPick }: { label: string; values: 
     <div className="mb-2">
       <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">{label}</p>
       <div className="flex flex-wrap gap-1">
-        <button onClick={() => onPick("")} className={stockChipCls(active === "")}>All</button>
+        <button onClick={() => onPick("")} className={stockChipCls(active === "")}>{tr("editor.all")}</button>
         {values.map((v) => (
           <button key={v.id} onClick={() => onPick(v.id)} title={`${v.count} asset${v.count === 1 ? "" : "s"}`} className={stockChipCls(active === v.id)}>{facetLabel(v.id)}</button>
         ))}
@@ -3305,7 +3344,7 @@ async function placeStock(a: StockAssetSummary, toast: ReturnType<typeof useToas
     useEditor.getState().addIconSvg(a.svg, provenance);
   } else if (isProviderAsset(a) && a.sourceUrl) {
     if (!workspaceId) {
-      toast.toast("Open a workspace design to place photos.", "info");
+      toast.toast(tr("editor.open_a_workspace_design_to_place_photos"), "info");
       return;
     }
     try {
@@ -3314,7 +3353,7 @@ async function placeStock(a: StockAssetSummary, toast: ReturnType<typeof useToas
       // frontend origin differs from the API's, same as the Uploads grid.
       placeImage(resolveAssetUrl(up.url), provenance);
     } catch {
-      toast.toast("Couldn't add this photo. Try another one.", "error");
+      toast.toast(tr("editor.couldnt_add_this_photo_try_another_one"), "error");
     }
     return; // provider assets have no recents entry in the bundled catalog
   } else if (a.sourceUrl) {
@@ -3322,7 +3361,7 @@ async function placeStock(a: StockAssetSummary, toast: ReturnType<typeof useToas
     // export canvas stays untainted (CORS-clean). Fills a selected frame if any.
     placeImage(/^(data:|blob:)/.test(a.sourceUrl) ? a.sourceUrl : stockProxyUrl(a.sourceUrl), provenance);
   } else {
-    toast.toast("This asset isn't placeable.", "info");
+    toast.toast(tr("editor.this_asset_isnt_placeable"), "info");
     return;
   }
   // Fire-and-forget: recording a recent should never block insertion. Live
@@ -3347,7 +3386,7 @@ function StockTile({ a, onPlace, onToggleStar }: { a: StockAssetSummary; onPlace
           // stock keeps its attribution credit, same as click-to-place.
           e.dataTransfer.setData("application/x-oc-provenance", JSON.stringify(stockProvenance(a)));
         }}
-        title={draggable ? "Click to place, or drag onto the canvas" : a.sourceUrl ? "Click to place" : a.title}
+        title={draggable ? tr("editor.click_to_place_or_drag_onto_the_canvas") : a.sourceUrl ? tr("editor.click_to_place") : a.title}
         className="grid aspect-square w-full place-items-center overflow-hidden rounded-lg border border-neutral-200 hover:border-brand-300"
       >
         {a.svg ? (
@@ -3366,9 +3405,9 @@ function StockTile({ a, onPlace, onToggleStar }: { a: StockAssetSummary; onPlace
       {!isProviderAsset(a) && (
         <button
           onClick={(e) => { e.stopPropagation(); onToggleStar(a); }}
-          title={a.favorited ? "Remove from favorites" : "Add to favorites"}
+          title={a.favorited ? tr("editor.remove_from_favorites") : tr("editor.add_to_favorites")}
           aria-pressed={!!a.favorited}
-          className={`absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-surface/90 shadow transition ${a.favorited ? "text-amber-500" : "text-neutral-400 opacity-0 group-hover:opacity-100 hover:text-amber-500"}`}
+          className={`absolute end-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-surface/90 shadow transition ${a.favorited ? "text-amber-500" : "text-neutral-400 opacity-0 group-hover:opacity-100 hover:text-amber-500"}`}
         >
           <Star size={13} fill={a.favorited ? "currentColor" : "none"} />
         </button>
@@ -3404,12 +3443,12 @@ function intentQuery(q: string): string {
 
 // Animated stickers: editable-vector graphics paired with a looping emphasis
 // preset, applied to the inserted node so it moves in play/present.
-const ANIMATED_STICKERS: { id: string; label: string; preset: "pulse" | "spin" | "wiggle" | "bob" | "flicker"; svg: string }[] = [
-  { id: "a-star", label: "Spinning star", preset: "spin", svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2 L15 9 L22 9 L16 14 L18 21 L12 17 L6 21 L8 14 L2 9 L9 9 Z" fill="#f5b301"/></svg>' },
-  { id: "a-heart", label: "Pulsing heart", preset: "pulse", svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 21 C 4 14 4 6 9 6 C 11 6 12 8 12 8 C 12 8 13 6 15 6 C 20 6 20 14 12 21 Z" fill="#e0245e"/></svg>' },
-  { id: "a-bell", label: "Wiggling bell", preset: "wiggle", svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 3 C 8 3 7 6 7 10 C 7 14 5 16 5 16 L 19 16 C 19 16 17 14 17 10 C 17 6 16 3 12 3 Z M 10 19 a 2 2 0 0 0 4 0 Z" fill="#6366f1"/></svg>' },
-  { id: "a-dot", label: "Bouncing dot", preset: "bob", svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="#22c55e"/></svg>' },
-  { id: "a-spark", label: "Flickering spark", preset: "flicker", svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2 L13.5 10.5 L22 12 L13.5 13.5 L12 22 L10.5 13.5 L2 12 L10.5 10.5 Z" fill="#f59e0b"/></svg>' },
+const animatedStickers = (): { id: string; label: string; preset: "pulse" | "spin" | "wiggle" | "bob" | "flicker"; svg: string }[] => [
+  { id: "a-star", label: tr("editor.spinning_star"), preset: "spin", svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2 L15 9 L22 9 L16 14 L18 21 L12 17 L6 21 L8 14 L2 9 L9 9 Z" fill="#f5b301"/></svg>' },
+  { id: "a-heart", label: tr("editor.pulsing_heart"), preset: "pulse", svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 21 C 4 14 4 6 9 6 C 11 6 12 8 12 8 C 12 8 13 6 15 6 C 20 6 20 14 12 21 Z" fill="#e0245e"/></svg>' },
+  { id: "a-bell", label: tr("editor.wiggling_bell"), preset: "wiggle", svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 3 C 8 3 7 6 7 10 C 7 14 5 16 5 16 L 19 16 C 19 16 17 14 17 10 C 17 6 16 3 12 3 Z M 10 19 a 2 2 0 0 0 4 0 Z" fill="#6366f1"/></svg>' },
+  { id: "a-dot", label: tr("editor.bouncing_dot"), preset: "bob", svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="#22c55e"/></svg>' },
+  { id: "a-spark", label: tr("editor.flickering_spark"), preset: "flicker", svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2 L13.5 10.5 L22 12 L13.5 13.5 L12 22 L10.5 13.5 L2 12 L10.5 10.5 Z" fill="#f59e0b"/></svg>' },
 ];
 
 export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
@@ -3546,9 +3585,9 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
   }
 
   const TABS: { id: StockTab; label: string; icon: typeof Star }[] = [
-    { id: "browse", label: "Browse", icon: LayoutGrid },
-    { id: "favorites", label: "Favorites", icon: Star },
-    { id: "recents", label: "Recent", icon: Clock },
+    { id: "browse", label: tr("editor.browse"), icon: LayoutGrid },
+    { id: "favorites", label: tr("editor.favorites"), icon: Star },
+    { id: "recents", label: tr("editor.recent"), icon: Clock },
   ];
 
   // Bundled packs surface as a per-kind Source facet (e.g. illustration packs
@@ -3556,21 +3595,21 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
   const packSources = collections.filter((c) => c.source === "pack" && c.kind === kind);
 
   const emptyMessage =
-    tab === "favorites" ? "No favorites yet. Tap the star on any asset." :
-    tab === "recents" ? "Nothing placed yet." :
+    tab === "favorites" ? tr("editor.no_favorites_yet_tap_the_star_on_any_asset") :
+    tab === "recents" ? tr("editor.nothing_placed_yet") :
     // Name the facet as a cause alongside the query: with both active, the
     // facet is often the real constraint (and on photos it also switches the
     // search from the live provider to the bundled library).
     debouncedQuery && (category || style || orientation) ? `No results for “${debouncedQuery}” with these filters. Try clearing a filter.` :
     debouncedQuery ? `No results for “${debouncedQuery}”.` :
-    category || style || orientation ? "Nothing matches these filters." :
-    "No stock assets available.";
+    category || style || orientation ? tr("editor.nothing_matches_these_filters") :
+    tr("editor.no_stock_assets_available");
 
   return (
-    <PanelShell title="Stock">
+    <PanelShell title={tr("editor.stock")}>
       <div className="mb-3 flex gap-1">
         {TABS.map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)} className={`flex flex-1 items-center justify-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-medium ${tab === t.id ? "border-brand-500 bg-brand-50 text-brand-ink" : "border-neutral-200 text-neutral-600 hover:bg-neutral-100"}`}>
+          <button key={t.id} onClick={() => setTab(t.id)} aria-pressed={tab === t.id} className={`flex flex-1 items-center justify-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-medium ${tab === t.id ? "border-brand-500 bg-brand-50 text-brand-ink" : "border-neutral-200 text-neutral-600 hover:bg-neutral-100"}`}>
             <t.icon size={13} />{t.label}
           </button>
         ))}
@@ -3579,10 +3618,10 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
       {tab === "browse" && (
         <>
           <form onSubmit={onSubmit} className="relative mb-2">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search photos & icons" className="h-9 w-full rounded-lg border border-neutral-200 pl-9 pr-9 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100" />
+            <Search size={15} className="absolute start-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={tr("editor.search_photos_icons")} className="h-9 w-full rounded-lg border border-neutral-200 ps-9 pe-9 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100" />
             {query && (
-              <button type="button" onClick={() => setQuery("")} title="Clear search" className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded text-neutral-400 hover:text-neutral-700">
+              <button type="button" onClick={() => setQuery("")} title={tr("editor.clear_search")} className="absolute end-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded text-neutral-400 hover:text-neutral-700">
                 <X size={14} />
               </button>
             )}
@@ -3591,7 +3630,7 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
               five kinds overflow the panel sideways (flex items can't shrink
               below their text), which read as the whole panel sliding. */}
           <div className="mb-3 flex flex-wrap gap-1">
-            {STOCK_KINDS.map((f) => (
+            {stockKinds().map((f) => (
               <button key={f.label} onClick={() => setFilter(f.kind)} className={stockChipCls(kind === f.kind)}>{f.label}</button>
             ))}
           </div>
@@ -3601,9 +3640,9 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
               Collections section. */}
           {kind && packSources.length >= 2 && (
             <div className="mb-2">
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Source</p>
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">{tr("editor.source")}</p>
               <div className="flex flex-wrap gap-1">
-                <button onClick={() => setSource("")} className={stockChipCls(source === "")}>All</button>
+                <button onClick={() => setSource("")} className={stockChipCls(source === "")}>{tr("editor.all")}</button>
                 {packSources.map((c) => (
                   <button key={c.id} onClick={() => setSource(source === c.id ? "" : c.id)} title={c.description} className={stockChipCls(source === c.id)}>{c.title}</button>
                 ))}
@@ -3612,13 +3651,13 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
           )}
           {kind && filters && (
             <>
-              <FacetChips label="Category" values={filters.categories.filter((v) => v.kind === kind)} active={category} onPick={setCategory} />
-              <FacetChips label="Style" values={filters.styles.filter((v) => v.kind === kind)} active={style} onPick={setStyle} />
-              <FacetChips label="Orientation" values={filters.orientations.filter((v) => v.kind === kind)} active={orientation} onPick={setOrientation} />
+              <FacetChips label={tr("editor.category")} values={filters.categories.filter((v) => v.kind === kind)} active={category} onPick={setCategory} />
+              <FacetChips label={tr("editor.style")} values={filters.styles.filter((v) => v.kind === kind)} active={style} onPick={setStyle} />
+              <FacetChips label={tr("editor.orientation")} values={filters.orientations.filter((v) => v.kind === kind)} active={orientation} onPick={setOrientation} />
               {/* Faceted photo search is bundled-only (the live provider can't
                   apply facets), so say so instead of results silently shrinking. */}
               {kind === "photo" && (category || style || orientation) && (
-                <p className="mb-2 text-[11px] text-neutral-500">Filters search the built-in library. Clear them to search live photos.</p>
+                <p className="mb-2 text-[11px] text-neutral-500">{tr("editor.filters_search_the_built_in_library_clear_th")}</p>
               )}
             </>
           )}
@@ -3631,7 +3670,7 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
         <div className="mt-6 flex flex-col items-center gap-2 text-center">
           <p className="text-xs text-neutral-500">Couldn&apos;t reach the stock library.</p>
           <button onClick={() => setRetryNonce((n) => n + 1)} className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink">
-            Retry
+            {tr("editor.retry")}
           </button>
         </div>
       ) : results.length === 0 ? (
@@ -3649,7 +3688,7 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
               disabled={loadingMore}
               className="mt-2 w-full rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink disabled:opacity-50"
             >
-              {loadingMore ? "Loading…" : "Load more"}
+              {loadingMore ? tr("editor.loading") : tr("editor.load_more")}
             </button>
           )}
         </>
@@ -3710,10 +3749,10 @@ export function AppsPanel() {
   function actionsFor(app: MiniAppSummary): AppAction_[] {
     switch (app.id) {
       case "qr":
-        return [{ label: "Add QR code", icon: QrCode, action: "insert-node", run: async () => {
-          const t = await promptText({ title: "Add QR code", label: "Links to (URL or text)", placeholder: "https://", defaultValue: "https://", confirmText: "Add" });
+        return [{ label: tr("editor.add_qr_code"), icon: QrCode, action: "insert-node", run: async () => {
+          const t = await promptText({ title: tr("editor.add_qr_code"), label: tr("editor.links_to_url_or_text"), placeholder: "https://", defaultValue: "https://", confirmText: tr("editor.add") });
           if (!t) return;
-          addNode("qr", { name: "QR code", value: t, ecLevel: "M", foreground: { srgb: { r: 0, g: 0, b: 0, a: 1 } }, background: { srgb: { r: 1, g: 1, b: 1, a: 1 } }, modules: qrModules(t, "M"), transform: CENTER, size: { width: 220, height: 220 } } as Partial<Node>);
+          addNode("qr", { name: tr("editor.qr_code"), value: t, ecLevel: "M", foreground: { srgb: { r: 0, g: 0, b: 0, a: 1 } }, background: { srgb: { r: 1, g: 1, b: 1, a: 1 } }, modules: qrModules(t, "M"), transform: CENTER, size: { width: 220, height: 220 } } as Partial<Node>);
         } }];
       case "charts":
         return ([["bar", BarChart3], ["line", LineChart], ["area", AreaChart], ["pie", PieChart], ["donut", Donut]] as const).map(([type, icon]) => ({
@@ -3727,9 +3766,9 @@ export function AppsPanel() {
         ];
       case "shapes":
         return [
-          { label: "Rectangle", icon: Square, action: "insert-node", run: () => addNode("shape", { name: "Rectangle", shape: "rect", transform: CENTER, size: { width: 240, height: 160 }, fills: [BRAND] } as Partial<Node>) },
-          { label: "Ellipse", icon: Circle, action: "insert-node", run: () => addNode("shape", { name: "Ellipse", shape: "ellipse", transform: CENTER, size: { width: 200, height: 200 }, fills: [BRAND] } as Partial<Node>) },
-          { label: "Star", icon: Star, action: "insert-node", run: () => addNode("shape", { name: "Star", shape: "star", sides: 5, innerRadius: 0.5, transform: CENTER, size: { width: 200, height: 200 }, fills: [BRAND] } as Partial<Node>) },
+          { label: tr("editor.rectangle"), icon: Square, action: "insert-node", run: () => addNode("shape", { name: tr("editor.rectangle"), shape: "rect", transform: CENTER, size: { width: 240, height: 160 }, fills: [BRAND] } as Partial<Node>) },
+          { label: tr("editor.ellipse"), icon: Circle, action: "insert-node", run: () => addNode("shape", { name: tr("editor.ellipse"), shape: "ellipse", transform: CENTER, size: { width: 200, height: 200 }, fills: [BRAND] } as Partial<Node>) },
+          { label: tr("editor.star"), icon: Star, action: "insert-node", run: () => addNode("shape", { name: tr("editor.star"), shape: "star", sides: 5, innerRadius: 0.5, transform: CENTER, size: { width: 200, height: 200 }, fills: [BRAND] } as Partial<Node>) },
         ];
       default:
         return [];
@@ -3742,7 +3781,7 @@ export function AppsPanel() {
     // apps will use, so an out-of-scope action is denied, not silently dropped.
     const decision = checkAppAction({ scopes: app.scopes as never }, a.action);
     if (!decision.allowed) {
-      toast.toast(decision.reason ?? "This app can't do that.", "error");
+      toast.toast(decision.reason ?? tr("editor.this_app_cant_do_that"), "error");
       return;
     }
     void a.run();
@@ -3752,8 +3791,8 @@ export function AppsPanel() {
     const actions = actionsFor(open);
     const Icon = APP_ICONS[open.id] ?? Shapes;
     return (
-      <PanelShell title="Apps">
-        <button onClick={() => setOpen(null)} className="mb-3 flex items-center gap-1 text-xs font-medium text-brand-ink hover:underline"><ChevronLeft size={13} />All apps</button>
+      <PanelShell title={tr("editor.apps")}>
+        <button onClick={() => setOpen(null)} className="mb-3 flex items-center gap-1 text-xs font-medium text-brand-ink hover:underline"><ChevronLeft size={13} />{tr("editor.all_apps")}</button>
         <div className="mb-3 flex items-center gap-2">
           <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand-50 text-brand-ink"><Icon size={18} /></span>
           <div>
@@ -3773,19 +3812,19 @@ export function AppsPanel() {
   }
 
   return (
-    <PanelShell title="Apps">
-      <p className="mb-3 text-[11px] text-neutral-400">Mini apps insert content onto your design.</p>
+    <PanelShell title={tr("editor.apps")}>
+      <p className="mb-3 text-[11px] text-neutral-400">{tr("editor.mini_apps_insert_content_onto_your_design")}</p>
       {loading ? (
         <div className="grid place-items-center py-8 text-neutral-400"><Spinner /></div>
       ) : error ? (
         <div className="mt-6 flex flex-col items-center gap-2 text-center">
           <p className="text-xs text-neutral-500">Couldn&apos;t load apps.</p>
           <button onClick={() => setRetryNonce((n) => n + 1)} className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink">
-            Retry
+            {tr("editor.retry")}
           </button>
         </div>
       ) : apps.length === 0 ? (
-        <p className="mt-6 text-center text-xs text-neutral-400">No apps available.</p>
+        <p className="mt-6 text-center text-xs text-neutral-400">{tr("editor.no_apps_available")}</p>
       ) : (
         <div className="grid grid-cols-2 gap-3">
           {apps.map((app) => {

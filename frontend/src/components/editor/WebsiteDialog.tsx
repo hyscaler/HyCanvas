@@ -30,6 +30,7 @@ import { resolveAssetUrl as resolveBackendUrl } from "@/lib/sdk";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
+import { tr } from "@/lib/i18n";
 
 type Tab = "settings" | "preview" | "export";
 type Device = "desktop" | "tablet" | "mobile";
@@ -70,7 +71,7 @@ function seedSite(doc: DesignFile, designId?: string, workspaceId?: string): Sit
     id: undefined,
     workspaceId: workspaceId ?? "",
     designId: designId ?? doc.id,
-    title: doc.title || "Untitled site",
+    title: doc.title || tr("editor.untitled_site"),
     slug: kebab(doc.title || "site") || "site",
     homePageId: homeId,
     pageOrder: pages.map((p) => p.id),
@@ -164,12 +165,12 @@ export function WebsiteDialog({
   // primary single-file path downloads just the home index.html.
   function downloadHome() {
     download(new Blob([homeHtml], { type: "text/html;charset=utf-8" }), "index.html");
-    toast.success("Downloaded index.html");
+    toast.success(tr("editor.downloaded_index_html"));
   }
 
   function downloadAll() {
     if (result.files.length === 0) {
-      toast.error("Nothing to download yet.");
+      toast.error(tr("editor.nothing_to_download_yet"));
       return;
     }
     result.files.forEach((f, i) => {
@@ -191,14 +192,14 @@ export function WebsiteDialog({
         <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-3.5">
           <div className="flex items-center gap-2">
             <Globe size={18} className="text-brand-ink" />
-            <h2 className="text-base font-semibold text-neutral-900">Publish as website</h2>
+            <h2 className="text-base font-semibold text-neutral-900">{tr("editor.publish_as_website")}</h2>
           </div>
           <div className="flex items-center gap-1 rounded-lg bg-neutral-100 p-1 text-sm">
             {(
               [
-                ["settings", "Settings", SettingsIcon],
-                ["preview", "Preview", Eye],
-                ["export", "Export", FileCode],
+                ["settings", tr("editor.settings"), SettingsIcon],
+                ["preview", tr("editor.preview"), Eye],
+                ["export", tr("editor.export"), FileCode],
               ] as const
             ).map(([id, label, Icon]) => (
               <button
@@ -214,7 +215,7 @@ export function WebsiteDialog({
             ))}
           </div>
           <button onClick={onClose} className="rounded-md px-2 py-1 text-sm text-neutral-500 hover:bg-neutral-100">
-            Close
+            {tr("editor.close")}
           </button>
         </div>
 
@@ -224,15 +225,15 @@ export function WebsiteDialog({
             <div className="grid grid-cols-2 gap-6 p-5">
               {/* Site */}
               <section className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Site</h3>
-                <Field label="Title">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-400">{tr("editor.site")}</h3>
+                <Field label={tr("editor.title")}>
                   <input
                     className={INPUT_CLS}
                     value={site.title}
                     onChange={(e) => patchSite({ title: e.target.value })}
                   />
                 </Field>
-                <Field label="Slug" hint=".hycanvas.site (hosting deferred)">
+                <Field label={tr("editor.slug")} hint=".hycanvas.site (hosting deferred)">
                   <div className="flex items-center gap-1">
                     <input
                       className={`${INPUT_CLS} flex-1`}
@@ -243,7 +244,7 @@ export function WebsiteDialog({
                     <span className="shrink-0 text-xs text-neutral-400">.hycanvas.site</span>
                   </div>
                 </Field>
-                <Field label="Password protect" hint="serving-layer gate; deferred">
+                <Field label={tr("editor.password_protect")} hint="serving-layer gate; deferred">
                   <input
                     type="checkbox"
                     checked={site.settings.password?.enabled ?? false}
@@ -255,21 +256,21 @@ export function WebsiteDialog({
               {/* SEO */}
               <section className="space-y-3">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-400">SEO</h3>
-                <Field label="Title">
+                <Field label={tr("editor.title")}>
                   <input
                     className={INPUT_CLS}
                     value={site.settings.seo.title ?? ""}
                     onChange={(e) => patchSeo({ title: e.target.value || undefined })}
                   />
                 </Field>
-                <Field label="Description">
+                <Field label={tr("editor.description")}>
                   <textarea
                     className={`${INPUT_CLS} h-16 resize-none`}
                     value={site.settings.seo.description ?? ""}
                     onChange={(e) => patchSeo({ description: e.target.value || undefined })}
                   />
                 </Field>
-                <Field label="Keywords" hint="comma separated">
+                <Field label={tr("editor.keywords")} hint="comma separated">
                   <input
                     className={INPUT_CLS}
                     value={(site.settings.seo.keywords ?? []).join(", ")}
@@ -290,7 +291,7 @@ export function WebsiteDialog({
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
                   Navigation ({site.nav.filter((n) => n.visible).length}/{site.nav.length} shown)
                 </h3>
-                <p className="text-[11px] text-neutral-400">Auto-built from the design pages. Toggle visibility and rename.</p>
+                <p className="text-[11px] text-neutral-400">{tr("editor.auto_built_from_the_design_pages_toggle_visi")}</p>
                 <ul className="space-y-1.5">
                   {site.nav.map((n) => (
                     <li key={n.id} className="flex items-center gap-2">
@@ -298,7 +299,7 @@ export function WebsiteDialog({
                         type="checkbox"
                         checked={n.visible}
                         onChange={() => toggleNavVisible(n.id)}
-                        title="Show in nav"
+                        title={tr("editor.show_in_nav")} aria-label={tr("editor.show_in_nav")}
                       />
                       <input
                         className={`${INPUT_CLS} flex-1`}
@@ -307,7 +308,7 @@ export function WebsiteDialog({
                       />
                       {n.target.kind === "page" && n.target.pageId === site.homePageId && (
                         <span className="shrink-0 rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-medium text-brand-ink">
-                          home
+                          {tr("editor.home")}
                         </span>
                       )}
                     </li>
@@ -317,9 +318,9 @@ export function WebsiteDialog({
 
               {/* Custom code */}
               <section className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Custom code</h3>
-                <p className="text-[11px] text-amber-600">Injected only into the published site. Untrusted code is your responsibility.</p>
-                <Field label="Head">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-400">{tr("editor.custom_code")}</h3>
+                <p className="text-[11px] text-amber-700">{tr("editor.injected_only_into_the_published_site_untrus")}</p>
+                <Field label={tr("editor.head")}>
                   <textarea
                     className={`${INPUT_CLS} h-16 resize-none font-mono text-xs`}
                     placeholder="<!-- analytics, meta, etc. -->"
@@ -327,7 +328,7 @@ export function WebsiteDialog({
                     onChange={(e) => patchCustomCode({ head: e.target.value })}
                   />
                 </Field>
-                <Field label="End of body">
+                <Field label={tr("editor.end_of_body")}>
                   <textarea
                     className={`${INPUT_CLS} h-16 resize-none font-mono text-xs`}
                     placeholder="<!-- widgets, scripts -->"
@@ -353,11 +354,11 @@ export function WebsiteDialog({
                     <Icon size={16} />
                   </IconButton>
                 ))}
-                <span className="ml-2 text-xs text-neutral-400">{DEVICE_WIDTH[device]}px home page</span>
+                <span className="ms-2 text-xs text-neutral-400">{DEVICE_WIDTH[device]}px home page</span>
               </div>
               <div className="grid place-items-center rounded-xl border border-neutral-200 bg-neutral-50 p-3">
                 <iframe
-                  title="Site preview"
+                  title={tr("editor.site_preview")}
                   srcDoc={homeHtml}
                   style={{ width: device === "desktop" ? "100%" : `${DEVICE_WIDTH[device]}px` }}
                   className="h-[60vh] w-full rounded-md border border-neutral-300 bg-surface shadow-sm"
@@ -365,7 +366,7 @@ export function WebsiteDialog({
                 />
               </div>
               <p className="text-center text-[11px] text-neutral-400">
-                Live local preview of the generated static HTML. Hosting, password gate, and form submission are deferred.
+                {tr("editor.live_local_preview_of_the_generated_static_h")}
               </p>
             </div>
           )}
@@ -378,20 +379,20 @@ export function WebsiteDialog({
                 </h3>
                 <div className="flex gap-2">
                   <Button variant="secondary" size="sm" onClick={downloadHome}>
-                    <Download size={14} /> Home only
+                    <Download size={14} /> {tr("editor.home_only")}
                   </Button>
                   <Button size="sm" onClick={downloadAll}>
-                    <Download size={14} /> Download site
+                    <Download size={14} /> {tr("editor.download_site")}
                   </Button>
                 </div>
               </div>
               <div className="overflow-hidden rounded-lg border border-neutral-200">
                 <table className="w-full text-sm">
-                  <thead className="bg-neutral-50 text-left text-xs text-neutral-400">
+                  <thead className="bg-neutral-50 text-start text-xs text-neutral-400">
                     <tr>
-                      <th className="px-3 py-2 font-medium">Path</th>
-                      <th className="px-3 py-2 font-medium">Type</th>
-                      <th className="px-3 py-2 text-right font-medium">Size</th>
+                      <th className="px-3 py-2 font-medium">{tr("editor.path")}</th>
+                      <th className="px-3 py-2 font-medium">{tr("editor.type")}</th>
+                      <th className="px-3 py-2 text-end font-medium">{tr("editor.size")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -399,7 +400,7 @@ export function WebsiteDialog({
                       <tr key={f.path} className="border-t border-neutral-100">
                         <td className="px-3 py-1.5 font-mono text-xs text-neutral-800">{f.path}</td>
                         <td className="px-3 py-1.5 text-xs text-neutral-500">{f.contentType.split(";")[0]}</td>
-                        <td className="px-3 py-1.5 text-right text-xs text-neutral-500">{fmtBytes(byteLen(f.body))}</td>
+                        <td className="px-3 py-1.5 text-end text-xs text-neutral-500">{fmtBytes(byteLen(f.body))}</td>
                       </tr>
                     ))}
                   </tbody>

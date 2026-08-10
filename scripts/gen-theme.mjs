@@ -30,6 +30,8 @@ const ROOT_START = "/* THEME:root:start (generated from src/theme.config.mjs - d
 const ROOT_END = "/* THEME:root:end */";
 const DARK_START = "/* THEME:dark:start (generated from src/theme.config.mjs - do not edit by hand) */";
 const DARK_END = "/* THEME:dark:end */";
+const HC_START = "/* THEME:hc:start (generated from src/theme.config.mjs - do not edit by hand) */";
+const HC_END = "/* THEME:hc:end */";
 
 function scaleVars(prefix, scale, indent = "  ") {
   return Object.keys(scale)
@@ -43,6 +45,12 @@ function colorsRegion() {
     scaleVars("brand", theme.brand),
     "",
     scaleVars("accent", theme.accent),
+    "",
+    "",
+    "  /* The app's neutral ramp. Emitted (rather than left to Tailwind's",
+    "     default palette) because steps 400/500 are tuned for WCAG 1.4.3 AA",
+    "     on the chrome backgrounds; see the note in theme.config.mjs. */",
+    scaleVars("neutral", theme.neutral),
     "",
     "  /* Semantic chrome surfaces (dark mode swaps these; see THEME:dark). */",
     "  --color-page: #ffffff;",
@@ -84,6 +92,47 @@ function darkRegion() {
   ].join("\n");
 }
 
+function hcRegion() {
+  const c = theme.contrast;
+  return [
+    HC_START,
+    "/* High-contrast chrome (F38 FR-4): the `hc` class strengthens the tokens the",
+    "   dark region swaps, on both the light and dark chrome. Design content is",
+    "   never restyled: the `.light` escape hatch re-declares these tokens on a",
+    "   nearer ancestor, so document surfaces win inside their own subtrees. */",
+    ".hc {",
+    `  --color-brand-ink: ${c.light.brandInk};`,
+    "",
+    scaleVars("neutral", c.light.neutral),
+    "}",
+    "",
+    ".hc.dark {",
+    `  --color-page: ${c.dark.page};`,
+    `  --color-surface: ${c.dark.surface};`,
+    `  --color-brand-ink: ${c.dark.brandInk};`,
+    "",
+    scaleVars("neutral", c.dark.neutral),
+    "}",
+    "",
+    "/* A focus indicator that cannot be missed: neutral-900 is near-black on the",
+    "   light chrome and white on the dark one, so the ring is always extreme. */",
+    ".hc :focus-visible {",
+    "  outline: 2px solid var(--color-neutral-900);",
+    "  outline-offset: 2px;",
+    "}",
+    "",
+    "/* Windows/forced-colors high contrast: the system repaints colors itself;",
+    "   the app's job is to never suppress the focus indicator it relies on. */",
+    "@media (forced-colors: active) {",
+    "  :focus-visible {",
+    "    outline: 2px solid ButtonText;",
+    "    outline-offset: 2px;",
+    "  }",
+    "}",
+    HC_END,
+  ].join("\n");
+}
+
 function rootRegion() {
   const g = theme.gradient;
   const o = theme.overlay;
@@ -117,6 +166,7 @@ function nextGlobals(current) {
   let out = replaceRegion(current, COLORS_START, COLORS_END, colorsRegion(), "colors");
   out = replaceRegion(out, ROOT_START, ROOT_END, rootRegion(), "root");
   out = replaceRegion(out, DARK_START, DARK_END, darkRegion(), "dark");
+  out = replaceRegion(out, HC_START, HC_END, hcRegion(), "hc");
   return out;
 }
 

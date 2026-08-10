@@ -6,13 +6,15 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/router";
 import QRCode from "qrcode";
-import { Bell, BellRing, Check, ChevronLeft, Copy, Download, KeyRound, LogOut, Moon, MonitorSmartphone, ShieldCheck, Sun, Trash2, User as UserIcon } from "lucide-react";
+import { Bell, BellRing, Check, ChevronLeft, Contrast, Copy, Download, Gauge, KeyRound, LogOut, Moon, MonitorSmartphone, ShieldCheck, Sun, Trash2, User as UserIcon } from "lucide-react";
 import { ApiError, type MfaEnrollment, type NotificationType, type SessionInfo, type TimeFormat, type WeekStart } from "@hc/sdk";
 import { oc, ssoLinkUrl } from "@/lib/sdk";
 import { browserTimezone } from "@/lib/datetime";
-import { getThemePreference, setThemePreference, type ThemePreference } from "@/lib/theme";
+import { getContrastPreference, getMotionPreference, getThemePreference, setContrastPreference, setMotionPreference, setThemePreference, type ContrastPreference, type MotionPreference, type ThemePreference } from "@/lib/theme";
 import { disablePush, enablePush, getPushState, type PushState } from "@/lib/push";
 import { useAuth } from "@/store/auth";
+import { MIRROR_IN_RTL, setLocalePreference, getLocalePreference } from "@/lib/locale";
+import { loadCatalog } from "@/lib/i18n";
 import { useToast } from "@/components/ui/Toast";
 import { FullScreenLoader } from "@/components/ui/BrandLoader";
 import { Logo } from "@/components/ui/Logo";
@@ -20,19 +22,25 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { settingsPath, type SettingsTab } from "./tabs";
+import { tr } from "@/lib/i18n";
+import { apiCodeMessage, CodedError, userMessage } from "@/lib/errors";
 
 type Tab = SettingsTab;
 type Step = "idle" | "enrolling" | "codes";
 
-const TABS: { id: Tab; label: string; icon: typeof UserIcon }[] = [
-  { id: "account", label: "Account", icon: UserIcon },
-  { id: "security", label: "Security", icon: ShieldCheck },
-  { id: "notifications", label: "Notifications", icon: Bell },
+// Built on call, not held as a module constant: a `tr()` at module scope is
+// evaluated once at import, before any catalog has loaded, and would stay
+// English whatever language the user picks.
+const tabs = (): { id: Tab; label: string; icon: typeof UserIcon }[] => [
+  { id: "account", label: tr("settings.account"), icon: UserIcon },
+  { id: "security", label: tr("settings.security"), icon: ShieldCheck },
+  { id: "notifications", label: tr("settings.notifications"), icon: Bell },
 ];
 
 // A small, friendly set of UI languages. The user's current locale is added if
 // it is not already listed, so the select always reflects their value.
-const LOCALES: { value: string; label: string }[] = [
+// i18n-ignore: a language picker shows each language in its OWN name.
+const locales = (): { value: string; label: string }[] => [
   { value: "en-US", label: "English (US)" },
   { value: "en-GB", label: "English (UK)" },
   { value: "es-ES", label: "Español" },
@@ -45,20 +53,22 @@ const LOCALES: { value: string; label: string }[] = [
 ];
 
 // Clock and week-start preferences. "auto" defers to the chosen language.
-const TIME_FORMATS: { value: TimeFormat; label: string }[] = [
-  { value: "auto", label: "Automatic (match language)" },
-  { value: "12h", label: "12-hour (1:30 PM)" },
-  { value: "24h", label: "24-hour (13:30)" },
+// Functions rather than constants, for the reason given above `tabs`.
+const timeFormats = (): { value: TimeFormat; label: string }[] => [
+  { value: "auto", label: tr("settings.automatic_match_language") },
+  { value: "12h", label: tr("settings.12_hour_clock") },
+  { value: "24h", label: tr("settings.24_hour_clock") },
 ];
-const WEEK_STARTS: { value: WeekStart; label: string }[] = [
-  { value: "auto", label: "Automatic (match language)" },
-  { value: "sunday", label: "Sunday" },
-  { value: "monday", label: "Monday" },
+const weekStarts = (): { value: WeekStart; label: string }[] => [
+  { value: "auto", label: tr("settings.automatic_match_language") },
+  { value: "sunday", label: tr("settings.sunday") },
+  { value: "monday", label: tr("settings.monday") },
 ];
 
 // The full IANA zone list from the platform when available (all modern engines),
 // with a small fallback for older ones. "" is offered separately as "Automatic".
-const TIMEZONE_FALLBACK = [
+// i18n-ignore: IANA zone ids are data passed to Intl, never labels.
+const timezoneFallback = () => [
   "UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
   "America/Sao_Paulo", "Europe/London", "Europe/Paris", "Europe/Berlin", "Europe/Moscow",
   "Africa/Johannesburg", "Asia/Dubai", "Asia/Kolkata", "Asia/Singapore", "Asia/Shanghai",
@@ -72,16 +82,16 @@ function timezoneList(): string[] {
   } catch {
     /* fall through to the curated list */
   }
-  return TIMEZONE_FALLBACK;
+  return timezoneFallback();
 }
 
-const NOTIFICATION_PREF_TYPES: { type: NotificationType; label: string }[] = [
-  { type: "mention", label: "Mentions" },
-  { type: "reply", label: "Replies to my comments" },
-  { type: "task_assign", label: "Task assignments" },
-  { type: "share", label: "Shared with me" },
-  { type: "approval_request", label: "Approval requests" },
-  { type: "approval_decision", label: "Approval decisions" },
+const notificationPrefTypes = (): { type: NotificationType; label: string }[] => [
+  { type: "mention", label: tr("settings.mentions") },
+  { type: "reply", label: tr("settings.replies_to_my_comments") },
+  { type: "task_assign", label: tr("settings.task_assignments") },
+  { type: "share", label: tr("settings.shared_with_me") },
+  { type: "approval_request", label: tr("settings.approval_requests") },
+  { type: "approval_decision", label: tr("settings.approval_decisions") },
 ];
 
 function exportFilename(email: string | undefined): string {
@@ -91,9 +101,10 @@ function exportFilename(email: string | undefined): string {
 }
 
 function errMessage(e: unknown, fallback: string): string {
+  if (e instanceof CodedError) return userMessage(e, fallback);
   if (e instanceof ApiError) {
     const body = e.body as { detail?: string; message?: string } | undefined;
-    return body?.detail ?? body?.message ?? fallback;
+    return apiCodeMessage(body) ?? body?.detail ?? body?.message ?? fallback;
   }
   return fallback;
 }
@@ -125,7 +136,12 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
 
   // Profile form.
   const [name, setName] = useState(user?.name ?? "");
-  const [locale, setLocale] = useState(user?.locale ?? "en-US");
+  // Seeded from the DEVICE preference first: picking a language remounts the
+  // app (the tree is keyed on the catalog version), which resets this form.
+  // Without this, the dropdown snapped back to the account value after the
+  // remount and "Save changes" then silently wrote the OLD language over the
+  // one the user had just picked.
+  const [locale, setLocale] = useState(getLocalePreference() ?? user?.locale ?? "en-US");
   // The default timezone comes from the browser when the account has none stored.
   const defaultTimezone = user?.timezone || browserTimezone();
   const [timezone, setTimezone] = useState(defaultTimezone);
@@ -133,8 +149,8 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
   const [weekStart, setWeekStart] = useState<WeekStart>(user?.weekStart ?? "auto");
   const [savingProfile, setSavingProfile] = useState(false);
   const localeOptions = useMemo(() => {
-    if (!locale || LOCALES.some((l) => l.value === locale)) return LOCALES;
-    return [{ value: locale, label: locale }, ...LOCALES];
+    if (!locale || locales().some((l) => l.value === locale)) return locales();
+    return [{ value: locale, label: locale }, ...locales()];
   }, [locale]);
   const timezoneOptions = useMemo(() => {
     const zones = timezoneList();
@@ -231,8 +247,8 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
     const result = router.query.sso;
     if (result !== "connected" && result !== "error") return;
     ssoHandledRef.current = true;
-    if (result === "connected") toast.success("Single sign-on connected.");
-    else toast.error("Couldn't connect single sign-on. Please try again.");
+    if (result === "connected") toast.success(tr("settings.single_sign_on_connected"));
+    else toast.error(tr("settings.couldnt_connect_single_sign_on_please_try_ag"));
     void router.replace(settingsPath("security"));
   }, [router, toast]);
 
@@ -252,9 +268,9 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
     try {
       const updated = await oc.updateProfile({ name: name.trim(), locale, timezone, timeFormat, weekStart });
       setUser(updated);
-      toast.success("Profile updated.");
+      toast.success(tr("settings.profile_updated"));
     } catch (e) {
-      toast.error(errMessage(e, "Couldn't update your profile."));
+      toast.error(errMessage(e, tr("settings.couldnt_update_your_profile")));
     } finally {
       setSavingProfile(false);
     }
@@ -283,10 +299,10 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
     try {
       await oc.disconnectOidc();
       setSso((s) => (s ? { ...s, linked: false } : s));
-      toast.success("Single sign-on disconnected.");
+      toast.success(tr("settings.single_sign_on_disconnected"));
     } catch (e) {
       // 409 when SSO is the only sign-in method; the API detail explains it.
-      toast.error(errMessage(e, "Couldn't disconnect single sign-on."));
+      toast.error(errMessage(e, tr("settings.couldnt_disconnect_single_sign_on")));
     } finally {
       setSsoBusy(false);
     }
@@ -305,7 +321,7 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
       const saved = await oc.setNotificationPrefs({ emailTypes: next });
       setEmailTypes(saved.emailTypes);
     } catch {
-      toast.error("Couldn't save notification preferences.");
+      toast.error(tr("settings.couldnt_save_notification_preferences"));
       reloadPrefs();
     } finally {
       setSavingPrefs(false);
@@ -321,7 +337,7 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
       const saved = await oc.setNotificationPrefs({ pushTypes: next });
       setPushTypes(saved.pushTypes);
     } catch {
-      toast.error("Couldn't save notification preferences.");
+      toast.error(tr("settings.couldnt_save_notification_preferences"));
       reloadPrefs();
     } finally {
       setSavingPrefs(false);
@@ -333,12 +349,12 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
     try {
       const next = pushState === "subscribed" ? await disablePush() : await enablePush();
       setPushState(next);
-      if (next === "denied") toast.error("Notifications are blocked. Allow them in your browser settings.");
-      else if (next === "unsupported") toast.error("This browser does not support push notifications.");
-      else if (next === "unconfigured") toast.error("Push notifications are not available on this server.");
-      else if (next === "subscribed") toast.success("Push notifications enabled on this device.");
+      if (next === "denied") toast.error(tr("settings.notifications_are_blocked_allow_them_in_your"));
+      else if (next === "unsupported") toast.error(tr("settings.this_browser_does_not_support_push_notificat"));
+      else if (next === "unconfigured") toast.error(tr("settings.push_notifications_are_not_available_on_this"));
+      else if (next === "subscribed") toast.success(tr("settings.push_notifications_enabled_on_this_device"));
     } catch {
-      toast.error("Couldn't update push notifications.");
+      toast.error(tr("settings.couldnt_update_push_notifications"));
       void getPushState().then(setPushState).catch(() => undefined);
     } finally {
       setTogglingPush(false);
@@ -353,7 +369,7 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
       setEnrollment(e);
       setStep("enrolling");
     } catch (e) {
-      setError(errMessage(e, "Couldn't start setup. Please try again."));
+      setError(errMessage(e, tr("settings.couldnt_start_setup_please_try_again")));
     } finally {
       setBusy(false);
     }
@@ -368,7 +384,7 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
       setStep("codes");
       await bootstrap();
     } catch (e) {
-      setError(errMessage(e, "That code wasn't valid. Try again."));
+      setError(errMessage(e, tr("settings.that_code_wasnt_valid_try_again")));
     } finally {
       setBusy(false);
     }
@@ -379,11 +395,11 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
     setError(null);
     try {
       await oc.disableMfa(disableCode.trim());
-      toast.success("Two-step verification turned off.");
+      toast.success(tr("settings.two_step_verification_turned_off"));
       setDisableCode("");
       await bootstrap();
     } catch (e) {
-      setError(errMessage(e, "That code wasn't valid. Try again."));
+      setError(errMessage(e, tr("settings.that_code_wasnt_valid_try_again")));
     } finally {
       setBusy(false);
     }
@@ -391,7 +407,7 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
 
   function copyCodes() {
     void navigator.clipboard?.writeText(recoveryCodes.join("\n"));
-    toast.success("Recovery codes copied.");
+    toast.success(tr("settings.recovery_codes_copied"));
   }
 
   async function downloadData() {
@@ -407,9 +423,9 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      toast.success("Your data export has started downloading.");
+      toast.success(tr("settings.your_data_export_has_started_downloading"));
     } catch (e) {
-      toast.error(errMessage(e, "Couldn't export your data. Please try again."));
+      toast.error(errMessage(e, tr("settings.couldnt_export_your_data_please_try_again")));
     } finally {
       setExporting(false);
     }
@@ -422,7 +438,7 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
       await deleteAccount({ password: deletePassword, code: enabled ? deleteCode.trim() || undefined : undefined });
       await router.replace("/");
     } catch (e) {
-      setDeleteError(errMessage(e, "Couldn't delete the account. Check your credentials."));
+      setDeleteError(errMessage(e, tr("settings.couldnt_delete_the_account_check_your_creden")));
       setDeleting(false);
     }
   }
@@ -434,17 +450,19 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
   return (
     <div className="min-h-screen bg-neutral-50">
       <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-neutral-200 bg-surface/90 px-4 py-2.5 backdrop-blur">
-        <button onClick={() => void router.push("/dashboard")} aria-label="Back to dashboard" className="grid h-8 w-8 place-items-center rounded-lg text-neutral-500 hover:bg-neutral-100">
-          <ChevronLeft size={20} />
+        <button onClick={() => void router.push("/dashboard")} aria-label={tr("settings.back_to_dashboard")} className="grid h-8 w-8 place-items-center rounded-lg text-neutral-500 hover:bg-neutral-100">
+          <ChevronLeft size={20} className={MIRROR_IN_RTL} />
         </button>
         <Logo size={26} />
-        <span className="text-sm font-semibold text-neutral-800">Settings</span>
+        {/* The page's level-one heading. It is the visible title too, so
+            heading navigation and the visual hierarchy agree. */}
+        <h1 className="text-sm font-semibold text-neutral-800">{tr("settings.settings")}</h1>
       </header>
 
       <div className="mx-auto grid max-w-4xl gap-8 px-6 py-10 md:grid-cols-[12rem_1fr]">
         {/* Sub-nav */}
         <nav className="flex gap-1 md:flex-col">
-          {TABS.map((t) => (
+          {tabs().map((t) => (
             <button
               key={t.id}
               onClick={() => gotoTab(t.id)}
@@ -457,10 +475,10 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
         </nav>
 
         {/* Content */}
-        <div className="min-w-0 space-y-6">
+        <main className="min-w-0 space-y-6">
           {tab === "account" && (
             <>
-              <Card title="Profile" description="Your name, language, and regional preferences across HyCanvas.">
+              <Card title={tr("settings.profile")} description={tr("settings.your_name_language_and_regional_preferences")}>
                 <div className="flex items-center gap-4">
                   {user.avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element -- user-provided avatar URL
@@ -476,12 +494,21 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
                   </div>
                 </div>
                 <div className="mt-5 flex flex-col gap-4">
-                  <Input label="Display name" value={name} onChange={(e) => setName(e.target.value)} />
+                  <Input label={tr("settings.display_name")} value={name} onChange={(e) => setName(e.target.value)} />
                   <label className="flex flex-col gap-1.5 text-sm font-medium text-neutral-700">
-                    Language
+                    {tr("settings.language")}
                     <select
                       value={locale}
-                      onChange={(e) => setLocale(e.target.value)}
+                      onChange={(e) => {
+                        setLocale(e.target.value);
+                        // Apply immediately: the point of picking a language is
+                        // seeing it. The account still saves on "Save changes";
+                        // until then this is the device preference, and if the
+                        // user leaves without saving, the account value wins
+                        // again on the next load.
+                        setLocalePreference(e.target.value);
+                        void loadCatalog(e.target.value);
+                      }}
                       className="h-11 rounded-xl border border-neutral-200 bg-surface px-3 text-sm text-neutral-800 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                     >
                       {localeOptions.map((l) => (
@@ -490,7 +517,7 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
                     </select>
                   </label>
                   <label className="flex flex-col gap-1.5 text-sm font-medium text-neutral-700">
-                    Timezone
+                    {tr("settings.timezone")}
                     <select
                       value={timezone}
                       onChange={(e) => setTimezone(e.target.value)}
@@ -506,25 +533,25 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
                   </label>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <label className="flex flex-col gap-1.5 text-sm font-medium text-neutral-700">
-                      Time format
+                      {tr("settings.time_format")}
                       <select
                         value={timeFormat}
                         onChange={(e) => setTimeFormat(e.target.value as TimeFormat)}
                         className="h-11 rounded-xl border border-neutral-200 bg-surface px-3 text-sm text-neutral-800 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                       >
-                        {TIME_FORMATS.map((t) => (
+                        {timeFormats().map((t) => (
                           <option key={t.value} value={t.value}>{t.label}</option>
                         ))}
                       </select>
                     </label>
                     <label className="flex flex-col gap-1.5 text-sm font-medium text-neutral-700">
-                      Week starts on
+                      {tr("settings.week_starts_on")}
                       <select
                         value={weekStart}
                         onChange={(e) => setWeekStart(e.target.value as WeekStart)}
                         className="h-11 rounded-xl border border-neutral-200 bg-surface px-3 text-sm text-neutral-800 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                       >
-                        {WEEK_STARTS.map((w) => (
+                        {weekStarts().map((w) => (
                           <option key={w.value} value={w.value}>{w.label}</option>
                         ))}
                       </select>
@@ -532,23 +559,27 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
                   </div>
                   <div className="flex justify-end border-t border-neutral-100 pt-4">
                     <Button disabled={savingProfile || !profileDirty || !name.trim()} onClick={() => void saveProfile()}>
-                      {savingProfile ? "Saving…" : "Save changes"}
+                      {savingProfile ? tr("settings.saving") : tr("settings.save_changes")}
                     </Button>
                   </div>
                 </div>
               </Card>
 
-              <Card title="Appearance" description="How the HyCanvas interface looks on this device. Your designs are never restyled.">
-                <ThemePicker />
+              <Card title={tr("settings.appearance")} description={tr("settings.how_the_hycanvas_interface_looks_on_this_dev")}>
+                <div className="space-y-5">
+                  <ThemePicker />
+                  <ContrastPicker />
+                  <MotionPicker />
+                </div>
               </Card>
 
-              <Card title="Your data" description="Download everything in your account, or permanently delete it.">
+              <Card title={tr("settings.your_data")} description={tr("settings.download_everything_in_your_account_or_perma")}>
                 <div className="flex flex-wrap items-center gap-2">
                   <Button variant="secondary" disabled={exporting} onClick={() => void downloadData()}>
-                    <Download size={16} /> {exporting ? "Preparing…" : "Download my data"}
+                    <Download size={16} /> {exporting ? tr("settings.preparing") : tr("settings.download_my_data")}
                   </Button>
                   <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
-                    <Trash2 size={16} /> Delete account
+                    <Trash2 size={16} /> {tr("settings.delete_account")}
                   </Button>
                 </div>
               </Card>
@@ -557,105 +588,105 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
 
           {tab === "security" && (
             <>
-              <Card title="Two-step verification" description="Add a code from your authenticator app each time you sign in.">
+              <Card title={tr("settings.two_step_verification")} description={tr("settings.add_a_code_from_your_authenticator_app_each")}>
                 <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${enabled ? "bg-green-50 text-green-700" : "bg-neutral-100 text-neutral-500"}`}>
-                  <ShieldCheck size={13} /> {enabled ? "On" : "Off"}
+                  <ShieldCheck size={13} /> {enabled ? tr("settings.on") : tr("settings.off")}
                 </span>
 
                 {error && <div role="alert" className="mt-4 rounded-xl bg-red-50 px-3.5 py-2.5 text-sm text-red-700">{error}</div>}
 
                 {enabled && step !== "codes" && (
                   <div className="mt-4 flex max-w-sm flex-col gap-3">
-                    <Input label="Enter a code to turn it off" placeholder="123456 or a recovery code" value={disableCode} onChange={(e) => setDisableCode(e.target.value)} autoComplete="one-time-code" />
+                    <Input label={tr("settings.enter_a_code_to_turn_it_off")} placeholder={tr("settings.123456_or_a_recovery_code")} value={disableCode} onChange={(e) => setDisableCode(e.target.value)} autoComplete="one-time-code" />
                     <div>
-                      <Button variant="danger" disabled={busy || !disableCode} onClick={() => void disable()}>{busy ? "Working…" : "Turn off"}</Button>
+                      <Button variant="danger" disabled={busy || !disableCode} onClick={() => void disable()}>{busy ? tr("settings.working") : tr("settings.turn_off")}</Button>
                     </div>
                   </div>
                 )}
 
                 {!enabled && step === "idle" && (
                   <div className="mt-4">
-                    <Button disabled={busy} onClick={() => void startEnroll()}>{busy ? "Starting…" : "Set up two-step verification"}</Button>
+                    <Button disabled={busy} onClick={() => void startEnroll()}>{busy ? tr("settings.starting") : tr("settings.set_up_two_step_verification")}</Button>
                   </div>
                 )}
 
                 {!enabled && step === "enrolling" && enrollment && (
                   <div className="mt-4 flex max-w-md flex-col gap-4">
-                    <p className="text-sm text-neutral-600">Scan this with your authenticator app, then enter the 6-digit code it shows.</p>
+                    <p className="text-sm text-neutral-600">{tr("settings.scan_this_with_your_authenticator_app_then_e")}</p>
                     <div className="flex items-center gap-4">
                       {qrDataUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element -- data URL, no remote asset
-                        <img src={qrDataUrl} alt="Authenticator QR code" className="h-40 w-40 rounded-lg border border-neutral-200" />
+                        <img src={qrDataUrl} alt={tr("settings.authenticator_qr_code")} className="h-40 w-40 rounded-lg border border-neutral-200" />
                       ) : (
-                        <div className="grid h-40 w-40 place-items-center rounded-lg border border-neutral-200 text-xs text-neutral-400">Generating…</div>
+                        <div className="grid h-40 w-40 place-items-center rounded-lg border border-neutral-200 text-xs text-neutral-400">{tr("settings.generating")}</div>
                       )}
                       <div className="min-w-0">
-                        <p className="text-xs font-medium text-neutral-500">Or enter this key manually</p>
+                        <p className="text-xs font-medium text-neutral-500">{tr("settings.or_enter_this_key_manually")}</p>
                         <code className="mt-1 block break-all rounded-lg bg-neutral-50 px-2 py-1.5 text-xs text-neutral-800">{enrollment.secret}</code>
                       </div>
                     </div>
-                    <Input label="Code from your app" placeholder="123456" inputMode="numeric" value={code} onChange={(e) => setCode(e.target.value)} autoComplete="one-time-code" autoFocus />
+                    <Input label={tr("settings.code_from_your_app")} placeholder="123456" inputMode="numeric" value={code} onChange={(e) => setCode(e.target.value)} autoComplete="one-time-code" autoFocus />
                     <div className="flex gap-2">
-                      <Button variant="ghost" onClick={resetMfaFlow}>Cancel</Button>
-                      <Button disabled={busy || !code} onClick={() => void confirmEnroll()}>{busy ? "Verifying…" : "Verify"}</Button>
+                      <Button variant="ghost" onClick={resetMfaFlow}>{tr("settings.cancel")}</Button>
+                      <Button disabled={busy || !code} onClick={() => void confirmEnroll()}>{busy ? tr("settings.verifying") : tr("settings.verify")}</Button>
                     </div>
                   </div>
                 )}
 
                 {step === "codes" && (
                   <div className="mt-4 flex max-w-md flex-col gap-3">
-                    <p className="text-sm text-neutral-600">Save these recovery codes somewhere safe. Each one works once if you lose your authenticator. They will not be shown again.</p>
+                    <p className="text-sm text-neutral-600">{tr("settings.save_these_recovery_codes_somewhere_safe_eac")}</p>
                     <ul className="grid grid-cols-2 gap-1.5 rounded-xl bg-neutral-50 p-3 font-mono text-sm text-neutral-800">
                       {recoveryCodes.map((c) => <li key={c}>{c}</li>)}
                     </ul>
-                    <button type="button" onClick={copyCodes} className="inline-flex items-center gap-1.5 self-start text-sm font-medium text-brand-ink hover:underline"><Copy size={14} /> Copy codes</button>
+                    <button type="button" onClick={copyCodes} className="inline-flex items-center gap-1.5 self-start text-sm font-medium text-brand-ink hover:underline"><Copy size={14} /> {tr("settings.copy_codes")}</button>
                     <label className="flex items-start gap-2 text-sm text-neutral-700">
                       <input type="checkbox" checked={acknowledged} onChange={(e) => setAcknowledged(e.target.checked)} className="mt-0.5" />
-                      I have saved these recovery codes.
+                      {tr("settings.i_have_saved_these_recovery_codes")}
                     </label>
                     <div>
-                      <Button disabled={!acknowledged} onClick={resetMfaFlow}><Check size={16} /> Done</Button>
+                      <Button disabled={!acknowledged} onClick={resetMfaFlow}><Check size={16} /> {tr("settings.done")}</Button>
                     </div>
                   </div>
                 )}
               </Card>
 
               {sso?.configured && step !== "enrolling" && step !== "codes" && (
-                <Card title="Single sign-on" description="Sign in with your organization's identity provider.">
+                <Card title={tr("settings.single_sign_on")} description={tr("settings.sign_in_with_your_organizations_identity_pro")}>
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${sso.linked ? "bg-green-50 text-green-700" : "bg-neutral-100 text-neutral-500"}`}>
-                      <KeyRound size={13} /> {sso.linked ? "Connected" : "Not connected"}
+                      <KeyRound size={13} /> {sso.linked ? tr("settings.connected") : tr("settings.not_connected")}
                     </span>
                     {sso.linked ? (
-                      <Button variant="ghost" disabled={ssoBusy} onClick={() => void disconnectSso()}>{ssoBusy ? "Working…" : "Disconnect"}</Button>
+                      <Button variant="ghost" disabled={ssoBusy} onClick={() => void disconnectSso()}>{ssoBusy ? tr("settings.working") : tr("settings.disconnect")}</Button>
                     ) : (
-                      <Button onClick={connectSso}>Connect</Button>
+                      <Button onClick={connectSso}>{tr("settings.connect")}</Button>
                     )}
                   </div>
                   {sso.linked && (
-                    <p className="mt-3 text-xs text-neutral-500">Keep a password on your account so you are not locked out if SSO becomes unavailable.</p>
+                    <p className="mt-3 text-xs text-neutral-500">{tr("settings.keep_a_password_on_your_account_so_you_are_n")}</p>
                   )}
                 </Card>
               )}
 
               {step !== "enrolling" && step !== "codes" && (
-                <Card title="Active sessions" description="Devices currently signed in to your account.">
+                <Card title={tr("settings.active_sessions")} description={tr("settings.devices_currently_signed_in_to_your_account")}>
                   {sessions === null ? (
-                    <p className="text-xs text-neutral-400">Loading…</p>
+                    <p className="text-xs text-neutral-400">{tr("settings.loading")}</p>
                   ) : sessions.length === 0 ? (
-                    <p className="text-xs text-neutral-400">No other active sessions.</p>
+                    <p className="text-xs text-neutral-400">{tr("settings.no_other_active_sessions")}</p>
                   ) : (
                     <ul className="flex flex-col gap-2">
                       {sessions.map((s) => (
                         <li key={s.id} className="flex items-center justify-between gap-3 rounded-lg bg-neutral-50 px-3 py-2 text-sm">
-                          <span className="min-w-0 truncate text-neutral-700">{s.device || "Unknown device"}{s.ip ? ` · ${s.ip}` : ""}</span>
+                          <span className="min-w-0 truncate text-neutral-700">{s.device || tr("settings.unknown_device")}{s.ip ? ` · ${s.ip}` : ""}</span>
                           <span className="shrink-0 text-xs text-neutral-400">{new Date(s.lastSeenAt).toLocaleDateString()}</span>
                         </li>
                       ))}
                     </ul>
                   )}
                   <div className="mt-4 border-t border-neutral-100 pt-4">
-                    <Button variant="ghost" disabled={signingOutAll} onClick={() => void signOutEverywhere()}><LogOut size={16} /> {signingOutAll ? "Signing out…" : "Sign out everywhere"}</Button>
+                    <Button variant="ghost" disabled={signingOutAll} onClick={() => void signOutEverywhere()}><LogOut size={16} /> {signingOutAll ? tr("settings.signing_out") : tr("settings.sign_out_everywhere")}</Button>
                   </div>
                 </Card>
               )}
@@ -663,33 +694,33 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
           )}
 
           {tab === "notifications" && (
-            <Card title="Notifications" description="In-app notifications are always on. Choose what also emails or pushes to you.">
+            <Card title={tr("settings.notifications")} description={tr("settings.in_app_notifications_are_always_on_choose_wh")}>
               <div className="flex items-start gap-3 rounded-xl bg-neutral-50 p-3">
                 <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-ink"><BellRing size={16} /></span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-neutral-800">Push on this device</p>
+                  <p className="text-sm font-medium text-neutral-800">{tr("settings.push_on_this_device")}</p>
                   <p className="mt-0.5 text-xs text-neutral-500">
-                    {pushState === null ? "Checking…"
-                      : pushState === "unsupported" ? "This browser does not support push notifications."
-                      : pushState === "unconfigured" ? "Push notifications are not available on this server."
-                      : pushState === "denied" ? "Blocked. Allow notifications in your browser settings."
-                      : pushState === "subscribed" ? "Enabled on this device."
-                      : "Get notified even when HyCanvas is closed."}
+                    {pushState === null ? tr("settings.checking")
+                      : pushState === "unsupported" ? tr("settings.this_browser_does_not_support_push_notificat")
+                      : pushState === "unconfigured" ? tr("settings.push_notifications_are_not_available_on_this")
+                      : pushState === "denied" ? tr("settings.blocked_allow_notifications_in_your_browser")
+                      : pushState === "subscribed" ? tr("settings.enabled_on_this_device")
+                      : tr("settings.get_notified_even_when_hycanvas_is_closed")}
                   </p>
                 </div>
                 {(pushState === "default" || pushState === "subscribed") && (
                   <Button variant={pushState === "subscribed" ? "ghost" : "primary"} disabled={togglingPush} onClick={() => void togglePushDevice()}>
-                    {togglingPush ? "Working…" : pushState === "subscribed" ? "Disable" : "Enable"}
+                    {togglingPush ? tr("settings.working") : pushState === "subscribed" ? tr("settings.disable") : tr("settings.enable")}
                   </Button>
                 )}
               </div>
 
               <div className="mt-5">
                 <div className="grid grid-cols-[1fr_3.5rem_3.5rem] items-center gap-y-3 text-sm">
-                  <span className="text-xs font-medium uppercase tracking-wide text-neutral-400">Notify me about</span>
-                  <span className="justify-self-center text-xs font-medium text-neutral-500">Email</span>
-                  <span className="justify-self-center text-xs font-medium text-neutral-500">Push</span>
-                  {NOTIFICATION_PREF_TYPES.map(({ type, label }) => (
+                  <span className="text-xs font-medium uppercase tracking-wide text-neutral-400">{tr("settings.notify_me_about")}</span>
+                  <span className="justify-self-center text-xs font-medium text-neutral-500">{tr("settings.email")}</span>
+                  <span className="justify-self-center text-xs font-medium text-neutral-500">{tr("settings.push")}</span>
+                  {notificationPrefTypes().map(({ type, label }) => (
                     <Fragment key={type}>
                       <span className="text-neutral-700">{label}</span>
                       <input type="checkbox" aria-label={`Email: ${label}`} className="h-4 w-4 justify-self-center" disabled={emailTypes === null || savingPrefs} checked={!!emailTypes?.includes(type)} onChange={() => void toggleEmailType(type)} />
@@ -700,22 +731,22 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
               </div>
             </Card>
           )}
-        </div>
+        </main>
       </div>
 
       {confirmingDelete && (
-        <Modal open onClose={() => setConfirmingDelete(false)} title="Delete account" width="w-[26rem]">
+        <Modal open onClose={() => setConfirmingDelete(false)} title={tr("settings.delete_account")} width="w-[26rem]">
           <p className="text-sm text-neutral-600">
             This permanently deletes your account and any workspaces only you belong to, including their designs.
             Workspaces you share with others stay, and you are removed from them. This cannot be undone.
           </p>
           {deleteError && <div role="alert" className="mt-4 rounded-xl bg-red-50 px-3.5 py-2.5 text-sm text-red-700">{deleteError}</div>}
           <div className="mt-4 flex flex-col gap-3">
-            <Input label="Confirm your password" type="password" value={deletePassword} onChange={(e) => setDeletePassword(e.target.value)} autoComplete="current-password" autoFocus />
-            {enabled && <Input label="Authentication code" placeholder="123456 or a recovery code" value={deleteCode} onChange={(e) => setDeleteCode(e.target.value)} autoComplete="one-time-code" />}
+            <Input label={tr("settings.confirm_your_password")} type="password" value={deletePassword} onChange={(e) => setDeletePassword(e.target.value)} autoComplete="current-password" autoFocus />
+            {enabled && <Input label={tr("settings.authentication_code")} placeholder={tr("settings.123456_or_a_recovery_code")} value={deleteCode} onChange={(e) => setDeleteCode(e.target.value)} autoComplete="one-time-code" />}
             <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setConfirmingDelete(false)}>Cancel</Button>
-              <Button variant="danger" disabled={deleting || !deletePassword || (enabled && !deleteCode)} onClick={() => void confirmDelete()}>{deleting ? "Deleting…" : "Delete account"}</Button>
+              <Button variant="ghost" onClick={() => setConfirmingDelete(false)}>{tr("settings.cancel")}</Button>
+              <Button variant="danger" disabled={deleting || !deletePassword || (enabled && !deleteCode)} onClick={() => void confirmDelete()}>{deleting ? tr("settings.deleting") : tr("settings.delete_account")}</Button>
             </div>
           </div>
         </Modal>
@@ -729,12 +760,12 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
 function ThemePicker() {
   const [pref, setPref] = useState<ThemePreference>(() => getThemePreference());
   const options: { value: ThemePreference; label: string; icon: typeof Sun; hint: string }[] = [
-    { value: "system", label: "System", icon: MonitorSmartphone, hint: "Follow this device" },
-    { value: "light", label: "Light", icon: Sun, hint: "Always light" },
-    { value: "dark", label: "Dark", icon: Moon, hint: "Always dark" },
+    { value: "system", label: tr("settings.system"), icon: MonitorSmartphone, hint: tr("settings.follow_this_device") },
+    { value: "light", label: tr("settings.light"), icon: Sun, hint: tr("settings.always_light") },
+    { value: "dark", label: tr("settings.dark"), icon: Moon, hint: tr("settings.always_dark") },
   ];
   return (
-    <div role="radiogroup" aria-label="Interface theme" className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+    <div role="radiogroup" aria-label={tr("settings.interface_theme")} className="grid grid-cols-1 gap-2 sm:grid-cols-3">
       {options.map((o) => {
         const active = pref === o.value;
         return (
@@ -747,7 +778,7 @@ function ThemePicker() {
               setPref(o.value);
               setThemePreference(o.value);
             }}
-            className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm transition ${
+            className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-start text-sm transition ${
               active
                 ? "border-brand-500 bg-brand-50 text-brand-ink ring-1 ring-brand-200"
                 : "border-neutral-200 text-neutral-700 hover:border-neutral-300 hover:bg-neutral-50"
@@ -761,6 +792,99 @@ function ThemePicker() {
           </button>
         );
       })}
+    </div>
+  );
+}
+
+// Contrast: normal / high / follow-the-OS (F38 FR-4), the second appearance
+// axis. High contrast strengthens chrome text, borders, and focus indicators
+// via the generated `.hc` token overrides; design content is never restyled.
+function ContrastPicker() {
+  const [pref, setPref] = useState<ContrastPreference>(() => getContrastPreference());
+  const options: { value: ContrastPreference; label: string; hint: string }[] = [
+    { value: "system", label: tr("settings.system"), hint: tr("settings.follow_this_device") },
+    { value: "normal", label: tr("settings.normal_contrast"), hint: tr("settings.the_standard_look") },
+    { value: "high", label: tr("settings.high_contrast"), hint: tr("settings.stronger_text_borders_and_focus") },
+  ];
+  return (
+    <div>
+      <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-neutral-500">
+        <Contrast size={13} /> {tr("settings.contrast")}
+      </div>
+      <div role="radiogroup" aria-label={tr("settings.contrast")} className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        {options.map((o) => {
+          const active = pref === o.value;
+          return (
+            <button
+              key={o.value}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => {
+                setPref(o.value);
+                setContrastPreference(o.value);
+              }}
+              className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-start text-sm transition ${
+                active
+                  ? "border-brand-500 bg-brand-50 text-brand-ink ring-1 ring-brand-200"
+                  : "border-neutral-200 text-neutral-700 hover:border-neutral-300 hover:bg-neutral-50"
+              }`}
+            >
+              <span className="min-w-0">
+                <span className="block font-medium">{o.label}</span>
+                <span className={`block text-xs ${active ? "text-brand-ink/80" : "text-neutral-500"}`}>{o.hint}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Motion: skip or keep nonessential animation (F38 FR-4), the third
+// appearance axis. "System" follows the OS reduce-motion setting; "Reduced"
+// forces the damping on; "Full" keeps animation even when the OS asks to
+// reduce. Present mode and the deck export planner read the same resolution.
+function MotionPicker() {
+  const [pref, setPref] = useState<MotionPreference>(() => getMotionPreference());
+  const options: { value: MotionPreference; label: string; hint: string }[] = [
+    { value: "system", label: tr("settings.system"), hint: tr("settings.follow_this_device") },
+    { value: "reduce", label: tr("settings.reduced"), hint: tr("settings.skip_nonessential_animation") },
+    { value: "full", label: tr("settings.full"), hint: tr("settings.always_animate") },
+  ];
+  return (
+    <div>
+      <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-neutral-500">
+        <Gauge size={13} /> {tr("settings.motion")}
+      </div>
+      <div role="radiogroup" aria-label={tr("settings.motion")} className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        {options.map((o) => {
+          const active = pref === o.value;
+          return (
+            <button
+              key={o.value}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => {
+                setPref(o.value);
+                setMotionPreference(o.value);
+              }}
+              className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-start text-sm transition ${
+                active
+                  ? "border-brand-500 bg-brand-50 text-brand-ink ring-1 ring-brand-200"
+                  : "border-neutral-200 text-neutral-700 hover:border-neutral-300 hover:bg-neutral-50"
+              }`}
+            >
+              <span className="min-w-0">
+                <span className="block font-medium">{o.label}</span>
+                <span className={`block text-xs ${active ? "text-brand-ink/80" : "text-neutral-500"}`}>{o.hint}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

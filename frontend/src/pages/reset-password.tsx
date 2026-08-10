@@ -13,6 +13,7 @@ import { CanvasFloor } from "@/components/ui/CanvasFloor";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { tr } from "@/lib/i18n";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -28,11 +29,11 @@ export default function ResetPasswordPage() {
     // The token lives only in the URL; read it at submit time.
     const token = typeof router.query.token === "string" ? router.query.token : "";
     if (!token) {
-      setError("This reset link is invalid or has expired.");
+      setError(tr("page.this_reset_link_is_invalid_or_has_expired"));
       return;
     }
     if (password !== confirm) {
-      setError("Passwords don't match.");
+      setError(tr("page.passwords_dont_match"));
       return;
     }
     setBusy(true);
@@ -41,9 +42,9 @@ export default function ResetPasswordPage() {
       setDone(true);
     } catch (err) {
       if (err instanceof ApiError && err.status === 400) {
-        setError("This reset link is invalid or has expired. Request a new one.");
+        setError(tr("page.this_reset_link_is_invalid_or_has_expired_re"));
       } else {
-        setError("Something went wrong. Please try again.");
+        setError(tr("page.something_went_wrong_please_try_again"));
       }
       setBusy(false);
     }
@@ -52,7 +53,7 @@ export default function ResetPasswordPage() {
   return (
     <>
       <Head>
-        <title>Reset password · HyCanvas</title>
+        <title>{tr("page.reset_password_hycanvas")}</title>
       </Head>
       <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-6">
         <CanvasFloor />
@@ -61,36 +62,36 @@ export default function ResetPasswordPage() {
           {done ? (
             <div className="text-center">
               <CheckCircle2 size={40} className="mx-auto text-emerald-500" />
-              <h1 className="mt-4 text-lg font-bold text-neutral-900">Password updated</h1>
+              <h1 className="mt-4 text-lg font-bold text-neutral-900">{tr("page.password_updated")}</h1>
               <p className="mt-1.5 text-sm text-neutral-500">
-                You can now sign in with your new password.
+                {tr("page.you_can_now_sign_in_with_your_new_password")}
               </p>
               <Button block size="lg" className="mt-6" onClick={() => void router.push("/login")}>
-                Sign in
+                {tr("page.sign_in")}
               </Button>
             </div>
           ) : (
             <>
-              <h1 className="text-lg font-bold text-neutral-900">Choose a new password</h1>
-              <p className="mt-1.5 text-sm text-neutral-500">Enter a new password for your account.</p>
+              <h1 className="text-lg font-bold text-neutral-900">{tr("page.choose_a_new_password")}</h1>
+              <p className="mt-1.5 text-sm text-neutral-500">{tr("page.enter_a_new_password_for_your_account")}</p>
               <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-4">
                 <Input
-                  label="New password"
+                  label={tr("page.new_password")}
                   type="password"
                   required
                   minLength={8}
-                  placeholder="At least 8 characters"
+                  placeholder={tr("page.at_least_8_characters")}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="new-password"
                   autoFocus
                 />
                 <Input
-                  label="Confirm password"
+                  label={tr("page.confirm_password")}
                   type="password"
                   required
                   minLength={8}
-                  placeholder="Re-enter your password"
+                  placeholder={tr("page.re_enter_your_password")}
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
                   autoComplete="new-password"
@@ -101,12 +102,12 @@ export default function ResetPasswordPage() {
                   </div>
                 )}
                 <Button type="submit" size="lg" block disabled={busy}>
-                  {busy ? "Please wait…" : "Update password"}
+                  {busy ? tr("page.please_wait") : tr("page.update_password")}
                 </Button>
               </form>
               <p className="mt-6 text-center text-sm text-neutral-500">
                 <Link href="/login" className="font-semibold text-brand-ink hover:underline">
-                  Back to sign in
+                  {tr("page.back_to_sign_in")}
                 </Link>
               </p>
             </>

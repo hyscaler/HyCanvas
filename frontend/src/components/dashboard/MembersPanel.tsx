@@ -11,19 +11,20 @@ import type { Capability, CustomRoleView, WorkspaceInvitation, WorkspaceMemberVi
 import { oc } from "@/lib/sdk";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
+import { tr } from "@/lib/i18n";
 
 const ROLE_RANK: Record<WorkspaceRole, number> = { viewer: 1, member: 2, admin: 3, owner: 4 };
 const ROLES: WorkspaceRole[] = ["viewer", "member", "admin", "owner"];
-const ROLE_LABEL: Record<WorkspaceRole, string> = { viewer: "Viewer", member: "Member", admin: "Admin", owner: "Owner" };
+const roleLabel = (): Record<WorkspaceRole, string> => ({ viewer: tr("dashboard.viewer"), member: tr("dashboard.member"), admin: tr("dashboard.admin"), owner: tr("dashboard.owner") });
 
 // One-line description of each role, shown under the invite picker so the inviter
 // knows what they're granting.
-const ROLE_DESC: Record<WorkspaceRole, string> = {
-  owner: "Full access, plus workspace settings and deletion.",
-  admin: "Manage members, content, and brand settings.",
-  member: "Create, edit, and share designs.",
-  viewer: "View and comment only.",
-};
+const roleDesc = (): Record<WorkspaceRole, string> => ({
+  owner: tr("dashboard.full_access_plus_workspace_settings_and_dele"),
+  admin: tr("dashboard.manage_members_content_and_brand_settings"),
+  member: tr("dashboard.create_edit_and_share_designs"),
+  viewer: tr("dashboard.view_and_comment_only"),
+});
 
 // Color-coded role chip styling, by authority.
 const ROLE_BADGE: Record<WorkspaceRole, string> = {
@@ -34,15 +35,15 @@ const ROLE_BADGE: Record<WorkspaceRole, string> = {
 };
 
 // Capabilities a custom role can grant, with friendly labels.
-const CAPABILITIES: { id: Capability; label: string }[] = [
-  { id: "view", label: "View" },
-  { id: "comment", label: "Comment" },
-  { id: "edit", label: "Edit" },
-  { id: "share", label: "Share" },
-  { id: "approve", label: "Approve" },
-  { id: "manage-brand", label: "Manage brand" },
-  { id: "manage-roles", label: "Manage roles" },
-  { id: "delete", label: "Delete" },
+const capabilities = (): { id: Capability; label: string }[] => [
+  { id: "view", label: tr("dashboard.view") },
+  { id: "comment", label: tr("dashboard.comment") },
+  { id: "edit", label: tr("dashboard.edit") },
+  { id: "share", label: tr("dashboard.share") },
+  { id: "approve", label: tr("dashboard.approve") },
+  { id: "manage-brand", label: tr("dashboard.manage_brand") },
+  { id: "manage-roles", label: tr("dashboard.manage_roles") },
+  { id: "delete", label: tr("dashboard.delete") },
 ];
 
 function initials(nameOrEmail: string): string {
@@ -93,7 +94,7 @@ function RoleBadge({ role }: { role: WorkspaceRole }) {
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${ROLE_BADGE[role]}`}>
       {role === "owner" && <Crown size={12} />}
-      {ROLE_LABEL[role]}
+      {roleLabel()[role]}
     </span>
   );
 }
@@ -115,9 +116,9 @@ function RoleSelect({
 }) {
   const dims =
     size === "md"
-      ? "h-11 rounded-xl pl-3.5 pr-9 text-sm font-medium"
-      : "h-8 rounded-lg pl-2.5 pr-7 text-xs font-medium";
-  const chevron = size === "md" ? "right-3" : "right-2";
+      ? "h-11 rounded-xl ps-3.5 pe-9 text-sm font-medium"
+      : "h-8 rounded-lg ps-2.5 pe-7 text-xs font-medium";
+  const chevron = size === "md" ? "end-3" : "end-2";
   return (
     <div className="relative">
       <select
@@ -128,7 +129,7 @@ function RoleSelect({
       >
         {roles.map((r) => (
           <option key={r} value={r}>
-            {ROLE_LABEL[r]}
+            {roleLabel()[r]}
           </option>
         ))}
       </select>
@@ -185,7 +186,7 @@ export function MembersPanel({
       toast.success(`Deleted "${workspaceName}".`);
       onExit?.();
     } catch {
-      toast.error("Could not delete the workspace.");
+      toast.error(tr("dashboard.could_not_delete_the_workspace"));
     } finally {
       setDeleting(false);
     }
@@ -200,7 +201,7 @@ export function MembersPanel({
         setInvites(await oc.workspaceInvitations(workspaceId).catch(() => []));
       }
     } catch {
-      toast.error("Could not load members.");
+      toast.error(tr("dashboard.could_not_load_members"));
     }
   }, [workspaceId, isPersonal, canManage, toast]);
 
@@ -218,7 +219,7 @@ export function MembersPanel({
           if (!cancelled) setInvites(inv);
         }
       } catch {
-        if (!cancelled) toast.error("Could not load members.");
+        if (!cancelled) toast.error(tr("dashboard.could_not_load_members"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -238,7 +239,7 @@ export function MembersPanel({
       toast.success(isResend ? `Invitation resent to ${addr}.` : `Invitation sent to ${addr}.`);
       await reload();
     } catch {
-      toast.error("Could not send the invitation.");
+      toast.error(tr("dashboard.could_not_send_the_invitation"));
     } finally {
       setBusy(false);
     }
@@ -248,10 +249,10 @@ export function MembersPanel({
     if (!workspaceId || role === m.role) return;
     try {
       await oc.changeMemberRole(workspaceId, m.userId, role);
-      toast.success(`${m.name || m.email} is now a ${ROLE_LABEL[role].toLowerCase()}.`);
+      toast.success(`${m.name || m.email} is now a ${roleLabel()[role].toLowerCase()}.`);
       await reload();
     } catch {
-      toast.error("Could not change the role.");
+      toast.error(tr("dashboard.could_not_change_the_role"));
     }
   }
 
@@ -260,14 +261,14 @@ export function MembersPanel({
     const self = m.userId === myUserId;
     try {
       await oc.removeMember(workspaceId, m.userId);
-      toast.success(self ? "You left the workspace." : `Removed ${m.name || m.email}.`);
+      toast.success(self ? tr("dashboard.you_left_the_workspace") : `Removed ${m.name || m.email}.`);
       if (self) {
         onExit?.();
         return;
       }
       await reload();
     } catch {
-      toast.error(self ? "Could not leave (a workspace needs an owner)." : "Could not remove this member.");
+      toast.error(self ? tr("dashboard.could_not_leave_a_workspace_needs_an_owner") : tr("dashboard.could_not_remove_this_member"));
     }
   }
 
@@ -275,10 +276,10 @@ export function MembersPanel({
     if (!workspaceId) return;
     try {
       await oc.revokeInvitation(workspaceId, inv.id);
-      toast.success("Invitation revoked.");
+      toast.success(tr("dashboard.invitation_revoked"));
       await reload();
     } catch {
-      toast.error("Could not revoke the invitation.");
+      toast.error(tr("dashboard.could_not_revoke_the_invitation"));
     }
   }
 
@@ -303,7 +304,7 @@ export function MembersPanel({
       {isPersonal ? (
         <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-8 text-center">
           <Users size={28} className="mx-auto mb-3 text-neutral-400" />
-          <p className="text-sm font-medium text-neutral-700">This is your personal workspace</p>
+          <p className="text-sm font-medium text-neutral-700">{tr("dashboard.this_is_your_personal_workspace")}</p>
           <p className="mx-auto mt-1 max-w-sm text-sm text-neutral-500">
             It&apos;s just for you. Create a team workspace to invite people and collaborate in real time.
           </p>
@@ -313,31 +314,31 @@ export function MembersPanel({
           {/* Invite (admins/owners only). */}
           {canManage && (
             <section>
-              <SectionHeader icon={UserPlus} label="Invite people" />
+              <SectionHeader icon={UserPlus} label={tr("dashboard.invite_people")} />
               <div className="flex items-stretch gap-2">
                 <div className="relative min-w-0 flex-1">
-                  <Mail size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+                  <Mail size={16} className="pointer-events-none absolute start-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
                   <input
                     type="email"
-                    placeholder="teammate@example.com"
+                    placeholder={tr("dashboard.teammate_example_com")}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && email.trim() && !busy) void sendInvite();
                     }}
-                    aria-label="Invite by email"
-                    className="h-11 w-full rounded-xl border border-neutral-200 bg-surface pl-10 pr-3 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                    aria-label={tr("dashboard.invite_by_email")}
+                    className="h-11 w-full rounded-xl border border-neutral-200 bg-surface ps-10 pe-3 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                   />
                 </div>
                 <div className="w-32 shrink-0">
-                  <RoleSelect value={inviteRole} roles={invitableRoles} onChange={setInviteRole} ariaLabel="Invite role" />
+                  <RoleSelect value={inviteRole} roles={invitableRoles} onChange={setInviteRole} ariaLabel={tr("dashboard.invite_role")} />
                 </div>
                 <Button className="h-11 shrink-0 px-5" disabled={busy || !email.trim()} onClick={() => void sendInvite()}>
-                  <Mail size={16} /> Invite
+                  <Mail size={16} /> {tr("dashboard.invite")}
                 </Button>
               </div>
               <p className="mt-2 text-xs text-neutral-500">
-                <span className="font-medium text-neutral-600">{ROLE_LABEL[inviteRole]}:</span> {ROLE_DESC[inviteRole]} They&apos;ll
+                <span className="font-medium text-neutral-600">{roleLabel()[inviteRole]}:</span> {roleDesc()[inviteRole]} They&apos;ll
                 get an email with a link to join.
               </p>
             </section>
@@ -345,7 +346,7 @@ export function MembersPanel({
 
           {/* Roster. */}
           <section>
-            <SectionHeader icon={Users} label="People with access" count={members.length} />
+            <SectionHeader icon={Users} label={tr("dashboard.people_with_access")} count={members.length} />
             {loading ? (
               <SkeletonList />
             ) : (
@@ -380,16 +381,16 @@ export function MembersPanel({
                         <button
                           onClick={() => void removeMember(m)}
                           className="shrink-0 rounded-lg px-2.5 py-1 text-xs font-medium text-neutral-500 transition-colors hover:bg-red-50 hover:text-red-600"
-                          title="Leave workspace"
+                          title={tr("dashboard.leave_workspace")}
                         >
-                          Leave
+                          {tr("dashboard.leave")}
                         </button>
                       ) : manageable ? (
                         <button
                           onClick={() => void removeMember(m)}
                           aria-label={`Remove ${m.name || m.email}`}
                           className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                          title="Remove member"
+                          title={tr("dashboard.remove_member")}
                         >
                           <Trash2 size={15} />
                         </button>
@@ -406,17 +407,17 @@ export function MembersPanel({
           {/* Pending invitations (admins/owners only). */}
           {canManage && invites.length > 0 && (
             <section>
-              <SectionHeader icon={Clock} label="Pending invitations" count={invites.length} />
+              <SectionHeader icon={Clock} label={tr("dashboard.pending_invitations")} count={invites.length} />
               <ul className="divide-y divide-neutral-100 overflow-hidden rounded-xl border border-neutral-200">
                 {invites.map((inv) => (
                   <li key={inv.id} className="flex items-center gap-3 px-3.5 py-3 transition-colors hover:bg-neutral-50/70">
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-amber-50 text-amber-600 ring-1 ring-inset ring-amber-100">
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-100">
                       <Clock size={16} />
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-medium text-neutral-800">{inv.email}</div>
                       <div className="truncate text-xs text-neutral-500">
-                        Invited as {ROLE_LABEL[inv.role]} · expires {relativeExpiry(inv.expiresAt)}
+                        {tr("dashboard.invited_as_role_expires", { role: roleLabel()[inv.role], expiry: relativeExpiry(inv.expiresAt) })}
                       </div>
                     </div>
                     <button
@@ -424,13 +425,13 @@ export function MembersPanel({
                       disabled={busy}
                       className="shrink-0 rounded-lg px-2.5 py-1 text-xs font-medium text-brand-ink transition-colors hover:bg-brand-50 disabled:opacity-50"
                     >
-                      Resend
+                      {tr("dashboard.resend")}
                     </button>
                     <button
                       onClick={() => void revoke(inv)}
                       className="shrink-0 rounded-lg px-2.5 py-1 text-xs font-medium text-neutral-500 transition-colors hover:bg-red-50 hover:text-red-600"
                     >
-                      Revoke
+                      {tr("dashboard.revoke")}
                     </button>
                   </li>
                 ))}
@@ -448,21 +449,21 @@ export function MembersPanel({
           {/* Danger zone: delete the workspace (owner only). */}
           {myRole === "owner" && workspaceId && (
             <section className="border-t border-neutral-100 pt-5">
-              <SectionHeader icon={AlertTriangle} label="Danger zone" />
+              <SectionHeader icon={AlertTriangle} label={tr("dashboard.danger_zone")} />
               <div className="rounded-xl border border-red-200 bg-red-50/40 p-4">
-                <p className="text-sm font-semibold text-neutral-800">Delete this workspace</p>
+                <p className="text-sm font-semibold text-neutral-800">{tr("dashboard.delete_this_workspace")}</p>
                 <p className="mt-1 text-xs text-neutral-600">
-                  Permanently deletes <span className="font-semibold">{workspaceName}</span> and everything in it:
+                  {tr("dashboard.permanently_deletes")} <span className="font-semibold">{workspaceName}</span> and everything in it:
                   all designs, members, brand kits, custom roles, and uploads. This cannot be undone.
                 </p>
                 {!confirmingDelete ? (
                   <Button variant="danger" size="sm" className="mt-3" onClick={() => setConfirmingDelete(true)}>
-                    <Trash2 size={15} /> Delete workspace
+                    <Trash2 size={15} /> {tr("dashboard.delete_workspace")}
                   </Button>
                 ) : (
                   <div className="mt-3">
                     <label htmlFor="ws-delete-confirm" className="block text-xs font-medium text-neutral-700">
-                      Type <span className="font-semibold">{workspaceName}</span> to confirm
+                      {tr("dashboard.type")} <span className="font-semibold">{workspaceName}</span> {tr("dashboard.to_confirm")}
                     </label>
                     <input
                       id="ws-delete-confirm"
@@ -474,10 +475,10 @@ export function MembersPanel({
                     />
                     <div className="mt-3 flex justify-end gap-2">
                       <Button variant="ghost" size="sm" onClick={() => { setConfirmingDelete(false); setDeleteConfirm(""); }}>
-                        Cancel
+                        {tr("dashboard.cancel")}
                       </Button>
                       <Button variant="danger" size="sm" disabled={deleting || deleteConfirm !== workspaceName} onClick={() => void deleteWorkspace()}>
-                        {deleting ? "Deleting…" : "Delete forever"}
+                        {deleting ? tr("dashboard.deleting") : tr("dashboard.delete_forever")}
                       </Button>
                     </div>
                   </div>
@@ -561,25 +562,25 @@ function CustomRolesSection({ workspaceId }: { workspaceId: string }) {
     try {
       if (editingId) {
         await oc.updateCustomRole(editingId, { name: name.trim(), capabilities: caps });
-        toast.success("Custom role updated.");
+        toast.success(tr("dashboard.custom_role_updated"));
       } else {
         await oc.createCustomRole(workspaceId, { name: name.trim(), capabilities: caps });
-        toast.success("Custom role created.");
+        toast.success(tr("dashboard.custom_role_created"));
       }
       closeForm();
       await reload();
     } catch {
-      toast.error(editingId ? "Could not update the role." : "Could not create the role.");
+      toast.error(editingId ? tr("dashboard.could_not_update_the_role") : tr("dashboard.could_not_create_the_role"));
     }
   }
 
   async function remove(r: CustomRoleView) {
     try {
       await oc.deleteCustomRole(r.id);
-      toast.success("Role deleted.");
+      toast.success(tr("dashboard.role_deleted"));
       await reload();
     } catch {
-      toast.error("Could not delete the role.");
+      toast.error(tr("dashboard.could_not_delete_the_role"));
     }
   }
 
@@ -587,12 +588,12 @@ function CustomRolesSection({ workspaceId }: { workspaceId: string }) {
     <div>
       <SectionHeader
         icon={Shield}
-        label="Custom roles"
+        label={tr("dashboard.custom_roles")}
         count={roles.length || undefined}
         action={
           !formOpen && (
             <button onClick={() => { closeForm(); setCreating(true); }} className="flex items-center gap-1 text-xs font-semibold text-brand-ink transition-colors hover:text-brand-800">
-              <Plus size={14} /> New role
+              <Plus size={14} /> {tr("dashboard.new_role")}
             </button>
           )
         }
@@ -600,7 +601,7 @@ function CustomRolesSection({ workspaceId }: { workspaceId: string }) {
 
       {roles.length === 0 && !formOpen ? (
         <p className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50/60 px-3.5 py-3 text-xs text-neutral-500">
-          No custom roles yet. Create one to assign a named capability set to people on a design.
+          {tr("dashboard.no_custom_roles_yet_create_one_to_assign_a_n")}
         </p>
       ) : (
         roles.length > 0 && (
@@ -618,7 +619,7 @@ function CustomRolesSection({ workspaceId }: { workspaceId: string }) {
                   onClick={() => startEdit(r)}
                   aria-label={`Edit role ${r.name}`}
                   className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700"
-                  title="Edit role"
+                  title={tr("dashboard.edit_role")}
                 >
                   <Pencil size={15} />
                 </button>
@@ -626,7 +627,7 @@ function CustomRolesSection({ workspaceId }: { workspaceId: string }) {
                   onClick={() => void remove(r)}
                   aria-label={`Delete role ${r.name}`}
                   className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                  title="Delete role"
+                  title={tr("dashboard.delete_role")}
                 >
                   <Trash2 size={15} />
                 </button>
@@ -639,19 +640,19 @@ function CustomRolesSection({ workspaceId }: { workspaceId: string }) {
       {formOpen && (
         <div className="mt-3 rounded-xl border border-neutral-200 bg-neutral-50/40 p-4">
           <label htmlFor="custom-role-name" className="mb-1.5 block text-sm font-medium text-neutral-700">
-            {editingId ? "Edit role" : "Role name"}
+            {editingId ? tr("dashboard.edit_role") : tr("dashboard.role_name")}
           </label>
           <input
             id="custom-role-name"
-            placeholder="e.g. Reviewer"
+            placeholder={tr("dashboard.e_g_reviewer")}
             value={name}
             onChange={(e) => setName(e.target.value)}
             autoFocus
             className="h-11 w-full rounded-xl border border-neutral-200 bg-surface px-3.5 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           />
-          <p className="mb-2 mt-3 text-xs font-medium text-neutral-600">Capabilities</p>
+          <p className="mb-2 mt-3 text-xs font-medium text-neutral-600">{tr("dashboard.capabilities")}</p>
           <div className="flex flex-wrap gap-2">
-            {CAPABILITIES.map((c) => (
+            {capabilities().map((c) => (
               <label
                 key={c.id}
                 className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors ${
@@ -665,10 +666,10 @@ function CustomRolesSection({ workspaceId }: { workspaceId: string }) {
           </div>
           <div className="mt-4 flex justify-end gap-2">
             <Button variant="ghost" size="sm" onClick={closeForm}>
-              Cancel
+              {tr("dashboard.cancel")}
             </Button>
             <Button size="sm" disabled={!name.trim() || caps.length === 0} onClick={() => void save()}>
-              {editingId ? "Save changes" : "Create role"}
+              {editingId ? tr("dashboard.save_changes") : tr("dashboard.create_role")}
             </Button>
           </div>
         </div>

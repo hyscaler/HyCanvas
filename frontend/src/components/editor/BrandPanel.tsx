@@ -21,6 +21,8 @@ import { useBrand, brandHexColors, brandFontFamilies } from "@/store/brand";
 import { fonts } from "@/lib/fontProvider";
 import { oc, resolveAssetUrl } from "@/lib/sdk";
 import { useToast } from "@/components/ui/Toast";
+import { tr } from "@/lib/i18n";
+import { CodedError } from "@/lib/errors";
 
 /** Map a lint violation's typed fix to the store's BrandFixTarget, or null when
  *  there is no safe auto-fix (restore_logo / missing fix). */
@@ -31,13 +33,13 @@ function fixTargetOf(v: BrandLintViolation): BrandFixTarget | null {
 }
 
 /** Human label for a violation kind, for grouping. */
-const KIND_LABEL: Record<BrandLintViolation["kind"], string> = {
-  "off-brand-color": "Off-brand colors",
-  "off-brand-font": "Off-brand fonts",
-  "logo-misuse": "Logo misuse",
-  "low-contrast": "Low contrast",
-  spacing: "Spacing",
-};
+const kindLabel = (): Record<BrandLintViolation["kind"], string> => ({
+  "off-brand-color": tr("editor.off_brand_colors"),
+  "off-brand-font": tr("editor.off_brand_fonts"),
+  "logo-misuse": tr("editor.logo_misuse"),
+  "low-contrast": tr("editor.low_contrast"),
+  spacing: tr("editor.spacing"),
+});
 
 /** sRGB Color -> #rrggbb (alpha dropped for the swatch button). */
 function hexOf(c: Color): string {
@@ -115,7 +117,7 @@ export function BrandPanel({ workspaceId }: { workspaceId: string | null }) {
 
   const placeLogo = useCallback((assetId: string) => {
     const url = assetUrls[assetId];
-    if (!url) { toast.error("Logo asset is unavailable."); return; }
+    if (!url) { toast.error(tr("editor.logo_asset_is_unavailable")); return; }
     useEditor.getState().addImage(resolveAssetUrl(url));
   }, [assetUrls, toast]);
 
@@ -134,7 +136,7 @@ export function BrandPanel({ workspaceId }: { workspaceId: string | null }) {
     const result = st.reskinToBrand({ palette, fonts: fontFams }, overrides);
     setReskin(result);
     if (result.colors.length === 0 && result.fonts.length === 0)
-      toast.toast("Design is already on brand.", "info");
+      toast.toast(tr("editor.design_is_already_on_brand"), "info");
     else
       toast.success(`Re-skinned: ${result.colors.length} colors, ${result.fonts.length} fonts.`);
   }, [kit, toast]);
@@ -148,7 +150,7 @@ export function BrandPanel({ workspaceId }: { workspaceId: string | null }) {
     if (firstHex) st.setPageBackground({ type: "solid", color: srgbFromHex(firstHex) });
     const body = families[0];
     if (body) { fonts.ensure(body); for (const id of st.selection) st.setTextStyle(id, { fontFamily: body }); }
-    toast.success("Applied brand defaults.");
+    toast.success(tr("editor.applied_brand_defaults"));
   }, [kit, swatches, families, toast]);
 
   // --- brand linting (FR-7, FR-8) -------------------------------------------
@@ -160,7 +162,7 @@ export function BrandPanel({ workspaceId }: { workspaceId: string | null }) {
     try {
       setViolations(await oc.brandLint(designId));
     } catch {
-      toast.error("Couldn't run brand check.");
+      toast.error(tr("editor.couldnt_run_brand_check"));
     } finally {
       setLinting(false);
     }
@@ -190,7 +192,7 @@ export function BrandPanel({ workspaceId }: { workspaceId: string | null }) {
   const applyFix = useCallback((v: BrandLintViolation) => {
     const target = fixTargetOf(v);
     if (!target) {
-      toast.toast("Adjust the logo manually to restore it on brand.", "info");
+      toast.toast(tr("editor.adjust_the_logo_manually_to_restore_it_on_br"), "info");
       return;
     }
     const n = useEditor.getState().applyBrandFixes([target]);
@@ -201,7 +203,7 @@ export function BrandPanel({ workspaceId }: { workspaceId: string | null }) {
   const fixAll = useCallback(() => {
     if (!violations) return;
     const targets = violations.map(fixTargetOf).filter((t): t is BrandFixTarget => t !== null);
-    if (!targets.length) { toast.toast("No safe auto-fixes available.", "info"); return; }
+    if (!targets.length) { toast.toast(tr("editor.no_safe_auto_fixes_available"), "info"); return; }
     const n = useEditor.getState().applyBrandFixes(targets);
     if (n > 0) { toast.success(`Applied ${n} fix${n === 1 ? "" : "es"}.`); void runLint(); }
   }, [violations, runLint, toast]);
@@ -232,32 +234,32 @@ export function BrandPanel({ workspaceId }: { workspaceId: string | null }) {
 
   if (!designId) {
     return (
-      <PanelShell title="Brand">
-        <p className="text-sm text-neutral-500">Open a saved design to use brand kits.</p>
+      <PanelShell title={tr("editor.brand")}>
+        <p className="text-sm text-neutral-500">{tr("editor.open_a_saved_design_to_use_brand_kits")}</p>
       </PanelShell>
     );
   }
 
   return (
-    <PanelShell title="Brand">
-      {loading && <p className="text-sm text-neutral-400">Loading brand…</p>}
+    <PanelShell title={tr("editor.brand")}>
+      {loading && <p className="text-sm text-neutral-400">{tr("editor.loading_brand")}</p>}
 
       {/* Kit selector (FR-2). */}
       {kits.length > 0 && (
         <div className="mb-4">
-          <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Brand kit</label>
+          <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-neutral-400">{tr("editor.brand_kit")}</label>
           <select
             value={kit?.id ?? ""}
             disabled={!canManage}
             onChange={(e) => void useBrand.getState().assign(e.target.value || null)}
             className="w-full rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm outline-none focus:border-brand-400 disabled:opacity-60"
           >
-            <option value="">No brand</option>
+            <option value="">{tr("editor.no_brand")}</option>
             {kits.map((k) => (
               <option key={k.id} value={k.id}>{k.name}{k.isDefault ? " (default)" : ""}</option>
             ))}
           </select>
-          {!canManage && <p className="mt-1 text-[11px] text-neutral-400">Only brand admins can switch the kit.</p>}
+          {!canManage && <p className="mt-1 text-[11px] text-neutral-400">{tr("editor.only_brand_admins_can_switch_the_kit")}</p>}
         </div>
       )}
 
@@ -279,7 +281,7 @@ export function BrandPanel({ workspaceId }: { workspaceId: string | null }) {
             }}
             className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700"
           >
-            <Plus size={15} /> Create brand kit
+            <Plus size={15} /> {tr("editor.create_brand_kit")}
           </button>
           <GenerateFromLogo
             workspaceId={workspaceId}
@@ -303,8 +305,8 @@ export function BrandPanel({ workspaceId }: { workspaceId: string | null }) {
                   await useBrand.getState().markReviewed();
                   await refresh();
                   await checkUpdates();
-                  toast.success("Brand refreshed to the latest version.");
-                } catch { toast.error("Couldn't apply the brand update."); }
+                  toast.success(tr("editor.brand_refreshed_to_the_latest_version"));
+                } catch { toast.error(tr("editor.couldnt_apply_the_brand_update")); }
               }}
               onPin={async () => {
                 if (!designId || update.designVersion == null) return;
@@ -312,8 +314,8 @@ export function BrandPanel({ workspaceId }: { workspaceId: string | null }) {
                   await oc.setDesignBrandVersion(designId, update.designVersion);
                   await refresh();
                   await checkUpdates();
-                  toast.success("Pinned to the current version.");
-                } catch { toast.error("Couldn't pin the version."); }
+                  toast.success(tr("editor.pinned_to_the_current_version"));
+                } catch { toast.error(tr("editor.couldnt_pin_the_version")); }
               }}
             />
           )}
@@ -324,10 +326,10 @@ export function BrandPanel({ workspaceId }: { workspaceId: string | null }) {
           {canManage && (
             <div className="flex flex-col gap-2">
               <button onClick={applyBrandDefaults} className="flex items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm font-medium text-brand-ink hover:bg-brand-100">
-                <Wand2 size={15} /> Apply brand
+                <Wand2 size={15} /> {tr("editor.apply_brand")}
               </button>
               <button onClick={() => doReskin()} className="flex items-center justify-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700 hover:border-brand-300 hover:bg-brand-50">
-                Re-skin to brand
+                {tr("editor.re_skin_to_brand")}
               </button>
               {reskin && (reskin.colors.length > 0 || reskin.fonts.length > 0) && (
                 <ReskinMapping
@@ -341,7 +343,7 @@ export function BrandPanel({ workspaceId }: { workspaceId: string | null }) {
           )}
 
           {/* Brand lint (FR-7, FR-8). */}
-          <CollapsibleSection title="Brand check" icon={ShieldCheck}>
+          <CollapsibleSection title={tr("editor.brand_check")} icon={ShieldCheck}>
             <LintSection
               violations={violations}
               linting={linting}
@@ -353,9 +355,9 @@ export function BrandPanel({ workspaceId }: { workspaceId: string | null }) {
           </CollapsibleSection>
 
           {/* Colors (FR-1, FR-4). */}
-          <CollapsibleSection title="Colors" icon={Palette} defaultOpen right={kit.controls.lockColors ? <LockedBadge /> : undefined}>
+          <CollapsibleSection title={tr("editor.colors")} icon={Palette} defaultOpen right={kit.controls.lockColors ? <LockedBadge /> : undefined}>
             {swatches.length === 0 ? (
-              <p className="text-xs text-neutral-400">No brand colors yet.</p>
+              <p className="text-xs text-neutral-400">{tr("editor.no_brand_colors_yet")}</p>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {swatches.map((hex) => (
@@ -372,20 +374,20 @@ export function BrandPanel({ workspaceId }: { workspaceId: string | null }) {
           </CollapsibleSection>
 
           {/* Fonts (FR-1, FR-4). */}
-          <CollapsibleSection title="Fonts" icon={TypeIcon} defaultOpen right={kit.controls.lockFonts ? <LockedBadge /> : undefined}>
+          <CollapsibleSection title={tr("editor.fonts")} icon={TypeIcon} defaultOpen right={kit.controls.lockFonts ? <LockedBadge /> : undefined}>
             {families.length === 0 ? (
-              <p className="text-xs text-neutral-400">No brand fonts yet.</p>
+              <p className="text-xs text-neutral-400">{tr("editor.no_brand_fonts_yet")}</p>
             ) : (
               <div className="flex flex-col gap-1.5">
                 {kit.fonts.map((f) => (
                   <button
                     key={f.id}
                     onClick={() => applyFont(f.fontFamily)}
-                    className="flex items-center justify-between rounded-lg border border-neutral-200 px-3 py-2 text-left text-sm hover:border-brand-300 hover:bg-brand-50"
+                    className="flex items-center justify-between rounded-lg border border-neutral-200 px-3 py-2 text-start text-sm hover:border-brand-300 hover:bg-brand-50"
                     style={{ fontFamily: `'${f.fontFamily}', sans-serif` }}
                   >
                     <span className="truncate">{f.fontFamily}</span>
-                    <span className="ml-2 shrink-0 text-[10px] uppercase tracking-wide text-neutral-300">{f.role}</span>
+                    <span className="ms-2 shrink-0 text-[10px] uppercase tracking-wide text-neutral-300">{f.role}</span>
                   </button>
                 ))}
               </div>
@@ -394,7 +396,7 @@ export function BrandPanel({ workspaceId }: { workspaceId: string | null }) {
 
           {/* Logos (FR-1). */}
           {kit.logos.length > 0 && (
-            <CollapsibleSection title="Logos" icon={ImageIcon} badge={kit.logos.length}>
+            <CollapsibleSection title={tr("editor.logos")} icon={ImageIcon} badge={kit.logos.length}>
               <div className="grid grid-cols-3 gap-2">
                 {kit.logos.map((l) => (
                   <button
@@ -417,7 +419,7 @@ export function BrandPanel({ workspaceId }: { workspaceId: string | null }) {
 
           {/* Voice (FR-1, read-only). */}
           {kit.voice && (
-            <CollapsibleSection title="Voice" icon={Sparkles}>
+            <CollapsibleSection title={tr("editor.voice")} icon={Sparkles}>
               {kit.voice.tone.length > 0 && (
                 <div className="mb-1.5 flex flex-wrap gap-1.5">
                   {kit.voice.tone.map((t) => (
@@ -431,7 +433,7 @@ export function BrandPanel({ workspaceId }: { workspaceId: string | null }) {
 
           {/* Pin / track a specific version (FR-10, manage-brand only). */}
           {canManage && (
-            <CollapsibleSection title="Version" icon={GitBranch}>
+            <CollapsibleSection title={tr("editor.version")} icon={GitBranch}>
               <PinTrackControl
                 designId={designId}
                 pinnedVersion={pinnedVersion}
@@ -443,7 +445,7 @@ export function BrandPanel({ workspaceId }: { workspaceId: string | null }) {
 
           {/* Locked regions (FR-6, AC-4, manage-brand only). */}
           {canManage && (
-            <CollapsibleSection title="Locked regions" icon={Lock} badge={lockedRegions.length || undefined}>
+            <CollapsibleSection title={tr("editor.locked_regions")} icon={Lock} badge={lockedRegions.length || undefined}>
               <LockedRegionsControl
                 designId={designId}
                 selection={selection}
@@ -455,14 +457,14 @@ export function BrandPanel({ workspaceId }: { workspaceId: string | null }) {
 
           {/* Version history + restore (FR-9, manage-brand only). */}
           {canManage && (
-            <CollapsibleSection title="Version history" icon={History}>
+            <CollapsibleSection title={tr("editor.version_history")} icon={History}>
               <VersionHistory kitId={kit.id} onRestored={() => void refresh()} />
             </CollapsibleSection>
           )}
 
           {/* Brand controls + content management (manage-brand only). */}
           {canManage && (
-            <CollapsibleSection title="Brand controls (admin)" icon={ShieldCheck}>
+            <CollapsibleSection title={tr("editor.brand_controls_admin")} icon={ShieldCheck}>
               <BrandControlsEditor kit={kit} workspaceId={workspaceId} onSaved={() => void refresh()} assetUrls={assetUrls} />
             </CollapsibleSection>
           )}
@@ -488,24 +490,24 @@ function BrandUpdateBanner({
   return (
     <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
       <div className="mb-1 flex items-center gap-1.5 font-semibold">
-        <RefreshCw size={13} /> Brand updated - review
+        <RefreshCw size={13} /> {tr("editor.brand_updated_review")}
       </div>
       <p className="mb-1.5 text-amber-700">
         The brand kit advanced to v{update.latestVersion} (this design reflects
         {update.designVersion == null ? " an older version" : ` v${update.designVersion}`}).
       </p>
       {update.changes.length > 0 && (
-        <ul className="mb-2 list-disc pl-4 text-[11px] text-amber-700">
+        <ul className="mb-2 list-disc ps-4 text-[11px] text-amber-700">
           {update.changes.map((c, i) => (<li key={i}>{c}</li>))}
         </ul>
       )}
       {canManage ? (
         <div className="flex gap-2">
-          <button onClick={() => void onApply()} className="rounded-md bg-amber-600 px-2.5 py-1 font-medium text-white hover:bg-amber-700">Apply update</button>
-          <button onClick={() => void onPin()} className="rounded-md border border-amber-300 bg-surface px-2.5 py-1 font-medium text-amber-700 hover:bg-amber-100">Pin current</button>
+          <button onClick={() => void onApply()} className="rounded-md bg-amber-600 px-2.5 py-1 font-medium text-white hover:bg-amber-700">{tr("editor.apply_update")}</button>
+          <button onClick={() => void onPin()} className="rounded-md border border-amber-300 bg-surface px-2.5 py-1 font-medium text-amber-700 hover:bg-amber-100">{tr("editor.pin_current")}</button>
         </div>
       ) : (
-        <p className="text-[11px] text-amber-600">A brand admin can apply or pin this update.</p>
+        <p className="text-[11px] text-amber-700">{tr("editor.a_brand_admin_can_apply_or_pin_this_update")}</p>
       )}
     </div>
   );
@@ -545,14 +547,14 @@ function LintSection({
     <>
       <div className="flex justify-end">
         <button onClick={onCheck} disabled={linting} className="rounded-md border border-neutral-200 px-2 py-1 text-xs font-medium text-neutral-600 hover:border-brand-300 hover:bg-brand-50 disabled:opacity-50">
-          {linting ? "Checking…" : "Check brand"}
+          {linting ? tr("editor.checking") : tr("editor.check_brand")}
         </button>
       </div>
 
-      {violations === null && <p className="text-xs text-neutral-400">Run a brand check to see violations. It then updates live as you edit.</p>}
+      {violations === null && <p className="text-xs text-neutral-400">{tr("editor.run_a_brand_check_to_see_violations_it_then")}</p>}
       {clean && (
         <p className="flex items-center gap-1.5 rounded bg-emerald-50 px-2 py-1 text-xs text-emerald-700">
-          <ShieldCheck size={13} /> On brand. No violations found.
+          <ShieldCheck size={13} /> {tr("editor.on_brand_no_violations_found")}
         </p>
       )}
 
@@ -561,18 +563,18 @@ function LintSection({
           {groups.map(([kind, items]) => (
             <div key={kind}>
               <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-neutral-500">
-                <AlertTriangle size={12} className="text-amber-500" /> {KIND_LABEL[kind]} ({items.length})
+                <AlertTriangle size={12} className="text-amber-500" /> {kindLabel()[kind]} ({items.length})
               </div>
               <ul className="flex flex-col gap-1">
                 {items.map((v) => {
                   const canFix = fixTargetOf(v) !== null;
                   return (
                     <li key={v.id} className="rounded-lg border border-neutral-100 bg-neutral-50 px-2 py-1.5 text-xs">
-                      <button onClick={() => onHighlight(v)} disabled={!v.nodeId} className="block w-full text-left text-neutral-600 hover:text-brand-ink disabled:cursor-default disabled:hover:text-neutral-600" title={v.nodeId ? "Highlight on canvas" : undefined}>
+                      <button onClick={() => onHighlight(v)} disabled={!v.nodeId} className="block w-full text-start text-neutral-600 hover:text-brand-ink disabled:cursor-default disabled:hover:text-neutral-600" title={v.nodeId ? tr("editor.highlight_on_canvas") : undefined}>
                         {v.message}
                       </button>
                       <button onClick={() => onFix(v)} className="mt-1 text-[11px] font-medium text-brand-ink hover:underline">
-                        {canFix ? "Fix" : "How to fix"}
+                        {canFix ? tr("editor.fix") : tr("editor.how_to_fix")}
                       </button>
                     </li>
                   );
@@ -612,9 +614,9 @@ function PinTrackControl({
     try {
       await oc.setDesignBrandVersion(designId, v);
       await onChanged();
-      toast.success(v == null ? "Now tracking the latest version." : `Pinned to v${v}.`);
+      toast.success(v == null ? tr("editor.now_tracking_the_latest_version") : `Pinned to v${v}.`);
     } catch {
-      toast.error("Couldn't change the brand version.");
+      toast.error(tr("editor.couldnt_change_the_brand_version"));
     } finally {
       setBusy(false);
     }
@@ -623,7 +625,7 @@ function PinTrackControl({
   return (
     <>
       <p className="mb-2 text-[11px] text-neutral-500">
-        {pinnedVersion == null ? "Tracking the latest version." : `Pinned to v${pinnedVersion}.`}
+        {pinnedVersion == null ? tr("editor.tracking_the_latest_version") : `Pinned to v${pinnedVersion}.`}
       </p>
       <select
         value={pinnedVersion == null ? "" : String(pinnedVersion)}
@@ -661,7 +663,7 @@ function LockedRegionsControl({
       useBrand.getState().setLockedRegions(ids);
       await onChanged();
     } catch {
-      toast.error("Couldn't update locked regions.");
+      toast.error(tr("editor.couldnt_update_locked_regions"));
     } finally {
       setBusy(false);
     }
@@ -675,7 +677,7 @@ function LockedRegionsControl({
   return (
     <>
       <p className="mb-2 text-[11px] text-neutral-500">
-        {lockedRegions.length === 0 ? "No locked regions. Members can edit every element." : `${lockedRegions.length} locked region${lockedRegions.length === 1 ? "" : "s"}. Members cannot move or restyle them.`}
+        {lockedRegions.length === 0 ? tr("editor.no_locked_regions_members_can_edit_every_ele") : `${lockedRegions.length} locked region${lockedRegions.length === 1 ? "" : "s"}. Members cannot move or restyle them.`}
       </p>
       <div className="flex gap-2">
         <button
@@ -691,7 +693,7 @@ function LockedRegionsControl({
             disabled={busy}
             className="flex items-center gap-1.5 rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs font-medium text-neutral-700 hover:border-brand-300 hover:bg-brand-50 disabled:opacity-50"
           >
-            <Unlock size={13} /> Clear all
+            <Unlock size={13} /> {tr("editor.clear_all")}
           </button>
         )}
       </div>
@@ -742,7 +744,7 @@ function VersionHistory({ kitId, onRestored }: { kitId: string; onRestored: () =
       await load();
       toast.success(`Restored to v${version}.`);
     } catch {
-      toast.error("Couldn't restore that version.");
+      toast.error(tr("editor.couldnt_restore_that_version"));
     } finally {
       setBusy(false);
     }
@@ -758,23 +760,23 @@ function VersionHistory({ kitId, onRestored }: { kitId: string; onRestored: () =
 
   return (
     <>
-      {busy && !versions && <p className="text-xs text-neutral-400">Loading…</p>}
-      {versions && versions.length === 0 && <p className="text-xs text-neutral-400">No versions recorded yet.</p>}
+      {busy && !versions && <p className="text-xs text-neutral-400">{tr("editor.loading")}</p>}
+      {versions && versions.length === 0 && <p className="text-xs text-neutral-400">{tr("editor.no_versions_recorded_yet")}</p>}
       {versions && versions.length > 0 && (
         <ul className="flex flex-col gap-1">
           {versions.map((v) => (
             <li key={v.id} className="flex items-center justify-between rounded-lg border border-neutral-100 bg-neutral-50 px-2 py-1.5 text-xs">
               <span className="text-neutral-600">
                 v{v.version}
-                <span className="ml-2 text-[10px] text-neutral-400">{new Date(v.createdAt).toLocaleString()}</span>
+                <span className="ms-2 text-[10px] text-neutral-400">{new Date(v.createdAt).toLocaleString()}</span>
               </span>
               <button
                 onClick={() => onRestoreClick(v.version)}
                 disabled={busy}
-                title={confirmVersion === v.version ? "Click again to restore (history is preserved)" : `Restore to v${v.version}`}
+                title={confirmVersion === v.version ? tr("editor.click_again_to_restore_history_is_preserved") : `Restore to v${v.version}`}
                 className={`flex items-center gap-1 hover:underline disabled:opacity-50 ${confirmVersion === v.version ? "font-semibold text-red-600" : "text-brand-ink"}`}
               >
-                <RotateCcw size={12} /> {confirmVersion === v.version ? "Confirm restore" : "Restore"}
+                <RotateCcw size={12} /> {confirmVersion === v.version ? tr("editor.confirm_restore") : tr("editor.restore")}
               </button>
             </li>
           ))}
@@ -787,8 +789,8 @@ function VersionHistory({ kitId, onRestored }: { kitId: string; onRestored: () =
 /** Small "locked by brand" pill, used in a CollapsibleSection's right slot. */
 function LockedBadge() {
   return (
-    <span className="inline-flex items-center gap-0.5 rounded bg-amber-50 px-1 text-[10px] font-medium text-amber-700" title="Locked by brand">
-      <Lock size={10} /> locked
+    <span className="inline-flex items-center gap-0.5 rounded bg-amber-50 px-1 text-[10px] font-medium text-amber-700" title={tr("editor.locked_by_brand")}>
+      <Lock size={10} /> {tr("editor.locked")}
     </span>
   );
 }
@@ -831,8 +833,8 @@ function ReskinMapping({
   return (
     <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-2 text-xs">
       <div className="mb-1 flex items-center justify-between">
-        <span className="font-medium text-neutral-600">Re-skin mapping</span>
-        <button onClick={onUndo} className="text-brand-ink hover:underline">Undo</button>
+        <span className="font-medium text-neutral-600">{tr("editor.re_skin_mapping")}</span>
+        <button onClick={onUndo} className="text-brand-ink hover:underline">{tr("editor.undo")}</button>
       </div>
       {result.colors.map((m) => {
         const choice = choices[m.from] ?? m.to;
@@ -848,10 +850,10 @@ function ReskinMapping({
             <select
               value={choice}
               onChange={(e) => setChoices((c) => ({ ...c, [m.from]: e.target.value }))}
-              className="ml-auto rounded border border-neutral-200 bg-surface px-1 py-0.5 text-[11px] outline-none focus:border-brand-400"
-              title="Map this color to a brand swatch, or keep the original"
+              className="ms-auto rounded border border-neutral-200 bg-surface px-1 py-0.5 text-[11px] outline-none focus:border-brand-400"
+              title={tr("editor.map_this_color_to_a_brand_swatch_or_keep_the")} aria-label={tr("editor.map_this_color_to_a_brand_swatch_or_keep_the")}
             >
-              <option value="keep">Keep original</option>
+              <option value="keep">{tr("editor.keep_original")}</option>
               {swatchOptions.map((hex) => (
                 <option key={hex} value={hex}>{hex}</option>
               ))}
@@ -867,7 +869,7 @@ function ReskinMapping({
           onClick={() => onReapply(overrides)}
           className="mt-1.5 w-full rounded-md bg-brand-600 px-2 py-1 text-[11px] font-medium text-white hover:bg-brand-700"
         >
-          Re-apply with overrides
+          {tr("editor.re_apply_with_overrides")}
         </button>
       )}
     </div>
@@ -897,7 +899,7 @@ function BrandControlsEditor({
         useBrand.getState().setKit(updated);
         onSaved();
       } catch {
-        toast.error("Couldn't save brand kit.");
+        toast.error(tr("editor.couldnt_save_brand_kit"));
       } finally {
         setBusy(false);
       }
@@ -907,7 +909,7 @@ function BrandControlsEditor({
 
   const addColor = useCallback(
     (hex: string) => {
-      const base = kit.palettes[0] ?? { id: `p-${crypto.randomUUID()}`, name: "Palette", colors: [] };
+      const base = kit.palettes[0] ?? { id: `p-${crypto.randomUUID()}`, name: tr("editor.palette"), colors: [] };
       const p = structuredClone(base);
       p.colors = [...p.colors, { id: `s-${crypto.randomUUID()}`, role: "accent", value: srgbFromHexFull(hex) }];
       const palettes = kit.palettes.length ? kit.palettes.map((x, i) => (i === 0 ? p : x)) : [p];
@@ -922,40 +924,40 @@ function BrandControlsEditor({
         defaultValue={kit.name}
         onBlur={(e) => { if (e.target.value.trim() && e.target.value !== kit.name) void save({ name: e.target.value.trim() }); }}
         className="mb-3 w-full rounded-lg border border-neutral-200 px-2 py-1.5 text-sm outline-none focus:border-brand-400"
-        placeholder="Kit name"
+        placeholder={tr("editor.kit_name")}
       />
       <div className="mb-3 flex flex-col gap-2">
-        <ControlToggle label="Lock colors to palette" checked={kit.controls.lockColors} disabled={busy} onChange={(v) => void save({ controls: { lockColors: v } })} />
-        <ControlToggle label="Lock fonts to approved set" checked={kit.controls.lockFonts} disabled={busy} onChange={(v) => void save({ controls: { lockFonts: v } })} />
-        <ControlToggle label="Restrict to brand templates" checked={kit.controls.restrictTemplates} disabled={busy} onChange={(v) => void save({ controls: { restrictTemplates: v } })} />
+        <ControlToggle label={tr("editor.lock_colors_to_palette")} checked={kit.controls.lockColors} disabled={busy} onChange={(v) => void save({ controls: { lockColors: v } })} />
+        <ControlToggle label={tr("editor.lock_fonts_to_approved_set")} checked={kit.controls.lockFonts} disabled={busy} onChange={(v) => void save({ controls: { lockFonts: v } })} />
+        <ControlToggle label={tr("editor.restrict_to_brand_templates")} checked={kit.controls.restrictTemplates} disabled={busy} onChange={(v) => void save({ controls: { restrictTemplates: v } })} />
       </div>
 
       {/* Manage colors. */}
       <div className="mb-3">
-        <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Palette colors</span>
+        <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-neutral-400">{tr("editor.palette_colors")}</span>
         <div className="flex flex-wrap items-center gap-2">
           {kit.palettes.flatMap((p) => p.colors).map((sw) => (
             <div key={sw.id} className="group relative">
               <span className="block h-7 w-7 rounded-lg border border-neutral-200" style={{ backgroundColor: hexOf(sw.value) }} />
               <button
-                title="Remove"
+                title={tr("editor.remove")}
                 onClick={() => {
                   const palettes = kit.palettes.map((p) => ({ ...p, colors: p.colors.filter((c) => c.id !== sw.id) }));
                   void save({ palettes });
                 }}
-                className="absolute -right-1 -top-1 hidden rounded-full bg-surface text-neutral-400 group-hover:block hover:text-red-500"
+                className="absolute -end-1 -top-1 hidden rounded-full bg-surface text-neutral-400 group-hover:block hover:text-red-500"
               >
                 <Trash2 size={12} />
               </button>
             </div>
           ))}
-          <input type="color" onChange={(e) => addColor(e.target.value)} className="oc-color h-7 w-7" title="Add color" />
+          <input type="color" onChange={(e) => addColor(e.target.value)} className="oc-color h-7 w-7" title={tr("editor.add_color")} aria-label={tr("editor.add_color")} />
         </div>
       </div>
 
       {/* Manage fonts (heading/body). */}
       <div className="mb-3">
-        <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Fonts</span>
+        <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-neutral-400">{tr("editor.fonts")}</span>
         <BrandFontField role="heading" current={kit.fonts.find((f) => f.role === "heading")?.fontFamily ?? ""} onSet={(fam) => void save({ fonts: upsertFont(kit, "heading", fam) })} />
         <BrandFontField role="body" current={kit.fonts.find((f) => f.role === "body")?.fontFamily ?? ""} onSet={(fam) => void save({ fonts: upsertFont(kit, "body", fam) })} />
       </div>
@@ -967,7 +969,7 @@ function BrandControlsEditor({
 
       {/* Voice (FR-1). */}
       <div className="mt-3">
-        <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Voice tone (comma separated)</span>
+        <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-neutral-400">{tr("editor.voice_tone_comma_separated")}</span>
         <input
           defaultValue={(kit.voice?.tone ?? []).join(", ")}
           onBlur={(e) => {
@@ -975,7 +977,7 @@ function BrandControlsEditor({
             void save({ voice: { tone, doSay: kit.voice?.doSay ?? [], dontSay: kit.voice?.dontSay ?? [], sampleCopy: kit.voice?.sampleCopy } });
           }}
           className="w-full rounded-lg border border-neutral-200 px-2 py-1.5 text-sm outline-none focus:border-brand-400"
-          placeholder="friendly, confident"
+          placeholder={tr("editor.friendly_confident")}
         />
       </div>
     </>
@@ -992,7 +994,7 @@ function ControlToggle({ label, checked, onChange, disabled }: { label: string; 
         onClick={() => onChange(!checked)}
         className={`relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-40 ${checked ? "bg-brand-600" : "bg-neutral-300"}`}
       >
-        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-surface transition-all ${checked ? "left-4" : "left-0.5"}`} />
+        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-surface transition-all ${checked ? "start-4" : "start-0.5"}`} />
       </button>
     </label>
   );
@@ -1007,7 +1009,7 @@ function BrandFontField({ role, current, onSet }: { role: string; current: strin
         key={current}
         onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== current) { fonts.ensure(v); onSet(v); } }}
         className="flex-1 rounded-lg border border-neutral-200 px-2 py-1.5 text-sm outline-none focus:border-brand-400"
-        placeholder="Font family"
+        placeholder={tr("editor.font_family")}
       />
     </div>
   );
@@ -1023,15 +1025,15 @@ function AddLogoFromUploads({ workspaceId, assetUrls, onAdd }: { workspaceId: st
   return (
     <div className="mb-3">
       <button onClick={() => setOpen((v) => !v)} className="flex items-center gap-1 text-xs font-medium text-brand-ink hover:underline">
-        <Plus size={12} /> Add logo from uploads
+        <Plus size={12} /> {tr("editor.add_logo_from_uploads")}
       </button>
       {open && (
         <div className="mt-2 grid grid-cols-4 gap-1.5">
-          {assets.length === 0 && <span className="col-span-4 text-[11px] text-neutral-400">No uploads.</span>}
+          {assets.length === 0 && <span className="col-span-4 text-[11px] text-neutral-400">{tr("editor.no_uploads")}</span>}
           {assets.map((a) => (
             <button
               key={a.id}
-              onClick={() => { onAdd(a.id, a.filename ?? "Logo"); setOpen(false); }}
+              onClick={() => { onAdd(a.id, a.filename ?? tr("editor.logo")); setOpen(false); }}
               className="flex aspect-square items-center justify-center overflow-hidden rounded border border-neutral-200 hover:border-brand-300"
               title={a.filename ?? "asset"}
             >
@@ -1078,7 +1080,7 @@ function GenerateFromLogo({
       const img = await new Promise<HTMLImageElement>((res, rej) => {
         const el = new Image();
         el.onload = () => res(el);
-        el.onerror = () => rej(new Error("decode failed"));
+        el.onerror = () => rej(new CodedError("errors.image_decode_failed", "Couldn't decode the image."));
         el.src = dataUrl;
       });
 
@@ -1112,14 +1114,14 @@ function GenerateFromLogo({
 
       // Create the kit, then fill it with the extracted palette + logo + default
       // heading/body fonts (the text engine's registry resolves these family names).
-      const created = await oc.createBrandKit(workspaceId, { name: "Brand from logo" });
+      const created = await oc.createBrandKit(workspaceId, { name: tr("editor.brand_from_logo") });
       const filled = await oc.updateBrandKit(created.id, {
         palettes:
           palette.length > 0
             ? [
                 {
                   id: `p-${crypto.randomUUID()}`,
-                  name: "Logo palette",
+                  name: tr("editor.logo_palette"),
                   colors: palette.map((hex, i) => ({
                     id: `s-${crypto.randomUUID()}`,
                     role: i === 0 ? "primary" : i === 1 ? "secondary" : "accent",
@@ -1132,14 +1134,14 @@ function GenerateFromLogo({
           { id: `f-${crypto.randomUUID()}`, role: "heading", fontFamily: "Inter" },
           { id: `f-${crypto.randomUUID()}`, role: "body", fontFamily: "Inter" },
         ],
-        logos: [{ id: `l-${crypto.randomUUID()}`, label: file.name || "Logo", assetId: asset.id }],
+        logos: [{ id: `l-${crypto.randomUUID()}`, label: file.name || tr("editor.logo"), assetId: asset.id }],
       });
 
       onCreated(filled);
       await useBrand.getState().assign(filled.id);
       toast.success(`Brand kit generated from logo (${palette.length} colors).`);
     } catch {
-      toast.error("Couldn't generate a brand kit from that logo.");
+      toast.error(tr("editor.couldnt_generate_a_brand_kit_from_that_logo"));
     } finally {
       setBusy(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -1160,7 +1162,7 @@ function GenerateFromLogo({
         disabled={busy}
         className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm font-medium text-brand-ink hover:bg-brand-100 disabled:opacity-60"
       >
-        <Sparkles size={15} /> {busy ? "Generating…" : "Generate from logo"}
+        <Sparkles size={15} /> {busy ? tr("editor.generating") : tr("editor.generate_from_logo")}
       </button>
     </>
   );

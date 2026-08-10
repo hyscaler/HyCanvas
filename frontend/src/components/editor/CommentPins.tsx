@@ -13,6 +13,7 @@ import { useAuth } from "@/store/auth";
 import { initials, avatarColor } from "@/lib/avatar";
 import type { CommentAnchor, CommentThread } from "@hc/sdk";
 import type { CanvasApi } from "@/lib/useEditorCanvas";
+import { tr } from "@/lib/i18n";
 
 /** Page-space (canvas) coordinates for a comment anchor, or null when it cannot
  *  be placed (orphaned element, or an anchor with no resolvable point). This is
@@ -51,7 +52,7 @@ export function CommentPins({ api }: { api: CanvasApi }) {
   const openThreadId = useComments((s) => s.openThreadId);
   const draftAnchor = useComments((s) => s.draftAnchor);
   const panelOpen = useComments((s) => s.panelOpen);
-  const meName = useAuth((s) => s.user?.name ?? "You");
+  const meName = useAuth((s) => s.user?.name ?? tr("editor.you"));
   const meId = useAuth((s) => s.user?.id ?? null);
   // Re-render on viewport/document changes so pins track pan/zoom and edits.
   useEditor((s) => s.viewport);

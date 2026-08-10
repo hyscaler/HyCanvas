@@ -17,6 +17,8 @@ import { fonts } from "@/lib/fontProvider";
 import { imageAssets } from "@/lib/assetProvider";
 import { useViewBeat } from "@/lib/useViewBeat";
 import { resolveAssetUrl } from "@/lib/sdk";
+import { DESIGN_SURFACE_DIR } from "@/lib/locale";
+import { tr } from "@/lib/i18n";
 
 function fmt(frame: number, fps: number): string {
   const s = Math.max(0, Math.floor(frame / fps));
@@ -201,11 +203,11 @@ export function VideoWatch({ doc, token, password }: { doc: DesignFile; token?: 
   }, [duration, paint]);
 
   if (!project) {
-    return <div className="flex flex-1 items-center justify-center p-8 text-sm text-neutral-500">This shared video has no content yet.</div>;
+    return <div className="flex flex-1 items-center justify-center p-8 text-sm text-neutral-500">{tr("app.this_shared_video_has_no_content_yet")}</div>;
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 p-4">
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 p-4" dir={DESIGN_SURFACE_DIR}>
       <div className="relative w-full max-w-3xl">
         <canvas
           ref={canvasRef}
@@ -217,7 +219,7 @@ export function VideoWatch({ doc, token, password }: { doc: DesignFile; token?: 
           <button
             type="button"
             onClick={toggle}
-            aria-label="Play"
+            aria-label={tr("app.play")}
             className="absolute inset-0 grid place-items-center"
           >
             <span className="grid h-16 w-16 place-items-center rounded-full bg-black/55 text-white backdrop-blur transition hover:bg-black/70">
@@ -227,7 +229,7 @@ export function VideoWatch({ doc, token, password }: { doc: DesignFile; token?: 
         )}
       </div>
       <div className="flex w-full max-w-3xl items-center gap-3 text-xs text-neutral-600">
-        <button type="button" onClick={toggle} aria-label={playing ? "Pause" : "Play"} className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-neutral-200 text-neutral-700 hover:bg-neutral-300">
+        <button type="button" onClick={toggle} aria-label={playing ? tr("app.pause") : tr("app.play")} className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-neutral-200 text-neutral-700 hover:bg-neutral-300">
           {playing ? <Pause size={15} /> : <Play size={15} className="translate-x-0.5" />}
         </button>
         <span className="tabular-nums">{fmt(frame, fps)}</span>
@@ -238,7 +240,7 @@ export function VideoWatch({ doc, token, password }: { doc: DesignFile; token?: 
           value={Math.min(frame, duration)}
           onChange={(e) => seek(Number(e.target.value))}
           className="h-1 flex-1 cursor-pointer accent-brand-600"
-          aria-label="Seek"
+          aria-label={tr("app.seek")}
         />
         <span className="tabular-nums">{fmt(duration, fps)}</span>
       </div>

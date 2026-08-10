@@ -11,6 +11,7 @@ import { createScene, renderScene, type CanvasLike, type Viewport } from "@hc/en
 import { useEditor } from "@/store/editor";
 import { imageAssets } from "@/lib/assetProvider";
 import { useToast } from "@/components/ui/Toast";
+import { tr } from "@/lib/i18n";
 
 const TARGET_DPI = 200; // print-grade raster resolution
 const MAX_DIM = 4200; // cap any single page's pixel dimension (memory/perf)
@@ -118,33 +119,33 @@ export function PrintDialog({ open, onClose }: { open: boolean; onClose: () => v
       doc,
       indices,
       () => { setBusy(false); onClose(); },
-      () => { setBusy(false); toast.error("Couldn't prepare the print, an external image may have blocked it. Download as PDF instead."); },
+      () => { setBusy(false); toast.error(tr("editor.couldnt_prepare_the_print_an_external_image")); },
     );
   }
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/30" onClick={onClose}>
-      <div role="dialog" aria-label="Print" className="w-80 rounded-2xl bg-surface p-5 shadow-2xl ring-1 ring-black/5" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-label={tr("editor.print")} className="w-80 rounded-2xl bg-surface p-5 shadow-2xl ring-1 ring-black/5" onClick={(e) => e.stopPropagation()}>
         <h2 className="mb-1 flex items-center gap-2 text-base font-semibold text-neutral-900">
-          <Printer size={18} className="text-neutral-500" /> Print
+          <Printer size={18} className="text-neutral-500" /> {tr("editor.print")}
         </h2>
         <p className="mb-4 text-[12px] text-neutral-500">Opens your system print dialog. Choose a printer, or pick &ldquo;Save as PDF&rdquo; there to get a file.</p>
 
         {pageCount > 1 && (
           <div className="mb-4">
-            <label className="mb-1.5 block text-xs font-medium text-neutral-500">Pages</label>
+            <label className="mb-1.5 block text-xs font-medium text-neutral-500">{tr("editor.pages")}</label>
             <div className="flex gap-1">
               <button type="button" onClick={() => setScope("all")} className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition ${scope === "all" ? "bg-brand-600 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}>All {pageCount} pages</button>
-              <button type="button" onClick={() => setScope("current")} className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition ${scope === "current" ? "bg-brand-600 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}>Current page</button>
+              <button type="button" onClick={() => setScope("current")} className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition ${scope === "current" ? "bg-brand-600 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`}>{tr("editor.current_page")}</button>
             </div>
-            <p className="mt-1.5 text-[11px] text-neutral-400">You can also pick a page range in the print dialog.</p>
+            <p className="mt-1.5 text-[11px] text-neutral-400">{tr("editor.you_can_also_pick_a_page_range_in_the_print")}</p>
           </div>
         )}
 
         <div className="flex justify-end gap-2 text-sm">
-          <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-neutral-600 hover:bg-neutral-100">Cancel</button>
+          <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-neutral-600 hover:bg-neutral-100">{tr("editor.cancel")}</button>
           <button onClick={go} disabled={busy} className="flex items-center gap-2 rounded-lg bg-brand-600 px-3 py-1.5 font-medium text-white hover:bg-brand-700 disabled:opacity-50">
-            <Printer size={15} /> {busy ? "Preparing…" : "Print"}
+            <Printer size={15} /> {busy ? tr("editor.preparing") : tr("editor.print")}
           </button>
         </div>
       </div>

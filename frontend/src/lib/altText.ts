@@ -9,6 +9,7 @@ import { walkNodes, type ImageNode } from "@hc/schema";
 import { useEditor } from "@/store/editor";
 import { oc } from "@/lib/sdk";
 import { resolveAssetUrl } from "@/lib/sdk";
+import { CodedError } from "./errors";
 
 /** Load a (CORS-clean) image URL into a base64 PNG data URL by re-encoding it
  *  through a canvas. Throws a friendly error on CORS / decode failure. */
@@ -17,19 +18,19 @@ async function imageUrlToPngDataUrl(url: string): Promise<string> {
   img.crossOrigin = "anonymous";
   await new Promise<void>((res, rej) => {
     img.onload = () => res();
-    img.onerror = () => rej(new Error("Couldn't read this image (it may block cross-origin access)."));
+    img.onerror = () => rej(new CodedError("errors.image_unreadable_cross_origin", "Couldn't read this image (it may block cross-origin access)."));
     img.src = url;
   });
   const canvas = document.createElement("canvas");
   canvas.width = img.naturalWidth || 1;
   canvas.height = img.naturalHeight || 1;
   const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas is unavailable in this browser.");
+  if (!ctx) throw new CodedError("errors.canvas_unavailable", "Canvas is unavailable in this browser.");
   ctx.drawImage(img, 0, 0);
   try {
     return canvas.toDataURL("image/png");
   } catch {
-    throw new Error("This image can't be described because it's loaded cross-origin.");
+    throw new CodedError("errors.image_describe_cross_origin", "This image can't be described because it's loaded cross-origin.");
   }
 }
 
@@ -61,7 +62,7 @@ export async function generateAltText(workspaceId: string): Promise<boolean> {
   const loc = st.doc.pages.flatMap((p) => collectImages(p.children)).find((n) => n.id === st.selection[0]);
   if (!loc) return false;
   const url = imageNodeUrl(loc);
-  if (!url) throw new Error("This image has no source to describe.");
+  if (!url) throw new CodedError("errors.image_no_source", "This image has no source to describe.");
   const text = await describe(workspaceId, url);
   if (text) useEditor.getState().setImageAlt(loc.id, text);
   return true;

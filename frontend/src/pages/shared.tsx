@@ -25,10 +25,11 @@ import { CanvasFloor } from "@/components/ui/CanvasFloor";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { tr } from "@/lib/i18n";
 
 const SharedViewer = dynamic(
   () => import("@/components/SharedViewer").then((m) => m.SharedViewer),
-  { ssr: false, loading: () => <div className="p-6 text-neutral-500">Loading…</div> },
+  { ssr: false, loading: () => <div className="p-6 text-neutral-500">{tr("page.loading")}</div> },
 );
 
 type State =
@@ -77,7 +78,7 @@ export default function SharedLinkPage() {
     async (token: string, pwd?: string) => {
       try {
         if (!token) {
-          setState({ kind: "denied", reason: "This link is missing its token." });
+          setState({ kind: "denied", reason: tr("page.this_link_is_missing_its_token") });
           return;
         }
         // First resolve access. A signed-in visitor is routed to the editor so
@@ -105,22 +106,22 @@ export default function SharedLinkPage() {
               return;
             }
             if (code === "link_password_required") {
-              setState({ kind: "password", error: pwd ? "Incorrect password." : undefined });
+              setState({ kind: "password", error: pwd ? tr("page.incorrect_password") : undefined });
               return;
             }
-            setState({ kind: "denied", reason: "You do not have access to this link." });
+            setState({ kind: "denied", reason: tr("page.you_do_not_have_access_to_this_link") });
             return;
           }
           if (e.status === 410) {
-            setState({ kind: "denied", reason: "This link has expired." });
+            setState({ kind: "denied", reason: tr("page.this_link_has_expired") });
             return;
           }
           if (e.status === 404) {
-            setState({ kind: "denied", reason: "This link is no longer available." });
+            setState({ kind: "denied", reason: tr("page.this_link_is_no_longer_available") });
             return;
           }
         }
-        setState({ kind: "denied", reason: "This link could not be opened." });
+        setState({ kind: "denied", reason: tr("page.this_link_could_not_be_opened") });
       }
     },
     [authStatus, router],
@@ -148,7 +149,7 @@ export default function SharedLinkPage() {
   }
 
   if (state.kind === "viewing") {
-    const designTitle = state.file.title?.trim() || "Shared design";
+    const designTitle = state.file.title?.trim() || tr("page.shared_design");
     // An anonymous visitor only ever gets a read-only render here, even on a
     // comment/edit link (commenting/editing need an account). Show "View only"
     // honestly and offer a sign-in CTA that unlocks what the link grants.
@@ -165,8 +166,8 @@ export default function SharedLinkPage() {
           <header className="flex shrink-0 items-center gap-3 border-b border-neutral-200 bg-surface px-4 py-2.5">
             <Logo size={26} />
             <span className="min-w-0 truncate text-sm font-semibold text-neutral-800">{designTitle}</span>
-            <span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">View only</span>
-            <div className="ml-auto flex items-center gap-3">
+            <span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">{tr("page.view_only")}</span>
+            <div className="ms-auto flex items-center gap-3">
               {unlock && (
                 <Link
                   href={`/login?next=${encodeURIComponent(`/shared/${encodeURIComponent(token)}/`)}`}
@@ -176,7 +177,7 @@ export default function SharedLinkPage() {
                 </Link>
               )}
               <Link href="/" className="text-sm font-semibold text-neutral-500 hover:text-neutral-800 hover:underline">
-                HyCanvas
+                {tr("page.hycanvas_2")}
               </Link>
             </div>
           </header>
@@ -193,7 +194,7 @@ export default function SharedLinkPage() {
   return (
     <>
       <Head>
-        <title>Shared design · HyCanvas</title>
+        <title>{tr("page.shared_design_hycanvas")}</title>
       </Head>
       <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-6">
         <CanvasFloor />
@@ -202,40 +203,40 @@ export default function SharedLinkPage() {
           {state.kind === "resolving" && (
             <>
               <Loader2 size={36} className="mx-auto animate-spin text-brand-500" />
-              <p className="mt-4 text-sm text-neutral-500">Opening shared design…</p>
+              <p className="mt-4 text-sm text-neutral-500">{tr("page.opening_shared_design")}</p>
             </>
           )}
           {state.kind === "password" && (
-            <form onSubmit={submitPassword} className="text-left">
+            <form onSubmit={submitPassword} className="text-start">
               <Lock size={28} className="mx-auto mb-3 text-brand-500" />
-              <h1 className="mb-1 text-center text-lg font-bold text-neutral-900">Password required</h1>
-              <p className="mb-4 text-center text-sm text-neutral-500">This link is password protected.</p>
+              <h1 className="mb-1 text-center text-lg font-bold text-neutral-900">{tr("page.password_required")}</h1>
+              <p className="mb-4 text-center text-sm text-neutral-500">{tr("page.this_link_is_password_protected")}</p>
               <Input
                 type="password"
                 autoFocus
-                placeholder="Password"
+                placeholder={tr("page.password")}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 error={state.error}
               />
               <Button block size="lg" type="submit" className="mt-4" disabled={!password}>
-                Open design
+                {tr("page.open_design")}
               </Button>
             </form>
           )}
           {state.kind === "signin" && (
             <>
               <LogIn size={28} className="mx-auto mb-3 text-brand-500" />
-              <h1 className="mb-1 text-lg font-bold text-neutral-900">Sign in to continue</h1>
+              <h1 className="mb-1 text-lg font-bold text-neutral-900">{tr("page.sign_in_to_continue")}</h1>
               <p className="mb-5 text-sm text-neutral-500">
-                The owner requires you to sign in to open this shared design.
+                {tr("page.the_owner_requires_you_to_sign_in_to_open_th")}
               </p>
               <Link
                 href={`/login?next=${encodeURIComponent(`/shared/${encodeURIComponent(tokenFromLocation(router.query.token))}/`)}`}
                 className="block"
               >
                 <Button block size="lg">
-                  Sign in
+                  {tr("page.sign_in")}
                 </Button>
               </Link>
             </>
@@ -249,7 +250,7 @@ export default function SharedLinkPage() {
                 href={authStatus === "authed" ? "/dashboard" : "/"}
                 className="mt-6 inline-block text-sm font-semibold text-brand-ink hover:underline"
               >
-                {authStatus === "authed" ? "Go to your dashboard" : "Go to HyCanvas"}
+                {authStatus === "authed" ? tr("page.go_to_your_dashboard") : tr("page.go_to_hycanvas")}
               </Link>
             </>
           )}

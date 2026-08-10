@@ -10,11 +10,12 @@ import { ApiError } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
+import { tr } from "@/lib/i18n";
 
-const MODES: { value: AccessMode; label: string }[] = [
-  { value: "view", label: "Can view" },
-  { value: "comment", label: "Can comment" },
-  { value: "edit", label: "Can edit" },
+const modes = (): { value: AccessMode; label: string }[] => [
+  { value: "view", label: tr("editor.can_view") },
+  { value: "comment", label: tr("editor.can_comment") },
+  { value: "edit", label: tr("editor.can_edit") },
 ];
 
 export function RequestAccessScreen({ designId, onBack }: { designId: string; onBack: () => void }) {
@@ -29,12 +30,12 @@ export function RequestAccessScreen({ designId, onBack }: { designId: string; on
     try {
       await oc.requestAccess(designId, { mode, message: message.trim() || undefined });
       setSent(true);
-      toast.success("Access request sent.");
+      toast.success(tr("editor.access_request_sent"));
     } catch (e) {
       if (e instanceof ApiError && e.status === 400) {
-        toast.error("You already have this level of access.");
+        toast.error(tr("editor.you_already_have_this_level_of_access"));
       } else {
-        toast.error("Could not send the request.");
+        toast.error(tr("editor.could_not_send_the_request"));
       }
     } finally {
       setBusy(false);
@@ -49,27 +50,27 @@ export function RequestAccessScreen({ designId, onBack }: { designId: string; on
         </span>
         {sent ? (
           <>
-            <h1 className="text-lg font-bold text-neutral-900">Request sent</h1>
+            <h1 className="text-lg font-bold text-neutral-900">{tr("editor.request_sent")}</h1>
             <p className="mt-1.5 text-sm text-neutral-500">
-              The owner has been notified. You will get a notification when they respond.
+              {tr("editor.the_owner_has_been_notified_you_will_get_a_n")}
             </p>
-            <Button variant="secondary" className="mt-6" onClick={onBack}>Back to dashboard</Button>
+            <Button variant="secondary" className="mt-6" onClick={onBack}>{tr("editor.back_to_dashboard")}</Button>
           </>
         ) : (
           <>
-            <h1 className="text-lg font-bold text-neutral-900">You need access</h1>
+            <h1 className="text-lg font-bold text-neutral-900">{tr("editor.you_need_access")}</h1>
             <p className="mt-1.5 text-sm text-neutral-500">
-              You do not have permission to open this design. Request access from its owner.
+              {tr("editor.you_do_not_have_permission_to_open_this_desi")}
             </p>
-            <div className="mt-5 flex flex-col gap-2 text-left">
+            <div className="mt-5 flex flex-col gap-2 text-start">
               <label className="text-xs font-medium text-neutral-600">
-                Access level
+                {tr("editor.access_level")}
                 <select
                   value={mode}
                   onChange={(e) => setMode(e.target.value as AccessMode)}
                   className="mt-1 h-10 w-full rounded-xl border border-neutral-200 bg-surface px-3 text-sm text-neutral-800 outline-none focus:border-brand-500"
                 >
-                  {MODES.map((m) => (
+                  {modes().map((m) => (
                     <option key={m.value} value={m.value}>{m.label}</option>
                   ))}
                 </select>
@@ -77,15 +78,15 @@ export function RequestAccessScreen({ designId, onBack }: { designId: string; on
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Add a message (optional)"
+                placeholder={tr("editor.add_a_message_optional")}
                 rows={2}
                 className="resize-none rounded-xl border border-neutral-200 bg-surface px-3 py-2 text-sm text-neutral-800 outline-none focus:border-brand-500"
               />
             </div>
             <div className="mt-5 flex gap-2">
-              <Button variant="ghost" className="flex-1" onClick={onBack}>Cancel</Button>
+              <Button variant="ghost" className="flex-1" onClick={onBack}>{tr("editor.cancel")}</Button>
               <Button className="flex-1" disabled={busy} onClick={() => void request()}>
-                {busy ? "Sending…" : "Request access"}
+                {busy ? tr("editor.sending") : tr("editor.request_access")}
               </Button>
             </div>
           </>

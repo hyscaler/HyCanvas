@@ -40,6 +40,22 @@
   --color-accent-900: #4F1537;
   --color-accent-950: #350D24;
 
+
+  /* The app's neutral ramp. Emitted (rather than left to Tailwind's
+     default palette) because steps 400/500 are tuned for WCAG 1.4.3 AA
+     on the chrome backgrounds; see the note in theme.config.mjs. */
+  --color-neutral-50: #fafafa;
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #e5e5e5;
+  --color-neutral-300: #d4d4d4;
+  --color-neutral-400: #6f6f6f;
+  --color-neutral-500: #5f5f5f;
+  --color-neutral-600: #525252;
+  --color-neutral-700: #404040;
+  --color-neutral-800: #262626;
+  --color-neutral-900: #171717;
+  --color-neutral-950: #0a0a0a;
+
   /* Semantic chrome surfaces (dark mode swaps these; see THEME:dark). */
   --color-page: #ffffff;
   --color-surface: #ffffff;
@@ -108,8 +124,8 @@
   --color-neutral-100: #f5f5f5;
   --color-neutral-200: #e5e5e5;
   --color-neutral-300: #d4d4d4;
-  --color-neutral-400: #a3a3a3;
-  --color-neutral-500: #737373;
+  --color-neutral-400: #6f6f6f;
+  --color-neutral-500: #5f5f5f;
   --color-neutral-600: #525252;
   --color-neutral-700: #404040;
   --color-neutral-800: #262626;
@@ -128,6 +144,62 @@
   --oc-panel-dot: rgba(244, 244, 246, 0.06);
   --oc-swatch-border: rgba(255, 255, 255, 0.16);
 }
+
+/* THEME:hc:start (generated from src/theme.config.mjs - do not edit by hand) */
+/* High-contrast chrome (F38 FR-4): the `hc` class strengthens the tokens the
+   dark region swaps, on both the light and dark chrome. Design content is
+   never restyled: the `.light` escape hatch re-declares these tokens on a
+   nearer ancestor, so document surfaces win inside their own subtrees. */
+.hc {
+  --color-brand-ink: #681A49;
+
+  --color-neutral-50: #f8f8f8;
+  --color-neutral-100: #ededed;
+  --color-neutral-200: #bdbdbd;
+  --color-neutral-300: #8f8f8f;
+  --color-neutral-400: #4f4f4f;
+  --color-neutral-500: #454545;
+  --color-neutral-600: #333333;
+  --color-neutral-700: #232323;
+  --color-neutral-800: #141414;
+  --color-neutral-900: #000000;
+  --color-neutral-950: #000000;
+}
+
+.hc.dark {
+  --color-page: #000000;
+  --color-surface: #0d0d0d;
+  --color-brand-ink: #EDBBDC;
+
+  --color-neutral-50: #0d0d0d;
+  --color-neutral-100: #161616;
+  --color-neutral-200: #3d3d3d;
+  --color-neutral-300: #5c5c5c;
+  --color-neutral-400: #b3b3b3;
+  --color-neutral-500: #cccccc;
+  --color-neutral-600: #e0e0e0;
+  --color-neutral-700: #ededed;
+  --color-neutral-800: #f7f7f7;
+  --color-neutral-900: #ffffff;
+  --color-neutral-950: #ffffff;
+}
+
+/* A focus indicator that cannot be missed: neutral-900 is near-black on the
+   light chrome and white on the dark one, so the ring is always extreme. */
+.hc :focus-visible {
+  outline: 2px solid var(--color-neutral-900);
+  outline-offset: 2px;
+}
+
+/* Windows/forced-colors high contrast: the system repaints colors itself;
+   the app's job is to never suppress the focus indicator it relies on. */
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 2px solid ButtonText;
+    outline-offset: 2px;
+  }
+}
+/* THEME:hc:end */
 
 html,
 body {
@@ -258,15 +330,27 @@ body {
 /* Respect the OS "reduce motion" setting app-wide: damp transitions/animations
    and instant scrolling for users who opt out of motion. PresentMode also reads
    the preference directly to skip slide transitions. */
+/* The OS preference applies unless the user explicitly chose "Full" in
+   Settings (html.motion-full); an explicit "Reduced" choice applies the same
+   damping with no OS involvement (html.motion-reduce). lib/theme.ts owns the
+   classes; prefersReducedMotion() is the JS-side view of the same result. */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  html:not(.motion-full) *,
+  html:not(.motion-full) *::before,
+  html:not(.motion-full) *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+html.motion-reduce *,
+html.motion-reduce *::before,
+html.motion-reduce *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }
 
 /* Precision cursor for the pen tool: an open-center reticle (thin white-outlined

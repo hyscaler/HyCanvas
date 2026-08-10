@@ -7,6 +7,7 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { IconButton } from "./IconButton";
+import { tr } from "@/lib/i18n";
 
 // Selector for natively focusable, currently-enabled elements within the panel.
 const FOCUSABLE =
@@ -102,7 +103,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
-        aria-label={title ? undefined : (ariaLabel ?? "Dialog")}
+        aria-label={title ? undefined : (ariaLabel ?? tr("ui.dialog"))}
         tabIndex={-1}
         className={`${width} rounded-2xl bg-surface p-5 shadow-2xl outline-none`}
         onClick={(e) => e.stopPropagation()}
@@ -111,7 +112,7 @@ export function Modal({
         {title && (
           <div className="mb-4 flex items-center justify-between">
             <h2 id={titleId} className="text-base font-bold text-neutral-900">{title}</h2>
-            <IconButton aria-label="Close" onClick={onClose}>
+            <IconButton aria-label={tr("ui.close")} onClick={onClose}>
               <X size={18} />
             </IconButton>
           </div>

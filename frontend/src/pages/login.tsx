@@ -1,11 +1,12 @@
 import Head from "next/head";
 import { AuthForm } from "@/components/auth/AuthForm";
+import { tr } from "@/lib/i18n";
 
 export default function LoginPage() {
   return (
     <>
       <Head>
-        <title>Sign in · HyCanvas</title>
+        <title>{tr("page.sign_in_hycanvas")}</title>
       </Head>
       <AuthForm mode="login" />
     </>

@@ -69,6 +69,7 @@ import {
   worldMatrix,
   unionAABB,
   moveTransform,
+  rotateAboutPoint,
   alignDeltas,
   distributeDeltas,
   tidyUpDeltas,
@@ -104,6 +105,7 @@ import { parseCsvMatrix } from "@/lib/csv";
 import { tabularToChart } from "@/lib/magicDesign";
 import { usePresence } from "@/store/presence";
 import { useBrand } from "@/store/brand";
+import { tr } from "@/lib/i18n";
 
 // True when a node carries a collaborative lock held by ANOTHER participant
 //. This is SEPARATE from the schema's static `node.locked` flag:
@@ -157,6 +159,12 @@ function transformVectorPath(vp: VPath, m: Mat2D): VPath {
 // per-run (style.fill); image/group have no fills. Used so setFillColor never
 // stamps a schema-foreign property onto a node that has no fill concept.
 const FILL_CAPABLE = new Set<string>(["shape", "path", "icon", "frame"]);
+
+// `fontStyle` values are file-format tokens, never localized: the engine
+// parses weight/italic out of them by ENGLISH name and they persist into the
+// design file, so a translated token corrupts the doc.
+const boldFontStyle = "Bold";
+const regularFontStyle = "Regular";
 
 // Zoom is clamped to this range everywhere (matches the wheel-zoom bounds) so a
 // stray 0/negative value can never reach the screen<->page math.
@@ -367,6 +375,9 @@ interface EditorState {
   loadDoc(file: DesignFile): void;
   /** Set the document title (used for the editor header + export filename). */
   setDocTitle(title: string): void;
+  /** Set (or clear, with "") the document's primary language, a BCP 47 tag
+   *  announced to assistive technology and the tagged-PDF /Lang (F38 FR-8). */
+  setDocLanguage(tag: string): void;
   /**
    * Shallow-merge a patch into `doc.meta` as one undoable step. Document-type
    * surfaces (whiteboard/doc/sheet/video-32) keep their non-scene state
@@ -647,6 +658,14 @@ interface EditorState {
   duplicateSelection(dx?: number, dy?: number): string[];
   /** Move the selection by (dx,dy), undoable (arrow-key nudge). */
   nudge(dx: number, dy: number): void;
+  /** Grow/shrink the selection's size by (dw,dh), undoable (Alt+arrow keyboard
+   *  resize). Routes text/line/grid/frame through the same geometry appliers
+   *  the properties panel uses so their content re-lays with the box. */
+  growSelection(dw: number, dh: number): void;
+  /** Rotate the selection by deltaDeg about each node's own rotation origin
+   *  (center by default, mirroring the rotate handle), one undoable step
+   *  (keyboard rotate: comma/period, Alt for 15 degrees). */
+  rotateSelection(deltaDeg: number): void;
   /** Copy the first selected node's style; paste it onto the selection. */
   copyStyle(): void;
   pasteStyle(): void;
@@ -1152,13 +1171,17 @@ function applyTableShape(
   perform(() => set2(structuredClone(after)), () => set2(structuredClone(before)));
 }
 
+// The boot-time scratch document, evaluated ONCE at store creation (module
+// import), before any catalog loads: a tr() here freezes to English forever,
+// so the strings are deliberately plain literals. It is placeholder data the
+// first loadDoc replaces; node names bake in at creation time by design.
 function sampleDesign(): DesignFile {
-  const d = createBlankDesign({ title: "Untitled design", width: 1080, height: 1080 });
+  const d = createBlankDesign({ title: "Untitled design", width: 1080, height: 1080 }); // i18n-ignore: boot placeholder
   d.pages[0].background = { type: "solid", color: { srgb: { r: 1, g: 1, b: 1, a: 1 } } };
   d.pages[0].children = [
     createNode("shape", {
       id: "rect-1",
-      name: "Rectangle",
+      name: "Rectangle", // i18n-ignore: boot placeholder
       shape: "rect",
       transform: { x: 120, y: 140, scaleX: 1, scaleY: 1, rotation: 0 },
       size: { width: 360, height: 240 },
@@ -1166,7 +1189,7 @@ function sampleDesign(): DesignFile {
     } as Partial<Node>),
     createNode("shape", {
       id: "ellipse-1",
-      name: "Ellipse",
+      name: "Ellipse", // i18n-ignore: boot placeholder
       shape: "ellipse",
       transform: { x: 560, y: 380, scaleX: 1, scaleY: 1, rotation: 0 },
       size: { width: 300, height: 300 },
@@ -1174,7 +1197,7 @@ function sampleDesign(): DesignFile {
     } as Partial<Node>),
     createNode("text", {
       id: "text-1",
-      name: "Heading",
+      name: "Heading", // i18n-ignore: boot placeholder
       transform: { x: 140, y: 460, scaleX: 1, scaleY: 1, rotation: 0 },
       size: { width: 520, height: 80 },
       box: { mode: "fixed", width: 520, height: 80, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
@@ -1182,7 +1205,7 @@ function sampleDesign(): DesignFile {
         {
           runs: [
             {
-              text: "HyCanvas",
+              text: "HyCanvas", // i18n-ignore: boot placeholder
               style: {
                 fontFamily: "system",
                 fontStyle: "Bold",
@@ -1686,7 +1709,7 @@ export const useEditor = create<EditorState>((set, get) => {
         if (el.kind === "accent") {
           const fill: Fill = { type: "solid", color: fromHex(el.color ?? "") ?? bgColor };
           nodes.push(createNode("shape", {
-            name: "Accent",
+            name: tr("app.accent"),
             shape: "rect",
             transform: { x, y, scaleX: 1, scaleY: 1, rotation: 0 },
             size: { width: bw, height: bh },
@@ -1922,7 +1945,7 @@ export const useEditor = create<EditorState>((set, get) => {
           // variable here would skip re-adding the default master on redo and
           // leave the layout pointing at a master that no longer exists.
           if (!(doc.masters ?? []).some((m) => m.id === layout.masterId)) {
-            doc.masters = [...(doc.masters ?? []), { id: layout.masterId, name: "Default master", placeholders: [] }];
+            doc.masters = [...(doc.masters ?? []), { id: layout.masterId, name: tr("app.default_master"), placeholders: [] }];
           }
           doc.layouts = [...(doc.layouts ?? []), layout];
           page.layoutId = layoutId; // the source page uses its own layout
@@ -1970,13 +1993,13 @@ export const useEditor = create<EditorState>((set, get) => {
       for (const ph of layout.placeholders ?? []) {
         if (have.has(ph.id)) continue;
         made.push(createNode("text", {
-          name: ph.role === "title" ? "Title" : "Text",
+          name: ph.role === "title" ? tr("app.title") : tr("app.text"),
           transform: { x: ph.rect.x, y: ph.rect.y, scaleX: 1, scaleY: 1, rotation: 0 },
           size: { width: ph.rect.width, height: ph.rect.height },
           box: { mode: "fixed", width: ph.rect.width, height: ph.rect.height, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
           data: { placeholderId: ph.id },
           content: [{
-            runs: [{ text: ph.role === "title" ? "Title" : "Text", style: { fontFamily: "system", fontStyle: ph.role === "title" ? "Bold" : "Regular", fontSize: ph.role === "title" ? 44 : 20, fill: { type: "solid", color: { srgb: { r: 0.12, g: 0.14, b: 0.18, a: 1 } } } } }],
+            runs: [{ text: ph.role === "title" ? tr("app.title") : tr("app.text"), style: { fontFamily: "system", fontStyle: ph.role === "title" ? boldFontStyle : regularFontStyle, fontSize: ph.role === "title" ? 44 : 20, fill: { type: "solid", color: { srgb: { r: 0.12, g: 0.14, b: 0.18, a: 1 } } } } }],
             style: { align: "left", direction: "auto" },
           }],
         } as Partial<Node>));
@@ -2246,6 +2269,14 @@ export const useEditor = create<EditorState>((set, get) => {
       );
     },
 
+    setDocLanguage: (tag) => {
+      // Honor access the same way setDocMeta does.
+      if (!usePresence.getState().canEdit() || get().readonlyPreview()) return;
+      if (tag) get().doc.language = tag;
+      else delete get().doc.language;
+      set((s) => ({ rev: s.rev + 1 }));
+    },
+
     setDocTitle: (title) => {
       get().doc.title = title;
       set((s) => ({ rev: s.rev + 1 }));
@@ -2472,7 +2503,7 @@ export const useEditor = create<EditorState>((set, get) => {
     },
     addShapeAt: (x, y, shape) => {
       const node = createNode("shape", {
-        name: shape === "rect" ? "Rectangle" : "Ellipse",
+        name: shape === "rect" ? tr("app.rectangle") : tr("app.ellipse"),
         shape,
         transform: { x, y, scaleX: 1, scaleY: 1, rotation: 0 },
         size: { width: 1, height: 1 },
@@ -2488,13 +2519,13 @@ export const useEditor = create<EditorState>((set, get) => {
     },
     addTextAt: (x, y) => {
       const node = createNode("text", {
-        name: "Text",
+        name: tr("app.text"),
         transform: { x, y, scaleX: 1, scaleY: 1, rotation: 0 },
         size: { width: 240, height: 44 },
         // Auto-height by default the box grows with the typed text;
         // dragging the top/bottom handle switches it to a fixed height.
         box: { mode: "autoHeight", width: 240, height: 44, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
-        content: [{ runs: [{ text: "Text", style: { fontFamily: "system", fontStyle: "Regular", fontSize: 32, fill: { type: "solid", color: { srgb: { r: 0.1, g: 0.12, b: 0.16, a: 1 } } } } }], style: { align: "left", direction: "auto" } }],
+        content: [{ runs: [{ text: tr("app.text"), style: { fontFamily: "system", fontStyle: "Regular", fontSize: 32, fill: { type: "solid", color: { srgb: { r: 0.1, g: 0.12, b: 0.16, a: 1 } } } } }], style: { align: "left", direction: "auto" } }],
       } as Partial<Node>);
       const page = get().doc.pages[curPageIndex()];
       const prev = get().selection;
@@ -2622,7 +2653,7 @@ export const useEditor = create<EditorState>((set, get) => {
         const w = PAD * 2 + cols * STICKY + (cols - 1) * GAP;
         const h = PAD * 2 + TITLE + rows * STICKY + (rows - 1) * GAP;
         frames.push(createNode("frame", {
-          name: (cluster.title || "Theme").slice(0, 80),
+          name: (cluster.title || tr("app.theme")).slice(0, 80),
           transform: { x, y: baseY, scaleX: 1, scaleY: 1, rotation: 0 },
           size: { width: w, height: h },
         } as Partial<Node>));
@@ -2673,7 +2704,7 @@ export const useEditor = create<EditorState>((set, get) => {
         baseY = Math.max(baseY, tr.y + Math.abs(n.size.height * tr.scaleY) + 120);
       }
       const node = createNode("text", {
-        name: "Summary",
+        name: tr("app.summary"),
         transform: { x: 120, y: baseY, scaleX: 1, scaleY: 1, rotation: 0 },
         size: { width: 520, height: 200 },
         box: { mode: "fixed", width: 520, height: 200, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
@@ -3119,7 +3150,7 @@ export const useEditor = create<EditorState>((set, get) => {
       const bn = parseInt(bh.length === 3 ? bh.split("").map((c) => c + c).join("") : bh, 16) || 0;
       const brushColor = { srgb: { r: ((bn >> 16) & 255) / 255, g: ((bn >> 8) & 255) / 255, b: (bn & 255) / 255, a: Math.max(0, Math.min(1, brush.opacity)) } };
       const node = createNode("path", {
-        name: "Pencil",
+        name: tr("app.pencil"),
         segments: segs,
         closed: false,
         stroke: { fill: { type: "solid", color: brushColor }, width: Math.max(0.5, brush.width), align: "center", cap: "round", join: "round" },
@@ -3178,7 +3209,7 @@ export const useEditor = create<EditorState>((set, get) => {
       const bn = parseInt(bh.length === 3 ? bh.split("").map((c) => c + c).join("") : bh, 16) || 0;
       const brushColor = { srgb: { r: ((bn >> 16) & 255) / 255, g: ((bn >> 8) & 255) / 255, b: (bn & 255) / 255, a: 1 } };
       const node = createNode("ink", {
-        name: brush.mode === "highlighter" ? "Highlighter" : brush.mode === "marker" ? "Marker" : "Ink",
+        name: brush.mode === "highlighter" ? tr("app.highlighter") : brush.mode === "marker" ? tr("app.marker") : tr("app.ink"),
         points: local,
         smoothing: s,
         brush: { width, opacity: Math.max(0, Math.min(1, brush.opacity)), color: brushColor, mode: brush.mode },
@@ -3278,7 +3309,7 @@ export const useEditor = create<EditorState>((set, get) => {
       if (!outline.subpaths.length) return;
       const page = doc.pages[curPageIndex()];
       const node = createNode("boolean", {
-        name: "Outline", op: "union", operands: [], result: outline, fills: [stroke.fill],
+        name: tr("app.outline"), op: "union", operands: [], result: outline, fills: [stroke.fill],
         transform: { ...n.transform }, size: { ...n.size },
       } as unknown as Partial<Node>);
       const before = structuredClone(stroke);
@@ -3305,7 +3336,7 @@ export const useEditor = create<EditorState>((set, get) => {
       let node: Node;
       if (rec.kind === "line") {
         node = createNode("path", {
-          name: "Line", closed: false,
+          name: tr("app.line"), closed: false,
           segments: [{ x: rec.from.x, y: rec.from.y }, { x: rec.to.x, y: rec.to.y }],
           stroke: stroke ?? { fill: { type: "solid", color: { srgb: { r: 0.1, g: 0.12, b: 0.16, a: 1 } } }, width: 2, align: "center", cap: "round", join: "round" },
           transform: { ...baseT },
@@ -3655,7 +3686,7 @@ export const useEditor = create<EditorState>((set, get) => {
       get().addNode("chart", {
         chartType,
         categories: ["A", "B", "C", "D"],
-        series: [{ name: "Series 1", values: [12, 19, 8, 15], color: seriesColorAt(0) }],
+        series: [{ name: tr("app.series_1"), values: [12, 19, 8, 15], color: seriesColorAt(0) }],
         options: {},
         style: { legend: { show: true, position: "bottom" }, valueLabels: false },
         transform: { x: 200, y: 200, scaleX: 1, scaleY: 1, rotation: 0 },
@@ -3665,7 +3696,7 @@ export const useEditor = create<EditorState>((set, get) => {
     insertChartData: (data) => {
       const series = data.series.length
         ? data.series.map((s, i) => ({ name: s.name, values: s.values, color: seriesColorAt(i) }))
-        : [{ name: "Series 1", values: [], color: seriesColorAt(0) }];
+        : [{ name: tr("app.series_1"), values: [], color: seriesColorAt(0) }];
       const node = createNode("chart", {
         chartType: data.chartType,
         categories: data.categories,
@@ -3966,7 +3997,7 @@ export const useEditor = create<EditorState>((set, get) => {
     },
     addTextBox: (text, at) => {
       const node = createNode("text", {
-        name: text.slice(0, 24) || "Text",
+        name: text.slice(0, 24) || tr("app.text"),
         transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
         size: { width: 360, height: 80 },
         box: { mode: "fixed", width: 360, height: 80, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
@@ -4020,6 +4051,56 @@ export const useEditor = create<EditorState>((set, get) => {
         after.push(moveTransform(loc.node.transform, dx, dy));
       }
       if (nodes.length) get().runCommand({ kind: "transform", nodes, before, after });
+    },
+    rotateSelection: (deltaDeg) => {
+      const { doc, selection } = get();
+      const nodes: string[] = [];
+      const before: Transform[] = [];
+      const after: Transform[] = [];
+      for (const id of selection) {
+        const loc = locate(doc, id);
+        if (!loc || loc.node.locked || editBlocked(id)) continue; // skip collab-locked + brand locked regions
+        const sz = (loc.node as { size?: { width: number; height: number } }).size;
+        if (!sz) continue; // no box, no pivot (e.g. connectors follow their endpoints)
+        nodes.push(id);
+        before.push({ ...loc.node.transform });
+        after.push(rotateAboutPoint(loc.node.transform, sz, deltaDeg, loc.node.transform.origin ?? { x: 0.5, y: 0.5 }));
+      }
+      if (nodes.length) get().runCommand({ kind: "transform", nodes, before, after });
+    },
+    growSelection: (dw, dh) => {
+      // One keypress = ONE undo step, even for a mixed selection whose
+      // text/line/grid/frame members each commit through their own geometry
+      // applier: runAsTurn collapses everything this adds into a composite.
+      get().runAsTurn(() => {
+        const { doc, selection } = get();
+        const nodes: string[] = [];
+        const before: Transform[] = [];
+        const after: Transform[] = [];
+        const beforeSizes: { width: number; height: number }[] = [];
+        const afterSizes: { width: number; height: number }[] = [];
+        for (const id of selection) {
+          const loc = locate(doc, id);
+          if (!loc || loc.node.locked || editBlocked(id)) continue; // skip collab-locked + brand locked regions
+          const sz = (loc.node as { size?: { width: number; height: number } }).size;
+          if (!sz) continue; // nodes without a box (e.g. connectors) have nothing to grow
+          const next = { width: Math.max(1, sz.width + dw), height: Math.max(1, sz.height + dh) };
+          if (next.width === sz.width && next.height === sz.height) continue;
+          const t = { ...loc.node.transform };
+          // Content that lays out from its box must re-lay when the box changes
+          // (mirrors the properties panel's W/H commit path).
+          if (loc.node.type === "text") { get().applyTextGeometry(id, t, next); continue; }
+          if (loc.node.type === "line") { get().applyLineGeometry(id, t, next); continue; }
+          if (loc.node.type === "grid") { get().applyGridGeometry(id, t, next); continue; }
+          if (loc.node.type === "frame") { get().applyFrameGeometry(id, t, next); continue; }
+          nodes.push(id);
+          before.push({ ...loc.node.transform });
+          after.push(t);
+          beforeSizes.push({ ...sz });
+          afterSizes.push(next);
+        }
+        if (nodes.length) get().runCommand({ kind: "transform", nodes, before, after, beforeSizes, afterSizes });
+      });
     },
     reorderLayer: (id, toIndex) => {
       if (editBlocked(id)) return; // a filler may not restack a brand locked region
@@ -4087,6 +4168,13 @@ export const useEditor = create<EditorState>((set, get) => {
       const cur = l.node as unknown as Snap;
       const after: Snap = { transform: { ...cur.transform }, size: { ...cur.size }, box: cur.box !== undefined ? structuredClone(cur.box) : undefined, content: cur.content !== undefined ? structuredClone(cur.content) : undefined, points: cur.points !== undefined ? structuredClone(cur.points) : undefined, children: before.children !== undefined ? structuredClone(cur.children) : undefined };
       const b: Snap = { transform: { ...before.transform }, size: { ...before.size }, box: before.box !== undefined ? structuredClone(before.box) : undefined, content: before.content !== undefined ? structuredClone(before.content) : undefined, points: before.points !== undefined ? structuredClone(before.points) : undefined, children: before.children !== undefined ? structuredClone(before.children) : undefined };
+      // Same invariant as perform(): while a CRDT undo manager is bound the
+      // local stacks stay EMPTY - replaying a stale snapshot against a later
+      // collaborative state would clobber peer edits.
+      if (get().collabUndo) {
+        set((s) => ({ rev: s.rev + 1 }));
+        return;
+      }
       set((s) => ({ rev: s.rev + 1, undoStack: [...s.undoStack, { undo: () => apply(b), redo: () => apply(after) }], redoStack: [] }));
     },
 
@@ -4122,7 +4210,7 @@ export const useEditor = create<EditorState>((set, get) => {
       const vbH = (vb && vb[3]) || 24;
       const scale = 200 / Math.max(vbW, vbH);
       const group = createNode("group", {
-        name: "Icon",
+        name: tr("app.icon"),
         children: nodes,
         transform: { x: 0, y: 0, scaleX: scale, scaleY: scale, rotation: 0 },
         size: { width: vbW, height: vbH },
@@ -4164,7 +4252,7 @@ export const useEditor = create<EditorState>((set, get) => {
       for (const s of slots) {
         const box = gridCellBox({ width: gw, height: gh }, r, c, gap, s);
         const cell = createNode("frame", {
-          name: "Photo",
+          name: tr("app.photo"),
           transform: { x: box.x, y: box.y, scaleX: 1, scaleY: 1, rotation: 0 },
           size: { width: box.width, height: box.height },
           clip: true,
@@ -4176,7 +4264,7 @@ export const useEditor = create<EditorState>((set, get) => {
         cells.push({ ...s, childId: cell.id });
       }
       const grid = createNode("grid", {
-        name: "Photo grid",
+        name: tr("app.photo_grid"),
         rows: r, cols: c, gap,
         cells, children,
         size: { width: gw, height: gh },
@@ -4242,7 +4330,7 @@ export const useEditor = create<EditorState>((set, get) => {
         for (let col = 0; col < c; col++) {
           const keep = byPos.get(`${row},${col}`) as unknown as { id: string; transform: Transform; size: { width: number; height: number }; children?: Node[] } | undefined;
           const frame = keep ?? (createNode("frame", {
-            name: "Photo", transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: cellW, height: cellH }, clip: true, children: [], maskShape: "rect", fills: [{ type: "solid", color: { srgb: { r: 0.9, g: 0.91, b: 0.93, a: 1 } } }],
+            name: tr("app.photo"), transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: cellW, height: cellH }, clip: true, children: [], maskShape: "rect", fills: [{ type: "solid", color: { srgb: { r: 0.9, g: 0.91, b: 0.93, a: 1 } } }],
           } as Partial<Node>) as unknown as { id: string; transform: Transform; size: { width: number; height: number }; children?: Node[] });
           layout(frame, { row, col, rowSpan: 1, colSpan: 1 }, r, c);
           nextChildren.push(frame as unknown as Node);
@@ -4377,7 +4465,7 @@ export const useEditor = create<EditorState>((set, get) => {
       ensureDocArrays(doc);
       const refs: AssetRef[] = assets.map((a) => ({ id: a.assetId, kind: "image", url: a.url, mime: "image/*", checksum: "" }));
       const group = createNode("group", {
-        name: "Imported SVG",
+        name: tr("app.imported_svg"),
         children: nodes,
         transform: { x: gx, y: gy, scaleX: scale, scaleY: scale, rotation: 0 },
         size: { width: vbW, height: vbH },
@@ -4474,7 +4562,7 @@ export const useEditor = create<EditorState>((set, get) => {
       const pageId = page.id;
       const assetId = `asset-${crypto.randomUUID()}`;
       const node = createNode("image", {
-        name: "Background",
+        name: tr("app.background"),
         source: { assetId, naturalWidth: 0, naturalHeight: 0 },
         fit: "cover",
         transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
@@ -4703,7 +4791,7 @@ export const useEditor = create<EditorState>((set, get) => {
       const src = loc.node as unknown as { transform: Transform; size: { width: number; height: number }; opacity?: number; fills?: Fill[]; name?: string };
       const frame = createNode("frame", {
         id, // keep the id so selection/undo stay anchored to it
-        name: src.name ?? "Frame",
+        name: src.name ?? tr("app.frame"),
         transform: { ...src.transform },
         size: { ...src.size },
         opacity: src.opacity ?? 1,

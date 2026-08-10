@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { WizardShell, ErrorBanner, SuccessBanner, useSecretGate } from "./WizardShell";
 import { getAnswers, setupPost, updateAnswers, type DBAnswers } from "./wizard";
+import { tr } from "@/lib/i18n";
+import { userMessage } from "@/lib/errors";
 
 const DB_DEFAULTS: DBAnswers = { url: "", host: "localhost", port: "5432", user: "", password: "", name: "hycanvas" };
 
@@ -51,7 +53,7 @@ export function Step2Database() {
       await setupPost("db/test", payload);
       setTested(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Connection failed.");
+      setError(userMessage(err, tr("installation.connection_failed")));
     } finally {
       setBusy(false);
     }
@@ -66,7 +68,7 @@ export function Step2Database() {
       await updateAnswers({ db: mode === "url" ? { ...db } : { ...db, url: "" } });
       await router.push("/installation/step-3");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't save. Please try again.");
+      setError(userMessage(err, tr("installation.couldnt_save_please_try_again")));
       setBusy(false);
     }
   }
@@ -74,7 +76,7 @@ export function Step2Database() {
   return (
     <WizardShell
       step={2}
-      title="Connect PostgreSQL"
+      title={tr("installation.connect_postgresql")}
       subtitle="HyCanvas stores designs and accounts in Postgres. The database must exist; tables are created automatically."
     >
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
@@ -82,21 +84,21 @@ export function Step2Database() {
           <>
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-2">
-                <Input label="Host" required placeholder="localhost" value={db.host} onChange={(e) => setDB({ host: e.target.value })} autoFocus />
+                <Input label={tr("installation.host")} required placeholder={tr("installation.localhost")} value={db.host} onChange={(e) => setDB({ host: e.target.value })} autoFocus />
               </div>
-              <Input label="Port" inputMode="numeric" placeholder="5432" value={db.port} onChange={(e) => setDB({ port: e.target.value })} />
+              <Input label={tr("installation.port")} inputMode="numeric" placeholder="5432" value={db.port} onChange={(e) => setDB({ port: e.target.value })} />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Input label="Username" required placeholder="postgres" value={db.user} onChange={(e) => setDB({ user: e.target.value })} />
-              <Input label="Password" type="password" value={db.password} onChange={(e) => setDB({ password: e.target.value })} autoComplete="off" />
+              <Input label={tr("installation.username")} required placeholder={tr("installation.postgres")} value={db.user} onChange={(e) => setDB({ user: e.target.value })} />
+              <Input label={tr("installation.password")} type="password" value={db.password} onChange={(e) => setDB({ password: e.target.value })} autoComplete="off" />
             </div>
-            <Input label="Database name" required placeholder="hycanvas" value={db.name} onChange={(e) => setDB({ name: e.target.value })} />
+            <Input label={tr("installation.database_name")} required placeholder={tr("installation.hycanvas")} value={db.name} onChange={(e) => setDB({ name: e.target.value })} />
           </>
         ) : (
           <Input
-            label="Connection URL"
+            label={tr("installation.connection_url")}
             required
-            placeholder="postgresql://user:password@host:5432/hycanvas"
+            placeholder={tr("installation.postgresql_user_password_host_5432_hycanvas")}
             value={db.url}
             onChange={(e) => setDB({ url: e.target.value })}
             autoFocus
@@ -112,22 +114,22 @@ export function Step2Database() {
           }}
           className="self-start text-sm font-medium text-brand-ink hover:underline"
         >
-          {mode === "fields" ? "Paste a connection URL instead" : "Enter host and credentials instead"}
+          {mode === "fields" ? tr("installation.paste_a_connection_url_instead") : tr("installation.enter_host_and_credentials_instead")}
         </button>
 
         {error && <ErrorBanner>{error}</ErrorBanner>}
-        {tested && <SuccessBanner>Connection succeeded.</SuccessBanner>}
+        {tested && <SuccessBanner>{tr("installation.connection_succeeded")}</SuccessBanner>}
 
         <div className="flex items-center justify-between gap-3">
           <Button type="button" variant="ghost" onClick={() => void router.push("/installation/step-1")}>
-            Back
+            {tr("installation.back")}
           </Button>
           <div className="flex gap-2">
             <Button type="button" variant="secondary" onClick={() => void test()} disabled={busy}>
-              {busy ? "Working…" : "Test connection"}
+              {busy ? tr("installation.working") : tr("installation.test_connection")}
             </Button>
             <Button type="submit" disabled={!tested || busy}>
-              Continue
+              {tr("installation.continue")}
             </Button>
           </div>
         </div>

@@ -1,4 +1,5 @@
 // Media probing + analysis cache for the video editor. One entry per asset
+import { CodedError } from "../errors";
 // URL: metadata (duration/dimensions), a filmstrip thumbnail strip for video
 // clips, and min/max peak buckets for audio waveforms. Everything is cached by
 // promise so concurrent callers share one probe, and failures are cached too
@@ -30,7 +31,7 @@ export function probeMedia(url: string, kind: "video" | "audio"): Promise<MediaI
         });
         el.src = "";
       };
-      el.onerror = () => reject(new Error("Could not read media metadata."));
+      el.onerror = () => reject(new CodedError("errors.media_metadata_failed", "Could not read media metadata."));
       el.src = url;
     });
     infoCache.set(url, p);
@@ -53,21 +54,21 @@ export function filmstrip(url: string, tiles = 6, tileW = 96, tileH = 48): Promi
       video.muted = true;
       await new Promise<void>((resolve, reject) => {
         video.onloadedmetadata = () => resolve();
-        video.onerror = () => reject(new Error("video load failed"));
+        video.onerror = () => reject(new CodedError("errors.video_load_failed", "video load failed"));
         video.src = url;
       });
       const canvas = document.createElement("canvas");
       canvas.width = tiles * tileW;
       canvas.height = tileH;
       const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("no 2d context");
+      if (!ctx) throw new CodedError("errors.canvas_unavailable", "Canvas is unavailable in this browser.");
       const dur = Math.max(0.001, video.duration);
       for (let i = 0; i < tiles; i++) {
         // Sample tile centers, avoiding the exact first/last frame (often black).
         const t = dur * ((i + 0.5) / tiles);
         await new Promise<void>((resolve, reject) => {
           video.onseeked = () => resolve();
-          video.onerror = () => reject(new Error("seek failed"));
+          video.onerror = () => reject(new CodedError("errors.video_seek_failed", "video seek failed"));
           video.currentTime = Math.min(dur - 0.001, t);
         });
         const sw = video.videoWidth || 1;
@@ -95,7 +96,7 @@ export function decodeMono(url: string): Promise<{ samples: Float32Array; sample
   if (!p) {
     p = (async () => {
       const res = await fetch(url, { credentials: "include" });
-      if (!res.ok) throw new Error(`audio fetch failed (${res.status})`);
+      if (!res.ok) throw new CodedError("errors.audio_fetch_failed", `audio fetch failed (${res.status})`, { status: res.status });
       const raw = await res.arrayBuffer();
       const ctx = new OfflineAudioContext(1, 1, 44100);
       const buf = await ctx.decodeAudioData(raw);
@@ -123,7 +124,7 @@ export function peaks(url: string, buckets = 200): Promise<number[]> {
   if (!p) {
     p = (async () => {
       const res = await fetch(url, { credentials: "include" });
-      if (!res.ok) throw new Error(`audio fetch failed (${res.status})`);
+      if (!res.ok) throw new CodedError("errors.audio_fetch_failed", `audio fetch failed (${res.status})`, { status: res.status });
       const raw = await res.arrayBuffer();
       // OfflineAudioContext decodes without needing a user gesture.
       const ctx = new OfflineAudioContext(1, 1, 44100);
@@ -157,7 +158,7 @@ export async function waveformDataUrl(url: string, width = 240, height = 40): Pr
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("no 2d context");
+  if (!ctx) throw new CodedError("errors.canvas_unavailable", "Canvas is unavailable in this browser.");
   ctx.fillStyle = "rgba(255,255,255,0.85)";
   const per = width / pk.length;
   for (let i = 0; i < pk.length; i++) {

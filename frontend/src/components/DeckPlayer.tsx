@@ -29,6 +29,8 @@ import { useViewBeat } from "@/lib/useViewBeat";
 import { AudiencePanel } from "@/components/AudiencePanel";
 import { oc } from "@/lib/sdk";
 import { nextVisibleIndex, prevVisibleIndex, firstVisibleIndex, visiblePosition, LIVE_STALE_MS } from "@/lib/present";
+import { DESIGN_SURFACE_DIR } from "@/lib/locale";
+import { tr } from "@/lib/i18n";
 
 type Transition = NonNullable<DesignFile["pages"][number]["transition"]>;
 
@@ -270,6 +272,7 @@ export function DeckPlayer({ doc, token, password }: { doc: DesignFile; token?: 
     <div
       ref={wrapRef}
       className="relative flex min-h-0 w-full flex-1 flex-col bg-neutral-900"
+      dir={DESIGN_SURFACE_DIR}
       data-testid="deck-player"
     >
       <div ref={stageRef} className="grid min-h-0 flex-1 place-items-center overflow-hidden p-2">
@@ -286,7 +289,7 @@ export function DeckPlayer({ doc, token, password }: { doc: DesignFile; token?: 
             <>
               <button
                 type="button"
-                aria-label="Previous slide"
+                aria-label={tr("app.previous_slide")}
                 onClick={() => go(-1)}
                 className="grid h-8 w-8 place-items-center rounded-full hover:bg-white/15"
               >
@@ -297,7 +300,7 @@ export function DeckPlayer({ doc, token, password }: { doc: DesignFile; token?: 
               </span>
               <button
                 type="button"
-                aria-label="Next slide"
+                aria-label={tr("app.next_slide")}
                 onClick={() => go(1)}
                 className="grid h-8 w-8 place-items-center rounded-full hover:bg-white/15"
               >
@@ -307,7 +310,7 @@ export function DeckPlayer({ doc, token, password }: { doc: DesignFile; token?: 
           )}
           <button
             type="button"
-            aria-label={fullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+            aria-label={fullscreen ? tr("app.exit_fullscreen") : tr("app.enter_fullscreen")}
             onClick={() => void toggleFullscreen()}
             className="grid h-8 w-8 place-items-center rounded-full hover:bg-white/15"
           >
@@ -333,7 +336,7 @@ export function DeckPlayer({ doc, token, password }: { doc: DesignFile; token?: 
           }`}
         >
           <span className={`h-2 w-2 rounded-full ${following ? "animate-pulse bg-white" : "bg-red-500"}`} />
-          {following ? "Following the presenter - click to stop" : "Presenter is live - follow along"}
+          {following ? tr("app.following_the_presenter_click_to_stop") : tr("app.presenter_is_live_follow_along")}
         </button>
       )}
     </div>
