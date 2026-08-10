@@ -4,9 +4,20 @@
 // scale matrix yields the requested output resolution and each node's transform
 // composes onto it.
 //
-// Fidelity notes (v1, documented vs the browser @hc/engine): linear & radial
+// Fidelity notes (documented vs the browser @hc/engine): linear & radial
 // gradient fills are rasterized (objectBoundingBox, per-pixel); shape strokes
-// follow the shape outline as thick quads with filled joins (see strokeOutline),
+// follow the shape outline as thick quads with filled joins (see strokeOutline).
+//
+// TEXT AND SCRIPT COVERAGE: bidirectional ordering ships (see bidi.go), so a
+// right-to-left paragraph is ordered and aligned as the canvas shows it, and
+// Arabic is SHAPED on this path (see shape.go: contextual forms, lam-alef
+// ligatures, harakat). Glyph coverage: the embedded fallback (Liberation
+// Sans) covers Latin/Greek/Cyrillic only, but the renderer falls back per
+// glyph across the fonts registered at startup (FONTS_DIR), a presentation
+// form no font covers decomposes to its base letters, and a character
+// nothing can draw is reported once rather than dropped silently. Measure
+// uses the same shaped text and fallback advances as the draw pass.
+//
 // blend modes, drop shadows, and node effects (colour adjustments, blur, glow,
 // outline, duotone) composite through an isolated layer (see composite.go and
 // effects.go; shadow `spread` is not applied, inner shadows are skipped, blur is
@@ -730,14 +741,46 @@ func wrapChunks(s string) []textChunk {
 func (rc *rctx) rasterText(m mat, node map[string]any) {
 	scale := avgScale(m)
 	// Letter spacing means per-glyph drawing, so measuring shares the walk.
-	measure := func(face font.Face, text string, ls float64) float64 {
+	// Measure what will DRAW: Arabic measures its SHAPED forms (a lam-alef
+	// ligature merges two runes into one glyph, changing the width), and an
+	// uncovered rune measures through the same registered-font fallback the
+	// draw pass uses instead of contributing zero width - otherwise wrap and
+	// alignment are computed from widths the drawn line does not have. A
+	// style run that splits mid-word shapes each fragment without seam
+	// context here (the draw pass joins them), a small documented
+	// approximation.
+	measure := func(face font.Face, style map[string]any, text string, ls float64) float64 {
+		if hasArabic(text) {
+			text = ShapeArabic(text, 0, 0)
+		}
+		fam := asStr(style["fontFamily"])
+		wght := int(asNum(asObj(style["axes"])["wght"]))
+		size := asNum(style["fontSize"])
+		if size == 0 {
+			size = 16
+		}
+		advOf := func(r rune) (float64, bool) {
+			if adv, ok := face.GlyphAdvance(r); ok {
+				return float64(adv>>6)/scale + ls, true
+			}
+			if alt := faceCovering(r, fam, wght, size*scale, rc.font); alt != nil {
+				adv, _ := alt.GlyphAdvance(r)
+				_ = alt.Close()
+				return float64(adv>>6)/scale + ls, true
+			}
+			return 0, false
+		}
 		w := 0.0
 		for _, r := range text {
-			adv, ok := face.GlyphAdvance(r)
-			if !ok {
+			if aw, ok := advOf(r); ok {
+				w += aw
 				continue
 			}
-			w += float64(adv>>6)/scale + ls
+			for _, br := range UnshapeFallback(r) {
+				if aw, ok := advOf(br); ok {
+					w += aw
+				}
+			}
 		}
 		return w
 	}
@@ -790,14 +833,28 @@ func (rc *rctx) rasterText(m mat, node map[string]any) {
 		width  float64
 		height float64
 		align  string
+		dir    string
 	}
 	var lines []vline
 
 	// Layout pass: build visual lines per paragraph, wrapping between words.
 	for _, para := range asArr(node["content"]) {
 		po := asObj(para)
-		align := asStr(asObj(po["style"])["align"])
-		cur := vline{align: align}
+		pstyle := asObj(po["style"])
+		align := asStr(pstyle["align"])
+		// Base direction (F38 FR-10), resolved exactly as @hc/text does so the
+		// export matches the canvas.
+		var paraText strings.Builder
+		for _, run := range asArr(po["runs"]) {
+			paraText.WriteString(runText(asObj(run), asObj(asObj(run)["style"])))
+		}
+		dir := ResolveBaseDirection(paraText.String(), asStr(pstyle["direction"]))
+		// A right-to-left paragraph reads from the right, so an author who never
+		// chose an alignment gets one that follows the text.
+		if dir == "rtl" && align == "" {
+			align = "right"
+		}
+		cur := vline{align: align, dir: dir}
 		firstSize := 0.0
 		flush := func() {
 			if cur.height == 0 {
@@ -808,7 +865,10 @@ func (rc *rctx) rasterText(m mat, node map[string]any) {
 				}
 			}
 			lines = append(lines, cur)
-			cur = vline{align: align}
+			// Carry the paragraph's base direction onto continuation lines:
+			// dropping it made every wrapped RTL line resolve bidi with an
+			// LTR base, putting trailing punctuation on the wrong side.
+			cur = vline{align: align, dir: dir}
 		}
 		for _, run := range asArr(po["runs"]) {
 			ro := asObj(run)
@@ -824,7 +884,7 @@ func (rc *rctx) rasterText(m mat, node map[string]any) {
 			}
 			ls := asNum(style["letterSpacing"])
 			for _, chunk := range wrapChunks(runText(ro, style)) {
-				w := measure(face, chunk.text, ls)
+				w := measure(face, style, chunk.text, ls)
 				if wrap && cur.width > 0 && cur.width+w > contentW && !chunk.ws {
 					flush()
 				}
@@ -851,6 +911,22 @@ func (rc *rctx) rasterText(m mat, node map[string]any) {
 
 	// Draw pass: baseline sits near the line's bottom (ascent approximation).
 	for _, ln := range lines {
+		// Display order. Unlike the browser, this renderer draws rune by rune and
+		// gets no bidi from the text stack, so OrderVisual also reverses the
+		// characters inside right-to-left runs.
+		texts := make([]string, len(ln.segs))
+		joined := strings.Builder{}
+		for i, sg := range ln.segs {
+			texts[i] = sg.text
+			joined.WriteString(sg.text)
+		}
+		if ln.dir == "rtl" || HasRtl(joined.String()) {
+			ordered := make([]seg, 0, len(ln.segs))
+			for _, p := range OrderVisual(texts, ln.dir) {
+				ordered = append(ordered, seg{text: p.Text, style: ln.segs[p.Item].style})
+			}
+			ln.segs = ordered
+		}
 		y += ln.height
 		x := padL
 		switch ln.align {
@@ -870,12 +946,53 @@ func (rc *rctx) rasterText(m mat, node map[string]any) {
 			}
 			src := image.NewUniform(rasterColor(col, rc.alpha))
 			ls := asNum(sg.style["letterSpacing"])
-			for _, r := range sg.text {
+			fam := asStr(sg.style["fontFamily"])
+			wght := int(asNum(asObj(sg.style["axes"])["wght"]))
+			size := asNum(sg.style["fontSize"])
+			if size == 0 {
+				size = 16
+			}
+			// The run's own face may not cover a rune: the embedded fallback
+			// has no Hebrew, Arabic, Indic or CJK glyphs. Skipping silently is
+			// what made non-Latin text export blank, so fall back across the
+			// registered fonts; drawRune reports whether anything drew.
+			drawRune := func(r rune) bool {
+				glyphFace := face
+				if _, ok := face.GlyphAdvance(r); !ok {
+					if alt := faceCovering(r, fam, wght, size*scale, rc.font); alt != nil {
+						glyphFace = alt
+					} else {
+						return false
+					}
+				}
 				dx, dy := m.apply(x, y)
-				d := &font.Drawer{Dst: rc.dst, Src: src, Face: face, Dot: fixed.P(int(math.Round(dx)), int(math.Round(dy)))}
+				d := &font.Drawer{Dst: rc.dst, Src: src, Face: glyphFace, Dot: fixed.P(int(math.Round(dx)), int(math.Round(dy)))}
 				d.DrawString(string(r))
-				adv, _ := face.GlyphAdvance(r)
+				adv, _ := glyphFace.GlyphAdvance(r)
 				x += float64(adv>>6)/scale + ls
+				if glyphFace != face {
+					_ = glyphFace.Close()
+				}
+				return true
+			}
+			for _, r := range sg.text {
+				if drawRune(r) {
+					continue
+				}
+				// Nothing covers this rune. A shaped presentation form falls
+				// back to its base letter(s) - many Arabic fonts shape via
+				// OpenType and cover the base block but not Forms-B in their
+				// cmap - so shaping never renders WORSE than the unshaped
+				// export did. Anything still missing is reported once.
+				drew := false
+				for _, br := range UnshapeFallback(r) {
+					if drawRune(br) {
+						drew = true
+					}
+				}
+				if !drew {
+					noteMissingGlyph(r)
+				}
 			}
 			_ = face.Close()
 		}
