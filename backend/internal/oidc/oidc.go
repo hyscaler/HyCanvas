@@ -184,7 +184,9 @@ func (s *Service) AuthURL() (authURL, cookie string, err error) { return s.autho
 
 // LinkURL builds the authorize redirect for connecting an SSO identity to an
 // already-authenticated user (the user id is bound into the signed state).
-func (s *Service) LinkURL(userID string) (authURL, cookie string, err error) { return s.authorize(userID) }
+func (s *Service) LinkURL(userID string) (authURL, cookie string, err error) {
+	return s.authorize(userID)
+}
 
 // authorize builds the authorize redirect URL + the signed state cookie value.
 // A non-empty linkUserID marks a connect flow.

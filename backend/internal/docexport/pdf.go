@@ -230,7 +230,7 @@ func assemblePDF(pageStreams []string) []byte {
 	// Numbering: 1=Catalog, 2=Pages (both filled in after pages exist), then the
 	// four shared fonts, then a content + page object per page.
 	catalogNum := addObj("") // 1
-	pagesNum := addObj("")    // 2
+	pagesNum := addObj("")   // 2
 	fontKeys := []string{"H", "HB", "HO", "C"}
 	fontObjNums := map[string]int{}
 	for _, k := range fontKeys {
