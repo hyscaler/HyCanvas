@@ -3378,5 +3378,8 @@
   "editor.effect_outline": "Contorno",
   "editor.effect_adjustment": "Ajustar",
   "editor.effect_duotone": "Duotono",
-  "editor.text_effects": "Efectos de texto"
+  "editor.text_effects": "Efectos de texto",
+  "editor.no_animations_to_preview": "Todavía no hay animaciones en esta página",
+  "editor.comments_open_count.one": "Comentarios ({count} abierto)",
+  "editor.comments_open_count.other": "Comentarios ({count} abiertos)"
 }

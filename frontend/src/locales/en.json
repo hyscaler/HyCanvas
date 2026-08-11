@@ -3378,5 +3378,8 @@
   "editor.effect_outline": "Outline",
   "editor.effect_adjustment": "Adjust",
   "editor.effect_duotone": "Duotone",
-  "editor.text_effects": "Text effects"
+  "editor.text_effects": "Text effects",
+  "editor.no_animations_to_preview": "No animations on this page yet",
+  "editor.comments_open_count.one": "Comments ({count} open)",
+  "editor.comments_open_count.other": "Comments ({count} open)"
 }

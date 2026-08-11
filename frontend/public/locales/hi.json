@@ -3378,5 +3378,8 @@
   "editor.effect_outline": "रूपरेखा",
   "editor.effect_adjustment": "समायोजित करें",
   "editor.effect_duotone": "डुओटोन",
-  "editor.text_effects": "पाठ प्रभाव"
+  "editor.text_effects": "पाठ प्रभाव",
+  "editor.no_animations_to_preview": "इस पृष्ठ पर अभी कोई एनिमेशन नहीं है",
+  "editor.comments_open_count.one": "टिप्पणियाँ ({count} खुली)",
+  "editor.comments_open_count.other": "टिप्पणियाँ ({count} खुली)"
 }

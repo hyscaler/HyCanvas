@@ -3378,5 +3378,8 @@
   "editor.effect_outline": "描边",
   "editor.effect_adjustment": "调整",
   "editor.effect_duotone": "双色调",
-  "editor.text_effects": "文字效果"
+  "editor.text_effects": "文字效果",
+  "editor.no_animations_to_preview": "此页面还没有动画",
+  "editor.comments_open_count.one": "评论（{count} 条未解决）",
+  "editor.comments_open_count.other": "评论（{count} 条未解决）"
 }

@@ -4,6 +4,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
 import { useRouter } from "next/router";
+import type { Node as DesignNode } from "@hc/schema";
 import { ChevronLeft, Undo2, Redo2, Download, Play, MonitorPlay, Ruler, Grid3x3, Magnet, LayoutTemplate, History, Eye, Share2, MessageSquare, ShieldCheck, Activity, BarChart3, MoreHorizontal, Send, Globe, Printer, PanelRightClose, PanelRightOpen, Keyboard, Info, X, Accessibility, Maximize2, Minimize2, LayoutGrid, FileDown, Film, Table2 } from "lucide-react";
 import type { AccessMode } from "@hc/sdk";
 import { ApiError } from "@hc/sdk";
@@ -241,6 +242,26 @@ export function EditorApp() {
   const undo = useEditor((s) => s.undo);
   const redo = useEditor((s) => s.redo);
   const playing = useEditor((s) => s.playing);
+  // Whether anything on this page can actually be previewed. `playAnimations`
+  // walks the page and returns silently when no node carries an entrance or
+  // emphasis, so without this the button is permanently clickable and does
+  // nothing on the overwhelmingly common page that has no animations. That
+  // reads as broken rather than as "nothing to play".
+  //
+  // Selecting a BOOLEAN keeps this cheap: the walk runs on store changes, but
+  // the component only re-renders when the answer flips.
+  const hasAnimations = useEditor((s) => {
+    const page = s.doc.pages[s.activePage];
+    if (!page) return false;
+    const any = (nodes: DesignNode[]): boolean =>
+      nodes.some((n) => {
+        const a = (n as unknown as { animation?: { entrance?: unknown; emphasis?: unknown } }).animation;
+        if (a && (a.entrance || a.emphasis)) return true;
+        const kids = (n as unknown as { children?: DesignNode[] }).children;
+        return Array.isArray(kids) ? any(kids) : false;
+      });
+    return any(page.children);
+  });
   // Dirty tracking: the doc has unsaved edits whenever its revision counter has
   // moved past the revision captured at the last save (markClean). Subscribing
   // to both keeps the indicator and the unload guard reactive.
@@ -908,7 +929,7 @@ export function EditorApp() {
           {!isCompact && <Sep />}
           {!isCompact && docKind === "design" && (
             <>
-              <IconButton size="sm" onClick={() => useEditor.getState().playAnimations()} disabled={playing} title={playing ? tr("editor.playing") : tr("editor.preview_animations")}>
+              <IconButton size="sm" onClick={() => useEditor.getState().playAnimations()} disabled={playing || !hasAnimations} title={playing ? tr("editor.playing") : hasAnimations ? tr("editor.preview_animations") : tr("editor.no_animations_to_preview")}>
                 <Play size={18} />
               </IconButton>
               <IconButton size="sm" onClick={() => { useEditor.getState().setPresenting(true); setPresenting(true); }} title={tr("editor.present_fullscreen")}>
@@ -923,7 +944,7 @@ export function EditorApp() {
           )}
           {!isCompact && designId && (
             <div className="relative">
-              <IconButton size="sm" active={commentsOpen} onClick={() => showPanel("comments")} title={openComments > 0 ? `Comments (${openComments} open)` : tr("editor.comments")}>
+              <IconButton size="sm" active={commentsOpen} onClick={() => showPanel("comments")} title={openComments > 0 ? tr("editor.comments_open_count", { count: openComments }) : tr("editor.comments")}>
                 <MessageSquare size={18} />
               </IconButton>
               {openComments > 0 && (
@@ -944,7 +965,11 @@ export function EditorApp() {
               // fits narrow screens without overflowing.
               ...(isCompact && docKind === "design"
                 ? [
-                    { icon: Play as TopIcon, label: tr("editor.preview_animations"), onClick: () => useEditor.getState().playAnimations() },
+                    // Gated exactly like the inline button above: below lg this
+                    // IS the play action, so leaving it enabled would keep the
+                    // silent no-op on precisely the narrow screens where the
+                    // inline button is not there to be disabled instead.
+                    { icon: Play as TopIcon, label: hasAnimations ? tr("editor.preview_animations") : tr("editor.no_animations_to_preview"), onClick: () => useEditor.getState().playAnimations(), disabled: playing || !hasAnimations },
                     { icon: MonitorPlay as TopIcon, label: tr("editor.present_fullscreen"), onClick: () => { useEditor.getState().setPresenting(true); setPresenting(true); } },
                   ]
                 : []),

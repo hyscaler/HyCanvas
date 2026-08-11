@@ -3378,5 +3378,8 @@
   "editor.effect_outline": "アウトライン",
   "editor.effect_adjustment": "調整",
   "editor.effect_duotone": "デュオトーン",
-  "editor.text_effects": "テキストエフェクト"
+  "editor.text_effects": "テキストエフェクト",
+  "editor.no_animations_to_preview": "このページにはまだアニメーションがありません",
+  "editor.comments_open_count.one": "コメント（未解決 {count} 件）",
+  "editor.comments_open_count.other": "コメント（未解決 {count} 件）"
 }
