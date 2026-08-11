@@ -15,38 +15,29 @@ For the product-wide north star (the goals and differentiators we hold ourselves
 | Presentations | [28-presentations.md](28-presentations.md) | Core + a long interop/AI/live tail shipped (PPTX export, deck-to-video MP4, present-and-record, live audience Q&A/polls/reactions, whole-deck translation, AI speaker notes, doc/URL/file ingestion, tagged PDF); PPTX import now ships too (full round-trip); masters/layouts UI and live-data charts/bulk merge remain |
 | Whiteboard | [30-whiteboard.md](30-whiteboard.md) | Core, infinite canvas, ink, the full facilitation suite, and the Phase 3 AI canvas (diagram-from-prompt, clustering, summarize, Mermaid round-trip) shipped; agent deep-end and guest rate limiting remain |
 | Accessibility, i18n, security, compliance, self-host, NFR | [38-accessibility-i18n-security-compliance-selfhost-nfr.md](38-accessibility-i18n-security-compliance-selfhost-nfr.md) | **In progress.** Accessibility, i18n (seven full catalogs, 3232 keys each), export fidelity and RTL shipped, with a zero-violation axe pass recorded in `docs/audits/`. The FR-13 ratchet blind spot is closed, and API errors now localize (every problem+json response carries a stable code, enforced on both sides). Remaining: a manual screen-reader pass, passkeys (deferred), and the workspace-scoped half of the audit trail (FR-16/AC-7), deferred as useful but not pressing since the design-scoped half already ships. Enterprise governance (SAML, SCIM, DLP, CMEK, hash-chained audit) was dropped from scope, not deferred |
-| Procedural node graph and non-destructive editing | [40-procedural-node-graph.md](40-procedural-node-graph.md) | Not started, sequenced after F38; the core of the creation-depth set (layers and graph as two views of one document) |
-| Vector authoring depth | [41-vector-authoring.md](41-vector-authoring.md) | Not started, sequenced after F38; a pen and a node editor exist, but booleans bake, path effects do not exist, and `mask`/`boolean` have no export path. Also owns the typography layer (OpenType features, justification and hyphenation, kerning) and shape blending, added August 2026 |
-| Raster imaging and digital painting | [42-raster-and-painting.md](42-raster-and-painting.md) | Not started, sequenced after F38; ink is a vector ribbon, there is no brush engine, and the one existing pixels-in-document path writes base64 into the CRDT |
-| Real-time and procedural motion graphics | [43-motion-graphics.md](43-motion-graphics.md) | Not started, sequenced after F38; a preset animation model and a Go poser ship, but there is no timeline panel, no curve editor, and nothing procedural |
-| GPU-accelerated rendering | [44-gpu-rendering.md](44-gpu-rendering.md) | Not started, sequenced after F38; the seam exists but is inert (`gpuAvailable()` returns false), and render parity across the four output paths is currently unmet and untested |
-| Creative interop, colour management, asset libraries | [45-creative-interop-and-color.md](45-creative-interop-and-color.md) | Not started, sequenced after F38; PPTX/PDF/SVG ship, but PSD/AI/EPS/DXF import, ICC and CMYK, shared libraries, and design variables do not |
-| Responsive container layout | Not specced | **Gap, no spec yet.** Direction, padding, gap, and resize rules that reflow a frame's children when it changes size. Nothing in F40 to F45 owns it: F41 holds a GEOMETRIC constraint solver (parallel, tangent, equal length) which is a different problem, and folding a layout solver in there would put two unrelated solvers in one spec. Identified August 2026 while auditing the creation-depth set against the wider market. Worth its own spec before any of F40 to F45 that would depend on it |
 
 ### Schema version allocation
 
-Five of the creation-depth specs bump `CURRENT_SCHEMA_VERSION`, and several were drafted in parallel each claiming "17 to 18". A version is a single global counter mirrored in Go (`backend/internal/persistence/file.go`), so it has to be allocated centrally, in the order the work actually lands, not per document. Whoever starts a bump claims the next free number here first and edits their spec to match:
+A version is a single global counter mirrored in Go (`backend/internal/persistence/file.go`), so it has to be allocated centrally, in the order the work actually lands, not per document. Whoever starts a bump claims the next free number here first and edits their spec to match:
 
 | Version | Owner | Carries |
 | --- | --- | --- |
 | 17 | shipped | |
 | 18 | shipped | `DesignFile.language` (F38, August 2026) |
-| 19 | F40 | `NodeBase.graph` plus the bake |
-| 20 | F41 | vector op node types and `PathNode.pathEffects` |
-| 21 | F42 | `ImageNode.raster` tile manifests |
-| 22 | F43 | the `MotionNode` payload |
-| 23 | F45 | colour, print, and library records |
+| 19 | Effect stack | `Effect.enabled` and `TextEffect.enabled`, the per-effect enable |
 
 This table was already wrong once, which is the case for keeping it. F38
 shipped `DesignFile.language` as v18 in August 2026 without reclaiming the
-number here, so the table went on offering 18 to F40 while the code had
-already used it. Anyone implementing F40 Phase 1 from the spec text would have
-bumped to a version that exists, and the Go write boundary would have started
-rejecting files. Claim the number HERE first, then edit the spec.
+number here, so the table went on offering 18 to a spec that would then have
+bumped to a version already in use, and the Go write boundary would have
+started rejecting files. Claim the number HERE first, then edit the spec.
 
-F44 bumps nothing by design.
-
-One more thing to fix before anyone codes: the six header tables use a single "Depends on" field for two different relationships, which makes the graph look cyclic (F40 lists F41 through F45, and each of those lists F40). Read it as **Requires** (must exist first) versus **Serves** (is consumed by). F40 requires nothing from F42, F43, or F45; F44 requires nothing from F42 or F43; F41 requires the geometry kernels that F40 Phase 1 re-homes into the engine. Split the field when each spec is next touched. The table is the claim, not the specs: if the build order changes, renumber here and fix the specs, never the other way round.
+Two rules that follow from the counter being global. A bump must raise
+`CURRENT_SCHEMA_VERSION` and the Go mirror in the SAME change, or the write
+boundary answers 422 and nothing persists. And a version is permanent once it
+reaches a real instance: under the zero-data-loss rule every later binary has
+to open, migrate, and preserve it forever, so the moment before a schema
+addition ships is the only free moment to decline it.
 
 Each spec follows the original 15-section template (context, requirements, data model, API, acceptance criteria, tests). Read the spec before picking up its area, and keep it in sync if scope changes.
 
@@ -72,17 +63,21 @@ Remaining:
 
 Not started. Captions, TTS, music, avatars, lip-sync, and image-to-video are all blocked on the video media pipeline and on audio/video model endpoints in the AI layer.
 
-### Creation depth: the 2D content-creation set (40 to 45)
+### Creation depth: specified, then withdrawn (August 2026)
 
-Six specs that together take the platform from a layout tool to a comprehensive 2D content-creation suite for graphic design, digital art, and interactive real-time motion graphics. They close two north-star differentiators that have never had specs behind them: a GPU-accelerated engine, and a real vector editor with print-grade colour.
+Six specs were drafted to take the platform from a layout tool to a 2D
+content-creation suite: a procedural node graph, vector authoring depth, raster
+and painting, motion graphics, GPU rendering, and creative interop with colour
+management. **They were withdrawn in August 2026 before any of them shipped**,
+and the documents were removed. This section records why, so the decision is not
+silently re-litigated.
 
-All six are Not started, and **F38 comes before all of them.** That ordering is deliberate and evidence-led rather than a matter of taste, so the reasoning is recorded below under "Why F38 precedes the creation-depth set".
+Two findings drove it.
 
-Within the set, the order is not the numeric one: a minimal F40 core together with F41, because parametric path effects are graph operations and building the pen destructively first means building it twice; then F44, because F42 and F43 are impractical at professional scale on Canvas2D alone; then F42, then F43, then F45 last, since interop matters most once there is depth worth importing into. The one exception that should be pulled forward regardless is F44's Phase 0, which contains no GPU code and fixes export defects users hit today.
-
-### Why F38 precedes the creation-depth set
-
-A market and demand review in August 2026 produced a consistent result across independent sources: internationalisation and accessibility show more evidence of BLOCKING adoption than the creative-depth capabilities do, and they are the two axes an incumbent cannot easily follow us onto.
+The demand evidence never improved. A market and demand review found that
+internationalisation and accessibility show more evidence of BLOCKING adoption
+than creative depth does, and that they are two axes an incumbent cannot easily
+follow us onto:
 
 - Demand for creative depth from a template-first audience is weak where it is measurable. On the closest vote-counted analogue board, a pen tool scores 5 votes while "export to an editable format a professional can open" scores 1,128, and non-English font coverage scores 135. The market leader reached hundreds of millions of users without ever shipping a bezier pen.
 - Language support is stated as a hard adoption blocker by real teams, and a paid cottage industry exists purely to pre-fix RTL text for tools that lack shaping. RTL and Indic grapheme handling share a root cause, so they are one investment rather than two.
@@ -90,11 +85,31 @@ A market and demand review in August 2026 produced a consistent result across in
 - Self-hosting and data sovereignty are what organizations actually pay for in a browser-based creative tool, which is F38's territory and already our strongest differentiator.
 - The creative-depth market moved in the meantime: a mature professional vector, raster, and publishing suite became free in October 2025, so entering on depth alone means competing with free incumbents for a much smaller audience, on the axis where we are weakest.
 
-None of that makes F40 to F45 wrong. It makes them the second programme rather than the first, and it means the parts of them worth pulling forward early are the ones that serve the existing audience (F44 Phase 0, outbound layered export, basic print mechanics, motion at the sequencing tier) rather than the ones that chase a new one.
+A surfaced node graph in particular had no demand evidence at all from this
+audience, which its own spec conceded.
 
-Two constraints run through all six. Progressive disclosure: direct manipulation stays the default and writes into the graph behind the scenes, and a task that can only be completed through the graph panel is a defect, not a power feature. Render parity: every path already disagrees today, so the parity suite in F44 Phase 0 is a prerequisite for the rest rather than a later hardening pass.
+The first phase turned out to be defect repair wearing feature clothing. When it
+was attempted, its stated prerequisites were not groundwork for anything new:
+they were bugs in shipped behaviour. Those were fixed and kept. The procedural
+machinery built on top of them was removed rather than shipped, because a schema
+addition is permanent under the zero-data-loss rule and the moment before it
+reaches an instance is the only free moment to decline it.
 
-The audits behind these specs also recorded defects in shipped code, each tracked in the spec that owns the area: the Go export renderer implements no drop shadows, no blend modes, and no shape strokes, so those export wrong from the current product; `MaskNode` is in the schema and rendered by nothing; group opacity multiplies per child instead of compositing the group as a layer; background removal writes a base64 cutout into the document and therefore into the CRDT, every snapshot, and IndexedDB; and `matte.ts`, `tiles.ts`, the `EngineConfig` tiling knobs, and the `Scene` dirty API are all dead code.
+What this does NOT say is that creative depth is worthless. Vector authoring
+depth and colour management stand on their own and would deserve fresh specs on
+their own evidence. It says the set was bundled too early, that the bundle made
+the speculative parts look as justified as the necessary ones, and that
+separating them was the part with a demonstrable payoff.
+
+Defects those audits recorded, and where they now stand. Fixed as part of the
+withdrawal: `MaskNode` was in the schema and rendered by nothing, in all four
+output paths; group opacity multiplied down per child instead of compositing the
+group as a layer, so overlaps in a semi-transparent group showed seams; boolean
+nodes drew curved results as polylines. Still open and unowned now that the
+specs are gone: the Go export renderer's coverage gaps, background removal
+writing a base64 cutout into the document and therefore into the CRDT, every
+snapshot and IndexedDB, and the dead `matte.ts`, `tiles.ts`, `EngineConfig`
+tiling knobs, and `Scene` dirty API. Whoever next touches those areas owns them.
 
 ### Presentations (28)
 
