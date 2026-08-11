@@ -3364,5 +3364,19 @@
   "ui.loading": "加载中…",
   "ui.notice": "通知",
   "ui.page_not_found": "页面未找到",
-  "ui.the_page_you_are_looking_for_does_not_exist": "你要找的页面不存在或已被移动。"
+  "ui.the_page_you_are_looking_for_does_not_exist": "你要找的页面不存在或已被移动。",
+  "editor.effect_stack": "效果堆栈",
+  "editor.effect_stack_order_hint": "效果自上而下应用。重新排序可改变结果。",
+  "editor.disable_effect": "停用效果",
+  "editor.enable_effect": "启用效果",
+  "editor.move_effect_up": "上移效果",
+  "editor.move_effect_down": "下移效果",
+  "editor.remove_effect": "移除效果",
+  "editor.effect_shadow": "阴影",
+  "editor.effect_blur": "模糊",
+  "editor.effect_glow": "发光",
+  "editor.effect_outline": "描边",
+  "editor.effect_adjustment": "调整",
+  "editor.effect_duotone": "双色调",
+  "editor.text_effects": "文字效果"
 }

@@ -25,6 +25,7 @@ import {
 import { fonts } from "@/lib/fontProvider";
 import { promptText, alertText } from "@/lib/promptDialog";
 import { FILTER_PRESETS, resolvePresetOps, autoEnhanceOps, removeBackground, rasterizeToPng, type AdjOp } from "@/lib/imageFilters";
+import { AddEffectRow, EffectStack } from "./EffectStack";
 import { useEditor } from "@/store/editor";
 import { BuildOrderSection } from "./BuildOrderSection";
 import { usePresence } from "@/store/presence";
@@ -1729,7 +1730,18 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
               const ebtn = (a: boolean) => `rounded-lg border px-1.5 py-1.5 text-[11px] font-medium transition ${a ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`;
               return (
                 <div className="flex flex-col gap-2">
-                  <span className="text-[10px] uppercase tracking-wide text-neutral-400">{tr("editor.effects")}</span>
+                  {/* "Text effects", not "Effects". A text node renders BOTH
+                      this section and the generic NodeEffects one below, and
+                      they were headed identically while driving two different
+                      arrays: `TextNode.textEffects` here (glyph treatments,
+                      drawn per run) and `NodeBase.effects` there (applied to
+                      the whole box). Two identical headings offering Shadow and
+                      Glow, writing to different fields and rendering through
+                      different code paths, is not a distinction anyone can be
+                      expected to infer. The two stacks are stored apart on
+                      purpose and must stay that way, so the surfaces have to
+                      say which is which. */}
+                  <span className="text-[10px] uppercase tracking-wide text-neutral-400">{tr("editor.text_effects")}</span>
                   <div className="grid grid-cols-3 gap-1.5">
                     {PRESETS.map((p) => (
                       <button key={p.key} onClick={() => set(p.make())} className={ebtn(active === p.key)} title={p.label}>{p.label}</button>
@@ -3212,19 +3224,31 @@ function FxSlider({ label, min, max, step = 1, value, onChange, onStart, onCommi
  * the node's `effects` array, which the engine renders for text, shapes, lines,
  * frames, and images alike (render2d effects filter + outline specs).
  */
+/**
+ * Object-level effects: the `NodeBase.effects` stack.
+ *
+ * Note this never renders for a TEXT node. The enclosing section derives its
+ * node from `rep`, and `rep` falls back to the stroke selection when the type
+ * is in `SKIP` (which lists text, image, and group); for a lone text node that
+ * is empty, so the section returns null before reaching here. Text gets its
+ * own effects surface instead. Worth knowing before adding a text-specific
+ * branch to this component: it would be unreachable.
+ */
 function NodeEffects({ id, effects }: { id: string; effects?: readonly { kind: string }[] }) {
   const eff = (effects ?? []) as EffectItem[];
   const find = (k: string) => eff.find((e) => e.kind === k);
-  const has = (k: string) => !!find(k);
-  const make: Record<string, () => EffectItem> = {
-    shadow: () => ({ kind: "shadow", type: "drop", color: { srgb: { r: 0, g: 0, b: 0, a: 0.35 } }, offsetX: 0, offsetY: 3, blur: 6, spread: 0 }),
-    outline: () => ({ kind: "outline", color: { srgb: { r: 0, g: 0, b: 0, a: 1 } }, width: 3 }),
-    glow: () => ({ kind: "glow", color: { srgb: { r: 0.45, g: 0.5, b: 1, a: 0.9 } }, radius: 10 }),
-    blur: () => ({ kind: "blur", radius: 4 }),
-  };
   const setAll = (next: EffectItem[]) => useEditor.getState().setEffects(id, (next.length ? next : undefined) as never);
-  const toggle = (k: string) => setAll(has(k) ? eff.filter((e) => e.kind !== k) : [...eff, make[k]()]);
-  const update = (k: string, patch: Partial<EffectItem>) => setAll(eff.map((e) => (e.kind === k ? { ...e, ...patch } : e)));
+  // First match only. These controls patch "the" effect of a kind, which was
+  // unambiguous while the panel capped a node at one of each. The stack allows
+  // two blurs, and a kind-wide patch would then drive both from one slider.
+  const patchFirst = (list: EffectItem[], k: string, patch: Partial<EffectItem>) => {
+    const at = list.findIndex((e) => e.kind === k);
+    if (at < 0) return list;
+    const next = [...list];
+    next[at] = { ...next[at], ...patch };
+    return next;
+  };
+  const update = (k: string, patch: Partial<EffectItem>) => setAll(patchFirst(eff, k, patch));
   // Slider gestures: live no-undo preview per tick, one undo step on release
   // (same contract as the image adjust sliders).
   const dragBefore = useRef<unknown>(null);
@@ -3232,9 +3256,8 @@ function NodeEffects({ id, effects }: { id: string; effects?: readonly { kind: s
   const commit = () => useEditor.getState().commitEffects(id, dragBefore.current);
   const previewUpdate = (k: string, patch: Partial<EffectItem>) => {
     const live = ((locate(useEditor.getState().doc, id)?.node as unknown as { effects?: EffectItem[] })?.effects ?? []);
-    useEditor.getState().previewEffects(id, live.map((e) => (e.kind === k ? { ...e, ...patch } : e)) as never);
+    useEditor.getState().previewEffects(id, patchFirst(live, k, patch) as never);
   };
-  const cls = (on: boolean) => `flex-1 rounded-lg border py-1.5 text-xs font-medium transition ${on ? "border-brand-300 bg-brand-50 text-brand-ink" : "border-transparent bg-neutral-100 text-neutral-600 hover:bg-neutral-200"}`;
   // Recoloring keeps the color's alpha: the Opacity slider owns it, and a
   // swatch change must not silently reset a 35% shadow to full strength.
   const colorLabels: Record<string, string> = {
@@ -3272,13 +3295,24 @@ function NodeEffects({ id, effects }: { id: string; effects?: readonly { kind: s
           >{p.label}</button>
         ))}
       </div>
+      {/* One group, not three. The presets above are whole looks; this is the
+          stack those looks are made of, so what is applied and how you add to
+          it belong under a single heading.
+
+          The per-kind toggle row that used to sit here (Shadow / Outline /
+          Glow / Blur) is gone. It was a relic of the panel capping a node at
+          one effect per kind, and once the stack lists what is applied with a
+          visibility toggle and a delete, the row was a third control doing the
+          same job as the two above it: "Shadow" appeared three times on screen,
+          twice meaning subtly different things. */}
       <span className="mt-1 text-[10px] uppercase tracking-wide text-neutral-400">{tr("editor.fine_tune")}</span>
-      <div className="flex gap-1">
-        <button onClick={() => toggle("shadow")} className={cls(has("shadow"))}>{tr("editor.shadow")}</button>
-        <button onClick={() => toggle("outline")} className={cls(has("outline"))}>{tr("editor.outline")}</button>
-        <button onClick={() => toggle("glow")} className={cls(has("glow"))}>{tr("editor.glow")}</button>
-        <button onClick={() => toggle("blur")} className={cls(has("blur"))}>{tr("editor.blur")}</button>
-      </div>
+      {eff.length > 0 && (
+        <>
+          <EffectStack id={id} effects={eff as unknown as Effect[]} />
+          <p className="text-[10px] leading-snug text-neutral-500">{tr("editor.effect_stack_order_hint")}</p>
+        </>
+      )}
+      <AddEffectRow id={id} />
       {sh && (
         <>
           <div className="flex items-center gap-2">

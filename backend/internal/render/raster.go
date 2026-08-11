@@ -1009,8 +1009,13 @@ func (rc *rctx) rasterNode(m mat, node map[string]any) {
 	// exports as normal and a shadow exports as nothing. Nodes with neither draw
 	// straight into the page buffer, so the common path is unchanged.
 	mode, shadows, effects := blendModeOf(node), shadowsOf(node), effectsOf(node)
-	if mode != "" || len(shadows) > 0 || hasLayerEffect(effects) {
-		rc.rasterLayered(m, node, mode, shadows, effects)
+	// A semi-transparent container needs the same treatment for a different
+	// reason: its opacity must apply to the COMPOSITE of its children, not to
+	// each child in turn. Fading them individually makes every overlap darker
+	// than the rest and draws a seam along each shared edge.
+	isolateOpacity := groupNeedsIsolation(node)
+	if mode != "" || len(shadows) > 0 || hasLayerEffect(effects) || isolateOpacity {
+		rc.rasterLayered(m, node, mode, shadows, effects, isolateOpacity)
 		return
 	}
 	rc.rasterNodeDirect(m, node)
@@ -1018,19 +1023,32 @@ func (rc *rctx) rasterNode(m mat, node map[string]any) {
 
 // rasterLayered draws the node into its own transparent layer, paints any drop
 // shadows beneath it, then composites the layer with its blend mode.
-func (rc *rctx) rasterLayered(m mat, node map[string]any, mode string, shadows []shadowSpec, effects []effectSpec) {
+func (rc *rctx) rasterLayered(m mat, node map[string]any, mode string, shadows []shadowSpec, effects []effectSpec, isolateOpacity bool) {
 	page := rc.dst
 	layer := rc.takeLayer()
 	defer rc.releaseLayer(layer)
-	// The node's OWN opacity is applied inside the layer, because
-	// rasterNodeDirect applies it while drawing the subtree (which also keeps
-	// group opacity behaving exactly as it did before isolation existed).
-	// Only the INHERITED alpha is applied on the way back in; multiplying by the
-	// node's opacity again here would darken it twice.
+	// The node's OWN opacity is normally applied inside the layer, because
+	// rasterNodeDirect applies it while drawing the subtree. Only the INHERITED
+	// alpha is applied on the way back in; multiplying by the node's opacity
+	// again here would darken it twice.
+	//
+	// An isolating CONTAINER inverts that. Its opacity has to reach the
+	// finished composite rather than each child, so the subtree is drawn opaque
+	// and the fade happens once, below. For a leaf the two are identical, which
+	// is why this is not simply the default: a leaf with a drop shadow relies on
+	// the silhouette already carrying its opacity.
+	own := 1.0
+	drawn := node
+	if isolateOpacity {
+		own = nodeOpacity(node)
+		drawn = shallowCopyMap(node)
+		drawn["opacity"] = 1.0
+	}
 	prevAlpha := rc.alpha
 	rc.dst, rc.alpha = layer, 1
-	rc.rasterNodeDirect(m, node)
+	rc.rasterNodeDirect(m, drawn)
 	rc.dst, rc.alpha = page, prevAlpha
+	prevAlpha *= own
 	// Colour and spatial effects transform the node's own pixels, in the order
 	// they are declared (CSS filters compose in sequence, so the order is part
 	// of the result). Adjustments fold into one matrix per run so a stack of
@@ -1161,6 +1179,8 @@ func (rc *rctx) rasterNodeDirect(m mat, node map[string]any) {
 		rc.rasterConnector(node)
 	case "boolean":
 		rc.rasterBoolean(cm, node)
+	case "mask":
+		rc.rasterMask(cm, node)
 	case "qr":
 		rc.rasterQR(cm, node)
 	case "table":
@@ -1333,6 +1353,10 @@ func ToRaster(file Design, pageIndex int, scale float64) (*image.RGBA, error) {
 // stager uses so a partial or faded element composites correctly as an overlay
 // (an opaque-white element PNG would occlude everything beneath it).
 func toRaster(file Design, pageIndex int, scale float64, transparent bool) (*image.RGBA, error) {
+	// Evaluate any procedural graphs at THIS export's scale before drawing
+	// (F40 FR-21): a graph re-evaluates for a 4x export rather than having a
+	// screen-resolution bake scaled up. Returns the input untouched when the
+	// document has no graphs, so an ordinary export pays nothing.
 	pages := asArr(file["pages"])
 	if pageIndex < 0 || pageIndex >= len(pages) {
 		return nil, ErrPageRange

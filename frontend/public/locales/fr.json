@@ -3364,5 +3364,19 @@
   "ui.loading": "Chargement…",
   "ui.notice": "Avis",
   "ui.page_not_found": "Page introuvable",
-  "ui.the_page_you_are_looking_for_does_not_exist": "La page que vous cherchez n'existe pas ou a été déplacée."
+  "ui.the_page_you_are_looking_for_does_not_exist": "La page que vous cherchez n'existe pas ou a été déplacée.",
+  "editor.effect_stack": "Pile d'effets",
+  "editor.effect_stack_order_hint": "Les effets s'appliquent de haut en bas. Réorganisez pour changer le résultat.",
+  "editor.disable_effect": "Désactiver l'effet",
+  "editor.enable_effect": "Activer l'effet",
+  "editor.move_effect_up": "Monter l'effet",
+  "editor.move_effect_down": "Descendre l'effet",
+  "editor.remove_effect": "Supprimer l'effet",
+  "editor.effect_shadow": "Ombre",
+  "editor.effect_blur": "Flou",
+  "editor.effect_glow": "Lueur",
+  "editor.effect_outline": "Contour",
+  "editor.effect_adjustment": "Ajuster",
+  "editor.effect_duotone": "Duotone",
+  "editor.text_effects": "Effets de texte"
 }

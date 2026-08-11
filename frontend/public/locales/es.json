@@ -3364,5 +3364,19 @@
   "ui.loading": "Cargando…",
   "ui.notice": "Aviso",
   "ui.page_not_found": "Página no encontrada",
-  "ui.the_page_you_are_looking_for_does_not_exist": "La página que buscas no existe o puede haberse movido."
+  "ui.the_page_you_are_looking_for_does_not_exist": "La página que buscas no existe o puede haberse movido.",
+  "editor.effect_stack": "Pila de efectos",
+  "editor.effect_stack_order_hint": "Los efectos se aplican de arriba abajo. Reordena para cambiar el resultado.",
+  "editor.disable_effect": "Desactivar efecto",
+  "editor.enable_effect": "Activar efecto",
+  "editor.move_effect_up": "Subir efecto",
+  "editor.move_effect_down": "Bajar efecto",
+  "editor.remove_effect": "Quitar efecto",
+  "editor.effect_shadow": "Sombra",
+  "editor.effect_blur": "Desenfoque",
+  "editor.effect_glow": "Resplandor",
+  "editor.effect_outline": "Contorno",
+  "editor.effect_adjustment": "Ajustar",
+  "editor.effect_duotone": "Duotono",
+  "editor.text_effects": "Efectos de texto"
 }

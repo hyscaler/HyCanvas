@@ -3364,5 +3364,19 @@
   "ui.loading": "लोड हो रहा है…",
   "ui.notice": "सूचना",
   "ui.page_not_found": "पृष्ठ नहीं मिला",
-  "ui.the_page_you_are_looking_for_does_not_exist": "आप जो पृष्ठ खोज रहे हैं वह मौजूद नहीं है या हटाया जा चुका है।"
+  "ui.the_page_you_are_looking_for_does_not_exist": "आप जो पृष्ठ खोज रहे हैं वह मौजूद नहीं है या हटाया जा चुका है।",
+  "editor.effect_stack": "प्रभाव स्टैक",
+  "editor.effect_stack_order_hint": "प्रभाव ऊपर से नीचे लागू होते हैं। परिणाम बदलने के लिए क्रम बदलें।",
+  "editor.disable_effect": "प्रभाव अक्षम करें",
+  "editor.enable_effect": "प्रभाव सक्षम करें",
+  "editor.move_effect_up": "प्रभाव ऊपर ले जाएं",
+  "editor.move_effect_down": "प्रभाव नीचे ले जाएं",
+  "editor.remove_effect": "प्रभाव हटाएं",
+  "editor.effect_shadow": "छाया",
+  "editor.effect_blur": "धुंधलापन",
+  "editor.effect_glow": "चमक",
+  "editor.effect_outline": "रूपरेखा",
+  "editor.effect_adjustment": "समायोजित करें",
+  "editor.effect_duotone": "डुओटोन",
+  "editor.text_effects": "पाठ प्रभाव"
 }

@@ -945,6 +945,14 @@ interface EditorState {
   setStroke(id: string, stroke?: Stroke): void;
   /** Set/clear a node's effects (shadow/blur/glow), undoable. */
   setEffects(id: string, effects?: Effect[]): void;
+  /** Move an effect within the stack; order is the render order. */
+  moveEffect(id: string, from: number, to: number): void;
+  /** Switch one effect off without losing its parameters. */
+  setEffectEnabled(id: string, index: number, enabled: boolean): void;
+  /** Remove one effect by position, so duplicates of a kind are addressable. */
+  removeEffectAt(id: string, index: number): void;
+  /** Append an effect of a kind, allowing more than one of the same kind. */
+  addEffect(id: string, kind: Effect["kind"]): void;
   /** Live-preview color adjustments (brightness/contrast/...) with no undo step. */
   previewAdjustments(id: string, ops: { name: string; value: number }[]): void;
   /** Commit an effects change as one undo step (before = effects at gesture start). */
@@ -1293,6 +1301,33 @@ function looksLikeData(matrix: string[][]): boolean {
   const head = (matrix[0] ?? []).join(" ").trim().toLowerCase();
   if (head.startsWith("<") || head.startsWith("{") || head.startsWith("[")) return false;
   return true;
+}
+
+
+/**
+ * Default parameters for a newly added effect.
+ *
+ * Values match what the fixed-tab panel used, so adding a shadow from the
+ * stack produces exactly what the old button did and no document changes
+ * appearance because of where it was created.
+ */
+function newEffectOfKind(kind: Effect["kind"]): Effect | null {
+  switch (kind) {
+    case "shadow":
+      return { kind: "shadow", type: "drop", color: { srgb: { r: 0, g: 0, b: 0, a: 0.35 } }, offsetX: 0, offsetY: 3, blur: 6, spread: 0 };
+    case "blur":
+      return { kind: "blur", radius: 4 };
+    case "glow":
+      return { kind: "glow", color: { srgb: { r: 0.45, g: 0.5, b: 1, a: 0.9 } }, radius: 10 };
+    case "outline":
+      return { kind: "outline", color: { srgb: { r: 0, g: 0, b: 0, a: 1 } }, width: 3 };
+    case "adjustment":
+      return { kind: "adjustment", ops: [] };
+    default:
+      // duotone carries an asset-derived palette and is authored by its own
+      // control, not summoned blank from the stack's add menu.
+      return null;
+  }
 }
 
 export const useEditor = create<EditorState>((set, get) => {
@@ -5943,6 +5978,57 @@ export const useEditor = create<EditorState>((set, get) => {
       if (!loc || loc.node.locked || editBlocked(id)) return;
       const before = loc.node.effects;
       get().runCommand({ kind: "setEffects", node: id, before, after: effects });
+    },
+    /**
+     * The effect stack.
+     *
+     * All four route through `setEffects`, which is already one undoable
+     * command and already fans out over the CRDT. Writing fresh `perform`
+     * closures for each would duplicate that plumbing and give the stack
+     * subtly different undo behaviour from every other effect edit.
+     *
+     * They address effects BY INDEX rather than by kind. The old panel was
+     * built on `find(kind)`/`has(kind)`, which silently caps a node at one
+     * blur and cannot express order at all; two blurs at different radii is an
+     * ordinary thing to want and was simply unreachable.
+     */
+    moveEffect: (id, from, to) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.locked || editBlocked(id)) return;
+      const eff = [...(loc.node.effects ?? [])];
+      if (from === to || from < 0 || to < 0 || from >= eff.length || to >= eff.length) return;
+      const [moved] = eff.splice(from, 1);
+      eff.splice(to, 0, moved);
+      get().setEffects(id, eff);
+    },
+    setEffectEnabled: (id, index, enabled) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.locked || editBlocked(id)) return;
+      const eff = [...(loc.node.effects ?? [])];
+      if (index < 0 || index >= eff.length) return;
+      // Absent means enabled, so switching ON clears the key rather than
+      // writing `true`. That keeps a file that never touched the stack
+      // byte-identical to one that toggled an effect off and back on.
+      const next = { ...eff[index] } as Effect & { enabled?: boolean };
+      if (enabled) delete next.enabled;
+      else next.enabled = false;
+      eff[index] = next;
+      get().setEffects(id, eff);
+    },
+    removeEffectAt: (id, index) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.locked || editBlocked(id)) return;
+      const eff = [...(loc.node.effects ?? [])];
+      if (index < 0 || index >= eff.length) return;
+      eff.splice(index, 1);
+      get().setEffects(id, eff.length ? eff : undefined);
+    },
+    addEffect: (id, kind) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.locked || editBlocked(id)) return;
+      const made = newEffectOfKind(kind);
+      if (!made) return;
+      get().setEffects(id, [...(loc.node.effects ?? []), made]);
     },
     setCornerRadius: (id, radius) => {
       const loc = locate(get().doc, id);

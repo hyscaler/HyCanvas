@@ -687,17 +687,24 @@ func (c *svgCtx) emitNode(file Design, node map[string]any) string {
 	}
 	kind := asStr(node["type"])
 	container := kind == "group" || kind == "frame" || kind == "grid"
-	// Opacity multiplies down the ancestor chain (see the svgCtx.alpha note):
-	// a container's opacity is carried to its leaves rather than emitted on
-	// the <g>, which would ISOLATE the group and stop overlapping children
-	// from double-darkening the way every other render path does.
+	// Opacity normally multiplies down the ancestor chain (see the svgCtx.alpha
+	// note): a container's opacity is carried to its leaves rather than emitted
+	// on the <g>.
+	//
+	// An ISOLATING container is the exception, and this used to be inverted on
+	// purpose: SVG was kept bug-compatible with the other backends, which faded
+	// each child separately and double-darkened every overlap. Now that raster
+	// and the browser composite groups as a unit, emitting the opacity here is
+	// what keeps SVG agreeing with them, and it costs nothing because `opacity`
+	// on a <g> is defined to composite the group as a unit.
 	parentAlpha := c.alpha
 	eff := parentAlpha
 	if op, ok := node["opacity"].(float64); ok && op >= 0 && op < 1 {
 		eff = parentAlpha * op
 	}
+	isolate := container && groupNeedsIsolation(node)
 	open := `<g data-oc-id="` + esc(asStr(node["id"])) + `" transform="` + tfm + `"`
-	if !container && eff < 1 {
+	if (!container || isolate) && eff < 1 {
 		open += ` opacity="` + num(eff) + `"`
 	}
 	// Blend and opacity ride on this OUTER wrapper; the effect filter wraps
@@ -706,7 +713,13 @@ func (c *svgCtx) emitNode(file Design, node map[string]any) string {
 	open += c.blendAttr(node)
 	open += ">"
 	if container {
-		c.alpha = eff
+		// An isolating group's alpha is on its <g>, so its children draw at
+		// full strength inside it; applying it here as well would square it.
+		if isolate {
+			c.alpha = 1
+		} else {
+			c.alpha = eff
+		}
 		defer func() { c.alpha = parentAlpha }()
 	}
 
@@ -738,6 +751,29 @@ func (c *svgCtx) emitNode(file Design, node map[string]any) string {
 			sb.WriteString(c.emitNode(file, asObj(ch)))
 		}
 		body = sb.String()
+	case "mask":
+		// A real <clipPath>, so the mask stays vector in the export rather than
+		// being rasterized or dropped. The child is emitted inside a <g> that
+		// references it; an unusable shape emits the child UNCLIPPED, because
+		// an empty clipPath would hide it entirely and a document that renders
+		// today must not start exporting blank.
+		child := asObj(node["child"])
+		if child == nil {
+			break
+		}
+		inner := c.emitNode(file, child)
+		if shape := asObj(node["maskShape"]); shape != nil {
+			if d := svgMaskPathData(shape); d != "" {
+				id := fmt.Sprintf("clip%d", len(c.defs))
+				rule := ""
+				if asStr(shape["fillRule"]) == "evenodd" {
+					rule = ` clip-rule="evenodd"`
+				}
+				c.defs = append(c.defs, `<clipPath id="`+id+`"><path d="`+d+`"`+rule+`/></clipPath>`)
+				inner = `<g clip-path="url(#` + id + `)">` + inner + `</g>`
+			}
+		}
+		body = inner
 	default:
 		body = "<!-- unsupported node type for svg: " + esc(asStr(node["type"])) + " -->"
 	}
@@ -749,6 +785,8 @@ func (c *svgCtx) emitNode(file Design, node map[string]any) string {
 
 // ToSVG serializes one page of a design to an editable SVG document.
 func ToSVG(file Design, pageIndex int) (string, error) {
+	// SVG is resolution-independent output, so the class is nominal (1); the
+	// graph still evaluates rather than the bake being emitted (F40 FR-29).
 	pages := asArr(file["pages"])
 	if pageIndex < 0 || pageIndex >= len(pages) {
 		return "", ErrPageRange

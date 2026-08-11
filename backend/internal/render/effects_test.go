@@ -251,3 +251,58 @@ func TestRasterHonorsRemainingEffects(t *testing.T) {
 		t.Fatalf("a text node was boxed by its outline effect: %+v", c)
 	}
 }
+
+// The Go side of the effect stack (F40 FR-17).
+//
+// The browser filters disabled effects in `enabledEffects`; these assert Go
+// agrees, because a stack that hides an effect in the editor and ships it in
+// the export is the browser/server divergence FR-13 exists to prevent. Go
+// happened to implement the check before the schema declared the field, so
+// this pins behaviour that was previously undeclared and therefore free to
+// drift.
+func TestEffectsOfSkipsDisabledEffects(t *testing.T) {
+	got := effectsOf(map[string]any{"effects": []any{
+		map[string]any{"kind": "blur", "radius": 4.0},
+		map[string]any{"kind": "glow", "radius": 8.0, "enabled": false},
+		map[string]any{"kind": "outline", "width": 2.0},
+	}})
+	if len(got) != 2 {
+		t.Fatalf("effectsOf = %d effects, want 2 (the disabled glow skipped)", len(got))
+	}
+	for _, e := range got {
+		if e.kind == "glow" {
+			t.Fatal("a disabled effect reached the renderer")
+		}
+	}
+}
+
+func TestEffectsOfTreatsAbsentEnabledAsOn(t *testing.T) {
+	// Every effect in every existing document omits the field. Reading absent
+	// as off would blank every shadow and blur in every saved design.
+	got := effectsOf(map[string]any{"effects": []any{
+		map[string]any{"kind": "blur", "radius": 4.0},
+		map[string]any{"kind": "outline", "width": 2.0, "enabled": true},
+	}})
+	if len(got) != 2 {
+		t.Fatalf("effectsOf = %d effects, want 2", len(got))
+	}
+}
+
+func TestEffectsOfPreservesDeclaredOrder(t *testing.T) {
+	// Order is the render order on both sides: filters compose in sequence, so
+	// a reordered stack must reach the exporter reordered.
+	got := effectsOf(map[string]any{"effects": []any{
+		map[string]any{"kind": "adjustment", "ops": []any{}},
+		map[string]any{"kind": "blur", "radius": 4.0},
+	}})
+	if len(got) != 2 || got[0].kind != "adjustment" || got[1].kind != "blur" {
+		t.Fatalf("order not preserved: %+v", got)
+	}
+	rev := effectsOf(map[string]any{"effects": []any{
+		map[string]any{"kind": "blur", "radius": 4.0},
+		map[string]any{"kind": "adjustment", "ops": []any{}},
+	}})
+	if rev[0].kind != "blur" || rev[1].kind != "adjustment" {
+		t.Fatalf("order not preserved when reversed: %+v", rev)
+	}
+}

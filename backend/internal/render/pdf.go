@@ -91,6 +91,9 @@ type pdfCtx struct {
 	// the page's resource dictionary.
 	gstates  []pdfGState
 	gstateBy map[string]int
+	// Transparency groups (pdfgroup.go): each is a Form XObject written as its
+	// own object and referenced from the page's /XObject dictionary.
+	forms []pdfForm
 	// Gradient shadings (F38 export parity), serialized dictionaries written
 	// inline into the page's /Shading resources as /Sh0, /Sh1, ...
 	shadings []string
@@ -845,10 +848,53 @@ func (c *pdfCtx) emitNode(node map[string]any, inArtifact bool) {
 		// Track the ancestor chain so a nested child's raster effect layers
 		// (pdffx.go) can reproduce its transforms/clips and undo the CTM.
 		c.chain = append(c.chain, node)
-		for _, ch := range childrenOf(node) {
-			c.emitNode(asObj(ch), inArtifact)
+		emitKids := func() {
+			for _, ch := range childrenOf(node) {
+				c.emitNode(asObj(ch), inArtifact)
+			}
+		}
+		if groupNeedsIsolation(node) {
+			// The group's alpha was already written onto this node's own gs
+			// above, which is the multiply-down model: it would reach each
+			// child and darken every overlap. Re-emit it as the group's
+			// composite alpha instead and neutralize it for the contents.
+			c.op("/" + c.gstateFor(1, "") + " gs")
+			c.emitTransparencyGroup(node, ca, pdfBlendName(blendModeOf(node)), emitKids)
+		} else {
+			emitKids()
 		}
 		c.chain = c.chain[:len(c.chain)-1]
+	case "mask":
+		// A real PDF clip (`W n`), so the mask stays vector in the export
+		// rather than being dropped as it was before. The clip is scoped by
+		// q/Q so it cannot leak onto whatever is emitted next.
+		//
+		// An unusable shape emits the child UNCLIPPED. An empty clip path in
+		// PDF clips everything away, so failing the other way would turn a
+		// document that exports today into one that exports blank.
+		if child := asObj(node["child"]); child != nil {
+			shape := asObj(node["maskShape"])
+			clipped := false
+			if shape != nil {
+				c.op("q")
+				if pdfMaskPath(c, shape) {
+					if asStr(shape["fillRule"]) == "evenodd" {
+						c.op("W* n")
+					} else {
+						c.op("W n")
+					}
+					clipped = true
+				} else {
+					c.op("Q")
+				}
+			}
+			c.chain = append(c.chain, node)
+			c.emitNode(child, inArtifact)
+			c.chain = c.chain[:len(c.chain)-1]
+			if clipped {
+				c.op("Q")
+			}
+		}
 	}
 	// Outline effect: stroke the node's box OVER its own content, mirroring
 	// the raster path's outlineBox (drawn after everything else so it does
@@ -1029,6 +1075,7 @@ type pdfPage struct {
 	fonts    []*embeddedFont // the embedded fonts this page drew with
 	gstates  []pdfGState     // opacity/blend graphics states this page used
 	shadings []string        // gradient shading dicts this page used
+	forms    []pdfForm       // transparency groups this page emitted
 }
 
 // ToPDF renders one page of a design to a single-page PDF document. An optional
@@ -1078,6 +1125,8 @@ func validLangTag(tag string) bool {
 }
 
 func ToPDF(file Design, pageIndex int, src ...ImageSource) ([]byte, error) {
+	// PDF is vector output, so the resolution class is nominal (1): the graph
+	// re-evaluates, but there is no raster scale to match.
 	pages := asArr(file["pages"])
 	if pageIndex < 0 || pageIndex >= len(pages) {
 		return nil, ErrPageRange
@@ -1159,7 +1208,7 @@ func renderPDFPage(file Design, page map[string]any, src ImageSource, fonts []*e
 			pageFonts = append(pageFonts, f)
 		}
 	}
-	return pdfPage{content: c.buf.Bytes(), w: w, h: h, tags: ordered, name: asStr(page["name"]), images: c.images, fonts: pageFonts, gstates: c.gstates, shadings: c.shadings}
+	return pdfPage{content: c.buf.Bytes(), w: w, h: h, tags: ordered, name: asStr(page["name"]), images: c.images, fonts: pageFonts, gstates: c.gstates, shadings: c.shadings, forms: c.forms}
 }
 
 // assemblePDF writes a valid PDF over one or more pages, registering the base-14
@@ -1203,6 +1252,7 @@ func assemblePDF(pages []pdfPage, embedded []*embeddedFont, lang string) []byte 
 	}
 	pageObjNo := make([]int, len(pages))
 	imageObjNo := make([][]int, len(pages))
+	formObjNo := make([][]int, len(pages))
 	for i, p := range pages {
 		pageObjNo[i] = next
 		next += 2 // page, contents
@@ -1213,6 +1263,13 @@ func assemblePDF(pages []pdfPage, embedded []*embeddedFont, lang string) []byte 
 			if im.alpha != nil {
 				next++ // its soft mask
 			}
+		}
+		// Transparency groups follow this page's images, so the bodies appended
+		// after them below land on exactly these numbers.
+		formObjNo[i] = make([]int, len(p.forms))
+		for k := range p.forms {
+			formObjNo[i][k] = next
+			next++
 		}
 	}
 	pageObj := func(i int) int { return pageObjNo[i] }
@@ -1241,6 +1298,9 @@ func assemblePDF(pages []pdfPage, embedded []*embeddedFont, lang string) []byte 
 			b, res := im.xobjects(imageObjNo[i][j])
 			bodies = append(bodies, b...)
 			xobjDict.WriteString(res)
+		}
+		for k := range p.forms {
+			xobjDict.WriteString(fmt.Sprintf("/%s %d 0 R ", formResourceRef(k), formObjNo[i][k]))
 		}
 		imageObjs = append(imageObjs, bodies)
 		xobjects := ""
@@ -1277,9 +1337,20 @@ func assemblePDF(pages []pdfPage, embedded []*embeddedFont, lang string) []byte 
 		for _, e := range p.fonts {
 			pageFontDict += embResource[e]
 		}
+		// One resource dictionary, shared verbatim by the page and by every
+		// transparency group on it. A form's content is emitted during the same
+		// pass that registers the fonts, images, and graphics states it uses,
+		// so the assembled dictionary already covers all of them. Sharing it
+		// also means a nested group finds the outer form listed, which is what
+		// lets groups nest.
+		resources := fmt.Sprintf("<< /Font << %s>>%s%s%s >>", pageFontDict, xobjects, gstates, shadings)
+		for k, f := range p.forms {
+			_ = k
+			imageObjs[i] = append(imageObjs[i], f.object(resources))
+		}
 		pageObjs = append(pageObjs, fmt.Sprintf(
-			"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %s %s] /Resources << /Font << %s>>%s%s%s >> /Contents %d 0 R /StructParents %d /Tabs /S >>",
-			pn(p.w), pn(p.h), pageFontDict, xobjects, gstates, shadings, pageObj(i)+1, i))
+			"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %s %s] /Resources %s /Contents %d 0 R /StructParents %d /Tabs /S >>",
+			pn(p.w), pn(p.h), resources, pageObj(i)+1, i))
 		contentObjs = append(contentObjs, fmt.Sprintf("<< /Length %d >>\nstream\n%s\nendstream", len(p.content)+1, p.content))
 
 		// One structure element per tag, in reading order, each pointing at its

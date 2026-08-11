@@ -47,8 +47,10 @@ func migrateFile(file DesignFile) DesignFile {
 			}
 			cur["schemaVersion"] = float64(18)
 		default:
-			// Additive bumps (v4->v5, v6->v7, v7->v8, v8->v9, v9->v10, v10->v11):
-			// no transform; the file simply omits the newer optional fields.
+			// Additive bumps (v4->v5, v6->v7, v7->v8, v8->v9, v9->v10, v10->v11,
+			// ... v18->v19): no transform; the file simply omits the newer
+			// optional fields. v18->v19 adds NodeBase.graph, which an older
+			// file has none of.
 			cur = shallowCopy(cur)
 			cur["schemaVersion"] = float64(v + 1)
 		}

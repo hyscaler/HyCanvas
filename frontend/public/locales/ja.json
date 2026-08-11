@@ -3364,5 +3364,19 @@
   "ui.loading": "読み込み中…",
   "ui.notice": "お知らせ",
   "ui.page_not_found": "ページが見つかりません",
-  "ui.the_page_you_are_looking_for_does_not_exist": "お探しのページは存在しないか、移動した可能性があります。"
+  "ui.the_page_you_are_looking_for_does_not_exist": "お探しのページは存在しないか、移動した可能性があります。",
+  "editor.effect_stack": "エフェクトスタック",
+  "editor.effect_stack_order_hint": "エフェクトは上から順に適用されます。並べ替えると結果が変わります。",
+  "editor.disable_effect": "エフェクトを無効化",
+  "editor.enable_effect": "エフェクトを有効化",
+  "editor.move_effect_up": "エフェクトを上へ",
+  "editor.move_effect_down": "エフェクトを下へ",
+  "editor.remove_effect": "エフェクトを削除",
+  "editor.effect_shadow": "シャドウ",
+  "editor.effect_blur": "ぼかし",
+  "editor.effect_glow": "グロー",
+  "editor.effect_outline": "アウトライン",
+  "editor.effect_adjustment": "調整",
+  "editor.effect_duotone": "デュオトーン",
+  "editor.text_effects": "テキストエフェクト"
 }

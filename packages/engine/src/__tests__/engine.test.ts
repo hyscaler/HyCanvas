@@ -415,7 +415,12 @@ describe("Canvas2D render path (FR-1, FR-2, FR-5, AC-1)", () => {
     const scene = createScene(designAllNodes());
     expect(() => renderScene(scene, ctx, defaultViewport(800, 600))).not.toThrow();
     expect(ctx.saves).toBe(ctx.restores);
-    expect(ctx.saves).toBe(constructable.length);
+    // One save per node, except a mask, which is no longer a leaf: it paints
+    // its subject (one more save) and brackets it with a clip (one more). The
+    // clip save happens either way, since an unusable mask shape saves and
+    // restores immediately rather than clipping.
+    const maskExtra = constructable.filter((t) => t === "mask").length * 2;
+    expect(ctx.saves).toBe(constructable.length + maskExtra);
   });
 
   it("draws an inert placeholder for an unknown node type (FR-2)", () => {

@@ -3364,5 +3364,19 @@
   "ui.loading": "Wird geladen…",
   "ui.notice": "Hinweis",
   "ui.page_not_found": "Seite nicht gefunden",
-  "ui.the_page_you_are_looking_for_does_not_exist": "Die gesuchte Seite existiert nicht oder wurde verschoben."
+  "ui.the_page_you_are_looking_for_does_not_exist": "Die gesuchte Seite existiert nicht oder wurde verschoben.",
+  "editor.effect_stack": "Effektstapel",
+  "editor.effect_stack_order_hint": "Effekte werden von oben nach unten angewendet. Ändern Sie die Reihenfolge, um das Ergebnis zu ändern.",
+  "editor.disable_effect": "Effekt deaktivieren",
+  "editor.enable_effect": "Effekt aktivieren",
+  "editor.move_effect_up": "Effekt nach oben",
+  "editor.move_effect_down": "Effekt nach unten",
+  "editor.remove_effect": "Effekt entfernen",
+  "editor.effect_shadow": "Schatten",
+  "editor.effect_blur": "Weichzeichnen",
+  "editor.effect_glow": "Leuchten",
+  "editor.effect_outline": "Kontur",
+  "editor.effect_adjustment": "Anpassen",
+  "editor.effect_duotone": "Duotone",
+  "editor.text_effects": "Texteffekte"
 }

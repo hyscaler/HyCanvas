@@ -347,6 +347,11 @@ export const migrations: Record<number, Migration> = {
       ? { ...file, language, schemaVersion: 18 }
       : { ...file, schemaVersion: 18 };
   },
+  // v18 -> v19: per-effect enable. Purely additive, with no transform: a v18
+  // file's effects all omit `enabled`, which means enabled, so every one keeps
+  // rendering exactly as before. The Go mirror reaches the same result through
+  // its generic additive branch, which is why there is no matching `case 18`.
+  18: (file: AnyObj) => ({ ...file, schemaVersion: 19 }),
 };
 
 export class MigrationError extends Error {

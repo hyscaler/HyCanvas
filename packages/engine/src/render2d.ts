@@ -21,9 +21,11 @@ import {
   type TableNode,
   type TextEffect,
 } from "@hc/schema";
+import { enabledEffects, enabledTextEffects } from "@hc/schema";
 import { fitRect } from "./image";
 import { booleanGeometry } from "./booleanGeom";
 import { buildClipFromPathData } from "./pathclip";
+import { layerContext, makeLayerCanvas, needsIsolation } from "./layer";
 import { autoFitNode, layoutText, isTabRun, tabRunWidth, type MeasureFn } from "@hc/text";
 import { colorToCss } from "./color";
 import { applyTextCase, canvasFontString, fontFamilyStack } from "./fonts";
@@ -678,6 +680,53 @@ function drawInk(ctx: CanvasLike, node: InkNode): void {
   done();
 }
 
+
+/**
+ * Trace a `VectorPath` into the current path, honouring anchor handles.
+ *
+ * Curves matter here in a way they do not for a bounding box: a mask edge IS
+ * the visible boundary of whatever it contains, so flattening it to line
+ * segments shows as faceting on every rounded mask.
+ *
+ * Returns false when nothing traceable was found, so the caller can decide
+ * between "clip to this" and "do not clip at all". Clipping to an empty path
+ * would hide the subject completely, which is the worst possible failure for a
+ * document that renders today.
+ */
+function traceVectorPath(ctx: CanvasLike, path: { subpaths: { closed: boolean; anchors: { x: number; y: number; inHandle?: { x: number; y: number }; outHandle?: { x: number; y: number } }[] }[] } | undefined): boolean {
+  if (!path || !path.subpaths || path.subpaths.length === 0) return false;
+  let traced = false;
+  for (const sp of path.subpaths) {
+    const as = sp.anchors;
+    if (!as || as.length < 2) continue;
+    ctx.moveTo(as[0].x, as[0].y);
+    for (let i = 1; i < as.length; i++) {
+      const prev = as[i - 1];
+      const cur = as[i];
+      // A segment is a curve when either side of it carries a handle.
+      if ((prev.outHandle || cur.inHandle) && ctx.bezierCurveTo) {
+        const c1 = prev.outHandle ?? { x: prev.x, y: prev.y };
+        const c2 = cur.inHandle ?? { x: cur.x, y: cur.y };
+        ctx.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, cur.x, cur.y);
+      } else {
+        ctx.lineTo(cur.x, cur.y);
+      }
+    }
+    if (sp.closed) {
+      const first = as[0];
+      const last = as[as.length - 1];
+      if ((last.outHandle || first.inHandle) && ctx.bezierCurveTo) {
+        const c1 = last.outHandle ?? { x: last.x, y: last.y };
+        const c2 = first.inHandle ?? { x: first.x, y: first.y };
+        ctx.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, first.x, first.y);
+      }
+      ctx.closePath();
+    }
+    traced = true;
+  }
+  return traced;
+}
+
 function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, boxes?: BoxMap, origin?: { x: number; y: number }): void {
   const { width: w, height: h } = node.size;
   // Unknown / newer node type: inert placeholder using transform/size (FR-2).
@@ -706,17 +755,19 @@ function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, bo
       // Background highlight hugs the TEXT per line, not the box.
       // Resolve its fill + padding/roundness once; the rects are drawn per line
       // (behind the glyphs) inside the line loop below.
-      const hl = (node.textEffects ?? []).find((e) => e.kind === "highlight");
+      const hl = enabledTextEffects(node.textEffects).find((e) => e.kind === "highlight");
       const hlFill = hl ? resolveFill(ctx, hl.color, w, h) : null;
       const hlPad = hl ? Math.max(0, hl.padding ?? 0) : 0;
       const hlRad = hl ? Math.max(0, hl.radius ?? 0) : 0;
       // Glyph outline (hollow/outlined text) from an "outline" effect.
-      const outline = (node.effects ?? []).find((e) => e.kind === "outline") as { color: { srgb: { r: number; g: number; b: number; a: number } }; width: number } | undefined;
+      const outline = enabledEffects(node.effects).find((e) => e.kind === "outline") as { color: { srgb: { r: number; g: number; b: number; a: number } }; width: number } | undefined;
       if (outline && "lineJoin" in (ctx as object)) (ctx as { lineJoin?: string }).lineJoin = "round";
       // Named text effects resolved once, applied behind/around the
       // run fill in the segment loop below. Shadows need a flat CSS color (a
       // gradient can't be a shadowColor), so resolve effect fills to a flat color.
-      const tfx: TextEffect[] = node.textEffects ?? [];
+      // Honours the per-effect enable, like NodeBase.effects: a switched-off
+      // text effect must not paint, and the two stacks have to behave the same.
+      const tfx: TextEffect[] = enabledTextEffects(node.textEffects);
       const eShadow = tfx.find((e) => e.kind === "shadow") as Extract<TextEffect, { kind: "shadow" }> | undefined;
       const eLift = tfx.find((e) => e.kind === "lift") as Extract<TextEffect, { kind: "lift" }> | undefined;
       const eGlow = tfx.find((e) => e.kind === "glow") as Extract<TextEffect, { kind: "glow" }> | undefined;
@@ -1105,13 +1156,11 @@ function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, bo
       const r = node.result && node.result.subpaths.length > 0 ? node.result : booleanGeometry(node);
       if (r && r.subpaths.length > 0) {
         ctx.beginPath();
-        for (const sp of r.subpaths) {
-          const as = sp.anchors;
-          if (as.length < 2) continue;
-          ctx.moveTo(as[0].x, as[0].y);
-          for (let i = 1; i < as.length; i++) ctx.lineTo(as[i].x, as[i].y);
-          if (sp.closed) ctx.closePath();
-        }
+        // Honours anchor handles. This traced with lineTo only, so a boolean
+        // whose operands had curved edges rendered as a polyline: the spec
+        // lists it as a defect, and the tracer written for masks does the job
+        // unchanged, since both consume the same VectorPath.
+        traceVectorPath(ctx, r);
         if (node.fills && node.fills.length > 0) {
           ctx.fillStyle = resolveFill(ctx, node.fills[0], w, h);
           ctx.fill(); // nonzero winding renders holes from the clipper correctly
@@ -1276,6 +1325,10 @@ function drawNodeContent(ctx: CanvasLike, node: Node, assets?: AssetProvider, bo
     case "group":
     case "grid":
     case "audio":
+    // A mask paints nothing itself. Its subject is a real SceneNode child and
+    // the clip is applied in `paint` before that child is drawn, so drawing
+    // anything here would put a box behind every masked object.
+    case "mask":
       break; // no own surface
     default:
       placeholderBox(ctx, w, h);
@@ -1853,6 +1906,57 @@ function drawRadar(ctx: CanvasLike, node: ChartNode, cx: number, cy: number, rad
   }
 }
 
+
+/**
+ * Paint a container's children into an offscreen layer and composite once.
+ *
+ * The layer is canvas-sized and shares the target's transform, which is what
+ * lets the children be painted by the ordinary recursive `paint` with no
+ * special coordinate handling. It is the same shape the Go raster path already
+ * uses for blend and shadow isolation.
+ *
+ * Children are painted at parentAlpha 1: the group's own alpha belongs on the
+ * composite, not on each child, and applying it in both places is precisely the
+ * double-darkening this fixes.
+ *
+ * Returns false when the runtime cannot supply a layer, so the caller can fall
+ * back rather than lose the artwork.
+ */
+function paintIsolated(
+  ctx: CanvasLike,
+  sn: SceneNode,
+  alpha: number,
+  opts: Render2DOptions,
+  boxes: BoxMap,
+  cull: { x: number; y: number; w: number; h: number; zoom: number } | null,
+): boolean {
+  if (!ctx.getTransform || !ctx.canvas || !ctx.drawImage || !ctx.save || !ctx.restore) return false;
+  const { width, height } = ctx.canvas;
+  const layer = makeLayerCanvas(width, height);
+  if (!layer) return false;
+  const lctx = layerContext(layer);
+  if (!lctx) return false;
+
+  const t = ctx.getTransform();
+  lctx.setTransform(t.a, t.b, t.c, t.d, t.e, t.f);
+  for (const child of sn.children!) paint(lctx, child, 1, opts, boxes, cull);
+
+  // Composite in DEVICE space: the layer already carries the transform, so
+  // drawing it under the node transform as well would apply it twice. Any clip
+  // set for this node stays in force, because a canvas clip is device-space
+  // once applied.
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = alpha;
+  ctx.globalCompositeOperation = blendToComposite(sn.node.blendMode);
+  // The explicit destination size is the 5-argument form. CanvasLike does not
+  // declare the 3-argument overload, and the layer is canvas-sized anyway, so
+  // naming the size is both required and exact.
+  ctx.drawImage(layer as unknown, 0, 0, width, height);
+  ctx.restore();
+  return true;
+}
+
 function paint(
   ctx: CanvasLike,
   sn: SceneNode,
@@ -1944,7 +2048,44 @@ function paint(
   }
 
   if (sn.children) {
+    // Group isolation: composite the subtree as a unit rather than fading each
+    // child individually. Skipped for a mask, whose own clip/composite path is
+    // immediately below and which has exactly one child anyway.
+    if (node.type !== "mask" && needsIsolation(node as never, sn.children.length)) {
+      if (paintIsolated(ctx, sn, alpha, opts, boxes, cull)) {
+        ctx.restore();
+        return;
+      }
+      // Falling through is the documented degradation: a runtime with no
+      // offscreen canvas draws exactly what it drew before this existed.
+    }
+
+    // A mask clips its subject to `maskShape`. The clip goes here rather than
+    // in drawNodeContent because it must still be in effect while the CHILD is
+    // painted, and drawNodeContent has already returned by then.
+    //
+    // An unusable mask shape (absent, empty, or degenerate) deliberately clips
+    // NOTHING rather than everything. Both are wrong, but one hides the user's
+    // artwork and the other merely fails to trim it.
+    let clipped = false;
+    if (node.type === "mask" && ctx.save && ctx.restore && ctx.clip) {
+      const shape = (node as unknown as { maskShape?: Parameters<typeof traceVectorPath>[1] }).maskShape;
+      ctx.save();
+      ctx.beginPath();
+      if (traceVectorPath(ctx, shape)) {
+        const rule = (node as unknown as { maskShape?: { fillRule?: "nonzero" | "evenodd" } }).maskShape?.fillRule;
+        try {
+          (ctx.clip as (rule?: "nonzero" | "evenodd") => void)(rule === "evenodd" ? "evenodd" : "nonzero");
+        } catch {
+          ctx.clip();
+        }
+        clipped = true;
+      } else {
+        ctx.restore();
+      }
+    }
     for (const child of sn.children) paint(ctx, child, alpha, opts, boxes, cull);
+    if (clipped) ctx.restore!();
   }
 
   ctx.restore();

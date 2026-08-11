@@ -52,8 +52,15 @@ import { z } from "zod";
  *      (a BCP 47 tag) naming the document's primary language for assistive
  *      technology and the tagged-PDF /Lang. Additive: a v17 file omits it and
  *      exports fall back to en-US as before. The migration copies a legacy
- *      `meta.language` up (importers wrote it there); meta keeps its copy. */
-export const CURRENT_SCHEMA_VERSION = 18;
+ *      `meta.language` up (importers wrote it there); meta keeps its copy.
+ *  v19: per-effect enable. `Effect` and `TextEffect` each gain an optional
+ *      `enabled`, so an effect can be switched off in the reorderable stack
+ *      without losing its parameters. ABSENT MEANS ENABLED: every effect
+ *      written before this omits the field and must keep rendering, so the
+ *      flag can only ever turn something off. Spelled `enabled` rather than
+ *      `disabled` because the Go renderers already honoured exactly this check
+ *      before the schema declared it. */
+export const CURRENT_SCHEMA_VERSION = 19;
 
 /** Maximum container nesting depth; guards traversal against stack overflow (FR-4). */
 export const MAX_NESTING_DEPTH = 32;
@@ -319,21 +326,44 @@ const duotoneFields = {
   intensity: z.number(),
 };
 
-export type Effect =
+/** Per-effect enable, for the reorderable effect stack.
+ *
+ *  ABSENT MEANS ENABLED. Every effect written before this field existed omits
+ *  it and must keep rendering, so the flag can only ever turn something off.
+ *
+ *  Spelled `enabled` rather than `disabled` because the Go renderers already
+ *  implemented exactly this check, in `effectsOf` and in both shadow paths of
+ *  `composite.go`, before the schema ever declared the field. Introducing the
+ *  opposite polarity would have left two conventions for one idea and a silent
+ *  browser/server divergence the first time anything wrote one of them. */
+const effectEnabled = { enabled: z.boolean().optional() };
+
+export type Effect = { enabled?: boolean } & (
   | (Shadow & { kind: "shadow" })
   | { kind: "blur"; radius: number }
   | { kind: "glow"; color: Color; radius: number }
   | { kind: "outline"; color: Color; width: number }
   | { kind: "adjustment"; ops: AdjustmentOp[] }
-  | (Duotone & { kind: "duotone" });
+  | (Duotone & { kind: "duotone" })
+);
 export const EffectSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("shadow"), ...shadowFields }),
-  z.object({ kind: z.literal("blur"), radius: z.number() }),
-  z.object({ kind: z.literal("glow"), color: ColorSchema, radius: z.number() }),
-  z.object({ kind: z.literal("outline"), color: ColorSchema, width: z.number() }),
-  z.object({ kind: z.literal("adjustment"), ops: z.array(AdjustmentOpSchema) }),
-  z.object({ kind: z.literal("duotone"), ...duotoneFields }),
+  z.object({ kind: z.literal("shadow"), ...shadowFields, ...effectEnabled }),
+  z.object({ kind: z.literal("blur"), radius: z.number(), ...effectEnabled }),
+  z.object({ kind: z.literal("glow"), color: ColorSchema, radius: z.number(), ...effectEnabled }),
+  z.object({ kind: z.literal("outline"), color: ColorSchema, width: z.number(), ...effectEnabled }),
+  z.object({ kind: z.literal("adjustment"), ops: z.array(AdjustmentOpSchema), ...effectEnabled }),
+  z.object({ kind: z.literal("duotone"), ...duotoneFields, ...effectEnabled }),
 ]);
+
+/** The effects that actually render: absent `enabled` counts as enabled. */
+export function enabledEffects(effects?: readonly Effect[]): Effect[] {
+  return (effects ?? []).filter((e) => e.enabled !== false);
+}
+
+/** The same rule for a text node's parallel stack. */
+export function enabledTextEffects(effects?: readonly TextEffect[]): TextEffect[] {
+  return (effects ?? []).filter((e) => e.enabled !== false);
+}
 
 export interface CornerRadius {
   topLeft: number;
@@ -866,7 +896,10 @@ export const TextFlowSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("arc"), curvature: z.number() }),
 ]);
 
-export type TextEffect =
+/** Text effects take the same per-effect enable, with the same polarity and the
+ *  same absent-means-enabled rule, so the two stacks behave identically to a
+ *  user who does not know they are stored apart. */
+export type TextEffect = { enabled?: boolean } & (
   | { kind: "shadow"; dx: number; dy: number; blur: number; color: Fill; opacity: number }
   | { kind: "outline"; width: number; color: Fill; join: "miter" | "round" | "bevel" }
   | { kind: "glow"; radius: number; color: Fill; intensity: number }
@@ -875,17 +908,18 @@ export type TextEffect =
   | { kind: "splice"; thickness: number; offset: number; color: Fill }
   | { kind: "highlight"; color: Fill; padding: number; radius: number }
   | { kind: "lift"; intensity: number }
-  | { kind: "hollow"; thickness: number };
+  | { kind: "hollow"; thickness: number }
+);
 export const TextEffectSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("shadow"), dx: z.number(), dy: z.number(), blur: z.number(), color: FillSchema, opacity: channel }),
-  z.object({ kind: z.literal("outline"), width: z.number(), color: FillSchema, join: z.enum(["miter", "round", "bevel"]) }),
-  z.object({ kind: z.literal("glow"), radius: z.number(), color: FillSchema, intensity: z.number() }),
-  z.object({ kind: z.literal("echo"), offset: z.number(), count: z.number().int(), color: FillSchema }),
-  z.object({ kind: z.literal("neon"), color: FillSchema, intensity: z.number() }),
-  z.object({ kind: z.literal("splice"), thickness: z.number(), offset: z.number(), color: FillSchema }),
-  z.object({ kind: z.literal("highlight"), color: FillSchema, padding: z.number(), radius: z.number() }),
-  z.object({ kind: z.literal("lift"), intensity: z.number() }),
-  z.object({ kind: z.literal("hollow"), thickness: z.number() }),
+  z.object({ kind: z.literal("shadow"), dx: z.number(), dy: z.number(), blur: z.number(), color: FillSchema, opacity: channel, ...effectEnabled }),
+  z.object({ kind: z.literal("outline"), width: z.number(), color: FillSchema, join: z.enum(["miter", "round", "bevel"]), ...effectEnabled }),
+  z.object({ kind: z.literal("glow"), radius: z.number(), color: FillSchema, intensity: z.number(), ...effectEnabled }),
+  z.object({ kind: z.literal("echo"), offset: z.number(), count: z.number().int(), color: FillSchema, ...effectEnabled }),
+  z.object({ kind: z.literal("neon"), color: FillSchema, intensity: z.number(), ...effectEnabled }),
+  z.object({ kind: z.literal("splice"), thickness: z.number(), offset: z.number(), color: FillSchema, ...effectEnabled }),
+  z.object({ kind: z.literal("highlight"), color: FillSchema, padding: z.number(), radius: z.number(), ...effectEnabled }),
+  z.object({ kind: z.literal("lift"), intensity: z.number(), ...effectEnabled }),
+  z.object({ kind: z.literal("hollow"), thickness: z.number(), ...effectEnabled }),
 ]);
 
 export interface TextNode extends NodeBase {

@@ -161,8 +161,11 @@ func TestMigratePromotesDocumentLanguage(t *testing.T) {
 		"meta": map[string]any{"language": "ar-SA"},
 	}
 	out := migrateFile(file)
-	if got := asNum(out["schemaVersion"]); got != 18 {
-		t.Fatalf("schemaVersion = %v, want 18", got)
+	// Assert against the mirror, not a literal. This test hardcoded 18 and
+	// broke on the next additive bump even though nothing it actually checks
+	// (the language promotion) had changed. Migration always runs to current.
+	if got := asNum(out["schemaVersion"]); got != float64(currentSchemaVersion) {
+		t.Fatalf("schemaVersion = %v, want %d", got, currentSchemaVersion)
 	}
 	if got := asStr(out["language"]); got != "ar-SA" {
 		t.Fatalf("language = %q, want ar-SA (promoted from meta)", got)
