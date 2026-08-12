@@ -26,6 +26,7 @@ import { fitRect } from "./image";
 import { booleanGeometry } from "./booleanGeom";
 import { buildClipFromPathData } from "./pathclip";
 import { layerContext, makeLayerCanvas, needsIsolation } from "./layer";
+import { maskedCanvas } from "./maskedImage";
 import { autoFitNode, layoutText, isTabRun, tabRunWidth, type MeasureFn } from "@hc/text";
 import { colorToCss } from "./color";
 import { applyTextCase, canvasFontString, fontFamilyStack } from "./fonts";
@@ -351,6 +352,30 @@ function drawImageNode(ctx: CanvasLike, node: ImageNode, w: number, h: number, a
           const mw = (mapped as { width?: number }).width;
           const mh = (mapped as { height?: number }).height;
           if (mw && mh) { srcW = mw; srcH = mh; }
+        }
+      }
+      // Alpha mask (v20): non-destructive background removal keeps the original
+      // in `source` and the cutout here, so this is what actually hides the
+      // background. Applied BEFORE crop/fit so the mask is in source-pixel
+      // space, which is how it was authored; masking after the fit would make
+      // the mask slide whenever the node was resized.
+      const maskRef = (node as unknown as { alphaMask?: { assetId: string } }).alphaMask;
+      if (maskRef && assets?.status(maskRef.assetId) === "ready") {
+        const maskImg = assets.image(maskRef.assetId);
+        if (maskImg) {
+          const masked = maskedCanvas(
+            `${assetId}:${maskRef.assetId}:${srcW}x${srcH}`,
+            img as CanvasImageSource,
+            maskImg as CanvasImageSource,
+            srcW,
+            srcH,
+          );
+          if (masked) {
+            img = masked;
+            const mw = (masked as { width?: number }).width;
+            const mh = (masked as { height?: number }).height;
+            if (mw && mh) { srcW = mw; srcH = mh; }
+          }
         }
       }
       const crop = node.crop ?? { x: 0, y: 0, width: 1, height: 1 };

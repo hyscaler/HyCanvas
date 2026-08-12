@@ -352,6 +352,11 @@ export const migrations: Record<number, Migration> = {
   // rendering exactly as before. The Go mirror reaches the same result through
   // its generic additive branch, which is why there is no matching `case 18`.
   18: (file: AnyObj) => ({ ...file, schemaVersion: 19 }),
+  // v19 -> v20: ImageNode.alphaMask. Purely additive, with no transform: a v19
+  // file has no mask, and absence means fully opaque, so every image renders
+  // exactly as it did. The Go mirror reaches the same result through its
+  // generic additive branch, which is why there is no matching `case 19`.
+  19: (file: AnyObj) => ({ ...file, schemaVersion: 20 }),
 };
 
 export class MigrationError extends Error {

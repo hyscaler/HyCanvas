@@ -877,6 +877,9 @@ interface EditorState {
   setImageCrop(id: string, crop: CropRect | undefined): void;
   /** Replace an image node's source with a new URL (resets crop), undoable. */
   setImageSource(id: string, url: string): void;
+  /** Attach or clear an image's alpha mask (v20), undoable. Non-destructive:
+   *  the original `source` is untouched. */
+  setImageAlphaMask(id: string, url: string | null, width: number, height: number): void;
   /** Set/clear an image node's accessibility alt text (F22 FR-12), undoable. */
   setImageAlt(id: string, alt: string | undefined): void;
   /** Set/clear any node's accessibility description (doc 28 FR-29), undoable. */
@@ -4653,6 +4656,49 @@ export const useEditor = create<EditorState>((set, get) => {
       }
     },
 
+    /**
+     * Attach an alpha mask WITHOUT touching the image.
+     *
+     * Background removal used to call `setImageSource` with the flattened
+     * cutout, which threw the original pixels out of the document: the result
+     * could not be meaningfully undone, and there was nothing left to refine.
+     * Storing the alpha separately makes the cutout a view of the image rather
+     * than a replacement for it.
+     *
+     * The mask is registered as an ordinary asset, so it travels the same
+     * upload, storage and export path as any other. Passing null removes it,
+     * which is what "restore background" is: one field cleared, no pixels
+     * touched.
+     */
+    setImageAlphaMask: (id, url, width, height) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "image" || loc.node.locked || editBlocked(id)) return;
+      const node = loc.node as unknown as { alphaMask?: { assetId: string; width: number; height: number } };
+      const doc = get().doc;
+      ensureDocArrays(doc);
+      const before = node.alphaMask ? { ...node.alphaMask } : undefined;
+      if (url === null) {
+        perform(
+          () => { delete node.alphaMask; },
+          () => { if (before) node.alphaMask = { ...before }; },
+        );
+        return;
+      }
+      const assetId = `asset-${crypto.randomUUID()}`;
+      const ref: AssetRef = { id: assetId, kind: "image", url, mime: "image/png", checksum: "" };
+      perform(
+        () => {
+          doc.assets.push(ref);
+          node.alphaMask = { assetId, width, height };
+        },
+        () => {
+          const at = doc.assets.findIndex((a) => a.id === assetId);
+          if (at >= 0) doc.assets.splice(at, 1);
+          if (before) node.alphaMask = { ...before };
+          else delete node.alphaMask;
+        },
+      );
+    },
     setImageSource: (id, url) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "image" || loc.node.locked || editBlocked(id)) return;

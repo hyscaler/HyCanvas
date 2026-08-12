@@ -59,8 +59,14 @@ import { z } from "zod";
  *      written before this omits the field and must keep rendering, so the
  *      flag can only ever turn something off. Spelled `enabled` rather than
  *      `disabled` because the Go renderers already honoured exactly this check
- *      before the schema declared it. */
-export const CURRENT_SCHEMA_VERSION = 19;
+ *      before the schema declared it.
+ *  v20: non-destructive background removal. `ImageNode` gains optional
+ *      `alphaMask`, a grayscale asset reference applied over `source`.
+ *      Removal previously overwrote `source` with the flattened cutout, which
+ *      discarded the original pixels; keeping both makes the cutout a view
+ *      rather than a replacement, and therefore undoable and refinable.
+ *      Additive: a v19 file has no mask and renders exactly as before. */
+export const CURRENT_SCHEMA_VERSION = 20;
 
 /** Maximum container nesting depth; guards traversal against stack overflow (FR-4). */
 export const MAX_NESTING_DEPTH = 32;
@@ -950,6 +956,20 @@ const cropSchema = z.object({ x: unit, y: unit, width: unit, height: unit }); //
 // ImageNode uses the image value types (ImageFit/CropRect/ClipPath/ImageSource,
 // and ImageFill in the Fill union) defined near the Fill model above.
 
+/** A grayscale alpha mask stored as an ordinary workspace asset (see
+ *  `ImageNode.alphaMask`). Dimensions are recorded so a renderer can scale the
+ *  mask onto the image without decoding it first. */
+export interface ImageAlphaMask {
+  assetId: string;
+  width: number;
+  height: number;
+}
+export const ImageAlphaMaskSchema = z.object({
+  assetId: z.string(),
+  width: z.number(),
+  height: z.number(),
+});
+
 export interface ImageNode extends NodeBase {
   type: "image";
   source: ImageSource;
@@ -961,6 +981,19 @@ export interface ImageNode extends NodeBase {
   flipY?: boolean;
   effectivePpi?: number;
   motion?: ImageMotion; // photo motion (ken-burns/parallax)
+  /** Per-pixel transparency applied over `source`, as a grayscale asset:
+   *  white keeps, black hides.
+   *
+   *  This is what makes background removal NON-DESTRUCTIVE. Removal used to
+   *  overwrite `source` with the flattened cutout, so the original pixels left
+   *  the document and the result could be neither undone meaningfully nor
+   *  refined. Keeping the original and storing the alpha separately means the
+   *  cutout is a view of the image rather than a replacement for it.
+   *
+   *  An assetId, never inline pixel data. A data URL here would land in the
+   *  CRDT, every snapshot, and IndexedDB, and be re-sent to every collaborator
+   *  on load; a mask that a brush revises repeatedly would make that acute. */
+  alphaMask?: ImageAlphaMask;
   /** Accessibility alt text (F22 FR-12). Optional + additive, so older files
    *  still validate with no migration; AI alt-text and a11y export read it. */
   alt?: string;
@@ -977,6 +1010,7 @@ export const ImageNodeSchema = z.object({
   flipY: z.boolean().optional(),
   effectivePpi: z.number().optional(),
   motion: ImageMotionSchema.optional(),
+  alphaMask: ImageAlphaMaskSchema.optional(),
   alt: z.string().optional(),
 });
 

@@ -216,3 +216,50 @@ function blobToDataUrl(blob: Blob): Promise<string> {
     reader.readAsDataURL(blob);
   });
 }
+
+/**
+ * Derive a grayscale alpha mask from a cutout produced by `removeBackground`.
+ *
+ * The model returns a transparent PNG: the foreground with its background
+ * knocked out. What we persist instead is the ALPHA of that result as a
+ * separate grayscale image (white keeps, black hides), so the original photo
+ * stays in the document and the cutout becomes a view of it.
+ *
+ * That is what makes removal undoable and, later, refinable by hand: a brush
+ * edits this mask rather than repainting pixels into the photo.
+ */
+export async function alphaMaskFromCutout(
+  cutoutDataUrl: string,
+): Promise<{ dataUrl: string; width: number; height: number }> {
+  if (typeof window === "undefined") {
+    throw new CodedError("errors.bg_removal_browser_only", "Background removal runs in the browser only.");
+  }
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = () => reject(new CodedError("errors.background_removal_failed", "Could not read the cutout."));
+    el.src = cutoutDataUrl;
+  });
+  const w = img.naturalWidth || 1;
+  const h = img.naturalHeight || 1;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) throw new CodedError("errors.background_removal_failed", "Canvas unavailable.");
+  ctx.drawImage(img, 0, 0);
+  const data = ctx.getImageData(0, 0, w, h);
+  const px = data.data;
+  for (let i = 0; i < px.length; i += 4) {
+    // Alpha becomes luminance; the mask itself is fully opaque. A grayscale
+    // mask is what a brush can paint into, and it survives formats that drop
+    // an alpha channel.
+    const a = px[i + 3];
+    px[i] = a;
+    px[i + 1] = a;
+    px[i + 2] = a;
+    px[i + 3] = 255;
+  }
+  ctx.putImageData(data, 0, 0);
+  return { dataUrl: canvas.toDataURL("image/png"), width: w, height: h };
+}

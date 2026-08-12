@@ -158,6 +158,11 @@ function assetIdsOf(node: Node): string[] {
   if (node.type === "image") {
     const src = (node as { source?: { assetId?: unknown } }).source;
     if (typeof src?.assetId === "string" && src.assetId.length > 0) ids.push(src.assetId);
+    // The alpha mask is a second asset on the same node. Without it here the
+    // loader never fetches it, and the image would draw unmasked forever with
+    // no clue why.
+    const mask = (node as { alphaMask?: { assetId?: unknown } }).alphaMask;
+    if (typeof mask?.assetId === "string" && mask.assetId.length > 0) ids.push(mask.assetId);
   } else {
     const direct = (node as { assetId?: unknown }).assetId;
     if (typeof direct === "string" && direct.length > 0) ids.push(direct);

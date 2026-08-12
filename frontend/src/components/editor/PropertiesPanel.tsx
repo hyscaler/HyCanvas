@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { fonts } from "@/lib/fontProvider";
 import { promptText, alertText } from "@/lib/promptDialog";
-import { FILTER_PRESETS, resolvePresetOps, autoEnhanceOps, removeBackground, rasterizeToPng, type AdjOp } from "@/lib/imageFilters";
+import { FILTER_PRESETS, resolvePresetOps, autoEnhanceOps, alphaMaskFromCutout, removeBackground, rasterizeToPng, type AdjOp } from "@/lib/imageFilters";
 import { AddEffectRow, EffectStack } from "./EffectStack";
 import { useEditor } from "@/store/editor";
 import { BuildOrderSection } from "./BuildOrderSection";
@@ -2751,25 +2751,33 @@ function ImageEffectsSection({ id, node, workspaceId }: { id: string; node: Node
         blob = await rasterizeToPng(blob, src.naturalWidth ?? 0, src.naturalHeight ?? 0);
       }
       const { dataUrl } = await removeBackground(blob, (f) => setBgProgress(f));
-      // Store the cutout as a real uploaded asset, never as a data URL: the
-      // document carries its assets inline, so embedding megabytes of base64
-      // here pushes them into the CRDT, every snapshot, and IndexedDB, and they
-      // are re-sent to every collaborator on load. Falling back to the data URL
-      // keeps the feature working offline or without a workspace, which is the
-      // lesser evil of the two.
-      let nextUrl = dataUrl;
+      // Non-destructive (v20): the ORIGINAL stays in `source` and only the
+      // alpha travels, as a mask beside it. Overwriting the source, which this
+      // used to do, discarded the user's pixels and made the result impossible
+      // to undo meaningfully or refine afterwards.
+      //
+      // Only the MASK is uploaded now. The flattened cutout used to be uploaded
+      // too and is no longer stored anywhere, which halves what this costs: a
+      // grayscale mask also compresses far smaller than a colour cutout.
+      const mask = await alphaMaskFromCutout(dataUrl);
+      // A real uploaded asset, never a data URL: the document carries its
+      // assets inline, so embedding megabytes of base64 pushes them into the
+      // CRDT, every snapshot, and IndexedDB, and re-sends them to every
+      // collaborator on load. Falling back to the data URL keeps the feature
+      // working offline or without a workspace, which is the lesser evil.
+      let maskUrl = mask.dataUrl;
       if (workspaceId) {
         try {
           const asset = await uploadAssetWithProgress(workspaceId, {
-            filename: `cutout-${Date.now()}.png`,
-            dataBase64: dataUrl.split(",")[1] ?? "",
+            filename: `mask-${Date.now()}.png`,
+            dataBase64: mask.dataUrl.split(",")[1] ?? "",
           });
-          nextUrl = asset.url;
+          maskUrl = asset.url;
         } catch {
-          // Upload failed: keep the inline result rather than losing the work.
+          // Upload failed: keep the inline mask rather than losing the work.
         }
       }
-      useEditor.getState().setImageSource(id, nextUrl);
+      useEditor.getState().setImageAlphaMask(id, maskUrl, mask.width, mask.height);
       setBgState("idle");
     } catch (err) {
       setBgState("error");
