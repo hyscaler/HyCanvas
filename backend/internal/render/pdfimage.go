@@ -142,5 +142,26 @@ func assetBytes(node map[string]any, src ImageSource) (assetID string, data []by
 		return "", nil, false
 	}
 	data, ok = src(assetID)
-	return assetID, data, ok && len(data) > 0
+	if !ok || len(data) == 0 {
+		return assetID, data, false
+	}
+	// An alpha mask (v20) is flattened in before the bytes reach the PDF
+	// writer. PDF resolves images through this function rather than the
+	// inlined `src` the raster and SVG paths use, so the composite has to
+	// happen twice, once per resolution path, or a PDF export alone would
+	// reinstate the background the user removed.
+	//
+	// The cache key changes with the mask because assetID alone no longer
+	// identifies the bytes: two nodes sharing a photo but masked differently
+	// must not collapse into one XObject.
+	if maskID := AlphaMaskAssetID(node); maskID != "" {
+		if maskData, mok := src(maskID); mok && len(maskData) > 0 {
+			if merged, cok := CompositeAlphaMask(data, maskData); cok {
+				return assetID + "+" + maskID, merged, true
+			}
+		}
+		// Unmasked rather than nothing: a mask that will not decode must not
+		// cost the user the whole image.
+	}
+	return assetID, data, true
 }

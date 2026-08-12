@@ -1,6 +1,10 @@
 package httpapi
 
-import "encoding/base64"
+import (
+	"encoding/base64"
+
+	"hycanvas/backend/internal/render"
+)
 
 // assetContent fetches an asset's bytes and content type by id (backed by the
 // uploads service in production; a stub in tests).
@@ -39,6 +43,22 @@ func embedNodeAssets(fetch assetContent, node map[string]any) map[string]any {
 	if typ, _ := node["type"].(string); typ == "image" {
 		if src, _ := node["source"].(map[string]any); src != nil {
 			if aid, _ := src["assetId"].(string); aid != "" {
+				// An alpha mask (v20) is flattened into the inlined bytes here,
+				// so every backend downstream of this draws the cutout the
+				// editor shows. Without it an export silently reinstates the
+				// background the user removed.
+				if mid := render.AlphaMaskAssetID(node); mid != "" {
+					if imgData, _, err := fetch(aid); err == nil && len(imgData) > 0 {
+						if maskData, _, mErr := fetch(mid); mErr == nil && len(maskData) > 0 {
+							if merged, ok := render.CompositeAlphaMask(imgData, maskData); ok {
+								n2["src"] = "data:image/png;base64," + base64.StdEncoding.EncodeToString(merged)
+								return n2
+							}
+						}
+					}
+					// Fall through unmasked: a mask that will not decode must
+					// not cost the user the whole image.
+				}
 				if url, ok := dataURL(aid); ok {
 					n2["src"] = url
 				}
