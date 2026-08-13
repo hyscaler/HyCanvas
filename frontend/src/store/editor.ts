@@ -41,6 +41,7 @@ import {
   type TableHeaderStyle,
   type TableNode,
   type TextEffect,
+  type TextNode,
   type TextFlow,
   type Transform,
   type SlideSection,
@@ -94,6 +95,7 @@ import {
 } from "@hc/engine";
 import { booleanOp, fitCubicBeziers, pathToPolylines, recognizeShape, shapeNodeToParametric, shapeToPath, simplifyPolyline, strokeToOutline, type BooleanOp } from "@hc/geometry";
 import { imageAssets } from "@/lib/assetProvider";
+import { measuredTextHeight } from "@/lib/textFit";
 import { PAGE_GAP, pageOffsets, pageTop } from "@/lib/pageLayout";
 import type { MagicDesignSpec } from "@/lib/magicDesign";
 import { layoutDesign, type AiDesignSpec, type DeckResult } from "@hc/aistudio";
@@ -1362,6 +1364,21 @@ export const useEditor = create<EditorState>((set, get) => {
     redo: () => applyCommand(get().doc, cmd),
     undo: () => applyCommand(get().doc, invertCommand(cmd)),
   });
+
+  // Re-fit an auto-height text box to its content, with the same measurer the
+  // inline editor and the resize gizmo use. Whole-box restyles (font family,
+  // size, weight, spacing, line height) change how text wraps, and a box left
+  // at its pre-restyle height disagrees with the render: the selection box
+  // covers three lines while five paint. Fixed boxes keep the user's chosen
+  // height (text overflows or auto-fits instead), mirroring setContent's rule.
+  const refitAutoTextHeight = (node: Node) => {
+    const n = node as unknown as { box?: { mode?: string; height: number }; size: { height: number } };
+    if (n.box?.mode !== "autoHeight") return;
+    const h = measuredTextHeight(node as unknown as TextNode);
+    if (Math.abs(n.size.height - h) < 0.5) return;
+    n.size.height = h;
+    n.box.height = h;
+  };
 
   // Index of the page being edited, clamped to the document's page count.
   const curPageIndex = () => {
@@ -5313,6 +5330,11 @@ export const useEditor = create<EditorState>((set, get) => {
       // resolve (node deleted since collection, run gone after an edit) are
       // skipped rather than failing the batch.
       const changes: { apply: () => void; revert: () => void }[] = [];
+      // Text nodes whose runs get replaced, each with its pre-batch height:
+      // translations routinely run longer than the source and rewrap, so every
+      // touched auto-height box is re-fitted after the batch (and its height
+      // reverts with it).
+      const touchedText = new Map<string, { node: Node; h: number; bh: number }>();
       for (const e of entries) {
         const next = e.text;
         if (typeof next !== "string") continue;
@@ -5334,13 +5356,29 @@ export const useEditor = create<EditorState>((set, get) => {
             if (!run || typeof run.text !== "string") continue;
             const before = run.text;
             changes.push({ apply: () => { run.text = next; }, revert: () => { run.text = before; } });
+            if (!touchedText.has(e.ref.nodeId)) {
+              // Defensive reads: schema guarantees size+box on text nodes, but
+              // this must not be the line that fails an otherwise valid batch.
+              const sized = loc.node as unknown as { size?: { height: number }; box?: { height: number } };
+              touchedText.set(e.ref.nodeId, { node: loc.node, h: sized.size?.height ?? 0, bh: sized.box?.height ?? sized.size?.height ?? 0 });
+            }
           }
         }
       }
       if (!changes.length) return;
       perform(
-        () => { for (const c of changes) c.apply(); },
-        () => { for (const c of [...changes].reverse()) c.revert(); },
+        () => {
+          for (const c of changes) c.apply();
+          for (const t of touchedText.values()) refitAutoTextHeight(t.node);
+        },
+        () => {
+          for (const c of [...changes].reverse()) c.revert();
+          for (const t of touchedText.values()) {
+            const sized = t.node as unknown as { size?: { height: number }; box?: { height: number } };
+            if (sized.size) sized.size.height = t.h;
+            if (sized.box) sized.box.height = t.bh;
+          }
+        },
       );
     },
 
@@ -5362,12 +5400,19 @@ export const useEditor = create<EditorState>((set, get) => {
         runs: [{ text: line, style: structuredClone(old[i]?.runs?.[0]?.style ?? firstStyle) }],
         style: structuredClone(old[i]?.style ?? old[0].style),
       }));
+      const sized = loc.node as unknown as { size: { height: number }; box: { height: number } };
+      const hBefore = sized.size.height;
+      const boxHBefore = sized.box.height;
       perform(
         () => {
           node.content = after;
+          // New text wraps to a different line count; keep the box on it.
+          refitAutoTextHeight(loc.node);
         },
         () => {
           node.content = structuredClone(before);
+          sized.size.height = hBefore;
+          sized.box.height = boxHBefore;
         },
       );
     },
@@ -5408,9 +5453,23 @@ export const useEditor = create<EditorState>((set, get) => {
       const after = changed.map((n) =>
         n.content!.map((p) => ({ ...p, runs: p.runs.map((r) => ({ ...r, text: r.text.split(find).join(replace) })) })),
       );
+      // Replaced text wraps differently; re-fit each auto-height box with the
+      // swap and take the heights back on undo.
+      const heights = changed.map((n) => {
+        const s = n as unknown as { size: { height: number }; box?: { height: number } };
+        return { h: s.size.height, bh: s.box?.height ?? s.size.height };
+      });
       perform(
-        () => changed.forEach((n, i) => { n.content = structuredClone(after[i]) as never; }),
-        () => changed.forEach((n, i) => { n.content = structuredClone(before[i]) as never; }),
+        () => changed.forEach((n, i) => {
+          n.content = structuredClone(after[i]) as never;
+          refitAutoTextHeight(n as unknown as Node);
+        }),
+        () => changed.forEach((n, i) => {
+          n.content = structuredClone(before[i]) as never;
+          const s = n as unknown as { size: { height: number }; box?: { height: number } };
+          s.size.height = heights[i].h;
+          if (s.box) s.box.height = heights[i].bh;
+        }),
       );
       return changed.length;
     },
@@ -5485,12 +5544,19 @@ export const useEditor = create<EditorState>((set, get) => {
           if (rec.stroke.fill) rec.stroke.fill = mapFill(rec.stroke.fill);
           if (rec.stroke.color) rec.stroke.color = mapColor(rec.stroke.color);
         }
+        let fontChanged = false;
         for (const para of rec.content ?? [])
           for (const run of para.runs) {
             if (run.style.fill) run.style.fill = mapFill(run.style.fill);
             if (run.style.color) run.style.color = mapColor(run.style.color);
-            run.style.fontFamily = mapFont(run.style.fontFamily);
+            const swapped = mapFont(run.style.fontFamily);
+            if (swapped !== run.style.fontFamily) fontChanged = true;
+            run.style.fontFamily = swapped;
           }
+        // A swapped family wraps differently; keep the box on the text. Only
+        // when a font actually changed, so a color-only re-skin can't fold
+        // unrelated height corrections into its undo step.
+        if (fontChanged) refitAutoTextHeight(n);
         for (const kid of rec.children ?? []) applyNode(kid);
       };
 
@@ -5555,6 +5621,9 @@ export const useEditor = create<EditorState>((set, get) => {
           if (node.type !== "text") continue;
           const paras = (node as unknown as { content: { runs: { style: { fontFamily?: string } }[] }[] }).content;
           paras.forEach((p) => p.runs.forEach((r) => (r.style.fontFamily = fix.to)));
+          // The brand font wraps differently than the off-brand one; the
+          // per-node before/after snapshots capture the height with the swap.
+          refitAutoTextHeight(node);
           applied++;
         } else if (fix.kind === "fix_contrast") {
           if (node.type !== "text") continue;
@@ -5580,7 +5649,10 @@ export const useEditor = create<EditorState>((set, get) => {
           if (!loc) continue;
           const live = loc.node as unknown as Record<string, unknown>;
           const src = snap as unknown as Record<string, unknown>;
-          for (const k of ["fills", "stroke", "content"]) {
+          // size + box travel with the snapshot because a swap_font fix re-fits
+          // an auto-height box; without them undo restores the font but leaves
+          // the re-fitted height behind.
+          for (const k of ["fills", "stroke", "content", "size", "box"]) {
             if (k in src) live[k] = structuredClone(src[k]);
             else delete live[k];
           }
@@ -5682,15 +5754,25 @@ export const useEditor = create<EditorState>((set, get) => {
     setTextBoxMode: (id, mode) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return;
-      const box = (loc.node as unknown as { box: { mode: "fixed" | "autoHeight" | "autoWidth" } }).box;
-      const before = box.mode;
+      const node = loc.node as unknown as { box: { mode: "fixed" | "autoHeight" | "autoWidth"; height: number }; size: { height: number } };
+      const before = node.box.mode;
       if (before === mode) return;
+      const hBefore = node.size.height;
+      const boxHBefore = node.box.height;
       perform(
-        () => { box.mode = mode; },
-        () => { box.mode = before; },
+        () => {
+          node.box.mode = mode;
+          // Switching TO auto-height snaps the box to its content immediately,
+          // so the toggle doubles as "fit the box to the text" for a box whose
+          // stored height drifted while it was fixed.
+          refitAutoTextHeight(loc.node);
+        },
+        () => {
+          node.box.mode = before;
+          node.size.height = hBefore;
+          node.box.height = boxHBefore;
+        },
       );
-      // Auto-height reflow recomputes height from content on the next measure pass;
-      // trigger a tick so the box resizes immediately rather than on next edit.
       get().tick();
     },
 
@@ -5787,16 +5869,21 @@ export const useEditor = create<EditorState>((set, get) => {
     stepTextFontSize: (id, delta) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return;
-      const node = loc.node as unknown as { content: { runs: { style: { fontSize: number } }[] }[] };
+      const node = loc.node as unknown as { content: { runs: { style: { fontSize: number } }[] }[]; size: { height: number }; box: { height: number } };
       const before = structuredClone(node.content);
+      const hBefore = node.size.height;
+      const boxHBefore = node.box.height;
       perform(
         () => {
           node.content.forEach((p) => p.runs.forEach((r) => {
             r.style.fontSize = Math.max(4, Math.min(512, Math.round(r.style.fontSize + delta)));
           }));
+          refitAutoTextHeight(loc.node);
         },
         () => {
           node.content = structuredClone(before);
+          node.size.height = hBefore;
+          node.box.height = boxHBefore;
         },
       );
     },
@@ -5813,17 +5900,24 @@ export const useEditor = create<EditorState>((set, get) => {
       if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return;
       const node = loc.node as unknown as {
         content: { runs: { style: Record<string, unknown> }[]; style: Record<string, unknown> }[];
+        size: { height: number };
+        box: { height: number };
       };
       const before = structuredClone(node.content);
+      const hBefore = node.size.height;
+      const boxHBefore = node.box.height;
       perform(
         () => {
           node.content.forEach((p) => {
             if (para) Object.assign(p.style, para);
             if (char) p.runs.forEach((r) => Object.assign(r.style, char));
           });
+          refitAutoTextHeight(loc.node);
         },
         () => {
           node.content = structuredClone(before);
+          node.size.height = hBefore;
+          node.box.height = boxHBefore;
         },
       );
     },
@@ -6439,14 +6533,20 @@ export const useEditor = create<EditorState>((set, get) => {
           }
           if (!changed) continue;
           snapshot(node.id, node);
+          let fontChanged = false;
           for (const p of content) for (const r of p.runs) {
-            if (r.style.fontFamily && fontMap.has(r.style.fontFamily)) r.style.fontFamily = fontMap.get(r.style.fontFamily)!;
+            if (r.style.fontFamily && fontMap.has(r.style.fontFamily)) {
+              r.style.fontFamily = fontMap.get(r.style.fontFamily)!;
+              fontChanged = true;
+            }
             const f = r.style.fill;
             if (f && f.type === "solid") {
               const to = colorMap.get(toHex(f.color).toLowerCase());
               if (to) r.style.fill = { type: "solid", color: hexToColor(to) };
             }
           }
+          // Font harmonization rewraps the text; color-only changes do not.
+          if (fontChanged) refitAutoTextHeight(node);
         } else {
           const rec = node as unknown as { fills?: Fill[]; cornerRadius?: CornerRadius };
           let changed = false;
@@ -6482,7 +6582,9 @@ export const useEditor = create<EditorState>((set, get) => {
           if (!loc) continue;
           const live = loc.node as unknown as Record<string, unknown>;
           const src = snap as unknown as Record<string, unknown>;
-          for (const k of ["fills", "cornerRadius", "content"]) {
+          // size + box travel with the snapshot: a font harmonization re-fits
+          // an auto-height box, and undo must take the height back with it.
+          for (const k of ["fills", "cornerRadius", "content", "size", "box"]) {
             if (k in src) live[k] = structuredClone(src[k]);
             else delete live[k];
           }
