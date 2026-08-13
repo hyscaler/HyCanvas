@@ -84,9 +84,13 @@ export function ssoLinkUrl(): string {
   return `${baseUrl}/v1/auth/oidc/link`;
 }
 
-/** Resolve a (possibly relative) backend URL to something an <img> can load. */
+/** Resolve a (possibly relative) backend URL to something an <img> can load.
+ *  Only server-relative paths get the origin prefix: a pasted or dropped image
+ *  lives in the document as a `data:` URL (and previews may hand in `blob:`),
+ *  and prefixing those produced an unparseable URL, so every fetch consumer
+ *  (background removal, export) failed on exactly the images people paste in. */
 export function resolveAssetUrl(url: string): string {
-  if (/^https?:\/\//.test(url)) return url;
+  if (/^(https?:\/\/|data:|blob:)/.test(url)) return url;
   return `${apiOrigin}${url}`;
 }
 
