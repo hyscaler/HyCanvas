@@ -31,11 +31,12 @@ export function PageOverlays({ api }: { api: CanvasApi }) {
   useEditor((s) => s.viewport);
   const activePage = useEditor((s) => s.activePage);
   const cropping = useEditor((s) => s.cropping);
+  const maskRefining = useEditor((s) => s.maskRefining);
   const presenting = useEditor((s) => s.presenting);
   const doc = useEditor.getState().doc;
   const st = useEditor.getState();
 
-  if (cropping || presenting) return null;
+  if (cropping || maskRefining || presenting) return null;
 
   const base = api.viewport();
   const z = base.zoom;

@@ -98,6 +98,35 @@ func TestCompositeAlphaMaskKeepsColourAtSoftEdges(t *testing.T) {
 	}
 }
 
+func TestCompositeAlphaMaskPreservesSoftFalloffProportionally(t *testing.T) {
+	// The editor's refinement brush paints a soft radial falloff, so a mask now
+	// carries the whole grey range, not just the remover's near-binary values.
+	// Each grey must come through as a PROPORTIONAL alpha: an implementation
+	// that thresholds or steps would pass the half-grey test above on tolerance
+	// while visibly hardening every brushed edge on export.
+	levels := []uint8{32, 64, 128, 191, 224}
+	mask := image.NewNRGBA(image.Rect(0, 0, len(levels), 1))
+	for i, v := range levels {
+		mask.SetNRGBA(i, 0, color.NRGBA{R: v, G: v, B: v, A: 255})
+	}
+	var mb bytes.Buffer
+	if err := png.Encode(&mb, mask); err != nil {
+		t.Fatal(err)
+	}
+	out, ok := CompositeAlphaMask(solidPNG(t, len(levels), 1, color.NRGBA{G: 255, A: 255}), mb.Bytes())
+	if !ok {
+		t.Fatal("compositing failed")
+	}
+	img := decodeNRGBA(t, out)
+	for i, v := range levels {
+		_, _, _, a := img.At(i, 0).RGBA()
+		got := int(a >> 8)
+		if diff := got - int(v); diff < -2 || diff > 2 {
+			t.Fatalf("grey %d exported as alpha %d, want within 2", v, got)
+		}
+	}
+}
+
 func TestCompositeAlphaMaskHandlesAMaskOfADifferentSize(t *testing.T) {
 	// Nothing guarantees the mask was saved at the image's pixel size; a
 	// downscaled mask is a reasonable optimisation and must not clip or panic.

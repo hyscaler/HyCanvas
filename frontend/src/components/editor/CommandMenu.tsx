@@ -150,10 +150,10 @@ export function CommandMenu({ onExport, onShortcuts, workspaceId }: { onExport: 
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // Crop and present mode own the keyboard; don't open the command menu or
-      // export under their overlays.
+      // Crop, the mask-refine brush, and present mode own the keyboard; don't
+      // open the command menu or export under their overlays.
       const ed = useEditor.getState();
-      if (ed.cropping || ed.presenting) return;
+      if (ed.cropping || ed.maskRefining || ed.presenting) return;
       const el = e.target as HTMLElement | null;
       const typing =
         el?.tagName === "INPUT" || el?.tagName === "TEXTAREA" || !!el?.isContentEditable;

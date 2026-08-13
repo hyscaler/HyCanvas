@@ -658,7 +658,7 @@ export function EditorApp() {
       const el = e.target as HTMLElement | null;
       if (el?.tagName === "INPUT" || el?.tagName === "TEXTAREA" || el?.isContentEditable) return;
       const ed = useEditor.getState();
-      if (ed.cropping || ed.presenting) return;
+      if (ed.cropping || ed.maskRefining || ed.presenting) return;
       e.preventDefault();
       setShortcutsOpen(true);
     };
@@ -675,7 +675,7 @@ export function EditorApp() {
       const el = e.target as HTMLElement | null;
       if (el?.tagName === "INPUT" || el?.tagName === "TEXTAREA" || el?.isContentEditable) return;
       const ed = useEditor.getState();
-      if (ed.cropping || ed.presenting) return;
+      if (ed.cropping || ed.maskRefining || ed.presenting) return;
       const kind = (ed.doc.meta as { kind?: string } | undefined)?.kind ?? "design";
       if (kind !== "design" && kind !== "whiteboard") return;
       e.preventDefault();

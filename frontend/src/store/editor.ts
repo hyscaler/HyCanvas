@@ -336,6 +336,7 @@ interface EditorState {
   setBrush(patch: Partial<{ width: number; colorHex: string; opacity: number; mode: "pen" | "marker" | "highlighter" }>): void;
   playing: boolean; // animation preview running
   cropping: string | null; // id of the image currently in crop mode (UI only)
+  maskRefining: string | null; // id of the image whose alpha mask is being brush-refined (UI only)
   editingTextId: string | null; // text node currently in the inline editor (UI only); the renderer skips it so it doesn't double up
   /** Step every run's font size by `delta` px (relative, so mixed-size boxes
    *  keep their ratios), clamped to a sane range. Undoable. */
@@ -524,6 +525,7 @@ interface EditorState {
   // tools
   setTool(tool: Tool): void;
   setCropping(id: string | null): void;
+  setMaskRefining(id: string | null): void;
   setEditingText(id: string | null): void;
   setPresenting(on: boolean): void;
   toggleRulers(): void;
@@ -1456,6 +1458,7 @@ export const useEditor = create<EditorState>((set, get) => {
     tool: "select",
     brush: { width: 3, colorHex: "#1a1f29", opacity: 1, mode: "pen" },
     cropping: null,
+    maskRefining: null,
     editingTextId: null,
     textEditApply: null,
     presenting: false,
@@ -2352,7 +2355,7 @@ export const useEditor = create<EditorState>((set, get) => {
         // activates the selection's page first, so re-targeting activePage
         // under a live selection would shift their coordinate origin.
         const follow =
-          s.selection.length === 0 && !s.transforming && s.editingTextId === null && s.cropping === null;
+          s.selection.length === 0 && !s.transforming && s.editingTextId === null && s.cropping === null && s.maskRefining === null;
         const idx = follow ? centeredPageIndex(s.doc, viewport, s.viewportSize) : null;
         return {
           viewport,
@@ -2431,6 +2434,7 @@ export const useEditor = create<EditorState>((set, get) => {
     setTool: (tool) => set({ tool }),
     setBrush: (patch) => set((s) => ({ brush: { ...s.brush, ...patch } })),
     setCropping: (id) => set({ cropping: id }),
+    setMaskRefining: (id) => set({ maskRefining: id }),
     setEditingText: (id) => set({ editingTextId: id }),
     setTextEditApply: (fn) => set({ textEditApply: fn }),
     setPresenting: (on) => set({ presenting: on }),

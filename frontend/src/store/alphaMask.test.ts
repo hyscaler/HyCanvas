@@ -61,6 +61,42 @@ describe("attaching a mask", () => {
   });
 });
 
+describe("refining the mask (the brush's commit path)", () => {
+  // The refinement brush commits each stroke as a fresh mask PNG through the
+  // same setImageAlphaMask call. What matters is that a stroke is one undo
+  // step, and that undoing it returns to the PREVIOUS mask, not to no mask.
+  it("replaces the mask and leaves no orphaned asset behind on undo", () => {
+    const st = useEditor.getState();
+    st.setImageAlphaMask("img", "blob:mask-v1", 100, 80);
+    const first = node().alphaMask!.assetId;
+    const assetsAfterFirst = useEditor.getState().doc.assets.length;
+    st.setImageAlphaMask("img", "blob:mask-v2", 100, 80);
+    expect(node().alphaMask!.assetId).not.toBe(first);
+    useEditor.getState().undo();
+    expect(node().alphaMask?.assetId).toBe(first);
+    expect(useEditor.getState().doc.assets).toHaveLength(assetsAfterFirst);
+  });
+
+  it("attaches a first mask to an image that never had one (brush from scratch)", () => {
+    // The brush seeds opaque white when the node has no mask, so its first
+    // commit is an ordinary attach; nothing about it may require a prior mask.
+    useEditor.getState().setImageAlphaMask("img", "blob:painted", 64, 48);
+    expect(node().alphaMask).toEqual(expect.objectContaining({ width: 64, height: 48 }));
+    expect(node().source.assetId).toBe("original");
+  });
+
+  it("keeps redo working across a refine (undo/redo round trip)", () => {
+    const st = useEditor.getState();
+    st.setImageAlphaMask("img", "blob:mask-v1", 100, 80);
+    st.setImageAlphaMask("img", "blob:mask-v2", 100, 80);
+    const second = node().alphaMask!.assetId;
+    useEditor.getState().undo();
+    useEditor.getState().redo();
+    expect(node().alphaMask?.assetId).toBe(second);
+    expect(useEditor.getState().doc.assets.some((a) => a.id === second)).toBe(true);
+  });
+});
+
 describe("restoring the background", () => {
   it("is a field clear, not a pixel operation", () => {
     const st = useEditor.getState();

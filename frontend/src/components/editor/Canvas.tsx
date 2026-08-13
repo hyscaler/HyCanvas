@@ -23,6 +23,7 @@ import { A11yTree, SelectionAnnouncer } from "./A11yTree";
 import { PageOverlays } from "./PageOverlays";
 import { PathEditor } from "./PathEditor";
 import { CropOverlay } from "./CropOverlay";
+import { MaskRefineOverlay } from "./MaskRefineOverlay";
 import { PresenceOverlay } from "./PresenceOverlay";
 import { CommentPins } from "./CommentPins";
 import { getRealtimeClient } from "@/lib/useRealtime";
@@ -1389,6 +1390,7 @@ export function Canvas() {
   const selection = useEditor((s) => s.selection);
   const transforming = useEditor((s) => s.transforming);
   const cropping = useEditor((s) => s.cropping);
+  const maskRefining = useEditor((s) => s.maskRefining);
   const viewport = useEditor((s) => s.viewport);
   const activePage = useEditor((s) => s.activePage);
   const showRulers = useEditor((s) => s.showRulers);
@@ -2528,10 +2530,11 @@ export function Canvas() {
         setHoverAlt(true);
       }
       const store = useEditor.getState();
-      // The crop overlay and present mode own the keyboard; don't let canvas
-      // shortcuts (delete/undo/nudge/...) mutate the doc underneath them. A
-      // history preview is read-only too, so the same gate applies.
-      if (store.cropping || store.presenting || store.preview) return;
+      // The crop overlay, the mask-refine brush, and present mode own the
+      // keyboard; don't let canvas shortcuts (delete/undo/nudge/...) mutate the
+      // doc underneath them. A history preview is read-only too, so the same
+      // gate applies.
+      if (store.cropping || store.maskRefining || store.presenting || store.preview) return;
       // An OPEN DIALOG owns the keyboard too. Focus can sit on a button inside
       // a modal (where the target guard above does not fire, because a button
       // is neither an input nor contentEditable), and Delete or an arrow would
@@ -2758,7 +2761,7 @@ export function Canvas() {
       const editable = (n: HTMLElement | null) => !!n && (n.tagName === "INPUT" || n.tagName === "TEXTAREA" || n.isContentEditable);
       if (editable(el) || editable(active)) return;
       const store = useEditor.getState();
-      if (store.cropping || store.presenting || store.preview) return;
+      if (store.cropping || store.maskRefining || store.presenting || store.preview) return;
       if (!usePresence.getState().canEdit() || store.readonlyPreview()) return;
       const dt = e.clipboardData;
       if (!dt) return;
@@ -3365,7 +3368,9 @@ export function Canvas() {
           />
         </svg>
       )}
-      {cropping ? (
+      {maskRefining ? (
+        <MaskRefineOverlay api={api} id={maskRefining} />
+      ) : cropping ? (
         <CropOverlay api={api} id={cropping} />
       ) : editingConnectorLabel ? (
         <ConnectorLabelOverlay api={api} id={editingConnectorLabel} onClose={() => setEditingConnectorLabel(null)} />

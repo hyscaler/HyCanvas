@@ -2674,6 +2674,10 @@ function ImageEffectsSection({ id, node, workspaceId }: { id: string; node: Node
   const [bgState, setBgState] = useState<"idle" | "working" | "error">("idle");
   const [bgProgress, setBgProgress] = useState(0);
   const [bgError, setBgError] = useState<string | null>(null);
+  // Both the remover and the brush write the same alphaMask field, and the
+  // brush's working buffer is seeded ONCE per session: a removal committed
+  // mid-refine would be silently overwritten by the very next stroke.
+  const refining = useEditor((s) => s.maskRefining === id);
   const draggingRef = useRef(false);
   const beforeRef = useRef<unknown>(null);
 
@@ -2772,7 +2776,12 @@ function ImageEffectsSection({ id, node, workspaceId }: { id: string; node: Node
             filename: `mask-${Date.now()}.png`,
             dataBase64: mask.dataUrl.split(",")[1] ?? "",
           });
-          maskUrl = asset.url;
+          // The upload response's url is server-RELATIVE (the backend prefixes
+          // publicURL only when configured). Stored raw, the mask would load
+          // against the frontend origin and 404 in dev, and the engine then
+          // draws the image unmasked - removal "succeeds" with no visible
+          // effect. Resolve it like every other insertion flow does.
+          maskUrl = resolveAssetUrl(asset.url);
         } catch {
           // Upload failed: keep the inline mask rather than losing the work.
         }
@@ -2879,7 +2888,7 @@ function ImageEffectsSection({ id, node, workspaceId }: { id: string; node: Node
             <span className="text-xs font-medium text-neutral-700">{tr("editor.remove_background")}</span>
             <button
               onClick={runBgRemoval}
-              disabled={bgState === "working"}
+              disabled={bgState === "working" || refining}
               className="rounded-lg bg-neutral-100 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-200 disabled:opacity-50"
             >
               {bgState === "working" ? `Processing ${Math.round(bgProgress * 100)}%` : tr("editor.remove_background")}
@@ -2888,6 +2897,18 @@ function ImageEffectsSection({ id, node, workspaceId }: { id: string; node: Node
               {tr("editor.runs_in_your_browser_the_model_downloads_on")}
             </p>
             {bgState === "error" && bgError && <p className="text-[11px] text-red-600">{bgError}</p>}
+            {/* Brush refinement of the result (or of a mask painted from
+                scratch): a canvas overlay tool, since it needs pointer events
+                on the design surface, not a panel control. Locked images are
+                refused at entry; the brush's commits would silently no-op on
+                them, which reads as strokes vanishing on exit. */}
+            <button
+              onClick={() => useEditor.getState().setMaskRefining(refining ? null : id)}
+              disabled={bgState === "working" || !!node.locked}
+              className="rounded-lg bg-neutral-100 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-200 disabled:opacity-50"
+            >
+              {refining ? tr("editor.done") : tr("editor.refine_edges")}
+            </button>
           </div>
 
           {/* Active effects stack: toggle/remove each entry */}
