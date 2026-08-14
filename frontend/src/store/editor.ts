@@ -826,7 +826,11 @@ interface EditorState {
   /** Grow/shrink a text node's box height to fit content WITHOUT an undo step
    *  (live feedback while typing, so the selection box tracks line wraps). The
    *  final height is recorded once, undoably, by setContent on commit. */
-  growTextBoxLive(id: string, height: number): void;
+  /** Track the box height to the content while typing (transient, no undo
+   *  entry). `fixedBase` is the height when editing began: a fixed box clamps
+   *  to max(fixedBase, content) so it can shrink back as lines are deleted but
+   *  never below the user's chosen height. */
+  growTextBoxLive(id: string, height: number, fixedBase?: number): void;
   /** Set (or clear, with null) a text node's background highlight,
    *  a padded rounded rect filled behind the text. Undoable. */
   setTextBackground(id: string, color: Color | null, padding?: number, radius?: number): void;
@@ -1365,19 +1369,26 @@ export const useEditor = create<EditorState>((set, get) => {
     undo: () => applyCommand(get().doc, invertCommand(cmd)),
   });
 
-  // Re-fit an auto-height text box to its content, with the same measurer the
-  // inline editor and the resize gizmo use. Whole-box restyles (font family,
-  // size, weight, spacing, line height) change how text wraps, and a box left
-  // at its pre-restyle height disagrees with the render: the selection box
-  // covers three lines while five paint. Fixed boxes keep the user's chosen
-  // height (text overflows or auto-fits instead), mirroring setContent's rule.
-  const refitAutoTextHeight = (node: Node) => {
-    const n = node as unknown as { box?: { mode?: string; height: number }; size: { height: number } };
-    if (n.box?.mode !== "autoHeight") return;
-    const h = measuredTextHeight(node as unknown as TextNode);
+  // Re-fit a text box to its content, with the same measurer the inline editor
+  // and the resize gizmo use, after anything that changes how the text wraps
+  // (restyles, content rewrites, translations). One rule everywhere: a box may
+  // never LIE about containing its text. An auto-height box tracks the content
+  // exactly, both directions. A fixed box CLAMPS: it grows when the content
+  // needs more room and returns to the user's chosen height when the content
+  // shrinks, but never drops below that choice - the render never clips text,
+  // so "fixed but overflowing" only produced a selection box smaller than the
+  // visible text. Auto-fit boxes are exempt: they fit by scaling the FONT
+  // inside a deliberate frame, so the frame itself must not move.
+  const refitTextHeight = (node: Node) => {
+    const n = node as unknown as { box?: { mode?: string; height: number; autoFit?: { enabled?: boolean } }; size: { height: number } };
+    const mode = n.box?.mode;
+    if (mode !== "autoHeight" && mode !== "fixed") return; // autoWidth: width is the free axis
+    if (mode === "fixed" && n.box?.autoFit?.enabled) return;
+    const content = measuredTextHeight(node as unknown as TextNode);
+    const h = mode === "autoHeight" ? content : Math.max(n.size.height, content);
     if (Math.abs(n.size.height - h) < 0.5) return;
     n.size.height = h;
-    n.box.height = h;
+    n.box!.height = h;
   };
 
   // Index of the page being edited, clamped to the document's page count.
@@ -5369,7 +5380,7 @@ export const useEditor = create<EditorState>((set, get) => {
       perform(
         () => {
           for (const c of changes) c.apply();
-          for (const t of touchedText.values()) refitAutoTextHeight(t.node);
+          for (const t of touchedText.values()) refitTextHeight(t.node);
         },
         () => {
           for (const c of [...changes].reverse()) c.revert();
@@ -5407,7 +5418,7 @@ export const useEditor = create<EditorState>((set, get) => {
         () => {
           node.content = after;
           // New text wraps to a different line count; keep the box on it.
-          refitAutoTextHeight(loc.node);
+          refitTextHeight(loc.node);
         },
         () => {
           node.content = structuredClone(before);
@@ -5462,7 +5473,7 @@ export const useEditor = create<EditorState>((set, get) => {
       perform(
         () => changed.forEach((n, i) => {
           n.content = structuredClone(after[i]) as never;
-          refitAutoTextHeight(n as unknown as Node);
+          refitTextHeight(n as unknown as Node);
         }),
         () => changed.forEach((n, i) => {
           n.content = structuredClone(before[i]) as never;
@@ -5556,7 +5567,7 @@ export const useEditor = create<EditorState>((set, get) => {
         // A swapped family wraps differently; keep the box on the text. Only
         // when a font actually changed, so a color-only re-skin can't fold
         // unrelated height corrections into its undo step.
-        if (fontChanged) refitAutoTextHeight(n);
+        if (fontChanged) refitTextHeight(n);
         for (const kid of rec.children ?? []) applyNode(kid);
       };
 
@@ -5623,7 +5634,7 @@ export const useEditor = create<EditorState>((set, get) => {
           paras.forEach((p) => p.runs.forEach((r) => (r.style.fontFamily = fix.to)));
           // The brand font wraps differently than the off-brand one; the
           // per-node before/after snapshots capture the height with the swap.
-          refitAutoTextHeight(node);
+          refitTextHeight(node);
           applied++;
         } else if (fix.kind === "fix_contrast") {
           if (node.type !== "text") continue;
@@ -5672,24 +5683,43 @@ export const useEditor = create<EditorState>((set, get) => {
       if (!content.length) return; // never leave a text node with zero paragraphs
       const before = structuredClone(node.content);
       const after = structuredClone(content);
-      // Auto-grow height ONLY for auto-height boxes; a fixed box
-      // keeps the user's chosen height (text overflows / auto-fits instead). The
-      // undo baseline is the height before editing began (boxHeightBefore) when
-      // known, so transient live-grow during typing reverts cleanly.
-      const autoHeight = node.box.mode === "autoHeight";
+      // Auto-height boxes track the content exactly. A fixed box CLAMPS: the
+      // height the user chose (the height when editing began) is the floor,
+      // and the box grows past it only while the text needs the room - the
+      // render never clips, so a shorter box only produced a selection box
+      // that lied about the text's extent. Auto-fit frames keep their height
+      // (the font scales to fit instead). The undo baseline is the height
+      // before editing began (boxHeightBefore) when known, so transient
+      // live-grow during typing reverts cleanly.
+      const box = node.box as { mode?: string; height: number; autoFit?: { enabled?: boolean } };
       const hBefore = boxHeightBefore ?? node.size.height;
-      const hNext = autoHeight && boxHeight != null && Math.abs(boxHeight - hBefore) > 0.5 ? boxHeight : hBefore;
+      let hNext = hBefore;
+      if (boxHeight != null) {
+        if (box.mode === "autoHeight") hNext = boxHeight;
+        else if (box.mode === "fixed" && !box.autoFit?.enabled) hNext = Math.max(hBefore, boxHeight);
+      }
+      if (Math.abs(hNext - hBefore) <= 0.5) hNext = hBefore;
       perform(
         () => { node.content = structuredClone(after); node.size.height = hNext; node.box.height = hNext; },
         () => { node.content = structuredClone(before); node.size.height = hBefore; node.box.height = hBefore; },
       );
     },
-    growTextBoxLive: (id, height) => {
+    growTextBoxLive: (id, height, fixedBase) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return;
-      const node = loc.node as unknown as { size: { width: number; height: number }; box: { height: number; mode?: string } };
-      if (node.box.mode !== "autoHeight") return; // fixed boxes keep the user's height
-      const h = Math.max(1, height);
+      const node = loc.node as unknown as { size: { width: number; height: number }; box: { height: number; mode?: string; autoFit?: { enabled?: boolean } } };
+      let h: number;
+      if (node.box.mode === "autoHeight") {
+        h = Math.max(1, height);
+      } else if (node.box.mode === "fixed" && !node.box.autoFit?.enabled) {
+        // A fixed box clamps while typing: it grows past the height it had
+        // when editing began only while the text needs the room, and deleting
+        // lines lets it shrink back to that height - never below it. Auto-fit
+        // frames are exempt (the font scales to fit instead).
+        h = Math.max(1, Math.max(fixedBase ?? node.size.height, height));
+      } else {
+        return;
+      }
       if (Math.abs(node.size.height - h) < 0.5) return; // no meaningful change
       // Transient: mutate the box + bump rev for a re-render, but do NOT push an
       // undo entry. The undoable height write happens once, on commit.
@@ -5765,7 +5795,7 @@ export const useEditor = create<EditorState>((set, get) => {
           // Switching TO auto-height snaps the box to its content immediately,
           // so the toggle doubles as "fit the box to the text" for a box whose
           // stored height drifted while it was fixed.
-          refitAutoTextHeight(loc.node);
+          refitTextHeight(loc.node);
         },
         () => {
           node.box.mode = before;
@@ -5878,7 +5908,7 @@ export const useEditor = create<EditorState>((set, get) => {
           node.content.forEach((p) => p.runs.forEach((r) => {
             r.style.fontSize = Math.max(4, Math.min(512, Math.round(r.style.fontSize + delta)));
           }));
-          refitAutoTextHeight(loc.node);
+          refitTextHeight(loc.node);
         },
         () => {
           node.content = structuredClone(before);
@@ -5912,7 +5942,7 @@ export const useEditor = create<EditorState>((set, get) => {
             if (para) Object.assign(p.style, para);
             if (char) p.runs.forEach((r) => Object.assign(r.style, char));
           });
-          refitAutoTextHeight(loc.node);
+          refitTextHeight(loc.node);
         },
         () => {
           node.content = structuredClone(before);
@@ -6546,7 +6576,7 @@ export const useEditor = create<EditorState>((set, get) => {
             }
           }
           // Font harmonization rewraps the text; color-only changes do not.
-          if (fontChanged) refitAutoTextHeight(node);
+          if (fontChanged) refitTextHeight(node);
         } else {
           const rec = node as unknown as { fills?: Fill[]; cornerRadius?: CornerRadius };
           let changed = false;

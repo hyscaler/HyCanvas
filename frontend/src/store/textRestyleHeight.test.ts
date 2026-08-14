@@ -75,11 +75,58 @@ describe("stepTextFontSize on an auto-height box", () => {
   });
 });
 
-describe("a fixed-height box keeps the user's height", () => {
-  it("overflows instead of growing, mirroring setContent's rule", () => {
+describe("a fixed-height box clamps to its content", () => {
+  // One rule everywhere: a box may never lie about containing its text. Fixed
+  // boxes keep the user's chosen height as a FLOOR and grow past it only
+  // while the content needs the room.
+  it("grows when a restyle rewraps taller, and undo restores the old height", () => {
     seed("fixed");
     useEditor.getState().setTextStyle("txt", { fontSize: 32 });
+    const n = node();
+    expect(n.size.height).toBe(Math.max(40, measuredTextHeight(n as unknown as TextNode)));
+    expect(n.size.height).toBeGreaterThan(40);
+    useEditor.getState().undo();
     expect(node().size.height).toBe(40);
+    expect(node().box.height).toBe(40);
+  });
+
+  it("never shrinks below the chosen height", () => {
+    seed("fixed");
+    const n = node();
+    n.size.height = 400; // a deliberately roomy frame
+    n.box.height = 400;
+    useEditor.getState().setTextStyle("txt", { fontSize: 8 }); // content now tiny
+    expect(node().size.height).toBe(400);
+  });
+
+  it("leaves an auto-fit frame alone (the font scales to fit instead)", () => {
+    seed("fixed");
+    (node().box as { autoFit?: { enabled: boolean; min: number; max: number } }).autoFit = { enabled: true, min: 8, max: 512 };
+    useEditor.getState().setTextStyle("txt", { fontSize: 32 });
+    expect(node().size.height).toBe(40);
+  });
+});
+
+describe("typing into a fixed box (the inline editor's paths)", () => {
+  it("setContent commits a height that contains the text, floored at the edit-start height", () => {
+    seed("fixed");
+    const st = useEditor.getState();
+    const content = structuredClone((node() as unknown as { content: unknown }).content);
+    st.setContent("txt", content as never, 120, 40); // measured 120, editing began at 40
+    expect(node().size.height).toBe(120);
+    expect(node().box.height).toBe(120);
+    st.setContent("txt", content as never, 20, 40); // lines deleted: content below the floor
+    expect(node().size.height).toBe(40);
+  });
+
+  it("growTextBoxLive tracks typing transiently with the same clamp", () => {
+    seed("fixed");
+    const st = useEditor.getState();
+    st.growTextBoxLive("txt", 120, 40);
+    expect(node().size.height).toBe(120);
+    st.growTextBoxLive("txt", 20, 40);
+    expect(node().size.height).toBe(40);
+    expect(useEditor.getState().undoStack).toHaveLength(0); // live growth is not an undo step
   });
 });
 
@@ -130,10 +177,7 @@ describe("brand font swap (applyBrandFixes)", () => {
 
 describe("switching a box to auto-height", () => {
   it("snaps a drifted box back onto its content", () => {
-    seed("fixed");
-    // Restyle while fixed: the box keeps 40 while the content needs more.
-    useEditor.getState().setTextStyle("txt", { fontSize: 32 });
-    expect(node().size.height).toBe(40);
+    seed("fixed"); // stored height 40, from a document authored before the clamp
     useEditor.getState().setTextBoxMode("txt", "autoHeight");
     const n = node();
     expect(n.size.height).toBe(measuredTextHeight(n as unknown as TextNode));
