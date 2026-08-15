@@ -23,7 +23,7 @@ func bulkCreateHandler(svc *bulkcreate.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var in bulkcreate.Input
 		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())
@@ -54,7 +54,7 @@ func autofillHandler(svc *bulkcreate.Service) http.HandlerFunc {
 			Values bulkcreate.FillValues `json:"values"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		id := chi.URLParam(r, "id")
@@ -72,10 +72,10 @@ func autofillHandler(svc *bulkcreate.Service) http.HandlerFunc {
 func bulkProblem(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, bulkcreate.ErrBadRequest):
-		Problem(w, r, http.StatusBadRequest, "Bad Request", err.Error())
+		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", err.Error(), "bulk_create_failed")
 	case errors.Is(err, accounts.ErrForbidden):
-		Problem(w, r, http.StatusForbidden, "Forbidden", "not permitted")
+		problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not permitted", "not_permitted")
 	default:
-		Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed")
+		problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed", "request_failed")
 	}
 }

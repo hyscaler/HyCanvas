@@ -25,6 +25,12 @@ import {
   HelpCircle,
   Undo2,
   Trash2,
+  Disc,
+  MessageSquare,
+  ThumbsUp,
+  CheckCircle2,
+  EyeOff,
+  BarChart3,
 } from "lucide-react";
 import {
   createScene,
@@ -58,8 +64,14 @@ import type {
 } from "@hc/schema";
 import { nextSectionStart, prevSectionStart } from "@hc/schema";
 import { useEditor } from "@/store/editor";
+import { prefersReducedMotion } from "@/lib/theme";
 import { imageAssets } from "@/lib/assetProvider";
 import { useBrand } from "@/store/brand";
+import { oc } from "@/lib/sdk";
+import { DESIGN_SURFACE_DIR } from "@/lib/locale";
+import { onAudienceEvent } from "@/lib/realtime";
+import { useToast } from "@/components/ui/Toast";
+import type { AudienceState } from "@hc/sdk";
 import { AudienceLink, openAudienceWindow } from "@/lib/audienceWindow";
 import {
   adjustSpotlightRadius,
@@ -72,6 +84,7 @@ import {
   prevVisibleIndex,
   RehearsalTimer,
   seekVisible,
+  LIVE_HEARTBEAT_MS,
   SPOTLIGHT_DEFAULT_RADIUS,
   spotlightGeom,
   stepZoom,
@@ -81,6 +94,7 @@ import {
   type SlideLike,
   type ZoomTransform,
 } from "@/lib/present";
+import { tr } from "@/lib/i18n";
 
 // The active presenter magic tool (FR-8). At most one pointer tool is active at a
 // time so they cannot fight over the cursor: entering pen disables laser, etc.
@@ -350,6 +364,102 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null); // presenter-only tools layer
+
+  // Present-and-record (doc 28 FR-19): capture a composite of the slide canvas
+  // + the presenter ink/laser overlay at 30fps, mix in mic narration when the
+  // user grants it (declining still records video-only), and save a .webm on
+  // stop. Everything is client-side MediaRecorder; nothing uploads.
+  const [recording, setRecording] = useState(false);
+  const recRef = useRef<{ rec: MediaRecorder; raf: number; stream: MediaStream; audio: MediaStream | null } | null>(null);
+  // Set while start-up is in flight (the mic permission prompt can sit open for
+  // as long as the user ignores it) and cleared on unmount. Without it a second
+  // click starts a second pipeline that the first recRef write orphans, and an
+  // exit during the prompt leaves a live mic and a rAF loop with no UI to stop
+  // them.
+  const recStartingRef = useRef(false);
+  const presentAliveRef = useRef(true);
+  const toggleRecording = useCallback(async () => {
+    const active = recRef.current;
+    if (active) {
+      active.rec.stop();
+      return;
+    }
+    if (recStartingRef.current) return;
+    const slide = canvasRef.current;
+    if (!slide || typeof MediaRecorder === "undefined") return;
+    recStartingRef.current = true;
+    const comp = document.createElement("canvas");
+    comp.width = slide.width || 1920;
+    comp.height = slide.height || 1080;
+    const cctx = comp.getContext("2d");
+    if (!cctx) {
+      recStartingRef.current = false;
+      return;
+    }
+    let raf = 0;
+    const draw = () => {
+      cctx.fillStyle = "#000";
+      cctx.fillRect(0, 0, comp.width, comp.height);
+      const sl = canvasRef.current;
+      const ov = overlayRef.current;
+      if (sl) cctx.drawImage(sl, 0, 0, comp.width, comp.height);
+      if (ov && ov.width > 0) cctx.drawImage(ov, 0, 0, comp.width, comp.height);
+      raf = requestAnimationFrame(draw);
+    };
+    draw();
+    let audio: MediaStream | null = null;
+    try {
+      audio = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      audio = null; // no mic permission: record the slides silently
+    }
+    recStartingRef.current = false;
+    // Present mode may have closed while the permission prompt was open. Drop
+    // everything we just acquired rather than recording into a dead component.
+    if (!presentAliveRef.current) {
+      cancelAnimationFrame(raf);
+      audio?.getTracks().forEach((t) => t.stop());
+      return;
+    }
+    const stream = comp.captureStream(30);
+    if (audio) for (const t of audio.getAudioTracks()) stream.addTrack(t);
+    const mime = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"].find((m) => MediaRecorder.isTypeSupported(m));
+    const rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 8_000_000 } : undefined);
+    const chunks: Blob[] = [];
+    rec.ondataavailable = (e) => {
+      if (e.data.size) chunks.push(e.data);
+    };
+    rec.onstop = () => {
+      cancelAnimationFrame(raf);
+      audio?.getTracks().forEach((t) => t.stop());
+      stream.getTracks().forEach((t) => t.stop());
+      recRef.current = null;
+      setRecording(false);
+      if (!chunks.length) return;
+      const container = (rec.mimeType || "video/webm").split(";")[0];
+      const ext = container.includes("mp4") ? "mp4" : container.includes("webm") ? "webm" : (container.split("/")[1] ?? "webm");
+      const blob = new Blob(chunks, { type: container });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      const base = (useEditor.getState().doc.title || "presentation").replace(/[^\w.-]+/g, "-") || "presentation";
+      a.download = `${base}-recording.${ext}`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    };
+    rec.start(1000);
+    recRef.current = { rec, raf, stream, audio };
+    setRecording(true);
+  }, []);
+  // Leaving present mode stops (and saves) an in-flight recording, and tells a
+  // start-up still waiting on the mic prompt to abandon itself.
+  useEffect(() => {
+    presentAliveRef.current = true;
+    return () => {
+      presentAliveRef.current = false;
+      recRef.current?.rec.stop();
+    };
+  }, []);
+
   const [interactiveCursor, setInteractiveCursor] = useState(false);
 
   // Presenter magic tools (FR-8). All of this is presenter-only and ephemeral: it
@@ -387,6 +497,64 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
   // can be blocked, so this only gates the affordance; the same-window overlay
   // keeps working either way (AC-3).
   const designId = useBrand((s) => s.designId);
+
+  // Live audience (doc 28): questions/polls arrive over the realtime socket
+  // (the editor session stays connected beneath present mode); reactions float
+  // as ephemeral emoji. The drawer refetches on events and on open.
+  const [qaOpen, setQaOpen] = useState(false);
+  const [audState, setAudState] = useState<AudienceState | null>(null);
+  const [unseen, setUnseen] = useState(0);
+  const [floaters, setFloaters] = useState<{ id: number; emoji: string; left: number }[]>([]);
+  const qaOpenRef = useRef(false);
+  useEffect(() => {
+    qaOpenRef.current = qaOpen;
+  }, [qaOpen]);
+  const floaterSeq = useRef(0);
+  // Slide-follow (doc 28): publish the current slide so share-link viewers
+  // can follow along; -1 on exit ends the live session. Best-effort.
+  useEffect(() => {
+    if (!designId) return;
+    void oc.presenterSetLiveSlide(designId, idx).catch(() => {});
+    // Republish on a heartbeat, not only on slide change. Followers treat the
+    // live position as stale after LIVE_STALE_MS so a presenter who closed the tab stops
+    // dragging the audience around, and talking over one slide for longer than
+    // that is the normal case, not the exception: without this the banner and
+    // slide-follow drop out mid-presentation and flap back on the next slide.
+    const beat = setInterval(() => {
+      void oc.presenterSetLiveSlide(designId, idx).catch(() => {});
+    }, LIVE_HEARTBEAT_MS);
+    return () => clearInterval(beat);
+  }, [designId, idx]);
+  useEffect(() => {
+    if (!designId) return;
+    return () => void oc.presenterSetLiveSlide(designId, -1).catch(() => {});
+  }, [designId]);
+
+  const refreshAudience = useCallback(async () => {
+    if (!designId) return;
+    try {
+      setAudState(await oc.presenterAudienceState(designId));
+    } catch {
+      // best-effort; the drawer shows the last known state
+    }
+  }, [designId]);
+  useEffect(() => {
+    if (!designId) return;
+    return onAudienceEvent((e) => {
+      if (e.kind === "reaction" && e.emoji) {
+        const id = ++floaterSeq.current;
+        setFloaters((f) => [...f.slice(-11), { id, emoji: e.emoji!, left: 8 + Math.random() * 84 }]);
+        setTimeout(() => setFloaters((f) => f.filter((x) => x.id !== id)), 2600);
+        return;
+      }
+      // "live" is this presenter's own slide publish echoing back; refetching
+      // the whole board on every heartbeat would be pure churn.
+      if (e.kind === "live") return;
+      if (e.kind === "question" && !qaOpenRef.current) setUnseen((n) => n + 1);
+      void refreshAudience();
+    });
+  }, [designId, refreshAudience]);
+
   const [audienceOpen, setAudienceOpen] = useState(false);
   const [popupBlocked, setPopupBlocked] = useState(false);
   const audienceLink = useRef<AudienceLink | null>(null);
@@ -396,10 +564,9 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
   const visIdxs = useMemo(() => visibleIndices(pages as SlideLike[]), [pages, rev]); // eslint-disable-line react-hooks/exhaustive-deps
   const pos = visiblePosition(pages as SlideLike[], idx);
 
-  const reducedMotion = useMemo(
-    () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true,
-    [],
-  );
+  // Through the preference-aware helper, so the in-app Settings override
+  // (not just the OS setting) also skips slide transitions.
+  const reducedMotion = useMemo(() => prefersReducedMotion(), []);
 
   /** Open (or focus) the audience display. Returns false when popups are blocked. */
   const openAudience = useCallback((): boolean => {
@@ -1069,7 +1236,7 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
   if (pages.length === 0) return null;
 
   return (
-    <div className="light fixed inset-0 z-[100] flex flex-col bg-neutral-900">
+    <div className="light fixed inset-0 z-[100] flex flex-col bg-neutral-900" dir={DESIGN_SURFACE_DIR}>
       {/* Audience-facing render path: only the slide canvas. Presenter-only UI
           (HUD, controls, magic-tool overlays) lives outside this surface so a
           captured/mirrored slide area never shows presenter chrome. */}
@@ -1118,11 +1285,11 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
             className="absolute inset-0 z-[106]"
             style={{ background: blank === "black" ? "#000" : "#fff" }}
             onClick={(e) => { e.stopPropagation(); setBlank("none"); }}
-            title="Click or press a key to resume"
+            title={tr("editor.click_or_press_a_key_to_resume")}
           />
         )}
       </div>
-      <button onClick={onClose} className="absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20" title="Exit (Esc)">
+      <button onClick={onClose} className="absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20" title={tr("editor.exit_esc")}>
         <X size={18} />
       </button>
       {/* Pen options sub-bar (FR-8): color + width + undo/clear, shown only while
@@ -1153,36 +1320,36 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
             </button>
           ))}
           <span className="mx-1 h-5 w-px bg-white/15" />
-          <button onClick={undoStroke} disabled={inkCount === 0} className="grid h-7 w-7 place-items-center rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30" title="Undo last stroke">
+          <button onClick={undoStroke} disabled={inkCount === 0} className="grid h-7 w-7 place-items-center rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30" title={tr("editor.undo_last_stroke")}>
             <Undo2 size={15} />
           </button>
-          <button onClick={clearStrokes} disabled={inkCount === 0} className="grid h-7 w-7 place-items-center rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30" title="Clear slide ink">
+          <button onClick={clearStrokes} disabled={inkCount === 0} className="grid h-7 w-7 place-items-center rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30" title={tr("editor.clear_slide_ink")}>
             <Trash2 size={15} />
           </button>
         </div>
       )}
 
       <div className="flex items-center justify-center gap-3 py-3 text-white" onClick={(e) => e.stopPropagation()}>
-        <button onClick={guardedPrev} disabled={!hasPrev} className="grid h-9 w-9 place-items-center rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30" title="Previous (left arrow)">
+        <button onClick={guardedPrev} disabled={!hasPrev} className="grid h-9 w-9 place-items-center rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30" title={tr("editor.previous_left_arrow")}>
           <ChevronLeft size={18} />
         </button>
         <span className="text-sm tabular-nums text-white/70">{pos.position} / {pos.total}</span>
-        <button onClick={guardedNext} disabled={!hasNext} className="grid h-9 w-9 place-items-center rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30" title="Next (right arrow)">
+        <button onClick={guardedNext} disabled={!hasNext} className="grid h-9 w-9 place-items-center rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30" title={tr("editor.next_right_arrow")}>
           <ChevronRight size={18} />
         </button>
         <span className="mx-1 h-5 w-px bg-white/15" />
         {/* Magic tools toolbar (FR-8). Each is also a keyboard shortcut. */}
-        <ToolButton active={tool === "laser"} onClick={() => selectTool("laser")} title="Laser pointer (L)"><MousePointer2 size={16} /></ToolButton>
-        <ToolButton active={tool === "pen"} onClick={() => selectTool("pen")} title="Pen draw (D)"><Pencil size={16} /></ToolButton>
-        <ToolButton active={tool === "spotlight"} onClick={() => selectTool("spotlight")} title="Spotlight (O)"><Lightbulb size={16} /></ToolButton>
-        <ToolButton active={zoom.scale > 1} onClick={() => setZoom((z) => (z.scale > 1 ? fitZoom() : stepZoom(z, ZOOM_STEP * 2, 0.5, 0.5)))} title="Zoom (Z, +/-, wheel; 0 resets)"><ZoomIn size={16} /></ToolButton>
-        <ToolButton active={blank === "black"} onClick={() => setBlank((v) => (v === "black" ? "none" : "black"))} title="Black screen (B)"><Square size={16} fill="currentColor" /></ToolButton>
-        <ToolButton active={blank === "white"} onClick={() => setBlank((v) => (v === "white" ? "none" : "white"))} title="White screen (W)"><Square size={16} /></ToolButton>
-        <ToolButton active={paletteOpen} onClick={() => setPaletteOpen(true)} title="Jump to slide (G or /)"><LayoutGrid size={16} /></ToolButton>
+        <ToolButton active={tool === "laser"} onClick={() => selectTool("laser")} title={tr("editor.laser_pointer_l")}><MousePointer2 size={16} /></ToolButton>
+        <ToolButton active={tool === "pen"} onClick={() => selectTool("pen")} title={tr("editor.pen_draw_d")}><Pencil size={16} /></ToolButton>
+        <ToolButton active={tool === "spotlight"} onClick={() => selectTool("spotlight")} title={tr("editor.spotlight_o")}><Lightbulb size={16} /></ToolButton>
+        <ToolButton active={zoom.scale > 1} onClick={() => setZoom((z) => (z.scale > 1 ? fitZoom() : stepZoom(z, ZOOM_STEP * 2, 0.5, 0.5)))} title={tr("editor.present_zoom_hint")}><ZoomIn size={16} /></ToolButton>
+        <ToolButton active={blank === "black"} onClick={() => setBlank((v) => (v === "black" ? "none" : "black"))} title={tr("editor.black_screen_b")}><Square size={16} fill="currentColor" /></ToolButton>
+        <ToolButton active={blank === "white"} onClick={() => setBlank((v) => (v === "white" ? "none" : "white"))} title={tr("editor.white_screen_w")}><Square size={16} /></ToolButton>
+        <ToolButton active={paletteOpen} onClick={() => setPaletteOpen(true)} title={tr("editor.jump_to_slide_g_or")}><LayoutGrid size={16} /></ToolButton>
         <span className="mx-1 h-5 w-px bg-white/15" />
-        <ToolButton active={autopilot} onClick={() => setAutopilot((v) => !v)} title={autopilot ? "Pause autopilot (P)" : "Play autopilot (P)"}>{autopilot ? <Pause size={16} /> : <Play size={16} />}</ToolButton>
-        <ToolButton active={loop} onClick={() => setLoop((v) => !v)} title={loop ? "Loop on" : "Loop off"}><Repeat size={16} /></ToolButton>
-        <ToolButton active={showHud} onClick={() => setShowHud((v) => !v)} title="Presenter view (S)"><PanelRightOpen size={16} /></ToolButton>
+        <ToolButton active={autopilot} onClick={() => setAutopilot((v) => !v)} title={autopilot ? tr("editor.pause_autopilot_p") : tr("editor.play_autopilot_p")}>{autopilot ? <Pause size={16} /> : <Play size={16} />}</ToolButton>
+        <ToolButton active={loop} onClick={() => setLoop((v) => !v)} title={loop ? tr("editor.loop_on") : tr("editor.loop_off")}><Repeat size={16} /></ToolButton>
+        <ToolButton active={showHud} onClick={() => setShowHud((v) => !v)} title={tr("editor.presenter_view_s")}><PanelRightOpen size={16} /></ToolButton>
         {designId && (
           <ToolButton
             active={audienceOpen}
@@ -1190,13 +1357,63 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
               if (audienceOpen) { closeAudience(); return; }
               if (!openAudience()) setPopupBlocked(true);
             }}
-            title={audienceOpen ? "Close audience display (E)" : "Open audience display on a second screen (E)"}
+            title={audienceOpen ? tr("editor.close_audience_display_e") : tr("editor.open_audience_display_on_a_second_screen_e")}
           >
             {audienceOpen ? <MonitorX size={16} /> : <MonitorPlay size={16} />}
           </ToolButton>
         )}
-        <ToolButton active={showHelp} onClick={() => setShowHelp((v) => !v)} title="Shortcuts (?)"><HelpCircle size={16} /></ToolButton>
+        <ToolButton active={recording} onClick={() => void toggleRecording()} title={recording ? tr("editor.stop_recording_and_save_the_file") : tr("editor.record_the_presentation_slides_ink_narration")}>
+          <Disc size={16} className={recording ? "animate-pulse text-red-400" : undefined} />
+        </ToolButton>
+        {designId && (
+          <ToolButton
+            active={qaOpen}
+            onClick={() => {
+              const next = !qaOpen;
+              setQaOpen(next);
+              if (next) {
+                setUnseen(0); // opening marks everything seen
+                void refreshAudience();
+              }
+            }}
+            title={tr("editor.audience_q_a_and_polls")}
+          >
+            <span className="relative">
+              <MessageSquare size={16} />
+              {unseen > 0 && (
+                <span className="absolute -right-2 -top-2 grid h-4 min-w-4 place-items-center rounded-full bg-red-500 px-0.5 text-[9px] font-bold text-white">{unseen > 9 ? "9+" : unseen}</span>
+              )}
+            </span>
+          </ToolButton>
+        )}
+        <ToolButton active={showHelp} onClick={() => setShowHelp((v) => !v)} title={tr("editor.shortcuts")}><HelpCircle size={16} /></ToolButton>
       </div>
+
+      {recording && (
+        <div className="pointer-events-none absolute left-4 top-4 z-50 flex items-center gap-1.5 rounded-full bg-red-600/90 px-2.5 py-1 text-[11px] font-semibold text-white shadow-lg">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-white" /> REC
+        </div>
+      )}
+
+      {/* Audience reactions float up from the bottom edge (ephemeral). */}
+      {floaters.length > 0 && (
+        <div className="pointer-events-none absolute inset-0 z-40 overflow-hidden" aria-hidden>
+          {floaters.map((f) => (
+            <span key={f.id} className="absolute bottom-16 animate-bounce text-3xl drop-shadow-lg" style={{ left: `${f.left}%` }}>
+              {f.emoji}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {qaOpen && designId && (
+        <PresenterAudience
+          designId={designId}
+          state={audState}
+          onRefresh={() => void refreshAudience()}
+          onClose={() => setQaOpen(false)}
+        />
+      )}
 
       {showHelp && <ShortcutHelp onClose={() => setShowHelp(false)} />}
 
@@ -1214,8 +1431,8 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
           so we explain rather than fail silently. */}
       {popupBlocked && (
         <div className="pointer-events-auto absolute left-1/2 top-4 z-50 -translate-x-1/2 rounded-lg bg-amber-500/95 px-3 py-2 text-xs font-medium text-black shadow-lg">
-          Allow pop-ups for this site to open the audience display. The presenter view still works here (S).
-          <button onClick={() => setPopupBlocked(false)} className="ml-3 underline">Dismiss</button>
+          {tr("editor.allow_pop_ups_for_this_site_to_open_the_audi")}
+          <button onClick={() => setPopupBlocked(false)} className="ml-3 underline">{tr("editor.dismiss")}</button>
         </div>
       )}
 
@@ -1278,21 +1495,21 @@ function ToolButton({
 // presenter chrome.
 function ShortcutHelp({ onClose }: { onClose: () => void }) {
   const rows: [string, string][] = [
-    ["Right / Space / PageDown", "Next slide"],
-    ["Left / PageUp", "Previous slide"],
-    ["L", "Laser pointer"],
-    ["D", "Pen draw (ephemeral)"],
+    [tr("editor.right_space_pagedown"), tr("editor.next_slide")],
+    [tr("editor.left_pageup"), tr("editor.previous_slide")],
+    ["L", tr("editor.laser_pointer")],
+    ["D", tr("editor.pen_draw_ephemeral")],
     ["O", "Spotlight (wheel or [ ] adjusts radius)"],
-    ["Z / + / - / wheel", "Zoom (0 resets to fit)"],
-    ["B", "Black screen"],
-    ["W", "White screen"],
-    ["G or /", "Jump-to-slide palette"],
-    ["S", "Presenter view"],
-    ["E", "Audience display (2nd screen)"],
-    ["[ / ]", "Previous / next section"],
-    ["P", "Autopilot play/pause"],
-    ["?", "Toggle this help"],
-    ["Esc", "Close tool / overlay, then exit"],
+    [tr("editor.z_wheel"), tr("editor.zoom_0_resets_to_fit")],
+    ["B", tr("editor.black_screen")],
+    ["W", tr("editor.white_screen")],
+    [tr("editor.g_or"), tr("editor.jump_to_slide_palette")],
+    ["S", tr("editor.presenter_view")],
+    ["E", tr("editor.audience_display_2nd_screen")],
+    ["[ / ]", tr("editor.previous_next_section")],
+    ["P", tr("editor.autopilot_play_pause")],
+    ["?", tr("editor.toggle_this_help")],
+    [tr("editor.esc"), tr("editor.close_tool_overlay_then_exit")],
   ];
   return (
     <div className="absolute inset-0 z-[120] grid place-items-center bg-black/40" onClick={onClose}>
@@ -1301,8 +1518,8 @@ function ShortcutHelp({ onClose }: { onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-sm font-semibold">Presenter shortcuts</span>
-          <button onClick={onClose} className="grid h-7 w-7 place-items-center rounded-full bg-white/10 hover:bg-white/20" title="Close (Esc)">
+          <span className="text-sm font-semibold">{tr("editor.presenter_shortcuts")}</span>
+          <button onClick={onClose} className="grid h-7 w-7 place-items-center rounded-full bg-white/10 hover:bg-white/20" title={tr("editor.close_esc")}>
             <X size={15} />
           </button>
         </div>
@@ -1366,8 +1583,8 @@ function JumpPalette({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-sm font-semibold">Jump to slide</span>
-          <button onClick={onClose} className="grid h-7 w-7 place-items-center rounded-full bg-white/10 hover:bg-white/20" title="Close (Esc)">
+          <span className="text-sm font-semibold">{tr("editor.jump_to_slide")}</span>
+          <button onClick={onClose} className="grid h-7 w-7 place-items-center rounded-full bg-white/10 hover:bg-white/20" title={tr("editor.close_esc")}>
             <X size={15} />
           </button>
         </div>
@@ -1384,11 +1601,11 @@ function JumpPalette({
               <div className="relative grid aspect-video place-items-center overflow-hidden rounded bg-white/5">
                 <SlideThumb doc={doc} index={full} w={180} h={110} />
                 {full === curIdx && (
-                  <span className="absolute left-1 top-1 rounded bg-brand-500/90 px-1.5 py-0.5 text-[10px] font-medium">Current</span>
+                  <span className="absolute left-1 top-1 rounded bg-brand-500/90 px-1.5 py-0.5 text-[10px] font-medium">{tr("editor.current")}</span>
                 )}
               </div>
               <div className="mt-1 truncate text-xs text-white/70">
-                {`${n + 1}. ${doc.pages[full]?.name ?? "Slide"}`}
+                {`${n + 1}. ${doc.pages[full]?.name ?? tr("editor.slide")}`}
               </div>
             </button>
           ))}
@@ -1464,22 +1681,22 @@ function Teleprompter({ notes }: { notes: string }) {
   return (
     <div>
       <div className="mb-1 flex items-center justify-between text-[10px] uppercase tracking-wide text-white/40">
-        <span>Speaker notes</span>
+        <span>{tr("editor.speaker_notes")}</span>
         {has && (
           <div className="flex items-center gap-2 normal-case">
             <button
               onClick={() => setFontPx((v) => Math.max(11, v - 2))}
               className="rounded px-1.5 py-0.5 text-white/60 hover:bg-white/10"
-              aria-label="Smaller notes text"
-              title="Smaller"
+              aria-label={tr("editor.smaller_notes_text")}
+              title={tr("editor.smaller")}
             >
               A-
             </button>
             <button
               onClick={() => setFontPx((v) => Math.min(30, v + 2))}
               className="rounded px-1.5 py-0.5 text-white/60 hover:bg-white/10"
-              aria-label="Larger notes text"
-              title="Larger"
+              aria-label={tr("editor.larger_notes_text")}
+              title={tr("editor.larger")}
             >
               A+
             </button>
@@ -1487,9 +1704,9 @@ function Teleprompter({ notes }: { notes: string }) {
               onClick={() => setSpeed((v) => (v ? 0 : 18))}
               className={`rounded px-1.5 py-0.5 hover:bg-white/10 ${speed ? "text-brand-300" : "text-white/60"}`}
               aria-pressed={speed > 0}
-              title="Auto-scroll the notes"
+              title={tr("editor.auto_scroll_the_notes")}
             >
-              Scroll
+              {tr("editor.scroll")}
             </button>
             {speed > 0 && (
               <input
@@ -1499,7 +1716,7 @@ function Teleprompter({ notes }: { notes: string }) {
                 value={speed}
                 onChange={(e) => setSpeed(Number(e.target.value))}
                 className="h-1 w-16 accent-white/70"
-                aria-label="Scroll speed"
+                aria-label={tr("editor.scroll_speed")}
               />
             )}
           </div>
@@ -1511,7 +1728,7 @@ function Teleprompter({ notes }: { notes: string }) {
         style={{ fontSize: `${fontPx}px` }}
         className="max-h-40 overflow-y-auto whitespace-pre-wrap rounded-lg border border-white/10 bg-white/5 p-2.5 leading-relaxed text-white/85"
       >
-        {has ? notes : <span className="text-white/30">No notes for this slide.</span>}
+        {has ? notes : <span className="text-white/30">{tr("editor.no_notes_for_this_slide")}</span>}
       </div>
     </div>
   );
@@ -1569,7 +1786,7 @@ function PresenterHud(props: {
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wide text-white/50">Presenter view</span>
+        <span className="text-xs font-semibold uppercase tracking-wide text-white/50">{tr("editor.presenter_view")}</span>
         <span className="flex items-center gap-2 text-xs tabular-nums text-white/60">
           <WallClock />
           <span className="text-white/25">|</span>
@@ -1579,32 +1796,32 @@ function PresenterHud(props: {
 
       <div className="flex gap-2">
         <div className="flex-1">
-          <div className="mb-1 text-[10px] uppercase tracking-wide text-white/40">Current</div>
+          <div className="mb-1 text-[10px] uppercase tracking-wide text-white/40">{tr("editor.current")}</div>
           <div className="grid aspect-video place-items-center overflow-hidden rounded-lg border border-white/10 bg-white/5">
             <SlideThumb doc={doc} index={curIdx} w={200} h={120} />
           </div>
         </div>
         <div className="w-[42%]">
-          <div className="mb-1 text-[10px] uppercase tracking-wide text-white/40">Next</div>
+          <div className="mb-1 text-[10px] uppercase tracking-wide text-white/40">{tr("editor.next")}</div>
           <div className="grid aspect-video place-items-center overflow-hidden rounded-lg border border-white/10 bg-white/5">
-            {nextIdx >= 0 ? <SlideThumb doc={doc} index={nextIdx} w={140} h={84} /> : <span className="text-[10px] text-white/30">End</span>}
+            {nextIdx >= 0 ? <SlideThumb doc={doc} index={nextIdx} w={140} h={84} /> : <span className="text-[10px] text-white/30">{tr("editor.end")}</span>}
           </div>
         </div>
       </div>
 
       <div className="flex items-center justify-between gap-2">
-        <button onClick={onPrev} disabled={!hasPrev} className="rounded-lg bg-white/10 px-3 py-1.5 text-xs hover:bg-white/20 disabled:opacity-30">Prev</button>
+        <button onClick={onPrev} disabled={!hasPrev} className="rounded-lg bg-white/10 px-3 py-1.5 text-xs hover:bg-white/20 disabled:opacity-30">{tr("editor.prev")}</button>
         <select
           value={curIdx}
           onChange={(e) => onJump(Number(e.target.value))}
           className="flex-1 rounded-lg border border-white/10 bg-neutral-900 px-2 py-1.5 text-xs outline-none"
-          title="Jump to slide"
+          title={tr("editor.jump_to_slide")} aria-label={tr("editor.jump_to_slide")}
         >
           {visIdxs.map((i, n) => (
             <option key={i} value={i}>{`Slide ${n + 1}${doc.pages[i]?.name ? ` - ${doc.pages[i].name}` : ""}`}</option>
           ))}
         </select>
-        <button onClick={onNext} disabled={!hasNext} className="rounded-lg bg-white/10 px-3 py-1.5 text-xs hover:bg-white/20 disabled:opacity-30">Next</button>
+        <button onClick={onNext} disabled={!hasNext} className="rounded-lg bg-white/10 px-3 py-1.5 text-xs hover:bg-white/20 disabled:opacity-30">{tr("editor.next")}</button>
       </div>
 
       <Teleprompter notes={notes} />
@@ -1613,14 +1830,14 @@ function PresenterHud(props: {
         <div className="flex items-center justify-between">
           <div className={`text-3xl font-semibold tabular-nums ${timerOver ? "text-red-400" : ""}`}>{timerDisplay}</div>
           <div className="flex gap-1.5">
-            <button onClick={onToggleTimer} className="rounded-lg bg-white/10 px-2.5 py-1 text-xs hover:bg-white/20">{timerRunning ? "Stop" : "Start"}</button>
-            <button onClick={onResetTimer} className="rounded-lg bg-white/10 px-2.5 py-1 text-xs hover:bg-white/20">Reset</button>
+            <button onClick={onToggleTimer} className="rounded-lg bg-white/10 px-2.5 py-1 text-xs hover:bg-white/20">{timerRunning ? tr("editor.stop") : tr("editor.start")}</button>
+            <button onClick={onResetTimer} className="rounded-lg bg-white/10 px-2.5 py-1 text-xs hover:bg-white/20">{tr("editor.reset")}</button>
           </div>
         </div>
         <div className="mt-2 flex items-center gap-2 text-xs">
           <div className="inline-flex overflow-hidden rounded-lg border border-white/10">
-            <button onClick={() => onSetMode("up")} className={`px-2.5 py-1 ${timerMode === "up" ? "bg-brand-500/80" : "bg-white/5 hover:bg-white/10"}`}>Count up</button>
-            <button onClick={() => onSetMode("down")} className={`px-2.5 py-1 ${timerMode === "down" ? "bg-brand-500/80" : "bg-white/5 hover:bg-white/10"}`}>Count down</button>
+            <button onClick={() => onSetMode("up")} className={`px-2.5 py-1 ${timerMode === "up" ? "bg-brand-500/80" : "bg-white/5 hover:bg-white/10"}`}>{tr("editor.count_up")}</button>
+            <button onClick={() => onSetMode("down")} className={`px-2.5 py-1 ${timerMode === "down" ? "bg-brand-500/80" : "bg-white/5 hover:bg-white/10"}`}>{tr("editor.count_down")}</button>
           </div>
           {timerMode === "down" && (
             <label className="ml-auto flex items-center gap-1 text-white/60">
@@ -1631,7 +1848,7 @@ function PresenterHud(props: {
                 onChange={(e) => onSetTarget(Math.max(1, Number(e.target.value) || 1) * 60000)}
                 className="w-14 rounded border border-white/10 bg-neutral-900 px-1.5 py-1 text-right tabular-nums outline-none"
               />
-              min
+              {tr("editor.min")}
             </label>
           )}
         </div>
@@ -1639,7 +1856,7 @@ function PresenterHud(props: {
 
       {breakdown && breakdown.length > 0 && (
         <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-          <div className="mb-1.5 text-[10px] uppercase tracking-wide text-white/40">Per-slide time (rehearsal)</div>
+          <div className="mb-1.5 text-[10px] uppercase tracking-wide text-white/40">{tr("editor.per_slide_time_rehearsal")}</div>
           <ul className="space-y-1 text-xs text-white/75">
             {breakdown.map((b) => (
               <li key={b.index} className="flex items-center justify-between tabular-nums">
@@ -1651,7 +1868,7 @@ function PresenterHud(props: {
         </div>
       )}
 
-      <button onClick={onClose} className="mt-auto rounded-lg bg-white/10 px-3 py-1.5 text-xs hover:bg-white/20">Close presenter view (S)</button>
+      <button onClick={onClose} className="mt-auto rounded-lg bg-white/10 px-3 py-1.5 text-xs hover:bg-white/20">{tr("editor.close_presenter_view_s")}</button>
     </div>
   );
 }
@@ -1720,4 +1937,146 @@ function compositeTransition(
       renderScene(createScene(tempDoc, to.pageIndex), destCtx as unknown as CanvasLike, vp, { assets: imageAssets });
     } catch { /* a cross-origin image can throw; skip the morphed layer */ }
   }
+}
+
+// Presenter-side audience drawer (doc 28): moderate viewer questions (answer /
+// dismiss), launch and close live polls, and clear the board between sessions.
+// Renders over present mode but never over the audience display (that window
+// only mirrors the slide canvas).
+function PresenterAudience({ designId, state, onRefresh, onClose }: {
+  designId: string;
+  state: AudienceState | null;
+  onRefresh: () => void;
+  onClose: () => void;
+}) {
+  const toast = useToast();
+  const [pollQ, setPollQ] = useState("");
+  const [pollOpts, setPollOpts] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function createPoll() {
+    const options = pollOpts.split("\n").map((o) => o.trim()).filter(Boolean);
+    if (!pollQ.trim() || options.length < 2 || busy) return;
+    // The server accepts 2..6 options; say so here rather than letting the
+    // request 422 with nothing shown to the presenter.
+    if (options.length > 6) {
+      toast.error(tr("editor.a_poll_takes_at_most_6_options"));
+      return;
+    }
+    setBusy(true);
+    try {
+      await oc.presenterCreatePoll(designId, { question: pollQ.trim(), options });
+      setPollQ("");
+      setPollOpts("");
+      onRefresh();
+    } catch {
+      toast.error(tr("editor.could_not_launch_that_poll"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const questions = state?.questions ?? [];
+  const polls = state?.polls ?? [];
+  return (
+    <aside className="light pointer-events-auto absolute bottom-16 right-4 top-4 z-50 flex w-80 flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xl">
+      <header className="flex items-center justify-between border-b border-neutral-100 px-3 py-2">
+        <span className="text-sm font-semibold text-neutral-800">{tr("editor.audience")}</span>
+        <span className="flex items-center gap-1">
+          <button
+            onClick={() => { void oc.presenterClearAudience(designId).then(onRefresh).catch(() => {}); }}
+            title={tr("editor.clear_all_questions_and_polls_new_session")}
+            className="rounded px-1.5 py-0.5 text-[11px] text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
+          >
+            {tr("editor.clear")}
+          </button>
+          <button onClick={onClose} aria-label={tr("editor.close")} className="rounded p-1 text-neutral-400 hover:bg-neutral-100"><X size={16} /></button>
+        </span>
+      </header>
+      <div className="oc-scroll flex-1 overflow-y-auto p-3">
+        {/* Poll launcher */}
+        <div className="mb-3 rounded-xl border border-neutral-200 p-2.5">
+          <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-neutral-400"><BarChart3 size={12} /> {tr("editor.new_poll")}</p>
+          <input
+            value={pollQ}
+            onChange={(e) => setPollQ(e.target.value)}
+            placeholder={tr("editor.poll_question")}
+            className="mb-1.5 w-full rounded-lg border border-neutral-200 px-2 py-1.5 text-xs outline-none focus:border-brand-400"
+          />
+          <textarea
+            value={pollOpts}
+            onChange={(e) => setPollOpts(e.target.value)}
+            placeholder={tr("editor.one_option_per_line_2_6")}
+            rows={2}
+            className="mb-1.5 w-full resize-none rounded-lg border border-neutral-200 px-2 py-1.5 text-xs outline-none focus:border-brand-400"
+          />
+          <button
+            onClick={() => void createPoll()}
+            disabled={busy || !pollQ.trim() || pollOpts.split("\n").filter((o) => o.trim()).length < 2}
+            className="w-full rounded-lg bg-neutral-900 py-1.5 text-xs font-medium text-white disabled:opacity-40"
+          >
+            {tr("editor.launch_poll")}
+          </button>
+        </div>
+
+        {polls.map((p) => {
+          const total = p.counts.reduce((s, n) => s + n, 0);
+          return (
+            <div key={p.id} className="mb-3 rounded-xl border border-neutral-200 p-2.5">
+              <p className="mb-1 flex items-center justify-between text-sm font-medium text-neutral-800">
+                <span className="truncate">{p.question}</span>
+                <button
+                  onClick={() => { void oc.presenterSetPollOpen(designId, p.id, !p.open).then(onRefresh).catch(() => {}); }}
+                  className={`ml-2 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${p.open ? "bg-emerald-100 text-emerald-700" : "bg-neutral-100 text-neutral-500"}`}
+                >
+                  {p.open ? tr("editor.open") : tr("editor.closed")}
+                </button>
+              </p>
+              {p.options.map((opt, i) => {
+                const pct = total ? Math.round((p.counts[i] / total) * 100) : 0;
+                return (
+                  <div key={i} className="relative mb-1 overflow-hidden rounded-lg border border-neutral-100 px-2 py-1 text-xs text-neutral-700">
+                    <span className="absolute inset-y-0 left-0 bg-brand-100/70" style={{ width: `${pct}%` }} aria-hidden />
+                    <span className="relative flex justify-between">
+                      <span className="truncate">{opt}</span>
+                      <span className="ml-2 shrink-0 tabular-nums text-neutral-500">{p.counts[i]} · {pct}%</span>
+                    </span>
+                  </div>
+                );
+              })}
+              <p className="text-right text-[10px] text-neutral-400">{total} vote{total === 1 ? "" : "s"}</p>
+            </div>
+          );
+        })}
+
+        {/* Questions, hottest first (server orders by votes). */}
+        {questions.map((q) => (
+          <div key={q.id} className={`mb-1.5 rounded-lg px-2 py-1.5 ${q.dismissed ? "bg-neutral-50 opacity-60" : "bg-neutral-50"}`}>
+            <p className="text-xs text-neutral-800">{q.text}</p>
+            <p className="mt-0.5 flex items-center gap-2 text-[10px] text-neutral-400">
+              <span className="flex items-center gap-0.5"><ThumbsUp size={10} /> {q.votes}</span>
+              <span className="truncate">{q.authorName || tr("editor.anonymous")}</span>
+              <span className="ml-auto flex gap-1">
+                <button
+                  onClick={() => { void oc.presenterModerateQuestion(designId, q.id, { answered: !q.answered }).then(onRefresh).catch(() => {}); }}
+                  title={q.answered ? tr("editor.mark_unanswered") : tr("editor.mark_answered")}
+                  className={`rounded p-0.5 ${q.answered ? "text-emerald-600" : "text-neutral-400 hover:text-neutral-600"}`}
+                >
+                  <CheckCircle2 size={12} />
+                </button>
+                <button
+                  onClick={() => { void oc.presenterModerateQuestion(designId, q.id, { dismissed: !q.dismissed }).then(onRefresh).catch(() => {}); }}
+                  title={q.dismissed ? tr("editor.restore") : tr("editor.dismiss_hides_from_the_audience")}
+                  className="rounded p-0.5 text-neutral-400 hover:text-neutral-600"
+                >
+                  <EyeOff size={12} />
+                </button>
+              </span>
+            </p>
+          </div>
+        ))}
+        {questions.length === 0 && <p className="py-3 text-center text-xs text-neutral-400">{tr("editor.no_questions_yet_share_the_link_and_ask_the")}</p>}
+      </div>
+    </aside>
+  );
 }

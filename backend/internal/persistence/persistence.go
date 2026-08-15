@@ -30,6 +30,11 @@ type DBTX interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
 	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+	// Begin scopes the few writes that must be atomic across statements (the
+	// checkpoint compaction / branch-creation pair). Satisfied by both a pool
+	// and a pgx.Tx (which nests via savepoint), so tests still run inside one
+	// rolled-back transaction.
+	Begin(ctx context.Context) (pgx.Tx, error)
 }
 
 // DesignRecord matches the NestJS DesignRecord JSON shape exactly.

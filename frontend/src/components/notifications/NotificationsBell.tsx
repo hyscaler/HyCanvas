@@ -24,6 +24,7 @@ import type { NotificationType, NotificationView } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
 import { onNotify } from "@/lib/realtime";
 import { cn } from "@/lib/cn";
+import { tr } from "@/lib/i18n";
 
 const POLL_MS = 30_000;
 
@@ -167,36 +168,36 @@ export function NotificationsBell({ className }: { className?: string }) {
       <button
         type="button"
         onClick={toggle}
-        aria-label="Notifications"
-        title="Notifications"
+        aria-label={tr("notifications.notifications")}
+        title={tr("notifications.notifications")}
         className="relative grid h-9 w-9 place-items-center rounded-lg text-neutral-600 transition hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
       >
         <Bell size={18} />
         {count > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white">
+          <span className="absolute -end-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white">
             {count > 99 ? "99+" : count}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-neutral-200 bg-surface shadow-lg">
+        <div className="absolute end-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-neutral-200 bg-surface shadow-lg">
           <div className="flex items-center justify-between border-b border-neutral-100 px-3 py-2">
-            <span className="text-sm font-semibold text-neutral-800">Notifications</span>
+            <span className="text-sm font-semibold text-neutral-800">{tr("notifications.notifications")}</span>
             <button
               onClick={() => void markAll()}
               className="flex items-center gap-1 text-xs font-medium text-neutral-500 hover:text-neutral-900"
-              title="Mark all as read"
+              title={tr("notifications.mark_all_as_read")}
             >
-              <CheckCheck size={14} /> Mark all read
+              <CheckCheck size={14} /> {tr("notifications.mark_all_read")}
             </button>
           </div>
           <div className="oc-scroll max-h-96 overflow-y-auto">
             {loading ? (
-              <div className="px-3 py-8 text-center text-sm text-neutral-400">Loading…</div>
+              <div className="px-3 py-8 text-center text-sm text-neutral-400">{tr("notifications.loading")}</div>
             ) : items.length === 0 ? (
               <div className="px-3 py-8 text-center text-sm text-neutral-400">
-                You are all caught up.
+                {tr("notifications.you_are_all_caught_up")}
               </div>
             ) : (
               items.map((n) => {
@@ -206,7 +207,7 @@ export function NotificationsBell({ className }: { className?: string }) {
                     key={n.id}
                     onClick={() => void onRowClick(n)}
                     className={cn(
-                      "flex w-full items-start gap-3 px-3 py-2.5 text-left transition hover:bg-neutral-50",
+                      "flex w-full items-start gap-3 px-3 py-2.5 text-start transition hover:bg-neutral-50",
                       !n.read && "bg-brand-50/40",
                     )}
                   >

@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"errors"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // ErrNotFound is returned when a design/snapshot/version does not exist or is
@@ -502,37 +504,83 @@ func (s *Service) Purge(ctx context.Context, designID, workspaceID string) error
 // AppendUpdate journals a realtime document update to the DesignUpdateLog
 // (doc 16): the per-design seq is the running max + 1, the Yjs update bytes are
 // stored inline. Best-effort durability journal alongside snapshots.
-func (s *Service) AppendUpdate(ctx context.Context, designID string, update []byte, authorID string) error {
+func (s *Service) AppendUpdate(ctx context.Context, designID, branchID string, update []byte, authorID string) error {
 	var author *string
 	if authorID != "" {
 		author = &authorID
 	}
-	const q = `INSERT INTO "design_update_logs" ("design_id", seq, update, "author_id")
-		VALUES ($1, (SELECT COALESCE(MAX(seq),0)+1 FROM "design_update_logs" WHERE "design_id" = $1), $2, $3)`
-	_, err := s.db.Exec(ctx, q, designID, update, author)
+	// branchID "" journals to the main lineage (branch_id NULL). seq is assigned
+	// from the DESIGN-global max across all lineages, which keeps every branch's
+	// combined parent-prefix + own-rows stream in one ascending seq order (the
+	// property ListBranchUpdates' single-cursor paging relies on).
+	var branch *string
+	if branchID != "" {
+		branch = &branchID
+	}
+	const q = `INSERT INTO "design_update_logs" ("design_id", "branch_id", seq, update, "author_id")
+		VALUES ($1, $4, (SELECT COALESCE(MAX(seq),0)+1 FROM "design_update_logs" WHERE "design_id" = $1), $2, $3)`
+	_, err := s.db.Exec(ctx, q, designID, update, author, branch)
 	return err
 }
 
 // AppendCheckpoint journals a CRDT FULL-STATE update (client-produced via Yjs
-// encodeStateAsUpdate, since the server has no Go CRDT encoder) as a checkpoint
-// row and atomically compacts the log: every row older than the checkpoint is
-// deleted (doc 16 FR-11). The log then stays bounded - a checkpoint plus the
-// deltas since - and the history scrubber folds checkpoint-then-tail (the full-
-// state row reconstructs the base on the same CRDT identity space before the
-// tail deltas apply). Insert + delete run as one data-modifying CTE, so the
-// checkpoint is never deleted by its own compaction and the two can't interleave.
-func (s *Service) AppendCheckpoint(ctx context.Context, designID string, update []byte, authorID string) error {
+// encodeStateAsUpdate) as a checkpoint row and compacts the log within ITS OWN
+// lineage scope (doc 16 FR-11): older rows of the same scope are deleted, so
+// the scope stays bounded - a checkpoint plus the deltas since - and the
+// history scrubber folds checkpoint-then-tail (the full-state row reconstructs
+// the base on the same CRDT identity space before the tail deltas apply).
+// Insert + delete run as one data-modifying CTE, so the checkpoint is never
+// deleted by its own compaction and the two can't interleave.
+//
+// BRANCH SAFETY (FR-10): compaction never deletes rows at or below the newest
+// fork point of a dependent branch. A branch's base is the parent lineage's
+// prefix up to forked_from_seq; deleting any of those rows would corrupt the
+// branch's fold (the checkpoint's full state is too new to substitute - it
+// includes edits the branch forked before). The guard keeps the needed prefix
+// and compacts only the rows past it.
+func (s *Service) AppendCheckpoint(ctx context.Context, designID, branchID string, update []byte, authorID string) error {
 	var author *string
 	if authorID != "" {
 		author = &authorID
 	}
+	var branch *string
+	if branchID != "" {
+		branch = &branchID
+	}
+	// Compaction and branch creation must not interleave: a branch created
+	// while this statement runs would not be visible to the fork guard below,
+	// and its base prefix would be deleted out from under it. Both paths take
+	// the same design-scoped transaction lock, so one always sees the other.
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if err := lockDesignLineage(ctx, tx, designID); err != nil {
+		return err
+	}
 	const q = `WITH ins AS (
-		INSERT INTO "design_update_logs" ("design_id", seq, update, "author_id", "is_checkpoint")
-		VALUES ($1, (SELECT COALESCE(MAX(seq),0)+1 FROM "design_update_logs" WHERE "design_id" = $1), $2, $3, true)
+		INSERT INTO "design_update_logs" ("design_id", "branch_id", seq, update, "author_id", "is_checkpoint")
+		VALUES ($1, $4, (SELECT COALESCE(MAX(seq),0)+1 FROM "design_update_logs" WHERE "design_id" = $1), $2, $3, true)
 		RETURNING seq
 	)
-	DELETE FROM "design_update_logs" WHERE "design_id" = $1 AND seq < (SELECT seq FROM ins)`
-	_, err := s.db.Exec(ctx, q, designID, update, author)
+	DELETE FROM "design_update_logs"
+	WHERE "design_id" = $1 AND "branch_id" IS NOT DISTINCT FROM $4
+		AND seq < (SELECT seq FROM ins)
+		AND seq > COALESCE((SELECT MAX("forked_from_seq") FROM "design_branches"
+			WHERE "design_id" = $1 AND "parent_branch_id" IS NOT DISTINCT FROM $4), 0)`
+	if _, err := tx.Exec(ctx, q, designID, update, author, branch); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+// lockDesignLineage takes a transaction-scoped advisory lock keyed on the
+// design, serializing the two writers that can invalidate each other's view of
+// the update log: checkpoint compaction (which deletes a prefix) and branch
+// creation (which claims one as its base). Released on commit or rollback.
+func lockDesignLineage(ctx context.Context, tx pgx.Tx, designID string) error {
+	_, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, "design-lineage:"+designID)
 	return err
 }
 

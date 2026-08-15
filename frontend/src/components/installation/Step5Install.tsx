@@ -11,12 +11,14 @@ import { BrandLoader } from "@/components/ui/BrandLoader";
 import { Button } from "@/components/ui/Button";
 import { WizardShell, ErrorBanner, useSecretGate } from "./WizardShell";
 import { getAnswers, healthOk, setupPost, setupStatus, type SetupAnswers } from "./wizard";
+import { tr } from "@/lib/i18n";
+import { userMessage } from "@/lib/errors";
 
-const PHASES = [
-  { id: "validating", label: "Validating the database connection" },
-  { id: "writing", label: "Writing the configuration (.env)" },
-  { id: "migrating", label: "Creating database tables" },
-  { id: "starting", label: "Starting HyCanvas" },
+const phases = () => [
+  { id: "validating", label: tr("installation.validating_the_database_connection") },
+  { id: "writing", label: tr("installation.writing_the_configuration_env") },
+  { id: "migrating", label: tr("installation.creating_database_tables") },
+  { id: "starting", label: tr("installation.starting_hycanvas") },
 ];
 
 type InstallState =
@@ -68,7 +70,7 @@ export function Step5Install() {
         }
         if (st.phase === "error") {
           if (pollRef.current !== null) window.clearInterval(pollRef.current);
-          setState({ kind: "error", detail: st.error ?? "Install failed." });
+          setState({ kind: "error", detail: st.error ?? tr("installation.install_failed") });
           return;
         }
         setState({ kind: "running", phase: st.phase });
@@ -82,22 +84,22 @@ export function Step5Install() {
       await setupPost("complete", {});
       watchInstall();
     } catch (err) {
-      setState({ kind: "error", detail: err instanceof Error ? err.message : "Install failed." });
+      setState({ kind: "error", detail: userMessage(err, tr("installation.install_failed")) });
     }
   }
 
   const running = state.kind === "running" || state.kind === "waiting";
   const currentPhase = state.kind === "running" ? state.phase : state.kind === "waiting" ? "starting" : "";
-  const phaseIndex = PHASES.findIndex((p) => p.id === currentPhase);
+  const phaseIndex = phases().findIndex((p) => p.id === currentPhase);
 
   return (
     <WizardShell
       step={5}
-      title={running ? "Installing…" : "Review and install"}
+      title={running ? tr("installation.installing") : tr("installation.review_and_install")}
       subtitle={
         running
           ? "Hold tight; this takes a few seconds."
-          : "Everything checks out. Installing writes the configuration, prepares the database, and starts the server."
+          : tr("installation.everything_checks_out_installing_writes_the")
       }
       stage={state.kind === "review" ? "setup" : "none"}
     >
@@ -105,14 +107,14 @@ export function Step5Install() {
         <div className="flex flex-col gap-4">
           {answers ? (
             <dl className="divide-y divide-neutral-100 rounded-xl border border-neutral-200 text-sm">
-              <Row k="Public URL" v={answers.appUrl || "(current origin)"} />
+              <Row k={tr("installation.public_url")} v={answers.appUrl || "(current origin)"} />
               {answers.proxied ? (
-                <Row k="Listens on" v={`${answers.bindHost || "127.0.0.1"}:${answers.port || "8005"} (behind your proxy)`} />
+                <Row k={tr("installation.listens_on")} v={`${answers.bindHost || "127.0.0.1"}:${answers.port || "8005"} (behind your proxy)`} />
               ) : (
-                <Row k="Port" v={answers.port || "8005"} />
+                <Row k={tr("installation.port")} v={answers.port || "8005"} />
               )}
               <Row
-                k="Database"
+                k={tr("installation.database")}
                 v={
                   answers.db.url
                     ? answers.db.url.replace(/:\/\/([^:]+):[^@]*@/, "://$1:••••@")
@@ -120,11 +122,11 @@ export function Step5Install() {
                 }
               />
               <Row
-                k="Storage"
+                k={tr("installation.storage")}
                 v={answers.storage.driver === "s3" ? `S3: ${answers.storage.s3.bucket} @ ${answers.storage.s3.endpoint}` : `Local disk: ${answers.storage.localPath}`}
               />
-              <Row k="Email" v={answers.smtp.enabled ? `SMTP via ${answers.smtp.host}` : "Not configured"} />
-              <Row k="Secrets" v="JWT and encryption keys are generated automatically" />
+              <Row k={tr("installation.email")} v={answers.smtp.enabled ? `SMTP via ${answers.smtp.host}` : tr("installation.not_configured")} />
+              <Row k={tr("installation.secrets")} v={tr("installation.jwt_and_encryption_keys_are_generated_automa")} />
             </dl>
           ) : (
             <div className="grid place-items-center rounded-xl border border-neutral-200 py-10">
@@ -133,10 +135,10 @@ export function Step5Install() {
           )}
           <div className="flex items-center justify-between gap-3">
             <Button type="button" variant="ghost" onClick={() => void router.push("/installation/step-4")}>
-              Back
+              {tr("installation.back")}
             </Button>
             <Button type="button" size="lg" onClick={() => void install()} disabled={!answers}>
-              Install HyCanvas
+              {tr("installation.install_hycanvas")}
             </Button>
           </div>
         </div>
@@ -144,7 +146,7 @@ export function Step5Install() {
 
       {running && (
         <ul className="flex flex-col gap-3">
-          {PHASES.map((p, i) => {
+          {phases().map((p, i) => {
             const done = phaseIndex > i || state.kind === "waiting";
             const active = !done && phaseIndex === i;
             return (
@@ -171,10 +173,10 @@ export function Step5Install() {
           <ErrorBanner>{state.detail}</ErrorBanner>
           <div className="flex items-center justify-between gap-3">
             <Button type="button" variant="ghost" onClick={() => void router.push("/installation/step-2")}>
-              Back to database
+              {tr("installation.back_to_database")}
             </Button>
             <Button type="button" onClick={() => void install()}>
-              Try again
+              {tr("installation.try_again")}
             </Button>
           </div>
         </div>
@@ -187,7 +189,7 @@ function Row({ k, v }: { k: string; v: string }) {
   return (
     <div className="flex items-start justify-between gap-6 px-4 py-2.5">
       <dt className="shrink-0 font-medium text-neutral-500">{k}</dt>
-      <dd className="break-all text-right text-neutral-900">{v}</dd>
+      <dd className="break-all text-end text-neutral-900">{v}</dd>
     </div>
   );
 }

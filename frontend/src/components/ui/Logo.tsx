@@ -6,6 +6,7 @@
 // of the masters live in /public/brand for non-React surfaces.
 
 import { cn } from "@/lib/cn";
+import { tr } from "@/lib/i18n";
 
 // The brand's "paper" tone (mark color on gradient/dark surfaces). Part of the
 // logo asset itself, not the app accent system.
@@ -67,7 +68,7 @@ export function Logo({
   return (
     <span className={cn("flex items-center gap-2.5 text-lg font-extrabold tracking-tight", className)}>
       <LogoMark size={size} variant={variant} />
-      {variant === "light" ? <span className="text-white">HyCanvas</span> : <span className="oc-gradient-text">HyCanvas</span>}
+      {variant === "light" ? <span className="text-white">{tr("ui.hycanvas")}</span> : <span className="oc-gradient-text">{tr("ui.hycanvas")}</span>}
     </span>
   );
 }

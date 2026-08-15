@@ -143,6 +143,12 @@ export interface CanvasLike {
   measureText?(text: string): { width: number };
   globalAlpha: number;
   globalCompositeOperation: string;
+  /** Optional current transform readback (browser + node canvas). Group
+   *  isolation needs it to give its offscreen layer the same coordinate space
+   *  as the target; a context without it degrades to multiplying alpha down. */
+  getTransform?(): { a: number; b: number; c: number; d: number; e: number; f: number };
+  /** Optional backing surface size, for sizing an isolation layer. */
+  canvas?: { width: number; height: number };
   fillStyle: string | CanvasGradientLike | CanvasPatternLike;
   strokeStyle: string | CanvasGradientLike;
   lineWidth: number;

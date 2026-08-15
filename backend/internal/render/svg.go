@@ -7,6 +7,11 @@
 package render
 
 import (
+	"bytes"
+	"encoding/base64"
+	"fmt"
+	"image"
+	"image/color"
 	"math"
 	"sort"
 	"strconv"
@@ -56,6 +61,13 @@ type svgCtx struct {
 	defs   []string
 	gradID int
 	boxes  map[string]rbox // page node world-boxes, for connector endpoint routing
+	// alpha is the cumulative opacity of the ancestor chain. SVG `opacity`
+	// on a group ISOLATES it (children composite first, then fade as one),
+	// but the engine, the raster path, and the PDF all multiply opacity down
+	// the subtree per node, so overlapping siblings in a translucent group
+	// double-darken. To match them, containers never carry an opacity
+	// attribute; the effective product lands on each leaf instead.
+	alpha float64
 }
 
 type paint struct {
@@ -63,7 +75,10 @@ type paint struct {
 	opacity float64
 }
 
-func (c *svgCtx) paintOf(fill map[string]any) paint {
+// paintOf resolves a fill to an SVG paint (color or defs ref). w/h are the fill
+// box dims in user units (shape size); when known (>0) an image fill uses a
+// userSpaceOnUse pattern so cover/contain fit is exact for any aspect ratio.
+func (c *svgCtx) paintOf(fill map[string]any, w, h float64) paint {
 	if fill == nil {
 		return paint{ref: "none", opacity: 1}
 	}
@@ -95,16 +110,87 @@ func (c *svgCtx) paintOf(fill map[string]any) paint {
 			c.defs = append(c.defs, `<linearGradient id="`+id+`" x1="`+num(0.5-dx)+`" y1="`+num(0.5-dy)+`" x2="`+num(0.5+dx)+`" y2="`+num(0.5+dy)+`">`+stops.String()+`</linearGradient>`)
 		}
 		return paint{ref: "url(#" + id + ")", opacity: 1}
+	case "image":
+		href := asStr(fill["src"])
+		if href == "" {
+			return paint{ref: "none", opacity: 1}
+		}
+		c.gradID++
+		id := "img-" + strconv.Itoa(c.gradID)
+		// Fit -> SVG preserveAspectRatio: cover=slice, contain/none=meet, stretch=none.
+		par := "xMidYMid slice"
+		switch asStr(fill["fit"]) {
+		case "contain", "none":
+			par = "xMidYMid meet"
+		case "stretch":
+			par = "none"
+		}
+		if w > 0 && h > 0 {
+			// userSpaceOnUse: the image is sized in real user units, so
+			// preserveAspectRatio (cover/contain) is exact for any aspect ratio
+			// (objectBoundingBox squashes fit on a non-square box).
+			c.defs = append(c.defs, `<pattern id="`+id+`" patternUnits="userSpaceOnUse" width="`+num(w)+`" height="`+num(h)+`"><image href="`+esc(href)+`" x="0" y="0" width="`+num(w)+`" height="`+num(h)+`" preserveAspectRatio="`+par+`"/></pattern>`)
+		} else {
+			c.defs = append(c.defs, `<pattern id="`+id+`" patternUnits="objectBoundingBox" patternContentUnits="objectBoundingBox" width="1" height="1"><image href="`+esc(href)+`" x="0" y="0" width="1" height="1" preserveAspectRatio="`+par+`"/></pattern>`)
+		}
+		op := 1.0
+		if o, ok := fill["opacity"].(float64); ok {
+			op = o
+		}
+		return paint{ref: "url(#" + id + ")", opacity: op}
+	case "pattern":
+		href := asStr(fill["src"])
+		if href == "" {
+			return paint{ref: "none", opacity: 1}
+		}
+		iw, ih := dataURLDims(href)
+		if iw <= 0 || ih <= 0 {
+			iw, ih = 64, 64
+		}
+		scale := asNum(fill["scale"])
+		if scale <= 0 {
+			scale = 1
+		}
+		tw, th := float64(iw)*scale, float64(ih)*scale
+		c.gradID++
+		id := "pat-" + strconv.Itoa(c.gradID)
+		ptf := ""
+		if rot := asNum(fill["rotation"]); rot != 0 {
+			ptf = ` patternTransform="rotate(` + num(rot) + `)"`
+		}
+		c.defs = append(c.defs, `<pattern id="`+id+`" patternUnits="userSpaceOnUse" width="`+num(tw)+`" height="`+num(th)+`"`+ptf+`><image href="`+esc(href)+`" x="0" y="0" width="`+num(tw)+`" height="`+num(th)+`" preserveAspectRatio="none"/></pattern>`)
+		return paint{ref: "url(#" + id + ")", opacity: 1}
 	}
 	return paint{ref: "none", opacity: 1}
 }
 
-func (c *svgCtx) fillAttrs(fills []any) string {
+// dataURLDims decodes a "data:...;base64,..." image's pixel dimensions cheaply
+// (header only), for sizing a tiled SVG pattern. Returns 0,0 when undecodable.
+func dataURLDims(u string) (int, int) {
+	i := strings.Index(u, ",")
+	if i < 0 || !strings.HasPrefix(u, "data:") {
+		return 0, 0
+	}
+	raw, err := base64.StdEncoding.DecodeString(u[i+1:])
+	if err != nil {
+		return 0, 0
+	}
+	cfg, _, err := image.DecodeConfig(bytes.NewReader(raw))
+	if err != nil {
+		return 0, 0
+	}
+	return cfg.Width, cfg.Height
+}
+
+// fillAttrs emits the SVG fill attribute for the first fill. w/h are the fill
+// box dims (shape size) so an image fill's cover/contain fit is exact; pass 0,0
+// when the box is unknown or the fill is solid/gradient.
+func (c *svgCtx) fillAttrs(fills []any, w, h float64) string {
 	var first map[string]any
 	if len(fills) > 0 {
 		first = asObj(fills[0])
 	}
-	p := c.paintOf(first)
+	p := c.paintOf(first, w, h)
 	out := ` fill="` + p.ref + `"`
 	if p.opacity < 1 {
 		out += ` fill-opacity="` + num(p.opacity) + `"`
@@ -116,7 +202,7 @@ func (c *svgCtx) strokeAttrs(stroke map[string]any) string {
 	if stroke == nil {
 		return ""
 	}
-	p := c.paintOf(asObj(stroke["fill"]))
+	p := c.paintOf(asObj(stroke["fill"]), 0, 0)
 	out := ` stroke="` + p.ref + `" stroke-width="` + num(asNum(stroke["width"])) + `"`
 	if p.opacity < 1 {
 		out += ` stroke-opacity="` + num(p.opacity) + `"`
@@ -220,7 +306,7 @@ func starD(w, h float64, points int, innerRatio float64) string {
 
 func (c *svgCtx) shapeBody(node map[string]any) string {
 	w, h := sizeOf(node)
-	pnt := c.fillAttrs(asArr(node["fills"])) + c.strokeAttrs(asObj(node["stroke"]))
+	pnt := c.fillAttrs(asArr(node["fills"]), w, h) + c.strokeAttrs(asObj(node["stroke"]))
 	switch asStr(node["shape"]) {
 	case "rect":
 		rx := ""
@@ -314,7 +400,7 @@ func (c *svgCtx) pathBody(node map[string]any) string {
 	if compound {
 		rule = ` fill-rule="evenodd"`
 	}
-	pnt := c.fillAttrs(asArr(node["fills"])) + c.strokeAttrs(asObj(node["stroke"]))
+	pnt := c.fillAttrs(asArr(node["fills"]), 0, 0) + c.strokeAttrs(asObj(node["stroke"]))
 	return `<path d="` + d.String() + `"` + rule + pnt + `/>`
 }
 
@@ -329,12 +415,15 @@ func (c *svgCtx) lineBody(node map[string]any) string {
 }
 
 func (c *svgCtx) textBody(node map[string]any) string {
+	w, _ := sizeOf(node)
 	var out strings.Builder
 	y := 0.0
 	for _, para := range asArr(node["content"]) {
 		po := asObj(para)
+		pstyle := asObj(po["style"])
 		lineHeight := 0.0
 		var tspans strings.Builder
+		var paraText strings.Builder
 		for _, run := range asArr(po["runs"]) {
 			ro := asObj(run)
 			style := asObj(ro["style"])
@@ -347,37 +436,136 @@ func (c *svgCtx) textBody(node map[string]any) string {
 			if f := asStr(style["fontFamily"]); f != "" {
 				family = f
 			}
-			p := c.paintOf(asObj(style["fill"]))
+			p := c.paintOf(asObj(style["fill"]), 0, 0)
 			fo := ""
 			if p.opacity < 1 {
 				fo = ` fill-opacity="` + num(p.opacity) + `"`
 			}
+			paraText.WriteString(asStr(ro["text"]))
 			tspans.WriteString(`<tspan font-family="` + esc(family) + `" font-size="` + num(size) + `" fill="` + p.ref + `"` + fo + `>` + esc(asStr(ro["text"])) + `</tspan>`)
 		}
 		if lineHeight == 0 {
 			lineHeight = 16 * 1.2
 		}
 		y += lineHeight
-		out.WriteString(`<text x="0" y="` + num(y) + `">` + tspans.String() + `</text>`)
+		// Base direction and alignment, mirroring the raster layout: the SVG
+		// carries LOGICAL text and the consumer runs its own bidi, so an RTL
+		// paragraph must SAY it is RTL (an LTR-base renderer would put
+		// trailing punctuation on the wrong side) and, when the author never
+		// chose an alignment, reads from the right like the canvas shows it.
+		dir := ResolveBaseDirection(paraText.String(), asStr(pstyle["direction"]))
+		align := asStr(pstyle["align"])
+		if dir == "rtl" && align == "" {
+			align = "right"
+		}
+		// text-anchor is DIRECTION-RELATIVE in SVG: under direction="rtl",
+		// "start" is the line's RIGHT edge, so a right-aligned RTL paragraph
+		// anchors its start at x=w (anchor "end" there would hang the whole
+		// line off the box's right side).
+		x, anchor := 0.0, ""
+		switch {
+		case align == "center":
+			x, anchor = w/2, ` text-anchor="middle"`
+		case align == "right" && dir == "rtl":
+			x, anchor = w, ` text-anchor="start"`
+		case align == "right":
+			x, anchor = w, ` text-anchor="end"`
+		case dir == "rtl": // explicit left alignment of an RTL paragraph
+			x, anchor = 0, ` text-anchor="end"`
+		}
+		dirAttr := ""
+		if dir == "rtl" {
+			dirAttr = ` direction="rtl" unicode-bidi="embed"`
+		}
+		out.WriteString(`<text x="` + num(x) + `" y="` + num(y) + `"` + anchor + dirAttr + `>` + tspans.String() + `</text>`)
 	}
 	return out.String()
 }
 
 func imageBody(file Design, node map[string]any) string {
 	w, h := sizeOf(node)
-	href := ""
-	if src := asObj(node["source"]); src != nil {
-		if assetID := asStr(src["assetId"]); assetID != "" {
-			for _, a := range asArr(file["assets"]) {
-				ao := asObj(a)
-				if asStr(ao["id"]) == assetID {
-					href = asStr(ao["url"])
-					break
+	// Prefer an inlined data URL (set by the export handler's asset embedding);
+	// otherwise fall back to a url carried in the file's asset manifest.
+	href := asStr(node["src"])
+	if href == "" {
+		if src := asObj(node["source"]); src != nil {
+			if assetID := asStr(src["assetId"]); assetID != "" {
+				for _, a := range asArr(file["assets"]) {
+					ao := asObj(a)
+					if asStr(ao["id"]) == assetID {
+						href = asStr(ao["url"])
+						break
+					}
 				}
 			}
 		}
 	}
 	return `<image x="0" y="0" width="` + num(w) + `" height="` + num(h) + `" preserveAspectRatio="none" href="` + esc(href) + `"/>`
+}
+
+// qrBody emits a QR node as its background, module rects (one path), and an
+// optional center logo (bytes inlined by the export handler as node["logoSrc"]).
+func (c *svgCtx) qrBody(node map[string]any) string {
+	w, h := sizeOf(node)
+	rows := asArr(node["modules"])
+	n := len(rows)
+	if n == 0 {
+		return `<rect x="0" y="0" width="` + num(w) + `" height="` + num(h) + `" fill="rgb(244,244,245)" stroke="rgb(212,212,216)"/>`
+	}
+	quiet := 4.0
+	total := float64(n) + quiet*2
+	cell := math.Min(w, h) / total
+	ox := (w-cell*total)/2 + quiet*cell
+	oy := (h-cell*total)/2 + quiet*cell
+	bg := "rgb(255,255,255)"
+	if col := asObj(node["background"]); col != nil {
+		bg = rgbOf(col)
+	}
+	fg := "rgb(0,0,0)"
+	if col := asObj(node["foreground"]); col != nil {
+		fg = rgbOf(col)
+	}
+	var b strings.Builder
+	b.WriteString(`<rect x="0" y="0" width="` + num(w) + `" height="` + num(h) + `" fill="` + bg + `"/>`)
+	var d strings.Builder
+	for r := 0; r < n; r++ {
+		cols := asArr(rows[r])
+		for cc := 0; cc < len(cols); cc++ {
+			if !asBool(cols[cc]) {
+				continue
+			}
+			x := ox + float64(cc)*cell
+			y := oy + float64(r)*cell
+			d.WriteString("M" + num(x) + " " + num(y) + "h" + num(cell) + "v" + num(cell) + "h" + num(-cell) + "z")
+		}
+	}
+	b.WriteString(`<path d="` + d.String() + `" fill="` + fg + `"/>`)
+	if logo := asStr(node["logoSrc"]); logo != "" {
+		// Match rasterQR / browser drawQr: default 0.22 when unset, else clamp.
+		scale := 0.22
+		if _, ok := node["logoScale"]; ok {
+			scale = math.Max(0.08, math.Min(0.4, asNum(node["logoScale"])))
+		}
+		box := math.Min(w, h) * scale
+		pad := box * 0.16
+		lx := (w - box) / 2
+		ly := (h - box) / 2
+		b.WriteString(`<rect x="` + num(lx-pad) + `" y="` + num(ly-pad) + `" width="` + num(box+pad*2) + `" height="` + num(box+pad*2) + `" fill="` + bg + `"/>`)
+		b.WriteString(`<image href="` + esc(logo) + `" x="` + num(lx) + `" y="` + num(ly) + `" width="` + num(box) + `" height="` + num(box) + `" preserveAspectRatio="none"/>`)
+	}
+	return b.String()
+}
+
+// stampBody emits a stamp node as its glyph in an emoji font stack, so a browser
+// viewing the SVG renders the actual (color) emoji.
+func (c *svgCtx) stampBody(node map[string]any) string {
+	w, h := sizeOf(node)
+	glyph := asStr(node["glyph"])
+	if glyph == "" {
+		glyph = "\U0001F44D"
+	}
+	fs := math.Max(4, math.Min(w, h)*0.82)
+	return `<text x="` + num(w/2) + `" y="` + num(h/2) + `" font-size="` + num(fs) + `" text-anchor="middle" dominant-baseline="central" font-family="` + esc(`"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",system-ui,sans-serif`) + `">` + esc(glyph) + `</text>`
 }
 
 // --- F30 board nodes --------------------------------------------------------
@@ -405,7 +593,7 @@ func (c *svgCtx) inkBody(node map[string]any) string {
 func (c *svgCtx) stickyBody(node map[string]any) string {
 	w, h := sizeOf(node)
 	var b strings.Builder
-	fillP := c.paintOf(asObj(node["fill"]))
+	fillP := c.paintOf(asObj(node["fill"]), 0, 0)
 	fo := ""
 	if fillP.opacity < 1 {
 		fo = ` fill-opacity="` + num(fillP.opacity) + `"`
@@ -497,11 +685,43 @@ func (c *svgCtx) emitNode(file Design, node map[string]any) string {
 	if asStr(node["type"]) == "connector" {
 		tfm = "matrix(1,0,0,1,0,0)"
 	}
-	open := `<g data-oc-id="` + esc(asStr(node["id"])) + `" transform="` + tfm + `"`
-	if op, ok := node["opacity"].(float64); ok && op < 1 {
-		open += ` opacity="` + num(op) + `"`
+	kind := asStr(node["type"])
+	container := kind == "group" || kind == "frame" || kind == "grid"
+	// Opacity normally multiplies down the ancestor chain (see the svgCtx.alpha
+	// note): a container's opacity is carried to its leaves rather than emitted
+	// on the <g>.
+	//
+	// An ISOLATING container is the exception, and this used to be inverted on
+	// purpose: SVG was kept bug-compatible with the other backends, which faded
+	// each child separately and double-darkened every overlap. Now that raster
+	// and the browser composite groups as a unit, emitting the opacity here is
+	// what keeps SVG agreeing with them, and it costs nothing because `opacity`
+	// on a <g> is defined to composite the group as a unit.
+	parentAlpha := c.alpha
+	eff := parentAlpha
+	if op, ok := node["opacity"].(float64); ok && op >= 0 && op < 1 {
+		eff = parentAlpha * op
 	}
+	isolate := container && groupNeedsIsolation(node)
+	open := `<g data-oc-id="` + esc(asStr(node["id"])) + `" transform="` + tfm + `"`
+	if (!container || isolate) && eff < 1 {
+		open += ` opacity="` + num(eff) + `"`
+	}
+	// Blend and opacity ride on this OUTER wrapper; the effect filter wraps
+	// the body on an inner group so the outline (stroked after the filter,
+	// like the raster path) is not part of the shadow-casting silhouette.
+	open += c.blendAttr(node)
 	open += ">"
+	if container {
+		// An isolating group's alpha is on its <g>, so its children draw at
+		// full strength inside it; applying it here as well would square it.
+		if isolate {
+			c.alpha = 1
+		} else {
+			c.alpha = eff
+		}
+		defer func() { c.alpha = parentAlpha }()
+	}
 
 	var body string
 	switch asStr(node["type"]) {
@@ -521,32 +741,64 @@ func (c *svgCtx) emitNode(file Design, node map[string]any) string {
 		body = c.stickyBody(node)
 	case "connector":
 		body = c.connectorBody(node)
+	case "qr":
+		body = c.qrBody(node)
+	case "stamp":
+		body = c.stampBody(node)
 	case "group", "frame", "grid":
 		var sb strings.Builder
 		for _, ch := range childrenOf(node) {
 			sb.WriteString(c.emitNode(file, asObj(ch)))
 		}
 		body = sb.String()
+	case "mask":
+		// A real <clipPath>, so the mask stays vector in the export rather than
+		// being rasterized or dropped. The child is emitted inside a <g> that
+		// references it; an unusable shape emits the child UNCLIPPED, because
+		// an empty clipPath would hide it entirely and a document that renders
+		// today must not start exporting blank.
+		child := asObj(node["child"])
+		if child == nil {
+			break
+		}
+		inner := c.emitNode(file, child)
+		if shape := asObj(node["maskShape"]); shape != nil {
+			if d := svgMaskPathData(shape); d != "" {
+				id := fmt.Sprintf("clip%d", len(c.defs))
+				rule := ""
+				if asStr(shape["fillRule"]) == "evenodd" {
+					rule = ` clip-rule="evenodd"`
+				}
+				c.defs = append(c.defs, `<clipPath id="`+id+`"><path d="`+d+`"`+rule+`/></clipPath>`)
+				inner = `<g clip-path="url(#` + id + `)">` + inner + `</g>`
+			}
+		}
+		body = inner
 	default:
 		body = "<!-- unsupported node type for svg: " + esc(asStr(node["type"])) + " -->"
 	}
-	return open + body + "</g>"
+	if filter := c.effectFilterAttr(node); filter != "" {
+		body = "<g" + filter + ">" + body + "</g>"
+	}
+	return open + body + outlineRects(node) + "</g>"
 }
 
 // ToSVG serializes one page of a design to an editable SVG document.
 func ToSVG(file Design, pageIndex int) (string, error) {
+	// SVG is resolution-independent output, so the class is nominal (1); the
+	// graph still evaluates rather than the bake being emitted (F40 FR-29).
 	pages := asArr(file["pages"])
 	if pageIndex < 0 || pageIndex >= len(pages) {
 		return "", ErrPageRange
 	}
 	page := asObj(pages[pageIndex])
 	w, h := asNum(page["width"]), asNum(page["height"])
-	c := &svgCtx{boxes: pageBoxMap(page)}
+	c := &svgCtx{boxes: pageBoxMap(page), alpha: 1}
 
 	bg := ""
 	if bgFill := asObj(page["background"]); bgFill != nil {
 		if k := asStr(bgFill["type"]); k != "pattern" && k != "image" {
-			bg = `<rect x="0" y="0" width="` + num(w) + `" height="` + num(h) + `"` + c.fillAttrs([]any{bgFill}) + `/>`
+			bg = `<rect x="0" y="0" width="` + num(w) + `" height="` + num(h) + `"` + c.fillAttrs([]any{bgFill}, 0, 0) + `/>`
 		}
 	}
 	var content strings.Builder
@@ -571,4 +823,297 @@ func sortedKeys(m map[string]any) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// ---------------------------------------------------------------------------
+// Effects (F38 parity work): the raster path composites blend modes, shadows,
+// glows and blurs; this gives the SVG export the same visuals through native
+// SVG features instead of silently dropping them.
+// ---------------------------------------------------------------------------
+
+// blendAttr returns the mix-blend-mode style attribute for a node's OUTER
+// wrapper (the filter lives on an inner group so an outline can sit between
+// the filtered artwork and the blend, exactly like the raster layer order).
+func (c *svgCtx) blendAttr(node map[string]any) string {
+	if m := blendModeOf(node); m != "" {
+		return ` style="mix-blend-mode:` + esc(m) + `"`
+	}
+	return ""
+}
+
+// outlineRects strokes the node's local box over its own content, mirroring
+// outlineBox on the raster path: drawn AFTER the filter so it does not
+// thicken the silhouette the node's own shadow is cast from, and inside the
+// outer group so it participates in the node's opacity and blend.
+func outlineRects(node map[string]any) string {
+	if asStr(node["type"]) == "text" {
+		return ""
+	}
+	w, h := sizeOf(node)
+	if w <= 0 || h <= 0 {
+		return ""
+	}
+	out := ""
+	for _, e := range effectsOf(node) {
+		if e.kind != "outline" {
+			continue
+		}
+		width := asNum(e.raw["width"])
+		if width <= 0 {
+			continue
+		}
+		col, ca := shadowColor(asObj(e.raw["color"]))
+		if ca <= 0 {
+			continue
+		}
+		rgba := rasterColor(col, 1)
+		out += fmt.Sprintf(`<rect x="0" y="0" width="%s" height="%s" fill="none" stroke="rgb(%d,%d,%d)" stroke-opacity="%s" stroke-width="%s"/>`,
+			num(w), num(h), rgba.R, rgba.G, rgba.B, num(ca), num(width))
+	}
+	return out
+}
+
+// effectFilterAttr returns a filter reference for a node that carries
+// adjustments, a duotone, a layer blur, shadows, or a glow; the filter itself
+// is appended to defs. "" when the node has none of them.
+//
+// The primitive chain mirrors the raster path's layer pass: effects apply in
+// DECLARED order (adjustment matrices compose until a blur forces a flush;
+// duotone maps luminance onto the shadows/highlights ramp and mixes by
+// intensity), and the shadow/glow silhouettes are taken from the PROCESSED
+// artwork, so a blurred node casts a blurred shadow. Shadows and glows use
+// the same blur-radius-is-2x-stdDeviation convention as CSS drop-shadow.
+// color-interpolation-filters is pinned to sRGB because both the browser's
+// CSS filters and the raster path work in sRGB, while SVG filters default to
+// linearRGB.
+func (c *svgCtx) effectFilterAttr(node map[string]any) string {
+	effects := effectsOf(node)
+	shadows := shadowsOf(node)
+	var glow map[string]any
+	hasChain := false
+	maxBlur := 0.0
+	for _, e := range effects {
+		switch e.kind {
+		case "glow":
+			if glow == nil {
+				glow = e.raw
+			}
+		case "blur":
+			if r := asNum(e.raw["radius"]); r > 0 {
+				hasChain = true
+				if r > maxBlur {
+					maxBlur = r
+				}
+			}
+		case "adjustment":
+			for _, o := range asArr(e.raw["ops"]) {
+				oo := asObj(o)
+				if oo == nil {
+					continue
+				}
+				if _, blurPx, known := adjustmentMatrix(asStr(oo["name"]), asNum(oo["value"])); known {
+					hasChain = true
+					if blurPx > maxBlur {
+						maxBlur = blurPx
+					}
+				}
+			}
+		case "duotone":
+			hasChain = true
+		}
+	}
+	if len(shadows) == 0 && glow == nil && !hasChain {
+		return ""
+	}
+	blurRadius := maxBlur
+
+	var f strings.Builder
+	id := fmt.Sprintf("fx%d", len(c.defs))
+	// Filter region in user-space units, not objectBoundingBox percentages: a
+	// zero-area box (a horizontal line) collapses a percentage region and SVG
+	// then disables the element entirely, and a fixed percentage clips any
+	// shadow reaching past it. Cover the node's local bounds plus the
+	// furthest effect extent (offset + 3 sigma of the blur).
+	x0, y0 := 0.0, 0.0
+	w, h := sizeOf(node)
+	if asStr(node["type"]) == "connector" {
+		// Connectors draw from connectorPoints in absolute page space under an
+		// identity transform, so their bounds come from the points themselves.
+		if pts := connectorPoints(node, c.boxes); len(pts) > 0 {
+			minX, minY, maxX, maxY := pts[0][0], pts[0][1], pts[0][0], pts[0][1]
+			for _, p := range pts[1:] {
+				minX, minY = math.Min(minX, p[0]), math.Min(minY, p[1])
+				maxX, maxY = math.Max(maxX, p[0]), math.Max(maxY, p[1])
+			}
+			x0, y0, w, h = minX, minY, maxX-minX, maxY-minY
+		}
+	}
+	margin := 4.0
+	for _, sh := range shadows {
+		if m := math.Max(math.Abs(sh.dx), math.Abs(sh.dy)) + 1.5*sh.blur + 4; m > margin {
+			margin = m
+		}
+	}
+	if glow != nil {
+		if m := 1.5*asNum(glow["radius"]) + 4; m > margin {
+			margin = m
+		}
+	}
+	// A layer blur's radius is its sigma, so 3 sigma of reach = 3x radius.
+	if m := 3*blurRadius + 4; blurRadius > 0 && m > margin {
+		margin = m
+	}
+	if w <= 0 && h <= 0 && len(childrenOf(node)) > 0 {
+		// A sizeless container (a group carries no box of its own): its
+		// children's extent is unknown here, so keep a generous relative
+		// region rather than clipping to a point.
+		f.WriteString(`<filter id="` + id + `" color-interpolation-filters="sRGB" x="-60%" y="-60%" width="220%" height="220%">`)
+	} else {
+		f.WriteString(fmt.Sprintf(`<filter id="%s" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse" x="%s" y="%s" width="%s" height="%s">`,
+			id, num(x0-margin), num(y0-margin), num(w+2*margin), num(h+2*margin)))
+	}
+
+	// --- the processing chain, in declared effect order ---------------------
+	// `cur` names the running result ("" = the unprocessed SourceGraphic).
+	cur := ""
+	in := func() string {
+		if cur == "" {
+			return "SourceGraphic"
+		}
+		return cur
+	}
+	step := 0
+	emitMatrix := func(m colorMatrix) {
+		if m == identityMatrix() {
+			return
+		}
+		vals := make([]string, 0, 20)
+		for _, v := range m {
+			vals = append(vals, num(v))
+		}
+		res := fmt.Sprintf("p%d", step)
+		step++
+		f.WriteString(fmt.Sprintf(`<feColorMatrix in="%s" type="matrix" values="%s" result="%s"/>`, in(), strings.Join(vals, " "), res))
+		cur = res
+	}
+	// A layer/adjustment blur's radius IS its standard deviation (CSS
+	// blur(r) and the raster's blurLayer both treat it as sigma); only
+	// drop-shadow/glow use the blur-is-2x-sigma convention, handled by
+	// emitSilhouette below.
+	emitBlur := func(r float64) {
+		if r <= 0 {
+			return
+		}
+		res := fmt.Sprintf("p%d", step)
+		step++
+		f.WriteString(fmt.Sprintf(`<feGaussianBlur in="%s" stdDeviation="%s" result="%s"/>`, in(), num(r), res))
+		cur = res
+	}
+	for _, e := range effects {
+		switch e.kind {
+		case "adjustment":
+			// Compose sliders into one matrix; an embedded blur op flushes
+			// the pending matrix first, exactly like the raster pass.
+			pending := identityMatrix()
+			for _, o := range asArr(e.raw["ops"]) {
+				oo := asObj(o)
+				if oo == nil {
+					continue
+				}
+				mtx, blurPx, known := adjustmentMatrix(asStr(oo["name"]), asNum(oo["value"]))
+				if !known {
+					continue
+				}
+				pending = pending.mul(mtx)
+				if blurPx > 0 {
+					emitMatrix(pending)
+					pending = identityMatrix()
+					emitBlur(blurPx)
+				}
+			}
+			emitMatrix(pending)
+		case "blur":
+			emitBlur(asNum(e.raw["radius"]))
+		case "duotone":
+			k := 1.0
+			if v, ok := e.raw["intensity"].(float64); ok {
+				k = clamp01f(v)
+			}
+			if k == 0 {
+				continue
+			}
+			sc, _ := shadowColor(asObj(e.raw["shadows"]))
+			hc, _ := shadowColor(asObj(e.raw["highlights"]))
+			orig := in()
+			// Rec.601 luminance into every channel, then a 2-entry transfer
+			// table interpolates each channel along the shadows->highlights
+			// ramp: exactly the raster LUT.
+			const lum = "0.299 0.587 0.114 0 0"
+			gray := fmt.Sprintf("p%d", step)
+			step++
+			f.WriteString(fmt.Sprintf(`<feColorMatrix in="%s" type="matrix" values="%s %s %s 0 0 0 1 0" result="%s"/>`, orig, lum, lum, lum, gray))
+			mapped := fmt.Sprintf("p%d", step)
+			step++
+			f.WriteString(fmt.Sprintf(`<feComponentTransfer in="%s" result="%s"><feFuncR type="table" tableValues="%s %s"/><feFuncG type="table" tableValues="%s %s"/><feFuncB type="table" tableValues="%s %s"/></feComponentTransfer>`,
+				gray, mapped, num(sc.r), num(hc.r), num(sc.g), num(hc.g), num(sc.b), num(hc.b)))
+			if k >= 1 {
+				cur = mapped
+			} else {
+				res := fmt.Sprintf("p%d", step)
+				step++
+				f.WriteString(fmt.Sprintf(`<feComposite in="%s" in2="%s" operator="arithmetic" k1="0" k2="%s" k3="%s" k4="0" result="%s"/>`,
+					mapped, orig, num(k), num(1-k), res))
+				cur = res
+			}
+		}
+	}
+	src := in()
+
+	// Silhouette-based primitives (shadow, glow), taken from the PROCESSED
+	// artwork's alpha, tinted, and merged BENEATH it: the raster painting
+	// order, where a blurred node casts a blurred shadow.
+	var merges []string
+	emitSilhouette := func(i int, dx, dy, blur float64, col color.RGBA, opacity float64) {
+		res := fmt.Sprintf("s%d", i)
+		f.WriteString(fmt.Sprintf(`<feGaussianBlur in="%s" stdDeviation="%s" result="%s_b"/>`, src, num(blur/2), res))
+		f.WriteString(fmt.Sprintf(`<feOffset in="%s_b" dx="%s" dy="%s" result="%s_o"/>`, res, num(dx), num(dy), res))
+		f.WriteString(fmt.Sprintf(`<feFlood flood-color="rgb(%d,%d,%d)" flood-opacity="%s"/>`, col.R, col.G, col.B, num(opacity)))
+		f.WriteString(fmt.Sprintf(`<feComposite in2="%s_o" operator="in" result="%s"/>`, res, res))
+		merges = append(merges, res)
+	}
+	i := 0
+	if glow != nil {
+		radius := asNum(glow["radius"])
+		col, ca := shadowColor(asObj(glow["color"]))
+		intensity := 1.0
+		if v, ok := glow["intensity"].(float64); ok {
+			intensity = v
+		}
+		if radius > 0 && ca*intensity > 0 {
+			emitSilhouette(i, 0, 0, radius, rasterColor(col, 1), clamp01f(ca*intensity))
+			i++
+		}
+	}
+	for _, sh := range shadows {
+		emitSilhouette(i, sh.dx, sh.dy, sh.blur, sh.col, sh.opacity)
+		i++
+	}
+
+	if len(merges) > 0 {
+		f.WriteString(`<feMerge>`)
+		for _, m := range merges {
+			f.WriteString(`<feMergeNode in="` + m + `"/>`)
+		}
+		f.WriteString(`<feMergeNode in="` + src + `"/></feMerge>`)
+	}
+	f.WriteString(`</filter>`)
+
+	// Every op reduced to identity and nothing casts: a filter with zero
+	// primitives renders its element TRANSPARENT, so emit no filter at all.
+	if step == 0 && len(merges) == 0 {
+		return ""
+	}
+
+	c.defs = append(c.defs, f.String())
+	return ` filter="url(#` + id + `)"`
 }

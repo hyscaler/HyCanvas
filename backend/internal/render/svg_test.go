@@ -95,3 +95,135 @@ func TestToSVGRotationMatrix(t *testing.T) {
 		t.Fatalf("90deg rotation matrix wrong:\n%s", svg)
 	}
 }
+
+// Effects parity (F38): the SVG export must carry the same blend modes and
+// shadows the raster path composites, instead of silently dropping them.
+func TestSVGEmitsBlendModeAndShadow(t *testing.T) {
+	col := func(r, g, b float64) map[string]any {
+		return map[string]any{"srgb": map[string]any{"r": r, "g": g, "b": b, "a": 1.0}}
+	}
+	design := Design{"pages": []any{map[string]any{
+		"width": 200.0, "height": 100.0,
+		"background": map[string]any{"type": "solid", "color": col(1, 1, 1)},
+		"children": []any{map[string]any{
+			"id": "n1", "type": "shape", "shape": "rect",
+			"transform": map[string]any{"x": 10.0, "y": 10.0, "scaleX": 1.0, "scaleY": 1.0, "rotation": 0.0},
+			"size":      map[string]any{"width": 50.0, "height": 40.0},
+			"fills":     []any{map[string]any{"type": "solid", "color": col(1, 0, 0)}},
+			"blendMode": "multiply",
+			"effects": []any{map[string]any{
+				"kind": "shadow", "offsetX": 4.0, "offsetY": 6.0, "blur": 8.0,
+				"color": col(0, 0, 0),
+			}},
+		}},
+	}}}
+	svg, err := ToSVG(design, 0)
+	if err != nil {
+		t.Fatalf("toSVG: %v", err)
+	}
+	out := svg
+	if !strings.Contains(out, "mix-blend-mode:multiply") {
+		t.Error("blend mode was dropped from the SVG export")
+	}
+	if !strings.Contains(out, "<feOffset") || !strings.Contains(out, `dx="4"`) {
+		t.Error("drop shadow was dropped from the SVG export")
+	}
+	if !strings.Contains(out, `filter="url(#`) {
+		t.Error("node does not reference its effect filter")
+	}
+	// A plain node must NOT pay for a filter it does not have.
+	design2 := Design{"pages": []any{map[string]any{
+		"width": 100.0, "height": 100.0,
+		"background": map[string]any{"type": "solid", "color": col(1, 1, 1)},
+		"children": []any{map[string]any{
+			"id": "n2", "type": "shape", "shape": "rect",
+			"transform": map[string]any{"x": 0.0, "y": 0.0, "scaleX": 1.0, "scaleY": 1.0, "rotation": 0.0},
+			"size":      map[string]any{"width": 20.0, "height": 20.0},
+			"fills":     []any{map[string]any{"type": "solid", "color": col(0, 0, 1)}},
+		}},
+	}}}
+	svg2, err := ToSVG(design2, 0)
+	if err != nil {
+		t.Fatalf("toSVG plain: %v", err)
+	}
+	if strings.Contains(svg2, "filter=") || strings.Contains(svg2, "mix-blend-mode") {
+		t.Error("a plain node grew effect markup")
+	}
+}
+
+// A percentage filter region collapses on a zero-area bounding box (a
+// horizontal line) and SVG then disables the element entirely; the region
+// must be in user-space units sized from the node box plus the effect extent.
+func TestSVGFilterRegionSurvivesZeroAreaBox(t *testing.T) {
+	col := func(r, g, b float64) map[string]any {
+		return map[string]any{"srgb": map[string]any{"r": r, "g": g, "b": b, "a": 1.0}}
+	}
+	design := Design{"pages": []any{map[string]any{
+		"width": 200.0, "height": 100.0,
+		"background": map[string]any{"type": "solid", "color": col(1, 1, 1)},
+		"children": []any{map[string]any{
+			"id": "l1", "type": "line",
+			"transform": map[string]any{"x": 10.0, "y": 50.0, "scaleX": 1.0, "scaleY": 1.0, "rotation": 0.0},
+			"size":      map[string]any{"width": 100.0, "height": 0.0},
+			"points":    []any{map[string]any{"x": 0.0, "y": 0.0}, map[string]any{"x": 100.0, "y": 0.0}},
+			"stroke":    map[string]any{"width": 2.0, "color": col(0, 0, 0)},
+			"effects":   []any{map[string]any{"kind": "shadow", "offsetX": 4.0, "offsetY": 4.0, "blur": 8.0, "color": col(0, 0, 0)}},
+		}},
+	}}}
+	svg, err := ToSVG(design, 0)
+	if err != nil {
+		t.Fatalf("ToSVG: %v", err)
+	}
+	if !strings.Contains(svg, `filterUnits="userSpaceOnUse"`) {
+		t.Error("filter region not in user-space units; a zero-area box disables the element")
+	}
+	if strings.Contains(svg, `x="-60%"`) {
+		t.Error("percentage filter region emitted for a sized node")
+	}
+}
+
+// Adjustment/duotone/outline parity (F38): the SVG must carry the same
+// effect chain the raster path applies, in declared order.
+func TestSVGEmitsAdjustmentDuotoneOutline(t *testing.T) {
+	col := func(r, g, b float64) map[string]any {
+		return map[string]any{"srgb": map[string]any{"r": r, "g": g, "b": b, "a": 1.0}}
+	}
+	design := Design{"pages": []any{map[string]any{
+		"width": 200.0, "height": 100.0,
+		"background": map[string]any{"type": "solid", "color": col(1, 1, 1)},
+		"children": []any{map[string]any{
+			"id": "n1", "type": "shape", "shape": "rect",
+			"transform": map[string]any{"x": 10.0, "y": 10.0, "scaleX": 1.0, "scaleY": 1.0, "rotation": 0.0},
+			"size":      map[string]any{"width": 50.0, "height": 40.0},
+			"fills":     []any{map[string]any{"type": "solid", "color": col(1, 0, 0)}},
+			"effects": []any{
+				map[string]any{"kind": "adjustment", "ops": []any{map[string]any{"name": "saturate", "value": 1.4}}},
+				map[string]any{"kind": "duotone", "shadows": col(0.1, 0, 0.2), "highlights": col(1, 0.9, 0.8), "intensity": 0.5},
+				map[string]any{"kind": "outline", "width": 3.0, "color": col(0, 0, 1)},
+			},
+		}},
+	}}}
+	svg, err := ToSVG(design, 0)
+	if err != nil {
+		t.Fatalf("ToSVG: %v", err)
+	}
+	for _, want := range []string{
+		`feColorMatrix`,                      // the saturate matrix
+		`feComponentTransfer`,                // the duotone ramp
+		`operator="arithmetic"`,              // the 0.5 intensity mix
+		`color-interpolation-filters="sRGB"`, // CSS-filter color space
+		`stroke-width="3"`,                   // the outline box stroke
+		`fill="none" stroke="rgb(0,0,255)"`,  // outline color, not a fill
+	} {
+		if !strings.Contains(svg, want) {
+			t.Errorf("missing %q in SVG output", want)
+		}
+	}
+	// The outline must NOT be inside the filtered group (it is stroked after
+	// the filter so it cannot thicken the node's own shadow silhouette).
+	fxEnd := strings.Index(svg, `filter="url(#fx0)"`)
+	rect := strings.Index(svg, `stroke-width="3"`)
+	if fxEnd == -1 || rect < fxEnd {
+		t.Error("outline rect not emitted after the filtered group")
+	}
+}

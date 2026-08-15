@@ -873,3 +873,32 @@ describe("visitor utilities", () => {
     expect(maxDepth(design.pages[0].children)).toBe(3);
   });
 });
+
+describe("v18: document language", () => {
+  it("v17 -> v18 stamps the version and promotes a legacy meta.language", () => {
+    const design = createBlankDesign();
+    design.meta.language = "ar-SA"; // where importers wrote it pre-v18
+    const v17 = structuredClone({ ...design, schemaVersion: 17 }) as DesignFile;
+    const out = migrate(v17);
+    expect(out.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(out.language).toBe("ar-SA");
+    // COPIED up, never removed: older readers keep finding it where they look.
+    expect(out.meta.language).toBe("ar-SA");
+    expect(validate(out)).toEqual({ ok: true });
+  });
+
+  it("v17 -> v18 without a legacy value adds nothing", () => {
+    const v17 = structuredClone({ ...createBlankDesign(), schemaVersion: 17 }) as DesignFile;
+    const out = migrate(v17);
+    expect(out.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect("language" in out).toBe(false);
+    expect(validate(out)).toEqual({ ok: true });
+  });
+
+  it("a set language validates and an absent one stays optional", () => {
+    const design = createBlankDesign();
+    expect(validate(design)).toEqual({ ok: true });
+    design.language = "hi-IN";
+    expect(validate(design)).toEqual({ ok: true });
+  });
+});

@@ -5,10 +5,12 @@
 import {
   isContainer,
   childrenOf,
+  childNodesOf,
   type DesignFile,
   type Effect,
   type Node,
 } from "@hc/schema";
+import { enabledEffects } from "@hc/schema";
 import { pointInLocalShape } from "./hit";
 import { SpatialIndex } from "./spatial";
 import {
@@ -42,8 +44,10 @@ const SHADOW_HALO = 1.5; // drop-shadow blur -> ~1.5 * blur
 
 /** Maximum outward bleed (in local px) a node's effects add to its bounds. */
 export function effectBleed(node: Node): number {
-  const effects = node.effects;
-  if (!effects || effects.length === 0) return 0;
+  // Bounds follow what renders: a disabled blur must stop reserving its halo,
+  // or the node keeps a ring of stale invalidation and culling slack.
+  const effects = enabledEffects(node.effects);
+  if (effects.length === 0) return 0;
   let bleed = 0;
   for (const e of effects as Effect[]) {
     switch (e.kind) {
@@ -121,10 +125,23 @@ function buildSceneNode(
   // Duplicate ids are rejected by schema validate(); if one slips through, the
   // first occurrence wins rather than being silently shadowed.
   if (!index.has(node.id)) index.set(node.id, sn);
-  if (isContainer(node)) {
-    sn.children = childrenOf(node).map((child) =>
-      buildSceneNode(child, world, sn, index),
-    );
+  // A mask stores its subject in `child`, not `children`, and building no
+  // SceneNode for it left the subject invisible to render, hit test, bounds and
+  // the spatial index. That absence is why masks drew a placeholder box.
+  //
+  // Boolean OPERANDS are deliberately excluded even though `childNodesOf`
+  // returns them. They are inputs consumed into the boolean's own geometry, not
+  // artwork in their own right: adding them here would paint each operand on
+  // top of the combined result and make them separately selectable, which is
+  // exactly what a boolean exists to stop. Traversal still sees them, because
+  // id-uniqueness and version diffs must.
+  const nested = isContainer(node)
+    ? childrenOf(node)
+    : node.type === "mask"
+      ? childNodesOf(node)
+      : [];
+  if (nested.length > 0) {
+    sn.children = nested.map((child) => buildSceneNode(child, world, sn, index));
   }
   return sn;
 }
@@ -141,6 +158,11 @@ function assetIdsOf(node: Node): string[] {
   if (node.type === "image") {
     const src = (node as { source?: { assetId?: unknown } }).source;
     if (typeof src?.assetId === "string" && src.assetId.length > 0) ids.push(src.assetId);
+    // The alpha mask is a second asset on the same node. Without it here the
+    // loader never fetches it, and the image would draw unmasked forever with
+    // no clue why.
+    const mask = (node as { alphaMask?: { assetId?: unknown } }).alphaMask;
+    if (typeof mask?.assetId === "string" && mask.assetId.length > 0) ids.push(mask.assetId);
   } else {
     const direct = (node as { assetId?: unknown }).assetId;
     if (typeof direct === "string" && direct.length > 0) ids.push(direct);
@@ -388,13 +410,25 @@ class SceneImpl implements Scene {
       if (sn.children && deep) {
         for (let i = sn.children.length - 1; i >= 0; i--) {
           const hit = visit(sn.children[i]);
-          if (hit) return hit;
+          if (!hit) continue;
+          // A mask selects as a UNIT, like a group. Its subject is what makes
+          // the hit precise (you can only click where the mask actually shows
+          // something), but the MASK is what gets returned, for two reasons: a
+          // mask is one object as far as the user is concerned, and its subject
+          // lives in `child` rather than `children`, so `@hc/editor`'s
+          // `locate()` cannot find it. Returning the subject produced a
+          // selection that every store action silently ignored, because they
+          // all begin by locating the id and bailing when that fails.
+          if (node.type !== "mask") return hit;
+          return ignoreLocked && node.locked ? null : node;
         }
       }
       if (sn === this.root) return null; // the implicit page root is not selectable
       if (ignoreLocked && node.locked) return null;
-      // Groups have no own surface; only their children are hittable.
-      if (node.type === "group") return null;
+      // Groups have no own surface; only their children are hittable. A mask is
+      // the same: it is selectable only where its subject actually paints, so
+      // an empty corner of its box is not an invisible click target.
+      if (node.type === "group" || node.type === "mask") return null;
 
       // Connectors are routed lines between attached nodes, not a box at the
       // node's own transform; test the page-space point against the routed line.
@@ -414,6 +448,11 @@ class SceneImpl implements Scene {
       const idx = new SpatialIndex();
       for (const sn of this.index.values()) {
         if (sn === this.root || isContainer(sn.node)) continue; // selectable leaves only
+        // A masked subject is not independently selectable (the mask is the
+        // unit), so it must not appear as a leaf here either. Presence
+        // interest-management and the AI agent's off-screen context both read
+        // this, and both should see the mask.
+        if (sn.parent?.node.type === "mask") continue;
         idx.insert(sn.node.id, sn.worldBounds);
       }
       this.spatial = idx;

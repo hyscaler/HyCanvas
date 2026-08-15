@@ -7,7 +7,7 @@
 import { create } from "zustand";
 import { ApiError, type User, type WorkspaceWithRole } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
-import { browserTimezone } from "@/lib/datetime";
+import { browserTimezone } from "@/lib/timezone";
 
 type Status = "loading" | "authed" | "anon";
 

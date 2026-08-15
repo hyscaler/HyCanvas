@@ -58,14 +58,44 @@ const COMPUTED_PROPS = [
   "font-family", "font-size", "font-weight", "font-style", "text-anchor",
 ];
 
+// getComputedStyle can report paint in modern color spaces (lab()/lch()/oklab()/
+// oklch()/color()) — this is what `currentColor` resolves to under a Tailwind v4
+// theme. The dependency-free SVG color parser only understands hex/rgb/hsl/named,
+// so it drops those colors: a fill silently falls back to black, but a stroke-only
+// shape (outline icons: fill="none") loses its ONLY paint and renders invisible.
+// Rasterize such a value to one pixel and read it back as sRGB so the parser can
+// consume it. Returns a normalizer, or null when there is no canvas.
+function makeColorNormalizer(): ((v: string) => string) | null {
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = 1;
+  const c = cv.getContext("2d", { willReadFrequently: true });
+  if (!c) return null;
+  return (v: string): string => {
+    if (!v || v === "none" || v === "transparent" || v.startsWith("url(")) return v;
+    if (/^(#|rgb|hsl)/i.test(v)) return v; // already parser-readable
+    try {
+      c.clearRect(0, 0, 1, 1);
+      c.fillStyle = v;
+      c.fillRect(0, 0, 1, 1);
+      const [r, g, b, a] = c.getImageData(0, 0, 1, 1).data;
+      return a === 255 ? `rgb(${r}, ${g}, ${b})` : `rgba(${r}, ${g}, ${b}, ${(a / 255).toFixed(3)})`;
+    } catch {
+      return v;
+    }
+  };
+}
+
 /** Overwrite the element's inline style with its computed paint/text values, so
- *  the downstream attribute parser (which lets `style` win) picks them up. */
-function inlineComputedPaint(el: Element): void {
+ *  the downstream attribute parser (which lets `style` win) picks them up. Paint
+ *  colors are normalized to sRGB via `toRgb` so modern color spaces still parse. */
+function inlineComputedPaint(el: Element, toRgb: ((v: string) => string) | null): void {
   const cs = window.getComputedStyle(el);
   const decls: string[] = [];
   for (const p of COMPUTED_PROPS) {
-    const v = cs.getPropertyValue(p).trim();
-    if (v && v !== "normal") decls.push(`${p}:${v}`);
+    let v = cs.getPropertyValue(p).trim();
+    if (!v || v === "normal") continue;
+    if (toRgb && (p === "fill" || p === "stroke")) v = toRgb(v);
+    decls.push(`${p}:${v}`);
   }
   if (decls.length) el.setAttribute("style", decls.join(";"));
 }
@@ -98,6 +128,7 @@ export function flattenSvgToNodes(svgText: string, opts: { fallbackFill?: boolea
     return { nodes: r.nodes, assets: r.assets, approximated: r.approximated };
   }
   document.body.appendChild(host);
+  const toRgb = makeColorNormalizer();
 
   // `co` is the accumulated container opacity. CSS `opacity` does not inherit, so
   // a `<g opacity="0.5">` must be folded onto its leaves manually (each leaf's
@@ -112,7 +143,7 @@ export function flattenSvgToNodes(svgText: string, opts: { fallbackFill?: boolea
         continue;
       }
       if (!LEAF.has(tag)) continue; // skip defs/clipPath/gradients/etc.
-      inlineComputedPaint(child);
+      inlineComputedPaint(child, toRgb);
       const r = svgToNodes(child.outerHTML, idGen, { fallbackFill, gradients });
       approximated = approximated || r.approximated;
       assets.push(...r.assets);

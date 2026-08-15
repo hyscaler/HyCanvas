@@ -669,7 +669,7 @@ export function Gizmo({ api }: { api: CanvasApi }) {
       node.size = size;
       store.setSnapGuides(gx.length || gy.length ? { x: gx, y: gy } : null);
       if (node.type === "text") {
-        const tn = node as unknown as { box: { width: number; height: number; mode?: string } };
+        const tn = node as unknown as { box: { width: number; height: number; mode?: string; autoFit?: { enabled: boolean } } };
         tn.box = { ...tn.box, width: size.width, height: size.height };
         const scale = (factor: number) => {
           if (d.startContent && factor !== 1) scaleTextFonts(node as unknown as { content?: unknown }, d.startContent, factor);
@@ -690,6 +690,24 @@ export function Gizmo({ api }: { api: CanvasApi }) {
             tn.box.height = hh;
             size = { ...size, height: hh };
             node.size = size;
+          } else if (!tn.box.autoFit?.enabled) {
+            // A fixed box may never LIE about containing its text: narrowing
+            // rewraps the text taller, and leaving the height alone paints
+            // lines below the selection box. Track the content height while
+            // PRESERVING the box's vertical slack from the gesture start, so
+            // the behavior is symmetric: narrowing grows the box with the
+            // text, widening shrinks it back, and a deliberately tall box
+            // keeps its designed spacing either way. A box that started
+            // overflowing (a stale height) has no slack and snaps onto its
+            // content. Auto-fit boxes are excluded: they fit by scaling the
+            // FONT down inside a deliberate frame, so the frame must not move.
+            const slack = Math.max(0, d.startSize.height - (d.startMinH ?? d.startSize.height));
+            const hh = measuredTextHeight(node as unknown as TextNode) + slack;
+            if (hh !== tn.box.height) {
+              tn.box.height = hh;
+              size = { ...size, height: hh };
+              node.size = size;
+            }
           }
         } else if (d.handle === "n" || d.handle === "s") {
           // Top/bottom: the box holds the text plus empty space at the current

@@ -14,3 +14,8 @@ export * from "./svg";
 export * from "./apng";
 export * from "./gif";
 export * from "./lottie";
+export * from "./pptx";
+export * from "./zipstore";
+export * from "./unzip";
+export * from "./xml";
+export * from "./pptximport";

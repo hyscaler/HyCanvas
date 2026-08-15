@@ -18,6 +18,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { useToast } from "@/components/ui/Toast";
+import { tr } from "@/lib/i18n";
 
 interface Props {
   designId: string;
@@ -93,7 +94,7 @@ export function ApprovalBanner({ designId, requestOpen, onRequestClose, onLockCh
   async function submitRequest() {
     const approverIds = [...selected];
     if (approverIds.length === 0) {
-      toast.error("Pick at least one approver.");
+      toast.error(tr("editor.pick_at_least_one_approver"));
       return;
     }
     setBusy(true);
@@ -101,10 +102,10 @@ export function ApprovalBanner({ designId, requestOpen, onRequestClose, onLockCh
       const next = await oc.requestApproval(designId, { approverIds, policy });
       apply(next);
       setSelected(new Set());
-      toast.success("Approval requested.");
+      toast.success(tr("editor.approval_requested"));
       onRequestClose();
     } catch {
-      toast.error("Could not request approval. One may already be in progress.");
+      toast.error(tr("editor.could_not_request_approval_one_may_already_b"));
     } finally {
       setBusy(false);
     }
@@ -119,9 +120,9 @@ export function ApprovalBanner({ designId, requestOpen, onRequestClose, onLockCh
       apply(next);
       setRejecting(false);
       setNote("");
-      toast.success(decision === "approve" ? "Approved." : "Rejected.");
+      toast.success(decision === "approve" ? tr("editor.approved") : tr("editor.rejected"));
     } catch {
-      toast.error("Could not record your decision.");
+      toast.error(tr("editor.could_not_record_your_decision"));
     } finally {
       setBusy(false);
     }
@@ -134,9 +135,9 @@ export function ApprovalBanner({ designId, requestOpen, onRequestClose, onLockCh
     try {
       const next = await oc.reopenApproval(approval.id);
       apply(next);
-      toast.success("Reopened for editing. The prior approval is invalidated.");
+      toast.success(tr("editor.reopened_for_editing_the_prior_approval_is_i"));
     } catch {
-      toast.error("Could not reopen this design.");
+      toast.error(tr("editor.could_not_reopen_this_design"));
     } finally {
       setBusy(false);
     }
@@ -167,11 +168,11 @@ export function ApprovalBanner({ designId, requestOpen, onRequestClose, onLockCh
               locked ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"
             }`}
           >
-            {locked ? <Lock size={16} className="shrink-0 text-emerald-600" /> : <Clock size={16} className="shrink-0 text-amber-600" />}
+            {locked ? <Lock size={16} className="shrink-0 text-emerald-600" /> : <Clock size={16} className="shrink-0 text-amber-700" />}
             <div className="min-w-0">
               <p className={`text-sm font-medium ${locked ? "text-emerald-900" : "text-amber-900"}`}>
                 {locked
-                  ? "Approved - editing is locked"
+                  ? tr("editor.approved_editing_is_locked")
                   : `Approval pending - ${approval.approvedCount} of ${approval.approverCount} approved`}
               </p>
               <p className="truncate text-xs text-neutral-500">
@@ -183,20 +184,20 @@ export function ApprovalBanner({ designId, requestOpen, onRequestClose, onLockCh
                       .join(", ")}
               </p>
             </div>
-            <div className="ml-auto flex shrink-0 items-center gap-1.5">
+            <div className="ms-auto flex shrink-0 items-center gap-1.5">
               {pending && actions?.canDecide && (
                 <>
                   <Button size="sm" onClick={() => void decide("approve")} disabled={busy}>
-                    <CheckCircle2 size={15} /> Approve
+                    <CheckCircle2 size={15} /> {tr("editor.approve")}
                   </Button>
                   <Button variant="secondary" size="sm" onClick={() => setRejecting(true)} disabled={busy}>
-                    <X size={15} /> Reject
+                    <X size={15} /> {tr("editor.reject")}
                   </Button>
                 </>
               )}
               {locked && actions?.canReopen && (
-                <Button variant="secondary" size="sm" onClick={() => void reopen()} disabled={busy} title="Reopening invalidates the approval">
-                  Reopen for editing
+                <Button variant="secondary" size="sm" onClick={() => void reopen()} disabled={busy} title={tr("editor.reopening_invalidates_the_approval")}>
+                  {tr("editor.reopen_for_editing")}
                 </Button>
               )}
             </div>
@@ -205,31 +206,31 @@ export function ApprovalBanner({ designId, requestOpen, onRequestClose, onLockCh
       )}
 
       {/* Reject-note prompt. */}
-      <Modal open={rejecting} onClose={() => setRejecting(false)} title="Reject with a note">
+      <Modal open={rejecting} onClose={() => setRejecting(false)} title={tr("editor.reject_with_a_note")}>
         <div className="flex flex-col gap-3">
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Optional note explaining the rejection"
+            placeholder={tr("editor.optional_note_explaining_the_rejection")}
             rows={3}
             className="oc-scroll w-full resize-none rounded-lg border border-neutral-200 px-3 py-2 text-sm outline-none focus:border-brand-500"
           />
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setRejecting(false)}>Cancel</Button>
-            <Button size="sm" onClick={() => void decide("reject", note.trim() || undefined)} disabled={busy}>Reject</Button>
+            <Button variant="ghost" size="sm" onClick={() => setRejecting(false)}>{tr("editor.cancel")}</Button>
+            <Button size="sm" onClick={() => void decide("reject", note.trim() || undefined)} disabled={busy}>{tr("editor.reject")}</Button>
           </div>
         </div>
       </Modal>
 
       {/* Request-approval dialog. */}
-      <Modal open={requestOpen} onClose={onRequestClose} title="Request approval" width="w-[30rem]">
+      <Modal open={requestOpen} onClose={onRequestClose} title={tr("editor.request_approval")} width="w-[30rem]">
         <div className="flex flex-col gap-4">
           <div>
             <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-neutral-800">
-              <ShieldCheck size={15} /> Approvers
+              <ShieldCheck size={15} /> {tr("editor.approvers")}
             </p>
             {people.length === 0 ? (
-              <p className="text-sm text-neutral-500">No people with access to pick from yet.</p>
+              <p className="text-sm text-neutral-500">{tr("editor.no_people_with_access_to_pick_from_yet")}</p>
             ) : (
               <ul className="oc-scroll max-h-56 overflow-y-auto rounded-lg border border-neutral-100">
                 {people.map((p) => (
@@ -245,25 +246,25 @@ export function ApprovalBanner({ designId, requestOpen, onRequestClose, onLockCh
             )}
           </div>
           <div>
-            <p className="mb-2 text-sm font-semibold text-neutral-800">Policy</p>
+            <p className="mb-2 text-sm font-semibold text-neutral-800">{tr("editor.policy")}</p>
             <div className="flex gap-4 text-sm text-neutral-700">
               <label className="flex items-center gap-2">
                 <input type="radio" name="policy" checked={policy === "any"} onChange={() => setPolicy("any")} />
-                Any approver
+                {tr("editor.any_approver")}
               </label>
               <label className="flex items-center gap-2">
                 <input type="radio" name="policy" checked={policy === "all"} onChange={() => setPolicy("all")} />
-                All approvers
+                {tr("editor.all_approvers")}
               </label>
             </div>
           </div>
           <p className="text-xs text-neutral-400">
-            When granted, the design locks to read-only for everyone until an owner, admin, or approver reopens it.
+            {tr("editor.when_granted_the_design_locks_to_read_only_f")}
           </p>
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={onRequestClose}>Cancel</Button>
+            <Button variant="ghost" size="sm" onClick={onRequestClose}>{tr("editor.cancel")}</Button>
             <Button size="sm" onClick={() => void submitRequest()} disabled={busy || selected.size === 0}>
-              {busy ? <Spinner /> : "Request approval"}
+              {busy ? <Spinner /> : tr("editor.request_approval")}
             </Button>
           </div>
         </div>

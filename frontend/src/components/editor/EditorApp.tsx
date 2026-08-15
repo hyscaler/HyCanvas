@@ -4,10 +4,14 @@
 
 import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
 import { useRouter } from "next/router";
-import { ChevronLeft, Undo2, Redo2, Download, Play, MonitorPlay, Ruler, Grid3x3, Magnet, LayoutTemplate, History, Eye, Share2, MessageSquare, ShieldCheck, Activity, BarChart3, MoreHorizontal, Send, Globe, Printer, PanelRightClose, PanelRightOpen, Keyboard, Info, X, Accessibility, Maximize2, Minimize2, LayoutGrid } from "lucide-react";
+import type { Node as DesignNode } from "@hc/schema";
+import { ChevronLeft, Undo2, Redo2, Download, Play, MonitorPlay, Ruler, Grid3x3, Magnet, LayoutTemplate, History, Eye, Share2, MessageSquare, ShieldCheck, Activity, BarChart3, MoreHorizontal, Send, Globe, Printer, PanelRightClose, PanelRightOpen, Keyboard, Info, X, Accessibility, Maximize2, Minimize2, LayoutGrid, FileDown, Film, Table2 } from "lucide-react";
 import type { AccessMode } from "@hc/sdk";
 import { ApiError } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
+import { downloadHycFile } from "@/lib/hycFile";
+import { deckToVideoFile } from "@/lib/video/deckToVideo";
+import { parseCsvMatrix } from "@/lib/csv";
 import { useEditor } from "@/store/editor";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
@@ -42,13 +46,15 @@ import { ApprovalBanner } from "./ApprovalBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { PromptHost } from "@/components/ui/PromptHost";
 import { useRealtime, getDesignDoc, resyncFromLiveDoc } from "@/lib/useRealtime";
-import { useAutoSnapshot } from "@/lib/useAutoSnapshot";
+import { useAutoSnapshot, CHECKPOINT_MAX_BYTES } from "@/lib/useAutoSnapshot";
 import { onCommentChanged, onRoleChanged } from "@/lib/realtime";
 import { useViewBeat } from "@/lib/useViewBeat";
 import { useComments } from "@/store/comments";
 import { useBrand } from "@/store/brand";
 import { usePresence } from "@/store/presence";
 import { useBoardFocus, enterBoardFocus, exitBoardFocus } from "@/store/boardFocus";
+import { DESIGN_SURFACE_DIR, MIRROR_IN_RTL, documentDirection } from "@/lib/locale";
+import { tr } from "@/lib/i18n";
 
 type Status = "loading" | "ready" | "error" | "forbidden" | "notfound";
 
@@ -86,10 +92,10 @@ function ViewToggles() {
   const st = useEditor.getState;
   const cls = (on: boolean) => `grid h-8 w-8 place-items-center rounded-lg ${on ? "bg-brand-50 text-brand-ink" : "text-neutral-500 hover:bg-neutral-100"}`;
   return (
-    <div className="ml-1 flex items-center gap-0.5">
-      <button onClick={() => st().toggleRulers()} title="Rulers & guides" className={cls(showRulers)}><Ruler size={16} /></button>
-      <button onClick={() => st().toggleGrid()} title="Grid" className={cls(showGrid)}><Grid3x3 size={16} /></button>
-      <button onClick={() => st().toggleSnap()} title="Snapping" className={cls(snapEnabled)}><Magnet size={16} /></button>
+    <div className="ms-1 flex items-center gap-0.5">
+      <button onClick={() => st().toggleRulers()} title={tr("editor.rulers_guides")} className={cls(showRulers)}><Ruler size={16} /></button>
+      <button onClick={() => st().toggleGrid()} title={tr("editor.grid")} className={cls(showGrid)}><Grid3x3 size={16} /></button>
+      <button onClick={() => st().toggleSnap()} title={tr("editor.snapping")} className={cls(snapEnabled)}><Magnet size={16} /></button>
     </div>
   );
 }
@@ -149,16 +155,16 @@ function OverflowMenu({ items }: { items: MenuItem[] }) {
   if (!items.length) return null;
   return (
     <div ref={ref} className="relative">
-      <IconButton ref={triggerRef} size="sm" aria-label="More actions" title="More actions" aria-haspopup="menu" aria-expanded={open} active={open} onClick={() => setOpen((v) => !v)}>
+      <IconButton ref={triggerRef} size="sm" aria-label={tr("editor.more_actions")} title={tr("editor.more_actions")} aria-haspopup="menu" aria-expanded={open} active={open} onClick={() => setOpen((v) => !v)}>
         <MoreHorizontal size={18} />
       </IconButton>
       {open && (
         <div
           ref={menuRef}
           role="menu"
-          aria-label="More actions"
+          aria-label={tr("editor.more_actions")}
           onKeyDown={onMenuKeyDown}
-          className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-neutral-200 bg-surface py-1 shadow-lg"
+          className="absolute end-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-neutral-200 bg-surface py-1 shadow-lg"
         >
           {items.map((it) => (
             <button
@@ -166,7 +172,7 @@ function OverflowMenu({ items }: { items: MenuItem[] }) {
               role="menuitem"
               disabled={it.disabled}
               onClick={() => { restoreFocusRef.current = true; setOpen(false); it.onClick(); }}
-              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-neutral-700 transition hover:bg-neutral-100 focus-visible:bg-neutral-100 focus-visible:outline-none disabled:opacity-40"
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-start text-sm text-neutral-700 transition hover:bg-neutral-100 focus-visible:bg-neutral-100 focus-visible:outline-none disabled:opacity-40"
             >
               <it.icon size={16} className="shrink-0 text-neutral-500" />
               {it.label}
@@ -190,12 +196,12 @@ function PreviewBanner() {
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center p-3">
       <div className="pointer-events-auto flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 shadow-md">
-        <Eye size={16} className="text-amber-600" />
+        <Eye size={16} className="text-amber-700" />
         <span className="text-sm font-medium text-amber-900">
           Viewing a past version - {preview.label}
         </span>
         <Button variant="ghost" size="sm" onClick={() => { useEditor.getState().exitPreview(); resyncFromLiveDoc(); }}>
-          Exit preview
+          {tr("editor.exit_preview")}
         </Button>
       </div>
     </div>
@@ -213,10 +219,10 @@ function AccessBanner({ mode, suppressed }: { mode: AccessMode; suppressed?: boo
   const isComment = mode === "comment";
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center p-3">
-      <div className="pointer-events-auto flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 shadow-md">
-        {isComment ? <MessageSquare size={16} className="text-sky-600" /> : <Eye size={16} className="text-sky-600" />}
-        <span className="text-sm font-medium text-sky-900">
-          {isComment ? "You can comment on this design, but not edit it." : "You have view-only access to this design."}
+      <div className="pointer-events-auto flex items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-4 py-2 shadow-md">
+        {isComment ? <MessageSquare size={16} className="text-brand-ink" /> : <Eye size={16} className="text-brand-ink" />}
+        <span className="text-sm font-medium text-brand-ink">
+          {isComment ? tr("editor.you_can_comment_on_this_design_but_not_edit") : tr("editor.you_have_view_only_access_to_this_design")}
         </span>
       </div>
     </div>
@@ -236,6 +242,26 @@ export function EditorApp() {
   const undo = useEditor((s) => s.undo);
   const redo = useEditor((s) => s.redo);
   const playing = useEditor((s) => s.playing);
+  // Whether anything on this page can actually be previewed. `playAnimations`
+  // walks the page and returns silently when no node carries an entrance or
+  // emphasis, so without this the button is permanently clickable and does
+  // nothing on the overwhelmingly common page that has no animations. That
+  // reads as broken rather than as "nothing to play".
+  //
+  // Selecting a BOOLEAN keeps this cheap: the walk runs on store changes, but
+  // the component only re-renders when the answer flips.
+  const hasAnimations = useEditor((s) => {
+    const page = s.doc.pages[s.activePage];
+    if (!page) return false;
+    const any = (nodes: DesignNode[]): boolean =>
+      nodes.some((n) => {
+        const a = (n as unknown as { animation?: { entrance?: unknown; emphasis?: unknown } }).animation;
+        if (a && (a.entrance || a.emphasis)) return true;
+        const kids = (n as unknown as { children?: DesignNode[] }).children;
+        return Array.isArray(kids) ? any(kids) : false;
+      });
+    return any(page.children);
+  });
   // Dirty tracking: the doc has unsaved edits whenever its revision counter has
   // moved past the revision captured at the last save (markClean). Subscribing
   // to both keeps the indicator and the unload guard reactive.
@@ -303,7 +329,7 @@ export function EditorApp() {
   // same treatment as the Properties panel. `display: contents` keeps them as
   // normal flex siblings at lg+. showPanel() is exclusive among these four, so
   // at most one overlays at a time.
-  const rightPanelOverlay = isCompact ? "absolute right-0 top-0 z-30 h-full shadow-xl" : "contents";
+  const rightPanelOverlay = isCompact ? "absolute end-0 top-0 z-30 h-full shadow-xl" : "contents";
   const toggleProps = () => {
     if (isCompact) {
       setCompactPropsOpen((v) => !v);
@@ -367,8 +393,12 @@ export function EditorApp() {
   const onPanelResizeMove = (e: React.PointerEvent) => {
     const r = resizeRef.current;
     if (!r) return;
-    // The panel is on the right; dragging its left edge leftward widens it.
-    setPanelWidth(Math.min(520, Math.max(240, r.startW + (r.startX - e.clientX))));
+    // The panel sits at the inline END (right in LTR, left in RTL) and its
+    // resize handle at its inline start; dragging toward the page centre
+    // widens it. Physical pointer deltas resolve through the UI direction so
+    // the drag feels the same mirrored.
+    const towardCentre = (r.startX - e.clientX) * (documentDirection() === "rtl" ? -1 : 1);
+    setPanelWidth(Math.min(520, Math.max(240, r.startW + towardCentre)));
   };
   const onPanelResizeUp = (e: React.PointerEvent) => {
     resizeRef.current = null;
@@ -579,9 +609,9 @@ export function EditorApp() {
         return "edit"; // editor: editing restored
       });
       setApprovalRefresh((n) => n + 1);
-      if (reason === "approval-locked") toast.toast("This design was approved and locked. Editing is disabled.", "info");
-      else if (reason === "approval-reopened") toast.success("This design was reopened. You can edit again.");
-      else toast.toast("Your access to this design changed.", "info");
+      if (reason === "approval-locked") toast.toast(tr("editor.this_design_was_approved_and_locked_editing"), "info");
+      else if (reason === "approval-reopened") toast.success(tr("editor.this_design_was_reopened_you_can_edit_again"));
+      else toast.toast(tr("editor.your_access_to_this_design_changed"), "info");
     });
     return off;
   }, [toast]);
@@ -628,7 +658,7 @@ export function EditorApp() {
       const el = e.target as HTMLElement | null;
       if (el?.tagName === "INPUT" || el?.tagName === "TEXTAREA" || el?.isContentEditable) return;
       const ed = useEditor.getState();
-      if (ed.cropping || ed.presenting) return;
+      if (ed.cropping || ed.maskRefining || ed.presenting) return;
       e.preventDefault();
       setShortcutsOpen(true);
     };
@@ -645,7 +675,7 @@ export function EditorApp() {
       const el = e.target as HTMLElement | null;
       if (el?.tagName === "INPUT" || el?.tagName === "TEXTAREA" || el?.isContentEditable) return;
       const ed = useEditor.getState();
-      if (ed.cropping || ed.presenting) return;
+      if (ed.cropping || ed.maskRefining || ed.presenting) return;
       const kind = (ed.doc.meta as { kind?: string } | undefined)?.kind ?? "design";
       if (kind !== "design" && kind !== "whiteboard") return;
       e.preventDefault();
@@ -655,18 +685,113 @@ export function EditorApp() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Live data bindings (doc 28 / F27): once per design open, refresh every
+  // URL-bound chart/table so the design shows current data, not the numbers
+  // from the last edit session. Best-effort; failures keep the stored data.
+  // Viewers are skipped (they cannot persist the refreshed numbers anyway), and
+  // the doc's saved marker is restored afterwards so simply OPENING a design
+  // never leaves it dirty for autosave or puts a refresh on the undo stack
+  // ahead of the user's first real edit.
+  const refreshedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (status !== "ready" || !designId || refreshedRef.current === designId) return;
+    if (accessMode !== "edit") return;
+    refreshedRef.current = designId;
+    const st = useEditor.getState();
+    const bound: string[] = [];
+    for (const pg of st.doc.pages) {
+      const walk = (nodes: typeof pg.children) => {
+        for (const n of nodes as { id: string; binding?: { kind?: string }; children?: typeof pg.children }[]) {
+          if (n.binding?.kind === "url") bound.push(n.id);
+          if (n.children?.length) walk(n.children);
+        }
+      };
+      walk(pg.children);
+    }
+    if (!bound.length) return;
+    void (async () => {
+      const before = useEditor.getState();
+      const wasClean = before.rev === before.savedRev;
+      const revBefore = before.rev;
+      let applied = 0;
+      for (const id of bound) if (await st.refreshBinding(id).catch(() => false)) applied++;
+      // Only absorb OUR OWN revisions. If the user edited while the fetches
+      // were in flight the rev moved further than the refreshes account for,
+      // and marking clean would hide their edit from autosave entirely.
+      const after = useEditor.getState();
+      if (applied > 0 && wasClean && after.rev === revBefore + applied) after.markClean();
+    })();
+  }, [status, designId, accessMode]);
+
+  // Bulk data-merge into slides (doc 28): pick a CSV whose header row names
+  // the {{tokens}} used on the CURRENT page; one new slide lands per row.
+  const mergeCsvRef = useRef<HTMLInputElement>(null);
+  async function bulkMergeFromCsv(list: FileList | null) {
+    const f = list?.[0];
+    if (!f) return;
+    try {
+      const matrix = parseCsvMatrix(await f.text());
+      if (matrix.length < 2) {
+        toast.error(tr("editor.the_csv_needs_a_header_row_plus_at_least_one"));
+        return;
+      }
+      const headers = matrix[0].map((h) => h.trim());
+      const rows = matrix.slice(1).map((r) => Object.fromEntries(headers.map((h, i) => [h, r[i] ?? ""])));
+      const n = useEditor.getState().bulkMergePages(rows);
+      if (n) toast.success(`Created ${n} slide${n === 1 ? "" : "s"} from ${f.name} (tokens: ${headers.map((h) => `{{${h}}}`).join(", ")}).`);
+      else toast.error(tr("editor.nothing_merged_is_the_current_page_the_templ"));
+    } catch {
+      toast.error(tr("editor.could_not_read_that_csv"));
+    }
+  }
+
   const save = useCallback(async () => {
     if (!designId) return;
     // Never checkpoint a history preview: without realtime the store doc IS
     // the previewed historical file, and saving it would silently move the
     // design's current version back in time. Restore is the explicit path.
     if (useEditor.getState().preview) {
-      toast.error("You're viewing a past version. Exit the preview to save, or use Restore.");
+      toast.error(tr("editor.youre_viewing_a_past_version_exit_the_previe"));
       return;
     }
     setSaving(true);
     useEditor.getState().setManualSaving(true); // auto-snapshot yields while this runs
     try {
+      // On an in-CRDT BRANCH (FR-10) a design-level snapshot would rotate the
+      // design's CURRENT file to branch state. The branch's journal is already
+      // durable; Save uploads a branch-scoped checkpoint (bounding its log) so
+      // the gesture still means "my work is safe".
+      const branch = usePresence.getState().branch;
+      if (branch) {
+        const doc = getDesignDoc();
+        if (!doc) {
+          // Nothing to checkpoint yet: the branch document has not loaded, so
+          // there is no state to upload and no basis to call the work saved.
+          toast.error("The branch is still loading; try again in a moment.");
+          return;
+        }
+        // A checkpoint COMPACTS the lineage: the server drops rows older than
+        // it. It captures this client's state at one instant, so a peer's edits
+        // journaled while it uploads would be compacted away. Only checkpoint
+        // when alone (same rule the auto-snapshot follows); with company the
+        // journal is already durable and the log simply stays longer.
+        const solo = Object.keys(usePresence.getState().peers).length === 0;
+        const cpFrame = solo ? doc.checkpointFrame(CHECKPOINT_MAX_BYTES) : null;
+        if (cpFrame) await oc.checkpointDesign(designId, cpFrame, branch);
+        if (!mounted.current) return;
+        // Durability on a branch is the journal, and the journal only has the
+        // edits the socket actually delivered. Claiming "saved" while
+        // disconnected would disarm the unsaved-changes guard over work that
+        // exists in this browser profile alone.
+        if (usePresence.getState().connection !== "connected") {
+          toast.error(tr("editor.offline_your_branch_edits_are_on_this_device"));
+          return;
+        }
+        useEditor.getState().markClean();
+        setSavedAt(new Date().toLocaleTimeString());
+        toast.success(tr("editor.branch_saved"));
+        return;
+      }
       // When realtime is live, snapshot the shared Y.Doc (the source of truth
       // for collaborative edits); otherwise fall back to the local store doc.
       const file = getDesignDoc()?.snapshot() ?? useEditor.getState().doc;
@@ -682,9 +807,9 @@ export function EditorApp() {
       // the unload guard clear; record the wall-clock time for the status text.
       useEditor.getState().markClean();
       setSavedAt(new Date().toLocaleTimeString());
-      toast.success("Saved.");
+      toast.success(tr("editor.saved"));
     } catch {
-      if (mounted.current) toast.error("Save failed.");
+      if (mounted.current) toast.error(tr("editor.save_failed"));
     } finally {
       useEditor.getState().setManualSaving(false); // always clear, even if unmounted
       if (mounted.current) setSaving(false);
@@ -702,8 +827,23 @@ export function EditorApp() {
       } catch {
         // Roll back the optimistic title so local state matches the server.
         setDocTitle(prev);
-        toast.error("Rename failed.");
+        toast.error(tr("editor.rename_failed"));
       }
+    }
+  }
+
+  // Convert this deck (a multi-page design) into a new video document: each page
+  // becomes an animated scene (P5.3). Client-side (the deck is already loaded),
+  // non-destructive (the source deck is untouched); opens the new video.
+  async function convertToVideo() {
+    if (!workspaceId) return;
+    try {
+      const file = deckToVideoFile(useEditor.getState().doc);
+      const rec = await oc.createDesign({ workspaceId, title: file.title, from: file });
+      toast.success(tr("editor.created_a_video_from_this_deck"));
+      void router.push({ pathname: "/editor", query: { id: rec.id } });
+    } catch {
+      toast.error(tr("editor.couldnt_convert_this_deck_to_video"));
     }
   }
 
@@ -713,17 +853,17 @@ export function EditorApp() {
   if (status === "error") {
     return (
       <div className="grid h-screen place-items-center gap-3 text-center">
-        <p className="text-sm text-neutral-600">Could not open this design.</p>
-        <Button variant="secondary" onClick={() => void router.push("/dashboard")}>Back to dashboard</Button>
+        <p className="text-sm text-neutral-600">{tr("editor.could_not_open_this_design")}</p>
+        <Button variant="secondary" onClick={() => void router.push("/dashboard")}>{tr("editor.back_to_dashboard")}</Button>
       </div>
     );
   }
   if (status === "notfound") {
     return (
       <NotFoundScreen
-        title="Design not found"
-        message="This design doesn't exist or may have been deleted."
-        homeLabel="Back to dashboard"
+        title={tr("editor.design_not_found")}
+        message={tr("editor.this_design_doesnt_exist_or_may_have_been_de")}
+        homeLabel={tr("editor.back_to_dashboard")}
         homeHref="/dashboard"
       />
     );
@@ -741,37 +881,43 @@ export function EditorApp() {
           canvas + its floating toolbar remain. */}
       {!inFocus && (
       <header className="flex flex-nowrap items-center gap-3 border-b border-neutral-200 bg-surface px-3 py-2">
-        <IconButton className="shrink-0" aria-label="Back to dashboard" onClick={() => void router.push("/dashboard")}>
-          <ChevronLeft size={20} />
+        {/* The document's name as the page's level-one heading: screen
+            readers navigate by headings, and the editor is otherwise a page
+            of controls with no title in its structure. Offscreen because the
+            visible title is the editable field beside it. */}
+        <h1 className="sr-only">{title || tr("editor.untitled_design_2")}</h1>
+        <IconButton className="shrink-0" aria-label={tr("editor.back_to_dashboard")} onClick={() => void router.push("/dashboard")}>
+          <ChevronLeft size={20} className={MIRROR_IN_RTL} />
         </IconButton>
         <LogoMark size={28} />
         <input
           ref={titleRef}
           defaultValue={title}
           key={title}
+          aria-label={tr("editor.design_title")}
           onBlur={() => void commitTitle()}
           onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
           className="min-w-0 max-w-[8rem] flex-shrink rounded-lg px-2 py-1 text-sm font-semibold text-neutral-800 outline-none hover:bg-neutral-100 focus:bg-neutral-100 sm:max-w-[12rem] lg:max-w-[14rem]"
         />
-        <div className="ml-2 flex shrink-0 items-center">
-          <IconButton aria-label="Undo" onClick={undo}><Undo2 size={18} /></IconButton>
-          <IconButton aria-label="Redo" onClick={redo}><Redo2 size={18} /></IconButton>
+        <div className="ms-2 flex shrink-0 items-center">
+          <IconButton aria-label={tr("editor.undo")} onClick={undo}><Undo2 size={18} /></IconButton>
+          <IconButton aria-label={tr("editor.redo")} onClick={redo}><Redo2 size={18} /></IconButton>
         </div>
         {/* Rulers/grid/snap fit inline down to sm; below that they fold into the
             overflow menu (they have no other entry point, so they must stay
             reachable). */}
         {!isVeryNarrow && <ViewToggles />}
-        <div className="ml-auto flex shrink-0 items-center gap-1">
+        <div className="ms-auto flex shrink-0 items-center gap-1">
           {!isCompact && designId && <PresenceBar />}
           {designId && (
             dirty ? (
-              <span className="mr-1 hidden items-center gap-1.5 text-xs font-medium text-amber-600 lg:inline-flex" title="You have unsaved changes">
+              <span className="me-1 hidden items-center gap-1.5 text-xs font-medium text-amber-700 lg:inline-flex" title={tr("editor.you_have_unsaved_changes")}>
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                Unsaved changes
+                {tr("editor.unsaved_changes")}
               </span>
             ) : (
-              <span className="mr-1 hidden text-xs text-neutral-400 lg:inline" title={savedAt ? `Last saved ${savedAt}` : undefined}>
-                {savedAt ? `Saved ${savedAt}` : "All changes saved"}
+              <span className="me-1 hidden text-xs text-neutral-400 lg:inline" title={savedAt ? `Last saved ${savedAt}` : undefined}>
+                {savedAt ? `Saved ${savedAt}` : tr("editor.all_changes_saved")}
               </span>
             )
           )}
@@ -783,26 +929,26 @@ export function EditorApp() {
           {!isCompact && <Sep />}
           {!isCompact && docKind === "design" && (
             <>
-              <IconButton size="sm" onClick={() => useEditor.getState().playAnimations()} disabled={playing} title={playing ? "Playing…" : "Preview animations"}>
+              <IconButton size="sm" onClick={() => useEditor.getState().playAnimations()} disabled={playing || !hasAnimations} title={playing ? tr("editor.playing") : hasAnimations ? tr("editor.preview_animations") : tr("editor.no_animations_to_preview")}>
                 <Play size={18} />
               </IconButton>
-              <IconButton size="sm" onClick={() => { useEditor.getState().setPresenting(true); setPresenting(true); }} title="Present (fullscreen)">
+              <IconButton size="sm" onClick={() => { useEditor.getState().setPresenting(true); setPresenting(true); }} title={tr("editor.present_fullscreen")}>
                 <MonitorPlay size={18} />
               </IconButton>
             </>
           )}
           {!isCompact && docKind === "whiteboard" && (
-            <IconButton size="sm" onClick={enterBoardFocus} title="Focus mode — hide panels (full screen)">
+            <IconButton size="sm" onClick={enterBoardFocus} title={tr("editor.focus_mode_hide_panels_full_screen")}>
               <Maximize2 size={18} />
             </IconButton>
           )}
           {!isCompact && designId && (
             <div className="relative">
-              <IconButton size="sm" active={commentsOpen} onClick={() => showPanel("comments")} title={openComments > 0 ? `Comments (${openComments} open)` : "Comments"}>
+              <IconButton size="sm" active={commentsOpen} onClick={() => showPanel("comments")} title={openComments > 0 ? tr("editor.comments_open_count", { count: openComments }) : tr("editor.comments")}>
                 <MessageSquare size={18} />
               </IconButton>
               {openComments > 0 && (
-                <span className="pointer-events-none absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-brand-600 px-1 text-[10px] font-semibold leading-none text-white">
+                <span className="pointer-events-none absolute -end-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-brand-600 px-1 text-[10px] font-semibold leading-none text-white">
                   {openComments > 99 ? "99+" : openComments}
                 </span>
               )}
@@ -819,61 +965,81 @@ export function EditorApp() {
               // fits narrow screens without overflowing.
               ...(isCompact && docKind === "design"
                 ? [
-                    { icon: Play as TopIcon, label: "Preview animations", onClick: () => useEditor.getState().playAnimations() },
-                    { icon: MonitorPlay as TopIcon, label: "Present (fullscreen)", onClick: () => { useEditor.getState().setPresenting(true); setPresenting(true); } },
+                    // Gated exactly like the inline button above: below lg this
+                    // IS the play action, so leaving it enabled would keep the
+                    // silent no-op on precisely the narrow screens where the
+                    // inline button is not there to be disabled instead.
+                    { icon: Play as TopIcon, label: hasAnimations ? tr("editor.preview_animations") : tr("editor.no_animations_to_preview"), onClick: () => useEditor.getState().playAnimations(), disabled: playing || !hasAnimations },
+                    { icon: MonitorPlay as TopIcon, label: tr("editor.present_fullscreen"), onClick: () => { useEditor.getState().setPresenting(true); setPresenting(true); } },
                   ]
                 : []),
-              ...(isCompact && docKind === "whiteboard" ? [{ icon: Maximize2 as TopIcon, label: "Focus mode", onClick: enterBoardFocus }] : []),
-              ...(isCompact && designId ? [{ icon: MessageSquare as TopIcon, label: openComments > 0 ? `Comments (${openComments} open)` : "Comments", onClick: () => showPanel("comments") }] : []),
-              ...(isCompact && (docKind === "design" || docKind === "whiteboard") ? [{ icon: Download as TopIcon, label: "Download", onClick: () => setExportOpen(true) }] : []),
-              ...(isCompact && designId && canShare ? [{ icon: Share2 as TopIcon, label: "Share", onClick: () => setShareOpen(true) }] : []),
+              ...(isCompact && docKind === "whiteboard" ? [{ icon: Maximize2 as TopIcon, label: tr("editor.focus_mode"), onClick: enterBoardFocus }] : []),
+              ...(isCompact && designId ? [{ icon: MessageSquare as TopIcon, label: openComments > 0 ? `Comments (${openComments} open)` : tr("editor.comments"), onClick: () => showPanel("comments") }] : []),
+              ...(isCompact && (docKind === "design" || docKind === "whiteboard") ? [{ icon: Download as TopIcon, label: tr("editor.download"), onClick: () => setExportOpen(true) }] : []),
+              ...(isCompact && designId && canShare ? [{ icon: Share2 as TopIcon, label: tr("editor.share"), onClick: () => setShareOpen(true) }] : []),
               // Below sm the rulers/grid/snap toggles fold in here (their only
               // other home, the inline ViewToggles, is hidden at that width).
               ...(isVeryNarrow
                 ? [
-                    { icon: Ruler as TopIcon, label: "Rulers & guides", onClick: () => useEditor.getState().toggleRulers() },
-                    { icon: Grid3x3 as TopIcon, label: "Grid", onClick: () => useEditor.getState().toggleGrid() },
-                    { icon: Magnet as TopIcon, label: "Snapping", onClick: () => useEditor.getState().toggleSnap() },
+                    { icon: Ruler as TopIcon, label: tr("editor.rulers_guides"), onClick: () => useEditor.getState().toggleRulers() },
+                    { icon: Grid3x3 as TopIcon, label: tr("editor.grid"), onClick: () => useEditor.getState().toggleGrid() },
+                    { icon: Magnet as TopIcon, label: tr("editor.snapping"), onClick: () => useEditor.getState().toggleSnap() },
                   ]
                 : []),
               ...(docKind === "design" && pageCount > 1
-                ? [{ icon: LayoutGrid as TopIcon, label: "Slide overview", onClick: () => setOverviewOpen(true) }]
+                ? [
+                    { icon: LayoutGrid as TopIcon, label: tr("editor.slide_overview"), onClick: () => setOverviewOpen(true) },
+                    { icon: Film as TopIcon, label: tr("editor.convert_to_video"), onClick: () => void convertToVideo(), disabled: !workspaceId },
+                  ]
                 : []),
-              ...(designId ? [{ icon: History as TopIcon, label: "Version history", onClick: () => showPanel("history") }] : []),
-              ...(designId ? [{ icon: Activity as TopIcon, label: "Activity feed", onClick: () => showPanel("activity") }] : []),
-              ...(designId && canMember ? [{ icon: BarChart3 as TopIcon, label: "Engagement insights", onClick: () => showPanel("insights") }] : []),
-              ...(designId && canApprove && docKind === "design" ? [{ icon: ShieldCheck as TopIcon, label: "Request approval", onClick: () => setApprovalRequestOpen(true) }] : []),
+              // Merge clones the ACTIVE slide once per CSV row, so it is at its
+              // most useful on a one-slide template deck: never gate it on page
+              // count.
+              ...(docKind === "design"
+                ? [{ icon: Table2 as TopIcon, label: tr("editor.bulk_slides_from_csv"), onClick: () => mergeCsvRef.current?.click() }]
+                : []),
+              // The document as a portable .hyc file (the open format as
+              // readable JSON): every kind, saved or not, downloads what is
+              // currently on screen.
+              { icon: FileDown as TopIcon, label: tr("editor.download_hyc_file"), onClick: () => {
+                const d = useEditor.getState().doc;
+                downloadHycFile(d, (d.title as string) || "design");
+              } },
+              ...(designId ? [{ icon: History as TopIcon, label: tr("editor.version_history"), onClick: () => showPanel("history") }] : []),
+              ...(designId ? [{ icon: Activity as TopIcon, label: tr("editor.activity_feed"), onClick: () => showPanel("activity") }] : []),
+              ...(designId && canMember ? [{ icon: BarChart3 as TopIcon, label: tr("editor.engagement_insights"), onClick: () => showPanel("insights") }] : []),
+              ...(designId && canApprove && docKind === "design" ? [{ icon: ShieldCheck as TopIcon, label: tr("editor.request_approval"), onClick: () => setApprovalRequestOpen(true) }] : []),
               // Template/publish/print render the page scene, so they apply to
               // scene-backed designs only (doc/sheet/video content lives in meta).
               ...(docKind === "design"
                 ? [
-                    { icon: LayoutTemplate as TopIcon, label: "Save as template", onClick: () => setTemplateOpen(true), disabled: !workspaceId },
-                    { icon: Send as TopIcon, label: "Publish to social", onClick: () => setPublishOpen(true) },
-                    { icon: Globe as TopIcon, label: "Publish as website", onClick: () => setWebsiteOpen(true) },
-                    { icon: Printer as TopIcon, label: "Print", onClick: () => setPrintOpen(true) },
+                    { icon: LayoutTemplate as TopIcon, label: tr("editor.save_as_template"), onClick: () => setTemplateOpen(true), disabled: !workspaceId },
+                    { icon: Send as TopIcon, label: tr("editor.publish_to_social"), onClick: () => setPublishOpen(true) },
+                    { icon: Globe as TopIcon, label: tr("editor.publish_as_website"), onClick: () => setWebsiteOpen(true) },
+                    { icon: Printer as TopIcon, label: tr("editor.print"), onClick: () => setPrintOpen(true) },
                   ]
                 : []),
-              { icon: Accessibility as TopIcon, label: "Accessibility check", onClick: () => setA11yOpen(true) },
-              { icon: Keyboard as TopIcon, label: "Keyboard shortcuts", onClick: () => setShortcutsOpen(true) },
+              { icon: Accessibility as TopIcon, label: tr("editor.accessibility_check"), onClick: () => setA11yOpen(true) },
+              { icon: Keyboard as TopIcon, label: tr("editor.keyboard_shortcuts"), onClick: () => setShortcutsOpen(true) },
             ]}
           />
           {/* Image/PDF/SVG export renders the scene; doc/sheet/video keep their
               content in meta (not scene nodes), so the chrome export is only shown
               for scene-backed kinds (Docs has its own Markdown export). */}
           {!isCompact && (docKind === "design" || docKind === "whiteboard") && (
-            <IconButton size="sm" onClick={() => setExportOpen(true)} title="Download">
+            <IconButton size="sm" onClick={() => setExportOpen(true)} title={tr("editor.download")}>
               <Download size={18} />
             </IconButton>
           )}
 
           {!isCompact && <Sep />}
           {!isCompact && designId && canShare && (
-            <Button variant="secondary" size="sm" onClick={() => setShareOpen(true)} title="Share this design">
-              <Share2 size={16} /> Share
+            <Button variant="secondary" size="sm" onClick={() => setShareOpen(true)} title={tr("editor.share_this_design")}>
+              <Share2 size={16} /> {tr("editor.share")}
             </Button>
           )}
-          <Button size="sm" onClick={() => void save()} disabled={!designId || saving || accessMode !== "edit"} title={accessMode !== "edit" ? "You do not have edit access" : designId ? "Save a snapshot" : "Open from the dashboard to save"}>
-            {saving ? "Saving…" : "Save"}
+          <Button size="sm" onClick={() => void save()} disabled={!designId || saving || accessMode !== "edit"} title={accessMode !== "edit" ? tr("editor.you_do_not_have_edit_access") : designId ? tr("editor.save_a_snapshot") : tr("editor.open_from_the_dashboard_to_save")}>
+            {saving ? tr("editor.saving") : tr("editor.save")}
           </Button>
         </div>
       </header>
@@ -885,13 +1051,13 @@ export function EditorApp() {
           canvas or any control. */}
       {isVeryNarrow && !narrowNoticeDismissed && !inFocus && (
         <div className="flex shrink-0 items-center gap-2 border-b border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-900">
-          <Info size={14} className="shrink-0 text-amber-600" />
-          <span className="min-w-0 flex-1">The editor is optimized for larger screens. Some panels float over the canvas to keep it usable.</span>
+          <Info size={14} className="shrink-0 text-amber-700" />
+          <span className="min-w-0 flex-1">{tr("editor.the_editor_is_optimized_for_larger_screens_s")}</span>
           <button
             onClick={() => setNarrowNoticeDismissed(true)}
-            aria-label="Dismiss notice"
-            title="Dismiss"
-            className="grid h-5 w-5 shrink-0 place-items-center rounded text-amber-600 hover:bg-amber-100 hover:text-amber-800"
+            aria-label={tr("editor.dismiss_notice")}
+            title={tr("editor.dismiss")}
+            className="grid h-5 w-5 shrink-0 place-items-center rounded text-amber-700 hover:bg-amber-100 hover:text-amber-800"
           >
             <X size={13} />
           </button>
@@ -909,6 +1075,16 @@ export function EditorApp() {
       {websiteOpen && <WebsiteDialog open onClose={() => setWebsiteOpen(false)} designId={designId ?? undefined} workspaceId={workspaceId ?? undefined} />}
       {printOpen && <PrintDialog open onClose={() => setPrintOpen(false)} />}
       {a11yOpen && <AccessibilityDialog open onClose={() => setA11yOpen(false)} />}
+      <input
+        ref={mergeCsvRef}
+        type="file"
+        accept=".csv,text/csv"
+        hidden
+        onChange={(e) => {
+          void bulkMergeFromCsv(e.target.files);
+          e.target.value = "";
+        }}
+      />
       <SlideOverview open={overviewOpen} onClose={() => setOverviewOpen(false)} />
       {presenting && <PresentMode onClose={() => { useEditor.getState().setPresenting(false); setPresenting(false); }} />}
       <PromptHost />
@@ -926,7 +1102,7 @@ export function EditorApp() {
         {docKind !== "design" ? (
           // Same relative wrapper as the design canvas so overlays (the
           // read-only history preview banner) cover every document surface.
-          <main className="relative flex min-w-0 flex-1">
+          <main className="relative flex min-w-0 flex-1" dir={DESIGN_SURFACE_DIR}>
             <DocumentSurface kind={docKind} workspaceId={workspaceId ?? undefined} designId={designId ?? undefined} />
             <PreviewBanner />
           </main>
@@ -998,8 +1174,8 @@ export function EditorApp() {
               // overlay) and caps its width to the viewport, so opening it on a
               // phone never crushes the canvas; at lg+ it is a normal flex sibling
               // at the user's resizable width.
-              className={`flex flex-col border-l border-neutral-200 bg-surface ${
-                isCompact ? "absolute right-0 top-0 z-30 h-full shadow-xl" : "relative shrink-0"
+              className={`flex flex-col border-s border-neutral-200 bg-surface ${
+                isCompact ? "absolute end-0 top-0 z-30 h-full shadow-xl" : "relative shrink-0"
               }`}
               style={{ width: isCompact ? "min(20rem, 86vw)" : panelWidth }}
             >
@@ -1008,33 +1184,33 @@ export function EditorApp() {
                 onPointerDown={onPanelResizeDown}
                 onPointerMove={onPanelResizeMove}
                 onPointerUp={onPanelResizeUp}
-                title="Drag to resize"
-                className="absolute left-0 top-0 z-20 h-full w-1.5 cursor-col-resize touch-none hover:bg-brand-200"
+                title={tr("editor.drag_to_resize")}
+                className="absolute start-0 top-0 z-20 h-full w-1.5 cursor-col-resize touch-none hover:bg-brand-200"
               />
               {/* A thin header bar with the collapse toggle on the panel's inner
                   (left) edge, so it stays put and never overlaps the content. */}
-              <div className="flex shrink-0 items-center border-b border-neutral-100 py-1 pl-2.5 pr-2">
+              <div className="flex shrink-0 items-center border-b border-neutral-100 py-1 ps-2.5 pe-2">
                 <button
                   onClick={toggleProps}
-                  title="Collapse panel"
-                  aria-label="Collapse properties panel"
+                  title={tr("editor.collapse_panel")}
+                  aria-label={tr("editor.collapse_properties_panel")}
                   className="grid h-7 w-7 place-items-center rounded-md text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
                 >
-                  <PanelRightClose size={16} />
+                  <PanelRightClose size={16} className={MIRROR_IN_RTL} />
                 </button>
               </div>
               <div className="oc-scroll min-h-0 flex-1 overflow-y-auto">
-                <PropertiesPanel />
+                <PropertiesPanel workspaceId={workspaceId} />
               </div>
             </aside>
           ) : (
             <button
               onClick={toggleProps}
-              title="Show properties"
-              aria-label="Show properties panel"
-              className="grid w-9 shrink-0 cursor-pointer place-items-start justify-center border-l border-neutral-200 bg-surface pt-2.5 text-neutral-400 hover:bg-neutral-50 hover:text-neutral-700"
+              title={tr("editor.show_properties")}
+              aria-label={tr("editor.show_properties_panel")}
+              className="grid w-9 shrink-0 cursor-pointer place-items-start justify-center border-s border-neutral-200 bg-surface pt-2.5 text-neutral-400 hover:bg-neutral-50 hover:text-neutral-700"
             >
-              <PanelRightOpen size={18} />
+              <PanelRightOpen size={18} className={MIRROR_IN_RTL} />
             </button>
           )
         ) : null}
@@ -1065,13 +1241,13 @@ export function EditorApp() {
         <button
           type="button"
           onClick={exitBoardFocus}
-          title="Exit focus mode (Esc)"
-          aria-label="Exit focus mode"
-          className="fixed right-3 top-3 z-[60] flex items-center gap-1.5 rounded-full border border-neutral-200 bg-surface/95 px-3 py-1.5 text-xs font-medium text-neutral-700 shadow-lg backdrop-blur hover:bg-neutral-100"
+          title={tr("editor.exit_focus_mode_esc")}
+          aria-label={tr("editor.exit_focus_mode")}
+          className="fixed end-3 top-3 z-[60] flex items-center gap-1.5 rounded-full border border-neutral-200 bg-surface/95 px-3 py-1.5 text-xs font-medium text-neutral-700 shadow-lg backdrop-blur hover:bg-neutral-100"
         >
           <Minimize2 size={14} />
-          Exit focus
-          <kbd className="ml-0.5 rounded border border-neutral-300 bg-neutral-50 px-1 text-[10px] font-semibold text-neutral-500">Esc</kbd>
+          {tr("editor.exit_focus")}
+          <kbd className="ms-0.5 rounded border border-neutral-300 bg-neutral-50 px-1 text-[10px] font-semibold text-neutral-500">{tr("editor.esc")}</kbd>
         </button>
       )}
     </div>

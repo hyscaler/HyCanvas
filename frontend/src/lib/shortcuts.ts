@@ -12,6 +12,7 @@ import {
   type ShortcutScheme,
   type KeyEvent as ChordKeyEvent,
 } from "@hc/shortcuts";
+import { tr } from "@/lib/i18n";
 
 const STORAGE_KEY = "oc.shortcuts.overrides.v1";
 
@@ -103,7 +104,7 @@ export function activeScheme(): ShortcutScheme {
   const bindings = DEFAULT_SCHEME.bindings.map((b) =>
     overrides[b.commandId] ? { ...b, chord: overrides[b.commandId] } : b,
   );
-  return { id: Object.keys(overrides).length ? "custom" : "default", name: "Editor shortcuts", bindings };
+  return { id: Object.keys(overrides).length ? "custom" : "default", name: tr("app.editor_shortcuts"), bindings };
 }
 
 /** Set (and normalize) a command's chord. Throws if the chord is invalid. */
@@ -157,7 +158,7 @@ export function formatChord(chord: string): string {
   const map: Record<string, string> =
     PLATFORM === "mac"
       ? { mod: "⌘", ctrl: "⌃", alt: "⌥", shift: "⇧" }
-      : { mod: "Ctrl", ctrl: "Ctrl", alt: "Alt", shift: "Shift" };
+      : { mod: tr("app.ctrl"), ctrl: tr("app.ctrl"), alt: tr("app.alt"), shift: tr("app.shift") };
   return chord
     .split("+")
     .map((t) => map[t] ?? (t.length === 1 ? t.toUpperCase() : t.charAt(0).toUpperCase() + t.slice(1)))

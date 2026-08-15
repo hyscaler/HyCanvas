@@ -21,6 +21,14 @@ export function getJsonSchema(): Record<string, unknown> {
   const schema = z.toJSONSchema(DesignFileSchema, {
     target: "draft-2020-12",
     unrepresentable: "any",
+    // Emit a subschema used by more than one parent ONCE, under $defs, and
+    // reference it. The default inlines every reuse, and `nodeBaseFields` is
+    // spread into all ~54 node types, so every shared structure was duplicated
+    // 54 times: the published schema was 640 KB with five $refs in it, and the
+    // resulting validator was deep enough that Ajv overflowed its stack on an
+    // ordinary fixture. The duplication is a property of `nodeBaseFields` being
+    // spread everywhere, so it is worth fixing on its own account.
+    reused: "ref",
   }) as Record<string, unknown>;
   return {
     $id: DESIGN_SCHEMA_ID,

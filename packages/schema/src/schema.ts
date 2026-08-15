@@ -44,8 +44,29 @@ import { z } from "zod";
  *      it and open unchanged.
  *  v16: chart text size: ChartStyle gains optional `fontSize` (base size in px;
  *      all chart text scales from it, absence means the built-in 11). Additive:
- *      older files omit it and render unchanged. */
-export const CURRENT_SCHEMA_VERSION = 16;
+ *      older files omit it and render unchanged.
+ *  v17: QR center logo size: QRNode gains optional `logoScale` (logo size as a
+ *      fraction of the QR, absence means the default 0.22). Additive: a v16 file
+ *      omits it and its QR logo renders at the default size unchanged.
+ *  v18: document language (F38 FR-8): DesignFile gains optional `language`
+ *      (a BCP 47 tag) naming the document's primary language for assistive
+ *      technology and the tagged-PDF /Lang. Additive: a v17 file omits it and
+ *      exports fall back to en-US as before. The migration copies a legacy
+ *      `meta.language` up (importers wrote it there); meta keeps its copy.
+ *  v19: per-effect enable. `Effect` and `TextEffect` each gain an optional
+ *      `enabled`, so an effect can be switched off in the reorderable stack
+ *      without losing its parameters. ABSENT MEANS ENABLED: every effect
+ *      written before this omits the field and must keep rendering, so the
+ *      flag can only ever turn something off. Spelled `enabled` rather than
+ *      `disabled` because the Go renderers already honoured exactly this check
+ *      before the schema declared it.
+ *  v20: non-destructive background removal. `ImageNode` gains optional
+ *      `alphaMask`, a grayscale asset reference applied over `source`.
+ *      Removal previously overwrote `source` with the flattened cutout, which
+ *      discarded the original pixels; keeping both makes the cutout a view
+ *      rather than a replacement, and therefore undoable and refinable.
+ *      Additive: a v19 file has no mask and renders exactly as before. */
+export const CURRENT_SCHEMA_VERSION = 20;
 
 /** Maximum container nesting depth; guards traversal against stack overflow (FR-4). */
 export const MAX_NESTING_DEPTH = 32;
@@ -311,21 +332,44 @@ const duotoneFields = {
   intensity: z.number(),
 };
 
-export type Effect =
+/** Per-effect enable, for the reorderable effect stack.
+ *
+ *  ABSENT MEANS ENABLED. Every effect written before this field existed omits
+ *  it and must keep rendering, so the flag can only ever turn something off.
+ *
+ *  Spelled `enabled` rather than `disabled` because the Go renderers already
+ *  implemented exactly this check, in `effectsOf` and in both shadow paths of
+ *  `composite.go`, before the schema ever declared the field. Introducing the
+ *  opposite polarity would have left two conventions for one idea and a silent
+ *  browser/server divergence the first time anything wrote one of them. */
+const effectEnabled = { enabled: z.boolean().optional() };
+
+export type Effect = { enabled?: boolean } & (
   | (Shadow & { kind: "shadow" })
   | { kind: "blur"; radius: number }
   | { kind: "glow"; color: Color; radius: number }
   | { kind: "outline"; color: Color; width: number }
   | { kind: "adjustment"; ops: AdjustmentOp[] }
-  | (Duotone & { kind: "duotone" });
+  | (Duotone & { kind: "duotone" })
+);
 export const EffectSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("shadow"), ...shadowFields }),
-  z.object({ kind: z.literal("blur"), radius: z.number() }),
-  z.object({ kind: z.literal("glow"), color: ColorSchema, radius: z.number() }),
-  z.object({ kind: z.literal("outline"), color: ColorSchema, width: z.number() }),
-  z.object({ kind: z.literal("adjustment"), ops: z.array(AdjustmentOpSchema) }),
-  z.object({ kind: z.literal("duotone"), ...duotoneFields }),
+  z.object({ kind: z.literal("shadow"), ...shadowFields, ...effectEnabled }),
+  z.object({ kind: z.literal("blur"), radius: z.number(), ...effectEnabled }),
+  z.object({ kind: z.literal("glow"), color: ColorSchema, radius: z.number(), ...effectEnabled }),
+  z.object({ kind: z.literal("outline"), color: ColorSchema, width: z.number(), ...effectEnabled }),
+  z.object({ kind: z.literal("adjustment"), ops: z.array(AdjustmentOpSchema), ...effectEnabled }),
+  z.object({ kind: z.literal("duotone"), ...duotoneFields, ...effectEnabled }),
 ]);
+
+/** The effects that actually render: absent `enabled` counts as enabled. */
+export function enabledEffects(effects?: readonly Effect[]): Effect[] {
+  return (effects ?? []).filter((e) => e.enabled !== false);
+}
+
+/** The same rule for a text node's parallel stack. */
+export function enabledTextEffects(effects?: readonly TextEffect[]): TextEffect[] {
+  return (effects ?? []).filter((e) => e.enabled !== false);
+}
 
 export interface CornerRadius {
   topLeft: number;
@@ -858,7 +902,10 @@ export const TextFlowSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("arc"), curvature: z.number() }),
 ]);
 
-export type TextEffect =
+/** Text effects take the same per-effect enable, with the same polarity and the
+ *  same absent-means-enabled rule, so the two stacks behave identically to a
+ *  user who does not know they are stored apart. */
+export type TextEffect = { enabled?: boolean } & (
   | { kind: "shadow"; dx: number; dy: number; blur: number; color: Fill; opacity: number }
   | { kind: "outline"; width: number; color: Fill; join: "miter" | "round" | "bevel" }
   | { kind: "glow"; radius: number; color: Fill; intensity: number }
@@ -867,17 +914,18 @@ export type TextEffect =
   | { kind: "splice"; thickness: number; offset: number; color: Fill }
   | { kind: "highlight"; color: Fill; padding: number; radius: number }
   | { kind: "lift"; intensity: number }
-  | { kind: "hollow"; thickness: number };
+  | { kind: "hollow"; thickness: number }
+);
 export const TextEffectSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("shadow"), dx: z.number(), dy: z.number(), blur: z.number(), color: FillSchema, opacity: channel }),
-  z.object({ kind: z.literal("outline"), width: z.number(), color: FillSchema, join: z.enum(["miter", "round", "bevel"]) }),
-  z.object({ kind: z.literal("glow"), radius: z.number(), color: FillSchema, intensity: z.number() }),
-  z.object({ kind: z.literal("echo"), offset: z.number(), count: z.number().int(), color: FillSchema }),
-  z.object({ kind: z.literal("neon"), color: FillSchema, intensity: z.number() }),
-  z.object({ kind: z.literal("splice"), thickness: z.number(), offset: z.number(), color: FillSchema }),
-  z.object({ kind: z.literal("highlight"), color: FillSchema, padding: z.number(), radius: z.number() }),
-  z.object({ kind: z.literal("lift"), intensity: z.number() }),
-  z.object({ kind: z.literal("hollow"), thickness: z.number() }),
+  z.object({ kind: z.literal("shadow"), dx: z.number(), dy: z.number(), blur: z.number(), color: FillSchema, opacity: channel, ...effectEnabled }),
+  z.object({ kind: z.literal("outline"), width: z.number(), color: FillSchema, join: z.enum(["miter", "round", "bevel"]), ...effectEnabled }),
+  z.object({ kind: z.literal("glow"), radius: z.number(), color: FillSchema, intensity: z.number(), ...effectEnabled }),
+  z.object({ kind: z.literal("echo"), offset: z.number(), count: z.number().int(), color: FillSchema, ...effectEnabled }),
+  z.object({ kind: z.literal("neon"), color: FillSchema, intensity: z.number(), ...effectEnabled }),
+  z.object({ kind: z.literal("splice"), thickness: z.number(), offset: z.number(), color: FillSchema, ...effectEnabled }),
+  z.object({ kind: z.literal("highlight"), color: FillSchema, padding: z.number(), radius: z.number(), ...effectEnabled }),
+  z.object({ kind: z.literal("lift"), intensity: z.number(), ...effectEnabled }),
+  z.object({ kind: z.literal("hollow"), thickness: z.number(), ...effectEnabled }),
 ]);
 
 export interface TextNode extends NodeBase {
@@ -908,6 +956,20 @@ const cropSchema = z.object({ x: unit, y: unit, width: unit, height: unit }); //
 // ImageNode uses the image value types (ImageFit/CropRect/ClipPath/ImageSource,
 // and ImageFill in the Fill union) defined near the Fill model above.
 
+/** A grayscale alpha mask stored as an ordinary workspace asset (see
+ *  `ImageNode.alphaMask`). Dimensions are recorded so a renderer can scale the
+ *  mask onto the image without decoding it first. */
+export interface ImageAlphaMask {
+  assetId: string;
+  width: number;
+  height: number;
+}
+export const ImageAlphaMaskSchema = z.object({
+  assetId: z.string(),
+  width: z.number(),
+  height: z.number(),
+});
+
 export interface ImageNode extends NodeBase {
   type: "image";
   source: ImageSource;
@@ -919,6 +981,19 @@ export interface ImageNode extends NodeBase {
   flipY?: boolean;
   effectivePpi?: number;
   motion?: ImageMotion; // photo motion (ken-burns/parallax)
+  /** Per-pixel transparency applied over `source`, as a grayscale asset:
+   *  white keeps, black hides.
+   *
+   *  This is what makes background removal NON-DESTRUCTIVE. Removal used to
+   *  overwrite `source` with the flattened cutout, so the original pixels left
+   *  the document and the result could be neither undone meaningfully nor
+   *  refined. Keeping the original and storing the alpha separately means the
+   *  cutout is a view of the image rather than a replacement for it.
+   *
+   *  An assetId, never inline pixel data. A data URL here would land in the
+   *  CRDT, every snapshot, and IndexedDB, and be re-sent to every collaborator
+   *  on load; a mask that a brush revises repeatedly would make that acute. */
+  alphaMask?: ImageAlphaMask;
   /** Accessibility alt text (F22 FR-12). Optional + additive, so older files
    *  still validate with no migration; AI alt-text and a11y export read it. */
   alt?: string;
@@ -935,6 +1010,7 @@ export const ImageNodeSchema = z.object({
   flipY: z.boolean().optional(),
   effectivePpi: z.number().optional(),
   motion: ImageMotionSchema.optional(),
+  alphaMask: ImageAlphaMaskSchema.optional(),
   alt: z.string().optional(),
 });
 
@@ -1418,6 +1494,9 @@ export interface QRNode extends NodeBase {
   foreground: Color;
   background: Color;
   logoAssetId?: string;
+  /** Center-logo size as a fraction of the QR's min(width,height). Absent means
+   *  the default (0.22); renderers clamp it to a scannable range. */
+  logoScale?: number;
   /** Scannable module bit-matrix (row-major, true = dark). Derived from `value`
    *  by the editor; the renderer draws it. Absent until generated. */
   modules?: boolean[][];
@@ -1430,6 +1509,7 @@ export const QRNodeSchema = z.object({
   foreground: ColorSchema,
   background: ColorSchema,
   logoAssetId: z.string().optional(),
+  logoScale: z.number().optional(),
   modules: z.array(z.array(z.boolean())).optional(),
 });
 
@@ -1934,6 +2014,10 @@ export interface DesignFile {
   /** Slide sections (doc 28 FR-5). Order here is presentational only; the deck
    *  sequence is `pages`. A section with no pages is legal (just empty). */
   sections?: SlideSection[];
+  /** Document's primary language as a BCP 47 tag (F38 FR-8), announced to
+   *  assistive technology and written as the tagged-PDF /Lang. Absent means
+   *  unset; exports fall back to en-US. */
+  language?: string;
   meta: Record<string, unknown>;
 }
 export const DesignFileSchema = z.object({
@@ -1949,6 +2033,7 @@ export const DesignFileSchema = z.object({
   layouts: z.array(SlideLayoutSchema).optional(),
   theme: ThemeSchema.optional(),
   sections: z.array(SlideSectionSchema).optional(),
+  language: z.string().optional(),
   assets: z.array(AssetRefSchema),
   fonts: z.array(FontRefSchema),
   palette: z.array(ColorSwatchSchema).optional(),

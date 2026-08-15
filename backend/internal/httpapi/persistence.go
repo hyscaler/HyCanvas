@@ -37,6 +37,8 @@ func mountPersistence(api chi.Router, p *persistence.Service, acct *accounts.Ser
 	api.With(requireAuth(acct)).Post("/designs/{id}/versions/{vid}/restore", restoreVersionHandler(p, acct, br))
 	api.With(requireAuth(acct)).Get("/designs/{id}/branches", branchesHandler(p, acct, sh))
 	api.With(requireAuth(acct)).Post("/designs/{id}/versions/{vid}/branch", branchHandler(p, acct))
+	api.With(requireAuth(acct)).Get("/designs/{id}/crdt-branches", listCrdtBranchesHandler(p, acct, sh))
+	api.With(requireAuth(acct)).Post("/designs/{id}/crdt-branches", createCrdtBranchHandler(p, acct))
 	api.With(requireAuth(acct)).Post("/designs/{id}/restore", restoreFromTrashHandler(p, acct))
 	api.With(requireAuth(acct)).Get("/workspaces/{wid}/trash", trashHandler(p, acct))
 	api.With(requireAuth(acct)).Get("/workspaces/{id}/designs", listWorkspaceDesignsHandler(p, acct))
@@ -45,18 +47,20 @@ func mountPersistence(api chi.Router, p *persistence.Service, acct *accounts.Ser
 func persistenceProblem(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, persistence.ErrNotFound):
-		Problem(w, r, http.StatusNotFound, "Not Found", "design not found")
+		problemWithCode(w, r, http.StatusNotFound, "Not Found", "design not found", "design_not_found")
 	case errors.Is(err, persistence.ErrNoStorage):
-		Problem(w, r, http.StatusServiceUnavailable, "Service Unavailable", "storage is not configured")
+		problemWithCode(w, r, http.StatusServiceUnavailable, "Service Unavailable", "storage is not configured", "storage_is_not_configured")
 	case errors.Is(err, persistence.ErrInvalidFile):
 		// Surface the specific violated invariant (e.g. `duplicate node id "x"`).
 		// The reasons carry only ids/types, never design content, and the saver
 		// already holds the full file, so this leaks nothing and turns an opaque
 		// 422 into a diagnosable one.
 		slog.Warn("design file rejected", "path", r.URL.Path, "reason", err.Error())
-		Problem(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "the design file is structurally invalid: "+err.Error())
+		problemWithCode(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", "the design file is structurally invalid: "+err.Error(), "design_file_invalid")
+	case errors.Is(err, persistence.ErrInvalidBranch):
+		problemWithCode(w, r, http.StatusUnprocessableEntity, "Unprocessable Entity", err.Error(), "design_file_rejected")
 	default:
-		Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed")
+		problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed", "request_failed")
 	}
 }
 
@@ -111,12 +115,12 @@ func createDesignHandler(p *persistence.Service, acct *accounts.Service) http.Ha
 			From        persistence.DesignFile `json:"from"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.WorkspaceID == "" {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "missing workspaceId")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "missing workspaceId", "missing_workspaceid")
 			return
 		}
 		u := userFrom(r.Context())
 		if err := acct.AssertMember(r.Context(), u.ID, body.WorkspaceID, "member"); err != nil {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace", "not_workspace_member")
 			return
 		}
 		rec, err := p.Create(r.Context(), body.WorkspaceID, body.Title, body.From, &u.ID)
@@ -160,7 +164,7 @@ func renameDesignHandler(p *persistence.Service, acct *accounts.Service) http.Ha
 			Title string `json:"title"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Title == "" {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "missing title")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "missing title", "missing_title")
 			return
 		}
 		id := chi.URLParam(r, "id")
@@ -270,7 +274,10 @@ func updateLogHandler(p *persistence.Service, acct *accounts.Service, sh *sharin
 		}
 		afterSeq, _ := strconv.ParseInt(r.URL.Query().Get("afterSeq"), 10, 64)
 		limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-		page, err := p.ListUpdates(r.Context(), id, ws, afterSeq, limit)
+		// ?branch= selects an in-CRDT branch lineage (FR-10): the parent prefix up
+		// to the fork plus the branch's own rows, one ascending seq stream. Empty =
+		// the main lineage, exactly as before.
+		page, err := p.ListBranchUpdates(r.Context(), id, ws, r.URL.Query().Get("branch"), afterSeq, limit)
 		if err != nil {
 			persistenceProblem(w, r, err)
 			return
@@ -295,23 +302,31 @@ func checkpointUpdateLogHandler(p *persistence.Service, acct *accounts.Service) 
 			Update string `json:"update"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Update == "" {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "missing update")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "missing update", "missing_update")
 			return
 		}
 		raw, err := base64.StdEncoding.DecodeString(body.Update)
 		if err != nil || len(raw) == 0 || len(raw) > maxCheckpointBytes {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid or oversized update")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid or oversized update", "invalid_or_oversized_update")
 			return
 		}
 		// Mirror the realtime hub's guard: only a y-protocols UPDATE frame (type 2)
 		// may become a checkpoint. Compaction deletes all prior history, so a frame
 		// the scrubber can't fold as a full-state base must never be accepted.
 		if raw[0] != 2 {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "update is not a y-protocols update frame")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "update is not a y-protocols update frame", "crdt_update_malformed")
 			return
 		}
 		u := userFrom(r.Context())
-		if err := p.AppendCheckpoint(r.Context(), id, raw, u.ID); err != nil {
+		// ?branch= scopes the checkpoint (and its compaction) to that in-CRDT
+		// branch's lineage; empty = main. An unknown branch must 404 rather than
+		// silently journaling into a dead scope.
+		branch := r.URL.Query().Get("branch")
+		if branch != "" && !p.BranchBelongsToDesign(r.Context(), id, branch) {
+			problemWithCode(w, r, http.StatusNotFound, "Not Found", "unknown branch", "unknown_branch")
+			return
+		}
+		if err := p.AppendCheckpoint(r.Context(), id, branch, raw, u.ID); err != nil {
 			persistenceProblem(w, r, err)
 			return
 		}
@@ -341,10 +356,10 @@ func restoreVersionHandler(p *persistence.Service, acct *accounts.Service, br *b
 			}
 			if berr := br.ValidateSnapshot(r.Context(), id, ws, u.ID, file); berr != nil {
 				if errors.Is(berr, brand.ErrBrandLocked) {
-					Problem(w, r, http.StatusBadRequest, "Bad Request", berr.Error())
+					problemWithCode(w, r, http.StatusBadRequest, "Bad Request", berr.Error(), "restore_failed")
 					return
 				}
-				Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "brand validation failed")
+				problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "brand validation failed", "brand_validation_failed")
 				return
 			}
 		}
@@ -354,6 +369,55 @@ func restoreVersionHandler(p *persistence.Service, acct *accounts.Service, br *b
 			return
 		}
 		writeJSON(w, http.StatusOK, entry)
+	}
+}
+
+// listCrdtBranchesHandler serves the design's in-CRDT named branches (FR-10),
+// distinct from the fork-model /branches (designs copied from a version).
+func listCrdtBranchesHandler(p *persistence.Service, acct *accounts.Service, sh *sharing.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		ws, err := authorizeDesignRead(r, p, acct, sh, id)
+		if err != nil {
+			authProblem(w, r, err)
+			return
+		}
+		branches, err := p.ListCrdtBranches(r.Context(), id, ws)
+		if err != nil {
+			persistenceProblem(w, r, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, branches)
+	}
+}
+
+// createCrdtBranchHandler forks a named in-CRDT branch from a history point
+// (FR-10): {name, forkedFromSeq, parentBranchId?}. Member-gated like other
+// design mutations; never touches existing history (purely additive).
+func createCrdtBranchHandler(p *persistence.Service, acct *accounts.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		ws, err := authorizeDesign(r, p, acct, id, "member")
+		if err != nil {
+			authProblem(w, r, err)
+			return
+		}
+		var body struct {
+			Name           string  `json:"name"`
+			ForkedFromSeq  int64   `json:"forkedFromSeq"`
+			ParentBranchID *string `json:"parentBranchId"`
+		}
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 8192)).Decode(&body); err != nil {
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
+			return
+		}
+		u := userFrom(r.Context())
+		branch, err := p.CreateCrdtBranch(r.Context(), id, ws, body.Name, body.ForkedFromSeq, body.ParentBranchID, &u.ID)
+		if err != nil {
+			persistenceProblem(w, r, err)
+			return
+		}
+		writeJSON(w, http.StatusCreated, branch)
 	}
 }
 
@@ -438,7 +502,7 @@ func trashHandler(p *persistence.Service, acct *accounts.Service) http.HandlerFu
 		wid := chi.URLParam(r, "wid")
 		u := userFrom(r.Context())
 		if err := acct.AssertMember(r.Context(), u.ID, wid, "viewer"); err != nil {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace", "not_workspace_member")
 			return
 		}
 		list, err := p.ListTrash(r.Context(), wid)
@@ -455,12 +519,12 @@ func listWorkspaceDesignsHandler(p *persistence.Service, acct *accounts.Service)
 		ws := chi.URLParam(r, "id")
 		u := userFrom(r.Context())
 		if err := acct.AssertMember(r.Context(), u.ID, ws, "viewer"); err != nil {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace", "not_workspace_member")
 			return
 		}
 		list, err := p.ListByWorkspace(r.Context(), ws, 50)
 		if err != nil {
-			Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "could not list designs")
+			problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "could not list designs", "could_not_list_designs")
 			return
 		}
 		writeJSON(w, http.StatusOK, list)
@@ -470,7 +534,7 @@ func listWorkspaceDesignsHandler(p *persistence.Service, acct *accounts.Service)
 // authProblem maps the authorize helper's errors.
 func authProblem(w http.ResponseWriter, r *http.Request, err error) {
 	if errors.Is(err, errForbidden) {
-		Problem(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace")
+		problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace", "not_workspace_member")
 		return
 	}
 	persistenceProblem(w, r, err)

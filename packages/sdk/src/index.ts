@@ -174,6 +174,47 @@ export interface DesignUpdateEntry {
   isCheckpoint?: boolean;
 }
 
+/** Live audience (doc 28): one viewer question with computed votes. */
+export interface AudienceQuestion {
+  id: string;
+  authorName: string;
+  text: string;
+  votes: number;
+  answered: boolean;
+  dismissed?: boolean;
+  createdAt: string;
+  voted?: boolean;
+}
+/** Live audience: one presenter poll with computed per-option counts. */
+export interface AudiencePoll {
+  id: string;
+  question: string;
+  options: string[];
+  counts: number[];
+  open: boolean;
+  createdAt: string;
+  myVote: number;
+}
+export interface AudienceState {
+  questions: AudienceQuestion[];
+  polls: AudiencePoll[];
+  /** The presenter's live slide position (slide-follow), when one is fresh. */
+  live?: { slide: number; updatedAt: string };
+}
+
+/** A named in-CRDT branch of a design (doc 16 FR-10): a fork point inside one
+ *  design whose state is the parent lineage up to `forkedFromSeq` plus the
+ *  branch's own update rows. */
+export interface CrdtBranch {
+  id: string;
+  designId: string;
+  name: string;
+  forkedFromSeq: number;
+  parentBranchId?: string;
+  createdById?: string;
+  createdAt: string;
+}
+
 /** A forward-paginated, ascending-seq slice of the CRDT update log. */
 export interface DesignUpdatePage {
   items: DesignUpdateEntry[];
@@ -313,6 +354,10 @@ export interface StockAssetSummary {
   svg?: string;
   /** Bundled-library pack id (e.g. "twemoji"), when the asset ships with the app. */
   pack?: string;
+  /** True for a live upstream-provider asset (Openverse photo, Iconify icon) that
+   *  is not in the bundled catalog: favorites/recents don't apply and it is
+   *  imported/inlined on placement rather than drag-proxied. */
+  live?: boolean;
   /** License metadata; attribution-required assets are stamped with provenance
    *  on insert so credits compile from the design. */
   license?: { type?: string; holder?: string; url?: string; attributionRequired?: boolean; attributionText?: string; attributionUrl?: string };
@@ -325,6 +370,10 @@ export interface StockCollectionSummary {
   kind?: string;
   trending?: boolean;
   seasonal?: boolean;
+  /** "pack" for a bundled-library source (ManyPixels, Open Doodles, Tabler, ...),
+   *  absent for a curated theme. The browse UI shows curated themes as top-level
+   *  Collection chips and pack sources as a per-kind Source facet. */
+  source?: string;
   /** Curated seed collections list their members; bundled-pack collections
    *  omit this (assets point back via collectionIds instead). */
   assetIds?: string[];
@@ -1213,19 +1262,37 @@ export class HyCanvasClient {
   }
   /** The append-only CRDT update log in ascending seq order (FR-9): the raw
    *  y-protocols frames the client folds into an ephemeral Y.Doc to scrub
-   *  history. Pass the returned `nextSeq` as `afterSeq` to page forward. */
-  designUpdates(id: string, afterSeq?: number, limit?: number): Promise<DesignUpdatePage> {
+   *  history. Pass the returned `nextSeq` as `afterSeq` to page forward.
+   *  `branch` selects an in-CRDT branch's lineage (FR-10): the parent prefix up
+   *  to the fork plus the branch's own rows, one ascending seq stream. */
+  designUpdates(id: string, afterSeq?: number, limit?: number, branch?: string): Promise<DesignUpdatePage> {
     const q = new URLSearchParams();
     if (afterSeq) q.set("afterSeq", String(afterSeq));
     if (limit) q.set("limit", String(limit));
+    if (branch) q.set("branch", branch);
     const qs = q.toString();
     return this.request("GET", `/v1/designs/${id}/updates${qs ? `?${qs}` : ""}`);
   }
   /** Journal a CRDT full-state checkpoint and compact the update log (FR-11):
    *  older rows are deleted server-side, so the log stays bounded. `update` is a
-   *  base64 y-protocols update frame from the live Y.Doc (encodeStateAsUpdate). */
-  checkpointDesign(id: string, update: string): Promise<void> {
-    return this.request("POST", `/v1/designs/${id}/updates/checkpoint`, { update });
+   *  base64 y-protocols update frame from the live Y.Doc (encodeStateAsUpdate).
+   *  `branch` scopes the checkpoint (and its compaction) to that in-CRDT
+   *  branch's own lineage. */
+  checkpointDesign(id: string, update: string, branch?: string): Promise<void> {
+    const qs = branch ? `?branch=${encodeURIComponent(branch)}` : "";
+    return this.request("POST", `/v1/designs/${id}/updates/checkpoint${qs}`, { update });
+  }
+  /** The design's in-CRDT named branches (FR-10), oldest first. Distinct from
+   *  {@link listBranches}, the fork model (new designs copied from a version). */
+  listCrdtBranches(id: string): Promise<CrdtBranch[]> {
+    return this.request("GET", `/v1/designs/${id}/crdt-branches`);
+  }
+  /** Fork a named in-CRDT branch at a history point (FR-10). `forkedFromSeq` is
+   *  a seq of the parent lineage (0 = the empty beginning); `parentBranchId`
+   *  nests a branch under another branch (default: the main lineage). Purely
+   *  additive: existing history is never touched. */
+  createCrdtBranch(id: string, input: { name: string; forkedFromSeq: number; parentBranchId?: string }): Promise<CrdtBranch> {
+    return this.request("POST", `/v1/designs/${id}/crdt-branches`, input);
   }
   /** Restore a prior version as a NEW snapshot (kind 'restore'), making it the
    *  current state without discarding anything. Distinct from
@@ -1551,6 +1618,10 @@ export class HyCanvasClient {
       skipCaptions?: boolean;
       /** Render only this track's audio (pre-master stem), mp3 format. */
       stemTrackId?: string;
+      /** Render THIS file's timeline instead of the design's stored one (doc 28
+       *  FR-19 deck-to-video: the client converts the deck to a video project on
+       *  the fly and nothing is persisted). Same workspace asset scope. */
+      file?: DesignFile;
     } = {},
   ): Promise<{ jobId: string }> {
     return this.request("POST", `/v1/designs/${designId}/export/video`, opts);
@@ -1667,6 +1738,54 @@ export class HyCanvasClient {
   }
   getAiUsage(workspaceId: string): Promise<{ tokensThisMonth: number }> {
     return this.request("GET", `/v1/workspaces/${workspaceId}/ai-usage`);
+  }
+  // --- live audience (doc 28): share-link viewers <-> presenter -------------
+  /** Audience state (visible questions + polls), personalized by voterKey.
+   *  POST so a link password never rides a URL. */
+  audienceState(token: string, input: { voterKey: string; password?: string }): Promise<AudienceState> {
+    return this.request("POST", `/v1/links/${encodeURIComponent(token)}/audience/state`, input);
+  }
+  audienceAsk(token: string, input: { name?: string; text: string; password?: string }): Promise<AudienceQuestion> {
+    return this.request("POST", `/v1/links/${encodeURIComponent(token)}/audience/questions`, input);
+  }
+  audienceVoteQuestion(token: string, questionId: string, input: { voterKey: string; password?: string }): Promise<void> {
+    return this.request("POST", `/v1/links/${encodeURIComponent(token)}/audience/questions/${encodeURIComponent(questionId)}/vote`, input);
+  }
+  audienceVotePoll(token: string, pollId: string, input: { voterKey: string; option: number; password?: string }): Promise<void> {
+    return this.request("POST", `/v1/links/${encodeURIComponent(token)}/audience/polls/${encodeURIComponent(pollId)}/vote`, input);
+  }
+  audienceReact(token: string, input: { emoji: string; password?: string }): Promise<void> {
+    return this.request("POST", `/v1/links/${encodeURIComponent(token)}/audience/react`, input);
+  }
+  /** Presenter: full audience state incl. dismissed questions. */
+  presenterAudienceState(designId: string): Promise<AudienceState> {
+    return this.request("GET", `/v1/designs/${designId}/audience/state`);
+  }
+  presenterModerateQuestion(designId: string, questionId: string, input: { answered?: boolean; dismissed?: boolean }): Promise<void> {
+    return this.request("POST", `/v1/designs/${designId}/audience/questions/${encodeURIComponent(questionId)}/moderate`, input);
+  }
+  presenterCreatePoll(designId: string, input: { question: string; options: string[] }): Promise<AudiencePoll> {
+    return this.request("POST", `/v1/designs/${designId}/audience/polls`, input);
+  }
+  presenterSetPollOpen(designId: string, pollId: string, open: boolean): Promise<void> {
+    return this.request("POST", `/v1/designs/${designId}/audience/polls/${encodeURIComponent(pollId)}/open`, { open });
+  }
+  presenterClearAudience(designId: string): Promise<void> {
+    return this.request("POST", `/v1/designs/${designId}/audience/clear`, {});
+  }
+  /** Presenter: publish the current slide for audience slide-follow (-1 ends). */
+  presenterSetLiveSlide(designId: string, slide: number): Promise<void> {
+    return this.request("POST", `/v1/designs/${designId}/audience/live`, { slide });
+  }
+  /** Server-side data-source proxy (doc 28 / F27 live bindings): fetches a
+   *  remote CSV/TSV/JSON URL past CORS, behind the same SSRF gate. */
+  dataFetch(input: { url: string }): Promise<{ text: string }> {
+    return this.request("POST", "/v1/data/fetch", input);
+  }
+  /** Server-side URL-to-text extraction (doc 28 FR-23): fetches a public web
+   *  page (SSRF-guarded) and returns its readable text for deck grounding. */
+  aiExtractUrl(input: { url: string }): Promise<{ title: string; text: string }> {
+    return this.request("POST", "/v1/ai/extract-url", input);
   }
   aiText(input: { workspaceId: string; prompt: string; system?: string }): Promise<{ text: string }> {
     return this.request("POST", "/v1/ai/text", input);

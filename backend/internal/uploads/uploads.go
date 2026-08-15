@@ -651,11 +651,27 @@ func (s *Service) resolveFolder(ctx context.Context, workspaceID string, folderI
 	return &f.ID, nil
 }
 
-// Content returns the raw bytes + mime for an asset (public delivery route).
+// Content returns the raw bytes + mime for an asset (public delivery route,
+// intentionally unscoped by workspace).
 func (s *Service) Content(ctx context.Context, id string) ([]byte, string, error) {
+	return s.contentOf(ctx, "", id)
+}
+
+// ContentInWorkspace returns an asset's bytes + mime only when it belongs to
+// workspaceID (else ErrNotFound). Used by export/embedding paths so a design
+// cannot inline assets from another workspace by referencing a foreign asset id.
+func (s *Service) ContentInWorkspace(ctx context.Context, workspaceID, id string) ([]byte, string, error) {
+	return s.contentOf(ctx, workspaceID, id)
+}
+
+// contentOf loads an asset's bytes; a non-empty workspaceID scopes the lookup.
+func (s *Service) contentOf(ctx context.Context, workspaceID, id string) ([]byte, string, error) {
 	rec, err := s.getAsset(ctx, id)
 	if err != nil {
 		return nil, "", err
+	}
+	if workspaceID != "" && rec.WorkspaceID != workspaceID {
+		return nil, "", ErrNotFound
 	}
 	bytes, err := s.storage.Get(rec.StorageKey)
 	if err != nil || bytes == nil {

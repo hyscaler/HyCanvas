@@ -11,6 +11,8 @@ import { createScene, renderScene, type CanvasLike, type Viewport } from "@hc/en
 import { imageAssets } from "@/lib/assetProvider";
 import { useViewBeat } from "@/lib/useViewBeat";
 import { DeckPlayer } from "@/components/DeckPlayer";
+import { VideoWatch } from "@/components/VideoWatch";
+import { DESIGN_SURFACE_DIR } from "@/lib/locale";
 
 function PageCanvas({ doc, index, onVisible }: { doc: DesignFile; index: number; onVisible?: (index: number) => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -59,6 +61,11 @@ export function SharedViewer({
   token?: string;
   password?: string;
 }) {
+  // A shared video plays in a lightweight watch player (P7.9), not the page
+  // scroll/deck views.
+  if ((doc.meta as { kind?: string } | undefined)?.kind === "video") {
+    return <VideoWatch doc={doc} token={token} password={password} />;
+  }
   // Multi-page designs are decks: render the real web player (engine-drawn
   // slides, navigation, fullscreen, transitions) instead of a scroll stack
   // (doc 28 FR-26). Single-page designs stay a plain scroll render.
@@ -88,7 +95,7 @@ function ScrollViewer({
     getPageId: () => doc.pages[visiblePage]?.id ?? null,
   });
   return (
-    <div className="flex flex-1 flex-col items-center gap-6 overflow-auto py-8">
+    <div className="flex flex-1 flex-col items-center gap-6 overflow-auto py-8" dir={DESIGN_SURFACE_DIR}>
       {doc.pages.map((_, i) => (
         <PageCanvas key={i} doc={doc} index={i} onVisible={setVisiblePage} />
       ))}

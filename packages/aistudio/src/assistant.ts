@@ -58,6 +58,12 @@ export function toolCatalog(): ToolDef[] {
     { name: "rewriteSelectedText", description: "Rewrite/transform the currently selected text box per an instruction (shorten, change tone, translate, fix grammar, etc.).", params: [
       { name: "instruction", type: "string", required: true, description: "how to rewrite, e.g. 'make it punchier' or 'translate to Spanish'" },
     ], mutates: true },
+    { name: "translateDeck", description: "Translate the ENTIRE design into a target language: every text box on every page, sticky notes, and speaker notes, preserving layout and styling. Use for 'translate this deck/design/presentation to X'.", params: [
+      { name: "language", type: "string", required: true, description: "target language, e.g. 'Spanish', 'Japanese', 'pt-BR'" },
+    ], mutates: true },
+    { name: "generateSpeakerNotes", description: "Write presenter speaker notes for EVERY slide, stored in each page's notes (shown in presenter view and the notes panel). Use for 'write/generate speaker notes / talking points'.", params: [
+      { name: "instruction", type: "string", required: false, description: "optional guidance, e.g. 'keep each to 3 short bullet points' or 'formal tone'" },
+    ], mutates: true },
     { name: "generateImage", description: "Generate an image from a description and place it on the current page (fills the selected frame if one is selected).", params: [
       { name: "prompt", type: "string", required: true, description: "what the image shows" },
       { name: "style", type: "string", required: false, description: "'logo' for a flat vector logo; otherwise omit" },
@@ -74,6 +80,14 @@ export function toolCatalog(): ToolDef[] {
       { name: "pageCount", type: "number", required: false },
       { name: "mode", type: "string", required: false, description: "'append' to add the generated pages to the current design instead of replacing it" },
     ], mutates: true },
+    { name: "generateDiagram", description: "Create a flowchart or mind map ON THE BOARD from a description - native sticky notes + connectors, auto-laid-out. Also accepts pasted Mermaid source verbatim. Use for 'draw/make a flowchart/diagram/mind map of X'.", params: [
+      { name: "prompt", type: "string", required: true, description: "what to diagram (a plain description, or Mermaid flowchart source pasted verbatim)" },
+      { name: "kind", type: "string", required: false, description: "flowchart|mindmap (default flowchart)" },
+    ], mutates: true },
+    { name: "clusterStickies", description: "Group the board's sticky notes into labeled theme frames (affinity clustering): each theme becomes a titled frame with its stickies arranged inside. Use for 'cluster/group the stickies by theme'.", params: [
+      { name: "instruction", type: "string", required: false, description: "optional guidance, e.g. 'cluster by customer segment'" },
+    ], mutates: true },
+    { name: "summarizeStickies", description: "Summarize the board's sticky notes into a text note on the canvas: key themes, decisions, and action items. Use for 'summarize the board / the stickies / this brainstorm'.", params: [], mutates: true },
     { name: "critique", description: "Analyze the current page and report design issues (no changes).", params: [], mutates: false },
   ];
 }

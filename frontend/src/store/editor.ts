@@ -41,6 +41,7 @@ import {
   type TableHeaderStyle,
   type TableNode,
   type TextEffect,
+  type TextNode,
   type TextFlow,
   type Transform,
   type SlideSection,
@@ -69,6 +70,7 @@ import {
   worldMatrix,
   unionAABB,
   moveTransform,
+  rotateAboutPoint,
   alignDeltas,
   distributeDeltas,
   tidyUpDeltas,
@@ -93,16 +95,19 @@ import {
 } from "@hc/engine";
 import { booleanOp, fitCubicBeziers, pathToPolylines, recognizeShape, shapeNodeToParametric, shapeToPath, simplifyPolyline, strokeToOutline, type BooleanOp } from "@hc/geometry";
 import { imageAssets } from "@/lib/assetProvider";
+import { measuredTextHeight } from "@/lib/textFit";
 import { PAGE_GAP, pageOffsets, pageTop } from "@/lib/pageLayout";
 import type { MagicDesignSpec } from "@/lib/magicDesign";
 import { layoutDesign, type AiDesignSpec, type DeckResult } from "@hc/aistudio";
 import { qrModules } from "@/lib/qr";
 import { frameMaskFor } from "@/lib/maskPath";
 import { flattenSvgToNodes } from "@/lib/svgFlatten";
+import { layoutFlowchart, layoutMindMap, type DiagramSpec as WbDiagramSpec } from "@hc/whiteboard";
 import { parseCsvMatrix } from "@/lib/csv";
 import { tabularToChart } from "@/lib/magicDesign";
 import { usePresence } from "@/store/presence";
 import { useBrand } from "@/store/brand";
+import { tr } from "@/lib/i18n";
 
 // True when a node carries a collaborative lock held by ANOTHER participant
 //. This is SEPARATE from the schema's static `node.locked` flag:
@@ -157,6 +162,12 @@ function transformVectorPath(vp: VPath, m: Mat2D): VPath {
 // stamps a schema-foreign property onto a node that has no fill concept.
 const FILL_CAPABLE = new Set<string>(["shape", "path", "icon", "frame"]);
 
+// `fontStyle` values are file-format tokens, never localized: the engine
+// parses weight/italic out of them by ENGLISH name and they persist into the
+// design file, so a translated token corrupts the doc.
+const boldFontStyle = "Bold";
+const regularFontStyle = "Regular";
+
 // Zoom is clamped to this range everywhere (matches the wheel-zoom bounds) so a
 // stray 0/negative value can never reach the screen<->page math.
 const MIN_ZOOM = 0.01;
@@ -196,6 +207,18 @@ export type OcLink = { kind: "url" | "page" | "anchor" | "email"; target: string
 /** The brand inputs a re-skin maps a design onto. `palette` is the
  *  flat list of approved brand colors; `fonts` are the approved family names
  *  (heading first by convention). Empty arrays leave that dimension untouched. */
+/** A stable address for one translatable string in the design (doc 28 FR-23):
+ *  a text run (so styling boundaries survive translation), a sticky note's
+ *  text, or a page's speaker notes. */
+export type DeckTextRef =
+  | { kind: "run"; nodeId: string; para: number; run: number }
+  | { kind: "sticky"; nodeId: string }
+  | { kind: "notes"; page: number };
+export interface DeckTextEntry {
+  ref: DeckTextRef;
+  text: string;
+}
+
 export type ReskinBrand = { palette: Color[]; fonts: string[] };
 /** One color remap a re-skin applied (from hex -> to hex), for the override UI. */
 export type ReskinColorMap = { from: string; to: string };
@@ -315,6 +338,7 @@ interface EditorState {
   setBrush(patch: Partial<{ width: number; colorHex: string; opacity: number; mode: "pen" | "marker" | "highlighter" }>): void;
   playing: boolean; // animation preview running
   cropping: string | null; // id of the image currently in crop mode (UI only)
+  maskRefining: string | null; // id of the image whose alpha mask is being brush-refined (UI only)
   editingTextId: string | null; // text node currently in the inline editor (UI only); the renderer skips it so it doesn't double up
   /** Step every run's font size by `delta` px (relative, so mixed-size boxes
    *  keep their ratios), clamped to a sane range. Undoable. */
@@ -354,6 +378,9 @@ interface EditorState {
   loadDoc(file: DesignFile): void;
   /** Set the document title (used for the editor header + export filename). */
   setDocTitle(title: string): void;
+  /** Set (or clear, with "") the document's primary language, a BCP 47 tag
+   *  announced to assistive technology and the tagged-PDF /Lang (F38 FR-8). */
+  setDocLanguage(tag: string): void;
   /**
    * Shallow-merge a patch into `doc.meta` as one undoable step. Document-type
    * surfaces (whiteboard/doc/sheet/video-32) keep their non-scene state
@@ -426,6 +453,23 @@ interface EditorState {
   setPageSize(width: number, height: number): void;
   /** Set (or clear) the active page's background fill, undoable. */
   setPageBackground(fill: Fill | undefined): void;
+  /** Slide layouts (doc 28 FR-3/FR-4, materialization model): capture the
+   *  ACTIVE page as a named reusable layout (background + text placeholders).
+   *  Ensures a default master exists. Returns the new layout id. */
+  savePageAsLayout(name: string): string | null;
+  /** Link a page to a layout (null unlinks) and materialize it: the layout's
+   *  background applies and missing placeholders land as editable text boxes
+   *  (tagged via data.placeholderId). One undo step. */
+  applyLayoutToPage(layoutId: string | null, pageIndex?: number): boolean;
+  /** Re-capture the layout's background + placeholders from the active page. */
+  updateLayoutFromPage(layoutId: string): boolean;
+  /** Re-apply a layout to EVERY page linked to it (background + missing
+   *  placeholders), one undo step. Returns how many pages changed. */
+  syncLayoutPages(layoutId: string): number;
+  /** Bulk data-merge into slides (doc 28): duplicate the ACTIVE page once per
+   *  row, replacing {{column}} tokens in text runs and sticky notes with the
+   *  row's values. One undo step; returns the number of pages created. */
+  bulkMergePages(rows: Record<string, string>[]): number;
   /** Reorder pages (move page at `from` to index `to`), undoable. */
   movePage(from: number, to: number): void;
   /** Start a new section at `pageIndex`, adopting the run that follows (FR-5). */
@@ -483,6 +527,7 @@ interface EditorState {
   // tools
   setTool(tool: Tool): void;
   setCropping(id: string | null): void;
+  setMaskRefining(id: string | null): void;
   setEditingText(id: string | null): void;
   setPresenting(on: boolean): void;
   toggleRulers(): void;
@@ -514,6 +559,20 @@ interface EditorState {
    *  to two nodes (auto anchors by default) as one undo step; selects + returns
    *  it, or null if the nodes are missing/identical. */
   connectNodes(fromId: string, toId: string, fromAnchor?: string, toAnchor?: string): string | null;
+  /** Materialize a diagram spec (doc 30 Phase 3: AI diagram-from-prompt or a
+   *  pasted Mermaid graph) as native board nodes: one sticky per node laid out
+   *  by the pure flowchart/mind-map engine, one connector per edge, all as ONE
+   *  undo step. Returns false when the spec is empty. */
+  insertDiagramSpec(spec: WbDiagramSpec): boolean;
+  /** Every unlocked sticky on the active page (id + text), for AI clustering
+   *  and summarize (doc 30 Phase 3). */
+  collectBoardStickies(): { id: string; text: string }[];
+  /** Cluster stickies into labeled frames (doc 30 Phase 3): one frame per
+   *  cluster laid out below the existing content, member stickies arranged in
+   *  a grid inside it. One undo step; unknown ids are skipped. */
+  applyStickyClusters(clusters: { title: string; ids: string[] }[]): boolean;
+  /** Drop an AI summary as a text note below the existing board content. */
+  insertSummaryNote(text: string): boolean;
   /** Set the route style (straight/elbow/curved) on the selected connector(s),
    *  the board connector style picker (F30 FR-7). One undo step. */
   setConnectorRoute(route: "straight" | "elbow" | "curved"): void;
@@ -603,6 +662,14 @@ interface EditorState {
   duplicateSelection(dx?: number, dy?: number): string[];
   /** Move the selection by (dx,dy), undoable (arrow-key nudge). */
   nudge(dx: number, dy: number): void;
+  /** Grow/shrink the selection's size by (dw,dh), undoable (Alt+arrow keyboard
+   *  resize). Routes text/line/grid/frame through the same geometry appliers
+   *  the properties panel uses so their content re-lays with the box. */
+  growSelection(dw: number, dh: number): void;
+  /** Rotate the selection by deltaDeg about each node's own rotation origin
+   *  (center by default, mirroring the rotate handle), one undoable step
+   *  (keyboard rotate: comma/period, Alt for 15 degrees). */
+  rotateSelection(deltaDeg: number): void;
   /** Copy the first selected node's style; paste it onto the selection. */
   copyStyle(): void;
   pasteStyle(): void;
@@ -725,9 +792,12 @@ interface EditorState {
   importPdfPages(pages: { width: number; height: number; nodes: Node[] }[]): void;
   /** Apply a template into the CURRENT design: append its pages (fresh node and
    *  page ids, assets and uploaded-font refs merged) and switch to the first
-   *  one. Additive by design, so applying a template never destroys existing
-   *  pages; one undo step. Returns false when nothing was applied (read-only
-   *  session, history preview, or an empty template). */
+   *  one. Pages authored at a different size are resized to the active page's
+   *  dimensions on insert (the design-resize mapping), so applying any gallery
+   *  template never creates a mixed-size document. Additive by design, so
+   *  applying a template never destroys existing pages; one undo step. Returns
+   *  false when nothing was applied (read-only session, history preview, or an
+   *  empty template). */
   applyTemplateFile(file: DesignFile, title: string): boolean;
   /** Import a full SVG file (e.g. an SVG export from another design tool) as editable elements:
    *  shapes/paths/text/images, registered assets, scaled to fit the page and
@@ -736,6 +806,14 @@ interface EditorState {
   /** Set node-level fills to a single solid color (hex), undoable. */
   setFillColor(id: string, hex: string): void;
   /** Replace a text node's first-run text, undoable. */
+  /** Every translatable string in the design with a stable address: each text
+   *  run (styling boundaries preserved), each sticky note, and each page's
+   *  speaker notes. Locked subtrees are skipped. Powers whole-deck translation
+   *  (doc 28 FR-23): translate the strings, then applyDeckTexts the results. */
+  collectDeckTexts(): DeckTextEntry[];
+  /** Write translated/rewritten strings back to their collected addresses as
+   *  ONE undo step. Refs that no longer resolve are skipped, never fatal. */
+  applyDeckTexts(entries: DeckTextEntry[]): void;
   setText(id: string, text: string): void;
   /** Set a whiteboard sticky note's text (and optional auto-fit scale) as one
    *  undo step. */
@@ -748,7 +826,11 @@ interface EditorState {
   /** Grow/shrink a text node's box height to fit content WITHOUT an undo step
    *  (live feedback while typing, so the selection box tracks line wraps). The
    *  final height is recorded once, undoably, by setContent on commit. */
-  growTextBoxLive(id: string, height: number): void;
+  /** Track the box height to the content while typing (transient, no undo
+   *  entry). `fixedBase` is the height when editing began: a fixed box clamps
+   *  to max(fixedBase, content) so it can shrink back as lines are deleted but
+   *  never below the user's chosen height. */
+  growTextBoxLive(id: string, height: number, fixedBase?: number): void;
   /** Set (or clear, with null) a text node's background highlight,
    *  a padded rounded rect filled behind the text. Undoable. */
   setTextBackground(id: string, color: Color | null, padding?: number, radius?: number): void;
@@ -803,6 +885,9 @@ interface EditorState {
   setImageCrop(id: string, crop: CropRect | undefined): void;
   /** Replace an image node's source with a new URL (resets crop), undoable. */
   setImageSource(id: string, url: string): void;
+  /** Attach or clear an image's alpha mask (v20), undoable. Non-destructive:
+   *  the original `source` is untouched. */
+  setImageAlphaMask(id: string, url: string | null, width: number, height: number): void;
   /** Set/clear an image node's accessibility alt text (F22 FR-12), undoable. */
   setImageAlt(id: string, alt: string | undefined): void;
   /** Set/clear any node's accessibility description (doc 28 FR-29), undoable. */
@@ -819,6 +904,11 @@ interface EditorState {
   outpaintImage(id: string, url: string, width: number, height: number): void;
   /** Rebind a QR node's value and regenerate its module matrix, undoable. */
   setQrValue(id: string, value: string): void;
+  /** Set (or clear, with assetId=null) a QR node's center logo. Adding a logo
+   *  bumps error correction to "H" so the covered modules stay scannable. */
+  setQrLogo(id: string, assetId: string | null, url?: string): void;
+  /** Center-logo size as a fraction (0.08..0.4) of the QR's min dimension. */
+  setQrLogoScale(id: string, scale: number): void;
   /** Set a video node's trim/volume/loop/mute, undoable. */
   setVideoProps(id: string, patch: Partial<{ trimStartMs: number; trimEndMs: number; volume: number; muted: boolean; loop: boolean }>): void;
   /** Place an image into a frame (clipped to the frame), undoable. */
@@ -829,6 +919,28 @@ interface EditorState {
    *  false when either side is locked/blocked so the caller falls back to a
    *  plain move. */
   fillWithImageNode(targetId: string, kind: "frame" | "shape", imageId: string, restoreTransform?: Transform): boolean;
+  /** True when the node is an image serving as its page's background: flagged
+   *  via `data.background` (set by setImageAsBackground), or a hand-built
+   *  background - a bottom-of-stack, top-level image covering the whole page.
+   *  Background status always requires the node to be LOCKED: unlocking a
+   *  background suspends it (the image acts like a plain element and "Set as
+   *  background" reappears); re-setting a still-flagged image keeps its
+   *  original pre-background state for detach. */
+  isBackgroundImage(id: string): boolean;
+  /** Make a top-level image the page background as ONE undo step: reshape it
+   *  to a page-sized box at scale 1 with the source covering it (fit "cover",
+   *  flips preserved), send it to the back, lock it, and flag it via
+   *  `data.background`. The prior transform/size/fit and z-index are saved in
+   *  `data.backgroundRestore` so detach can put the image back. The scale-1
+   *  box is what the crop overlay requires, so the background stays
+   *  adjustable (pan/zoom via setImageCrop) while locked. An image currently
+   *  serving as this page's background is detached in the same step, so the
+   *  new background is not buried under it. */
+  setImageAsBackground(id: string): void;
+  /** Reverse of setImageAsBackground: unlock the image, restore the saved
+   *  pre-background transform/size/fit and z-index when present (a hand-built
+   *  background just unlocks in place), and clear the background flag. */
+  detachImageBackground(id: string): void;
   /** Fill a shape with an image, clipped to its outline (undoable). Pass an
    *  empty url to clear the image fill back to a solid color. */
   setImageFill(id: string, url: string): void;
@@ -844,6 +956,14 @@ interface EditorState {
   setStroke(id: string, stroke?: Stroke): void;
   /** Set/clear a node's effects (shadow/blur/glow), undoable. */
   setEffects(id: string, effects?: Effect[]): void;
+  /** Move an effect within the stack; order is the render order. */
+  moveEffect(id: string, from: number, to: number): void;
+  /** Switch one effect off without losing its parameters. */
+  setEffectEnabled(id: string, index: number, enabled: boolean): void;
+  /** Remove one effect by position, so duplicates of a kind are addressable. */
+  removeEffectAt(id: string, index: number): void;
+  /** Append an effect of a kind, allowing more than one of the same kind. */
+  addEffect(id: string, kind: Effect["kind"]): void;
   /** Live-preview color adjustments (brightness/contrast/...) with no undo step. */
   previewAdjustments(id: string, ops: { name: string; value: number }[]): void;
   /** Commit an effects change as one undo step (before = effects at gesture start). */
@@ -1070,13 +1190,17 @@ function applyTableShape(
   perform(() => set2(structuredClone(after)), () => set2(structuredClone(before)));
 }
 
+// The boot-time scratch document, evaluated ONCE at store creation (module
+// import), before any catalog loads: a tr() here freezes to English forever,
+// so the strings are deliberately plain literals. It is placeholder data the
+// first loadDoc replaces; node names bake in at creation time by design.
 function sampleDesign(): DesignFile {
-  const d = createBlankDesign({ title: "Untitled design", width: 1080, height: 1080 });
+  const d = createBlankDesign({ title: "Untitled design", width: 1080, height: 1080 }); // i18n-ignore: boot placeholder
   d.pages[0].background = { type: "solid", color: { srgb: { r: 1, g: 1, b: 1, a: 1 } } };
   d.pages[0].children = [
     createNode("shape", {
       id: "rect-1",
-      name: "Rectangle",
+      name: "Rectangle", // i18n-ignore: boot placeholder
       shape: "rect",
       transform: { x: 120, y: 140, scaleX: 1, scaleY: 1, rotation: 0 },
       size: { width: 360, height: 240 },
@@ -1084,7 +1208,7 @@ function sampleDesign(): DesignFile {
     } as Partial<Node>),
     createNode("shape", {
       id: "ellipse-1",
-      name: "Ellipse",
+      name: "Ellipse", // i18n-ignore: boot placeholder
       shape: "ellipse",
       transform: { x: 560, y: 380, scaleX: 1, scaleY: 1, rotation: 0 },
       size: { width: 300, height: 300 },
@@ -1092,7 +1216,7 @@ function sampleDesign(): DesignFile {
     } as Partial<Node>),
     createNode("text", {
       id: "text-1",
-      name: "Heading",
+      name: "Heading", // i18n-ignore: boot placeholder
       transform: { x: 140, y: 460, scaleX: 1, scaleY: 1, rotation: 0 },
       size: { width: 520, height: 80 },
       box: { mode: "fixed", width: 520, height: 80, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
@@ -1100,7 +1224,7 @@ function sampleDesign(): DesignFile {
         {
           runs: [
             {
-              text: "HyCanvas",
+              text: "HyCanvas", // i18n-ignore: boot placeholder
               style: {
                 fontFamily: "system",
                 fontStyle: "Bold",
@@ -1172,6 +1296,51 @@ function ensureDocArrays(doc: DesignFile): void {
   if (!Array.isArray(doc.fonts)) (doc as { fonts: DesignFile["fonts"] }).fonts = [];
 }
 
+/** Reject a "refresh" that clearly did not return data. A URL that starts
+ *  serving an HTML error page, a login redirect, or a JSON blob still parses
+ *  (every line becomes a row), and writing that over a chart replaces real
+ *  numbers with wreckage.
+ *
+ *  Deliberately narrow: it only refuses content that looks like MARKUP, never
+ *  judges shape. Single-column tables, one-row datasets, ragged rows, and
+ *  trailing blank lines are all legitimate here (parseCsvMatrix tolerates
+ *  ragged rows by design, and the UI accepts pasted TSV), so a shape rule
+ *  would silently stop existing bindings from refreshing. */
+function looksLikeData(matrix: string[][]): boolean {
+  const cells = matrix.flat();
+  if (!cells.some((c) => c.trim() !== "")) return false; // nothing at all
+  const head = (matrix[0] ?? []).join(" ").trim().toLowerCase();
+  if (head.startsWith("<") || head.startsWith("{") || head.startsWith("[")) return false;
+  return true;
+}
+
+
+/**
+ * Default parameters for a newly added effect.
+ *
+ * Values match what the fixed-tab panel used, so adding a shadow from the
+ * stack produces exactly what the old button did and no document changes
+ * appearance because of where it was created.
+ */
+function newEffectOfKind(kind: Effect["kind"]): Effect | null {
+  switch (kind) {
+    case "shadow":
+      return { kind: "shadow", type: "drop", color: { srgb: { r: 0, g: 0, b: 0, a: 0.35 } }, offsetX: 0, offsetY: 3, blur: 6, spread: 0 };
+    case "blur":
+      return { kind: "blur", radius: 4 };
+    case "glow":
+      return { kind: "glow", color: { srgb: { r: 0.45, g: 0.5, b: 1, a: 0.9 } }, radius: 10 };
+    case "outline":
+      return { kind: "outline", color: { srgb: { r: 0, g: 0, b: 0, a: 1 } }, width: 3 };
+    case "adjustment":
+      return { kind: "adjustment", ops: [] };
+    default:
+      // duotone carries an asset-derived palette and is authored by its own
+      // control, not summoned blank from the stack's add menu.
+      return null;
+  }
+}
+
 export const useEditor = create<EditorState>((set, get) => {
   // Cache for pageContentBounds(): keyed by (rev, page index) so panning (which
   // calls it every frame via the MiniMap) is O(1) unless the scene changed.
@@ -1199,6 +1368,28 @@ export const useEditor = create<EditorState>((set, get) => {
     redo: () => applyCommand(get().doc, cmd),
     undo: () => applyCommand(get().doc, invertCommand(cmd)),
   });
+
+  // Re-fit a text box to its content, with the same measurer the inline editor
+  // and the resize gizmo use, after anything that changes how the text wraps
+  // (restyles, content rewrites, translations). One rule everywhere: a box may
+  // never LIE about containing its text. An auto-height box tracks the content
+  // exactly, both directions. A fixed box CLAMPS: it grows when the content
+  // needs more room and returns to the user's chosen height when the content
+  // shrinks, but never drops below that choice - the render never clips text,
+  // so "fixed but overflowing" only produced a selection box smaller than the
+  // visible text. Auto-fit boxes are exempt: they fit by scaling the FONT
+  // inside a deliberate frame, so the frame itself must not move.
+  const refitTextHeight = (node: Node) => {
+    const n = node as unknown as { box?: { mode?: string; height: number; autoFit?: { enabled?: boolean } }; size: { height: number } };
+    const mode = n.box?.mode;
+    if (mode !== "autoHeight" && mode !== "fixed") return; // autoWidth: width is the free axis
+    if (mode === "fixed" && n.box?.autoFit?.enabled) return;
+    const content = measuredTextHeight(node as unknown as TextNode);
+    const h = mode === "autoHeight" ? content : Math.max(n.size.height, content);
+    if (Math.abs(n.size.height - h) < 0.5) return;
+    n.size.height = h;
+    n.box!.height = h;
+  };
 
   // Index of the page being edited, clamped to the document's page count.
   const curPageIndex = () => {
@@ -1295,6 +1486,7 @@ export const useEditor = create<EditorState>((set, get) => {
     tool: "select",
     brush: { width: 3, colorHex: "#1a1f29", opacity: 1, mode: "pen" },
     cropping: null,
+    maskRefining: null,
     editingTextId: null,
     textEditApply: null,
     presenting: false,
@@ -1586,7 +1778,7 @@ export const useEditor = create<EditorState>((set, get) => {
         if (el.kind === "accent") {
           const fill: Fill = { type: "solid", color: fromHex(el.color ?? "") ?? bgColor };
           nodes.push(createNode("shape", {
-            name: "Accent",
+            name: tr("app.accent"),
             shape: "rect",
             transform: { x, y, scaleX: 1, scaleY: 1, rotation: 0 },
             size: { width: bw, height: bh },
@@ -1756,11 +1948,243 @@ export const useEditor = create<EditorState>((set, get) => {
       const w = Math.max(1, Math.round(width));
       const h = Math.max(1, Math.round(height));
       if (before.width === w && before.height === h) return;
+      // Background images are PAGE-SIZED cover boxes; they follow the page so
+      // a manual W/H change never leaves the background at the old bounds.
+      // Only the flagged, still-locked ones move - this raw path deliberately
+      // repositions no other content (the design-resize flow maps everything).
+      const bgs = page.children
+        .filter((n) => n.type === "image" && n.locked && (n.data as { background?: unknown } | undefined)?.background === true)
+        .map((n) => ({ n, transform: { ...n.transform }, size: { ...n.size } }));
       perform(
-        () => { page.width = w; page.height = h; },
-        () => { page.width = before.width; page.height = before.height; },
+        () => {
+          page.width = w;
+          page.height = h;
+          for (const b of bgs) {
+            b.n.transform = { ...b.n.transform, x: b.n.transform.scaleX < 0 ? w : 0, y: b.n.transform.scaleY < 0 ? h : 0 };
+            b.n.size = { width: w, height: h };
+          }
+        },
+        () => {
+          page.width = before.width;
+          page.height = before.height;
+          for (const b of bgs) {
+            b.n.transform = { ...b.transform };
+            b.n.size = { ...b.size };
+          }
+        },
       );
     },
+    savePageAsLayout: (name) => {
+      const doc = get().doc as unknown as {
+        masters?: { id: string; name?: string; placeholders: unknown[] }[];
+        layouts?: { id: string; masterId: string; name: string; background?: Fill; placeholders: unknown[] }[];
+        pages: Page[];
+      };
+      const page = doc.pages[curPageIndex()] as unknown as { background?: Fill; children: Node[]; layoutId?: string };
+      const title = name.trim();
+      if (!page || !title) return null;
+      // Placeholders: every top-level text box becomes a positioned slot. The
+      // largest font is the title, the rest body (a useful default; the layout
+      // stays editable by re-capturing).
+      const texts = (page.children as Node[]).filter((n) => n.type === "text" && !n.hidden);
+      const fontOf = (n: Node) => {
+        const paras = (n as unknown as { content?: { runs?: { style?: { fontSize?: number } }[] }[] }).content ?? [];
+        return Math.max(0, ...paras.flatMap((pp) => (pp.runs ?? []).map((r) => r.style?.fontSize ?? 0)));
+      };
+      const titleNode = texts.length ? texts.reduce((a, b) => (fontOf(b) > fontOf(a) ? b : a)) : null;
+      const placeholders = texts.map((n, i) => ({
+        id: `ph-${i + 1}`,
+        role: n === titleNode ? "title" : "body",
+        rect: { x: n.transform.x, y: n.transform.y, width: Math.abs(n.size.width * n.transform.scaleX), height: Math.abs(n.size.height * n.transform.scaleY) },
+      }));
+      const layoutId = `layout-${crypto.randomUUID().slice(0, 8)}`;
+      const layout = {
+        id: layoutId,
+        masterId: (doc.masters ?? [])[0]?.id ?? "master-default",
+        name: title,
+        ...(page.background ? { background: structuredClone(page.background) } : {}),
+        placeholders,
+      };
+      const prevMasters = doc.masters;
+      const prevLayouts = doc.layouts;
+      const prevPageLayout = page.layoutId;
+      perform(
+        () => {
+          // Re-check the DOC on every run (redo included): reading a closure
+          // variable here would skip re-adding the default master on redo and
+          // leave the layout pointing at a master that no longer exists.
+          if (!(doc.masters ?? []).some((m) => m.id === layout.masterId)) {
+            doc.masters = [...(doc.masters ?? []), { id: layout.masterId, name: tr("app.default_master"), placeholders: [] }];
+          }
+          doc.layouts = [...(doc.layouts ?? []), layout];
+          page.layoutId = layoutId; // the source page uses its own layout
+        },
+        () => {
+          doc.masters = prevMasters;
+          doc.layouts = prevLayouts;
+          page.layoutId = prevPageLayout;
+        },
+      );
+      return layoutId;
+    },
+
+    applyLayoutToPage: (layoutId, pageIndex) => {
+      const doc = get().doc as unknown as {
+        masters?: { id: string; background?: Fill }[];
+        layouts?: { id: string; masterId: string; background?: Fill; placeholders: { id: string; role: string; rect: { x: number; y: number; width: number; height: number } }[] }[];
+        pages: Page[];
+      };
+      const idx = pageIndex ?? curPageIndex();
+      const page = doc.pages[idx] as unknown as { background?: Fill; children: Node[]; layoutId?: string };
+      if (!page) return false;
+      const prevLayoutId = page.layoutId;
+      if (layoutId === null) {
+        // Unlink only: the materialized content stays (nothing is destroyed).
+        perform(
+          () => { delete page.layoutId; },
+          () => { if (prevLayoutId) page.layoutId = prevLayoutId; },
+        );
+        return true;
+      }
+      const layout = (doc.layouts ?? []).find((l) => l.id === layoutId);
+      if (!layout) return false;
+      const master = (doc.masters ?? []).find((m) => m.id === layout.masterId);
+      const bg = layout.background ?? master?.background;
+      const prevBg = page.background;
+      // Placeholders materialize as editable text boxes, matched by the tag so
+      // re-applying never duplicates one that already exists on the page.
+      const have = new Set(
+        (page.children as Node[])
+          .map((n) => (n.data as { placeholderId?: string } | undefined)?.placeholderId)
+          .filter((v): v is string => !!v),
+      );
+      const made: Node[] = [];
+      for (const ph of layout.placeholders ?? []) {
+        if (have.has(ph.id)) continue;
+        made.push(createNode("text", {
+          name: ph.role === "title" ? tr("app.title") : tr("app.text"),
+          transform: { x: ph.rect.x, y: ph.rect.y, scaleX: 1, scaleY: 1, rotation: 0 },
+          size: { width: ph.rect.width, height: ph.rect.height },
+          box: { mode: "fixed", width: ph.rect.width, height: ph.rect.height, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
+          data: { placeholderId: ph.id },
+          content: [{
+            runs: [{ text: ph.role === "title" ? tr("app.title") : tr("app.text"), style: { fontFamily: "system", fontStyle: ph.role === "title" ? boldFontStyle : regularFontStyle, fontSize: ph.role === "title" ? 44 : 20, fill: { type: "solid", color: { srgb: { r: 0.12, g: 0.14, b: 0.18, a: 1 } } } } }],
+            style: { align: "left", direction: "auto" },
+          }],
+        } as Partial<Node>));
+      }
+      perform(
+        () => {
+          page.layoutId = layoutId;
+          if (bg) page.background = structuredClone(bg);
+          page.children.push(...(made as never[]));
+        },
+        () => {
+          if (prevLayoutId) page.layoutId = prevLayoutId; else delete page.layoutId;
+          page.background = prevBg;
+          for (const n of made) {
+            const i = page.children.findIndex((c) => c.id === n.id);
+            if (i >= 0) page.children.splice(i, 1);
+          }
+        },
+      );
+      return true;
+    },
+
+    updateLayoutFromPage: (layoutId) => {
+      const doc = get().doc as unknown as {
+        layouts?: { id: string; background?: Fill; placeholders: unknown[] }[];
+        pages: Page[];
+      };
+      const layout = (doc.layouts ?? []).find((l) => l.id === layoutId);
+      const page = doc.pages[curPageIndex()] as unknown as { background?: Fill; children: Node[] };
+      if (!layout || !page) return false;
+      const texts = (page.children as Node[]).filter((n) => n.type === "text" && !n.hidden);
+      const nextPh = texts.map((n, i) => ({
+        id: (n.data as { placeholderId?: string } | undefined)?.placeholderId ?? `ph-${i + 1}`,
+        role: i === 0 ? "title" : "body",
+        rect: { x: n.transform.x, y: n.transform.y, width: Math.abs(n.size.width * n.transform.scaleX), height: Math.abs(n.size.height * n.transform.scaleY) },
+      }));
+      const prevBg = layout.background;
+      const prevPh = layout.placeholders;
+      const nextBg = page.background ? structuredClone(page.background) : undefined;
+      perform(
+        () => {
+          if (nextBg) layout.background = nextBg; else delete layout.background;
+          layout.placeholders = nextPh;
+        },
+        () => {
+          if (prevBg) layout.background = prevBg; else delete layout.background;
+          layout.placeholders = prevPh;
+        },
+      );
+      return true;
+    },
+
+    syncLayoutPages: (layoutId) => {
+      const doc = get().doc as unknown as { pages: (Page & { layoutId?: string })[] };
+      const targets = doc.pages
+        .map((pg, i) => ({ pg, i }))
+        .filter(({ pg }) => pg.layoutId === layoutId);
+      let changed = 0;
+      // One gesture, one undo step. Each applyLayoutToPage is its own perform,
+      // so without the fold "Update + sync" would need N undos to walk back a
+      // single click (collab mode only hid this because the Yjs capture window
+      // merged them).
+      get().runAsTurn(() => {
+        for (const { i } of targets) {
+          if (get().applyLayoutToPage(layoutId, i)) changed++;
+        }
+      });
+      return changed;
+    },
+
+    bulkMergePages: (rows) => {
+      const doc = get().doc;
+      ensureDocArrays(doc);
+      const idx = curPageIndex();
+      const template = doc.pages[idx];
+      if (!template || !rows.length) return 0;
+      const capped = rows.slice(0, 100); // one deck stays navigable
+      const idGen = () => `n_${crypto.randomUUID().slice(0, 12)}`;
+      const madePages: Page[] = [];
+      for (const row of capped) {
+        const clone = structuredClone(template) as Page & { name?: string };
+        clone.id = `page_${crypto.randomUUID().slice(0, 12)}`;
+        const remapped = remapIds(structuredClone(template.children ?? []) as Node[], idGen);
+        clone.children = remapped.nodes as never[];
+        const sub = (text: string) => text.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (m, key: string) => (Object.hasOwn(row, key) ? row[key] : m));
+        const walk = (nodes: Node[]) => {
+          for (const n of nodes) {
+            if (n.type === "text") {
+              const paras = (n as unknown as { content?: { runs?: { text?: string }[] }[] }).content ?? [];
+              for (const pp of paras) for (const r of pp.runs ?? []) if (typeof r.text === "string") r.text = sub(r.text);
+            } else if (n.type === "sticky") {
+              const rec = n as unknown as { text?: string };
+              if (typeof rec.text === "string") rec.text = sub(rec.text);
+            }
+            const kids = (n as unknown as { children?: Node[] }).children;
+            if (kids?.length) walk(kids);
+          }
+        };
+        walk(clone.children as Node[]);
+        madePages.push(clone);
+      }
+      const at = idx + 1;
+      const prevActive = get().activePage;
+      perform(
+        () => {
+          doc.pages.splice(at, 0, ...madePages);
+          set({ activePage: at });
+        },
+        () => {
+          doc.pages.splice(at, madePages.length);
+          set({ activePage: prevActive });
+        },
+      );
+      return madePages.length;
+    },
+
     setPageBackground: (fill) => {
       const page = get().doc.pages[curPageIndex()] as unknown as { background?: Fill };
       if (!page) return;
@@ -1914,6 +2338,14 @@ export const useEditor = create<EditorState>((set, get) => {
       );
     },
 
+    setDocLanguage: (tag) => {
+      // Honor access the same way setDocMeta does.
+      if (!usePresence.getState().canEdit() || get().readonlyPreview()) return;
+      if (tag) get().doc.language = tag;
+      else delete get().doc.language;
+      set((s) => ({ rev: s.rev + 1 }));
+    },
+
     setDocTitle: (title) => {
       get().doc.title = title;
       set((s) => ({ rev: s.rev + 1 }));
@@ -1951,7 +2383,7 @@ export const useEditor = create<EditorState>((set, get) => {
         // activates the selection's page first, so re-targeting activePage
         // under a live selection would shift their coordinate origin.
         const follow =
-          s.selection.length === 0 && !s.transforming && s.editingTextId === null && s.cropping === null;
+          s.selection.length === 0 && !s.transforming && s.editingTextId === null && s.cropping === null && s.maskRefining === null;
         const idx = follow ? centeredPageIndex(s.doc, viewport, s.viewportSize) : null;
         return {
           viewport,
@@ -2030,6 +2462,7 @@ export const useEditor = create<EditorState>((set, get) => {
     setTool: (tool) => set({ tool }),
     setBrush: (patch) => set((s) => ({ brush: { ...s.brush, ...patch } })),
     setCropping: (id) => set({ cropping: id }),
+    setMaskRefining: (id) => set({ maskRefining: id }),
     setEditingText: (id) => set({ editingTextId: id }),
     setTextEditApply: (fn) => set({ textEditApply: fn }),
     setPresenting: (on) => set({ presenting: on }),
@@ -2140,7 +2573,7 @@ export const useEditor = create<EditorState>((set, get) => {
     },
     addShapeAt: (x, y, shape) => {
       const node = createNode("shape", {
-        name: shape === "rect" ? "Rectangle" : "Ellipse",
+        name: shape === "rect" ? tr("app.rectangle") : tr("app.ellipse"),
         shape,
         transform: { x, y, scaleX: 1, scaleY: 1, rotation: 0 },
         size: { width: 1, height: 1 },
@@ -2156,13 +2589,13 @@ export const useEditor = create<EditorState>((set, get) => {
     },
     addTextAt: (x, y) => {
       const node = createNode("text", {
-        name: "Text",
+        name: tr("app.text"),
         transform: { x, y, scaleX: 1, scaleY: 1, rotation: 0 },
         size: { width: 240, height: 44 },
         // Auto-height by default the box grows with the typed text;
         // dragging the top/bottom handle switches it to a fixed height.
         box: { mode: "autoHeight", width: 240, height: 44, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
-        content: [{ runs: [{ text: "Text", style: { fontFamily: "system", fontStyle: "Regular", fontSize: 32, fill: { type: "solid", color: { srgb: { r: 0.1, g: 0.12, b: 0.16, a: 1 } } } } }], style: { align: "left", direction: "auto" } }],
+        content: [{ runs: [{ text: tr("app.text"), style: { fontFamily: "system", fontStyle: "Regular", fontSize: 32, fill: { type: "solid", color: { srgb: { r: 0.1, g: 0.12, b: 0.16, a: 1 } } } } }], style: { align: "left", direction: "auto" } }],
       } as Partial<Node>);
       const page = get().doc.pages[curPageIndex()];
       const prev = get().selection;
@@ -2173,6 +2606,198 @@ export const useEditor = create<EditorState>((set, get) => {
       get().privateRound?.mine.add(node.id); // private mode: my own text (FR-15)
       return node.id;
     },
+    insertDiagramSpec: (spec) => {
+      if (!spec.nodes.length) return false;
+      const doc = get().doc;
+      ensureDocArrays(doc);
+      const page = doc.pages[curPageIndex()];
+      if (!page) return false;
+      // Positions from the pure layout engine (page-local, around the origin).
+      const graph = { nodes: spec.nodes.map((n) => n.id), edges: spec.edges.map((e) => [e.from, e.to] as [string, string]) };
+      const pos = spec.kind === "mindmap"
+        ? layoutMindMap(spec.nodes[0].id, graph, { radiusStep: 240 })
+        : layoutFlowchart(graph, { direction: spec.direction ?? "down", layerGap: 220, nodeGap: 210 });
+      // Anchor the diagram below existing content (or at the page origin area
+      // on an empty board), normalized so the layout's min corner starts there.
+      const STICKY = 170;
+      let minX = Infinity;
+      let minY = Infinity;
+      for (const id of graph.nodes) {
+        const p = pos[id] ?? { x: 0, y: 0 };
+        minX = Math.min(minX, p.x);
+        minY = Math.min(minY, p.y);
+      }
+      if (!Number.isFinite(minX)) { minX = 0; minY = 0; }
+      let baseY = 80;
+      for (const n of page.children as Node[]) {
+        const t = n.transform;
+        baseY = Math.max(baseY, t.y + Math.abs(n.size.height * t.scaleY) + 120);
+      }
+      const baseX = 120;
+      const idMap = new Map<string, string>();
+      const made: Node[] = [];
+      for (const dn of spec.nodes) {
+        const p = pos[dn.id] ?? { x: 0, y: 0 };
+        const node = createNode("sticky", {
+          text: dn.label,
+          transform: { x: baseX + (p.x - minX), y: baseY + (p.y - minY), scaleX: 1, scaleY: 1, rotation: 0 },
+          size: { width: STICKY, height: STICKY },
+        } as Partial<Node>);
+        idMap.set(dn.id, node.id);
+        made.push(node);
+      }
+      for (const e of spec.edges) {
+        const fromId = idMap.get(e.from);
+        const toId = idMap.get(e.to);
+        if (!fromId || !toId) continue;
+        made.push(createNode("connector", {
+          route: spec.kind === "mindmap" ? "curved" : "elbow",
+          start: { attach: { nodeId: fromId, anchor: "auto" } },
+          end: { attach: { nodeId: toId, anchor: "auto" } },
+          ...(e.label ? { label: e.label } : {}),
+          transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+          stroke: {
+            fill: { type: "solid", color: { srgb: { r: 0.28, g: 0.33, b: 0.41, a: 1 } } },
+            width: 3,
+            align: "center",
+            cap: "round",
+            join: "round",
+          },
+          endCap: { kind: "arrow", size: 12 },
+        } as Partial<Node>));
+      }
+      const prevSel = get().selection;
+      perform(
+        () => {
+          page.children.push(...(made as never[]));
+          set({ selection: made.filter((n) => n.type === "sticky").map((n) => n.id) });
+        },
+        () => {
+          for (const n of made) {
+            const i = page.children.findIndex((c) => c.id === n.id);
+            if (i >= 0) page.children.splice(i, 1);
+          }
+          set({ selection: prevSel });
+        },
+      );
+      return true;
+    },
+
+    collectBoardStickies: () => {
+      const page = get().doc.pages[curPageIndex()];
+      const out: { id: string; text: string }[] = [];
+      if (!page) return out;
+      for (const n of page.children as Node[]) {
+        if (n.type !== "sticky" || n.locked) continue;
+        const text = (n as unknown as { text?: string }).text ?? "";
+        if (text.trim()) out.push({ id: n.id, text: text.trim() });
+      }
+      return out;
+    },
+
+    applyStickyClusters: (clusters) => {
+      const doc = get().doc;
+      const page = doc.pages[curPageIndex()];
+      if (!page) return false;
+      const STICKY = 170;
+      const GAP = 24;
+      const COLS = 3;
+      const PAD = 28;
+      const TITLE = 44;
+      // Lay clusters in a row below the existing content extent.
+      let baseY = 80;
+      for (const n of page.children as Node[]) {
+        const t = n.transform;
+        baseY = Math.max(baseY, t.y + Math.abs(n.size.height * t.scaleY) + 140);
+      }
+      let x = 120;
+      const moves: { node: Node; to: { x: number; y: number }; from: { x: number; y: number } }[] = [];
+      const frames: Node[] = [];
+      for (const cluster of clusters) {
+        const members = cluster.ids
+          .map((id) => (page.children as Node[]).find((n) => n.id === id && n.type === "sticky" && !n.locked))
+          .filter((n): n is Node => !!n);
+        if (!members.length) continue;
+        const cols = Math.min(COLS, members.length);
+        const rows = Math.ceil(members.length / cols);
+        const w = PAD * 2 + cols * STICKY + (cols - 1) * GAP;
+        const h = PAD * 2 + TITLE + rows * STICKY + (rows - 1) * GAP;
+        frames.push(createNode("frame", {
+          name: (cluster.title || tr("app.theme")).slice(0, 80),
+          transform: { x, y: baseY, scaleX: 1, scaleY: 1, rotation: 0 },
+          size: { width: w, height: h },
+        } as Partial<Node>));
+        members.forEach((m, i) => {
+          const col = i % cols;
+          const row = Math.floor(i / cols);
+          moves.push({
+            node: m,
+            from: { x: m.transform.x, y: m.transform.y },
+            to: { x: x + PAD + col * (STICKY + GAP), y: baseY + PAD + TITLE + row * (STICKY + GAP) },
+          });
+        });
+        x += w + 60;
+      }
+      if (!frames.length) return false;
+      perform(
+        () => {
+          // Frames go BEHIND the stickies they group (start of the paint order).
+          page.children.unshift(...(frames as never[]));
+          for (const mv of moves) {
+            mv.node.transform.x = mv.to.x;
+            mv.node.transform.y = mv.to.y;
+          }
+        },
+        () => {
+          for (const f of frames) {
+            const i = page.children.findIndex((c) => c.id === f.id);
+            if (i >= 0) page.children.splice(i, 1);
+          }
+          for (const mv of moves) {
+            mv.node.transform.x = mv.from.x;
+            mv.node.transform.y = mv.from.y;
+          }
+        },
+      );
+      return true;
+    },
+
+    insertSummaryNote: (text) => {
+      const t = text.trim();
+      if (!t) return false;
+      const doc = get().doc;
+      const page = doc.pages[curPageIndex()];
+      if (!page) return false;
+      let baseY = 80;
+      for (const n of page.children as Node[]) {
+        const tr = n.transform;
+        baseY = Math.max(baseY, tr.y + Math.abs(n.size.height * tr.scaleY) + 120);
+      }
+      const node = createNode("text", {
+        name: tr("app.summary"),
+        transform: { x: 120, y: baseY, scaleX: 1, scaleY: 1, rotation: 0 },
+        size: { width: 520, height: 200 },
+        box: { mode: "fixed", width: 520, height: 200, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
+        content: t.split("\n").map((line) => ({
+          runs: [{ text: line, style: { fontFamily: "system", fontStyle: "Regular", fontSize: 18, fill: { type: "solid", color: { srgb: { r: 0.12, g: 0.14, b: 0.18, a: 1 } } } } }],
+          style: { align: "left", direction: "auto" },
+        })),
+      } as Partial<Node>);
+      const prevSel = get().selection;
+      perform(
+        () => {
+          page.children.push(node as never);
+          set({ selection: [node.id] });
+        },
+        () => {
+          const i = page.children.findIndex((c) => c.id === node.id);
+          if (i >= 0) page.children.splice(i, 1);
+          set({ selection: prevSel });
+        },
+      );
+      return true;
+    },
+
     connectNodes: (fromId, toId, fromAnchor = "auto", toAnchor = "auto") => {
       if (fromId === toId) return null;
       const d = get().doc;
@@ -2595,7 +3220,7 @@ export const useEditor = create<EditorState>((set, get) => {
       const bn = parseInt(bh.length === 3 ? bh.split("").map((c) => c + c).join("") : bh, 16) || 0;
       const brushColor = { srgb: { r: ((bn >> 16) & 255) / 255, g: ((bn >> 8) & 255) / 255, b: (bn & 255) / 255, a: Math.max(0, Math.min(1, brush.opacity)) } };
       const node = createNode("path", {
-        name: "Pencil",
+        name: tr("app.pencil"),
         segments: segs,
         closed: false,
         stroke: { fill: { type: "solid", color: brushColor }, width: Math.max(0.5, brush.width), align: "center", cap: "round", join: "round" },
@@ -2654,7 +3279,7 @@ export const useEditor = create<EditorState>((set, get) => {
       const bn = parseInt(bh.length === 3 ? bh.split("").map((c) => c + c).join("") : bh, 16) || 0;
       const brushColor = { srgb: { r: ((bn >> 16) & 255) / 255, g: ((bn >> 8) & 255) / 255, b: (bn & 255) / 255, a: 1 } };
       const node = createNode("ink", {
-        name: brush.mode === "highlighter" ? "Highlighter" : brush.mode === "marker" ? "Marker" : "Ink",
+        name: brush.mode === "highlighter" ? tr("app.highlighter") : brush.mode === "marker" ? tr("app.marker") : tr("app.ink"),
         points: local,
         smoothing: s,
         brush: { width, opacity: Math.max(0, Math.min(1, brush.opacity)), color: brushColor, mode: brush.mode },
@@ -2754,7 +3379,7 @@ export const useEditor = create<EditorState>((set, get) => {
       if (!outline.subpaths.length) return;
       const page = doc.pages[curPageIndex()];
       const node = createNode("boolean", {
-        name: "Outline", op: "union", operands: [], result: outline, fills: [stroke.fill],
+        name: tr("app.outline"), op: "union", operands: [], result: outline, fills: [stroke.fill],
         transform: { ...n.transform }, size: { ...n.size },
       } as unknown as Partial<Node>);
       const before = structuredClone(stroke);
@@ -2781,7 +3406,7 @@ export const useEditor = create<EditorState>((set, get) => {
       let node: Node;
       if (rec.kind === "line") {
         node = createNode("path", {
-          name: "Line", closed: false,
+          name: tr("app.line"), closed: false,
           segments: [{ x: rec.from.x, y: rec.from.y }, { x: rec.to.x, y: rec.to.y }],
           stroke: stroke ?? { fill: { type: "solid", color: { srgb: { r: 0.1, g: 0.12, b: 0.16, a: 1 } } }, width: 2, align: "center", cap: "round", join: "round" },
           transform: { ...baseT },
@@ -3131,7 +3756,7 @@ export const useEditor = create<EditorState>((set, get) => {
       get().addNode("chart", {
         chartType,
         categories: ["A", "B", "C", "D"],
-        series: [{ name: "Series 1", values: [12, 19, 8, 15], color: seriesColorAt(0) }],
+        series: [{ name: tr("app.series_1"), values: [12, 19, 8, 15], color: seriesColorAt(0) }],
         options: {},
         style: { legend: { show: true, position: "bottom" }, valueLabels: false },
         transform: { x: 200, y: 200, scaleX: 1, scaleY: 1, rotation: 0 },
@@ -3141,7 +3766,7 @@ export const useEditor = create<EditorState>((set, get) => {
     insertChartData: (data) => {
       const series = data.series.length
         ? data.series.map((s, i) => ({ name: s.name, values: s.values, color: seriesColorAt(i) }))
-        : [{ name: "Series 1", values: [], color: seriesColorAt(0) }];
+        : [{ name: tr("app.series_1"), values: [], color: seriesColorAt(0) }];
       const node = createNode("chart", {
         chartType: data.chartType,
         categories: data.categories,
@@ -3198,16 +3823,28 @@ export const useEditor = create<EditorState>((set, get) => {
       if (!b) return false;
       let csv = b.csv ?? "";
       if (b.kind === "url" && b.url) {
+        // Direct fetch first (works for CORS-enabled hosts and same-origin
+        // files); fall back to the server's SSRF-guarded data proxy, which
+        // covers the common case of a source with no CORS headers.
+        let text: string | null = null;
         try {
           const res = await fetch(b.url);
-          if (!res.ok) return false;
-          csv = await res.text();
+          if (res.ok) text = await res.text();
         } catch {
-          return false;
+          text = null;
         }
+        if (text === null) {
+          try {
+            const { oc } = await import("@/lib/sdk");
+            text = (await oc.dataFetch({ url: b.url })).text;
+          } catch {
+            return false;
+          }
+        }
+        csv = text;
       }
       const matrix = parseCsvMatrix(csv);
-      if (!matrix.length) return false;
+      if (!looksLikeData(matrix)) return false; // markup in: keep the stored data
       if (node.type === "chart") {
         const cd = tabularToChart(matrix, node.chartType ?? "bar");
         get().setChart(id, { chartType: cd.chartType, categories: cd.categories, series: cd.series });
@@ -3430,7 +4067,7 @@ export const useEditor = create<EditorState>((set, get) => {
     },
     addTextBox: (text, at) => {
       const node = createNode("text", {
-        name: text.slice(0, 24) || "Text",
+        name: text.slice(0, 24) || tr("app.text"),
         transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
         size: { width: 360, height: 80 },
         box: { mode: "fixed", width: 360, height: 80, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
@@ -3484,6 +4121,56 @@ export const useEditor = create<EditorState>((set, get) => {
         after.push(moveTransform(loc.node.transform, dx, dy));
       }
       if (nodes.length) get().runCommand({ kind: "transform", nodes, before, after });
+    },
+    rotateSelection: (deltaDeg) => {
+      const { doc, selection } = get();
+      const nodes: string[] = [];
+      const before: Transform[] = [];
+      const after: Transform[] = [];
+      for (const id of selection) {
+        const loc = locate(doc, id);
+        if (!loc || loc.node.locked || editBlocked(id)) continue; // skip collab-locked + brand locked regions
+        const sz = (loc.node as { size?: { width: number; height: number } }).size;
+        if (!sz) continue; // no box, no pivot (e.g. connectors follow their endpoints)
+        nodes.push(id);
+        before.push({ ...loc.node.transform });
+        after.push(rotateAboutPoint(loc.node.transform, sz, deltaDeg, loc.node.transform.origin ?? { x: 0.5, y: 0.5 }));
+      }
+      if (nodes.length) get().runCommand({ kind: "transform", nodes, before, after });
+    },
+    growSelection: (dw, dh) => {
+      // One keypress = ONE undo step, even for a mixed selection whose
+      // text/line/grid/frame members each commit through their own geometry
+      // applier: runAsTurn collapses everything this adds into a composite.
+      get().runAsTurn(() => {
+        const { doc, selection } = get();
+        const nodes: string[] = [];
+        const before: Transform[] = [];
+        const after: Transform[] = [];
+        const beforeSizes: { width: number; height: number }[] = [];
+        const afterSizes: { width: number; height: number }[] = [];
+        for (const id of selection) {
+          const loc = locate(doc, id);
+          if (!loc || loc.node.locked || editBlocked(id)) continue; // skip collab-locked + brand locked regions
+          const sz = (loc.node as { size?: { width: number; height: number } }).size;
+          if (!sz) continue; // nodes without a box (e.g. connectors) have nothing to grow
+          const next = { width: Math.max(1, sz.width + dw), height: Math.max(1, sz.height + dh) };
+          if (next.width === sz.width && next.height === sz.height) continue;
+          const t = { ...loc.node.transform };
+          // Content that lays out from its box must re-lay when the box changes
+          // (mirrors the properties panel's W/H commit path).
+          if (loc.node.type === "text") { get().applyTextGeometry(id, t, next); continue; }
+          if (loc.node.type === "line") { get().applyLineGeometry(id, t, next); continue; }
+          if (loc.node.type === "grid") { get().applyGridGeometry(id, t, next); continue; }
+          if (loc.node.type === "frame") { get().applyFrameGeometry(id, t, next); continue; }
+          nodes.push(id);
+          before.push({ ...loc.node.transform });
+          after.push(t);
+          beforeSizes.push({ ...sz });
+          afterSizes.push(next);
+        }
+        if (nodes.length) get().runCommand({ kind: "transform", nodes, before, after, beforeSizes, afterSizes });
+      });
     },
     reorderLayer: (id, toIndex) => {
       if (editBlocked(id)) return; // a filler may not restack a brand locked region
@@ -3551,6 +4238,13 @@ export const useEditor = create<EditorState>((set, get) => {
       const cur = l.node as unknown as Snap;
       const after: Snap = { transform: { ...cur.transform }, size: { ...cur.size }, box: cur.box !== undefined ? structuredClone(cur.box) : undefined, content: cur.content !== undefined ? structuredClone(cur.content) : undefined, points: cur.points !== undefined ? structuredClone(cur.points) : undefined, children: before.children !== undefined ? structuredClone(cur.children) : undefined };
       const b: Snap = { transform: { ...before.transform }, size: { ...before.size }, box: before.box !== undefined ? structuredClone(before.box) : undefined, content: before.content !== undefined ? structuredClone(before.content) : undefined, points: before.points !== undefined ? structuredClone(before.points) : undefined, children: before.children !== undefined ? structuredClone(before.children) : undefined };
+      // Same invariant as perform(): while a CRDT undo manager is bound the
+      // local stacks stay EMPTY - replaying a stale snapshot against a later
+      // collaborative state would clobber peer edits.
+      if (get().collabUndo) {
+        set((s) => ({ rev: s.rev + 1 }));
+        return;
+      }
       set((s) => ({ rev: s.rev + 1, undoStack: [...s.undoStack, { undo: () => apply(b), redo: () => apply(after) }], redoStack: [] }));
     },
 
@@ -3586,7 +4280,7 @@ export const useEditor = create<EditorState>((set, get) => {
       const vbH = (vb && vb[3]) || 24;
       const scale = 200 / Math.max(vbW, vbH);
       const group = createNode("group", {
-        name: "Icon",
+        name: tr("app.icon"),
         children: nodes,
         transform: { x: 0, y: 0, scaleX: scale, scaleY: scale, rotation: 0 },
         size: { width: vbW, height: vbH },
@@ -3628,7 +4322,7 @@ export const useEditor = create<EditorState>((set, get) => {
       for (const s of slots) {
         const box = gridCellBox({ width: gw, height: gh }, r, c, gap, s);
         const cell = createNode("frame", {
-          name: "Photo",
+          name: tr("app.photo"),
           transform: { x: box.x, y: box.y, scaleX: 1, scaleY: 1, rotation: 0 },
           size: { width: box.width, height: box.height },
           clip: true,
@@ -3640,7 +4334,7 @@ export const useEditor = create<EditorState>((set, get) => {
         cells.push({ ...s, childId: cell.id });
       }
       const grid = createNode("grid", {
-        name: "Photo grid",
+        name: tr("app.photo_grid"),
         rows: r, cols: c, gap,
         cells, children,
         size: { width: gw, height: gh },
@@ -3706,7 +4400,7 @@ export const useEditor = create<EditorState>((set, get) => {
         for (let col = 0; col < c; col++) {
           const keep = byPos.get(`${row},${col}`) as unknown as { id: string; transform: Transform; size: { width: number; height: number }; children?: Node[] } | undefined;
           const frame = keep ?? (createNode("frame", {
-            name: "Photo", transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: cellW, height: cellH }, clip: true, children: [], maskShape: "rect", fills: [{ type: "solid", color: { srgb: { r: 0.9, g: 0.91, b: 0.93, a: 1 } } }],
+            name: tr("app.photo"), transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: cellW, height: cellH }, clip: true, children: [], maskShape: "rect", fills: [{ type: "solid", color: { srgb: { r: 0.9, g: 0.91, b: 0.93, a: 1 } } }],
           } as Partial<Node>) as unknown as { id: string; transform: Transform; size: { width: number; height: number }; children?: Node[] });
           layout(frame, { row, col, rowSpan: 1, colSpan: 1 }, r, c);
           nextChildren.push(frame as unknown as Node);
@@ -3748,6 +4442,12 @@ export const useEditor = create<EditorState>((set, get) => {
       // with ids already persisted in this doc, and applying the same template
       // twice must never mint duplicates.
       const idGen = () => `n_${crypto.randomUUID().slice(0, 12)}`;
+      // A template authored at a different size is resized to the ACTIVE
+      // page's dimensions on insert (the same smart mapping as the design
+      // resize feature), so applying any gallery template never creates a
+      // mixed-size document.
+      const cur = doc.pages[Math.min(get().activePage, Math.max(0, doc.pages.length - 1))];
+      const target = cur && cur.width > 0 && cur.height > 0 ? { width: cur.width, height: cur.height } : null;
       const made = pages.map((p, i) => {
         const page = structuredClone(p) as Page & { name?: string; readingOrder?: string[] };
         page.id = `page_${crypto.randomUUID().slice(0, 12)}`;
@@ -3763,6 +4463,14 @@ export const useEditor = create<EditorState>((set, get) => {
             .filter((id): id is string => !!id);
           if (ro.length) page.readingOrder = ro;
           else delete page.readingOrder;
+        }
+        if (
+          target &&
+          page.width > 0 &&
+          page.height > 0 &&
+          (Math.round(page.width) !== Math.round(target.width) || Math.round(page.height) !== Math.round(target.height))
+        ) {
+          return resizePage(page, target) as typeof page;
         }
         return page;
       });
@@ -3827,7 +4535,7 @@ export const useEditor = create<EditorState>((set, get) => {
       ensureDocArrays(doc);
       const refs: AssetRef[] = assets.map((a) => ({ id: a.assetId, kind: "image", url: a.url, mime: "image/*", checksum: "" }));
       const group = createNode("group", {
-        name: "Imported SVG",
+        name: tr("app.imported_svg"),
         children: nodes,
         transform: { x: gx, y: gy, scaleX: scale, scaleY: scale, rotation: 0 },
         size: { width: vbW, height: vbH },
@@ -3901,8 +4609,14 @@ export const useEditor = create<EditorState>((set, get) => {
             };
             n.source.naturalWidth = img.naturalWidth;
             n.source.naturalHeight = img.naturalHeight ?? n.size.height;
-            const aspect = img.naturalWidth / (img.naturalHeight || img.naturalWidth);
-            n.size = { width: n.size.width, height: Math.max(1, Math.round(n.size.width / aspect)) };
+            // A node made the page background while its image was still loading
+            // keeps its page-sized box: the aspect snap below would pull it off
+            // the page. Stock photos load through the proxy (slow), so that
+            // race is easy to hit; the natural size above is still patched.
+            if ((loc.node.data as { background?: unknown } | undefined)?.background !== true) {
+              const aspect = img.naturalWidth / (img.naturalHeight || img.naturalWidth);
+              n.size = { width: n.size.width, height: Math.max(1, Math.round(n.size.width / aspect)) };
+            }
             get().tick();
           }
           off(); // ready or missing: stop listening either way
@@ -3918,7 +4632,7 @@ export const useEditor = create<EditorState>((set, get) => {
       const pageId = page.id;
       const assetId = `asset-${crypto.randomUUID()}`;
       const node = createNode("image", {
-        name: "Background",
+        name: tr("app.background"),
         source: { assetId, naturalWidth: 0, naturalHeight: 0 },
         fit: "cover",
         transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
@@ -3974,6 +4688,49 @@ export const useEditor = create<EditorState>((set, get) => {
       }
     },
 
+    /**
+     * Attach an alpha mask WITHOUT touching the image.
+     *
+     * Background removal used to call `setImageSource` with the flattened
+     * cutout, which threw the original pixels out of the document: the result
+     * could not be meaningfully undone, and there was nothing left to refine.
+     * Storing the alpha separately makes the cutout a view of the image rather
+     * than a replacement for it.
+     *
+     * The mask is registered as an ordinary asset, so it travels the same
+     * upload, storage and export path as any other. Passing null removes it,
+     * which is what "restore background" is: one field cleared, no pixels
+     * touched.
+     */
+    setImageAlphaMask: (id, url, width, height) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "image" || loc.node.locked || editBlocked(id)) return;
+      const node = loc.node as unknown as { alphaMask?: { assetId: string; width: number; height: number } };
+      const doc = get().doc;
+      ensureDocArrays(doc);
+      const before = node.alphaMask ? { ...node.alphaMask } : undefined;
+      if (url === null) {
+        perform(
+          () => { delete node.alphaMask; },
+          () => { if (before) node.alphaMask = { ...before }; },
+        );
+        return;
+      }
+      const assetId = `asset-${crypto.randomUUID()}`;
+      const ref: AssetRef = { id: assetId, kind: "image", url, mime: "image/png", checksum: "" };
+      perform(
+        () => {
+          doc.assets.push(ref);
+          node.alphaMask = { assetId, width, height };
+        },
+        () => {
+          const at = doc.assets.findIndex((a) => a.id === assetId);
+          if (at >= 0) doc.assets.splice(at, 1);
+          if (before) node.alphaMask = { ...before };
+          else delete node.alphaMask;
+        },
+      );
+    },
     setImageSource: (id, url) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "image" || loc.node.locked || editBlocked(id)) return;
@@ -4013,8 +4770,11 @@ export const useEditor = create<EditorState>((set, get) => {
             const n = l.node as unknown as { source: { naturalWidth: number; naturalHeight: number }; size: { width: number; height: number } };
             n.source.naturalWidth = img.naturalWidth;
             n.source.naturalHeight = img.naturalHeight ?? n.size.height;
-            const aspect = img.naturalWidth / (img.naturalHeight || img.naturalWidth);
-            n.size = { width: n.size.width, height: Math.max(1, Math.round(n.size.width / aspect)) };
+            // Keep a page background's page-sized box; see addImage above.
+            if ((l.node.data as { background?: unknown } | undefined)?.background !== true) {
+              const aspect = img.naturalWidth / (img.naturalHeight || img.naturalWidth);
+              n.size = { width: n.size.width, height: Math.max(1, Math.round(n.size.width / aspect)) };
+            }
             get().tick();
           }
           off();
@@ -4086,6 +4846,40 @@ export const useEditor = create<EditorState>((set, get) => {
         () => { node.value = beforeV; node.modules = beforeM; },
       );
     },
+    setQrLogo: (id, assetId, url) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "qr") return;
+      const node = loc.node as unknown as { logoAssetId?: string; ecLevel?: "L" | "M" | "Q" | "H"; value?: string; modules?: boolean[][] };
+      const doc = get().doc;
+      ensureDocArrays(doc);
+      const beforeLogo = node.logoAssetId;
+      const beforeEc = node.ecLevel;
+      const beforeM = node.modules;
+      if (assetId) {
+        // A center logo covers modules; bump error correction to "H" (30%) and
+        // regenerate the matrix so the code stays scannable under the logo.
+        const modules = qrModules(node.value ?? "", "H");
+        const ref: AssetRef | null = url && !doc.assets.some((a) => a.id === assetId) ? { id: assetId, kind: "image", url, mime: "image/*", checksum: "" } : null;
+        perform(
+          () => { node.logoAssetId = assetId; node.ecLevel = "H"; node.modules = modules; if (ref) doc.assets.push(ref); },
+          () => { node.logoAssetId = beforeLogo; node.ecLevel = beforeEc; node.modules = beforeM; if (ref) { const i = doc.assets.findIndex((a) => a.id === assetId); if (i >= 0) doc.assets.splice(i, 1); } },
+        );
+        if (url && typeof window !== "undefined") imageAssets.register(assetId, url);
+      } else {
+        perform(
+          () => { node.logoAssetId = undefined; },
+          () => { node.logoAssetId = beforeLogo; },
+        );
+      }
+    },
+    setQrLogoScale: (id, scale) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "qr") return;
+      const node = loc.node as unknown as { logoScale?: number };
+      const before = node.logoScale;
+      const v = Math.min(0.4, Math.max(0.08, scale));
+      perform(() => { node.logoScale = v; }, () => { node.logoScale = before; });
+    },
     setFrameShape: (id, mask, radius) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "frame") return;
@@ -4110,7 +4904,7 @@ export const useEditor = create<EditorState>((set, get) => {
       const src = loc.node as unknown as { transform: Transform; size: { width: number; height: number }; opacity?: number; fills?: Fill[]; name?: string };
       const frame = createNode("frame", {
         id, // keep the id so selection/undo stay anchored to it
-        name: src.name ?? "Frame",
+        name: src.name ?? tr("app.frame"),
         transform: { ...src.transform },
         size: { ...src.size },
         opacity: src.opacity ?? 1,
@@ -4313,6 +5107,165 @@ export const useEditor = create<EditorState>((set, get) => {
       }
       return true;
     },
+
+    isBackgroundImage: (id) => {
+      const doc = get().doc;
+      const loc = locate(doc, id);
+      // Background status always requires the lock: unlocking a background
+      // (panel/menu lock toggle) suspends it, so the freed image acts like a
+      // plain element again and "Set as background" reappears. The flag stays
+      // on the node, so re-setting it keeps the original pre-background state.
+      if (!loc || loc.node.type !== "image" || loc.parent || !loc.node.locked) return false;
+      if ((loc.node.data as { background?: unknown } | undefined)?.background === true) return true;
+      // Hand-built background (no flag): a locked, bottom-of-stack image
+      // covering the whole page, i.e. what "set as background" produces when
+      // done by hand. Detach then simply unlocks it.
+      if (loc.index !== 0) return false;
+      const box = worldAABB(doc, id);
+      const eps = 1;
+      return (
+        !!box &&
+        box.x <= eps &&
+        box.y <= eps &&
+        box.x + box.width >= loc.page.width - eps &&
+        box.y + box.height >= loc.page.height - eps
+      );
+    },
+
+    setImageAsBackground: (id) => {
+      const doc = get().doc;
+      const loc = locate(doc, id);
+      if (!loc || loc.node.type !== "image" || loc.parent || editBlocked(id)) return;
+      if (get().isBackgroundImage(id)) return;
+      const node = loc.node;
+      const page = loc.page;
+      if (node.size.width <= 0 || node.size.height <= 0 || page.width <= 0 || page.height <= 0) return;
+      // The background is a PAGE-SIZED box at scale 1 with the source covering
+      // it (fit "cover"), not a scaled-up transform: that is how every other
+      // image box is modeled, and it is the shape the crop overlay requires,
+      // so the background stays adjustable (pan/zoom via crop) while locked.
+      // A negative scale (flip) keeps its sign so the background stays
+      // mirrored; the box still spans the page exactly.
+      const sx = node.transform.scaleX < 0 ? -1 : 1;
+      const sy = node.transform.scaleY < 0 ? -1 : 1;
+      const cover: Transform = {
+        x: sx < 0 ? page.width : 0,
+        y: sy < 0 ? page.height : 0,
+        scaleX: sx,
+        scaleY: sy,
+        rotation: 0,
+      };
+      const img = node as unknown as { fit: ImageFit };
+      const prevTransform = { ...node.transform };
+      const prevSize = { ...node.size };
+      const prevFit = img.fit;
+      const prevIndex = loc.index;
+      const prevLocked = !!node.locked;
+      const prevData = node.data;
+      // Re-setting a still-flagged image (its background status was suspended
+      // by an unlock, never detached) keeps the ORIGINAL pre-background state,
+      // so a later detach restores the true pre-background spot instead of the
+      // suspended cover box.
+      const dataRec = prevData as { background?: unknown; backgroundRestore?: unknown } | undefined;
+      const keptRestore =
+        dataRec?.background === true && typeof dataRec.backgroundRestore === "object" && dataRec.backgroundRestore !== null
+          ? dataRec.backgroundRestore
+          : null;
+      // The image currently serving as this page's background is detached in
+      // the same undo step; otherwise it would sit full-page directly above
+      // the new background and hide it. A stale-flagged bottom image (its
+      // background suspended by an unlock) is cleaned up the same way.
+      const bottom = page.children[0];
+      const oldBg =
+        bottom &&
+        bottom.id !== id &&
+        bottom.type === "image" &&
+        (get().isBackgroundImage(bottom.id) || (bottom.data as { background?: unknown } | undefined)?.background === true)
+          ? bottom
+          : null;
+      const oldBgPrev = oldBg
+        ? {
+            locked: !!oldBg.locked,
+            data: oldBg.data,
+            transform: { ...oldBg.transform },
+            size: { ...oldBg.size },
+            fit: (oldBg as unknown as { fit: ImageFit }).fit,
+          }
+        : null;
+      perform(
+        () => {
+          if (oldBg) applyBackgroundDetach(oldBg, page);
+          const i = page.children.indexOf(node);
+          if (i > 0) {
+            page.children.splice(i, 1);
+            page.children.unshift(node);
+          }
+          node.transform = { ...cover };
+          node.size = { width: page.width, height: page.height };
+          img.fit = "cover";
+          node.locked = true;
+          node.data = {
+            ...(prevData ?? {}),
+            background: true,
+            backgroundRestore: keptRestore ?? { transform: prevTransform, size: prevSize, fit: prevFit, index: prevIndex },
+          };
+        },
+        () => {
+          // Re-bottom the old background FIRST: prevIndex was measured while it
+          // sat at index 0, so the new node's slot is only correct after it is back.
+          if (oldBg && oldBgPrev) {
+            oldBg.locked = oldBgPrev.locked;
+            oldBg.data = oldBgPrev.data;
+            oldBg.transform = oldBgPrev.transform;
+            oldBg.size = oldBgPrev.size;
+            (oldBg as unknown as { fit: ImageFit }).fit = oldBgPrev.fit;
+            const j = page.children.indexOf(oldBg);
+            if (j > 0) {
+              page.children.splice(j, 1);
+              page.children.unshift(oldBg);
+            }
+          }
+          node.data = prevData;
+          node.locked = prevLocked;
+          node.transform = { ...prevTransform };
+          node.size = { ...prevSize };
+          img.fit = prevFit;
+          const i = page.children.indexOf(node);
+          if (i >= 0) page.children.splice(i, 1);
+          page.children.splice(Math.min(prevIndex, page.children.length), 0, node);
+        },
+      );
+    },
+
+    detachImageBackground: (id) => {
+      const doc = get().doc;
+      const loc = locate(doc, id);
+      if (!loc || loc.node.type !== "image" || loc.parent || editBlocked(id)) return;
+      if (!get().isBackgroundImage(id)) return;
+      const node = loc.node;
+      const page = loc.page;
+      const prevLocked = !!node.locked;
+      const prevData = node.data;
+      const prevTransform = { ...node.transform };
+      const prevSize = { ...node.size };
+      const prevFit = (node as unknown as { fit: ImageFit }).fit;
+      const prevIndex = loc.index;
+      perform(
+        () => {
+          applyBackgroundDetach(node, page);
+        },
+        () => {
+          node.locked = prevLocked;
+          node.data = prevData;
+          node.transform = { ...prevTransform };
+          node.size = { ...prevSize };
+          (node as unknown as { fit: ImageFit }).fit = prevFit;
+          const i = page.children.indexOf(node);
+          if (i >= 0) page.children.splice(i, 1);
+          page.children.splice(Math.min(prevIndex, page.children.length), 0, node);
+        },
+      );
+    },
     setFillColor: (id, hex) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.locked || editBlocked(id)) return;
@@ -4350,6 +5303,96 @@ export const useEditor = create<EditorState>((set, get) => {
       );
     },
 
+    collectDeckTexts: () => {
+      const { doc } = get();
+      const out: DeckTextEntry[] = [];
+      const walk = (nodes: Node[]) => {
+        for (const n of nodes) {
+          if (n.locked) continue; // a locked subtree is not editable; skip whole branch
+          if (n.type === "text") {
+            const paras = (n as unknown as { content?: { runs?: { text?: string }[] }[] }).content ?? [];
+            paras.forEach((p, pi) =>
+              (p.runs ?? []).forEach((r, ri) => {
+                if (typeof r.text === "string" && r.text.trim()) {
+                  out.push({ ref: { kind: "run", nodeId: n.id, para: pi, run: ri }, text: r.text });
+                }
+              }),
+            );
+          } else if (n.type === "sticky") {
+            const t = (n as unknown as { text?: string }).text;
+            if (typeof t === "string" && t.trim()) out.push({ ref: { kind: "sticky", nodeId: n.id }, text: t });
+          }
+          const kids = (n as unknown as { children?: Node[] }).children;
+          if (kids?.length) walk(kids);
+        }
+      };
+      doc.pages.forEach((pg, i) => {
+        walk(pg.children as Node[]);
+        const notes = (pg as unknown as { notes?: string }).notes;
+        if (typeof notes === "string" && notes.trim()) out.push({ ref: { kind: "notes", page: i }, text: notes });
+      });
+      return out;
+    },
+
+    applyDeckTexts: (entries) => {
+      const { doc } = get();
+      // Resolve every target up front and snapshot its prior value; the whole
+      // batch then applies (and reverts) as ONE undo step. Refs that no longer
+      // resolve (node deleted since collection, run gone after an edit) are
+      // skipped rather than failing the batch.
+      const changes: { apply: () => void; revert: () => void }[] = [];
+      // Text nodes whose runs get replaced, each with its pre-batch height:
+      // translations routinely run longer than the source and rewrap, so every
+      // touched auto-height box is re-fitted after the batch (and its height
+      // reverts with it).
+      const touchedText = new Map<string, { node: Node; h: number; bh: number }>();
+      for (const e of entries) {
+        const next = e.text;
+        if (typeof next !== "string") continue;
+        if (e.ref.kind === "notes") {
+          const pg = doc.pages[e.ref.page] as unknown as { notes?: string } | undefined;
+          if (!pg) continue;
+          const before = pg.notes;
+          changes.push({ apply: () => { pg.notes = next; }, revert: () => { pg.notes = before; } });
+        } else {
+          const loc = locate(doc, e.ref.nodeId);
+          if (!loc || loc.node.locked || editBlocked(e.ref.nodeId)) continue;
+          if (e.ref.kind === "sticky" && loc.node.type === "sticky") {
+            const rec = loc.node as unknown as { text?: string };
+            const before = rec.text;
+            changes.push({ apply: () => { rec.text = next; }, revert: () => { rec.text = before; } });
+          } else if (e.ref.kind === "run" && loc.node.type === "text") {
+            const paras = (loc.node as unknown as { content?: { runs?: { text?: string }[] }[] }).content;
+            const run = paras?.[e.ref.para]?.runs?.[e.ref.run];
+            if (!run || typeof run.text !== "string") continue;
+            const before = run.text;
+            changes.push({ apply: () => { run.text = next; }, revert: () => { run.text = before; } });
+            if (!touchedText.has(e.ref.nodeId)) {
+              // Defensive reads: schema guarantees size+box on text nodes, but
+              // this must not be the line that fails an otherwise valid batch.
+              const sized = loc.node as unknown as { size?: { height: number }; box?: { height: number } };
+              touchedText.set(e.ref.nodeId, { node: loc.node, h: sized.size?.height ?? 0, bh: sized.box?.height ?? sized.size?.height ?? 0 });
+            }
+          }
+        }
+      }
+      if (!changes.length) return;
+      perform(
+        () => {
+          for (const c of changes) c.apply();
+          for (const t of touchedText.values()) refitTextHeight(t.node);
+        },
+        () => {
+          for (const c of [...changes].reverse()) c.revert();
+          for (const t of touchedText.values()) {
+            const sized = t.node as unknown as { size?: { height: number }; box?: { height: number } };
+            if (sized.size) sized.size.height = t.h;
+            if (sized.box) sized.box.height = t.bh;
+          }
+        },
+      );
+    },
+
     setText: (id, text) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return;
@@ -4368,12 +5411,19 @@ export const useEditor = create<EditorState>((set, get) => {
         runs: [{ text: line, style: structuredClone(old[i]?.runs?.[0]?.style ?? firstStyle) }],
         style: structuredClone(old[i]?.style ?? old[0].style),
       }));
+      const sized = loc.node as unknown as { size: { height: number }; box: { height: number } };
+      const hBefore = sized.size.height;
+      const boxHBefore = sized.box.height;
       perform(
         () => {
           node.content = after;
+          // New text wraps to a different line count; keep the box on it.
+          refitTextHeight(loc.node);
         },
         () => {
           node.content = structuredClone(before);
+          sized.size.height = hBefore;
+          sized.box.height = boxHBefore;
         },
       );
     },
@@ -4414,9 +5464,23 @@ export const useEditor = create<EditorState>((set, get) => {
       const after = changed.map((n) =>
         n.content!.map((p) => ({ ...p, runs: p.runs.map((r) => ({ ...r, text: r.text.split(find).join(replace) })) })),
       );
+      // Replaced text wraps differently; re-fit each auto-height box with the
+      // swap and take the heights back on undo.
+      const heights = changed.map((n) => {
+        const s = n as unknown as { size: { height: number }; box?: { height: number } };
+        return { h: s.size.height, bh: s.box?.height ?? s.size.height };
+      });
       perform(
-        () => changed.forEach((n, i) => { n.content = structuredClone(after[i]) as never; }),
-        () => changed.forEach((n, i) => { n.content = structuredClone(before[i]) as never; }),
+        () => changed.forEach((n, i) => {
+          n.content = structuredClone(after[i]) as never;
+          refitTextHeight(n as unknown as Node);
+        }),
+        () => changed.forEach((n, i) => {
+          n.content = structuredClone(before[i]) as never;
+          const s = n as unknown as { size: { height: number }; box?: { height: number } };
+          s.size.height = heights[i].h;
+          if (s.box) s.box.height = heights[i].bh;
+        }),
       );
       return changed.length;
     },
@@ -4491,12 +5555,19 @@ export const useEditor = create<EditorState>((set, get) => {
           if (rec.stroke.fill) rec.stroke.fill = mapFill(rec.stroke.fill);
           if (rec.stroke.color) rec.stroke.color = mapColor(rec.stroke.color);
         }
+        let fontChanged = false;
         for (const para of rec.content ?? [])
           for (const run of para.runs) {
             if (run.style.fill) run.style.fill = mapFill(run.style.fill);
             if (run.style.color) run.style.color = mapColor(run.style.color);
-            run.style.fontFamily = mapFont(run.style.fontFamily);
+            const swapped = mapFont(run.style.fontFamily);
+            if (swapped !== run.style.fontFamily) fontChanged = true;
+            run.style.fontFamily = swapped;
           }
+        // A swapped family wraps differently; keep the box on the text. Only
+        // when a font actually changed, so a color-only re-skin can't fold
+        // unrelated height corrections into its undo step.
+        if (fontChanged) refitTextHeight(n);
         for (const kid of rec.children ?? []) applyNode(kid);
       };
 
@@ -4561,6 +5632,9 @@ export const useEditor = create<EditorState>((set, get) => {
           if (node.type !== "text") continue;
           const paras = (node as unknown as { content: { runs: { style: { fontFamily?: string } }[] }[] }).content;
           paras.forEach((p) => p.runs.forEach((r) => (r.style.fontFamily = fix.to)));
+          // The brand font wraps differently than the off-brand one; the
+          // per-node before/after snapshots capture the height with the swap.
+          refitTextHeight(node);
           applied++;
         } else if (fix.kind === "fix_contrast") {
           if (node.type !== "text") continue;
@@ -4586,7 +5660,10 @@ export const useEditor = create<EditorState>((set, get) => {
           if (!loc) continue;
           const live = loc.node as unknown as Record<string, unknown>;
           const src = snap as unknown as Record<string, unknown>;
-          for (const k of ["fills", "stroke", "content"]) {
+          // size + box travel with the snapshot because a swap_font fix re-fits
+          // an auto-height box; without them undo restores the font but leaves
+          // the re-fitted height behind.
+          for (const k of ["fills", "stroke", "content", "size", "box"]) {
             if (k in src) live[k] = structuredClone(src[k]);
             else delete live[k];
           }
@@ -4606,24 +5683,43 @@ export const useEditor = create<EditorState>((set, get) => {
       if (!content.length) return; // never leave a text node with zero paragraphs
       const before = structuredClone(node.content);
       const after = structuredClone(content);
-      // Auto-grow height ONLY for auto-height boxes; a fixed box
-      // keeps the user's chosen height (text overflows / auto-fits instead). The
-      // undo baseline is the height before editing began (boxHeightBefore) when
-      // known, so transient live-grow during typing reverts cleanly.
-      const autoHeight = node.box.mode === "autoHeight";
+      // Auto-height boxes track the content exactly. A fixed box CLAMPS: the
+      // height the user chose (the height when editing began) is the floor,
+      // and the box grows past it only while the text needs the room - the
+      // render never clips, so a shorter box only produced a selection box
+      // that lied about the text's extent. Auto-fit frames keep their height
+      // (the font scales to fit instead). The undo baseline is the height
+      // before editing began (boxHeightBefore) when known, so transient
+      // live-grow during typing reverts cleanly.
+      const box = node.box as { mode?: string; height: number; autoFit?: { enabled?: boolean } };
       const hBefore = boxHeightBefore ?? node.size.height;
-      const hNext = autoHeight && boxHeight != null && Math.abs(boxHeight - hBefore) > 0.5 ? boxHeight : hBefore;
+      let hNext = hBefore;
+      if (boxHeight != null) {
+        if (box.mode === "autoHeight") hNext = boxHeight;
+        else if (box.mode === "fixed" && !box.autoFit?.enabled) hNext = Math.max(hBefore, boxHeight);
+      }
+      if (Math.abs(hNext - hBefore) <= 0.5) hNext = hBefore;
       perform(
         () => { node.content = structuredClone(after); node.size.height = hNext; node.box.height = hNext; },
         () => { node.content = structuredClone(before); node.size.height = hBefore; node.box.height = hBefore; },
       );
     },
-    growTextBoxLive: (id, height) => {
+    growTextBoxLive: (id, height, fixedBase) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return;
-      const node = loc.node as unknown as { size: { width: number; height: number }; box: { height: number; mode?: string } };
-      if (node.box.mode !== "autoHeight") return; // fixed boxes keep the user's height
-      const h = Math.max(1, height);
+      const node = loc.node as unknown as { size: { width: number; height: number }; box: { height: number; mode?: string; autoFit?: { enabled?: boolean } } };
+      let h: number;
+      if (node.box.mode === "autoHeight") {
+        h = Math.max(1, height);
+      } else if (node.box.mode === "fixed" && !node.box.autoFit?.enabled) {
+        // A fixed box clamps while typing: it grows past the height it had
+        // when editing began only while the text needs the room, and deleting
+        // lines lets it shrink back to that height - never below it. Auto-fit
+        // frames are exempt (the font scales to fit instead).
+        h = Math.max(1, Math.max(fixedBase ?? node.size.height, height));
+      } else {
+        return;
+      }
       if (Math.abs(node.size.height - h) < 0.5) return; // no meaningful change
       // Transient: mutate the box + bump rev for a re-render, but do NOT push an
       // undo entry. The undoable height write happens once, on commit.
@@ -4688,15 +5784,25 @@ export const useEditor = create<EditorState>((set, get) => {
     setTextBoxMode: (id, mode) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return;
-      const box = (loc.node as unknown as { box: { mode: "fixed" | "autoHeight" | "autoWidth" } }).box;
-      const before = box.mode;
+      const node = loc.node as unknown as { box: { mode: "fixed" | "autoHeight" | "autoWidth"; height: number }; size: { height: number } };
+      const before = node.box.mode;
       if (before === mode) return;
+      const hBefore = node.size.height;
+      const boxHBefore = node.box.height;
       perform(
-        () => { box.mode = mode; },
-        () => { box.mode = before; },
+        () => {
+          node.box.mode = mode;
+          // Switching TO auto-height snaps the box to its content immediately,
+          // so the toggle doubles as "fit the box to the text" for a box whose
+          // stored height drifted while it was fixed.
+          refitTextHeight(loc.node);
+        },
+        () => {
+          node.box.mode = before;
+          node.size.height = hBefore;
+          node.box.height = boxHBefore;
+        },
       );
-      // Auto-height reflow recomputes height from content on the next measure pass;
-      // trigger a tick so the box resizes immediately rather than on next edit.
       get().tick();
     },
 
@@ -4793,16 +5899,21 @@ export const useEditor = create<EditorState>((set, get) => {
     stepTextFontSize: (id, delta) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return;
-      const node = loc.node as unknown as { content: { runs: { style: { fontSize: number } }[] }[] };
+      const node = loc.node as unknown as { content: { runs: { style: { fontSize: number } }[] }[]; size: { height: number }; box: { height: number } };
       const before = structuredClone(node.content);
+      const hBefore = node.size.height;
+      const boxHBefore = node.box.height;
       perform(
         () => {
           node.content.forEach((p) => p.runs.forEach((r) => {
             r.style.fontSize = Math.max(4, Math.min(512, Math.round(r.style.fontSize + delta)));
           }));
+          refitTextHeight(loc.node);
         },
         () => {
           node.content = structuredClone(before);
+          node.size.height = hBefore;
+          node.box.height = boxHBefore;
         },
       );
     },
@@ -4819,17 +5930,24 @@ export const useEditor = create<EditorState>((set, get) => {
       if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return;
       const node = loc.node as unknown as {
         content: { runs: { style: Record<string, unknown> }[]; style: Record<string, unknown> }[];
+        size: { height: number };
+        box: { height: number };
       };
       const before = structuredClone(node.content);
+      const hBefore = node.size.height;
+      const boxHBefore = node.box.height;
       perform(
         () => {
           node.content.forEach((p) => {
             if (para) Object.assign(p.style, para);
             if (char) p.runs.forEach((r) => Object.assign(r.style, char));
           });
+          refitTextHeight(loc.node);
         },
         () => {
           node.content = structuredClone(before);
+          node.size.height = hBefore;
+          node.box.height = boxHBefore;
         },
       );
     },
@@ -4980,7 +6098,12 @@ export const useEditor = create<EditorState>((set, get) => {
     },
     setImageCrop: (id, crop) => {
       const loc = locate(get().doc, id);
-      if (!loc || loc.node.locked || editBlocked(id)) return;
+      if (!loc || editBlocked(id)) return;
+      // A background image is locked by design (it must not catch canvas
+      // drags), but the crop overlay is exactly how it is adjusted: pan/zoom
+      // within the page box. Only the static lock is bypassed for it;
+      // collab/brand/facilitator locks above still block.
+      if (loc.node.locked && !get().isBackgroundImage(id)) return;
       // The crop lives on the image node itself, or on a shape's image fill
       // (fills[0]) - the same normalized-crop model either way, so the crop
       // overlay serves both.
@@ -5029,6 +6152,57 @@ export const useEditor = create<EditorState>((set, get) => {
       if (!loc || loc.node.locked || editBlocked(id)) return;
       const before = loc.node.effects;
       get().runCommand({ kind: "setEffects", node: id, before, after: effects });
+    },
+    /**
+     * The effect stack.
+     *
+     * All four route through `setEffects`, which is already one undoable
+     * command and already fans out over the CRDT. Writing fresh `perform`
+     * closures for each would duplicate that plumbing and give the stack
+     * subtly different undo behaviour from every other effect edit.
+     *
+     * They address effects BY INDEX rather than by kind. The old panel was
+     * built on `find(kind)`/`has(kind)`, which silently caps a node at one
+     * blur and cannot express order at all; two blurs at different radii is an
+     * ordinary thing to want and was simply unreachable.
+     */
+    moveEffect: (id, from, to) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.locked || editBlocked(id)) return;
+      const eff = [...(loc.node.effects ?? [])];
+      if (from === to || from < 0 || to < 0 || from >= eff.length || to >= eff.length) return;
+      const [moved] = eff.splice(from, 1);
+      eff.splice(to, 0, moved);
+      get().setEffects(id, eff);
+    },
+    setEffectEnabled: (id, index, enabled) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.locked || editBlocked(id)) return;
+      const eff = [...(loc.node.effects ?? [])];
+      if (index < 0 || index >= eff.length) return;
+      // Absent means enabled, so switching ON clears the key rather than
+      // writing `true`. That keeps a file that never touched the stack
+      // byte-identical to one that toggled an effect off and back on.
+      const next = { ...eff[index] } as Effect & { enabled?: boolean };
+      if (enabled) delete next.enabled;
+      else next.enabled = false;
+      eff[index] = next;
+      get().setEffects(id, eff);
+    },
+    removeEffectAt: (id, index) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.locked || editBlocked(id)) return;
+      const eff = [...(loc.node.effects ?? [])];
+      if (index < 0 || index >= eff.length) return;
+      eff.splice(index, 1);
+      get().setEffects(id, eff.length ? eff : undefined);
+    },
+    addEffect: (id, kind) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.locked || editBlocked(id)) return;
+      const made = newEffectOfKind(kind);
+      if (!made) return;
+      get().setEffects(id, [...(loc.node.effects ?? []), made]);
     },
     setCornerRadius: (id, radius) => {
       const loc = locate(get().doc, id);
@@ -5389,14 +6563,20 @@ export const useEditor = create<EditorState>((set, get) => {
           }
           if (!changed) continue;
           snapshot(node.id, node);
+          let fontChanged = false;
           for (const p of content) for (const r of p.runs) {
-            if (r.style.fontFamily && fontMap.has(r.style.fontFamily)) r.style.fontFamily = fontMap.get(r.style.fontFamily)!;
+            if (r.style.fontFamily && fontMap.has(r.style.fontFamily)) {
+              r.style.fontFamily = fontMap.get(r.style.fontFamily)!;
+              fontChanged = true;
+            }
             const f = r.style.fill;
             if (f && f.type === "solid") {
               const to = colorMap.get(toHex(f.color).toLowerCase());
               if (to) r.style.fill = { type: "solid", color: hexToColor(to) };
             }
           }
+          // Font harmonization rewraps the text; color-only changes do not.
+          if (fontChanged) refitTextHeight(node);
         } else {
           const rec = node as unknown as { fills?: Fill[]; cornerRadius?: CornerRadius };
           let changed = false;
@@ -5432,7 +6612,9 @@ export const useEditor = create<EditorState>((set, get) => {
           if (!loc) continue;
           const live = loc.node as unknown as Record<string, unknown>;
           const src = snap as unknown as Record<string, unknown>;
-          for (const k of ["fills", "cornerRadius", "content"]) {
+          // size + box travel with the snapshot: a font harmonization re-fits
+          // an auto-height box, and undo must take the height back with it.
+          for (const k of ["fills", "cornerRadius", "content", "size", "box"]) {
             if (k in src) live[k] = structuredClone(src[k]);
             else delete live[k];
           }
@@ -5657,6 +6839,43 @@ function applyDeltas(
   }
   if (nodes.length) get().runCommand({ kind: "transform", nodes, before, after });
   void set;
+}
+
+// Forward mutation shared by "detach from background" and the auto-detach a
+// new background applies to the previous one: unlock the image, restore the
+// pre-background transform and z-index saved by setImageAsBackground (values
+// are validated first - `data` round-trips through saved files, so it is
+// untrusted), and strip the background keys from `data`. A hand-built
+// background carries no saved state and just unlocks in place. Callers own
+// the undo closure.
+function applyBackgroundDetach(node: Node, page: Page): void {
+  const data = (node.data ?? {}) as Record<string, unknown>;
+  const saved = data.backgroundRestore as
+    | { transform?: Partial<Transform>; size?: Partial<{ width: number; height: number }>; fit?: string; index?: number }
+    | undefined;
+  const t = saved?.transform;
+  if (t && [t.x, t.y, t.scaleX, t.scaleY, t.rotation].every((v) => Number.isFinite(v))) {
+    node.transform = { x: t.x!, y: t.y!, scaleX: t.scaleX!, scaleY: t.scaleY!, rotation: t.rotation! };
+  }
+  const sz = saved?.size;
+  if (sz && Number.isFinite(sz.width) && Number.isFinite(sz.height) && sz.width! > 0 && sz.height! > 0) {
+    node.size = { width: sz.width!, height: sz.height! };
+  }
+  if (saved?.fit === "cover" || saved?.fit === "contain" || saved?.fit === "stretch" || saved?.fit === "none") {
+    (node as unknown as { fit: ImageFit }).fit = saved.fit;
+  }
+  if (typeof saved?.index === "number" && Number.isInteger(saved.index) && saved.index >= 0) {
+    const i = page.children.indexOf(node);
+    if (i >= 0) {
+      page.children.splice(i, 1);
+      page.children.splice(Math.min(saved.index, page.children.length), 0, node);
+    }
+  }
+  node.locked = false;
+  const rest = { ...data };
+  delete rest.background;
+  delete rest.backgroundRestore;
+  node.data = Object.keys(rest).length ? rest : undefined;
 }
 
 // Register commands that were already applied (the layer ops mutate as they

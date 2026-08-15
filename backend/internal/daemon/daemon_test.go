@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 // stubServer writes an executable script into dir that ignores its args and
@@ -161,7 +162,12 @@ func TestStartFailsFastWhenServerDies(t *testing.T) {
 		t.Fatal(err)
 	}
 	var out bytes.Buffer
-	s := &svc{exe: exe, dir: dir, out: &out}
+	// The stub exits instantly, but under parallel test load even that can
+	// outlive the production grace window (the whole backend suite compiling
+	// and running saturates the CPU). A generous window keeps this test
+	// deterministic and costs nothing: start returns the moment the death is
+	// reaped, not at the window's end.
+	s := &svc{exe: exe, dir: dir, out: &out, grace: 15 * time.Second}
 	if err := s.start(); err == nil {
 		t.Fatalf("start should fail when the server dies immediately; output: %s", out.String())
 	}

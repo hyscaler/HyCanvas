@@ -49,22 +49,22 @@ func mountSharing(api chi.Router, sh *sharing.Service, acct *accounts.Service) {
 func sharingProblem(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, sharing.ErrForbidden):
-		Problem(w, r, http.StatusForbidden, "Forbidden", "you do not have permission for this action")
+		problemWithCode(w, r, http.StatusForbidden, "Forbidden", "you do not have permission for this action", "forbidden_action")
 	case errors.Is(err, sharing.ErrNotFound):
-		Problem(w, r, http.StatusNotFound, "Not Found", "resource not found")
+		problemWithCode(w, r, http.StatusNotFound, "Not Found", "resource not found", "resource_not_found")
 	case errors.Is(err, sharing.ErrBadRequest):
-		Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid request")
+		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid request", "invalid_request")
 	case errors.Is(err, sharing.ErrLinkGone):
-		Problem(w, r, http.StatusGone, "Gone", "this link has expired")
+		problemWithCode(w, r, http.StatusGone, "Gone", "this link has expired", "this_link_has_expired")
 	case errors.Is(err, sharing.ErrLinkNotAvail):
-		Problem(w, r, http.StatusNotFound, "Not Found", "this link is no longer available")
+		problemWithCode(w, r, http.StatusNotFound, "Not Found", "this link is no longer available", "link_unavailable")
 	case errors.Is(err, sharing.ErrLinkPassword):
 		// Distinct, stable code so the landing can show the password form.
 		problemWithCode(w, r, http.StatusForbidden, "Forbidden", "incorrect password", "link_password_required")
 	case errors.Is(err, sharing.ErrLinkSigninReq):
 		problemWithCode(w, r, http.StatusForbidden, "Forbidden", "this link requires sign-in", "link_signin_required")
 	default:
-		Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed")
+		problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed", "request_failed")
 	}
 }
 
@@ -100,7 +100,7 @@ func addGrantHandler(sh *sharing.Service) http.HandlerFunc {
 			RoleID    *string           `json:"roleId"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())
@@ -117,7 +117,7 @@ func updateGrantHandler(sh *sharing.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var raw map[string]json.RawMessage
 		if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		var mode *string
@@ -159,7 +159,7 @@ func createLinkHandler(sh *sharing.Service) http.HandlerFunc {
 			RequireSignin bool   `json:"requireSignin"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())
@@ -176,7 +176,7 @@ func updateLinkHandler(sh *sharing.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var raw map[string]json.RawMessage
 		if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		in := sharing.UpdateLinkInput{}
@@ -246,7 +246,7 @@ func createRoleHandler(sh *sharing.Service) http.HandlerFunc {
 			DesignID     *string  `json:"designId"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())
@@ -266,7 +266,7 @@ func updateRoleHandler(sh *sharing.Service) http.HandlerFunc {
 			Capabilities *[]string `json:"capabilities"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())
@@ -298,7 +298,7 @@ func assignRoleHandler(sh *sharing.Service) http.HandlerFunc {
 			Mode         *string `json:"mode"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())

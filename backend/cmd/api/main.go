@@ -8,6 +8,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -26,6 +27,7 @@ import (
 	"hycanvas/backend/internal/ai"
 	"hycanvas/backend/internal/aistudio"
 	"hycanvas/backend/internal/approvals"
+	"hycanvas/backend/internal/audience"
 	"hycanvas/backend/internal/brand"
 	"hycanvas/backend/internal/bulkcreate"
 	"hycanvas/backend/internal/captcha"
@@ -43,6 +45,7 @@ import (
 	"hycanvas/backend/internal/platform/db"
 	"hycanvas/backend/internal/push"
 	"hycanvas/backend/internal/realtime"
+	"hycanvas/backend/internal/render"
 	"hycanvas/backend/internal/setup"
 	"hycanvas/backend/internal/sharing"
 	"hycanvas/backend/internal/stock"
@@ -153,6 +156,25 @@ func main() {
 	}
 	logger.Info("storage ready", "kind", store.Kind())
 
+	// Export font coverage (F38 FR-10). The embedded fallback covers Latin,
+	// Greek and Cyrillic only, so Hebrew, Arabic, Indic and CJK text exports
+	// BLANK unless the operator supplies fonts covering them. FONTS_DIR points
+	// at a directory of .ttf/.otf named "Family-Weight.ttf"; every file in it is
+	// registered and used per glyph wherever the design's own font falls short.
+	if dir := os.Getenv("FONTS_DIR"); dir != "" {
+		n, errs := render.LoadFontDir(dir)
+		for _, e := range errs {
+			logger.Warn("fonts: could not register", "err", e)
+		}
+		logger.Info("fonts registered for export", "count", n, "families", render.RegisteredFamilies(), "dir", dir)
+	}
+	// Say it once per script when a glyph cannot be drawn at all: a design that
+	// exports blank text is otherwise almost undiagnosable from the outside.
+	render.SetMissingGlyphReporter(func(r rune) {
+		logger.Warn("export: no font covers this character, text using it will be missing from raster exports",
+			"char", string(r), "codepoint", fmt.Sprintf("U+%04X", r), "hint", "set FONTS_DIR to a directory containing a font with this script")
+	})
+
 	// The MFA TOTP secret is encrypted with AI_SECRET (falling back to
 	// JWT_SECRET), matching the Node ai/crypto resolution.
 	mfaSecret := cfg.AISecret
@@ -182,9 +204,30 @@ func main() {
 		func(ctx context.Context, designID, userID string) (string, error) {
 			return sharingSvc.ResolveGatewayRole(ctx, designID, userID, nil)
 		})
+	// Server-authoritative last-leave snapshot (doc 16 FR-11): when a design's
+	// room empties (10s grace for transient reconnects), fold its journaled
+	// update log server-side and materialize an AUTO snapshot. Catch-up-only:
+	// SnapshotFoldedUpdateLog skips when a client's own leave snapshot (or any
+	// newer write) already landed, so it acts exactly when a client died
+	// mid-edit and its journaled changes were never materialized.
+	rtHub = rtHub.WithLastLeaveHook(func(designID string) {
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+		created, err := persist.SnapshotFoldedUpdateLog(ctx, designID)
+		if err != nil {
+			slog.Warn("realtime: last-leave fold-and-snapshot failed", "design", designID, "err", err)
+			return
+		}
+		if created {
+			slog.Info("realtime: last-leave snapshot materialized from update log", "design", designID)
+		}
+	}, 10*time.Second)
 	// Approvals push a live role refresh to connected clients on lock/unlock via
 	// the realtime hub (F16 AC-9).
 	approvalsSvc := approvals.NewService(pool, sharingSvc, acct, rtHub, emitter)
+	// Live audience (doc 28): questions/polls/reactions from share-link viewers,
+	// fanned to the presenter over the realtime hub.
+	audienceSvc := audience.NewService(pool, rtHub)
 	// Horizontal scaling (optional): when REDIS_URL is set, fan relay/awareness
 	// frames out across gateway instances via Redis pub/sub so clients on
 	// different instances converge (roadmap doc 16, section 8). Unset = single
@@ -333,6 +376,7 @@ func main() {
 			AIStudio:      aiStudioSvc,
 			Uploads:       uploadsSvc,
 			Realtime:      rtHub,
+			Audience:      audienceSvc,
 			Templates:     templatesSvc,
 			Stock:         stockSvc,
 			OIDC:          oidcSvc,
@@ -347,6 +391,9 @@ func main() {
 			Captcha:       captchaVerifier,
 			CaptchaConfig: captchaCfg,
 			PublicDir:     cfg.PublicDir,
+			// Translations an operator dropped next to the binary. Defaults to
+			// ./locales so adding a language needs no configuration at all.
+			LocalesDir:    localesDir(),
 			AnalyticsGAID: cfg.AnalyticsGAID,
 			AllowOrigin:   allowOrigin,
 		}),
@@ -494,4 +541,18 @@ func setupWebFS(publicDir string) http.FileSystem {
 		}
 	}
 	return nil
+}
+
+// localesDir resolves the directory of operator-supplied UI translations.
+// LOCALES_DIR wins; otherwise a "locales" directory beside the working
+// directory is used when it exists, so dropping in a translation is the whole
+// installation step.
+func localesDir() string {
+	if d := os.Getenv("LOCALES_DIR"); d != "" {
+		return d
+	}
+	if info, err := os.Stat("locales"); err == nil && info.IsDir() {
+		return "locales"
+	}
+	return ""
 }

@@ -11,6 +11,7 @@ import {
   toHex, fromHex, rgbToCmyk, gamutCheck, simulateCvd, wcag, type CvdType,
 } from "@hc/color";
 import { Pipette } from "lucide-react";
+import { tr } from "@/lib/i18n";
 
 type HSV = { h: number; s: number; v: number };
 
@@ -53,12 +54,12 @@ function rgba(c: Color): string {
   return `rgba(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)},${a ?? 1})`;
 }
 
-const CVD_LABELS: { v: "" | CvdType; label: string }[] = [
+const cvdLabels = (): { v: "" | CvdType; label: string }[] => [
   { v: "", label: "Normal vision" },
-  { v: "protanopia", label: "Protanopia (red-blind)" },
-  { v: "deuteranopia", label: "Deuteranopia (green-blind)" },
-  { v: "tritanopia", label: "Tritanopia (blue-blind)" },
-  { v: "achromatopsia", label: "Achromatopsia (mono)" },
+  { v: "protanopia", label: tr("editor.protanopia_red_blind") },
+  { v: "deuteranopia", label: tr("editor.deuteranopia_green_blind") },
+  { v: "tritanopia", label: tr("editor.tritanopia_blue_blind") },
+  { v: "achromatopsia", label: tr("editor.achromatopsia_mono") },
 ];
 
 export interface ColorFieldProps {
@@ -191,7 +192,7 @@ export function ColorField({
     <div ref={wrapRef} className={`relative ${block ? "flex-1" : ""}`}>
       <button
         type="button"
-        title={title ?? "Edit color"}
+        title={title ?? tr("editor.edit_color")}
         onClick={() => setOpen((o) => !o)}
         className={`oc-color-trigger h-8 ${block ? "w-full" : "w-9"} rounded-lg border border-neutral-200`}
         style={{
@@ -229,7 +230,7 @@ export function ColorField({
           <div className="mt-3 flex items-center gap-2">
             <Pipette size={14} className="shrink-0 text-neutral-400" />
             <input
-              type="range" min={0} max={360} value={Math.round(hue)} aria-label="Hue"
+              type="range" min={0} max={360} value={Math.round(hue)} aria-label={tr("editor.hue")}
               onChange={(e) => setHSV(Number(e.target.value), Math.max(s, 0.0001), Math.max(v, 0.0001))}
               className="oc-hue h-3 w-full appearance-none rounded-full"
               style={{ background: "linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)" }}
@@ -239,11 +240,11 @@ export function ColorField({
             <div className="mt-2 flex items-center gap-2">
               <span className="w-3.5 text-center text-[10px] text-neutral-400">A</span>
               <input
-                type="range" min={0} max={100} value={Math.round(alpha * 100)} aria-label="Alpha"
+                type="range" min={0} max={100} value={Math.round(alpha * 100)} aria-label={tr("editor.alpha")}
                 onChange={(e) => setAlpha(Number(e.target.value) / 100)}
                 className="h-3 w-full accent-neutral-500"
               />
-              <span className="w-8 text-right font-mono text-[10px] text-neutral-400">{Math.round(alpha * 100)}%</span>
+              <span className="w-8 text-end font-mono text-[10px] text-neutral-400">{Math.round(alpha * 100)}%</span>
             </div>
           )}
 
@@ -254,7 +255,7 @@ export function ColorField({
               onChange={(e) => setHex(e.target.value)}
               spellCheck={false}
               className="w-20 rounded-md border border-neutral-200 px-1.5 py-1 font-mono text-[11px] uppercase outline-none focus:border-brand-400"
-              aria-label="Hex"
+              aria-label={tr("editor.hex")}
             />
             {(["r", "g", "b"] as const).map((k) => (
               <input
@@ -274,8 +275,8 @@ export function ColorField({
               CMYK {Math.round(cmyk.c * 100)} {Math.round(cmyk.m * 100)} {Math.round(cmyk.y * 100)} {Math.round(cmyk.k * 100)}
             </span>
             {!inGamut && (
-              <span className="rounded bg-amber-100 px-1.5 py-0.5 font-medium text-amber-700" title="Outside the CMYK print gamut; will shift in print">
-                out of gamut
+              <span className="rounded bg-amber-100 px-1.5 py-0.5 font-medium text-amber-700" title={tr("editor.outside_cmyk_print_gamut")}>
+                {tr("editor.out_of_gamut")}
               </span>
             )}
           </div>
@@ -288,7 +289,7 @@ export function ColorField({
               </span>
               <span className="font-mono text-neutral-500">{contrast.ratio.toFixed(2)}:1</span>
               <span className={`rounded px-1.5 py-0.5 font-medium ${contrast.aaNormal ? "bg-emerald-100 text-emerald-700" : contrast.aaLarge ? "bg-amber-100 text-amber-700" : "bg-rose-100 text-rose-700"}`}>
-                {contrast.aaNormal ? "AA" : contrast.aaLarge ? "AA large" : "fails AA"}
+                {contrast.aaNormal ? "AA" : contrast.aaLarge ? tr("editor.aa_large") : "fails AA"}
               </span>
             </div>
           )}
@@ -299,12 +300,12 @@ export function ColorField({
               value={cvd}
               onChange={(e) => setCvd(e.target.value as "" | CvdType)}
               className="flex-1 rounded-md border border-neutral-200 px-1.5 py-1 text-[10px] text-neutral-600 outline-none focus:border-brand-400"
-              aria-label="Color-vision simulation"
+              aria-label={tr("editor.color_vision_simulation")}
             >
-              {CVD_LABELS.map((o) => <option key={o.v} value={o.v}>{o.label}</option>)}
+              {cvdLabels().map((o) => <option key={o.v} value={o.v}>{o.label}</option>)}
             </select>
             {cvd && (
-              <span className="h-5 w-8 rounded border border-neutral-200" style={{ background: rgba(preview) }} title="How this color appears with the selected color-vision type" />
+              <span className="h-5 w-8 rounded border border-neutral-200" style={{ background: rgba(preview) }} title={tr("editor.how_this_color_appears_with_the_selected_col")} />
             )}
           </div>
 
@@ -334,11 +335,11 @@ export function ColorField({
 }
 
 function EyeDropperButton({ onPick }: { onPick: (hex: string) => void }) {
-  if (typeof window === "undefined" || !("EyeDropper" in window)) return null;
+  if (typeof window === "undefined" || !(tr("editor.eyedropper") in window)) return null;
   return (
     <button
       type="button"
-      title="Pick a color from the screen"
+      title={tr("editor.pick_a_color_from_the_screen")}
       onClick={async () => {
         try {
           const ed = new (window as unknown as { EyeDropper: new () => { open: () => Promise<{ sRGBHex: string }> } }).EyeDropper();

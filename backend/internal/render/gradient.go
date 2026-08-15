@@ -25,8 +25,9 @@ type gradStop struct {
 type gradSpec struct {
 	ok     bool
 	radial bool
-	angle  float64 // linear, degrees
-	cx, cy float64 // radial center in objectBoundingBox units (default 0.5)
+	conic  bool
+	angle  float64 // linear/conic start angle, degrees
+	cx, cy float64 // radial/conic center in objectBoundingBox units (default 0.5)
 	radius float64 // radial radius in objectBoundingBox units (default 0.5)
 	stops  []gradStop
 }
@@ -66,6 +67,11 @@ func parseGradient(fill map[string]any) gradSpec {
 		}
 		if r := asNum(fill["radius"]); r > 0 {
 			g.radius = r
+		}
+	} else if asStr(fill["gradient"]) == "conic" {
+		g.conic = true
+		if ctr := asObj(fill["center"]); ctr != nil {
+			g.cx, g.cy = asNum(ctr["x"]), asNum(ctr["y"])
 		}
 	}
 	return g
@@ -128,17 +134,33 @@ type gradientSrc struct {
 	bounds image.Rectangle
 	spec   gradSpec
 	radial bool
+	conic  bool
 	// linear axis (device space)
 	p0x, p0y, dx, dy, len2 float64
-	// radial frame (device space, objectBoundingBox)
+	// radial/conic frame (device space, objectBoundingBox)
 	minX, minY, w, h float64
+	startAngle       float64 // conic, radians
 }
 
 func (s *gradientSrc) ColorModel() color.Model { return color.NRGBAModel }
 func (s *gradientSrc) Bounds() image.Rectangle { return s.bounds }
 func (s *gradientSrc) At(x, y int) color.Color {
 	var t float64
-	if s.radial {
+	if s.conic {
+		if s.w == 0 || s.h == 0 {
+			t = 0
+		} else {
+			cxp := s.minX + s.spec.cx*s.w
+			cyp := s.minY + s.spec.cy*s.h
+			// Canvas createConicGradient: angle measured clockwise from +x (y is
+			// down), starting at startAngle; wrap into [0,1).
+			tt := math.Mod(math.Atan2(float64(y)-cyp, float64(x)-cxp)-s.startAngle, 2*math.Pi)
+			if tt < 0 {
+				tt += 2 * math.Pi
+			}
+			t = tt / (2 * math.Pi)
+		}
+	} else if s.radial {
 		if s.w == 0 || s.h == 0 || s.spec.radius <= 0 {
 			t = 0
 		} else {
@@ -157,8 +179,8 @@ func (s *gradientSrc) At(x, y int) color.Color {
 func (g gradSpec) source(bb [4]float64, bounds image.Rectangle) *gradientSrc {
 	minX, minY, maxX, maxY := bb[0], bb[1], bb[2], bb[3]
 	w, h := maxX-minX, maxY-minY
-	src := &gradientSrc{bounds: bounds, spec: g, radial: g.radial, minX: minX, minY: minY, w: w, h: h}
-	if !g.radial {
+	src := &gradientSrc{bounds: bounds, spec: g, radial: g.radial, conic: g.conic, minX: minX, minY: minY, w: w, h: h, startAngle: g.angle * math.Pi / 180}
+	if !g.radial && !g.conic {
 		rad := g.angle * math.Pi / 180
 		ddx, ddy := math.Cos(rad)*0.5, math.Sin(rad)*0.5
 		src.p0x = minX + (0.5-ddx)*w

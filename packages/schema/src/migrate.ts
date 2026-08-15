@@ -334,6 +334,29 @@ export const migrations: Record<number, Migration> = {
   // v15 -> v16: chart text size (ChartStyle.fontSize). Purely additive: a v15
   // file carries no fontSize and every chart renders at the built-in base.
   15: (file: AnyObj) => ({ ...file, schemaVersion: 16 }),
+  // v16 -> v17: QR center logo size (QRNode.logoScale). Purely additive: a v16
+  // file carries no logoScale and its QR logo renders at the default size.
+  16: (file: AnyObj) => ({ ...file, schemaVersion: 17 }),
+  // v17 -> v18: document language (DesignFile.language). Additive; the legacy
+  // `meta.language` (written by importers for the tagged-PDF /Lang) is COPIED
+  // up, never removed, so older readers keep finding it where they look.
+  17: (file: AnyObj) => {
+    const legacy = (file.meta as AnyObj | undefined)?.language;
+    const language = file.language ?? (typeof legacy === "string" && legacy ? legacy : undefined);
+    return language !== undefined
+      ? { ...file, language, schemaVersion: 18 }
+      : { ...file, schemaVersion: 18 };
+  },
+  // v18 -> v19: per-effect enable. Purely additive, with no transform: a v18
+  // file's effects all omit `enabled`, which means enabled, so every one keeps
+  // rendering exactly as before. The Go mirror reaches the same result through
+  // its generic additive branch, which is why there is no matching `case 18`.
+  18: (file: AnyObj) => ({ ...file, schemaVersion: 19 }),
+  // v19 -> v20: ImageNode.alphaMask. Purely additive, with no transform: a v19
+  // file has no mask, and absence means fully opaque, so every image renders
+  // exactly as it did. The Go mirror reaches the same result through its
+  // generic additive branch, which is why there is no matching `case 19`.
+  19: (file: AnyObj) => ({ ...file, schemaVersion: 20 }),
 };
 
 export class MigrationError extends Error {

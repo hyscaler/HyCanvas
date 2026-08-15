@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { parseCsv, type ParsedCsv } from "@/lib/csv";
+import { tr } from "@/lib/i18n";
 
 type Base =
   | { kind: "template"; id: string; title: string }
@@ -49,7 +50,7 @@ export function BulkCreateModal(props: BulkCreateProps) {
   // Only mount the body when open, so its state initializes fresh each time
   // (no reset effect needed).
   return (
-    <Modal open={props.open} onClose={props.onClose} title="Bulk create from data" width="w-[44rem]">
+    <Modal open={props.open} onClose={props.onClose} title={tr("dashboard.bulk_create_from_data")} width="w-[44rem]">
       {props.open && <BulkCreateBody {...props} />}
     </Modal>
   );
@@ -112,7 +113,7 @@ function BulkCreateBody({
   function parseData() {
     const p = parseCsv(csvText);
     if (p.headers.length === 0 || p.rows.length === 0) {
-      toast.error("Paste at least a header row and one data row.");
+      toast.error(tr("dashboard.paste_at_least_a_header_row_and_one_data_row"));
       return;
     }
     setParsed(p);
@@ -157,7 +158,7 @@ function BulkCreateBody({
         toast.success(`Generated ${res.created.length} designs.`);
       }
     } catch {
-      toast.error("Bulk create failed.");
+      toast.error(tr("dashboard.bulk_create_failed"));
     } finally {
       setBusy(false);
     }
@@ -169,22 +170,22 @@ function BulkCreateBody({
     <>
       {/* Step 1: choose a base. Always visible at the top so it can be changed. */}
       <div className="mb-4">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">1. Pick a base</p>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">{tr("dashboard.1_pick_a_base")}</p>
         {base ? (
           <div className="flex items-center justify-between rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2">
             <span className="truncate text-sm font-medium text-neutral-800">
-              {base.kind === "template" ? "Template" : "Design"}: {base.title}
+              {base.kind === "template" ? tr("dashboard.template") : tr("dashboard.design")}: {base.title}
             </span>
             <Button variant="ghost" size="sm" onClick={() => { setBase(null); setStep("data"); }}>
-              Change
+              {tr("dashboard.change")}
             </Button>
           </div>
         ) : (
           <BasePicker templates={templates} designs={designs} onPick={setBase} />
         )}
         {base && !loadingFields && fields.length === 0 && (
-          <p className="mt-2 text-xs text-amber-600">
-            This base has no fillable fields. Mark fields on it first (Brand template fields) to enable autofill.
+          <p className="mt-2 text-xs text-amber-700">
+            {tr("dashboard.this_base_has_no_fillable_fields_mark_fields")}
           </p>
         )}
       </div>
@@ -194,9 +195,9 @@ function BulkCreateBody({
           {/* Step 2: paste data */}
           <div className="mb-4">
             <div className="mb-2 flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">2. Paste your data (CSV)</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">{tr("dashboard.2_paste_your_data_csv")}</p>
               <button className="text-xs font-medium text-brand-ink hover:underline" onClick={() => setCsvText(SAMPLE_CSV)}>
-                Use sample
+                {tr("dashboard.use_sample")}
               </button>
             </div>
             <textarea
@@ -208,7 +209,7 @@ function BulkCreateBody({
             />
             {step === "data" && (
               <div className="mt-2 flex justify-end">
-                <Button size="sm" onClick={parseData} disabled={!csvText.trim()}>Parse data</Button>
+                <Button size="sm" onClick={parseData} disabled={!csvText.trim()}>{tr("dashboard.parse_data")}</Button>
               </div>
             )}
           </div>
@@ -216,13 +217,13 @@ function BulkCreateBody({
           {/* Step 3: map columns -> fields + title pattern */}
           {step !== "data" && parsed.headers.length > 0 && (
             <div className="mb-4">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">3. Map columns to fields</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">{tr("dashboard.3_map_columns_to_fields")}</p>
               <div className="space-y-2">
                 {fields.map((f) => (
                   <div key={f.nodeId} className="flex items-center gap-3">
                     <span className="w-40 shrink-0 truncate text-sm text-neutral-700" title={f.label}>
                       {f.label}
-                      <span className="ml-1 text-xs text-neutral-400">({f.kind})</span>
+                      <span className="ms-1 text-xs text-neutral-400">({f.kind})</span>
                     </span>
                     <select
                       value={mapping[f.nodeId] ?? ""}
@@ -239,7 +240,7 @@ function BulkCreateBody({
               </div>
               <div className="mt-3">
                 <Input
-                  label="Title pattern (optional)"
+                  label={tr("dashboard.title_pattern_optional")}
                   value={titlePattern}
                   onChange={(e) => setTitlePattern(e.target.value)}
                   placeholder={fields[0] ? `{${fields[0].label}} - card` : "{name} - card"}
@@ -250,7 +251,7 @@ function BulkCreateBody({
               </div>
               <div className="mt-3 flex justify-end">
                 <Button size="sm" onClick={() => setStep("review")} disabled={mappedFields.length === 0}>
-                  Preview
+                  {tr("dashboard.preview")}
                 </Button>
               </div>
             </div>
@@ -259,21 +260,21 @@ function BulkCreateBody({
           {/* Step 4: review + generate */}
           {step === "review" && (
             <div className="mb-2">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">4. Review</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">{tr("dashboard.4_review")}</p>
               <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm">
                 <p className="text-neutral-700">
-                  This will generate <span className="font-semibold">{previewCount}</span> design
+                  {tr("dashboard.this_will_generate")} <span className="font-semibold">{previewCount}</span> design
                   {previewCount === 1 ? "" : "s"} from <span className="font-semibold">{base.title}</span>.
                 </p>
                 {previewCount > 200 && (
-                  <p className="mt-1 text-xs text-amber-600">
-                    Only the first 200 rows will be generated in this batch (the rest are truncated).
+                  <p className="mt-1 text-xs text-amber-700">
+                    {tr("dashboard.only_the_first_200_rows_will_be_generated_in")}
                   </p>
                 )}
                 <SamplePreview parsed={parsed} fields={fields} mapping={mapping} titlePattern={titlePattern} baseTitle={base.title} />
               </div>
               <div className="mt-4 flex justify-end gap-2">
-                <Button variant="ghost" onClick={() => setStep("map")}>Back</Button>
+                <Button variant="ghost" onClick={() => setStep("map")}>{tr("dashboard.back")}</Button>
                 <Button onClick={() => void generate()} disabled={busy}>
                   {busy && <Loader2 size={16} className="animate-spin" />}
                   Generate {previewCount} design{previewCount === 1 ? "" : "s"}
@@ -287,27 +288,27 @@ function BulkCreateBody({
       {/* Results */}
       {step === "done" && result && (
         <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">Created designs</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">{tr("dashboard.created_designs")}</p>
           {result.truncated && (
-            <p className="mb-2 text-xs text-amber-600">
+            <p className="mb-2 text-xs text-amber-700">
               Dataset truncated: {result.requestedRows} rows requested, {result.created.length} created (cap reached).
             </p>
           )}
           {result.skipped.length > 0 && (
-            <p className="mb-2 text-xs text-amber-600">{result.skipped.length} row(s) skipped (failed validation).</p>
+            <p className="mb-2 text-xs text-amber-700">{result.skipped.length} row(s) skipped (failed validation).</p>
           )}
           <ul className="oc-scroll max-h-64 divide-y divide-neutral-100 overflow-y-auto rounded-xl border border-neutral-200">
             {result.created.map((c) => (
               <li key={c.id} className="flex items-center justify-between px-3 py-2 text-sm">
                 <span className="truncate text-neutral-700">{c.title}</span>
                 <button className="shrink-0 font-medium text-brand-ink hover:underline" onClick={() => onOpenDesign(c.id)}>
-                  Open
+                  {tr("dashboard.open")}
                 </button>
               </li>
             ))}
           </ul>
           <div className="mt-4 flex justify-end">
-            <Button onClick={onClose}>Done</Button>
+            <Button onClick={onClose}>{tr("dashboard.done")}</Button>
           </div>
         </div>
       )}
@@ -329,18 +330,18 @@ function BasePicker({
   return (
     <div className="rounded-xl border border-neutral-200">
       <div className="flex border-b border-neutral-100 text-sm">
-        <TabButton active={tab === "template"} onClick={() => setTab("template")}>Templates</TabButton>
-        <TabButton active={tab === "design"} onClick={() => setTab("design")}>Your designs</TabButton>
+        <TabButton active={tab === "template"} onClick={() => setTab("template")}>{tr("dashboard.templates")}</TabButton>
+        <TabButton active={tab === "design"} onClick={() => setTab("design")}>{tr("dashboard.your_designs")}</TabButton>
       </div>
       <div className="oc-scroll max-h-48 overflow-y-auto p-1">
         {list.length === 0 ? (
-          <p className="p-3 text-sm text-neutral-400">Nothing here yet.</p>
+          <p className="p-3 text-sm text-neutral-400">{tr("dashboard.nothing_here_yet")}</p>
         ) : (
           list.map((x) => (
             <button
               key={x.id}
               onClick={() => onPick({ kind: tab, id: x.id, title: x.title })}
-              className="block w-full truncate rounded-lg px-3 py-2 text-left text-sm text-neutral-700 hover:bg-brand-50"
+              className="block w-full truncate rounded-lg px-3 py-2 text-start text-sm text-neutral-700 hover:bg-brand-50"
             >
               {x.title}
             </button>
@@ -382,7 +383,7 @@ function SamplePreview({
   const mapped = fields.filter((f) => mapping[f.nodeId]);
   return (
     <div className="mt-3 border-t border-neutral-200 pt-3">
-      <p className="text-xs font-medium text-neutral-500">First design preview</p>
+      <p className="text-xs font-medium text-neutral-500">{tr("dashboard.first_design_preview")}</p>
       <p className="mt-1 text-sm font-semibold text-neutral-800">{title}</p>
       <dl className="mt-1 space-y-0.5">
         {mapped.map((f) => (

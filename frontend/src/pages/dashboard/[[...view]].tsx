@@ -7,11 +7,12 @@ import {
   DASHBOARD_VIEWS,
   type DashboardView,
 } from "@/components/dashboard/views";
+import { tr } from "@/lib/i18n";
 
 // Client-only: depends on auth state, localStorage, and live API calls.
 const DashboardApp = dynamic(() => import("@/components/dashboard/DashboardApp").then((m) => m.DashboardApp), {
   ssr: false,
-  loading: () => <div className="grid min-h-screen place-items-center text-sm text-neutral-500">Loading…</div>,
+  loading: () => <div className="grid min-h-screen place-items-center text-sm text-neutral-500">{tr("page.loading")}</div>,
 });
 
 interface DashboardPageProps {

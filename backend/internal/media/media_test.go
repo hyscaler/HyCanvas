@@ -50,6 +50,35 @@ func TestSSRF(t *testing.T) {
 			t.Errorf("IsPrivateIP(%q) should be false", ip)
 		}
 	}
+	// IPv6 forms that carry an IPv4 address inside them. These read as global
+	// unicast to every stdlib predicate, but a stack with NAT64 or 6to4 turns
+	// them into a connection to the embedded address, so the guard has to judge
+	// what they actually reach.
+	embedded := []string{
+		"64:ff9b::7f00:1",   // NAT64 well-known prefix -> 127.0.0.1
+		"64:ff9b::a00:1",    // NAT64 -> 10.0.0.1
+		"64:ff9b:1::7f00:1", // NAT64 local-use range (RFC 8215)
+		"2002:7f00:1::",     // 6to4 -> 127.0.0.1
+		"2002:a00:1::",      // 6to4 -> 10.0.0.1
+		"::7f00:1",          // deprecated IPv4-compatible -> 127.0.0.1
+		"64:FF9B::7F00:1",   // uppercase must not slip past
+		"::ffff:7f00:1",     // v4-mapped in hex, not dotted -> 127.0.0.1
+		"::ffff:0a00:1",     // v4-mapped in hex -> 10.0.0.1
+		"0:0:0:0:0:0:0:1",   // loopback written out in full
+	}
+	for _, ip := range embedded {
+		if !IsPrivateIP(ip) {
+			t.Errorf("IsPrivateIP(%q) should be true (embeds a private IPv4)", ip)
+		}
+	}
+	// A 6to4 address wrapping a PUBLIC IPv4 is still fetchable; the guard must
+	// refuse by what is embedded, not by the prefix.
+	if IsPrivateIP("2002:808:808::") { // 6to4 -> 8.8.8.8
+		t.Error(`IsPrivateIP("2002:808:808::") should be false (embeds a public IPv4)`)
+	}
+	if IsPrivateIP("2606:4700:4700::1111") { // ordinary public IPv6
+		t.Error("a public IPv6 address should not be refused")
+	}
 	if v := ValidateImportURL("https://example.com/a.png"); !v.OK {
 		t.Fatalf("public https should pass: %+v", v)
 	}

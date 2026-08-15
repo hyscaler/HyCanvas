@@ -18,14 +18,15 @@ import {
 import type { ActivityItem, ActivityType } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
 import { onCommentChanged } from "@/lib/realtime";
+import { tr } from "@/lib/i18n";
 
-const FILTERS: { value: ActivityType | "all"; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "edit", label: "Edits" },
-  { value: "comment", label: "Comments" },
-  { value: "share", label: "Sharing" },
-  { value: "approval_decision", label: "Approvals" },
-  { value: "task_assign", label: "Tasks" },
+const filters = (): { value: ActivityType | "all"; label: string }[] => [
+  { value: "all", label: tr("editor.all") },
+  { value: "edit", label: tr("editor.edits") },
+  { value: "comment", label: tr("editor.comments") },
+  { value: "share", label: tr("editor.sharing") },
+  { value: "approval_decision", label: tr("editor.approvals") },
+  { value: "task_assign", label: tr("editor.tasks") },
 ];
 
 function iconFor(type: ActivityType) {
@@ -128,18 +129,18 @@ export function ActivityPanel({ designId, onClose }: { designId: string; onClose
   }
 
   return (
-    <aside className="oc-scroll flex w-80 shrink-0 flex-col overflow-y-auto border-l border-neutral-200 bg-surface">
+    <aside className="oc-scroll flex w-80 shrink-0 flex-col overflow-y-auto border-s border-neutral-200 bg-surface">
       <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
         <span className="flex items-center gap-2 text-sm font-semibold text-neutral-800">
-          <Activity size={16} /> Activity
+          <Activity size={16} /> {tr("editor.activity")}
         </span>
-        <button onClick={onClose} aria-label="Close activity" className="text-neutral-400 hover:text-neutral-700">
+        <button onClick={onClose} aria-label={tr("editor.close_activity")} className="text-neutral-400 hover:text-neutral-700">
           <X size={18} />
         </button>
       </div>
 
       <div className="flex flex-wrap gap-1.5 border-b border-neutral-100 px-3 py-2">
-        {FILTERS.map((f) => (
+        {filters().map((f) => (
           <button
             key={f.value}
             onClick={() => setFilter(f.value)}
@@ -154,9 +155,9 @@ export function ActivityPanel({ designId, onClose }: { designId: string; onClose
 
       <div className="flex-1">
         {loading ? (
-          <div className="px-4 py-10 text-center text-sm text-neutral-400">Loading…</div>
+          <div className="px-4 py-10 text-center text-sm text-neutral-400">{tr("editor.loading")}</div>
         ) : items.length === 0 ? (
-          <div className="px-4 py-10 text-center text-sm text-neutral-400">No activity yet.</div>
+          <div className="px-4 py-10 text-center text-sm text-neutral-400">{tr("editor.no_activity_yet")}</div>
         ) : (
           <ul className="divide-y divide-neutral-50">
             {items.map((it) => {
@@ -181,7 +182,7 @@ export function ActivityPanel({ designId, onClose }: { designId: string; onClose
             disabled={loadingMore}
             className="my-3 w-full text-center text-xs font-medium text-brand-ink hover:text-brand-ink disabled:opacity-50"
           >
-            {loadingMore ? "Loading…" : "Load more"}
+            {loadingMore ? tr("editor.loading") : tr("editor.load_more")}
           </button>
         )}
       </div>

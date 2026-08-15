@@ -10,14 +10,10 @@ import { useAuth } from "@/store/auth";
 type WhenInput = string | number | Date;
 
 /** The browser's own IANA timezone (e.g. "Asia/Kolkata"), or "" if the runtime
- *  cannot report one. Used as the default a user gets until they choose another. */
-export function browserTimezone(): string {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
-  } catch {
-    return "";
-  }
-}
+ *  cannot report one. Used as the default a user gets until they choose another.
+ *  Defined in a leaf module so the auth store can use it without importing this
+ *  one, which imports the auth store; re-exported here for existing callers. */
+export { browserTimezone } from "./timezone";
 
 interface Resolved {
   locale: string | undefined;

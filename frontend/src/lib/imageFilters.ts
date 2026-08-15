@@ -2,6 +2,7 @@
 // in-browser background remover. Presets are pure data (bundles of adjustment
 // ops) so applying one is a single `setEffects` undo step; the engine maps the
 // ops to its CSS-filter path (see @hc/engine effectsFilter / adjustmentOpToFilters).
+import { CodedError } from "./errors";
 
 /** One adjustment op: a named scalar the engine maps to a CSS filter. */
 export interface AdjOp {
@@ -132,7 +133,7 @@ export async function rasterizeToPng(blob: Blob, width: number, height: number):
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {
       const el = new Image();
       el.onload = () => resolve(el);
-      el.onerror = () => reject(new Error("Couldn't decode the image."));
+      el.onerror = () => reject(new CodedError("errors.image_decode_failed", "Couldn't decode the image."));
       el.src = url;
     });
     let w = Math.max(1, Math.round(width || img.naturalWidth || 1024));
@@ -144,10 +145,10 @@ export async function rasterizeToPng(blob: Blob, width: number, height: number):
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("Canvas is unavailable.");
+    if (!ctx) throw new CodedError("errors.canvas_unavailable", "Canvas is unavailable in this browser.");
     ctx.drawImage(img, 0, 0, w, h);
     return await new Promise<Blob>((resolve, reject) =>
-      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Couldn't rasterize the image."))), "image/png"),
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new CodedError("errors.image_rasterize_failed", "Couldn't rasterize the image."))), "image/png"),
     );
   } finally {
     URL.revokeObjectURL(url);
@@ -171,7 +172,7 @@ export async function removeBackground(
   onProgress?: (fraction: number) => void,
 ): Promise<BgRemovalResult> {
   if (typeof window === "undefined") {
-    throw new Error("Background removal runs in the browser only.");
+    throw new CodedError("errors.bg_removal_browser_only", "Background removal runs in the browser only.");
   }
   let removeBackgroundFn: (
     input: string | Blob,
@@ -181,7 +182,7 @@ export async function removeBackground(
     const mod = await import("@imgly/background-removal");
     removeBackgroundFn = (mod as unknown as { removeBackground: typeof removeBackgroundFn }).removeBackground;
   } catch {
-    throw new Error("Could not load the background remover. Check your connection and try again.");
+    throw new CodedError("errors.bg_remover_load_failed", "Could not load the background remover. Check your connection and try again.");
   }
   try {
     const blob = await removeBackgroundFn(input, {
@@ -196,8 +197,11 @@ export async function removeBackground(
     const dataUrl = await blobToDataUrl(blob);
     return { dataUrl };
   } catch (err) {
+    // The library's own errors are cryptic (fetch/wasm internals), so the code
+    // translates to a friendly message at the display boundary while the
+    // English message keeps the detail for logs.
     const detail = err instanceof Error ? err.message : String(err);
-    throw new Error(`Background removal failed: ${detail}`);
+    throw new CodedError("errors.background_removal_failed", `Background removal failed: ${detail}`);
   }
 }
 
@@ -211,4 +215,51 @@ function blobToDataUrl(blob: Blob): Promise<string> {
     reader.onerror = () => reject(reader.error ?? new Error("Read failed"));
     reader.readAsDataURL(blob);
   });
+}
+
+/**
+ * Derive a grayscale alpha mask from a cutout produced by `removeBackground`.
+ *
+ * The model returns a transparent PNG: the foreground with its background
+ * knocked out. What we persist instead is the ALPHA of that result as a
+ * separate grayscale image (white keeps, black hides), so the original photo
+ * stays in the document and the cutout becomes a view of it.
+ *
+ * That is what makes removal undoable and, later, refinable by hand: a brush
+ * edits this mask rather than repainting pixels into the photo.
+ */
+export async function alphaMaskFromCutout(
+  cutoutDataUrl: string,
+): Promise<{ dataUrl: string; width: number; height: number }> {
+  if (typeof window === "undefined") {
+    throw new CodedError("errors.bg_removal_browser_only", "Background removal runs in the browser only.");
+  }
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = () => reject(new CodedError("errors.background_removal_failed", "Could not read the cutout."));
+    el.src = cutoutDataUrl;
+  });
+  const w = img.naturalWidth || 1;
+  const h = img.naturalHeight || 1;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) throw new CodedError("errors.background_removal_failed", "Canvas unavailable.");
+  ctx.drawImage(img, 0, 0);
+  const data = ctx.getImageData(0, 0, w, h);
+  const px = data.data;
+  for (let i = 0; i < px.length; i += 4) {
+    // Alpha becomes luminance; the mask itself is fully opaque. A grayscale
+    // mask is what a brush can paint into, and it survives formats that drop
+    // an alpha channel.
+    const a = px[i + 3];
+    px[i] = a;
+    px[i + 1] = a;
+    px[i + 2] = a;
+    px[i + 3] = 255;
+  }
+  ctx.putImageData(data, 0, 0);
+  return { dataUrl: canvas.toDataURL("image/png"), width: w, height: h };
 }

@@ -15,6 +15,7 @@ import { LayoutGrid, List, X } from "lucide-react";
 import { groupPagesBySection, sectionTitle, slideTitle } from "@hc/schema";
 import { useEditor } from "@/store/editor";
 import { SlideThumb } from "./SlideThumb";
+import { tr } from "@/lib/i18n";
 
 const GRID_W = 200;
 const GRID_H = 130;
@@ -68,19 +69,19 @@ export function SlideOverview({ open, onClose }: { open: boolean; onClose: () =>
   return (
     <div className="fixed inset-0 z-[90] flex flex-col bg-neutral-900/95 backdrop-blur" data-testid="slide-overview">
       <header className="flex shrink-0 items-center gap-3 border-b border-white/10 px-4 py-2.5 text-white">
-        <span className="text-sm font-semibold">Overview</span>
+        <span className="text-sm font-semibold">{tr("editor.overview")}</span>
         <span className="text-xs text-white/40">
           {doc.pages.length} slide{doc.pages.length === 1 ? "" : "s"}
         </span>
-        <div className="ml-4 flex items-center gap-1 rounded-lg bg-white/10 p-0.5">
-          <ViewTab active={view === "grid"} onClick={() => setView("grid")} icon={LayoutGrid} label="Grid" testId="overview-tab-grid" />
-          <ViewTab active={view === "outline"} onClick={() => setView("outline")} icon={List} label="Outline" testId="overview-tab-outline" />
+        <div className="ms-4 flex items-center gap-1 rounded-lg bg-white/10 p-0.5">
+          <ViewTab active={view === "grid"} onClick={() => setView("grid")} icon={LayoutGrid} label={tr("editor.grid")} testId="overview-tab-grid" />
+          <ViewTab active={view === "outline"} onClick={() => setView("outline")} icon={List} label={tr("editor.outline")} testId="overview-tab-outline" />
         </div>
         <button
           onClick={onClose}
           data-testid="overview-close"
-          aria-label="Close overview"
-          className="ml-auto grid h-8 w-8 place-items-center rounded-full bg-white/10 hover:bg-white/20"
+          aria-label={tr("editor.close_overview")}
+          className="ms-auto grid h-8 w-8 place-items-center rounded-full bg-white/10 hover:bg-white/20"
         >
           <X size={16} />
         </button>
@@ -93,7 +94,7 @@ export function SlideOverview({ open, onClose }: { open: boolean; onClose: () =>
                 at all; otherwise every deck would grow a meaningless label. */}
             {(group.section || groups.length > 1) && (
               <h2 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-white/50">
-                {group.section ? sectionTitle(group.section, gi) : "No section"}
+                {group.section ? sectionTitle(group.section, gi) : tr("editor.no_section")}
                 <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-white/40">
                   {group.pageIndices.length}
                 </span>
@@ -140,7 +141,7 @@ export function SlideOverview({ open, onClose }: { open: boolean; onClose: () =>
                       <span className="text-[11px] tabular-nums text-white/40">{i + 1}</span>
                       <span className="min-w-0 flex-1 truncate text-[11px] text-white/70">{slideTitle(doc.pages[i], i)}</span>
                       {doc.pages[i].hidden && (
-                        <span className="rounded bg-white/10 px-1 text-[9px] text-white/40">Hidden</span>
+                        <span className="rounded bg-white/10 px-1 text-[9px] text-white/40">{tr("editor.hidden")}</span>
                       )}
                     </div>
                   </div>
@@ -153,11 +154,11 @@ export function SlideOverview({ open, onClose }: { open: boolean; onClose: () =>
                     <button
                       onClick={() => openSlide(i)}
                       data-testid={`overview-outline-${i}`}
-                      className={`flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left transition ${
+                      className={`flex w-full items-start gap-3 rounded-lg px-3 py-2 text-start transition ${
                         i === activePage ? "bg-white/15" : "hover:bg-white/5"
                       }`}
                     >
-                      <span className="w-6 shrink-0 pt-0.5 text-right text-[11px] tabular-nums text-white/40">{i + 1}</span>
+                      <span className="w-6 shrink-0 pt-0.5 text-end text-[11px] tabular-nums text-white/40">{i + 1}</span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm text-white/90">{slideTitle(doc.pages[i], i)}</span>
                         {doc.pages[i].notes?.trim() && (

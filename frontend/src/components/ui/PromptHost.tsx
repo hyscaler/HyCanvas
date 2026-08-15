@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { Modal } from "./Modal";
 import { Button } from "./Button";
 import { useDialog } from "@/lib/promptDialog";
+import { tr } from "@/lib/i18n";
 
 export function PromptHost() {
   const req = useDialog((s) => s.req);
@@ -38,7 +39,7 @@ export function PromptHost() {
   };
 
   return (
-    <Modal open onClose={cancel} title={req.kind === "alert" ? req.title ?? "Notice" : req.title}>
+    <Modal open onClose={cancel} title={req.kind === "alert" ? req.title ?? tr("ui.notice") : req.title}>
       {req.kind === "prompt" ? (
         <form
           onSubmit={(e) => {
@@ -56,7 +57,7 @@ export function PromptHost() {
             className="h-11 rounded-xl border border-neutral-200 bg-surface px-3.5 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           />
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary" size="sm" onClick={cancel}>Cancel</Button>
+            <Button type="button" variant="secondary" size="sm" onClick={cancel}>{tr("ui.cancel")}</Button>
             <Button type="submit" size="sm">{req.confirmText ?? "OK"}</Button>
           </div>
         </form>

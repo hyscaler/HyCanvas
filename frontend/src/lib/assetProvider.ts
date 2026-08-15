@@ -5,6 +5,7 @@
 // and crop/fit fidelity remain deferred; this draws the image into the node box.
 
 import type { AssetProvider, AssetStatus } from "@hc/engine";
+import { resolveAssetUrl } from "@/lib/sdk";
 
 interface Entry {
   url: string;
@@ -17,8 +18,14 @@ class ImageAssetProvider implements AssetProvider {
   private entries = new Map<string, Entry>();
   private subs = new Set<(assetId: string) => void>();
 
-  /** Register an asset id -> url and begin loading it (idempotent per url). */
+  /** Register an asset id -> url and begin loading it (idempotent per url).
+   *  Server-relative urls are resolved against the API origin here: documents
+   *  can carry them (upload responses are relative unless the backend has a
+   *  publicURL), and loading one against the frontend dev origin 404s, which
+   *  reads as a permanently "missing" asset. In the same-origin dist build the
+   *  resolution is the identity, so this only matters where it helps. */
   register(assetId: string, url: string): void {
+    url = resolveAssetUrl(url);
     const existing = this.entries.get(assetId);
     if (existing && existing.url === url) return;
     const entry: Entry = { url, status: "loading", img: null };
@@ -42,6 +49,7 @@ class ImageAssetProvider implements AssetProvider {
    *  draw the current frame via ctx.drawImage. Notifies on load and on seek so
    *  the canvas repaints when the frame changes (scrubbing/playback). */
   registerVideo(assetId: string, url: string): void {
+    url = resolveAssetUrl(url); // same relative-url resolution as register()
     const existing = this.entries.get(assetId);
     if (existing && existing.url === url) return;
     const entry: Entry = { url, status: "loading", img: null, video: true };

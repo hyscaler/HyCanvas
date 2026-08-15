@@ -36,6 +36,7 @@ type ServerFrame =
   | { t: "locks"; locks: Record<string, LockHolder> } // authoritative collab locks (slice C)
   | { t: "comment"; op: "changed"; designId: string } // comment mutation signal
   | { t: "vote"; op: "changed"; designId: string } // server-authoritative vote signal (FR-19)
+  | { t: "audience"; kind: AudienceEvent["kind"]; emoji?: string } // live audience event (doc 28)
   | { t: "moderated"; action: "kick" | "ban" | "unban"; designId: string } // you were removed (FR-32)
   | { t: "notify"; designId: string } // new in-app notification for the caller
   | { t: "role"; role: RealtimeRole; reason?: RoleChangeReason } // live role change
@@ -67,6 +68,23 @@ export function serverNow(): number {
 // The comments panel subscribes so threads/pins refetch live; clients without a
 // socket still work via REST. Module-level so it survives client reconnects.
 const commentListeners = new Set<(designId: string) => void>();
+
+/** Live audience events (doc 28): a question/vote/poll/reaction from a
+ *  share-link viewer, fanned to the presenter by the server. */
+export interface AudienceEvent {
+  // "live" is the presenter's slide position (published on change and on a
+  // heartbeat). It is listed here so subscribers can ignore it: treating it as
+  // an unknown kind makes the presenter refetch the whole audience state on
+  // every one of its own heartbeats.
+  kind: "question" | "qa-changed" | "poll" | "poll-changed" | "reaction" | "cleared" | "live";
+  emoji?: string;
+  slide?: number;
+}
+const audienceListeners = new Set<(e: AudienceEvent) => void>();
+export function onAudienceEvent(fn: (e: AudienceEvent) => void): () => void {
+  audienceListeners.add(fn);
+  return () => audienceListeners.delete(fn);
+}
 
 /** Subscribe to live comment-changed signals; returns an unsubscribe. */
 export function onCommentChanged(fn: (designId: string) => void): () => void {
@@ -135,13 +153,16 @@ function fromBase64(b64: string): Uint8Array {
   return out;
 }
 
-/** Build the ws(s):// URL for a design from the configured backend origin. */
-function realtimeUrl(designId: string): string {
+/** Build the ws(s):// URL for a design from the configured backend origin.
+ *  `branch` joins an in-CRDT branch session (doc 16 FR-10): its own room and
+ *  its own journaled lineage, fully isolated from the main room. */
+function realtimeUrl(designId: string, branch: string | null): string {
   // apiOrigin is the backend origin without the /api suffix (empty in the
   // same-origin dist build, where we fall back to the page's own origin).
   const origin = apiOrigin || (typeof window !== "undefined" ? window.location.origin : "");
   const wsBase = origin.replace(/^http/, "ws"); // http->ws, https->wss
-  return `${wsBase}/realtime?design=${encodeURIComponent(designId)}`;
+  const branchQ = branch ? `&branch=${encodeURIComponent(branch)}` : "";
+  return `${wsBase}/realtime?design=${encodeURIComponent(designId)}${branchQ}`;
 }
 
 /**
@@ -176,6 +197,7 @@ export class RealtimeClient {
   constructor(
     private readonly designId: string,
     private readonly doc: DesignDoc | null = null,
+    private readonly branch: string | null = null,
   ) {
     this.setState("connecting");
     // Broadcast local CRDT updates to the room as they happen; on (re)connect the
@@ -194,7 +216,7 @@ export class RealtimeClient {
     if (this.closed || typeof window === "undefined") return;
     let ws: WebSocket;
     try {
-      ws = new WebSocket(realtimeUrl(this.designId));
+      ws = new WebSocket(realtimeUrl(this.designId, this.branch));
     } catch {
       this.scheduleReconnect();
       return;
@@ -300,6 +322,9 @@ export class RealtimeClient {
         break;
       case "comment":
         for (const fn of commentListeners) fn(frame.designId);
+        break;
+      case "audience":
+        for (const fn of audienceListeners) fn({ kind: frame.kind, emoji: frame.emoji });
         break;
       case "vote":
         for (const fn of voteListeners) fn(frame.designId);
@@ -499,6 +524,6 @@ export class RealtimeClient {
 /** Open a realtime connection for a design and return its client. Pass the
  *  per-design {@link DesignDoc} to also carry Yjs document sync on the socket
  *  (slice B); omit it for a presence-only connection (slice A behavior). */
-export function connectRealtime(designId: string, doc: DesignDoc | null = null): RealtimeClient {
-  return new RealtimeClient(designId, doc);
+export function connectRealtime(designId: string, doc: DesignDoc | null = null, branch: string | null = null): RealtimeClient {
+  return new RealtimeClient(designId, doc, branch);
 }

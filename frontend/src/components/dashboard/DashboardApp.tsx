@@ -8,6 +8,8 @@ import { useRouter } from "next/router";
 import {
   Home as HomeIcon,
   LayoutTemplate,
+  FileUp,
+  FileDown,
   PanelLeftClose,
   PanelLeftOpen,
   Trash2,
@@ -45,7 +47,9 @@ import {
   Sun,
 } from "lucide-react";
 import { createBlankDesign } from "@hc/schema";
-import type { DesignRecord, HomeItem, MyTask, StorageUsageView, TaskStatus, TemplateCollectionSummary, TemplateSummary, WorkspaceRole } from "@hc/sdk";
+import { HYC_ACCEPT, downloadHycFile, importedTitle, parseHycFile, readFileText } from "@/lib/hycFile";
+import { pptxToDesign } from "@hc/export";
+import { ApiError, type DesignRecord, type HomeItem, type MyTask, type StorageUsageView, type TaskStatus, type TemplateCollectionSummary, type TemplateSummary, type WorkspaceRole } from "@hc/sdk";
 import { formatBytes } from "@/lib/format";
 import { useDateFormat } from "@/lib/datetime";
 import { resolvedTheme, setThemePreference } from "@/lib/theme";
@@ -65,13 +69,15 @@ import { MembersPanel } from "./MembersPanel";
 import { VerifyEmailBanner } from "@/components/auth/VerifyEmailBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { HeroArt, EmptyArt, RailArt } from "@/components/ui/CanvasBackdrop";
+import { tr } from "@/lib/i18n";
+import { apiCodeMessage, userMessage } from "@/lib/errors";
 
 // Time-aware greeting for the dashboard hero band.
 function greetByHour(): string {
   const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 18) return "Good afternoon";
-  return "Good evening";
+  if (h < 12) return tr("dashboard.good_morning");
+  if (h < 18) return tr("dashboard.good_afternoon");
+  return tr("dashboard.good_evening");
 }
 
 // Faint canvas dot-grid + soft corner blobs behind the main scroll area. Layered
@@ -88,59 +94,59 @@ const DASH_BACKDROP: React.CSSProperties = {
 
 type Format = { label: string; icon: typeof Plus; w: number; h: number; kind?: string };
 
-const FORMAT_GROUPS: { title: string; items: Format[] }[] = [
+const formatGroups = (): { title: string; items: Format[] }[] => [
   {
-    title: "Social",
+    title: tr("dashboard.social"),
     items: [
-      { label: "Instagram post", icon: Instagram, w: 1080, h: 1080 },
-      { label: "Instagram story", icon: Smartphone, w: 1080, h: 1920 },
-      { label: "Facebook post", icon: Facebook, w: 1200, h: 630 },
-      { label: "LinkedIn post", icon: Linkedin, w: 1200, h: 627 },
-      { label: "YouTube thumbnail", icon: Youtube, w: 1280, h: 720 },
+      { label: tr("dashboard.instagram_post_2"), icon: Instagram, w: 1080, h: 1080 },
+      { label: tr("dashboard.instagram_story_2"), icon: Smartphone, w: 1080, h: 1920 },
+      { label: tr("dashboard.facebook_post_2"), icon: Facebook, w: 1200, h: 630 },
+      { label: tr("dashboard.linkedin_post_2"), icon: Linkedin, w: 1200, h: 627 },
+      { label: tr("dashboard.youtube_thumbnail"), icon: Youtube, w: 1280, h: 720 },
     ],
   },
   {
-    title: "Print",
+    title: tr("dashboard.print"),
     items: [
-      { label: "Poster", icon: FileText, w: 1080, h: 1350 },
-      { label: "Flyer", icon: File, w: 816, h: 1056 },
-      { label: "Business card", icon: CreditCard, w: 1050, h: 600 },
+      { label: tr("dashboard.poster"), icon: FileText, w: 1080, h: 1350 },
+      { label: tr("dashboard.flyer"), icon: File, w: 816, h: 1056 },
+      { label: tr("dashboard.business_card_2"), icon: CreditCard, w: 1050, h: 600 },
       { label: "A4 document", icon: BookOpen, w: 1240, h: 1754 },
     ],
   },
   {
-    title: "Digital",
+    title: tr("dashboard.digital"),
     items: [
-      { label: "Presentation", icon: Presentation, w: 1920, h: 1080 },
-      { label: "Banner", icon: RectangleHorizontal, w: 1500, h: 500 },
-      { label: "Desktop wallpaper", icon: Monitor, w: 1920, h: 1080 },
-      { label: "Logo", icon: ImageIcon, w: 500, h: 500 },
+      { label: tr("dashboard.presentation"), icon: Presentation, w: 1920, h: 1080 },
+      { label: tr("dashboard.banner"), icon: RectangleHorizontal, w: 1500, h: 500 },
+      { label: tr("dashboard.desktop_wallpaper"), icon: Monitor, w: 1920, h: 1080 },
+      { label: tr("dashboard.logo"), icon: ImageIcon, w: 500, h: 500 },
     ],
   },
   {
     // Document types beyond static design (docs 28-32). `kind` is written to
     // meta.kind at creation so the editor mounts the matching surface.
-    title: "Docs & data",
+    title: tr("dashboard.docs_data"),
     items: [
-      { label: "Whiteboard", icon: LayoutGrid, w: 1920, h: 1080, kind: "whiteboard" },
-      { label: "Doc", icon: FileText, w: 816, h: 1056, kind: "doc" },
-      { label: "Sheet", icon: Table2, w: 1280, h: 800, kind: "sheet" },
-      { label: "Video", icon: Film, w: 1920, h: 1080, kind: "video" },
+      { label: tr("dashboard.whiteboard"), icon: LayoutGrid, w: 1920, h: 1080, kind: "whiteboard" },
+      { label: tr("dashboard.doc"), icon: FileText, w: 816, h: 1056, kind: "doc" },
+      { label: tr("dashboard.sheet"), icon: Table2, w: 1280, h: 800, kind: "sheet" },
+      { label: tr("dashboard.video"), icon: Film, w: 1920, h: 1080, kind: "video" },
     ],
   },
 ];
 
 // Preset canvas sizes offered in the "Create a design" size picker.
-const SIZE_PRESETS: { label: string; w: number; h: number }[] = [
-  { label: "Instagram Post", w: 1080, h: 1080 },
-  { label: "Instagram Story", w: 1080, h: 1920 },
-  { label: "Presentation 16:9", w: 1920, h: 1080 },
-  { label: "Facebook Post", w: 1200, h: 630 },
-  { label: "LinkedIn Post", w: 1200, h: 627 },
-  { label: "Poster", w: 1080, h: 1350 },
+const sizePresets = (): { label: string; w: number; h: number }[] => [
+  { label: tr("dashboard.instagram_post"), w: 1080, h: 1080 },
+  { label: tr("dashboard.instagram_story"), w: 1080, h: 1920 },
+  { label: tr("dashboard.presentation_16_9"), w: 1920, h: 1080 },
+  { label: tr("dashboard.facebook_post"), w: 1200, h: 630 },
+  { label: tr("dashboard.linkedin_post"), w: 1200, h: 627 },
+  { label: tr("dashboard.poster"), w: 1080, h: 1350 },
   { label: "A4 Document", w: 1240, h: 1754 },
-  { label: "Logo", w: 500, h: 500 },
-  { label: "Business Card", w: 1050, h: 600 },
+  { label: tr("dashboard.logo"), w: 500, h: 500 },
+  { label: tr("dashboard.business_card"), w: 1050, h: 600 },
 ];
 
 export function DashboardApp({ view }: { view: DashboardView }) {
@@ -313,12 +319,12 @@ export function DashboardApp({ view }: { view: DashboardView }) {
   // Only offer type chips when there's actually a mix of types to filter.
   const presentKinds = new Set(items.map(itemKind));
   const TYPE_CHIPS: { id: string; label: string }[] = [
-    { id: "all", label: "All" },
-    { id: "design", label: "Designs" },
-    { id: "doc", label: "Docs" },
-    { id: "whiteboard", label: "Whiteboards" },
-    { id: "sheet", label: "Sheets" },
-    { id: "video", label: "Videos" },
+    { id: "all", label: tr("dashboard.all") },
+    { id: "design", label: tr("dashboard.designs") },
+    { id: "doc", label: tr("dashboard.docs") },
+    { id: "whiteboard", label: tr("dashboard.whiteboards") },
+    { id: "sheet", label: tr("dashboard.sheets") },
+    { id: "video", label: tr("dashboard.videos") },
   ];
   const typeChips = TYPE_CHIPS.filter((c) => c.id === "all" || presentKinds.has(c.id));
   // Fall back to "all" when the active filter is no longer available (e.g. the
@@ -348,7 +354,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
       // Revert on failure.
       setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, starred: item.starred } : i)));
       if (item.starred) setFavorites((prev) => (prev.some((i) => i.id === item.id) ? prev : [item, ...prev]));
-      toast.error("Could not update favorite.");
+      toast.error(tr("dashboard.could_not_update_favorite"));
     }
   }
 
@@ -356,17 +362,95 @@ export function DashboardApp({ view }: { view: DashboardView }) {
     if (!activeWorkspaceId) return;
     await oc.restoreDesign(id);
     setTrash(await oc.listTrash(activeWorkspaceId).catch(() => []));
-    toast.success("Restored.");
+    toast.success(tr("dashboard.restored"));
   }
 
   async function deleteForever(id: string) {
     if (!activeWorkspaceId) return;
     await oc.deleteDesign(id, true);
     setTrash(await oc.listTrash(activeWorkspaceId).catch(() => []));
-    toast.success("Deleted permanently.");
+    toast.success(tr("dashboard.deleted_permanently"));
   }
 
-  async function createDesign(width = 1080, height = 1080, label = "Untitled design", kind?: string) {
+  // Import a .hyc file (the open format as JSON) as a NEW design in the active
+  // workspace. Validation + forward migration happen client-side so the errors
+  // are immediate and specific; the server re-validates on create.
+  // Best user-facing message from a failed import: the server's problem+json
+  // `detail` (a validate() slip that reached the server, quota, etc.) beats the
+  // opaque "HyCanvas API 4xx" ApiError.message; a client-side Error keeps its
+  // own specific message.
+  const importErrorMessage = (e: unknown, fallback: string) => {
+    if (e instanceof ApiError) {
+      const coded = apiCodeMessage(e.body);
+      if (coded) return coded;
+      const detail = (e.body as { detail?: unknown } | null)?.detail;
+      if (typeof detail === "string" && detail) return detail;
+    }
+    // Translates CodedError (the .hyc import failures); plain Error keeps its
+    // message, as before.
+    return userMessage(e, fallback);
+  };
+  const importDesignRef = useRef<HTMLInputElement>(null);
+  async function importHycDesign(list: FileList | null) {
+    const f = list?.[0];
+    if (!f || !activeWorkspaceId || busy) return;
+    setBusy(true);
+    try {
+      // .pptx imports through the client-side OOXML parser (doc 28 interop):
+      // slides land as editable pages, embedded media as self-contained data
+      // URLs the server ingests like any pasted image. Everything else is the
+      // open .hyc format.
+      const isPptx = /\.pptx$/i.test(f.name) || f.type === "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+      const file = isPptx
+        ? await pptxToDesign(new Uint8Array(await f.arrayBuffer()), { title: f.name.replace(/\.pptx$/i, "") })
+        : parseHycFile(await readFileText(f));
+      const title = importedTitle(file, f.name);
+      const rec = await oc.createDesign({ workspaceId: activeWorkspaceId, title, from: { ...file, title } });
+      toast.success(`Imported "${title}".`);
+      await open(rec.id);
+    } catch (e) {
+      toast.error(importErrorMessage(e, tr("dashboard.could_not_import_the_file")));
+      setBusy(false);
+    }
+  }
+
+  // Import a .hyc as a WORKSPACE template (same file format; templates are
+  // design files), so templates travel between instances as plain files.
+  const importTemplateRef = useRef<HTMLInputElement>(null);
+  async function importHycTemplate(list: FileList | null) {
+    const f = list?.[0];
+    if (!f || !activeWorkspaceId || busy) return;
+    setBusy(true);
+    try {
+      const file = parseHycFile(await readFileText(f));
+      const title = importedTitle(file, f.name);
+      await oc.saveAsTemplate({ workspaceId: activeWorkspaceId, file, title, visibility: "workspace" });
+      // Refresh with the SAME scope the Templates view loads under (workspace +
+      // active collection), so the new card appears without collapsing the
+      // view's scoping to an unfiltered global list.
+      setTemplates(
+        await oc
+          .listTemplates({ workspaceId: activeWorkspaceId, collection: tplCollection ?? undefined })
+          .catch(() => templates),
+      );
+      toast.success(`Template "${title}" imported.`);
+    } catch (e) {
+      toast.error(importErrorMessage(e, tr("dashboard.could_not_import_the_template")));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Download a template as a portable .hyc file.
+  async function downloadTemplateHyc(t: TemplateSummary) {
+    try {
+      downloadHycFile(await oc.getTemplateFile(t.id), t.title);
+    } catch {
+      toast.error(tr("dashboard.could_not_download_the_template"));
+    }
+  }
+
+  async function createDesign(width = 1080, height = 1080, label = tr("dashboard.untitled_design"), kind?: string) {
     if (!activeWorkspaceId) return;
     setSizeOpen(false);
     setBusy(true);
@@ -378,7 +462,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
       const rec = await oc.createDesign({ workspaceId: activeWorkspaceId, title: label, from });
       await open(rec.id);
     } catch {
-      toast.error("Could not create design.");
+      toast.error(tr("dashboard.could_not_create_design"));
       setBusy(false);
     }
   }
@@ -392,9 +476,9 @@ export function DashboardApp({ view }: { view: DashboardView }) {
       file.title = title;
       await oc.createDesign({ workspaceId: activeWorkspaceId, title, from: file });
       setItems(await load(query));
-      toast.success("Design duplicated.");
+      toast.success(tr("dashboard.design_duplicated"));
     } catch {
-      toast.error("Could not duplicate the design.");
+      toast.error(tr("dashboard.could_not_duplicate_the_design"));
     } finally {
       setBusy(false);
     }
@@ -412,7 +496,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
       const { designId } = await oc.applyTemplate(t.id, activeWorkspaceId);
       await open(designId);
     } catch {
-      toast.error("Could not open template.");
+      toast.error(tr("dashboard.could_not_open_template"));
       setBusy(false);
     }
   }
@@ -429,7 +513,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
     if (!renameTarget || !renameValue.trim()) return;
     await oc.renameDesign(renameTarget.id, renameValue.trim());
     setRenameTarget(null);
-    toast.success("Renamed.");
+    toast.success(tr("dashboard.renamed"));
     setItems(await load(query));
   }
 
@@ -437,7 +521,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
     if (!deleteTarget) return;
     await oc.deleteDesign(deleteTarget.id);
     setDeleteTarget(null);
-    toast.success("Moved to trash.");
+    toast.success(tr("dashboard.moved_to_trash"));
     setItems(await load(query));
   }
 
@@ -456,15 +540,16 @@ export function DashboardApp({ view }: { view: DashboardView }) {
     <div className="flex items-center gap-2">
       <select
         value={sortBy}
+        aria-label={tr("dashboard.sort_designs_by")}
         onChange={(e) => setSortBy(e.target.value as "recent" | "name")}
         className="h-8 rounded-lg border border-neutral-200 bg-surface px-2 text-xs text-neutral-600 outline-none focus:border-brand-400"
       >
-        <option value="recent">Last edited</option>
-        <option value="name">Name (A-Z)</option>
+        <option value="recent">{tr("dashboard.last_edited")}</option>
+        <option value="name">{tr("dashboard.name_a_z")}</option>
       </select>
       <div className="flex overflow-hidden rounded-lg border border-neutral-200">
-        <button onClick={() => setViewMode("grid")} title="Grid view" className={`grid h-8 w-8 place-items-center ${viewMode === "grid" ? "bg-brand-50 text-brand-ink" : "text-neutral-500 hover:bg-neutral-100"}`}><LayoutGrid size={15} /></button>
-        <button onClick={() => setViewMode("list")} title="List view" className={`grid h-8 w-8 place-items-center border-l border-neutral-200 ${viewMode === "list" ? "bg-brand-50 text-brand-ink" : "text-neutral-500 hover:bg-neutral-100"}`}><List size={15} /></button>
+        <button onClick={() => setViewMode("grid")} title={tr("dashboard.grid_view")} className={`grid h-8 w-8 place-items-center ${viewMode === "grid" ? "bg-brand-50 text-brand-ink" : "text-neutral-500 hover:bg-neutral-100"}`}><LayoutGrid size={15} /></button>
+        <button onClick={() => setViewMode("list")} title={tr("dashboard.list_view")} className={`grid h-8 w-8 place-items-center border-s border-neutral-200 ${viewMode === "list" ? "bg-brand-50 text-brand-ink" : "text-neutral-500 hover:bg-neutral-100"}`}><List size={15} /></button>
       </div>
     </div>
   );
@@ -472,13 +557,13 @@ export function DashboardApp({ view }: { view: DashboardView }) {
   // One design's "more" menu (open/rename/delete), shared by card + row.
   const itemMenu = (item: HomeItem) => (
     <div className="relative">
-      <IconButton size="sm" onClick={(e) => { e.stopPropagation(); setMenuFor(menuFor === item.id ? null : item.id); }} aria-label="More"><MoreHorizontal size={16} /></IconButton>
+      <IconButton size="sm" onClick={(e) => { e.stopPropagation(); setMenuFor(menuFor === item.id ? null : item.id); }} aria-label={tr("dashboard.more")}><MoreHorizontal size={16} /></IconButton>
       {menuFor === item.id && (
-        <div className="absolute right-0 z-30 mt-1 w-36 overflow-hidden rounded-xl border border-neutral-200 bg-surface py-1 text-sm shadow-lg" onClick={(e) => e.stopPropagation()}>
-          <MenuRow icon={ExternalLink} onClick={() => { setMenuFor(null); void open(item.id); }}>Open</MenuRow>
-          <MenuRow icon={Copy} onClick={() => { setMenuFor(null); void duplicate(item); }}>Duplicate</MenuRow>
-          <MenuRow icon={Pencil} onClick={() => { setMenuFor(null); setRenameTarget(item); setRenameValue(item.title); }}>Rename</MenuRow>
-          <MenuRow icon={Trash2} danger onClick={() => { setMenuFor(null); setDeleteTarget(item); }}>Delete</MenuRow>
+        <div className="absolute end-0 z-30 mt-1 w-36 overflow-hidden rounded-xl border border-neutral-200 bg-surface py-1 text-sm shadow-lg" onClick={(e) => e.stopPropagation()}>
+          <MenuRow icon={ExternalLink} onClick={() => { setMenuFor(null); void open(item.id); }}>{tr("dashboard.open")}</MenuRow>
+          <MenuRow icon={Copy} onClick={() => { setMenuFor(null); void duplicate(item); }}>{tr("dashboard.duplicate")}</MenuRow>
+          <MenuRow icon={Pencil} onClick={() => { setMenuFor(null); setRenameTarget(item); setRenameValue(item.title); }}>{tr("dashboard.rename")}</MenuRow>
+          <MenuRow icon={Trash2} danger onClick={() => { setMenuFor(null); setDeleteTarget(item); }}>{tr("dashboard.delete")}</MenuRow>
         </div>
       )}
     </div>
@@ -487,7 +572,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
   // A design as a grid card / a list row. Used across Home + Favorites.
   const renderCard = (item: HomeItem) => (
     <li key={item.id} className="group relative rounded-2xl border border-neutral-200 bg-surface shadow-sm transition hover:shadow-md">
-      <button onClick={() => void open(item.id)} className="block aspect-[4/3] w-full overflow-hidden rounded-t-2xl" title="Open"><DesignThumb designId={item.id} /></button>
+      <button onClick={() => void open(item.id)} className="block aspect-[4/3] w-full overflow-hidden rounded-t-2xl" title={tr("dashboard.open")}><DesignThumb designId={item.id} /></button>
       <FavoriteButton starred={item.starred} onToggle={() => void toggleFavorite(item)} />
       <div className="flex items-center justify-between gap-2 px-3 py-2.5">
         <div className="min-w-0">
@@ -501,12 +586,12 @@ export function DashboardApp({ view }: { view: DashboardView }) {
 
   const renderRow = (item: HomeItem) => (
     <li key={item.id} className="group flex items-center gap-3 border-b border-neutral-100 px-3 py-2 last:border-b-0 hover:bg-neutral-50">
-      <button onClick={() => void open(item.id)} className="h-10 w-14 shrink-0 overflow-hidden rounded-md border border-neutral-200 bg-neutral-100" title="Open"><DesignThumb designId={item.id} /></button>
-      <button onClick={() => void open(item.id)} className="min-w-0 flex-1 text-left">
+      <button onClick={() => void open(item.id)} className="h-10 w-14 shrink-0 overflow-hidden rounded-md border border-neutral-200 bg-neutral-100" title={tr("dashboard.open")}><DesignThumb designId={item.id} /></button>
+      <button onClick={() => void open(item.id)} className="min-w-0 flex-1 text-start">
         <div className="truncate text-sm font-semibold text-neutral-800">{item.title}</div>
         <div className="text-xs text-neutral-400">{df.date(item.updatedAt)}</div>
       </button>
-      <button onClick={() => void toggleFavorite(item)} aria-label={item.starred ? "Unfavorite" : "Favorite"} className={`grid h-8 w-8 place-items-center rounded-lg transition ${item.starred ? "text-amber-400" : "text-neutral-400 opacity-0 hover:bg-neutral-100 group-hover:opacity-100"}`}><Star size={15} fill={item.starred ? "currentColor" : "none"} /></button>
+      <button onClick={() => void toggleFavorite(item)} aria-label={item.starred ? tr("dashboard.unfavorite") : tr("dashboard.favorite")} className={`grid h-8 w-8 place-items-center rounded-lg transition ${item.starred ? "text-amber-400" : "text-neutral-400 opacity-0 hover:bg-neutral-100 group-hover:opacity-100"}`}><Star size={15} fill={item.starred ? "currentColor" : "none"} /></button>
       {itemMenu(item)}
     </li>
   );
@@ -524,7 +609,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
       {/* Left rail: fixed to the viewport; only the main column scrolls.
           Collapsible to an icon-only strip (remembered in localStorage). */}
       <aside
-        className={`oc-panel-dots relative flex shrink-0 flex-col overflow-y-auto border-r border-neutral-200 bg-surface transition-[width] duration-200 ${
+        className={`oc-panel-dots relative flex shrink-0 flex-col overflow-y-auto border-e border-neutral-200 bg-surface transition-[width] duration-200 ${
           railCollapsed ? "w-[4.5rem] p-3" : "w-80 p-4"
         }`}
       >
@@ -536,8 +621,8 @@ export function DashboardApp({ view }: { view: DashboardView }) {
             <button
               type="button"
               onClick={() => toggleRail(false)}
-              title="Expand sidebar"
-              aria-label="Expand sidebar"
+              title={tr("dashboard.expand_sidebar")}
+              aria-label={tr("dashboard.expand_sidebar")}
               className="mb-4 flex justify-center rounded-xl py-2 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700"
             >
               <PanelLeftOpen size={18} />
@@ -546,8 +631,8 @@ export function DashboardApp({ view }: { view: DashboardView }) {
             <button
               type="button"
               onClick={() => toggleRail(false)}
-              title={workspaces.find((w) => w.id === activeWorkspaceId)?.name ?? "Workspace"}
-              aria-label="Expand sidebar to switch workspace"
+              title={workspaces.find((w) => w.id === activeWorkspaceId)?.name ?? tr("dashboard.workspace")}
+              aria-label={tr("dashboard.expand_sidebar_to_switch_workspace")}
               className="oc-gradient mx-auto grid h-8 w-8 place-items-center rounded-md text-xs font-bold text-white"
             >
               {(workspaces.find((w) => w.id === activeWorkspaceId)?.name || "?").charAt(0).toUpperCase()}
@@ -560,8 +645,8 @@ export function DashboardApp({ view }: { view: DashboardView }) {
               <button
                 type="button"
                 onClick={() => toggleRail(true)}
-                title="Collapse sidebar"
-                aria-label="Collapse sidebar"
+                title={tr("dashboard.collapse_sidebar")}
+                aria-label={tr("dashboard.collapse_sidebar")}
                 className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
               >
                 <PanelLeftClose size={18} />
@@ -578,12 +663,12 @@ export function DashboardApp({ view }: { view: DashboardView }) {
         )}
 
         <nav className="mt-5 flex flex-col gap-1 text-sm">
-          <RailItem icon={HomeIcon} label="Home" active={view === "home"} collapsed={railCollapsed} onClick={() => gotoView("home")} />
-          <RailItem icon={Star} label="Favorites" active={view === "favorites"} collapsed={railCollapsed} onClick={() => gotoView("favorites")} />
-          <RailItem icon={CheckSquare} label="My tasks" active={view === "tasks"} collapsed={railCollapsed} onClick={() => gotoView("tasks")} />
-          <RailItem icon={LayoutTemplate} label="Templates" active={view === "templates"} collapsed={railCollapsed} onClick={() => gotoView("templates")} />
-          <RailItem icon={Users} label="Members" active={view === "members"} collapsed={railCollapsed} onClick={() => gotoView("members")} />
-          <RailItem icon={Trash2} label="Trash" active={view === "trash"} collapsed={railCollapsed} onClick={() => gotoView("trash")} />
+          <RailItem icon={HomeIcon} label={tr("dashboard.home")} active={view === "home"} collapsed={railCollapsed} onClick={() => gotoView("home")} />
+          <RailItem icon={Star} label={tr("dashboard.favorites")} active={view === "favorites"} collapsed={railCollapsed} onClick={() => gotoView("favorites")} />
+          <RailItem icon={CheckSquare} label={tr("dashboard.my_tasks")} active={view === "tasks"} collapsed={railCollapsed} onClick={() => gotoView("tasks")} />
+          <RailItem icon={LayoutTemplate} label={tr("dashboard.templates")} active={view === "templates"} collapsed={railCollapsed} onClick={() => gotoView("templates")} />
+          <RailItem icon={Users} label={tr("dashboard.members")} active={view === "members"} collapsed={railCollapsed} onClick={() => gotoView("members")} />
+          <RailItem icon={Trash2} label={tr("dashboard.trash")} active={view === "trash"} collapsed={railCollapsed} onClick={() => gotoView("trash")} />
         </nav>
 
         {/* Storage meter pinned to the rail's bottom corner. */}
@@ -600,15 +685,15 @@ export function DashboardApp({ view }: { view: DashboardView }) {
         {/* Header: global search, create, notifications, and the user menu. */}
         <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-neutral-200 bg-surface/90 px-6 py-2.5 backdrop-blur">
           <form onSubmit={onSearch} className="relative max-w-lg flex-1">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-neutral-400" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search designs and templates…"
-              className="h-9 w-full rounded-xl border border-neutral-200 bg-neutral-50 pl-9 pr-3 text-sm outline-none transition focus:border-brand-400 focus:bg-surface focus:ring-2 focus:ring-brand-100"
+              placeholder={tr("dashboard.search_designs_and_templates")}
+              className="h-9 w-full rounded-xl border border-neutral-200 bg-neutral-50 ps-9 pe-3 text-sm outline-none transition focus:border-brand-400 focus:bg-surface focus:ring-2 focus:ring-brand-100"
             />
           </form>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ms-auto flex items-center gap-2">
             <CreateMenu
               disabled={busy || !activeWorkspaceId}
               onPick={(f) => void createDesign(f.w, f.h, f.label, f.kind)}
@@ -634,14 +719,14 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                   {greetByHour()}, {firstName} <span className="inline-block">👋</span>
                 </h1>
                 <p className="mt-2 text-sm text-neutral-500">
-                  Let’s make something today. Start from a blank canvas or pick up where you left off.
+                  {tr("dashboard.let_s_make_something_today_start_from_a_blan")}
                 </p>
                 <div className="mt-5 flex flex-wrap gap-2.5">
                   <Button onClick={() => setSizeOpen(true)} disabled={busy || !activeWorkspaceId}>
-                    <Plus size={16} /> Start a design
+                    <Plus size={16} /> {tr("dashboard.start_a_design")}
                   </Button>
                   <Button variant="secondary" onClick={() => gotoView("templates")}>
-                    <LayoutTemplate size={16} /> Browse templates
+                    <LayoutTemplate size={16} /> {tr("dashboard.browse_templates")}
                   </Button>
                 </div>
               </div>
@@ -650,11 +735,26 @@ export function DashboardApp({ view }: { view: DashboardView }) {
 
           {/* Create row: every format together in one wrap. */}
           <section className="mb-10">
-            <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-neutral-400">Start a design</h2>
+            <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-neutral-400">{tr("dashboard.start_a_design")}</h2>
             <div className="flex flex-wrap gap-3">
-              {[{ label: "Blank", icon: Plus, w: 1080, h: 1080 } as Format, ...FORMAT_GROUPS.flatMap((g) => g.items)].map((f) => (
+              {[{ label: tr("dashboard.blank"), icon: Plus, w: 1080, h: 1080 } as Format, ...formatGroups().flatMap((g) => g.items)].map((f) => (
                 <FormatTile key={f.label} f={f} disabled={busy} onClick={() => startFormat(f)} />
               ))}
+              <FormatTile
+                f={{ label: tr("dashboard.import_hyc_pptx"), icon: FileUp, w: 1080, h: 1080 } as Format}
+                disabled={busy}
+                onClick={() => importDesignRef.current?.click()}
+              />
+              <input
+                ref={importDesignRef}
+                type="file"
+                accept={`${HYC_ACCEPT},.pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation`}
+                hidden
+                onChange={(e) => {
+                  void importHycDesign(e.target.files);
+                  e.target.value = ""; // allow re-picking the same file
+                }}
+              />
             </div>
           </section>
 
@@ -662,7 +762,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
           <section>
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-sm font-bold uppercase tracking-wide text-neutral-400">
-                {query.trim() ? "Search results" : "Recent designs"}
+                {query.trim() ? tr("dashboard.search_results") : tr("dashboard.recent_designs")}
               </h2>
               {items.length > 0 && viewControls()}
             </div>
@@ -684,10 +784,10 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                 <Spinner className="text-2xl" />
               </div>
             ) : items.length === 0 ? (
-              <EmptyState message={query.trim() ? "No matching designs." : "No designs yet."}>
+              <EmptyState message={query.trim() ? tr("dashboard.no_matching_designs") : tr("dashboard.no_designs_yet")}>
                 {!query.trim() && (
                   <Button onClick={() => setSizeOpen(true)}>
-                    <Plus size={18} /> Create your first design
+                    <Plus size={18} /> {tr("dashboard.create_your_first_design")}
                   </Button>
                 )}
               </EmptyState>
@@ -699,15 +799,15 @@ export function DashboardApp({ view }: { view: DashboardView }) {
           {/* Templates teaser (below recents) */}
           {templates.length > 0 && !query.trim() && (
             <section className="mt-10">
-              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-neutral-400">Start from a template</h2>
+              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-neutral-400">{tr("dashboard.start_from_a_template")}</h2>
               <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {templates.map((t) => (
                   <button
                     key={t.id}
                     onClick={() => void applyTemplate(t)}
                     disabled={busy}
-                    title="Use this template"
-                    className="group overflow-hidden rounded-2xl border border-neutral-200 bg-surface text-left shadow-sm transition hover:shadow-md disabled:opacity-60"
+                    title={tr("dashboard.use_this_template")}
+                    className="group overflow-hidden rounded-2xl border border-neutral-200 bg-surface text-start shadow-sm transition hover:shadow-md disabled:opacity-60"
                   >
                     <div className="aspect-[4/3] bg-neutral-100">
                       <DesignThumb templateId={t.id} />
@@ -724,11 +824,11 @@ export function DashboardApp({ view }: { view: DashboardView }) {
           {view === "favorites" && (
             <section>
               <div className="mb-3 flex items-center justify-between gap-3">
-                <h2 className="text-sm font-bold uppercase tracking-wide text-neutral-400">Favorites</h2>
+                <h2 className="text-sm font-bold uppercase tracking-wide text-neutral-400">{tr("dashboard.favorites")}</h2>
                 {favorites.length > 0 && viewControls()}
               </div>
               {favorites.length === 0 ? (
-                <EmptyState message="No favorites yet. Tap the star on a design to add it here." />
+                <EmptyState message={tr("dashboard.no_favorites_yet_tap_the_star_on_a_design_to")} />
               ) : (
                 itemsList(sortedFavorites)
               )}
@@ -739,14 +839,29 @@ export function DashboardApp({ view }: { view: DashboardView }) {
             <section>
               {/* Header row matches Favorites: title left, controls right. */}
               <div className="mb-3 flex items-center justify-between gap-3">
-                <h2 className="text-sm font-bold uppercase tracking-wide text-neutral-400">Templates</h2>
+                <h2 className="text-sm font-bold uppercase tracking-wide text-neutral-400">{tr("dashboard.templates")}</h2>
+                <Button variant="secondary" size="sm" disabled={busy} onClick={() => importTemplateRef.current?.click()} title={tr("dashboard.import_a_template_from_a_hyc_file")}>
+                  <FileUp size={15} /> {tr("dashboard.import_template")}
+                </Button>
+                <input
+                  ref={importTemplateRef}
+                  type="file"
+                  accept={HYC_ACCEPT}
+                  hidden
+                  onChange={(e) => {
+                    void importHycTemplate(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+                <span className="flex-1" />
                 {collections.length > 0 && (
                   <select
                     value={tplCollection ?? ""}
+                    aria-label={tr("dashboard.filter_by_collection")}
                     onChange={(e) => setTplCollection(e.target.value || null)}
                     className="h-8 rounded-lg border border-neutral-200 bg-surface px-2 text-xs text-neutral-600 outline-none focus:border-brand-400"
                   >
-                    <option value="">All collections</option>
+                    <option value="">{tr("dashboard.all_collections")}</option>
                     {collections.map((c) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
@@ -761,7 +876,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                     onClick={() => setTplCategory(null)}
                     className={`rounded-lg border px-3 py-1 text-sm transition ${tplCategory === null ? "border-brand-200 bg-brand-50 text-brand-ink" : "border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-50"}`}
                   >
-                    All
+                    {tr("dashboard.all")}
                   </button>
                   {templateCategories.map((c) => (
                     <button
@@ -775,7 +890,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                 </div>
               )}
               {filteredTemplates.length === 0 ? (
-                <EmptyState message="No templates yet. Open a design and use Save as template to add one here." />
+                <EmptyState message={tr("dashboard.no_templates_yet_open_a_design_and_use_save")} />
               ) : (
                 <ul className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                   {filteredTemplates.map((t) => (
@@ -783,11 +898,19 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                       <button
                         onClick={() => void applyTemplate(t)}
                         disabled={busy}
-                        title="Use this template"
-                        className="block w-full text-left disabled:opacity-60"
+                        title={tr("dashboard.use_this_template")}
+                        className="block w-full text-start disabled:opacity-60"
                       >
                         <div className="aspect-[4/3] overflow-hidden rounded-t-2xl bg-neutral-100"><DesignThumb templateId={t.id} /></div>
                         <div className="truncate px-3 py-2.5 text-sm font-semibold text-neutral-800">{t.title}</div>
+                      </button>
+                      <button
+                        onClick={() => void downloadTemplateHyc(t)}
+                        title={tr("dashboard.download_as_hyc_file")}
+                        aria-label={`Download "${t.title}" as .hyc file`}
+                        className="absolute end-2 top-2 rounded-lg border border-neutral-200 bg-surface p-1.5 text-neutral-600 opacity-0 shadow-sm transition hover:text-brand-ink focus-visible:opacity-100 group-hover:opacity-100"
+                      >
+                        <FileDown size={14} />
                       </button>
                     </li>
                   ))}
@@ -798,9 +921,9 @@ export function DashboardApp({ view }: { view: DashboardView }) {
 
           {view === "trash" && (
             <section>
-              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-neutral-400">Trash</h2>
+              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-neutral-400">{tr("dashboard.trash")}</h2>
               {trash.length === 0 ? (
-                <EmptyState message="Trash is empty." />
+                <EmptyState message={tr("dashboard.trash_is_empty")} />
               ) : (
                 <ul className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                   {trash.map((d) => (
@@ -809,8 +932,8 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                       <div className="px-3 py-2.5">
                         <div className="truncate text-sm font-semibold text-neutral-800">{d.title}</div>
                         <div className="mt-2 flex gap-2 text-xs">
-                          <button onClick={() => void restoreFromTrash(d.id)} className="font-medium text-brand-ink hover:underline">Restore</button>
-                          <button onClick={() => void deleteForever(d.id)} className="font-medium text-red-600 hover:underline">Delete forever</button>
+                          <button onClick={() => void restoreFromTrash(d.id)} className="font-medium text-brand-ink hover:underline">{tr("dashboard.restore")}</button>
+                          <button onClick={() => void deleteForever(d.id)} className="font-medium text-red-600 hover:underline">{tr("dashboard.delete_forever")}</button>
                         </div>
                       </div>
                     </li>
@@ -822,14 +945,14 @@ export function DashboardApp({ view }: { view: DashboardView }) {
 
           {view === "tasks" && (
             <section>
-              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-neutral-400">My tasks</h2>
+              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-neutral-400">{tr("dashboard.my_tasks")}</h2>
               {tasks.length === 0 ? (
-                <EmptyState message="No tasks assigned to you. Comments converted to tasks and assigned to you show up here." />
+                <EmptyState message={tr("dashboard.no_tasks_assigned_to_you_comments_converted")} />
               ) : (
                 <ul className="space-y-2">
                   {tasks.map((t) => {
                     const status = (t.task?.status ?? "open") as TaskStatus;
-                    const label: Record<TaskStatus, string> = { open: "Open", in_progress: "In progress", done: "Done" };
+                    const label: Record<TaskStatus, string> = { open: tr("dashboard.open"), in_progress: tr("dashboard.in_progress"), done: tr("dashboard.done") };
                     const tone: Record<TaskStatus, string> = {
                       open: "bg-amber-50 text-amber-700",
                       in_progress: "bg-sky-50 text-sky-700",
@@ -839,7 +962,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                       <li key={t.id}>
                         <button
                           onClick={() => void open(t.designId)}
-                          className="flex w-full items-center gap-3 rounded-xl border border-neutral-200 bg-surface px-4 py-3 text-left shadow-sm hover:border-brand-300 hover:bg-brand-50/40"
+                          className="flex w-full items-center gap-3 rounded-xl border border-neutral-200 bg-surface px-4 py-3 text-start shadow-sm hover:border-brand-300 hover:bg-brand-50/40"
                         >
                           <CheckSquare size={18} className="shrink-0 text-brand-ink" />
                           <span className="min-w-0 flex-1">
@@ -861,7 +984,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
 
           {view === "members" && (
             <section>
-              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-neutral-400">Members</h2>
+              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-neutral-400">{tr("dashboard.members")}</h2>
               <MembersPanel
                 workspaceId={activeWorkspaceId}
                 workspaceName={activeWs?.name ?? "this workspace"}
@@ -877,9 +1000,9 @@ export function DashboardApp({ view }: { view: DashboardView }) {
 
       {/* Modals */}
 
-      <Modal open={sizeOpen} onClose={() => setSizeOpen(false)} title="Create a design" width="w-[34rem]">
+      <Modal open={sizeOpen} onClose={() => setSizeOpen(false)} title={tr("dashboard.create_a_design")} width="w-[34rem]">
         <div className="grid grid-cols-2 gap-2">
-          {SIZE_PRESETS.map((p) => {
+          {sizePresets().map((p) => {
             const box = 34;
             const ratio = p.w / p.h;
             const pw = ratio >= 1 ? box : Math.round(box * ratio);
@@ -888,7 +1011,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
               <button
                 key={p.label}
                 onClick={() => void createDesign(p.w, p.h, p.label)}
-                className="flex items-center gap-3 rounded-lg border border-neutral-200 px-3 py-2.5 text-left transition-colors hover:border-brand-300 hover:bg-brand-50"
+                className="flex items-center gap-3 rounded-lg border border-neutral-200 px-3 py-2.5 text-start transition-colors hover:border-brand-300 hover:bg-brand-50"
               >
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center" aria-hidden>
                   <span
@@ -905,33 +1028,33 @@ export function DashboardApp({ view }: { view: DashboardView }) {
           })}
         </div>
         <div className="mt-4 border-t border-neutral-100 pt-4">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">Custom size (px)</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">{tr("dashboard.custom_size_px")}</p>
           <div className="flex items-end gap-2">
             <div className="min-w-0 flex-1">
-              <Input label="Width" type="number" className="w-full" value={customW} onChange={(e) => setCustomW(Math.max(1, Number(e.target.value) || 0))} />
+              <Input label={tr("dashboard.width")} type="number" className="w-full" value={customW} onChange={(e) => setCustomW(Math.max(1, Number(e.target.value) || 0))} />
             </div>
             <span className="pb-3 text-neutral-400">×</span>
             <div className="min-w-0 flex-1">
-              <Input label="Height" type="number" className="w-full" value={customH} onChange={(e) => setCustomH(Math.max(1, Number(e.target.value) || 0))} />
+              <Input label={tr("dashboard.height")} type="number" className="w-full" value={customH} onChange={(e) => setCustomH(Math.max(1, Number(e.target.value) || 0))} />
             </div>
-            <Button className="shrink-0" onClick={() => void createDesign(customW, customH, `Custom ${customW}×${customH}`)}>Create</Button>
+            <Button className="shrink-0" onClick={() => void createDesign(customW, customH, `Custom ${customW}×${customH}`)}>{tr("dashboard.create")}</Button>
           </div>
         </div>
       </Modal>
 
-      <Modal open={!!renameTarget} onClose={() => setRenameTarget(null)} title="Rename design">
-        <Input label="Title" value={renameValue} onChange={(e) => setRenameValue(e.target.value)} autoFocus />
+      <Modal open={!!renameTarget} onClose={() => setRenameTarget(null)} title={tr("dashboard.rename_design")}>
+        <Input label={tr("dashboard.title")} value={renameValue} onChange={(e) => setRenameValue(e.target.value)} autoFocus />
         <div className="mt-5 flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => setRenameTarget(null)}>Cancel</Button>
-          <Button onClick={() => void confirmRename()}>Save</Button>
+          <Button variant="ghost" onClick={() => setRenameTarget(null)}>{tr("dashboard.cancel")}</Button>
+          <Button onClick={() => void confirmRename()}>{tr("dashboard.save")}</Button>
         </div>
       </Modal>
 
-      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Move to trash?">
+      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title={tr("dashboard.move_to_trash")}>
         <p className="text-sm text-neutral-600">“{deleteTarget?.title}” will be moved to trash. You can restore it later.</p>
         <div className="mt-5 flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-          <Button variant="danger" onClick={() => void confirmDelete()}>Move to trash</Button>
+          <Button variant="ghost" onClick={() => setDeleteTarget(null)}>{tr("dashboard.cancel")}</Button>
+          <Button variant="danger" onClick={() => void confirmDelete()}>{tr("dashboard.move_to_trash_2")}</Button>
         </div>
       </Modal>
 
@@ -944,11 +1067,11 @@ export function DashboardApp({ view }: { view: DashboardView }) {
         onOpenDesign={(id) => { setBulkOpen(false); void open(id); }}
       />
 
-      <Modal open={wsModal} onClose={() => setWsModal(false)} title="Create a workspace">
-        <Input label="Workspace name" value={wsName} onChange={(e) => setWsName(e.target.value)} placeholder="e.g. Marketing team" autoFocus />
+      <Modal open={wsModal} onClose={() => setWsModal(false)} title={tr("dashboard.create_a_workspace")}>
+        <Input label={tr("dashboard.workspace_name")} value={wsName} onChange={(e) => setWsName(e.target.value)} placeholder={tr("dashboard.e_g_marketing_team")} autoFocus />
         <div className="mt-5 flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => setWsModal(false)}>Cancel</Button>
-          <Button onClick={() => void createWorkspace()}>Create</Button>
+          <Button variant="ghost" onClick={() => setWsModal(false)}>{tr("dashboard.cancel")}</Button>
+          <Button onClick={() => void createWorkspace()}>{tr("dashboard.create")}</Button>
         </div>
       </Modal>
     </div>
@@ -975,7 +1098,7 @@ function RailItem({
       title={collapsed ? label : undefined}
       aria-label={label}
       className={`flex items-center rounded-xl font-medium ${
-        collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2 text-left"
+        collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2 text-start"
       } ${active ? "bg-brand-50 text-brand-ink" : "text-neutral-600 hover:bg-neutral-100"}`}
     >
       <Icon size={18} className="shrink-0" />
@@ -998,14 +1121,14 @@ function RailStorage({ usage }: { usage: StorageUsageView }) {
   return (
     <div className="rounded-xl border border-white/60 bg-surface/40 p-3 shadow-[0_8px_24px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.7)] backdrop-blur-[6px] backdrop-saturate-150 dark:border-white/10 dark:shadow-[0_8px_24px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)]">
       <div className="mb-1 flex items-center justify-between text-[11px] text-neutral-600">
-        <span className="font-medium">Workspace storage</span>
+        <span className="font-medium">{tr("dashboard.workspace_storage")}</span>
         <span>{formatBytes(usage.usedBytes)}{usage.quotaBytes > 0 ? ` of ${formatBytes(usage.quotaBytes)}` : ""}</span>
       </div>
       {usage.quotaBytes > 0 && bar(usage.usedBytes, usage.quotaBytes)}
       {usage.userQuotaBytes > 0 && (
         <>
           <div className="mb-1 mt-2.5 flex items-center justify-between text-[11px] text-neutral-600">
-            <span className="font-medium">Your storage</span>
+            <span className="font-medium">{tr("dashboard.your_storage")}</span>
             <span>{formatBytes(usage.userUsedBytes)} of {formatBytes(usage.userQuotaBytes)}</span>
           </div>
           {bar(usage.userUsedBytes, usage.userQuotaBytes)}
@@ -1023,10 +1146,10 @@ function FavoriteButton({ starred, onToggle }: { starred: boolean; onToggle: () 
         e.stopPropagation();
         onToggle();
       }}
-      aria-label={starred ? "Remove from favorites" : "Add to favorites"}
+      aria-label={starred ? tr("dashboard.remove_from_favorites") : tr("dashboard.add_to_favorites")}
       aria-pressed={starred}
-      title={starred ? "Remove from favorites" : "Add to favorites"}
-      className={`absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-surface/90 shadow-sm backdrop-blur transition hover:bg-surface ${
+      title={starred ? tr("dashboard.remove_from_favorites") : tr("dashboard.add_to_favorites")}
+      className={`absolute end-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-surface/90 shadow-sm backdrop-blur transition hover:bg-surface ${
         starred ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus:opacity-100"
       }`}
     >
@@ -1054,7 +1177,7 @@ function EmptyState({ message, children }: { message: string; children?: React.R
 
 function MenuRow({ children, onClick, danger, icon: Icon }: { children: React.ReactNode; onClick: () => void; danger?: boolean; icon?: typeof Trash2 }) {
   return (
-    <button onClick={onClick} className={`flex w-full items-center gap-2.5 px-3 py-1.5 text-left hover:bg-neutral-50 ${danger ? "text-red-600" : "text-neutral-700"}`}>
+    <button onClick={onClick} className={`flex w-full items-center gap-2.5 px-3 py-1.5 text-start hover:bg-neutral-50 ${danger ? "text-red-600" : "text-neutral-700"}`}>
       {Icon && <Icon size={15} className={danger ? "text-red-500" : "text-neutral-400"} />}
       {children}
     </button>
@@ -1072,7 +1195,7 @@ function FormatTile({ f, disabled, onClick }: { f: Format; disabled?: boolean; o
       onClick={onClick}
       disabled={disabled}
       className="group flex w-24 flex-col items-center gap-2"
-      title={f.label === "Blank" ? f.label : `${f.label} · ${f.w}×${f.h}`}
+      title={f.label === "Blank" || f.label.startsWith("Import") ? f.label : `${f.label} · ${f.w}×${f.h}`}
     >
       <span className="relative grid h-[78px] w-full place-items-center rounded-xl border border-neutral-200 bg-surface shadow-sm transition group-hover:-translate-y-0.5 group-hover:border-brand-300 group-hover:shadow-md">
         <span className="rounded bg-brand-50 ring-1 ring-brand-100" style={{ width: boxW, height: boxH }} />
@@ -1100,17 +1223,17 @@ function CreateMenu({ disabled, onPick, onCustom, onBulk }: { disabled?: boolean
   useOutsideClose(ref, open, () => setOpen(false));
   return (
     <div className="relative" ref={ref}>
-      <Button onClick={() => setOpen((o) => !o)} disabled={disabled}><Plus size={16} /> Create</Button>
+      <Button onClick={() => setOpen((o) => !o)} disabled={disabled}><Plus size={16} /> {tr("dashboard.create")}</Button>
       {open && (
-        <div className="absolute right-0 z-40 mt-1.5 max-h-[72vh] w-64 overflow-y-auto rounded-xl border border-neutral-200 bg-surface p-1.5 shadow-xl ring-1 ring-black/5">
-          <button onClick={() => { setOpen(false); onCustom(); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-medium text-neutral-700 hover:bg-neutral-100">
-            <Plus size={16} className="text-brand-ink" /> Blank / custom size
+        <div className="absolute end-0 z-40 mt-1.5 max-h-[72vh] w-64 overflow-y-auto rounded-xl border border-neutral-200 bg-surface p-1.5 shadow-xl ring-1 ring-black/5">
+          <button onClick={() => { setOpen(false); onCustom(); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-start text-sm font-medium text-neutral-700 hover:bg-neutral-100">
+            <Plus size={16} className="text-brand-ink" /> {tr("dashboard.blank_custom_size")}
           </button>
-          {FORMAT_GROUPS.map((g) => (
+          {formatGroups().map((g) => (
             <div key={g.title}>
               <div className="px-2.5 pb-0.5 pt-2 text-[10px] font-bold uppercase tracking-wide text-neutral-400">{g.title}</div>
               {g.items.map((f) => (
-                <button key={f.label} onClick={() => { setOpen(false); onPick(f); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm text-neutral-700 hover:bg-neutral-100">
+                <button key={f.label} onClick={() => { setOpen(false); onPick(f); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-start text-sm text-neutral-700 hover:bg-neutral-100">
                   <f.icon size={16} className="shrink-0 text-neutral-500" />
                   <span className="min-w-0 flex-1 truncate">{f.label}</span>
                   <span className="shrink-0 text-[11px] text-neutral-400">{f.w}×{f.h}</span>
@@ -1119,8 +1242,8 @@ function CreateMenu({ disabled, onPick, onCustom, onBulk }: { disabled?: boolean
             </div>
           ))}
           <div className="mt-1 border-t border-neutral-100 pt-1">
-            <button onClick={() => { setOpen(false); onBulk(); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100">
-              <Layers size={16} className="text-neutral-500" /> Bulk create
+            <button onClick={() => { setOpen(false); onBulk(); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-start text-sm text-neutral-700 hover:bg-neutral-100">
+              <Layers size={16} className="text-neutral-500" /> {tr("dashboard.bulk_create")}
             </button>
           </div>
         </div>
@@ -1136,19 +1259,19 @@ function UserMenu({ user, onSettings, onSignOut }: { user: { name?: string | nul
   useOutsideClose(ref, open, () => setOpen(false));
   return (
     <div className="relative" ref={ref}>
-      <button onClick={() => setOpen((o) => !o)} aria-label="Account" className="oc-gradient grid h-8 w-8 place-items-center rounded-full text-sm font-bold text-white">
+      <button onClick={() => setOpen((o) => !o)} aria-label={tr("dashboard.account")} className="oc-gradient grid h-8 w-8 place-items-center rounded-full text-sm font-bold text-white">
         {(user?.name || user?.email || "?").charAt(0).toUpperCase()}
       </button>
       {open && (
-        <div className="absolute right-0 z-40 mt-1.5 w-56 rounded-xl border border-neutral-200 bg-surface p-1.5 shadow-xl ring-1 ring-black/5">
+        <div className="absolute end-0 z-40 mt-1.5 w-56 rounded-xl border border-neutral-200 bg-surface p-1.5 shadow-xl ring-1 ring-black/5">
           <div className="px-2.5 py-1.5">
             {user?.name && <div className="truncate text-sm font-semibold text-neutral-800">{user.name}</div>}
             <div className="truncate text-xs text-neutral-500">{user?.email}</div>
           </div>
           <div className="my-1 border-t border-neutral-100" />
           <ThemeMenuItem />
-          <button onClick={() => { setOpen(false); onSettings(); }} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100"><Settings size={15} className="text-neutral-400" /> Settings</button>
-          <button onClick={() => { setOpen(false); onSignOut(); }} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100"><LogOut size={15} className="text-neutral-400" /> Sign out</button>
+          <button onClick={() => { setOpen(false); onSettings(); }} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-start text-sm text-neutral-700 hover:bg-neutral-100"><Settings size={15} className="text-neutral-400" /> {tr("dashboard.settings")}</button>
+          <button onClick={() => { setOpen(false); onSignOut(); }} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-start text-sm text-neutral-700 hover:bg-neutral-100"><LogOut size={15} className="text-neutral-400" /> {tr("dashboard.sign_out")}</button>
         </div>
       )}
     </div>
@@ -1167,10 +1290,10 @@ function ThemeMenuItem() {
         setThemePreference(next);
         setDark(next === "dark");
       }}
-      className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100"
+      className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-start text-sm text-neutral-700 hover:bg-neutral-100"
     >
       {dark ? <Sun size={15} className="text-neutral-400" /> : <Moon size={15} className="text-neutral-400" />}
-      {dark ? "Light mode" : "Dark mode"}
+      {dark ? tr("dashboard.light_mode") : tr("dashboard.dark_mode")}
     </button>
   );
 }
@@ -1194,27 +1317,27 @@ function WorkspaceSwitcher({
     <div className="relative" ref={ref}>
       <button
         onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
-        className="flex w-full items-center gap-2 rounded-xl border border-neutral-200 px-3 py-2 text-left text-sm hover:bg-neutral-50"
+        className="flex w-full items-center gap-2 rounded-xl border border-neutral-200 px-3 py-2 text-start text-sm hover:bg-neutral-50"
       >
         <span className="oc-gradient grid h-6 w-6 shrink-0 place-items-center rounded-md text-xs font-bold text-white">
           {(active?.name || "?").charAt(0).toUpperCase()}
         </span>
-        <span className="min-w-0 flex-1 truncate font-semibold">{active?.name ?? "Workspace"}</span>
+        <span className="min-w-0 flex-1 truncate font-semibold">{active?.name ?? tr("dashboard.workspace")}</span>
         <ChevronDown size={16} className="text-neutral-400" />
       </button>
       {open && (
-        <div className="absolute left-0 right-0 z-20 mt-1 overflow-hidden rounded-xl border border-neutral-200 bg-surface py-1 shadow-lg" onClick={(e) => e.stopPropagation()}>
+        <div className="absolute start-0 end-0 z-20 mt-1 overflow-hidden rounded-xl border border-neutral-200 bg-surface py-1 shadow-lg" onClick={(e) => e.stopPropagation()}>
           {workspaces.map((w) => (
             <button
               key={w.id}
               onClick={() => { onSelect(w.id); setOpen(false); }}
-              className={`block w-full truncate px-3 py-2 text-left text-sm hover:bg-neutral-50 ${w.id === activeId ? "font-semibold text-brand-ink" : "text-neutral-700"}`}
+              className={`block w-full truncate px-3 py-2 text-start text-sm hover:bg-neutral-50 ${w.id === activeId ? "font-semibold text-brand-ink" : "text-neutral-700"}`}
             >
               {w.name}
               {w.kind === "personal" ? " · personal" : ""}
             </button>
           ))}
-          <button onClick={() => { onCreate(); setOpen(false); }} className="block w-full border-t border-neutral-100 px-3 py-2 text-left text-sm font-medium text-brand-ink hover:bg-neutral-50">
+          <button onClick={() => { onCreate(); setOpen(false); }} className="block w-full border-t border-neutral-100 px-3 py-2 text-start text-sm font-medium text-brand-ink hover:bg-neutral-50">
             + New workspace
           </button>
         </div>

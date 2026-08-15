@@ -27,7 +27,7 @@ func homeSectionHandler(h *home.Service) http.HandlerFunc {
 		u := userFrom(r.Context())
 		items, err := h.Section(r.Context(), u.ID, ws, section)
 		if err != nil {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace", "not_workspace_member")
 			return
 		}
 		writeJSON(w, http.StatusOK, items)
@@ -39,7 +39,7 @@ func searchHandler(h *home.Service) http.HandlerFunc {
 		q := r.URL.Query()
 		ws := q.Get("workspaceId")
 		if ws == "" {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "workspaceId is required")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "workspaceId is required", "workspaceid_is_required")
 			return
 		}
 		var types []string
@@ -49,7 +49,7 @@ func searchHandler(h *home.Service) http.HandlerFunc {
 		u := userFrom(r.Context())
 		items, err := h.Search(r.Context(), u.ID, ws, q.Get("q"), types)
 		if err != nil {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace", "not_workspace_member")
 			return
 		}
 		writeJSON(w, http.StatusOK, items)
@@ -62,7 +62,7 @@ func favoriteHandler(h *home.Service, on bool) http.HandlerFunc {
 		u := userFrom(r.Context())
 		starred, err := h.SetFavorite(r.Context(), u.ID, id, on)
 		if err != nil {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "cannot favorite this design")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "cannot favorite this design", "cannot_favorite_this_design")
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"starred": starred})

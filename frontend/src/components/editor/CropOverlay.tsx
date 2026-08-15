@@ -10,6 +10,7 @@ import { locate, worldMatrix } from "@hc/editor";
 import { useEditor } from "@/store/editor";
 import { imageAssets } from "@/lib/assetProvider";
 import type { CanvasApi } from "@/lib/useEditorCanvas";
+import { tr } from "@/lib/i18n";
 
 export function CropOverlay({ api, id }: { api: CanvasApi; id: string }) {
   // Track edits/pan/zoom so the frame stays glued to the node.
@@ -178,7 +179,7 @@ export function CropOverlay({ api, id }: { api: CanvasApi; id: string }) {
         style={{ left: ftl.x, top: ftl.y + fh + 10 }}
         onPointerDown={(e) => e.stopPropagation()}
       >
-        <span className="text-xs text-neutral-500">Zoom</span>
+        <span className="text-xs text-neutral-500">{tr("editor.zoom")}</span>
         <input
           type="range"
           min={1}
@@ -191,10 +192,10 @@ export function CropOverlay({ api, id }: { api: CanvasApi; id: string }) {
         {/* text-surface, not text-white: neutral-900 flips light in dark mode,
             so the label must flip with it to stay readable. */}
         <button onClick={apply} className="flex items-center gap-1 rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-medium text-surface hover:bg-neutral-700">
-          <Check size={14} /> Done
+          <Check size={14} /> {tr("editor.done")}
         </button>
         <button onClick={() => setCropping(null)} className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs text-neutral-600 hover:bg-neutral-100">
-          <X size={14} /> Cancel
+          <X size={14} /> {tr("editor.cancel")}
         </button>
       </div>
     </>

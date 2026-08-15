@@ -18,6 +18,7 @@ import {
   shortcutConflicts,
   subscribeShortcuts,
 } from "@/lib/shortcuts";
+import { tr } from "@/lib/i18n";
 
 export function ShortcutsCustomizer() {
   const [, force] = useReducer((x: number) => x + 1, 0);
@@ -43,8 +44,10 @@ export function ShortcutsCustomizer() {
       try {
         setChord(recording, chord);
         setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
+      } catch {
+        // captureChord already rejects unparseable chords, so this is a last
+        // resort; the raw message is developer-grade ("empty chord"), not UI.
+        setError(tr("editor.that_key_combination_isnt_valid"));
       }
       setRecording(null);
     };
@@ -60,8 +63,8 @@ export function ShortcutsCustomizer() {
     <div className="mb-5 rounded-xl border border-neutral-200 bg-neutral-50/60 p-4">
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-neutral-800">Customize shortcuts</h3>
-          <p className="text-[11px] text-neutral-500">Click a key, then press the new combination. Esc cancels.</p>
+          <h3 className="text-sm font-semibold text-neutral-800">{tr("editor.customize_shortcuts")}</h3>
+          <p className="text-[11px] text-neutral-500">{tr("editor.click_a_key_then_press_the_new_combination_e")}</p>
         </div>
         <button
           type="button"
@@ -69,7 +72,7 @@ export function ShortcutsCustomizer() {
           disabled={!anyCustom}
           className="flex items-center gap-1.5 rounded-md border border-neutral-200 bg-surface px-2.5 py-1 text-[11px] font-medium text-neutral-600 enabled:hover:bg-neutral-100 disabled:opacity-40"
         >
-          <RotateCcw size={12} /> Reset all
+          <RotateCcw size={12} /> {tr("editor.reset_all")}
         </button>
       </div>
 
@@ -99,7 +102,7 @@ export function ShortcutsCustomizer() {
                   className={
                     "flex min-w-[5rem] items-center justify-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium shadow-sm " +
                     (rec
-                      ? "border-blue-400 bg-blue-50 text-blue-600"
+                      ? "border-brand-400 bg-brand-50 text-brand-ink"
                       : inConflict
                         ? "border-amber-300 bg-amber-50 text-amber-700"
                         : "border-neutral-200 bg-surface text-neutral-600 hover:bg-neutral-100")
@@ -107,7 +110,7 @@ export function ShortcutsCustomizer() {
                 >
                   {rec ? (
                     <>
-                      <Circle size={9} className="animate-pulse fill-current" /> Press keys
+                      <Circle size={9} className="animate-pulse fill-current" /> {tr("editor.press_keys")}
                     </>
                   ) : (
                     formatChord(chord)
@@ -117,7 +120,7 @@ export function ShortcutsCustomizer() {
                   type="button"
                   onClick={() => resetChord(id)}
                   disabled={!isCustomized(id)}
-                  title="Reset to default"
+                  title={tr("editor.reset_to_default")}
                   className="rounded-md p-1 text-neutral-400 enabled:hover:bg-neutral-200 enabled:hover:text-neutral-600 disabled:opacity-30"
                 >
                   <RotateCcw size={12} />

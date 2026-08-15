@@ -49,7 +49,7 @@ func TestUpdateLogCheckpointCompaction_DB(t *testing.T) {
 
 	// Three incremental frames (type-2 sync update bytes).
 	for i := 0; i < 3; i++ {
-		if err := svc.AppendUpdate(ctx, rec.ID, []byte{2, byte(i), 1}, owner.ID); err != nil {
+		if err := svc.AppendUpdate(ctx, rec.ID, "", []byte{2, byte(i), 1}, owner.ID); err != nil {
 			t.Fatalf("AppendUpdate %d: %v", i, err)
 		}
 	}
@@ -58,7 +58,7 @@ func TestUpdateLogCheckpointCompaction_DB(t *testing.T) {
 	}
 
 	// Checkpoint compacts: pre-checkpoint rows deleted, the checkpoint remains.
-	if err := svc.AppendCheckpoint(ctx, rec.ID, []byte{2, 9, 9}, owner.ID); err != nil {
+	if err := svc.AppendCheckpoint(ctx, rec.ID, "", []byte{2, 9, 9}, owner.ID); err != nil {
 		t.Fatalf("AppendCheckpoint: %v", err)
 	}
 	page, err := svc.ListUpdates(ctx, rec.ID, ws.ID, 0, 0)
@@ -71,7 +71,7 @@ func TestUpdateLogCheckpointCompaction_DB(t *testing.T) {
 	checkpointSeq := page.Items[0].Seq
 
 	// A subsequent delta is a tail on top of the checkpoint, in order.
-	if err := svc.AppendUpdate(ctx, rec.ID, []byte{2, 7, 7}, owner.ID); err != nil {
+	if err := svc.AppendUpdate(ctx, rec.ID, "", []byte{2, 7, 7}, owner.ID); err != nil {
 		t.Fatalf("tail AppendUpdate: %v", err)
 	}
 	page, err = svc.ListUpdates(ctx, rec.ID, ws.ID, 0, 0)

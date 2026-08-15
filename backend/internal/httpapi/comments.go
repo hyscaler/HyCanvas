@@ -35,13 +35,13 @@ func mountComments(api chi.Router, cm *comments.Service, acct *accounts.Service)
 func commentProblem(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, comments.ErrForbidden):
-		Problem(w, r, http.StatusForbidden, "Forbidden", "you do not have permission for this action")
+		problemWithCode(w, r, http.StatusForbidden, "Forbidden", "you do not have permission for this action", "forbidden_action")
 	case errors.Is(err, comments.ErrNotFound):
-		Problem(w, r, http.StatusNotFound, "Not Found", "not found")
+		problemWithCode(w, r, http.StatusNotFound, "Not Found", "not found", "not_found")
 	case errors.Is(err, comments.ErrBadRequest):
-		Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid request")
+		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid request", "invalid_request")
 	default:
-		Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed")
+		problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed", "request_failed")
 	}
 }
 
@@ -69,7 +69,7 @@ func commentCreateHandler(cm *comments.Service) http.HandlerFunc {
 			Mentions []string        `json:"mentions"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())
@@ -101,7 +101,7 @@ func commentReplyHandler(cm *comments.Service) http.HandlerFunc {
 			Mentions []string `json:"mentions"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())
@@ -118,7 +118,7 @@ func commentEditHandler(cm *comments.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var raw map[string]json.RawMessage
 		if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		in := comments.EditInput{}
@@ -145,7 +145,7 @@ func commentResolveHandler(cm *comments.Service) http.HandlerFunc {
 			Resolved bool `json:"resolved"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())
@@ -175,7 +175,7 @@ func commentReactHandler(cm *comments.Service) http.HandlerFunc {
 			Emoji string `json:"emoji"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())
@@ -192,7 +192,7 @@ func commentTaskHandler(cm *comments.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var raw map[string]json.RawMessage
 		if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		in := comments.TaskInput{}

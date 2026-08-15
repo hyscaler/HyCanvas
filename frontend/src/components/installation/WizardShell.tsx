@@ -9,6 +9,7 @@ import { cn } from "@/lib/cn";
 import { CanvasFloor } from "@/components/ui/CanvasFloor";
 import { Logo } from "@/components/ui/Logo";
 import { getSecret, setupStatus } from "./wizard";
+import { tr } from "@/lib/i18n";
 
 // useSecretGate sends steps 2..5 back to the welcome step when no verified
 // access secret is held, which is the case on any fresh page load or direct
@@ -109,7 +110,7 @@ export function WizardShell({
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={Math.round(progress)}
-          aria-label="Setup progress"
+          aria-label={tr("installation.setup_progress")}
         >
           <div className="oc-gradient h-full rounded-full transition-all" style={{ width: `${progress}%` }} />
         </div>

@@ -1,4 +1,5 @@
 // API helpers for the first-run installation wizard. All wizard state lives
+import { CodedError } from "@/lib/errors";
 // on the setup server (/api/setup/answers), never in browser storage; the
 // only client-held state is the verified access secret below, kept in module
 // memory so a refresh or direct deep-link always restarts at step 1.
@@ -95,7 +96,7 @@ async function setupFetch(path: string, init: RequestInit): Promise<Response> {
   try {
     res = await fetch(`${API_BASE}/setup/${path}`, init);
   } catch {
-    throw new Error("Couldn't reach the server. Is it still running?");
+    throw new CodedError("errors.server_unreachable", "Couldn't reach the server. Is it still running?");
   }
   if (!res.ok) throw new Error(await problemDetail(res));
   return res;

@@ -5,6 +5,7 @@
 // duotone effect is a per-pixel luminance->gradient map rendered to a
 // cached offscreen buffer (see duotone helpers below), not a CSS filter.
 
+import { enabledEffects } from "@hc/schema";
 import type { Color, Effect } from "@hc/schema";
 import { colorToCss } from "./color";
 
@@ -77,9 +78,14 @@ export function adjustmentOpToFilters(name: string, value: number): string[] {
 
 /** A CSS filter string for a node's effects, or "none". */
 export function effectsFilter(effects?: Effect[]): string {
-  if (!effects || effects.length === 0) return "none";
+  // Filtering inside each reader rather than at one call site is deliberate:
+  // `SceneNode.node` is a live reference into the document, so there is no
+  // copy point to sanitize. Making every public reader do it means a disabled
+  // effect cannot reach the canvas through a path someone forgot to update.
+  const on = enabledEffects(effects);
+  if (on.length === 0) return "none";
   const parts: string[] = [];
-  for (const e of effects) {
+  for (const e of on) {
     switch (e.kind) {
       case "blur":
         if (e.radius > 0) parts.push(`blur(${e.radius}px)`);
@@ -116,9 +122,8 @@ export interface OutlineSpec {
 
 /** Outline effects, as stroke specs to draw around the node box. */
 export function outlineSpecs(effects?: Effect[]): OutlineSpec[] {
-  if (!effects) return [];
   const out: OutlineSpec[] = [];
-  for (const e of effects) {
+  for (const e of enabledEffects(effects)) {
     if (e.kind === "outline") out.push({ color: colorToCss(e.color), width: e.width });
   }
   return out;
@@ -130,9 +135,8 @@ export function outlineSpecs(effects?: Effect[]): OutlineSpec[] {
 
 /** The active duotone effect on a node, if any (the last one wins). */
 export function duotoneEffect(effects?: Effect[]): (Effect & { kind: "duotone" }) | undefined {
-  if (!effects) return undefined;
   let found: (Effect & { kind: "duotone" }) | undefined;
-  for (const e of effects) if (e.kind === "duotone") found = e;
+  for (const e of enabledEffects(effects)) if (e.kind === "duotone") found = e;
   return found;
 }
 

@@ -13,10 +13,11 @@ import { useState } from "react";
 import Head from "next/head";
 import dynamic from "next/dynamic";
 import { RequireAuth } from "@/components/RequireAuth";
+import { tr } from "@/lib/i18n";
 
 const AudienceStage = dynamic(() => import("@/components/editor/AudienceStage").then((m) => m.AudienceStage), {
   ssr: false,
-  loading: () => <div className="grid min-h-screen place-items-center bg-black text-sm text-neutral-500">Loading…</div>,
+  loading: () => <div className="grid min-h-screen place-items-center bg-black text-sm text-neutral-500">{tr("page.loading")}</div>,
 });
 
 /** The design id, path-style (/present/<id>/) or legacy query (?id=). */
@@ -43,14 +44,14 @@ export default function PresentPage() {
   return (
     <>
       <Head>
-        <title>Presenting · HyCanvas</title>
+        <title>{tr("page.presenting_hycanvas")}</title>
       </Head>
       <RequireAuth>
         {designId ? (
           <AudienceStage designId={designId} initialSlide={initialSlide} />
         ) : (
           <div className="grid min-h-screen place-items-center bg-black text-sm text-neutral-500">
-            No design to present.
+            {tr("page.no_design_to_present")}
           </div>
         )}
       </RequireAuth>

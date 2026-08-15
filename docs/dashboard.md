@@ -8,7 +8,7 @@ The dashboard is the home surface after signing in: it holds your designs, the t
 
 - **Top bar**: one search box across your designs and the template library, the **Create** button, notifications, and your account menu.
 - **Left sidebar**: the workspace switcher, the section rail, and your storage meters. The panel icon next to the logo collapses the sidebar to icons; HyCanvas remembers your choice.
-- **Main area**: quick-start format tiles and your recent designs, switchable between grid and list views and sortable by last edited.
+- **Main area**: quick-start format tiles (including **Import .hyc**, which opens a HyCanvas design file as a new design) and your recent designs, switchable between grid and list views and sortable by last edited.
 
 ## Workspaces
 
@@ -25,7 +25,7 @@ Every design lives in exactly one workspace. You get a personal workspace on sig
 
 ## Templates
 
-The **Templates** section browses the library by category: business, education, events, food, marketing, personal, presentations, print, quotes, and social. Picking a template creates a new design from it in the current workspace. The same library is searchable from the top bar and reachable from the editor.
+The **Templates** section browses the library by category: business, education, events, food, marketing, personal, presentations, print, quotes, and social. Picking a template creates a new design from it in the current workspace. The same library is searchable from the top bar and reachable from the editor. Hovering a card offers a `.hyc` download of the template file, and **Import template** adds a `.hyc` file as a workspace template, so templates travel between instances as plain files.
 
 ![The template library](images/templates.png)
 

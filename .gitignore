@@ -43,6 +43,7 @@ prisma/migrations/.migration_lock.toml
 # Misc
 *.tsbuildinfo
 .eslintcache
+tmp/
 
 # Frontend export staged into the Go binary at build time (go:embed, -tags embed).
 # Builds that omit the tag (dev, tests, plain build:backend) never reference it, so

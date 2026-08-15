@@ -16,7 +16,7 @@ func mountJobs(api chi.Router, reg *jobs.Registry, acct *accounts.Service) {
 		u := userFrom(r.Context())
 		job, ok := reg.Get(u.ID, chi.URLParam(r, "id"))
 		if !ok {
-			Problem(w, r, http.StatusNotFound, "Not Found", "job not found")
+			problemWithCode(w, r, http.StatusNotFound, "Not Found", "job not found", "job_not_found")
 			return
 		}
 		writeJSON(w, http.StatusOK, job.View())

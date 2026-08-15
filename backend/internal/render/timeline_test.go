@@ -1,7 +1,12 @@
 package render
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
+	"image"
+	"image/color"
+	"image/png"
 	"math"
 	"os"
 	"os/exec"
@@ -60,6 +65,239 @@ func fixtureAssets(t *testing.T) func(string) (StagedAsset, bool) {
 	}
 }
 
+// TestRenderTimeline_ElementE2E renders a footage-free white-background element
+// clip all the way to MP4 and confirms a decoded frame is actually white, i.e.
+// the element composited (not a black video). Skips when ffmpeg is absent.
+func TestRenderTimeline_ElementE2E(t *testing.T) {
+	if _, err := exec.LookPath("ffmpeg"); err != nil {
+		t.Skip("ffmpeg not available")
+	}
+	node := map[string]any{
+		"type": "shape", "shape": "rect",
+		"transform": map[string]any{"x": 0.0, "y": 0.0, "scaleX": 1.0, "scaleY": 1.0, "rotation": 0.0},
+		"size":      map[string]any{"width": 320.0, "height": 240.0},
+		"fills":     []any{map[string]any{"type": "solid", "color": map[string]any{"srgb": map[string]any{"r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0}}}},
+	}
+	dir := t.TempDir()
+	imgBytes, err := ToPNG(Design{"pages": []any{map[string]any{"width": 320.0, "height": 240.0, "children": []any{node}}}}, 0, 1)
+	if err != nil || len(imgBytes) == 0 {
+		t.Fatalf("raster element: %v", err)
+	}
+	pngPath := filepath.Join(dir, "element-e1.png")
+	if err := os.WriteFile(pngPath, imgBytes, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	p := &TimelineProject{}
+	p.Stage.Width = 320
+	p.Stage.Height = 240
+	p.Fps = 30
+	p.Tracks = []TimelineTrack{{
+		ID: "ov1", Kind: "overlay",
+		Clips: []TimelineClip{{ID: "e1", StartFrame: 0, InFrame: 0, OutFrame: 30, Speed: 1, Element: node}},
+	}}
+	opts := TimelineOptions{ElementFiles: map[string]string{"e1": pngPath}}
+	out, err := RenderTimeline(context.Background(), p, func(string) (StagedAsset, bool) { return StagedAsset{}, false }, opts)
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	if len(out) < 1000 {
+		t.Fatalf("output too small (%d bytes)", len(out))
+	}
+	mp4 := filepath.Join(dir, "out.mp4")
+	if err := os.WriteFile(mp4, out, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	frame := filepath.Join(dir, "frame.png")
+	if err := exec.Command("ffmpeg", "-y", "-ss", "0.5", "-i", mp4, "-frames:v", "1", frame).Run(); err != nil {
+		t.Fatalf("extract frame: %v", err)
+	}
+	f, err := os.Open(frame)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	img, err := png.Decode(f)
+	if err != nil {
+		t.Fatalf("decode frame: %v", err)
+	}
+	b := img.Bounds()
+	r, g, bl, _ := img.At(b.Dx()/2, b.Dy()/2).RGBA()
+	if r < 0xe000 || g < 0xe000 || bl < 0xe000 {
+		t.Fatalf("center pixel not white (element did not composite): r=%x g=%x b=%x", r, g, bl)
+	}
+}
+
+// TestRasterTextElement confirms the Go rasterizer draws a text element node to
+// visible (dark) pixels, so a text element clip composites in the server export
+// (the element->PNG->overlay pipeline itself is covered by the E2E test above).
+func TestRasterTextElement(t *testing.T) {
+	node := map[string]any{
+		"type":      "text",
+		"transform": map[string]any{"x": 10.0, "y": 30.0, "scaleX": 1.0, "scaleY": 1.0, "rotation": 0.0},
+		"size":      map[string]any{"width": 300.0, "height": 60.0},
+		"box":       map[string]any{"mode": "fixed", "width": 300.0, "height": 60.0, "verticalAlign": "middle", "autoFit": map[string]any{"enabled": false, "min": 8.0, "max": 512.0}},
+		"content": []any{map[string]any{
+			"runs":  []any{map[string]any{"text": "HELLO", "style": map[string]any{"fontFamily": "system", "fontStyle": "Regular", "fontSize": 48.0, "fill": map[string]any{"type": "solid", "color": map[string]any{"srgb": map[string]any{"r": 0.0, "g": 0.0, "b": 0.0, "a": 1.0}}}}}},
+			"style": map[string]any{"align": "center", "direction": "auto"},
+		}},
+	}
+	imgBytes, err := ToPNG(Design{"pages": []any{map[string]any{"width": 320.0, "height": 120.0, "children": []any{node}, "background": map[string]any{"type": "solid", "color": map[string]any{"srgb": map[string]any{"r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0}}}}}}, 0, 1)
+	if err != nil || len(imgBytes) == 0 {
+		t.Fatalf("raster text: %v", err)
+	}
+	img, err := png.Decode(strings.NewReader(string(imgBytes)))
+	if err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	dark := 0
+	b := img.Bounds()
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			r, g, bl, _ := img.At(x, y).RGBA()
+			if r < 0x4000 && g < 0x4000 && bl < 0x4000 {
+				dark++
+			}
+		}
+	}
+	if dark < 50 {
+		t.Fatalf("text element rendered too few dark pixels (%d); text not drawn", dark)
+	}
+}
+
+// TestRasterTextWrap confirms a long single-paragraph line wraps to multiple
+// lines inside a fixed-width box (matching the browser layout), instead of
+// drawing one overflowing line. Wrapping shows up as dark text pixels spanning
+// several line heights vertically.
+func TestRasterTextWrap(t *testing.T) {
+	node := map[string]any{
+		"type":      "text",
+		"transform": map[string]any{"x": 10.0, "y": 10.0, "scaleX": 1.0, "scaleY": 1.0, "rotation": 0.0},
+		"size":      map[string]any{"width": 140.0, "height": 260.0},
+		"box":       map[string]any{"mode": "fixed", "width": 140.0, "height": 260.0, "verticalAlign": "top"},
+		"content": []any{map[string]any{
+			"runs":  []any{map[string]any{"text": "The quick brown fox jumps over the lazy dog again and again", "style": map[string]any{"fontFamily": "system", "fontStyle": "Regular", "fontSize": 20.0, "fill": map[string]any{"type": "solid", "color": map[string]any{"srgb": map[string]any{"r": 0.0, "g": 0.0, "b": 0.0, "a": 1.0}}}}}},
+			"style": map[string]any{"align": "left", "direction": "auto"},
+		}},
+	}
+	imgBytes, err := ToPNG(Design{"pages": []any{map[string]any{"width": 200.0, "height": 300.0, "children": []any{node}, "background": map[string]any{"type": "solid", "color": map[string]any{"srgb": map[string]any{"r": 1.0, "g": 1.0, "b": 1.0, "a": 1.0}}}}}}, 0, 1)
+	if err != nil || len(imgBytes) == 0 {
+		t.Fatalf("raster wrapped text: %v", err)
+	}
+	img, err := png.Decode(strings.NewReader(string(imgBytes)))
+	if err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	minY, maxY, dark := 1<<30, -1, 0
+	b := img.Bounds()
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			r, g, bl, _ := img.At(x, y).RGBA()
+			if r < 0x4000 && g < 0x4000 && bl < 0x4000 {
+				dark++
+				if y < minY {
+					minY = y
+				}
+				if y > maxY {
+					maxY = y
+				}
+			}
+		}
+	}
+	if dark < 50 {
+		t.Fatalf("wrapped text rendered too few dark pixels (%d)", dark)
+	}
+	// One 20px line spans ~24px vertically; wrapping the sentence to a 140px box
+	// must produce several lines, so the vertical extent far exceeds one line.
+	if span := maxY - minY; span < 60 {
+		t.Fatalf("text did not wrap: dark-pixel vertical span %d px is within a single line", span)
+	}
+}
+
+// TestRasterImageElement confirms the Go rasterizer decodes and draws an image
+// element (bytes embedded as a data URL on node["src"], as the video export
+// handler does), so image element clips composite in the server export.
+func TestRasterImageElement(t *testing.T) {
+	// A 16x16 solid-red source image, embedded as a data URL.
+	red := image.NewRGBA(image.Rect(0, 0, 16, 16))
+	for y := 0; y < 16; y++ {
+		for x := 0; x < 16; x++ {
+			red.Set(x, y, color.RGBA{R: 220, G: 20, B: 20, A: 255})
+		}
+	}
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, red); err != nil {
+		t.Fatal(err)
+	}
+	node := map[string]any{
+		"type":      "image",
+		"fit":       "cover",
+		"transform": map[string]any{"x": 0.0, "y": 0.0, "scaleX": 1.0, "scaleY": 1.0, "rotation": 0.0},
+		"size":      map[string]any{"width": 100.0, "height": 100.0},
+		"source":    map[string]any{"assetId": "x", "naturalWidth": 16.0, "naturalHeight": 16.0},
+		"src":       "data:image/png;base64," + base64.StdEncoding.EncodeToString(buf.Bytes()),
+	}
+	imgBytes, err := ToPNG(Design{"pages": []any{map[string]any{"width": 100.0, "height": 100.0, "children": []any{node}}}}, 0, 1)
+	if err != nil || len(imgBytes) == 0 {
+		t.Fatalf("raster image: %v", err)
+	}
+	out, err := png.Decode(bytes.NewReader(imgBytes))
+	if err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	r, g, b, _ := out.At(50, 50).RGBA()
+	if r>>8 < 150 || g>>8 > 100 || b>>8 > 100 {
+		t.Fatalf("image element center not red (image not drawn): r=%d g=%d b=%d", r>>8, g>>8, b>>8)
+	}
+}
+
+func TestBuildTimelineArgs_Element(t *testing.T) {
+	p := &TimelineProject{}
+	p.Stage.Width = 640
+	p.Stage.Height = 360
+	p.Fps = 30
+	p.Tracks = []TimelineTrack{{
+		ID: "ov1", Kind: "overlay",
+		Clips: []TimelineClip{{
+			ID: "e1", StartFrame: 30, InFrame: 0, OutFrame: 60, Speed: 1,
+			Element:      map[string]any{"type": "shape", "shape": "rect"},
+			TransitionIn: &TimelineTransition{Type: "fade", DurationFrames: 10},
+		}},
+	}}
+	opts := TimelineOptions{ElementFiles: map[string]string{"e1": "/tmp/element-e1.png"}}
+	args, err := BuildTimelineArgs(p, fixtureAssets(t), opts, "/tmp/out.mp4")
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	joined := strings.Join(args, " ")
+	if !strings.Contains(joined, "-loop 1 -i /tmp/element-e1.png") {
+		t.Fatalf("element clip should add a looped image input; args: %s", joined)
+	}
+	var fc string
+	for i, a := range args {
+		if a == "-filter_complex" {
+			fc = args[i+1]
+		}
+	}
+	if !strings.Contains(fc, "overlay=x=0:y=0") {
+		t.Fatalf("element clip should overlay onto the base; fc: %s", fc)
+	}
+	if !strings.Contains(fc, "fade=t=in") {
+		t.Fatalf("element fade-in transition missing; fc: %s", fc)
+	}
+	if !strings.Contains(fc, "setpts=PTS+1.0000/TB") {
+		t.Fatalf("element start offset (1.0s) missing; fc: %s", fc)
+	}
+
+	// With no staged PNG for the element, the clip is skipped (no image input).
+	args2, err := BuildTimelineArgs(p, fixtureAssets(t), TimelineOptions{}, "/tmp/out.mp4")
+	if err != nil {
+		t.Fatalf("build2: %v", err)
+	}
+	if strings.Contains(strings.Join(args2, " "), "-loop") {
+		t.Fatalf("element with no staged file must be skipped")
+	}
+}
+
 func TestBuildTimelineArgs(t *testing.T) {
 	p := timelineFixture()
 	args, err := BuildTimelineArgs(p, fixtureAssets(t), TimelineOptions{DrawText: true}, "/tmp/out.mp4")
@@ -81,7 +319,7 @@ func TestBuildTimelineArgs(t *testing.T) {
 		"trim=start=0.0000:end=3.0000",
 		"scale=640:360:force_original_aspect_ratio=increase",
 		"fade=t=out:st=2.5000:d=0.5000:alpha=1",
-		"overlay=0:0:eof_action=pass",
+		"overlay=x=0:y=0:eof_action=pass",
 	} {
 		if !strings.Contains(fc, want) {
 			t.Fatalf("filter graph missing %q in:\n%s", want, fc)

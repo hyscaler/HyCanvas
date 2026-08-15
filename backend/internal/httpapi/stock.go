@@ -32,11 +32,11 @@ func mountStock(api chi.Router, st *stock.Service, acct *accounts.Service) {
 func stockProblem(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, stock.ErrNotFound):
-		Problem(w, r, http.StatusNotFound, "Not Found", "stock asset not found")
+		problemWithCode(w, r, http.StatusNotFound, "Not Found", "stock asset not found", "stock_asset_not_found")
 	case errors.Is(err, stock.ErrBadRequest):
-		Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid request")
+		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid request", "invalid_request")
 	default:
-		Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed")
+		problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed", "request_failed")
 	}
 }
 
@@ -137,7 +137,7 @@ func stockProxyHandler(st *stock.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		raw := r.URL.Query().Get("url")
 		if raw == "" {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "missing url")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "missing url", "missing_url")
 			return
 		}
 		bytes, mime, err := st.Proxy(raw)

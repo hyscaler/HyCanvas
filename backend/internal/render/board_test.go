@@ -23,15 +23,15 @@ func boardDesign() Design {
 				"children": []any{
 					map[string]any{
 						"id": "sa", "type": "sticky", "text": "First note",
-						"size": map[string]any{"width": 120.0, "height": 120.0},
+						"size":      map[string]any{"width": 120.0, "height": 120.0},
 						"transform": map[string]any{"x": 40.0, "y": 40.0, "scaleX": 1.0, "scaleY": 1.0, "rotation": 0.0},
-						"fill": solid(1, 0.9, 0.4, 1), "textColor": color(0, 0, 0, 1), "fontScale": 1.0, "autoSize": true,
+						"fill":      solid(1, 0.9, 0.4, 1), "textColor": color(0, 0, 0, 1), "fontScale": 1.0, "autoSize": true,
 					},
 					map[string]any{
 						"id": "sb", "type": "sticky", "text": "Second",
-						"size": map[string]any{"width": 120.0, "height": 120.0},
+						"size":      map[string]any{"width": 120.0, "height": 120.0},
 						"transform": map[string]any{"x": 400.0, "y": 40.0, "scaleX": 1.0, "scaleY": 1.0, "rotation": 0.0},
-						"fill": solid(0.7, 0.9, 1, 1), "textColor": color(0, 0, 0, 1), "fontScale": 1.0, "autoSize": true,
+						"fill":      solid(0.7, 0.9, 1, 1), "textColor": color(0, 0, 0, 1), "fontScale": 1.0, "autoSize": true,
 					},
 					map[string]any{
 						"id": "c1", "type": "connector", "route": "elbow",
@@ -67,16 +67,16 @@ func TestExportBoardNodesSVG(t *testing.T) {
 		t.Fatalf("ToSVG: %v", err)
 	}
 	must := []string{
-		`data-oc-id="sa"`,             // sticky group present
-		`First`,                       // sticky text rendered (wraps to fit the card)
-		`data-oc-id="c1"`,             // connector present
-		`<polyline`,                   // connector (and ink) polyline drawn
-		`leads to`,                    // connector label rendered
-		`<polygon`,                    // arrowhead drawn
-		`data-oc-id="ik"`,             // ink present
-		`stroke="rgb(26,26,26)"`,      // ink-distinct stroke color (brush 0.1,0.1,0.1)
-		`stroke="rgb(71,84,105)"`,     // connector-distinct stroke color
-		`stroke-linecap="round"`,      // ink/connector round stroke
+		`data-oc-id="sa"`,         // sticky group present
+		`First`,                   // sticky text rendered (wraps to fit the card)
+		`data-oc-id="c1"`,         // connector present
+		`<polyline`,               // connector (and ink) polyline drawn
+		`leads to`,                // connector label rendered
+		`<polygon`,                // arrowhead drawn
+		`data-oc-id="ik"`,         // ink present
+		`stroke="rgb(26,26,26)"`,  // ink-distinct stroke color (brush 0.1,0.1,0.1)
+		`stroke="rgb(71,84,105)"`, // connector-distinct stroke color
+		`stroke-linecap="round"`,  // ink/connector round stroke
 	}
 	for _, m := range must {
 		if !strings.Contains(svg, m) {

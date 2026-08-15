@@ -16,6 +16,7 @@ export * from "./tiles";
 export * from "./color";
 export * from "./fonts";
 export * from "./image";
+export * from "./booleanGeom";
 export * from "./animation";
 export * from "./chart";
 export { resolveFill } from "./fills";
@@ -30,6 +31,7 @@ export {
   type OutlineSpec,
 } from "./effects";
 export { duotoneCanvas, clearDuotoneCache } from "./duotone";
+export { maskedCanvas, clearMaskCache, maskingAvailable } from "./maskedImage";
 export { createScene, effectBleed } from "./scene";
 export { SpatialIndex } from "./spatial";
 export { pointInLocalShape } from "./hit";

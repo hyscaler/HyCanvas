@@ -56,7 +56,10 @@ const (
 // (DesignUpdateLog). Optional; nil = updates are relayed but not journaled
 // (snapshots remain the durability mechanism).
 type UpdateLog interface {
-	AppendUpdate(ctx context.Context, designID string, update []byte, authorID string) error
+	// AppendUpdate journals one y-protocols update frame. branchID "" is the
+	// design's main lineage; otherwise the row is scoped to that in-CRDT branch
+	// (doc 16 FR-10).
+	AppendUpdate(ctx context.Context, designID, branchID string, update []byte, authorID string) error
 }
 
 // conn is one live WebSocket connection in a room.
@@ -151,12 +154,62 @@ type Hub struct {
 	// is force-disconnected and refused on rejoin. In-memory per-hub (single
 	// instance / self-host); cross-instance ban fan-out is deferred like locks were.
 	bans map[string]map[string]bool
+	// lastLeave is the server-authoritative last-leave hook (doc 16 FR-11): when
+	// the last local connection leaves a room, it fires (after lastLeaveDelay,
+	// canceled by a rejoin) so the composition root can fold the design's update
+	// log into a snapshot. Per-instance by design: with multiple gateway
+	// instances each folds on its OWN last-local-leave, and the content-addressed
+	// AUTO snapshot dedup makes the redundant earlier folds free while the
+	// globally-last instance captures the complete log. Nil = disabled.
+	lastLeave      func(designID string)
+	lastLeaveDelay time.Duration
+	leaveTimers    map[string]*time.Timer
 }
 
 // NewHub builds a relay. updateLog may be nil. The coordinator defaults to the
 // single-instance no-op; use WithCoordinator to enable cross-instance fan-out.
 func NewHub(updateLog UpdateLog) *Hub {
-	return &Hub{rooms: map[string]*liveRoom{}, updateLog: updateLog, coord: localCoordinator{}, bans: map[string]map[string]bool{}}
+	return &Hub{rooms: map[string]*liveRoom{}, updateLog: updateLog, coord: localCoordinator{}, bans: map[string]map[string]bool{}, leaveTimers: map[string]*time.Timer{}}
+}
+
+// WithLastLeaveHook installs the last-leave callback (doc 16 FR-11): fn runs on
+// its own goroutine `delay` after a room loses its last local connection, unless
+// someone rejoins first. The delay skips transient reconnects (a page refresh
+// tears down and rejoins within seconds) so routine navigation does not fold.
+func (h *Hub) WithLastLeaveHook(fn func(designID string), delay time.Duration) *Hub {
+	h.lastLeave = fn
+	h.lastLeaveDelay = delay
+	return h
+}
+
+// scheduleLastLeaveLocked arms the last-leave fold timer for a now-empty room.
+// Caller holds h.mu. At fire time the room's absence is re-checked under the
+// lock, so a rejoin that raced the timer wins and the fold is skipped.
+func (h *Hub) scheduleLastLeaveLocked(designID string) {
+	if h.lastLeave == nil {
+		return
+	}
+	if t, ok := h.leaveTimers[designID]; ok {
+		t.Stop()
+	}
+	h.leaveTimers[designID] = time.AfterFunc(h.lastLeaveDelay, func() {
+		h.mu.Lock()
+		delete(h.leaveTimers, designID)
+		_, live := h.rooms[designID]
+		h.mu.Unlock()
+		if !live {
+			h.lastLeave(designID)
+		}
+	})
+}
+
+// cancelLastLeaveLocked disarms a pending last-leave fold (a client rejoined).
+// Caller holds h.mu.
+func (h *Hub) cancelLastLeaveLocked(designID string) {
+	if t, ok := h.leaveTimers[designID]; ok {
+		t.Stop()
+		delete(h.leaveTimers, designID)
+	}
 }
 
 // WithRoleResolver installs the per-user role resolver (backed by the sharing
@@ -301,6 +354,27 @@ func (h *Hub) fanOut(lr *liveRoom, designID string, payload []byte, exceptClient
 	h.coord.Publish(designID, exceptClientID, payload)
 }
 
+// BroadcastEvent pushes a server-originated frame to every connection in the
+// design's rooms (main + branches), local and cross-instance. Used by the live
+// audience service (doc 28: a viewer's question/vote/reaction reaches the
+// presenter instantly) and safe for any design-scoped server event: the
+// payload is JSON-encoded via the same frame() the hub's own messages use.
+func (h *Hub) BroadcastEvent(designID string, payload map[string]any) {
+	buf := frame(payload)
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for key, lr := range h.rooms {
+		if d, _ := SplitRoomKey(key); d != designID {
+			continue
+		}
+		h.fanOut(lr, key, buf, "")
+	}
+	if _, ok := h.rooms[designID]; !ok {
+		// No local room: still publish so a presenter on another instance hears it.
+		h.coord.Publish(designID, "", buf)
+	}
+}
+
 func (h *Hub) roomFor(designID string) *liveRoom {
 	lr, ok := h.rooms[designID]
 	if !ok {
@@ -327,12 +401,16 @@ func (h *Hub) Join(id PeerIdentity, designID string, serverTimeMs int64) *conn {
 func (h *Hub) joinConn(id PeerIdentity, designID string, serverTimeMs int64, cancel context.CancelFunc) *conn {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if h.bans[designID][id.UserID] {
+	// Bans are DESIGN-scoped (keyed by the design part of the room key), so a
+	// banned user is refused from the main room and every branch room alike.
+	if banDesign, _ := SplitRoomKey(designID); h.bans[banDesign][id.UserID] {
 		return nil // banned: refuse the join under the same lock the ban write holds
 	}
 	if id.Color == "" {
 		id.Color = colorForUser(id.UserID) // stable per-user palette color
 	}
+	// A (re)join disarms any pending last-leave fold: the room is live again.
+	h.cancelLastLeaveLocked(designID)
 	lr := h.roomFor(designID)
 	// Per-user connection cap: if this user is already at the cap in this room,
 	// evict their oldest socket (smallest lastSeenMs) so a fresh tab/reconnect
@@ -474,6 +552,15 @@ func (h *Hub) Leave(c *conn) {
 	close(c.send)
 	if len(lr.conns) == 0 {
 		delete(h.rooms, c.designID)
+		// Last local client gone: arm the server-authoritative fold-and-snapshot
+		// (doc 16 FR-11) so the design's journaled updates are materialized even
+		// when the departed client never got to run its own leave snapshot
+		// (crashed tab, killed laptop). MAIN rooms only: a branch's state is
+		// log-only by design (a branch fold must never rotate the design's
+		// current snapshot; branches materialize on switch/preview client-side).
+		if _, branch := SplitRoomKey(c.designID); branch == "" {
+			h.scheduleLastLeaveLocked(c.designID)
+		}
 	}
 }
 
@@ -667,38 +754,48 @@ func (h *Hub) HandleModerate(c *conn, action, targetUserID string) {
 	if !present || id.Role != RoleEditor {
 		return // only an editor/facilitator may moderate
 	}
+	// Moderation is DESIGN-scoped: the ban registry keys on the design part of
+	// the room key, and a kick/ban force-disconnects the target's connections in
+	// the main room AND every branch room of the same design.
+	banDesign, _ := SplitRoomKey(c.designID)
 	switch action {
 	case "unban":
-		if set := h.bans[c.designID]; set != nil {
+		if set := h.bans[banDesign]; set != nil {
 			delete(set, targetUserID)
 			if len(set) == 0 {
-				delete(h.bans, c.designID) // reclaim the emptied submap
+				delete(h.bans, banDesign) // reclaim the emptied submap
 			}
 		}
 		return
 	case "ban":
-		set := h.bans[c.designID]
+		set := h.bans[banDesign]
 		if set == nil {
 			set = map[string]bool{}
-			h.bans[c.designID] = set
+			h.bans[banDesign] = set
 		}
 		set[targetUserID] = true
 		fallthrough
 	case "kick":
-		// Notify + force-disconnect every connection the target holds in this room.
-		// cancel() only signals the target's pump context; the actual Leave runs in
-		// the target's own goroutine, so calling it under h.mu cannot deadlock.
-		notice := frame(map[string]any{"t": "moderated", "action": action, "designId": c.designID})
-		for _, tc := range lr.conns {
-			if tc.userID != targetUserID {
+		// Notify + force-disconnect every connection the target holds in any of
+		// this design's rooms. cancel() only signals the target's pump context;
+		// the actual Leave runs in the target's own goroutine, so calling it
+		// under h.mu cannot deadlock.
+		notice := frame(map[string]any{"t": "moderated", "action": action, "designId": banDesign})
+		for key, room := range h.rooms {
+			if d, _ := SplitRoomKey(key); d != banDesign {
 				continue
 			}
-			select {
-			case tc.send <- notice:
-			default:
-			}
-			if tc.cancel != nil {
-				tc.cancel()
+			for _, tc := range room.conns {
+				if tc.userID != targetUserID {
+					continue
+				}
+				select {
+				case tc.send <- notice:
+				default:
+				}
+				if tc.cancel != nil {
+					tc.cancel()
+				}
 			}
 		}
 	}
@@ -737,9 +834,12 @@ func (h *Hub) HandleSync(ctx context.Context, c *conn, m string) {
 	h.mu.Unlock()
 
 	// Journal y-protocols UPDATE messages (type 2); sync step1/step2 handshakes
-	// carry no durable mutation. Best-effort, outside the lock.
+	// carry no durable mutation. Best-effort, outside the lock. The room key
+	// resolves to (design, branch) so a branch session journals into its own
+	// branch-scoped lineage (FR-10).
 	if h.updateLog != nil && raw[0] == 2 {
-		_ = h.updateLog.AppendUpdate(ctx, c.designID, raw, id.UserID)
+		design, branch := SplitRoomKey(c.designID)
+		_ = h.updateLog.AppendUpdate(ctx, design, branch, raw, id.UserID)
 	}
 }
 
@@ -1005,22 +1105,27 @@ func (h *Hub) RefreshRoles(ctx context.Context, designID, reason string) {
 // refreshRolesLocal re-resolves and pushes role changes for THIS instance's
 // connections only (no cross-instance publish). The role resolver runs OUTSIDE
 // the hub lock (it hits the DB); only the snapshot + apply steps hold it.
+// Design-scoped: covers the main room AND every branch room of the design,
+// since a permission change applies to the design as a whole.
 func (h *Hub) refreshRolesLocal(ctx context.Context, designID, reason string) {
 	if h.roleResolver == nil {
 		return
 	}
-	type entry struct{ clientID, userID string }
+	type entry struct{ roomKey, clientID, userID string }
 	h.mu.Lock()
-	lr, ok := h.rooms[designID]
-	if !ok {
-		h.mu.Unlock()
-		return
-	}
-	entries := make([]entry, 0, len(lr.conns))
-	for cid, c := range lr.conns {
-		entries = append(entries, entry{cid, c.userID})
+	var entries []entry
+	for key, lr := range h.rooms {
+		if d, _ := SplitRoomKey(key); d != designID {
+			continue
+		}
+		for cid, c := range lr.conns {
+			entries = append(entries, entry{key, cid, c.userID})
+		}
 	}
 	h.mu.Unlock()
+	if len(entries) == 0 {
+		return
+	}
 
 	for _, e := range entries {
 		role, err := h.roleResolver(ctx, designID, e.userID)
@@ -1028,10 +1133,10 @@ func (h *Hub) refreshRolesLocal(ctx context.Context, designID, reason string) {
 			continue
 		}
 		h.mu.Lock()
-		lr, ok := h.rooms[designID]
+		lr, ok := h.rooms[e.roomKey]
 		if !ok {
 			h.mu.Unlock()
-			return
+			continue
 		}
 		if c, present := lr.conns[e.clientID]; present && lr.room.setRole(e.clientID, Role(role)) {
 			select {

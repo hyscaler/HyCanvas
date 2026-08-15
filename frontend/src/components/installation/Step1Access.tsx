@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { WizardShell, ErrorBanner } from "./WizardShell";
 import { getAnswers, setupStatus, updateAnswers, verifySecret } from "./wizard";
+import { tr } from "@/lib/i18n";
+import { userMessage } from "@/lib/errors";
 
 export function Step1Access() {
   const router = useRouter();
@@ -45,7 +47,7 @@ export function Step1Access() {
       });
       await router.push("/installation/step-2");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Verification failed. Please try again.");
+      setError(userMessage(err, tr("installation.verification_failed_please_try_again")));
       setBusy(false);
     }
   }
@@ -53,15 +55,15 @@ export function Step1Access() {
   return (
     <WizardShell
       step={1}
-      title="Welcome to HyCanvas"
+      title={tr("installation.welcome_to_hycanvas")}
       subtitle="Let's set up your server. First, prove you're the operator: enter the wizard access secret shown where you started the server (terminal output or `hycanvas service log`)."
     >
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <Input
-          label="Wizard access secret"
+          label={tr("installation.wizard_access_secret")}
           required
           autoFocus
-          placeholder="Printed when the server started"
+          placeholder={tr("installation.printed_when_the_server_started")}
           value={secret}
           onChange={(e) => setSecret(e.target.value)}
           autoComplete="off"
@@ -78,10 +80,10 @@ export function Step1Access() {
             }}
             className="h-4 w-4 rounded border-neutral-300 accent-[var(--color-brand-600)]"
           />
-          Running HyCanvas behind a proxy?
+          {tr("installation.running_hycanvas_behind_a_proxy")}
         </label>
         <Input
-          label={proxied ? "External URL (the domain your proxy serves)" : "Public URL"}
+          label={proxied ? tr("installation.external_url_the_domain_your_proxy_serves") : tr("installation.public_url")}
           type="url"
           required
           placeholder={proxied ? "https://hycanvas.art" : "https://canvas.example.com"}
@@ -91,13 +93,13 @@ export function Step1Access() {
         {proxied ? (
           <div className="grid grid-cols-2 gap-3">
             <Input
-              label="Internal host (proxy forwards here)"
+              label={tr("installation.internal_host_proxy_forwards_here")}
               placeholder="127.0.0.1"
               value={bindHost}
               onChange={(e) => setBindHost(e.target.value)}
             />
             <Input
-              label="Internal port"
+              label={tr("installation.internal_port")}
               inputMode="numeric"
               placeholder="8005"
               value={port}
@@ -106,7 +108,7 @@ export function Step1Access() {
           </div>
         ) : (
           <Input
-            label="Port"
+            label={tr("installation.port")}
             inputMode="numeric"
             placeholder="8005"
             value={port}
@@ -120,7 +122,7 @@ export function Step1Access() {
         </p>
         {error && <ErrorBanner>{error}</ErrorBanner>}
         <Button type="submit" size="lg" block disabled={busy || !secret}>
-          {busy ? "Checking…" : "Continue"}
+          {busy ? tr("installation.checking") : tr("installation.continue")}
         </Button>
       </form>
     </WizardShell>

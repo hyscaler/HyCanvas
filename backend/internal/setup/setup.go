@@ -173,7 +173,7 @@ func (s *server) requireSecret(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		got := req.Header.Get("X-Setup-Secret")
 		if subtle.ConstantTimeCompare([]byte(got), []byte(s.opts.Secret)) != 1 {
-			httpapi.Problem(w, req, http.StatusForbidden, "Forbidden", "missing or wrong setup secret")
+			httpapi.ProblemCode(w, req, http.StatusForbidden, "Forbidden", "missing or wrong setup secret", "missing_or_wrong_setup_secret")
 			return
 		}
 		next.ServeHTTP(w, req)
@@ -205,7 +205,7 @@ func (s *server) handleVerify(w http.ResponseWriter, req *http.Request) {
 		Secret string `json:"secret"`
 	}
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		httpapi.Problem(w, req, http.StatusBadRequest, "Bad Request", "invalid JSON body")
+		httpapi.ProblemCode(w, req, http.StatusBadRequest, "Bad Request", "invalid JSON body", "invalid_json_body")
 		return
 	}
 
@@ -213,7 +213,7 @@ func (s *server) handleVerify(w http.ResponseWriter, req *http.Request) {
 	locked := time.Now().Before(s.lockUntil)
 	s.mu.Unlock()
 	if locked {
-		httpapi.Problem(w, req, http.StatusTooManyRequests, "Too Many Attempts", "too many wrong secrets; wait 30 seconds")
+		httpapi.ProblemCode(w, req, http.StatusTooManyRequests, "Too Many Attempts", "too many wrong secrets; wait 30 seconds", "setup_secret_rate_limited")
 		return
 	}
 
@@ -227,7 +227,7 @@ func (s *server) handleVerify(w http.ResponseWriter, req *http.Request) {
 		s.mu.Unlock()
 		s.opts.Logger.Warn("setup: wrong wizard access secret")
 		time.Sleep(500 * time.Millisecond) // slow brute force
-		httpapi.Problem(w, req, http.StatusForbidden, "Forbidden", "wrong setup secret; it is printed on the server's terminal or in `hycanvas service log`")
+		httpapi.ProblemCode(w, req, http.StatusForbidden, "Forbidden", "wrong setup secret; it is printed on the server's terminal or in `hycanvas service log`", "setup_secret_wrong")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
@@ -277,16 +277,16 @@ func testDB(ctx context.Context, dsn string) error {
 func (s *server) handleDBTest(w http.ResponseWriter, req *http.Request) {
 	var body dbRequest
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		httpapi.Problem(w, req, http.StatusBadRequest, "Bad Request", "invalid JSON body")
+		httpapi.ProblemCode(w, req, http.StatusBadRequest, "Bad Request", "invalid JSON body", "invalid_json_body")
 		return
 	}
 	dsn, err := body.dsn()
 	if err != nil {
-		httpapi.Problem(w, req, http.StatusBadRequest, "Invalid Database Settings", err.Error())
+		httpapi.ProblemCode(w, req, http.StatusBadRequest, "Invalid Database Settings", err.Error(), "setup_db_test_failed")
 		return
 	}
 	if err := testDB(req.Context(), dsn); err != nil {
-		httpapi.Problem(w, req, http.StatusBadRequest, "Connection Failed", err.Error())
+		httpapi.ProblemCode(w, req, http.StatusBadRequest, "Connection Failed", err.Error(), "setup_db_test_failed")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
@@ -349,11 +349,11 @@ func testSMTP(cfg smtpRequest) error {
 func (s *server) handleSMTPTest(w http.ResponseWriter, req *http.Request) {
 	var body smtpRequest
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		httpapi.Problem(w, req, http.StatusBadRequest, "Bad Request", "invalid JSON body")
+		httpapi.ProblemCode(w, req, http.StatusBadRequest, "Bad Request", "invalid JSON body", "invalid_json_body")
 		return
 	}
 	if err := testSMTP(body); err != nil {
-		httpapi.Problem(w, req, http.StatusBadRequest, "SMTP Check Failed", err.Error())
+		httpapi.ProblemCode(w, req, http.StatusBadRequest, "SMTP Check Failed", err.Error(), "setup_smtp_test_failed")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
@@ -385,11 +385,11 @@ func testS3(cfg s3Request) error {
 func (s *server) handleS3Test(w http.ResponseWriter, req *http.Request) {
 	var body s3Request
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		httpapi.Problem(w, req, http.StatusBadRequest, "Bad Request", "invalid JSON body")
+		httpapi.ProblemCode(w, req, http.StatusBadRequest, "Bad Request", "invalid JSON body", "invalid_json_body")
 		return
 	}
 	if err := testS3(body); err != nil {
-		httpapi.Problem(w, req, http.StatusBadRequest, "S3 Check Failed", err.Error())
+		httpapi.ProblemCode(w, req, http.StatusBadRequest, "S3 Check Failed", err.Error(), "setup_s3_test_failed")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
@@ -449,7 +449,7 @@ func (s *server) handleGetAnswers(w http.ResponseWriter, _ *http.Request) {
 func (s *server) handleUpdateAnswers(w http.ResponseWriter, req *http.Request) {
 	var u answersUpdate
 	if err := json.NewDecoder(req.Body).Decode(&u); err != nil {
-		httpapi.Problem(w, req, http.StatusBadRequest, "Bad Request", "invalid JSON body")
+		httpapi.ProblemCode(w, req, http.StatusBadRequest, "Bad Request", "invalid JSON body", "invalid_json_body")
 		return
 	}
 	s.mu.Lock()
@@ -488,12 +488,12 @@ func (s *server) handleComplete(w http.ResponseWriter, req *http.Request) {
 	s.mu.Unlock()
 
 	if inProgress {
-		httpapi.Problem(w, req, http.StatusConflict, "Install In Progress", "an install is already running")
+		httpapi.ProblemCode(w, req, http.StatusConflict, "Install In Progress", "an install is already running", "an_install_is_already_running")
 		return
 	}
 	dsn, err := body.DB.dsn()
 	if err != nil {
-		httpapi.Problem(w, req, http.StatusBadRequest, "Invalid Database Settings", "complete the database step first: "+err.Error())
+		httpapi.ProblemCode(w, req, http.StatusBadRequest, "Invalid Database Settings", "complete the database step first: "+err.Error(), "setup_db_step_required")
 		return
 	}
 

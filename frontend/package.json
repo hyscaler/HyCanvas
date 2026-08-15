@@ -15,7 +15,6 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@imgly/background-removal": "^1.7.0",
     "@hc/a11y": "*",
     "@hc/audio": "*",
     "@hc/authz": "*",
@@ -39,13 +38,14 @@
     "@hc/timeline": "*",
     "@hc/website": "*",
     "@hc/whiteboard": "*",
+    "@imgly/background-removal": "^1.7.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "jspdf": "^4.2.1",
     "lib0": "^0.2.99",
     "lucide-react": "^0.561.0",
-    "next": "16.2.7",
-    "pdfjs-dist": "^6.0.227",
+    "next": "16.2.11",
+    "pdfjs-dist": "^6.2.108",
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -65,6 +65,7 @@
     "cross-env": "^7.0.3",
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
+    "jsdom": "^29.1.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^3.2.6"

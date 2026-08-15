@@ -8,6 +8,7 @@ import { unionAABB, locate } from "@hc/editor";
 import { useEditor } from "@/store/editor";
 import { usePresence } from "@/store/presence";
 import type { CanvasApi } from "@/lib/useEditorCanvas";
+import { tr } from "@/lib/i18n";
 
 const PAD = 76; // keep the bar from spilling off the canvas edges
 
@@ -71,20 +72,20 @@ export function SelectionToolbar({ api }: { api: CanvasApi }) {
       style={{ left: centerX, top, transform: translate }}
       onPointerDown={(e) => e.stopPropagation()}
     >
-      {canGroup && <ToolBtn icon={GroupIcon} label="Group" onClick={() => st.group()} />}
-      {isSingleGroup && <ToolBtn icon={Ungroup} label="Ungroup" onClick={() => st.ungroupSelection()} />}
+      {canGroup && <ToolBtn icon={GroupIcon} label={tr("editor.group")} onClick={() => st.group()} />}
+      {isSingleGroup && <ToolBtn icon={Ungroup} label={tr("editor.ungroup")} onClick={() => st.ungroupSelection()} />}
       {(canGroup || isSingleGroup) && <span className="mx-0.5 h-5 w-px bg-neutral-200" />}
-      <ToolBtn icon={CopyPlus} label="Duplicate" onClick={() => st.duplicateSelection()} />
+      <ToolBtn icon={CopyPlus} label={tr("editor.duplicate")} onClick={() => st.duplicateSelection()} />
       <ToolBtn
         icon={allLocked ? Lock : LockOpen}
-        label={allLocked ? "Unlock" : "Lock"}
+        label={allLocked ? tr("editor.unlock") : tr("editor.lock")}
         onClick={() => st.setLockedSel(!allLocked)}
       />
       <span className="mx-0.5 h-5 w-px bg-neutral-200" />
-      <ToolBtn icon={BringToFront} label="Bring to front" onClick={() => st.orderSelection("front")} />
-      <ToolBtn icon={SendToBack} label="Send to back" onClick={() => st.orderSelection("back")} />
+      <ToolBtn icon={BringToFront} label={tr("editor.bring_to_front")} onClick={() => st.orderSelection("front")} />
+      <ToolBtn icon={SendToBack} label={tr("editor.send_to_back")} onClick={() => st.orderSelection("back")} />
       <span className="mx-0.5 h-5 w-px bg-neutral-200" />
-      <ToolBtn icon={Trash2} label="Delete" danger onClick={() => st.deleteSelection()} />
+      <ToolBtn icon={Trash2} label={tr("editor.delete")} danger onClick={() => st.deleteSelection()} />
     </div>
   );
 }

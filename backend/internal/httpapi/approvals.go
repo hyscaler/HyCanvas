@@ -26,15 +26,15 @@ func mountApprovals(api chi.Router, ap *approvals.Service, acct *accounts.Servic
 func approvalProblem(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, approvals.ErrForbidden):
-		Problem(w, r, http.StatusForbidden, "Forbidden", "you do not have permission for this action")
+		problemWithCode(w, r, http.StatusForbidden, "Forbidden", "you do not have permission for this action", "forbidden_action")
 	case errors.Is(err, approvals.ErrNotFound):
-		Problem(w, r, http.StatusNotFound, "Not Found", "approval not found")
+		problemWithCode(w, r, http.StatusNotFound, "Not Found", "approval not found", "approval_not_found")
 	case errors.Is(err, approvals.ErrConflict):
-		Problem(w, r, http.StatusConflict, "Conflict", "the approval is not in a valid state for this action")
+		problemWithCode(w, r, http.StatusConflict, "Conflict", "the approval is not in a valid state for this action", "approval_bad_state")
 	case errors.Is(err, approvals.ErrBadRequest):
-		Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid request")
+		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid request", "invalid_request")
 	default:
-		Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed")
+		problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed", "request_failed")
 	}
 }
 
@@ -57,7 +57,7 @@ func approvalRequestHandler(ap *approvals.Service) http.HandlerFunc {
 			Policy      string   `json:"policy"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())
@@ -77,7 +77,7 @@ func approvalDecideHandler(ap *approvals.Service) http.HandlerFunc {
 			Note     *string `json:"note"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())

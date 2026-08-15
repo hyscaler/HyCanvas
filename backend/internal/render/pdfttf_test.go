@@ -133,8 +133,13 @@ func TestRunFallsBackWhenTheFontLacksAGlyph(t *testing.T) {
 	if strings.Contains(pdf, "/Encoding /Identity-H") {
 		t.Error("a run with an uncoverable glyph should fall back to base-14, not embed")
 	}
-	if !strings.Contains(pdf, "Tj") {
-		t.Error("the run should still be drawn")
+	// The CJK run is beyond WinAnsi, so the node RASTERIZES (mojibake would
+	// be worse) and carries its text as the Figure tag's /Alt (UTF-16BE).
+	if !strings.Contains(pdf, " Do\n") {
+		t.Error("the run should still be drawn (as a raster layer)")
+	}
+	if !strings.Contains(pdf, "/Alt <FEFF") {
+		t.Error("the rasterized text should keep its words as a Unicode /Alt")
 	}
 }
 

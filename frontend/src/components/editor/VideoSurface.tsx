@@ -78,6 +78,12 @@ import {
   PlaySquare,
   Link as LinkIcon,
   Rows3,
+  Shapes,
+  Square,
+  Circle,
+  Triangle,
+  Minus,
+  Sparkles,
 } from "lucide-react";
 import {
   newProject,
@@ -105,13 +111,20 @@ import {
   type Track,
   type Clip,
   type ClipTransition,
+  listScenes,
+  sceneAtFrame,
+  packScenes,
 } from "@hc/timeline";
 import {
   soloActive,
   solveDucking,
 } from "@hc/audio";
-import type { UploadedAsset } from "@hc/sdk";
+import { createNode, type Node } from "@hc/schema";
+import { FONT_CATALOG } from "@hc/text";
+import { imageAssets } from "@/lib/assetProvider";
+import type { UploadedAsset, StockAssetSummary } from "@hc/sdk";
 import { useEditor } from "@/store/editor";
+import { fonts } from "@/lib/fontProvider";
 import { oc, resolveAssetUrl, uploadAssetWithProgress } from "@/lib/sdk";
 import { promptText } from "@/lib/promptDialog";
 import {
@@ -131,14 +144,24 @@ import {
   fitRect,
 } from "@/lib/video/compositor";
 import { TimelinePlayer } from "@/lib/video/playback";
-import { probeMedia, filmstrip, waveformDataUrl } from "@/lib/video/mediaCache";
+import { probeMedia, filmstrip, waveformDataUrl, decodeMono } from "@/lib/video/mediaCache";
+import { detectBeatTimes, beatTimesToFrames } from "@/lib/video/beats";
 import { pickRecorderTarget, startRecording, downloadBlob, type ExportController } from "@/lib/video/exporter";
-import { captionStyleOf, cueAt, withCaptionStyle, withCues, toSrt, toVtt, type CaptionCue } from "@/lib/video/captions";
+import { captionStyleOf, cueAt, withCaptionStyle, withCues, addCaptionTrack, removeCaptionTrack, setCaptionLang, toSrt, toVtt, type CaptionCue } from "@/lib/video/captions";
 import { detectSceneSeconds } from "@/lib/video/sceneDetect";
+import { VIDEO_TEMPLATES, type VideoTemplate } from "@/lib/video/videoTemplates";
+import { tr } from "@/lib/i18n";
+import { CodedError, userMessage } from "@/lib/errors";
 
 // ---------------------------------------------------------------------------
 // constants
 // ---------------------------------------------------------------------------
+
+// `fontStyle` values are file-format tokens, never localized: the engine
+// parses weight/italic out of them by ENGLISH name and they persist into the
+// design file, so a translated token corrupts the doc.
+const boldFontStyle = "Bold";
+const regularFontStyle = "Regular";
 
 const TRACK_HEIGHT = 56; // px per track lane
 const GUTTER_WIDTH = 200; // px, the left track-header column
@@ -164,11 +187,11 @@ const storedSidebarW = (key: string, fallback: number): number => {
   return Number.isFinite(v) ? clampSidebarW(v) : fallback;
 };
 // Stage size presets (the common social/broadcast formats).
-const STAGE_PRESETS: { value: string; label: string }[] = [
-  { value: "1920x1080", label: "YouTube / 16:9 (1920x1080)" },
-  { value: "1080x1920", label: "TikTok / Reels / Shorts (1080x1920)" },
-  { value: "1080x1080", label: "Instagram square (1080x1080)" },
-  { value: "1080x1350", label: "Instagram portrait 4:5 (1080x1350)" },
+const stagePresets = (): { value: string; label: string }[] => [
+  { value: "1920x1080", label: tr("editor.youtube_16_9_1920x1080") },
+  { value: "1080x1920", label: tr("editor.tiktok_reels_shorts_1080x1920") },
+  { value: "1080x1080", label: tr("editor.instagram_square_1080x1080") },
+  { value: "1080x1350", label: tr("editor.instagram_portrait_4_5_1080x1350") },
   { value: "1280x720", label: "720p (1280x720)" },
   { value: "2560x1440", label: "1440p (2560x1440)" },
   { value: "3840x2160", label: "4K (3840x2160)" },
@@ -181,13 +204,13 @@ function clampStageDim(v: number): number {
 }
 
 // Transition types offered in the inspector edge selectors. "" clears the edge.
-const TRANSITION_TYPES: { value: "" | ClipTransition["type"]; label: string }[] = [
+const transitionTypes = (): { value: "" | ClipTransition["type"]; label: string }[] => [
   { value: "", label: "None" },
-  { value: "crossDissolve", label: "Cross dissolve" },
-  { value: "fade", label: "Fade" },
-  { value: "wipe", label: "Wipe" },
-  { value: "slide", label: "Slide" },
-  { value: "dipToColor", label: "Dip to color" },
+  { value: "crossDissolve", label: tr("editor.cross_dissolve") },
+  { value: "fade", label: tr("editor.fade") },
+  { value: "wipe", label: tr("editor.wipe") },
+  { value: "slide", label: tr("editor.slide") },
+  { value: "dipToColor", label: tr("editor.dip_to_color") },
 ];
 
 // A clip's accent color is derived from its track kind so the timeline reads at
@@ -351,6 +374,60 @@ function freeStartFrame(
   return start;
 }
 
+/** Build a centered text element node in stage coordinates. Shared by the text
+ *  presets (P5.2) and the font pairings (P6.3). `font` defaults to the system
+ *  stack; a webfont family renders once it is loaded (see the font-ensure effect). */
+function mkTextNode(
+  W: number,
+  H: number,
+  o: {
+    text: string; xFrac: number; yFrac: number; wFrac: number; hFrac: number;
+    sizeFrac: number; color: { r: number; g: number; b: number; a: number };
+    weight: number; align: "left" | "center" | "right"; font?: string;
+  },
+): Node {
+  const fontSize = Math.max(14, Math.round(H * o.sizeFrac));
+  const bw = Math.round(W * o.wFrac);
+  const bh = Math.round(H * o.hFrac);
+  return createNode("text", {
+    transform: { x: Math.round(W * o.xFrac), y: Math.round(H * o.yFrac), scaleX: 1, scaleY: 1, rotation: 0 },
+    size: { width: bw, height: bh },
+    box: { mode: "fixed", width: bw, height: bh, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "middle" },
+    content: [{ runs: [{ text: o.text, style: { fontFamily: o.font ?? "system", fontStyle: "Regular", fontSize, axes: { wght: o.weight }, fill: { type: "solid", color: { srgb: o.color } } } }], style: { align: o.align, direction: "auto" } }],
+  } as Partial<Node>);
+}
+
+/** Curated heading + body font pairings for video title blocks (P6.3). Weights
+ *  are per font (display faces like Anton/Bebas ship only 400). */
+const videoTextPairings = (): { name: string; headFont: string; headWeight: number; subFont: string }[] => [
+  { name: tr("editor.bold_clean"), headFont: "Montserrat", headWeight: 800, subFont: "Open Sans" },
+  { name: tr("editor.elegant_serif"), headFont: "Playfair Display", headWeight: 700, subFont: "Lato" },
+  { name: tr("editor.modern"), headFont: "Poppins", headWeight: 700, subFont: "Inter" },
+  { name: tr("editor.editorial"), headFont: "Lora", headWeight: 700, subFont: "Work Sans" },
+  { name: tr("editor.impact"), headFont: "Anton", headWeight: 400, subFont: "Roboto" },
+  { name: tr("editor.statement"), headFont: "Oswald", headWeight: 600, subFont: "Merriweather" },
+];
+
+/** Non-system font families used by a project's text element clips, so the video
+ *  editor can lazy-load their webfonts (the canvas renderer needs them in
+ *  document.fonts to draw the real face instead of a fallback). */
+function collectElementFonts(project: VideoProject | undefined): Set<string> {
+  const out = new Set<string>();
+  const walk = (n: unknown): void => {
+    if (!n || typeof n !== "object") return;
+    const node = n as { type?: string; content?: { runs?: { style?: { fontFamily?: string } }[] }[]; children?: unknown[] };
+    if (node.type === "text" && Array.isArray(node.content)) {
+      for (const p of node.content) for (const r of p.runs ?? []) {
+        const f = r.style?.fontFamily;
+        if (f && f !== "system") out.add(f);
+      }
+    }
+    for (const c of node.children ?? []) walk(c);
+  };
+  for (const t of project?.tracks ?? []) for (const c of t.clips) if (c.element) walk(c.element);
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // component
 // ---------------------------------------------------------------------------
@@ -364,6 +441,8 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
   // media assets: the workspace's uploaded video/audio, for clip binding.
   // ---------------------------------------------------------------------
   const [assets, setAssets] = useState<UploadedAsset[]>([]);
+  // Workspace images (for the +Image element picker; kept separate from media).
+  const [imageList, setImageList] = useState<UploadedAsset[]>([]);
   const assetsRef = useRef<Map<string, UploadedAsset>>(new Map());
   // Video assets that have a server-generated 540p preview proxy; playback
   // prefers it so heavy sources scrub smoothly (exports keep the original).
@@ -390,6 +469,9 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
     try {
       const all = await oc.listAssets(workspaceId);
       const media = all.filter((a) => a.kind === "video" || a.kind === "audio");
+      // Images are kept OUT of the media list (they are not track-bound media);
+      // they feed the "+Image" element picker instead.
+      setImageList(all.filter((a) => a.kind === "image"));
       assetsRef.current = new Map(media.map((a) => [a.id, a]));
       await Promise.all(
         media
@@ -488,7 +570,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           const dataUrl = await new Promise<string>((resolve, reject) => {
             const fr = new FileReader();
             fr.onload = () => resolve(String(fr.result));
-            fr.onerror = () => reject(new Error("read failed"));
+            fr.onerror = () => reject(new CodedError("errors.file_read_failed", "Could not read the file."));
             fr.readAsDataURL(file);
           });
           await uploadAssetWithProgress(
@@ -499,7 +581,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
         }
         await loadAssets();
       } catch (err) {
-        showPanelError(err instanceof Error ? `Upload failed: ${err.message}` : "Upload failed");
+        showPanelError(userMessage(err, tr("editor.upload_failed")));
       } finally {
         setUploadPct(null);
         if (uploadInputRef.current) uploadInputRef.current.value = "";
@@ -623,7 +705,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       await oc.deleteAsset(a.id);
       await loadAssets();
     } catch (err) {
-      showPanelError(err instanceof Error ? `Delete failed: ${err.message}` : "Delete failed");
+      showPanelError(err instanceof Error ? `Delete failed: ${err.message}` : tr("editor.delete_failed_2"));
     }
   }, [confirmDeleteAsset, loadAssets, showPanelError]);
 
@@ -938,14 +1020,23 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
   useEffect(() => {
     if (project) return;
     const fps = 30;
-    const videoTrack = newTrack("video", "Video 1");
-    const audioTrack = newTrack("audio", "Audio 1");
-    const fresh = newProject({
-      stage: { width: 1920, height: 1080 },
-      fps,
-      durationFrames: 30 * fps, // a 30s default canvas extent
-      tracks: [videoTrack, audioTrack],
-    });
+    const videoTrack = newTrack("video", tr("editor.video_1"));
+    const audioTrack = newTrack("audio", tr("editor.audio_1"));
+    // Open on a blank WHITE page (design-first), not a black stage. The stage
+    // background IS the page, so we just start it white instead of layering a
+    // white rectangle over a black base. It stays fully editable from the video
+    // settings Background picker, and any clips (footage, text, shapes) draw on
+    // top of it. Rendered identically in preview, exact export, and server MP4
+    // (all read project.background).
+    const fresh: VideoProject = {
+      ...newProject({
+        stage: { width: 1920, height: 1080 },
+        fps,
+        durationFrames: 30 * fps, // a 30s default canvas extent (grows to fit content)
+        tracks: [videoTrack, audioTrack],
+      }),
+      background: "#ffffff",
+    };
     useEditor.getState().setDocMeta({ video: fresh });
     // The store bump re-renders this surface with the new project on the next pass.
   }, [project]);
@@ -1079,9 +1170,28 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
   // -------------------------------------------------------------------------
   const stageCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawStateRef = useRef<{ project: VideoProject | null; frame: number }>({ project: null, frame: 0 });
+  // Active caption track id for the burn-in preview (bridged from state declared
+  // later, so the paint loop can read it without re-subscribing).
+  const activeCapIdRef = useRef<string | null>(null);
   useEffect(() => {
     drawStateRef.current = { project: project ?? null, frame };
   }, [project, frame]);
+
+  // Lazy-load the web fonts used by text element clips: the canvas renderer draws
+  // a fallback face until the real font is in document.fonts. Element rasters are
+  // cached by node content (not font-load state), so when a font arrives we drop
+  // the cache; the continuous paint loop then re-renders with the real face.
+  useEffect(() => {
+    const off = fonts.onChange(() => { try { getPlayer().invalidateElements(); } catch { /* player not built yet */ } });
+    return off;
+  }, [getPlayer]);
+  useEffect(() => {
+    for (const f of collectElementFonts(project)) fonts.ensure(f);
+  }, [project]);
+  // Preload the curated pairing fonts so the +Text menu previews render in-font.
+  useEffect(() => {
+    for (const p of videoTextPairings()) { fonts.ensure(p.headFont); fonts.ensure(p.subFont); }
+  }, []);
   useEffect(() => {
     let raf = 0;
     const paint = () => {
@@ -1096,6 +1206,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
         const ctx = canvas.getContext("2d");
         if (ctx) {
           let loading = 0;
+          player.setStage(p.stage.width, p.stage.height);
           drawTimelineFrame(
             ctx,
             p,
@@ -1107,7 +1218,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             },
             player.activeOptions(),
           );
-          const capTrack = p.captions?.[0];
+          const capTrack = p.captions?.find((t) => t.id === activeCapIdRef.current) ?? p.captions?.[0];
           const style = captionStyleOf(capTrack);
           const cue = cueAt(capTrack?.cues, f);
           if (cue && style.burnIn !== false) drawCaption(ctx, p, cue.text, style);
@@ -1238,8 +1349,437 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
     [project, persist],
   );
 
+  // Insert one or more footage-free design elements (Clip.element) as clips on
+  // overlay tracks: the building block of a motion-graphics video. All go through
+  // here (background, text, image, shapes; see the design-video roadmap). Multiple
+  // items are placed in ONE persist onto distinct free layers (so a compound insert
+  // like a lower-third bar + text lands together, not overwriting each other).
+  const addElementClips = useCallback(
+    (items: { node: Node; name: string }[], durSec = 5) => {
+      if (!project || !items.length) return;
+      // Elements JOIN the scene (page) under the playhead so a background + text
+      // + image compose into one timed scene; each element lands on its own
+      // overlay layer, sharing the scene's [start, start+duration). With no scene
+      // at the playhead a new one is created there.
+      const scene = sceneAtFrame(project, frame);
+      const start = scene ? scene.startFrame : frame;
+      const dur = scene ? scene.durationFrames : Math.round((project.fps as number) * durSec);
+      const sceneId = scene ? scene.id : shortId("scene");
+      const clipEnd = (c: Clip) => c.startFrame + (c.outFrame - c.inFrame) / Math.abs(c.speed || 1);
+      const busy = (t: Track) => t.clips.some((c) => start < clipEnd(c) && c.startFrame < start + dur);
+      // Work on a mutable copy so each item picks a layer not used by the ones
+      // placed earlier in this same batch.
+      const tracks: Track[] = project.tracks.map((t) => ({ ...t, clips: [...t.clips] }));
+      let lastId: string | null = null;
+      for (const { node, name } of items) {
+        let track = tracks.find((t) => t.kind === "overlay" && !t.locked && !busy(t));
+        if (!track) {
+          track = newTrack("overlay", `Elements ${tracks.filter((t) => t.kind === "overlay").length + 1}`);
+          tracks.push(track);
+        }
+        const clip: Clip = { id: shortId("clip"), name, startFrame: start, inFrame: 0, outFrame: dur, speed: 1, element: node, sceneId };
+        track.clips.push(clip);
+        lastId = clip.id;
+      }
+      persist(withDuration({ ...project, tracks }));
+      if (lastId) selectOnly(lastId);
+    },
+    [project, frame, persist, selectOnly],
+  );
+
+  // Single-element convenience wrapper (the common case).
+  const addElementClip = useCallback(
+    (node: Node, name: string, durSec = 5) => addElementClips([{ node, name }], durSec),
+    [addElementClips],
+  );
+
+  // --- scenes (design-video pages) --------------------------------------------
+
+  // Apply a starter template (P5.1): APPEND its scenes after any existing content
+  // (never destructive), on fresh overlay tracks, and jump the playhead there.
+  // For a brand-new empty video this simply fills the timeline.
+  const applyVideoTemplate = useCallback(
+    (tpl: VideoTemplate) => {
+      if (!project) return;
+      const W = project.stage.width;
+      const H = project.stage.height;
+      const scenes = tpl.build(W, H, project.fps);
+      if (!scenes.length) return;
+      // Start after the furthest existing clip so nothing is overwritten.
+      const existingEnd = Math.max(0, ...project.tracks.flatMap((t) => t.clips.map((c) => clipEndFrame(c))));
+      const maxLayers = Math.max(1, ...scenes.map((s) => s.layers.length));
+      const newTracks: Track[] = Array.from({ length: maxLayers }, (_, i) =>
+        newTrack("overlay", `Elements ${project.tracks.filter((t) => t.kind === "overlay").length + i + 1}`),
+      );
+      let run = existingEnd;
+      let firstClipId: string | null = null;
+      for (const sc of scenes) {
+        const sceneId = shortId("scene");
+        sc.layers.forEach((node, li) => {
+          const clip: Clip = { id: shortId("clip"), name: `Scene ${li === 0 ? "bg" : li}`, startFrame: run, inFrame: 0, outFrame: sc.durationFrames, speed: 1, element: node, sceneId };
+          if (!firstClipId) firstClipId = clip.id;
+          newTracks[li] = { ...newTracks[li], clips: [...newTracks[li].clips, clip] };
+        });
+        run += sc.durationFrames;
+      }
+      persist(withDuration({ ...project, tracks: [...project.tracks, ...newTracks] }));
+      setPlayhead(existingEnd);
+      if (firstClipId) selectOnly(firstClipId);
+    },
+    [project, persist, selectOnly],
+  );
+
+  // Append a new scene (a white background page) after the last scene and jump
+  // the playhead to it, so subsequent +Text/+Image join the new page.
+  const addScene = useCallback(() => {
+    if (!project) return;
+    const scenes = listScenes(project);
+    const startFrame = scenes.length ? scenes[scenes.length - 1].startFrame + scenes[scenes.length - 1].durationFrames : 0;
+    const dur = Math.round((project.fps as number) * 5);
+    const W = project.stage.width;
+    const H = project.stage.height;
+    const bg = createNode("shape", {
+      shape: "rect",
+      transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+      size: { width: W, height: H },
+      fills: [{ type: "solid", color: { srgb: { r: 1, g: 1, b: 1, a: 1 } } }],
+    } as Partial<Node>);
+    const sceneId = shortId("scene");
+    const existing = project.tracks.find((t) => t.kind === "overlay");
+    const track = existing ?? newTrack("overlay", tr("editor.elements_1"));
+    const clip: Clip = { id: shortId("clip"), name: tr("editor.background"), startFrame, inFrame: 0, outFrame: dur, speed: 1, element: bg, sceneId };
+    const nextTrack: Track = { ...track, clips: [...track.clips, clip] };
+    const tracks = existing ? project.tracks.map((t) => (t.id === nextTrack.id ? nextTrack : t)) : [...project.tracks, nextTrack];
+    persist(withDuration({ ...project, tracks }));
+    setPlayhead(startFrame);
+    selectOnly(clip.id);
+  }, [project, persist, selectOnly]);
+
+  // "Animate all" (P4.6): stagger an entrance across the scene-at-the-playhead's
+  // elements, skipping the full-stage background. Each element gets the same
+  // preset with an increasing delay (explicit delayMs, so the staggered build is
+  // honored identically in preview, exact export, and the server MP4).
+  const animateSceneAll = useCallback(
+    (preset = "rise", staggerMs = 150) => {
+      if (!project) return;
+      const scene = sceneAtFrame(project, Math.round(playhead));
+      if (!scene) return;
+      const W = project.stage.width;
+      const H = project.stage.height;
+      const isStageFill = (el: unknown) => {
+        const n = el as { type?: string; size?: { width?: number; height?: number } } | undefined;
+        return n?.type === "shape" && (n.size?.width ?? 0) >= W * 0.98 && (n.size?.height ?? 0) >= H * 0.98;
+      };
+      const targets: Clip[] = [];
+      for (const t of project.tracks) for (const c of t.clips) if (c.sceneId === scene.id && c.element && !isStageFill(c.element)) targets.push(c);
+      if (!targets.length) return;
+      targets.sort((a, b) => a.startFrame - b.startFrame);
+      const patched = new Map<string, Node>();
+      targets.forEach((c, i) => {
+        const el = structuredClone(c.element) as unknown as Record<string, unknown>;
+        el.animation = { ...((el.animation as Record<string, unknown>) ?? {}), entrance: { preset, durationMs: 600, delayMs: i * staggerMs, easing: "ease-out" } };
+        patched.set(c.id, el as unknown as Node);
+      });
+      const tracks = project.tracks.map((t) => ({ ...t, clips: t.clips.map((c) => (patched.has(c.id) ? { ...c, element: patched.get(c.id)! } : c)) }));
+      persist(withDuration({ ...project, tracks }));
+    },
+    [project, playhead, persist],
+  );
+
+  // Reorder scenes to `orderedIds` and re-pack them contiguously.
+  const reorderScenes = useCallback(
+    (orderedIds: string[]) => {
+      if (!project) return;
+      persist(withDuration(packScenes(project, orderedIds)));
+    },
+    [project, persist],
+  );
+
+  const deleteScene = useCallback(
+    (sceneId: string) => {
+      if (!project) return;
+      const remaining = listScenes(project).map((s) => s.id).filter((id) => id !== sceneId);
+      const tracks = project.tracks.map((t) => ({ ...t, clips: t.clips.filter((c) => c.sceneId !== sceneId) }));
+      persist(withDuration(packScenes({ ...project, tracks }, remaining)));
+    },
+    [project, persist],
+  );
+
+  const duplicateScene = useCallback(
+    (sceneId: string) => {
+      if (!project) return;
+      const scenes = listScenes(project);
+      const idx = scenes.findIndex((s) => s.id === sceneId);
+      if (idx < 0) return;
+      const newId = shortId("scene");
+      const tracks = project.tracks.map((t) => {
+        const copies = t.clips
+          .filter((c) => c.sceneId === sceneId)
+          .map((c) => ({ ...structuredClone(c), id: shortId("clip"), sceneId: newId, groupId: undefined }));
+        return copies.length ? { ...t, clips: [...t.clips, ...copies] } : t;
+      });
+      const order = scenes.map((s) => s.id);
+      order.splice(idx + 1, 0, newId); // the copy sits right after the original
+      persist(withDuration(packScenes({ ...project, tracks }, order)));
+    },
+    [project, persist],
+  );
+
+  // Retime a scene (P2.2): set every element clip in it to `seconds` long, then
+  // re-pack so the following scenes shift to stay contiguous. Element clips start
+  // at the scene's inFrame=0, so the new span is [start, start+durFrames).
+  const setSceneDuration = useCallback(
+    (sceneId: string, seconds: number) => {
+      if (!project) return;
+      const durF = Math.max(1, Math.round(seconds * (project.fps as number)));
+      const tracks = project.tracks.map((t) => ({
+        ...t,
+        clips: t.clips.map((c) => (c.sceneId === sceneId ? { ...c, outFrame: c.inFrame + durF } : c)),
+      }));
+      const order = listScenes(project).map((s) => s.id);
+      persist(withDuration(packScenes({ ...project, tracks }, order)));
+    },
+    [project, persist],
+  );
+
+  // A scene's entrance transition: set transitionIn on all of its element clips
+  // (reusing the clip transition system, so preview + MP4 both honor it). "none"
+  // clears it. Cycled from the scene chip.
+  const cycleSceneTransition = useCallback(
+    (sceneId: string) => {
+      if (!project) return;
+      const kinds: (ClipTransition["type"] | "none")[] = ["none", "fade", "crossDissolve", "slide", "wipe"];
+      const first = project.tracks.flatMap((t) => t.clips).find((c) => c.sceneId === sceneId);
+      const cur = first?.transitionIn?.type ?? "none";
+      const next = kinds[(kinds.indexOf(cur as ClipTransition["type"] | "none") + 1) % kinds.length];
+      const dur = Math.max(1, Math.round((project.fps as number) * 0.4));
+      const tracks = project.tracks.map((t) => ({
+        ...t,
+        clips: t.clips.map((c) => {
+          if (c.sceneId !== sceneId) return c;
+          if (next === "none") {
+            const rest = { ...c };
+            delete rest.transitionIn;
+            return rest;
+          }
+          return { ...c, transitionIn: { type: next, durationFrames: dur } };
+        }),
+      }));
+      persist(withDuration({ ...project, tracks }));
+    },
+    [project, persist],
+  );
+
+  // A full-stage solid-color page: the canvas you layer text/images on.
+  const addBackground = useCallback(() => {
+    if (!project) return;
+    const W = project.stage.width;
+    const H = project.stage.height;
+    addElementClip(
+      createNode("shape", {
+        shape: "rect",
+        transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+        size: { width: W, height: H },
+        fills: [{ type: "solid", color: { srgb: { r: 1, g: 1, b: 1, a: 1 } } }],
+      } as Partial<Node>),
+      tr("editor.background"),
+    );
+  }, [project, addElementClip]);
+
+  // Styled text presets (P5.2): heading / subtitle / body / quote / lower-third.
+  // A lower-third also drops a translucent bar behind the text. Each preset lands
+  // as an element clip joining the scene at the playhead, reusing addElementClip.
+  const addTextPreset = useCallback(
+    (preset: "heading" | "subtitle" | "body" | "quote" | "lowerThird") => {
+      if (!project) return;
+      const W = project.stage.width;
+      const H = project.stage.height;
+      const ink = { r: 0.1, g: 0.12, b: 0.16, a: 1 };
+      const white = { r: 1, g: 1, b: 1, a: 1 };
+      const mkText = (o: { text: string; xFrac: number; yFrac: number; wFrac: number; hFrac: number; sizeFrac: number; color: { r: number; g: number; b: number; a: number }; weight: number; align: "left" | "center" | "right" }) => mkTextNode(W, H, o);
+      switch (preset) {
+        case "heading":
+          addElementClip(mkText({ text: tr("editor.heading"), xFrac: 0.08, yFrac: 0.38, wFrac: 0.84, hFrac: 0.2, sizeFrac: 0.11, color: ink, weight: 800, align: "center" }), tr("editor.heading"));
+          break;
+        case "subtitle":
+          addElementClip(mkText({ text: tr("editor.subtitle_text"), xFrac: 0.1, yFrac: 0.55, wFrac: 0.8, hFrac: 0.12, sizeFrac: 0.05, color: { r: 0.35, g: 0.38, b: 0.44, a: 1 }, weight: 500, align: "center" }), tr("editor.subtitle"));
+          break;
+        case "body":
+          addElementClip(mkText({ text: tr("editor.body_copy_goes_here_keep_it_short_and_readab"), xFrac: 0.1, yFrac: 0.4, wFrac: 0.6, hFrac: 0.3, sizeFrac: 0.038, color: ink, weight: 400, align: "left" }), tr("editor.body"));
+          break;
+        case "quote":
+          addElementClip(mkText({ text: "“A short, memorable quote.”", xFrac: 0.1, yFrac: 0.34, wFrac: 0.8, hFrac: 0.32, sizeFrac: 0.075, color: ink, weight: 700, align: "center" }), tr("editor.quote"));
+          break;
+        case "lowerThird": {
+          // A translucent bar across the lower third, then the text on top. Both
+          // in ONE insert (stacked on overlay layers of the same scene).
+          const barH = Math.round(H * 0.16);
+          const barY = Math.round(H * 0.76);
+          const bar = createNode("shape", {
+            shape: "rect",
+            transform: { x: 0, y: barY, scaleX: 1, scaleY: 1, rotation: 0 },
+            size: { width: W, height: barH },
+            fills: [{ type: "solid", color: { srgb: { r: 0.08, g: 0.09, b: 0.12, a: 0.72 } } }],
+          } as Partial<Node>);
+          const label = mkText({ text: "Name  ·  Title", xFrac: 0.06, yFrac: 0.78, wFrac: 0.6, hFrac: 0.12, sizeFrac: 0.045, color: white, weight: 700, align: "left" });
+          addElementClips([{ node: bar, name: tr("editor.lower_third_bar") }, { node: label, name: tr("editor.lower_third") }]);
+          break;
+        }
+      }
+    },
+    [project, addElementClip, addElementClips],
+  );
+
+  // Curated font pairing (P6.3): a heading + subheading in a complementary font
+  // combo, dropped as one scene. Loads both webfonts so they render immediately.
+  const addTextPairing = useCallback(
+    (p: { name: string; headFont: string; headWeight: number; subFont: string }) => {
+      if (!project) return;
+      const W = project.stage.width;
+      const H = project.stage.height;
+      fonts.ensure(p.headFont);
+      fonts.ensure(p.subFont);
+      const ink = { r: 0.1, g: 0.12, b: 0.16, a: 1 };
+      const sub = { r: 0.35, g: 0.38, b: 0.44, a: 1 };
+      const head = mkTextNode(W, H, { text: tr("editor.heading"), font: p.headFont, xFrac: 0.08, yFrac: 0.34, wFrac: 0.84, hFrac: 0.2, sizeFrac: 0.11, color: ink, weight: p.headWeight, align: "center" });
+      const subtitle = mkTextNode(W, H, { text: tr("editor.your_subheading_here"), font: p.subFont, xFrac: 0.1, yFrac: 0.54, wFrac: 0.8, hFrac: 0.12, sizeFrac: 0.05, color: sub, weight: 500, align: "center" });
+      addElementClips([{ node: head, name: `${p.headFont} heading` }, { node: subtitle, name: `${p.subFont} subheading` }]);
+    },
+    [project, addElementClips],
+  );
+
+  // A full-stage image element from a workspace image (cover fit). The asset is
+  // registered with the shared image provider so the preview/export can draw it.
+  const addImageElement = useCallback(
+    (asset: UploadedAsset) => {
+      if (!project) return;
+      const W = project.stage.width;
+      const H = project.stage.height;
+      const url = resolveAssetUrl(asset.url);
+      imageAssets.register(asset.id, url);
+      // The renderer samples the source using naturalWidth/Height, so probe the
+      // real image dimensions before placing (an asset carries no size metadata).
+      const place = (nw: number, nh: number) =>
+        addElementClip(
+          createNode("image", {
+            transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+            size: { width: W, height: H },
+            fit: "cover",
+            source: { assetId: asset.id, naturalWidth: Math.max(1, Math.round(nw)), naturalHeight: Math.max(1, Math.round(nh)) },
+          } as Partial<Node>),
+          asset.filename ?? tr("editor.image"),
+        );
+      const probe = new Image();
+      probe.onload = () => place(probe.naturalWidth || W, probe.naturalHeight || H);
+      probe.onerror = () => place(W, H);
+      probe.src = url;
+    },
+    [project, addElementClip],
+  );
+
+  // A decorative shape element (rect / rounded / ellipse / triangle / star / line),
+  // centered and sized relative to the stage, with a solid accent fill. Reuses the
+  // element-clip path so it renders in preview, exact export, AND server MP4 (the
+  // Go rasterizer already handles shape/line nodes).
+  const addShapeElement = useCallback(
+    (kind: "rect" | "rounded" | "ellipse" | "triangle" | "star" | "line") => {
+      if (!project) return;
+      const W = project.stage.width;
+      const H = project.stage.height;
+      const fill = { type: "solid", color: { srgb: { r: 0.23, g: 0.51, b: 0.96, a: 1 } } };
+      const w = Math.round(W * (kind === "line" ? 0.5 : 0.32));
+      const h = kind === "line" ? Math.max(4, Math.round(H * 0.008)) : Math.round(H * 0.32);
+      const x = Math.round((W - w) / 2);
+      const y = Math.round((H - h) / 2);
+      const transform = { x, y, scaleX: 1, scaleY: 1, rotation: 0 };
+      const size = { width: w, height: h };
+      const specs: Record<string, { name: string; props: Partial<Node> }> = {
+        rect: { name: tr("editor.rectangle"), props: { shape: "rect", transform, size, fills: [fill] } as Partial<Node> },
+        rounded: { name: tr("editor.rounded_rectangle"), props: { shape: "rect", cornerRadius: { topLeft: 32, topRight: 32, bottomRight: 32, bottomLeft: 32 }, transform, size, fills: [fill] } as Partial<Node> },
+        ellipse: { name: tr("editor.ellipse"), props: { shape: "ellipse", transform, size, fills: [fill] } as Partial<Node> },
+        triangle: { name: tr("editor.triangle"), props: { shape: "triangle", sides: 3, transform, size, fills: [fill] } as Partial<Node> },
+        star: { name: tr("editor.star"), props: { shape: "star", sides: 5, innerRadius: 0.5, transform, size, fills: [fill] } as Partial<Node> },
+        // A divider line: a thin, fully rounded bar (renders identically everywhere).
+        line: { name: tr("editor.divider"), props: { shape: "rect", cornerRadius: { topLeft: 999, topRight: 999, bottomRight: 999, bottomLeft: 999 }, transform, size, fills: [fill] } as Partial<Node> },
+      };
+      const spec = specs[kind];
+      addElementClip(createNode("shape", spec.props), spec.name);
+    },
+    [project, addElementClip],
+  );
+
+  // Register the image assets used by element clips with the shared provider so
+  // the preview (and thumbnails) can draw them, incl. on reopening a design.
+  useEffect(() => {
+    if (!project) return;
+    for (const t of project.tracks) {
+      for (const c of t.clips) {
+        const el = c.element as { type?: string; source?: { assetId?: string } } | undefined;
+        const aid = el?.type === "image" ? el.source?.assetId : undefined;
+        if (!aid) continue;
+        const a = imageList.find((x) => x.id === aid);
+        if (a) imageAssets.register(a.id, resolveAssetUrl(a.url));
+      }
+    }
+  }, [project, imageList]);
+
   // Which track an asset is being picked for (opens the media picker modal).
   const [pickerTrackId, setPickerTrackId] = useState<string | null>(null);
+  // True while the media picker is choosing an image for a design element.
+  const [pickingImage, setPickingImage] = useState(false);
+  // True while the shape-element menu (rect/ellipse/...) is open in the toolbar.
+  const [shapeMenuOpen, setShapeMenuOpen] = useState(false);
+  // True while the starter-template menu is open in the toolbar.
+  const [templateMenuOpen, setTemplateMenuOpen] = useState(false);
+  // True while the text-preset menu (heading/subtitle/lower-third/...) is open.
+  const [textMenuOpen, setTextMenuOpen] = useState(false);
+  // Stock-photo search in the image picker (photos import into uploads on pick).
+  const [stockQuery, setStockQuery] = useState("");
+  const [stockResults, setStockResults] = useState<StockAssetSummary[]>([]);
+  const [stockBusy, setStockBusy] = useState(false);
+
+  // Import a stock photo into the workspace uploads, then place it as an image
+  // element (reusing addImageElement). Importing first gives the photo a real
+  // asset id so the server MP4 export can embed its bytes (it never depends on an
+  // external host), exactly like the design editor's stock placement.
+  const addStockImage = useCallback(
+    async (a: StockAssetSummary) => {
+      if (!workspaceId || !a.sourceUrl) return;
+      setStockBusy(true);
+      try {
+        const up = await oc.importAssetFromUrl(workspaceId, a.sourceUrl);
+        addImageElement(up);
+        setPickingImage(false);
+        setStockResults([]);
+        setStockQuery("");
+        void loadAssets();
+      } catch {
+        showPanelError(tr("editor.couldnt_add_this_photo_try_another_one"));
+      } finally {
+        setStockBusy(false);
+      }
+    },
+    [workspaceId, addImageElement, loadAssets, showPanelError],
+  );
+
+  // Debounced stock-photo search while the image picker is open. An empty query
+  // returns the curated/popular set so the panel is never blank.
+  useEffect(() => {
+    if (!pickingImage) return;
+    let cancelled = false;
+    const id = window.setTimeout(async () => {
+      try {
+        const r = await oc.stockSearch(stockQuery.trim() || undefined, "photo", { limit: 24 });
+        if (!cancelled) setStockResults(r.filter((a) => !!a.sourceUrl));
+      } catch {
+        if (!cancelled) setStockResults([]);
+      }
+    }, 300);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(id);
+    };
+  }, [pickingImage, stockQuery]);
   // Right-click context menu (clip or empty lane).
   const [ctxMenu, setCtxMenu] = useState<{
     x: number;
@@ -1270,13 +1810,13 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
         inFrame: 0,
         outFrame: dur,
         speed: 1,
-        ...(track.kind === "text" ? { title: { text: "Title" } } : {}),
+        ...(track.kind === "text" ? { title: { text: tr("editor.title") } } : {}),
       };
       const nextTrack: Track = { ...track, clips: [...track.clips, clip] };
       persist(replaceTrack(project, nextTrack));
       selectOnly(clip.id);
     },
-    [project, frame, persist],
+    [project, frame, persist, selectOnly],
   );
 
   // Bind a picked asset as a new clip at the playhead: probe the real
@@ -1308,8 +1848,136 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       selectOnly(clip.id);
       requestClipArt(asset);
     },
-    [project, frame, persist, requestClipArt],
+    [project, frame, persist, requestClipArt, selectOnly],
   );
+
+  // Timeline-synced voiceover (P7.8): record the mic WHILE the timeline plays,
+  // then upload the take and drop it as an audio clip at the frame where
+  // recording began (its own audio lane if the sync spot is occupied), so the
+  // narration lines up with the picture the user was watching.
+  const [voRecording, setVoRecording] = useState(false);
+  const voRecRef = useRef<MediaRecorder | null>(null);
+  const voStreamRef = useRef<MediaStream | null>(null);
+  const voChunksRef = useRef<Blob[]>([]);
+  const voStartRef = useRef(0);
+  const voStartingRef = useRef(false); // guards the async getUserMedia gap against a double-click
+
+  const uploadBlobAsset = useCallback(
+    async (blob: Blob, filename: string): Promise<UploadedAsset | null> => {
+      if (!workspaceId) return null;
+      const dataUrl = await new Promise<string>((res, rej) => {
+        const fr = new FileReader();
+        fr.onload = () => res(String(fr.result));
+        fr.onerror = () => rej(new CodedError("errors.file_read_failed", "Could not read the file."));
+        fr.readAsDataURL(blob);
+      });
+      return uploadAssetWithProgress(workspaceId, { filename, dataBase64: dataUrl.split(",")[1] ?? "" }, (pct) => setUploadPct(pct));
+    },
+    [workspaceId],
+  );
+
+  const placeVoiceover = useCallback(
+    async (blob: Blob, startFrame: number) => {
+      try {
+        setUploadPct(0);
+        const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+        const ext = blob.type.includes("mp4") ? "mp4" : blob.type.includes("ogg") ? "ogg" : "webm";
+        const asset = await uploadBlobAsset(blob, `voiceover-${stamp}.${ext}`);
+        if (!asset) return;
+        await loadAssets();
+        // Freshest project from the store (a stale closure could miss edits).
+        const cur = (seqId
+          ? (useEditor.getState().doc.meta.videoSequences as Record<string, VideoProject> | undefined)?.[seqId]
+          : (useEditor.getState().doc.meta.video as VideoProject | undefined));
+        if (!cur) return;
+        let durFrames = DEFAULT_CLIP_FRAMES;
+        try {
+          const info = await probeMedia(resolveAssetUrl(asset.url), "audio");
+          durFrames = Math.max(1, Math.round((info.durationMs / 1000) * (cur.fps as number)));
+        } catch { /* unprobeable: default length */ }
+        // Prefer an audio lane that is free at the sync point; else a new lane.
+        let track = cur.tracks.find((t) => t.kind === "audio" && !t.locked && freeStartFrame(t, durFrames, startFrame) === startFrame);
+        let tracks = cur.tracks;
+        if (!track) {
+          track = newTrack("audio", `Voiceover ${cur.tracks.filter((t) => t.kind === "audio").length + 1}`);
+          tracks = [...cur.tracks, track];
+        }
+        const clip: Clip = { id: shortId("clip"), name: tr("editor.voiceover"), assetId: asset.id, startFrame: freeStartFrame(track, durFrames, startFrame), inFrame: 0, outFrame: durFrames, speed: 1 };
+        const nextTrack: Track = { ...track, clips: [...track.clips, clip] };
+        persist(withDuration({ ...cur, tracks: tracks.map((t) => (t.id === nextTrack.id ? nextTrack : t)) }));
+        selectOnly(clip.id);
+      } catch (e) {
+        showPanelError(userMessage(e, tr("editor.voiceover_failed")));
+      } finally {
+        setUploadPct(null);
+      }
+    },
+    [uploadBlobAsset, loadAssets, seqId, persist, selectOnly, showPanelError],
+  );
+
+  const toggleVoiceover = useCallback(async () => {
+    if (voRecRef.current) { voRecRef.current.stop(); return; } // stop -> onstop finishes
+    if (voStartingRef.current) return; // a start is already in flight (guards a double-click)
+    if (!project || !workspaceId) return;
+    voStartingRef.current = true;
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      voStartingRef.current = false;
+      showPanelError(tr("editor.microphone_permission_denied"));
+      return;
+    }
+    voStreamRef.current = stream;
+    // Play-at-end restarts from 0, so record-from-0 in that case (keeps the take
+    // aligned with what actually plays).
+    const atEnd = frame >= durationFrames;
+    voStartRef.current = atEnd ? 0 : frame;
+    let rec: MediaRecorder;
+    try {
+      rec = new MediaRecorder(stream);
+    } catch {
+      stream.getTracks().forEach((t) => t.stop());
+      voStreamRef.current = null;
+      voStartingRef.current = false;
+      return;
+    }
+    voChunksRef.current = [];
+    rec.ondataavailable = (e) => { if (e.data.size > 0) voChunksRef.current.push(e.data); };
+    rec.onstop = () => {
+      const type = rec.mimeType || "audio/webm";
+      const blob = new Blob(voChunksRef.current, { type });
+      voStreamRef.current?.getTracks().forEach((t) => t.stop());
+      voStreamRef.current = null;
+      voRecRef.current = null;
+      setVoRecording(false);
+      setPlaying(false);
+      if (blob.size > 0) void placeVoiceover(blob, voStartRef.current);
+    };
+    voRecRef.current = rec;
+    voStartingRef.current = false; // recorder is live; re-clicks now hit the stop path
+    rec.start();
+    setVoRecording(true);
+    if (atEnd) setPlayhead(0); // rewind so playback (and the take) run from the start, not past the end
+    setPlaying(true); // narrate to the timeline from the current playhead
+  }, [project, workspaceId, frame, durationFrames, placeVoiceover, showPanelError, setPlayhead]);
+
+  // Pausing (or the playhead reaching the end) stops an in-progress voiceover.
+  useEffect(() => {
+    if (!playing && voRecRef.current) voRecRef.current.stop();
+  }, [playing]);
+  // Stop the mic + recorder if the surface unmounts mid-recording. Detach onstop
+  // first so the async stop can't run placeVoiceover / setState after unmount.
+  useEffect(() => () => {
+    const rec = voRecRef.current;
+    if (rec) {
+      rec.onstop = null;
+      try { rec.stop(); } catch { /* already inactive */ }
+      voRecRef.current = null;
+    }
+    voStreamRef.current?.getTracks().forEach((t) => t.stop());
+    voStreamRef.current = null;
+  }, []);
 
   // -------------------------------------------------------------------------
   // export: render the timeline in-browser (realtime pass over the preview
@@ -1328,13 +1996,13 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
     try {
       const blob = await ex.controller.done;
       if (cancelled) {
-        setExportMsg("Export cancelled");
+        setExportMsg(tr("editor.export_cancelled"));
       } else {
         downloadBlob(blob, `${(docTitle || "video").replace(/[^\w.-]+/g, "_")}.${ex.extension}`);
         setExportMsg(`Downloaded ${ex.extension.toUpperCase()}`);
       }
     } catch (e) {
-      setExportMsg(e instanceof Error ? e.message : "Export failed");
+      setExportMsg(userMessage(e, tr("editor.export_failed_2")));
     } finally {
       setExporting(false);
     }
@@ -1400,7 +2068,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
     }) => {
       if (!props.designId || serverExporting) return;
       setServerExporting(true);
-      setExportMsg("Rendering on the server…");
+      setExportMsg(tr("editor.rendering_on_the_server"));
       try {
         // Flush the current document first: the job renders the PERSISTED file,
         // and racing the autosave would render a stale (or empty) timeline.
@@ -1417,7 +2085,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           endFrame: opts.useRange ? project?.range?.endFrame : undefined,
         });
         if (!isSafePathId(jobId)) {
-          setExportMsg("Server export failed: malformed job id");
+          setExportMsg(tr("editor.server_export_failed_malformed_job_id"));
           return;
         }
         recordExport(jobId, opts.stemTrackId ? `${opts.format} stem` : opts.format);
@@ -1429,7 +2097,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             // in-browser export uses (a cross-origin <a download> click is
             // unreliable: the attribute is ignored cross-origin).
             const res = await fetch(oc.videoExportDownloadUrl(props.designId, jobId), { credentials: "include" });
-            if (!res.ok) throw new Error(`download failed (${res.status})`);
+            if (!res.ok) throw new CodedError("errors.download_failed", `download failed (${res.status})`, { status: res.status });
             // Name the file by what the server actually encoded: an older
             // backend mid-rollout ignores `format` and renders MP4, and its
             // job result says so.
@@ -1446,19 +2114,19 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           }
           if (job.status === "failed") {
             markExport(jobId, "failed");
-            setExportMsg(job.error ? `Server export failed: ${job.error}` : "Server export failed");
+            setExportMsg(job.error ? `Server export failed: ${job.error}` : tr("editor.server_export_failed"));
             return;
           }
           await new Promise((r) => setTimeout(r, 1500));
         }
-        setExportMsg("Server export timed out");
+        setExportMsg(tr("editor.server_export_timed_out"));
       } catch (e) {
-        setExportMsg(e instanceof Error ? e.message : "Server export failed");
+        setExportMsg(userMessage(e, tr("editor.server_export_failed")));
       } finally {
         setServerExporting(false);
       }
     },
-    [props.designId, serverExporting, docTitle, project],
+    [props.designId, serverExporting, docTitle, project, markExport, recordExport],
   );
 
   const doExportVideo = useCallback(
@@ -1472,7 +2140,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       const canvas = stageCanvasRef.current;
       const player = getPlayer();
       if (!target || !canvas || typeof canvas.captureStream !== "function") {
-        setExportMsg("This browser cannot record video (MediaRecorder unavailable).");
+        setExportMsg(tr("editor.this_browser_cannot_record_video_mediarecord"));
         return;
       }
       setExporting(true);
@@ -1548,12 +2216,19 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
     setPlaying(true);
   }, [draftProject, storeProject]);
   const stageDragRef = useRef<{
-    mode: "pose" | "title";
+    mode: "pose" | "title" | "element" | "resize";
     clipId: string;
     trackId: string;
     startX: number;
     startY: number;
+    // For "element", base.dx/dy hold the node's resting transform.x/y (stage px)
+    // and downSX/downSY the stage point grabbed (so the delta is pixel-accurate).
     base: { dx: number; dy: number; scale: number };
+    downSX?: number;
+    downSY?: number;
+    // For "resize": the element's starting bounds and which corner is dragged.
+    rb?: { x: number; y: number; w: number; h: number };
+    corner?: "nw" | "ne" | "sw" | "se";
     localFrame: number;
   } | null>(null);
   const wheelCommitRef = useRef<number | null>(null);
@@ -1607,11 +2282,21 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
     return { x: (e.clientX - ox) / scale, y: (e.clientY - oy) / scale };
   }, []);
 
+  // Resting stage bounds of an element clip's node (transform + size * scale),
+  // ignoring animation/keyframe pose (users position the authored resting frame).
+  const elementBounds = useCallback((clip: Clip): { x: number; y: number; w: number; h: number } | null => {
+    const n = clip.element as unknown as { transform?: { x?: number; y?: number; scaleX?: number; scaleY?: number }; size?: { width?: number; height?: number } } | undefined;
+    if (!n?.size) return null;
+    const sx = n.transform?.scaleX ?? 1;
+    const sy = n.transform?.scaleY ?? 1;
+    return { x: n.transform?.x ?? 0, y: n.transform?.y ?? 0, w: (n.size.width ?? 0) * sx, h: (n.size.height ?? 0) * sy };
+  }, []);
+
   // Topmost element under a stage point: titles first (they draw above the
   // video), then video/overlay/sequence clips. Top-level scope only (nested
   // sequence content selects its parent sequence clip via the base active).
   const stageHitTest = useCallback(
-    (x: number, y: number): { track: Track; clip: Clip; kind: "title" | "clip" } | null => {
+    (x: number, y: number): { track: Track; clip: Clip; kind: "title" | "clip" | "element" } | null => {
       const p = draftProject ?? storeProject;
       const ctx = stageOverlayRef.current?.getContext("2d");
       if (!p || !ctx) return null;
@@ -1630,6 +2315,15 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       for (let i = vis.length - 1; i >= 0; i--) {
         const a = vis[i];
         if (a.track.locked) continue;
+        // Element clips hit-test against the design node's own bounds (not the
+        // full-stage offscreen), so clicks select/drag the actual element.
+        if (a.clip.element) {
+          const b = elementBounds(a.clip);
+          if (b && x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) {
+            return { track: a.track, clip: a.clip, kind: "element" };
+          }
+          continue;
+        }
         const pose = evalKeyframes(a.clip.keyframes, a.localFrame, a.clip);
         const media = getPlayer().drawSource(a);
         const crop = a.clip.crop;
@@ -1648,7 +2342,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       }
       return null;
     },
-    [draftProject, storeProject, getPlayer],
+    [draftProject, storeProject, getPlayer, elementBounds],
   );
 
   // Live title reposition (draft while dragging, one persist on release).
@@ -1676,9 +2370,82 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
     [draftProject, storeProject, persist],
   );
 
+  // Live element reposition on the stage (draft while dragging, one persist on
+  // release): writes the design node's transform.x/y in stage pixels.
+  const patchElementPosition = useCallback(
+    (trackId: string, clipId: string, x: number, y: number, commit: boolean) => {
+      const base = draftProject ?? storeProject;
+      if (!base) return;
+      const track = base.tracks.find((t) => t.id === trackId);
+      const clip = track?.clips.find((c) => c.id === clipId);
+      if (!track || !clip?.element) return;
+      const el = patchNodeLayout(clip.element, { x, y });
+      const next = replaceTrack(base, { ...track, clips: track.clips.map((c) => (c.id === clipId ? { ...c, element: el } : c)) });
+      if (commit) {
+        persist(next);
+        setDraftProject(null);
+      } else setDraftProject(next);
+    },
+    [draftProject, storeProject, persist],
+  );
+
+  // Live element resize (draft while dragging, one persist on release): sets the
+  // node's transform.x/y + size in stage pixels.
+  const patchElementBounds = useCallback(
+    (trackId: string, clipId: string, b: { x: number; y: number; w: number; h: number }, commit: boolean) => {
+      const base = draftProject ?? storeProject;
+      if (!base) return;
+      const track = base.tracks.find((t) => t.id === trackId);
+      const clip = track?.clips.find((c) => c.id === clipId);
+      if (!track || !clip?.element) return;
+      const el = patchNodeLayout(clip.element, { x: b.x, y: b.y, w: b.w, h: b.h });
+      const next = replaceTrack(base, { ...track, clips: track.clips.map((c) => (c.id === clipId ? { ...c, element: el } : c)) });
+      if (commit) {
+        persist(next);
+        setDraftProject(null);
+      } else setDraftProject(next);
+    },
+    [draftProject, storeProject, persist],
+  );
+
+  // New bounds for a corner-resize: the opposite corner stays anchored, sizes
+  // clamp to a minimum, no flipping past the anchor.
+  const resizeBounds = useCallback(
+    (b: { x: number; y: number; w: number; h: number }, corner: "nw" | "ne" | "sw" | "se", px: number, py: number) => {
+      const min = 8;
+      const right = b.x + b.w;
+      const bottom = b.y + b.h;
+      let x = b.x, y = b.y, w = b.w, h = b.h;
+      if (corner === "se") { w = Math.max(min, px - b.x); h = Math.max(min, py - b.y); }
+      else if (corner === "ne") { w = Math.max(min, px - b.x); h = Math.max(min, bottom - py); y = bottom - h; }
+      else if (corner === "sw") { w = Math.max(min, right - px); h = Math.max(min, py - b.y); x = right - w; }
+      else { w = Math.max(min, right - px); h = Math.max(min, bottom - py); x = right - w; y = bottom - h; }
+      return { x, y, w, h };
+    },
+    [],
+  );
+
   const onStagePointerDown = useCallback(
     (e: React.PointerEvent) => {
       const pt = stagePointAt(e);
+      // A corner handle of the SELECTED element starts a resize.
+      if (stageTarget?.clip.element && pt && !stageTarget.track.locked && project) {
+        const b = elementBounds(stageTarget.clip);
+        if (b) {
+          const tol = Math.max(24, project.stage.width * 0.02);
+          const corners: ["nw" | "ne" | "sw" | "se", number, number][] = [
+            ["nw", b.x, b.y], ["ne", b.x + b.w, b.y], ["sw", b.x, b.y + b.h], ["se", b.x + b.w, b.y + b.h],
+          ];
+          for (const [corner, cx, cy] of corners) {
+            if (Math.abs(pt.x - cx) <= tol && Math.abs(pt.y - cy) <= tol) {
+              e.preventDefault();
+              (e.target as Element).setPointerCapture?.(e.pointerId);
+              stageDragRef.current = { mode: "resize", clipId: stageTarget.clip.id, trackId: stageTarget.track.id, startX: e.clientX, startY: e.clientY, base: { dx: 0, dy: 0, scale: 1 }, rb: b, corner, localFrame: 0 };
+              return;
+            }
+          }
+        }
+      }
       // The SELECTED video clip drags its pose when grabbed directly.
       if (stageTarget && pt) {
         const hit = stageHitTest(pt.x, pt.y);
@@ -1721,9 +2488,23 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           },
           localFrame: 0,
         };
+      } else if (hit.kind === "element" && !hit.track.locked) {
+        const b = elementBounds(hit.clip);
+        (e.target as Element).setPointerCapture?.(e.pointerId);
+        stageDragRef.current = {
+          mode: "element",
+          clipId: hit.clip.id,
+          trackId: hit.track.id,
+          startX: e.clientX,
+          startY: e.clientY,
+          base: { dx: b?.x ?? 0, dy: b?.y ?? 0, scale: 1 },
+          downSX: pt.x,
+          downSY: pt.y,
+          localFrame: 0,
+        };
       }
     },
-    [stageTarget, stagePointAt, stageHitTest, selectOnly],
+    [stageTarget, stagePointAt, stageHitTest, selectOnly, elementBounds, project],
   );
   const onStagePointerMove = useCallback(
     (e: React.PointerEvent) => {
@@ -1737,9 +2518,19 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
         patchTitleOffsets(d.trackId, d.clipId, d.base.dx + fx, d.base.dy + fy, false);
         return;
       }
+      if (d.mode === "element") {
+        const cur = stagePointAt(e);
+        if (cur) patchElementPosition(d.trackId, d.clipId, d.base.dx + (cur.x - (d.downSX ?? cur.x)), d.base.dy + (cur.y - (d.downSY ?? cur.y)), false);
+        return;
+      }
+      if (d.mode === "resize" && d.rb && d.corner) {
+        const cur = stagePointAt(e);
+        if (cur) patchElementBounds(d.trackId, d.clipId, resizeBounds(d.rb, d.corner, cur.x, cur.y), false);
+        return;
+      }
       applyPose(d.clipId, d.trackId, d.localFrame, { dx: d.base.dx + fx, dy: d.base.dy + fy }, false);
     },
-    [applyPose, patchTitleOffsets],
+    [applyPose, patchTitleOffsets, patchElementPosition, patchElementBounds, resizeBounds, stagePointAt],
   );
   const onStagePointerUp = useCallback(
     (e: React.PointerEvent) => {
@@ -1754,9 +2545,20 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
         patchTitleOffsets(d.trackId, d.clipId, d.base.dx + fx, d.base.dy + fy, true);
         return;
       }
+      if (d.mode === "element") {
+        const cur = stagePointAt(e);
+        if (cur) patchElementPosition(d.trackId, d.clipId, d.base.dx + (cur.x - (d.downSX ?? cur.x)), d.base.dy + (cur.y - (d.downSY ?? cur.y)), true);
+        else patchElementPosition(d.trackId, d.clipId, d.base.dx, d.base.dy, true);
+        return;
+      }
+      if (d.mode === "resize" && d.rb && d.corner) {
+        const cur = stagePointAt(e);
+        patchElementBounds(d.trackId, d.clipId, cur ? resizeBounds(d.rb, d.corner, cur.x, cur.y) : d.rb, true);
+        return;
+      }
       applyPose(d.clipId, d.trackId, d.localFrame, { dx: d.base.dx + fx, dy: d.base.dy + fy }, true);
     },
-    [applyPose, patchTitleOffsets],
+    [applyPose, patchTitleOffsets, patchElementPosition, patchElementBounds, resizeBounds, stagePointAt],
   );
   const onStageWheel = useCallback(
     (e: React.WheelEvent) => {
@@ -1824,26 +2626,49 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           if (sel) {
             const active = activeClipsAt(p, f).find((a) => a.clip.id === sel);
             if (active && (active.track.kind === "video" || active.track.kind === "overlay") && !active.track.hidden) {
-              // Mirror the compositor's transforms exactly: fit (cover or
-              // contain), crop source dims, keyframed pose, and rotation.
-              const pose = evalKeyframes(active.clip.keyframes, active.localFrame, active.clip);
               const W = p.stage.width;
               const H = p.stage.height;
-              const media = getPlayer().drawSource(active);
-              const crop = active.clip.crop;
-              const sw = crop?.width ?? media?.width ?? W;
-              const sh = crop?.height ?? media?.height ?? H;
-              const d = fitRect(sw, sh, W, H, active.clip.fit ?? "cover");
-              ctx.save();
-              ctx.translate(W / 2 + pose.dx * W, H / 2 + pose.dy * H);
-              if (pose.rotation) ctx.rotate((pose.rotation * Math.PI) / 180);
-              ctx.scale(pose.scale, pose.scale);
-              ctx.translate(-W / 2, -H / 2);
-              ctx.strokeStyle = "rgba(255,255,255,0.85)";
-              ctx.setLineDash([10, 7]);
-              ctx.lineWidth = Math.max(2, Math.round(W / 640)) / Math.max(0.01, pose.scale);
-              ctx.strokeRect(d.x, d.y, d.w, d.h);
-              ctx.restore();
+              // Element clips outline the design node's own resting bounds (so the
+              // drag box hugs the element, not the whole stage).
+              if (active.clip.element) {
+                const b = elementBounds(active.clip);
+                if (b) {
+                  ctx.save();
+                  ctx.strokeStyle = "rgba(56,189,248,0.9)";
+                  ctx.setLineDash([10, 7]);
+                  ctx.lineWidth = Math.max(2, Math.round(W / 640));
+                  ctx.strokeRect(b.x, b.y, b.w, b.h);
+                  // Corner resize handles (solid squares) when the track is editable.
+                  if (!active.track.locked) {
+                    const hs = Math.max(8, Math.round(W * 0.01)); // half-size
+                    ctx.setLineDash([]);
+                    ctx.fillStyle = "rgba(56,189,248,0.95)";
+                    for (const [cx, cy] of [[b.x, b.y], [b.x + b.w, b.y], [b.x, b.y + b.h], [b.x + b.w, b.y + b.h]]) {
+                      ctx.fillRect(cx - hs, cy - hs, hs * 2, hs * 2);
+                    }
+                  }
+                  ctx.restore();
+                }
+              } else {
+                // Mirror the compositor's transforms exactly: fit (cover or
+                // contain), crop source dims, keyframed pose, and rotation.
+                const pose = evalKeyframes(active.clip.keyframes, active.localFrame, active.clip);
+                const media = getPlayer().drawSource(active);
+                const crop = active.clip.crop;
+                const sw = crop?.width ?? media?.width ?? W;
+                const sh = crop?.height ?? media?.height ?? H;
+                const d = fitRect(sw, sh, W, H, active.clip.fit ?? "cover");
+                ctx.save();
+                ctx.translate(W / 2 + pose.dx * W, H / 2 + pose.dy * H);
+                if (pose.rotation) ctx.rotate((pose.rotation * Math.PI) / 180);
+                ctx.scale(pose.scale, pose.scale);
+                ctx.translate(-W / 2, -H / 2);
+                ctx.strokeStyle = "rgba(255,255,255,0.85)";
+                ctx.setLineDash([10, 7]);
+                ctx.lineWidth = Math.max(2, Math.round(W / 640)) / Math.max(0.01, pose.scale);
+                ctx.strokeRect(d.x, d.y, d.w, d.h);
+                ctx.restore();
+              }
             }
           }
         }
@@ -1852,42 +2677,75 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
     };
     raf = requestAnimationFrame(paint);
     return () => cancelAnimationFrame(raf);
-  }, [getPlayer]);
+  }, [getPlayer, elementBounds]);
   // -------------------------------------------------------------------------
-  // captions: manual cue editing on the project's first caption track.
+  // captions: manual cue editing across multiple language tracks (P7.2). The
+  // editor targets the ACTIVE track; a track selector adds/switches/renames/
+  // deletes tracks. Preview burns the active track.
   // -------------------------------------------------------------------------
   const [captionsOpen, setCaptionsOpen] = useState(false);
-  const cues: CaptionCue[] = useMemo(() => project?.captions?.[0]?.cues ?? [], [project]);
+  const [activeCapId, setActiveCapId] = useState<string | null>(null);
+  const capTracks = useMemo(() => project?.captions ?? [], [project]);
+  // Resolve the active track (fall back to the first) and keep its id valid.
+  const activeCap = useMemo(
+    () => capTracks.find((t) => t.id === activeCapId) ?? capTracks[0],
+    [capTracks, activeCapId],
+  );
+  const cues: CaptionCue[] = useMemo(() => activeCap?.cues ?? [], [activeCap]);
   const persistCues = useCallback(
     (next: CaptionCue[]) => {
       if (!project) return;
-      persist(withCues(project, next));
+      persist(withCues(project, next, activeCap?.id));
     },
-    [project, persist],
+    [project, persist, activeCap],
   );
-  const captionStyle = captionStyleOf(project?.captions?.[0]);
+  const captionStyle = captionStyleOf(activeCap);
   const patchCaptionStyle = useCallback(
     (patch: Partial<ReturnType<typeof captionStyleOf>>) => {
       if (!project) return;
-      persist(withCaptionStyle(project, patch));
+      persist(withCaptionStyle(project, patch, activeCap?.id));
     },
-    [project, persist],
+    [project, persist, activeCap],
   );
   const addCueAtPlayhead = useCallback(() => {
     if (!project) return;
     const start = frame;
     const end = Math.min(Math.max(start + 1, start + project.fps * 2), Math.max(durationFrames, start + 1));
-    persistCues([...cues, { id: shortId("cue"), startFrame: start, endFrame: end, text: "Caption text" }]);
+    persistCues([...cues, { id: shortId("cue"), startFrame: start, endFrame: end, text: tr("editor.caption_text") }]);
   }, [project, frame, durationFrames, cues, persistCues]);
+  const addCaptionLangTrack = useCallback(
+    (lang: string) => {
+      if (!project) return;
+      const { project: next, track } = addCaptionTrack(project, lang);
+      persist(next);
+      setActiveCapId(track.id);
+    },
+    [project, persist],
+  );
+  const removeActiveCaptionTrack = useCallback(() => {
+    if (!project || !activeCap) return;
+    persist(removeCaptionTrack(project, activeCap.id));
+    setActiveCapId(null);
+  }, [project, persist, activeCap]);
+  const setActiveCaptionLang = useCallback(
+    (lang: string) => {
+      if (!project || !activeCap) return;
+      persist(setCaptionLang(project, activeCap.id, lang));
+    },
+    [project, persist, activeCap],
+  );
   const downloadCaptions = useCallback(
     (format: "srt" | "vtt") => {
       if (!project || !cues.length) return;
       const text = format === "srt" ? toSrt(cues, project.fps) : toVtt(cues, project.fps);
+      const lang = activeCap?.lang ? `.${activeCap.lang}` : "";
       const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-      downloadBlob(blob, `${(docTitle || "captions").replace(/[^\w.-]+/g, "_")}.${format}`);
+      downloadBlob(blob, `${(docTitle || "captions").replace(/[^\w.-]+/g, "_")}${lang}.${format}`);
     },
-    [project, cues, docTitle],
+    [project, cues, docTitle, activeCap],
   );
+  // Bridge the active caption track id to the paint loop (burn-in preview).
+  useEffect(() => { activeCapIdRef.current = activeCap?.id ?? null; }, [activeCap]);
 
   // -------------------------------------------------------------------------
   // clip fades + project settings
@@ -2200,7 +3058,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
     };
     persist(withDuration(next));
     selectOnly(audioClip.id);
-  }, [project, selected, persist]);
+  }, [project, selected, persist, selectOnly]);
 
   // Scene detection: propose cuts on the selected clip's source and split at
   // each one (splitting right-to-left keeps the original id on the left piece
@@ -2232,6 +3090,34 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       setDetectingScenes(false);
     }
   }, [project, selected, detectingScenes, persist]);
+
+  // Beat sync (P7.3): decode the selected clip's audio, detect onsets, and add
+  // them as ruler markers within the clip's span. Markers are snap targets
+  // (snapTargets includes project.markers), so cuts/edges snap to the beat.
+  const [detectingBeats, setDetectingBeats] = useState(false);
+  const detectBeats = useCallback(async () => {
+    if (!project || !selected || selected.track.locked || !selected.clip.assetId || detectingBeats) return;
+    const asset = assetsRef.current.get(selected.clip.assetId);
+    if (!asset) return;
+    setDetectingBeats(true);
+    try {
+      const { samples, sampleRate } = await decodeMono(resolveAssetUrl(asset.url));
+      const c = selected.clip;
+      const speedMag = Math.abs(c.speed) || 1;
+      // source frames (project-fps convention), mapped into the clip's timeline span
+      const frames = beatTimesToFrames(detectBeatTimes(samples, sampleRate), project.fps)
+        .filter((sf) => sf >= c.inFrame && sf < c.outFrame)
+        .map((sf) => c.startFrame + Math.round((sf - c.inFrame) / speedMag))
+        .filter((f) => f >= 0 && f <= project.durationFrames);
+      if (!frames.length) return;
+      const merged = [...new Set([...(project.markers ?? []), ...frames])].sort((a, b) => a - b);
+      persist({ ...project, markers: merged });
+    } catch (e) {
+      console.warn("Beat detection failed:", e);
+    } finally {
+      setDetectingBeats(false);
+    }
+  }, [project, selected, detectingBeats, persist]);
 
   // Reorder tracks (stacking order IS track order: later draws on top).
   const moveTrack = useCallback(
@@ -2356,7 +3242,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       setMultiIds(new Set(pastedIds));
       setSelectedClipId(pastedIds[0]);
     }
-  }, [project, frame, persist]);
+  }, [project, frame, persist, selectOnly]);
 
   // Remove every selected clip (multi-select delete; single keeps ripple).
   const deleteSelected = useCallback(() => {
@@ -2620,7 +3506,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       }
       // Modal dialogs own the keyboard: Escape closes the topmost one, and
       // editing shortcuts must never mutate the timeline underneath a modal.
-      const modalOpen = exportDialog || !!confirmDeleteAsset || !!confirmDeleteTrack || !!pickerTrackId || !!ctxMenu || !!replaceTarget;
+      const modalOpen = exportDialog || !!confirmDeleteAsset || !!confirmDeleteTrack || !!pickerTrackId || pickingImage || !!ctxMenu || !!replaceTarget;
       if (modalOpen) {
         if (e.key === "Escape") {
           e.preventDefault();
@@ -2628,6 +3514,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           setConfirmDeleteAsset(null);
           setConfirmDeleteTrack(null);
           setPickerTrackId(null);
+          setPickingImage(false);
           setCtxMenu(null);
           setReplaceTarget(null);
         }
@@ -2744,7 +3631,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [doSplit, doRippleDelete, durationFrames, toggleMarker, markRange, copySelectedClip, pasteClip, multiIds, deleteSelected, togglePlay, exportDialog, confirmDeleteAsset, confirmDeleteTrack, pickerTrackId, ctxMenu, replaceTarget, selectOnly, selectAllClips, nudgeSelection, shuttle]);
+  }, [doSplit, doRippleDelete, durationFrames, toggleMarker, markRange, copySelectedClip, pasteClip, multiIds, deleteSelected, togglePlay, exportDialog, confirmDeleteAsset, confirmDeleteTrack, pickerTrackId, ctxMenu, replaceTarget, selectOnly, selectAllClips, nudgeSelection, shuttle, pickingImage]);
 
   // Total source frames available for a clip's media (probed duration for
   // assets, child extent for sequences); undefined when unknown.
@@ -2856,6 +3743,20 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
         ...existing,
         durationFrames: Math.max(1, Math.floor(durationFrames || 1)),
       };
+      const next = addTransition(selected.track, selected.clip.id, edge, t);
+      persist(replaceTrack(project, next));
+    },
+    [project, selected, persist],
+  );
+
+  // Inspector direction setter for a slide/wipe edge (P4.7). "" clears it back to
+  // the default (left/horizontal). No-op if the edge has no transition.
+  const setTransitionDirection = useCallback(
+    (edge: "in" | "out", direction: "" | NonNullable<ClipTransition["direction"]>) => {
+      if (!project || !selected || selected.track.locked) return;
+      const existing = edge === "in" ? selected.clip.transitionIn : selected.clip.transitionOut;
+      if (!existing) return;
+      const t: ClipTransition = { ...existing, direction: direction || undefined };
       const next = addTransition(selected.track, selected.clip.id, edge, t);
       persist(replaceTrack(project, next));
     },
@@ -3364,7 +4265,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
   if (!project) {
     return (
       <div className="grid flex-1 place-items-center bg-neutral-50 text-sm text-neutral-600">
-        Preparing video project...
+        {tr("editor.preparing_video_project")}
       </div>
     );
   }
@@ -3382,6 +4283,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       {/* ---------------------------------------------------------------- */}
       {mediaOpen ? (
       <aside
+        aria-label={tr("editor.media_library")}
         className="relative flex shrink-0 flex-col border-r border-neutral-200 bg-neutral-100"
         style={{ width: mediaW }}
         onDragEnter={onPanelDragEnter}
@@ -3392,7 +4294,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
         {dropActive && (
           <div className="pointer-events-none absolute inset-1 z-30 flex items-center justify-center rounded-lg border-2 border-dashed border-brand-500 bg-brand-500/10">
             <span className="rounded bg-surface px-2 py-1 text-[11px] font-medium text-brand-ink shadow">
-              Drop to upload
+              {tr("editor.drop_to_upload")}
             </span>
           </div>
         )}
@@ -3400,7 +4302,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           onPointerDown={onSideResizeDown("left")}
           onPointerMove={onSideResizeMove}
           onPointerUp={onSideResizeUp}
-          title="Drag to resize the media panel; double-click to reset"
+          title={tr("editor.drag_resize_media_panel")}
           className="absolute inset-y-0 -right-0.5 z-20 w-1.5 cursor-col-resize hover:bg-brand-600/60"
         />
         <div className="flex items-center justify-between border-b border-neutral-200 px-3 py-2">
@@ -3409,7 +4311,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           <span className="flex items-center gap-1.5">
             <button
               type="button"
-              title="Collapse the media panel"
+              title={tr("editor.collapse_the_media_panel")}
               onPointerDown={(e) => {
                 if (e.button !== 0) return;
                 railPressRef.current = performance.now();
@@ -3423,7 +4325,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             >
               <PanelLeftClose size={15} className="pointer-events-none" />
             </button>
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-700">Media</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-700">{tr("editor.media")}</span>
           </span>
           <input
             ref={uploadInputRef}
@@ -3450,40 +4352,40 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             type="search"
             value={mediaQuery}
             onChange={(e) => setMediaQuery(e.target.value)}
-            placeholder="Search media…"
-            title="Filter by filename or tag"
+            placeholder={tr("editor.search_media")}
+            title={tr("editor.filter_by_filename_or_tag")} aria-label={tr("editor.filter_by_filename_or_tag")}
             onKeyDown={(e) => e.stopPropagation()}
             className="w-0 min-w-0 flex-1 rounded border border-neutral-300 bg-neutral-50 px-1.5 py-1 text-[11px] text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
           />
           <select
             value={mediaSort}
             onChange={(e) => setMediaSort(e.target.value as typeof mediaSort)}
-            title="Sort"
+            title={tr("editor.sort")} aria-label={tr("editor.sort")}
             className="rounded border border-neutral-300 bg-neutral-50 px-1 py-1 text-[10px] text-neutral-700"
           >
-            <option value="new">Newest</option>
-            <option value="name">Name</option>
-            <option value="size">Size</option>
+            <option value="new">{tr("editor.newest")}</option>
+            <option value="name">{tr("editor.name")}</option>
+            <option value="size">{tr("editor.size")}</option>
           </select>
           <button
             type="button"
-            title="Import a video or audio file from a URL"
+            title={tr("editor.import_a_video_or_audio_file_from_a_url")}
             disabled={!workspaceId || uploadPct !== null}
             onClick={() => {
               void (async () => {
                 // In-app modal (PromptHost), not the browser's native prompt.
                 const url = await promptText({
-                  title: "Import from URL",
-                  label: "Link to a video or audio file",
+                  title: tr("editor.import_from_url"),
+                  label: tr("editor.link_to_a_video_or_audio_file"),
                   placeholder: "https://example.com/clip.mp4",
-                  confirmText: "Import",
+                  confirmText: tr("editor.import"),
                 });
                 if (!url) return;
                 try {
                   await oc.importAssetFromUrl(workspaceId!, url);
                   await loadAssets();
                 } catch (err) {
-                  showPanelError(err instanceof Error ? `Import failed: ${err.message}` : "Import failed");
+                  showPanelError(err instanceof Error ? `Import failed: ${err.message}` : tr("editor.import_failed"));
                 }
               })();
             }}
@@ -3515,9 +4417,9 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             >
               <UploadIcon size={20} className="pointer-events-none" />
               <span className="pointer-events-none font-medium">
-                {uploadPct !== null ? `Uploading… ${uploadPct}%` : "Drop video or audio here"}
+                {uploadPct !== null ? `Uploading… ${uploadPct}%` : tr("editor.drop_video_or_audio_here")}
               </span>
-              <span className="pointer-events-none">or click to browse, or record below</span>
+              <span className="pointer-events-none">{tr("editor.or_click_to_browse_or_record_below")}</span>
             </button>
           ) : (
             assets
@@ -3576,7 +4478,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                 >
                   {usedAssetIds.has(a.id) && (
                     <span
-                      title="On the timeline"
+                      title={tr("editor.on_the_timeline")}
                       className="absolute left-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400 ring-1 ring-black/40"
                     />
                   )}
@@ -3597,14 +4499,14 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate">{a.filename ?? a.id}</span>
                   {proxyPending.has(a.id) && (
-                    <span className="flex items-center gap-1 text-[9px] text-amber-600 dark:text-amber-400">
-                      <Loader2 size={9} className="animate-spin" /> optimizing preview…
+                    <span className="flex items-center gap-1 text-[9px] text-amber-700 dark:text-amber-400">
+                      <Loader2 size={9} className="animate-spin" /> {tr("editor.optimizing_preview")}
                     </span>
                   )}
                 </span>
                 <button
                   type="button"
-                  title="Delete this upload from the workspace"
+                  title={tr("editor.delete_this_upload_from_the_workspace")}
                   onClick={(e) => {
                     e.stopPropagation();
                     setConfirmDeleteAsset(a);
@@ -3625,7 +4527,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             >
               <UploadIcon size={12} className="pointer-events-none" />
               <span className="pointer-events-none">
-                {uploadPct !== null ? `Uploading… ${uploadPct}%` : "Drop files here or click to upload"}
+                {uploadPct !== null ? `Uploading… ${uploadPct}%` : tr("editor.drop_files_here_or_click_to_upload")}
               </span>
             </button>
           )}
@@ -3634,7 +4536,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       ) : (
         <button
           type="button"
-          title="Open the media panel"
+          title={tr("editor.open_the_media_panel")}
           onPointerDown={(e) => {
             if (e.button !== 0) return;
             railPressRef.current = performance.now();
@@ -3649,7 +4551,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           {/* children ignore the pointer so every click targets the button */}
           <PanelLeftOpen size={15} className="pointer-events-none" />
           <span className="pointer-events-none text-[9px] font-semibold uppercase tracking-wide [writing-mode:vertical-rl]">
-            Media
+            {tr("editor.media")}
           </span>
         </button>
       )}
@@ -3664,14 +4566,14 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             onClick={() => { setSeqPath([]); selectOnly(null); setPlaying(false); setPlayhead(0); }}
             className="rounded px-1.5 py-0.5 text-neutral-700 hover:bg-neutral-200 hover:text-neutral-950"
           >
-            Main timeline
+            {tr("editor.main_timeline")}
           </button>
           {seqPath.map((id, i) => (
             <span key={id} className="flex items-center gap-1">
               <span className="text-neutral-400">/</span>
               {i === seqPath.length - 1 ? (
                 <span className="rounded bg-neutral-200 px-1.5 py-0.5 font-medium text-neutral-950">
-                  {sequenceNames?.[id] ?? "Sequence"}
+                  {sequenceNames?.[id] ?? tr("editor.sequence")}
                 </span>
               ) : (
                 <button
@@ -3679,7 +4581,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                   onClick={() => { setSeqPath(seqPath.slice(0, i + 1)); selectOnly(null); setPlaying(false); setPlayhead(0); }}
                   className="rounded px-1.5 py-0.5 text-neutral-700 hover:bg-neutral-200 hover:text-neutral-950"
                 >
-                  {sequenceNames?.[id] ?? "Sequence"}
+                  {sequenceNames?.[id] ?? tr("editor.sequence")}
                 </button>
               )}
             </span>
@@ -3724,7 +4626,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
               onPointerMove={onStagePointerMove}
               onPointerUp={onStagePointerUp}
               onWheel={onStageWheel}
-              title={stageTarget ? "Drag to reframe the selected clip; wheel to scale; click other clips or titles to select them" : "Click a clip or title to select it"}
+              title={stageTarget ? "Drag to reframe the selected clip; wheel to scale; click other clips or titles to select them" : tr("editor.click_a_clip_or_title_to_select_it")}
               className={`absolute inset-0 h-full w-full object-contain ${stageTarget ? "cursor-move" : "cursor-pointer"}`}
             />
             </div>
@@ -3732,7 +4634,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             <div className="absolute right-1.5 top-1.5 z-10 flex gap-1 rounded bg-black/55 p-0.5">
               <button
                 type="button"
-                title={guidesOn ? "Hide safe-area guides" : "Show safe-area guides (thirds + title-safe)"}
+                title={guidesOn ? tr("editor.hide_safe_area_guides") : tr("editor.show_safe_area_guides_thirds_title_safe")}
                 onClick={() => setGuidesOn((v) => !v)}
                 className={`rounded p-1 ${guidesOn ? "bg-brand-600 text-white" : "text-white/75 hover:bg-white/20"}`}
               >
@@ -3740,7 +4642,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
               </button>
               <button
                 type="button"
-                title={stageActualSize ? "Fit the preview to the panel" : "View at 100% pixel size (scrolls)"}
+                title={stageActualSize ? tr("editor.fit_the_preview_to_the_panel") : tr("editor.view_at_100_pixel_size_scrolls")}
                 onClick={() => setStageActualSize((v) => !v)}
                 className={`rounded p-1 ${stageActualSize ? "bg-brand-600 text-white" : "text-white/75 hover:bg-white/20"}`}
               >
@@ -3748,7 +4650,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
               </button>
               <button
                 type="button"
-                title="Save the current frame as a PNG"
+                title={tr("editor.save_the_current_frame_as_a_png")}
                 onClick={() => {
                   stageCanvasRef.current?.toBlob((blob) => {
                     if (blob) downloadBlob(blob, `${(docTitle || "frame").replace(/[^\w.-]+/g, "_")}-${formatTimecode(frame, fps).replace(/:/g, ".")}.png`);
@@ -3760,7 +4662,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
               </button>
               <button
                 type="button"
-                title="Use the current frame as this video's cover (dashboard preview)"
+                title={tr("editor.use_the_current_frame_as_this_videos_cover_d")}
                 onClick={() => {
                   const stage = stageCanvasRef.current;
                   if (!stage) return;
@@ -3771,7 +4673,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                   c.height = h;
                   c.getContext("2d")?.drawImage(stage, 0, 0, w, h);
                   useEditor.getState().setDocMeta({ videoPoster: c.toDataURL("image/jpeg", 0.8) });
-                  setExportMsg("Cover updated from the current frame");
+                  setExportMsg(tr("editor.cover_updated_from_the_current_frame"));
                 }}
                 className="rounded p-1 text-white/75 hover:bg-white/20"
               >
@@ -3779,7 +4681,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
               </button>
               <button
                 type="button"
-                title="Fullscreen preview (Esc exits)"
+                title={tr("editor.fullscreen_preview_esc_exits")}
                 onClick={() => {
                   if (document.fullscreenElement) void document.exitFullscreen();
                   else void stageBoxRef.current?.requestFullscreen();
@@ -3809,7 +4711,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           {/* transport controls */}
           <div className="mt-3 flex items-center gap-1.5">
             <TransportButton
-              title="Step back one frame"
+              title={tr("editor.step_back_one_frame")}
               onClick={() => {
                 setPlaying(false);
                 setPlayhead((p) => Math.max(0, Math.round(p) - 1));
@@ -3818,14 +4720,14 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
               <ChevronLeft size={16} />
             </TransportButton>
             <TransportButton
-              title={playing ? "Pause" : "Play"}
+              title={playing ? tr("editor.pause") : tr("editor.play")}
               onClick={togglePlay}
               accent
             >
               {playing ? <Pause size={16} /> : <Play size={16} />}
             </TransportButton>
             <TransportButton
-              title="Step forward one frame"
+              title={tr("editor.step_forward_one_frame")}
               onClick={() => {
                 setPlaying(false);
                 setPlayhead((p) => Math.min(durationFrames, Math.round(p) + 1));
@@ -3834,7 +4736,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
               <ChevronRight size={16} />
             </TransportButton>
             <TransportButton
-              title="Rewind to start"
+              title={tr("editor.rewind_to_start")}
               onClick={() => {
                 setPlaying(false);
                 setPlayhead(0);
@@ -3852,12 +4754,12 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
               }}
             />
             {project.range && (
-              <TransportButton title="Play just the marked range (stops at the out point)" onClick={playRange}>
+              <TransportButton title={tr("editor.play_just_the_marked_range_stops_at_the_out")} onClick={playRange}>
                 <PlaySquare size={14} />
               </TransportButton>
             )}
             <TransportButton
-              title={loop ? "Stop looping" : project.range ? "Loop the marked range" : "Loop playback"}
+              title={loop ? tr("editor.stop_looping") : project.range ? tr("editor.loop_the_marked_range") : tr("editor.loop_playback")}
               accent={loop}
               onClick={() => setLoop((v) => !v)}
             >
@@ -3866,7 +4768,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             <select
               value={playRate}
               onChange={(e) => setPlayRate(parseFloat(e.target.value))}
-              title="Preview playback speed (exports always render at 1x)"
+              title={tr("editor.preview_playback_speed_exports_always_render")} aria-label={tr("editor.preview_playback_speed_exports_always_render")}
               className="h-8 rounded border border-neutral-300 bg-neutral-200 px-1 text-xs text-neutral-800"
             >
               {[0.25, 0.5, 1, 1.5, 2].map((r) => (
@@ -3877,7 +4779,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
               )}
             </select>
             <TransportButton
-              title={previewMuted ? "Unmute the preview" : "Mute the preview (exports keep sound)"}
+              title={previewMuted ? tr("editor.unmute_the_preview") : tr("editor.mute_the_preview_exports_keep_sound")}
               onClick={() => setPreviewMuted((v) => !v)}
             >
               {previewMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
@@ -3885,12 +4787,12 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             <LevelMeter getLevel={playerLevel} />
             {exportHistory.length > 0 && (
               <div className="relative">
-                <TransportButton title="Export history (re-download finished renders)" onClick={() => setHistoryOpen((v) => !v)}>
+                <TransportButton title={tr("editor.export_history_re_download_finished_renders")} onClick={() => setHistoryOpen((v) => !v)}>
                   <Download size={13} />
                 </TransportButton>
                 {historyOpen && (
                   <div className="absolute bottom-10 right-0 z-40 w-64 rounded-lg border border-neutral-300 bg-neutral-100 p-2 text-xs shadow-2xl">
-                    <div className="mb-1 font-semibold text-neutral-800">Exports</div>
+                    <div className="mb-1 font-semibold text-neutral-800">{tr("editor.exports")}</div>
                     {exportHistory.map((h) => (
                       <div key={h.jobId} className="flex items-center gap-2 py-1">
                         <span className="w-16 shrink-0 font-mono uppercase text-neutral-700">{h.format}</span>
@@ -3918,7 +4820,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                             }}
                             className="rounded bg-neutral-200 px-1.5 py-0.5 text-[10px] text-neutral-800 hover:bg-neutral-300"
                           >
-                            Download
+                            {tr("editor.download")}
                           </button>
                         )}
                       </div>
@@ -3934,15 +4836,15 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                 else setExportDialog(true);
               }}
               disabled={serverExporting}
-              title={exporting ? "Cancel the render" : "Choose a format and export the timeline"}
+              title={exporting ? tr("editor.cancel_the_render") : tr("editor.choose_a_format_and_export_the_timeline")}
               className="ml-auto inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {exporting || serverExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
               {exporting
                 ? `Rendering ${Math.min(100, Math.round((frame / Math.max(1, durationFrames)) * 100))}% (cancel)`
                 : serverExporting
-                  ? "Server render…"
-                  : "Export"}
+                  ? tr("editor.server_render")
+                  : tr("editor.export")}
             </button>
           </div>
           {exportMsg && (
@@ -3959,39 +4861,39 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       <div className="flex flex-wrap items-center gap-2 border-t border-neutral-200 bg-neutral-100 px-3 py-2 text-xs">
         {/* clip actions (require a selection on an unlocked track) */}
         <div className="flex items-center gap-1">
-          <ToolbarButton title="Split at playhead (S)" disabled={editDisabled} onClick={doSplit}>
-            <Scissors size={13} /> Split
+          <ToolbarButton title={tr("editor.split_at_playhead_s")} disabled={editDisabled} onClick={doSplit}>
+            <Scissors size={13} /> {tr("editor.split")}
           </ToolbarButton>
-          <ToolbarButton title="Ripple delete" disabled={editDisabled} onClick={doRippleDelete}>
-            <Trash2 size={13} /> Ripple
+          <ToolbarButton title={tr("editor.ripple_delete")} disabled={editDisabled} onClick={doRippleDelete}>
+            <Trash2 size={13} /> {tr("editor.ripple")}
           </ToolbarButton>
           <span className="flex items-center gap-0.5 rounded-md border border-neutral-200 py-0.5 pl-1.5 pr-0.5">
-            <span className="pr-1 text-[9px] font-semibold uppercase tracking-wide text-neutral-400">Trim</span>
-            <ToolbarButton title="Nudge the in point earlier (or drag the clip's left edge)" disabled={editDisabled} onClick={() => doTrim("in", -TRIM_STEP)}>
-              In-
+            <span className="pr-1 text-[9px] font-semibold uppercase tracking-wide text-neutral-400">{tr("editor.trim")}</span>
+            <ToolbarButton title={tr("editor.nudge_the_in_point_earlier_or_drag_the_clips")} disabled={editDisabled} onClick={() => doTrim("in", -TRIM_STEP)}>
+              {tr("editor.in")}
             </ToolbarButton>
-            <ToolbarButton title="Nudge the in point later" disabled={editDisabled} onClick={() => doTrim("in", TRIM_STEP)}>
-              In+
+            <ToolbarButton title={tr("editor.nudge_the_in_point_later")} disabled={editDisabled} onClick={() => doTrim("in", TRIM_STEP)}>
+              {tr("editor.in_2")}
             </ToolbarButton>
-            <ToolbarButton title="Nudge the out point earlier" disabled={editDisabled} onClick={() => doTrim("out", -TRIM_STEP)}>
-              Out-
+            <ToolbarButton title={tr("editor.nudge_the_out_point_earlier")} disabled={editDisabled} onClick={() => doTrim("out", -TRIM_STEP)}>
+              {tr("editor.out")}
             </ToolbarButton>
-            <ToolbarButton title="Nudge the out point later (or drag the clip's right edge)" disabled={editDisabled} onClick={() => doTrim("out", TRIM_STEP)}>
-              Out+
+            <ToolbarButton title={tr("editor.nudge_the_out_point_later_or_drag_the_clips")} disabled={editDisabled} onClick={() => doTrim("out", TRIM_STEP)}>
+              {tr("editor.out_2")}
             </ToolbarButton>
           </span>
           <ToolbarButton
-            title="Collapse the selected clips into a nested sequence (double-click it to edit inside)"
+            title={tr("editor.collapse_the_selected_clips_into_a_nested_se")}
             disabled={multiIds.size === 0}
             onClick={nestSelection}
           >
-            <Layers size={13} /> Nest
+            <Layers size={13} /> {tr("editor.nest")}
           </ToolbarButton>
         </div>
 
         {/* speed */}
         <label className="flex items-center gap-1 text-neutral-600">
-          Speed
+          {tr("editor.speed")}
           <input
             type="number"
             step={0.1}
@@ -4008,16 +4910,16 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
         {/* transition: an edge selector (in/out) plus a type select, so a
             transition can be attached to EITHER edge of the selected clip (V4). */}
         <label className="flex items-center gap-1 text-neutral-600">
-          Transition
+          {tr("editor.transition")}
           <select
             disabled={editDisabled}
             value={transitionEdge}
             onChange={(e) => setTransitionEdge(e.target.value as "in" | "out")}
-            title="Which edge the transition attaches to"
+            title={tr("editor.which_edge_the_transition_attaches_to")} aria-label={tr("editor.which_edge_the_transition_attaches_to")}
             className="rounded border border-neutral-300 bg-neutral-200 px-1.5 py-1 text-neutral-900 disabled:opacity-40"
           >
-            <option value="in">In</option>
-            <option value="out">Out</option>
+            <option value="in">{tr("editor.in_3")}</option>
+            <option value="out">{tr("editor.out_3")}</option>
           </select>
           <select
             disabled={editDisabled}
@@ -4032,12 +4934,12 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             }}
             className="rounded border border-neutral-300 bg-neutral-200 px-1.5 py-1 text-neutral-900 disabled:opacity-40"
           >
-            <option value="">none...</option>
-            <option value="crossDissolve">Cross dissolve</option>
-            <option value="fade">Fade</option>
-            <option value="wipe">Wipe</option>
-            <option value="slide">Slide</option>
-            <option value="dipToColor">Dip to color</option>
+            <option value="">{tr("editor.none_2")}</option>
+            <option value="crossDissolve">{tr("editor.cross_dissolve")}</option>
+            <option value="fade">{tr("editor.fade")}</option>
+            <option value="wipe">{tr("editor.wipe")}</option>
+            <option value="slide">{tr("editor.slide")}</option>
+            <option value="dipToColor">{tr("editor.dip_to_color")}</option>
           </select>
         </label>
 
@@ -4045,19 +4947,194 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
 
         {/* add tracks */}
         <div className="flex items-center gap-1">
-          <ToolbarButton title="Add video track" onClick={() => addTrack("video")}>
+          <ToolbarButton title={tr("editor.add_video_track")} onClick={() => addTrack("video")}>
             <Film size={13} /> +Video
           </ToolbarButton>
-          <ToolbarButton title="Add audio track" onClick={() => addTrack("audio")}>
+          <ToolbarButton title={tr("editor.add_audio_track")} onClick={() => addTrack("audio")}>
             <Music2 size={13} /> +Audio
           </ToolbarButton>
-          <ToolbarButton title="Add text track" onClick={() => addTrack("text")}>
-            <TypeIcon size={13} /> +Text
+          <ToolbarButton title={tr("editor.add_text_track_title_cards")} onClick={() => addTrack("text")}>
+            <TypeIcon size={13} /> +Text track
           </ToolbarButton>
-          <ToolbarButton title="Add overlay track (draws above video tracks)" onClick={() => addTrack("overlay")}>
+          <ToolbarButton title={tr("editor.add_overlay_track_draws_above_video_tracks")} onClick={() => addTrack("overlay")}>
             <Layers size={13} /> +Overlay
           </ToolbarButton>
+          <div className="relative">
+            <ToolbarButton title={tr("editor.start_from_a_template_adds_ready_made_scenes")} onClick={() => setTemplateMenuOpen((v) => !v)}>
+              <Sparkles size={13} /> {tr("editor.templates")}
+            </ToolbarButton>
+            {templateMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setTemplateMenuOpen(false)} />
+                <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-lg border border-neutral-200 bg-surface p-1 shadow-lg">
+                  {VIDEO_TEMPLATES.map((tpl) => (
+                    <button
+                      key={tpl.id}
+                      type="button"
+                      className="block w-full rounded px-2 py-1.5 text-left hover:bg-neutral-100"
+                      onClick={() => { applyVideoTemplate(tpl); setTemplateMenuOpen(false); }}
+                    >
+                      <span className="block text-xs font-medium text-neutral-800">{tpl.name}</span>
+                      <span className="block text-[10px] leading-tight text-neutral-500">{tpl.description}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          <ToolbarButton title={tr("editor.add_a_solid_background_page_layer_text_image")} onClick={addBackground}>
+            <ImageIcon size={13} /> +Background
+          </ToolbarButton>
+          <div className="relative">
+            <ToolbarButton title={tr("editor.add_a_text_element_heading_subtitle_lower_th")} onClick={() => setTextMenuOpen((v) => !v)}>
+              <TypeIcon size={13} /> +Text
+            </ToolbarButton>
+            {textMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setTextMenuOpen(false)} />
+                <div className="absolute left-0 top-full z-50 mt-1 max-h-[70vh] w-48 overflow-y-auto rounded-lg border border-neutral-200 bg-surface p-1 shadow-lg">
+                  {([
+                    { k: "heading", label: tr("editor.heading") },
+                    { k: "subtitle", label: tr("editor.subtitle") },
+                    { k: "body", label: tr("editor.body_copy") },
+                    { k: "quote", label: tr("editor.quote") },
+                    { k: "lowerThird", label: tr("editor.lower_third") },
+                  ] as const).map(({ k, label }) => (
+                    <button
+                      key={k}
+                      type="button"
+                      className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-neutral-700 hover:bg-neutral-100"
+                      onClick={() => { addTextPreset(k); setTextMenuOpen(false); }}
+                    >
+                      <TypeIcon size={13} className="text-neutral-500" /> {label}
+                    </button>
+                  ))}
+                  <div className="my-1 border-t border-neutral-200" />
+                  <p className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">{tr("editor.font_pairings")}</p>
+                  {videoTextPairings().map((p) => (
+                    <button
+                      key={p.name}
+                      type="button"
+                      className="flex w-full flex-col items-start rounded px-2 py-1.5 text-left hover:bg-neutral-100"
+                      title={`Heading in ${p.headFont}, subheading in ${p.subFont}`}
+                      onClick={() => { addTextPairing(p); setTextMenuOpen(false); }}
+                    >
+                      <span className="text-sm leading-tight text-neutral-800" style={{ fontFamily: `'${p.headFont}', sans-serif` }}>{p.name}</span>
+                      <span className="text-[10px] leading-tight text-neutral-400" style={{ fontFamily: `'${p.subFont}', sans-serif` }}>{p.headFont} + {p.subFont}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          <ToolbarButton title={tr("editor.add_an_image_element_a_workspace_photo_on_th")} onClick={() => setPickingImage(true)}>
+            <ImageIcon size={13} /> +Image
+          </ToolbarButton>
+          <div className="relative">
+            <ToolbarButton title={tr("editor.add_a_shape_element_rectangle_ellipse_line")} onClick={() => setShapeMenuOpen((v) => !v)}>
+              <Shapes size={13} /> +Shape
+            </ToolbarButton>
+            {shapeMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShapeMenuOpen(false)} />
+                <div className="absolute left-0 top-full z-50 mt-1 w-40 rounded-lg border border-neutral-200 bg-surface p-1 shadow-lg">
+                  {([
+                    { k: "rect", label: tr("editor.rectangle"), Icon: Square },
+                    { k: "rounded", label: tr("editor.rounded_rect"), Icon: Square },
+                    { k: "ellipse", label: tr("editor.ellipse"), Icon: Circle },
+                    { k: "triangle", label: tr("editor.triangle"), Icon: Triangle },
+                    { k: "star", label: tr("editor.star"), Icon: Sparkles },
+                    { k: "line", label: tr("editor.divider"), Icon: Minus },
+                  ] as const).map(({ k, label, Icon }) => (
+                    <button
+                      key={k}
+                      type="button"
+                      className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-neutral-700 hover:bg-neutral-100"
+                      onClick={() => { addShapeElement(k); setShapeMenuOpen(false); }}
+                    >
+                      <Icon size={14} className="text-neutral-500" /> {label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          <ToolbarButton title={tr("editor.add_a_new_scene_page_a_timed_page_you_layer")} onClick={addScene}>
+            <Plus size={13} /> +Scene
+          </ToolbarButton>
+          <ToolbarButton title={tr("editor.animate_all_elements_of_the_current_scene_wi")} onClick={() => animateSceneAll()}>
+            <Wand2 size={13} /> {tr("editor.animate_all_2")}
+          </ToolbarButton>
+          <div className="mx-1 h-5 w-px bg-neutral-300" />
+          <button
+            type="button"
+            disabled={!workspaceId}
+            onClick={() => void toggleVoiceover()}
+            title={voRecording ? tr("editor.stop_the_voiceover_and_drop_it_on_the_timeli") : tr("editor.record_a_voiceover_the_timeline_plays_from_t")}
+            className={`flex items-center gap-1 rounded px-2 py-1 text-xs ${voRecording ? "bg-red-600 text-white" : "bg-neutral-200 text-neutral-700 hover:bg-neutral-300"} disabled:opacity-40`}
+          >
+            {voRecording ? <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" /> : <Mic size={13} />}
+            {voRecording ? tr("editor.recording") : tr("editor.voiceover")}
+          </button>
         </div>
+
+        {project && (() => {
+          const scenes = listScenes(project);
+          if (!scenes.length) return null;
+          const curId = sceneAtFrame(project, frame)?.id;
+          return (
+            <>
+              <div className="mx-1 h-5 w-px bg-neutral-300" />
+              <div className="flex max-w-[36vw] items-center gap-1 overflow-x-auto" title={tr("editor.scenes_pages")}>
+                {scenes.map((s, i) => {
+                  const active = s.id === curId;
+                  const txType = project.tracks.flatMap((t) => t.clips).find((c) => c.id === s.clipIds[0])?.transitionIn?.type;
+                  const txAbbr = txType ? ({ fade: "F", crossDissolve: "D", slide: "S", wipe: "W", dipToColor: "C" } as Record<string, string>)[txType] ?? "•" : "–";
+                  return (
+                    <div
+                      key={s.id}
+                      className={`flex shrink-0 items-center gap-0.5 rounded-md border px-1 py-0.5 ${active ? "border-brand-500 bg-brand-50" : "border-neutral-200 bg-surface"}`}
+                    >
+                      <button
+                        type="button"
+                        title={`Jump to scene ${i + 1}`}
+                        onClick={() => setPlayhead(s.startFrame)}
+                        className={`px-1 text-xs font-medium ${active ? "text-brand-ink" : "text-neutral-600 hover:text-neutral-900"}`}
+                      >
+                        {i + 1}
+                      </button>
+                      <input
+                        type="number"
+                        min={0.5}
+                        step={0.5}
+                        title={tr("editor.scene_duration_seconds")} aria-label={tr("editor.scene_duration_seconds")}
+                        defaultValue={(s.durationFrames / (project.fps as number)).toFixed(1)}
+                        key={`${s.id}:${s.durationFrames}`}
+                        onClick={(e) => e.currentTarget.select()}
+                        onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                        onBlur={(e) => { const v = parseFloat(e.target.value); if (Number.isFinite(v) && v >= 0.1) setSceneDuration(s.id, v); }}
+                        className="w-9 rounded border border-neutral-200 bg-surface px-0.5 py-0.5 text-center text-[10px] text-neutral-700 outline-none focus:border-brand-400"
+                      />
+                      <span className="text-[9px] text-neutral-400">s</span>
+                      <button type="button" title={tr("editor.move_scene_left")} disabled={i === 0}
+                        onClick={() => { const o = scenes.map((x) => x.id); [o[i - 1], o[i]] = [o[i], o[i - 1]]; reorderScenes(o); }}
+                        className="px-0.5 text-[10px] text-neutral-400 hover:text-neutral-800 disabled:opacity-30">‹</button>
+                      <button type="button" title={tr("editor.move_scene_right")} disabled={i === scenes.length - 1}
+                        onClick={() => { const o = scenes.map((x) => x.id); [o[i + 1], o[i]] = [o[i], o[i + 1]]; reorderScenes(o); }}
+                        className="px-0.5 text-[10px] text-neutral-400 hover:text-neutral-800 disabled:opacity-30">›</button>
+                      <button type="button" title={`Scene entrance transition: ${txType ?? "none"} (click to change)`} onClick={() => cycleSceneTransition(s.id)}
+                        className={`px-0.5 text-[10px] ${txType ? "text-brand-ink" : "text-neutral-400"} hover:text-neutral-800`}>{txAbbr}</button>
+                      <button type="button" title={tr("editor.duplicate_scene")} onClick={() => duplicateScene(s.id)}
+                        className="px-0.5 text-[10px] text-neutral-400 hover:text-neutral-800">⧉</button>
+                      <button type="button" title={tr("editor.delete_scene")} onClick={() => deleteScene(s.id)}
+                        className="px-0.5 text-[10px] text-neutral-400 hover:text-rose-600">✕</button>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          );
+        })()}
 
         <div className="mx-1 h-5 w-px bg-neutral-300" />
 
@@ -4067,7 +5144,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
         <button
           type="button"
           onClick={() => setCaptionsOpen((v) => !v)}
-          title="Captions: edit cues, export SRT/VTT"
+          title={tr("editor.captions_edit_cues_export_srt_vtt")}
           className={`flex items-center gap-1 rounded px-2 py-1 ${
             captionsOpen ? "bg-brand-600 text-white" : "bg-neutral-200 text-neutral-700 hover:bg-neutral-300"
           }`}
@@ -4079,7 +5156,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           <button
             type="button"
             onClick={clearRange}
-            title="Clear the export range (set with I and O at the playhead)"
+            title={tr("editor.clear_the_export_range_set_with_i_and_o_at_t")}
             className="flex items-center gap-1 rounded bg-brand-600/30 px-2 py-1 text-brand-ink hover:bg-brand-600/50"
           >
             Range {formatTimecode(project.range.startFrame, fps)}-{formatTimecode(project.range.endFrame, fps)} ✕
@@ -4100,7 +5177,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           </ToolbarButton>
           <div className="mx-1 h-5 w-px bg-neutral-300" />
           <ToolbarButton
-            title="Zoom out (anchored on the playhead); Ctrl+wheel zooms at the cursor"
+            title={tr("editor.zoom_out_playhead_hint")}
             onClick={() => applyZoom(pxPerFrame / 1.4)}
           >
             <ZoomOut size={13} />
@@ -4109,19 +5186,19 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             {pxPerFrame.toFixed(2)} px/f
           </span>
           <ToolbarButton
-            title="Zoom in (anchored on the playhead); Ctrl+wheel zooms at the cursor"
+            title={tr("editor.zoom_in_playhead_hint")}
             onClick={() => applyZoom(pxPerFrame * 1.4)}
           >
             <ZoomIn size={13} />
           </ToolbarButton>
-          <ToolbarButton title="Zoom to fit the whole timeline" onClick={zoomToFit}>
+          <ToolbarButton title={tr("editor.zoom_to_fit_the_whole_timeline")} onClick={zoomToFit}>
             <Maximize2 size={13} />
           </ToolbarButton>
           <ToolbarButton title={`Track height (${trackH === 40 ? "compact" : trackH === 56 ? "normal" : "tall"}); click to cycle`} onClick={cycleTrackHeight}>
             <Rows3 size={13} />
           </ToolbarButton>
           <div className="mx-1 h-5 w-px bg-neutral-300" />
-          <ToolbarButton title="Hide the timeline (more room for the preview)" onClick={toggleTimeline}>
+          <ToolbarButton title={tr("editor.hide_the_timeline_more_room_for_the_preview")} onClick={toggleTimeline}>
             <PanelBottomClose size={13} />
           </ToolbarButton>
         </div>
@@ -4133,15 +5210,47 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       {/* ---------------------------------------------------------------- */}
       {captionsOpen && (
         <div className="max-h-44 overflow-y-auto border-t border-neutral-200 bg-neutral-100 px-3 py-2 text-xs">
-          <div className="mb-1.5 flex items-center gap-2">
-            <span className="font-semibold uppercase tracking-wide text-neutral-600">Captions</span>
-            <ToolbarButton title="Add a 2s cue at the playhead" onClick={addCueAtPlayhead}>
-              <Plus size={12} /> Cue at playhead
+          {/* Language tracks (P7.2): switch/add/rename/delete subtitle tracks. */}
+          <div className="mb-1.5 flex flex-wrap items-center gap-2">
+            <span className="text-neutral-500">{tr("editor.language_2")}</span>
+            <select
+              value={activeCap?.id ?? ""}
+              onChange={(e) => setActiveCapId(e.target.value || null)}
+              disabled={capTracks.length === 0}
+              className="rounded border border-neutral-300 bg-surface px-1.5 py-0.5 text-xs disabled:opacity-50"
+              title={tr("editor.subtitle_language_track_to_edit")} aria-label={tr("editor.subtitle_language_track_to_edit")}
+            >
+              {capTracks.length === 0 && <option value="">{tr("editor.none_yet")}</option>}
+              {capTracks.map((t) => (
+                <option key={t.id} value={t.id}>{t.lang || "und"}{t.source === "translated" ? " (translated)" : ""}</option>
+              ))}
+            </select>
+            {activeCap && (
+              <input
+                value={activeCap.lang}
+                onChange={(e) => setActiveCaptionLang(e.target.value)}
+                title={tr("editor.language_tag_bcp_47_e_g_en_es_fr_hi")} aria-label={tr("editor.language_tag_bcp_47_e_g_en_es_fr_hi")}
+                className="w-14 rounded border border-neutral-300 bg-surface px-1.5 py-0.5 text-xs"
+              />
+            )}
+            <ToolbarButton title={tr("editor.add_a_subtitle_language_track")} onClick={() => addCaptionLangTrack("en")}>
+              <Plus size={12} /> {tr("editor.language_2")}
             </ToolbarButton>
-            <ToolbarButton title="Download SubRip subtitles" disabled={!cues.length} onClick={() => downloadCaptions("srt")}>
+            {activeCap && (
+              <ToolbarButton title={tr("editor.remove_this_language_track")} onClick={removeActiveCaptionTrack}>
+                <Trash2 size={12} /> {tr("editor.remove")}
+              </ToolbarButton>
+            )}
+          </div>
+          <div className="mb-1.5 flex items-center gap-2">
+            <span className="font-semibold uppercase tracking-wide text-neutral-600">{tr("editor.captions")}</span>
+            <ToolbarButton title={tr("editor.add_a_2s_cue_at_the_playhead")} onClick={addCueAtPlayhead}>
+              <Plus size={12} /> {tr("editor.cue_at_playhead")}
+            </ToolbarButton>
+            <ToolbarButton title={tr("editor.download_subrip_subtitles")} disabled={!cues.length} onClick={() => downloadCaptions("srt")}>
               <Download size={12} /> SRT
             </ToolbarButton>
-            <ToolbarButton title="Download WebVTT subtitles" disabled={!cues.length} onClick={() => downloadCaptions("vtt")}>
+            <ToolbarButton title={tr("editor.download_webvtt_subtitles")} disabled={!cues.length} onClick={() => downloadCaptions("vtt")}>
               <Download size={12} /> VTT
             </ToolbarButton>
             <label className="flex items-center gap-1 text-neutral-500">
@@ -4150,10 +5259,10 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                 checked={captionStyle.burnIn !== false}
                 onChange={(e) => patchCaptionStyle({ burnIn: e.target.checked })}
               />
-              burn in
+              {tr("editor.burn_in")}
             </label>
             <label className="flex items-center gap-1 text-neutral-500">
-              size
+              {tr("editor.size_2")}
               <input
                 type="number"
                 min={2}
@@ -4166,15 +5275,15 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             </label>
             <input
               type="color"
-              title="Caption color"
+              title={tr("editor.caption_color")} aria-label={tr("editor.caption_color")}
               value={captionStyle.color ?? "#ffffff"}
               onChange={(e) => patchCaptionStyle({ color: e.target.value })}
               className="h-5 w-8 cursor-pointer rounded border border-neutral-300 bg-neutral-200"
             />
-            <span className="text-neutral-400">SRT/VTT for players</span>
+            <span className="text-neutral-400">{tr("editor.srt_vtt_for_players")}</span>
           </div>
           {cues.length === 0 ? (
-            <div className="py-1 text-neutral-400">No cues yet. Move the playhead and add one.</div>
+            <div className="py-1 text-neutral-400">{tr("editor.no_cues_yet_move_the_playhead_and_add_one")}</div>
           ) : (
             cues.map((cue) => (
               <div key={cue.id} className="flex items-center gap-1.5 border-t border-neutral-200/60 py-1">
@@ -4187,7 +5296,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                     const start = Math.max(0, Math.round(parseFloat(e.target.value || "0") * fps));
                     persistCues(cues.map((c) => (c.id === cue.id ? { ...c, startFrame: start, endFrame: Math.max(start + 1, c.endFrame) } : c)));
                   }}
-                  title="Start (seconds)"
+                  title={tr("editor.start_seconds")} aria-label={tr("editor.start_seconds")}
                   className="w-16 rounded border border-neutral-300 bg-neutral-200 px-1 py-0.5 text-neutral-900"
                 />
                 <span className="text-neutral-400">-</span>
@@ -4200,7 +5309,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                     const end = Math.max(cue.startFrame + 1, Math.round(parseFloat(e.target.value || "0") * fps));
                     persistCues(cues.map((c) => (c.id === cue.id ? { ...c, endFrame: end } : c)));
                   }}
-                  title="End (seconds)"
+                  title={tr("editor.end_seconds")} aria-label={tr("editor.end_seconds")}
                   className="w-16 rounded border border-neutral-300 bg-neutral-200 px-1 py-0.5 text-neutral-900"
                 />
                 <input
@@ -4210,7 +5319,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                 />
                 <button
                   type="button"
-                  title="Jump to cue"
+                  title={tr("editor.jump_to_cue")}
                   onClick={() => { setPlaying(false); setPlayhead(cue.startFrame); }}
                   className="rounded p-1 text-neutral-500 hover:bg-neutral-300 hover:text-neutral-900"
                 >
@@ -4218,7 +5327,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                 </button>
                 <button
                   type="button"
-                  title="Delete cue"
+                  title={tr("editor.delete_cue")}
                   onClick={() => persistCues(cues.filter((c) => c.id !== cue.id))}
                   className="rounded p-1 text-neutral-500 hover:bg-neutral-300 hover:text-red-600 dark:hover:text-red-400"
                 >
@@ -4247,7 +5356,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             className="sticky top-0 z-10 flex items-center bg-neutral-100 px-3 text-[10px] uppercase tracking-wide text-neutral-500"
             style={{ height: RULER_HEIGHT }}
           >
-            Tracks
+            {tr("editor.tracks")}
           </div>
           {project.tracks.map((track) => {
             const Icon = KIND_ICON[track.kind];
@@ -4265,7 +5374,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                     key={`name-${track.id}-${track.name ?? ""}`}
                     defaultValue={track.name ?? ""}
                     placeholder={track.kind}
-                    title="Rename track"
+                    title={tr("editor.rename_track")} aria-label={tr("editor.rename_track")}
                     onKeyDown={(e) => {
                       e.stopPropagation();
                       if (e.key === "Enter") (e.target as HTMLInputElement).blur();
@@ -4278,7 +5387,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                   />
                   <button
                     type="button"
-                    title="Move track up"
+                    title={tr("editor.move_track_up")}
                     disabled={project.tracks[0]?.id === track.id}
                     onClick={() => moveTrack(track.id, -1)}
                     className="ml-auto rounded p-0.5 text-neutral-500 hover:bg-neutral-300 hover:text-neutral-900 disabled:cursor-not-allowed disabled:opacity-30"
@@ -4287,7 +5396,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                   </button>
                   <button
                     type="button"
-                    title="Move track down (later tracks draw on top)"
+                    title={tr("editor.move_track_down_later_tracks_draw_on_top")}
                     disabled={project.tracks[project.tracks.length - 1]?.id === track.id}
                     onClick={() => moveTrack(track.id, 1)}
                     className="rounded p-0.5 text-neutral-500 hover:bg-neutral-300 hover:text-neutral-900 disabled:cursor-not-allowed disabled:opacity-30"
@@ -4296,7 +5405,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                   </button>
                   <button
                     type="button"
-                    title="Duplicate track (clips included)"
+                    title={tr("editor.duplicate_track_clips_included")}
                     onClick={() => duplicateTrack(track.id)}
                     className="rounded p-0.5 text-neutral-500 hover:bg-neutral-300 hover:text-neutral-900"
                   >
@@ -4306,7 +5415,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                       undoable patch through the normal persist path. */}
                   <button
                     type="button"
-                    title={track.locked ? "Unlock track" : "Lock track (block edits)"}
+                    title={track.locked ? tr("editor.unlock_track") : tr("editor.lock_track_block_edits")}
                     onClick={() => patchTrack(track.id, { locked: !track.locked })}
                     className={`rounded p-0.5 ${
                       track.locked
@@ -4319,7 +5428,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                   {track.kind !== "audio" && (
                     <button
                       type="button"
-                      title={track.hidden ? "Show track" : "Hide track"}
+                      title={track.hidden ? tr("editor.show_track") : tr("editor.hide_track")}
                       onClick={() => patchTrack(track.id, { hidden: !track.hidden })}
                       className={`rounded p-0.5 ${
                         track.hidden
@@ -4332,7 +5441,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                   )}
                   <button
                     type="button"
-                    title="Add clip at playhead"
+                    title={tr("editor.add_clip_at_playhead")}
                     disabled={track.locked}
                     onClick={() => addClip(track.id)}
                     className="rounded p-0.5 text-neutral-500 hover:bg-neutral-300 hover:text-neutral-900 disabled:cursor-not-allowed disabled:opacity-40"
@@ -4341,7 +5450,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                   </button>
                   <button
                     type="button"
-                    title={track.clips.length ? `Delete track (${track.clips.length} clips)` : "Delete track"}
+                    title={track.clips.length ? `Delete track (${track.clips.length} clips)` : tr("editor.delete_track")}
                     disabled={track.locked}
                     onClick={() => (track.clips.length ? setConfirmDeleteTrack(track) : removeTrack(track.id))}
                     className="rounded p-0.5 text-neutral-500 hover:bg-neutral-300 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:text-red-400"
@@ -4353,7 +5462,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
-                      title={track.muted ? "Unmute" : "Mute"}
+                      title={track.muted ? tr("editor.unmute") : tr("editor.mute")}
                       onClick={() => patchTrack(track.id, { muted: !track.muted })}
                       className={`rounded p-0.5 ${
                         track.muted ? "bg-red-600 text-white" : "text-neutral-500 hover:bg-neutral-300"
@@ -4363,7 +5472,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                     </button>
                     <button
                       type="button"
-                      title="Solo"
+                      title={tr("editor.solo")}
                       onClick={() => patchTrack(track.id, { solo: !track.solo })}
                       className={`rounded px-1 py-0.5 text-[10px] font-bold ${
                         track.solo ? "bg-amber-500 text-black" : "text-neutral-500 hover:bg-neutral-300"
@@ -4377,7 +5486,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                       max={6}
                       step={1}
                       value={track.gainDb ?? 0}
-                      title={`Gain ${track.gainDb ?? 0} dB`}
+                      title={`Gain ${track.gainDb ?? 0} dB`} aria-label={`Gain ${track.gainDb ?? 0} dB`}
                       // Drag the slider (or arrow-key it) against the local draft
                       // (visible live, not persisted per tick), then commit ONCE on
                       // release so the whole gesture is a single undo step. We do
@@ -4398,7 +5507,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                       max={1}
                       step={0.1}
                       value={track.pan ?? 0}
-                      title={`Pan ${(track.pan ?? 0) === 0 ? "center" : (track.pan ?? 0) < 0 ? "left" : "right"} (${track.pan ?? 0}); double-click to center`}
+                      title={`Pan ${(track.pan ?? 0) === 0 ? "center" : (track.pan ?? 0) < 0 ? "left" : "right"} (${track.pan ?? 0}); double-click to center`} aria-label={`Pan ${(track.pan ?? 0) === 0 ? "center" : (track.pan ?? 0) < 0 ? "left" : "right"} (${track.pan ?? 0}); double-click to center`}
                       onChange={(e) => draftPatchTrack(track.id, { pan: parseFloat(e.target.value) || undefined })}
                       onMouseUp={commitDraft}
                       onBlur={commitDraft}
@@ -4624,7 +5733,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                   const label =
                     clip.name ??
                     (clip.sequenceId
-                      ? `⧉ ${sequenceNames?.[clip.sequenceId] ?? "Sequence"}`
+                      ? `⧉ ${sequenceNames?.[clip.sequenceId] ?? tr("editor.sequence")}`
                       : asset?.filename ?? clip.title?.text ?? clip.nodeId ?? clip.id);
                   const art = clip.assetId ? clipArt[clip.assetId] : undefined;
                   const vidWave = clip.assetId ? waveArt[clip.assetId] : undefined;
@@ -4693,7 +5802,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                       <div className="flex items-center gap-1 truncate bg-black/35 px-1.5 py-0.5 font-medium">
                         {clip.locked && <Lock size={9} className="shrink-0" />}
                         <span className="truncate">{label}</span>
-                        {clip.disabled && <span className="shrink-0 rounded bg-black/50 px-1 text-[8px] uppercase">off</span>}
+                        {clip.disabled && <span className="shrink-0 rounded bg-black/50 px-1 text-[8px] uppercase">{tr("editor.off")}</span>}
                       </div>
                       {/* volume envelope (gain keyframes), drawn over the waveform */}
                       {gainKfs && gainKfs.length > 0 && (
@@ -4802,12 +5911,12 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                         <>
                           <div
                             onPointerDown={(e) => onClipPointerDown(e, track, clip, "trim-in")}
-                            title="Drag to trim the in point (Cmd/Ctrl-drag retimes)"
+                            title={tr("editor.drag_to_trim_the_in_point_cmd_ctrl_drag_reti")}
                             className="absolute inset-y-0 left-0 w-1.5 cursor-ew-resize hover:bg-white/50"
                           />
                           <div
                             onPointerDown={(e) => onClipPointerDown(e, track, clip, "trim-out")}
-                            title="Drag to trim the out point (Cmd/Ctrl-drag retimes)"
+                            title={tr("editor.drag_to_trim_the_out_point_cmd_ctrl_drag_ret")}
                             className="absolute inset-y-0 right-0 w-1.5 cursor-ew-resize hover:bg-white/50"
                           />
                         </>
@@ -4818,7 +5927,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                         <>
                           <div
                             onPointerDown={(e) => onClipPointerDown(e, track, clip, "fade-in")}
-                            title={track.kind === "audio" ? "Drag to set the fade-in" : "Drag to set the in transition"}
+                            title={track.kind === "audio" ? tr("editor.drag_to_set_the_fade_in") : tr("editor.drag_to_set_the_in_transition")}
                             className="absolute top-0 z-10 h-2.5 w-2.5 -translate-x-1/2 cursor-ew-resize rounded-full border border-neutral-950/80 bg-neutral-100/90 hover:scale-125 hover:bg-neutral-950"
                             style={{
                               left: Math.min(
@@ -4829,7 +5938,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                           />
                           <div
                             onPointerDown={(e) => onClipPointerDown(e, track, clip, "fade-out")}
-                            title={track.kind === "audio" ? "Drag to set the fade-out" : "Drag to set the out transition"}
+                            title={track.kind === "audio" ? tr("editor.drag_to_set_the_fade_out") : tr("editor.drag_to_set_the_out_transition")}
                             className="absolute top-0 z-10 h-2.5 w-2.5 translate-x-1/2 cursor-ew-resize rounded-full border border-neutral-950/80 bg-neutral-100/90 hover:scale-125 hover:bg-neutral-950"
                             style={{
                               right: Math.min(
@@ -4863,7 +5972,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                   );
                 })}
                 {track.clips.length === 0 && (
-                  <div className="pointer-events-none flex h-full items-center px-2 text-[10px] text-neutral-300">
+                  <div className="pointer-events-none flex h-full items-center px-2 text-[10px] text-neutral-400">
                     empty &middot; use + to add a clip
                   </div>
                 )}
@@ -4910,7 +6019,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           </span>
           <button
             type="button"
-            title="Show the timeline"
+            title={tr("editor.show_the_timeline")}
             onPointerDown={(e) => {
               if (e.button !== 0) return;
               railPressRef.current = performance.now();
@@ -4934,6 +6043,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       {/* ---------------------------------------------------------------- */}
       {inspectorOpen ? (
         <aside
+          aria-label={tr("editor.inspector")}
           className="relative flex shrink-0 flex-col border-l border-neutral-200 bg-neutral-100"
           style={{ width: inspectorW }}
         >
@@ -4941,16 +6051,16 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             onPointerDown={onSideResizeDown("right")}
             onPointerMove={onSideResizeMove}
             onPointerUp={onSideResizeUp}
-            title="Drag to resize the inspector; double-click to reset"
+            title={tr("editor.drag_resize_inspector")}
             className="absolute inset-y-0 -left-0.5 z-20 w-1.5 cursor-col-resize hover:bg-brand-600/60"
           />
           <div className="flex items-center justify-between border-b border-neutral-200 px-3 py-2">
             <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-700">
-              {selected ? "Clip inspector" : "Project settings"}
+              {selected ? tr("editor.clip_inspector") : tr("editor.project_settings")}
             </span>
             <button
               type="button"
-              title="Collapse inspector"
+              title={tr("editor.collapse_inspector")}
               onPointerDown={(e) => {
                 if (e.button !== 0) return;
                 railPressRef.current = performance.now();
@@ -4975,9 +6085,9 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                 assetLabel={
                   (selected.clip.assetId ? assetMap.get(selected.clip.assetId)?.filename : undefined) ??
                   (selected.clip.sequenceId
-                    ? (sequenceNames?.[selected.clip.sequenceId] ?? "Sequence")
+                    ? (sequenceNames?.[selected.clip.sequenceId] ?? tr("editor.sequence"))
                     : undefined) ??
-                  (selected.track.kind === "text" ? "Title" : "Clip")
+                  (selected.track.kind === "text" ? tr("editor.title") : tr("editor.clip"))
                 }
                 mediaDims={selected.clip.assetId ? assetDims[selected.clip.assetId] : undefined}
                 editDisabled={editDisabled}
@@ -4985,6 +6095,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                 onSetSpeed={doSetSpeed}
                 onSetTransition={setTransition}
                 onSetTransitionDuration={setTransitionDuration}
+                onSetTransitionDirection={setTransitionDirection}
                 onSetClipGainDb={setClipGainDb}
                 onSetFades={setClipFades}
                 onSetTitle={setClipTitle}
@@ -5000,19 +6111,19 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             ) : (
               <div className="flex flex-col gap-3 p-3 text-xs">
                 <div className="text-[11px] leading-snug text-neutral-500">
-                  Select a clip to edit it. These settings apply to the whole video.
+                  {tr("editor.select_a_clip_to_edit_it_these_settings_appl")}
                 </div>
                 {seqPath.length > 0 ? (
-                  <InspectorSection title="Stage" icon={Film}>
+                  <InspectorSection title={tr("editor.stage")} icon={Film}>
                     <div className="text-[11px] leading-snug text-neutral-500">
                       A nested sequence renders inside its parent clip: it follows the main
                       timeline&apos;s stage size, background, and frame rate.
                     </div>
                   </InspectorSection>
                 ) : (
-                <InspectorSection title="Stage" icon={Film}>
+                <InspectorSection title={tr("editor.stage")} icon={Film}>
                   <label className="flex items-center justify-between gap-2 text-neutral-600">
-                    <span>Size</span>
+                    <span>{tr("editor.size")}</span>
                     <select
                       value={`${project.stage.width}x${project.stage.height}`}
                       onChange={(e) => {
@@ -5021,10 +6132,10 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                       }}
                       className="rounded border border-neutral-300 bg-neutral-200 px-1.5 py-1 text-neutral-900"
                     >
-                      {STAGE_PRESETS.map((p) => (
+                      {stagePresets().map((p) => (
                         <option key={p.value} value={p.value}>{p.label}</option>
                       ))}
-                      {!STAGE_PRESETS.some((p) => p.value === `${project.stage.width}x${project.stage.height}`) && (
+                      {!stagePresets().some((p) => p.value === `${project.stage.width}x${project.stage.height}`) && (
                         <option value={`${project.stage.width}x${project.stage.height}`}>
                           {project.stage.width}x{project.stage.height}
                         </option>
@@ -5032,7 +6143,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                     </select>
                   </label>
                   <label className="flex items-center justify-between gap-2 text-neutral-600">
-                    <span>Custom</span>
+                    <span>{tr("editor.custom_2")}</span>
                     <span className="flex items-center gap-1">
                       <input
                         key={`w-${project.stage.width}`}
@@ -5040,7 +6151,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                         min={16}
                         max={7680}
                         defaultValue={project.stage.width}
-                        title="Width (px); commits on Enter or focus-out"
+                        title={tr("editor.stage_width_px_hint")} aria-label={tr("editor.stage_width_px_hint")}
                         onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
                         onBlur={(e) => {
                           const w = clampStageDim(parseInt(e.target.value, 10) || project.stage.width);
@@ -5055,7 +6166,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                         min={16}
                         max={7680}
                         defaultValue={project.stage.height}
-                        title="Height (px); commits on Enter or focus-out"
+                        title={tr("editor.stage_height_px_hint")} aria-label={tr("editor.stage_height_px_hint")}
                         onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
                         onBlur={(e) => {
                           const h = clampStageDim(parseInt(e.target.value, 10) || project.stage.height);
@@ -5065,7 +6176,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                       />
                       <button
                         type="button"
-                        title="Swap orientation (portrait/landscape)"
+                        title={tr("editor.swap_orientation_portrait_landscape")}
                         onClick={() => setStageSize(project.stage.height, project.stage.width)}
                         className="rounded bg-neutral-200 px-1.5 py-0.5 text-neutral-700 hover:bg-neutral-300"
                       >
@@ -5074,11 +6185,11 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                     </span>
                   </label>
                   <label className="flex items-center justify-between gap-2 text-neutral-600">
-                    <span>Frame rate</span>
+                    <span>{tr("editor.frame_rate")}</span>
                     <select
                       value={fps}
                       onChange={(e) => setProjectFps(Number(e.target.value) as Fps)}
-                      title="Clips re-time on change so wall-clock timing holds"
+                      title={tr("editor.clips_re_time_on_change_so_wall_clock_timing")} aria-label={tr("editor.clips_re_time_on_change_so_wall_clock_timing")}
                       className="rounded border border-neutral-300 bg-neutral-200 px-1.5 py-1 text-neutral-900"
                     >
                       {[24, 25, 30, 50, 60].map((v) => (
@@ -5087,19 +6198,19 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                     </select>
                   </label>
                   <label className="flex items-center justify-between gap-2 text-neutral-600">
-                    <span>Preview quality</span>
+                    <span>{tr("editor.preview_quality")}</span>
                     <select
                       value={previewQuality}
                       onChange={(e) => setPreviewQuality(e.target.value === "original" ? "original" : "auto")}
-                      title="Auto scrubs the 540p preview proxy when one exists; exports always use originals"
+                      title={tr("editor.preview_proxy_scrub_hint")} aria-label={tr("editor.preview_proxy_scrub_hint")}
                       className="rounded border border-neutral-300 bg-neutral-200 px-1.5 py-1 text-neutral-900"
                     >
-                      <option value="auto">Auto (proxy)</option>
-                      <option value="original">Original</option>
+                      <option value="auto">{tr("editor.auto_proxy")}</option>
+                      <option value="original">{tr("editor.original")}</option>
                     </select>
                   </label>
                   <label className="flex items-center justify-between gap-2 text-neutral-600">
-                    <span>Background</span>
+                    <span>{tr("editor.background")}</span>
                     <span className="flex items-center gap-1.5">
                       <input
                         type="color"
@@ -5107,26 +6218,26 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                         onChange={(e) =>
                           persist({ ...project, background: e.target.value === "#000000" ? undefined : e.target.value })
                         }
-                        title="Shows behind clips and through letterboxed ones"
+                        title={tr("editor.shows_behind_clips_and_through_letterboxed_o")} aria-label={tr("editor.shows_behind_clips_and_through_letterboxed_o")}
                         className="h-6 w-10 cursor-pointer rounded border border-neutral-300 bg-neutral-200"
                       />
-                      {project.background && (
+                      {project.background && project.background !== "#ffffff" && (
                         <button
                           type="button"
-                          onClick={() => persist({ ...project, background: undefined })}
-                          title="Back to black"
+                          onClick={() => persist({ ...project, background: "#ffffff" })}
+                          title={tr("editor.reset_to_white")}
                           className="rounded bg-neutral-200 px-1.5 py-0.5 text-[10px] text-neutral-700 hover:bg-neutral-300"
                         >
-                          Reset
+                          {tr("editor.reset")}
                         </button>
                       )}
                     </span>
                   </label>
                 </InspectorSection>
                 )}
-                <InspectorSection title="Audio" icon={Volume2}>
+                <InspectorSection title={tr("editor.audio")} icon={Volume2}>
                   <label className="flex items-center justify-between gap-2 text-neutral-600">
-                    <span>Master volume</span>
+                    <span>{tr("editor.master_volume")}</span>
                     <span className="flex items-center gap-2">
                       <input
                         type="range"
@@ -5165,19 +6276,19 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                     return (
                       <>
                         <label className="flex items-center justify-between gap-2 text-neutral-600">
-                          <span>Auto-duck</span>
+                          <span>{tr("editor.auto_duck")}</span>
                           <input
                             type="checkbox"
                             checked={!!d}
                             disabled={audioish.length < 2}
-                            title={audioish.length < 2 ? "Needs two tracks that carry audio" : "Lower the music under the voice automatically"}
+                            title={audioish.length < 2 ? tr("editor.needs_two_tracks_that_carry_audio") : tr("editor.lower_the_music_under_the_voice_automaticall")} aria-label={audioish.length < 2 ? tr("editor.needs_two_tracks_that_carry_audio") : tr("editor.lower_the_music_under_the_voice_automaticall")}
                             onChange={(e) => (e.target.checked ? setDuck({}) : setDuck(null))}
                           />
                         </label>
                         {d && (
                           <>
                             <label className="flex items-center justify-between gap-2 text-neutral-600">
-                              <span>Music track</span>
+                              <span>{tr("editor.music_track")}</span>
                               <select
                                 value={d.musicTrackId}
                                 onChange={(e) => setDuck({ musicTrackId: e.target.value })}
@@ -5189,7 +6300,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                               </select>
                             </label>
                             <label className="flex items-center justify-between gap-2 text-neutral-600">
-                              <span>Voice track</span>
+                              <span>{tr("editor.voice_track")}</span>
                               <select
                                 value={d.voiceTrackId}
                                 onChange={(e) => setDuck({ voiceTrackId: e.target.value })}
@@ -5201,7 +6312,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                               </select>
                             </label>
                             <label className="flex items-center justify-between gap-2 text-neutral-600">
-                              <span>Duck by</span>
+                              <span>{tr("editor.duck_by")}</span>
                               <span className="flex items-center gap-1">
                                 <input
                                   type="number"
@@ -5211,11 +6322,11 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                                   onChange={(e) => setDuck({ amountDb: Math.max(-36, Math.min(-1, parseInt(e.target.value, 10) || -12)) })}
                                   className="w-14 rounded border border-neutral-300 bg-neutral-200 px-1 py-0.5 text-right text-neutral-900"
                                 />
-                                dB
+                                {tr("editor.db")}
                               </span>
                             </label>
                             <label className="flex items-center justify-between gap-2 text-neutral-600">
-                              <span>Attack / release</span>
+                              <span>{tr("editor.attack_release")}</span>
                               <span className="flex items-center gap-1">
                                 <input
                                   type="number"
@@ -5234,7 +6345,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                                   onChange={(e) => setDuck({ releaseMs: Math.max(10, Math.min(5000, parseInt(e.target.value, 10) || 400)) })}
                                   className="w-14 rounded border border-neutral-300 bg-neutral-200 px-1 py-0.5 text-right text-neutral-900"
                                 />
-                                ms
+                                {tr("editor.ms")}
                               </span>
                             </label>
                           </>
@@ -5243,15 +6354,15 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                     );
                   })()}
                 </InspectorSection>
-                <InspectorSection title="Timeline" icon={Gauge}>
+                <InspectorSection title={tr("editor.timeline")} icon={Gauge}>
                   <label className="flex items-center justify-between gap-2 text-neutral-600">
-                    <span>Duration</span>
+                    <span>{tr("editor.duration")}</span>
                     <span className="flex items-center gap-1">
                       <input
                         key={`dur-${durationFrames}`}
                         type="text"
                         defaultValue={formatTimecode(durationFrames, fps)}
-                        title="Type a time (mm:ss or mm:ss:ff) to extend the timeline with trailing space; shorter than the clips snaps back to the clip extent"
+                        title={tr("editor.timeline_extend_time_hint")} aria-label={tr("editor.timeline_extend_time_hint")}
                         onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
                         onBlur={(e) => {
                           const f = parseTimecode(e.target.value, fps);
@@ -5262,21 +6373,21 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                         className="w-24 rounded border border-neutral-300 bg-neutral-200 px-1 py-0.5 text-right font-mono tabular-nums text-neutral-900"
                       />
                       {project.minDurationFrames !== undefined && (
-                        <span className="text-[9px] text-neutral-500" title="Trailing space after the last clip">
-                          fixed
+                        <span className="text-[9px] text-neutral-500" title={tr("editor.trailing_space_after_the_last_clip")}>
+                          {tr("editor.fixed")}
                         </span>
                       )}
                     </span>
                   </label>
-                  <ReadoutRow label="Tracks" value={`${project.tracks.length}`} />
+                  <ReadoutRow label={tr("editor.tracks")} value={`${project.tracks.length}`} />
                   {project.range && (
                     <ReadoutRow
-                      label="Range"
+                      label={tr("editor.range")}
                       value={`${formatTimecode(project.range.startFrame, fps)} - ${formatTimecode(project.range.endFrame, fps)}`}
                     />
                   )}
                   {(project.markers?.length ?? 0) > 0 && (
-                    <ReadoutRow label="Markers" value={`${project.markers!.length}`} />
+                    <ReadoutRow label={tr("editor.markers")} value={`${project.markers!.length}`} />
                   )}
                 </InspectorSection>
               </div>
@@ -5286,7 +6397,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       ) : (
         <button
           type="button"
-          title="Open the clip inspector"
+          title={tr("editor.open_the_clip_inspector")}
           onPointerDown={(e) => {
             if (e.button !== 0) return;
             railPressRef.current = performance.now();
@@ -5300,7 +6411,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
         >
           <PanelRightOpen size={15} className="pointer-events-none" />
           <span className="pointer-events-none text-[9px] font-semibold uppercase tracking-wide [writing-mode:vertical-rl]">
-            Inspector
+            {tr("editor.inspector")}
           </span>
         </button>
       )}
@@ -5313,13 +6424,13 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
           onClick={() => setConfirmDeleteAsset(null)}
           role="dialog"
-          aria-label="Delete upload"
+          aria-label={tr("editor.delete_upload")}
         >
           <div
             className="w-80 rounded-lg border border-neutral-300 bg-neutral-100 p-4 text-xs shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-2 text-sm font-semibold text-neutral-900">Delete upload?</div>
+            <div className="mb-2 text-sm font-semibold text-neutral-900">{tr("editor.delete_upload_2")}</div>
             <p className="mb-3 leading-snug text-neutral-600">
               &ldquo;{confirmDeleteAsset.filename ?? confirmDeleteAsset.id}&rdquo; will be removed from the
               workspace for every design that uses it. Clips referencing it will stop playing.
@@ -5330,14 +6441,14 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                 onClick={() => setConfirmDeleteAsset(null)}
                 className="rounded-md bg-neutral-200 px-3 py-1.5 font-medium text-neutral-800 hover:bg-neutral-300"
               >
-                Cancel
+                {tr("editor.cancel")}
               </button>
               <button
                 type="button"
                 onClick={() => void doDeleteAsset()}
                 className="rounded-md bg-red-600 px-3 py-1.5 font-medium text-white hover:bg-red-700"
               >
-                Delete
+                {tr("editor.delete")}
               </button>
             </div>
           </div>
@@ -5353,9 +6464,9 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
             className="max-h-[70vh] w-[24rem] overflow-y-auto rounded-xl border border-neutral-300 bg-neutral-100 p-4 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-2 text-sm font-semibold text-neutral-900">Replace media</div>
+            <div className="mb-2 text-sm font-semibold text-neutral-900">{tr("editor.replace_media")}</div>
             <p className="mb-2 text-[11px] text-neutral-500">
-              The clip keeps its position, trim, and effects; only the footage swaps.
+              {tr("editor.replace_footage_hint")}
             </p>
             {(() => {
               const track = project.tracks.find((t) => t.id === replaceTarget.trackId);
@@ -5386,13 +6497,13 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
           onClick={() => setConfirmDeleteTrack(null)}
           role="dialog"
-          aria-label="Delete track"
+          aria-label={tr("editor.delete_track")}
         >
           <div
             className="w-80 rounded-lg border border-neutral-300 bg-neutral-100 p-4 text-xs shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-2 text-sm font-semibold text-neutral-900">Delete track?</div>
+            <div className="mb-2 text-sm font-semibold text-neutral-900">{tr("editor.delete_track_2")}</div>
             <p className="mb-3 leading-snug text-neutral-600">
               &ldquo;{confirmDeleteTrack.name ?? confirmDeleteTrack.kind}&rdquo; holds{" "}
               {confirmDeleteTrack.clips.length} clip{confirmDeleteTrack.clips.length === 1 ? "" : "s"}; deleting the
@@ -5404,7 +6515,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                 onClick={() => setConfirmDeleteTrack(null)}
                 className="rounded-md bg-neutral-200 px-3 py-1.5 font-medium text-neutral-800 hover:bg-neutral-300"
               >
-                Cancel
+                {tr("editor.cancel")}
               </button>
               <button
                 type="button"
@@ -5414,7 +6525,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                 }}
                 className="rounded-md bg-red-600 px-3 py-1.5 font-medium text-white hover:bg-red-700"
               >
-                Delete track
+                {tr("editor.delete_track")}
               </button>
             </div>
           </div>
@@ -5431,7 +6542,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
           durationFrames={durationFrames}
           fps={fps}
           stagePixels={project.stage.width * project.stage.height}
-          captionsPresent={(project.captions?.[0]?.cues.length ?? 0) > 0}
+          captionsPresent={(project.captions ?? []).some((t) => t.cues.length > 0)}
           audioTracks={project.tracks
             .filter((t) => t.kind === "audio" || t.kind === "video")
             .map((t) => ({ id: t.id, label: t.name ?? t.kind }))}
@@ -5458,6 +6569,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
               multiCount={multiIds.size}
               hasClipboard={hasClipboard}
               detectingScenes={detectingScenes}
+              detectingBeats={detectingBeats}
               close={() => setCtxMenu(null)}
               actions={{
                 pasteAt: (f) => { setPlayhead(f); pasteClip(f); },
@@ -5475,6 +6587,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                 crossDissolve: crossDissolveAtCut,
                 detachAudio,
                 detectScenes: () => void detectScenes(),
+                detectBeats: () => void detectBeats(),
                 deleteSelection: deleteSelected,
                 rippleDelete: doRippleDelete,
                 unlink: unlinkGroup,
@@ -5490,35 +6603,35 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       {/* ---------------------------------------------------------------- */}
       {/* MEDIA PICKER: bind an uploaded video/audio asset as a new clip.   */}
       {/* ---------------------------------------------------------------- */}
-      {pickerTrackId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setPickerTrackId(null)}>
+      {(pickerTrackId || pickingImage) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => { setPickerTrackId(null); setPickingImage(false); }}>
           <div
             className="max-h-[70vh] w-[28rem] overflow-y-auto rounded-xl border border-neutral-300 bg-neutral-100 p-4 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-sm font-semibold text-neutral-900">Add media to track</span>
+              <span className="text-sm font-semibold text-neutral-900">{pickingImage ? tr("editor.add_an_image") : tr("editor.add_media_to_track")}</span>
               <button
                 type="button"
-                onClick={() => setPickerTrackId(null)}
+                onClick={() => { setPickerTrackId(null); setPickingImage(false); }}
                 className="rounded p-1 text-neutral-600 hover:bg-neutral-200 hover:text-neutral-900"
               >
                 ✕
               </button>
             </div>
             {(() => {
-              const track = project.tracks.find((t) => t.id === pickerTrackId);
-              // Strictly typed lanes: audio tracks take audio, video/overlay
+              // Image picker feeds the element path; the track picker feeds media
+              // clips. Strictly typed lanes: audio tracks take audio, video/overlay
               // tracks take video (an audio file on a video lane would render
               // black frames whenever it is the top clip).
-              const wanted = track?.kind === "audio" ? "audio" : "video";
-              const options = assets.filter((a) => a.kind === wanted);
-              if (!options.length) {
+              const wanted = pickingImage ? "image" : project.tracks.find((t) => t.id === pickerTrackId)?.kind === "audio" ? "audio" : "video";
+              const options = (pickingImage ? imageList : assets).filter((a) => a.kind === wanted);
+              if (!options.length && !pickingImage) {
                 return (
                   <div className="py-6 text-center text-xs text-neutral-500">
                     No {wanted} uploads in this workspace yet.
                     <br />
-                    Upload media (or record a clip) in the design editor&apos;s Uploads panel.
+                    {tr("editor.upload_media_in_uploads_panel")}
                   </div>
                 );
               }
@@ -5526,15 +6639,59 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
                 <button
                   key={a.id}
                   type="button"
-                  onClick={() => void addAssetClip(pickerTrackId, a)}
+                  onClick={() => {
+                    if (pickingImage) { addImageElement(a); setPickingImage(false); }
+                    else if (pickerTrackId) void addAssetClip(pickerTrackId, a);
+                  }}
                   className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-neutral-800 hover:bg-neutral-200"
                 >
-                  {a.kind === "video" ? <Film size={14} className="shrink-0 text-violet-400" /> : <Music2 size={14} className="shrink-0 text-emerald-400" />}
+                  {a.kind === "video" ? <Film size={14} className="shrink-0 text-violet-400" /> : a.kind === "audio" ? <Music2 size={14} className="shrink-0 text-emerald-400" /> : <ImageIcon size={14} className="shrink-0 text-sky-400" />}
                   <span className="min-w-0 flex-1 truncate">{a.filename ?? a.id}</span>
                   <span className="shrink-0 text-neutral-500">{a.kind}</span>
                 </button>
               ));
             })()}
+            {/* Stock photos: search a free library and import on pick (P3.4). */}
+            {pickingImage && (
+              <div className="mt-3 border-t border-neutral-300 pt-3">
+                <div className="mb-2 flex items-center gap-2">
+                  <ImageIcon size={13} className="shrink-0 text-neutral-500" />
+                  <input
+                    type="text"
+                    value={stockQuery}
+                    onChange={(e) => setStockQuery(e.target.value)}
+                    placeholder={tr("editor.search_free_stock_photos")}
+                    className="min-w-0 flex-1 rounded border border-neutral-300 bg-surface px-2 py-1 text-xs outline-none focus:border-brand-400"
+                  />
+                  {stockBusy && <Loader2 size={13} className="shrink-0 animate-spin text-neutral-500" />}
+                </div>
+                {stockResults.length ? (
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {stockResults.map((a) => (
+                      <button
+                        key={a.id}
+                        type="button"
+                        disabled={stockBusy}
+                        onClick={() => void addStockImage(a)}
+                        title={a.title}
+                        className="grid aspect-square w-full place-items-center overflow-hidden rounded-lg border border-neutral-200 hover:border-brand-300 disabled:opacity-50"
+                      >
+                        {a.previewUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- remote stock thumbnail preview
+                          <img src={a.previewUrl} alt={a.title} className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="px-1 text-center text-[10px] text-neutral-500">{a.title}</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-3 text-center text-[11px] text-neutral-500">
+                    {stockQuery.trim() ? tr("editor.no_photos_found") : tr("editor.type_to_search_free_stock_photos")}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -5554,6 +6711,7 @@ function CtxMenuItems(props: {
   multiCount: number;
   hasClipboard: boolean;
   detectingScenes: boolean;
+  detectingBeats: boolean;
   close: () => void;
   actions: {
     pasteAt: (frame: number) => void;
@@ -5571,6 +6729,7 @@ function CtxMenuItems(props: {
     crossDissolve: (trackId: string, clipId: string) => void;
     detachAudio: () => void;
     detectScenes: () => void;
+    detectBeats: () => void;
     deleteSelection: () => void;
     rippleDelete: () => void;
     unlink: (groupId: string) => void;
@@ -5598,10 +6757,10 @@ function CtxMenuItems(props: {
     const nearMarker = (project.markers ?? []).some((m) => Math.abs(m - menu.atFrame) <= 2);
     return (
       <>
-        {item(nearMarker ? "Remove marker" : "Add marker here", () => actions.toggleMarkerAt(menu.atFrame))}
-        {item("Start export range here", () => actions.setRangeEdge("in", menu.atFrame))}
-        {item("End export range here", () => actions.setRangeEdge("out", menu.atFrame))}
-        {item("Clear export range", actions.clearRange, !actions.hasRange)}
+        {item(nearMarker ? tr("editor.remove_marker") : tr("editor.add_marker_here"), () => actions.toggleMarkerAt(menu.atFrame))}
+        {item(tr("editor.start_export_range_here"), () => actions.setRangeEdge("in", menu.atFrame))}
+        {item(tr("editor.end_export_range_here"), () => actions.setRangeEdge("out", menu.atFrame))}
+        {item(tr("editor.clear_export_range"), actions.clearRange, !actions.hasRange)}
       </>
     );
   }
@@ -5614,41 +6773,44 @@ function CtxMenuItems(props: {
     const inGap = !!nextClip && prevEnd > 0 && nextClip.startFrame > prevEnd;
     return (
       <>
-        {item("Paste here", () => actions.pasteAt(menu.atFrame), !props.hasClipboard)}
-        {item("Close gap", () => actions.closeGap(track.id, menu.atFrame), track.locked || !inGap)}
-        {item("Add media…", () => actions.addClip(track.id), track.locked)}
+        {item(tr("editor.paste_here"), () => actions.pasteAt(menu.atFrame), !props.hasClipboard)}
+        {item(tr("editor.close_gap"), () => actions.closeGap(track.id, menu.atFrame), track.locked || !inGap)}
+        {item(tr("editor.add_media"), () => actions.addClip(track.id), track.locked)}
       </>
     );
   }
   const insidePlayhead = frame > clip.startFrame && frame < clipEndFrame(clip);
   const abutting = track.clips.some((c) => c.id !== clip.id && c.startFrame === clipEndFrame(clip));
   const items = [
-    item("Split at playhead", actions.split, track.locked || !insidePlayhead),
-    item("Copy", actions.copy),
-    item("Duplicate", () => actions.duplicate(track.id, clip.id), track.locked),
-    item("Nest into sequence", actions.nest, track.locked || multiCount === 0),
+    item(tr("editor.split_at_playhead"), actions.split, track.locked || !insidePlayhead),
+    item(tr("editor.copy"), actions.copy),
+    item(tr("editor.duplicate"), () => actions.duplicate(track.id, clip.id), track.locked),
+    item(tr("editor.nest_into_sequence"), actions.nest, track.locked || multiCount === 0),
   ];
-  if (clip.sequenceId) items.push(item("Open sequence", () => actions.openSequence(clip.sequenceId as string)));
-  if (clip.groupId) items.push(item("Unlink grouped clips", () => actions.unlink(clip.groupId as string), track.locked));
-  items.push(item(clip.disabled ? "Enable clip" : "Disable clip (skip in render)", () => actions.patchClip(track.id, clip.id, { disabled: clip.disabled ? undefined : true }), track.locked));
-  items.push(item(clip.locked ? "Unlock clip" : "Lock clip", () => actions.patchClip(track.id, clip.id, { locked: clip.locked ? undefined : true }), track.locked));
-  if (clip.assetId && !clip.sequenceId) items.push(item("Replace media…", () => actions.replaceMedia(track.id, clip.id), track.locked || !!clip.locked));
-  if (clip.assetId && track.kind === "video") items.push(item("Freeze frame here (3s)", actions.freezeFrame, track.locked || !!clip.locked || !insidePlayhead));
-  if (abutting) items.push(item("Cross-dissolve at cut", () => actions.crossDissolve(track.id, clip.id), track.locked));
+  if (clip.sequenceId) items.push(item(tr("editor.open_sequence"), () => actions.openSequence(clip.sequenceId as string)));
+  if (clip.groupId) items.push(item(tr("editor.unlink_grouped_clips"), () => actions.unlink(clip.groupId as string), track.locked));
+  items.push(item(clip.disabled ? tr("editor.enable_clip") : tr("editor.disable_clip_skip_in_render"), () => actions.patchClip(track.id, clip.id, { disabled: clip.disabled ? undefined : true }), track.locked));
+  items.push(item(clip.locked ? tr("editor.unlock_clip") : tr("editor.lock_clip"), () => actions.patchClip(track.id, clip.id, { locked: clip.locked ? undefined : true }), track.locked));
+  if (clip.assetId && !clip.sequenceId) items.push(item(tr("editor.replace_media_2"), () => actions.replaceMedia(track.id, clip.id), track.locked || !!clip.locked));
+  if (clip.assetId && track.kind === "video") items.push(item(tr("editor.freeze_frame_here_3s"), actions.freezeFrame, track.locked || !!clip.locked || !insidePlayhead));
+  if (abutting) items.push(item(tr("editor.cross_dissolve_at_cut"), () => actions.crossDissolve(track.id, clip.id), track.locked));
   if (track.kind === "video" && clip.assetId) {
-    items.push(item("Detach audio", actions.detachAudio, track.locked));
-    items.push(item("Detect scenes", actions.detectScenes, track.locked || props.detectingScenes));
+    items.push(item(tr("editor.detach_audio"), actions.detachAudio, track.locked));
+    items.push(item(tr("editor.detect_scenes"), actions.detectScenes, track.locked || props.detectingScenes));
   }
-  items.push(item(multiCount > 1 ? `Delete ${multiCount} clips` : "Delete", actions.deleteSelection, track.locked));
-  if (multiCount <= 1) items.push(item("Ripple delete (close the gap)", actions.rippleDelete, track.locked));
+  if (clip.assetId && (track.kind === "audio" || track.kind === "video")) {
+    items.push(item(props.detectingBeats ? tr("editor.detecting_beats") : tr("editor.detect_beats_add_markers"), actions.detectBeats, track.locked || props.detectingBeats));
+  }
+  items.push(item(multiCount > 1 ? `Delete ${multiCount} clips` : tr("editor.delete"), actions.deleteSelection, track.locked));
+  if (multiCount <= 1) items.push(item(tr("editor.ripple_delete_close_the_gap"), actions.rippleDelete, track.locked));
   items.push(
     <div key="labels" className="flex items-center gap-1.5 px-3 py-1.5">
-      <span className="text-[10px] text-neutral-500">Label</span>
+      <span className="text-[10px] text-neutral-500">{tr("editor.label")}</span>
       {["", "#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#a855f7"].map((c) => (
         <button
           key={c || "none"}
           type="button"
-          title={c ? "Color label" : "Clear label"}
+          title={c ? tr("editor.color_label") : tr("editor.clear_label")}
           onClick={() => {
             props.close();
             actions.patchClip(track.id, clip.id, { colorLabel: c || undefined });
@@ -5669,6 +6831,238 @@ function CtxMenuItems(props: {
 // gain. Every editing control calls one of the parent ops, which persist through
 // the normal undoable path. Re-keyed by clip id so local input drafts reset when
 // the selection changes. Chrome only (Tailwind); no canvas content here.
+// --- element (design-video node) editing -----------------------------------
+
+function srgbToHex(c?: { r: number; g: number; b: number }): string {
+  if (!c) return "#000000";
+  const h = (x: number) => Math.max(0, Math.min(255, Math.round((x ?? 0) * 255))).toString(16).padStart(2, "0");
+  return `#${h(c.r)}${h(c.g)}${h(c.b)}`;
+}
+function hexToSrgb(hex: string): { r: number; g: number; b: number; a: number } {
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
+  const n = m ? parseInt(m[1], 16) : 0;
+  return { r: ((n >> 16) & 255) / 255, g: ((n >> 8) & 255) / 255, b: (n & 255) / 255, a: 1 };
+}
+function patchTextNode(
+  node: Node,
+  ch: { text?: string; fontFamily?: string; fontSize?: number; colorHex?: string; bold?: boolean; align?: string; letterSpacing?: number; lineHeight?: number },
+): Node {
+  const n = structuredClone(node) as unknown as Record<string, unknown> & { content?: { runs?: Record<string, unknown>[]; style?: Record<string, unknown> }[] };
+  const para = n.content?.[0];
+  const run = para?.runs?.[0] as { text?: string; style?: Record<string, unknown> } | undefined;
+  if (!para || !run) return node;
+  const st = (run.style = (run.style ?? {}) as Record<string, unknown>);
+  if (ch.text !== undefined) run.text = ch.text;
+  if (ch.fontFamily !== undefined) st.fontFamily = ch.fontFamily;
+  if (ch.fontSize !== undefined) st.fontSize = ch.fontSize;
+  if (ch.colorHex !== undefined) st.fill = { type: "solid", color: { srgb: hexToSrgb(ch.colorHex) } };
+  if (ch.bold !== undefined) {
+    st.axes = { ...((st.axes as Record<string, unknown>) ?? {}), wght: ch.bold ? 700 : 400 };
+    st.fontStyle = ch.bold ? boldFontStyle : regularFontStyle;
+  }
+  // letterSpacing (px) and lineHeight (multiplier) are honored by BOTH the engine
+  // renderer and the Go raster text layout, so they stay faithful across paths.
+  if (ch.letterSpacing !== undefined) st.letterSpacing = ch.letterSpacing;
+  if (ch.lineHeight !== undefined) st.lineHeight = ch.lineHeight;
+  if (ch.align !== undefined) para.style = { ...(para.style ?? {}), align: ch.align };
+  return n as unknown as Node;
+}
+function patchShapeFill(node: Node, hex: string): Node {
+  const n = structuredClone(node) as unknown as Record<string, unknown>;
+  n.fills = [{ type: "solid", color: { srgb: hexToSrgb(hex) } }];
+  return n as unknown as Node;
+}
+
+/** Set an element node's stage position/size (in stage px). Text nodes mirror the
+ *  size into their layout `box` so wrapping/alignment follow the new frame. */
+function patchNodeLayout(node: Node, patch: { x?: number; y?: number; w?: number; h?: number }): Node {
+  const n = structuredClone(node) as unknown as Record<string, unknown>;
+  const tr = { ...((n.transform as Record<string, unknown>) ?? {}) };
+  if (patch.x !== undefined) tr.x = Math.round(patch.x);
+  if (patch.y !== undefined) tr.y = Math.round(patch.y);
+  n.transform = tr;
+  const size = { ...((n.size as Record<string, unknown>) ?? {}) };
+  if (patch.w !== undefined) size.width = Math.max(1, Math.round(patch.w));
+  if (patch.h !== undefined) size.height = Math.max(1, Math.round(patch.h));
+  n.size = size;
+  if (n.type === "text") {
+    const box = { ...((n.box as Record<string, unknown>) ?? {}) };
+    if (patch.w !== undefined) box.width = Math.max(1, Math.round(patch.w));
+    if (patch.h !== undefined) box.height = Math.max(1, Math.round(patch.h));
+    n.box = box;
+  }
+  return n as unknown as Node;
+}
+
+/** X / Y / W / H numeric controls (stage px) for the selected element, so an
+ *  element can be positioned and resized without an on-stage gizmo. */
+function LayoutEditor({ element, disabled, onChange }: { element: Node; disabled: boolean; onChange: (n: Node) => void }): React.ReactElement {
+  const n = element as unknown as { transform?: { x?: number; y?: number }; size?: { width?: number; height?: number } };
+  const x = Math.round(n.transform?.x ?? 0);
+  const y = Math.round(n.transform?.y ?? 0);
+  const w = Math.round(n.size?.width ?? 0);
+  const h = Math.round(n.size?.height ?? 0);
+  const field = (label: string, val: number, key: "x" | "y" | "w" | "h") => (
+    <label className="flex items-center gap-1 text-[11px] text-neutral-600">
+      <span className="w-3 text-neutral-400">{label}</span>
+      <input
+        type="number"
+        step={1}
+        disabled={disabled}
+        title={`${label} (stage px)`} aria-label={`${label} (stage px)`}
+        value={val}
+        onChange={(e) => { const v = parseFloat(e.target.value); if (Number.isFinite(v)) onChange(patchNodeLayout(element, { [key]: v })); }}
+        className="min-w-0 flex-1 rounded border border-neutral-200 bg-surface px-1 py-0.5 text-right text-xs text-neutral-800 outline-none focus:border-brand-400"
+      />
+    </label>
+  );
+  return (
+    <InspectorSection title={tr("editor.layout")} icon={Expand}>
+      <div className="grid grid-cols-2 gap-1.5">
+        {field("X", x, "x")}
+        {field("Y", y, "y")}
+        {field("W", w, "w")}
+        {field("H", h, "h")}
+      </div>
+    </InspectorSection>
+  );
+}
+
+// Default timings when an element animation is turned on from the inspector.
+const ANIM_DEFAULTS = { entrance: 600, exit: 600, emphasis: 1200 } as const;
+
+/** Set (or clear, when preset is "") one of a node's animation clips. Clones the
+ *  node; removes the empty `animation` object so a cleared element stays static. */
+function setNodeAnim(node: Node, kind: "entrance" | "exit" | "emphasis", preset: string): Node {
+  const n = structuredClone(node) as unknown as Record<string, unknown>;
+  const anim = { ...((n.animation as Record<string, unknown>) ?? {}) };
+  if (!preset) delete anim[kind];
+  else anim[kind] = { preset, durationMs: ANIM_DEFAULTS[kind], delayMs: 0, easing: kind === "emphasis" ? "ease-in-out" : "ease-out" };
+  if (Object.keys(anim).length === 0) delete n.animation;
+  else n.animation = anim;
+  return n as unknown as Node;
+}
+
+/** Set (or clear) image Ken Burns / parallax motion on an image node. */
+function setNodeMotion(node: Node, kind: "" | "kenburns" | "parallax", intensity = 0.6): Node {
+  const n = structuredClone(node) as unknown as Record<string, unknown>;
+  if (!kind) delete n.motion;
+  else n.motion = { kind, intensity };
+  return n as unknown as Node;
+}
+
+const ENTRANCE_PRESETS = ["fade", "rise", "pan", "pop", "zoom-in", "drift", "tumble", "stomp", "breathe-in"];
+const EXIT_PRESETS = ["fade-out", "sink", "pop-out", "zoom-out", "drift-out", "tumble-out"];
+const EMPHASIS_PRESETS = ["pulse", "wiggle", "spin", "breathe", "tada", "flicker", "jiggle", "bob"];
+
+/** Entrance/exit/emphasis pickers + (for images) Ken Burns motion. Writes the
+ *  chosen clips onto node.animation / node.motion; playback and the exact export
+ *  pose the element via the shared engine poser. */
+function AnimationEditor({ element, disabled, onChange }: { element: Node; disabled: boolean; onChange: (n: Node) => void }): React.ReactElement {
+  const n = element as unknown as { type?: string; animation?: { entrance?: { preset?: string }; exit?: { preset?: string }; emphasis?: { preset?: string } }; motion?: { kind?: string; intensity?: number } };
+  const row = (label: string, kind: "entrance" | "exit" | "emphasis", presets: string[], cur?: string) => (
+    <label className="flex items-center justify-between gap-2 text-[11px] text-neutral-600">
+      {label}
+      <select disabled={disabled} value={cur ?? ""} onChange={(e) => onChange(setNodeAnim(element, kind, e.target.value))} className={`${elSelectCls} min-w-0 flex-1`}>
+        <option value="">{tr("editor.none")}</option>
+        {presets.map((p) => <option key={p} value={p}>{p}</option>)}
+      </select>
+    </label>
+  );
+  return (
+    <InspectorSection title={tr("editor.animation")} icon={Wand2}>
+      {row(tr("editor.in_3"), "entrance", ENTRANCE_PRESETS, n.animation?.entrance?.preset)}
+      {row(tr("editor.emphasis"), "emphasis", EMPHASIS_PRESETS, n.animation?.emphasis?.preset)}
+      {row(tr("editor.out_3"), "exit", EXIT_PRESETS, n.animation?.exit?.preset)}
+      {n.type === "image" && (
+        <label className="flex items-center justify-between gap-2 text-[11px] text-neutral-600">
+          {tr("editor.photo_motion")}
+          <select disabled={disabled} value={n.motion?.kind ?? ""} onChange={(e) => onChange(setNodeMotion(element, e.target.value as "" | "kenburns" | "parallax", n.motion?.intensity ?? 0.6))} className={`${elSelectCls} min-w-0 flex-1`}>
+            <option value="">{tr("editor.none")}</option>
+            <option value="kenburns">{tr("editor.ken_burns_zoom")}</option>
+            <option value="parallax">{tr("editor.parallax_pan")}</option>
+          </select>
+        </label>
+      )}
+    </InspectorSection>
+  );
+}
+
+const VIDEO_FONTS = FONT_CATALOG.slice(0, 30).map((f) => f.family);
+const elSelectCls = "rounded border border-neutral-200 bg-surface px-1.5 py-1 text-xs text-neutral-800 outline-none focus:border-brand-400";
+
+/** Edit the design element a clip renders (text/background/image). Writes a new
+ *  node back via onChange, which the inspector persists as Clip.element. */
+function ElementEditor({ element, disabled, onChange }: { element: Node; disabled: boolean; onChange: (n: Node) => void }): React.ReactElement | null {
+  const el = element as unknown as {
+    type?: string;
+    fit?: string;
+    fills?: { color?: { srgb?: { r: number; g: number; b: number } } }[];
+    content?: { runs?: { text?: string; style?: Record<string, unknown> }[]; style?: { align?: string } }[];
+  };
+  if (el.type === "text") {
+    const run = el.content?.[0]?.runs?.[0] ?? {};
+    const st = (run.style ?? {}) as Record<string, unknown>;
+    const align = el.content?.[0]?.style?.align ?? "left";
+    const bold = ((st.axes as { wght?: number } | undefined)?.wght ?? 400) >= 600;
+    const fill = (st.fill as { color?: { srgb?: { r: number; g: number; b: number } } } | undefined)?.color?.srgb;
+    return (
+      <InspectorSection title={tr("editor.text")} icon={TypeIcon}>
+        <textarea disabled={disabled} value={run.text ?? ""} rows={2}
+          onChange={(e) => onChange(patchTextNode(element, { text: e.target.value }))}
+          className="w-full resize-none rounded border border-neutral-200 px-2 py-1 text-xs outline-none focus:border-brand-400" />
+        <div className="flex items-center gap-1">
+          <select disabled={disabled} value={(st.fontFamily as string) ?? "system"} onChange={(e) => onChange(patchTextNode(element, { fontFamily: e.target.value }))} className={`${elSelectCls} min-w-0 flex-1`}>
+            {VIDEO_FONTS.map((f) => <option key={f} value={f}>{f === "system" ? tr("editor.system") : f}</option>)}
+          </select>
+          <input type="color" disabled={disabled} value={srgbToHex(fill)} onChange={(e) => onChange(patchTextNode(element, { colorHex: e.target.value }))} className="h-7 w-8 shrink-0 rounded border border-neutral-200" title={tr("editor.text_color")} aria-label={tr("editor.text_color")} />
+        </div>
+        <div className="flex items-center gap-2">
+          <input type="range" min={8} max={240} step={1} disabled={disabled} value={(st.fontSize as number) ?? 48} onChange={(e) => onChange(patchTextNode(element, { fontSize: Number(e.target.value) }))} className="min-w-0 flex-1" title={tr("editor.font_size")} aria-label={tr("editor.font_size")} />
+          <button type="button" disabled={disabled} onClick={() => onChange(patchTextNode(element, { bold: !bold }))} className={`shrink-0 rounded border px-2 py-0.5 text-xs font-bold ${bold ? "border-brand-500 bg-brand-50 text-brand-ink" : "border-neutral-200 text-neutral-600"}`}>B</button>
+        </div>
+        <div className="flex items-center gap-1">
+          {(["left", "center", "right"] as const).map((a) => (
+            <button key={a} type="button" disabled={disabled} onClick={() => onChange(patchTextNode(element, { align: a }))} className={`flex-1 rounded border px-1 py-0.5 text-[10px] capitalize ${align === a ? "border-brand-500 bg-brand-50 text-brand-ink" : "border-neutral-200 text-neutral-600"}`}>{a}</button>
+          ))}
+        </div>
+        <label className="flex items-center justify-between gap-2 text-[10px] text-neutral-500">
+          <span className="shrink-0">{tr("editor.letter_spacing")}</span>
+          <input type="range" min={-5} max={40} step={0.5} disabled={disabled} value={(st.letterSpacing as number) ?? 0} onChange={(e) => onChange(patchTextNode(element, { letterSpacing: Number(e.target.value) }))} className="min-w-0 flex-1" />
+        </label>
+        <label className="flex items-center justify-between gap-2 text-[10px] text-neutral-500">
+          <span className="shrink-0">{tr("editor.line_height")}</span>
+          <input type="range" min={0.8} max={2.5} step={0.05} disabled={disabled} value={(st.lineHeight as number) ?? 1.2} onChange={(e) => onChange(patchTextNode(element, { lineHeight: Number(e.target.value) }))} className="min-w-0 flex-1" />
+        </label>
+      </InspectorSection>
+    );
+  }
+  if (el.type === "shape") {
+    return (
+      <InspectorSection title={tr("editor.background")} icon={Palette}>
+        <label className="flex items-center justify-between text-[11px] text-neutral-600">
+          {tr("editor.fill_color")}
+          <input type="color" disabled={disabled} value={srgbToHex(el.fills?.[0]?.color?.srgb)} onChange={(e) => onChange(patchShapeFill(element, e.target.value))} className="h-7 w-10 rounded border border-neutral-200" />
+        </label>
+      </InspectorSection>
+    );
+  }
+  if (el.type === "image") {
+    return (
+      <InspectorSection title={tr("editor.image")} icon={ImageIcon}>
+        <label className="flex items-center justify-between text-[11px] text-neutral-600">
+          {tr("editor.fit")}
+          <select disabled={disabled} value={el.fit ?? "cover"} onChange={(e) => onChange({ ...(structuredClone(element) as object), fit: e.target.value } as unknown as Node)} className={elSelectCls}>
+            <option value="cover">{tr("editor.cover_fill")}</option>
+            <option value="contain">{tr("editor.contain_fit")}</option>
+          </select>
+        </label>
+      </InspectorSection>
+    );
+  }
+  return null;
+}
+
 function ClipInspector(props: {
   track: Track;
   clip: Clip;
@@ -5682,6 +7076,7 @@ function ClipInspector(props: {
   onSetSpeed: (speed: number) => void;
   onSetTransition: (edge: "in" | "out", type: "" | ClipTransition["type"]) => void;
   onSetTransitionDuration: (edge: "in" | "out", durationFrames: number) => void;
+  onSetTransitionDirection: (edge: "in" | "out", direction: "" | NonNullable<ClipTransition["direction"]>) => void;
   onSetClipGainDb: (db: number) => void;
   onSetFades: (fadeInFrames: number, fadeOutFrames: number) => void;
   onSetTitle: (patch: Partial<TitleCard>) => void;
@@ -5714,7 +7109,7 @@ function ClipInspector(props: {
           disabled={editDisabled}
           value={clip.name ?? ""}
           placeholder={props.assetLabel}
-          title={`Rename clip (media: ${props.assetLabel})`}
+          title={`Rename clip (media: ${props.assetLabel})`} aria-label={`Rename clip (media: ${props.assetLabel})`}
           onChange={(e) => props.onPatchClip({ name: e.target.value || undefined })}
           className="w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-sm font-medium text-neutral-900 placeholder:text-neutral-900 hover:border-neutral-300 focus:border-neutral-400 focus:bg-neutral-200 focus:placeholder:text-neutral-500 focus:outline-none disabled:opacity-60"
         />
@@ -5728,21 +7123,30 @@ function ClipInspector(props: {
           <span className="uppercase tracking-wide text-neutral-400">{track.kind}</span>
         </div>
         {editDisabled && (
-          <div className="flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400">
+          <div className="flex items-center gap-1 text-[10px] text-amber-700 dark:text-amber-400">
             <Lock size={10} /> track locked &middot; read-only
           </div>
         )}
       </div>
 
+      {/* ELEMENT (design-video node): edit text/background/image content + motion. */}
+      {clip.element && (
+        <>
+          <ElementEditor element={clip.element} disabled={editDisabled} onChange={(n) => props.onPatchClip({ element: n })} />
+          <LayoutEditor element={clip.element} disabled={editDisabled} onChange={(n) => props.onPatchClip({ element: n })} />
+          <AnimationEditor element={clip.element} disabled={editDisabled} onChange={(n) => props.onPatchClip({ element: n })} />
+        </>
+      )}
+
       {/* TIMING */}
-      <InspectorSection title="Timing" icon={Gauge}>
-        <ReadoutRow label="In (src)" value={`${clip.inFrame}f`} />
-        <ReadoutRow label="Out (src)" value={`${clip.outFrame}f`} />
-        <ReadoutRow label="Start" value={`${clip.startFrame}f`} sub={formatTimecode(clip.startFrame, fps)} />
-        <ReadoutRow label="End" value={`${end}f`} sub={formatTimecode(end, fps)} />
-        <ReadoutRow label="Duration" value={`${dur}f`} sub={formatTimecode(dur, fps)} />
+      <InspectorSection title={tr("editor.timing")} icon={Gauge}>
+        <ReadoutRow label={tr("editor.in_src")} value={`${clip.inFrame}f`} />
+        <ReadoutRow label={tr("editor.out_src")} value={`${clip.outFrame}f`} />
+        <ReadoutRow label={tr("editor.start")} value={`${clip.startFrame}f`} sub={formatTimecode(clip.startFrame, fps)} />
+        <ReadoutRow label={tr("editor.end")} value={`${end}f`} sub={formatTimecode(end, fps)} />
+        <ReadoutRow label={tr("editor.duration")} value={`${dur}f`} sub={formatTimecode(dur, fps)} />
         <label className="mt-1 flex items-center justify-between gap-2 text-neutral-600">
-          <span>Speed</span>
+          <span>{tr("editor.speed")}</span>
           <span className="flex items-center gap-1">
             <input
               type="number"
@@ -5761,43 +7165,45 @@ function ClipInspector(props: {
           </span>
         </label>
         <label className="flex items-center justify-between gap-2 text-neutral-600">
-          <span>Reverse</span>
+          <span>{tr("editor.reverse")}</span>
           <input
             type="checkbox"
             disabled={editDisabled || !!clip.sequenceId}
             checked={reversed}
-            title={clip.sequenceId ? "Sequences cannot play in reverse" : "Play the clip backwards (audio mutes)"}
+            title={clip.sequenceId ? tr("editor.sequences_cannot_play_in_reverse") : tr("editor.play_the_clip_backwards_audio_mutes")} aria-label={clip.sequenceId ? tr("editor.sequences_cannot_play_in_reverse") : tr("editor.play_the_clip_backwards_audio_mutes")}
             onChange={(e) => props.onSetSpeed((e.target.checked ? -1 : 1) * Math.abs(clip.speed))}
           />
         </label>
         {reversed && (
-          <div className="text-[10px] font-medium text-pink-600 dark:text-pink-400">plays in reverse (audio muted)</div>
+          <div className="text-[10px] font-medium text-pink-600 dark:text-pink-400">{tr("editor.plays_in_reverse_audio_muted")}</div>
         )}
       </InspectorSection>
 
       {/* TRANSITIONS */}
-      <InspectorSection title="Transitions" icon={Wand2}>
+      <InspectorSection title={tr("editor.transitions")} icon={Wand2}>
         <TransitionEdge
-          label="In edge"
+          label={tr("editor.in_edge")}
           edge="in"
           transition={clip.transitionIn}
           disabled={editDisabled}
           onSetTransition={props.onSetTransition}
           onSetDuration={props.onSetTransitionDuration}
+          onSetDirection={props.onSetTransitionDirection}
         />
         <TransitionEdge
-          label="Out edge"
+          label={tr("editor.out_edge")}
           edge="out"
           transition={clip.transitionOut}
           disabled={editDisabled}
           onSetTransition={props.onSetTransition}
           onSetDuration={props.onSetTransitionDuration}
+          onSetDirection={props.onSetTransitionDirection}
         />
       </InspectorSection>
 
       {/* AUDIO (audio tracks only) */}
       {(track.kind === "video" || track.kind === "overlay") && clip.assetId && (
-        <InspectorSection title="Green screen" icon={Wand2}>
+        <InspectorSection title={tr("editor.green_screen")} icon={Wand2}>
           <label className="flex items-center gap-1.5 text-neutral-600">
             <input
               type="checkbox"
@@ -5807,12 +7213,12 @@ function ClipInspector(props: {
                 props.onSetChroma(e.target.checked ? { keyColor: "#00ff00", tolerance: 0.35, spill: 0.5, edgeFeather: 6 } : null)
               }
             />
-            Key out a color
+            {tr("editor.key_out_a_color")}
           </label>
           {clip.chromaKey && (
             <>
               <label className="flex items-center justify-between gap-2 text-neutral-600">
-                <span>Key color</span>
+                <span>{tr("editor.key_color")}</span>
                 <input
                   type="color"
                   disabled={editDisabled}
@@ -5822,7 +7228,7 @@ function ClipInspector(props: {
                 />
               </label>
               <label className="flex items-center justify-between gap-2 text-neutral-600">
-                <span>Tolerance</span>
+                <span>{tr("editor.tolerance")}</span>
                 <input
                   type="range"
                   min={0.05}
@@ -5835,7 +7241,7 @@ function ClipInspector(props: {
                 />
               </label>
               <label className="flex items-center justify-between gap-2 text-neutral-600">
-                <span>Spill</span>
+                <span>{tr("editor.spill")}</span>
                 <input
                   type="range"
                   min={0}
@@ -5848,7 +7254,7 @@ function ClipInspector(props: {
                 />
               </label>
               <label className="flex items-center justify-between gap-2 text-neutral-600">
-                <span>Feather</span>
+                <span>{tr("editor.feather")}</span>
                 <input
                   type="range"
                   min={0}
@@ -5867,7 +7273,7 @@ function ClipInspector(props: {
 
       {/* COLOR (media clips on video/overlay tracks) */}
       {(track.kind === "video" || track.kind === "overlay") && clip.assetId && (
-        <InspectorSection title="Color" icon={Palette}>
+        <InspectorSection title={tr("editor.color")} icon={Palette}>
           <div className="flex flex-wrap gap-1">
             <button
               type="button"
@@ -5879,7 +7285,7 @@ function ClipInspector(props: {
                   : "bg-neutral-200 text-neutral-700 hover:bg-neutral-300"
               } disabled:opacity-40`}
             >
-              None
+              {tr("editor.none")}
             </button>
             {COLOR_PRESETS.map((p) => (
               <button
@@ -5898,7 +7304,7 @@ function ClipInspector(props: {
             ))}
           </div>
           <ColorSlider
-            label="Brightness"
+            label={tr("editor.brightness")}
             min={0.5}
             max={1.5}
             neutral={1}
@@ -5907,7 +7313,7 @@ function ClipInspector(props: {
             onChange={(v) => props.onPatchClip({ color: { ...clip.color, brightness: v, preset: undefined } })}
           />
           <ColorSlider
-            label="Contrast"
+            label={tr("editor.contrast")}
             min={0.5}
             max={1.5}
             neutral={1}
@@ -5916,7 +7322,7 @@ function ClipInspector(props: {
             onChange={(v) => props.onPatchClip({ color: { ...clip.color, contrast: v, preset: undefined } })}
           />
           <ColorSlider
-            label="Saturation"
+            label={tr("editor.saturation")}
             min={0}
             max={2}
             neutral={1}
@@ -5925,7 +7331,7 @@ function ClipInspector(props: {
             onChange={(v) => props.onPatchClip({ color: { ...clip.color, saturation: v, preset: undefined } })}
           />
           <ColorSlider
-            label="Warmth"
+            label={tr("editor.warmth")}
             min={-1}
             max={1}
             neutral={0}
@@ -5938,7 +7344,7 @@ function ClipInspector(props: {
 
       {/* CROP (media clips with known pixel dims) */}
       {(track.kind === "video" || track.kind === "overlay") && clip.assetId && props.mediaDims && (
-        <InspectorSection title="Crop" icon={Maximize2}>
+        <InspectorSection title={tr("editor.crop")} icon={Maximize2}>
           <label className="flex items-center gap-1.5 text-neutral-600">
             <input
               type="checkbox"
@@ -5952,7 +7358,7 @@ function ClipInspector(props: {
                 })
               }
             />
-            Crop the source
+            {tr("editor.crop_the_source")}
           </label>
           {clip.crop && (
             <>
@@ -5999,9 +7405,9 @@ function ClipInspector(props: {
 
       {/* TRANSFORM (media clips on video/overlay tracks) */}
       {(track.kind === "video" || track.kind === "overlay") && (clip.assetId || clip.sequenceId) && (
-        <InspectorSection title="Transform" icon={Layers}>
+        <InspectorSection title={tr("editor.transform")} icon={Layers}>
           <label className="flex items-center justify-between gap-2 text-neutral-600">
-            <span>Fill</span>
+            <span>{tr("editor.fill")}</span>
             <select
               disabled={editDisabled}
               value={clip.fit ?? "cover"}
@@ -6010,12 +7416,12 @@ function ClipInspector(props: {
               }
               className="rounded border border-neutral-300 bg-neutral-200 px-1.5 py-1 text-neutral-900 disabled:opacity-40"
             >
-              <option value="cover">Fill the stage (crop)</option>
-              <option value="contain">Fit inside (letterbox)</option>
+              <option value="cover">{tr("editor.fill_the_stage_crop")}</option>
+              <option value="contain">{tr("editor.fit_inside_letterbox")}</option>
             </select>
           </label>
           <ColorSlider
-            label="Opacity"
+            label={tr("editor.opacity")}
             min={0}
             max={1}
             neutral={1}
@@ -6024,7 +7430,7 @@ function ClipInspector(props: {
             onChange={(v) => props.onPatchClip({ opacity: v >= 1 ? undefined : v })}
           />
           <label className="flex items-center justify-between gap-2 text-neutral-600">
-            <span>Rotation</span>
+            <span>{tr("editor.rotation")}</span>
             <span className="flex items-center gap-1">
               <input
                 type="number"
@@ -6046,7 +7452,7 @@ function ClipInspector(props: {
       )}
 
       {(track.kind === "video" || track.kind === "overlay" || track.kind === "audio") && (
-        <InspectorSection title="Animate" icon={Gauge}>
+        <InspectorSection title={tr("editor.animate")} icon={Gauge}>
           <KeyframeRows
             clip={clip}
             playhead={playhead}
@@ -6062,48 +7468,48 @@ function ClipInspector(props: {
             type="button"
             disabled={editDisabled}
             onClick={props.onDetachAudio}
-            title="Move this clip's sound to an audio track (the video keeps playing silently)"
+            title={tr("editor.move_this_clips_sound_to_an_audio_track_the")}
             className="flex flex-1 items-center justify-center gap-1 rounded bg-neutral-200 px-2 py-1.5 text-neutral-800 hover:bg-neutral-300 disabled:opacity-40"
           >
-            <Music2 size={12} /> Detach audio
+            <Music2 size={12} /> {tr("editor.detach_audio")}
           </button>
           <button
             type="button"
             disabled={editDisabled || detectingScenes}
             onClick={props.onDetectScenes}
-            title="Find cuts in the footage and split the clip at each one"
+            title={tr("editor.find_cuts_in_the_footage_and_split_the_clip")}
             className="flex flex-1 items-center justify-center gap-1 rounded bg-neutral-200 px-2 py-1.5 text-neutral-800 hover:bg-neutral-300 disabled:opacity-40"
           >
-            <Scissors size={12} /> {detectingScenes ? "Detecting…" : "Detect scenes"}
+            <Scissors size={12} /> {detectingScenes ? tr("editor.detecting") : tr("editor.detect_scenes")}
           </button>
         </div>
       )}
 
       {(track.kind === "text" || clip.title) && (
-        <InspectorSection title="Title" icon={TypeIcon}>
+        <InspectorSection title={tr("editor.title")} icon={TypeIcon}>
           <textarea
             rows={2}
             disabled={editDisabled}
             value={clip.title?.text ?? ""}
             onChange={(e) => props.onSetTitle({ text: e.target.value })}
-            placeholder="Title text"
+            placeholder={tr("editor.title_text")}
             className="w-full resize-y rounded border border-neutral-300 bg-neutral-200 px-1.5 py-1 text-neutral-900 disabled:opacity-40"
           />
           <label className="flex items-center justify-between gap-2 text-neutral-600">
-            <span>Position</span>
+            <span>{tr("editor.position")}</span>
             <select
               disabled={editDisabled}
               value={clip.title?.position ?? "center"}
               onChange={(e) => props.onSetTitle({ position: e.target.value as TitleCard["position"] })}
               className="rounded border border-neutral-300 bg-neutral-200 px-1.5 py-1 text-neutral-900 disabled:opacity-40"
             >
-              <option value="top">Top</option>
-              <option value="center">Center</option>
-              <option value="lower-third">Lower third</option>
+              <option value="top">{tr("editor.top")}</option>
+              <option value="center">{tr("editor.center")}</option>
+              <option value="lower-third">{tr("editor.lower_third")}</option>
             </select>
           </label>
           <label className="flex items-center justify-between gap-2 text-neutral-600">
-            <span>Size</span>
+            <span>{tr("editor.size")}</span>
             <span className="flex items-center gap-1">
               <input
                 type="number"
@@ -6118,7 +7524,7 @@ function ClipInspector(props: {
             </span>
           </label>
           <label className="flex items-center justify-between gap-2 text-neutral-600">
-            <span>Color</span>
+            <span>{tr("editor.color")}</span>
             <input
               type="color"
               disabled={editDisabled}
@@ -6128,7 +7534,7 @@ function ClipInspector(props: {
             />
           </label>
           <label className="flex items-center justify-between gap-2 text-neutral-600">
-            <span>Band</span>
+            <span>{tr("editor.band")}</span>
             <span className="flex items-center gap-1.5">
               <input
                 type="checkbox"
@@ -6146,35 +7552,35 @@ function ClipInspector(props: {
             </span>
           </label>
           <label className="flex items-center justify-between gap-2 text-neutral-600">
-            <span>Enter</span>
+            <span>{tr("editor.enter")}</span>
             <select
               disabled={editDisabled}
               value={clip.title?.animIn ?? ""}
               onChange={(e) => props.onSetTitle({ animIn: (e.target.value || undefined) as TitleCard["animIn"] })}
               className="rounded border border-neutral-300 bg-neutral-200 px-1.5 py-1 text-neutral-900 disabled:opacity-40"
             >
-              <option value="">None</option>
-              <option value="fade">Fade</option>
-              <option value="slide-up">Slide up</option>
-              <option value="type-on">Type on</option>
+              <option value="">{tr("editor.none")}</option>
+              <option value="fade">{tr("editor.fade")}</option>
+              <option value="slide-up">{tr("editor.slide_up")}</option>
+              <option value="type-on">{tr("editor.type_on")}</option>
             </select>
           </label>
           <label className="flex items-center justify-between gap-2 text-neutral-600">
-            <span>Exit</span>
+            <span>{tr("editor.exit")}</span>
             <select
               disabled={editDisabled}
               value={clip.title?.animOut ?? ""}
               onChange={(e) => props.onSetTitle({ animOut: (e.target.value || undefined) as TitleCard["animOut"] })}
               className="rounded border border-neutral-300 bg-neutral-200 px-1.5 py-1 text-neutral-900 disabled:opacity-40"
             >
-              <option value="">None</option>
-              <option value="fade">Fade</option>
-              <option value="slide-down">Slide down</option>
+              <option value="">{tr("editor.none")}</option>
+              <option value="fade">{tr("editor.fade")}</option>
+              <option value="slide-down">{tr("editor.slide_down")}</option>
             </select>
           </label>
           {(clip.title?.animIn || clip.title?.animOut) && (
             <label className="flex items-center justify-between gap-2 text-neutral-600">
-              <span>Anim length</span>
+              <span>{tr("editor.anim_length")}</span>
               <span className="flex items-center gap-1">
                 <input
                   type="number"
@@ -6196,9 +7602,9 @@ function ClipInspector(props: {
       )}
 
       {isAudio && (
-        <InspectorSection title="Audio" icon={Volume2}>
+        <InspectorSection title={tr("editor.audio")} icon={Volume2}>
           <label className="flex items-center justify-between gap-2 text-neutral-600">
-            <span>Clip gain</span>
+            <span>{tr("editor.clip_gain")}</span>
             <span className="flex items-center gap-2">
               <input
                 type="range"
@@ -6216,10 +7622,10 @@ function ClipInspector(props: {
               </span>
             </span>
           </label>
-          <ReadoutRow label="Track gain" value={`${(track.gainDb ?? 0) > 0 ? "+" : ""}${track.gainDb ?? 0} dB`} />
+          <ReadoutRow label={tr("editor.track_gain")} value={`${(track.gainDb ?? 0) > 0 ? "+" : ""}${track.gainDb ?? 0} dB`} />
           {/* fade envelope: seconds in the UI, integer frames in the model */}
           <label className="flex items-center justify-between gap-2 text-neutral-600">
-            <span>Fade in</span>
+            <span>{tr("editor.fade_in")}</span>
             <span className="flex items-center gap-1">
               <input
                 type="number"
@@ -6236,7 +7642,7 @@ function ClipInspector(props: {
             </span>
           </label>
           <label className="flex items-center justify-between gap-2 text-neutral-600">
-            <span>Fade out</span>
+            <span>{tr("editor.fade_out")}</span>
             <span className="flex items-center gap-1">
               <input
                 type="number"
@@ -6255,11 +7661,11 @@ function ClipInspector(props: {
           <div className="flex items-center gap-1.5 text-[11px]">
             {track.muted ? (
               <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
-                <VolumeX size={12} /> track muted
+                <VolumeX size={12} /> {tr("editor.track_muted")}
               </span>
             ) : (
               <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                <Volume2 size={12} /> track audible
+                <Volume2 size={12} /> {tr("editor.track_audible")}
               </span>
             )}
           </div>
@@ -6270,21 +7676,21 @@ function ClipInspector(props: {
       <div className="flex gap-2">
         <button
           type="button"
-          title="Split at playhead (S)"
+          title={tr("editor.split_at_playhead_s")}
           disabled={editDisabled}
           onClick={props.onSplit}
           className="flex flex-1 items-center justify-center gap-1 rounded bg-neutral-200 px-2 py-1.5 text-neutral-800 hover:bg-neutral-300 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <Scissors size={12} /> Split
+          <Scissors size={12} /> {tr("editor.split")}
         </button>
         <button
           type="button"
-          title="Ripple delete"
+          title={tr("editor.ripple_delete")}
           disabled={editDisabled}
           onClick={props.onRippleDelete}
           className="flex flex-1 items-center justify-center gap-1 rounded bg-neutral-200 px-2 py-1.5 text-neutral-800 hover:bg-neutral-300 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <Trash2 size={12} /> Ripple
+          <Trash2 size={12} /> {tr("editor.ripple")}
         </button>
       </div>
     </div>
@@ -6364,7 +7770,7 @@ function PanelRecorder(props: {
     timerRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
   }, [mode, cleanup, onCapture]);
 
-  const label = mode === "audio" ? "Voice" : mode === "screen" ? "Screen" : "Webcam";
+  const label = mode === "audio" ? tr("editor.voice") : mode === "screen" ? tr("editor.screen") : tr("editor.webcam");
   const Icon = mode === "audio" ? Mic : mode === "screen" ? MonitorUp : WebcamIcon;
   const supported =
     typeof navigator !== "undefined" &&
@@ -6408,7 +7814,7 @@ function TimecodeEntry(props: {
     return (
       <button
         type="button"
-        title="Click to type a time (mm:ss or mm:ss:ff) and seek"
+        title={tr("editor.click_to_type_a_time_mm_ss_or_mm_ss_ff_and_s")}
         onClick={() => setText(formatTimecode(props.frame, props.fps))}
         className="ml-2 rounded px-1 font-mono text-xs tabular-nums text-neutral-600 hover:bg-neutral-200 hover:text-neutral-800"
       >
@@ -6466,7 +7872,7 @@ function TrackMeter({ player, trackId }: { player: () => TimelinePlayer; trackId
     return () => cancelAnimationFrame(raf);
   }, [player, trackId]);
   return (
-    <span title="Track level" className="relative ml-0.5 inline-flex h-4 w-1 items-end overflow-hidden rounded-sm bg-neutral-300">
+    <span title={tr("editor.track_level")} className="relative ml-0.5 inline-flex h-4 w-1 items-end overflow-hidden rounded-sm bg-neutral-300">
       <span ref={barRef} className="block w-full" />
     </span>
   );
@@ -6491,7 +7897,7 @@ function LevelMeter({ getLevel }: { getLevel: () => number }): React.ReactElemen
     return () => cancelAnimationFrame(raf);
   }, [getLevel]);
   return (
-    <div title="Output level" className="h-1.5 w-14 overflow-hidden rounded bg-neutral-200">
+    <div title={tr("editor.output_level")} className="h-1.5 w-14 overflow-hidden rounded bg-neutral-200">
       <div ref={barRef} className="h-full w-0" />
     </div>
   );
@@ -6611,13 +8017,13 @@ function ExportDialog(props: {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
       onClick={props.onClose}
       role="dialog"
-      aria-label="Export"
+      aria-label={tr("editor.export")}
     >
       <div
         className="w-[26rem] max-w-[calc(100vw-2rem)] rounded-lg border border-neutral-300 bg-neutral-100 p-4 text-xs shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-3 text-sm font-semibold text-neutral-900">Export</div>
+        <div className="mb-3 text-sm font-semibold text-neutral-900">{tr("editor.export")}</div>
         <div className="flex flex-col gap-1.5">
           {EXPORT_KINDS.map((k) => {
             const disabled = k.server && !props.serverAvailable;
@@ -6648,21 +8054,21 @@ function ExportDialog(props: {
           })}
         </div>
         {!props.serverAvailable && (
-          <div className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">
-            Server formats need the design saved to a workspace first.
+          <div className="mt-2 text-[11px] text-amber-700 dark:text-amber-400">
+            {tr("editor.server_formats_need_the_design_saved_to_a_wo")}
           </div>
         )}
 
         <div className="mt-3 flex flex-wrap items-center gap-4">
           {!isServer && (
-            <label className="flex items-center gap-1.5 text-neutral-600" title="MP4 is used when the browser supports recording it">
+            <label className="flex items-center gap-1.5 text-neutral-600" title={tr("editor.mp4_is_used_when_the_browser_supports_record")}>
               <input type="checkbox" checked={preferWebm} onChange={(e) => setPreferWebm(e.target.checked)} />
-              Prefer WebM
+              {tr("editor.prefer_webm")}
             </label>
           )}
           {isServer && kind !== "mp3" && kind !== "gif" && (
             <label className="flex items-center gap-1.5 text-neutral-600">
-              Frame rate
+              {tr("editor.frame_rate")}
               <select
                 value={fpsOverride}
                 onChange={(e) => setFpsOverride(parseInt(e.target.value, 10))}
@@ -6678,19 +8084,19 @@ function ExportDialog(props: {
           {isServer && kind !== "mp3" && props.captionsPresent && (
             <label className="flex items-center gap-1.5 text-neutral-600">
               <input type="checkbox" checked={burnCaptions} onChange={(e) => setBurnCaptions(e.target.checked)} />
-              Burn captions
+              {tr("editor.burn_captions")}
             </label>
           )}
           {kind === "mp3" && props.audioTracks.length > 0 && (
             <label className="flex items-center gap-1.5 text-neutral-600">
-              Audio
+              {tr("editor.audio")}
               <select
                 value={stemTrackId}
                 onChange={(e) => setStemTrackId(e.target.value)}
-                title="A single track exports pre-master (no ducking, no master gain)"
+                title={tr("editor.a_single_track_exports_pre_master_no_ducking")} aria-label={tr("editor.a_single_track_exports_pre_master_no_ducking")}
                 className="max-w-[10rem] rounded border border-neutral-300 bg-neutral-200 px-1.5 py-1 text-neutral-900"
               >
-                <option value="">Master mix</option>
+                <option value="">{tr("editor.master_mix")}</option>
                 {props.audioTracks.map((t) => (
                   <option key={t.id} value={t.id}>{t.label} (stem)</option>
                 ))}
@@ -6699,29 +8105,29 @@ function ExportDialog(props: {
           )}
           {isServer && kind !== "mp3" && (
             <label className="flex items-center gap-1.5 text-neutral-600">
-              Resolution
+              {tr("editor.resolution")}
               <select
                 value={scale}
                 onChange={(e) => setScale(parseFloat(e.target.value))}
                 className="rounded border border-neutral-300 bg-neutral-200 px-1.5 py-1 text-neutral-900"
               >
-                <option value={1}>Full</option>
-                <option value={0.5}>Half</option>
-                <option value={0.25}>Quarter</option>
+                <option value={1}>{tr("editor.full")}</option>
+                <option value={0.5}>{tr("editor.half")}</option>
+                <option value={0.25}>{tr("editor.quarter")}</option>
               </select>
             </label>
           )}
           {(kind === "server-mp4" || kind === "server-webm") && (
             <label className="flex items-center gap-1.5 text-neutral-600">
-              Quality
+              {tr("editor.quality")}
               <select
                 value={quality}
                 onChange={(e) => setQuality(e.target.value as "high" | "standard" | "compact")}
                 className="rounded border border-neutral-300 bg-neutral-200 px-1.5 py-1 text-neutral-900"
               >
-                <option value="high">High</option>
-                <option value="standard">Standard</option>
-                <option value="compact">Small file</option>
+                <option value="high">{tr("editor.high")}</option>
+                <option value="standard">{tr("editor.standard")}</option>
+                <option value="compact">{tr("editor.small_file")}</option>
               </select>
             </label>
           )}
@@ -6735,10 +8141,10 @@ function ExportDialog(props: {
               checked={useRange && props.hasRange}
               onChange={(e) => setUseRange(e.target.checked)}
             />
-            Marked range only
+            {tr("editor.marked_range_only")}
           </label>
           {!props.hasRange && (
-            <span className="text-[10px] text-neutral-400">set a range with I and O on the timeline</span>
+            <span className="text-[10px] text-neutral-400">{tr("editor.set_a_range_with_i_and_o_on_the_timeline")}</span>
           )}
         </div>
 
@@ -6754,14 +8160,14 @@ function ExportDialog(props: {
               onClick={props.onClose}
               className="rounded-md bg-neutral-200 px-3 py-1.5 font-medium text-neutral-800 hover:bg-neutral-300"
             >
-              Cancel
+              {tr("editor.cancel")}
             </button>
             <button
               type="button"
               onClick={start}
               className="rounded-md bg-brand-600 px-3 py-1.5 font-medium text-white hover:bg-brand-700"
             >
-              Start export
+              {tr("editor.start_export")}
             </button>
           </span>
         </div>
@@ -6793,7 +8199,7 @@ function ColorSlider(props: {
           value={props.value}
           onChange={(e) => props.onChange(parseFloat(e.target.value))}
           onDoubleClick={() => props.onChange(props.neutral)}
-          title="Double-click to reset"
+          title={tr("editor.double_click_to_reset")} aria-label={tr("editor.double_click_to_reset")}
           className="h-1 w-24 accent-emerald-500 disabled:opacity-40"
         />
         <span className="w-8 text-right font-mono tabular-nums text-neutral-700">
@@ -6845,8 +8251,10 @@ function TransitionEdge(props: {
   disabled: boolean;
   onSetTransition: (edge: "in" | "out", type: "" | ClipTransition["type"]) => void;
   onSetDuration: (edge: "in" | "out", durationFrames: number) => void;
+  onSetDirection: (edge: "in" | "out", direction: "" | NonNullable<ClipTransition["direction"]>) => void;
 }): React.ReactElement {
   const t = props.transition;
+  const directional = t?.type === "slide" || t?.type === "wipe";
   return (
     <div className="flex flex-col gap-1">
       <span className="text-neutral-500">{props.label}</span>
@@ -6859,7 +8267,7 @@ function TransitionEdge(props: {
           }
           className="min-w-0 flex-1 rounded border border-neutral-300 bg-neutral-200 px-1.5 py-1 text-neutral-900 disabled:opacity-40"
         >
-          {TRANSITION_TYPES.map((opt) => (
+          {transitionTypes().map((opt) => (
             <option key={opt.value || "none"} value={opt.value}>
               {opt.label}
             </option>
@@ -6869,7 +8277,7 @@ function TransitionEdge(props: {
           type="number"
           min={1}
           step={1}
-          title="Transition duration (frames)"
+          title={tr("editor.transition_duration_frames")} aria-label={tr("editor.transition_duration_frames")}
           disabled={props.disabled || !t}
           value={t?.durationFrames ?? ""}
           onChange={(e) => props.onSetDuration(props.edge, parseInt(e.target.value, 10))}
@@ -6877,6 +8285,20 @@ function TransitionEdge(props: {
         />
         <span className="text-neutral-400">f</span>
       </div>
+      {directional && (
+        <select
+          disabled={props.disabled}
+          title={tr("editor.direction")} aria-label={tr("editor.direction")}
+          value={t?.direction ?? ""}
+          onChange={(e) => props.onSetDirection(props.edge, e.target.value as "" | NonNullable<ClipTransition["direction"]>)}
+          className="rounded border border-neutral-300 bg-neutral-200 px-1.5 py-1 text-neutral-900 disabled:opacity-40"
+        >
+          <option value="">{tr("editor.from_left")}</option>
+          <option value="right">{tr("editor.from_right")}</option>
+          <option value="up">{tr("editor.from_top")}</option>
+          <option value="down">{tr("editor.from_bottom")}</option>
+        </select>
+      )}
     </div>
   );
 }
@@ -6974,7 +8396,7 @@ function KeyframeRows({ clip, playhead, editDisabled, onSetKeyframes }: {
             type="button"
             disabled={editDisabled}
             onClick={() => onSetKeyframes(applyMotionPreset(clip.keyframes, p.name, dur))}
-            title="Writes pose keyframes over the clip edge; entrance and exit presets combine"
+            title={tr("editor.pose_keyframes_clip_edge_hint")}
             className="rounded bg-neutral-200 px-1.5 py-0.5 text-[10px] text-neutral-700 hover:bg-neutral-300 disabled:opacity-40"
           >
             {p.label}
@@ -6988,11 +8410,11 @@ function KeyframeRows({ clip, playhead, editDisabled, onSetKeyframes }: {
           onChange={(e) => setProperty(e.target.value as typeof property)}
           className="rounded border border-neutral-300 bg-neutral-200 px-1 py-0.5 text-neutral-900 disabled:opacity-40"
         >
-          <option value="opacity">Opacity</option>
-          <option value="scale">Scale</option>
-          <option value="dx">Offset X</option>
-          <option value="dy">Offset Y</option>
-          <option value="gain">Gain (dB)</option>
+          <option value="opacity">{tr("editor.opacity")}</option>
+          <option value="scale">{tr("editor.scale_2")}</option>
+          <option value="dx">{tr("editor.offset_x")}</option>
+          <option value="dy">{tr("editor.offset_y")}</option>
+          <option value="gain">{tr("editor.gain_db")}</option>
         </select>
         <input
           type="number"
@@ -7006,7 +8428,7 @@ function KeyframeRows({ clip, playhead, editDisabled, onSetKeyframes }: {
           type="button"
           disabled={editDisabled || localFrame < 0}
           onClick={addKeyframe}
-          title="Add a keyframe for this property at the playhead"
+          title={tr("editor.add_a_keyframe_for_this_property_at_the_play")}
           className="rounded bg-neutral-200 px-2 py-0.5 text-neutral-800 hover:bg-neutral-300 disabled:opacity-40"
         >
           + at {localFrame}f
@@ -7029,15 +8451,15 @@ function KeyframeRows({ clip, playhead, editDisabled, onSetKeyframes }: {
             }
             className="rounded border border-neutral-300 bg-neutral-200 px-1 py-0.5 text-neutral-900 disabled:opacity-40"
           >
-            <option value="linear">Linear</option>
-            <option value="easeIn">Ease in</option>
-            <option value="easeOut">Ease out</option>
-            <option value="easeInOut">Ease in-out</option>
+            <option value="linear">{tr("editor.linear")}</option>
+            <option value="easeIn">{tr("editor.ease_in")}</option>
+            <option value="easeOut">{tr("editor.ease_out")}</option>
+            <option value="easeInOut">{tr("editor.ease_in_out")}</option>
           </select>
         </label>
       )}
       {tracks.length === 0 ? (
-        <div className="text-[11px] text-neutral-400">No keyframes. Values interpolate between frames.</div>
+        <div className="text-[11px] text-neutral-400">{tr("editor.no_keyframes_values_interpolate_between_fram")}</div>
       ) : (
         tracks.map((t) =>
           t.keyframes.map((k) => (

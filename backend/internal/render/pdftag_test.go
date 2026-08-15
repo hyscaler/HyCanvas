@@ -1,6 +1,7 @@
 package render
 
 import (
+	"bytes"
 	"regexp"
 	"strings"
 	"testing"
@@ -274,5 +275,51 @@ func TestDeckPDFRejectsAnEmptyDeck(t *testing.T) {
 	file := Design(map[string]any{"pages": []any{map[string]any{"id": "p", "hidden": true, "width": 10.0, "height": 10.0}}})
 	if _, err := ToDeckPDF(file); err != ErrPageRange {
 		t.Errorf("want ErrPageRange for an all-hidden deck, got %v", err)
+	}
+}
+
+// PDF/UA requires /Lang to state the document's ACTUAL natural language. It was
+// hardcoded to en-US, so every exported PDF claimed American English whatever it
+// contained, and a screen reader pronounced it that way. That is the class of
+// defect institutional accessibility review rejects an export for.
+func TestPdfLangFollowsTheDocument(t *testing.T) {
+	if got := pdfLang(Design{}); got != "en-US" {
+		t.Errorf("no language set: got %q, want the en-US fallback", got)
+	}
+	if got := pdfLang(Design{"meta": map[string]any{"language": "ar"}}); got != "ar" {
+		t.Errorf("document language ignored: got %q, want ar", got)
+	}
+	if got := pdfLang(Design{"meta": map[string]any{"language": "pt-BR"}}); got != "pt-BR" {
+		t.Errorf("region subtag lost: got %q", got)
+	}
+	// /Lang is interpolated into the PDF catalog, so a hostile value must not be
+	// able to close the dictionary and inject objects.
+	for _, bad := range []string{
+		")>> /Evil (x", "en US", "en_US", "toolongsubtagvalue", "a-b-c-d", "",
+		"en-\n", "<script>",
+	} {
+		if got := pdfLang(Design{"meta": map[string]any{"language": bad}}); got != "en-US" {
+			t.Errorf("pdfLang(%q) = %q, want the safe fallback", bad, got)
+		}
+	}
+}
+
+// End to end: the catalog carries the document's language.
+func TestTaggedPdfEmitsDocumentLanguage(t *testing.T) {
+	design := Design{
+		"meta": map[string]any{"language": "he-IL"},
+		"pages": []any{map[string]any{
+			"id": "p1", "name": "עמוד", "width": 200.0, "height": 100.0, "children": []any{},
+		}},
+	}
+	out, err := ToPDF(design, 0)
+	if err != nil {
+		t.Fatalf("ToPDF: %v", err)
+	}
+	if !bytes.Contains(out, []byte("/Lang (he-IL)")) {
+		t.Fatal("the exported PDF does not declare the document's language")
+	}
+	if bytes.Contains(out, []byte("/Lang (en-US)")) {
+		t.Fatal("the hardcoded en-US language is still being written")
 	}
 }

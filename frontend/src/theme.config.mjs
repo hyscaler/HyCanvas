@@ -68,17 +68,26 @@ export const theme = {
   // gradient stay identical. `brandInk` is the accent TEXT color on chrome
   // (light mode uses brand-700); it exists because text and backgrounds share
   // scale steps and cannot be swapped wholesale.
-  // Tailwind's default neutral scale, restated so the generator can emit the
+  // The app's neutral ramp: emitted as the DEFAULT chrome tokens and as the
   // `.light` escape hatch (document surfaces like sheets and present mode pin
-  // themselves light even when the app chrome is dark). Keep in sync with
-  // Tailwind; these are not brand colors.
+  // themselves light even when the app chrome is dark). These are not brand
+  // colors.
+  //
+  // Steps 400 and 500 depart from Tailwind's defaults on purpose. Tailwind's
+  // neutral-400 (#a3a3a3) is 2.58:1 on white, and the app uses it for real
+  // secondary text (timestamps, hints, counts) at 10-12px, which fails WCAG
+  // 1.4.3 AA; a live axe-core scan flagged it on the editor and settings
+  // surfaces. Both steps now clear 4.5:1 against every chrome background the
+  // app puts text on (white, neutral-50, neutral-100), so secondary text
+  // passes AA everywhere by construction rather than per component. Adjust
+  // the tone here if it reads too heavy; keep 400 >= 4.5:1 on #f5f5f5.
   neutral: {
     50: "#fafafa",
     100: "#f5f5f5",
     200: "#e5e5e5",
     300: "#d4d4d4",
-    400: "#a3a3a3",
-    500: "#737373",
+    400: "#6f6f6f", // AA on white 5.02, neutral-50 4.81, neutral-100 4.61
+    500: "#5f5f5f", // stays a step darker than 400
     600: "#525252",
     700: "#404040",
     800: "#262626",
@@ -108,6 +117,51 @@ export const theme = {
       200: "#4e2340",
     },
     brandInk: "#E195C7",
+  },
+
+  // High-contrast mode for the APP CHROME only (F38 FR-4), an axis orthogonal
+  // to light/dark: the `hc` class on <html> strengthens the same tokens dark
+  // mode swaps, so secondary text reaches ~7:1 and borders stop being subtle.
+  // `light` (the light-hc ramp, applied by `.hc`) darkens the mid greys that
+  // sit around 3:1 on white; `dark` (applied by `.hc.dark`) brightens text
+  // toward white and lifts borders. Design content is never restyled: the
+  // `.light` escape hatch on document surfaces re-declares its own tokens on a
+  // nearer ancestor, so it wins inside those subtrees automatically.
+  contrast: {
+    light: {
+      neutral: {
+        50: "#f8f8f8",
+        100: "#ededed",
+        200: "#bdbdbd",
+        300: "#8f8f8f",
+        400: "#4f4f4f",
+        500: "#454545",
+        600: "#333333",
+        700: "#232323",
+        800: "#141414",
+        900: "#000000",
+        950: "#000000",
+      },
+      brandInk: "#681A49",
+    },
+    dark: {
+      page: "#000000",
+      surface: "#0d0d0d",
+      neutral: {
+        50: "#0d0d0d",
+        100: "#161616",
+        200: "#3d3d3d",
+        300: "#5c5c5c",
+        400: "#b3b3b3",
+        500: "#cccccc",
+        600: "#e0e0e0",
+        700: "#ededed",
+        800: "#f7f7f7",
+        900: "#ffffff",
+        950: "#ffffff",
+      },
+      brandInk: "#EDBBDC",
+    },
   },
 
   // Editor canvas overlay colors. The engine paints to Canvas2D and cannot read

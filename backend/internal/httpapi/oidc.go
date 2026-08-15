@@ -201,7 +201,7 @@ func oidcIdentityHandler(svc *oidc.Service, acct *accounts.Service) http.Handler
 		u := userFrom(r.Context())
 		linked, err := acct.HasOidcIdentity(r.Context(), u.ID)
 		if err != nil {
-			Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "could not load SSO status")
+			problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "could not load SSO status", "could_not_load_sso_status")
 			return
 		}
 		// configured reflects whether SSO is set up at all, so the UI can hide the
@@ -216,10 +216,10 @@ func oidcUnlinkHandler(acct *accounts.Service) http.HandlerFunc {
 		u := userFrom(r.Context())
 		if err := acct.UnlinkOidcIdentity(r.Context(), u.ID); err != nil {
 			if errors.Is(err, accounts.ErrOidcLastFactor) {
-				Problem(w, r, http.StatusConflict, "Conflict", "set a password before disconnecting SSO so you are not locked out")
+				problemWithCode(w, r, http.StatusConflict, "Conflict", "set a password before disconnecting SSO so you are not locked out", "sso_disconnect_needs_password")
 				return
 			}
-			Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "could not disconnect SSO")
+			problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "could not disconnect SSO", "could_not_disconnect_sso")
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)

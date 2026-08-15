@@ -1,0 +1,106 @@
+{
+  "updates": [
+    "AvoGATLT6NbKAQAoAQZkZXNpZ24GZm9ybWF0AXcPaHljYW52YXMuZGVzaWduKAEGZGVzaWduDXNjaGVtYVZlcnNpb24BfREoAQZkZXNpZ24CaWQBdxNkZXNpZ24tZm9sZC1maXh0dXJlKAEGZGVzaWduBXRpdGxlAXcMZm9sZC1maXh0dXJlKAEGZGVzaWduBHVuaXQBdwJweCgBBmRlc2lnbgNkcGkBfaABJwEGZGVzaWduBXBhZ2VzAAcA0+jWygEGASgA0+jWygEHAmlkAXcGcGFnZS0xKADT6NbKAQcEbmFtZQF3BlBhZ2UgMSgA0+jWygEHBXdpZHRoAX2gDCgA0+jWygEHBmhlaWdodAF9mAknANPo1soBBwpiYWNrZ3JvdW5kASgA0+jWygEMBHR5cGUBdwVzb2xpZCcA0+jWygEMBWNvbG9yAScA0+jWygEOBHNyZ2IBKADT6NbKAQ8BcgF9ASgA0+jWygEPAWcBfQEoANPo1soBDwFiAX0BKADT6NbKAQ8BYQF9AScA0+jWygEHCGNoaWxkcmVuAAcA0+jWygEUASgA0+jWygEVAmlkAXcHc2hhcGUtMScA0+jWygEVCXRyYW5zZm9ybQEoANPo1soBFwF4AX0KKADT6NbKARcBeQF9FCgA0+jWygEXBnNjYWxlWAF9ASgA0+jWygEXBnNjYWxlWQF9ASgA0+jWygEXCHJvdGF0aW9uAX0AJwDT6NbKARUEc2l6ZQEoANPo1soBHQV3aWR0aAF9pAEoANPo1soBHQZoZWlnaHQBfTIoANPo1soBFQdvcGFjaXR5AX0BKADT6NbKARUJYmxlbmRNb2RlAXcGbm9ybWFsKADT6NbKARUEdHlwZQF3BXNoYXBlKADT6NbKARUFc2hhcGUBdwRyZWN0JwDT6NbKARUFZmlsbHMABwDT6NbKASQBKADT6NbKASUEdHlwZQF3BXNvbGlkJwDT6NbKASUFY29sb3IBJwDT6NbKAScEc3JnYgEoANPo1soBKAFyAX0AKADT6NbKASgBZwF9ACgA0+jWygEoAWIBfQAoANPo1soBKAFhAX0BKADT6NbKARUFX19vcmQBfQAoANPo1soBBwVfX29yZAF9ACcBBmRlc2lnbgZhc3NldHMAJwEGZGVzaWduBWZvbnRzACcBBmRlc2lnbgRtZXRhAQA=",
+    "AqwEAR/T6NbKATKo0+jWygEYAX2sBIfT6NbKARUBKADT6NbKATMCaWQBdwZ0ZXh0LTEnANPo1soBMwl0cmFuc2Zvcm0BKADT6NbKATUBeAF9KCgA0+jWygE1AXkBfSgoANPo1soBNQZzY2FsZVgBfQEoANPo1soBNQZzY2FsZVkBfQEoANPo1soBNQhyb3RhdGlvbgF9ACcA0+jWygEzBHNpemUBKADT6NbKATsFd2lkdGgBfYgDKADT6NbKATsGaGVpZ2h0AX0oKADT6NbKATMHb3BhY2l0eQF9ASgA0+jWygEzCWJsZW5kTW9kZQF3Bm5vcm1hbCgA0+jWygEzBHR5cGUBdwR0ZXh0JwDT6NbKATMDYm94ASgA0+jWygFBBG1vZGUBdwVmaXhlZCgA0+jWygFBBXdpZHRoAX2kASgA0+jWygFBBmhlaWdodAF9pAEnANPo1soBQQdhdXRvRml0ASgA0+jWygFFB2VuYWJsZWQBeSgA0+jWygFFA21pbgF9CCgA0+jWygFFA21heAF9gAgoANPo1soBQQ12ZXJ0aWNhbEFsaWduAXcDdG9wJwDT6NbKATMHY29udGVudAAHANPo1soBSgEnANPo1soBSwRydW5zAicA0+jWygFLBXN0eWxlASgA0+jWygFNBWFsaWduAXcEbGVmdCgA0+jWygFNCWRpcmVjdGlvbgF3BGF1dG8oANPo1soBMwVfX29yZAF9AQHT6NbKAQEYAQ=="
+  ],
+  "expected": {
+    "format": "hycanvas.design",
+    "schemaVersion": 17,
+    "id": "design-fold-fixture",
+    "title": "fold-fixture",
+    "unit": "px",
+    "dpi": 96,
+    "pages": [
+      {
+        "id": "page-1",
+        "name": "Page 1",
+        "width": 800,
+        "height": 600,
+        "background": {
+          "type": "solid",
+          "color": {
+            "srgb": {
+              "r": 1,
+              "g": 1,
+              "b": 1,
+              "a": 1
+            }
+          }
+        },
+        "children": [
+          {
+            "id": "shape-1",
+            "transform": {
+              "x": 300,
+              "y": 20,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0
+            },
+            "size": {
+              "width": 100,
+              "height": 50
+            },
+            "opacity": 1,
+            "blendMode": "normal",
+            "type": "shape",
+            "shape": "rect",
+            "fills": [
+              {
+                "type": "solid",
+                "color": {
+                  "srgb": {
+                    "r": 0,
+                    "g": 0,
+                    "b": 0,
+                    "a": 1
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "text-1",
+            "transform": {
+              "x": 40,
+              "y": 40,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0
+            },
+            "size": {
+              "width": 200,
+              "height": 40
+            },
+            "opacity": 1,
+            "blendMode": "normal",
+            "type": "text",
+            "box": {
+              "mode": "fixed",
+              "width": 100,
+              "height": 100,
+              "autoFit": {
+                "enabled": false,
+                "min": 8,
+                "max": 512
+              },
+              "verticalAlign": "top"
+            },
+            "content": [
+              {
+                "runs": [],
+                "style": {
+                  "align": "left",
+                  "direction": "auto"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "assets": [],
+    "fonts": [],
+    "meta": {}
+  }
+}

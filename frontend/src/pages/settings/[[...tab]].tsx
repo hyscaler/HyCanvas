@@ -7,11 +7,12 @@ import {
   SETTINGS_TABS,
   type SettingsTab,
 } from "@/components/settings/tabs";
+import { tr } from "@/lib/i18n";
 
 // Client-only: depends on auth state and live API calls.
 const SettingsApp = dynamic(() => import("@/components/settings/SettingsApp").then((m) => m.SettingsApp), {
   ssr: false,
-  loading: () => <div className="grid min-h-screen place-items-center text-sm text-neutral-500">Loading…</div>,
+  loading: () => <div className="grid min-h-screen place-items-center text-sm text-neutral-500">{tr("page.loading")}</div>,
 });
 
 interface SettingsPageProps {

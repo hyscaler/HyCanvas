@@ -177,10 +177,14 @@ export function audibleClipsAt(project: VideoProject, frame: number, opts: Activ
 export interface TransitionFx {
   /** 0..1 overall clip opacity from fade/crossDissolve edges. */
   alpha: number;
-  /** Horizontal reveal fraction (wipe): draw only the left `wipe` of the clip. */
+  /** Reveal fraction (wipe): only `wipe` of the clip is drawn, from `wipeDir`. */
   wipe?: number;
+  /** Edge the wipe reveals from (default "left"). */
+  wipeDir?: "left" | "right" | "up" | "down";
   /** Horizontal slide offset as a fraction of stage width (slide). */
   slideX?: number;
+  /** Vertical slide offset as a fraction of stage height (slide up/down). */
+  slideY?: number;
   /** Solid overlay (dipToColor): color + its opacity. */
   dip?: { color: string; alpha: number };
 }
@@ -212,11 +216,23 @@ export function transitionFxAt(clip: Clip, localFrame: number, durationFrames: n
         break;
       case "wipe":
         fx.wipe = Math.min(fx.wipe ?? 1, p);
+        if (t.direction) fx.wipeDir = t.direction;
         break;
-      case "slide":
-        // In: slides in from the left; out: slides away to the right.
-        fx.slideX = (fx.slideX ?? 0) + (edge === "in" ? p - 1 : 1 - p);
+      case "slide": {
+        if (!t.direction) {
+          // Legacy: in slides from the left; out slides away to the right.
+          fx.slideX = (fx.slideX ?? 0) + (edge === "in" ? p - 1 : 1 - p);
+          break;
+        }
+        // Directional: the clip enters from `direction` (off = -1 -> 0) and exits
+        // back to it (0 -> -1). `off` is the offset toward the entry edge.
+        const off = edge === "in" ? p - 1 : -(1 - p);
+        if (t.direction === "left") fx.slideX = (fx.slideX ?? 0) + off;
+        else if (t.direction === "right") fx.slideX = (fx.slideX ?? 0) - off;
+        else if (t.direction === "up") fx.slideY = (fx.slideY ?? 0) + off;
+        else if (t.direction === "down") fx.slideY = (fx.slideY ?? 0) - off;
         break;
+      }
       case "dipToColor":
         fx.dip = { color: t.color ?? "#000000", alpha: 1 - p };
         break;
@@ -580,11 +596,16 @@ export function drawTimelineFrame(
     ctx.save();
     ctx.globalAlpha = Math.max(0, Math.min(1, fx.alpha * pose.opacity));
     if (fx.wipe !== undefined && fx.wipe < 1) {
+      const r = Math.max(0, fx.wipe);
       ctx.beginPath();
-      ctx.rect(0, 0, W * Math.max(0, fx.wipe), H);
+      // Reveal a growing band from the chosen edge (default left).
+      if (fx.wipeDir === "right") ctx.rect(W * (1 - r), 0, W * r, H);
+      else if (fx.wipeDir === "up") ctx.rect(0, 0, W, H * r);
+      else if (fx.wipeDir === "down") ctx.rect(0, H * (1 - r), W, H * r);
+      else ctx.rect(0, 0, W * r, H);
       ctx.clip();
     }
-    if (fx.slideX) ctx.translate(fx.slideX * W, 0);
+    if (fx.slideX || fx.slideY) ctx.translate((fx.slideX ?? 0) * W, (fx.slideY ?? 0) * H);
     // Keyframed pose: offset + scale + rotation about the stage center.
     if (pose.dx || pose.dy || pose.scale !== 1 || pose.rotation) {
       ctx.translate(W / 2 + pose.dx * W, H / 2 + pose.dy * H);

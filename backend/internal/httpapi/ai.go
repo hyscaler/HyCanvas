@@ -34,17 +34,19 @@ func mountAI(api chi.Router, svc *ai.Service, acct *accounts.Service) {
 }
 
 func aiProblem(w http.ResponseWriter, r *http.Request, err error) {
+	// Each branch carries a stable `code` so the frontend can translate the
+	// failure (F38 FR-9); the English detail stays as the fallback wording.
 	switch {
 	case errors.Is(err, ai.ErrPolicyBlocked):
-		Problem(w, r, http.StatusForbidden, "Forbidden", err.Error())
+		problemWithCode(w, r, http.StatusForbidden, "Forbidden", err.Error(), "ai_policy_blocked")
 	case errors.Is(err, ai.ErrImageUnsupported):
-		Problem(w, r, http.StatusBadRequest, "Bad Request", "your AI provider does not support image generation; switch to an image-capable provider (e.g. OpenAI or Together AI) in AI settings")
+		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "your AI provider does not support image generation; switch to an image-capable provider (e.g. OpenAI or Together AI) in AI settings", "ai_image_unsupported")
 	case errors.Is(err, ai.ErrBadRequest):
-		Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid AI request or no provider configured")
+		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid AI request or no provider configured", "ai_not_configured")
 	case errors.Is(err, ai.ErrBadGateway):
-		Problem(w, r, http.StatusBadGateway, "Bad Gateway", "the AI provider request failed")
+		problemWithCode(w, r, http.StatusBadGateway, "Bad Gateway", "the AI provider request failed", "ai_provider_failed")
 	default:
-		Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed")
+		problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed", "ai_failed")
 	}
 }
 
@@ -58,7 +60,7 @@ func aiGetConfigHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFun
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
 		if !aiAssert(r, acct, id, "viewer") {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace", "not_workspace_member")
 			return
 		}
 		cfg, err := svc.GetConfig(r.Context(), id)
@@ -74,7 +76,7 @@ func aiSetConfigHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFun
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
 		if !aiAssert(r, acct, id, "admin") {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "admin access required")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "admin access required", "admin_access_required")
 			return
 		}
 		var body struct {
@@ -85,7 +87,7 @@ func aiSetConfigHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFun
 			APIKey     string `json:"apiKey"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		cfg, err := svc.SetConfig(r.Context(), id, ai.ConfigInput{
@@ -103,7 +105,7 @@ func aiGetPolicyHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFun
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
 		if !aiAssert(r, acct, id, "viewer") {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace", "not_workspace_member")
 			return
 		}
 		p, err := svc.GetPolicy(r.Context(), id)
@@ -119,12 +121,12 @@ func aiSetPolicyHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFun
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
 		if !aiAssert(r, acct, id, "admin") {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "admin access required")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "admin access required", "admin_access_required")
 			return
 		}
 		var body ai.OrgPolicy
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		if err := svc.SetPolicy(r.Context(), id, body); err != nil {
@@ -144,7 +146,7 @@ func aiGetUsageHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFunc
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
 		if !aiAssert(r, acct, id, "viewer") {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace", "not_workspace_member")
 			return
 		}
 		u, err := svc.GetUsage(r.Context(), id)
@@ -164,11 +166,11 @@ func aiTextHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFunc {
 			System      string `json:"system"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		if !aiAssert(r, acct, body.WorkspaceID, "member") {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace", "not_workspace_member")
 			return
 		}
 		text, err := svc.Text(r.Context(), body.WorkspaceID, body.Prompt, body.System)
@@ -188,11 +190,11 @@ func aiImageHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFunc {
 			Size        string `json:"size"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		if !aiAssert(r, acct, body.WorkspaceID, "member") {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace", "not_workspace_member")
 			return
 		}
 		img, err := svc.Image(r.Context(), body.WorkspaceID, body.Prompt, body.Size)
@@ -212,11 +214,11 @@ func aiDescribeImageHandler(svc *ai.Service, acct *accounts.Service) http.Handle
 			Instruction string `json:"instruction"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		if !aiAssert(r, acct, body.WorkspaceID, "member") {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace", "not_workspace_member")
 			return
 		}
 		text, err := svc.DescribeImage(r.Context(), body.WorkspaceID, body.ImageBase64, body.Instruction)
@@ -238,11 +240,11 @@ func aiEditImageHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFun
 			Size        string `json:"size"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		if !aiAssert(r, acct, body.WorkspaceID, "member") {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace", "not_workspace_member")
 			return
 		}
 		img, err := svc.EditImage(r.Context(), body.WorkspaceID, body.ImageBase64, body.Prompt, body.MaskBase64, body.Size)

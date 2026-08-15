@@ -27,15 +27,15 @@ func mountWhiteboard(api chi.Router, wb *whiteboard.Service, acct *accounts.Serv
 func wbProblem(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, whiteboard.ErrForbidden):
-		Problem(w, r, http.StatusForbidden, "Forbidden", "you do not have permission for this action")
+		problemWithCode(w, r, http.StatusForbidden, "Forbidden", "you do not have permission for this action", "forbidden_action")
 	case errors.Is(err, whiteboard.ErrNotFound):
-		Problem(w, r, http.StatusNotFound, "Not Found", "not found")
+		problemWithCode(w, r, http.StatusNotFound, "Not Found", "not found", "not_found")
 	case errors.Is(err, whiteboard.ErrBadRequest):
-		Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid request")
+		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid request", "invalid_request")
 	case errors.Is(err, whiteboard.ErrConflict):
-		Problem(w, r, http.StatusConflict, "Conflict", "the vote session is closed or you are out of votes")
+		problemWithCode(w, r, http.StatusConflict, "Conflict", "the vote session is closed or you are out of votes", "vote_closed_or_exhausted")
 	default:
-		Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed")
+		problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed", "request_failed")
 	}
 }
 
@@ -46,7 +46,7 @@ func wbOpenSessionHandler(wb *whiteboard.Service) http.HandlerFunc {
 			Anonymous     bool `json:"anonymous"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())
@@ -66,7 +66,7 @@ func wbSessionStateHandler(wb *whiteboard.Service) http.HandlerFunc {
 			Revealed bool `json:"revealed"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())
@@ -98,7 +98,7 @@ func wbCastVoteHandler(wb *whiteboard.Service) http.HandlerFunc {
 			NodeID    string `json:"nodeId"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())

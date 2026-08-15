@@ -1,3 +1,4 @@
+import { tr } from "@/lib/i18n";
 // Brand loading state: the animated visitor mark (brand asset
 // /brand/visitor-loader.svg; the cursor arrives, the stroke paints itself and
 // escapes, on a 2.8s loop, resting complete under prefers-reduced-motion).
@@ -10,7 +11,7 @@ export function BrandLoader({ size = 104, label }: { size?: number; label?: stri
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/brand/visitor-loader.svg" width={size} height={size * (50 / 52)} alt="" aria-hidden />
       <span role="status" className="text-sm text-neutral-500">
-        {label ?? "Loading…"}
+        {label ?? tr("ui.loading")}
       </span>
     </span>
   );

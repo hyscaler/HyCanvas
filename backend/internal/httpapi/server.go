@@ -20,6 +20,7 @@ import (
 	"hycanvas/backend/internal/ai"
 	"hycanvas/backend/internal/aistudio"
 	"hycanvas/backend/internal/approvals"
+	"hycanvas/backend/internal/audience"
 	"hycanvas/backend/internal/brand"
 	"hycanvas/backend/internal/bulkcreate"
 	"hycanvas/backend/internal/captcha"
@@ -60,6 +61,7 @@ type Deps struct {
 	AIStudio      *aistudio.Service
 	Uploads       *uploads.Service
 	Realtime      *realtime.Hub
+	Audience      *audience.Service
 	Templates     *templates.Service
 	Stock         *stock.Service
 	OIDC          *oidc.Service
@@ -74,6 +76,7 @@ type Deps struct {
 	Captcha       captcha.Verifier     // optional CAPTCHA gate on the auth forms; nil = off
 	CaptchaConfig config.CaptchaConfig // public captcha config (provider/site key) for the sign-in page
 	PublicDir     string               // exported Next.js frontend to serve; empty = API only
+	LocalesDir    string               // optional dir of /locales/<tag>.json translations that overrides the embedded copy
 	AnalyticsGAID string               // optional GA4 measurement id injected into served HTML; empty = no analytics
 	// AllowOrigin gates CORS: it returns true for cross-origin Origins that may
 	// call the API with credentials (dev frontend). Nil disables CORS handling.
@@ -98,7 +101,7 @@ func NewRouter(d Deps) http.Handler {
 		ctx, cancel := context.WithTimeout(req.Context(), 3*time.Second)
 		defer cancel()
 		if err := d.DB.Ping(ctx); err != nil {
-			Problem(w, req, http.StatusServiceUnavailable, "Not Ready", "database unavailable")
+			problemWithCode(w, req, http.StatusServiceUnavailable, "Not Ready", "database unavailable", "database_unavailable")
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
@@ -178,6 +181,12 @@ func NewRouter(d Deps) http.Handler {
 		if d.Accounts != nil && d.AI != nil {
 			mountAI(api, d.AI, d.Accounts)
 		}
+		if d.Accounts != nil {
+			mountExtractURL(api, d.Accounts)
+		}
+		if d.Accounts != nil && d.Audience != nil && d.Sharing != nil && d.Persistence != nil {
+			mountAudience(api, d.Audience, d.Sharing, d.Persistence, d.Accounts)
+		}
 		if d.Accounts != nil && d.Uploads != nil {
 			mountUploads(api, d.Uploads, d.Accounts)
 		}
@@ -198,8 +207,11 @@ func NewRouter(d Deps) http.Handler {
 	// back to a PUBLIC_DIR directory when no UI was embedded.
 	switch {
 	case webui.HasContent():
-		mountStaticFS(r, http.FS(webui.FS()), d.AnalyticsGAID)
-		d.Logger.Info("serving embedded frontend")
+		// The locales overlay goes on FIRST so a translation dropped next to the
+		// binary beats the embedded copy; adding a language must not require a
+		// rebuild.
+		mountStaticFS(r, withLocalesDir(http.FS(webui.FS()), d.LocalesDir), d.AnalyticsGAID)
+		d.Logger.Info("serving embedded frontend", "localesDir", d.LocalesDir)
 	case d.PublicDir != "":
 		if info, err := os.Stat(d.PublicDir); err == nil && info.IsDir() {
 			mountStatic(r, d.PublicDir, d.AnalyticsGAID)

@@ -1,0 +1,21 @@
+{
+  "when": "2026-08-08T07:54:56.534Z",
+  "axeVersion": "4.12.0",
+  "surfaces": {
+    "login": [],
+    "signup": [],
+    "dashboard": [],
+    "settings-account": [],
+    "settings-security": [],
+    "settings-notifications": [],
+    "editor": [],
+    "editor+export": [],
+    "editor+share": [],
+    "whiteboard": [],
+    "doc": [],
+    "sheet": [],
+    "video": [],
+    "design(base)": [],
+    "present": []
+  }
+}

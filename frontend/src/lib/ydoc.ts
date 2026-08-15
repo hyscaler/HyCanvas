@@ -27,9 +27,10 @@
 
 import * as Y from "yjs";
 import * as syncProtocol from "y-protocols/sync";
+import * as decoding from "lib0/decoding";
 import * as encoding from "lib0/encoding";
 import { IndexeddbPersistence } from "y-indexeddb";
-import { reconcile, fromDoc, LOCAL_ORIGIN } from "@hc/realtime";
+import { reconcile, fromDoc, fromDocWithPageReuse, LOCAL_ORIGIN } from "@hc/realtime";
 import { DESIGN_ROOT_KEY, type DesignFile } from "@hc/schema";
 import { useEditor, type CollabUndo } from "@/store/editor";
 
@@ -48,6 +49,24 @@ function bytesToBase64(bytes: Uint8Array): string {
 // subscription can tell a remote-driven store change apart from a genuine local
 // edit and avoid an echo loop.
 const REMOTE_ORIGIN = "remote";
+
+/** Which lineage's document the editor store currently holds: the design it
+ *  belongs to and the branch within it (null = main). Updated whenever a bound
+ *  doc projects its state into the store, and read by the constructor to decide
+ *  whether the store is a safe seed for a newly bound room. Null until a doc
+ *  projects: a freshly opened design has its main-lineage file in the store
+ *  (loaded over REST), which is exactly what a main doc may seed from. */
+let storeLineage: { designId: string; branch: string | null } | null = null;
+
+/** True when the store holds a document from a lineage OTHER than (designId,
+ *  branch). Opening a different design is not foreign for a main doc: the store
+ *  then holds that design's REST-loaded main file. Switching branches within a
+ *  design always is, in both directions, because the switch only rebinds the
+ *  room and the store keeps the lineage just left until the new one syncs. */
+function storeIsForeign(designId: string, branch: string | null): boolean {
+  if (storeLineage && storeLineage.designId === designId) return storeLineage.branch !== branch;
+  return branch !== null;
+}
 
 /**
  * The live collaborative document for one design: a Y.Doc bound to the editor
@@ -79,10 +98,40 @@ export class DesignDoc {
   // reconcile as its own tracked diff. Cloned because edits mutate the store
   // doc in place; nulled once any state lands (one-shot).
   private seedBaseline: DesignFile | null;
+  /** True when the editor store holds a DIFFERENT lineage's document than this
+   *  doc binds (set at construction, cleared once this lineage's own state
+   *  reaches the store, whether by sync or by {@link adoptStore}). While true
+   *  the store is never used as a room seed. */
+  private foreignStore: boolean;
+  // Page-granular incremental projection (FR-2/FR-7 at scale). Non-local
+  // transactions accumulate the ids of pages they touched; applyToStore then
+  // re-projects ONLY those pages and reuses the store's existing objects for
+  // the rest, so a peer's one-shape edit costs one page, not the whole deck.
+  // `metaDirty` forces the full path for root-level/meta changes; reuse is
+  // valid only while the store doc is the object we last projected (local
+  // edits mutate it in place and are already reconciled INTO Y, so they never
+  // invalidate; a loadDoc swap does).
+  private dirtyPages = new Set<string>();
+  private metaDirty = false;
+  private lastStoreDoc: DesignFile | null = null;
 
-  constructor(readonly designId: string) {
+  /** branch: the in-CRDT branch this doc binds (doc 16 FR-10), or null for the
+   *  main lineage. A branch doc gets its own IndexedDB namespace. A doc bound
+   *  right after a lineage switch (in either direction) never seeds from the
+   *  store, which still holds the lineage just left; it seeds from the
+   *  lineage's folded journal via {@link applyJournalFrames} or from room
+   *  sync/IndexedDB. */
+  constructor(readonly designId: string, readonly branch: string | null = null) {
     this.lastRev = useEditor.getState().rev;
-    this.seedBaseline = structuredClone(useEditor.getState().doc);
+    // Whose state is in the store right now? Seeding a room from the store is
+    // only safe when the store holds THIS lineage's document. It does not after
+    // a lineage switch in either direction: switching only rebinds the room, so
+    // the store still holds the lineage we just left until that room's state
+    // arrives.
+    this.foreignStore = storeIsForeign(designId, branch);
+    // A doc must never treat another lineage's document as its pre-edit
+    // baseline; its baseline is the lineage's own folded state.
+    this.seedBaseline = this.foreignStore ? null : structuredClone(useEditor.getState().doc);
 
     // Track only LOCAL_ORIGIN transactions (this client's reconciled edits).
     // Remote-peer updates (REMOTE_ORIGIN) and the manager's own undo/redo apply
@@ -100,6 +149,28 @@ export class DesignDoc {
       stopCapturing: () => this.undoMgr.stopCapturing(),
     };
     useEditor.getState().setCollabUndo(this.undoHandle);
+
+    // Track which PAGES each non-local transaction touched, so the store
+    // rebuild below can re-project just those. Deep events carry a path from
+    // the observed root; a page subtree event's path starts ["pages", <index>].
+    // Index resolves to the page id at event time. Anything shallower or
+    // outside pages (meta, assets, a page insert/delete on the array itself)
+    // marks the projection meta-dirty and falls back to the full path.
+    this.ydoc.getMap(DESIGN_ROOT_KEY).observeDeep((events) => {
+      for (const ev of events) {
+        if (ev.transaction.origin === LOCAL_ORIGIN) continue; // store already has it
+        const path = ev.path;
+        if (path.length >= 2 && path[0] === "pages" && typeof path[1] === "number") {
+          const pages = this.ydoc.getMap(DESIGN_ROOT_KEY).get("pages");
+          const pg = pages instanceof Y.Array ? pages.get(path[1] as number) : null;
+          const id = pg instanceof Y.Map ? pg.get("id") : null;
+          if (typeof id === "string") this.dirtyPages.add(id);
+          else this.metaDirty = true;
+        } else {
+          this.metaDirty = true;
+        }
+      }
+    });
 
     // Y -> Local: any update not originating from our own reconcile (remote
     // peer, the initial sync, or an undo/redo applied by the UndoManager)
@@ -152,6 +223,13 @@ export class DesignDoc {
       // the edit itself diffs in as a normal tracked step and the session's
       // first action stays undoable.
       if (this.ydoc.getMap(DESIGN_ROOT_KEY).size === 0) {
+        // Never absorb ANOTHER lineage's document while empty. At switch time
+        // the store still holds the lineage we left, so seeding here would
+        // graft branch content onto main (broadcast to every peer as duplicate
+        // pages) or main content onto a branch. The real base arrives via
+        // applyJournalFrames / room sync; edits raced before that are dropped
+        // in favor of the authoritative lineage.
+        if (this.foreignStore) return;
         const isEdit = s.doc === prev.doc && this.seedBaseline != null;
         if (isEdit) {
           reconcile(this.seedBaseline as DesignFile, this.ydoc);
@@ -173,11 +251,38 @@ export class DesignDoc {
     // rebuilds the store from it) and auto-persists every change.
     if (typeof indexedDB !== "undefined") {
       try {
-        this.idb = new IndexeddbPersistence(`oc-design-${designId}`, this.ydoc);
+        // A branch doc persists under its own namespace: its CRDT state is a
+        // different lineage and must never merge into main's offline store.
+        const idbName = branch ? `oc-design-${designId}::${branch}` : `oc-design-${designId}`;
+        this.idb = new IndexeddbPersistence(idbName, this.ydoc);
       } catch {
         this.idb = null; // private-mode / blocked storage: degrade to online-only
       }
     }
+  }
+
+  /**
+   * Apply journaled y-protocols frames (base64, oldest first) to this doc -
+   * the branch seed path (doc 16 FR-10). The frames are the branch's
+   * lineage exactly as the server pages it out; readSyncMessage applies each
+   * like inbound live sync (REMOTE_ORIGIN, so the store rebuilds, nothing is
+   * re-broadcast, and nothing lands on the undo stack). Idempotent against
+   * room sync and IndexedDB state: CRDT merge of already-known frames is a
+   * no-op, so seeding and live sync can race freely.
+   */
+  applyJournalFrames(framesB64: string[]): void {
+    if (this.disposed || !framesB64.length) return;
+    this.ydoc.transact(() => {
+      for (const b64 of framesB64) {
+        if (!b64) continue;
+        const bin = atob(b64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        const dec = decoding.createDecoder(bytes);
+        const enc = encoding.createEncoder(); // reply sink, unused for updates
+        syncProtocol.readSyncMessage(dec, enc, this.ydoc, REMOTE_ORIGIN);
+      }
+    }, REMOTE_ORIGIN);
   }
 
   /** Project the current Y.Doc state to a plain DesignFile (for manual save). */
@@ -233,6 +338,9 @@ export class DesignDoc {
    */
   seedIfEmpty(file: DesignFile): void {
     if (this.hasState) return;
+    // A branch doc's only legitimate seed is its folded lineage
+    // (applyJournalFrames); a design-file seed would graft foreign state.
+    if (this.branch) return;
     reconcile(file, this.ydoc); // LOCAL_ORIGIN: also fans out so peers can sync
     this.undoMgr.clear(); // the seed is the baseline, not an undoable edit
   }
@@ -251,6 +359,18 @@ export class DesignDoc {
     this.undoMgr.clear(); // a restore is a fresh baseline (forward-only, not undoable)
   }
 
+  /** Declare that the editor store now holds THIS lineage's authoritative
+   *  document (the binder just loaded it), releasing the foreign-store guard.
+   *  Without this a doc bound after a lineage switch would refuse to seed
+   *  forever when no peer, journal, or IndexedDB state exists to unblock it,
+   *  and every edit would be dropped on the floor. */
+  adoptStore(): void {
+    if (this.disposed) return;
+    this.foreignStore = false;
+    storeLineage = { designId: this.designId, branch: this.branch };
+    this.seedBaseline = structuredClone(useEditor.getState().doc);
+  }
+
   /** Rebuild the editor store doc from the Y.Doc under the remote guard, without
    *  touching the undo stack. */
   private applyToStore(): void {
@@ -265,8 +385,32 @@ export class DesignDoc {
     if (useEditor.getState().preview) return;
     this.applyingRemote = true;
     this.seedBaseline = null; // synced state arrived; the pre-edit baseline is stale
+    // This lineage's authoritative state is about to become the store's doc.
+    this.foreignStore = false;
+    storeLineage = { designId: this.designId, branch: this.branch };
     try {
-      const file = fromDoc(this.ydoc);
+      const store = useEditor.getState();
+      // Page-granular fast path (FR-2/FR-7): when the store doc is the object
+      // we last projected (local edits mutate it in place and were reconciled
+      // INTO Y, so it is still in sync) and nothing outside page subtrees
+      // changed, re-project only the pages this batch of transactions touched
+      // and reuse every other page object untouched. A 50-page deck then pays
+      // for one page on a peer's edit, not fifty.
+      let file: DesignFile;
+      const prevPages = (store.doc as { pages?: { id?: unknown }[] }).pages;
+      const canReuse = !this.metaDirty && this.lastStoreDoc !== null && store.doc === this.lastStoreDoc && Array.isArray(prevPages);
+      if (canReuse) {
+        const reusable = new Map<string, unknown>();
+        for (const p of prevPages) {
+          if (p && typeof p.id === "string" && !this.dirtyPages.has(p.id)) reusable.set(p.id, p);
+        }
+        file = fromDocWithPageReuse(this.ydoc, reusable);
+      } else {
+        file = fromDoc(this.ydoc);
+      }
+      this.dirtyPages.clear();
+      this.metaDirty = false;
+      this.lastStoreDoc = file;
       // Mirror loadDoc's repaint, but preserve selection/viewport/undo: this is
       // an incremental remote merge, not a document switch.
       useEditor.setState((s) => ({ doc: file, rev: s.rev + 1 }));

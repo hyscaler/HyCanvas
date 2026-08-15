@@ -35,7 +35,7 @@ func mountAuth(api chi.Router, svc *accounts.Service, secure bool, policy config
 			return h
 		}
 		return func(w http.ResponseWriter, r *http.Request) {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "this sign-in method is disabled on this instance")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "this sign-in method is disabled on this instance", "signin_method_disabled")
 		}
 	}
 	// protect wraps a human-facing auth form with the CAPTCHA check when one is
@@ -49,7 +49,7 @@ func mountAuth(api chi.Router, svc *accounts.Service, secure bool, policy config
 		return func(w http.ResponseWriter, r *http.Request) {
 			token := r.Header.Get("X-Captcha-Token")
 			if err := cap.Verify(r.Context(), token, clientIP(r)); err != nil {
-				Problem(w, r, http.StatusForbidden, "Forbidden", "captcha verification failed; please try again")
+				problemWithCode(w, r, http.StatusForbidden, "Forbidden", "captcha verification failed; please try again", "captcha_failed")
 				return
 			}
 			h(w, r)
@@ -99,7 +99,7 @@ func updateMeHandler(svc *accounts.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var raw map[string]json.RawMessage
 		if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		var in accounts.UpdateProfileInput
@@ -125,14 +125,14 @@ func updateMeHandler(svc *accounts.Service) http.HandlerFunc {
 		view, err := svc.UpdateProfile(r.Context(), u.ID, in)
 		if err != nil {
 			if errors.Is(err, accounts.ErrInvalidSignup) {
-				Problem(w, r, http.StatusBadRequest, "Bad Request", "name cannot be empty")
+				problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "name cannot be empty", "name_cannot_be_empty")
 				return
 			}
 			if errors.Is(err, accounts.ErrInvalidProfile) {
-				Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid timezone or preference value")
+				problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid timezone or preference value", "invalid_timezone_or_preference_value")
 				return
 			}
-			Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "could not update profile")
+			problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "could not update profile", "could_not_update_profile")
 			return
 		}
 		writeJSON(w, http.StatusOK, view)
@@ -144,7 +144,7 @@ func sessionsHandler(svc *accounts.Service) http.HandlerFunc {
 		u := userFrom(r.Context())
 		list, err := svc.ListSessions(r.Context(), u.ID)
 		if err != nil {
-			Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "could not list sessions")
+			problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "could not list sessions", "could_not_list_sessions")
 			return
 		}
 		writeJSON(w, http.StatusOK, list)
@@ -159,18 +159,18 @@ func signupHandler(svc *accounts.Service, secure bool) http.HandlerFunc {
 			Name     string `json:"name"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		user, ws, tokens, err := svc.Signup(r.Context(), body.Email, body.Password, body.Name)
 		if err != nil {
 			switch {
 			case errors.Is(err, accounts.ErrEmailTaken):
-				Problem(w, r, http.StatusConflict, "Conflict", "an account with this email already exists")
+				problemWithCode(w, r, http.StatusConflict, "Conflict", "an account with this email already exists", "email_already_registered")
 			case errors.Is(err, accounts.ErrInvalidSignup):
-				Problem(w, r, http.StatusBadRequest, "Bad Request", "a valid email and an 8+ character password are required")
+				problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "a valid email and an 8+ character password are required", "signup_credentials_invalid")
 			default:
-				Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "signup failed")
+				problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "signup failed", "signup_failed")
 			}
 			return
 		}
@@ -186,7 +186,7 @@ func loginHandler(svc *accounts.Service, secure bool) http.HandlerFunc {
 			Password string `json:"password"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Email == "" || body.Password == "" {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "email and password are required")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "email and password are required", "email_and_password_are_required")
 			return
 		}
 		email := strings.ToLower(strings.TrimSpace(body.Email))
@@ -198,7 +198,7 @@ func loginHandler(svc *accounts.Service, secure bool) http.HandlerFunc {
 				writeJSON(w, http.StatusOK, map[string]any{"mfaRequired": true, "mfaToken": mfaToken})
 				return
 			}
-			Problem(w, r, http.StatusUnauthorized, "Unauthorized", "invalid email or password")
+			problemWithCode(w, r, http.StatusUnauthorized, "Unauthorized", "invalid email or password", "invalid_email_or_password")
 			return
 		}
 		setAuthCookies(w, tokens.Access, tokens.Refresh, secure)
@@ -210,7 +210,7 @@ func refreshHandler(svc *accounts.Service, secure bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c, err := r.Cookie(refreshCookie)
 		if err != nil || c.Value == "" {
-			Problem(w, r, http.StatusUnauthorized, "Unauthorized", "missing refresh token")
+			problemWithCode(w, r, http.StatusUnauthorized, "Unauthorized", "missing refresh token", "missing_refresh_token")
 			return
 		}
 		tokens, err := svc.Refresh(r.Context(), c.Value)
@@ -226,7 +226,7 @@ func refreshHandler(svc *accounts.Service, secure bool) http.HandlerFunc {
 			if errors.Is(err, accounts.ErrReuseDetected) || errors.Is(err, accounts.ErrSessionRevoked) {
 				clearAuthCookies(w, secure)
 			}
-			Problem(w, r, http.StatusUnauthorized, "Unauthorized", "invalid refresh token")
+			problemWithCode(w, r, http.StatusUnauthorized, "Unauthorized", "invalid refresh token", "invalid_refresh_token")
 			return
 		}
 		setAuthCookies(w, tokens.Access, tokens.Refresh, secure)
@@ -249,7 +249,7 @@ func meHandler(svc *accounts.Service) http.HandlerFunc {
 		u := userFrom(r.Context())
 		view, err := svc.GetUserByID(r.Context(), u.ID)
 		if err != nil {
-			Problem(w, r, http.StatusNotFound, "Not Found", "user not found")
+			problemWithCode(w, r, http.StatusNotFound, "Not Found", "user not found", "user_not_found")
 			return
 		}
 		writeJSON(w, http.StatusOK, view)
@@ -274,7 +274,7 @@ func mfaConfirmHandler(svc *accounts.Service) http.HandlerFunc {
 			Code string `json:"code"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())
@@ -293,7 +293,7 @@ func mfaDisableHandler(svc *accounts.Service) http.HandlerFunc {
 			Code string `json:"code"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())
@@ -312,7 +312,7 @@ func mfaVerifyHandler(svc *accounts.Service, secure bool) http.HandlerFunc {
 			Code     string `json:"code"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		user, tokens, err := svc.VerifyMfaLogin(r.Context(), body.MfaToken, body.Code, r.UserAgent(), clientIP(r))
@@ -334,7 +334,7 @@ func emailRequestHandler(svc *accounts.Service, kind string) http.HandlerFunc {
 			Email string `json:"email"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Email == "" {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "email is required")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "email is required", "email_is_required")
 			return
 		}
 		var err error
@@ -345,7 +345,7 @@ func emailRequestHandler(svc *accounts.Service, kind string) http.HandlerFunc {
 			err = svc.RequestEmailVerification(r.Context(), body.Email)
 		}
 		if err != nil {
-			Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed")
+			problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed", "request_failed")
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
@@ -358,12 +358,12 @@ func verifyEmailHandler(svc *accounts.Service) http.HandlerFunc {
 			Token string `json:"token"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		user, err := svc.VerifyEmail(r.Context(), body.Token)
 		if err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid or expired token")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid or expired token", "invalid_or_expired_token")
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"user": user})
@@ -377,15 +377,15 @@ func resetPasswordHandler(svc *accounts.Service) http.HandlerFunc {
 			Password string `json:"password"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		if err := svc.ResetPassword(r.Context(), body.Token, body.Password); err != nil {
 			if errors.Is(err, accounts.ErrInvalidSignup) {
-				Problem(w, r, http.StatusBadRequest, "Bad Request", "password must be at least 8 characters")
+				problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "password must be at least 8 characters", "password_too_short")
 				return
 			}
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid or expired token")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid or expired token", "invalid_or_expired_token")
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
@@ -402,11 +402,11 @@ func magicRequestHandler(svc *accounts.Service, policy config.AuthPolicy) http.H
 			Email string `json:"email"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Email == "" {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "email is required")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "email is required", "email_is_required")
 			return
 		}
 		if err := svc.RequestMagicLink(r.Context(), body.Email, policy.MagicLinkSignup); err != nil {
-			Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed")
+			problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed", "request_failed")
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
@@ -419,14 +419,14 @@ func magicLinkHandler(svc *accounts.Service, secure bool, policy config.AuthPoli
 			Token string `json:"token"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		// A redeem may create the account (sign-up link for a new email) only when
 		// magic-link signup is enabled; existing-user links always work.
 		user, tokens, err := svc.LoginWithMagicLink(r.Context(), body.Token, r.UserAgent(), clientIP(r), policy.MagicLinkSignup)
 		if err != nil {
-			Problem(w, r, http.StatusUnauthorized, "Unauthorized", "invalid or expired link")
+			problemWithCode(w, r, http.StatusUnauthorized, "Unauthorized", "invalid or expired link", "invalid_or_expired_link")
 			return
 		}
 		setAuthCookies(w, tokens.Access, tokens.Refresh, secure)
@@ -438,7 +438,7 @@ func magicLinkHandler(svc *accounts.Service, secure bool, policy config.AuthPoli
 func devOutboxHandler(svc *accounts.Service, secure bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if secure {
-			Problem(w, r, http.StatusForbidden, "Forbidden", "not available in production")
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not available in production", "not_available_in_production")
 			return
 		}
 		writeJSON(w, http.StatusOK, svc.Outbox())
@@ -449,16 +449,16 @@ func devOutboxHandler(svc *accounts.Service, secure bool) http.HandlerFunc {
 func mfaProblem(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, accounts.ErrMFAChallenge):
-		Problem(w, r, http.StatusUnauthorized, "Unauthorized", "invalid or expired MFA challenge")
+		problemWithCode(w, r, http.StatusUnauthorized, "Unauthorized", "invalid or expired MFA challenge", "invalid_or_expired_mfa_challenge")
 	case errors.Is(err, accounts.ErrMFAInvalid):
 		// 401 on the verify path, 400 on enroll/disable; both are acceptable, use 400.
-		Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid authentication code")
+		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid authentication code", "invalid_authentication_code")
 	case errors.Is(err, accounts.ErrMFAAlready):
-		Problem(w, r, http.StatusBadRequest, "Bad Request", "MFA is already enabled")
+		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "MFA is already enabled", "mfa_is_already_enabled")
 	case errors.Is(err, accounts.ErrMFANotSetup):
-		Problem(w, r, http.StatusBadRequest, "Bad Request", "start MFA enrollment first")
+		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "start MFA enrollment first", "start_mfa_enrollment_first")
 	default:
-		Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed")
+		problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed", "request_failed")
 	}
 }
 
@@ -469,12 +469,12 @@ func requireAuth(svc *accounts.Service) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token := bearerOrCookie(r)
 			if token == "" {
-				Problem(w, r, http.StatusUnauthorized, "Unauthorized", "missing access token")
+				problemWithCode(w, r, http.StatusUnauthorized, "Unauthorized", "missing access token", "missing_access_token")
 				return
 			}
 			uid, sid, err := svc.VerifyAccess(r.Context(), token)
 			if err != nil {
-				Problem(w, r, http.StatusUnauthorized, "Unauthorized", "invalid or expired access token")
+				problemWithCode(w, r, http.StatusUnauthorized, "Unauthorized", "invalid or expired access token", "invalid_or_expired_access_token")
 				return
 			}
 			ctx := context.WithValue(r.Context(), userKey, &authedUser{ID: uid, SessionID: sid})

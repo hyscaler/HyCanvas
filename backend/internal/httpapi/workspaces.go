@@ -36,7 +36,7 @@ func listWorkspacesHandler(svc *accounts.Service) http.HandlerFunc {
 		u := userFrom(r.Context())
 		list, err := svc.ListWorkspaces(r.Context(), u.ID)
 		if err != nil {
-			Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "could not list workspaces")
+			problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "could not list workspaces", "could_not_list_workspaces")
 			return
 		}
 		writeJSON(w, http.StatusOK, list)
@@ -50,13 +50,13 @@ func createWorkspaceHandler(svc *accounts.Service) http.HandlerFunc {
 			Kind string `json:"kind"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())
 		ws, err := svc.CreateWorkspace(r.Context(), u.ID, body.Name, body.Kind)
 		if err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", err.Error())
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", err.Error(), "workspace_create_failed")
 			return
 		}
 		writeJSON(w, http.StatusCreated, ws)

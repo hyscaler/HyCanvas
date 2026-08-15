@@ -11,6 +11,7 @@ import { oc } from "@/lib/sdk";
 import { CanvasFloor } from "@/components/ui/CanvasFloor";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
+import { tr } from "@/lib/i18n";
 
 type State = "verifying" | "ok" | "error";
 
@@ -33,7 +34,7 @@ export default function VerifyEmailPage() {
   return (
     <>
       <Head>
-        <title>Verify email · HyCanvas</title>
+        <title>{tr("page.verify_email_hycanvas")}</title>
       </Head>
       <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-6">
         <CanvasFloor />
@@ -42,28 +43,28 @@ export default function VerifyEmailPage() {
           {state === "verifying" && (
             <>
               <Loader2 size={36} className="mx-auto animate-spin text-brand-500" />
-              <p className="mt-4 text-sm text-neutral-500">Verifying your email…</p>
+              <p className="mt-4 text-sm text-neutral-500">{tr("page.verifying_your_email")}</p>
             </>
           )}
           {state === "ok" && (
             <>
               <CheckCircle2 size={40} className="mx-auto text-emerald-500" />
-              <h1 className="mt-4 text-lg font-bold text-neutral-900">Email verified</h1>
-              <p className="mt-1.5 text-sm text-neutral-500">Your email is confirmed. You&apos;re all set.</p>
+              <h1 className="mt-4 text-lg font-bold text-neutral-900">{tr("page.email_verified")}</h1>
+              <p className="mt-1.5 text-sm text-neutral-500">{tr("page.email_confirmed")}</p>
               <Button block size="lg" className="mt-6" onClick={() => void router.push("/dashboard")}>
-                Go to dashboard
+                {tr("page.go_to_dashboard")}
               </Button>
             </>
           )}
           {state === "error" && (
             <>
               <AlertCircle size={40} className="mx-auto text-red-500" />
-              <h1 className="mt-4 text-lg font-bold text-neutral-900">Link expired or invalid</h1>
+              <h1 className="mt-4 text-lg font-bold text-neutral-900">{tr("page.link_expired_or_invalid")}</h1>
               <p className="mt-1.5 text-sm text-neutral-500">
-                This verification link is no longer valid. You can request a new one from your dashboard.
+                {tr("page.this_verification_link_is_no_longer_valid_yo")}
               </p>
               <Link href="/dashboard" className="mt-6 inline-block text-sm font-semibold text-brand-ink hover:underline">
-                Back to dashboard
+                {tr("page.back_to_dashboard")}
               </Link>
             </>
           )}

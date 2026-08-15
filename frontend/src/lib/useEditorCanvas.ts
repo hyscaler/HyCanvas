@@ -41,6 +41,7 @@ export function useEditorCanvas(canvasRef: RefObject<HTMLCanvasElement | null>):
   const viewport = useEditor((s) => s.viewport);
   const activePage = useEditor((s) => s.activePage);
   const editingTextId = useEditor((s) => s.editingTextId);
+  const maskRefining = useEditor((s) => s.maskRefining);
   const transforming = useEditor((s) => s.transforming);
   const hoverId = useEditor((s) => s.hoverId);
   const docId = useEditor((s) => s.doc.id);
@@ -142,7 +143,11 @@ export function useEditorCanvas(canvasRef: RefObject<HTMLCanvasElement | null>):
     const viewTop = base.panY;
     const viewBottom = base.panY + (base.height || 0) / z;
     const buf = ((base.height || 0) / z) * 0.5;
-    const skipNodeId = useEditor.getState().editingTextId ?? undefined;
+    // Skip the node being text-edited (the DOM overlay shows it) and the image
+    // whose mask is being brush-refined: the refine overlay draws the LIVE
+    // composite itself, and the engine's committed render underneath would show
+    // the old mask through every freshly erased region.
+    const skipNodeId = useEditor.getState().editingTextId ?? useEditor.getState().maskRefining ?? undefined;
     // Private mode (FR-15): visually hide other participants' new contributions
     // (empty set unless a private round is hiding, so the common path is free).
     const hiddenIds = useEditor.getState().privateHiddenIds();
@@ -189,11 +194,12 @@ export function useEditorCanvas(canvasRef: RefObject<HTMLCanvasElement | null>):
   useEffect(() => imageAssets.onChange(() => render()), [render]);
   useEffect(() => fonts.onChange(() => render()), [render]);
 
-  // Repaint on viewport, active-page, text-edit (skip), live-transform, or hover
-  // change (hover reveals a selected/overflowing element's off-page overflow).
+  // Repaint on viewport, active-page, text-edit (skip), mask-refine (skip),
+  // live-transform, or hover change (hover reveals a selected/overflowing
+  // element's off-page overflow).
   useEffect(() => {
     render();
-  }, [viewport, activePage, editingTextId, transforming, hoverId, render]);
+  }, [viewport, activePage, editingTextId, maskRefining, transforming, hoverId, render]);
 
   // Repaint on container resize.
   useEffect(() => {

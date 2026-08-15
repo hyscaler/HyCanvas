@@ -20,7 +20,7 @@ func mountAccount(api chi.Router, svc *accountdata.Service, acct *accounts.Servi
 		u := userFrom(r.Context())
 		bundle, err := svc.Export(r.Context(), u.ID)
 		if err != nil {
-			Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "could not export account")
+			problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "could not export account", "could_not_export_account")
 			return
 		}
 		w.Header().Set("Content-Disposition", `attachment; filename="hycanvas-account.json"`)
@@ -33,16 +33,16 @@ func mountAccount(api chi.Router, svc *accountdata.Service, acct *accounts.Servi
 			Code     string `json:"code"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Password == "" {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "password is required")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "password is required", "password_is_required")
 			return
 		}
 		u := userFrom(r.Context())
 		if err := svc.Delete(r.Context(), u.ID, body.Password, body.Code); err != nil {
 			if errors.Is(err, accounts.ErrReauth) {
-				Problem(w, r, http.StatusUnauthorized, "Unauthorized", "invalid password or authentication code")
+				problemWithCode(w, r, http.StatusUnauthorized, "Unauthorized", "invalid password or authentication code", "invalid_password_or_authentication_code")
 				return
 			}
-			Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "could not delete account")
+			problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "could not delete account", "could_not_delete_account")
 			return
 		}
 		clearAuthCookies(w, secure)

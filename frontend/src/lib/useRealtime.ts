@@ -12,6 +12,7 @@ import { useEffect, useRef } from "react";
 import type { DesignFile } from "@hc/schema";
 import { connectRealtime, type RealtimeClient } from "@/lib/realtime";
 import { DesignDoc } from "@/lib/ydoc";
+import { oc } from "@/lib/sdk";
 import { useEditor } from "@/store/editor";
 import { usePresence } from "@/store/presence";
 
@@ -97,27 +98,95 @@ export function useRealtime(designId: string | null): void {
   // otherwise make the committed viewport differ from the value we recorded.
   const mirroring = useRef(false);
 
-  // Connect / disconnect on design id change. Slice B: stand up the per-design
-  // Y.Doc binding (store bridge), then open the socket carrying both presence
-  // and Yjs sync. The server room Y.Doc is authoritative and is seeded from the
-  // latest persisted snapshot, so the client does NOT independently reconcile the
-  // REST-loaded file into the Y.Doc: doing so would create a second, divergent
-  // set of CRDT items that merge into duplicate pages/nodes once sync step 2
-  // lands. The editor still renders immediately from the REST file already in the
-  // store; Yjs sync then rebuilds `store.doc` from the shared server state.
+  // Connect / disconnect on design id OR branch change. Slice B: stand up the
+  // per-design Y.Doc binding (store bridge), then open the socket carrying both
+  // presence and Yjs sync. The server room Y.Doc is authoritative and is seeded
+  // from the latest persisted snapshot, so the client does NOT independently
+  // reconcile the REST-loaded file into the Y.Doc: doing so would create a
+  // second, divergent set of CRDT items that merge into duplicate pages/nodes
+  // once sync step 2 lands. The editor still renders immediately from the REST
+  // file already in the store; Yjs sync then rebuilds `store.doc` from the
+  // shared server state.
+  //
+  // BRANCH sessions (doc 16 FR-10): switching the presence store's `branch`
+  // tears this binding down and rebinds against the branch's own room and
+  // IndexedDB namespace, then seeds the fresh doc from the branch's journaled
+  // lineage (paged from the server and applied like inbound sync). The seed is
+  // CRDT-idempotent against room sync and offline state, so racing them is
+  // safe; the store rebuilds from the doc as the frames land.
+  const branch = usePresence((s) => s.branch);
+  const lastDesign = useRef<string | null>(null);
+  // Set when this rebind is a lineage SWITCH within one design (as opposed to
+  // first open), which is exactly when the store holds the wrong document.
+  const lastBranch = useRef<string | null>(null);
+  const switchedLineage = useRef(false);
   useEffect(() => {
     if (!designId) return;
-    const doc = new DesignDoc(designId);
+    // A branch id belongs to ONE design: navigating to a different design with
+    // a stale branch set would join a nonexistent room (the gateway refuses the
+    // unknown branch) and could seed from the wrong lineage. Reset to main and
+    // let the effect re-run cleanly.
+    if (lastDesign.current !== designId) {
+      lastDesign.current = designId;
+      if (branch) {
+        usePresence.getState().setBranch(null);
+        return;
+      }
+    }
+    switchedLineage.current = lastDesign.current === designId && lastBranch.current !== branch;
+    lastBranch.current = branch;
+    const doc = new DesignDoc(designId, branch);
     activeDoc = doc;
-    const client = connectRealtime(designId, doc);
+    const client = connectRealtime(designId, doc, branch);
     activeClient = client;
+    let cancelled = false;
+    if (branch) {
+      void (async () => {
+        try {
+          let after = 0;
+          for (;;) {
+            const page = await oc.designUpdates(designId, after, 0, branch);
+            if (cancelled || doc !== activeDoc) return;
+            doc.applyJournalFrames(page.items.map((it) => it.update));
+            if (!page.nextSeq) break;
+            after = page.nextSeq;
+          }
+        } catch {
+          // Seed fetch failed (offline / stale branch): IndexedDB or room sync
+          // may still provide state; otherwise the doc stays empty and the
+          // branch-doc guards keep main state from leaking in.
+        }
+      })();
+    } else if (switchedLineage.current) {
+      // Coming back to MAIN from a branch. The store still holds the branch's
+      // document (switching only rebinds the room), so it is neither safe to
+      // seed the room from nor safe to leave on screen: the REST save paths
+      // fall back to the store doc and would write branch content into main's
+      // current file. Reload main's persisted document, then release the
+      // foreign-store guard - otherwise nothing ever clears it for a main room
+      // with no peer, no journal, and no local state, and every edit is
+      // dropped.
+      switchedLineage.current = false;
+      void (async () => {
+        try {
+          const file = await oc.getDesignFile(designId);
+          if (cancelled || doc !== activeDoc) return;
+          useEditor.getState().loadDoc(file);
+          doc.adoptStore();
+        } catch {
+          // Offline: leave the guard up rather than seeding main's room from
+          // branch state. Room sync or IndexedDB can still unblock it.
+        }
+      })();
+    }
     return () => {
+      cancelled = true;
       client.close();
       doc.dispose();
       if (activeClient === client) activeClient = null;
       if (activeDoc === doc) activeDoc = null;
     };
-  }, [designId]);
+  }, [designId, branch]);
 
   // Feed local SELECTION changes as presence (the Canvas feeds the cursor, and
   // viewport changes flow through the follow-mode effect below).

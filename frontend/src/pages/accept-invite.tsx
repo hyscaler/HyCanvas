@@ -17,8 +17,9 @@ import { useToast } from "@/components/ui/Toast";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { CanvasFloor } from "@/components/ui/CanvasFloor";
+import { tr } from "@/lib/i18n";
 
-const ROLE_LABEL: Record<WorkspaceRole, string> = { viewer: "Viewer", member: "Member", admin: "Admin", owner: "Owner" };
+const roleLabel = (): Record<WorkspaceRole, string> => ({ viewer: tr("page.viewer"), member: tr("page.member"), admin: tr("page.admin"), owner: tr("page.owner") });
 const ROLE_BADGE: Record<WorkspaceRole, string> = {
   owner: "bg-amber-50 text-amber-700 ring-amber-200",
   admin: "bg-brand-50 text-brand-ink ring-brand-200",
@@ -65,7 +66,7 @@ function HeroIcon({ children, tone = "brand" }: { children: ReactNode; tone?: "b
 function RoleChip({ role }: { role: WorkspaceRole }) {
   return (
     <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${ROLE_BADGE[role]}`}>
-      {ROLE_LABEL[role]}
+      {roleLabel()[role]}
     </span>
   );
 }
@@ -133,10 +134,10 @@ export default function AcceptInvitePage() {
           toast.success(`You joined ${inv.workspaceName || "the workspace"}.`);
           void router.push("/dashboard");
         } else {
-          toast.success("Invitation declined.");
+          toast.success(tr("page.invitation_declined"));
         }
       } catch {
-        toast.error(accept ? "Could not accept the invitation." : "Could not decline the invitation.");
+        toast.error(accept ? tr("page.could_not_accept_the_invitation") : tr("page.could_not_decline_the_invitation"));
       } finally {
         setBusyId(null);
       }
@@ -152,7 +153,7 @@ export default function AcceptInvitePage() {
         <Card>
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <Loader2 className="animate-spin text-brand-500" size={28} />
-            <p className="text-sm text-neutral-500">Just a moment…</p>
+            <p className="text-sm text-neutral-500">{tr("page.just_a_moment")}</p>
           </div>
         </Card>
       </Scene>
@@ -168,14 +169,14 @@ export default function AcceptInvitePage() {
               <LogIn size={26} />
             </HeroIcon>
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-neutral-900">Sign in to continue</h1>
+              <h1 className="text-xl font-bold tracking-tight text-neutral-900">{tr("page.sign_in_to_continue")}</h1>
               <p className="mx-auto mt-2 max-w-xs text-sm text-neutral-500">
-                Use the email your invitation was sent to, then come right back to join.
+                {tr("page.use_the_email_your_invitation_was_sent_to_th")}
               </p>
             </div>
             <Link href={`/login?next=${encodeURIComponent(router.asPath)}`}>
               <Button size="lg">
-                <LogIn size={18} /> Sign in
+                <LogIn size={18} /> {tr("page.sign_in")}
               </Button>
             </Link>
           </div>
@@ -195,8 +196,8 @@ export default function AcceptInvitePage() {
                 <CheckCircle2 size={24} />
               </HeroIcon>
               <div>
-                <h1 className="text-xl font-bold tracking-tight text-neutral-900">You&apos;re in</h1>
-                <p className="mt-2 text-sm text-neutral-500">Taking you to the workspace…</p>
+                <h1 className="text-xl font-bold tracking-tight text-neutral-900">{tr("page.youre_in")}</h1>
+                <p className="mt-2 text-sm text-neutral-500">{tr("page.taking_you_to_the_workspace")}</p>
               </div>
               <Loader2 className="animate-spin text-neutral-300" size={18} />
             </div>
@@ -206,13 +207,13 @@ export default function AcceptInvitePage() {
                 <AlertCircle size={26} />
               </HeroIcon>
               <div>
-                <h1 className="text-xl font-bold tracking-tight text-neutral-900">This invitation can&apos;t be used</h1>
+                <h1 className="text-xl font-bold tracking-tight text-neutral-900">{tr("page.this_invitation_cant_be_used")}</h1>
                 <p className="mx-auto mt-2 max-w-xs text-sm text-neutral-500">
-                  It may have expired, already been used, or been sent to a different email address.
+                  {tr("page.it_may_have_expired_already_been_used_or_bee")}
                 </p>
               </div>
               <Link href="/accept-invite">
-                <Button variant="secondary">See your invitations</Button>
+                <Button variant="secondary">{tr("page.see_your_invitations")}</Button>
               </Link>
             </div>
           ) : (
@@ -220,7 +221,7 @@ export default function AcceptInvitePage() {
               <HeroIcon>
                 <Sparkles size={26} />
               </HeroIcon>
-              <p className="mt-1 text-sm font-medium text-neutral-600">Accepting your invitation…</p>
+              <p className="mt-1 text-sm font-medium text-neutral-600">{tr("page.accepting_your_invitation")}</p>
               <Loader2 className="animate-spin text-neutral-300" size={20} />
             </div>
           )}
@@ -236,7 +237,7 @@ export default function AcceptInvitePage() {
         {invites === null ? (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <Loader2 className="animate-spin text-brand-500" size={28} />
-            <p className="text-sm text-neutral-500">Loading your invitations…</p>
+            <p className="text-sm text-neutral-500">{tr("page.loading_your_invitations")}</p>
           </div>
         ) : invites.length === 0 ? (
           <div className="flex flex-col items-center gap-4 py-2 text-center">
@@ -244,19 +245,19 @@ export default function AcceptInvitePage() {
               <MailOpen size={26} />
             </HeroIcon>
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-neutral-900">You&apos;re all caught up</h1>
-              <p className="mt-2 text-sm text-neutral-500">No pending invitations right now.</p>
+              <h1 className="text-xl font-bold tracking-tight text-neutral-900">{tr("page.youre_all_caught_up")}</h1>
+              <p className="mt-2 text-sm text-neutral-500">{tr("page.no_pending_invitations_right_now")}</p>
             </div>
             <Link href="/dashboard">
               <Button variant="secondary">
-                Go to dashboard <ArrowRight size={16} />
+                {tr("page.go_to_dashboard")} <ArrowRight size={16} />
               </Button>
             </Link>
           </div>
         ) : (
           <>
             <div className="mb-6 text-center">
-              <h1 className="text-xl font-bold tracking-tight text-neutral-900">You&apos;ve been invited</h1>
+              <h1 className="text-xl font-bold tracking-tight text-neutral-900">{tr("page.youve_been_invited")}</h1>
               <p className="mt-1.5 text-sm text-neutral-500">
                 Review your {invites.length === 1 ? "invitation" : "invitations"} below.
               </p>
@@ -270,7 +271,7 @@ export default function AcceptInvitePage() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex min-w-0 items-center gap-2">
-                        <p className="truncate text-sm font-semibold text-neutral-900">{inv.workspaceName || "A workspace"}</p>
+                        <p className="truncate text-sm font-semibold text-neutral-900">{inv.workspaceName || tr("page.a_workspace")}</p>
                         <span className="shrink-0">
                           <RoleChip role={inv.role} />
                         </span>
@@ -282,17 +283,17 @@ export default function AcceptInvitePage() {
                   </div>
                   <div className="mt-3 flex gap-2">
                     <Button variant="ghost" block disabled={busyId === inv.id} onClick={() => void respond(inv, false)}>
-                      Decline
+                      {tr("page.decline")}
                     </Button>
                     <Button block disabled={busyId === inv.id} onClick={() => void respond(inv, true)}>
-                      {busyId === inv.id ? <Loader2 size={16} className="animate-spin" /> : null} Accept
+                      {busyId === inv.id ? <Loader2 size={16} className="animate-spin" /> : null} {tr("page.accept")}
                     </Button>
                   </div>
                 </li>
               ))}
             </ul>
             <p className="mt-6 border-t border-neutral-100 pt-4 text-center text-xs text-neutral-400">
-              You can leave a workspace anytime from its Members panel.
+              {tr("page.you_can_leave_a_workspace_anytime_from_its_m")}
             </p>
           </>
         )}

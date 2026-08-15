@@ -10,7 +10,7 @@ Each entry opens a panel next to the rail; clicking the active entry collapses i
 
 ### Templates
 
-The template gallery, in the editor. Templates matching the current page size are suggested first (exact size, then the same aspect ratio), with search across the whole gallery and a size badge on every card. Clicking a template adds it as a new page of the design and jumps there; it never replaces existing pages, and one undo removes it. Design documents only.
+The template gallery, in the editor. Templates matching the current page size are suggested first (exact size, then the same aspect ratio), with search across the whole gallery and a size badge on every card. Clicking a template adds it as a new page of the design and jumps there; it never replaces existing pages, and one undo removes it. Hovering a card offers a `.hyc` download of the template file. Design documents only.
 
 ### Elements
 
@@ -18,7 +18,7 @@ Shapes (rectangle, rounded, ellipse, triangle, pentagon, hexagon, star, diamond,
 
 ### Text
 
-Add a text box or a preset heading, subheading, or body block. Below that: curated font pairings, a searchable font catalog with previews, and **Upload a font** (TTF, OTF, WOFF, WOFF2), which embeds the font in the design file so it travels with the document. Selecting a font applies it to selected text or inserts a new box.
+Add a text box or a preset heading, subheading, or body block. Below that: curated font pairings, a searchable font catalog with previews, and **Upload a font** (TTF, OTF, WOFF, WOFF2), which embeds the font in the design file so it travels with the document. Selecting a font applies it to selected text or inserts a new box. Web fonts load through Bunny Fonts by default (a keyless, no-logging mirror of the same open-source families), so a self-hosted instance does not leak end-user IPs to Google.
 
 ![The text panel](images/editor-text.png)
 
@@ -36,7 +36,7 @@ Drag and drop files, pick from disk, import from a URL, import SVG as editable v
 
 ### Stock
 
-Free stock content filtered by kind (photos, illustrations, icons, emoji) with Browse, Favorites, and Recent tabs. Photos come from a bundled catalog plus live Openverse search; provenance and license are stamped on import, and attribution-required assets compile into a Credits block at export. A set of animated stickers ships too.
+Free stock content filtered by kind (photos, illustrations, icons, emoji) with Browse, Favorites, and Recent tabs. Photos come from a bundled catalog plus live Openverse search; icons come from a bundled set plus live Iconify search (200k+ open-source icons across 200+ sets, returned as editable inline SVG you can recolor on the canvas); illustrations are a bundled set of CC0/MIT vector packs (Open Doodles, Open Peeps, Lukasz Adam, illlustrations, ManyPixels) inserted as editable, recolorable SVG. Provenance and license are stamped on import (each Iconify set carries its own SPDX license), and attribution-required assets compile into a Credits block at export. Both live sources can be disabled for air-gapped self-hosts (STOCK_PHOTO_PROVIDER/STOCK_ICON_PROVIDER=off); the bundled catalog keeps working. A set of animated stickers ships too.
 
 ### Apps
 
@@ -136,6 +136,7 @@ Also in the overflow menu:
 - **Publish to social**: a planning workspace with per-platform sizing (Instagram, Facebook, X, LinkedIn, TikTok, Pinterest, YouTube), captions with the strictest platform's character limit, a QR generator, and a calendar planner. Note: plans stay local for now; connecting real social accounts for automatic posting is not built yet, and the dialog says so.
 - **Publish as website**: generates a responsive static site from the design, with SEO fields, auto-built navigation, custom head/body code, a live desktop/tablet/mobile preview, and export of the generated files. Hosted publishing (domains, TLS) is on the roadmap; today you take the files to any static host.
 - **Save as template**: name, optional category, and visibility (only me, my team, or everyone).
+- **Download .hyc file**: the document as a portable `.hyc` file, the open design file format serialized as readable JSON. Works for every document kind and downloads exactly what is on screen (including unsaved edits). Import it from the dashboard to recreate the design, on this or any other HyCanvas instance; data-URL assets travel inside the file, workspace-hosted assets keep URLs that resolve on the origin instance.
 
 ## Accessibility checker
 

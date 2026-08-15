@@ -17,7 +17,7 @@ func TestExtractJSON(t *testing.T) {
 		{`{"a":1}`, `{"a":1}`},
 		{"```json\n{\"a\":1}\n```", `{"a":1}`},
 		{"sure, here:\n```\n{\"a\":{\"b\":2}}\n```\nhope that helps", `{"a":{"b":2}}`},
-		{`prose {"a":"}"} trailing`, `{"a":"}"}`}, // brace inside string ignored
+		{`prose {"a":"}"} trailing`, `{"a":"}"}`},                                                      // brace inside string ignored
 		{"```json\n{\"a\":\"```fence inside value```\"}\n```", "{\"a\":\"```fence inside value```\"}"}, // backticks in a string value must not be stripped
 		{"no json here", ""},
 	}

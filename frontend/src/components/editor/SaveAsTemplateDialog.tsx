@@ -10,11 +10,12 @@ import { useEditor } from "@/store/editor";
 import { useToast } from "@/components/ui/Toast";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
+import { tr } from "@/lib/i18n";
 
-const VISIBILITIES: { value: TemplateVisibility; label: string; hint: string }[] = [
-  { value: "private", label: "Only me", hint: "Visible only to you" },
-  { value: "workspace", label: "My team", hint: "Visible to workspace members" },
-  { value: "public", label: "Everyone", hint: "Public template, free to all" },
+const visibilities = (): { value: TemplateVisibility; label: string; hint: string }[] => [
+  { value: "private", label: tr("editor.only_me"), hint: tr("editor.visible_only_to_you") },
+  { value: "workspace", label: tr("editor.my_team"), hint: tr("editor.visible_to_workspace_members") },
+  { value: "public", label: tr("editor.everyone"), hint: tr("editor.public_template_free_to_all") },
 ];
 
 export function SaveAsTemplateDialog({
@@ -48,17 +49,17 @@ export function SaveAsTemplateDialog({
         category: category.trim() || undefined,
         visibility,
       });
-      toast.success("Saved as template.");
+      toast.success(tr("editor.saved_as_template"));
       onClose();
     } catch {
-      toast.error("Could not save template.");
+      toast.error(tr("editor.could_not_save_template"));
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Save as template">
+    <Modal open={open} onClose={onClose} title={tr("editor.save_as_template")}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -67,27 +68,27 @@ export function SaveAsTemplateDialog({
         className="flex flex-col gap-4"
       >
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-neutral-700">Name</span>
+          <span className="text-sm font-medium text-neutral-700">{tr("editor.name")}</span>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Template name"
+            placeholder={tr("editor.template_name")}
             className="h-11 rounded-xl border border-neutral-200 bg-surface px-3.5 text-sm text-neutral-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           />
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-neutral-700">Category (optional)</span>
+          <span className="text-sm font-medium text-neutral-700">{tr("editor.category_optional")}</span>
           <input
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            placeholder="e.g. social, poster, resume"
+            placeholder={tr("editor.e_g_social_poster_resume")}
             className="h-11 rounded-xl border border-neutral-200 bg-surface px-3.5 text-sm text-neutral-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           />
         </label>
         <fieldset className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-neutral-700">Who can use it</span>
+          <span className="text-sm font-medium text-neutral-700">{tr("editor.who_can_use_it")}</span>
           <div className="flex flex-col gap-1.5">
-            {VISIBILITIES.map((v) => (
+            {visibilities().map((v) => (
               <label
                 key={v.value}
                 className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2 text-sm ${
@@ -102,17 +103,17 @@ export function SaveAsTemplateDialog({
                   className="accent-brand-600"
                 />
                 <span className="font-medium text-neutral-800">{v.label}</span>
-                <span className="ml-auto text-xs text-neutral-400">{v.hint}</span>
+                <span className="ms-auto text-xs text-neutral-400">{v.hint}</span>
               </label>
             ))}
           </div>
         </fieldset>
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" size="sm" onClick={onClose}>
-            Cancel
+            {tr("editor.cancel")}
           </Button>
           <Button type="submit" size="sm" disabled={busy || !title.trim() || !workspaceId}>
-            {busy ? "Saving…" : "Save template"}
+            {busy ? tr("editor.saving") : tr("editor.save_template")}
           </Button>
         </div>
       </form>

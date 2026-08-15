@@ -96,7 +96,7 @@ func _peerOf(h *Hub, clientID string) *conn {
 // send buffer, so it is a reliable signal of how many sync frames survived.
 type countingLog struct{ n int64 }
 
-func (c *countingLog) AppendUpdate(_ context.Context, _ string, _ []byte, _ string) error {
+func (c *countingLog) AppendUpdate(_ context.Context, _, _ string, _ []byte, _ string) error {
 	atomic.AddInt64(&c.n, 1)
 	return nil
 }

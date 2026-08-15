@@ -7,12 +7,13 @@ import { useRouter } from "next/router";
 import { Button } from "@/components/ui/Button";
 import { Logo } from "@/components/ui/Logo";
 import { CanvasFloor } from "@/components/ui/CanvasFloor";
+import { tr } from "@/lib/i18n";
 
 export function NotFoundScreen({
   code = "404",
-  title = "Page not found",
-  message = "The page you are looking for does not exist or may have moved.",
-  homeLabel = "Back to home",
+  title = tr("ui.page_not_found"),
+  message = tr("ui.the_page_you_are_looking_for_does_not_exist"),
+  homeLabel = tr("ui.back_to_home"),
   homeHref = "/",
 }: {
   code?: string;
@@ -36,7 +37,7 @@ export function NotFoundScreen({
         </div>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Button onClick={() => void router.push(homeHref)}>{homeLabel}</Button>
-          <Button variant="secondary" onClick={() => router.back()}>Go back</Button>
+          <Button variant="secondary" onClick={() => router.back()}>{tr("ui.go_back")}</Button>
         </div>
       </div>
     </div>

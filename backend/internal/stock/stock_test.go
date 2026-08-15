@@ -104,9 +104,15 @@ func TestBundledLibrary(t *testing.T) {
 		}
 	}
 	// The illustration packs (opendoodles, openpeeps, lukaszadam,
-	// illlustrations) load and the kind filter reaches all of them.
-	illos := searchStock(seed.Stock, Query{Kind: "illustration", Limit: maxSearchLimit, Offset: 0})
-	illos = append(illos, searchStock(seed.Stock, Query{Kind: "illustration", Limit: maxSearchLimit, Offset: maxSearchLimit})...)
+	// illlustrations, manypixels) load and the kind filter reaches all of them.
+	var illos []map[string]any
+	for off := 0; ; off += maxSearchLimit {
+		page := searchStock(seed.Stock, Query{Kind: "illustration", Limit: maxSearchLimit, Offset: off})
+		if len(page) == 0 {
+			break // walked every illustration page
+		}
+		illos = append(illos, page...)
+	}
 	if len(illos) < 300 {
 		t.Fatalf("expected the illustration packs to load: %d", len(illos))
 	}
@@ -117,7 +123,7 @@ func TestBundledLibrary(t *testing.T) {
 			t.Fatalf("illustrations are CC0/MIT, no attribution: %v", a["license"])
 		}
 	}
-	for _, p := range []string{"opendoodles", "openpeeps", "lukaszadam", "illlustrations"} {
+	for _, p := range []string{"opendoodles", "openpeeps", "lukaszadam", "illlustrations", "manypixels"} {
 		if !packs[p] {
 			t.Fatalf("illustration pack missing from kind filter: %s (got %v)", p, packs)
 		}
@@ -135,25 +141,40 @@ func TestBundledLibrary(t *testing.T) {
 	}
 }
 
-// TestBrowseOrder covers the no-text browse ranking: photos and illustrations
-// lead, icon packs trail, colorful before monochrome within a kind, and the
-// order is deterministic so offset paging never overlaps.
+// TestBrowseOrder covers the no-text browse ranking: a mixed browse interleaves
+// kinds so the first screen is not a wall of one kind; a single-kind browse
+// ranks colorful before monochrome; and both are deterministic so offset paging
+// never overlaps.
 func TestBrowseOrder(t *testing.T) {
 	got := searchStock(seed.Stock, Query{Limit: maxSearchLimit})
-	if len(got) == 0 || str(got[0]["kind"]) != "photo" {
-		t.Fatalf("browse should open on photos: %v", got[0]["kind"])
+	if len(got) == 0 {
+		t.Fatal("browse returned nothing")
 	}
-	prevRank, prevScore := 0, math.Inf(1)
-	for _, a := range got {
-		r := browseKindRank(a)
-		if r < prevRank {
-			t.Fatalf("kind precedence violated at %v", a["id"])
+	// Mixed browse interleaves: the first tiles span more than one kind rather
+	// than opening on a single kind.
+	head := got
+	if len(head) > 6 {
+		head = head[:6]
+	}
+	headKinds := map[string]bool{}
+	for _, a := range head {
+		headKinds[str(a["kind"])] = true
+	}
+	if len(headKinds) < 2 {
+		t.Fatalf("mixed browse should interleave kinds, first tiles were all %v", head[0]["kind"])
+	}
+	// Within a single kind, colorful before monochrome, deterministic.
+	photos := searchStock(seed.Stock, Query{Kind: "photo", Limit: maxSearchLimit})
+	prevScore := math.Inf(1)
+	for _, a := range photos {
+		if str(a["kind"]) != "photo" {
+			t.Fatalf("kind filter leaked a non-photo: %v", a["id"])
 		}
 		s := colorfulness(a)
-		if r == prevRank && s > prevScore+1e-9 {
+		if s > prevScore+1e-9 {
 			t.Fatalf("colorfulness order violated at %v", a["id"])
 		}
-		prevRank, prevScore = r, s
+		prevScore = s
 	}
 	// Deterministic paging: consecutive pages never overlap.
 	p1 := searchStock(seed.Stock, Query{Limit: 60})
@@ -232,7 +253,9 @@ func TestSearchPhotoProvider(t *testing.T) {
 		_, _ = w.Write([]byte(`{"results":[{"id":"abc","title":"Sunset","url":"https://photos.example.com/sunset.jpg","license":"cc0","width":800,"height":600}]}`))
 	}))
 	defer srv.Close()
-	s := &Service{ov: &openverse{enabled: true, baseURL: srv.URL, client: srv.Client(), cache: map[string]ovCacheEntry{}}}
+	// Register only a photo provider pointed at the fake server; the icon
+	// provider is disabled so this test exercises the photo route in isolation.
+	s := &Service{live: []liveProvider{&openverse{enabled: true, baseURL: srv.URL, client: srv.Client(), cache: map[string]ovCacheEntry{}}}}
 	ctx := context.Background()
 
 	// kind=photo with text hits the provider.
@@ -261,11 +284,102 @@ func TestSearchPhotoProvider(t *testing.T) {
 			t.Fatal("facet-filtered search must not hit the provider")
 		}
 	}
-	// A dead provider falls back to the seed instead of erroring.
-	s.ov.baseURL = "http://127.0.0.1:1"
-	s.ov.cache = map[string]ovCacheEntry{}
+	// A dead provider falls back to the seed instead of erroring: point the
+	// live photo provider at an unroutable address.
+	ov := s.liveFor("photo").(*openverse)
+	ov.baseURL = "http://127.0.0.1:1"
+	ov.cache = map[string]ovCacheEntry{}
 	if _, err := s.Search(ctx, Query{Kind: "photo", Text: "sunset"}, ""); err != nil {
 		t.Fatalf("provider failure must fall back, not error: %v", err)
+	}
+}
+
+// TestSearchAllMerged covers the "All" (no kind) text search: it merges live
+// photos (Openverse) and icons (Iconify) with the bundled catalog, interleaves
+// the kinds, pages the merged order without overlap, and falls back to the
+// bundle when the live providers are unavailable.
+func TestSearchAllMerged(t *testing.T) {
+	ov := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"results":[
+			{"id":"h1","title":"Home 1","url":"https://photos.example.com/h1.jpg","license":"cc0","width":800,"height":600},
+			{"id":"h2","title":"Home 2","url":"https://photos.example.com/h2.jpg","license":"cc0","width":800,"height":600},
+			{"id":"h3","title":"Home 3","url":"https://photos.example.com/h3.jpg","license":"cc0","width":800,"height":600}
+		]}`))
+	}))
+	defer ov.Close()
+	ic := iconifyServer(t)
+	defer ic.Close()
+
+	icp := newIconify()
+	icp.baseURL = ic.URL
+	icp.enabled = true
+	s := &Service{live: []liveProvider{
+		&openverse{enabled: true, baseURL: ov.URL, client: ov.Client(), cache: map[string]ovCacheEntry{}},
+		icp,
+	}}
+	ctx := context.Background()
+
+	got, err := s.Search(ctx, Query{Text: "home", Limit: 60}, "")
+	if err != nil {
+		t.Fatalf("all-merged search errored: %v", err)
+	}
+	var hasPhoto, hasIcon bool
+	kinds := map[string]bool{}
+	for _, a := range got {
+		id := str(a["id"])
+		kinds[str(a["kind"])] = true
+		if strings.HasPrefix(id, "ov-") || strings.HasPrefix(id, "iconify-") {
+			// Live-provider assets must carry the live marker so the UI hides
+			// favorites/recents and disables drag-to-canvas for them.
+			if live, _ := a["live"].(bool); !live {
+				t.Fatalf("live-provider asset %v missing live:true marker", id)
+			}
+		}
+		if strings.HasPrefix(id, "ov-") {
+			hasPhoto = true
+		}
+		if strings.HasPrefix(id, "iconify-") {
+			hasIcon = true
+		}
+	}
+	if !hasPhoto || !hasIcon {
+		t.Fatalf("All search must merge live photos+icons: photo=%v icon=%v (ids seen: %d)", hasPhoto, hasIcon, len(got))
+	}
+	if len(kinds) < 2 {
+		t.Fatalf("All search should interleave multiple kinds, got only %v", kinds)
+	}
+	// Round-robin interleave: the first two tiles are from different buckets, so
+	// the view never opens on a wall of one kind.
+	if len(got) >= 2 && str(got[0]["kind"]) == str(got[1]["kind"]) {
+		t.Fatalf("first tiles not interleaved: %v then %v", got[0]["kind"], got[1]["kind"])
+	}
+
+	// Deterministic paging: page two (offset 2) never repeats a page-one id.
+	p1, _ := s.Search(ctx, Query{Text: "home", Limit: 2, Offset: 0}, "")
+	p2, _ := s.Search(ctx, Query{Text: "home", Limit: 2, Offset: 2}, "")
+	seen := map[string]bool{}
+	for _, a := range p1 {
+		seen[str(a["id"])] = true
+	}
+	for _, a := range p2 {
+		if seen[str(a["id"])] {
+			t.Fatalf("merged paging overlap: %v", a["id"])
+		}
+	}
+
+	// Live providers down: the All search still returns bundled results across
+	// kinds, and never leaks a live-provider id.
+	off := newIconify()
+	off.enabled = false
+	s2 := &Service{live: []liveProvider{&openverse{enabled: false}, off}}
+	got2, _ := s2.Search(ctx, Query{Text: "home", Limit: 60}, "")
+	if len(got2) == 0 {
+		t.Fatal("bundled fallback for All search returned nothing")
+	}
+	for _, a := range got2 {
+		if id := str(a["id"]); strings.HasPrefix(id, "ov-") || strings.HasPrefix(id, "iconify-") {
+			t.Fatalf("disabled providers must not appear in fallback: %v", id)
+		}
 	}
 }
 

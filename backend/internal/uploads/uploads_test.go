@@ -255,6 +255,16 @@ func TestUploads_DB(t *testing.T) {
 		t.Fatalf("content wrong: mime=%s len=%d err=%v", mime, len(bytes), err)
 	}
 
+	// Workspace-scoped content (used by export/embedding): the owning workspace
+	// returns bytes; a foreign workspace id is denied, so a design cannot inline
+	// another workspace's asset by referencing its id.
+	if b2, _, e2 := svc.ContentInWorkspace(ctx, ws.ID, asset.ID); e2 != nil || len(b2) == 0 {
+		t.Fatalf("ContentInWorkspace(owning ws) should return bytes, got len=%d err=%v", len(b2), e2)
+	}
+	if _, _, e2 := svc.ContentInWorkspace(ctx, uuid.NewString(), asset.ID); e2 != ErrNotFound {
+		t.Fatalf("ContentInWorkspace(foreign ws) should be ErrNotFound, got %v", e2)
+	}
+
 	// Usage reflects the uploaded size.
 	usage, err := svc.UsageView(ctx, owner.ID, ws.ID)
 	if err != nil || usage.UsedBytes != int64(len(pngBytes())) {

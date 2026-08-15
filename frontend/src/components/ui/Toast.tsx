@@ -4,6 +4,7 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import { CheckCircle2, AlertCircle, Info, X } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { tr } from "@/lib/i18n";
 
 type ToastKind = "success" | "error" | "info";
 interface Toast {
@@ -69,7 +70,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div
         role="status"
         aria-live="polite"
-        className="pointer-events-none fixed bottom-4 right-4 z-[100] flex flex-col gap-2"
+        className="pointer-events-none fixed bottom-4 end-4 z-[100] flex flex-col gap-2"
       >
         {toasts.map((t) => {
           const Icon = ICONS[t.kind];
@@ -83,7 +84,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             >
               <Icon size={18} className={cn("mt-0.5 shrink-0", TONE[t.kind])} />
               <span className="flex-1 text-neutral-800">{t.message}</span>
-              <button onClick={() => remove(t.id)} className="text-neutral-400 hover:text-neutral-700" aria-label="Dismiss">
+              <button onClick={() => remove(t.id)} className="text-neutral-400 hover:text-neutral-700" aria-label={tr("ui.dismiss")}>
                 <X size={15} />
               </button>
             </div>

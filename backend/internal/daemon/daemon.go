@@ -112,7 +112,19 @@ type svc struct {
 	exe string
 	dir string
 	out io.Writer
+	// Immediate-death window for start(): how long the spawned server may take
+	// to fail before start reports success. Zero means the production default
+	// (startGrace). Tests inject a larger window: on a loaded machine even the
+	// fork+exec+exit+reap of an instantly-dying child can exceed the default,
+	// and death is detected the moment it is reaped, so a generous window adds
+	// no wall time when the child actually dies.
+	grace time.Duration
 }
+
+// How long start() watches the spawned server for an immediate exit before
+// reporting success. Every successful start waits this out in full, so it
+// stays short; see svc.grace for the tradeoff.
+const startGrace = 1500 * time.Millisecond
 
 func (s *svc) pidPath() string { return filepath.Join(s.dir, pidFileName) }
 func (s *svc) logPath() string { return filepath.Join(s.dir, logFileName) }
@@ -190,13 +202,17 @@ func (s *svc) start() error {
 	// recycling the PID within the grace window. The window is generous
 	// because on a loaded machine even fork+exec+exit of a dying child can
 	// take the better part of a second; a daemon start can afford the wait.
+	grace := s.grace
+	if grace <= 0 {
+		grace = startGrace
+	}
 	select {
 	case <-exited:
 		_ = os.Remove(s.pidPath())
 		fmt.Fprintln(s.out, "server exited immediately; last log lines:")
 		s.printTail(80)
 		return fmt.Errorf("server failed to start")
-	case <-time.After(1500 * time.Millisecond):
+	case <-time.After(grace):
 	}
 
 	fmt.Fprintf(s.out, "started (pid %d)\n", pid)

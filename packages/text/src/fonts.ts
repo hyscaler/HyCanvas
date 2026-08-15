@@ -1,7 +1,10 @@
-// Font catalog. A curated, framework-agnostic list of families the
-// editor offers, plus helpers to search them and to build a Google Fonts CSS URL
-// the browser font provider uses to lazy-load a family. Uploaded/brand fonts
-// (FR-6) are layered on top of this at runtime; this is the built-in library.
+// Font catalog. The full open-source font library (Bunny's keyless mirror of the
+// Google Fonts families), bundled as metadata so search works offline with no API
+// key, plus helpers to search it and to build the CSS2 URL the browser font
+// provider uses to lazy-load a family. A small featured set is surfaced first.
+// Uploaded/brand fonts (FR-6) are layered on top of this at runtime.
+
+import { GENERATED_FONTS } from "./font-catalog.generated";
 
 export type FontCategory =
   | "sans-serif"
@@ -23,52 +26,40 @@ export interface FontCatalogEntry {
   system?: boolean;
 }
 
-const W = {
-  text: [300, 400, 500, 600, 700],
-  full: [100, 200, 300, 400, 500, 600, 700, 800, 900],
-  display: [400, 700],
-  mono: [400, 500, 700],
-};
-
-/** Built-in font library. Web fonts are loaded on demand from Google Fonts. */
-export const FONT_CATALOG: FontCatalogEntry[] = [
-  { family: "system", category: "sans-serif", weights: [400, 600, 700], system: true },
-  // Sans-serif
-  { family: "Inter", category: "sans-serif", weights: W.full, italics: true, variable: true },
-  { family: "Roboto", category: "sans-serif", weights: [100, 300, 400, 500, 700, 900], italics: true },
-  { family: "Open Sans", category: "sans-serif", weights: W.text, italics: true, variable: true },
-  { family: "Lato", category: "sans-serif", weights: [100, 300, 400, 700, 900], italics: true },
-  { family: "Montserrat", category: "sans-serif", weights: W.full, italics: true, variable: true },
-  { family: "Poppins", category: "sans-serif", weights: W.full, italics: true },
-  { family: "Nunito", category: "sans-serif", weights: W.text, italics: true, variable: true },
-  { family: "Raleway", category: "sans-serif", weights: W.full, italics: true, variable: true },
-  { family: "Work Sans", category: "sans-serif", weights: W.full, italics: true, variable: true },
-  { family: "DM Sans", category: "sans-serif", weights: [400, 500, 700], italics: true, variable: true },
-  { family: "Manrope", category: "sans-serif", weights: [200, 300, 400, 500, 600, 700, 800], variable: true },
-  { family: "Figtree", category: "sans-serif", weights: [300, 400, 500, 600, 700, 800, 900], variable: true },
-  { family: "Outfit", category: "sans-serif", weights: W.full, variable: true },
-  // Serif
-  { family: "Playfair Display", category: "serif", weights: [400, 500, 600, 700, 800, 900], italics: true, variable: true },
-  { family: "Merriweather", category: "serif", weights: [300, 400, 700, 900], italics: true },
-  { family: "Lora", category: "serif", weights: [400, 500, 600, 700], italics: true, variable: true },
-  { family: "PT Serif", category: "serif", weights: [400, 700], italics: true },
-  { family: "Source Serif 4", category: "serif", weights: W.full, italics: true, variable: true },
-  { family: "Roboto Slab", category: "serif", weights: W.full, variable: true },
-  // Display
-  { family: "Oswald", category: "display", weights: [200, 300, 400, 500, 600, 700], variable: true },
-  { family: "Bebas Neue", category: "display", weights: [400] },
-  { family: "Archivo Black", category: "display", weights: [400] },
-  { family: "Anton", category: "display", weights: [400] },
-  // Handwriting
-  { family: "Dancing Script", category: "handwriting", weights: [400, 500, 600, 700], variable: true },
-  { family: "Pacifico", category: "handwriting", weights: [400] },
-  { family: "Caveat", category: "handwriting", weights: [400, 500, 600, 700], variable: true },
-  { family: "Lobster", category: "handwriting", weights: [400] },
-  // Monospace
-  { family: "Roboto Mono", category: "monospace", weights: W.mono, italics: true, variable: true },
-  { family: "JetBrains Mono", category: "monospace", weights: [400, 500, 700, 800], italics: true, variable: true },
-  { family: "Space Mono", category: "monospace", weights: [400, 700], italics: true },
+// Families surfaced first (in this order) in the no-query view; the rest of the
+// library follows alphabetically. Weights/italics/variable for every family come
+// from the generated Bunny catalog, so a family's CSS request always matches what
+// the provider can actually serve.
+const FEATURED_ORDER = [
+  "Inter", "Roboto", "Open Sans", "Lato", "Montserrat", "Poppins", "Nunito",
+  "Raleway", "Work Sans", "DM Sans", "Manrope", "Figtree", "Outfit",
+  "Playfair Display", "Merriweather", "Lora", "PT Serif", "Source Serif 4", "Roboto Slab",
+  "Oswald", "Bebas Neue", "Archivo Black", "Anton",
+  "Dancing Script", "Pacifico", "Caveat", "Lobster",
+  "Roboto Mono", "JetBrains Mono", "Space Mono",
 ];
+
+const SYSTEM_ENTRY: FontCatalogEntry = { family: "system", category: "sans-serif", weights: [400, 600, 700], system: true };
+
+/**
+ * Built-in font library: the system stack, then the featured families (in
+ * FEATURED_ORDER), then the rest of the full open-source library (Bunny's mirror
+ * of Google Fonts, ~2k families) alphabetically. Metadata is bundled so search
+ * works offline with no API key; each family's web font is fetched on demand from
+ * the configured provider (Bunny) when it is previewed or applied.
+ */
+export const FONT_CATALOG: FontCatalogEntry[] = (() => {
+  const byName = new Map(GENERATED_FONTS.map((f) => [f.family.toLowerCase(), f]));
+  const seen = new Set<string>();
+  const featured: FontCatalogEntry[] = [];
+  for (const name of FEATURED_ORDER) {
+    const key = name.toLowerCase();
+    const e = byName.get(key);
+    if (e && !seen.has(key)) { featured.push(e); seen.add(key); }
+  }
+  const rest = GENERATED_FONTS.filter((f) => !seen.has(f.family.toLowerCase()));
+  return [SYSTEM_ENTRY, ...featured, ...rest];
+})();
 
 const BY_FAMILY = new Map(FONT_CATALOG.map((f) => [f.family.toLowerCase(), f]));
 
@@ -96,16 +87,43 @@ export function searchFonts(query = "", category?: FontCategory): FontCatalogEnt
     });
 }
 
+// Where webfont CSS is loaded from. Bunny Fonts (fonts.bunny.net) is the
+// default: it is a keyless, GDPR-safe mirror that serves the SAME open-source
+// fonts as Google via a CSS2-compatible endpoint, but with a stated zero-
+// logging policy, so a self-hosted instance does not leak end-user IPs to
+// Google on every page. Self-hosters who prefer Google can switch the host.
+const FONT_CSS_HOSTS = {
+  bunny: "https://fonts.bunny.net/css2",
+  google: "https://fonts.googleapis.com/css2",
+} as const;
+export type FontCssProvider = keyof typeof FONT_CSS_HOSTS;
+let fontCssHost: string = FONT_CSS_HOSTS.bunny;
+
+/** Switch the webfont CSS source ("bunny" default, or "google"). */
+export function setFontCssProvider(provider: FontCssProvider): void {
+  fontCssHost = FONT_CSS_HOSTS[provider] ?? FONT_CSS_HOSTS.bunny;
+}
+
 /**
- * Google Fonts CSS2 URL to load a family's selected weights (and italics when
- * available). The browser provider injects this as a stylesheet, then waits for
- * the face via the CSS Font Loading API.
+ * Webfont CSS URL to load a family's selected weights (and italics when
+ * available), from the configured provider (Bunny by default, Google
+ * optional; the CSS2 request syntax is identical on both). The browser
+ * provider injects this as a stylesheet, then waits for the face via the CSS
+ * Font Loading API. Empty string for system/unknown families.
  */
-export function googleFontsCssUrl(family: string, weights: number[] = [400, 700]): string {
+export function fontCssUrl(family: string, weights: number[] = [400, 700]): string {
   const entry = getFontEntry(family);
   if (!entry || entry.system) return "";
-  const name = family.replace(/\s+/g, "+");
-  const ws = [...new Set(weights.length ? weights : entry.weights)].sort((a, b) => a - b);
+  // Build the URL from the CANONICAL catalog family (entry.family), never the
+  // raw caller input: getFontEntry already rejected anything not in the curated
+  // library, so entry.family is a trusted, fixed string. Encode it so a family
+  // with spaces (or any other reserved char) is a well-formed query value and
+  // no untrusted text can ever reach the URL sink. Weights are numeric.
+  const name = encodeURIComponent(entry.family).replace(/%20/g, "+");
+  const ws = [...new Set(weights.length ? weights : entry.weights)]
+    .filter((w) => Number.isFinite(w))
+    .map((w) => Math.trunc(w))
+    .sort((a, b) => a - b);
   let axis: string;
   if (entry.italics) {
     const tuples = [
@@ -116,5 +134,8 @@ export function googleFontsCssUrl(family: string, weights: number[] = [400, 700]
   } else {
     axis = `:wght@${ws.join(";")}`;
   }
-  return `https://fonts.googleapis.com/css2?family=${name}${axis}&display=swap`;
+  return `${fontCssHost}?family=${name}${axis}&display=swap`;
 }
+
+/** @deprecated use fontCssUrl; kept so existing imports keep compiling. */
+export const googleFontsCssUrl = fontCssUrl;

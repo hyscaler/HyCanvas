@@ -4,6 +4,7 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -66,11 +67,11 @@ func mountStaticFS(r chi.Router, root http.FileSystem, gaID string) {
 		p := req.URL.Path
 		serve := func(name string) { serveFile(w, req, root, name, gaID) }
 		if req.Method != http.MethodGet && req.Method != http.MethodHead {
-			Problem(w, req, http.StatusNotFound, "Not Found", "no route for "+req.Method+" "+p)
+			problemWithCode(w, req, http.StatusNotFound, "Not Found", "no route for "+req.Method+" "+p, "no_route")
 			return
 		}
 		if strings.HasPrefix(p, "/api/") || p == "/api" || strings.HasPrefix(p, "/realtime") {
-			Problem(w, req, http.StatusNotFound, "Not Found", "no route for "+p)
+			problemWithCode(w, req, http.StatusNotFound, "Not Found", "no route for "+p, "no_route")
 			return
 		}
 
@@ -169,20 +170,20 @@ func mountAPIOnlyNotice(r chi.Router) {
 			_, _ = w.Write([]byte(apiOnlyNotice))
 			return
 		}
-		Problem(w, req, http.StatusNotFound, "Not Found", "no route for "+req.Method+" "+p)
+		problemWithCode(w, req, http.StatusNotFound, "Not Found", "no route for "+req.Method+" "+p, "no_route")
 	})
 }
 
 func serveFile(w http.ResponseWriter, req *http.Request, root http.FileSystem, name string, gaID string) {
 	f, err := root.Open(name)
 	if err != nil {
-		Problem(w, req, http.StatusNotFound, "Not Found", "no route for "+req.URL.Path)
+		problemWithCode(w, req, http.StatusNotFound, "Not Found", "no route for "+req.URL.Path, "no_route")
 		return
 	}
 	defer f.Close()
 	info, err := f.Stat()
 	if err != nil || info.IsDir() {
-		Problem(w, req, http.StatusNotFound, "Not Found", "no route for "+req.URL.Path)
+		problemWithCode(w, req, http.StatusNotFound, "Not Found", "no route for "+req.URL.Path, "no_route")
 		return
 	}
 	// HTML pages get the analytics snippet injected at serve time (when enabled),
@@ -246,4 +247,48 @@ func injectGA(html []byte, gaID string) []byte {
 	out = append(out, snippet...)
 	out = append(out, html[idx:]...)
 	return out
+}
+
+// localesOverlay serves /locales/<tag>.json from a directory on disk, falling
+// back to whatever the build embedded.
+//
+// Translations are the one asset a self-hoster has to be able to add WITHOUT
+// rebuilding. The production packaging is a single binary with the frontend
+// baked in by go:embed, and the embedded filesystem takes precedence over
+// PUBLIC_DIR, so without this a new language would mean recompiling the
+// product. That is the opposite of the promise the catalog format makes, where
+// a translator's contribution is one JSON file.
+//
+// The overlay is read-only, scoped to a single prefix, and only consulted when
+// LOCALES_DIR names a real directory, so it cannot shadow the application.
+type localesOverlay struct {
+	base http.FileSystem
+	dir  http.FileSystem
+}
+
+const localesPrefix = "/locales/"
+
+func (o localesOverlay) Open(name string) (http.File, error) {
+	clean := filepath.Clean("/" + strings.TrimPrefix(name, "/"))
+	if o.dir != nil && strings.HasPrefix(clean, localesPrefix) && strings.HasSuffix(clean, ".json") {
+		rel := strings.TrimPrefix(clean, localesPrefix)
+		// Clean already removed any "..", so rel cannot escape the directory.
+		if f, err := o.dir.Open("/" + rel); err == nil {
+			return f, nil
+		}
+	}
+	return o.base.Open(name)
+}
+
+// withLocalesDir wraps root so an operator-supplied translation directory wins
+// over the embedded copy. An empty or missing dir returns root unchanged.
+func withLocalesDir(root http.FileSystem, dir string) http.FileSystem {
+	if dir == "" {
+		return root
+	}
+	info, err := os.Stat(dir)
+	if err != nil || !info.IsDir() {
+		return root
+	}
+	return localesOverlay{base: root, dir: http.Dir(dir)}
 }

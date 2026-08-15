@@ -70,6 +70,11 @@ interface PresenceStore {
   protectedNodes: ReadonlySet<string>;
   /** clientId of the peer whose viewport we are mirroring (AC-5), or null. */
   following: string | null;
+  /** The active in-CRDT branch id (doc 16 FR-10), or null for the main
+   *  lineage. Switching rebinds the realtime session (own room, own update-log
+   *  lineage, own IndexedDB namespace) and seeds the doc from the branch's
+   *  folded lineage. Session-only, never persisted in the design. */
+  branch: string | null;
   /** The facilitator currently driving our viewport via spotlight/take-control
    *  (FR-14), or null. Distinct from voluntary `following`: this was forced by a
    *  facilitator and surfaces a "[name] is presenting" banner. Setting it also
@@ -117,6 +122,8 @@ interface PresenceStore {
   /** Toggle follow on a peer (AC-5); clears when the peer is gone. */
   toggleFollow(clientId: string): void;
   setFollowing(clientId: string | null): void;
+  /** Switch the active in-CRDT branch (null = main). The realtime hook rebinds. */
+  setBranch(branchId: string | null): void;
   /** Enter forced spotlight/take-control of a facilitator (FR-14): mirror their
    *  viewport and show the presenting banner. Reuses follow-mode mirroring. */
   setPresenter(clientId: string, name: string): void;
@@ -136,6 +143,7 @@ export const usePresence = create<PresenceStore>((set, get) => ({
   facilitator: null,
   protectedNodes: new Set<string>(),
   following: null,
+  branch: null,
   presenter: null,
   summon: null,
   selfLaser: null,
@@ -198,6 +206,7 @@ export const usePresence = create<PresenceStore>((set, get) => ({
     }),
   toggleFollow: (clientId) =>
     set((s) => ({ following: s.following === clientId ? null : clientId, presenter: null })),
+  setBranch: (branchId) => set({ branch: branchId }),
   // Setting follow to anything other than the active presenter (incl. null, e.g.
   // the user pans to break free) ends a forced spotlight.
   setFollowing: (clientId) =>

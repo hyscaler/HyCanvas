@@ -1,0 +1,218 @@
+// PPTX import (doc 28): the round-trip proof. A deck exported by our own
+// deckToPptx re-imports with structure intact (slides, text runs + styling,
+// shapes + fills, images + assets, notes, background), and deflate-compressed
+// archives (what PowerPoint actually writes) unzip correctly. The XML parser
+// and coordinate/rotation conversions get targeted checks.
+import { describe, expect, it } from "vitest";
+import { deflateRawSync } from "node:zlib";
+import { createBlankDesign, createNode, validate, type DesignFile, type Node } from "@hc/schema";
+import { deckToPptx } from "../pptx";
+import { pptxToDesign } from "../pptximport";
+import { parseXml, findFirst } from "../xml";
+import { unzip } from "../unzip";
+import { zipStore } from "../zipstore";
+
+const PNG_STUB = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3, 4]);
+
+function sampleDeck(): DesignFile {
+  const file = createBlankDesign({ title: "Round trip", width: 1280, height: 720 });
+  file.pages[0].id = "s1";
+  (file.pages[0] as { notes?: string }).notes = "Open strong.";
+  (file.pages[0] as { background?: unknown }).background = { type: "solid", color: { srgb: { r: 0.95, g: 0.97, b: 1, a: 1 } } };
+  file.pages[0].children = [
+    createNode("shape", {
+      id: "sh1",
+      shape: "ellipse",
+      transform: { x: 100, y: 80, scaleX: 1, scaleY: 1, rotation: 0 },
+      size: { width: 300, height: 200 },
+      fills: [{ type: "solid", color: { srgb: { r: 0.2, g: 0.4, b: 0.8, a: 1 } } }],
+      stroke: { fill: { type: "solid", color: { srgb: { r: 0, g: 0, b: 0, a: 1 } } }, width: 2, align: "center", cap: "butt", join: "miter" },
+    } as Partial<Node>),
+    createNode("text", {
+      id: "tx1",
+      transform: { x: 120, y: 320, scaleX: 1, scaleY: 1, rotation: 0 },
+      size: { width: 600, height: 60 },
+      content: [{
+        runs: [
+          { text: "Hello ", style: { fontFamily: "Inter", fontStyle: "Bold", fontSize: 32, fill: { type: "solid", color: { srgb: { r: 0.1, g: 0.1, b: 0.1, a: 1 } } } } },
+          { text: "world", style: { fontFamily: "Inter", fontStyle: "Regular", fontSize: 32, fill: { type: "solid", color: { srgb: { r: 0.8, g: 0.2, b: 0.2, a: 1 } } } } },
+        ],
+        style: { align: "center" },
+      }],
+    } as Partial<Node>),
+    createNode("image", {
+      id: "im1",
+      transform: { x: 700, y: 100, scaleX: 1, scaleY: 1, rotation: 0 },
+      size: { width: 320, height: 180 },
+      source: { assetId: "asset-1", naturalWidth: 640, naturalHeight: 480 },
+      fit: "cover",
+    } as Partial<Node>),
+  ];
+  return file;
+}
+
+describe("pptxToDesign", () => {
+  it("round-trips our own export: slides, text, shapes, images, notes, background", async () => {
+    const bytes = await deckToPptx(sampleDeck(), {
+      resolveImage: async () => ({ data: PNG_STUB, mime: "image/png" }),
+    });
+    const file = await pptxToDesign(bytes, { title: "Back again" });
+
+    expect(file.pages).toHaveLength(1);
+    expect(file.pages[0].width).toBe(1280);
+    expect(file.pages[0].height).toBe(720);
+    expect((file.pages[0] as { notes?: string }).notes).toBe("Open strong.");
+    const bg = (file.pages[0] as { background?: { type?: string } }).background;
+    expect(bg?.type).toBe("solid");
+
+    const kids = file.pages[0].children as Node[];
+    const shape = kids.find((n) => n.type === "shape")!;
+    expect((shape as unknown as { shape: string }).shape).toBe("ellipse");
+    expect(Math.round(shape.transform.x)).toBe(100);
+    expect(Math.round(shape.size.width)).toBe(300);
+    const fills = (shape as unknown as { fills: { color: { srgb: { b: number } } }[] }).fills;
+    expect(fills[0].color.srgb.b).toBeCloseTo(0.8, 1);
+    expect((shape as unknown as { stroke?: { width: number } }).stroke?.width).toBeCloseTo(2, 0);
+
+    const text = kids.find((n) => n.type === "text")!;
+    const paras = (text as unknown as { content: { runs: { text: string; style: { fontStyle: string; fontSize: number; fontFamily: string } }[]; style: { align: string } }[] }).content;
+    expect(paras[0].runs.map((r) => r.text)).toEqual(["Hello ", "world"]);
+    expect(paras[0].runs[0].style.fontStyle).toBe("Bold");
+    expect(paras[0].runs[0].style.fontFamily).toBe("Inter");
+    expect(paras[0].runs[0].style.fontSize).toBeCloseTo(32, 0);
+    expect(paras[0].style.align).toBe("center");
+
+    const image = kids.find((n) => n.type === "image")!;
+    const assetId = (image as unknown as { source: { assetId: string } }).source.assetId;
+    const asset = (file as { assets?: { id: string; url: string }[] }).assets?.find((a) => a.id === assetId);
+    expect(asset?.url.startsWith("data:image/png;base64,")).toBe(true);
+    // The cover crop derived on export comes back as an explicit crop.
+    expect((image as unknown as { crop?: object }).crop).toBeTruthy();
+  });
+
+  it("converts PowerPoint center-rotation back to top-left-origin rotation", async () => {
+    const file = createBlankDesign({ title: "rot", width: 1000, height: 1000 });
+    file.pages[0].children = [
+      createNode("shape", {
+        id: "r1",
+        shape: "rect",
+        transform: { x: 100, y: 100, scaleX: 1, scaleY: 1, rotation: 90 },
+        size: { width: 200, height: 100 },
+        fills: [{ type: "solid", color: { srgb: { r: 1, g: 0, b: 0, a: 1 } } }],
+      } as Partial<Node>),
+    ];
+    const back = await pptxToDesign(await deckToPptx(file));
+    const shape = (back.pages[0].children as Node[]).find((n) => n.type === "shape")!;
+    expect(shape.transform.rotation).toBeCloseTo(90, 3);
+    expect(shape.transform.x).toBeCloseTo(100, 0); // full inverse of the export re-anchor
+    expect(shape.transform.y).toBeCloseTo(100, 0);
+  });
+
+  it("unzips deflate-compressed archives (what PowerPoint writes)", async () => {
+    // Build a tiny deflated zip by hand: one entry, method 8.
+    const name = new TextEncoder().encode("hello.txt");
+    const content = new TextEncoder().encode("hello pptx");
+    const comp = new Uint8Array(deflateRawSync(content));
+    const crcTable = (() => { const t = new Uint32Array(256); for (let n2 = 0; n2 < 256; n2++) { let c = n2; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n2] = c >>> 0; } return t; })();
+    let crc = 0xffffffff;
+    for (const b of content) crc = crcTable[(crc ^ b) & 0xff] ^ (crc >>> 8);
+    crc = (crc ^ 0xffffffff) >>> 0;
+
+    const local = new Uint8Array(30 + name.length + comp.length);
+    const lv = new DataView(local.buffer);
+    lv.setUint32(0, 0x04034b50, true); lv.setUint16(8, 8, true);
+    lv.setUint32(14, crc, true); lv.setUint32(18, comp.length, true); lv.setUint32(22, content.length, true);
+    lv.setUint16(26, name.length, true);
+    local.set(name, 30); local.set(comp, 30 + name.length);
+
+    const central = new Uint8Array(46 + name.length);
+    const cv = new DataView(central.buffer);
+    cv.setUint32(0, 0x02014b50, true); cv.setUint16(10, 8, true);
+    cv.setUint32(16, crc, true); cv.setUint32(20, comp.length, true); cv.setUint32(24, content.length, true);
+    cv.setUint16(28, name.length, true); cv.setUint32(42, 0, true);
+    central.set(name, 46);
+
+    const eocd = new Uint8Array(22);
+    const ev = new DataView(eocd.buffer);
+    ev.setUint32(0, 0x06054b50, true); ev.setUint16(8, 1, true); ev.setUint16(10, 1, true);
+    ev.setUint32(12, central.length, true); ev.setUint32(16, local.length, true);
+
+    const zip = new Uint8Array(local.length + central.length + eocd.length);
+    zip.set(local, 0); zip.set(central, local.length); zip.set(eocd, local.length + central.length);
+
+    const files = await unzip(zip);
+    expect(new TextDecoder().decode(files.get("hello.txt"))).toBe("hello pptx");
+  });
+
+  it("parses XML with attributes, nesting, entities, CDATA, and self-closing tags", () => {
+    const root = parseXml(`<?xml version="1.0"?><a:r x="1&amp;2"><a:t>Hi &lt;there&gt;</a:t><b/><![CDATA[raw]]></a:r>`);
+    expect(root.tag).toBe("a:r");
+    expect(root.attrs.x).toBe("1&2");
+    expect(findFirst(root, "a:t")!.text).toBe("Hi <there>");
+    expect(findFirst(root, "b")).toBeTruthy();
+    expect(root.text).toBe("raw");
+  });
+
+  // Real PowerPoint decks carry tables, charts and SmartArt as p:graphicFrame.
+  // A table must come back editable; anything with no native equivalent must
+  // still leave a visible marker rather than vanishing from the slide.
+  it("imports graphicFrame tables as editable tables and marks what it cannot convert", async () => {
+    const enc = (s: string) => new TextEncoder().encode(s);
+    const frame = (inner: string, x: number) =>
+      `<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="9" name="Q3 numbers"/></p:nvGraphicFramePr>` +
+      `<p:xfrm><a:off x="${x}" y="952500"/><a:ext cx="2857500" cy="1905000"/></p:xfrm>` +
+      `<a:graphic><a:graphicData uri="${inner.includes("a:tbl") ? "http://schemas.openxmlformats.org/drawingml/2006/table" : "http://schemas.openxmlformats.org/drawingml/2006/chart"}">${inner}</a:graphicData></a:graphic></p:graphicFrame>`;
+    const cell = (t: string) => `<a:tc><a:txBody><a:bodyPr/><a:p><a:r><a:t>${t}</a:t></a:r></a:p></a:txBody></a:tc>`;
+    const tbl =
+      `<a:tbl><a:tblGrid><a:gridCol w="1428750"/><a:gridCol w="1428750"/></a:tblGrid>` +
+      `<a:tr h="476250">${cell("Region")}${cell("Revenue")}</a:tr>` +
+      `<a:tr h="476250">${cell("EMEA")}${cell("1.2M")}</a:tr></a:tbl>`;
+    const slideXml =
+      `<?xml version="1.0"?><p:sld xmlns:p="p" xmlns:a="a"><p:cSld><p:spTree>` +
+      frame(tbl, 952500) +
+      frame(`<c:chart xmlns:c="c" r:id="rId9" xmlns:r="r"/>`, 4762500) +
+      `</p:spTree></p:cSld></p:sld>`;
+    const bytes = zipStore([
+      { name: "ppt/presentation.xml", data: enc(`<?xml version="1.0"?><p:presentation xmlns:p="p" xmlns:r="r"><p:sldIdLst><p:sldId id="256" r:id="rId1"/></p:sldIdLst><p:sldSz cx="12192000" cy="6858000"/></p:presentation>`) },
+      { name: "ppt/_rels/presentation.xml.rels", data: enc(`<?xml version="1.0"?><Relationships><Relationship Id="rId1" Target="slides/slide1.xml"/></Relationships>`) },
+      { name: "ppt/slides/slide1.xml", data: enc(slideXml) },
+    ]);
+
+    const file = await pptxToDesign(bytes);
+    const kids = file.pages[0].children as Node[];
+
+    const table = kids.find((n) => n.type === "table") as unknown as {
+      rows: number; cols: number; colWidths: number[]; cells: { row: number; col: number; content: { text: string }[] }[];
+      transform: { x: number }; size: { width: number };
+    };
+    expect(table).toBeTruthy();
+    expect([table.rows, table.cols]).toEqual([2, 2]);
+    // The whole imported file must satisfy the OPEN FORMAT, not merely look
+    // right: a table cell is TextRun[] (fontId/fontSize/weight), not the
+    // paragraph/run tree a text node uses. Getting that wrong writes a design
+    // the frontend's own validator would later refuse to open.
+    const check = validate(file);
+    expect(check.ok, "ok" in check && !check.ok ? `${check.pointer}: ${check.message}` : "").toBe(true);
+    const run = table.cells[0].content[0] as unknown as { text: string; fontId: string; fontSize: number; weight: number };
+    expect(run.fontId).toBeTruthy();
+    expect(typeof run.fontSize).toBe("number");
+    expect(run.weight).toBeGreaterThanOrEqual(100);
+    expect(table.cells.map((c) => c.content.map((r) => r.text).join(""))).toEqual(["Region", "Revenue", "EMEA", "1.2M"]);
+    // Positioned where the slide put it, and the grid scales into that frame.
+    expect(Math.round(table.transform.x)).toBe(100);
+    expect(Math.round(table.size.width)).toBe(300);
+    expect(Math.round(table.colWidths.reduce((a, b) => a + b, 0))).toBe(300);
+
+    // The chart has no native equivalent yet: it must still be visible, in place.
+    const marker = kids.find((n) => n.type === "text") as unknown as { content: { runs: { text: string }[] }[]; transform: { x: number } };
+    expect(marker).toBeTruthy();
+    const label = marker.content[0].runs[0].text;
+    expect(label).toContain("Chart");
+    expect(label).toContain("Q3 numbers");
+    expect(Math.round(marker.transform.x)).toBe(500);
+  });
+
+  it("rejects non-pptx archives cleanly", async () => {
+    await expect(pptxToDesign(new Uint8Array([1, 2, 3]))).rejects.toThrow();
+  });
+});

@@ -24,6 +24,13 @@ const (
 	maxNodeCount = 100000
 )
 
+// ValidateFile is the exported form of the write-boundary check, for the paths
+// that consume a client-supplied file WITHOUT persisting it (the deck-to-video
+// inline-file override). Rendering walks the same recursive structures the
+// write gate bounds, so an unpersisted file must clear the same bar; skipping
+// it would leave a depth/count DoS reachable through a non-write route.
+func ValidateFile(file DesignFile) error { return validateForWrite(file) }
+
 // validateForWrite structurally validates a client-supplied DesignFile before it
 // is persisted. It checks only HARD structural invariants - ids present and
 // unique, node types present, arrays well-formed, bounded depth/count, sane

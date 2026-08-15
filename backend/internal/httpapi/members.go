@@ -34,21 +34,21 @@ func mountMembers(api chi.Router, acct *accounts.Service) {
 func membersProblem(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, accounts.ErrForbidden):
-		Problem(w, r, http.StatusForbidden, "Forbidden", "you do not have permission for this action")
+		problemWithCode(w, r, http.StatusForbidden, "Forbidden", "you do not have permission for this action", "forbidden_action")
 	case errors.Is(err, accounts.ErrNotFound):
-		Problem(w, r, http.StatusNotFound, "Not Found", "resource not found")
+		problemWithCode(w, r, http.StatusNotFound, "Not Found", "resource not found", "resource_not_found")
 	case errors.Is(err, accounts.ErrBadRequest):
-		Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid request")
+		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid request", "invalid_request")
 	case errors.Is(err, accounts.ErrAlreadyMember):
-		Problem(w, r, http.StatusConflict, "Conflict", "this person is already a member")
+		problemWithCode(w, r, http.StatusConflict, "Conflict", "this person is already a member", "already_workspace_member")
 	case errors.Is(err, accounts.ErrLastOwner):
-		Problem(w, r, http.StatusConflict, "Conflict", "a workspace must keep at least one owner")
+		problemWithCode(w, r, http.StatusConflict, "Conflict", "a workspace must keep at least one owner", "workspace_needs_owner")
 	case errors.Is(err, accounts.ErrInviteInvalid):
-		Problem(w, r, http.StatusGone, "Gone", "this invitation is no longer valid")
+		problemWithCode(w, r, http.StatusGone, "Gone", "this invitation is no longer valid", "invite_invalid")
 	case errors.Is(err, accounts.ErrInviteEmailMismatch):
-		Problem(w, r, http.StatusForbidden, "Forbidden", "this invitation was sent to a different email address")
+		problemWithCode(w, r, http.StatusForbidden, "Forbidden", "this invitation was sent to a different email address", "invite_email_mismatch")
 	default:
-		Problem(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed")
+		problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed", "request_failed")
 	}
 }
 
@@ -71,7 +71,7 @@ func inviteHandler(acct *accounts.Service) http.HandlerFunc {
 			Role  string `json:"role"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())
@@ -114,7 +114,7 @@ func respondInvitationHandler(acct *accounts.Service) http.HandlerFunc {
 			Accept bool `json:"accept"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())
@@ -160,7 +160,7 @@ func changeMemberRoleHandler(acct *accounts.Service) http.HandlerFunc {
 			Role string `json:"role"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "invalid body")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())

@@ -124,6 +124,21 @@ describe("resizePage (F22 FR-1/FR-2)", () => {
     expect(n.transform.y + n.size.height).toBeLessThanOrEqual(1080 + 1e-6);
   });
 
+  it("scales ruler guides proportionally with their axis", () => {
+    const src = pageOf(1000, 500, [shape("a", 0, 0, 100, 100)]);
+    // An "x" guide is a vertical line (position along the width); a "y" guide
+    // is horizontal (position along the height).
+    src.guides = [
+      { axis: "x", position: 250 },
+      { axis: "y", position: 100 },
+    ];
+    const out = resizePage(src, { width: 2000, height: 1500 });
+    expect(out.guides).toEqual([
+      { axis: "x", position: 500 },
+      { axis: "y", position: 300 },
+    ]);
+  });
+
   it("handles landscape -> portrait keeping group identity (re-places as a unit)", () => {
     const child = shape("child", 20, 20, 60, 60);
     const grp = createNode("group", {

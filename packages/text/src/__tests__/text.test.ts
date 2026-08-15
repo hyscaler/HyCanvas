@@ -22,7 +22,8 @@ import {
   FONT_CATALOG,
   searchFonts,
   getFontEntry,
-  googleFontsCssUrl,
+  fontCssUrl,
+  setFontCssProvider,
   isSystemFont,
 } from "../index";
 
@@ -39,12 +40,32 @@ describe("font catalog (FR-5)", () => {
     expect(searchFonts("", "serif").every((f) => f.category === "serif")).toBe(true);
     expect(searchFonts("mono", "monospace").length).toBeGreaterThan(0);
   });
-  it("builds a Google Fonts URL for web fonts and empty for system", () => {
-    const url = googleFontsCssUrl("Inter", [400, 700]);
+  it("builds a webfont CSS URL (Bunny by default) for web fonts and empty for system", () => {
+    const url = fontCssUrl("Inter", [400, 700]);
     expect(url).toContain("family=Inter");
     expect(url).toContain("wght@");
     expect(url).toContain("700");
-    expect(googleFontsCssUrl("system")).toBe("");
+    expect(url).toContain("fonts.bunny.net"); // privacy-friendly default
+    expect(fontCssUrl("system")).toBe("");
+  });
+
+  it("encodes a multi-word family with '+' and never leaks unknown/hostile input", () => {
+    // A catalog family with a space stays "+"-encoded (CSS2 request syntax).
+    expect(fontCssUrl("Open Sans")).toContain("family=Open+Sans");
+    // Anything not in the curated catalog (including anything with markup or URL
+    // meta-characters) resolves to no URL at all, so the DOM sink stays safe.
+    expect(fontCssUrl('Nope"<script>alert(1)</script>')).toBe("");
+    expect(fontCssUrl("../../evil")).toBe("");
+    // Every returned URL is on the fixed host allowlist, never derived host.
+    const url = fontCssUrl("Playfair Display");
+    expect(url === "" || /^https:\/\/(fonts\.bunny\.net|fonts\.googleapis\.com)\//.test(url)).toBe(true);
+  });
+
+  it("switches the webfont CSS host to Google when asked, and back to Bunny", () => {
+    setFontCssProvider("google");
+    expect(fontCssUrl("Inter")).toContain("fonts.googleapis.com");
+    setFontCssProvider("bunny");
+    expect(fontCssUrl("Inter")).toContain("fonts.bunny.net");
   });
 });
 

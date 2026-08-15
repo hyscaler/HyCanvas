@@ -33,6 +33,9 @@ type TimelineTransition struct {
 	Type           string  `json:"type"`
 	DurationFrames float64 `json:"durationFrames"`
 	Color          string  `json:"color"`
+	// Direction for slide/wipe (P4.7): "left" | "right" | "up" | "down". Empty =
+	// the legacy horizontal behavior. Mirrors @hc/timeline ClipTransition.
+	Direction string `json:"direction"`
 }
 
 type TimelineTitle struct {
@@ -83,15 +86,20 @@ type TimelineClip struct {
 	AudioGainDb   float64             `json:"audioGainDb"`
 	Title         *TimelineTitle      `json:"title"`
 	SequenceID    string              `json:"sequenceId"`
+	// Element is an embedded footage-free design node (image/shape/text/group)
+	// this clip renders onto the stage, authored in stage coordinates. It is
+	// rasterized to a PNG (staged by the caller into opts.ElementFiles) and
+	// composited like a looped image overlay, matching the browser preview.
+	Element map[string]any `json:"element"`
 }
 
 type TimelineTrack struct {
-	ID     string         `json:"id"`
-	Kind   string         `json:"kind"`
-	Muted  bool           `json:"muted"`
-	Solo   bool           `json:"solo"`
-	Hidden bool           `json:"hidden"`
-	GainDb float64        `json:"gainDb"`
+	ID     string  `json:"id"`
+	Kind   string  `json:"kind"`
+	Muted  bool    `json:"muted"`
+	Solo   bool    `json:"solo"`
+	Hidden bool    `json:"hidden"`
+	GainDb float64 `json:"gainDb"`
 	// -1 (left) .. 1 (right); 0 = center.
 	Pan   float64        `json:"pan"`
 	Clips []TimelineClip `json:"clips"`
@@ -291,6 +299,25 @@ type TimelineOptions struct {
 	// StemTrackID renders ONLY this track's audio (pre-master, no ducking):
 	// per-track stems for the mp3 format.
 	StemTrackID string
+	// ElementFiles maps a clip id to a staged PNG path for its embedded design
+	// element (Clip.element), rasterized by the caller. Element clips whose id
+	// is absent here are skipped (no I/O happens inside the arg builder).
+	ElementFiles map[string]string
+	// ElementSeqs maps a clip id to a staged PNG SEQUENCE for an ANIMATED element
+	// (each frame posed at its clip-local time by the caller), overlaid so the
+	// server MP4 animates the element exactly like the browser preview. Takes
+	// precedence over ElementFiles for the same clip id.
+	ElementSeqs map[string]ElementSeq
+}
+
+// ElementSeq is a staged, posed PNG sequence for one animated element clip.
+type ElementSeq struct {
+	// Pattern is an ffmpeg image2 input pattern, e.g. ".../f_%05d.png".
+	Pattern string
+	// Frames is the number of frames written (0..Frames-1).
+	Frames int
+	// Fps is the rate the frames were posed at (the sequence's native rate).
+	Fps float64
 }
 
 func (c *TimelineClip) speedMag() float64 {
@@ -356,6 +383,81 @@ func escapeDrawtext(s string) string {
 	s = strings.ReplaceAll(s, `:`, `\:`)
 	s = strings.ReplaceAll(s, `%`, `\%`)
 	return s
+}
+
+// fadeFilters builds the ffmpeg fade filter(s) for one transition edge on a clip
+// of length clipDurS seconds: the fade family fades alpha; dipToColor fades
+// through a color; SLIDE is position-only (handled by the overlay x-expression,
+// see slideOverlayX) so it adds no alpha fade here; WIPE still approximates as a
+// fade (a faithful per-pixel reveal is a follow-up). Empty when the transition is
+// absent. Shared by media clips and element clips.
+func fadeFilters(tr *TimelineTransition, edge string, clipDurS, fps float64) []string {
+	if tr == nil || tr.DurationFrames < 1 {
+		return nil
+	}
+	if tr.Type == "slide" {
+		return nil // rendered by moving the overlay, not by fading alpha
+	}
+	d := math.Min(tr.DurationFrames/fps, clipDurS)
+	st := 0.0
+	if edge == "out" {
+		st = clipDurS - d
+	}
+	t := "in"
+	if edge == "out" {
+		t = "out"
+	}
+	if tr.Type == "dipToColor" {
+		return []string{fmt.Sprintf("fade=t=%s:st=%.4f:d=%.4f:c=%s", t, st, d, cssColorToFF(tr.Color, "black"))}
+	}
+	return []string{fmt.Sprintf("fade=t=%s:st=%.4f:d=%.4f:alpha=1", t, st, d)}
+}
+
+// slideOverlayXY returns the ffmpeg overlay x/y expressions (functions of the
+// absolute output time t) for a clip's slide transitions, matching the browser
+// compositor. Legacy (no direction): in enters from the left (x: -W -> 0), out
+// exits to the right (x: 0 -> +W). Directional: the clip enters from `direction`
+// and exits back to it, along x (left/right) or y (up/down). Returns ("0","0")
+// when neither edge slides. Commas inside the if() are escaped for the filtergraph.
+func slideOverlayXY(c TimelineClip, W, H, startS, clipDurS, fps float64) (string, string) {
+	x, y := "0", "0"
+	endS := startS + clipDurS
+	apply := func(edge string, tr *TimelineTransition) {
+		if tr == nil || tr.Type != "slide" || tr.DurationFrames < 1 {
+			return
+		}
+		d := math.Min(tr.DurationFrames/fps, clipDurS)
+		// "presence" f in [0,1] (1 = settled) and the window guard condition.
+		var f, cond string
+		if edge == "in" {
+			f = fmt.Sprintf("((t-%.4f)/%.4f)", startS, d)
+			cond = fmt.Sprintf("lt(t\\,%.4f)", startS+d)
+		} else {
+			f = fmt.Sprintf("((%.4f-t)/%.4f)", endS, d)
+			cond = fmt.Sprintf("gt(t\\,%.4f)", endS-d)
+		}
+		wrap := func(prev, amount string) string { return fmt.Sprintf("if(%s\\,%s\\,%s)", cond, amount, prev) }
+		switch tr.Direction {
+		case "": // legacy horizontal: in slideX=f-1, out slideX=1-f
+			if edge == "in" {
+				x = wrap(x, fmt.Sprintf("%.2f*(%s-1)", W, f))
+			} else {
+				x = wrap(x, fmt.Sprintf("%.2f*(1-%s)", W, f))
+			}
+		case "left":
+			x = wrap(x, fmt.Sprintf("%.2f*(%s-1)", W, f))
+		case "right":
+			x = wrap(x, fmt.Sprintf("%.2f*(1-%s)", W, f))
+		case "up":
+			y = wrap(y, fmt.Sprintf("%.2f*(%s-1)", H, f))
+		case "down":
+			y = wrap(y, fmt.Sprintf("%.2f*(1-%s)", H, f))
+		}
+	}
+	// Apply out first so the in-window guard wraps outermost (checked first).
+	apply("out", c.TransitionOut)
+	apply("in", c.TransitionIn)
+	return x, y
 }
 
 // cssColorToFF maps the subset of CSS colors the editor writes (hex and
@@ -487,6 +589,9 @@ func BuildTimelineArgs(p *TimelineProject, assetFile func(assetID string) (Stage
 	inputIdx := map[string]int{}
 	staged := map[string]StagedAsset{}
 	var args []string
+	// Shared ffmpeg input index: media (-i) and element images (-loop 1 -i) draw
+	// from the same counter so overlay stream refs stay correct.
+	nInputs := 0
 	addInput := func(assetID string) (int, StagedAsset, bool) {
 		if idx, ok := inputIdx[assetID]; ok {
 			return idx, staged[assetID], true
@@ -495,7 +600,8 @@ func BuildTimelineArgs(p *TimelineProject, assetFile func(assetID string) (Stage
 		if !ok {
 			return 0, StagedAsset{}, false
 		}
-		idx := len(inputIdx)
+		idx := nInputs
+		nInputs++
 		inputIdx[assetID] = idx
 		staged[assetID] = sa
 		args = append(args, "-i", sa.Path)
@@ -530,7 +636,54 @@ func BuildTimelineArgs(p *TimelineProject, assetFile func(assetID string) (Stage
 		clips := append([]TimelineClip(nil), t.Clips...)
 		sort.Slice(clips, func(i, j int) bool { return clips[i].StartFrame < clips[j].StartFrame })
 		for _, c := range clips {
-			if c.AssetID == "" || c.Disabled {
+			if c.Disabled {
+				continue
+			}
+			// Footage-free design element. An ANIMATED element is a posed PNG
+			// sequence (each frame baked at its clip-local time), so its motion
+			// lives in the pixels; a static element is a single looped PNG. Both
+			// composite like a video overlay (matching the browser preview path).
+			if c.Element != nil {
+				seq, hasSeq := opts.ElementSeqs[c.ID]
+				path, hasPath := opts.ElementFiles[c.ID]
+				if (!hasSeq || seq.Frames <= 0) && (!hasPath || path == "") {
+					continue
+				}
+				idx := nInputs
+				nInputs++
+				if hasSeq && seq.Frames > 0 {
+					seqFps := seq.Fps
+					if seqFps <= 0 {
+						seqFps = fps
+					}
+					args = append(args, "-framerate", fmt.Sprintf("%g", seqFps), "-start_number", "0", "-i", seq.Pattern)
+				} else {
+					args = append(args, "-loop", "1", "-i", path)
+				}
+				startS := c.StartFrame / fps
+				clipDurS := c.durFrames() / fps
+				chain := []string{
+					fmt.Sprintf("[%d:v]scale=%d:%d", idx, W, H),
+					fmt.Sprintf("fps=%g", fps),
+					fmt.Sprintf("trim=start=0:end=%.4f", clipDurS),
+					"setpts=PTS-STARTPTS",
+					"format=yuva420p",
+				}
+				if c.Opacity != nil && *c.Opacity < 1 {
+					chain = append(chain, fmt.Sprintf("format=rgba,colorchannelmixer=aa=%.4f,format=yuva420p", math.Max(0, *c.Opacity)))
+				}
+				chain = append(chain, fadeFilters(c.TransitionIn, "in", clipDurS, fps)...)
+				chain = append(chain, fadeFilters(c.TransitionOut, "out", clipDurS, fps)...)
+				chain = append(chain, fmt.Sprintf("setpts=PTS+%.4f/TB", startS))
+				v := next("v")
+				fc = append(fc, strings.Join(chain, ",")+v)
+				out := next("o")
+				xExpr, yExpr := slideOverlayXY(c, float64(W), float64(H), startS, clipDurS, fps)
+				fc = append(fc, fmt.Sprintf("%s%soverlay=x=%s:y=%s:eof_action=pass%s", current, v, xExpr, yExpr, out))
+				current = out
+				continue
+			}
+			if c.AssetID == "" {
 				continue
 			}
 			idx, sa, ok := addInput(c.AssetID)
@@ -599,30 +752,14 @@ func BuildTimelineArgs(p *TimelineProject, assetFile func(assetID string) (Stage
 			}
 			// Transitions: fade family via alpha; dipToColor fades through the
 			// color; wipe/slide approximate as fades (documented).
-			addFade := func(tr *TimelineTransition, edge string) {
-				if tr == nil || tr.DurationFrames < 1 {
-					return
-				}
-				d := math.Min(tr.DurationFrames/fps, clipDurS)
-				st := 0.0
-				if edge == "out" {
-					st = clipDurS - d
-				}
-				if tr.Type == "dipToColor" {
-					col := cssColorToFF(tr.Color, "black")
-					fc := fmt.Sprintf("fade=t=%s:st=%.4f:d=%.4f:c=%s", map[string]string{"in": "in", "out": "out"}[edge], st, d, col)
-					chain = append(chain, fc)
-				} else {
-					chain = append(chain, fmt.Sprintf("fade=t=%s:st=%.4f:d=%.4f:alpha=1", map[string]string{"in": "in", "out": "out"}[edge], st, d))
-				}
-			}
-			addFade(c.TransitionIn, "in")
-			addFade(c.TransitionOut, "out")
+			chain = append(chain, fadeFilters(c.TransitionIn, "in", clipDurS, fps)...)
+			chain = append(chain, fadeFilters(c.TransitionOut, "out", clipDurS, fps)...)
 			chain = append(chain, fmt.Sprintf("setpts=PTS+%.4f/TB", startS))
 			v := next("v")
 			fc = append(fc, strings.Join(chain, ",")+v)
 			out := next("o")
-			fc = append(fc, fmt.Sprintf("%s%soverlay=0:0:eof_action=pass%s", current, v, out))
+			xExpr, yExpr := slideOverlayXY(c, float64(W), float64(H), startS, clipDurS, fps)
+			fc = append(fc, fmt.Sprintf("%s%soverlay=x=%s:y=%s:eof_action=pass%s", current, v, xExpr, yExpr, out))
 			current = out
 		}
 	}

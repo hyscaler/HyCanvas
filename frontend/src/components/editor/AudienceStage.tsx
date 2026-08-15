@@ -23,6 +23,8 @@ import { imageAssets } from "@/lib/assetProvider";
 import { fonts } from "@/lib/fontProvider";
 import { oc } from "@/lib/sdk";
 import { subscribeAudience, type AudienceState } from "@/lib/audienceWindow";
+import { DESIGN_SURFACE_DIR } from "@/lib/locale";
+import { tr } from "@/lib/i18n";
 
 type Blend = { fromIndex: number; startedAt: number };
 
@@ -54,7 +56,7 @@ export function AudienceStage({ designId, initialSlide }: { designId: string; in
         setDoc(f);
       })
       .catch(() => {
-        if (!cancelled) setError("Could not open this design.");
+        if (!cancelled) setError(tr("editor.could_not_open_this_design"));
       });
     return () => {
       cancelled = true;
@@ -186,9 +188,13 @@ export function AudienceStage({ designId, initialSlide }: { designId: string; in
   }
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-black" data-testid="audience-stage">
+    // The audience display IS the page's main content: one landmark holding
+    // the projected slide, with an offscreen heading so the window announces
+    // what it is rather than reading as an unlabelled canvas.
+    <main className="relative h-screen w-screen overflow-hidden bg-black" dir={DESIGN_SURFACE_DIR} data-testid="audience-stage">
+      <h1 className="sr-only">{tr("editor.audience_display")}</h1>
       <div ref={stageRef} className="grid h-full w-full place-items-center">
-        <canvas ref={canvasRef} data-testid="audience-canvas" />
+        <canvas ref={canvasRef} data-testid="audience-canvas" aria-label={tr("editor.presented_slide")} role="img" />
       </div>
       {/* Blanking covers the projection without disturbing the presenter. */}
       {blank && (
@@ -198,6 +204,6 @@ export function AudienceStage({ designId, initialSlide }: { designId: string; in
           aria-hidden
         />
       )}
-    </div>
+    </main>
   );
 }

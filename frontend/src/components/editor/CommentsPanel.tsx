@@ -32,13 +32,14 @@ import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { initials, avatarColor } from "@/lib/avatar";
+import { tr } from "@/lib/i18n";
 
 const REACTIONS = ["👍", "❤️", "🎉", "😂", "👀"];
-const STATUS_LABEL: Record<TaskStatus, string> = { open: "Open", in_progress: "In progress", done: "Done" };
-const FILTERS: { id: ReturnType<typeof useComments.getState>["filter"]; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "open", label: "Open" },
-  { id: "resolved", label: "Resolved" },
+const statusLabel = (): Record<TaskStatus, string> => ({ open: tr("editor.open"), in_progress: tr("editor.in_progress"), done: tr("editor.done") });
+const filters = (): { id: ReturnType<typeof useComments.getState>["filter"]; label: string }[] => [
+  { id: "all", label: tr("editor.all") },
+  { id: "open", label: tr("editor.open") },
+  { id: "resolved", label: tr("editor.resolved") },
 ];
 
 function relativeTime(iso: string): string {
@@ -165,12 +166,15 @@ function Composer({
   return (
     <div className="relative">
       {query != null && matches.length > 0 && (
-        <div className="absolute bottom-full left-0 z-20 mb-1 w-60 overflow-hidden rounded-xl border border-neutral-200 bg-surface p-1 shadow-lg ring-1 ring-black/5">
+        <div className="absolute bottom-full start-0 z-20 mb-1 w-60 overflow-hidden rounded-xl border border-neutral-200 bg-surface p-1 shadow-lg ring-1 ring-black/5">
           {matches.map((p) => (
             <button
               key={p.id}
-              onMouseDown={(e) => { e.preventDefault(); pick(p); }}
-              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-neutral-100"
+              // preventDefault keeps the textarea focused; the action itself runs
+              // on click so a keyboard Enter on the option works too.
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => pick(p)}
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-start hover:bg-neutral-100"
             >
               <Avatar name={p.name} id={p.id} size={24} />
               <span className="min-w-0 flex-1">
@@ -195,7 +199,7 @@ function Composer({
       />
       <div className="mt-1 flex items-center justify-end gap-2">
         {onCancel && (
-          <Button variant="ghost" size="sm" onClick={onCancel} disabled={busy}>Cancel</Button>
+          <Button variant="ghost" size="sm" onClick={onCancel} disabled={busy}>{tr("editor.cancel")}</Button>
         )}
         <Button size="sm" onClick={() => void submit()} disabled={disabled || busy || !text.trim()}>
           <Send size={14} /> {submitLabel}
@@ -234,13 +238,15 @@ function ReactButton({ onReact }: { onReact: (emoji: string) => void }) {
   const [picking, setPicking] = useState(false);
   return (
     <div className="relative">
-      <button onClick={() => setPicking((v) => !v)} className="grid h-6 w-6 place-items-center rounded-md text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600" title="Add reaction">
+      <button onClick={() => setPicking((v) => !v)} className="grid h-6 w-6 place-items-center rounded-md text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600" title={tr("editor.add_reaction")}>
         <Smile size={14} />
       </button>
       {picking && (
-        <div className="absolute right-0 z-20 mt-1 flex gap-1 rounded-lg border border-neutral-200 bg-surface p-1 shadow-lg ring-1 ring-black/5">
+        <div className="absolute end-0 z-20 mt-1 flex gap-1 rounded-lg border border-neutral-200 bg-surface p-1 shadow-lg ring-1 ring-black/5">
+          {/* preventDefault keeps the composer's focus; the action runs on
+              click so a keyboard Enter on the option works too. */}
           {REACTIONS.map((e) => (
-            <button key={e} onMouseDown={(ev) => { ev.preventDefault(); onReact(e); setPicking(false); }} className="rounded px-1 text-base hover:bg-neutral-100">{e}</button>
+            <button key={e} onMouseDown={(ev) => ev.preventDefault()} onClick={() => { onReact(e); setPicking(false); }} className="rounded px-1 text-base hover:bg-neutral-100">{e}</button>
           ))}
         </div>
       )}
@@ -263,14 +269,14 @@ function TaskControls({ comment, people, canComment, open, onClose, onChange }: 
       await oc.setCommentTask(comment.id, input);
       onChange();
     } catch {
-      toast.error("Could not update the task.");
+      toast.error(tr("editor.could_not_update_the_task"));
     }
   }
 
   // Nothing to show until a task exists or the user opened the form.
   if (!task && !showEditor) return null;
 
-  const assigneeName = task?.assigneeId ? people.find((p) => p.id === task.assigneeId)?.name ?? "Someone" : "Unassigned";
+  const assigneeName = task?.assigneeId ? people.find((p) => p.id === task.assigneeId)?.name ?? tr("editor.someone") : tr("editor.unassigned");
   const dueShort = task?.dueAt ? new Date(task.dueAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : null;
 
   // Collapsed one-line summary: status · assignee · due. Click to expand.
@@ -281,8 +287,8 @@ function TaskControls({ comment, people, canComment, open, onClose, onChange }: 
         className="mt-2 flex w-full items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-2 py-1.5 text-xs transition hover:bg-neutral-100"
       >
         <CheckSquare size={13} className="shrink-0 text-brand-ink" />
-        <span className="shrink-0 rounded-full bg-surface px-1.5 py-0.5 text-[11px] text-neutral-600 ring-1 ring-neutral-200">{STATUS_LABEL[task.status]}</span>
-        <span className="min-w-0 flex-1 truncate text-left text-neutral-600">{assigneeName}</span>
+        <span className="shrink-0 rounded-full bg-surface px-1.5 py-0.5 text-[11px] text-neutral-600 ring-1 ring-neutral-200">{statusLabel()[task.status]}</span>
+        <span className="min-w-0 flex-1 truncate text-start text-neutral-600">{assigneeName}</span>
         {dueShort && <span className="shrink-0 text-neutral-400">Due {dueShort}</span>}
         <ChevronDown size={13} className="shrink-0 text-neutral-400" />
       </button>
@@ -295,36 +301,36 @@ function TaskControls({ comment, people, canComment, open, onClose, onChange }: 
     <div className="mt-2 rounded-lg border border-neutral-200 bg-neutral-50 p-2 text-xs">
       <div className="flex items-center gap-2">
         <CheckSquare size={13} className="text-brand-ink" />
-        <span className="font-semibold text-neutral-700">Task</span>
-        {task && <span className="rounded-full bg-surface px-1.5 py-0.5 text-[11px] text-neutral-600 ring-1 ring-neutral-200">{STATUS_LABEL[task.status]}</span>}
-        <button onClick={collapse} className="ml-auto grid h-5 w-5 place-items-center rounded text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700" title="Collapse"><ChevronUp size={14} /></button>
+        <span className="font-semibold text-neutral-700">{tr("editor.task")}</span>
+        {task && <span className="rounded-full bg-surface px-1.5 py-0.5 text-[11px] text-neutral-600 ring-1 ring-neutral-200">{statusLabel()[task.status]}</span>}
+        <button onClick={collapse} className="ms-auto grid h-5 w-5 place-items-center rounded text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700" title={tr("editor.collapse")}><ChevronUp size={14} /></button>
       </div>
       <div className="mt-2 grid gap-1.5">
         <label className="flex items-center gap-2">
-          <span className="w-16 text-neutral-500">Assignee</span>
+          <span className="w-16 text-neutral-500">{tr("editor.assignee")}</span>
           <select
             value={task?.assigneeId ?? ""}
             disabled={!canComment}
             onChange={(e) => void patch({ assigneeId: e.target.value || null, status: task?.status ?? "open" })}
             className="flex-1 rounded border border-neutral-200 px-1.5 py-1"
           >
-            <option value="">Unassigned</option>
+            <option value="">{tr("editor.unassigned")}</option>
             {people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </label>
         <label className="flex items-center gap-2">
-          <span className="w-16 text-neutral-500">Status</span>
+          <span className="w-16 text-neutral-500">{tr("editor.status")}</span>
           <select
             value={task?.status ?? "open"}
             disabled={!canComment}
             onChange={(e) => void patch({ status: e.target.value as TaskStatus })}
             className="flex-1 rounded border border-neutral-200 px-1.5 py-1"
           >
-            {(["open", "in_progress", "done"] as TaskStatus[]).map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+            {(["open", "in_progress", "done"] as TaskStatus[]).map((s) => <option key={s} value={s}>{statusLabel()[s]}</option>)}
           </select>
         </label>
         <label className="flex items-center gap-2">
-          <span className="w-16 text-neutral-500">Due</span>
+          <span className="w-16 text-neutral-500">{tr("editor.due")}</span>
           <input
             type="date"
             value={task?.dueAt ? task.dueAt.slice(0, 10) : ""}
@@ -337,7 +343,7 @@ function TaskControls({ comment, people, canComment, open, onClose, onChange }: 
       {canComment && task && (
         <div className="mt-2 flex justify-end">
           <button onClick={() => void patch({ assigneeId: null, status: null, dueAt: null }).then(collapse)} className="text-neutral-400 hover:text-red-500">
-            Remove task
+            {tr("editor.remove_task")}
           </button>
         </div>
       )}
@@ -359,14 +365,14 @@ function CommentRow({ comment, people, canComment, userId, isRoot, onChanged }: 
   const mine = !!userId && comment.authorId === userId;
 
   async function react(emoji: string) {
-    try { await oc.reactComment(comment.id, emoji); onChanged(); } catch { toast.error("Reaction failed."); }
+    try { await oc.reactComment(comment.id, emoji); onChanged(); } catch { toast.error(tr("editor.reaction_failed")); }
   }
   async function remove() {
-    try { await oc.deleteComment(comment.id); onChanged(); } catch { toast.error("Delete failed."); }
+    try { await oc.deleteComment(comment.id); onChanged(); } catch { toast.error(tr("editor.delete_failed")); }
   }
   async function saveEdit(body: string, mentions: string[]) {
     try { await oc.editComment(comment.id, { body, mentions }); setEditing(false); onChanged(); }
-    catch { toast.error("Edit failed."); }
+    catch { toast.error(tr("editor.edit_failed")); }
   }
 
   return (
@@ -375,11 +381,11 @@ function CommentRow({ comment, people, canComment, userId, isRoot, onChanged }: 
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
           <span className="truncate text-sm font-semibold text-neutral-800">{comment.authorName}</span>
-          <span className="ml-auto shrink-0 text-[11px] text-neutral-400">{relativeTime(comment.createdAt)}{comment.editedAt ? " · edited" : ""}</span>
+          <span className="ms-auto shrink-0 text-[11px] text-neutral-400">{relativeTime(comment.createdAt)}{comment.editedAt ? " · edited" : ""}</span>
         </div>
         {editing ? (
           <div className="mt-1">
-            <Composer people={people} placeholder="Edit comment" submitLabel="Save" initial={comment.body} onSubmit={saveEdit} onCancel={() => setEditing(false)} />
+            <Composer people={people} placeholder={tr("editor.edit_comment")} submitLabel={tr("editor.save")} initial={comment.body} onSubmit={saveEdit} onCancel={() => setEditing(false)} />
           </div>
         ) : (
           <p className="mt-0.5 whitespace-pre-wrap break-words text-sm leading-snug text-neutral-700">{comment.body}</p>
@@ -389,13 +395,13 @@ function CommentRow({ comment, people, canComment, userId, isRoot, onChanged }: 
       {/* Hover toolbar: react + author edit/delete, floating top-right so the
           resting card stays clean (a common design-tool pattern). */}
       {!editing && (canComment || mine) && (
-        <div className="absolute right-0 top-0 flex items-center gap-0.5 rounded-lg border border-neutral-200 bg-surface p-0.5 opacity-0 shadow-sm ring-1 ring-black/5 transition focus-within:opacity-100 group-hover/row:opacity-100">
+        <div className="absolute end-0 top-0 flex items-center gap-0.5 rounded-lg border border-neutral-200 bg-surface p-0.5 opacity-0 shadow-sm ring-1 ring-black/5 transition focus-within:opacity-100 group-hover/row:opacity-100">
           {canComment && <ReactButton onReact={react} />}
           {mine && (
-            <button onClick={() => setEditing(true)} className="grid h-6 w-6 place-items-center rounded-md text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700" title="Edit"><Pencil size={13} /></button>
+            <button onClick={() => setEditing(true)} className="grid h-6 w-6 place-items-center rounded-md text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700" title={tr("editor.edit")}><Pencil size={13} /></button>
           )}
           {mine && (
-            <button onClick={() => void remove()} className="grid h-6 w-6 place-items-center rounded-md text-neutral-400 hover:bg-red-50 hover:text-red-500" title="Delete"><Trash2 size={13} /></button>
+            <button onClick={() => void remove()} className="grid h-6 w-6 place-items-center rounded-md text-neutral-400 hover:bg-red-50 hover:text-red-500" title={tr("editor.delete")}><Trash2 size={13} /></button>
           )}
         </div>
       )}
@@ -419,11 +425,11 @@ function Thread({ thread, people, canComment, userId, onChanged }: {
 
   async function toggleResolve() {
     try { await oc.resolveComment(thread.id, !thread.resolved); onChanged(); }
-    catch { toast.error("Could not update the thread."); }
+    catch { toast.error(tr("editor.could_not_update_the_thread")); }
   }
   async function reply(body: string, mentions: string[]) {
     try { await oc.replyComment(thread.id, { body, mentions }); setReplying(false); onChanged(); }
-    catch { toast.error("Reply failed."); }
+    catch { toast.error(tr("editor.reply_failed")); }
   }
 
   // Open + highlight a thread and bring its pin into view; collapsing it leaves
@@ -439,23 +445,32 @@ function Thread({ thread, people, canComment, userId, onChanged }: {
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-expanded={expanded}
       className={`cursor-pointer rounded-xl border p-3 transition ${thread.resolved ? "border-neutral-100 bg-neutral-50/60" : "border-neutral-200 bg-surface hover:border-neutral-300"} ${expanded ? "ring-1 ring-brand-200" : ""}`}
       onClick={openAndReveal}
+      onKeyDown={(e) => {
+        // Keys from the card's inner controls bubble here; only toggle when the
+        // card itself is focused.
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openAndReveal(); }
+      }}
     >
       <div onClick={(e) => e.stopPropagation()}>
         <div className="mb-1.5 flex flex-wrap gap-1.5 empty:hidden">
           {thread.resolved && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700"><Check size={11} /> Resolved</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700"><Check size={11} /> {tr("editor.resolved")}</span>
           )}
           {thread.anchor.orphaned && (
-            <span className="inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">Detached (element deleted)</span>
+            <span className="inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">{tr("editor.detached_element_deleted")}</span>
           )}
         </div>
         <CommentRow comment={thread} people={people} canComment={canComment} userId={userId} isRoot onChanged={onChanged} />
         <TaskControls comment={thread} people={people} canComment={canComment} open={taskOpen} onClose={() => setTaskOpen(false)} onChange={onChanged} />
 
         {expanded && thread.replies.length > 0 && (
-          <div className="ml-3.5 mt-3 space-y-3 border-l border-neutral-100 pl-3">
+          <div className="ms-3.5 mt-3 space-y-3 border-s border-neutral-100 ps-3">
             {thread.replies.map((r) => (
               <CommentRow key={r.id} comment={r} people={people} canComment={canComment} userId={userId} isRoot={false} onChanged={onChanged} />
             ))}
@@ -464,26 +479,26 @@ function Thread({ thread, people, canComment, userId, onChanged }: {
 
         <div className="mt-2 flex items-center gap-3 border-t border-neutral-100 pt-2 text-[11px] text-neutral-500">
           {canComment && (
-            <button onClick={() => setReplying((v) => !v)} className="flex items-center gap-1 hover:text-neutral-800"><CornerDownRight size={12} /> Reply</button>
+            <button onClick={() => setReplying((v) => !v)} className="flex items-center gap-1 hover:text-neutral-800"><CornerDownRight size={12} /> {tr("editor.reply")}</button>
           )}
           {canComment && !thread.task && !taskOpen && (
-            <button onClick={() => setTaskOpen(true)} className="flex items-center gap-1 hover:text-neutral-800"><CheckSquare size={12} /> Task</button>
+            <button onClick={() => setTaskOpen(true)} className="flex items-center gap-1 hover:text-neutral-800"><CheckSquare size={12} /> {tr("editor.task")}</button>
           )}
           {thread.replies.length > 0 && (
             <button onClick={openAndReveal} className="hover:text-neutral-800">
-              {expanded ? "Hide" : `${thread.replies.length} ${thread.replies.length === 1 ? "reply" : "replies"}`}
+              {expanded ? tr("editor.hide") : `${thread.replies.length} ${thread.replies.length === 1 ? "reply" : "replies"}`}
             </button>
           )}
           {canComment && (
-            <button onClick={() => void toggleResolve()} className="ml-auto flex items-center gap-1 hover:text-neutral-800">
-              {thread.resolved ? <><RotateCcw size={12} /> Reopen</> : <><Check size={12} /> Resolve</>}
+            <button onClick={() => void toggleResolve()} className="ms-auto flex items-center gap-1 hover:text-neutral-800">
+              {thread.resolved ? <><RotateCcw size={12} /> {tr("editor.reopen")}</> : <><Check size={12} /> {tr("editor.resolve")}</>}
             </button>
           )}
         </div>
 
         {replying && (
           <div className="mt-2">
-            <Composer people={people} placeholder="Write a reply… use @ to mention" submitLabel="Reply" onSubmit={reply} onCancel={() => setReplying(false)} />
+            <Composer people={people} placeholder={tr("editor.write_a_reply_use_to_mention")} submitLabel={tr("editor.reply")} onSubmit={reply} onCancel={() => setReplying(false)} />
           </div>
         )}
       </div>
@@ -501,7 +516,7 @@ export function CommentsPanel({ onClose }: { onClose: () => void }) {
   const draftAnchor = useComments((s) => s.draftAnchor);
   const [people, setPeople] = useState<MentionablePerson[]>([]);
   const userId = useAuth((s) => s.user?.id ?? null);
-  const userName = useAuth((s) => s.user?.name ?? "You");
+  const userName = useAuth((s) => s.user?.name ?? tr("editor.you"));
 
   const refresh = () => void useComments.getState().refresh();
 
@@ -521,26 +536,27 @@ export function CommentsPanel({ onClose }: { onClose: () => void }) {
       useComments.getState().setDraftAnchor(null);
       refresh();
     } catch {
-      toast.error("Could not post the comment.");
+      toast.error(tr("editor.could_not_post_the_comment"));
     }
   }
 
   return (
-    <aside className="oc-scroll flex w-80 shrink-0 flex-col overflow-hidden border-l border-neutral-200 bg-surface">
+    <aside className="oc-scroll flex w-80 shrink-0 flex-col overflow-hidden border-s border-neutral-200 bg-surface">
       <div className="flex items-center gap-2 border-b border-neutral-200 px-3 py-2.5">
         <MessageSquare size={18} className="text-brand-ink" />
-        <span className="text-sm font-semibold text-neutral-800">Comments</span>
+        <span className="text-sm font-semibold text-neutral-800">{tr("editor.comments")}</span>
         {threads.length > 0 && (
           <span className="rounded-full bg-neutral-100 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-neutral-500">{threads.length}</span>
         )}
-        <IconButton className="ml-auto" aria-label="Close comments" onClick={onClose}><X size={18} /></IconButton>
+        <IconButton className="ms-auto" aria-label={tr("editor.close_comments")} onClick={onClose}><X size={18} /></IconButton>
       </div>
 
       <div className="oc-scroll flex flex-nowrap gap-1 overflow-x-auto border-b border-neutral-100 px-3 py-2">
-        {FILTERS.map((f) => (
+        {filters().map((f) => (
           <button
             key={f.id}
             onClick={() => useComments.getState().setFilter(f.id)}
+            aria-pressed={filter === f.id}
             className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium transition ${filter === f.id ? "bg-brand-50 text-brand-ink" : "text-neutral-500 hover:bg-neutral-100"}`}
           >
             {f.label}
@@ -550,13 +566,13 @@ export function CommentsPanel({ onClose }: { onClose: () => void }) {
 
       {!designId ? (
         <div className="flex-1 grid place-items-center p-6 text-center text-sm text-neutral-400">
-          Save this design to start commenting.
+          {tr("editor.save_this_design_to_start_commenting")}
         </div>
       ) : (
         <>
           <div className="oc-scroll flex-1 space-y-2 overflow-y-auto p-3">
             {!canComment && (
-              <p className="rounded-lg bg-sky-50 px-3 py-2 text-xs text-sky-800">You have view-only access; you can read comments but not post.</p>
+              <p className="rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-ink">{tr("editor.view_only_can_read_comments")}</p>
             )}
             {loading && threads.length === 0 ? (
               <div className="space-y-2">
@@ -578,9 +594,9 @@ export function CommentsPanel({ onClose }: { onClose: () => void }) {
                 <div className="grid h-12 w-12 place-items-center rounded-full bg-neutral-100 text-neutral-400">
                   <MessageSquare size={22} />
                 </div>
-                <p className="text-sm font-medium text-neutral-600">No comments yet</p>
+                <p className="text-sm font-medium text-neutral-600">{tr("editor.no_comments_yet")}</p>
                 <p className="max-w-[12rem] text-xs text-neutral-400">
-                  {canComment ? "Leave the first comment, or click the canvas to pin one to an element." : "Comments will show up here."}
+                  {canComment ? tr("editor.leave_the_first_comment_or_click_the_canvas") : tr("editor.comments_will_show_up_here")}
                 </p>
               </div>
             ) : (
@@ -594,8 +610,8 @@ export function CommentsPanel({ onClose }: { onClose: () => void }) {
             <div className="border-t border-neutral-200 p-3">
               {draftAnchor && (
                 <div className="mb-1.5 flex items-center justify-between rounded-lg bg-brand-50 px-2 py-1 text-[11px] text-brand-ink">
-                  <span className="flex items-center gap-1"><MessageSquare size={11} /> {draftAnchor.kind === "element" ? "Commenting on an element" : "Commenting on a spot"}</span>
-                  <button onClick={() => useComments.getState().setDraftAnchor(null)} className="font-medium hover:underline">Clear</button>
+                  <span className="flex items-center gap-1"><MessageSquare size={11} /> {draftAnchor.kind === "element" ? tr("editor.commenting_on_an_element") : tr("editor.commenting_on_a_spot")}</span>
+                  <button onClick={() => useComments.getState().setDraftAnchor(null)} className="font-medium hover:underline">{tr("editor.clear")}</button>
                 </div>
               )}
               <div className="flex gap-2.5">
@@ -604,7 +620,7 @@ export function CommentsPanel({ onClose }: { onClose: () => void }) {
                   <Composer
                     people={people}
                     placeholder={draftAnchor ? "Comment on this pin… use @ to mention" : "Add a comment… use @ to mention"}
-                    submitLabel="Comment"
+                    submitLabel={tr("editor.comment")}
                     onSubmit={postNew}
                   />
                 </div>

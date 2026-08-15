@@ -7,6 +7,7 @@
 // get a friendly status rather than a thrown error.
 
 import { oc } from "@/lib/sdk";
+import { tr } from "@/lib/i18n";
 
 /** The push capability state for this device, surfaced in the settings UI. */
 export type PushState =
@@ -21,8 +22,8 @@ export function isPushSupported(): boolean {
   return (
     typeof window !== "undefined" &&
     "serviceWorker" in navigator &&
-    "PushManager" in window &&
-    "Notification" in window
+    tr("app.pushmanager") in window &&
+    tr("app.notification") in window
   );
 }
 

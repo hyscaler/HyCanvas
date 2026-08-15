@@ -16,24 +16,30 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Spinner } from "@/components/ui/Spinner";
 import { useToast } from "@/components/ui/Toast";
+import { tr } from "@/lib/i18n";
+import { apiCodeMessage, CodedError, userMessage } from "@/lib/errors";
 
 const MODES: AccessMode[] = ["view", "comment", "edit"];
-const MODE_LABEL: Record<AccessMode, string> = {
-  view: "Can view",
-  comment: "Can comment",
-  edit: "Can edit",
-};
+const modeLabel = (): Record<AccessMode, string> => ({
+  view: tr("editor.can_view"),
+  comment: tr("editor.can_comment"),
+  edit: tr("editor.can_edit"),
+});
 
-function ModeSelect({ value, onChange, disabled }: { value: AccessMode; onChange: (m: AccessMode) => void; disabled?: boolean }) {
+// `ariaLabel` names WHOSE access this select controls: six of these sit on
+// one screen, and "combo box, can view" with no context tells a screen
+// reader user nothing about which grantee or link they are editing.
+function ModeSelect({ value, onChange, disabled, ariaLabel }: { value: AccessMode; onChange: (m: AccessMode) => void; disabled?: boolean; ariaLabel: string }) {
   return (
     <select
       value={value}
+      aria-label={ariaLabel}
       disabled={disabled}
       onChange={(e) => onChange(e.target.value as AccessMode)}
       className="h-9 rounded-lg border border-neutral-200 bg-surface px-2 text-sm text-neutral-800 outline-none focus:border-brand-500 disabled:opacity-50"
     >
       {MODES.map((m) => (
-        <option key={m} value={m}>{MODE_LABEL[m]}</option>
+        <option key={m} value={m}>{modeLabel()[m]}</option>
       ))}
     </select>
   );
@@ -50,7 +56,10 @@ function linkUrl(token: string): string {
 
 /** Pull a human message out of a problem+json error, else the fallback. */
 function errMessage(e: unknown, fallback: string): string {
+  if (e instanceof CodedError) return userMessage(e, fallback);
   if (e instanceof ApiError) {
+    const coded = apiCodeMessage(e.body);
+    if (coded) return coded;
     const body = e.body as { detail?: string; title?: string } | null;
     if (body?.detail) return body.detail;
     if (body?.title) return body.title;
@@ -103,7 +112,7 @@ function principalLabel(g: ShareGrant): { primary: string; secondary?: string } 
   const email = g.principal.email?.trim();
   if (name) return { primary: name, secondary: email || undefined };
   if (email) return { primary: email };
-  return { primary: "Member" };
+  return { primary: tr("editor.member") };
 }
 
 export function ShareDialog({ open, onClose, designId, focusRequests }: { open: boolean; onClose: () => void; designId: string | null; focusRequests?: boolean }) {
@@ -176,7 +185,7 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
         setRequests(await oc.listAccessRequests(designId).catch(() => []));
       }
     } catch {
-      toast.error("Could not load sharing settings.");
+      toast.error(tr("editor.could_not_load_sharing_settings"));
     }
   }, [designId, toast]);
 
@@ -195,7 +204,7 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
           if (!cancelled) setRequests(reqs);
         }
       } catch {
-        if (!cancelled) toast.error("Could not load sharing settings.");
+        if (!cancelled) toast.error(tr("editor.could_not_load_sharing_settings"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -226,10 +235,10 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
     await withPending(grant.id, async () => {
       try {
         await oc.updateGrant(grant.id, { roleId: roleId || null });
-        toast.success(roleId ? "Role assigned." : "Role cleared.");
+        toast.success(roleId ? tr("editor.role_assigned") : tr("editor.role_cleared"));
         await reload();
       } catch (e) {
-        toast.error(errMessage(e, "Could not update the role."));
+        toast.error(errMessage(e, tr("editor.could_not_update_the_role")));
       }
     });
   }
@@ -238,10 +247,10 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
     await withPending(req.id, async () => {
       try {
         await oc.approveAccessRequest(req.id, approveMode[req.id] ?? req.mode);
-        toast.success("Access granted.");
+        toast.success(tr("editor.access_granted"));
         await reload();
       } catch (e) {
-        toast.error(errMessage(e, "Could not approve the request."));
+        toast.error(errMessage(e, tr("editor.could_not_approve_the_request")));
       }
     });
   }
@@ -251,10 +260,10 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
     await withPending(req.id, async () => {
       try {
         await oc.denyAccessRequest(req.id);
-        toast.success("Request denied.");
+        toast.success(tr("editor.request_denied"));
         await reload();
       } catch (e) {
-        toast.error(errMessage(e, "Could not deny the request."));
+        toast.error(errMessage(e, tr("editor.could_not_deny_the_request")));
       }
     });
   }
@@ -269,17 +278,17 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
     const id = invitee.trim();
     if (!id) return;
     if (!id.includes("@")) {
-      toast.error("Enter an email address.");
+      toast.error(tr("editor.enter_an_email_address"));
       return;
     }
     setInviting(true);
     try {
       await oc.addGrant(designId, { principal: { kind: "email", id }, mode: inviteMode });
       setInvitee("");
-      toast.success("Access granted.");
+      toast.success(tr("editor.access_granted"));
       await reload();
     } catch (e) {
-      toast.error(errMessage(e, "Could not add this person."));
+      toast.error(errMessage(e, tr("editor.could_not_add_this_person")));
     } finally {
       setInviting(false);
     }
@@ -289,10 +298,10 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
     await withPending(grant.id, async () => {
       try {
         await oc.updateGrant(grant.id, { mode });
-        toast.success("Access updated.");
+        toast.success(tr("editor.access_updated"));
         await reload();
       } catch (e) {
-        toast.error(errMessage(e, "Could not update access."));
+        toast.error(errMessage(e, tr("editor.could_not_update_access")));
       }
     });
   }
@@ -302,10 +311,10 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
     await withPending(grant.id, async () => {
       try {
         await oc.removeGrant(grant.id);
-        toast.success("Access removed.");
+        toast.success(tr("editor.access_removed"));
         await reload();
       } catch (e) {
-        toast.error(errMessage(e, "Could not remove access."));
+        toast.error(errMessage(e, tr("editor.could_not_remove_access")));
       }
     });
   }
@@ -325,10 +334,10 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
       setLinkRequireSignin(false);
       setLinkOptionsOpen(false);
       const copied = await copyText(linkUrl(created.token));
-      toast.success(copied ? "Link created and copied." : "Link created.");
+      toast.success(copied ? tr("editor.link_created_and_copied") : tr("editor.link_created"));
       await reload();
     } catch (e) {
-      toast.error(errMessage(e, "Could not create the link."));
+      toast.error(errMessage(e, tr("editor.could_not_create_the_link")));
     } finally {
       setCreatingLink(false);
     }
@@ -336,8 +345,8 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
 
   async function copyLink(link: ShareLinkView) {
     const ok = await copyText(linkUrl(link.token));
-    if (ok) toast.success("Link copied.");
-    else toast.error("Could not copy. Select the link and copy it manually.");
+    if (ok) toast.success(tr("editor.link_copied"));
+    else toast.error(tr("editor.could_not_copy_select_the_link_and_copy_it_m"));
   }
 
   async function patchLink(link: ShareLinkView, patch: Parameters<typeof oc.updateShareLink>[1], successMsg: string) {
@@ -347,7 +356,7 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
         toast.success(successMsg);
         await reload();
       } catch (e) {
-        toast.error(errMessage(e, "Could not update the link."));
+        toast.error(errMessage(e, tr("editor.could_not_update_the_link")));
       }
     });
   }
@@ -358,10 +367,10 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
       try {
         const next = await oc.rotateShareLink(link.id);
         const copied = await copyText(linkUrl(next.token));
-        toast.success(copied ? "Link rotated; new link copied." : "Link rotated. Copy the new link below.");
+        toast.success(copied ? "Link rotated; new link copied." : tr("editor.link_rotated_copy_the_new_link_below"));
         await reload();
       } catch (e) {
-        toast.error(errMessage(e, "Could not rotate the link."));
+        toast.error(errMessage(e, tr("editor.could_not_rotate_the_link")));
       }
     });
   }
@@ -371,25 +380,25 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
     await withPending(link.id, async () => {
       try {
         await oc.deleteShareLink(link.id);
-        toast.success("Link deleted.");
+        toast.success(tr("editor.link_deleted"));
         await reload();
       } catch (e) {
-        toast.error(errMessage(e, "Could not delete the link."));
+        toast.error(errMessage(e, tr("editor.could_not_delete_the_link")));
       }
     });
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Share" width="w-[34rem]">
+    <Modal open={open} onClose={onClose} title={tr("editor.share")} width="w-[34rem]">
       {loading ? (
         <div className="grid place-items-center py-10 text-neutral-400"><Spinner /></div>
       ) : !canShare ? (
         <div className="py-6 text-sm text-neutral-600">
           <p>
-            You have {data ? MODE_LABEL[data.myAccess.mode].toLowerCase() : "limited"} access to this design and
+            You have {data ? modeLabel()[data.myAccess.mode].toLowerCase() : "limited"} access to this design and
             cannot change its sharing.
           </p>
-          <p className="mt-1 text-neutral-500">Ask an owner or admin to grant you access.</p>
+          <p className="mt-1 text-neutral-500">{tr("editor.ask_an_owner_or_admin_to_grant_you_access")}</p>
         </div>
       ) : (
         <div className="flex flex-col gap-6">
@@ -405,9 +414,9 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
                   return (
                     <li key={req.id} className="flex items-center gap-2 rounded-lg border border-amber-100 bg-surface px-3 py-2">
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm text-neutral-800">{req.requester.name || req.requester.email || "Someone"}</span>
+                        <span className="block truncate text-sm text-neutral-800">{req.requester.name || req.requester.email || tr("editor.someone")}</span>
                         <span className="block truncate text-xs text-neutral-400">
-                          wants {MODE_LABEL[req.mode].toLowerCase()}
+                          wants {modeLabel()[req.mode].toLowerCase()}
                           {req.message ? ` · “${req.message}”` : ""}
                         </span>
                       </span>
@@ -415,11 +424,12 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
                         value={approveMode[req.id] ?? req.mode}
                         onChange={(m) => setApproveMode((s) => ({ ...s, [req.id]: m }))}
                         disabled={isPending(req.id)}
+                        ariaLabel={tr("editor.access_level_for_name", { name: req.requester.name || req.requester.email || req.requester.id })}
                       />
-                      <Button size="sm" onClick={() => void approveRequest(req)} disabled={isPending(req.id)}>Approve</Button>
+                      <Button size="sm" onClick={() => void approveRequest(req)} disabled={isPending(req.id)}>{tr("editor.approve")}</Button>
                       <button
-                        aria-label={armedDeny ? "Click again to deny" : "Deny request"}
-                        title={armedDeny ? "Click again to deny" : "Deny request"}
+                        aria-label={armedDeny ? tr("editor.click_again_to_deny") : tr("editor.deny_request")}
+                        title={armedDeny ? tr("editor.click_again_to_deny") : tr("editor.deny_request")}
                         disabled={isPending(req.id)}
                         className={`grid h-8 w-8 place-items-center rounded-lg disabled:opacity-40 ${armedDeny ? "bg-red-50 text-red-600 ring-1 ring-red-300" : "text-neutral-400 hover:bg-neutral-200 hover:text-red-600"}`}
                         onClick={() => void denyRequest(req)}
@@ -435,12 +445,12 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
 
           {/* People */}
           <section>
-            <h3 className="mb-2 text-sm font-semibold text-neutral-800">Invite people</h3>
+            <h3 className="mb-2 text-sm font-semibold text-neutral-800">{tr("editor.invite_people")}</h3>
             <div className="flex items-end gap-2">
               <div className="flex-1">
                 <Input
                   type="email"
-                  placeholder="Email address"
+                  placeholder={tr("editor.email_address")}
                   value={invitee}
                   onChange={(e) => setInvitee(e.target.value)}
                   onKeyDown={(e) => {
@@ -449,9 +459,9 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
                   className="h-9"
                 />
               </div>
-              <ModeSelect value={inviteMode} onChange={setInviteMode} disabled={inviting} />
+              <ModeSelect value={inviteMode} onChange={setInviteMode} disabled={inviting} ariaLabel={tr("editor.access_level_for_the_invitation")} />
               <Button size="sm" onClick={() => void invite()} disabled={inviting || !invitee.trim()}>
-                {inviting ? "Inviting…" : "Invite"}
+                {inviting ? tr("editor.inviting") : tr("editor.invite")}
               </Button>
             </div>
 
@@ -460,11 +470,11 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
               {data?.owner && (
                 <li className="flex items-center gap-2 rounded-lg border border-neutral-100 bg-neutral-50 px-3 py-2">
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm text-neutral-800">{data.owner.name || data.owner.email || "Owner"}</span>
+                    <span className="block truncate text-sm text-neutral-800">{data.owner.name || data.owner.email || tr("editor.owner")}</span>
                     {data.owner.email && data.owner.name && <span className="block truncate text-xs text-neutral-400">{data.owner.email}</span>}
                   </span>
                   <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-700">
-                    <Crown size={11} /> Owner
+                    <Crown size={11} /> {tr("editor.owner")}
                   </span>
                 </li>
               )}
@@ -481,10 +491,10 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
                         {g.invitedByName && <span className="block truncate text-[11px] text-neutral-400">Invited by {g.invitedByName}</span>}
                       </span>
                       {!canManageRoles && role && <span className="rounded bg-brand-50 px-1.5 py-0.5 text-xs font-medium text-brand-ink">{role}</span>}
-                      <ModeSelect value={g.mode} onChange={(m) => void changeGrant(g, m)} disabled={isPending(g.id)} />
+                      <ModeSelect value={g.mode} onChange={(m) => void changeGrant(g, m)} disabled={isPending(g.id)} ariaLabel={tr("editor.access_level_for_name", { name: principalLabel(g).primary })} />
                       <button
-                        aria-label={armedRemove ? "Click again to remove access" : "Remove access"}
-                        title={armedRemove ? "Click again to remove" : "Remove access"}
+                        aria-label={armedRemove ? tr("editor.click_again_to_remove_access") : tr("editor.remove_access")}
+                        title={armedRemove ? tr("editor.click_again_to_remove") : tr("editor.remove_access")}
                         disabled={isPending(g.id)}
                         className={`grid h-8 w-8 place-items-center rounded-lg disabled:opacity-40 ${armedRemove ? "bg-red-50 text-red-600 ring-1 ring-red-300" : "text-neutral-400 hover:bg-neutral-200 hover:text-red-600"}`}
                         onClick={() => void removeGrant(g)}
@@ -494,14 +504,15 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
                     </div>
                     {canManageRoles && (data?.customRoles.length ?? 0) > 0 && (
                       <div className="flex items-center gap-2 text-xs text-neutral-500">
-                        <span>Role</span>
+                        <span>{tr("editor.role")}</span>
                         <select
                           value={g.roleId ?? ""}
+                          aria-label={tr("editor.role_for_name", { name: principalLabel(g).primary })}
                           disabled={isPending(g.id)}
                           onChange={(e) => void setGrantRole(g, e.target.value)}
                           className="h-7 rounded border border-neutral-200 bg-surface px-1.5 text-xs text-neutral-700 outline-none focus:border-brand-500 disabled:opacity-50"
                         >
-                          <option value="">No role</option>
+                          <option value="">{tr("editor.no_role")}</option>
                           {data?.customRoles.map((r) => (
                             <option key={r.id} value={r.id}>{r.name}</option>
                           ))}
@@ -512,7 +523,7 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
                 );
               })}
               {!data?.owner && data?.grants.length === 0 && (
-                <li className="rounded-lg px-1 py-1 text-xs text-neutral-400">Only you have access.</li>
+                <li className="rounded-lg px-1 py-1 text-xs text-neutral-400">{tr("editor.only_you_have_access")}</li>
               )}
             </ul>
           </section>
@@ -520,19 +531,19 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
           {/* Link */}
           <section className="border-t border-neutral-100 pt-5">
             <h3 className="flex items-center gap-1.5 text-sm font-semibold text-neutral-800">
-              <Link2 size={15} /> Share links
+              <Link2 size={15} /> {tr("editor.share_links")}
             </h3>
             <p className="mb-3 mt-0.5 text-xs text-neutral-500">
-              Create a link anyone can open. Add a password, expiry, or require sign-in for more control.
+              {tr("editor.create_a_link_anyone_can_open_add_a_password")}
             </p>
 
             {/* Create form: a clean primary row, with advanced settings tucked away. */}
             <div className="rounded-xl border border-neutral-200 bg-neutral-50/60 p-3">
               <div className="flex items-center gap-2">
-                <span className="hidden text-sm text-neutral-600 sm:inline">Anyone with the link</span>
-                <ModeSelect value={linkMode} onChange={setLinkMode} disabled={creatingLink} />
-                <Button size="sm" className="ml-auto gap-1" onClick={() => void createLink()} disabled={creatingLink}>
-                  <Plus size={15} /> {creatingLink ? "Creating…" : "Create link"}
+                <span className="hidden text-sm text-neutral-600 sm:inline">{tr("editor.anyone_with_the_link")}</span>
+                <ModeSelect value={linkMode} onChange={setLinkMode} disabled={creatingLink} ariaLabel={tr("editor.access_level_for_the_new_link")} />
+                <Button size="sm" className="ms-auto gap-1" onClick={() => void createLink()} disabled={creatingLink}>
+                  <Plus size={15} /> {creatingLink ? tr("editor.creating") : tr("editor.create_link")}
                 </Button>
               </div>
 
@@ -545,26 +556,26 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
                 <ChevronRight size={13} className={`transition-transform ${linkOptionsOpen ? "rotate-90" : ""}`} />
                 Link options
                 {(linkPassword || linkExpiry || linkRequireSignin) && (
-                  <span className="rounded-full bg-brand-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-ink">set</span>
+                  <span className="rounded-full bg-brand-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-ink">{tr("editor.set")}</span>
                 )}
               </button>
 
               {linkOptionsOpen && (
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <label className="flex flex-col gap-1 text-xs font-medium text-neutral-600">
-                    Password
+                    {tr("editor.password")}
                     <div className="relative">
                       <Input
                         type={showPassword ? "text" : "password"}
-                        placeholder="Optional"
+                        placeholder={tr("editor.optional")}
                         value={linkPassword}
                         onChange={(e) => setLinkPassword(e.target.value)}
-                        className="h-9 pr-8"
+                        className="h-9 pe-8"
                       />
                       <button
                         type="button"
-                        aria-label={showPassword ? "Hide password" : "Show password"}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                        aria-label={showPassword ? tr("editor.hide_password") : tr("editor.show_password")}
+                        className="absolute end-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
                         onClick={() => setShowPassword((v) => !v)}
                       >
                         {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -572,12 +583,12 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
                     </div>
                   </label>
                   <label className="flex flex-col gap-1 text-xs font-medium text-neutral-600">
-                    Expires
+                    {tr("editor.expires")}
                     <Input type="datetime-local" value={linkExpiry} onChange={(e) => setLinkExpiry(e.target.value)} className="h-9" />
                   </label>
                   <label className="flex cursor-pointer items-center gap-2 text-xs text-neutral-600 sm:col-span-2">
                     <input type="checkbox" checked={linkRequireSignin} onChange={(e) => setLinkRequireSignin(e.target.checked)} />
-                    Require people to sign in to open the link
+                    {tr("editor.require_people_to_sign_in_to_open_the_link")}
                   </label>
                 </div>
               )}
@@ -593,21 +604,21 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
                   return (
                     <li key={l.id} className={`flex flex-col gap-2 rounded-xl border px-3 py-2.5 ${l.disabled ? "border-neutral-100 bg-neutral-50 opacity-70" : "border-neutral-200 bg-surface"}`}>
                       <div className="flex items-center gap-2">
-                        <ModeSelect value={l.mode} onChange={(m) => void patchLink(l, { mode: m }, "Link access updated.")} disabled={busy} />
+                        <ModeSelect value={l.mode} onChange={(m) => void patchLink(l, { mode: m }, tr("editor.link_access_updated"))} disabled={busy} ariaLabel={tr("editor.access_level_for_this_link")} />
                         <span className="flex flex-wrap items-center gap-1.5 text-xs font-medium text-neutral-500">
-                          {l.hasPassword && <span className="inline-flex items-center gap-0.5 rounded bg-neutral-100 px-1.5 py-0.5"><Lock size={11} /> password</span>}
-                          {l.requireSignin && <span className="rounded bg-neutral-100 px-1.5 py-0.5">sign-in</span>}
+                          {l.hasPassword && <span className="inline-flex items-center gap-0.5 rounded bg-neutral-100 px-1.5 py-0.5"><Lock size={11} /> {tr("editor.password_2")}</span>}
+                          {l.requireSignin && <span className="rounded bg-neutral-100 px-1.5 py-0.5">{tr("editor.sign_in")}</span>}
                           {l.expiresAt && <span className="rounded bg-neutral-100 px-1.5 py-0.5">expires {new Date(l.expiresAt).toLocaleString()}</span>}
-                          {l.disabled && <span className="rounded bg-red-50 px-1.5 py-0.5 text-red-600">disabled</span>}
+                          {l.disabled && <span className="rounded bg-red-50 px-1.5 py-0.5 text-red-600">{tr("editor.disabled")}</span>}
                         </span>
-                        <span className="ml-auto flex items-center gap-0.5">
-                          <button aria-label="Rotate link" title={armedRotate ? "Click again to rotate" : "Rotate (issue a new link)"} disabled={busy} className={`grid h-8 w-8 place-items-center rounded-lg disabled:opacity-40 ${armedRotate ? "bg-amber-50 text-amber-600 ring-1 ring-amber-300" : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"}`} onClick={() => void rotateLink(l)}>
+                        <span className="ms-auto flex items-center gap-0.5">
+                          <button aria-label={tr("editor.rotate_link")} title={armedRotate ? tr("editor.click_again_to_rotate") : tr("editor.rotate_issue_a_new_link")} disabled={busy} className={`grid h-8 w-8 place-items-center rounded-lg disabled:opacity-40 ${armedRotate ? "bg-amber-50 text-amber-700 ring-1 ring-amber-300" : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"}`} onClick={() => void rotateLink(l)}>
                             <RotateCw size={15} />
                           </button>
-                          <button aria-label={l.disabled ? "Enable link" : "Disable link"} title={l.disabled ? "Enable" : "Disable"} disabled={busy} className="grid h-8 w-8 place-items-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 disabled:opacity-40" onClick={() => void patchLink(l, { disabled: !l.disabled }, l.disabled ? "Link enabled." : "Link disabled.")}>
+                          <button aria-label={l.disabled ? tr("editor.enable_link") : tr("editor.disable_link")} title={l.disabled ? tr("editor.enable") : tr("editor.disable")} disabled={busy} className="grid h-8 w-8 place-items-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 disabled:opacity-40" onClick={() => void patchLink(l, { disabled: !l.disabled }, l.disabled ? tr("editor.link_enabled") : tr("editor.link_disabled"))}>
                             {l.disabled ? <Check size={15} /> : <Ban size={15} />}
                           </button>
-                          <button aria-label={armedDelete ? "Click again to delete link" : "Delete link"} title={armedDelete ? "Click again to delete" : "Delete link"} disabled={busy} className={`grid h-8 w-8 place-items-center rounded-lg disabled:opacity-40 ${armedDelete ? "bg-red-50 text-red-600 ring-1 ring-red-300" : "text-neutral-400 hover:bg-neutral-100 hover:text-red-600"}`} onClick={() => void deleteLink(l)}>
+                          <button aria-label={armedDelete ? tr("editor.click_again_to_delete_link") : tr("editor.delete_link")} title={armedDelete ? tr("editor.click_again_to_delete") : tr("editor.delete_link")} disabled={busy} className={`grid h-8 w-8 place-items-center rounded-lg disabled:opacity-40 ${armedDelete ? "bg-red-50 text-red-600 ring-1 ring-red-300" : "text-neutral-400 hover:bg-neutral-100 hover:text-red-600"}`} onClick={() => void deleteLink(l)}>
                             <Trash2 size={15} />
                           </button>
                         </span>
@@ -616,21 +627,22 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
                         <input
                           readOnly
                           value={url}
+                          aria-label={tr("editor.share_link_url")}
                           onFocus={(e) => e.currentTarget.select()}
                           className="h-8 min-w-0 flex-1 truncate rounded-lg border border-neutral-200 bg-neutral-50 px-2 font-mono text-xs text-neutral-600 outline-none"
                         />
-                        <button aria-label="Copy link" title="Copy link" disabled={l.disabled} className="grid h-8 w-8 place-items-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 disabled:opacity-40" onClick={() => void copyLink(l)}>
+                        <button aria-label={tr("editor.copy_link")} title={tr("editor.copy_link")} disabled={l.disabled} className="grid h-8 w-8 place-items-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 disabled:opacity-40" onClick={() => void copyLink(l)}>
                           <Copy size={15} />
                         </button>
                       </div>
                       <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500">
                         <label className="flex items-center gap-1">
-                          <span>Expires</span>
+                          <span>{tr("editor.expires")}</span>
                           <input
                             type="datetime-local"
                             value={toLocalInput(l.expiresAt)}
                             disabled={busy}
-                            onChange={(e) => void patchLink(l, { expiresAt: e.target.value ? new Date(e.target.value).toISOString() : null }, e.target.value ? "Expiry updated." : "Expiry removed.")}
+                            onChange={(e) => void patchLink(l, { expiresAt: e.target.value ? new Date(e.target.value).toISOString() : null }, e.target.value ? tr("editor.expiry_updated") : tr("editor.expiry_removed"))}
                             className="h-7 rounded border border-neutral-200 bg-surface px-1.5 text-xs text-neutral-700 outline-none focus:border-brand-500 disabled:opacity-50"
                           />
                         </label>
@@ -639,9 +651,9 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
                             type="checkbox"
                             checked={l.requireSignin}
                             disabled={busy}
-                            onChange={(e) => void patchLink(l, { requireSignin: e.target.checked }, e.target.checked ? "Sign-in required." : "Sign-in no longer required.")}
+                            onChange={(e) => void patchLink(l, { requireSignin: e.target.checked }, e.target.checked ? tr("editor.sign_in_required") : tr("editor.sign_in_no_longer_required"))}
                           />
-                          <span>Require sign-in</span>
+                          <span>{tr("editor.require_sign_in")}</span>
                         </label>
                       </div>
                     </li>
@@ -649,14 +661,14 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
                 })}
               </ul>
             ) : (
-              <p className="mt-3 text-xs text-neutral-400">No share links yet.</p>
+              <p className="mt-3 text-xs text-neutral-400">{tr("editor.no_share_links_yet")}</p>
             )}
 
             {anonLinks.length > 0 && (
               <p className={`mt-2 text-xs ${anonEdit ? "text-red-500" : "text-neutral-400"}`}>
                 {anonEdit
-                  ? "Anyone with an edit link can change this design without an account."
-                  : "Anyone with this link can open this design without an account."}
+                  ? tr("editor.anyone_with_an_edit_link_can_change_this_des")
+                  : tr("editor.anyone_with_this_link_can_open_this_design_w")}
               </p>
             )}
           </section>

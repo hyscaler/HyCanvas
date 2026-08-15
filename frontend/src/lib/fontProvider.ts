@@ -5,9 +5,25 @@
 // will register here too once font upload lands.
 
 import type { DesignFile, Node } from "@hc/schema";
-import { getFontEntry, googleFontsCssUrl, isSystemFont } from "@hc/text";
+import { getFontEntry, fontCssUrl, isSystemFont } from "@hc/text";
 
 const CUSTOM_FONTS_KEY = "oc-custom-fonts";
+
+// The only hosts a webfont stylesheet may load from. fontCssUrl builds URLs on
+// exactly these (Bunny is the default, Google optional); a non-empty href off
+// this list should be impossible, so we drop it rather than inject it.
+const FONT_CSS_HOST_ALLOWLIST = new Set(["fonts.bunny.net", "fonts.googleapis.com"]);
+
+/** True only for an https URL on the webfont-CSS host allowlist. */
+function isAllowedFontCssHref(href: string): boolean {
+  if (!href) return false;
+  try {
+    const u = new URL(href);
+    return u.protocol === "https:" && FONT_CSS_HOST_ALLOWLIST.has(u.hostname);
+  } catch {
+    return false;
+  }
+}
 
 class FontProvider {
   private loaded = new Set<string>();
@@ -94,10 +110,18 @@ class FontProvider {
       fetchFace();
       return;
     }
+    const href = fontCssUrl(family!, entry.weights);
+    // Defense in depth before the DOM sink: fontCssUrl only returns URLs on the
+    // fixed webfont-CSS host allowlist (Bunny / Google), so anything else means
+    // the input was not a catalog family and we do not inject a stylesheet.
+    if (!isAllowedFontCssHref(href)) {
+      this.loading.delete(key);
+      return;
+    }
     const link = document.createElement("link");
     link.rel = "stylesheet";
     link.id = id;
-    link.href = googleFontsCssUrl(family!, entry.weights);
+    link.href = href;
     // Only load the face once the @font-face rules from the stylesheet exist.
     link.addEventListener("load", fetchFace);
     link.addEventListener("error", () => this.loading.delete(key));

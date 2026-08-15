@@ -19,6 +19,7 @@
 import type { Color, DesignFile, Fill, Node, Page } from "@hc/schema";
 import { contrastRatio, fixToAA, fromHex, toHex } from "@hc/color";
 import { worldAABB } from "@hc/editor";
+import { tr } from "@/lib/i18n";
 
 // A simple page-space rectangle (mirrors @hc/engine Rect).
 export interface Rect {
@@ -227,8 +228,8 @@ export function detectOffCanvas(boxes: ElementBox[], page: { width: number; heig
       severity: fullyOut ? "high" : "med",
       nodeId: b.id,
       message: fullyOut
-        ? "Element is off the canvas and won't appear in the design."
-        : "Element extends past the page edge and will be clipped.",
+        ? tr("app.element_is_off_the_canvas_and_wont_appear_in")
+        : tr("app.element_extends_past_the_page_edge_and_will"),
       fix: { kind: "move_into_bounds", nodeId: b.id, dx, dy },
     });
   }
@@ -310,8 +311,8 @@ export function detectAlignment(boxes: ElementBox[]): CritiqueIssue[] {
               nodeId: b.id,
               message:
                 axis === "x"
-                  ? "Element is slightly off the left edge of nearby elements."
-                  : "Element is slightly off the top edge of nearby elements.",
+                  ? tr("app.element_is_slightly_off_the_left_edge_of_nea")
+                  : tr("app.element_is_slightly_off_the_top_edge_of_near"),
               fix: {
                 kind: "align_nudge",
                 nodeId: b.id,
@@ -572,9 +573,9 @@ export function autoLayoutSuggestions(
   const leftMisaligned = align.filter((i) => i.fix?.kind === "align_nudge" && i.fix.dx !== 0).map((i) => i.nodeId!);
   const topMisaligned = align.filter((i) => i.fix?.kind === "align_nudge" && i.fix.dy !== 0).map((i) => i.nodeId!);
   if (leftMisaligned.length >= 1 && boxes.length >= 2) {
-    out.push({ op: "align-left", label: "Align left edges", nodeIds: ids });
+    out.push({ op: "align-left", label: tr("app.align_left_edges"), nodeIds: ids });
   } else if (topMisaligned.length >= 1 && boxes.length >= 2) {
-    out.push({ op: "align-top", label: "Align top edges", nodeIds: ids });
+    out.push({ op: "align-top", label: tr("app.align_top_edges"), nodeIds: ids });
   }
 
   const spacing = detectSpacing(boxes);
@@ -584,18 +585,18 @@ export function autoLayoutSuggestions(
     const horiz = Math.max(...xs) - Math.min(...xs) >= Math.max(...ys) - Math.min(...ys);
     out.push(
       horiz
-        ? { op: "distribute-h", label: "Distribute horizontally", nodeIds: ids }
-        : { op: "distribute-v", label: "Distribute vertically", nodeIds: ids },
+        ? { op: "distribute-h", label: tr("app.distribute_horizontally"), nodeIds: ids }
+        : { op: "distribute-v", label: tr("app.distribute_vertically"), nodeIds: ids },
     );
   }
 
   const off = detectOffCanvas(boxes, page);
   if (off.length) {
-    out.push({ op: "fit", label: "Bring stray elements into the page", nodeIds: off.map((i) => i.nodeId!).filter(Boolean) });
+    out.push({ op: "fit", label: tr("app.bring_stray_elements_into_the_page"), nodeIds: off.map((i) => i.nodeId!).filter(Boolean) });
   }
 
   if (boxes.length >= 2 && !out.some((s) => s.op === "tidy")) {
-    out.push({ op: "tidy", label: "Tidy up into an even grid", nodeIds: ids });
+    out.push({ op: "tidy", label: tr("app.tidy_up_into_an_even_grid"), nodeIds: ids });
   }
   return out;
 }

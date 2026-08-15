@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { BarChart3, X } from "lucide-react";
 import { ApiError, type DesignInsights } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
+import { tr } from "@/lib/i18n";
 
 function fmtDuration(ms: number): string {
   if (ms <= 0) return "0s";
@@ -34,7 +35,7 @@ function Sparkline({ data }: { data: { date: string; count: number }[] }) {
   const w = 240;
   const h = 48;
   if (data.length === 0)
-    return <div className="text-xs text-neutral-400">No views yet.</div>;
+    return <div className="text-xs text-neutral-400">{tr("editor.no_views_yet")}</div>;
   const max = Math.max(1, ...data.map((d) => d.count));
   const step = data.length > 1 ? w / (data.length - 1) : 0;
   const pts = data
@@ -45,7 +46,7 @@ function Sparkline({ data }: { data: { date: string; count: number }[] }) {
     })
     .join(" ");
   return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="w-full" role="img" aria-label="Views over time">
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="w-full" role="img" aria-label={tr("editor.views_over_time")}>
       <polyline points={pts} fill="none" stroke="rgb(99 102 241)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   );
@@ -54,7 +55,7 @@ function Sparkline({ data }: { data: { date: string; count: number }[] }) {
 // A per-page engagement horizontal bar chart (inline SVG via flex bars).
 function PerPageBars({ data }: { data: { pageId: string; engagementMs: number }[] }) {
   if (data.length === 0)
-    return <div className="text-xs text-neutral-400">No per-page data yet.</div>;
+    return <div className="text-xs text-neutral-400">{tr("editor.no_per_page_data_yet")}</div>;
   const max = Math.max(1, ...data.map((d) => d.engagementMs));
   return (
     <div className="flex flex-col gap-2">
@@ -69,7 +70,7 @@ function PerPageBars({ data }: { data: { pageId: string; engagementMs: number }[
               style={{ width: `${Math.max(4, (d.engagementMs / max) * 100)}%` }}
             />
           </div>
-          <span className="w-14 shrink-0 text-right text-xs text-neutral-500">{fmtDuration(d.engagementMs)}</span>
+          <span className="w-14 shrink-0 text-end text-xs text-neutral-500">{fmtDuration(d.engagementMs)}</span>
         </div>
       ))}
     </div>
@@ -102,42 +103,42 @@ export function InsightsPanel({ designId, onClose }: { designId: string; onClose
   const empty = status === "ok" && data && data.totalViews === 0;
 
   return (
-    <aside className="oc-scroll flex w-80 shrink-0 flex-col overflow-y-auto border-l border-neutral-200 bg-surface">
+    <aside className="oc-scroll flex w-80 shrink-0 flex-col overflow-y-auto border-s border-neutral-200 bg-surface">
       <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
         <span className="flex items-center gap-2 text-sm font-semibold text-neutral-800">
-          <BarChart3 size={16} /> Insights
+          <BarChart3 size={16} /> {tr("editor.insights")}
         </span>
-        <button onClick={onClose} aria-label="Close insights" className="text-neutral-400 hover:text-neutral-700">
+        <button onClick={onClose} aria-label={tr("editor.close_insights")} className="text-neutral-400 hover:text-neutral-700">
           <X size={18} />
         </button>
       </div>
 
       <div className="flex flex-col gap-4 p-4">
-        {status === "loading" && <div className="text-center text-sm text-neutral-400">Loading…</div>}
+        {status === "loading" && <div className="text-center text-sm text-neutral-400">{tr("editor.loading")}</div>}
         {status === "forbidden" && (
-          <div className="text-sm text-neutral-500">Insights are available to members of this design.</div>
+          <div className="text-sm text-neutral-500">{tr("editor.insights_are_available_to_members_of_this_de")}</div>
         )}
-        {status === "error" && <div className="text-sm text-neutral-500">Could not load insights.</div>}
+        {status === "error" && <div className="text-sm text-neutral-500">{tr("editor.could_not_load_insights")}</div>}
         {status === "ok" && data && (
           <>
             {empty ? (
-              <div className="text-sm text-neutral-500">No views yet - share to start collecting insights.</div>
+              <div className="text-sm text-neutral-500">{tr("editor.no_views_yet_share_to_start_collecting_insig")}</div>
             ) : (
               <>
                 <div className="grid grid-cols-2 gap-2">
-                  <Stat label="Unique viewers" value={data.uniqueViewers} />
-                  <Stat label="Anonymous" value={data.uniqueAnonViewers} />
-                  <Stat label="Total views" value={data.totalViews} />
-                  <Stat label="Avg time" value={fmtDuration(data.avgTimeMs)} />
+                  <Stat label={tr("editor.unique_viewers")} value={data.uniqueViewers} />
+                  <Stat label={tr("editor.anonymous")} value={data.uniqueAnonViewers} />
+                  <Stat label={tr("editor.total_views")} value={data.totalViews} />
+                  <Stat label={tr("editor.avg_time")} value={fmtDuration(data.avgTimeMs)} />
                 </div>
 
                 <div>
-                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-neutral-400">Views over time</h3>
+                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-neutral-400">{tr("editor.views_over_time")}</h3>
                   <Sparkline data={data.views} />
                 </div>
 
                 <div>
-                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-neutral-400">Per-page engagement</h3>
+                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-neutral-400">{tr("editor.per_page_engagement")}</h3>
                   <PerPageBars data={data.perPage} />
                 </div>
               </>

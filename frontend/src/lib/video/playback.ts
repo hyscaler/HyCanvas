@@ -15,6 +15,42 @@ import {
   type DrawSource,
 } from "./compositor";
 import { ChromaKeyer } from "./chromaKey";
+import { createScene, renderScene, poseDesignAt, exitPatch, clipEnd, type CanvasLike } from "@hc/engine";
+import { CURRENT_SCHEMA_VERSION, type DesignFile, type Node } from "@hc/schema";
+import { imageAssets } from "@/lib/assetProvider";
+
+/** Collect the asset ids of any image nodes in an element tree (for cache keying
+ *  on load readiness). */
+function collectImageAssetIds(node: unknown, out: string[]): void {
+  if (!node || typeof node !== "object") return;
+  const n = node as { type?: string; source?: { assetId?: string }; children?: unknown[] };
+  if (n.type === "image" && n.source?.assetId) out.push(n.source.assetId);
+  for (const c of n.children ?? []) collectImageAssetIds(c, out);
+}
+
+/** True when a node carries any motion the poser must advance per frame
+ *  (entrance/exit/emphasis/custom animation, or image Ken Burns/parallax). */
+function isAnimated(node: Node): boolean {
+  const n = node as unknown as { animation?: object; motion?: object };
+  return !!(n.animation || n.motion);
+}
+
+/** Wrap a single element node in a minimal, stage-sized design file so the
+ *  engine node renderer can rasterize it exactly as the design editor would. */
+function elementFile(node: Node, width: number, height: number): DesignFile {
+  return {
+    format: "hycanvas.design",
+    schemaVersion: CURRENT_SCHEMA_VERSION,
+    id: "video-element",
+    title: "",
+    unit: "px",
+    dpi: 96,
+    pages: [{ id: "p", width, height, children: [node] }],
+    assets: [],
+    fonts: [],
+    meta: {},
+  };
+}
 
 export interface ResolvedMedia {
   url: string;
@@ -30,6 +66,11 @@ export class TimelinePlayer {
   /** assetId behind each element, for re-resolving media URLs. */
   private elAssets = new Map<string, string>();
   private keyer: ChromaKeyer | null = null;
+  /** Offscreen canvas per element clip (footage-free design elements), keyed by
+   *  content so a static element rasterizes once and is reused every frame. */
+  private elementCanvases = new Map<string, { canvas: HTMLCanvasElement; key: string }>();
+  /** Latest stage size (set each syncAt), so drawSource can size element frames. */
+  private lastStage: { width: number; height: number } | null = null;
   private gains = new Map<string, GainNode>();
   private panners = new Map<string, StereoPannerNode>();
   /** Per-track bus: a unity gain feeding master + a metering analyser. */
@@ -54,6 +95,21 @@ export class TimelinePlayer {
   /** Compositor options matching this player's scope (sequences + xfades). */
   activeOptions(): ActiveOptions {
     return { resolveSequence: this.resolveSequence, xfade: true };
+  }
+
+  /** Set the stage size element clips rasterize against. The draw loops call
+   *  this before compositing so element frames are correct on the first paint,
+   *  not only after the next syncAt. */
+  setStage(width: number, height: number): void {
+    this.lastStage = { width, height };
+  }
+
+  /** Drop cached element rasters so they re-render on the next paint. Called
+   *  when a dependency of the render changes outside the element content itself,
+   *  e.g. a web font finishing loading (the cache key is the node content, which
+   *  does not change when the font arrives). */
+  invalidateElements(): void {
+    this.elementCanvases.clear();
   }
 
   /** Lazily build the audio graph (must follow a user gesture to be audible). */
@@ -217,6 +273,17 @@ export class TimelinePlayer {
    *  Clips with a chromaKey render through the WebGL keyer first, so the
    *  compositor (and therefore the export) draws the keyed frame. */
   drawSource(active: ActiveClip): DrawSource | null {
+    // Footage-free design element (background/image/shape/text): rasterize the
+    // node to a stage-sized offscreen via the engine, then it flows through the
+    // same compositing path as video (opacity/transition/pose apply). Element
+    // animations (entrance/exit/emphasis + Ken Burns) are posed at the clip-local
+    // time so preview and the exact in-browser export match present mode.
+    if (active.clip.element) {
+      const fps = active.scopeFps || 30;
+      const tMs = (active.localFrame / fps) * 1000;
+      const clipMs = (active.durationFrames / fps) * 1000;
+      return this.elementSource(active.clip, tMs, clipMs);
+    }
     if (this.kindOf(active.clip) !== "video") return null;
     const el = this.elementFor(active.clip) as HTMLVideoElement | null;
     if (!el || el.readyState < 2) return null;
@@ -231,6 +298,76 @@ export class TimelinePlayer {
     return { el, width: w, height: h };
   }
 
+  /** Rasterize a clip's embedded element node to a cached stage-sized offscreen.
+   *  When the node is animated, it is posed at the clip-local time `tMs` (with an
+   *  exit in the last `exit.durationMs` before `clipMs`), so the raster changes
+   *  each frame; static nodes rasterize once and reuse. */
+  private elementSource(clip: Clip, tMs = 0, clipMs = 0): DrawSource | null {
+    const stage = this.lastStage;
+    const node = clip.element;
+    if (!stage || !node) return null;
+    const { width: W, height: H } = stage;
+    if (W <= 0 || H <= 0) return null;
+    const animated = isAnimated(node);
+    // Key on image-asset readiness too, so the cached raster is rebuilt once an
+    // image finishes loading (the node JSON alone would not change). Animated
+    // nodes key on the quantized frame time so each frame re-poses (one cached
+    // canvas per clip, overwritten in place, so the map never grows).
+    const ids: string[] = [];
+    collectImageAssetIds(node, ids);
+    const readiness = ids.map((id) => `${id}:${imageAssets.status(id)}`).join(",");
+    const timeKey = animated ? `|t:${Math.round(tMs)}` : "";
+    const key = `${W}x${H}|${readiness}${timeKey}|${JSON.stringify(node)}`;
+    let entry = this.elementCanvases.get(clip.id);
+    if (!entry || entry.key !== key) {
+      const canvas = entry?.canvas ?? document.createElement("canvas");
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return null;
+      ctx.clearRect(0, 0, W, H);
+      try {
+        const file = animated ? this.posedElementFile(node, W, H, tMs, clipMs) : elementFile(node, W, H);
+        renderScene(
+          createScene(file, 0),
+          ctx as unknown as CanvasLike,
+          { width: W, height: H, zoom: 1, dpr: 1, panX: 0, panY: 0 },
+          { assets: imageAssets, skipBackground: true },
+        );
+      } catch {
+        return null;
+      }
+      entry = { canvas, key };
+      this.elementCanvases.set(clip.id, entry);
+    }
+    return { el: entry.canvas, width: W, height: H };
+  }
+
+  /** A stage-sized element file posed at clip-local time. Entrance/emphasis/custom
+   *  and image motion come from the shared engine poser (`poseDesignAt`), so the
+   *  video preview matches present mode exactly. Exit is layered on top over the
+   *  clip's final `exit.durationMs`, which the slide-oriented poser does not do. */
+  private posedElementFile(node: Node, W: number, H: number, tMs: number, clipMs: number): DesignFile {
+    const posed = poseDesignAt(elementFile(node, W, H), 0, tMs);
+    const exit = (node as unknown as { animation?: { exit?: Parameters<typeof exitPatch>[0] } }).animation?.exit;
+    if (exit && clipMs > 0) {
+      const dur = clipEnd(exit); // delay + duration, in ms
+      const exitStart = Math.max(0, clipMs - dur);
+      if (tMs >= exitStart) {
+        const patch = exitPatch(exit, tMs - exitStart);
+        const target = posed.pages[0]?.children?.[0] as unknown as
+          | { transform: { x: number; y: number; scaleX: number; scaleY: number; rotation: number }; opacity?: number }
+          | undefined;
+        if (target) {
+          const t = target.transform;
+          target.opacity = Math.max(0, Math.min(1, (target.opacity ?? 1) * patch.opacityMul));
+          target.transform = { ...t, x: t.x + patch.dx, y: t.y + patch.dy, scaleX: t.scaleX * patch.scale, scaleY: t.scaleY * patch.scale, rotation: t.rotation + patch.rotate };
+        }
+      }
+    }
+    return posed;
+  }
+
   /**
    * Align every media element with the playhead: seek/play/pause the active
    * clips, silence and pause the rest, and apply the per-clip mix gain.
@@ -241,6 +378,7 @@ export class TimelinePlayer {
     playing: boolean,
     duckPoints?: { frame: number; musicGainDb: number }[],
   ): void {
+    this.lastStage = { width: project.stage.width, height: project.stage.height };
     const active = activeClipsAt(project, frame, this.activeOptions());
     const activeIds = new Set<string>();
     for (const a of active) {

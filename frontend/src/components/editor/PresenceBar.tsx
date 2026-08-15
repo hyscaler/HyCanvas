@@ -7,6 +7,7 @@
 import { Check, Cloud, CloudOff, Eye, Loader2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { usePresence, type ConnectionState, type Peer } from "@/store/presence";
+import { tr } from "@/lib/i18n";
 
 const MAX_AVATARS = 5;
 
@@ -20,27 +21,27 @@ function initials(name: string): string {
 function Badge({ state, readOnly, synced }: { state: ConnectionState; readOnly: boolean; synced: boolean }) {
   if (readOnly)
     return (
-      <span className="flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600" title="You have view-only access">
-        <Eye size={13} /> Read-only
+      <span className="flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600" title={tr("editor.you_have_view_only_access")}>
+        <Eye size={13} /> {tr("editor.read_only")}
       </span>
     );
   // Brief "Synced" reassurance right after reconnecting, so offline edits merging
   // back reads as success rather than silently flipping to "Live" (FR-14 UX).
   if (state === "connected" && synced)
     return (
-      <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700" title="Synced: your offline changes merged in">
-        <Check size={13} /> Synced
+      <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700" title={tr("editor.synced_your_offline_changes_merged_in")}>
+        <Check size={13} /> {tr("editor.synced")}
       </span>
     );
   // Offline/reconnecting reassure that edits are safe: the Y.Doc is mirrored to
   // IndexedDB, so changes persist on this device and sync on
   // reconnect. The title spells that out so "Offline" never reads as data loss.
-  const savedLocally = "Your changes are saved on this device and will sync when you reconnect.";
+  const savedLocally = tr("editor.your_changes_are_saved_on_this_device_and_wi");
   const map: Record<ConnectionState, { label: string; cls: string; icon: React.ReactNode; title: string }> = {
-    connecting: { label: "Connecting", cls: "bg-amber-50 text-amber-700", icon: <Loader2 size={13} className="animate-spin" />, title: "Connecting to live collaboration" },
-    connected: { label: "Live", cls: "bg-emerald-50 text-emerald-700", icon: <Cloud size={13} />, title: "Live: changes sync with collaborators in real time" },
-    reconnecting: { label: "Reconnecting", cls: "bg-amber-50 text-amber-700", icon: <Loader2 size={13} className="animate-spin" />, title: `Reconnecting. ${savedLocally}` },
-    offline: { label: "Offline", cls: "bg-neutral-100 text-neutral-500", icon: <CloudOff size={13} />, title: `Offline. ${savedLocally}` },
+    connecting: { label: tr("editor.connecting"), cls: "bg-amber-50 text-amber-700", icon: <Loader2 size={13} className="animate-spin" />, title: tr("editor.connecting_to_live_collaboration") },
+    connected: { label: tr("editor.live"), cls: "bg-emerald-50 text-emerald-700", icon: <Cloud size={13} />, title: tr("editor.live_changes_sync_with_collaborators_in_real") },
+    reconnecting: { label: tr("editor.reconnecting"), cls: "bg-amber-50 text-amber-700", icon: <Loader2 size={13} className="animate-spin" />, title: `Reconnecting. ${savedLocally}` },
+    offline: { label: tr("editor.offline"), cls: "bg-neutral-100 text-neutral-500", icon: <CloudOff size={13} />, title: `Offline. ${savedLocally}` },
   };
   const m = map[state];
   return (
@@ -55,7 +56,7 @@ function Avatar({ peer, following, onClick }: { peer: Peer; following: boolean; 
     <button
       onClick={onClick}
       title={`${peer.name}${following ? " (following)" : ""}: click to follow`}
-      className={`relative grid h-7 w-7 -ml-1.5 first:ml-0 place-items-center rounded-full text-[11px] font-semibold text-white ring-2 transition ${following ? "ring-neutral-900" : "ring-white"}`}
+      className={`relative grid h-7 w-7 -ms-1.5 first:ms-0 place-items-center rounded-full text-[11px] font-semibold text-white ring-2 transition ${following ? "ring-neutral-900" : "ring-white"}`}
       style={{ background: peer.color }}
     >
       {initials(peer.name)}
@@ -99,7 +100,7 @@ export function PresenceBar() {
           style={{ background: followingPeer.color }}
         >
           Following {followingPeer.name}
-          <button onClick={() => setFollowing(null)} className="ml-0.5 rounded-full hover:bg-black/15" aria-label="Stop following">
+          <button onClick={() => setFollowing(null)} className="ms-0.5 rounded-full hover:bg-black/15" aria-label={tr("editor.stop_following")}>
             <X size={13} />
           </button>
         </span>
@@ -110,7 +111,7 @@ export function PresenceBar() {
             <Avatar key={p.clientId} peer={p} following={following === p.clientId} onClick={() => toggleFollow(p.clientId)} />
           ))}
           {overflow > 0 && (
-            <span className="-ml-1.5 grid h-7 w-7 place-items-center rounded-full bg-neutral-200 text-[11px] font-semibold text-neutral-600 ring-2 ring-white">
+            <span className="-ms-1.5 grid h-7 w-7 place-items-center rounded-full bg-neutral-200 text-[11px] font-semibold text-neutral-600 ring-2 ring-white">
               +{overflow}
             </span>
           )}

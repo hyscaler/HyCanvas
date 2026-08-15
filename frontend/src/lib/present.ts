@@ -13,6 +13,15 @@ export interface SlideLike {
 /** Default autopilot dwell (ms) when a slide has no `autoAdvanceMs` (FR-14). */
 export const DEFAULT_AUTO_ADVANCE_MS = 5000;
 
+/** Live slide-follow (doc 28) timing. The presenter republishes its position
+ *  every LIVE_HEARTBEAT_MS; a follower stops following once the published
+ *  position is older than LIVE_STALE_MS, so a presenter who closed the tab
+ *  stops dragging the audience around. The window must stay a comfortable
+ *  multiple of the heartbeat: with the two too close, a single dropped request
+ *  (or a slide held longer than one beat) reads as "presenter left". */
+export const LIVE_HEARTBEAT_MS = 10_000;
+export const LIVE_STALE_MS = 35_000;
+
 /** Is the slide at `index` presentable (exists and not hidden)? */
 export function isVisibleSlide(pages: SlideLike[], index: number): boolean {
   const p = pages[index];
