@@ -1841,6 +1841,13 @@ export class HyCanvasClient {
   aiCritique(input: { workspaceId: string; designSummary: string }): Promise<{ suggestions: string }> {
     return this.request("POST", "/v1/ai/critique", input);
   }
+  /** Generate a complete design as a single editable SVG document at the target
+   *  size. Works with text-only providers (e.g. DeepSeek): the model draws the
+   *  design with vector primitives, and the client flattens the SVG to scene
+   *  nodes so the result stays fully editable (no rasterization). */
+  aiDesignSvg(input: { workspaceId: string; designType: string; prompt: string; width?: number; height?: number }): Promise<{ title: string; width: number; height: number; svg: string }> {
+    return this.request("POST", "/v1/ai/design-svg", input);
+  }
   // Session history (FR-9 / FR-27).
   listAiSessions(designId: string): Promise<{ sessions: AiSessionView[] }> {
     return this.request("GET", `/v1/designs/${designId}/ai-sessions`);
