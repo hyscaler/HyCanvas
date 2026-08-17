@@ -125,3 +125,19 @@ func TestZhipuPreset(t *testing.T) {
 		t.Fatalf("zhipu image model wrong: %v", body["model"])
 	}
 }
+
+// TestProviderSetMatchesPresets guards against the config allow-list drifting
+// from the advertised catalog: every preset shown in the config UI must be
+// accepted by SetConfig (regression: zhipu/google/together/... were rejected
+// because providerSet was a stale hand-maintained list).
+func TestProviderSetMatchesPresets(t *testing.T) {
+	for i := range PRESETS {
+		id := PRESETS[i].ID
+		if !providerSet[id] {
+			t.Fatalf("preset %q is advertised but not configurable (missing from providerSet)", id)
+		}
+	}
+	if len(providerSet) != len(PRESETS) {
+		t.Fatalf("providerSet (%d) and PRESETS (%d) out of sync", len(providerSet), len(PRESETS))
+	}
+}

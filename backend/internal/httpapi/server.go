@@ -179,7 +179,7 @@ func NewRouter(d Deps) http.Handler {
 			mountAIStudio(api, d.AIStudio, d.Accounts, d.Persistence, d.Jobs)
 		}
 		if d.Accounts != nil && d.AI != nil {
-			mountAI(api, d.AI, d.Accounts)
+			mountAI(api, d.AI, d.Accounts, d.Uploads)
 		}
 		if d.Accounts != nil {
 			mountExtractURL(api, d.Accounts)

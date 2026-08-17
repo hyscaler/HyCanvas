@@ -1,20 +1,54 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
 	"hycanvas/backend/internal/accounts"
 	"hycanvas/backend/internal/ai"
+	"hycanvas/backend/internal/uploads"
 )
+
+// persistAIImage stores an AI-generated image as a workspace asset and returns a
+// stable asset URL, so a provider's transient hosted URL (e.g. Zhipu CogView,
+// which returns an expiring link) or a large inline data URL (OpenAI b64) never
+// becomes the design's image source. On any failure it returns the value
+// unchanged, so image generation still works even if persistence hiccups.
+func persistAIImage(ctx context.Context, up *uploads.Service, userID, workspaceID, img string) string {
+	if up == nil || img == "" {
+		return img
+	}
+	var (
+		asset uploads.UploadedAsset
+		err   error
+	)
+	switch {
+	case strings.HasPrefix(img, "data:"):
+		parts := strings.SplitN(img, ",", 2)
+		if len(parts) != 2 || parts[1] == "" {
+			return img
+		}
+		asset, err = up.Upload(ctx, userID, workspaceID, "ai-image.png", parts[1], nil, "")
+	case strings.HasPrefix(img, "http://"), strings.HasPrefix(img, "https://"):
+		asset, err = up.ImportFromURL(ctx, userID, workspaceID, img, nil)
+	default:
+		return img
+	}
+	if err != nil || asset.URL == "" {
+		return img
+	}
+	return asset.URL
+}
 
 // mountAI attaches the AI surface (doc 19), all JWT-guarded: config read needs
 // viewer, config write needs admin, generation needs member. The provider key
 // is set encrypted and never returned.
-func mountAI(api chi.Router, svc *ai.Service, acct *accounts.Service) {
+func mountAI(api chi.Router, svc *ai.Service, acct *accounts.Service, up *uploads.Service) {
 	api.Group(func(r chi.Router) {
 		r.Use(requireAuth(acct))
 		// Provider registry (presets + capabilities) for the config UI. No secrets.
@@ -27,9 +61,9 @@ func mountAI(api chi.Router, svc *ai.Service, acct *accounts.Service) {
 		r.Put("/workspaces/{id}/ai-policy", aiSetPolicyHandler(svc, acct))
 		r.Get("/workspaces/{id}/ai-usage", aiGetUsageHandler(svc, acct))
 		r.Post("/ai/text", aiTextHandler(svc, acct))
-		r.Post("/ai/image", aiImageHandler(svc, acct))
+		r.Post("/ai/image", aiImageHandler(svc, acct, up))
 		r.Post("/ai/describe-image", aiDescribeImageHandler(svc, acct))
-		r.Post("/ai/image/edit", aiEditImageHandler(svc, acct))
+		r.Post("/ai/image/edit", aiEditImageHandler(svc, acct, up))
 	})
 }
 
@@ -182,7 +216,7 @@ func aiTextHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFunc {
 	}
 }
 
-func aiImageHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFunc {
+func aiImageHandler(svc *ai.Service, acct *accounts.Service, up *uploads.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var body struct {
 			WorkspaceID string `json:"workspaceId"`
@@ -202,6 +236,7 @@ func aiImageHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFunc {
 			aiProblem(w, r, err)
 			return
 		}
+		img = persistAIImage(r.Context(), up, userFrom(r.Context()).ID, body.WorkspaceID, img)
 		writeJSON(w, http.StatusOK, map[string]string{"image": img})
 	}
 }
@@ -230,7 +265,7 @@ func aiDescribeImageHandler(svc *ai.Service, acct *accounts.Service) http.Handle
 	}
 }
 
-func aiEditImageHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFunc {
+func aiEditImageHandler(svc *ai.Service, acct *accounts.Service, up *uploads.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var body struct {
 			WorkspaceID string `json:"workspaceId"`
@@ -252,6 +287,7 @@ func aiEditImageHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFun
 			aiProblem(w, r, err)
 			return
 		}
+		img = persistAIImage(r.Context(), up, userFrom(r.Context()).ID, body.WorkspaceID, img)
 		writeJSON(w, http.StatusOK, map[string]string{"image": img})
 	}
 }

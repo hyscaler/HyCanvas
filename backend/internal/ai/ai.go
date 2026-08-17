@@ -122,7 +122,18 @@ func (s *Service) GetConfig(ctx context.Context, workspaceID string) (*ConfigVie
 	return toConfigView(r), nil
 }
 
-var providerSet = map[string]bool{"openai": true, "anthropic": true, "deepseek": true, "custom": true}
+// providerSet is the set of configurable provider ids, derived from the registry
+// so every advertised preset (openai, anthropic, deepseek, zhipu, google,
+// mistral, groq, together, openrouter, azure-openai, custom) is accepted by
+// SetConfig. Deriving it from PRESETS keeps this in lockstep with the catalog
+// the config UI is shown, instead of a hand-maintained list that drifts.
+var providerSet = func() map[string]bool {
+	m := make(map[string]bool, len(PRESETS))
+	for i := range PRESETS {
+		m[PRESETS[i].ID] = true
+	}
+	return m
+}()
 
 // SetConfig upserts the workspace's provider config. A new apiKey is encrypted;
 // changing the provider without a new key clears the stored key (so an old
@@ -197,7 +208,7 @@ func (s *Service) callConfig(ctx context.Context, workspaceID string) (CallConfi
 	// base URL or model is empty, fall back to the provider's preset so a built-in
 	// provider (e.g. DeepSeek) routes to its own endpoint/model instead of the
 	// OpenAI-compatible defaults baked into the transport.
-	baseURL, model := deref(r.baseURL), deref(r.model)
+	baseURL, model, imageModel := deref(r.baseURL), deref(r.model), deref(r.imageModel)
 	if p := PresetFor(r.provider); p != nil {
 		if baseURL == "" {
 			baseURL = p.BaseURL
@@ -205,10 +216,13 @@ func (s *Service) callConfig(ctx context.Context, workspaceID string) (CallConfi
 		if model == "" {
 			model = p.DefaultModel
 		}
+		if imageModel == "" {
+			imageModel = p.DefaultImageModel
+		}
 	}
 	return CallConfig{
 		Provider: Provider(r.provider), APIKey: key,
-		BaseURL: baseURL, Model: model, ImageModel: deref(r.imageModel),
+		BaseURL: baseURL, Model: model, ImageModel: imageModel,
 	}, nil
 }
 
