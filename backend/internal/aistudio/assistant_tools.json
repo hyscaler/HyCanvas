@@ -1,0 +1,298 @@
+[
+  {
+    "name": "addPage",
+    "description": "Add a new blank page after the current one.",
+    "params": [],
+    "mutates": true
+  },
+  {
+    "name": "duplicatePage",
+    "description": "Duplicate the current page.",
+    "params": [],
+    "mutates": true
+  },
+  {
+    "name": "setPageBackground",
+    "description": "Set the current page's background to a solid color, or a linear gradient when a second color is given.",
+    "params": [
+      {
+        "name": "color",
+        "type": "color",
+        "required": true,
+        "description": "hex like #1a2b3c (the only color, or the gradient's start)"
+      },
+      {
+        "name": "color2",
+        "type": "color",
+        "required": false,
+        "description": "a second hex color; when set the background becomes a linear gradient from color to color2"
+      },
+      {
+        "name": "angle",
+        "type": "number",
+        "required": false,
+        "description": "gradient angle in degrees (default 135)"
+      }
+    ],
+    "mutates": true
+  },
+  {
+    "name": "setSelectedText",
+    "description": "Replace the text of the currently selected text box.",
+    "params": [
+      {
+        "name": "text",
+        "type": "string",
+        "required": true
+      }
+    ],
+    "mutates": true
+  },
+  {
+    "name": "recolorSelection",
+    "description": "Set the fill color of the selected element(s).",
+    "params": [
+      {
+        "name": "color",
+        "type": "color",
+        "required": true
+      }
+    ],
+    "mutates": true
+  },
+  {
+    "name": "applyBrand",
+    "description": "Apply the workspace brand kit (colors, fonts) across the design.",
+    "params": [],
+    "mutates": true
+  },
+  {
+    "name": "harmonize",
+    "description": "Harmonize fonts, colors, and corner radii across the current page for visual consistency.",
+    "params": [],
+    "mutates": true
+  },
+  {
+    "name": "tidyLayout",
+    "description": "Auto-align and tidy the elements on the current page.",
+    "params": [],
+    "mutates": true
+  },
+  {
+    "name": "animatePage",
+    "description": "Apply tasteful entrance animations and a page transition to the current page.",
+    "params": [],
+    "mutates": true
+  },
+  {
+    "name": "insertChart",
+    "description": "Insert an editable chart.",
+    "params": [
+      {
+        "name": "chartType",
+        "type": "string",
+        "required": true,
+        "description": "bar|line|area|pie|donut|scatter|radar"
+      },
+      {
+        "name": "categories",
+        "type": "stringArray",
+        "required": true
+      },
+      {
+        "name": "series",
+        "type": "series",
+        "required": true,
+        "description": "[{name, values:[...]}]"
+      }
+    ],
+    "mutates": true
+  },
+  {
+    "name": "resizePage",
+    "description": "Resize the current page to new pixel dimensions, recomposing the layout.",
+    "params": [
+      {
+        "name": "width",
+        "type": "number",
+        "required": true
+      },
+      {
+        "name": "height",
+        "type": "number",
+        "required": true
+      }
+    ],
+    "mutates": true
+  },
+  {
+    "name": "writeText",
+    "description": "Generate copy and place it into the selected text box, or a new one if nothing suitable is selected. Use for 'write/add a headline/tagline/paragraph'.",
+    "params": [
+      {
+        "name": "prompt",
+        "type": "string",
+        "required": true,
+        "description": "what to write, e.g. 'a punchy headline for a coffee shop launch'"
+      }
+    ],
+    "mutates": true
+  },
+  {
+    "name": "rewriteSelectedText",
+    "description": "Rewrite/transform the currently selected text box per an instruction (shorten, change tone, translate, fix grammar, etc.).",
+    "params": [
+      {
+        "name": "instruction",
+        "type": "string",
+        "required": true,
+        "description": "how to rewrite, e.g. 'make it punchier' or 'translate to Spanish'"
+      }
+    ],
+    "mutates": true
+  },
+  {
+    "name": "translateDeck",
+    "description": "Translate the ENTIRE design into a target language: every text box on every page, sticky notes, and speaker notes, preserving layout and styling. Use for 'translate this deck/design/presentation to X'.",
+    "params": [
+      {
+        "name": "language",
+        "type": "string",
+        "required": true,
+        "description": "target language, e.g. 'Spanish', 'Japanese', 'pt-BR'"
+      }
+    ],
+    "mutates": true
+  },
+  {
+    "name": "generateSpeakerNotes",
+    "description": "Write presenter speaker notes for EVERY slide, stored in each page's notes (shown in presenter view and the notes panel). Use for 'write/generate speaker notes / talking points'.",
+    "params": [
+      {
+        "name": "instruction",
+        "type": "string",
+        "required": false,
+        "description": "optional guidance, e.g. 'keep each to 3 short bullet points' or 'formal tone'"
+      }
+    ],
+    "mutates": true
+  },
+  {
+    "name": "generateImage",
+    "description": "Generate an image from a description and place it on the current page (fills the selected frame if one is selected).",
+    "params": [
+      {
+        "name": "prompt",
+        "type": "string",
+        "required": true,
+        "description": "what the image shows"
+      },
+      {
+        "name": "style",
+        "type": "string",
+        "required": false,
+        "description": "'logo' for a flat vector logo; otherwise omit"
+      }
+    ],
+    "mutates": true
+  },
+  {
+    "name": "generateBackgroundImage",
+    "description": "Generate a full-bleed background image and place it behind the current page's content.",
+    "params": [
+      {
+        "name": "prompt",
+        "type": "string",
+        "required": true,
+        "description": "the background scene/texture"
+      }
+    ],
+    "mutates": true
+  },
+  {
+    "name": "editSelectedImage",
+    "description": "Edit the currently selected image by instruction (e.g. 'remove the background', 'make it night-time').",
+    "params": [
+      {
+        "name": "instruction",
+        "type": "string",
+        "required": true
+      }
+    ],
+    "mutates": true
+  },
+  {
+    "name": "generateDesign",
+    "description": "Create a complete, finished design from scratch - a single poster, flyer, or social post, or a multi-page document or deck - with text, images, shapes, and layout composed for you (it replaces the current page(s) unless mode is 'append'). Use this whenever the user asks to create/make/design/build/generate something with content or a 'fresh layout'.",
+    "params": [
+      {
+        "name": "prompt",
+        "type": "string",
+        "required": true,
+        "description": "the brief, e.g. 'a 5-slide pitch deck for an eco water bottle'"
+      },
+      {
+        "name": "designType",
+        "type": "string",
+        "required": false,
+        "description": "deck|doc|social|poster (inferred if omitted)"
+      },
+      {
+        "name": "pageCount",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "mode",
+        "type": "string",
+        "required": false,
+        "description": "'append' to add the generated pages to the current design instead of replacing it"
+      }
+    ],
+    "mutates": true
+  },
+  {
+    "name": "generateDiagram",
+    "description": "Create a flowchart or mind map ON THE BOARD from a description - native sticky notes + connectors, auto-laid-out. Also accepts pasted Mermaid source verbatim. Use for 'draw/make a flowchart/diagram/mind map of X'.",
+    "params": [
+      {
+        "name": "prompt",
+        "type": "string",
+        "required": true,
+        "description": "what to diagram (a plain description, or Mermaid flowchart source pasted verbatim)"
+      },
+      {
+        "name": "kind",
+        "type": "string",
+        "required": false,
+        "description": "flowchart|mindmap (default flowchart)"
+      }
+    ],
+    "mutates": true
+  },
+  {
+    "name": "clusterStickies",
+    "description": "Group the board's sticky notes into labeled theme frames (affinity clustering): each theme becomes a titled frame with its stickies arranged inside. Use for 'cluster/group the stickies by theme'.",
+    "params": [
+      {
+        "name": "instruction",
+        "type": "string",
+        "required": false,
+        "description": "optional guidance, e.g. 'cluster by customer segment'"
+      }
+    ],
+    "mutates": true
+  },
+  {
+    "name": "summarizeStickies",
+    "description": "Summarize the board's sticky notes into a text note on the canvas: key themes, decisions, and action items. Use for 'summarize the board / the stickies / this brainstorm'.",
+    "params": [],
+    "mutates": true
+  },
+  {
+    "name": "critique",
+    "description": "Analyze the current page and report design issues (no changes).",
+    "params": [],
+    "mutates": false
+  }
+]

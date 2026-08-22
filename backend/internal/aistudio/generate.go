@@ -2,6 +2,8 @@ package aistudio
 
 import (
 	"context"
+	_ "embed"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
@@ -176,27 +178,87 @@ func (s *Service) Chart(ctx context.Context, workspaceID, description string) (*
 	return generateValidated(ctx, s, workspaceID, system, strings.TrimSpace(description), validateChart)
 }
 
-const assistantTools = `addPage, duplicatePage, setPageBackground(color,color2?,angle?), setSelectedText(text), recolorSelection(color), applyBrand, harmonize, tidyLayout, animatePage, insertChart(chartType,categories,series), resizePage(width,height), writeText(prompt), rewriteSelectedText(instruction), generateImage(prompt,style?), generateBackgroundImage(prompt), editSelectedImage(instruction), generateDesign(prompt,designType?,pageCount?,mode?), critique. For writeText/generateImage/generateBackgroundImage/editSelectedImage/rewriteSelectedText/generateDesign pass the user's INTENT as the prompt/instruction arg (never the finished text). generateDesign CREATES a complete, finished design from scratch - a single poster, flyer, social post, or document, or a multi-page deck - with all text, shapes, images, and layout composed for you (designType: deck|doc|social-set|poster). writeText adds a new text box; generateImage adds an image. So you CAN add text, shapes, images, and full layouts.`
+// The assistant tool catalog is defined ONCE, in assistant_tools.json, which
+// mirrors toolCatalog() in packages/aistudio/src/assistant.ts exactly (a vitest
+// parity test asserts the two are deep-equal). The Go side derives its allowed
+// action set and the system-prompt tool list from the manifest, so the server
+// catalog can never drift from the client's again (it did once: five tools were
+// client-only and validateAssistant silently dropped them).
+//
+//go:embed assistant_tools.json
+var assistantToolsJSON []byte
+
+type toolParamSpec struct {
+	Name        string `json:"name"`
+	Type        string `json:"type"`
+	Required    bool   `json:"required"`
+	Description string `json:"description,omitempty"`
+}
+
+type toolSpec struct {
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	Params      []toolParamSpec `json:"params"`
+	Mutates     bool            `json:"mutates"`
+}
+
+var assistantToolSpecs = func() []toolSpec {
+	var specs []toolSpec
+	if err := json.Unmarshal(assistantToolsJSON, &specs); err != nil {
+		panic(fmt.Sprintf("aistudio: invalid assistant_tools.json: %v", err))
+	}
+	if len(specs) == 0 {
+		panic("aistudio: assistant_tools.json is empty")
+	}
+	return specs
+}()
 
 var assistantCatalog = func() map[string]bool {
-	names := []string{"addPage", "duplicatePage", "setPageBackground", "setSelectedText", "recolorSelection", "applyBrand", "harmonize", "tidyLayout", "animatePage", "insertChart", "resizePage", "writeText", "rewriteSelectedText", "generateImage", "generateBackgroundImage", "editSelectedImage", "generateDesign", "critique"}
-	m := make(map[string]bool, len(names))
-	for _, n := range names {
-		m[n] = true
+	m := make(map[string]bool, len(assistantToolSpecs))
+	for _, t := range assistantToolSpecs {
+		m[t.Name] = true
 	}
 	return m
 }()
+
+// assistantToolCatalogText renders the manifest in the same "- name(param:type?
+// (desc), ...): description" shape the client's assistantSystemPrompt uses, so
+// both paths brief the model identically.
+func assistantToolCatalogText() string {
+	lines := make([]string, 0, len(assistantToolSpecs))
+	for _, t := range assistantToolSpecs {
+		params := make([]string, 0, len(t.Params))
+		for _, p := range t.Params {
+			s := p.Name + ":" + p.Type
+			if !p.Required {
+				s += "?"
+			}
+			if p.Description != "" {
+				s += " (" + p.Description + ")"
+			}
+			params = append(params, s)
+		}
+		line := "- " + t.Name + "(" + strings.Join(params, ", ") + ")"
+		if !t.Mutates {
+			line += " [read-only]"
+		}
+		lines = append(lines, line+": "+t.Description)
+	}
+	return strings.Join(lines, "\n")
+}
+
+const assistantToolGuidance = `For writeText/generateImage/generateBackgroundImage/editSelectedImage/rewriteSelectedText/generateDesign pass the user's INTENT as the prompt/instruction arg (never the finished text). writeText adds a new text box; generateImage adds an image. So you CAN add text, shapes, images, and full layouts.`
 
 // Assistant runs one agentic turn: a validated plan of editor actions or one
 // clarifying question (FR-6/7/10/12). The design summary is supplied by the
 // client (compact context, never the raw file).
 func (s *Service) Assistant(ctx context.Context, workspaceID, designSummary, history, message string) (*AssistantReply, error) {
-	system := "You are an agentic design assistant inside a design editor. Decompose the user's request into an ordered plan of tool calls, choosing ONLY from this catalog: " + assistantTools + ". " +
+	system := "You are an agentic design assistant inside a design editor. Decompose the user's request into an ordered plan of tool calls, choosing ONLY from the catalog below. " + assistantToolGuidance + " " +
 		"Never invent tools or edit raw document JSON. " +
 		"Output ONLY a single JSON object, no prose/markdown/fences: {\"reply\":string,\"plan\":[{\"action\":string,\"args\":object}],\"clarify\"?:string}. " +
 		"You CAN create finished designs and add content - never reply that you cannot add text, shapes, images, or layouts. For any request to create/make/design/build/generate something with content from scratch (a poster, flyer, social post, document, presentation, or any 'fresh layout/content'), use generateDesign with an appropriate designType; it composes the whole page (text, shapes, images, layout) and replaces the current page(s). " +
 		"Strongly prefer producing a plan over asking. Do NOT ask the user about page size, theme, or whether to add content - just generate it. Use \"clarify\" ONLY when the request is truly ambiguous (you cannot tell what to make) or would destroy specific existing work in more than one plausible way; otherwise return an empty clarify and a real plan. Keep the plan minimal. " +
-		"Example - user: \"professional marketing poster, fresh content and fresh layout\" -> {\"reply\":\"Creating a professional marketing poster.\",\"plan\":[{\"action\":\"generateDesign\",\"args\":{\"prompt\":\"professional marketing poster\",\"designType\":\"poster\"}}]}.\n\nCurrent design:\n" + designSummary
+		"Example - user: \"professional marketing poster, fresh content and fresh layout\" -> {\"reply\":\"Creating a professional marketing poster.\",\"plan\":[{\"action\":\"generateDesign\",\"args\":{\"prompt\":\"professional marketing poster\",\"designType\":\"poster\"}}]}.\n\nTool catalog:\n" + assistantToolCatalogText() + "\n\nCurrent design:\n" + designSummary
 	user := message
 	if strings.TrimSpace(history) != "" {
 		user = history + "\nuser: " + message
