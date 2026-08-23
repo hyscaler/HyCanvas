@@ -3384,5 +3384,13 @@
   "editor.text_effects": "文字效果",
   "editor.no_animations_to_preview": "此页面还没有动画",
   "editor.comments_open_count.one": "评论（{count} 条未解决）",
-  "editor.comments_open_count.other": "评论（{count} 条未解决）"
+  "editor.comments_open_count.other": "评论（{count} 条未解决）",
+  "editor.replaces_all_n_pages.one": "将替换当前页面。",
+  "editor.replaces_all_n_pages.other": "将替换全部 {count} 个页面。",
+  "editor.beta": "测试版",
+  "editor.couldnt_generate_a_vector_design_make_sure_a": "无法生成矢量设计。请确认已在设置中连接 AI 提供商，然后重试。",
+  "editor.draw_the_whole_design_as_an_editable_vector": "使用你的文本模型，在此页面上将整个设计绘制为可编辑的矢量图。无需图像模型即可使用（测试版）。",
+  "editor.drew_an_editable_vector_design_on_this_page": "已在此页面上绘制了可编辑的矢量设计。每个元素都是可以选择和编辑的真实图形或文本。",
+  "editor.vector_design": "矢量设计",
+  "editor.vector_generation_failed": "矢量生成失败。"
 }

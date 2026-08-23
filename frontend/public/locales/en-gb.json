@@ -57,5 +57,7 @@
   "editor.text_color": "Text colour",
   "editor.the_editor_is_optimized_for_larger_screens_s": "The editor is optimised for larger screens. Some panels float over the canvas to keep it usable.",
   "stickers.ab-checker": "Chequerboard",
-  "ui.dialog": "Dialogue"
+  "ui.dialog": "Dialogue",
+  "editor.replaces_all_n_pages.one": "Replaces the current page.",
+  "editor.replaces_all_n_pages.other": "Replaces all {count} pages."
 }

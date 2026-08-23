@@ -3384,5 +3384,13 @@
   "editor.text_effects": "पाठ प्रभाव",
   "editor.no_animations_to_preview": "इस पृष्ठ पर अभी कोई एनिमेशन नहीं है",
   "editor.comments_open_count.one": "टिप्पणियाँ ({count} खुली)",
-  "editor.comments_open_count.other": "टिप्पणियाँ ({count} खुली)"
+  "editor.comments_open_count.other": "टिप्पणियाँ ({count} खुली)",
+  "editor.replaces_all_n_pages.one": "वर्तमान पृष्ठ को बदल देगा।",
+  "editor.replaces_all_n_pages.other": "सभी {count} पृष्ठों को बदल देगा।",
+  "editor.beta": "बीटा",
+  "editor.couldnt_generate_a_vector_design_make_sure_a": "वेक्टर डिज़ाइन नहीं बन सका। सुनिश्चित करें कि सेटिंग्स में कोई AI प्रदाता जुड़ा है, फिर पुनः प्रयास करें।",
+  "editor.draw_the_whole_design_as_an_editable_vector": "अपने टेक्स्ट मॉडल का उपयोग करके पूरे डिज़ाइन को इस पृष्ठ पर संपादन योग्य वेक्टर के रूप में बनाएं। इमेज मॉडल के बिना काम करता है (बीटा)।",
+  "editor.drew_an_editable_vector_design_on_this_page": "इस पृष्ठ पर एक संपादन योग्य वेक्टर डिज़ाइन बनाया गया। हर तत्व एक वास्तविक आकृति या टेक्स्ट है जिसे आप चुन और संपादित कर सकते हैं।",
+  "editor.vector_design": "वेक्टर डिज़ाइन",
+  "editor.vector_generation_failed": "वेक्टर बनाना विफल रहा।"
 }

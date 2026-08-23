@@ -1944,6 +1944,22 @@ async function fetchAssistantOutline(workspaceId: string, dt: DesignType, prompt
   }
 }
 
+/** True when the document already holds work worth protecting: more than one
+ *  page, or any page with content on it. */
+function docHasContent(doc: { pages: { children: unknown[] }[] }): boolean {
+  return doc.pages.length > 1 || doc.pages.some((p) => p.children.length > 0);
+}
+
+/** How many existing pages a pending plan would destroy: non-zero only when a
+ *  generateDesign step explicitly carries mode:"replace" on a document with
+ *  content (the executor never replaces otherwise). Drives the confirmation
+ *  gate's "replaces all N pages" warning. */
+function planReplacePageCount(plan: PlanStep[], doc: { pages: { children: unknown[] }[] }): number {
+  if (!docHasContent(doc)) return 0;
+  const replaces = plan.some((s) => s.action === "generateDesign" && String(s.args?.mode ?? "").toLowerCase() === "replace");
+  return replaces ? doc.pages.length : 0;
+}
+
 // Async resolve pass for one plan step: performs any AI/network work BEFORE the
 // synchronous undo turn (mirrors the applyBrand brand-lint prefetch). Pure-sync
 // actions return {} and are applied directly by runPlanStep. A precondition that
@@ -2155,7 +2171,14 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       const size = { width: page?.width ?? 1280, height: page?.height ?? 720 };
       const brandClause = [deps.voiceClause, deps.brandPalette.length ? `Use this brand palette: ${deps.brandPalette.join(", ")}.` : ""].filter(Boolean).join(" ").trim();
       const pageCount = typeof a.pageCount === "number" ? a.pageCount : dt === "poster" ? 1 : undefined;
-      const append = String(a.mode ?? "").toLowerCase() === "append";
+      // Replacement is destructive and never the silent default: on a document
+      // that already has content (more than one page, or any non-empty page) the
+      // generated pages APPEND unless the plan step explicitly carries
+      // mode:"replace" - which the confirmation gate has warned about ("replaces
+      // all N pages"). A fresh empty document keeps the replace default so
+      // generation fills it in place.
+      const requestedMode = String(a.mode ?? "").toLowerCase();
+      const append = docHasContent(st.doc) ? requestedMode !== "replace" : requestedMode === "append";
       // Document/URL/file-to-deck (FR-23): with attached source content, the
       // outline is grounded strictly in it rather than invented from the brief.
       let brief = String(a.prompt);
@@ -2650,10 +2673,10 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       let ids: string[] = [];
       runAsTurn(() => { ids = useEditor.getState().buildSvgDesign(svg, { width, height }); });
       if (!ids.length) throw new Error("no nodes");
-      setTurns((t) => [...t, { role: "assistant", text: "Drew an editable vector design on this page. Every element is a real shape or text you can select and edit.", steps: [{ action: "generateVector", ok: true }] }]);
+      setTurns((t) => [...t, { role: "assistant", text: tr("editor.drew_an_editable_vector_design_on_this_page"), steps: [{ action: "generateVector", ok: true }] }]);
     } catch {
-      setTurns((t) => [...t, { role: "assistant", text: "Couldn't generate a vector design. Make sure an AI provider is connected in settings, then try again." }]);
-      toast.error("Vector generation failed.");
+      setTurns((t) => [...t, { role: "assistant", text: tr("editor.couldnt_generate_a_vector_design_make_sure_a") }]);
+      toast.error(tr("editor.vector_generation_failed"));
     } finally {
       setBusy(false);
     }
@@ -2742,7 +2765,13 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       {/* FR-8: confirm a large/destructive plan before it mutates the document. */}
       {pending && (
         <div className="mt-2 flex shrink-0 items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-800">
-          <span>Apply {pending.plan.length} step{pending.plan.length === 1 ? "" : "s"}?</span>
+          <span>
+            Apply {pending.plan.length} step{pending.plan.length === 1 ? "" : "s"}?
+            {(() => {
+              const n = planReplacePageCount(pending.plan, useEditor.getState().doc);
+              return n > 0 ? <strong className="ml-1">{tr("editor.replaces_all_n_pages", { count: n })}</strong> : null;
+            })()}
+          </span>
           <span className="flex gap-1">
             <button onClick={() => { const p = pending; setPending(null); void execute(p.plan, p.reply); }} className="rounded bg-amber-600 px-2 py-0.5 font-medium text-white hover:bg-amber-700">{tr("editor.confirm")}</button>
             <button onClick={() => { setPending(null); setTurns((t) => [...t, { role: "assistant", text: tr("editor.cancelled") }]); }} className="rounded border border-amber-300 px-2 py-0.5 hover:bg-amber-100">{tr("editor.cancel")}</button>
@@ -2859,11 +2888,11 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
           <button
             onClick={() => void genVector()}
             disabled={!canSend}
-            title="Draw the whole design as an editable vector on this page, using your text model. Works without an image model (beta)."
+            title={tr("editor.draw_the_whole_design_as_an_editable_vector")}
             className="flex items-center gap-1 rounded-full border border-neutral-200 bg-surface px-2 py-0.5 text-[10px] text-neutral-500 hover:border-brand-300 hover:text-brand-ink disabled:opacity-40"
           >
-            <Spline size={11} /> Vector design
-            <span className="rounded bg-brand-100 px-1 text-[9px] font-medium text-brand-ink">beta</span>
+            <Spline size={11} /> {tr("editor.vector_design")}
+            <span className="rounded bg-brand-100 px-1 text-[9px] font-medium text-brand-ink">{tr("editor.beta")}</span>
           </button>
         </div>
       </div>

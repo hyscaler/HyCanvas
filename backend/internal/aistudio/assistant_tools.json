@@ -223,7 +223,7 @@
   },
   {
     "name": "generateDesign",
-    "description": "Create a complete, finished design from scratch - a single poster, flyer, or social post, or a multi-page document or deck - with text, images, shapes, and layout composed for you (it replaces the current page(s) unless mode is 'append'). Use this whenever the user asks to create/make/design/build/generate something with content or a 'fresh layout'.",
+    "description": "Create a complete, finished design from scratch - a single poster, flyer, or social post, or a multi-page document or deck - with text, images, shapes, and layout composed for you. On a document that already has content the generated pages are APPENDED; replacement is destructive and never the default. Use this whenever the user asks to create/make/design/build/generate something with content or a 'fresh layout'.",
     "params": [
       {
         "name": "prompt",
@@ -246,7 +246,7 @@
         "name": "mode",
         "type": "string",
         "required": false,
-        "description": "'append' to add the generated pages to the current design instead of replacing it"
+        "description": "'append' adds the generated pages (already the default when the document has content); 'replace' DESTROYS and replaces every existing page - pass it ONLY when the user explicitly asks to replace/wipe/start over (they are asked to confirm)"
       }
     ],
     "mutates": true

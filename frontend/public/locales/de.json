@@ -3384,5 +3384,13 @@
   "editor.text_effects": "Texteffekte",
   "editor.no_animations_to_preview": "Auf dieser Seite gibt es noch keine Animationen",
   "editor.comments_open_count.one": "Kommentare ({count} offen)",
-  "editor.comments_open_count.other": "Kommentare ({count} offen)"
+  "editor.comments_open_count.other": "Kommentare ({count} offen)",
+  "editor.replaces_all_n_pages.one": "Ersetzt die aktuelle Seite.",
+  "editor.replaces_all_n_pages.other": "Ersetzt alle {count} Seiten.",
+  "editor.beta": "Beta",
+  "editor.couldnt_generate_a_vector_design_make_sure_a": "Vektordesign konnte nicht erstellt werden. Stelle sicher, dass in den Einstellungen ein KI-Anbieter verbunden ist, und versuche es erneut.",
+  "editor.draw_the_whole_design_as_an_editable_vector": "Zeichnet das gesamte Design als bearbeitbaren Vektor auf diese Seite, mit deinem Textmodell. Funktioniert ohne Bildmodell (Beta).",
+  "editor.drew_an_editable_vector_design_on_this_page": "Ein bearbeitbares Vektordesign wurde auf dieser Seite gezeichnet. Jedes Element ist eine echte Form oder ein Text, den du auswählen und bearbeiten kannst.",
+  "editor.vector_design": "Vektordesign",
+  "editor.vector_generation_failed": "Vektorerstellung fehlgeschlagen."
 }

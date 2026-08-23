@@ -3384,5 +3384,13 @@
   "editor.text_effects": "テキストエフェクト",
   "editor.no_animations_to_preview": "このページにはまだアニメーションがありません",
   "editor.comments_open_count.one": "コメント（未解決 {count} 件）",
-  "editor.comments_open_count.other": "コメント（未解決 {count} 件）"
+  "editor.comments_open_count.other": "コメント（未解決 {count} 件）",
+  "editor.replaces_all_n_pages.one": "現在のページを置き換えます。",
+  "editor.replaces_all_n_pages.other": "全{count}ページを置き換えます。",
+  "editor.beta": "ベータ",
+  "editor.couldnt_generate_a_vector_design_make_sure_a": "ベクターデザインを生成できませんでした。設定でAIプロバイダーが接続されていることを確認して、もう一度お試しください。",
+  "editor.draw_the_whole_design_as_an_editable_vector": "テキストモデルを使って、このページにデザイン全体を編集可能なベクターとして描画します。画像モデルなしで動作します（ベータ）。",
+  "editor.drew_an_editable_vector_design_on_this_page": "このページに編集可能なベクターデザインを描画しました。すべての要素は選択して編集できる実際の図形またはテキストです。",
+  "editor.vector_design": "ベクターデザイン",
+  "editor.vector_generation_failed": "ベクターの生成に失敗しました。"
 }

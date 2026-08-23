@@ -3384,5 +3384,13 @@
   "editor.text_effects": "Efectos de texto",
   "editor.no_animations_to_preview": "Todavía no hay animaciones en esta página",
   "editor.comments_open_count.one": "Comentarios ({count} abierto)",
-  "editor.comments_open_count.other": "Comentarios ({count} abiertos)"
+  "editor.comments_open_count.other": "Comentarios ({count} abiertos)",
+  "editor.replaces_all_n_pages.one": "Reemplaza la página actual.",
+  "editor.replaces_all_n_pages.other": "Reemplaza todas las {count} páginas.",
+  "editor.beta": "beta",
+  "editor.couldnt_generate_a_vector_design_make_sure_a": "No se pudo generar un diseño vectorial. Asegúrate de que haya un proveedor de IA conectado en la configuración e inténtalo de nuevo.",
+  "editor.draw_the_whole_design_as_an_editable_vector": "Dibuja todo el diseño como un vector editable en esta página, usando tu modelo de texto. Funciona sin modelo de imágenes (beta).",
+  "editor.drew_an_editable_vector_design_on_this_page": "Se dibujó un diseño vectorial editable en esta página. Cada elemento es una forma o texto real que puedes seleccionar y editar.",
+  "editor.vector_design": "Diseño vectorial",
+  "editor.vector_generation_failed": "La generación del vector falló."
 }
