@@ -26,7 +26,15 @@ export interface OutlineItem {
   title: string;
   points: string[];
   visualRole: VisualRole;
+  /** Speaker note for the page: 1-3 spoken-style sentences, plain text (no
+   *  markup), adding presenter context and delivery cues - never a restatement
+   *  of the slide text. Optional so older replies still normalize. */
+  note?: string;
 }
+
+/** Hard cap on a speaker note; the prompt asks for 100..500 chars and the
+ *  normalizer truncates defensively rather than failing the outline. */
+export const MAX_NOTE_CHARS = 500;
 
 export interface DesignOutline {
   title: string;
@@ -70,6 +78,17 @@ function str(v: unknown): string {
   return typeof v === "string" ? v.trim() : "";
 }
 
+/** Normalize a speaker note to plain single-paragraph text: collapse whitespace
+ *  runs (the note is spoken, not formatted) and cap the length at a sentence
+ *  boundary where one exists, mid-word truncation only as a last resort. */
+export function normalizeNote(v: unknown): string {
+  const flat = str(v).replace(/\s+/g, " ");
+  if (flat.length <= MAX_NOTE_CHARS) return flat;
+  const cut = flat.slice(0, MAX_NOTE_CHARS);
+  const sentenceEnd = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
+  return sentenceEnd > MAX_NOTE_CHARS / 2 ? cut.slice(0, sentenceEnd + 1) : cut;
+}
+
 /** Validate + normalize a parsed model value into a DesignOutline. Drops empty
  *  pages, defaults roles, and throws when nothing usable remains. */
 export function normalizeOutline(parsed: unknown): DesignOutline {
@@ -88,7 +107,8 @@ export function normalizeOutline(parsed: unknown): DesignOutline {
     const points = Array.isArray(p.points) ? p.points.map(str).filter(Boolean).slice(0, 8) : [];
     if (!pTitle && !points.length) continue;
     const visualRole = VISUAL_ROLES.includes(p.visualRole as VisualRole) ? (p.visualRole as VisualRole) : "content";
-    pages.push({ id: nextId(), title: pTitle || "Untitled", points, visualRole });
+    const note = normalizeNote(p.note);
+    pages.push({ id: nextId(), title: pTitle || "Untitled", points, visualRole, ...(note ? { note } : {}) });
   }
   if (!pages.length) {
     throw new OutlineError("The AI didn't return any pages. Try a more specific prompt.");
@@ -110,11 +130,18 @@ export const outlineJsonSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["title", "visualRole"],
+        required: ["title", "visualRole", "note"],
         properties: {
           title: { type: "string" },
           points: { type: "array", items: { type: "string" } },
           visualRole: { type: "string", enum: VISUAL_ROLES },
+          note: {
+            type: "string",
+            minLength: 100,
+            maxLength: 500,
+            description:
+              "speaker note: 1-3 spoken-style sentences of plain text (no markdown) that add presenter context and delivery cues; never restate the slide's visible text",
+          },
         },
       },
     },

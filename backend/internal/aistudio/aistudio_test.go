@@ -253,3 +253,42 @@ func TestAIStudio_DB(t *testing.T) {
 		t.Fatalf("list sessions: %v (n=%d)", err, len(sessions))
 	}
 }
+
+func TestNormalizeNote(t *testing.T) {
+	if got := normalizeNote("  Open with the story.\n\nPause  here. "); got != "Open with the story. Pause here." {
+		t.Errorf("whitespace not flattened: %q", got)
+	}
+	long := strings.Repeat("This sentence pads the speaker note out well past the cap. ", 20)
+	capped := normalizeNote(long)
+	if len([]rune(capped)) > maxNoteChars {
+		t.Errorf("note not capped: %d runes", len([]rune(capped)))
+	}
+	if !strings.HasSuffix(capped, ".") {
+		t.Errorf("note clipped mid-sentence: %q", capped)
+	}
+	hard := normalizeNote(strings.Repeat("x", 900))
+	if len([]rune(hard)) != maxNoteChars {
+		t.Errorf("hard truncation wrong length: %d", len([]rune(hard)))
+	}
+	// Rune safety: a multi-byte note must not be split inside a UTF-8 sequence.
+	multi := normalizeNote(strings.Repeat("ü", 900))
+	if len([]rune(multi)) != maxNoteChars {
+		t.Errorf("multi-byte truncation wrong rune length: %d", len([]rune(multi)))
+	}
+}
+
+func TestValidateOutlineNormalizesNotes(t *testing.T) {
+	o := &DesignOutline{Pages: []OutlineItem{
+		{Title: "A", Note: "  Keep it  spoken. "},
+		{Title: "B"},
+	}}
+	if err := validateOutline(o); err != nil {
+		t.Fatal(err)
+	}
+	if o.Pages[0].Note != "Keep it spoken." {
+		t.Errorf("note not normalized: %q", o.Pages[0].Note)
+	}
+	if o.Pages[1].Note != "" {
+		t.Errorf("absent note should stay empty, got %q", o.Pages[1].Note)
+	}
+}

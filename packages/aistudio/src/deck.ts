@@ -10,6 +10,8 @@ import { outlineItemToSpec, type DeckTheme, type DesignOutline } from "./outline
 export interface DeckPage extends LayoutResult {
   name: string;
   quality: QualityReport;
+  /** Speaker note carried from the outline item; becomes Page.notes. */
+  note?: string;
 }
 
 export interface DeckResult {
@@ -34,6 +36,7 @@ export function layoutDeck(
       ...laid,
       name: item.title || `Page ${i + 1}`,
       quality: qualityCheck({ ...laid, size }),
+      ...(item.note ? { note: item.note } : {}),
     };
   });
   return { title: outline.title, pages };

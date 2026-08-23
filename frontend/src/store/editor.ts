@@ -1915,6 +1915,7 @@ export const useEditor = create<EditorState>((set, get) => {
         height: h,
         background: p.background,
         children: structuredClone(p.nodes),
+        ...(p.note ? { notes: p.note } : {}), // speaker notes from the outline
       }));
       const pageIds = newPages.map((p) => p.id);
       const before = structuredClone(doc.pages);
@@ -1945,6 +1946,7 @@ export const useEditor = create<EditorState>((set, get) => {
         height: h,
         background: p.background,
         children: structuredClone(p.nodes),
+        ...(p.note ? { notes: p.note } : {}), // speaker notes from the outline
       }));
       const pageIds = newPages.map((p) => p.id);
       const snapshot = structuredClone(newPages);

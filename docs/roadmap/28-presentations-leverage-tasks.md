@@ -33,7 +33,7 @@ You are implementing one task at a time from the table below. For each session:
 | Task | Phase | Title | Status |
 | --- | --- | --- | --- |
 | T01 | 0 Repair | Assistant tool-catalog parity + test | done 2026-08-22 |
-| T02 | 0 Repair | Generated decks carry speaker notes | todo |
+| T02 | 0 Repair | Generated decks carry speaker notes | done 2026-08-23 |
 | T03 | 0 Repair | Non-destructive generation default | todo |
 | T04 | 0 Repair | Provider config gaps (dropdown, imageModel, azure preset) | todo |
 | T05 | 0 Repair | Sync stale docs to code | todo |
