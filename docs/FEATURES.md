@@ -31,6 +31,13 @@ A living checklist of what ships today versus what is planned. Shipped items are
 - [x] Slide master/layout/placeholder model + swappable deck Theme, schema v11 (F28 FR-3, FR-4)
 - [x] Accessibility model: per-node alt text + decorative, page reading order, schema v12 (F28 FR-29)
 - [x] Reading Order pane; keyboard Tab navigation follows reading order and skips decorative nodes (F28 FR-29)
+- [x] PPTX round-trip: export (editable text/shapes/images/notes, raster fallback) + import (incl. real tables; charts/SmartArt as placed placeholders; animations and master inheritance flatten)
+- [x] Deck-to-video: one-click server MP4 of the full playthrough (animations + transitions)
+- [x] Present-and-record: slides + ink + mic narration to a local .webm (camera bubble pending)
+- [x] Grid/outline overview editing view (`SlideOverview`: grid + outline, sections, drag reorder)
+- [x] Live audience over share links: Q&A with upvotes, presenter polls, emoji reactions (captions pending)
+- [x] Live data-linked charts/tables (inline CSV or URL via the SSRF-guarded proxy) + bulk data-merge (one slide per CSV row)
+- [x] Tagged, selectable-text PDF export
 - [x] Whiteboards (sticky/frame/ink/connectors, 8 templates, facilitation, synced timer, dot voting, convert-to-deck)
 - [x] Sheets (~48-function formula engine, formatting, borders, sort)
 - [x] Docs (block editor, callouts, embeds, AI writing tools, DOCX/PDF export)
@@ -47,9 +54,9 @@ A living checklist of what ships today versus what is planned. Shipped items are
 - [x] My tasks
 
 ### AI
-- [x] Bring-your-own-key providers (OpenAI/Anthropic/DeepSeek/custom), encrypted per workspace
-- [x] Magic Design, design assistant chat, image generation, restyle, chart, critique
-- [x] AI Creative Studio (outline-first multi-page generation), no-key Assist tools
+- [x] Bring-your-own-key providers (11 presets incl. OpenAI/Anthropic/DeepSeek/Azure OpenAI + custom), encrypted per workspace
+- [x] Design assistant chat: one agentic surface over the validated tool catalog (generate deck/doc/poster, images, restyle, charts, diagrams, whole-deck translation, speaker notes, critique); the earlier dedicated AI panels were consolidated into it
+- [x] Multi-page generation from server-validated outlines with speaker notes; doc/URL/file-to-deck ingestion (.txt/.md/.pdf text layer); no-key Assist tools
 
 ### Export and publishing
 - [x] Export: PNG/JPG/PDF/SVG/APNG/GIF/Lottie, size multipliers, page selection, zip
@@ -77,15 +84,16 @@ A living checklist of what ships today versus what is planned. Shipped items are
 ### AI media ([spec 23](roadmap/23-ai-media.md)), not started
 - [ ] Captions, TTS, music generation, AI avatars, lip-sync, image-to-video (blocked on the video pipeline + audio/video model endpoints)
 
-### Presentations ([spec 28](roadmap/28-presentations.md))
-- [ ] Deck-to-video (server MP4 with animations, transitions, narration); per-transition easing
+### Presentations ([spec 28](roadmap/28-presentations.md); the AI/generation remainder is broken down in [28-presentations-leverage-tasks.md](roadmap/28-presentations-leverage-tasks.md))
+- [ ] Narration in the exported deck video; per-transition easing
 - [ ] Tracked per-audience player links with passcodes and per-slide dwell analytics; iframe embed
-- [ ] Grid/outline overview editing view
-- [ ] PPTX import/export round-trip
-- [ ] Present-and-record; full-deck video
-- [ ] Live audience Q&A, polls, reactions, captions
-- [ ] AI design autopilot, whole-deck translation, speaker-note generation, doc/URL ingestion
-- [ ] Live data-linked charts, bulk merge; 60fps present at scale
+- [ ] Camera bubble in present-and-record
+- [ ] Live captions (blocked on the AI media pipeline, spec 23)
+- [ ] PPTX fidelity: native chart/SmartArt import, animation and master-inheritance preservation
+- [ ] Outline review step before generation (core ships; UI removed in the panel-to-chat consolidation)
+- [ ] Layout-grounded generation (AI decks targeting the master/layout/placeholder model)
+- [ ] Office-format ingestion (.docx/.pptx/.xlsx), multi-file grounding, scanned-PDF detection
+- [ ] 60fps present at scale (unverified)
 
 ### Whiteboard ([spec 30](roadmap/30-whiteboard.md))
 - [ ] True infinite canvas; board-native ink and free-draw connectors
