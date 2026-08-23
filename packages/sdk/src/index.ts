@@ -405,6 +405,14 @@ export interface MiniAppSummary {
   entry: string;
 }
 
+/** What an AI provider can do (mirrors the Go ai.Capabilities record). */
+export interface AiCapabilities {
+  text: boolean;
+  image: boolean;
+  describeImage: boolean;
+  editImage: boolean;
+}
+
 export interface AiConfigView {
   provider: string;
   model: string | null;
@@ -412,7 +420,7 @@ export interface AiConfigView {
   baseUrl: string | null;
   hasKey: boolean;
   /** What the configured provider can do (gates image-dependent features). */
-  capabilities: { text: boolean; image: boolean; describeImage: boolean; editImage: boolean };
+  capabilities: AiCapabilities;
 }
 
 /** One entry of the server's provider preset catalog (GET /ai/providers). */
@@ -422,7 +430,7 @@ export interface AiProviderPreset {
   baseUrl: string;
   defaultModel: string;
   defaultImageModel?: string;
-  capabilities: { text: boolean; image: boolean; describeImage: boolean; editImage: boolean };
+  capabilities: AiCapabilities;
   /** True when the user must supply the base URL (Azure/custom). */
   needsBaseUrl?: boolean;
 }
@@ -433,6 +441,8 @@ export interface AiOutlineItem {
   title: string;
   points: string[];
   visualRole: string;
+  /** Speaker note: 1-3 spoken-style plain-text sentences (100-500 chars). */
+  note?: string;
 }
 export interface AiDesignOutline {
   title: string;

@@ -13,7 +13,7 @@ import (
 	"encoding/json"
 )
 
-// currentSchemaVersion mirrors @hc/schema CURRENT_SCHEMA_VERSION.
+// currentSchemaVersion mirrors @hc/schema currentSchemaVersion.
 const currentSchemaVersion = 20
 
 // CurrentSchemaVersion is the exported mirror of currentSchemaVersion for other

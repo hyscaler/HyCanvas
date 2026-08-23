@@ -2,7 +2,7 @@ package persistence
 
 // The v20 write boundary (ImageNode.alphaMask).
 //
-// A schema bump must raise CURRENT_SCHEMA_VERSION and this Go mirror in the
+// A schema bump must raise currentSchemaVersion and this Go mirror in the
 // SAME change. Miss the mirror and validate.go range-checks the newer file out
 // with 422 and nothing persists, which is a data-loss bug that only shows up
 // once a client has already been upgraded.

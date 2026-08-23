@@ -2618,7 +2618,8 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       // FR-8: a large/destructive plan is previewed and confirmed before it runs;
       // a single small edit applies immediately. Confirm when the plan is multi-step
       // and mutating, OR contains a heavy whole-design action (generateDesign
-      // replaces every page).
+      // composes whole pages, and with explicit mode:"replace" destroys every
+      // existing one - the pending banner warns with the page count).
       const heavy = res.plan.some((s) => s.action === "generateDesign");
       if (heavy || (res.plan.length >= 2 && planMutates(res.plan, ASSISTANT_CATALOG))) {
         setPending({ plan: res.plan, reply: res.reply });
@@ -3181,24 +3182,20 @@ export function PolishPanel() {
   );
 }
 
-// Default model per built-in provider, shown as a placeholder hint so the user
-// knows what runs when the model field is left blank. The server registry
-// (GET /ai/providers) is the source of truth and supplies the hints at runtime;
-// this only covers the offline fallback presets below.
-const DEFAULT_MODEL_HINT: Record<string, string> = {
-  openai: "gpt-4o-mini",
-  anthropic: "claude-opus-4-8",
-  deepseek: "deepseek-chat",
-};
-
 // Offline fallback shown if GET /ai/providers is unreachable; the server
-// registry drives the dropdown whenever it loads.
+// registry drives the dropdown (and the model placeholder hints) whenever it
+// loads, so these only need the ids, URL flags, and defaults to stay usable.
 const FALLBACK_PRESETS: AiProviderPreset[] = [
   { id: "openai", label: "OpenAI", baseUrl: "", defaultModel: "gpt-4o-mini", defaultImageModel: "dall-e-3", capabilities: { text: true, image: true, describeImage: true, editImage: true } },
   { id: "anthropic", label: "Anthropic (Claude)", baseUrl: "", defaultModel: "claude-opus-4-8", capabilities: { text: true, image: false, describeImage: true, editImage: false } },
   { id: "deepseek", label: "DeepSeek", baseUrl: "", defaultModel: "deepseek-chat", capabilities: { text: true, image: false, describeImage: false, editImage: false } },
+  { id: "azure-openai", label: "Azure OpenAI", baseUrl: "", defaultModel: "gpt-4o-mini", defaultImageModel: "dall-e-3", capabilities: { text: true, image: true, describeImage: true, editImage: false }, needsBaseUrl: true },
   { id: "custom", label: "Custom (OpenAI-compatible)", baseUrl: "", defaultModel: "", capabilities: { text: true, image: true, describeImage: true, editImage: true }, needsBaseUrl: true },
 ];
+
+// Session cache for the server's provider catalog (a constant baked into the
+// binary): fetched at most once, shared by every AiPanel mount.
+let providerCatalogCache: AiProviderPreset[] | null = null;
 
 export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
   const toast = useToast();
@@ -3239,8 +3236,10 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
   const [baseUrl, setBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
   // The server's preset catalog drives the dropdown (11 providers, defaults,
-  // capabilities); the hardcoded fallback only covers a failed fetch.
-  const [presets, setPresets] = useState<AiProviderPreset[]>(FALLBACK_PRESETS);
+  // capabilities); the hardcoded fallback only covers a failed fetch. The
+  // catalog is baked into the server binary, so one successful fetch is cached
+  // for the whole session instead of refetching on every panel mount.
+  const [presets, setPresets] = useState<AiProviderPreset[]>(providerCatalogCache ?? FALLBACK_PRESETS);
 
   useEffect(() => {
     if (!workspaceId) return;
@@ -3248,10 +3247,10 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
     void (async () => {
       const [c, list] = await Promise.all([
         oc.getAiConfig(workspaceId).catch(() => null),
-        oc.aiProviders().catch(() => null),
+        providerCatalogCache ? Promise.resolve(providerCatalogCache) : oc.aiProviders().catch(() => null),
       ]);
       if (cancelled) return;
-      if (list?.length) setPresets(list);
+      if (list?.length) { providerCatalogCache = list; setPresets(list); }
       setConfig(c);
       setShowConfig(!c?.hasKey);
       if (c) { setProvider(c.provider); setModel(c.model ?? ""); setImageModel(c.imageModel ?? ""); setBaseUrl(c.baseUrl ?? ""); }
@@ -3261,10 +3260,13 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
   }, [workspaceId]);
 
   // The selected provider's preset: drives the base-URL requirement, the
-  // image-model field, and the placeholder hints.
+  // image-model field, and the placeholder hints. A provider we cannot resolve
+  // (legacy id, or the catalog fetch failed) keeps a stored base URL editable
+  // and RESENT on save - saveConfig omitting baseUrl NULLs the stored row, so
+  // hiding the field here would silently wipe a working config.
   const selPreset = presets.find((p) => p.id === provider);
-  const needsBaseUrl = selPreset ? !!selPreset.needsBaseUrl : provider === "custom";
-  const modelHint = selPreset?.defaultModel || DEFAULT_MODEL_HINT[provider] || "";
+  const needsBaseUrl = selPreset ? !!selPreset.needsBaseUrl : provider === "custom" || !!baseUrl;
+  const modelHint = selPreset?.defaultModel ?? "";
 
   async function saveConfig() {
     if (!workspaceId) return;

@@ -67,7 +67,7 @@ func validateOutline(o *DesignOutline) error {
 	return nil
 }
 
-// maxNoteChars mirrors MAX_NOTE_CHARS in packages/aistudio/src/outline.ts: the
+// maxNoteChars mirrors maxNoteChars in packages/aistudio/src/outline.ts: the
 // prompt asks for 100..500 chars and validation truncates defensively rather
 // than failing the outline.
 const maxNoteChars = 500

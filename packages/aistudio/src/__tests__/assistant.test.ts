@@ -115,7 +115,7 @@ describe("assistantSystemPrompt", () => {
 // one side is silently unreachable on the other (validateAssistant drops
 // unknown actions). If this test fails after you changed toolCatalog(),
 // regenerate the manifest from the TS catalog:
-//   node -e "const{toolCatalog}=require('./packages/aistudio/dist/index.js');require('fs').writeFileSync('backend/internal/aistudio/assistant_tools.json',JSON.stringify(toolCatalog(),null,2)+'\n')"
+//   npm run gen:ai-tools
 describe("server tool-catalog parity", () => {
   it("assistant_tools.json matches toolCatalog() exactly", async () => {
     const { readFileSync } = await import("node:fs");

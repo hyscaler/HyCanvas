@@ -246,3 +246,15 @@ func TestAzureOpenAIDialect(t *testing.T) {
 		t.Errorf("server saw api-key=%q authorization=%q", gotAPIKey, gotAuth)
 	}
 }
+
+// Providers that route by a user-supplied endpoint are rejected at the write
+// boundary when saved without one, instead of failing every later call as an
+// opaque 502 against a host-less URL. The check runs before any DB access.
+func TestSetConfigRequiresBaseURLForEndpointProviders(t *testing.T) {
+	svc := NewService(nil, "test-secret", true)
+	for _, provider := range []string{"azure-openai", "custom"} {
+		if _, err := svc.SetConfig(context.Background(), "ws", ConfigInput{Provider: provider, APIKey: "k"}); err != ErrBadRequest {
+			t.Errorf("SetConfig(%s, no baseUrl) = %v, want ErrBadRequest", provider, err)
+		}
+	}
+}

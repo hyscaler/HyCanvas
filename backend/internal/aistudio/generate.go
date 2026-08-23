@@ -179,12 +179,13 @@ func (s *Service) Chart(ctx context.Context, workspaceID, description string) (*
 	return generateValidated(ctx, s, workspaceID, system, strings.TrimSpace(description), validateChart)
 }
 
-// The assistant tool catalog is defined ONCE, in assistant_tools.json, which
-// mirrors toolCatalog() in packages/aistudio/src/assistant.ts exactly (a vitest
-// parity test asserts the two are deep-equal). The Go side derives its allowed
-// action set and the system-prompt tool list from the manifest, so the server
-// catalog can never drift from the client's again (it did once: five tools were
-// client-only and validateAssistant silently dropped them).
+// The assistant tool catalog is AUTHORED in toolCatalog() in
+// packages/aistudio/src/assistant.ts; assistant_tools.json is its generated
+// mirror (regenerate with `npm run gen:ai-tools` after editing the TS catalog;
+// a vitest parity test fails until the two are deep-equal). The Go side derives
+// its allowed action set and the system-prompt tool list from the manifest, so
+// the server catalog can never drift from the client's again (it did once:
+// five tools were client-only and validateAssistant silently dropped them).
 //
 //go:embed assistant_tools.json
 var assistantToolsJSON []byte
@@ -224,8 +225,9 @@ var assistantCatalog = func() map[string]bool {
 
 // assistantToolCatalogText renders the manifest in the same "- name(param:type?
 // (desc), ...): description" shape the client's assistantSystemPrompt uses, so
-// both paths brief the model identically.
-func assistantToolCatalogText() string {
+// both paths brief the model identically. Computed once at init: the manifest
+// is immutable, so there is nothing to re-render per request.
+var assistantToolCatalogText = func() string {
 	lines := make([]string, 0, len(assistantToolSpecs))
 	for _, t := range assistantToolSpecs {
 		params := make([]string, 0, len(t.Params))
@@ -246,7 +248,7 @@ func assistantToolCatalogText() string {
 		lines = append(lines, line+": "+t.Description)
 	}
 	return strings.Join(lines, "\n")
-}
+}()
 
 const assistantToolGuidance = `For writeText/generateImage/generateBackgroundImage/editSelectedImage/rewriteSelectedText/generateDesign pass the user's INTENT as the prompt/instruction arg (never the finished text). writeText adds a new text box; generateImage adds an image. So you CAN add text, shapes, images, and full layouts.`
 
@@ -258,8 +260,9 @@ func (s *Service) Assistant(ctx context.Context, workspaceID, designSummary, his
 		"Never invent tools or edit raw document JSON. " +
 		"Output ONLY a single JSON object, no prose/markdown/fences: {\"reply\":string,\"plan\":[{\"action\":string,\"args\":object}],\"clarify\"?:string}. " +
 		"You CAN create finished designs and add content - never reply that you cannot add text, shapes, images, or layouts. For any request to create/make/design/build/generate something with content from scratch (a poster, flyer, social post, document, presentation, or any 'fresh layout/content'), use generateDesign with an appropriate designType; it composes whole pages (text, shapes, images, layout), appending to a document that already has content. Pass mode:'replace' only when the user explicitly asks to replace or start over. " +
-		"Strongly prefer producing a plan over asking. Do NOT ask the user about page size, theme, or whether to add content - just generate it. Use \"clarify\" ONLY when the request is truly ambiguous (you cannot tell what to make) or would destroy specific existing work in more than one plausible way; otherwise return an empty clarify and a real plan. Keep the plan minimal. " +
-		"Example - user: \"professional marketing poster, fresh content and fresh layout\" -> {\"reply\":\"Creating a professional marketing poster.\",\"plan\":[{\"action\":\"generateDesign\",\"args\":{\"prompt\":\"professional marketing poster\",\"designType\":\"poster\"}}]}.\n\nTool catalog:\n" + assistantToolCatalogText() + "\n\nCurrent design:\n" + designSummary
+		"Strongly prefer producing a plan over asking. Do NOT ask the user about page size, theme, or whether to add content - just generate it. Use \"clarify\" ONLY when the request is truly ambiguous (you cannot tell what to make) or would destroy specific existing work in more than one plausible way; otherwise return an empty clarify and a real plan. " +
+		"Use action names verbatim from the catalog and provide every required arg with the correct type. Keep the plan minimal: only the steps needed. Prefer existing-selection actions (setSelectedText, recolorSelection) when the user refers to 'this' or 'the selected'. " +
+		"Example - user: \"professional marketing poster, fresh content and fresh layout\" -> {\"reply\":\"Creating a professional marketing poster.\",\"plan\":[{\"action\":\"generateDesign\",\"args\":{\"prompt\":\"professional marketing poster\",\"designType\":\"poster\"}}]}.\n\nTool catalog:\n" + assistantToolCatalogText + "\n\nCurrent design:\n" + designSummary
 	user := message
 	if strings.TrimSpace(history) != "" {
 		user = history + "\nuser: " + message

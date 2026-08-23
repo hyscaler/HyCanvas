@@ -6,11 +6,12 @@ import (
 	"testing"
 )
 
-// The assistant tool catalog is defined once in assistant_tools.json and shared
-// with the client (packages/aistudio/src/assistant.ts toolCatalog(); a vitest
-// test asserts the TS catalog deep-equals the manifest). These tests pin the Go
-// side of that contract: the manifest is well-formed, every tool is reachable
-// through validateAssistant, and the system prompt actually offers every tool.
+// The assistant tool catalog is authored in toolCatalog()
+// (packages/aistudio/src/assistant.ts); assistant_tools.json is its generated
+// mirror (`npm run gen:ai-tools`), and a vitest test asserts the two stay
+// deep-equal. These tests pin the Go side of that contract: the manifest is
+// well-formed, every tool is reachable through validateAssistant, and the
+// system prompt actually offers every tool.
 
 var validParamTypes = map[string]bool{
 	"string": true, "number": true, "color": true, "stringArray": true, "series": true,
@@ -61,7 +62,7 @@ func TestAssistantCatalogMatchesManifest(t *testing.T) {
 }
 
 func TestAssistantPromptOffersEveryTool(t *testing.T) {
-	text := assistantToolCatalogText()
+	text := assistantToolCatalogText
 	for _, spec := range assistantToolSpecs {
 		if !strings.Contains(text, "- "+spec.Name+"(") {
 			t.Errorf("system prompt tool list is missing %q", spec.Name)

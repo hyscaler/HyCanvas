@@ -145,6 +145,12 @@ func (s *Service) SetConfig(ctx context.Context, workspaceID string, in ConfigIn
 	if in.BaseURL != "" && !isSafeBaseURL(in.BaseURL, s.allowLocal) {
 		return nil, ErrBadRequest
 	}
+	// Providers that route by a user-supplied endpoint (Azure/custom) are
+	// unusable without one: reject at the write boundary with a 400 instead of
+	// letting every later call fail as an opaque 502 against a host-less URL.
+	if p := PresetFor(in.Provider); p != nil && p.NeedsBaseURL && in.BaseURL == "" {
+		return nil, ErrBadRequest
+	}
 	existing, err := s.getRow(ctx, workspaceID)
 	if err != nil {
 		return nil, err

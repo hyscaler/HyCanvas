@@ -101,7 +101,7 @@ Run from the repo root. After cloning, copy `.env.example` to `.env`, then `npm 
 - `npm run dev` - run the Go backend (:8005) and the frontend (:3000) with hot reload.
 - `npm run build` - build packages, the Go binary, and the frontend.
 - `npm run db:migrate` - apply SQL migrations (Go migrator); the server also migrates on boot.
-- `npm run test` - run package and Go backend tests.
+- `npm run test` - run package, frontend, and Go backend tests.
 - `npm run lint` - vet the Go backend and lint the frontend.
 - `npm run build:dist` then `npm run deploy` - build the single binary and restart it via the built-in service daemon (`hycanvas service restart`).
 

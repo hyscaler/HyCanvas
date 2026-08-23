@@ -83,10 +83,15 @@ function str(v: unknown): string {
  *  boundary where one exists, mid-word truncation only as a last resort. */
 export function normalizeNote(v: unknown): string {
   const flat = str(v).replace(/\s+/g, " ");
-  if (flat.length <= maxNoteChars) return flat;
-  const cut = flat.slice(0, maxNoteChars);
+  // Measure and cut in CODE POINTS (never splitting a surrogate pair), exactly
+  // like the Go mirror's rune handling, so server- and client-normalized notes
+  // agree on multibyte text. Slicing at sentenceEnd+1 is still safe because the
+  // sentence separators are ASCII.
+  const chars = Array.from(flat);
+  if (chars.length <= maxNoteChars) return flat;
+  const cut = chars.slice(0, maxNoteChars).join("");
   const sentenceEnd = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
-  return sentenceEnd > maxNoteChars / 2 ? cut.slice(0, sentenceEnd + 1) : cut;
+  return sentenceEnd >= 0 && Array.from(cut.slice(0, sentenceEnd)).length > maxNoteChars / 2 ? cut.slice(0, sentenceEnd + 1) : cut;
 }
 
 /** Validate + normalize a parsed model value into a DesignOutline. Drops empty
@@ -138,7 +143,7 @@ export const outlineJsonSchema = {
           note: {
             type: "string",
             minLength: 100,
-            maxLength: 500,
+            maxLength: maxNoteChars,
             description:
               "speaker note: 1-3 spoken-style sentences of plain text (no markdown) that add presenter context and delivery cues; never restate the slide's visible text",
           },
