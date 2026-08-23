@@ -4,7 +4,7 @@
 // provider uses to lazy-load a family. A small featured set is surfaced first.
 // Uploaded/brand fonts (FR-6) are layered on top of this at runtime.
 
-import { GENERATED_FONTS } from "./font-catalog.generated";
+import { generatedFonts } from "./font-catalog.generated";
 
 export type FontCategory =
   | "sans-serif"
@@ -48,8 +48,8 @@ const SYSTEM_ENTRY: FontCatalogEntry = { family: "system", category: "sans-serif
  * works offline with no API key; each family's web font is fetched on demand from
  * the configured provider (Bunny) when it is previewed or applied.
  */
-export const FONT_CATALOG: FontCatalogEntry[] = (() => {
-  const byName = new Map(GENERATED_FONTS.map((f) => [f.family.toLowerCase(), f]));
+export const fontCatalog: FontCatalogEntry[] = (() => {
+  const byName = new Map(generatedFonts.map((f) => [f.family.toLowerCase(), f]));
   const seen = new Set<string>();
   const featured: FontCatalogEntry[] = [];
   for (const name of FEATURED_ORDER) {
@@ -57,11 +57,11 @@ export const FONT_CATALOG: FontCatalogEntry[] = (() => {
     const e = byName.get(key);
     if (e && !seen.has(key)) { featured.push(e); seen.add(key); }
   }
-  const rest = GENERATED_FONTS.filter((f) => !seen.has(f.family.toLowerCase()));
+  const rest = generatedFonts.filter((f) => !seen.has(f.family.toLowerCase()));
   return [SYSTEM_ENTRY, ...featured, ...rest];
 })();
 
-const BY_FAMILY = new Map(FONT_CATALOG.map((f) => [f.family.toLowerCase(), f]));
+const BY_FAMILY = new Map(fontCatalog.map((f) => [f.family.toLowerCase(), f]));
 
 /** True for the system stack (no web font to load). */
 export function isSystemFont(family: string | undefined): boolean {
@@ -76,7 +76,7 @@ export function getFontEntry(family: string): FontCatalogEntry | undefined {
 /** Search the catalog by free text and optional category, ranked by prefix. */
 export function searchFonts(query = "", category?: FontCategory): FontCatalogEntry[] {
   const q = query.trim().toLowerCase();
-  const base = category ? FONT_CATALOG.filter((f) => f.category === category) : FONT_CATALOG;
+  const base = category ? fontCatalog.filter((f) => f.category === category) : fontCatalog;
   if (!q) return base;
   return base
     .filter((f) => f.family.toLowerCase().includes(q))

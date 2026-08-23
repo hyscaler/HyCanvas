@@ -28,8 +28,8 @@ import { imageAssets } from "@/lib/assetProvider";
 import { useViewBeat } from "@/lib/useViewBeat";
 import { AudiencePanel } from "@/components/AudiencePanel";
 import { oc } from "@/lib/sdk";
-import { nextVisibleIndex, prevVisibleIndex, firstVisibleIndex, visiblePosition, LIVE_STALE_MS } from "@/lib/present";
-import { DESIGN_SURFACE_DIR } from "@/lib/locale";
+import { nextVisibleIndex, prevVisibleIndex, firstVisibleIndex, visiblePosition, liveStaleMs } from "@/lib/present";
+import { designSurfaceDir } from "@/lib/locale";
 import { tr } from "@/lib/i18n";
 
 type Transition = NonNullable<DesignFile["pages"][number]["transition"]>;
@@ -53,7 +53,7 @@ export function DeckPlayer({ doc, token, password }: { doc: DesignFile; token?: 
 
   // Slide-follow (doc 28): while the presenter is live, offer to follow. The
   // player polls the audience state (viewers hold no socket); a fresh live row
-  // (< LIVE_STALE_MS) shows the banner, and following mirrors the presenter's slide.
+  // (< liveStaleMs) shows the banner, and following mirrors the presenter's slide.
   const [live, setLive] = useState<{ slide: number; at: number } | null>(null);
   const [following, setFollowing] = useState(false);
   const followingRef = useRef(false);
@@ -69,7 +69,7 @@ export function DeckPlayer({ doc, token, password }: { doc: DesignFile; token?: 
       try {
         const st = await oc.audienceState(token, { voterKey: "follow-probe", password });
         if (cancelled) return;
-        const fresh = st.live && Date.now() - new Date(st.live.updatedAt).getTime() < LIVE_STALE_MS ? st.live : null;
+        const fresh = st.live && Date.now() - new Date(st.live.updatedAt).getTime() < liveStaleMs ? st.live : null;
         setLive(fresh ? { slide: fresh.slide, at: Date.now() } : null);
         if (fresh && followingRef.current) {
           const target = Math.max(0, Math.min(fresh.slide, doc.pages.length - 1));
@@ -272,7 +272,7 @@ export function DeckPlayer({ doc, token, password }: { doc: DesignFile; token?: 
     <div
       ref={wrapRef}
       className="relative flex min-h-0 w-full flex-1 flex-col bg-neutral-900"
-      dir={DESIGN_SURFACE_DIR}
+      dir={designSurfaceDir}
       data-testid="deck-player"
     >
       <div ref={stageRef} className="grid min-h-0 flex-1 place-items-center overflow-hidden p-2">

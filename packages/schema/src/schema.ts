@@ -66,10 +66,10 @@ import { z } from "zod";
  *      discarded the original pixels; keeping both makes the cutout a view
  *      rather than a replacement, and therefore undoable and refinable.
  *      Additive: a v19 file has no mask and renders exactly as before. */
-export const CURRENT_SCHEMA_VERSION = 20;
+export const currentSchemaVersion = 20;
 
 /** Maximum container nesting depth; guards traversal against stack overflow (FR-4). */
-export const MAX_NESTING_DEPTH = 32;
+export const maxNestingDepth = 32;
 
 // ---------------------------------------------------------------------------
 // Section 6.2: shared value types
@@ -668,14 +668,14 @@ export type NodeType =
 // Node types with a concrete schema today. `model3d` is reserved/deferred
 // (Section 2), so it is intentionally absent here and is validated by its base
 // alone, like any newer/unknown type.
-export const KNOWN_NODE_TYPES: readonly NodeType[] = [
+export const knownNodeTypes: readonly NodeType[] = [
   "text", "image", "shape", "line", "path", "icon", "sticker",
   "group", "frame", "grid", "video", "audio", "table", "chart",
   "embed", "qr", "connector", "mask", "boolean", "sticky",
   "ink", "mindmap", "boardview", "diagramcode", "stamp",
 ] as const;
 
-const KNOWN_NODE_TYPE_SET = new Set<string>(KNOWN_NODE_TYPES);
+const KNOWN_NODE_TYPE_SET = new Set<string>(knownNodeTypes);
 export function isKnownNodeType(type: string): type is NodeType {
   return KNOWN_NODE_TYPE_SET.has(type);
 }
@@ -1800,7 +1800,7 @@ export type KnownNode =
 export type Node = KnownNode | UnknownNode;
 
 /** Per-type schemas for every known node type, keyed by discriminator. */
-export const KNOWN_NODE_SCHEMAS = {
+export const knownNodeSchemas = {
   text: TextNodeSchema,
   image: ImageNodeSchema,
   shape: ShapeNodeSchema,

@@ -34,9 +34,9 @@ function nearestOnSegment(
   p: { x: number; y: number },
 ): { t: number; dist: number } {
   let best = { t: 0, dist: Infinity };
-  const STEPS = 24;
-  for (let s = 0; s <= STEPS; s++) {
-    const t = s / STEPS;
+  const steps = 24;
+  for (let s = 0; s <= steps; s++) {
+    const t = s / steps;
     const u = 1 - t;
     const x = u * u * u * a.x + 3 * u * u * t * c1.x + 3 * u * t * t * c2.x + t * t * t * b.x;
     const y = u * u * u * a.y + 3 * u * u * t * c1.y + 3 * u * t * t * c2.y + t * t * t * b.y;

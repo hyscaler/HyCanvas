@@ -16,7 +16,7 @@ export interface QrOptions {
   logoAssetId?: string;
 }
 
-const BLACK: Color = { srgb: { r: 0, g: 0, b: 0, a: 1 } };
+const black: Color = { srgb: { r: 0, g: 0, b: 0, a: 1 } };
 const WHITE: Color = { srgb: { r: 1, g: 1, b: 1, a: 1 } };
 
 /** Create an editable QR node bound to `value` (FR-10). */
@@ -29,7 +29,7 @@ export function createQrNode(value: string, opts: QrOptions = {}, id = "qr"): No
     value,
     ecLevel,
     modules: encodeQrMatrix(value, ecLevel),
-    foreground: opts.foreground ?? BLACK,
+    foreground: opts.foreground ?? black,
     background: opts.background ?? WHITE,
     ...(opts.logoAssetId ? { logoAssetId: opts.logoAssetId } : {}),
   } as Partial<Node>);

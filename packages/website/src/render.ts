@@ -42,7 +42,7 @@ export interface Breakpoints {
   mobile: number;
 }
 
-export const DEFAULT_BREAKPOINTS: Breakpoints = { desktop: 1280, tablet: 768, mobile: 390 };
+export const defaultBreakpoints: Breakpoints = { desktop: 1280, tablet: 768, mobile: 390 };
 
 export interface RenderContext {
   /** Resolve an asset id (or a direct url) to a servable URL. */
@@ -445,7 +445,7 @@ function cssEscape(id: string): string {
  *  per-breakpoint overrides we emit those; otherwise the page scales
  *  proportionally to the viewport width within each breakpoint. */
 export function renderResponsiveCss(page: Page, ctx: RenderContext): string {
-  const bp = ctx.breakpoints ?? DEFAULT_BREAKPOINTS;
+  const bp = ctx.breakpoints ?? defaultBreakpoints;
   const withOv = nodesWithOverrides(page);
   const blocks: string[] = [];
 

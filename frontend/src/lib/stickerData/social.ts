@@ -3,7 +3,7 @@ import type { Sticker } from "../stickers";
 
 const svg = (inner: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${inner}</svg>`;
 
-export const SOCIAL_STICKERS: Sticker[] = [
+export const socialStickers: Sticker[] = [
   { id: "so-heart-like", label: "Heart Like", category: "Social", keywords: ["love", "favorite", "reaction", "like"], svg: svg('<path d="M50 84C22 62 12 44 12 30 12 18 21 10 32 10c8 0 14 5 18 12 4-7 10-12 18-12 11 0 20 8 20 20 0 14-10 32-38 54Z" fill="#ef4444"/>') },
   { id: "so-double-heart", label: "Double Heart", category: "Social", keywords: ["love", "hearts", "romance", "valentine"], svg: svg('<path d="M40 82C20 66 12 52 12 42c0-9 7-15 15-15 6 0 10 3 13 8 3-5 7-8 13-8 8 0 15 6 15 15 0 10-8 24-28 40Z" fill="#f43f5e"/><path d="M74 46C64 38 60 31 60 26c0-5 4-8 8-8 3 0 5 2 6 4 1-2 3-4 6-4 4 0 8 3 8 8 0 5-4 12-14 20Z" fill="#f472b6"/>') },
   { id: "so-thumbs-up", label: "Thumbs Up", category: "Social", keywords: ["like", "approve", "yes", "good"], svg: svg('<path d="M30 44h12l8-24c2-6 6-8 10-8 5 0 8 4 8 10l-3 22h19c6 0 10 5 9 11l-4 26c-1 6-6 9-12 9H30Z" fill="#3b82f6"/><rect x="14" y="44" width="14" height="46" rx="4" fill="#1d4ed8"/>') },

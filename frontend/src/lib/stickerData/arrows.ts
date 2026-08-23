@@ -3,7 +3,7 @@ import type { Sticker } from "../stickers";
 
 const svg = (inner: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${inner}</svg>`;
 
-export const ARROW_STICKERS: Sticker[] = [
+export const arrowStickers: Sticker[] = [
   { id: "ar-chevron-right", label: "Chevron Right", category: "Arrows", keywords: ["chevron", "next", "right", "forward", "caret"], svg: svg('<polygon points="36 8, 78 50, 36 92, 22 78, 50 50, 22 22" fill="#3b82f6"/>') },
   { id: "ar-double-chevron-right", label: "Double Chevron", category: "Arrows", keywords: ["chevron", "skip", "fast forward", "double", "next"], svg: svg('<polygon points="21 12, 59 50, 21 88, 12 79, 41 50, 12 21" fill="#93c5fd"/><polygon points="49 12, 87 50, 49 88, 40 79, 69 50, 40 21" fill="#3b82f6"/>') },
   { id: "ar-bold-arrow-right", label: "Bold Arrow Right", category: "Arrows", keywords: ["arrow", "right", "next", "forward", "direction"], svg: svg('<polygon points="8 38, 54 38, 54 20, 92 50, 54 80, 54 62, 8 62" fill="#ef4444"/>') },

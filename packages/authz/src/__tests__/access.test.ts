@@ -4,7 +4,7 @@ import {
   hasCapability,
   modeCanEdit,
   isBuiltinRole,
-  BUILTIN_ROLE_CAPABILITIES,
+  builtinRoleCapabilities,
   type CustomRole,
 } from "../access";
 
@@ -114,8 +114,8 @@ describe("capability sets", () => {
   });
 
   it("exposes the built-in capability table", () => {
-    expect(BUILTIN_ROLE_CAPABILITIES.viewer).not.toContain("edit");
-    expect(BUILTIN_ROLE_CAPABILITIES.admin).toContain("manage-roles");
+    expect(builtinRoleCapabilities.viewer).not.toContain("edit");
+    expect(builtinRoleCapabilities.admin).toContain("manage-roles");
   });
 });
 
@@ -128,10 +128,10 @@ describe("manage-brand capability", () => {
   });
 
   it("appears in the built-in capability table for owner/admin only", () => {
-    expect(BUILTIN_ROLE_CAPABILITIES.owner).toContain("manage-brand");
-    expect(BUILTIN_ROLE_CAPABILITIES.admin).toContain("manage-brand");
-    expect(BUILTIN_ROLE_CAPABILITIES.member).not.toContain("manage-brand");
-    expect(BUILTIN_ROLE_CAPABILITIES.viewer).not.toContain("manage-brand");
+    expect(builtinRoleCapabilities.owner).toContain("manage-brand");
+    expect(builtinRoleCapabilities.admin).toContain("manage-brand");
+    expect(builtinRoleCapabilities.member).not.toContain("manage-brand");
+    expect(builtinRoleCapabilities.viewer).not.toContain("manage-brand");
   });
 
   it("can be granted to a member via a custom role", () => {

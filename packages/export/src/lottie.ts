@@ -8,7 +8,7 @@
 import type { DesignFile, Node, NodeAnimation, ImageMotion, Fill } from "@hc/schema";
 import { childrenOf } from "@hc/schema";
 import {
-  type AnimPatch, IDENTITY_PATCH, appliedOpacity, clipEnd,
+  type AnimPatch, identityPatch, appliedOpacity, clipEnd,
   entrancePatch, emphasisPatch, customPatch, imageMotionPatch,
 } from "@hc/engine";
 
@@ -59,7 +59,7 @@ interface LottieLayer {
 }
 
 function compose(a: AnimPatch | null, b: AnimPatch): AnimPatch {
-  const base = a ?? IDENTITY_PATCH;
+  const base = a ?? identityPatch;
   return {
     dx: base.dx + b.dx,
     dy: base.dy + b.dy,
@@ -79,7 +79,7 @@ function patchAt(node: Node, tMs: number): AnimPatch {
   else if (anim?.entrance) patch = entrancePatch(anim.entrance, entEnd);
   if (anim?.custom) patch = compose(patch, customPatch(anim.custom, tMs - entEnd));
   if (motion) patch = compose(patch, imageMotionPatch(motion, tMs));
-  return patch ?? { ...IDENTITY_PATCH };
+  return patch ?? { ...identityPatch };
 }
 
 function isAnimated(node: Node): boolean {

@@ -156,9 +156,9 @@ function fitOneCubic(points: Point[], tHat0: Point, tHat3: Point, u: number[]): 
 // dense sampling of the curve, so the reported error matches the geometric
 // deviation a viewer sees (not just the deviation at the chord parameter).
 function maxFitError(points: Point[], bez: CubicBezier): { error: number; index: number } {
-  const STEPS = 48;
+  const steps = 48;
   const curve: Point[] = [];
-  for (let s = 0; s <= STEPS; s++) curve.push(cubicAt(bez, s / STEPS));
+  for (let s = 0; s <= steps; s++) curve.push(cubicAt(bez, s / steps));
   let error = 0;
   let index = Math.floor(points.length / 2);
   for (let i = 1; i < points.length - 1; i++) {

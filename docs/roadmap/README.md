@@ -33,7 +33,7 @@ bumped to a version already in use, and the Go write boundary would have
 started rejecting files. Claim the number HERE first, then edit the spec.
 
 Two rules that follow from the counter being global. A bump must raise
-`CURRENT_SCHEMA_VERSION` and the Go mirror in the SAME change, or the write
+`currentSchemaVersion` and the Go mirror in the SAME change, or the write
 boundary answers 422 and nothing persists. And a version is permanent once it
 reaches a real instance: under the zero-data-loss rule every later binary has
 to open, migrate, and preserve it forever, so the moment before a schema

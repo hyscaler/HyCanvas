@@ -6,8 +6,8 @@
 import { useEffect, useReducer, useState } from "react";
 import { RotateCcw, Circle } from "lucide-react";
 import {
-  REMAPPABLE_COMMANDS,
-  COMMAND_LABELS,
+  remappableCommands,
+  commandLabels,
   getChord,
   setChord,
   resetChord,
@@ -57,7 +57,7 @@ export function ShortcutsCustomizer() {
 
   const conflicts = shortcutConflicts();
   const conflictCmds = new Set(conflicts.flatMap((c) => c.commandIds));
-  const anyCustom = REMAPPABLE_COMMANDS.some((id) => isCustomized(id));
+  const anyCustom = remappableCommands.some((id) => isCustomized(id));
 
   return (
     <div className="mb-5 rounded-xl border border-neutral-200 bg-neutral-50/60 p-4">
@@ -84,8 +84,8 @@ export function ShortcutsCustomizer() {
       {error && <p className="mb-2 rounded-md bg-red-50 px-2.5 py-1.5 text-[11px] text-red-700">{error}</p>}
 
       <ul className="space-y-1">
-        {REMAPPABLE_COMMANDS.map((id) => {
-          const meta = COMMAND_LABELS[id];
+        {remappableCommands.map((id) => {
+          const meta = commandLabels[id];
           const chord = getChord(id);
           const inConflict = conflictCmds.has(id);
           const rec = recording === id;

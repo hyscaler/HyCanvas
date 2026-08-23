@@ -3,7 +3,7 @@ import type { Sticker } from "../stickers";
 
 const svg = (inner: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${inner}</svg>`;
 
-export const CALLOUT_STICKERS: Sticker[] = [
+export const calloutStickers: Sticker[] = [
   { id: "co-speech-bubble", label: "Speech Bubble", category: "Callouts", keywords: ["speech", "talk", "chat", "message", "comment"], svg: svg('<path d="M24 92 L34 73 A38 32 0 1 1 53 76 Z" fill="#3b82f6"/>') },
   { id: "co-chat-rect", label: "Chat Message", category: "Callouts", keywords: ["chat", "message", "text", "sms", "bubble"], svg: svg('<rect x="12" y="16" width="76" height="52" rx="12" fill="#22c55e"/><path d="M28 66 22 90 46 68Z" fill="#22c55e"/><rect x="26" y="32" width="48" height="7" rx="3.5" fill="#ffffff"/><rect x="26" y="46" width="32" height="7" rx="3.5" fill="#ffffff"/>') },
   { id: "co-thought-bubble", label: "Thought Cloud", category: "Callouts", keywords: ["thought", "think", "dream", "idea", "cloud"], svg: svg('<circle cx="33" cy="44" r="14" fill="#93c5fd"/><circle cx="67" cy="44" r="14" fill="#93c5fd"/><circle cx="50" cy="36" r="17" fill="#93c5fd"/><ellipse cx="50" cy="52" rx="26" ry="13" fill="#93c5fd"/><circle cx="38" cy="73" r="6" fill="#93c5fd"/><circle cx="28" cy="86" r="4" fill="#93c5fd"/>') },

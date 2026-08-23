@@ -15,7 +15,7 @@ import {
   evaluateGate,
   aggregateStatus,
   // catalog
-  PRINT_CATALOG,
+  printCatalog,
   filterCatalog,
   findProduct,
   findSize,
@@ -329,22 +329,22 @@ describe("aggregateStatus + evaluateGate (FR-6)", () => {
 
 describe("catalog (FR-1/FR-14)", () => {
   it("seed catalog includes the required product categories", () => {
-    const cats = new Set(PRINT_CATALOG.map((p) => p.category));
+    const cats = new Set(printCatalog.map((p) => p.category));
     for (const c of ["business_card", "flyer", "poster", "sticker", "mug", "tshirt"]) {
       expect(cats.has(c)).toBe(true);
     }
   });
 
   it("filters by category and region", () => {
-    expect(filterCatalog(PRINT_CATALOG, { category: "poster" }).every((p) => p.category === "poster")).toBe(true);
-    const inIndia = filterCatalog(PRINT_CATALOG, { region: "IN" });
+    expect(filterCatalog(printCatalog, { category: "poster" }).every((p) => p.category === "poster")).toBe(true);
+    const inIndia = filterCatalog(printCatalog, { region: "IN" });
     expect(inIndia.every((p) => p.regions.includes("IN"))).toBe(true);
     // poster is not available in IN in the seed.
     expect(inIndia.find((p) => p.category === "poster")).toBeUndefined();
   });
 
   it("findProduct / findSize resolve by id", () => {
-    const bc = findProduct(PRINT_CATALOG, "business_card_std");
+    const bc = findProduct(printCatalog, "business_card_std");
     expect(bc).toBeDefined();
     expect(findSize(bc!, "bc_85x55")).toBeDefined();
     expect(findSize(bc!, "nope")).toBeUndefined();

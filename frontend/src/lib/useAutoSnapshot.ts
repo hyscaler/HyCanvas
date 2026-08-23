@@ -23,7 +23,7 @@ import { getDesignDoc } from "@/lib/useRealtime";
 const IDLE_MS = 4000; // snapshot this long after the last edit
 const MAX_INTERVAL_MS = 90_000; // ...and at least this often during nonstop editing
 const CHECKPOINT_INTERVAL_MS = 5 * 60_000; // compact the CRDT update log at most this often
-export const CHECKPOINT_MAX_BYTES = 20 * 1024 * 1024 - 4096; // stay just under the server's 20MiB cap
+export const checkpointMaxBytes = 20 * 1024 * 1024 - 4096; // stay just under the server's 20MiB cap
 
 /**
  * Drive automatic "auto"-kind snapshots off real document mutations. Pass a
@@ -64,7 +64,7 @@ export function useAutoSnapshot(designId: string | null, onSaved?: () => void) {
         if (branch) {
           if (doc && Date.now() - lastCheckpointAt > CHECKPOINT_INTERVAL_MS) {
             const solo = Object.keys(usePresence.getState().peers).length === 0;
-            const cpFrame = solo ? doc.checkpointFrame(CHECKPOINT_MAX_BYTES) : null;
+            const cpFrame = solo ? doc.checkpointFrame(checkpointMaxBytes) : null;
             if (cpFrame) {
               await oc.checkpointDesign(designId, cpFrame, branch);
               lastCheckpointAt = Date.now();
@@ -102,7 +102,7 @@ export function useAutoSnapshot(designId: string | null, onSaved?: () => void) {
         // log just grows during active collaboration and compacts once it settles).
         const solo = Object.keys(usePresence.getState().peers).length === 0;
         if (doc && solo && Date.now() - lastCheckpointAt > CHECKPOINT_INTERVAL_MS) {
-          const cpFrame = doc.checkpointFrame(CHECKPOINT_MAX_BYTES); // null if too big to upload
+          const cpFrame = doc.checkpointFrame(checkpointMaxBytes); // null if too big to upload
           if (!cpFrame) {
             lastCheckpointAt = Date.now(); // back off so we don't re-encode a huge doc every tick
           } else {

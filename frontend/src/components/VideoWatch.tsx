@@ -17,7 +17,7 @@ import { fonts } from "@/lib/fontProvider";
 import { imageAssets } from "@/lib/assetProvider";
 import { useViewBeat } from "@/lib/useViewBeat";
 import { resolveAssetUrl } from "@/lib/sdk";
-import { DESIGN_SURFACE_DIR } from "@/lib/locale";
+import { designSurfaceDir } from "@/lib/locale";
 import { tr } from "@/lib/i18n";
 
 function fmt(frame: number, fps: number): string {
@@ -207,7 +207,7 @@ export function VideoWatch({ doc, token, password }: { doc: DesignFile; token?: 
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 p-4" dir={DESIGN_SURFACE_DIR}>
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 p-4" dir={designSurfaceDir}>
       <div className="relative w-full max-w-3xl">
         <canvas
           ref={canvasRef}

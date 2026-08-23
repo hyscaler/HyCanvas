@@ -212,7 +212,7 @@ export interface Renderer {
   dispose(): void;
 }
 
-export const DEFAULT_CONFIG: EngineConfig = {
+export const defaultConfig: EngineConfig = {
   preferGpu: true,
   tileSize: 256,
   maxTextureSize: 4096,

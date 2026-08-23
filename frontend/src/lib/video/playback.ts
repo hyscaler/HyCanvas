@@ -16,7 +16,7 @@ import {
 } from "./compositor";
 import { ChromaKeyer } from "./chromaKey";
 import { createScene, renderScene, poseDesignAt, exitPatch, clipEnd, type CanvasLike } from "@hc/engine";
-import { CURRENT_SCHEMA_VERSION, type DesignFile, type Node } from "@hc/schema";
+import { currentSchemaVersion, type DesignFile, type Node } from "@hc/schema";
 import { imageAssets } from "@/lib/assetProvider";
 
 /** Collect the asset ids of any image nodes in an element tree (for cache keying
@@ -40,7 +40,7 @@ function isAnimated(node: Node): boolean {
 function elementFile(node: Node, width: number, height: number): DesignFile {
   return {
     format: "hycanvas.design",
-    schemaVersion: CURRENT_SCHEMA_VERSION,
+    schemaVersion: currentSchemaVersion,
     id: "video-element",
     title: "",
     unit: "px",

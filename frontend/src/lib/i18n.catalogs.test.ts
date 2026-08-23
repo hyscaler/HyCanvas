@@ -5,7 +5,7 @@ import { describe, expect, it, beforeEach } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { BASE, registerCatalog, loadCatalog, translate, resetI18n } from "./i18n";
+import { baseCatalog, registerCatalog, loadCatalog, translate, resetI18n } from "./i18n";
 
 const DIR = join(fileURLToPath(new URL(".", import.meta.url)), "..", "..", "public", "locales");
 const load = (tag: string) => JSON.parse(readFileSync(join(DIR, `${tag}.json`), "utf8")) as Record<string, string>;
@@ -22,13 +22,13 @@ describe.each(FULL)("catalog %s", (tag) => {
   });
 
   it("covers every key in the base catalog", () => {
-    const missing = Object.keys(BASE).filter((k) => !(k in cat));
+    const missing = Object.keys(baseCatalog).filter((k) => !(k in cat));
     expect(missing).toEqual([]);
   });
 
   it("keeps every {placeholder} intact", () => {
     const ph = (s: string) => (s.match(/\{\w+\}/g) ?? []).sort().join(",");
-    const broken = Object.keys(cat).filter((k) => k in BASE && ph(BASE[k]) !== ph(cat[k]));
+    const broken = Object.keys(cat).filter((k) => k in baseCatalog && ph(baseCatalog[k]) !== ph(cat[k]));
     expect(broken).toEqual([]);
   });
 
@@ -51,7 +51,7 @@ describe("catalog en-gb", () => {
     const gb = load("en-gb");
     // Every entry must genuinely differ, or it is dead weight the per-key
     // fallback would have handled.
-    const same = Object.keys(gb).filter((k) => k in BASE && gb[k] === BASE[k]);
+    const same = Object.keys(gb).filter((k) => k in baseCatalog && gb[k] === baseCatalog[k]);
     expect(same).toEqual([]);
     expect(gb["dashboard.favorites"]).toBe("Favourites");
   });

@@ -10,7 +10,7 @@ import {
   clipEnd,
   transitionProgress,
   appliedOpacity,
-  IDENTITY_PATCH,
+  identityPatch,
 } from "../animation";
 
 const clip = <P extends string>(preset: P, durationMs = 500, delayMs = 0): AnimationClip<P> => ({
@@ -145,9 +145,9 @@ describe("transitionProgress", () => {
   });
 });
 
-describe("IDENTITY_PATCH", () => {
+describe("identityPatch", () => {
   it("is a no-op patch", () => {
-    expect(IDENTITY_PATCH).toEqual({ dx: 0, dy: 0, scale: 1, rotate: 0, opacityMul: 1 });
+    expect(identityPatch).toEqual({ dx: 0, dy: 0, scale: 1, rotate: 0, opacityMul: 1 });
   });
 });
 

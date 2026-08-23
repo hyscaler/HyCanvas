@@ -3,7 +3,7 @@
 import type { SocialPlatform } from "./types";
 
 /** Max caption length (characters) per platform. */
-export const PLATFORM_LIMITS: Record<SocialPlatform, number> = {
+export const platformLimits: Record<SocialPlatform, number> = {
   instagram: 2200,
   x: 280,
   linkedin: 3000,
@@ -17,7 +17,7 @@ export const PLATFORM_LIMITS: Record<SocialPlatform, number> = {
  * Max number of hashtags per platform where the platform enforces or strongly
  * recommends a cap. Platforms without a meaningful cap are omitted (undefined).
  */
-export const PLATFORM_MAX_HASHTAGS: Partial<Record<SocialPlatform, number>> = {
+export const platformMaxHashtags: Partial<Record<SocialPlatform, number>> = {
   instagram: 30,
   tiktok: 30,
   youtube: 15,
@@ -92,7 +92,7 @@ export function validateCaption(
   platform: SocialPlatform,
   caption: string,
 ): CaptionValidation {
-  const limit = PLATFORM_LIMITS[platform];
+  const limit = platformLimits[platform];
   const length = [...caption].length; // count code points, not UTF-16 units
   const errors: string[] = [];
 
@@ -100,7 +100,7 @@ export function validateCaption(
     errors.push(`caption is ${length} characters; ${platform} limit is ${limit}`);
   }
 
-  const maxTags = PLATFORM_MAX_HASHTAGS[platform];
+  const maxTags = platformMaxHashtags[platform];
   if (maxTags != null) {
     const count = extractHashtags(caption).length;
     if (count > maxTags) {

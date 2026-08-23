@@ -8,7 +8,7 @@
 import type { VideoProject } from "./model";
 
 /** Maximum allowed nesting depth before nesting is rejected. */
-export const MAX_NEST_DEPTH = 16;
+export const maxNestDepth = 16;
 
 export type ResolveSequence = (sequenceId: string) => VideoProject | null;
 
@@ -25,7 +25,7 @@ function directSequenceRefs(project: VideoProject): string[] {
 
 /**
  * Validate that every nested sequence reference in a project resolves and that
- * the nesting forms no cycle and does not exceed MAX_NEST_DEPTH. Returns false
+ * the nesting forms no cycle and does not exceed maxNestDepth. Returns false
  * if any reference is unresolved, a cycle is found, or the depth limit is
  * exceeded.
  */
@@ -33,7 +33,7 @@ export function nestClipRefsValid(project: VideoProject, resolve: ResolveSequenc
   const visiting = new Set<string>();
 
   const walk = (proj: VideoProject, depth: number): boolean => {
-    if (depth > MAX_NEST_DEPTH) return false;
+    if (depth > maxNestDepth) return false;
     for (const seqId of directSequenceRefs(proj)) {
       if (visiting.has(seqId)) return false; // cycle
       const child = resolve(seqId);
@@ -71,7 +71,7 @@ export function wouldCreateCycle(
   const onPath = new Set<string>();
 
   const reaches = (seqId: string, depth: number): boolean => {
-    if (depth > MAX_NEST_DEPTH) return true; // treat over-deep as a reject
+    if (depth > maxNestDepth) return true; // treat over-deep as a reject
     if (selfId && seqId === selfId) return true;
     if (onPath.has(seqId)) return true;
     const proj = resolve(seqId);

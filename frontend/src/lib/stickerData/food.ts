@@ -3,7 +3,7 @@ import type { Sticker } from "../stickers";
 
 const svg = (inner: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${inner}</svg>`;
 
-export const FOOD_STICKERS: Sticker[] = [
+export const foodStickers: Sticker[] = [
   { id: "fd-coffee-cup", label: "Coffee Cup", category: "Food & drink", keywords: ["coffee", "mug", "drink", "cafe", "espresso", "hot"], svg: svg('<rect x="20" y="34" width="46" height="44" rx="8" fill="#ef4444"/><path d="M66 42a14 14 0 0 1 0 28v-8a6 6 0 0 0 0-12v-8Z" fill="#ef4444"/><path d="M33 8c-4 6 4 10 0 16h5c4-6-4-10 0-16Z" fill="#9ca3af"/><path d="M48 8c-4 6 4 10 0 16h5c4-6-4-10 0-16Z" fill="#9ca3af"/>') },
   { id: "fd-takeaway-cup", label: "Takeaway Cup", category: "Food & drink", keywords: ["coffee", "takeaway", "cup", "latte", "paper"], svg: svg('<rect x="40" y="8" width="20" height="8" rx="3" fill="#475569"/><rect x="28" y="14" width="44" height="12" rx="4" fill="#475569"/><polygon points="32,26 68,26 62,90 38,90" fill="#e5e7eb"/><polygon points="34,44 66,44 64,64 36,64" fill="#f97316"/>') },
   { id: "fd-teacup", label: "Teacup", category: "Food & drink", keywords: ["tea", "cup", "saucer", "drink", "hot"], svg: svg('<path d="M70 38a10 10 0 0 1 0 20v-6a4 4 0 0 0 0-8v-6Z" fill="#ec4899"/><path d="M26 36H74V46A24 18 0 0 1 26 46Z" fill="#ec4899"/><ellipse cx="50" cy="68" rx="30" ry="6" fill="#be185d"/><path d="M40 10c-4 6 4 10 0 16h5c4-6-4-10 0-16Z" fill="#9ca3af"/><path d="M55 10c-4 6 4 10 0 16h5c4-6-4-10 0-16Z" fill="#9ca3af"/>') },

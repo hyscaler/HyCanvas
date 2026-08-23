@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
 import Ajv2020 from "ajv/dist/2020";
 import {
-  CURRENT_SCHEMA_VERSION,
-  MAX_NESTING_DEPTH,
-  KNOWN_NODE_TYPES,
+  currentSchemaVersion,
+  maxNestingDepth,
+  knownNodeTypes,
   createNode,
   createBlankDesign,
   validate,
@@ -23,7 +23,7 @@ import {
   type NodeType,
 } from "../index";
 
-const constructable = KNOWN_NODE_TYPES.filter(
+const constructable = knownNodeTypes.filter(
   (t) => t !== "model3d",
 ) as Exclude<NodeType, "model3d">[];
 
@@ -134,7 +134,7 @@ describe("AC-3: validate returns the exact JSON pointer", () => {
 describe("AC-4: forward migration is total and idempotent", () => {
   it("migrating a current-version file is a no-op identity", () => {
     const design = createBlankDesign();
-    expect(design.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(design.schemaVersion).toBe(currentSchemaVersion);
     expect(needsMigration(design)).toBe(false);
     expect(migrate(design)).toBe(design);
   });
@@ -177,7 +177,7 @@ describe("AC-4: forward migration is total and idempotent", () => {
     design.pages[0].children.push(path);
     const v14 = structuredClone({ ...design, schemaVersion: 14 }) as DesignFile;
     const out = migrate(v14);
-    expect(out.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(out.schemaVersion).toBe(currentSchemaVersion);
     expect(out.pages[0].children[0]).toEqual(path); // additive: node byte-identical
     // A compound path (extra even-odd contours) is valid in the new version.
     (out.pages[0].children[0] as unknown as Record<string, unknown>).contours = [
@@ -210,7 +210,7 @@ describe("v1 -> v2 text migration", () => {
     ];
 
     const out = migrate(v1 as unknown as DesignFile);
-    expect(out.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(out.schemaVersion).toBe(currentSchemaVersion);
     expect(validate(out)).toEqual({ ok: true });
 
     const node = out.pages[0].children[0] as unknown as {
@@ -249,7 +249,7 @@ describe("v2 -> v3 image migration", () => {
       },
     ];
     const out = migrate(v2 as unknown as DesignFile);
-    expect(out.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(out.schemaVersion).toBe(currentSchemaVersion);
     expect(validate(out)).toEqual({ ok: true });
     const node = out.pages[0].children[0] as unknown as {
       source: { assetId: string };
@@ -291,7 +291,7 @@ describe("v3 -> v4 color/fill migration (F09)", () => {
     ];
 
     const out = migrate(v3 as unknown as DesignFile);
-    expect(out.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(out.schemaVersion).toBe(currentSchemaVersion);
     expect(validate(out)).toEqual({ ok: true });
 
     const node = out.pages[0].children[0] as unknown as {
@@ -340,7 +340,7 @@ describe("v8 -> v9 per-range hyperlinks (CharStyle.link)", () => {
       },
     ];
     const out = migrate(v8 as unknown as DesignFile);
-    expect(out.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(out.schemaVersion).toBe(currentSchemaVersion);
     expect(validate(out)).toEqual({ ok: true });
     const run = (out.pages[0].children[0] as unknown as { content: { runs: { style: { link?: string } }[] }[] }).content[0].runs[1];
     expect(run.style.link).toBe("https://example.com");
@@ -357,7 +357,7 @@ describe("v9 -> v10 whiteboard board node types (F30)", () => {
       createNode("connector", { id: "c1" }) as unknown,
     ];
     const out = migrate(v9 as unknown as DesignFile);
-    expect(out.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(out.schemaVersion).toBe(currentSchemaVersion);
     expect(validate(out)).toEqual({ ok: true });
   });
 
@@ -436,7 +436,7 @@ describe("v4 -> v5 image effects/adjustments migration (F24)", () => {
     ];
 
     const out = migrate(v4 as unknown as DesignFile);
-    expect(out.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(out.schemaVersion).toBe(currentSchemaVersion);
     expect(validate(out)).toEqual({ ok: true });
     const node = out.pages[0].children[0] as unknown as { effects: { kind: string; ops?: unknown[] }[] };
     // The legacy adjustment effect is preserved verbatim.
@@ -493,7 +493,7 @@ describe("v5 -> v6 animation/interactivity migration (F25)", () => {
     ];
 
     const out = migrate(v5 as unknown as DesignFile);
-    expect(out.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(out.schemaVersion).toBe(currentSchemaVersion);
     expect(validate(out)).toEqual({ ok: true });
     const node = out.pages[0].children[0] as unknown as {
       animation?: { entrance?: { preset: string; durationMs: number; delayMs: number; easing: string } };
@@ -650,7 +650,7 @@ describe("v6 -> v7 chart/table styling migration (F27)", () => {
     ];
 
     const out = migrate(v6 as unknown as DesignFile);
-    expect(out.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(out.schemaVersion).toBe(currentSchemaVersion);
     expect(validate(out)).toEqual({ ok: true });
     // Additive: no styling fields are injected; the old shapes survive intact.
     const chart = out.pages[0].children[0] as unknown as { style?: unknown };
@@ -770,17 +770,17 @@ describe("AC-5: unknown node types survive losslessly", () => {
 });
 
 describe("AC-6: nesting depth limit", () => {
-  it(`rejects depth >= ${MAX_NESTING_DEPTH} with a pointer`, () => {
+  it(`rejects depth >= ${maxNestingDepth} with a pointer`, () => {
     const design = createBlankDesign();
-    design.pages[0].children = [nestedGroups(MAX_NESTING_DEPTH)];
+    design.pages[0].children = [nestedGroups(maxNestingDepth)];
     const result = validate(design);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.message).toContain("nesting depth");
   });
 
-  it(`accepts depth < ${MAX_NESTING_DEPTH}`, () => {
+  it(`accepts depth < ${maxNestingDepth}`, () => {
     const design = createBlankDesign();
-    design.pages[0].children = [nestedGroups(MAX_NESTING_DEPTH - 1)];
+    design.pages[0].children = [nestedGroups(maxNestingDepth - 1)];
     expect(validate(design)).toEqual({ ok: true });
   });
 });
@@ -880,7 +880,7 @@ describe("v18: document language", () => {
     design.meta.language = "ar-SA"; // where importers wrote it pre-v18
     const v17 = structuredClone({ ...design, schemaVersion: 17 }) as DesignFile;
     const out = migrate(v17);
-    expect(out.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(out.schemaVersion).toBe(currentSchemaVersion);
     expect(out.language).toBe("ar-SA");
     // COPIED up, never removed: older readers keep finding it where they look.
     expect(out.meta.language).toBe("ar-SA");
@@ -890,7 +890,7 @@ describe("v18: document language", () => {
   it("v17 -> v18 without a legacy value adds nothing", () => {
     const v17 = structuredClone({ ...createBlankDesign(), schemaVersion: 17 }) as DesignFile;
     const out = migrate(v17);
-    expect(out.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(out.schemaVersion).toBe(currentSchemaVersion);
     expect("language" in out).toBe(false);
     expect(validate(out)).toEqual({ ok: true });
   });

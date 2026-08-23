@@ -49,7 +49,7 @@ inline referenced image/pattern asset bytes (shared `embedNodeAssets`/
 shape image/pattern FILLS emit `<pattern>`/`<image>` defs, so images render
 across every export path (PDF already resolved images via `pdfImageSource`). The
 chart renderer is now a full port of the browser `drawChart`: title / legend /
-axis labels / Y-axis ticks (chrome), the exact `SERIES_PALETTE_HEX`, and every
+axis labels / Y-axis ticks (chrome), the exact `seriesPaletteHex`, and every
 kind (bar/grouped/stacked, line, area, pie, donut, scatter, radar; gauge/funnel/
 progress render as a line chart, exactly as the browser does). `stamp` glyphs
 render as colored vector icons for the fixed whiteboard stamp set
@@ -340,7 +340,7 @@ as an opaque white card that occludes lower tracks.
   renderer). Once elements composite in all three, Phases 2-4 are mostly UI +
   reusing existing design-engine capabilities.
 - Zero-data-loss: any new video primitives (scene, element clip, per-scene
-  background) are additive schema changes, bump `CURRENT_SCHEMA_VERSION` in both
+  background) are additive schema changes, bump `currentSchemaVersion` in both
   `packages/schema/src/schema.ts` and the Go mirror, and provide a forward
   migration; older video files must keep opening.
 - The clip/footage editor (`video-editor-backlog.md`) stays; this is a parallel

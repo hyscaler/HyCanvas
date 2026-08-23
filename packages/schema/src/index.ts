@@ -34,7 +34,7 @@ export * from "./sections";
 
 /**
  * Back-compat alias for the schema version constant. Prefer
- * `CURRENT_SCHEMA_VERSION`.
- * @deprecated use CURRENT_SCHEMA_VERSION
+ * `currentSchemaVersion`.
+ * @deprecated use currentSchemaVersion
  */
-export { CURRENT_SCHEMA_VERSION as SCHEMA_VERSION } from "./schema";
+export { currentSchemaVersion as SCHEMA_VERSION } from "./schema";

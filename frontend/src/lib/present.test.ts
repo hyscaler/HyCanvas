@@ -3,7 +3,7 @@ import {
   adjustSpotlightRadius,
   clamp,
   clampZoom,
-  DEFAULT_AUTO_ADVANCE_MS,
+  defaultAutoAdvanceMs,
   dwellMs,
   firstVisibleIndex,
   fitZoom,
@@ -15,15 +15,15 @@ import {
   RehearsalTimer,
   seekVisible,
   spotlightGeom,
-  SPOTLIGHT_DEFAULT_RADIUS,
-  SPOTLIGHT_FALLOFF,
-  SPOTLIGHT_MAX_RADIUS,
-  SPOTLIGHT_MIN_RADIUS,
+  spotlightDefaultRadius,
+  spotlightFalloff,
+  spotlightMaxRadius,
+  spotlightMinRadius,
   stepZoom,
   visibleIndices,
   visiblePosition,
-  ZOOM_MAX,
-  ZOOM_MIN,
+  zoomMax,
+  zoomMin,
   type SlideLike,
 } from "./present";
 
@@ -75,7 +75,7 @@ describe("autopilot dwell (FR-14)", () => {
   it("uses per-slide autoAdvanceMs when present, else the default", () => {
     const pages: SlideLike[] = [{ autoAdvanceMs: 1200 }, {}, { autoAdvanceMs: 0 }];
     expect(dwellMs(pages, 0)).toBe(1200);
-    expect(dwellMs(pages, 1)).toBe(DEFAULT_AUTO_ADVANCE_MS);
+    expect(dwellMs(pages, 1)).toBe(defaultAutoAdvanceMs);
     expect(dwellMs(pages, 2)).toBe(0); // an explicit 0 is honored
     expect(dwellMs(pages, 1, 8000)).toBe(8000); // custom default
   });
@@ -128,33 +128,33 @@ describe("clamp", () => {
 
 describe("spotlight geometry (FR-8 magic tools)", () => {
   it("centers on the cursor and bounds the radius", () => {
-    const g = spotlightGeom(100, 200, SPOTLIGHT_DEFAULT_RADIUS);
+    const g = spotlightGeom(100, 200, spotlightDefaultRadius);
     expect(g.cx).toBe(100);
     expect(g.cy).toBe(200);
-    expect(g.radius).toBe(SPOTLIGHT_DEFAULT_RADIUS);
-    expect(g.outer).toBeCloseTo(SPOTLIGHT_DEFAULT_RADIUS * (1 + SPOTLIGHT_FALLOFF));
+    expect(g.radius).toBe(spotlightDefaultRadius);
+    expect(g.outer).toBeCloseTo(spotlightDefaultRadius * (1 + spotlightFalloff));
   });
 
   it("clamps the radius below the minimum and above the maximum", () => {
-    expect(spotlightGeom(0, 0, 1).radius).toBe(SPOTLIGHT_MIN_RADIUS);
-    expect(spotlightGeom(0, 0, 99999).radius).toBe(SPOTLIGHT_MAX_RADIUS);
+    expect(spotlightGeom(0, 0, 1).radius).toBe(spotlightMinRadius);
+    expect(spotlightGeom(0, 0, 99999).radius).toBe(spotlightMaxRadius);
   });
 
   it("adjusts the radius within bounds via a signed step", () => {
-    expect(adjustSpotlightRadius(SPOTLIGHT_DEFAULT_RADIUS, 20)).toBe(SPOTLIGHT_DEFAULT_RADIUS + 20);
-    expect(adjustSpotlightRadius(SPOTLIGHT_MIN_RADIUS, -100)).toBe(SPOTLIGHT_MIN_RADIUS);
-    expect(adjustSpotlightRadius(SPOTLIGHT_MAX_RADIUS, 100)).toBe(SPOTLIGHT_MAX_RADIUS);
+    expect(adjustSpotlightRadius(spotlightDefaultRadius, 20)).toBe(spotlightDefaultRadius + 20);
+    expect(adjustSpotlightRadius(spotlightMinRadius, -100)).toBe(spotlightMinRadius);
+    expect(adjustSpotlightRadius(spotlightMaxRadius, 100)).toBe(spotlightMaxRadius);
   });
 });
 
 describe("zoom transform clamp (FR-8 magic tools)", () => {
   it("fit is the identity zoom centered", () => {
-    expect(fitZoom()).toEqual({ scale: ZOOM_MIN, originX: 0.5, originY: 0.5 });
+    expect(fitZoom()).toEqual({ scale: zoomMin, originX: 0.5, originY: 0.5 });
   });
 
   it("clamps scale into range and the origin into the surface", () => {
     expect(clampZoom({ scale: 100, originX: 2, originY: -1 })).toEqual({
-      scale: ZOOM_MAX,
+      scale: zoomMax,
       originX: 1,
       originY: 0,
     });
@@ -176,7 +176,7 @@ describe("zoom transform clamp (FR-8 magic tools)", () => {
   it("never exceeds the max scale when stepping repeatedly", () => {
     let z = fitZoom();
     for (let i = 0; i < 100; i++) z = stepZoom(z, 1, 0.5, 0.5);
-    expect(z.scale).toBe(ZOOM_MAX);
+    expect(z.scale).toBe(zoomMax);
   });
 });
 

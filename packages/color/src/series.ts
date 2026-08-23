@@ -6,7 +6,7 @@ import type { Color } from "@hc/schema";
 import { fromHex } from "./convert";
 
 /** Ordered qualitative swatches (hex), tuned for legibility on light surfaces. */
-export const SERIES_PALETTE_HEX = [
+export const seriesPaletteHex = [
   "#6366f1", // indigo
   "#10b981", // emerald
   "#f59e0b", // amber
@@ -22,7 +22,7 @@ export const SERIES_PALETTE_HEX = [
 export function seriesPalette(count: number): Color[] {
   const out: Color[] = [];
   for (let i = 0; i < Math.max(0, count); i++) {
-    const c = fromHex(SERIES_PALETTE_HEX[i % SERIES_PALETTE_HEX.length]);
+    const c = fromHex(seriesPaletteHex[i % seriesPaletteHex.length]);
     if (c) out.push(c);
   }
   return out;
@@ -30,5 +30,5 @@ export function seriesPalette(count: number): Color[] {
 
 /** The default color for the series at `index` (cycles through the palette). */
 export function seriesColorAt(index: number): Color {
-  return fromHex(SERIES_PALETTE_HEX[((index % SERIES_PALETTE_HEX.length) + SERIES_PALETTE_HEX.length) % SERIES_PALETTE_HEX.length])!;
+  return fromHex(seriesPaletteHex[((index % seriesPaletteHex.length) + seriesPaletteHex.length) % seriesPaletteHex.length])!;
 }

@@ -46,14 +46,14 @@ import { ApprovalBanner } from "./ApprovalBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { PromptHost } from "@/components/ui/PromptHost";
 import { useRealtime, getDesignDoc, resyncFromLiveDoc } from "@/lib/useRealtime";
-import { useAutoSnapshot, CHECKPOINT_MAX_BYTES } from "@/lib/useAutoSnapshot";
+import { useAutoSnapshot, checkpointMaxBytes } from "@/lib/useAutoSnapshot";
 import { onCommentChanged, onRoleChanged } from "@/lib/realtime";
 import { useViewBeat } from "@/lib/useViewBeat";
 import { useComments } from "@/store/comments";
 import { useBrand } from "@/store/brand";
 import { usePresence } from "@/store/presence";
 import { useBoardFocus, enterBoardFocus, exitBoardFocus } from "@/store/boardFocus";
-import { DESIGN_SURFACE_DIR, MIRROR_IN_RTL, documentDirection } from "@/lib/locale";
+import { designSurfaceDir, mirrorInRtl, documentDirection } from "@/lib/locale";
 import { tr } from "@/lib/i18n";
 
 type Status = "loading" | "ready" | "error" | "forbidden" | "notfound";
@@ -776,7 +776,7 @@ export function EditorApp() {
         // when alone (same rule the auto-snapshot follows); with company the
         // journal is already durable and the log simply stays longer.
         const solo = Object.keys(usePresence.getState().peers).length === 0;
-        const cpFrame = solo ? doc.checkpointFrame(CHECKPOINT_MAX_BYTES) : null;
+        const cpFrame = solo ? doc.checkpointFrame(checkpointMaxBytes) : null;
         if (cpFrame) await oc.checkpointDesign(designId, cpFrame, branch);
         if (!mounted.current) return;
         // Durability on a branch is the journal, and the journal only has the
@@ -887,7 +887,7 @@ export function EditorApp() {
             visible title is the editable field beside it. */}
         <h1 className="sr-only">{title || tr("editor.untitled_design_2")}</h1>
         <IconButton className="shrink-0" aria-label={tr("editor.back_to_dashboard")} onClick={() => void router.push("/dashboard")}>
-          <ChevronLeft size={20} className={MIRROR_IN_RTL} />
+          <ChevronLeft size={20} className={mirrorInRtl} />
         </IconButton>
         <LogoMark size={28} />
         <input
@@ -1102,7 +1102,7 @@ export function EditorApp() {
         {docKind !== "design" ? (
           // Same relative wrapper as the design canvas so overlays (the
           // read-only history preview banner) cover every document surface.
-          <main className="relative flex min-w-0 flex-1" dir={DESIGN_SURFACE_DIR}>
+          <main className="relative flex min-w-0 flex-1" dir={designSurfaceDir}>
             <DocumentSurface kind={docKind} workspaceId={workspaceId ?? undefined} designId={designId ?? undefined} />
             <PreviewBanner />
           </main>
@@ -1196,7 +1196,7 @@ export function EditorApp() {
                   aria-label={tr("editor.collapse_properties_panel")}
                   className="grid h-7 w-7 place-items-center rounded-md text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
                 >
-                  <PanelRightClose size={16} className={MIRROR_IN_RTL} />
+                  <PanelRightClose size={16} className={mirrorInRtl} />
                 </button>
               </div>
               <div className="oc-scroll min-h-0 flex-1 overflow-y-auto">
@@ -1210,7 +1210,7 @@ export function EditorApp() {
               aria-label={tr("editor.show_properties_panel")}
               className="grid w-9 shrink-0 cursor-pointer place-items-start justify-center border-s border-neutral-200 bg-surface pt-2.5 text-neutral-400 hover:bg-neutral-50 hover:text-neutral-700"
             >
-              <PanelRightOpen size={18} className={MIRROR_IN_RTL} />
+              <PanelRightOpen size={18} className={mirrorInRtl} />
             </button>
           )
         ) : null}

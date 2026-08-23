@@ -96,7 +96,7 @@ import {
 import { booleanOp, fitCubicBeziers, pathToPolylines, recognizeShape, shapeNodeToParametric, shapeToPath, simplifyPolyline, strokeToOutline, type BooleanOp } from "@hc/geometry";
 import { imageAssets } from "@/lib/assetProvider";
 import { measuredTextHeight } from "@/lib/textFit";
-import { PAGE_GAP, pageOffsets, pageTop } from "@/lib/pageLayout";
+import { pageGap, pageOffsets, pageTop } from "@/lib/pageLayout";
 import type { MagicDesignSpec } from "@/lib/magicDesign";
 import { layoutDesign, type AiDesignSpec, type DeckResult } from "@hc/aistudio";
 import { qrModules } from "@/lib/qr";
@@ -306,7 +306,7 @@ let styleClip: unknown = null;
 // Prefix that marks design-node JSON written to the OS clipboard, so a paste can
 // tell our own copied elements from arbitrary external text. Keeps copy/paste
 // working across refresh and browser tabs (last copy wins, as editors conventionally do).
-export const OC_CLIP_PREFIX = "oc-clipboard-v1::";
+export const ocClipPrefix = "oc-clipboard-v1::";
 
 /** Assign fresh ids to a node subtree (used when duplicating a page). */
 function regenIds(nodes: Node[]): void {
@@ -1432,7 +1432,7 @@ export const useEditor = create<EditorState>((set, get) => {
     const wy = vp.panY + vs.height / 2 / vp.zoom;
     const offs = pageOffsets(doc);
     for (let i = 0; i < doc.pages.length; i++) {
-      if (wy < offs[i] + doc.pages[i].height + PAGE_GAP / 2) return i;
+      if (wy < offs[i] + doc.pages[i].height + pageGap / 2) return i;
     }
     return doc.pages.length - 1;
   };
@@ -4073,7 +4073,7 @@ export const useEditor = create<EditorState>((set, get) => {
       // Mirror to the OS clipboard so paste survives refresh/other tabs and so
       // the native paste handler treats the freshest copy as the source.
       if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-        navigator.clipboard.writeText(OC_CLIP_PREFIX + JSON.stringify(nodes)).catch(() => {});
+        navigator.clipboard.writeText(ocClipPrefix + JSON.stringify(nodes)).catch(() => {});
       }
     },
     cutSelection: () => {

@@ -17,7 +17,7 @@ import { transitionProgress } from "./animation";
 import { pageAnimationDuration } from "./pose";
 
 /** How long a slide holds once its animations have finished. */
-export const DEFAULT_SLIDE_HOLD_MS = 2000;
+export const defaultSlideHoldMs = 2000;
 
 export interface DeckPlanOptions {
   /** Frames per second to sample at. */
@@ -69,7 +69,7 @@ export function visibleSlideIndices(file: DesignFile): number[] {
 }
 
 /** The time a slide occupies on its own: its animation window plus a hold. */
-export function slideDurationMs(file: DesignFile, pageIndex: number, holdMs = DEFAULT_SLIDE_HOLD_MS): number {
+export function slideDurationMs(file: DesignFile, pageIndex: number, holdMs = defaultSlideHoldMs): number {
   return pageAnimationDuration(file, pageIndex) + holdMs;
 }
 
@@ -84,7 +84,7 @@ export function slideDurationMs(file: DesignFile, pageIndex: number, holdMs = DE
  */
 export function planDeckFrames(file: DesignFile, opts: DeckPlanOptions = {}): DeckFrame[] {
   const fps = Math.max(1, Math.min(60, opts.fps ?? 15));
-  const holdMs = Math.max(0, opts.holdMs ?? DEFAULT_SLIDE_HOLD_MS);
+  const holdMs = Math.max(0, opts.holdMs ?? defaultSlideHoldMs);
   const maxFrames = Math.max(1, opts.maxFrames ?? 900);
   const delayMs = Math.round(1000 / fps);
   const visible = visibleSlideIndices(file);

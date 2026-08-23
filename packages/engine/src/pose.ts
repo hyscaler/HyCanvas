@@ -7,7 +7,7 @@
 import type { DesignFile, Node, NodeAnimation, ImageMotion } from "@hc/schema";
 import { childrenOf } from "@hc/schema";
 import {
-  type AnimPatch, IDENTITY_PATCH, appliedOpacity, clipEnd,
+  type AnimPatch, identityPatch, appliedOpacity, clipEnd,
   entrancePatch, emphasisPatch, customPatch, imageMotionPatch, entranceProgress,
 } from "./animation";
 
@@ -82,7 +82,7 @@ function revealTextWords(node: Node, keepWords: number): void {
 }
 
 function compose(a: AnimPatch | null, b: AnimPatch): AnimPatch {
-  const base = a ?? IDENTITY_PATCH;
+  const base = a ?? identityPatch;
   return {
     dx: base.dx + b.dx,
     dy: base.dy + b.dy,

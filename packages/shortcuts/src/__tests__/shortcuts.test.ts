@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   chordFromEvent,
   detectConflicts,
-  DEFAULT_SCHEME,
+  defaultScheme,
   normalizeChord,
   resolveChord,
   type ShortcutScheme,
@@ -45,14 +45,14 @@ describe("chordFromEvent (mod maps per platform)", () => {
 
 describe("resolveChord", () => {
   it("matches an event against the default scheme", () => {
-    const b = resolveChord({ key: "d", ctrlKey: true }, DEFAULT_SCHEME, "other");
+    const b = resolveChord({ key: "d", ctrlKey: true }, defaultScheme, "other");
     expect(b?.commandId).toBe("selection.duplicate");
-    const k = resolveChord({ key: "k", metaKey: true }, DEFAULT_SCHEME, "mac");
+    const k = resolveChord({ key: "k", metaKey: true }, defaultScheme, "mac");
     expect(k?.commandId).toBe("commandMenu.open");
   });
 
   it("returns null for an unbound chord", () => {
-    expect(resolveChord({ key: "j", ctrlKey: true }, DEFAULT_SCHEME, "other")).toBeNull();
+    expect(resolveChord({ key: "j", ctrlKey: true }, defaultScheme, "other")).toBeNull();
   });
 });
 
@@ -85,6 +85,6 @@ describe("detectConflicts (AC-7)", () => {
   });
 
   it("the shipped default scheme has no conflicts", () => {
-    expect(detectConflicts(DEFAULT_SCHEME)).toEqual([]);
+    expect(detectConflicts(defaultScheme)).toEqual([]);
   });
 });

@@ -83,13 +83,13 @@ export function resolvedLocale(pref: string | null = getLocalePreference()): str
  * file format; that is resolved by the text layout engine, not by this
  * attribute. `locale.pins.test.ts` asserts every surface below carries it.
  */
-export const DESIGN_SURFACE_DIR = "ltr";
+export const designSurfaceDir = "ltr";
 
 /**
  * The direction the interface is currently laid out in.
  *
  * Read from the document rather than recomputed from the locale, because a
- * subtree pinned with `DESIGN_SURFACE_DIR` is left-to-right even for a
+ * subtree pinned with `designSurfaceDir` is left-to-right even for a
  * right-to-left user, and pointer maths inside it must agree with what is on
  * screen rather than with the account setting.
  */
@@ -108,7 +108,7 @@ export function documentDirection(el?: { dir?: string } | null): "ltr" | "rtl" {
  * diagonal (a clock, a pencil, a trash can) must NOT carry this: mirroring it
  * makes it look wrong without making it mean anything.
  */
-export const MIRROR_IN_RTL = "rtl:-scale-x-100";
+export const mirrorInRtl = "rtl:-scale-x-100";
 
 /** The two attributes this sets, so the target can be stubbed in a test that
  *  has no DOM. */
@@ -139,7 +139,7 @@ export function setLocalePreference(tag: string | null, target?: LocaleTarget): 
  * A mirrored layout arriving one frame late is far more jarring than a colour
  * theme doing the same, because every element moves.
  */
-export const LOCALE_BOOT_SCRIPT = `(function(){try{
+export const localeBootScript = `(function(){try{
 var rtl=${JSON.stringify([...RTL_LANGUAGES])};
 var t=localStorage.getItem(${JSON.stringify(STORAGE_KEY)})||navigator.language||"en";
 var p=t.toLowerCase().split(/[-_]/)[0];

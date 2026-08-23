@@ -1,6 +1,6 @@
 // CRDT reconciler (FR-1, FR-2). The editor mutates a plain JS
 // `DesignFile`; this module pushes that plain object INTO a live Y.Doc's nested
-// shared types under DESIGN_ROOT_KEY, producing the MINIMAL set of Yjs ops that
+// shared types under designRootKey, producing the MINIMAL set of Yjs ops that
 // makes the Y.Doc match the JS doc. Minimal ops matter: when two clients edit
 // different nodes (or different fields of one node), the granular ops merge
 // conflict-free under Yjs CRDT semantics with no lost intent (AC-2/AC-3). A
@@ -12,12 +12,12 @@
 // ydoc)` deep-equals `doc`.
 
 import * as Y from "yjs";
-import { DESIGN_ROOT_KEY, type DesignFile } from "@hc/schema";
+import { designRootKey, type DesignFile } from "@hc/schema";
 
 /** Origin tag stamped on the transaction wrapping a local reconcile. The client
  *  binding observes for updates whose origin is NOT this, to apply remote edits
  *  without echoing them back. */
-export const LOCAL_ORIGIN = "local";
+export const localOrigin = "local";
 
 // F16 move/intention primitive: keyed-array items (pages, children, operands)
 // carry a synthetic numeric rank under this key so ORDER is a per-item property,
@@ -663,18 +663,18 @@ function reconcileParagraphArray(target: Y.Array<unknown>, source: JsonObject[])
 
 /**
  * Idempotently sync a plain JS `DesignFile` into a Y.Doc's nested shared types
- * under DESIGN_ROOT_KEY, producing minimal Yjs ops. Runs inside one
- * `ydoc.transact(..., LOCAL_ORIGIN)` so the whole reconcile is a single,
+ * under designRootKey, producing minimal Yjs ops. Runs inside one
+ * `ydoc.transact(..., localOrigin)` so the whole reconcile is a single,
  * locally-originated update the binding can tell apart from remote updates.
  *
  * After `reconcile(doc, ydoc)`, `fromY(ydoc)` (a.k.a. `toDesignFile(ydoc)`)
  * deep-equals `doc`.
  */
 export function reconcile(doc: DesignFile, ydoc: Y.Doc): void {
-  const root = ydoc.getMap(DESIGN_ROOT_KEY);
+  const root = ydoc.getMap(designRootKey);
   ydoc.transact(() => {
     reconcileMap(root, doc as unknown as JsonObject);
-  }, LOCAL_ORIGIN);
+  }, localOrigin);
 }
 
 /**
@@ -684,7 +684,7 @@ export function reconcile(doc: DesignFile, ydoc: Y.Doc): void {
  * when a bundler hands the two packages distinct yjs module instances.
  */
 export function fromDoc(ydoc: Y.Doc): DesignFile {
-  return yToJson(ydoc.getMap(DESIGN_ROOT_KEY)) as DesignFile;
+  return yToJson(ydoc.getMap(designRootKey)) as DesignFile;
 }
 
 /**
@@ -699,7 +699,7 @@ export function fromDoc(ydoc: Y.Doc): DesignFile {
  * outside `pages` projects normally.
  */
 export function fromDocWithPageReuse(ydoc: Y.Doc, reusable: ReadonlyMap<string, unknown>): DesignFile {
-  const root = ydoc.getMap(DESIGN_ROOT_KEY);
+  const root = ydoc.getMap(designRootKey);
   const out: JsonObject = {};
   for (const [k, v] of root.entries()) {
     if (k === ORDER_KEY || k === RUNS_STASH_KEY) continue;

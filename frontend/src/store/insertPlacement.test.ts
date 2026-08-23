@@ -10,7 +10,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { createBlankDesign } from "@hc/schema";
 import { useEditor } from "./editor";
-import { PAGE_GAP } from "@/lib/pageLayout";
+import { pageGap } from "@/lib/pageLayout";
 
 const PAGE_W = 800;
 const PAGE_H = 600;
@@ -28,7 +28,7 @@ function loadTwoPageDoc() {
 function lookAtPage(index: number) {
   const st = useEditor.getState();
   st.setViewportSize(1000, 700);
-  const top = index * (PAGE_H + PAGE_GAP);
+  const top = index * (PAGE_H + pageGap);
   st.setViewport({
     zoom: 1,
     panX: PAGE_W / 2 - 1000 / 2, // world center x = page center (pages share x=0)
@@ -59,7 +59,7 @@ describe("panel inserts on stacked pages", () => {
     useEditor.getState().setActivePage(1);
     const st = useEditor.getState();
     st.setViewportSize(1000, 700);
-    const top = 1 * (PAGE_H + PAGE_GAP);
+    const top = 1 * (PAGE_H + pageGap);
     st.setViewport({ zoom: 2, panX: 20, panY: top + 20 }); // top-left of page 2
     useEditor.getState().addNode("shape", {});
     expect(kids(1).length).toBe(1);
@@ -113,7 +113,7 @@ describe("panel inserts on stacked pages", () => {
     // The insert scrolled page 2's band back under the viewport center.
     const st = useEditor.getState();
     const centerY = st.viewport.panY + 700 / 2 / st.viewport.zoom;
-    const top = 1 * (PAGE_H + PAGE_GAP);
+    const top = 1 * (PAGE_H + pageGap);
     expect(centerY).toBeGreaterThanOrEqual(top);
     expect(centerY).toBeLessThanOrEqual(top + PAGE_H);
   });
@@ -125,7 +125,7 @@ describe("panel inserts on stacked pages", () => {
     const st = useEditor.getState();
     expect(st.activePage).toBe(1);
     const centerY = st.viewport.panY + 700 / 2 / st.viewport.zoom;
-    const top = 1 * (PAGE_H + PAGE_GAP);
+    const top = 1 * (PAGE_H + pageGap);
     expect(centerY).toBeGreaterThanOrEqual(top);
     expect(centerY).toBeLessThanOrEqual(top + PAGE_H);
   });

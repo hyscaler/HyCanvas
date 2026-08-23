@@ -3,7 +3,7 @@
 // unmirrored interface that also misreported its language to assistive
 // technology.
 import { describe, expect, it } from "vitest";
-import { isRtlLocale, directionFor, resolvedLocale, applyLocale, setLocalePreference, LOCALE_BOOT_SCRIPT } from "./locale";
+import { isRtlLocale, directionFor, resolvedLocale, applyLocale, setLocalePreference, localeBootScript } from "./locale";
 
 describe("isRtlLocale", () => {
   it("recognises the right-to-left languages, with or without a region", () => {
@@ -75,13 +75,13 @@ describe("applyLocale", () => {
   });
 });
 
-describe("LOCALE_BOOT_SCRIPT", () => {
+describe("localeBootScript", () => {
   it("resolves the same way the module does, since it runs before first paint", () => {
     // The snippet is duplicated logic by necessity (it cannot import), so it is
     // executed here against the same cases to keep the two from drifting.
     const run = (stored: string | null, navLang: string) => {
       const el = { lang: "", dir: "" };
-      const fn = new Function("localStorage", "navigator", "document", LOCALE_BOOT_SCRIPT);
+      const fn = new Function("localStorage", "navigator", "document", localeBootScript);
       fn(
         { getItem: () => stored },
         { language: navLang },
@@ -96,7 +96,7 @@ describe("LOCALE_BOOT_SCRIPT", () => {
   });
 
   it("never throws, whatever the environment does", () => {
-    const fn = new Function("localStorage", "navigator", "document", LOCALE_BOOT_SCRIPT);
+    const fn = new Function("localStorage", "navigator", "document", localeBootScript);
     expect(() =>
       fn(
         {

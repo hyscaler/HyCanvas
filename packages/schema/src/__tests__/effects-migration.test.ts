@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createBlankDesign } from "../factory";
 import { migrate } from "../migrate";
 import { validate } from "../validate";
-import { CURRENT_SCHEMA_VERSION, type DesignFile } from "../schema";
+import { currentSchemaVersion, type DesignFile } from "../schema";
 
 /** A v13 file carrying the two legacy effect shapes the v14 step normalizes:
  *  a node shadow written without a type (early panels) and a text shadow whose
@@ -38,7 +38,7 @@ function legacyV13(): DesignFile {
 describe("v13 -> v14 effect normalization", () => {
   it("stamps typeless node shadows as drop and bakes text-shadow opacity to 1", () => {
     const migrated = migrate(legacyV13() as unknown as DesignFile);
-    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(migrated.schemaVersion).toBe(currentSchemaVersion);
     const rect = migrated.pages[0].children[0] as unknown as { effects: { type?: string }[] };
     expect(rect.effects[0].type).toBe("drop");
     const text = (migrated.pages[0].children[1] as unknown as { children: { textEffects: { opacity: number }[] }[] }).children[0];

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createBlankDesign, createNode, type DesignFile, type Node } from "@hc/schema";
-import { checkAccessibility, summarizeAccessibility, MIN_TOUCH_TARGET } from "../index";
+import { checkAccessibility, summarizeAccessibility, minTouchTarget } from "../index";
 
 const solid = (r: number, g: number, b: number) => ({ type: "solid" as const, color: { srgb: { r, g, b, a: 1 } } });
 
@@ -68,7 +68,7 @@ describe("checkAccessibility", () => {
   it("flags interactive targets smaller than the minimum size", () => {
     const small = checkAccessibility(docWith([linkedRect(20, 20)]));
     expect(small.some((i) => i.kind === "touch-target")).toBe(true);
-    const ok = checkAccessibility(docWith([linkedRect(MIN_TOUCH_TARGET + 10, MIN_TOUCH_TARGET + 10)]));
+    const ok = checkAccessibility(docWith([linkedRect(minTouchTarget + 10, minTouchTarget + 10)]));
     expect(ok.some((i) => i.kind === "touch-target")).toBe(false);
   });
 

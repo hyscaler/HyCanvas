@@ -20,7 +20,7 @@ export interface PlatformFormat {
  * Recommended export sizes per platform. Each platform lists one or more named
  * formats; the first entry is the default/primary feed format.
  */
-export const PLATFORM_FORMATS: Record<SocialPlatform, PlatformFormat[]> = {
+export const platformFormats: Record<SocialPlatform, PlatformFormat[]> = {
   instagram: [
     { name: "square", width: 1080, height: 1080, format: "png" },
     { name: "portrait", width: 1080, height: 1350, format: "png" },
@@ -36,7 +36,7 @@ export const PLATFORM_FORMATS: Record<SocialPlatform, PlatformFormat[]> = {
 
 /** The primary recommended format for a platform. */
 export function primaryFormat(platform: SocialPlatform): PlatformFormat {
-  return PLATFORM_FORMATS[platform][0];
+  return platformFormats[platform][0];
 }
 
 /**

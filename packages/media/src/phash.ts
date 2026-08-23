@@ -71,8 +71,8 @@ export function hammingDistance(a: string, b: string): number {
 }
 
 /** Default near-duplicate threshold: <= 5 differing bits out of 64. */
-export const NEAR_DUPLICATE_MAX_DISTANCE = 5;
+export const nearDuplicateMaxDistance = 5;
 
-export function isNearDuplicate(a: string, b: string, maxDistance = NEAR_DUPLICATE_MAX_DISTANCE): boolean {
+export function isNearDuplicate(a: string, b: string, maxDistance = nearDuplicateMaxDistance): boolean {
   return hammingDistance(a, b) <= maxDistance;
 }

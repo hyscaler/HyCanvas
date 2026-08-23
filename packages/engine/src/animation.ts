@@ -26,7 +26,7 @@ export interface AnimPatch {
   opacityMul: number; // 0..1 multiplier on the node's opacity
 }
 
-export const IDENTITY_PATCH: Readonly<AnimPatch> = Object.freeze({
+export const identityPatch: Readonly<AnimPatch> = Object.freeze({
   dx: 0,
   dy: 0,
   scale: 1,
@@ -152,7 +152,7 @@ export function entrancePatch(clip: AnimationClip<EntrancePreset>, tMs: number):
     case "word-wipe":
       // Reveal is a content effect (handled in poseDesignAt), so the node itself
       // stays put and fully opaque; characters/words appear over the clip.
-      return { ...IDENTITY_PATCH };
+      return { ...identityPatch };
     case "tumble":
       return { dx: 0, dy: inv * 32, scale: 0.7 + 0.3 * e, rotate: -180 * inv, opacityMul: e };
     case "stomp":
@@ -160,7 +160,7 @@ export function entrancePatch(clip: AnimationClip<EntrancePreset>, tMs: number):
     case "zoom-in":
       return { dx: 0, dy: 0, scale: 0.2 + 0.8 * e, rotate: 0, opacityMul: e };
     default:
-      return { ...IDENTITY_PATCH };
+      return { ...identityPatch };
   }
 }
 
@@ -190,7 +190,7 @@ export function exitPatch(clip: AnimationClip<ExitPreset>, tMs: number): AnimPat
     case "zoom-out":
       return { dx: 0, dy: 0, scale: 1 - 0.8 * e, rotate: 0, opacityMul: 1 - e };
     default:
-      return { ...IDENTITY_PATCH };
+      return { ...identityPatch };
   }
 }
 
@@ -204,7 +204,7 @@ export function emphasisPatch(clip: AnimationClip<EmphasisPreset>, tMs: number):
   // Phase 0..1 within the active part of the loop (after delay), else resting.
   const cycle = period + clip.delayMs;
   const local = ((tMs % cycle) + cycle) % cycle;
-  if (local < clip.delayMs) return { ...IDENTITY_PATCH };
+  if (local < clip.delayMs) return { ...identityPatch };
   const p = (local - clip.delayMs) / period; // 0..1
   const sine = Math.sin(p * TAU); // -1..1, zero at the ends
   switch (clip.preset) {
@@ -233,7 +233,7 @@ export function emphasisPatch(clip: AnimationClip<EmphasisPreset>, tMs: number):
     case "bob":
       return { dx: 0, dy: -6 * Math.sin(p * Math.PI), scale: 1, rotate: 0, opacityMul: 1 };
     default:
-      return { ...IDENTITY_PATCH };
+      return { ...identityPatch };
   }
 }
 
@@ -254,7 +254,7 @@ function keyframePatch(k: Keyframe): AnimPatch {
  *  Each keyframe's `easing` shapes the segment to the next. Pure. */
 export function customPatch(track: KeyframeTrack, tMs: number): AnimPatch {
   const kfs = track.keyframes;
-  if (!kfs.length) return { ...IDENTITY_PATCH };
+  if (!kfs.length) return { ...identityPatch };
   const dur = Math.max(1, track.durationMs);
   let t = tMs;
   if (track.loop) t = ((tMs % dur) + dur) % dur;

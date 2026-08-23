@@ -26,7 +26,7 @@ import {
 import { useCallbackRef } from "@/lib/useCallbackRef";
 import { overlay } from "@/lib/theme.generated";
 import { useEditorCanvas, type CanvasApi } from "@/lib/useEditorCanvas";
-import { useEditor, OC_CLIP_PREFIX } from "@/store/editor";
+import { useEditor, ocClipPrefix } from "@/store/editor";
 import { commandForEvent } from "@/lib/shortcuts";
 import { Gizmo } from "./Gizmo";
 import { SelectionToolbar } from "./SelectionToolbar";
@@ -43,7 +43,7 @@ import { serverNow } from "@/lib/realtime";
 import { usePresence } from "@/store/presence";
 import { useBrand } from "@/store/brand";
 import { useComments } from "@/store/comments";
-import { DESIGN_SURFACE_DIR } from "@/lib/locale";
+import { designSurfaceDir } from "@/lib/locale";
 import { tr } from "@/lib/i18n";
 
 
@@ -2533,10 +2533,10 @@ export function Canvas() {
       }
       // 2) Text: our own copied elements (marker) -> nodes; else a text box.
       const text = dt.getData("text/plain");
-      if (text && text.startsWith(OC_CLIP_PREFIX)) {
+      if (text && text.startsWith(ocClipPrefix)) {
         e.preventDefault();
         try {
-          const nodes = JSON.parse(text.slice(OC_CLIP_PREFIX.length));
+          const nodes = JSON.parse(text.slice(ocClipPrefix.length));
           if (Array.isArray(nodes) && nodes.length) store.pasteNodes(nodes);
         } catch { /* ignore malformed clipboard JSON */ }
         return;
@@ -2648,7 +2648,7 @@ export function Canvas() {
       className="relative h-full w-full overflow-hidden bg-neutral-200 outline-none"
       // The design and every overlay positioned over it live in the design's own
       // coordinate space, so the shell's direction must not reach them.
-      dir={DESIGN_SURFACE_DIR}
+      dir={designSurfaceDir}
       // onFocus/onBlur bubble from children, so only treat focus as "on the
       // canvas" when the wrapper itself is the target. Focusing a child control
       // (a toolbar button, a text-edit overlay) reports a different target and

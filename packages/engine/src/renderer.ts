@@ -13,7 +13,7 @@ import {
   type FitMode,
 } from "./viewport";
 import {
-  DEFAULT_CONFIG,
+  defaultConfig,
   type AssetProvider,
   type EngineConfig,
   type EngineEvent,
@@ -159,7 +159,7 @@ export function mountRenderer(
   config: Partial<EngineConfig> = {},
   assets?: AssetProvider,
 ): Renderer {
-  return new RendererImpl(scene, target, { ...DEFAULT_CONFIG, ...config }, assets);
+  return new RendererImpl(scene, target, { ...defaultConfig, ...config }, assets);
 }
 
 export interface OneShotOptions extends Render2DOptions {

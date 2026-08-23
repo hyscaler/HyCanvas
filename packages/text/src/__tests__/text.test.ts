@@ -19,7 +19,7 @@ import {
   resolveCharStyle,
   resolveParagraphStyle,
   words,
-  FONT_CATALOG,
+  fontCatalog,
   searchFonts,
   getFontEntry,
   fontCssUrl,
@@ -29,7 +29,7 @@ import {
 
 describe("font catalog (FR-5)", () => {
   it("has a non-empty catalog including the system entry", () => {
-    expect(FONT_CATALOG.length).toBeGreaterThan(10);
+    expect(fontCatalog.length).toBeGreaterThan(10);
     expect(getFontEntry("system")?.system).toBe(true);
     expect(isSystemFont("system")).toBe(true);
     expect(isSystemFont(undefined)).toBe(true);

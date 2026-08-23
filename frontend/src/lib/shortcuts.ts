@@ -1,11 +1,11 @@
 // Active keyboard-shortcut scheme for the editor. Wraps the pure
-// @hc/shortcuts model with browser persistence: the shipped DEFAULT_SCHEME merged
+// @hc/shortcuts model with browser persistence: the shipped defaultScheme merged
 // with the user's per-command overrides (localStorage). The canvas keydown
 // handler resolves events through commandForEvent(); the Shortcuts editor UI
 // reads/writes overrides here and subscribes for live updates.
 
 import {
-  DEFAULT_SCHEME,
+  defaultScheme,
   resolveChord,
   normalizeChord,
   detectConflicts,
@@ -18,7 +18,7 @@ const STORAGE_KEY = "oc.shortcuts.overrides.v1";
 
 /** Commands the canvas keydown resolves through the scheme (so remapping them in
  *  the editor actually takes effect). Mirrors COMMAND_ACTIONS in Canvas.tsx. */
-export const REMAPPABLE_COMMANDS = [
+export const remappableCommands = [
   "history.undo",
   "history.redo",
   "clipboard.copy",
@@ -32,13 +32,13 @@ export const REMAPPABLE_COMMANDS = [
   "selection.ungroup",
 ] as const;
 
-export const PLATFORM: "mac" | "other" =
+export const platform: "mac" | "other" =
   typeof navigator !== "undefined" && /mac|iphone|ipad/i.test(navigator.platform || navigator.userAgent)
     ? "mac"
     : "other";
 
 /** Human labels + grouping for every command in the default scheme (UI only). */
-export const COMMAND_LABELS: Record<string, { label: string; group: string }> = {
+export const commandLabels: Record<string, { label: string; group: string }> = {
   "history.undo": { label: "Undo", group: "History" },
   "history.redo": { label: "Redo", group: "History" },
   "clipboard.copy": { label: "Copy", group: "Clipboard" },
@@ -87,7 +87,7 @@ export function subscribeShortcuts(fn: () => void): () => void {
 
 /** The default chord for a command (ignores user overrides). */
 export function defaultChord(commandId: string): string {
-  return DEFAULT_SCHEME.bindings.find((b) => b.commandId === commandId)?.chord ?? "";
+  return defaultScheme.bindings.find((b) => b.commandId === commandId)?.chord ?? "";
 }
 
 /** The effective chord for a command (override or default). */
@@ -101,7 +101,7 @@ export function isCustomized(commandId: string): boolean {
 
 /** The active scheme = defaults with overrides applied. */
 export function activeScheme(): ShortcutScheme {
-  const bindings = DEFAULT_SCHEME.bindings.map((b) =>
+  const bindings = defaultScheme.bindings.map((b) =>
     overrides[b.commandId] ? { ...b, chord: overrides[b.commandId] } : b,
   );
   return { id: Object.keys(overrides).length ? "custom" : "default", name: tr("app.editor_shortcuts"), bindings };
@@ -133,7 +133,7 @@ export function shortcutConflicts() {
 /** Resolve a DOM keyboard event to a command id, or null. */
 export function commandForEvent(e: KeyboardEvent): string | null {
   const ke: ChordKeyEvent = { key: e.key, ctrlKey: e.ctrlKey, metaKey: e.metaKey, shiftKey: e.shiftKey, altKey: e.altKey };
-  return resolveChord(ke, activeScheme(), PLATFORM)?.commandId ?? null;
+  return resolveChord(ke, activeScheme(), platform)?.commandId ?? null;
 }
 
 /** Build a normalized chord string from a captured keydown (for the editor UI).
@@ -142,8 +142,8 @@ export function captureChord(e: KeyboardEvent): string | null {
   const key = e.key.toLowerCase();
   if (key === "control" || key === "shift" || key === "alt" || key === "meta") return null;
   const mods: string[] = [];
-  if (PLATFORM === "mac" ? e.metaKey : e.ctrlKey) mods.push("mod");
-  if (PLATFORM === "mac" && e.ctrlKey) mods.push("ctrl");
+  if (platform === "mac" ? e.metaKey : e.ctrlKey) mods.push("mod");
+  if (platform === "mac" && e.ctrlKey) mods.push("ctrl");
   if (e.altKey) mods.push("alt");
   if (e.shiftKey) mods.push("shift");
   try {
@@ -156,11 +156,11 @@ export function captureChord(e: KeyboardEvent): string | null {
 /** Pretty-print a chord for display (mod -> ⌘ on mac / Ctrl elsewhere). */
 export function formatChord(chord: string): string {
   const map: Record<string, string> =
-    PLATFORM === "mac"
+    platform === "mac"
       ? { mod: "⌘", ctrl: "⌃", alt: "⌥", shift: "⇧" }
       : { mod: tr("app.ctrl"), ctrl: tr("app.ctrl"), alt: tr("app.alt"), shift: tr("app.shift") };
   return chord
     .split("+")
     .map((t) => map[t] ?? (t.length === 1 ? t.toUpperCase() : t.charAt(0).toUpperCase() + t.slice(1)))
-    .join(PLATFORM === "mac" ? "" : "+");
+    .join(platform === "mac" ? "" : "+");
 }

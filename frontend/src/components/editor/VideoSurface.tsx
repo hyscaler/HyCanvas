@@ -120,7 +120,7 @@ import {
   solveDucking,
 } from "@hc/audio";
 import { createNode, type Node } from "@hc/schema";
-import { FONT_CATALOG } from "@hc/text";
+import { fontCatalog } from "@hc/text";
 import { imageAssets } from "@/lib/assetProvider";
 import type { UploadedAsset, StockAssetSummary } from "@hc/sdk";
 import { useEditor } from "@/store/editor";
@@ -136,9 +136,9 @@ import {
   activeTitleClipsAt,
   visibleVideoClipsAt,
   titleBounds,
-  COLOR_PRESETS,
+  colorPresets,
   colorIsNeutral,
-  MOTION_PRESETS,
+  motionPresets,
   applyMotionPreset,
   setTrackEasing,
   fitRect,
@@ -149,7 +149,7 @@ import { detectBeatTimes, beatTimesToFrames } from "@/lib/video/beats";
 import { pickRecorderTarget, startRecording, downloadBlob, type ExportController } from "@/lib/video/exporter";
 import { captionStyleOf, cueAt, withCaptionStyle, withCues, addCaptionTrack, removeCaptionTrack, setCaptionLang, toSrt, toVtt, type CaptionCue } from "@/lib/video/captions";
 import { detectSceneSeconds } from "@/lib/video/sceneDetect";
-import { VIDEO_TEMPLATES, type VideoTemplate } from "@/lib/video/videoTemplates";
+import { videoTemplates, type VideoTemplate } from "@/lib/video/videoTemplates";
 import { tr } from "@/lib/i18n";
 import { CodedError, userMessage } from "@/lib/errors";
 
@@ -4967,7 +4967,7 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setTemplateMenuOpen(false)} />
                 <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-lg border border-neutral-200 bg-surface p-1 shadow-lg">
-                  {VIDEO_TEMPLATES.map((tpl) => (
+                  {videoTemplates.map((tpl) => (
                     <button
                       key={tpl.id}
                       type="button"
@@ -6988,7 +6988,7 @@ function AnimationEditor({ element, disabled, onChange }: { element: Node; disab
   );
 }
 
-const VIDEO_FONTS = FONT_CATALOG.slice(0, 30).map((f) => f.family);
+const VIDEO_FONTS = fontCatalog.slice(0, 30).map((f) => f.family);
 const elSelectCls = "rounded border border-neutral-200 bg-surface px-1.5 py-1 text-xs text-neutral-800 outline-none focus:border-brand-400";
 
 /** Edit the design element a clip renders (text/background/image). Writes a new
@@ -7287,7 +7287,7 @@ function ClipInspector(props: {
             >
               {tr("editor.none")}
             </button>
-            {COLOR_PRESETS.map((p) => (
+            {colorPresets.map((p) => (
               <button
                 key={p.name}
                 type="button"
@@ -8390,7 +8390,7 @@ function KeyframeRows({ clip, playhead, editDisabled, onSetKeyframes }: {
     <>
       {/* one-click motion presets (ordinary keyframes; edit them below) */}
       <div className="flex flex-wrap gap-1">
-        {MOTION_PRESETS.map((p) => (
+        {motionPresets.map((p) => (
           <button
             key={p.name}
             type="button"

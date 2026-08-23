@@ -3,7 +3,7 @@ import type { Sticker } from "../stickers";
 
 const svg = (inner: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${inner}</svg>`;
 
-export const ABSTRACT_STICKERS: Sticker[] = [
+export const abstractStickers: Sticker[] = [
   { id: "ab-blob-round", label: "Rounded Blob", category: "Abstract", keywords: ["blob", "organic", "shape", "round", "fluid"], svg: svg('<path d="M52 10 C74 12 92 28 90 50 C88 74 72 92 48 90 C26 88 8 72 10 48 C12 26 30 8 52 10 Z" fill="#8b5cf6"/>') },
   { id: "ab-blob-lumpy", label: "Lumpy Blob", category: "Abstract", keywords: ["blob", "organic", "lumpy", "amoeba", "fluid"], svg: svg('<path d="M50 10 C62 8 72 16 74 26 C76 36 90 38 90 50 C90 62 78 64 76 74 C74 86 62 92 52 88 C44 85 36 92 28 86 C18 79 22 68 16 60 C10 52 8 40 16 32 C24 24 30 28 36 20 C40 14 44 12 50 10 Z" fill="#14b8a6"/>') },
   { id: "ab-blob-tall", label: "Tall Blob", category: "Abstract", keywords: ["blob", "organic", "tall", "pebble", "stone"], svg: svg('<path d="M50 6 C64 8 72 22 70 38 C69 50 78 58 74 72 C70 88 60 94 49 94 C38 94 28 88 30 74 C32 62 24 54 27 40 C30 22 38 4 50 6 Z" fill="#f472b6"/>') },

@@ -6,7 +6,7 @@ import {
   ArgValue,
   CellValue,
   FormulaError,
-  FUNCTIONS,
+  functions,
   FnContext,
   compareValues,
   isError,
@@ -97,7 +97,7 @@ function evalNode(
     case "binary":
       return evalBinary(node, ctx, fnCtx);
     case "call": {
-      const fn = FUNCTIONS[node.name];
+      const fn = functions[node.name];
       if (!fn) return ERR("#NAME?");
       const args: ArgValue[] = node.args.map((a) =>
         evalNode(a, ctx, fnCtx)

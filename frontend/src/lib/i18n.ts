@@ -29,7 +29,7 @@ import { resolvedLocale } from "./locale";
 export type Catalog = Record<string, string>;
 
 /** The bundled base catalog. Every key the product uses must exist here. */
-export const BASE: Catalog = base as Catalog;
+export const baseCatalog: Catalog = base as Catalog;
 
 const PSEUDO_KEY = "hc-pseudo";
 
@@ -162,9 +162,9 @@ function pluralKey(key: string, count: number, tag: string, from: Catalog): stri
     category = count === 1 ? "one" : "other";
   }
   const exact = `${key}.=${count}`; // an explicit override, e.g. "zero items"
-  if (exact in from || exact in BASE) return exact;
+  if (exact in from || exact in baseCatalog) return exact;
   const wanted = `${key}.${category}`;
-  if (wanted in from || wanted in BASE) return wanted;
+  if (wanted in from || wanted in baseCatalog) return wanted;
   return `${key}.other`;
 }
 
@@ -181,10 +181,10 @@ export function translate(key: string, params?: Record<string, unknown>): string
   if (params && typeof params.count === "number") {
     k = pluralKey(key, params.count, activeTag || resolvedLocale(), active);
   }
-  const raw = active[k] ?? BASE[k];
+  const raw = active[k] ?? baseCatalog[k];
   if (raw === undefined) return key;
   const filled = interpolate(raw, params);
-  // Pseudo applies to the BASE text only: a real translation is already proof
+  // Pseudo applies to the baseCatalog text only: a real translation is already proof
   // that the string was externalized, so mangling it would only hide it.
   return pseudo && active[k] === undefined ? pseudoLocalize(filled) : filled;
 }

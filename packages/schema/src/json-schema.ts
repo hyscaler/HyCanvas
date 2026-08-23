@@ -6,10 +6,10 @@ import { z } from "zod";
 import { DesignFileSchema } from "./schema";
 
 /** Media type for the open design file format. */
-export const DESIGN_MEDIA_TYPE = "application/vnd.hycanvas.design+json";
+export const designMediaType = "application/vnd.hycanvas.design+json";
 
 /** Stable `$id` for the published schema document. */
-export const DESIGN_SCHEMA_ID =
+export const designSchemaId =
   "https://hycanvas.dev/schema/design.schema.json";
 
 /**
@@ -31,7 +31,7 @@ export function getJsonSchema(): Record<string, unknown> {
     reused: "ref",
   }) as Record<string, unknown>;
   return {
-    $id: DESIGN_SCHEMA_ID,
+    $id: designSchemaId,
     title: "HyCanvas Design File",
     ...schema,
   };

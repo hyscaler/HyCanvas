@@ -1,12 +1,12 @@
 // F16 per-user collaborative undo (the property the editor's DesignDoc relies
-// on): a Yjs UndoManager scoped to LOCAL_ORIGIN reverts only THIS client's edits
+// on): a Yjs UndoManager scoped to localOrigin reverts only THIS client's edits
 // and leaves a concurrent peer edit untouched, so undo never clobbers a
 // teammate's work. Mirrors the wiring in frontend/src/lib/ydoc.ts.
 
 import { describe, it, expect } from "vitest";
 import * as Y from "yjs";
-import { DESIGN_ROOT_KEY, type DesignFile } from "@hc/schema";
-import { reconcile, fromDoc, LOCAL_ORIGIN } from "../index";
+import { designRootKey, type DesignFile } from "@hc/schema";
+import { reconcile, fromDoc, localOrigin } from "../index";
 
 function rect(id: string, x: number) {
   return {
@@ -42,21 +42,21 @@ function hasNode(file: DesignFile, id: string): boolean {
   return file.pages[0].children.some((c) => (c as { id: string }).id === id);
 }
 
-describe("per-user collaborative undo (UndoManager scoped to LOCAL_ORIGIN)", () => {
+describe("per-user collaborative undo (UndoManager scoped to localOrigin)", () => {
   it("undo reverts only the local edit and preserves a concurrent remote edit", () => {
     const doc = new Y.Doc();
 
-    // Baseline shared state arrives as a remote/initial sync (NOT LOCAL_ORIGIN),
+    // Baseline shared state arrives as a remote/initial sync (NOT localOrigin),
     // so it is not tracked by the undo manager: one node `a` at x=0.
     const seed = new Y.Doc();
     reconcile(design([rect("a", 0)]), seed);
     Y.applyUpdate(doc, Y.encodeStateAsUpdate(seed), "remote");
 
-    const um = new Y.UndoManager(doc.getMap(DESIGN_ROOT_KEY), {
-      trackedOrigins: new Set([LOCAL_ORIGIN]),
+    const um = new Y.UndoManager(doc.getMap(designRootKey), {
+      trackedOrigins: new Set([localOrigin]),
     });
 
-    // Local edit (tracked): move `a` to x=50. reconcile runs under LOCAL_ORIGIN.
+    // Local edit (tracked): move `a` to x=50. reconcile runs under localOrigin.
     reconcile(design([rect("a", 50)]), doc);
     expect(um.canUndo()).toBe(true);
 
@@ -80,10 +80,10 @@ describe("per-user collaborative undo (UndoManager scoped to LOCAL_ORIGIN)", () 
 
   it("clear() drops the undo history so a baseline/restore is not undoable", () => {
     const doc = new Y.Doc();
-    const um = new Y.UndoManager(doc.getMap(DESIGN_ROOT_KEY), {
-      trackedOrigins: new Set([LOCAL_ORIGIN]),
+    const um = new Y.UndoManager(doc.getMap(designRootKey), {
+      trackedOrigins: new Set([localOrigin]),
     });
-    reconcile(design([rect("a", 0)]), doc); // seed under LOCAL_ORIGIN
+    reconcile(design([rect("a", 0)]), doc); // seed under localOrigin
     um.clear();
     expect(um.canUndo()).toBe(false);
   });

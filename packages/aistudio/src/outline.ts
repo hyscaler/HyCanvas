@@ -8,7 +8,7 @@ import type { AiDesignSpec, BlockRole, DesignBackground, DesignLayout } from "./
 
 /** What kind of multi-page artifact we are generating. Drives length + arc. */
 export type DesignType = "deck" | "doc" | "social-set" | "poster";
-export const DESIGN_TYPES: DesignType[] = ["deck", "doc", "social-set", "poster"];
+export const designTypes: DesignType[] = ["deck", "doc", "social-set", "poster"];
 
 /** The narrative/visual role of a page; maps to a layout + emphasis. */
 export type VisualRole =
@@ -19,7 +19,7 @@ export type VisualRole =
   | "quote"
   | "data"
   | "closing";
-export const VISUAL_ROLES: VisualRole[] = ["cover", "agenda", "content", "comparison", "quote", "data", "closing"];
+export const visualRoles: VisualRole[] = ["cover", "agenda", "content", "comparison", "quote", "data", "closing"];
 
 export interface OutlineItem {
   id: string;
@@ -34,7 +34,7 @@ export interface OutlineItem {
 
 /** Hard cap on a speaker note; the prompt asks for 100..500 chars and the
  *  normalizer truncates defensively rather than failing the outline. */
-export const MAX_NOTE_CHARS = 500;
+export const maxNoteChars = 500;
 
 export interface DesignOutline {
   title: string;
@@ -83,10 +83,10 @@ function str(v: unknown): string {
  *  boundary where one exists, mid-word truncation only as a last resort. */
 export function normalizeNote(v: unknown): string {
   const flat = str(v).replace(/\s+/g, " ");
-  if (flat.length <= MAX_NOTE_CHARS) return flat;
-  const cut = flat.slice(0, MAX_NOTE_CHARS);
+  if (flat.length <= maxNoteChars) return flat;
+  const cut = flat.slice(0, maxNoteChars);
   const sentenceEnd = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
-  return sentenceEnd > MAX_NOTE_CHARS / 2 ? cut.slice(0, sentenceEnd + 1) : cut;
+  return sentenceEnd > maxNoteChars / 2 ? cut.slice(0, sentenceEnd + 1) : cut;
 }
 
 /** Validate + normalize a parsed model value into a DesignOutline. Drops empty
@@ -106,7 +106,7 @@ export function normalizeOutline(parsed: unknown): DesignOutline {
     const pTitle = str(p.title);
     const points = Array.isArray(p.points) ? p.points.map(str).filter(Boolean).slice(0, 8) : [];
     if (!pTitle && !points.length) continue;
-    const visualRole = VISUAL_ROLES.includes(p.visualRole as VisualRole) ? (p.visualRole as VisualRole) : "content";
+    const visualRole = visualRoles.includes(p.visualRole as VisualRole) ? (p.visualRole as VisualRole) : "content";
     const note = normalizeNote(p.note);
     pages.push({ id: nextId(), title: pTitle || "Untitled", points, visualRole, ...(note ? { note } : {}) });
   }
@@ -134,7 +134,7 @@ export const outlineJsonSchema = {
         properties: {
           title: { type: "string" },
           points: { type: "array", items: { type: "string" } },
-          visualRole: { type: "string", enum: VISUAL_ROLES },
+          visualRole: { type: "string", enum: visualRoles },
           note: {
             type: "string",
             minLength: 100,

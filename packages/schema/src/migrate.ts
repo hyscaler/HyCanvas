@@ -3,7 +3,7 @@
 // from, plus a golden fixture (see __tests__). Opening an older file always
 // succeeds by composing steps from the file's version up to the target.
 
-import { CURRENT_SCHEMA_VERSION, type DesignFile } from "./schema";
+import { currentSchemaVersion, type DesignFile } from "./schema";
 
 /** A pure, idempotent step upgrading a file from version `v` to `v + 1`. */
 export type Migration = (file: any) => any;
@@ -378,7 +378,7 @@ export class MigrationError extends Error {
  */
 export function migrate(
   file: DesignFile,
-  toVersion: number = CURRENT_SCHEMA_VERSION,
+  toVersion: number = currentSchemaVersion,
 ): DesignFile {
   const from = file.schemaVersion;
 
@@ -415,7 +415,7 @@ export function migrate(
 /** True when the file needs a forward migration before it can be hydrated. */
 export function needsMigration(
   file: Pick<DesignFile, "schemaVersion">,
-  toVersion: number = CURRENT_SCHEMA_VERSION,
+  toVersion: number = currentSchemaVersion,
 ): boolean {
   return file.schemaVersion < toVersion;
 }

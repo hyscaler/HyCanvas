@@ -3,7 +3,7 @@
 // used an attribution-required asset drops its entry; re-adding restores it.
 
 import { childrenOf, type DesignFile, type Node } from "@hc/schema";
-import { PROVENANCE_KEY, type AttributionEntry, type NodeProvenance } from "./types";
+import { provenanceKey, type AttributionEntry, type NodeProvenance } from "./types";
 
 type AnyRec = Record<string, unknown>;
 
@@ -20,7 +20,7 @@ function visit(node: Node, fn: (n: Node) => void): void {
 /** Read provenance stamped on a node (by {@link withProvenance}), if any. */
 export function nodeProvenance(node: Node): NodeProvenance | undefined {
   const data = (node as unknown as AnyRec).data as AnyRec | undefined;
-  return data?.[PROVENANCE_KEY] as NodeProvenance | undefined;
+  return data?.[provenanceKey] as NodeProvenance | undefined;
 }
 
 /**

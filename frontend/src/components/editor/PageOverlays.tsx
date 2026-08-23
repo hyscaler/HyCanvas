@@ -8,7 +8,7 @@ import { pageToScreen } from "@hc/engine";
 import { useEditor } from "@/store/editor";
 import { promptText } from "@/lib/promptDialog";
 import type { CanvasApi } from "@/lib/useEditorCanvas";
-import { PAGE_GAP } from "@/lib/pageLayout";
+import { pageGap } from "@/lib/pageLayout";
 import { tr } from "@/lib/i18n";
 
 function HdrBtn({ icon: Icon, title, onClick, disabled, danger }: { icon: typeof ChevronUp; title: string; onClick: () => void; disabled?: boolean; danger?: boolean }) {
@@ -43,7 +43,7 @@ export function PageOverlays({ api }: { api: CanvasApi }) {
   const n = doc.pages.length;
 
   // Stacked offset (page-space Y) of page i.
-  const offsetOf = (i: number) => doc.pages.slice(0, i).reduce((a, q) => a + q.height + PAGE_GAP, 0);
+  const offsetOf = (i: number) => doc.pages.slice(0, i).reduce((a, q) => a + q.height + pageGap, 0);
   // Viewport culling: only render headers for pages near the visible area, so a
   // 100+ page document doesn't mount a DOM row per page.
   const viewTop = base.panY;

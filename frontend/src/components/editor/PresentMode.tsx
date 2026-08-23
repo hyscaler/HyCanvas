@@ -68,14 +68,14 @@ import { prefersReducedMotion } from "@/lib/theme";
 import { imageAssets } from "@/lib/assetProvider";
 import { useBrand } from "@/store/brand";
 import { oc } from "@/lib/sdk";
-import { DESIGN_SURFACE_DIR } from "@/lib/locale";
+import { designSurfaceDir } from "@/lib/locale";
 import { onAudienceEvent } from "@/lib/realtime";
 import { useToast } from "@/components/ui/Toast";
 import type { AudienceState } from "@hc/sdk";
 import { AudienceLink, openAudienceWindow } from "@/lib/audienceWindow";
 import {
   adjustSpotlightRadius,
-  DEFAULT_AUTO_ADVANCE_MS,
+  defaultAutoAdvanceMs,
   dwellMs,
   firstVisibleIndex,
   fitZoom,
@@ -84,13 +84,13 @@ import {
   prevVisibleIndex,
   RehearsalTimer,
   seekVisible,
-  LIVE_HEARTBEAT_MS,
-  SPOTLIGHT_DEFAULT_RADIUS,
+  liveHeartbeatMs,
+  spotlightDefaultRadius,
   spotlightGeom,
   stepZoom,
   visibleIndices,
   visiblePosition,
-  ZOOM_STEP,
+  zoomStep,
   type SlideLike,
   type ZoomTransform,
 } from "@/lib/present";
@@ -474,7 +474,7 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
   const [penColor, setPenColor] = useState<string>(PEN_COLORS[0]);
   const [penWidth, setPenWidth] = useState<number>(PEN_WIDTHS[1]);
   // Spotlight radius (CSS px), adjustable via wheel / +- keys.
-  const spotRadiusRef = useRef(SPOTLIGHT_DEFAULT_RADIUS);
+  const spotRadiusRef = useRef(spotlightDefaultRadius);
   // Cursor position over the wrapper in CSS px (drives laser + spotlight paint).
   const cursorRef = useRef<{ x: number; y: number } | null>(null);
   // Ephemeral pen ink, keyed by full-list slide index. Cleared on slide change &
@@ -516,13 +516,13 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
     if (!designId) return;
     void oc.presenterSetLiveSlide(designId, idx).catch(() => {});
     // Republish on a heartbeat, not only on slide change. Followers treat the
-    // live position as stale after LIVE_STALE_MS so a presenter who closed the tab stops
+    // live position as stale after liveStaleMs so a presenter who closed the tab stops
     // dragging the audience around, and talking over one slide for longer than
     // that is the normal case, not the exception: without this the banner and
     // slide-follow drop out mid-presentation and flap back on the next slide.
     const beat = setInterval(() => {
       void oc.presenterSetLiveSlide(designId, idx).catch(() => {});
-    }, LIVE_HEARTBEAT_MS);
+    }, liveHeartbeatMs);
     return () => clearInterval(beat);
   }, [designId, idx]);
   useEffect(() => {
@@ -771,9 +771,9 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
           if (to >= 0) navigate(to);
           return;
         }
-        case "z": case "Z": e.preventDefault(); setZoom((z) => stepZoom(z, ZOOM_STEP * 2, 0.5, 0.5)); return; // zoom in (center)
-        case "=": case "+": e.preventDefault(); setZoom((z) => stepZoom(z, ZOOM_STEP, z.originX, z.originY)); return;
-        case "-": case "_": e.preventDefault(); setZoom((z) => stepZoom(z, -ZOOM_STEP, z.originX, z.originY)); return;
+        case "z": case "Z": e.preventDefault(); setZoom((z) => stepZoom(z, zoomStep * 2, 0.5, 0.5)); return; // zoom in (center)
+        case "=": case "+": e.preventDefault(); setZoom((z) => stepZoom(z, zoomStep, z.originX, z.originY)); return;
+        case "-": case "_": e.preventDefault(); setZoom((z) => stepZoom(z, -zoomStep, z.originX, z.originY)); return;
         case "0": e.preventDefault(); setZoom(fitZoom()); return; // reset to fit
         case "?": e.preventDefault(); setShowHelp((v) => !v); return; // shortcut help
         default:
@@ -1008,7 +1008,7 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
     // Floor the per-slide dwell so a slide configured with autoAdvanceMs:0 (and no
     // entrance) cannot spin the timer in a tight zero-delay loop.
     const AUTOPILOT_MIN_DWELL_MS = 600;
-    const wait = entranceMs + Math.max(AUTOPILOT_MIN_DWELL_MS, dwellMs(pages as SlideLike[], idx, DEFAULT_AUTO_ADVANCE_MS));
+    const wait = entranceMs + Math.max(AUTOPILOT_MIN_DWELL_MS, dwellMs(pages as SlideLike[], idx, defaultAutoAdvanceMs));
     const timer = window.setTimeout(() => {
       // Autopilot advances directly (not via guardedNext), so clear any active
       // black/white blank itself so the next slide is actually visible.
@@ -1219,7 +1219,7 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
       const rect = wrap.getBoundingClientRect();
       const fx = (e.clientX - rect.left) / Math.max(1, rect.width);
       const fy = (e.clientY - rect.top) / Math.max(1, rect.height);
-      setZoom((z) => stepZoom(z, e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP, fx, fy));
+      setZoom((z) => stepZoom(z, e.deltaY < 0 ? zoomStep : -zoomStep, fx, fy));
     },
     [tool],
   );
@@ -1236,7 +1236,7 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
   if (pages.length === 0) return null;
 
   return (
-    <div className="light fixed inset-0 z-[100] flex flex-col bg-neutral-900" dir={DESIGN_SURFACE_DIR}>
+    <div className="light fixed inset-0 z-[100] flex flex-col bg-neutral-900" dir={designSurfaceDir}>
       {/* Audience-facing render path: only the slide canvas. Presenter-only UI
           (HUD, controls, magic-tool overlays) lives outside this surface so a
           captured/mirrored slide area never shows presenter chrome. */}
@@ -1342,7 +1342,7 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
         <ToolButton active={tool === "laser"} onClick={() => selectTool("laser")} title={tr("editor.laser_pointer_l")}><MousePointer2 size={16} /></ToolButton>
         <ToolButton active={tool === "pen"} onClick={() => selectTool("pen")} title={tr("editor.pen_draw_d")}><Pencil size={16} /></ToolButton>
         <ToolButton active={tool === "spotlight"} onClick={() => selectTool("spotlight")} title={tr("editor.spotlight_o")}><Lightbulb size={16} /></ToolButton>
-        <ToolButton active={zoom.scale > 1} onClick={() => setZoom((z) => (z.scale > 1 ? fitZoom() : stepZoom(z, ZOOM_STEP * 2, 0.5, 0.5)))} title={tr("editor.present_zoom_hint")}><ZoomIn size={16} /></ToolButton>
+        <ToolButton active={zoom.scale > 1} onClick={() => setZoom((z) => (z.scale > 1 ? fitZoom() : stepZoom(z, zoomStep * 2, 0.5, 0.5)))} title={tr("editor.present_zoom_hint")}><ZoomIn size={16} /></ToolButton>
         <ToolButton active={blank === "black"} onClick={() => setBlank((v) => (v === "black" ? "none" : "black"))} title={tr("editor.black_screen_b")}><Square size={16} fill="currentColor" /></ToolButton>
         <ToolButton active={blank === "white"} onClick={() => setBlank((v) => (v === "white" ? "none" : "white"))} title={tr("editor.white_screen_w")}><Square size={16} /></ToolButton>
         <ToolButton active={paletteOpen} onClick={() => setPaletteOpen(true)} title={tr("editor.jump_to_slide_g_or")}><LayoutGrid size={16} /></ToolButton>

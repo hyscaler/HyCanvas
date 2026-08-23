@@ -3,7 +3,7 @@ import type { Sticker } from "../stickers";
 
 const svg = (inner: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${inner}</svg>`;
 
-export const INFOGRAPHIC_STICKERS: Sticker[] = [
+export const infographicStickers: Sticker[] = [
   { id: "ig-progress-ring", label: "Progress Ring", category: "Infographic", keywords: ["percent", "loading", "chart", "donut"], svg: svg('<circle cx="50" cy="50" r="36" fill="#e5e7eb"/><circle cx="50" cy="50" r="24" fill="#ffffff"/><path d="M50 14a36 36 0 1 1-36 36h12a24 24 0 1 0 24-24Z" fill="#3b82f6"/>') },
   { id: "ig-pie-segment", label: "Pie Segment", category: "Infographic", keywords: ["chart", "share", "portion", "data"], svg: svg('<circle cx="50" cy="50" r="34" fill="#e5e7eb"/><path d="M50 50V16a34 34 0 0 1 29 51Z" fill="#f59e0b"/>') },
   { id: "ig-gauge", label: "Gauge", category: "Infographic", keywords: ["meter", "speed", "kpi", "dial"], svg: svg('<path d="M10 70a40 40 0 0 1 14-30l9 10a26 26 0 0 0-9 20Z" fill="#22c55e"/><path d="M24 40a40 40 0 0 1 52 0l-9 10a26 26 0 0 0-34 0Z" fill="#f59e0b"/><path d="M76 40a40 40 0 0 1 14 30H76a26 26 0 0 0-9-20Z" fill="#ef4444"/><polygon points="47 69 53 73 68 46 63 42" fill="#1f2937"/><circle cx="50" cy="70" r="6" fill="#1f2937"/>') },

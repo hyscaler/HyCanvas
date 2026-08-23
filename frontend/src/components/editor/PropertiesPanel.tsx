@@ -10,10 +10,10 @@ import type {
   Interaction, InteractionAction, Keyframe, KeyframeTrack, Node, NodeAnimation, Page, ParagraphStyle,
   TableConditionalRule, TableNode, TextEffect,
 } from "@hc/schema";
-import { colorHarmony, HARMONY_SCHEMES, type HarmonyScheme, extractPalette, toHex } from "@hc/color";
+import { colorHarmony, harmonySchemes, type HarmonyScheme, extractPalette, toHex } from "@hc/color";
 import { evalExpression, locate, rotateAboutPoint } from "@hc/editor";
 import { isLowResolution, computeEffectivePpi } from "@hc/engine";
-import { FONT_CATALOG, type FontCategory } from "@hc/text";
+import { fontCatalog, type FontCategory } from "@hc/text";
 import {
   AlignStartVertical, AlignCenterVertical, AlignEndVertical,
   AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal,
@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { fonts } from "@/lib/fontProvider";
 import { promptText, alertText } from "@/lib/promptDialog";
-import { FILTER_PRESETS, resolvePresetOps, autoEnhanceOps, alphaMaskFromCutout, removeBackground, rasterizeToPng, type AdjOp } from "@/lib/imageFilters";
+import { filterPresets, resolvePresetOps, autoEnhanceOps, alphaMaskFromCutout, removeBackground, rasterizeToPng, type AdjOp } from "@/lib/imageFilters";
 import { AddEffectRow, EffectStack } from "./EffectStack";
 import { useEditor } from "@/store/editor";
 import { BuildOrderSection } from "./BuildOrderSection";
@@ -61,7 +61,7 @@ const FONT_CATEGORIES: FontCategory[] = ["sans-serif", "serif", "display", "hand
 // a text node is selected), which otherwise janked text editing.
 const FONT_FAMILY_OPTIONS = FONT_CATEGORIES.map((cat) => (
   <optgroup key={cat} label={cat} className="capitalize">
-    {FONT_CATALOG.filter((f) => f.category === cat && !f.system).map((f) => (
+    {fontCatalog.filter((f) => f.category === cat && !f.system).map((f) => (
       <option key={f.family} value={f.family}>{f.family}</option>
     ))}
   </optgroup>
@@ -145,7 +145,7 @@ function ColorHarmony({ baseHex, onPick }: { baseHex: string; onPick: (hex: stri
   return (
     <div className="flex flex-col gap-1">
       <select aria-label={tr("editor.color_harmony")} value={scheme} onChange={(e) => setScheme(e.target.value as HarmonyScheme)} className="self-start rounded-md border border-neutral-200 bg-surface px-1.5 py-0.5 text-[11px] text-neutral-500 outline-none">
-        {HARMONY_SCHEMES.map((s) => <option key={s} value={s}>{s.replace("-", " ")}</option>)}
+        {harmonySchemes.map((s) => <option key={s} value={s}>{s.replace("-", " ")}</option>)}
       </select>
       <div className="flex flex-wrap gap-1.5">
         {swatches.map((c, i) => <Swatch key={`${c}-${i}`} color={c} title={`Apply ${c}`} onClick={() => onPick(c)} />)}
@@ -2707,7 +2707,7 @@ function ImageEffectsSection({ id, node, workspaceId }: { id: string; node: Node
     useEditor.getState().setEffects(id, (next.length ? next : undefined) as never);
   };
   const applyPreset = (presetId: string, k: number) => {
-    const preset = FILTER_PRESETS.find((p) => p.id === presetId);
+    const preset = filterPresets.find((p) => p.id === presetId);
     if (!preset) return;
     setActivePreset(presetId);
     applyAdjustments(resolvePresetOps(preset, k));
@@ -2808,7 +2808,7 @@ function ImageEffectsSection({ id, node, workspaceId }: { id: string; node: Node
       {tab === "filters" && (
         <div className="flex flex-col gap-2.5">
           <div className="grid grid-cols-3 gap-1.5">
-            {FILTER_PRESETS.map((p) => (
+            {filterPresets.map((p) => (
               <button
                 key={p.id}
                 onClick={() => applyPreset(p.id, intensity)}

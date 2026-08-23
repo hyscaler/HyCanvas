@@ -2,7 +2,7 @@
 // migrate, newer files are refused with a clear message, and the round-trip
 // through downloadHycFile's serialization is lossless.
 import { describe, expect, it } from "vitest";
-import { CURRENT_SCHEMA_VERSION, createBlankDesign } from "@hc/schema";
+import { currentSchemaVersion, createBlankDesign } from "@hc/schema";
 import { importedTitle, parseHycFile } from "./hycFile";
 
 describe("parseHycFile", () => {
@@ -18,7 +18,7 @@ describe("parseHycFile", () => {
     // structural validator still accepts it.
     const old = { ...createBlankDesign({ title: "Old file", width: 1080, height: 1080 }), schemaVersion: 7 };
     const parsed = parseHycFile(JSON.stringify(old));
-    expect(parsed.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(parsed.schemaVersion).toBe(currentSchemaVersion);
     expect(parsed.pages).toHaveLength(1);
   });
 
@@ -33,7 +33,7 @@ describe("parseHycFile", () => {
   });
 
   it("refuses files from a newer build instead of dropping fields", () => {
-    const newer = { schemaVersion: CURRENT_SCHEMA_VERSION + 1, pages: [{ id: "p", children: [] }] };
+    const newer = { schemaVersion: currentSchemaVersion + 1, pages: [{ id: "p", children: [] }] };
     expect(() => parseHycFile(JSON.stringify(newer))).toThrow(/newer version/);
   });
 

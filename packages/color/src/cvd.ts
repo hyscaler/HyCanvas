@@ -11,7 +11,7 @@ import { clamp01, color } from "./convert";
 export type CvdType = "protanopia" | "deuteranopia" | "tritanopia" | "achromatopsia";
 
 /** Row-major 3x3 matrices mapping (r,g,b) -> simulated (r,g,b). */
-export const CVD_MATRICES: Record<CvdType, readonly [number, number, number, number, number, number, number, number, number]> = {
+export const cvdMatrices: Record<CvdType, readonly [number, number, number, number, number, number, number, number, number]> = {
   protanopia: [0.567, 0.433, 0.0, 0.558, 0.442, 0.0, 0.0, 0.242, 0.758],
   deuteranopia: [0.625, 0.375, 0.0, 0.7, 0.3, 0.0, 0.0, 0.3, 0.7],
   tritanopia: [0.95, 0.05, 0.0, 0.0, 0.433, 0.567, 0.0, 0.475, 0.525],
@@ -20,7 +20,7 @@ export const CVD_MATRICES: Record<CvdType, readonly [number, number, number, num
 
 /** Apply a CVD transform to a single color (preview only; non-destructive). */
 export function simulateCvd(c: Color, type: CvdType): Color {
-  const m = CVD_MATRICES[type];
+  const m = cvdMatrices[type];
   const { r, g, b, a } = c.srgb;
   return color(
     clamp01(m[0] * r + m[1] * g + m[2] * b),

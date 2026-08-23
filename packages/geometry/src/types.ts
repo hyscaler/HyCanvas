@@ -20,4 +20,4 @@ export type ParametricShape =
   | { kind: "line"; length: number; angle: number };
 
 /** Cubic bezier circle-approximation constant. */
-export const KAPPA = 0.5522847498307936;
+export const kappa = 0.5522847498307936;

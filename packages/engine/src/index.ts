@@ -60,7 +60,7 @@ export {
   planDurationMs,
   slideDurationMs,
   visibleSlideIndices,
-  DEFAULT_SLIDE_HOLD_MS,
+  defaultSlideHoldMs,
   type DeckFrame,
   type DeckPlanOptions,
   type SlideFrame,

@@ -4,13 +4,13 @@
 // DesignFile for the last-client snapshot, and the read-only (viewer) gate.
 
 import * as Y from "yjs";
-import { DESIGN_ROOT_KEY, type DesignFile } from "@hc/schema";
+import { designRootKey, type DesignFile } from "@hc/schema";
 import { reconcile, fromDoc } from "./reconcile";
 
 /** True when a Y.Doc has no design state yet (its root map is empty). A freshly
  *  constructed room doc is empty until seeded or until a peer's first sync. */
 export function isEmptyDoc(ydoc: Y.Doc): boolean {
-  return ydoc.getMap(DESIGN_ROOT_KEY).size === 0;
+  return ydoc.getMap(designRootKey).size === 0;
 }
 
 /**

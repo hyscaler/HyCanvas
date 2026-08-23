@@ -6,7 +6,7 @@ import { Plus, Copy, Trash2, Eye, EyeOff, ChevronDown, ChevronRight, Bookmark } 
 import { groupPagesBySection, type SectionGroup, type SlideSection } from "@hc/schema";
 import { useEditor } from "@/store/editor";
 import { SlideThumb } from "./SlideThumb";
-import { MIRROR_IN_RTL } from "@/lib/locale";
+import { mirrorInRtl } from "@/lib/locale";
 import { tr } from "@/lib/i18n";
 
 const THUMB_W = 80;
@@ -265,7 +265,7 @@ function SectionChip({ section, count }: { section: SlideSection; count: number 
         data-testid={`section-toggle-${section.id}`}
         className="grid h-5 w-5 place-items-center rounded text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700"
       >
-        {section.collapsed ? <ChevronRight size={13} className={MIRROR_IN_RTL} /> : <ChevronDown size={13} />}
+        {section.collapsed ? <ChevronRight size={13} className={mirrorInRtl} /> : <ChevronDown size={13} />}
       </button>
       {renaming ? (
         <input

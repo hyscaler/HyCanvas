@@ -47,7 +47,7 @@ import {
   Sun,
 } from "lucide-react";
 import { createBlankDesign } from "@hc/schema";
-import { HYC_ACCEPT, downloadHycFile, importedTitle, parseHycFile, readFileText } from "@/lib/hycFile";
+import { hycAccept, downloadHycFile, importedTitle, parseHycFile, readFileText } from "@/lib/hycFile";
 import { pptxToDesign } from "@hc/export";
 import { ApiError, type DesignRecord, type HomeItem, type MyTask, type StorageUsageView, type TaskStatus, type TemplateCollectionSummary, type TemplateSummary, type WorkspaceRole } from "@hc/sdk";
 import { formatBytes } from "@/lib/format";
@@ -748,7 +748,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
               <input
                 ref={importDesignRef}
                 type="file"
-                accept={`${HYC_ACCEPT},.pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation`}
+                accept={`${hycAccept},.pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation`}
                 hidden
                 onChange={(e) => {
                   void importHycDesign(e.target.files);
@@ -846,7 +846,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                 <input
                   ref={importTemplateRef}
                   type="file"
-                  accept={HYC_ACCEPT}
+                  accept={hycAccept}
                   hidden
                   onChange={(e) => {
                     void importHycTemplate(e.target.files);

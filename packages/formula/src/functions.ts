@@ -131,7 +131,7 @@ export function dateToSerial(year: number, month: number, day: number): number {
   return Math.round((ms - DATE_EPOCH_MS) / DAY_MS);
 }
 
-export const FUNCTIONS: Record<string, Fn> = {
+export const functions: Record<string, Fn> = {
   SUM(args) {
     const nums = numericValues(args);
     if (isError(nums)) return nums;
@@ -235,7 +235,7 @@ export const FUNCTIONS: Record<string, Fn> = {
   },
 
   CONCATENATE(args, ctx) {
-    return FUNCTIONS.CONCAT(args, ctx);
+    return functions.CONCAT(args, ctx);
   },
 
   LEN(args) {

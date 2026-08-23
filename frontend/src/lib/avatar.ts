@@ -5,8 +5,8 @@
 import { avatarColors } from "@/lib/theme.generated";
 
 // Single-sourced from theme.config.mjs (a distinct rainbow for telling people
-// apart; not brand colors). Re-exported under the historical name.
-export const AVATAR_COLORS = avatarColors;
+// apart; not brand colors). Re-exported for avatar consumers.
+export { avatarColors };
 
 /** Up to two uppercase initials from a display name. */
 export function initials(name: string): string {
@@ -20,5 +20,5 @@ export function initials(name: string): string {
 export function avatarColor(seed: string): string {
   let h = 0;
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+  return avatarColors[h % avatarColors.length];
 }

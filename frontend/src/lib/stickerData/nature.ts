@@ -3,7 +3,7 @@ import type { Sticker } from "../stickers";
 
 const svg = (inner: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${inner}</svg>`;
 
-export const NATURE_STICKERS: Sticker[] = [
+export const natureStickers: Sticker[] = [
   { id: "nt-sun", label: "Sun", category: "Nature", keywords: ["sunny", "summer", "weather", "bright"], svg: svg('<polygon points="50 4 44 26 56 26" fill="#fbbf24"/><polygon points="50 96 44 74 56 74" fill="#fbbf24"/><polygon points="4 50 26 44 26 56" fill="#fbbf24"/><polygon points="96 50 74 44 74 56" fill="#fbbf24"/><polygon points="82 18 62 30 70 38" fill="#fbbf24"/><polygon points="18 18 38 30 30 38" fill="#fbbf24"/><polygon points="82 82 70 62 62 70" fill="#fbbf24"/><polygon points="18 82 30 62 38 70" fill="#fbbf24"/><circle cx="50" cy="50" r="20" fill="#facc15"/>') },
   { id: "nt-rain-cloud", label: "Rain Cloud", category: "Nature", keywords: ["weather", "rainy", "storm", "drops"], svg: svg('<path d="M28 60a18 18 0 0 1 3-35 22 22 0 0 1 41 6 14 14 0 0 1-3 29Z" fill="#93c5fd"/><path d="M34 66c-5 8-7 11-7 14a7 7 0 0 0 14 0c0-3-2-6-7-14Z" fill="#38bdf8"/><path d="M50 70c-5 8-7 11-7 14a7 7 0 0 0 14 0c0-3-2-6-7-14Z" fill="#38bdf8"/><path d="M66 66c-5 8-7 11-7 14a7 7 0 0 0 14 0c0-3-2-6-7-14Z" fill="#38bdf8"/>') },
   { id: "nt-snowflake", label: "Snowflake", category: "Nature", keywords: ["winter", "snow", "cold", "frost"], svg: svg('<rect x="47" y="8" width="6" height="84" rx="3" fill="#38bdf8"/><polygon points="16 26 12 32 84 74 88 68" fill="#38bdf8"/><polygon points="84 26 88 32 16 74 12 68" fill="#38bdf8"/><circle cx="50" cy="50" r="8" fill="#06b6d4"/>') },

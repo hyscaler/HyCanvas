@@ -14,18 +14,18 @@ import {
   normalizeHashtags,
   composeCaption,
   validateCaption,
-  PLATFORM_LIMITS,
+  platformLimits,
   variantKey,
   planVariants,
   proposeResizes,
-  PLATFORM_FORMATS,
+  platformFormats,
   encodeQr,
   qrToSvg,
   aggregateInsights,
   engagementRate,
   signPayload,
   verifySignature,
-  WEBHOOK_EVENTS,
+  webhookEvents,
   type PostStatus,
   type PostInsights,
 } from "../index";
@@ -259,7 +259,7 @@ describe("caption: validateCaption", () => {
   it("passes within limit", () => {
     const r = validateCaption("x", "short tweet");
     expect(r.ok).toBe(true);
-    expect(r.limit).toBe(PLATFORM_LIMITS.x);
+    expect(r.limit).toBe(platformLimits.x);
     expect(r.errors).toHaveLength(0);
   });
 
@@ -328,8 +328,8 @@ describe("variants: proposeResizes", () => {
     const out = proposeResizes(1080, 1080, ["instagram", "x", "pinterest"]);
     expect(out).toHaveLength(3);
     const ig = out.find((r) => r.platform === "instagram")!;
-    expect(ig.width).toBe(PLATFORM_FORMATS.instagram[0].width);
-    expect(ig.height).toBe(PLATFORM_FORMATS.instagram[0].height);
+    expect(ig.width).toBe(platformFormats.instagram[0].width);
+    expect(ig.height).toBe(platformFormats.instagram[0].height);
     // square source into a square IG primary => close aspect => fill.
     expect(ig.mode).toBe("fill");
   });
@@ -465,7 +465,7 @@ describe("insights: aggregation", () => {
 
 describe("webhook: sign/verify", () => {
   it("round-trips a signature", () => {
-    const body = JSON.stringify({ postId: "p1", event: WEBHOOK_EVENTS.postPublished });
+    const body = JSON.stringify({ postId: "p1", event: webhookEvents.postPublished });
     const sig = signPayload("s3cr3t", body, 1700000000);
     expect(verifySignature("s3cr3t", body, 1700000000, sig)).toBe(true);
   });
@@ -490,9 +490,9 @@ describe("webhook: sign/verify", () => {
   });
 
   it("exposes the four lifecycle event names", () => {
-    expect(WEBHOOK_EVENTS.postPublished).toBe("post.published");
-    expect(WEBHOOK_EVENTS.postFailed).toBe("post.failed");
-    expect(WEBHOOK_EVENTS.postScheduled).toBe("post.scheduled");
-    expect(WEBHOOK_EVENTS.insightsUpdated).toBe("insights.updated");
+    expect(webhookEvents.postPublished).toBe("post.published");
+    expect(webhookEvents.postFailed).toBe("post.failed");
+    expect(webhookEvents.postScheduled).toBe("post.scheduled");
+    expect(webhookEvents.insightsUpdated).toBe("insights.updated");
   });
 });

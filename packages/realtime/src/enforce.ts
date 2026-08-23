@@ -18,14 +18,14 @@
 // rather than duplicating the nested-structure traversal.
 
 import * as Y from "yjs";
-import { DESIGN_ROOT_KEY } from "@hc/schema";
+import { designRootKey } from "@hc/schema";
 import { yToJson, reconcileNodeMap } from "./reconcile";
 
 /** Origin tag stamped on the corrective transaction. Distinct from the local
  *  (reconcile) and remote (applied client update) origins so the gateway can
  *  tell a server correction apart and never echoes it back to its author as a
  *  fresh remote edit. */
-export const SERVER_ORIGIN = "server";
+export const serverOrigin = "server";
 
 /** A protected node's serialized state captured before an update is applied.
  *  `null` means the node was absent at snapshot time. */
@@ -43,7 +43,7 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
  * mutation.
  */
 export function findNodeMap(ydoc: Y.Doc, nodeId: string): Y.Map<unknown> | null {
-  const root = ydoc.getMap(DESIGN_ROOT_KEY);
+  const root = ydoc.getMap(designRootKey);
   const pages = root.get("pages");
   if (!(pages instanceof Y.Array)) return null;
   for (const page of pages.toArray()) {
@@ -111,7 +111,7 @@ export function snapshotNodes(ydoc: Y.Doc, ids: Iterable<string>): NodeSnapshot 
  *    gateway pairs this with the client lock UI, which prevents deleting a locked
  *    node in the first place.
  *
- * The whole pass is one transaction tagged {@link SERVER_ORIGIN} so the gateway
+ * The whole pass is one transaction tagged {@link serverOrigin} so the gateway
  * can broadcast exactly the corrective delta and never treat it as a new remote
  * edit (no echo loop).
  */
@@ -138,14 +138,14 @@ export function restoreNodes(ydoc: Y.Doc, snapshot: NodeSnapshot): string[] {
       // re-insertion into its recorded parent's children list.
       if (reinsertNode(ydoc, id, prior)) corrected.push(id);
     }
-  }, SERVER_ORIGIN);
+  }, serverOrigin);
   return corrected;
 }
 
 /** Remove a node by id from its parent children Y.Array. Returns whether it was
  *  found and removed. */
 function removeNode(ydoc: Y.Doc, nodeId: string): boolean {
-  const root = ydoc.getMap(DESIGN_ROOT_KEY);
+  const root = ydoc.getMap(designRootKey);
   const pages = root.get("pages");
   if (!(pages instanceof Y.Array)) return false;
   for (const page of pages.toArray()) {
@@ -189,7 +189,7 @@ function reinsertNode(
   nodeId: string,
   prior: Record<string, unknown>,
 ): boolean {
-  const root = ydoc.getMap(DESIGN_ROOT_KEY);
+  const root = ydoc.getMap(designRootKey);
   const pages = root.get("pages");
   if (!(pages instanceof Y.Array) || pages.length === 0) return false;
   // Re-insert under the first page's children. The node snapshot does not record

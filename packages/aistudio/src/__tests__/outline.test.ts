@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   normalizeOutline,
   normalizeNote,
-  MAX_NOTE_CHARS,
+  maxNoteChars,
   OutlineError,
   outlineItemToSpec,
   outlineJsonSchema,
@@ -11,7 +11,7 @@ import {
   qualityCheck,
   outlineSystemPrompt,
   groundImagePrompt,
-  VISUAL_ROLES,
+  visualRoles,
   type DesignOutline,
 } from "../index";
 
@@ -58,7 +58,7 @@ describe("normalizeOutline", () => {
   });
 
   it("schema enumerates the visual roles", () => {
-    expect(outlineJsonSchema.properties.pages.items.properties.visualRole.enum).toEqual(VISUAL_ROLES);
+    expect(outlineJsonSchema.properties.pages.items.properties.visualRole.enum).toEqual(visualRoles);
   });
 });
 
@@ -173,13 +173,13 @@ describe("speaker notes on outline items", () => {
       pages: [{ title: "P", visualRole: "content", note: sentence.repeat(20) }],
     });
     const note = o.pages[0].note!;
-    expect(note.length).toBeLessThanOrEqual(MAX_NOTE_CHARS);
+    expect(note.length).toBeLessThanOrEqual(maxNoteChars);
     expect(note.endsWith(".")).toBe(true); // never clipped mid-sentence
   });
 
   it("normalizeNote truncates hard when no sentence boundary exists", () => {
     const note = normalizeNote("x".repeat(900));
-    expect(note.length).toBe(MAX_NOTE_CHARS);
+    expect(note.length).toBe(maxNoteChars);
   });
 
   it("ignores non-string notes", () => {
@@ -190,7 +190,7 @@ describe("speaker notes on outline items", () => {
   it("the embedded schema requires the note", () => {
     const item = outlineJsonSchema.properties.pages.items;
     expect(item.required).toContain("note");
-    expect(item.properties.note.maxLength).toBe(MAX_NOTE_CHARS);
+    expect(item.properties.note.maxLength).toBe(maxNoteChars);
   });
 
   it("layoutDeck threads the note onto the DeckPage", () => {

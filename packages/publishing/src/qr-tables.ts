@@ -1,11 +1,11 @@
 // ISO/IEC 18004 QR error-correction block structure and alignment-pattern
 // position tables for versions 1..40. Used by qr.ts. Pure data, no logic.
 //
-// BLOCK_TABLE[version-1][ecLevelIndex] = [ecCodewordsPerBlock, numBlocksGroup1,
+// blockTable[version-1][ecLevelIndex] = [ecCodewordsPerBlock, numBlocksGroup1,
 //   dataCodewordsGroup1, numBlocksGroup2, dataCodewordsGroup2]
 // ecLevelIndex order: L=0, M=1, Q=2, H=3.
 
-export const BLOCK_TABLE: number[][][] = [
+export const blockTable: number[][][] = [
   // v1
   [[7, 1, 19, 0, 0], [10, 1, 16, 0, 0], [13, 1, 13, 0, 0], [17, 1, 9, 0, 0]],
   // v2
@@ -91,7 +91,7 @@ export const BLOCK_TABLE: number[][][] = [
 // Alignment-pattern center coordinates per version. The actual patterns are
 // placed at every (row, col) pair from these positions, skipping any that
 // collide with a finder pattern. Version 1 has none.
-export const ALIGN_POS: number[][] = [
+export const alignPos: number[][] = [
   [], // v1
   [6, 18],
   [6, 22],

@@ -9,7 +9,7 @@
 import { describe, it, expect } from "vitest";
 import * as Y from "yjs";
 import { type DesignFile } from "@hc/schema";
-import { reconcile, fromDoc, LOCAL_ORIGIN } from "../index";
+import { reconcile, fromDoc, localOrigin } from "../index";
 
 function run(text: string, style: Record<string, unknown> = { fontSize: 24 }) {
   return { text, style };
@@ -104,10 +104,10 @@ describe("rich-text concurrent merge", () => {
     const aU: Uint8Array[] = [];
     const bU: Uint8Array[] = [];
     A.on("update", (u: Uint8Array, o: unknown) => {
-      if (o === LOCAL_ORIGIN) aU.push(u);
+      if (o === localOrigin) aU.push(u);
     });
     B.on("update", (u: Uint8Array, o: unknown) => {
-      if (o === LOCAL_ORIGIN) bU.push(u);
+      if (o === localOrigin) bU.push(u);
     });
 
     // A inserts "X" after "Hello" (offset 5); B appends "Z" at the end (offset 11).
@@ -129,10 +129,10 @@ describe("rich-text concurrent merge", () => {
     const aU: Uint8Array[] = [];
     const bU: Uint8Array[] = [];
     A.on("update", (u: Uint8Array, o: unknown) => {
-      if (o === LOCAL_ORIGIN) aU.push(u);
+      if (o === localOrigin) aU.push(u);
     });
     B.on("update", (u: Uint8Array, o: unknown) => {
-      if (o === LOCAL_ORIGIN) bU.push(u);
+      if (o === localOrigin) bU.push(u);
     });
 
     reconcile(design([textNode("t1", [para([run("AAAx")]), para([run("BBB")])])]), A);
@@ -155,10 +155,10 @@ describe("rich-text concurrent merge", () => {
     const aU: Uint8Array[] = [];
     const bU: Uint8Array[] = [];
     A.on("update", (u: Uint8Array, o: unknown) => {
-      if (o === LOCAL_ORIGIN) aU.push(u);
+      if (o === localOrigin) aU.push(u);
     });
     B.on("update", (u: Uint8Array, o: unknown) => {
-      if (o === LOCAL_ORIGIN) bU.push(u);
+      if (o === localOrigin) bU.push(u);
     });
 
     reconcile(design([textNode("t1", [para([run("1-base")])])]), A);
@@ -360,10 +360,10 @@ describe("rich-text non-canonical paragraphs (round-trip fidelity)", () => {
     const aU: Uint8Array[] = [];
     const bU: Uint8Array[] = [];
     A.on("update", (u: Uint8Array, o: unknown) => {
-      if (o === LOCAL_ORIGIN) aU.push(u);
+      if (o === localOrigin) aU.push(u);
     });
     B.on("update", (u: Uint8Array, o: unknown) => {
-      if (o === LOCAL_ORIGIN) bU.push(u);
+      if (o === localOrigin) bU.push(u);
     });
 
     // A edits the two surrounding paragraphs (blank line untouched in intent).

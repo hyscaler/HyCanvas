@@ -9,7 +9,7 @@ import type {
   Run,
   TextStyleSheet,
 } from "@hc/schema";
-import { DEFAULT_CHAR_STYLE, DEFAULT_PARAGRAPH_STYLE } from "./defaults";
+import { defaultCharStyle, defaultParagraphStyle } from "./defaults";
 
 // Merge the defined keys of `b` over `a`. `axes` and `features` deep-merge so a
 // partial override (e.g. just `wght`) keeps the other axes.
@@ -61,7 +61,7 @@ export function resolveCharStyle(
   paragraph?: Paragraph,
   sheet?: TextStyleSheet,
 ): CharStyle {
-  let s: CharStyle = { ...DEFAULT_CHAR_STYLE };
+  let s: CharStyle = { ...defaultCharStyle };
   if (paragraph?.style.baseChar) s = merge(s, paragraph.style.baseChar);
   if (run.charStyleId && sheet) s = merge(s, resolveSheetChar(sheet, run.charStyleId));
   else s = merge(s, run.style); // inline resolved style
@@ -74,7 +74,7 @@ export function resolveParagraphStyle(
   paragraph: Paragraph,
   sheet?: TextStyleSheet,
 ): ParagraphStyle {
-  let s: ParagraphStyle = { ...DEFAULT_PARAGRAPH_STYLE };
+  let s: ParagraphStyle = { ...defaultParagraphStyle };
   if (paragraph.paraStyleId && sheet) s = merge(s, resolveSheetParagraph(sheet, paragraph.paraStyleId));
   else s = merge(s, paragraph.style);
   if (paragraph.overrides) s = merge(s, paragraph.overrides);

@@ -3,7 +3,7 @@ import { createBlankDesign } from "../factory";
 import { migrate } from "../migrate";
 import { validate } from "../validate";
 import { fromDesignFile, toDesignFile } from "../yjs";
-import { CURRENT_SCHEMA_VERSION, type DesignFile, type Theme } from "../schema";
+import { currentSchemaVersion, type DesignFile, type Theme } from "../schema";
 import {
   applyTheme,
   builtinMasterAndLayouts,
@@ -37,7 +37,7 @@ describe("schema version", () => {
   it("migrates a v10 file to the current version purely additively", () => {
     const v10 = { ...createBlankDesign({ title: "Old", width: 800, height: 600 }), schemaVersion: 10 };
     const migrated = migrate(v10 as unknown as DesignFile);
-    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(migrated.schemaVersion).toBe(currentSchemaVersion);
     // Nothing added, nothing lost: only the version changed.
     expect({ ...migrated, schemaVersion: 10 }).toEqual(v10);
   });

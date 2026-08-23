@@ -13,7 +13,7 @@ import { browserTimezone } from "@/lib/datetime";
 import { getContrastPreference, getMotionPreference, getThemePreference, setContrastPreference, setMotionPreference, setThemePreference, type ContrastPreference, type MotionPreference, type ThemePreference } from "@/lib/theme";
 import { disablePush, enablePush, getPushState, type PushState } from "@/lib/push";
 import { useAuth } from "@/store/auth";
-import { MIRROR_IN_RTL, setLocalePreference, getLocalePreference } from "@/lib/locale";
+import { mirrorInRtl, setLocalePreference, getLocalePreference } from "@/lib/locale";
 import { loadCatalog } from "@/lib/i18n";
 import { useToast } from "@/components/ui/Toast";
 import { FullScreenLoader } from "@/components/ui/BrandLoader";
@@ -451,7 +451,7 @@ export function SettingsApp({ tab: urlTab }: { tab: SettingsTab | null }) {
     <div className="min-h-screen bg-neutral-50">
       <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-neutral-200 bg-surface/90 px-4 py-2.5 backdrop-blur">
         <button onClick={() => void router.push("/dashboard")} aria-label={tr("settings.back_to_dashboard")} className="grid h-8 w-8 place-items-center rounded-lg text-neutral-500 hover:bg-neutral-100">
-          <ChevronLeft size={20} className={MIRROR_IN_RTL} />
+          <ChevronLeft size={20} className={mirrorInRtl} />
         </button>
         <Logo size={26} />
         {/* The page's level-one heading. It is the visible title too, so

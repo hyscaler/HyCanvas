@@ -26,12 +26,12 @@ import {
   X,
 } from "lucide-react";
 import {
-  PLATFORM_LIMITS,
+  platformLimits,
   composeCaption,
   extractHashtags,
   normalizeHashtags,
   validateCaption,
-  PLATFORM_FORMATS,
+  platformFormats,
   proposeResizes,
   planVariants,
   dueAt,
@@ -50,7 +50,7 @@ import { useEditor } from "@/store/editor";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { useToast } from "@/components/ui/Toast";
-import { MIRROR_IN_RTL } from "@/lib/locale";
+import { mirrorInRtl } from "@/lib/locale";
 import { tr } from "@/lib/i18n";
 import { userMessage } from "@/lib/errors";
 
@@ -206,7 +206,7 @@ export function PublishDialog({
     designId ?? "unsaved",
     page.id,
     selected.map((p) => {
-      const fmt = PLATFORM_FORMATS[p][0];
+      const fmt = platformFormats[p][0];
       return { targetId: p, width: fmt.width, height: fmt.height, format: fmt.format };
     }),
   );
@@ -214,7 +214,7 @@ export function PublishDialog({
   // The strictest selected platform decides the live limit warning.
   const strictest =
     selected.length > 0
-      ? selected.reduce((a, b) => (PLATFORM_LIMITS[a] <= PLATFORM_LIMITS[b] ? a : b))
+      ? selected.reduce((a, b) => (platformLimits[a] <= platformLimits[b] ? a : b))
       : null;
   const strictValidation = strictest ? validateCaption(strictest, composed) : null;
 
@@ -267,7 +267,7 @@ export function PublishDialog({
       createdAt: createdIso,
       updatedAt: createdIso,
       targets: selected.map((platform) => {
-        const fmt = PLATFORM_FORMATS[platform][0];
+        const fmt = platformFormats[platform][0];
         return {
           targetId: platform,
           platform,
@@ -560,13 +560,13 @@ export function PublishDialog({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <IconButton size="sm" aria-label={tr("editor.previous_month")} onClick={prevMonth}>
-                    <ChevronLeft size={16} className={MIRROR_IN_RTL} />
+                    <ChevronLeft size={16} className={mirrorInRtl} />
                   </IconButton>
                   <span className="min-w-[9rem] text-center text-sm font-medium text-neutral-800">
                     {monthNames()[calMonth - 1]} {calYear}
                   </span>
                   <IconButton size="sm" aria-label={tr("editor.next_month")} onClick={nextMonth}>
-                    <ChevronRight size={16} className={MIRROR_IN_RTL} />
+                    <ChevronRight size={16} className={mirrorInRtl} />
                   </IconButton>
                 </div>
                 <select

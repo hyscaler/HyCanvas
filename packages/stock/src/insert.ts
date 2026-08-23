@@ -6,7 +6,7 @@
 
 import { createNode, type AssetRef, type Node } from "@hc/schema";
 import { svgToNodes } from "./svg";
-import { PROVENANCE_KEY, type NodeProvenance, type StockAsset } from "./types";
+import { provenanceKey, type NodeProvenance, type StockAsset } from "./types";
 
 export interface Insertion {
   nodes: Node[];
@@ -22,7 +22,7 @@ function provenanceOf(asset: StockAsset): NodeProvenance {
 
 /** Stamp provenance onto a node under the agreed data key (serialized in-file). */
 export function withProvenance<T extends Node>(node: T, prov: NodeProvenance): T {
-  const data = { ...(node as { data?: Record<string, unknown> }).data, [PROVENANCE_KEY]: prov };
+  const data = { ...(node as { data?: Record<string, unknown> }).data, [provenanceKey]: prov };
   return { ...node, data } as T;
 }
 

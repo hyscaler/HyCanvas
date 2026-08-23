@@ -3,7 +3,7 @@ import type { Sticker } from "../stickers";
 
 const svg = (inner: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${inner}</svg>`;
 
-export const TRAVEL_STICKERS: Sticker[] = [
+export const travelStickers: Sticker[] = [
   { id: "tv-airplane", label: "Airplane", category: "Travel", keywords: ["plane", "flight", "airport", "aviation", "fly"], svg: svg('<polygon points="42,36 6,58 6,66 42,52 58,52 94,66 94,58 58,36" fill="#3b82f6"/><polygon points="44,74 24,90 24,96 44,84 56,84 76,96 76,90 56,74" fill="#3b82f6"/><path d="M50 4Q58 12 58 28L58 84Q58 94 50 94Q42 94 42 84L42 28Q42 12 50 4Z" fill="#e5e7eb"/><ellipse cx="50" cy="20" rx="5" ry="8" fill="#38bdf8"/>') },
   { id: "tv-hot-air-balloon", label: "Hot Air Balloon", category: "Travel", keywords: ["balloon", "adventure", "sky", "festival", "float"], svg: svg('<path d="M50 4C72 4 84 20 84 38C84 56 66 68 58 76L42 76C34 68 16 56 16 38C16 20 28 4 50 4Z" fill="#ef4444"/><path d="M50 4C58 14 62 26 62 38C62 56 55 68 53 76L47 76C45 68 38 56 38 38C38 26 42 14 50 4Z" fill="#facc15"/><polygon points="42,76 58,76 55,84 45,84" fill="#b91c1c"/><rect x="41" y="84" width="18" height="12" rx="3" fill="#92400e"/>') },
   { id: "tv-car", label: "Car", category: "Travel", keywords: ["drive", "vehicle", "auto", "road", "trip"], svg: svg('<path d="M24 50Q28 32 44 32L60 32Q74 32 80 50Z" fill="#ef4444"/><rect x="6" y="48" width="88" height="22" rx="8" fill="#ef4444"/><path d="M33 47Q36 37 44 37L49 37L49 47Z M54 37L60 37Q69 37 73 47L54 47Z" fill="#93c5fd"/><path d="M18 70a10 10 0 1 0 20 0a10 10 0 1 0-20 0Z M62 70a10 10 0 1 0 20 0a10 10 0 1 0-20 0Z" fill="#1f2937"/><path d="M24 70a4 4 0 1 0 8 0a4 4 0 1 0-8 0Z M68 70a4 4 0 1 0 8 0a4 4 0 1 0-8 0Z" fill="#ffffff"/>') },

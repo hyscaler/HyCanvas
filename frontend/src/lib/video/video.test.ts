@@ -14,7 +14,7 @@ import {
   clipGainAt,
   colorFilter,
   colorIsNeutral,
-  COLOR_PRESETS,
+  colorPresets,
   duckDbAtFrame,
   evalKeyframes,
   gainEnvelopeDb,
@@ -336,7 +336,7 @@ describe("color adjustments", () => {
   });
 
   it("ships presets whose values are non-neutral", () => {
-    for (const p of COLOR_PRESETS) expect(colorIsNeutral(p.color)).toBe(false);
+    for (const p of colorPresets) expect(colorIsNeutral(p.color)).toBe(false);
   });
 });
 

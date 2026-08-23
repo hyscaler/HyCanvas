@@ -30,8 +30,8 @@ import * as syncProtocol from "y-protocols/sync";
 import * as decoding from "lib0/decoding";
 import * as encoding from "lib0/encoding";
 import { IndexeddbPersistence } from "y-indexeddb";
-import { reconcile, fromDoc, fromDocWithPageReuse, LOCAL_ORIGIN } from "@hc/realtime";
-import { DESIGN_ROOT_KEY, type DesignFile } from "@hc/schema";
+import { reconcile, fromDoc, fromDocWithPageReuse, localOrigin } from "@hc/realtime";
+import { designRootKey, type DesignFile } from "@hc/schema";
 import { useEditor, type CollabUndo } from "@/store/editor";
 
 // base64 of a Uint8Array (browser btoa over a binary string). Chunked so a multi-
@@ -84,7 +84,7 @@ export class DesignDoc {
   // room on reconnect (Yjs CRDT, no data loss). Null in non-browser/SSR.
   private idb: IndexeddbPersistence | null = null;
   // F16 per-user collaborative undo: a Yjs UndoManager scoped to THIS client's
-  // edits (LOCAL_ORIGIN). Undo reverts only our own changes and merges cleanly
+  // edits (localOrigin). Undo reverts only our own changes and merges cleanly
   // with concurrent peer edits; registered into the editor store as the active
   // collab-undo handle while this doc is bound.
   private readonly undoMgr: Y.UndoManager;
@@ -133,13 +133,13 @@ export class DesignDoc {
     // baseline; its baseline is the lineage's own folded state.
     this.seedBaseline = this.foreignStore ? null : structuredClone(useEditor.getState().doc);
 
-    // Track only LOCAL_ORIGIN transactions (this client's reconciled edits).
+    // Track only localOrigin transactions (this client's reconciled edits).
     // Remote-peer updates (REMOTE_ORIGIN) and the manager's own undo/redo apply
     // under other origins, so they are not tracked and undo never reverts a
     // teammate's change. Default capture window groups a synchronous batch
     // (e.g. one runAsTurn) into a single undo step.
-    this.undoMgr = new Y.UndoManager(this.ydoc.getMap(DESIGN_ROOT_KEY), {
-      trackedOrigins: new Set([LOCAL_ORIGIN]),
+    this.undoMgr = new Y.UndoManager(this.ydoc.getMap(designRootKey), {
+      trackedOrigins: new Set([localOrigin]),
     });
     this.undoHandle = {
       undo: () => this.undoMgr.undo(),
@@ -156,12 +156,12 @@ export class DesignDoc {
     // Index resolves to the page id at event time. Anything shallower or
     // outside pages (meta, assets, a page insert/delete on the array itself)
     // marks the projection meta-dirty and falls back to the full path.
-    this.ydoc.getMap(DESIGN_ROOT_KEY).observeDeep((events) => {
+    this.ydoc.getMap(designRootKey).observeDeep((events) => {
       for (const ev of events) {
-        if (ev.transaction.origin === LOCAL_ORIGIN) continue; // store already has it
+        if (ev.transaction.origin === localOrigin) continue; // store already has it
         const path = ev.path;
         if (path.length >= 2 && path[0] === "pages" && typeof path[1] === "number") {
-          const pages = this.ydoc.getMap(DESIGN_ROOT_KEY).get("pages");
+          const pages = this.ydoc.getMap(designRootKey).get("pages");
           const pg = pages instanceof Y.Array ? pages.get(path[1] as number) : null;
           const id = pg instanceof Y.Map ? pg.get("id") : null;
           if (typeof id === "string") this.dirtyPages.add(id);
@@ -176,19 +176,19 @@ export class DesignDoc {
     // peer, the initial sync, or an undo/redo applied by the UndoManager)
     // rebuilds the store doc under the guard.
     this.ydoc.on("update", (_update: Uint8Array, origin: unknown) => {
-      if (origin !== LOCAL_ORIGIN) this.applyToStore();
+      if (origin !== localOrigin) this.applyToStore();
     });
 
-    // Fan out LOCAL edits (our reconcile, tagged LOCAL_ORIGIN) to the transport
+    // Fan out LOCAL edits (our reconcile, tagged localOrigin) to the transport
     // so they reach peers. Remote-origin (inbound sync) and IndexedDB-load
     // updates are NOT re-sent: the former already came from the network, and the
     // latter is just restoring already-synced local state, so rebroadcasting
     // would be redundant churn.
     this.ydoc.on("update", (update: Uint8Array, origin: unknown) => {
-      // Fan out our own edits (LOCAL_ORIGIN) AND undo/redo (applied by the
+      // Fan out our own edits (localOrigin) AND undo/redo (applied by the
       // UndoManager under its own origin), so peers converge on undone/redone
       // state. Remote-origin and IndexedDB-load updates are not re-sent.
-      if (origin !== LOCAL_ORIGIN && origin !== this.undoMgr) return;
+      if (origin !== localOrigin && origin !== this.undoMgr) return;
       for (const h of this.updateHandlers) h(update);
     });
 
@@ -222,7 +222,7 @@ export class DesignDoc {
       // pre-edit baseline first and clear, then reconcile the current doc so
       // the edit itself diffs in as a normal tracked step and the session's
       // first action stays undoable.
-      if (this.ydoc.getMap(DESIGN_ROOT_KEY).size === 0) {
+      if (this.ydoc.getMap(designRootKey).size === 0) {
         // Never absorb ANOTHER lineage's document while empty. At switch time
         // the store still holds the lineage we left, so seeding here would
         // graft branch content onto main (broadcast to every peer as duplicate
@@ -341,7 +341,7 @@ export class DesignDoc {
     // A branch doc's only legitimate seed is its folded lineage
     // (applyJournalFrames); a design-file seed would graft foreign state.
     if (this.branch) return;
-    reconcile(file, this.ydoc); // LOCAL_ORIGIN: also fans out so peers can sync
+    reconcile(file, this.ydoc); // localOrigin: also fans out so peers can sync
     this.undoMgr.clear(); // the seed is the baseline, not an undoable edit
   }
 
@@ -355,7 +355,7 @@ export class DesignDoc {
    * doc instead of only the local store.
    */
   replaceDoc(file: DesignFile): void {
-    reconcile(file, this.ydoc); // LOCAL_ORIGIN: minimal ops, broadcast to peers
+    reconcile(file, this.ydoc); // localOrigin: minimal ops, broadcast to peers
     this.undoMgr.clear(); // a restore is a fresh baseline (forward-only, not undoable)
   }
 

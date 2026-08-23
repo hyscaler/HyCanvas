@@ -3,8 +3,8 @@ import dynamic from "next/dynamic";
 import type { GetStaticPaths, GetStaticProps } from "next";
 import { RequireAuth } from "@/components/RequireAuth";
 import {
-  DASHBOARD_TITLES,
-  DASHBOARD_VIEWS,
+  dashboardTitles,
+  dashboardViews,
   type DashboardView,
 } from "@/components/dashboard/views";
 import { tr } from "@/lib/i18n";
@@ -24,7 +24,7 @@ interface DashboardPageProps {
 // render this same page component, so client-side navigation between sections
 // keeps the mounted DashboardApp (and its loaded data) alive.
 export const getStaticPaths: GetStaticPaths = async () => ({
-  paths: DASHBOARD_VIEWS.map((v) => ({ params: { view: v === "home" ? [] : [v] } })),
+  paths: dashboardViews.map((v) => ({ params: { view: v === "home" ? [] : [v] } })),
   fallback: false,
 });
 
@@ -37,7 +37,7 @@ export default function DashboardPage({ view }: DashboardPageProps) {
   return (
     <>
       <Head>
-        <title>{`${DASHBOARD_TITLES[view]} · HyCanvas`}</title>
+        <title>{`${dashboardTitles[view]} · HyCanvas`}</title>
       </Head>
       <RequireAuth>
         <DashboardApp view={view} />

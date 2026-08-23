@@ -6,7 +6,7 @@ import { describe, expect, it, beforeEach } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { BASE, registerCatalog, loadCatalog, translate, resetI18n } from "./i18n";
+import { baseCatalog, registerCatalog, loadCatalog, translate, resetI18n } from "./i18n";
 
 const hi = JSON.parse(
   readFileSync(join(fileURLToPath(new URL(".", import.meta.url)), "..", "..", "public", "locales", "hi.json"), "utf8"),
@@ -24,7 +24,7 @@ describe("the shipped Hindi catalog", () => {
     // example emails, database defaults) are present with identical values,
     // so a gap here is a NEW string a future change added without a Hindi
     // entry, not a deliberate omission.
-    const missing = Object.keys(BASE).filter((k) => !(k in hi));
+    const missing = Object.keys(baseCatalog).filter((k) => !(k in hi));
     expect(missing).toEqual([]);
   });
 

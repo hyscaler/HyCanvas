@@ -46,7 +46,7 @@ export function layoutFlowchart(
   // recursion stack (a back-edge). Deterministic given node order.
   const WHITE = 0;
   const GRAY = 1;
-  const BLACK = 2;
+  const black = 2;
   const color = new Map<string, number>(nodes.map((n) => [n, WHITE]));
   const adj = new Map<string, string[]>(nodes.map((n) => [n, []]));
   for (const [u, v] of edges) adj.get(u)!.push(v);
@@ -63,7 +63,7 @@ export function layoutFlowchart(
       acyclic.push([u, v]);
       if (c === WHITE) dfs(v);
     }
-    color.set(u, BLACK);
+    color.set(u, black);
   };
   for (const n of nodes) if (color.get(n) === WHITE) dfs(n);
 

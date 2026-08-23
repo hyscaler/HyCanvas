@@ -115,7 +115,7 @@ function rect(page: { width: number; height: number }, x: number, y: number, w: 
   return { x: page.width * x, y: page.height * y, width: page.width * w, height: page.height * h };
 }
 
-export const BUILTIN_MASTER_ID = "master-default";
+export const builtinMasterId = "master-default";
 
 /** The default master + the five built-in layouts PowerPoint users expect
  *  (title, title+content, two-content, comparison, picture). Sized to `page`,
@@ -125,7 +125,7 @@ export function builtinMasterAndLayouts(page: { width: number; height: number })
   layouts: SlideLayout[];
 } {
   const master: SlideMaster = {
-    id: BUILTIN_MASTER_ID,
+    id: builtinMasterId,
     name: "Default",
     placeholders: [{ id: "ph-footer", role: "footer", rect: rect(page, 0.06, 0.9, 0.88, 0.06) }],
   };

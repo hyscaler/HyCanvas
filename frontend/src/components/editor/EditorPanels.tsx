@@ -9,7 +9,7 @@ import { searchFonts, type FontCatalogEntry } from "@hc/text";
 import { toHex, fromHex, relativeLuminance } from "@hc/color";
 import { formatBytes } from "@/lib/format";
 import { qrModules } from "@/lib/qr";
-import { STICKERS, STICKER_CATEGORIES, type Sticker } from "@/lib/stickers";
+import { stickers, stickerCategories, type Sticker } from "@/lib/stickers";
 import { parseModelJson } from "@/lib/magicDesign";
 import {
   normalizeOutline, deckThemes, layoutDeck, groundImagePrompt,
@@ -30,8 +30,8 @@ import {
   autoLayoutSuggestions,
   autoAnimatePlan,
   animateBoxesForPage,
-  CATEGORY_LABEL,
-  ANIMATE_STYLES,
+  categoryLabel,
+  animateStyles,
   type CritiqueIssue,
   type HarmonizeProposal,
   type AutoLayoutSuggestion,
@@ -50,7 +50,7 @@ import { useComments } from "@/store/comments";
 import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
-import { MIRROR_IN_RTL } from "@/lib/locale";
+import { mirrorInRtl } from "@/lib/locale";
 import { tr } from "@/lib/i18n";
 import { stickerLabel, stickerCategoryLabel } from "@/lib/stickers";
 import { documentDirection } from "@/lib/locale";
@@ -592,7 +592,7 @@ export function ElementsPanel() {
         {/* Graphics: bundled, free, editable-vector stickers (insert via addIconSvg).
             Searchable across label/category/keywords; browsable by category with
             a per-category "Show all" so the DOM stays small at 400+ assets. */}
-        <CollapsibleSection title={tr("editor.graphics")} icon={Sparkles} defaultOpen badge={String(STICKERS.length)}>
+        <CollapsibleSection title={tr("editor.graphics")} icon={Sparkles} defaultOpen badge={String(stickers.length)}>
           <div className="mb-2">
             <input
               value={stickerQuery}
@@ -604,7 +604,7 @@ export function ElementsPanel() {
           {stickerQuery.trim() ? (
             (() => {
               const q = stickerQuery.trim().toLowerCase();
-              const matches = STICKERS.filter(
+              const matches = stickers.filter(
                 (s) =>
                   // Match the TRANSLATED label and category as well as the
                   // English ones, so search works in the user's language and
@@ -630,8 +630,8 @@ export function ElementsPanel() {
             })()
           ) : (
             <div className="flex flex-col gap-2.5">
-              {STICKER_CATEGORIES.map((cat) => {
-                const items = STICKERS.filter((s) => s.category === cat);
+              {stickerCategories.map((cat) => {
+                const items = stickers.filter((s) => s.category === cat);
                 const expanded = expandedStickerCats.has(cat);
                 const shown = expanded ? items : items.slice(0, 8);
                 return (
@@ -1686,7 +1686,7 @@ function TagEditor({ asset, folders, onClose, onSetTags, onMove }: {
         className="w-full rounded border border-neutral-200 px-1.5 py-1 text-[11px] outline-none focus:border-brand-400"
       />
       <label className="mt-auto flex items-center gap-1 text-[10px] text-neutral-500">
-        <ChevronLeft size={11} className={`rotate-180 ${MIRROR_IN_RTL}`} />
+        <ChevronLeft size={11} className={`rotate-180 ${mirrorInRtl}`} />
         <select
           value={asset.folderId ?? ""}
           onChange={(e) => onMove(e.target.value === "" ? null : e.target.value)}
@@ -2974,7 +2974,7 @@ function CritiqueSection() {
         <div className="flex flex-col gap-3">
           {groups.map(([cat, items]) => (
             <div key={cat}>
-              <div className="mb-1 text-[11px] font-semibold text-neutral-500">{CATEGORY_LABEL[cat]} ({items.length})</div>
+              <div className="mb-1 text-[11px] font-semibold text-neutral-500">{categoryLabel[cat]} ({items.length})</div>
               <ul className="flex flex-col gap-1">
                 {items.map((i) => (
                   <li key={i.id} className="rounded-lg border border-neutral-100 bg-neutral-50 px-2 py-1.5 text-xs">
@@ -3150,7 +3150,7 @@ function AutoAnimateSection() {
       </div>
       <p className="mb-2 text-xs text-neutral-400">{tr("editor.add_a_coherent_staggered_entrance_to_every_e")}</p>
       <div className="mb-2 grid grid-cols-3 gap-1">
-        {ANIMATE_STYLES.map((s) => (
+        {animateStyles.map((s) => (
           <button
             key={s.id}
             onClick={() => setStyle(s.id)}

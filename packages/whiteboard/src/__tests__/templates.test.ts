@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { validate, createBlankDesign } from "@hc/schema";
-import { WHITEBOARD_TEMPLATES, buildTemplate } from "../templates";
+import { whiteboardTemplates, buildTemplate } from "../templates";
 
 describe("templates", () => {
   it("lists all eight templates", () => {
-    const ids = WHITEBOARD_TEMPLATES.map((t) => t.id).sort();
+    const ids = whiteboardTemplates.map((t) => t.id).sort();
     expect(ids).toEqual(
       [
         "brainstorm",
@@ -23,7 +23,7 @@ describe("templates", () => {
     expect(() => buildTemplate("nope")).toThrow();
   });
 
-  for (const t of WHITEBOARD_TEMPLATES) {
+  for (const t of whiteboardTemplates) {
     it(`builds non-empty, valid, uniquely-ided nodes for ${t.id}`, () => {
       const { nodes } = buildTemplate(t.id);
       expect(nodes.length).toBeGreaterThan(0);

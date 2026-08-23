@@ -25,7 +25,7 @@ import type { BrandLintViolation, LintBrandKit, LintFont } from "./types";
 /** Max perceptual deltaE for a color to count as "matching" a brand swatch.
  *  Mirrors the slice-A locked-save tolerance so lint and the persist gate agree
  *  (below the just-noticeable-difference threshold). */
-export const COLOR_TOLERANCE = 2.0;
+export const colorTolerance = 2.0;
 
 /** WCAG AA normal-text contrast minimum. */
 const AA_NORMAL = 4.5;
@@ -206,7 +206,7 @@ export function lintDesign(file: DesignFile, kit: LintBrandKit): BrandLintViolat
     const seen = new Set<string>();
     for (const { color, nodeId, pageId } of colors) {
       const near = nearestPaletteColor(color, palette);
-      if (near && near.distance <= COLOR_TOLERANCE) continue;
+      if (near && near.distance <= colorTolerance) continue;
       const hex = hexOf(color);
       const key = `color:${hex}@${nodeId}`;
       if (seen.has(key)) continue;

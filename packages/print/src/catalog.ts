@@ -8,7 +8,7 @@ import type { CostBreakdown, PrintProduct, PrintSize, ShipmentInfo } from "./typ
 import type { PrintOrder } from "./types";
 
 /** A small, realistic seed catalog. Prices are illustrative at-cost figures. */
-export const PRINT_CATALOG: PrintProduct[] = [
+export const printCatalog: PrintProduct[] = [
   {
     id: "business_card_std",
     category: "business_card",
@@ -261,7 +261,7 @@ export class MockVendor implements VendorAdapter {
   ) {}
 
   async listProducts(region: string): Promise<PrintProduct[]> {
-    return filterCatalog(PRINT_CATALOG, { region });
+    return filterCatalog(printCatalog, { region });
   }
 
   async quote(items: QuoteItem[], _region: string): Promise<CostBreakdown> {

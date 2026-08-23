@@ -83,6 +83,6 @@ export interface PreflightReport {
 }
 
 /** Formats that produce raster pixels (need dimension math). */
-export const RASTER_FORMATS: ReadonlySet<ExportFormat> = new Set(["png", "jpg", "gif", "apng"]);
+export const rasterFormats: ReadonlySet<ExportFormat> = new Set(["png", "jpg", "gif", "apng"]);
 /** Formats that are print-grade and care about bleed / CMYK gamut. */
-export const PRINT_FORMATS: ReadonlySet<ExportFormat> = new Set(["pdfx"]);
+export const printFormats: ReadonlySet<ExportFormat> = new Set(["pdfx"]);

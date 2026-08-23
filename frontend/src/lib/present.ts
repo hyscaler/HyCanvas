@@ -11,16 +11,16 @@ export interface SlideLike {
 }
 
 /** Default autopilot dwell (ms) when a slide has no `autoAdvanceMs` (FR-14). */
-export const DEFAULT_AUTO_ADVANCE_MS = 5000;
+export const defaultAutoAdvanceMs = 5000;
 
 /** Live slide-follow (doc 28) timing. The presenter republishes its position
- *  every LIVE_HEARTBEAT_MS; a follower stops following once the published
- *  position is older than LIVE_STALE_MS, so a presenter who closed the tab
+ *  every liveHeartbeatMs; a follower stops following once the published
+ *  position is older than liveStaleMs, so a presenter who closed the tab
  *  stops dragging the audience around. The window must stay a comfortable
  *  multiple of the heartbeat: with the two too close, a single dropped request
  *  (or a slide held longer than one beat) reads as "presenter left". */
-export const LIVE_HEARTBEAT_MS = 10_000;
-export const LIVE_STALE_MS = 35_000;
+export const liveHeartbeatMs = 10_000;
+export const liveStaleMs = 35_000;
 
 /** Is the slide at `index` presentable (exists and not hidden)? */
 export function isVisibleSlide(pages: SlideLike[], index: number): boolean {
@@ -83,7 +83,7 @@ export function visiblePosition(pages: SlideLike[], index: number): { position: 
 
 /** The dwell (ms) before autopilot advances slide `index`: its own
  *  `autoAdvanceMs`, else the global default (FR-14). */
-export function dwellMs(pages: SlideLike[], index: number, defaultMs = DEFAULT_AUTO_ADVANCE_MS): number {
+export function dwellMs(pages: SlideLike[], index: number, defaultMs = defaultAutoAdvanceMs): number {
   const ms = pages[index]?.autoAdvanceMs;
   return typeof ms === "number" && ms >= 0 ? ms : defaultMs;
 }
@@ -162,24 +162,24 @@ export interface SpotlightGeom {
 }
 
 /** Default / bounds for the spotlight radius (CSS px). */
-export const SPOTLIGHT_MIN_RADIUS = 40;
-export const SPOTLIGHT_MAX_RADIUS = 600;
-export const SPOTLIGHT_DEFAULT_RADIUS = 140;
+export const spotlightMinRadius = 40;
+export const spotlightMaxRadius = 600;
+export const spotlightDefaultRadius = 140;
 /** Fraction of soft falloff beyond the hard radius. */
-export const SPOTLIGHT_FALLOFF = 0.35;
+export const spotlightFalloff = 0.35;
 
 /** Build the spotlight geometry for a cursor at (cx, cy) with a requested
- *  radius, clamped into [SPOTLIGHT_MIN_RADIUS, SPOTLIGHT_MAX_RADIUS]. The outer
- *  (fully-dim) radius extends past the hard radius by SPOTLIGHT_FALLOFF. */
+ *  radius, clamped into [spotlightMinRadius, spotlightMaxRadius]. The outer
+ *  (fully-dim) radius extends past the hard radius by spotlightFalloff. */
 export function spotlightGeom(cx: number, cy: number, radius: number): SpotlightGeom {
-  const r = clamp(radius, SPOTLIGHT_MIN_RADIUS, SPOTLIGHT_MAX_RADIUS);
-  return { cx, cy, radius: r, outer: r * (1 + SPOTLIGHT_FALLOFF) };
+  const r = clamp(radius, spotlightMinRadius, spotlightMaxRadius);
+  return { cx, cy, radius: r, outer: r * (1 + spotlightFalloff) };
 }
 
 /** Adjust a spotlight radius by a signed step, staying within bounds. Used by the
  *  wheel and the +/- keys so both share the same clamped result. */
 export function adjustSpotlightRadius(radius: number, delta: number): number {
-  return clamp(radius + delta, SPOTLIGHT_MIN_RADIUS, SPOTLIGHT_MAX_RADIUS);
+  return clamp(radius + delta, spotlightMinRadius, spotlightMaxRadius);
 }
 
 /** A bounded zoom-with-pan transform over the slide surface (FR-8). `scale` is
@@ -193,31 +193,31 @@ export interface ZoomTransform {
   originY: number; // 0..1
 }
 
-export const ZOOM_MIN = 1;
-export const ZOOM_MAX = 6;
-export const ZOOM_STEP = 0.25;
+export const zoomMin = 1;
+export const zoomMax = 6;
+export const zoomStep = 0.25;
 
 /** The identity (fit) zoom: no magnification, centered. */
 export function fitZoom(): ZoomTransform {
-  return { scale: ZOOM_MIN, originX: 0.5, originY: 0.5 };
+  return { scale: zoomMin, originX: 0.5, originY: 0.5 };
 }
 
 /** Clamp a candidate zoom into the valid range. `scale` is bounded to
- *  [ZOOM_MIN, ZOOM_MAX] and the origin to [0, 1] so a pan can never push the
+ *  [zoomMin, zoomMax] and the origin to [0, 1] so a pan can never push the
  *  focus point off the surface. At scale 1 the origin is forced to center so the
  *  reset is exact. */
 export function clampZoom(z: ZoomTransform): ZoomTransform {
-  const scale = clamp(z.scale, ZOOM_MIN, ZOOM_MAX);
-  if (scale <= ZOOM_MIN) return fitZoom();
+  const scale = clamp(z.scale, zoomMin, zoomMax);
+  if (scale <= zoomMin) return fitZoom();
   return { scale, originX: clamp(z.originX, 0, 1), originY: clamp(z.originY, 0, 1) };
 }
 
 /** Step the zoom by a signed amount, keeping the surface point under the cursor
  *  (fractions `fx`,`fy` in 0..1) fixed as the magnification changes. Returns a
- *  clamped transform; stepping below ZOOM_MIN resets to fit. */
+ *  clamped transform; stepping below zoomMin resets to fit. */
 export function stepZoom(z: ZoomTransform, delta: number, fx: number, fy: number): ZoomTransform {
   const scale = z.scale + delta;
-  if (scale <= ZOOM_MIN) return fitZoom();
+  if (scale <= zoomMin) return fitZoom();
   // Keep the cursor's surface fraction as the new origin so it stays put.
   return clampZoom({ scale, originX: fx, originY: fy });
 }

@@ -34,10 +34,10 @@ export interface A11yIssue {
 }
 
 /** Text below this point size is flagged as hard to read. */
-export const MIN_READABLE_FONT = 12;
+export const minReadableFont = 12;
 
 /** WCAG 2.2 (2.5.8) minimum target size for interactive elements, in CSS px. */
-export const MIN_TOUCH_TARGET = 24;
+export const minTouchTarget = 24;
 
 const WHITE: Color = { srgb: { r: 1, g: 1, b: 1, a: 1 } };
 
@@ -175,7 +175,7 @@ export function checkAccessibility(doc: DesignFile): A11yIssue[] {
               required: worst.required,
             });
           }
-          if (minFont !== Infinity && minFont < MIN_READABLE_FONT) {
+          if (minFont !== Infinity && minFont < minReadableFont) {
             issues.push({
               nodeId: node.id,
               nodeName: name,
@@ -206,16 +206,16 @@ export function checkAccessibility(doc: DesignFile): A11yIssue[] {
         if ((interactive.link || interactive.interaction) && interactive.size) {
           const w = interactive.size.width * Math.abs(interactive.transform?.scaleX ?? 1);
           const h = interactive.size.height * Math.abs(interactive.transform?.scaleY ?? 1);
-          if (w < MIN_TOUCH_TARGET || h < MIN_TOUCH_TARGET) {
+          if (w < minTouchTarget || h < minTouchTarget) {
             issues.push({
               nodeId: node.id,
               nodeName: name,
               pageIndex,
               kind: "touch-target",
               severity: "warning",
-              message: `Interactive target is small (${Math.round(w)}x${Math.round(h)}px; WCAG needs ${MIN_TOUCH_TARGET}x${MIN_TOUCH_TARGET}px)`,
+              message: `Interactive target is small (${Math.round(w)}x${Math.round(h)}px; WCAG needs ${minTouchTarget}x${minTouchTarget}px)`,
               messageCode: "a11y.touch_target_too_small",
-              messageParams: { w: Math.round(w), h: Math.round(h), min: MIN_TOUCH_TARGET },
+              messageParams: { w: Math.round(w), h: Math.round(h), min: minTouchTarget },
             });
           }
         }
