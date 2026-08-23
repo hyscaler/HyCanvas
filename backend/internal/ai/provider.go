@@ -24,12 +24,38 @@ import (
 type Provider string
 
 const (
-	ProviderOpenAI    Provider = "openai"
-	ProviderAnthropic Provider = "anthropic"
-	ProviderDeepSeek  Provider = "deepseek"
-	ProviderZhipu     Provider = "zhipu"
-	ProviderCustom    Provider = "custom"
+	ProviderOpenAI      Provider = "openai"
+	ProviderAnthropic   Provider = "anthropic"
+	ProviderDeepSeek    Provider = "deepseek"
+	ProviderZhipu       Provider = "zhipu"
+	ProviderAzureOpenAI Provider = "azure-openai"
+	ProviderCustom      Provider = "custom"
 )
+
+// azureAPIVersion is the GA Azure OpenAI REST api-version sent on every call.
+const azureAPIVersion = "2024-06-01"
+
+// azureURL builds the Azure OpenAI path for one operation. Azure differs from
+// the plain OpenAI dialect in two ways this transport must honor: requests are
+// routed per DEPLOYMENT (we use the configured model name as the deployment
+// name) under /openai/deployments/{deployment}/, and a required api-version
+// query parameter is appended. Authentication uses an "api-key" header instead
+// of a bearer token (see openAICompatEndpoint).
+func azureURL(base, deployment, op string) string {
+	return strings.TrimRight(base, "/") + "/openai/deployments/" + url.PathEscape(deployment) + "/" + op + "?api-version=" + azureAPIVersion
+}
+
+// openAICompatEndpoint resolves the URL + auth headers for one OpenAI-shaped
+// operation (op like "chat/completions"), handling the Azure dialect. The
+// deployment is the model that would be sent in the body (Azure routes by it).
+func openAICompatEndpoint(cfg CallConfig, deployment, op string) (string, map[string]string) {
+	if cfg.Provider == ProviderAzureOpenAI {
+		return azureURL(cfg.BaseURL, deployment, op),
+			map[string]string{"content-type": "application/json", "api-key": cfg.APIKey}
+	}
+	return orDefault(cfg.BaseURL, "https://api.openai.com/v1") + "/" + op,
+		map[string]string{"content-type": "application/json", "authorization": "Bearer " + cfg.APIKey}
+}
 
 // CallConfig is the resolved per-call provider config (key already decrypted).
 type CallConfig struct {
@@ -80,10 +106,12 @@ func buildTextRequest(cfg CallConfig, prompt, system string) httpRequest {
 		messages = append(messages, map[string]any{"role": "system", "content": system})
 	}
 	messages = append(messages, map[string]any{"role": "user", "content": prompt})
+	model := orDefault(cfg.Model, "gpt-4o-mini")
+	u, headers := openAICompatEndpoint(cfg, model, "chat/completions")
 	return httpRequest{
-		url:     orDefault(cfg.BaseURL, "https://api.openai.com/v1") + "/chat/completions",
-		headers: map[string]string{"content-type": "application/json", "authorization": "Bearer " + cfg.APIKey},
-		body:    map[string]any{"model": orDefault(cfg.Model, "gpt-4o-mini"), "messages": messages},
+		url:     u,
+		headers: headers,
+		body:    map[string]any{"model": model, "messages": messages},
 	}
 }
 
@@ -111,11 +139,13 @@ func buildDescribeImageRequest(cfg CallConfig, in DescribeImageInput) httpReques
 			},
 		}
 	}
+	model := orDefault(cfg.Model, "gpt-4o-mini")
+	u, headers := openAICompatEndpoint(cfg, model, "chat/completions")
 	return httpRequest{
-		url:     orDefault(cfg.BaseURL, "https://api.openai.com/v1") + "/chat/completions",
-		headers: map[string]string{"content-type": "application/json", "authorization": "Bearer " + cfg.APIKey},
+		url:     u,
+		headers: headers,
 		body: map[string]any{
-			"model": orDefault(cfg.Model, "gpt-4o-mini"), "max_tokens": 300,
+			"model": model, "max_tokens": 300,
 			"messages": []any{map[string]any{"role": "user", "content": []any{
 				map[string]any{"type": "text", "text": in.Instruction},
 				map[string]any{"type": "image_url", "image_url": map[string]any{"url": "data:" + mime + ";base64," + in.ImageBase64}},
@@ -152,10 +182,12 @@ func parseTextResponse(provider Provider, raw []byte) string {
 }
 
 func buildImageRequest(cfg CallConfig, prompt, size string) httpRequest {
+	model := orDefault(cfg.ImageModel, "gpt-image-1")
+	u, headers := openAICompatEndpoint(cfg, model, "images/generations")
 	return httpRequest{
-		url:     orDefault(cfg.BaseURL, "https://api.openai.com/v1") + "/images/generations",
-		headers: map[string]string{"content-type": "application/json", "authorization": "Bearer " + cfg.APIKey},
-		body:    map[string]any{"model": orDefault(cfg.ImageModel, "gpt-image-1"), "prompt": prompt, "size": orDefault(size, "1024x1024"), "n": 1},
+		url:     u,
+		headers: headers,
+		body:    map[string]any{"model": model, "prompt": prompt, "size": orDefault(size, "1024x1024"), "n": 1},
 	}
 }
 
@@ -316,12 +348,15 @@ func (s *Service) editImageCall(cfg CallConfig, in EditImageInput) (string, erro
 	if err := mw.Close(); err != nil {
 		return "", errProviderFailed
 	}
-	httpReq, err := http.NewRequest(http.MethodPost, orDefault(cfg.BaseURL, "https://api.openai.com/v1")+"/images/edits", &buf)
+	editURL, editHeaders := openAICompatEndpoint(cfg, orDefault(cfg.ImageModel, "gpt-image-1"), "images/edits")
+	httpReq, err := http.NewRequest(http.MethodPost, editURL, &buf)
 	if err != nil {
 		return "", errProviderFailed
 	}
-	httpReq.Header.Set("authorization", "Bearer "+cfg.APIKey)
-	httpReq.Header.Set("content-type", mw.FormDataContentType())
+	for k, v := range editHeaders {
+		httpReq.Header.Set(k, v)
+	}
+	httpReq.Header.Set("content-type", mw.FormDataContentType()) // multipart, not JSON
 	raw, err := s.do(httpReq)
 	if err != nil {
 		return "", err

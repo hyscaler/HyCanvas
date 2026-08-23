@@ -3392,5 +3392,6 @@
   "editor.draw_the_whole_design_as_an_editable_vector": "テキストモデルを使って、このページにデザイン全体を編集可能なベクターとして描画します。画像モデルなしで動作します（ベータ）。",
   "editor.drew_an_editable_vector_design_on_this_page": "このページに編集可能なベクターデザインを描画しました。すべての要素は選択して編集できる実際の図形またはテキストです。",
   "editor.vector_design": "ベクターデザイン",
-  "editor.vector_generation_failed": "ベクターの生成に失敗しました。"
+  "editor.vector_generation_failed": "ベクターの生成に失敗しました。",
+  "editor.image_model_optional": "画像モデル（任意）"
 }

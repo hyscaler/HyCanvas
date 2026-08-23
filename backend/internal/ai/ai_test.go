@@ -186,3 +186,63 @@ func TestAI_DB(t *testing.T) {
 		t.Fatalf("deepseek image should be ErrImageUnsupported, got %v", err)
 	}
 }
+
+// The Azure OpenAI dialect: deployment-scoped paths with an api-version query,
+// authenticated by an api-key header (never a bearer token). Asserted both on
+// the pure builders and over a real round trip through a mock server.
+func TestAzureOpenAIDialect(t *testing.T) {
+	cfg := CallConfig{Provider: ProviderAzureOpenAI, APIKey: "sek", BaseURL: "https://res.openai.azure.example/", Model: "gpt-4o-mini", ImageModel: "dall-e-3"}
+
+	req := buildTextRequest(cfg, "hi", "sys")
+	wantText := "https://res.openai.azure.example/openai/deployments/gpt-4o-mini/chat/completions?api-version=" + azureAPIVersion
+	if req.url != wantText {
+		t.Fatalf("azure text url = %q, want %q", req.url, wantText)
+	}
+	if req.headers["api-key"] != "sek" || req.headers["authorization"] != "" {
+		t.Fatalf("azure text headers wrong: %+v", req.headers)
+	}
+
+	ireq := buildImageRequest(cfg, "a cat", "")
+	wantImage := "https://res.openai.azure.example/openai/deployments/dall-e-3/images/generations?api-version=" + azureAPIVersion
+	if ireq.url != wantImage {
+		t.Fatalf("azure image url = %q, want %q", ireq.url, wantImage)
+	}
+	if ireq.headers["api-key"] != "sek" || ireq.headers["authorization"] != "" {
+		t.Fatalf("azure image headers wrong: %+v", ireq.headers)
+	}
+
+	dreq := buildDescribeImageRequest(cfg, DescribeImageInput{ImageBase64: "QUJD", Instruction: "alt"})
+	if dreq.url != wantText || dreq.headers["api-key"] != "sek" {
+		t.Fatalf("azure describe request wrong: url=%q headers=%+v", dreq.url, dreq.headers)
+	}
+
+	// A deployment name with a space must be path-escaped, not break the URL.
+	esc := buildTextRequest(CallConfig{Provider: ProviderAzureOpenAI, APIKey: "k", BaseURL: "https://r.example", Model: "my deploy"}, "x", "")
+	if !strings.Contains(esc.url, "/openai/deployments/my%20deploy/") {
+		t.Fatalf("deployment not escaped: %q", esc.url)
+	}
+
+	// Round trip: the mock server sees the exact path, query, and header.
+	var gotPath, gotQuery, gotAPIKey, gotAuth string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath, gotQuery = r.URL.Path, r.URL.RawQuery
+		gotAPIKey, gotAuth = r.Header.Get("api-key"), r.Header.Get("authorization")
+		w.Header().Set("content-type", "application/json")
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"pong"}}]}`))
+	}))
+	defer server.Close()
+	svc := &Service{client: server.Client()}
+	out, err := svc.generateText(CallConfig{Provider: ProviderAzureOpenAI, APIKey: "sek", BaseURL: server.URL, Model: "gpt-4o-mini"}, "ping", "")
+	if err != nil || out != "pong" {
+		t.Fatalf("azure round trip: out=%q err=%v", out, err)
+	}
+	if gotPath != "/openai/deployments/gpt-4o-mini/chat/completions" {
+		t.Errorf("server saw path %q", gotPath)
+	}
+	if gotQuery != "api-version="+azureAPIVersion {
+		t.Errorf("server saw query %q", gotQuery)
+	}
+	if gotAPIKey != "sek" || gotAuth != "" {
+		t.Errorf("server saw api-key=%q authorization=%q", gotAPIKey, gotAuth)
+	}
+}

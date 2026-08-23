@@ -3392,5 +3392,6 @@
   "editor.draw_the_whole_design_as_an_editable_vector": "Desenha todo o design como um vetor editável nesta página, usando seu modelo de texto. Funciona sem modelo de imagem (beta).",
   "editor.drew_an_editable_vector_design_on_this_page": "Um design vetorial editável foi desenhado nesta página. Cada elemento é uma forma ou texto real que você pode selecionar e editar.",
   "editor.vector_design": "Design vetorial",
-  "editor.vector_generation_failed": "A geração do vetor falhou."
+  "editor.vector_generation_failed": "A geração do vetor falhou.",
+  "editor.image_model_optional": "Modelo de imagem (opcional)"
 }

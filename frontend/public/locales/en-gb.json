@@ -59,5 +59,6 @@
   "stickers.ab-checker": "Chequerboard",
   "ui.dialog": "Dialogue",
   "editor.replaces_all_n_pages.one": "Replaces the current page.",
-  "editor.replaces_all_n_pages.other": "Replaces all {count} pages."
+  "editor.replaces_all_n_pages.other": "Replaces all {count} pages.",
+  "editor.image_model_optional": "Image model (optional)"
 }

@@ -415,6 +415,18 @@ export interface AiConfigView {
   capabilities: { text: boolean; image: boolean; describeImage: boolean; editImage: boolean };
 }
 
+/** One entry of the server's provider preset catalog (GET /ai/providers). */
+export interface AiProviderPreset {
+  id: string;
+  label: string;
+  baseUrl: string;
+  defaultModel: string;
+  defaultImageModel?: string;
+  capabilities: { text: boolean; image: boolean; describeImage: boolean; editImage: boolean };
+  /** True when the user must supply the base URL (Azure/custom). */
+  needsBaseUrl?: boolean;
+}
+
 // --- AI Creative Studio (F39) views, returned by the orchestration endpoints.
 export type AiStudioDesignType = "deck" | "doc" | "social-set" | "poster";
 export interface AiOutlineItem {
@@ -1724,6 +1736,11 @@ export class HyCanvasClient {
   }
 
   // --- AI (bring-your-own key) -------------------------------------
+  /** The server's provider preset catalog (ids, labels, defaults,
+   *  capabilities); drives the config UI so the client never hardcodes it. */
+  aiProviders(): Promise<AiProviderPreset[]> {
+    return this.request("GET", "/v1/ai/providers");
+  }
   getAiConfig(workspaceId: string): Promise<AiConfigView | null> {
     return this.request("GET", `/v1/workspaces/${workspaceId}/ai-config`);
   }

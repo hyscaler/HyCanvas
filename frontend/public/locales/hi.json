@@ -3392,5 +3392,6 @@
   "editor.draw_the_whole_design_as_an_editable_vector": "अपने टेक्स्ट मॉडल का उपयोग करके पूरे डिज़ाइन को इस पृष्ठ पर संपादन योग्य वेक्टर के रूप में बनाएं। इमेज मॉडल के बिना काम करता है (बीटा)।",
   "editor.drew_an_editable_vector_design_on_this_page": "इस पृष्ठ पर एक संपादन योग्य वेक्टर डिज़ाइन बनाया गया। हर तत्व एक वास्तविक आकृति या टेक्स्ट है जिसे आप चुन और संपादित कर सकते हैं।",
   "editor.vector_design": "वेक्टर डिज़ाइन",
-  "editor.vector_generation_failed": "वेक्टर बनाना विफल रहा।"
+  "editor.vector_generation_failed": "वेक्टर बनाना विफल रहा।",
+  "editor.image_model_optional": "इमेज मॉडल (वैकल्पिक)"
 }

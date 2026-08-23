@@ -1298,6 +1298,7 @@
   "editor.image_alt_text": "Image alt text",
   "editor.image_effects": "Image effects",
   "editor.image_fill": "Image fill",
+  "editor.image_model_optional": "Image model (optional)",
   "editor.image_read_failed_cross_origin": "Couldn't read this image (it may be cross-origin).",
   "editor.image_resolution_low_hint": "The image's resolution is low for its placed size; it may look soft when exported or printed.",
   "editor.image_url": "Image URL",

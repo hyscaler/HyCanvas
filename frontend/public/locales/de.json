@@ -3392,5 +3392,6 @@
   "editor.draw_the_whole_design_as_an_editable_vector": "Zeichnet das gesamte Design als bearbeitbaren Vektor auf diese Seite, mit deinem Textmodell. Funktioniert ohne Bildmodell (Beta).",
   "editor.drew_an_editable_vector_design_on_this_page": "Ein bearbeitbares Vektordesign wurde auf dieser Seite gezeichnet. Jedes Element ist eine echte Form oder ein Text, den du auswählen und bearbeiten kannst.",
   "editor.vector_design": "Vektordesign",
-  "editor.vector_generation_failed": "Vektorerstellung fehlgeschlagen."
+  "editor.vector_generation_failed": "Vektorerstellung fehlgeschlagen.",
+  "editor.image_model_optional": "Bildmodell (optional)"
 }

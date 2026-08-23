@@ -37,7 +37,7 @@ import {
   type AutoLayoutSuggestion,
   type AnimateStyle,
 } from "@/lib/assist";
-import { ApiError, type AiConfigView, type AssetFolder, type MiniAppSummary, type StockAssetSummary, type StockCollectionSummary, type StockFacetValue, type StockFiltersSummary, type StorageUsageView, type TemplateSummary, type UploadedAsset } from "@hc/sdk";
+import { ApiError, type AiConfigView, type AiProviderPreset, type AssetFolder, type MiniAppSummary, type StockAssetSummary, type StockCollectionSummary, type StockFacetValue, type StockFiltersSummary, type StorageUsageView, type TemplateSummary, type UploadedAsset } from "@hc/sdk";
 import { DesignThumb } from "@/components/dashboard/DesignThumb";
 import { checkAppAction, type AppAction } from "@hc/stock";
 import { oc, resolveAssetUrl, stockProxyUrl, uploadAssetWithProgress } from "@/lib/sdk";
@@ -3182,13 +3182,23 @@ export function PolishPanel() {
 }
 
 // Default model per built-in provider, shown as a placeholder hint so the user
-// knows what runs when the model field is left blank. The server registry is
-// the source of truth; this only mirrors it for the UI hint.
+// knows what runs when the model field is left blank. The server registry
+// (GET /ai/providers) is the source of truth and supplies the hints at runtime;
+// this only covers the offline fallback presets below.
 const DEFAULT_MODEL_HINT: Record<string, string> = {
   openai: "gpt-4o-mini",
   anthropic: "claude-opus-4-8",
   deepseek: "deepseek-chat",
 };
+
+// Offline fallback shown if GET /ai/providers is unreachable; the server
+// registry drives the dropdown whenever it loads.
+const FALLBACK_PRESETS: AiProviderPreset[] = [
+  { id: "openai", label: "OpenAI", baseUrl: "", defaultModel: "gpt-4o-mini", defaultImageModel: "dall-e-3", capabilities: { text: true, image: true, describeImage: true, editImage: true } },
+  { id: "anthropic", label: "Anthropic (Claude)", baseUrl: "", defaultModel: "claude-opus-4-8", capabilities: { text: true, image: false, describeImage: true, editImage: false } },
+  { id: "deepseek", label: "DeepSeek", baseUrl: "", defaultModel: "deepseek-chat", capabilities: { text: true, image: false, describeImage: false, editImage: false } },
+  { id: "custom", label: "Custom (OpenAI-compatible)", baseUrl: "", defaultModel: "", capabilities: { text: true, image: true, describeImage: true, editImage: true }, needsBaseUrl: true },
+];
 
 export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
   const toast = useToast();
@@ -3225,30 +3235,50 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
   const [showConfig, setShowConfig] = useState(false);
   const [provider, setProvider] = useState("openai");
   const [model, setModel] = useState("");
+  const [imageModel, setImageModel] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
+  // The server's preset catalog drives the dropdown (11 providers, defaults,
+  // capabilities); the hardcoded fallback only covers a failed fetch.
+  const [presets, setPresets] = useState<AiProviderPreset[]>(FALLBACK_PRESETS);
 
   useEffect(() => {
     if (!workspaceId) return;
     let cancelled = false;
     void (async () => {
-      const c = await oc.getAiConfig(workspaceId).catch(() => null);
+      const [c, list] = await Promise.all([
+        oc.getAiConfig(workspaceId).catch(() => null),
+        oc.aiProviders().catch(() => null),
+      ]);
       if (cancelled) return;
+      if (list?.length) setPresets(list);
       setConfig(c);
       setShowConfig(!c?.hasKey);
-      if (c) { setProvider(c.provider); setModel(c.model ?? ""); setBaseUrl(c.baseUrl ?? ""); }
+      if (c) { setProvider(c.provider); setModel(c.model ?? ""); setImageModel(c.imageModel ?? ""); setBaseUrl(c.baseUrl ?? ""); }
       setLoading(false);
     })();
     return () => { cancelled = true; };
   }, [workspaceId]);
 
+  // The selected provider's preset: drives the base-URL requirement, the
+  // image-model field, and the placeholder hints.
+  const selPreset = presets.find((p) => p.id === provider);
+  const needsBaseUrl = selPreset ? !!selPreset.needsBaseUrl : provider === "custom";
+  const modelHint = selPreset?.defaultModel || DEFAULT_MODEL_HINT[provider] || "";
+
   async function saveConfig() {
     if (!workspaceId) return;
     try {
-      // Only a custom endpoint carries a user-supplied base URL; built-in
-      // providers route via the server-side registry, so never persist a stale
-      // base URL left over from a prior "custom" selection.
-      const c = await oc.setAiConfig(workspaceId, { provider, model: model || undefined, baseUrl: provider === "custom" ? (baseUrl || undefined) : undefined, apiKey: apiKey || undefined });
+      // Only providers that require a user-supplied base URL (Azure/custom)
+      // persist one; the rest route via the server-side registry, so never
+      // persist a stale base URL left over from a prior selection.
+      const c = await oc.setAiConfig(workspaceId, {
+        provider,
+        model: model || undefined,
+        imageModel: imageModel || undefined,
+        baseUrl: needsBaseUrl ? (baseUrl || undefined) : undefined,
+        apiKey: apiKey || undefined,
+      });
       setConfig(c);
       setApiKey("");
       setShowConfig(false);
@@ -3284,13 +3314,17 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
             </p>
             <div className="flex flex-col gap-2">
               <select value={provider} onChange={(e) => setProvider(e.target.value)} className="rounded border border-neutral-300 px-2 py-1.5 text-sm">
-                <option value="openai">{tr("editor.openai_or_compatible")}</option>
-                <option value="anthropic">{tr("editor.anthropic")}</option>
-                <option value="deepseek">{tr("editor.deepseek")}</option>
-                <option value="custom">{tr("editor.custom_endpoint")}</option>
+                {presets.map((p) => (
+                  <option key={p.id} value={p.id}>{p.label}</option>
+                ))}
+                {/* A stored provider missing from the catalog (legacy row) stays selectable. */}
+                {!selPreset && <option value={provider}>{provider}</option>}
               </select>
-              <input value={model} onChange={(e) => setModel(e.target.value)} placeholder={DEFAULT_MODEL_HINT[provider] ? `Model (optional, default ${DEFAULT_MODEL_HINT[provider]})` : tr("editor.model_optional")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
-              {provider === "custom" && (
+              <input value={model} onChange={(e) => setModel(e.target.value)} placeholder={modelHint ? `Model (optional, default ${modelHint})` : tr("editor.model_optional")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
+              {(selPreset?.capabilities.image ?? true) && (
+                <input value={imageModel} onChange={(e) => setImageModel(e.target.value)} placeholder={selPreset?.defaultImageModel ? `Image model (optional, default ${selPreset.defaultImageModel})` : tr("editor.image_model_optional")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
+              )}
+              {needsBaseUrl && (
                 <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder={tr("editor.base_url_https_v1")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
               )}
               <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={config?.hasKey ? tr("editor.api_key_leave_blank_to_keep") : tr("editor.api_key")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
