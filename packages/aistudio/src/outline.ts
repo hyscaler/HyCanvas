@@ -82,7 +82,13 @@ function str(v: unknown): string {
  *  runs (the note is spoken, not formatted) and cap the length at a sentence
  *  boundary where one exists, mid-word truncation only as a last resort. */
 export function normalizeNote(v: unknown): string {
-  const flat = str(v).replace(/\s+/g, " ");
+  // Whitespace class: JS \s plus U+0085 NEL, i.e. the union of JS \s and Go's
+  // unicode.IsSpace - the Go mirror collapses the same union (IsSpace plus
+  // U+FEFF), so both sides flatten identically.
+  const flat = str(v).replace(/[\s\u0085]+/g, " ");
+  // Fast path: UTF-16 length is >= the code-point count, so an under-cap
+  // UTF-16 length can never hide an over-cap note.
+  if (flat.length <= maxNoteChars) return flat;
   // Measure and cut in CODE POINTS (never splitting a surrogate pair), exactly
   // like the Go mirror's rune handling, so server- and client-normalized notes
   // agree on multibyte text. Slicing at sentenceEnd+1 is still safe because the

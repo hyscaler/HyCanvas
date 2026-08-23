@@ -3390,5 +3390,6 @@
   "editor.vector_design": "Vektordesign",
   "editor.vector_generation_failed": "Vektorerstellung fehlgeschlagen.",
   "editor.image_model_optional": "Bildmodell (optional)",
-  "errors.api_ai_base_url_required": "Dieser Anbieter benötigt eine Basis-URL. Gib deine Endpunkt-URL ein, um zu speichern."
+  "errors.api_ai_base_url_required": "Dieser Anbieter benötigt eine Basis-URL. Gib deine Endpunkt-URL ein, um zu speichern.",
+  "editor.couldnt_load_ai_settings": "KI-Einstellungen konnten nicht geladen werden."
 }

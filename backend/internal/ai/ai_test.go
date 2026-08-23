@@ -252,9 +252,43 @@ func TestAzureOpenAIDialect(t *testing.T) {
 // opaque 502 against a host-less URL. The check runs before any DB access.
 func TestSetConfigRequiresBaseURLForEndpointProviders(t *testing.T) {
 	svc := NewService(nil, "test-secret", true)
-	for _, provider := range []string{"azure-openai", "custom"} {
-		if _, err := svc.SetConfig(context.Background(), "ws", ConfigInput{Provider: provider, APIKey: "k"}); err != ErrBaseURLRequired {
-			t.Errorf("SetConfig(%s, no baseUrl) = %v, want ErrBaseURLRequired", provider, err)
+	// Derive the set from the registry so a future NeedsBaseURL preset is
+	// covered automatically instead of silently skipped by a hardcoded list.
+	covered := 0
+	for _, p := range PRESETS {
+		if !p.NeedsBaseURL {
+			continue
 		}
+		covered++
+		if _, err := svc.SetConfig(context.Background(), "ws", ConfigInput{Provider: p.ID, APIKey: "k"}); err != ErrBaseURLRequired {
+			t.Errorf("SetConfig(%s, no baseUrl) = %v, want ErrBaseURLRequired", p.ID, err)
+		}
+		// A whitespace-only URL is trimmed at the boundary and must hit the
+		// same field-specific rejection, not read as present-but-unsafe.
+		if _, err := svc.SetConfig(context.Background(), "ws", ConfigInput{Provider: p.ID, BaseURL: "   ", APIKey: "k"}); err != ErrBaseURLRequired {
+			t.Errorf("SetConfig(%s, blank baseUrl) = %v, want ErrBaseURLRequired", p.ID, err)
+		}
+	}
+	if covered == 0 {
+		t.Fatal("no NeedsBaseURL presets in the registry; test covers nothing")
+	}
+}
+
+// EditImage must gate on the EDIT capability, not the broader image one: a
+// provider that generates but cannot edit (azure-openai, zhipu) is rejected
+// with the capability error instead of reaching the provider and 502ing.
+func TestEditImageGatesOnEditCapability(t *testing.T) {
+	if err := assertEditImageCapable(CallConfig{Provider: ProviderAzureOpenAI}); err != ErrImageUnsupported {
+		t.Errorf("azure-openai edit = %v, want ErrImageUnsupported", err)
+	}
+	if err := assertEditImageCapable(CallConfig{Provider: ProviderZhipu}); err != ErrImageUnsupported {
+		t.Errorf("zhipu edit = %v, want ErrImageUnsupported", err)
+	}
+	if err := assertEditImageCapable(CallConfig{Provider: ProviderOpenAI}); err != nil {
+		t.Errorf("openai edit = %v, want nil", err)
+	}
+	// Generation stays allowed where only editing is missing.
+	if err := assertImageCapable(CallConfig{Provider: ProviderAzureOpenAI}); err != nil {
+		t.Errorf("azure-openai generate = %v, want nil", err)
 	}
 }

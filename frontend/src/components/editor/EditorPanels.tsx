@@ -3241,51 +3241,70 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
   // for the whole session instead of refetching on every panel mount.
   const [presets, setPresets] = useState<AiProviderPreset[]>(providerCatalogCache ?? FALLBACK_PRESETS);
 
+  // A failed settings load is NOT "no config yet": showing the setup form on
+  // a transient error invites a Save that (via the provider-change key-clear
+  // rule) would destroy the stored key. Track failure separately and offer a
+  // retry instead. loadNonce re-arms the effect for that retry.
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadNonce, setLoadNonce] = useState(0);
+
   useEffect(() => {
     if (!workspaceId) return;
     let cancelled = false;
     void (async () => {
-      const [c, list] = await Promise.all([
-        oc.getAiConfig(workspaceId).catch(() => null),
-        providerCatalogCache ? Promise.resolve(providerCatalogCache) : oc.aiProviders().catch(() => null),
+      const [loaded, list] = await Promise.all([
+        oc.getAiConfig(workspaceId).then(
+          (c) => ({ ok: true as const, c }),
+          () => ({ ok: false as const, c: null }),
+        ),
+        // Stale-while-revalidate: seed from the session cache (see its decl)
+        // but still refetch, so a tab left open across a binary swap converges
+        // on the new registry instead of trusting the old one forever.
+        oc.aiProviders().catch(() => null),
       ]);
       if (cancelled) return;
       if (list?.length) { providerCatalogCache = list; setPresets(list); }
+      setLoadFailed(!loaded.ok);
+      const c = loaded.c;
       setConfig(c);
-      setShowConfig(!c?.hasKey);
+      setShowConfig(loaded.ok && !c?.hasKey);
       if (c) { setProvider(c.provider); setModel(c.model ?? ""); setImageModel(c.imageModel ?? ""); setBaseUrl(c.baseUrl ?? ""); }
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [workspaceId]);
+  }, [workspaceId, loadNonce]);
 
   // The selected provider's preset: drives the base-URL requirement, the
   // image-model field, and the placeholder hints. A provider we cannot resolve
-  // (legacy id, or the catalog fetch failed) keeps a stored base URL editable
-  // and RESENT on save - saveConfig omitting baseUrl NULLs the stored row, so
-  // hiding the field here would silently wipe a working config.
+  // (legacy id, or a preset missing from the offline fallback) keeps a STORED
+  // base URL editable - latched on the loaded config, never on the live input,
+  // so clearing the field mid-edit cannot unmount it.
   const selPreset = presets.find((p) => p.id === provider);
-  const needsBaseUrl = selPreset ? !!selPreset.needsBaseUrl : provider === "custom" || !!baseUrl;
+  const needsBaseUrl = selPreset ? !!selPreset.needsBaseUrl : !!config?.baseUrl;
   const modelHint = selPreset?.defaultModel ?? "";
 
   async function saveConfig() {
     if (!workspaceId) return;
+    const url = baseUrl.trim();
     // Endpoint-routed providers are unusable without their URL; the server
     // rejects the save too (ai_base_url_required), but catching it here points
     // at the field without a round trip.
-    if (needsBaseUrl && !baseUrl.trim()) {
+    if (needsBaseUrl && !url) {
       toast.error(tr("errors.api_ai_base_url_required"));
       return;
     }
     try {
-      // Only providers that require a user-supplied base URL (Azure/custom)
-      // persist one; the rest route via the server-side registry, so never
-      // persist a stale base URL left over from a prior selection.
+      // A provider may carry a base URL even when its preset does not REQUIRE
+      // one (an OpenAI-compatible proxy configured via the API), and the
+      // upsert overwrites base_url unconditionally - so while the provider is
+      // unchanged, always resend what is in the field (loaded from the stored
+      // config). Switching providers deliberately clears it: a stale URL must
+      // never follow the new provider.
       const c = await oc.setAiConfig(workspaceId, {
         provider,
         model: model || undefined,
         imageModel: imageModel || undefined,
-        baseUrl: needsBaseUrl ? (baseUrl || undefined) : undefined,
+        baseUrl: needsBaseUrl || provider === config?.provider ? (url || undefined) : undefined,
         apiKey: apiKey || undefined,
       });
       setConfig(c);
@@ -3313,6 +3332,19 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
         <p className="mt-4 text-center text-xs text-neutral-400">{tr("editor.open_a_saved_design_to_use_ai")}</p>
       ) : loading ? (
         <div className="grid place-items-center py-8 text-neutral-400"><Spinner /></div>
+      ) : loadFailed ? (
+        // A transient load failure must NOT render the setup form: it starts
+        // blank on the default provider, and one Save from there would clear
+        // the stored key (provider-change rule). Offer a retry instead.
+        <div className="flex flex-col items-center gap-2 py-8 text-center">
+          <p className="text-xs text-neutral-500">{tr("editor.couldnt_load_ai_settings")}</p>
+          <button
+            onClick={() => { setLoading(true); setLoadFailed(false); setLoadNonce((n) => n + 1); }}
+            className="rounded border border-neutral-300 px-2.5 py-1 text-xs text-neutral-600 hover:border-brand-300 hover:text-brand-ink"
+          >
+            {tr("editor.retry")}
+          </button>
+        </div>
       ) : showConfig || !config?.hasKey ? (
         <div className="flex flex-col gap-3">
           <div>

@@ -146,6 +146,11 @@ func (s *Service) SetConfig(ctx context.Context, workspaceID string, in ConfigIn
 	if !providerSet[in.Provider] {
 		return nil, ErrBadRequest
 	}
+	// Trim before every check and before persisting: a copy-pasted URL with
+	// stray whitespace would otherwise survive validation (url.Parse accepts
+	// spaces) and break every later call, and a whitespace-only URL must hit
+	// the required-URL check below, not read as "present but unsafe".
+	in.BaseURL = strings.TrimSpace(in.BaseURL)
 	if in.BaseURL != "" && !isSafeBaseURL(in.BaseURL, s.allowLocal) {
 		return nil, ErrBadRequest
 	}
@@ -264,6 +269,17 @@ func assertImageCapable(cfg CallConfig) error {
 	return nil
 }
 
+// assertEditImageCapable gates on the EDIT capability specifically: a provider
+// can generate but not edit (azure-openai's pinned api-version has no edits
+// operation; zhipu's CogView has no OpenAI-style edit route), and gating on
+// FeatureImage alone would let those calls through to an opaque 502.
+func assertEditImageCapable(cfg CallConfig) error {
+	if !ResolveRoute(string(cfg.Provider), cfg.Model, cfg.ImageModel, FeatureEditImage).Supported {
+		return ErrImageUnsupported
+	}
+	return nil
+}
+
 // Image runs an image-generation call.
 func (s *Service) Image(ctx context.Context, workspaceID, prompt, size string) (string, error) {
 	cfg, err := s.callConfig(ctx, workspaceID)
@@ -325,7 +341,7 @@ func (s *Service) EditImage(ctx context.Context, workspaceID, imageBase64, promp
 	if err != nil {
 		return "", err
 	}
-	if err := assertImageCapable(cfg); err != nil {
+	if err := assertEditImageCapable(cfg); err != nil {
 		return "", err
 	}
 	if err := s.enforce(ctx, workspaceID, string(cfg.Provider), countTokens(prompt)+imageTokenCost); err != nil {

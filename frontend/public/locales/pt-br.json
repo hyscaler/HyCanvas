@@ -3390,5 +3390,6 @@
   "editor.vector_design": "Design vetorial",
   "editor.vector_generation_failed": "A geração do vetor falhou.",
   "editor.image_model_optional": "Modelo de imagem (opcional)",
-  "errors.api_ai_base_url_required": "Este provedor precisa de uma URL base. Insira a URL do seu endpoint para salvar."
+  "errors.api_ai_base_url_required": "Este provedor precisa de uma URL base. Insira a URL do seu endpoint para salvar.",
+  "editor.couldnt_load_ai_settings": "Não foi possível carregar as configurações de IA."
 }

@@ -4,7 +4,7 @@
 // normalizer. Keeping the prompts here next to the schemas keeps the contract
 // in one place and the frontend thin.
 
-import { outlineJsonSchema, type DesignType } from "./outline";
+import { maxNoteChars, outlineJsonSchema, type DesignType } from "./outline";
 
 const TYPE_GUIDANCE: Record<DesignType, string> = {
   deck: "A presentation deck: a cover, an optional agenda, several content pages, an optional data or comparison page, and a closing/CTA page. Aim for a clear narrative arc.",
@@ -23,7 +23,7 @@ export function outlineSystemPrompt(designType: DesignType, brandClause: string,
     `${count}Output ONLY a single JSON object, no prose, no markdown, no code fences.`,
     `Schema: ${JSON.stringify(outlineJsonSchema)}.`,
     "Each page has a short title, 0-6 concise key points (real final copy, not placeholders), a visualRole from the enum, and a note.",
-    "The note is a REQUIRED speaker note for the presenter: 1-3 spoken-style sentences of plain text (no markdown, 100-500 characters) that add context, evidence, or delivery cues. It must never restate the slide's visible text. Never exceed the length limit; rephrase rather than clipping mid-sentence.",
+    `The note is a REQUIRED speaker note for the presenter: 1-3 spoken-style sentences of plain text (no markdown, 100-${maxNoteChars} characters) that add context, evidence, or delivery cues. It must never restate the slide's visible text. Never exceed the length limit; rephrase rather than clipping mid-sentence.`,
     "Use 'cover' for the first page, 'closing' for the last when it fits, and pick roles that match each page's purpose.",
     "Do NOT include any layout, colors, sizes, or positions - only titles, points, and roles.",
     brandClause,

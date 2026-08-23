@@ -3390,5 +3390,6 @@
   "editor.vector_design": "वेक्टर डिज़ाइन",
   "editor.vector_generation_failed": "वेक्टर बनाना विफल रहा।",
   "editor.image_model_optional": "इमेज मॉडल (वैकल्पिक)",
-  "errors.api_ai_base_url_required": "इस प्रदाता के लिए बेस URL आवश्यक है। सहेजने के लिए अपना एंडपॉइंट URL दर्ज करें।"
+  "errors.api_ai_base_url_required": "इस प्रदाता के लिए बेस URL आवश्यक है। सहेजने के लिए अपना एंडपॉइंट URL दर्ज करें।",
+  "editor.couldnt_load_ai_settings": "AI सेटिंग्स लोड नहीं हो सकीं।"
 }

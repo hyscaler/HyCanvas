@@ -3,6 +3,8 @@ package aistudio
 import (
 	"errors"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 // These mirror the @hc/aistudio TypeScript types. Only validation lives here
@@ -77,7 +79,17 @@ const maxNoteChars = 500
 // one exists, mid-word truncation only as a last resort. Mirrors normalizeNote
 // in packages/aistudio/src/outline.ts.
 func normalizeNote(s string) string {
-	flat := strings.Join(strings.Fields(s), " ")
+	// Whitespace class: unicode.IsSpace plus U+FEFF, i.e. the union of Go
+	// IsSpace and JS \s - the TS mirror collapses the same union (JS \s plus
+	// U+0085), so both sides flatten identically.
+	flat := strings.Join(strings.FieldsFunc(s, func(r rune) bool {
+		return unicode.IsSpace(r) || r == '\uFEFF'
+	}), " ")
+	// Fast path: byte length is >= the rune count, so an under-cap byte length
+	// can never hide an over-cap note.
+	if len(flat) <= maxNoteChars {
+		return flat
+	}
 	runes := []rune(flat)
 	if len(runes) <= maxNoteChars {
 		return flat
@@ -92,7 +104,7 @@ func normalizeNote(s string) string {
 	// Compare in RUNES to match the TS side (LastIndex returns a byte offset,
 	// which overstates the position in multi-byte text). Slicing at end+1 is
 	// still byte-safe because the separator is ASCII.
-	if end >= 0 && len([]rune(cut[:end])) > maxNoteChars/2 {
+	if end >= 0 && utf8.RuneCountInString(cut[:end]) > maxNoteChars/2 {
 		return cut[:end+1]
 	}
 	return cut

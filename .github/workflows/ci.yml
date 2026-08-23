@@ -26,6 +26,7 @@ jobs:
       - run: rm -f package-lock.json && npm install --no-audit --no-fund
       - run: npm run build:packages
       - run: npm run test:packages
+      - run: npm run test:frontend
       - run: npm run lint:frontend
       - run: npm run build:frontend
         env:

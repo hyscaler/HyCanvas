@@ -255,6 +255,9 @@ func TestAIStudio_DB(t *testing.T) {
 }
 
 func TestNormalizeNote(t *testing.T) {
+	if got := normalizeNote("A\u0085B\uFEFFC  D"); got != "A B C D" {
+		t.Errorf("NEL/FEFF not collapsed like the TS mirror: %q", got)
+	}
 	if got := normalizeNote("  Open with the story.\n\nPause  here. "); got != "Open with the story. Pause here." {
 		t.Errorf("whitespace not flattened: %q", got)
 	}

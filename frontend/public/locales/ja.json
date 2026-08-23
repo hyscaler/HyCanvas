@@ -3390,5 +3390,6 @@
   "editor.vector_design": "ベクターデザイン",
   "editor.vector_generation_failed": "ベクターの生成に失敗しました。",
   "editor.image_model_optional": "画像モデル（任意）",
-  "errors.api_ai_base_url_required": "このプロバイダーにはベースURLが必要です。保存するにはエンドポイントのURLを入力してください。"
+  "errors.api_ai_base_url_required": "このプロバイダーにはベースURLが必要です。保存するにはエンドポイントのURLを入力してください。",
+  "editor.couldnt_load_ai_settings": "AI設定を読み込めませんでした。"
 }

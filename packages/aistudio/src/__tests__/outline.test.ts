@@ -177,6 +177,10 @@ describe("speaker notes on outline items", () => {
     expect(note.endsWith(".")).toBe(true); // never clipped mid-sentence
   });
 
+  it("collapses NEL and FEFF whitespace identically to the Go mirror", () => {
+    expect(normalizeNote("A\u0085B\uFEFFC  D")).toBe("A B C D");
+  });
+
   it("normalizeNote truncates hard when no sentence boundary exists", () => {
     const note = normalizeNote("x".repeat(900));
     expect(note.length).toBe(maxNoteChars);

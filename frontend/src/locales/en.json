@@ -864,6 +864,7 @@
   "editor.couldnt_import_that_pdf": "Couldn't import that PDF.",
   "editor.couldnt_import_that_url": "Couldn't import that URL.",
   "editor.couldnt_import_that_url_not_an_image_blocked": "Couldn't import that URL (not an image, blocked host, or unreachable).",
+  "editor.couldnt_load_ai_settings": "Couldn't load AI settings.",
   "editor.couldnt_load_that_font_file": "Couldn't load that font file.",
   "editor.couldnt_load_that_svg": "Couldn't load that SVG.",
   "editor.couldnt_move_that_upload": "Couldn't move that upload.",
