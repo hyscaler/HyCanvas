@@ -2769,7 +2769,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
             Apply {pending.plan.length} step{pending.plan.length === 1 ? "" : "s"}?
             {(() => {
               const n = planReplacePageCount(pending.plan, useEditor.getState().doc);
-              return n > 0 ? <strong className="ml-1">{tr("editor.replaces_all_n_pages", { count: n })}</strong> : null;
+              return n > 0 ? <strong className="ms-1">{tr("editor.replaces_all_n_pages", { count: n })}</strong> : null;
             })()}
           </span>
           <span className="flex gap-1">

@@ -43,7 +43,10 @@ var PRESETS = []ProviderPreset{
 	{ID: "groq", Label: "Groq", BaseURL: "https://api.groq.com/openai/v1", DefaultModel: "llama-3.3-70b-versatile", Capabilities: Capabilities{Text: true}},
 	{ID: "together", Label: "Together AI", BaseURL: "https://api.together.xyz/v1", DefaultModel: "meta-llama/Llama-3.3-70B-Instruct-Turbo", DefaultImageModel: "black-forest-labs/FLUX.1-schnell", Capabilities: Capabilities{Text: true, Image: true}},
 	{ID: "openrouter", Label: "OpenRouter", BaseURL: "https://openrouter.ai/api/v1", DefaultModel: "openai/gpt-4o-mini", Capabilities: Capabilities{Text: true}},
-	{ID: "azure-openai", Label: "Azure OpenAI", BaseURL: "", DefaultModel: "gpt-4o-mini", DefaultImageModel: "dall-e-3", Capabilities: Capabilities{Text: true, Image: true, DescribeImage: true, EditImage: true}, NeedsBaseURL: true},
+	// EditImage is off: images/edits does not exist at the GA api-version the
+	// transport pins (2024-06-01), and the default dall-e-3 deployment cannot
+	// edit; advertising it would fail every call.
+	{ID: "azure-openai", Label: "Azure OpenAI", BaseURL: "", DefaultModel: "gpt-4o-mini", DefaultImageModel: "dall-e-3", Capabilities: Capabilities{Text: true, Image: true, DescribeImage: true}, NeedsBaseURL: true},
 	{ID: "custom", Label: "Custom (OpenAI-compatible)", BaseURL: "", DefaultModel: "", Capabilities: Capabilities{Text: true, Image: true, DescribeImage: true, EditImage: true}, NeedsBaseURL: true},
 }
 

@@ -89,7 +89,10 @@ func normalizeNote(s string) string {
 			end = i
 		}
 	}
-	if end > maxNoteChars/2 {
+	// Compare in RUNES to match the TS side (LastIndex returns a byte offset,
+	// which overstates the position in multi-byte text). Slicing at end+1 is
+	// still byte-safe because the separator is ASCII.
+	if end >= 0 && len([]rune(cut[:end])) > maxNoteChars/2 {
 		return cut[:end+1]
 	}
 	return cut
