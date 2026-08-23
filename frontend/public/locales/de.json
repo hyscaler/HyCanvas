@@ -3389,5 +3389,6 @@
   "editor.drew_an_editable_vector_design_on_this_page": "Ein bearbeitbares Vektordesign wurde auf dieser Seite gezeichnet. Jedes Element ist eine echte Form oder ein Text, den du auswählen und bearbeiten kannst.",
   "editor.vector_design": "Vektordesign",
   "editor.vector_generation_failed": "Vektorerstellung fehlgeschlagen.",
-  "editor.image_model_optional": "Bildmodell (optional)"
+  "editor.image_model_optional": "Bildmodell (optional)",
+  "errors.api_ai_base_url_required": "Dieser Anbieter benötigt eine Basis-URL. Gib deine Endpunkt-URL ein, um zu speichern."
 }

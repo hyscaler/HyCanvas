@@ -3389,5 +3389,6 @@
   "editor.drew_an_editable_vector_design_on_this_page": "已在此页面上绘制了可编辑的矢量设计。每个元素都是可以选择和编辑的真实图形或文本。",
   "editor.vector_design": "矢量设计",
   "editor.vector_generation_failed": "矢量生成失败。",
-  "editor.image_model_optional": "图像模型（可选）"
+  "editor.image_model_optional": "图像模型（可选）",
+  "errors.api_ai_base_url_required": "此提供商需要基础 URL。请输入您的端点 URL 后再保存。"
 }

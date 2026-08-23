@@ -253,8 +253,8 @@ func TestAzureOpenAIDialect(t *testing.T) {
 func TestSetConfigRequiresBaseURLForEndpointProviders(t *testing.T) {
 	svc := NewService(nil, "test-secret", true)
 	for _, provider := range []string{"azure-openai", "custom"} {
-		if _, err := svc.SetConfig(context.Background(), "ws", ConfigInput{Provider: provider, APIKey: "k"}); err != ErrBadRequest {
-			t.Errorf("SetConfig(%s, no baseUrl) = %v, want ErrBadRequest", provider, err)
+		if _, err := svc.SetConfig(context.Background(), "ws", ConfigInput{Provider: provider, APIKey: "k"}); err != ErrBaseURLRequired {
+			t.Errorf("SetConfig(%s, no baseUrl) = %v, want ErrBaseURLRequired", provider, err)
 		}
 	}
 }

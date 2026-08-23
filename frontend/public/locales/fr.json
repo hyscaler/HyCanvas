@@ -3389,5 +3389,6 @@
   "editor.drew_an_editable_vector_design_on_this_page": "Un design vectoriel modifiable a été dessiné sur cette page. Chaque élément est une vraie forme ou un vrai texte que vous pouvez sélectionner et modifier.",
   "editor.vector_design": "Design vectoriel",
   "editor.vector_generation_failed": "La génération du vecteur a échoué.",
-  "editor.image_model_optional": "Modèle d'image (facultatif)"
+  "editor.image_model_optional": "Modèle d'image (facultatif)",
+  "errors.api_ai_base_url_required": "Ce fournisseur nécessite une URL de base. Saisissez l’URL de votre point de terminaison pour enregistrer."
 }

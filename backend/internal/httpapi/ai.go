@@ -75,6 +75,8 @@ func aiProblem(w http.ResponseWriter, r *http.Request, err error) {
 		problemWithCode(w, r, http.StatusForbidden, "Forbidden", err.Error(), "ai_policy_blocked")
 	case errors.Is(err, ai.ErrImageUnsupported):
 		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "your AI provider does not support image generation; switch to an image-capable provider (e.g. OpenAI or Together AI) in AI settings", "ai_image_unsupported")
+	case errors.Is(err, ai.ErrBaseURLRequired):
+		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "this provider needs a base URL; enter your endpoint URL in AI settings", "ai_base_url_required")
 	case errors.Is(err, ai.ErrBadRequest):
 		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid AI request or no provider configured", "ai_not_configured")
 	case errors.Is(err, ai.ErrBadGateway):

@@ -3270,6 +3270,13 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
 
   async function saveConfig() {
     if (!workspaceId) return;
+    // Endpoint-routed providers are unusable without their URL; the server
+    // rejects the save too (ai_base_url_required), but catching it here points
+    // at the field without a round trip.
+    if (needsBaseUrl && !baseUrl.trim()) {
+      toast.error(tr("errors.api_ai_base_url_required"));
+      return;
+    }
     try {
       // Only providers that require a user-supplied base URL (Azure/custom)
       // persist one; the rest route via the server-side registry, so never
@@ -3285,8 +3292,11 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
       setApiKey("");
       setShowConfig(false);
       toast.success(tr("editor.ai_provider_saved"));
-    } catch {
-      toast.error(tr("editor.could_not_save_ai_settings"));
+    } catch (e) {
+      // Show the server's coded reason when it sent one (e.g. a rejected base
+      // URL); the generic save error stays the fallback.
+      const coded = e instanceof ApiError ? apiCodeMessage(e.body) : null;
+      toast.error(coded ?? tr("editor.could_not_save_ai_settings"));
     }
   }
 

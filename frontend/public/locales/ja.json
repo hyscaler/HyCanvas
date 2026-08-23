@@ -3389,5 +3389,6 @@
   "editor.drew_an_editable_vector_design_on_this_page": "このページに編集可能なベクターデザインを描画しました。すべての要素は選択して編集できる実際の図形またはテキストです。",
   "editor.vector_design": "ベクターデザイン",
   "editor.vector_generation_failed": "ベクターの生成に失敗しました。",
-  "editor.image_model_optional": "画像モデル（任意）"
+  "editor.image_model_optional": "画像モデル（任意）",
+  "errors.api_ai_base_url_required": "このプロバイダーにはベースURLが必要です。保存するにはエンドポイントのURLを入力してください。"
 }

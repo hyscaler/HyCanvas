@@ -33,6 +33,10 @@ var (
 	// Groq, OpenRouter). Distinct from ErrBadRequest so the API can tell the user
 	// their provider can't do images, not that their request/config is malformed.
 	ErrImageUnsupported = errors.New("provider does not support image generation")
+	// ErrBaseURLRequired is returned when a config for an endpoint-routed
+	// provider (Azure/custom) is saved without a base URL. Distinct from
+	// ErrBadRequest so the UI can point the user at the missing field.
+	ErrBaseURLRequired = errors.New("provider requires a base URL")
 )
 
 // DBTX is the query surface (satisfied by *pgxpool.Pool and pgx.Tx).
@@ -149,7 +153,7 @@ func (s *Service) SetConfig(ctx context.Context, workspaceID string, in ConfigIn
 	// unusable without one: reject at the write boundary with a 400 instead of
 	// letting every later call fail as an opaque 502 against a host-less URL.
 	if p := PresetFor(in.Provider); p != nil && p.NeedsBaseURL && in.BaseURL == "" {
-		return nil, ErrBadRequest
+		return nil, ErrBaseURLRequired
 	}
 	existing, err := s.getRow(ctx, workspaceID)
 	if err != nil {
