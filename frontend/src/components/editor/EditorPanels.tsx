@@ -1858,9 +1858,9 @@ type ResolvedPayload =
   | { kind: "clusters"; clusters: { title: string; ids: string[] }[] }
   | { kind: "summary"; text: string }
   | { kind: "outline"; outline: DesignOutline; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroPlans: { pageIndex: number; prompt: string; subject: string; size: string }[]; workspaceId: string; designId: string | null; append: boolean }
-  | { kind: "layoutDeck"; deckTitle: string; pages: { layoutId: string; name: string; note?: string; fill: LayoutFill }[]; background: unknown; imageSize: string; size: { width: number; height: number }; workspaceId: string; designId: string | null; append: boolean }
-  | { kind: "splitSlide"; pageIndex: number; halves: { layoutId: string; name: string; fill: LayoutFill }[] }
-  | { kind: "insertComparison"; layoutId: string; name: string; fill: LayoutFill; afterIndex: number }
+  | { kind: "layoutDeck"; deckTitle: string; pages: { layoutId: string; name: string; note?: string; fill: LayoutFill }[]; background: unknown; imageSize: string; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroPlans: { pageIndex: number; prompt: string; subject: string }[]; workspaceId: string; designId: string | null; append: boolean }
+  | { kind: "splitSlide"; pageIndex: number; pageId: string; halves: { layoutId: string; name: string; fill: LayoutFill }[] }
+  | { kind: "insertComparison"; layoutId: string; name: string; fill: LayoutFill; afterIndex: number; afterPageId: string }
   | { kind: "regenerateSlide"; pageIndex: number; pageId: string; layoutId: string; layoutChanged: boolean; fill: LayoutFill; imageTasks: { placeholderId: string; prompt: string; subject: string }[]; imageSize: string; workspaceId: string; designId: string | null };
 
 /** Parse a model reply that must be a JSON array of exactly `n` strings.
@@ -2000,12 +2000,21 @@ function pageTitleOf(page: { name?: string; children: unknown[] }): string {
   return extracted !== "Slide" ? extracted : (page.name || tr("editor.slide"));
 }
 
-/** Whether the deck opens on a title slide (drives agenda insertion position):
- *  the first page links a title-only layout, or carries at most two nodes. */
-function hasTitleSlide(doc: { pages: { layoutId?: string; children: unknown[] }[] }): boolean {
+/** Whether the deck opens on a title slide (drives agenda insertion position).
+ *  A linked layout decides by its slot signature (title-ish = no content
+ *  slot); otherwise a heuristic: few text nodes and nothing data-heavy - a
+ *  freeform cover is typically a hero background plus 2-3 text blocks. */
+function hasTitleSlide(doc: { layouts?: SlideLayout[]; pages: { layoutId?: string; children: unknown[] }[] }): boolean {
   const first = doc.pages[0];
   if (!first) return false;
-  return first.layoutId === "layout-title" || first.children.length <= 2;
+  if (first.layoutId) {
+    const layout = doc.layouts?.find((l) => l.id === first.layoutId);
+    if (layout) return !(layout.placeholders ?? []).some((ph) => ph.role === "content");
+  }
+  type Typed = { type: string };
+  const texts = (first.children as Typed[]).filter((n) => n.type === "text").length;
+  const heavy = (first.children as Typed[]).some((n) => n.type === "chart" || n.type === "table");
+  return !heavy && texts > 0 && texts <= 3;
 }
 
 /** True when the document already holds work worth protecting: more than one
@@ -2233,10 +2242,17 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       if (!page) return { error: "that page doesn't exist" };
       const instruction = String(a.instruction ?? "").trim();
       if (!instruction) return { error: "an instruction is needed" };
-      st.ensureSlideLayouts();
-      const layouts = (st.doc as unknown as { layouts: SlideLayout[] }).layouts;
+      // Read-only planning: the resolve phase must not mutate the document
+      // (ensureSlideLayouts runs inside the APPLY turn); built-ins here only
+      // shape the schemas, and their ids match what the apply installs.
+      const docLayouts = (st.doc as unknown as { layouts?: SlideLayout[] }).layouts;
+      const layouts = docLayouts?.length ? docLayouts : builtinMasterAndLayouts({ width: page.width, height: page.height }).layouts;
       type Slotted = { type: string; data?: { placeholderId?: string; aiImagePrompt?: string }; content?: { runs: { text: string }[] }[] };
       const slotted = (page.children as Slotted[]).filter((n) => n.data?.placeholderId);
+      // A slide with no placeholder boxes (freeform/pre-layout generation) has
+      // nothing this tool can rewrite in place: refuse cleanly instead of
+      // stacking new boxes over the existing content.
+      if (!slotted.length) return { error: "this slide isn't layout-linked - regenerate the deck to enable per-slide regeneration" };
       const currentTexts = slotted
         .filter((n) => n.type === "text" && n.content?.length)
         .map((n) => `${n.data!.placeholderId}: ${(n.content ?? []).map((par) => par.runs.map((r) => r.text).join("")).join(" / ")}`)
@@ -2267,7 +2283,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       try {
         const { text } = await oc.aiTextStructured({
           workspaceId: deps.workspaceId,
-          system: regenerateFillSystemPrompt(schema),
+          system: regenerateFillSystemPrompt(schema, deps.voiceClause),
           prompt: `Slide ${idx + 1} (${pageTitleOf(page)})\nInstruction: ${instruction}\nCurrent content by slot:\n${currentTexts.slice(0, 4000) || "(empty)"}`,
           schema,
         });
@@ -2278,7 +2294,8 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       }
       if (!fill) return { error: "couldn't regenerate that slide" };
       // Image diff: only changed prompts regenerate; unchanged images stay.
-      const changed = changedImagePrompts(currentImagePrompts, fill.imagePrompts);
+      // A text-only provider gets none (a queued task could only fail).
+      const changed = deps.imageCapable ? changedImagePrompts(currentImagePrompts, fill.imagePrompts) : {};
       const aspect = page.width >= page.height * 1.2 ? "landscape" : page.height >= page.width * 1.2 ? "portrait" : "square";
       const imageSize = aspect === "landscape" ? "1792x1024" : aspect === "portrait" ? "1024x1792" : "1024x1024";
       return {
@@ -2289,7 +2306,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
           layoutId,
           layoutChanged: layoutId !== page.layoutId,
           fill,
-          imageTasks: Object.entries(changed).map(([placeholderId, prompt]) => ({ placeholderId, prompt: groundImagePrompt(prompt, { palette: [] }), subject: prompt })),
+          imageTasks: Object.entries(changed).map(([placeholderId, prompt]) => ({ placeholderId, prompt: groundImagePrompt(prompt, { palette: deps.brandPalette, aspect }), subject: prompt })),
           imageSize,
           workspaceId: deps.workspaceId,
           designId: deps.designId ?? null,
@@ -2300,10 +2317,12 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       // One structured call splits the page's content into two outline items;
       // the two replacement pages fill deterministically from those items.
       const idx = Math.round(Number(a.pageIndex)) - 1; // the tool speaks 1-based
-      const page = st.doc.pages[idx] as unknown as { name?: string; children: unknown[] } | undefined;
+      const page = st.doc.pages[idx] as unknown as { id: string; name?: string; width: number; height: number; children: unknown[] } | undefined;
       if (!page) return { error: "that page doesn't exist" };
-      st.ensureSlideLayouts();
-      const layouts = (st.doc as unknown as { layouts: SlideLayout[] }).layouts;
+      // Read-only planning: layouts are only consulted here; the apply turn
+      // installs the built-ins when the document has none (same ids).
+      const docLayouts = (st.doc as unknown as { layouts?: SlideLayout[] }).layouts;
+      const layouts = docLayouts?.length ? docLayouts : builtinMasterAndLayouts({ width: page.width, height: page.height }).layouts;
       type Textish = { type: string; content?: { runs: { text: string }[] }[] };
       const pageText = (page.children as Textish[])
         .filter((n) => n.type === "text" && n.content?.length)
@@ -2329,11 +2348,13 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
         const layout = layouts.find((l) => l.id === layoutId)!;
         return { layoutId, name: item.title, fill: fallbackLayoutFill(layout, item) };
       });
-      return { payload: { kind: "splitSlide", pageIndex: idx, halves } };
+      return { payload: { kind: "splitSlide", pageIndex: idx, pageId: page.id, halves } };
     }
     case "insertComparison": {
-      st.ensureSlideLayouts();
-      const layouts = (st.doc as unknown as { layouts: SlideLayout[] }).layouts;
+      // Read-only planning: the apply turn installs built-ins when needed.
+      const activePage = st.doc.pages[st.activePage] as unknown as { width: number; height: number } | undefined;
+      const docLayouts = (st.doc as unknown as { layouts?: SlideLayout[] }).layouts;
+      const layouts = docLayouts?.length ? docLayouts : builtinMasterAndLayouts(activePage ?? { width: 1920, height: 1080 }).layouts;
       const layout = layouts.find((l) => l.id === "layout-comparison")
         ?? layouts.find((l) => (l.placeholders ?? []).filter((p) => p.role === "content").length >= 2);
       if (!layout) return { error: "no comparison layout available" };
@@ -2345,7 +2366,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       try {
         const { text } = await oc.aiTextStructured({
           workspaceId: deps.workspaceId,
-          system: layoutFillSystemPrompt(schema),
+          system: layoutFillSystemPrompt(schema, deps.voiceClause),
           prompt: `Write a side-by-side comparison slide of "${topicA}" versus "${topicB}": a heading naming both, one column of concrete points per topic (left = ${topicA}, right = ${topicB}).`,
           schema,
         });
@@ -2359,7 +2380,8 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       }
       const after = typeof a.afterPageIndex === "number" ? Math.round(a.afterPageIndex) - 1 : st.activePage;
       const afterIndex = Math.max(0, Math.min(after, st.doc.pages.length - 1));
-      return { payload: { kind: "insertComparison", layoutId: layout.id, name: `${topicA} vs ${topicB}`, fill, afterIndex } };
+      const afterPageId = (st.doc.pages[afterIndex] as unknown as { id: string }).id;
+      return { payload: { kind: "insertComparison", layoutId: layout.id, name: `${topicA} vs ${topicB}`, fill, afterIndex, afterPageId } };
     }
     case "generateDesign": {
       // The explicit designType wins when the model supplies one; otherwise the
@@ -2407,7 +2429,13 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       // engine only when layout grounding is impossible.
       {
         const docLayouts = (st.doc as unknown as { layouts?: SlideLayout[] }).layouts;
-        const layouts = docLayouts?.length ? docLayouts : builtinMasterAndLayouts(size).layouts;
+        let layouts = docLayouts?.length ? docLayouts : builtinMasterAndLayouts(size).layouts;
+        // A text-only provider cannot fill picture slots: prefer layouts
+        // without them (when any exist) so no un-fillable slot is offered.
+        if (!deps.imageCapable) {
+          const noPicture = layouts.filter((l) => !(l.placeholders ?? []).some((ph) => ph.role === "picture"));
+          if (noPicture.length) layouts = noPicture;
+        }
         if (layouts.length && (dt === "deck" || dt === "doc")) {
           const items = outline.pages;
           const ids = layouts.map((l) => l.id);
@@ -2425,6 +2453,9 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
             selection = repairLayoutSelection(null, items, layouts); // deterministic role preference
           }
           const byId = new Map(layouts.map((l) => [l.id, l] as const));
+          // Generation dials and the brand voice shape the FILL text too, not
+          // just the outline (the second pass would otherwise drift neutral).
+          const styleClause = [dialsClause(deps.dials), deps.voiceClause].filter(Boolean).join(" ");
 
           const fills: LayoutFill[] = new Array(items.length);
           const pool = 4;
@@ -2438,7 +2469,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
               try {
                 const { text } = await oc.aiTextStructured({
                   workspaceId: deps.workspaceId,
-                  system: layoutFillSystemPrompt(schema),
+                  system: layoutFillSystemPrompt(schema, styleClause),
                   prompt: `Deck: ${outline.title}${outline.theme ? ` (${outline.theme})` : ""}\nSlide ${i + 1} of ${items.length}: ${item.title}\nKey points:\n${item.points.map((x) => `- ${x}`).join("\n") || "(none)"}${item.note ? `\nSpeaker note (context, not slide text): ${item.note}` : ""}`,
                   schema,
                 });
@@ -2453,6 +2484,26 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
           await Promise.all(Array.from({ length: Math.min(pool, items.length) }, worker));
           const aspect = size.width >= size.height * 1.2 ? "landscape" : size.height >= size.width * 1.2 ? "portrait" : "square";
           const imageSize = aspect === "landscape" ? "1792x1024" : aspect === "portrait" ? "1024x1792" : "1024x1024";
+          // A text-only provider gets no image tasks at all: a queued task
+          // could only fail and nag with a retry that can never succeed.
+          if (!deps.imageCapable) for (const f of fills) f.imagePrompts = {};
+          // Hero backgrounds for the impact pages (the T10 behavior): layout
+          // grounding fills picture SLOTS, but most layouts have none, so the
+          // cover/quote/closing pages keep their streamed hero backgrounds.
+          const heroPlans = deps.imageCapable
+            ? items
+                .map((p, i) => ({ p, i }))
+                .filter(({ p, i }) => HERO_ROLES.has(p.visualRole) && !Object.keys(fills[i]?.imagePrompts ?? {}).length)
+                .slice(0, MAX_HERO_IMAGES)
+                .map(({ p, i }) => ({
+                  pageIndex: i,
+                  subject: p.title,
+                  prompt: groundImagePrompt(
+                    `${outline.title}${p.title ? ` - ${p.title}` : ""}. ${outline.theme ?? ""}. A soft, uncluttered, low-contrast background with generous empty space so overlaid text stays readable. No text, no words, no logos in the image.`,
+                    { palette: deps.brandPalette, aspect },
+                  ),
+                }))
+            : [];
           // The theme's page background, converted exactly as the freeform
           // engine converts it (an empty layout pass yields just the Fill).
           const seed = Array.from(outline.title).reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) | 0, 7);
@@ -2466,6 +2517,9 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
               background,
               imageSize,
               size,
+              brandPalette: deps.brandPalette,
+              brandFonts: deps.brandFonts,
+              heroPlans,
               workspaceId: deps.workspaceId,
               designId: deps.designId ?? null,
               append,
@@ -2647,18 +2701,18 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       // Fully algorithmic (T13): titles from the live pages, entry math and
       // numbering from the pure core, the layout via the priority picker; a
       // deck with no list-capable layout skips silently.
-      st.ensureSlideLayouts();
-      const layouts = (st.doc as unknown as { layouts: SlideLayout[] }).layouts;
-      const agendaLayout = pickAgendaLayout(layouts);
-      if (!agendaLayout) return false;
       const docPages = st.doc.pages as unknown as { name?: string; layoutId?: string; children: unknown[]; background?: unknown; width: number; height: number }[];
       const titles = docPages.map((p) => pageTitleOf(p));
-      const withTitle = hasTitleSlide({ pages: docPages });
+      const withTitle = hasTitleSlide(st.doc as unknown as { layouts?: SlideLayout[]; pages: { layoutId?: string; children: unknown[] }[] });
       const plans = buildAgendaPages(titles, withTitle);
       if (!plans.length) return false;
       const insertAt = withTitle ? 1 : 0;
       const refPage = docPages[insertAt] ?? docPages[0];
       const size = { width: refPage.width, height: refPage.height };
+      st.ensureSlideLayouts(size); // inside the turn, sized to the agenda's page
+      const layouts = (st.doc as unknown as { layouts: SlideLayout[] }).layouts;
+      const agendaLayout = pickAgendaLayout(layouts);
+      if (!agendaLayout) return false;
       const deckLike = {
         title: tr("editor.agenda"),
         pages: plans.map(() => ({ name: tr("editor.agenda"), background: structuredClone(refPage.background), nodes: [] })),
@@ -2683,9 +2737,15 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       if (ctx?.payload?.kind !== "regenerateSlide") return false;
       const { pageIndex, pageId, layoutId, layoutChanged, fill, imageTasks, imageSize, workspaceId, designId } = ctx.payload;
       // The page must still be the one that was resolved (identity guard).
-      const live = st.doc.pages[pageIndex] as unknown as { id: string } | undefined;
+      const live = st.doc.pages[pageIndex] as unknown as { id: string; width: number; height: number } | undefined;
       if (!live || live.id !== pageId) return false;
-      if (layoutChanged) st.applyLayoutToPage(layoutId, pageIndex); // adds missing slots, keeps existing ids
+      if (layoutChanged) {
+        st.ensureSlideLayouts({ width: live.width, height: live.height }); // inside the turn; no-op when layouts exist
+        // Prune the OLD layout's boxes for slots absent from the new layout, or
+        // they would keep their stale content overlapping the new slots. Slots
+        // present in both layouts keep their node ids (Magic Move contract).
+        st.applyLayoutToPage(layoutId, pageIndex, { pruneObsolete: true });
+      }
       st.fillPlaceholderContent(pageIndex, { texts: fill.texts, lists: fill.lists });
       enqueueAiImages(imageTasks.map((t) => ({
         workspaceId,
@@ -2701,13 +2761,21 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
     }
     case "splitSlide": {
       if (ctx?.payload?.kind !== "splitSlide") return false;
-      const { pageIndex, halves } = ctx.payload;
-      const orig = st.doc.pages[pageIndex] as unknown as { width: number; height: number; background?: unknown } | undefined;
-      if (!orig || halves.length !== 2) return false;
+      const { pageIndex, pageId, halves } = ctx.payload;
+      const orig = st.doc.pages[pageIndex] as unknown as { id: string; width: number; height: number; background?: unknown; children: unknown[] } | undefined;
+      // Identity guard: the resolve step is async, so the page at this index
+      // must still be the one that was split, or the wrong page gets deleted.
+      if (!orig || orig.id !== pageId || halves.length !== 2) return false;
+      st.ensureSlideLayouts({ width: orig.width, height: orig.height }); // inside the turn
       const size = { width: orig.width, height: orig.height };
+      // The split redistributes TEXT; everything else on the original slide
+      // (charts, images, shapes) carries onto the first half instead of being
+      // silently discarded with the deleted page. Ids stay unique in the final
+      // document: the original page (the only other holder) is removed below.
+      const keepNodes = structuredClone((orig.children as { type: string }[]).filter((n) => n.type !== "text"));
       const deckLike = {
         title: "",
-        pages: halves.map((h) => ({ name: h.name, background: structuredClone(orig.background), nodes: [] })),
+        pages: halves.map((h, j) => ({ name: h.name, background: structuredClone(orig.background), nodes: j === 0 ? keepNodes : [] })),
       } as unknown as Parameters<typeof st.buildDeckFromOutline>[0];
       const ids = st.appendDeckPages(deckLike, size);
       if (ids.length !== 2) return false;
@@ -2723,16 +2791,21 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
     }
     case "insertComparison": {
       if (ctx?.payload?.kind !== "insertComparison") return false;
-      const { layoutId, name, fill, afterIndex } = ctx.payload;
-      const ref = st.doc.pages[afterIndex] as unknown as { width: number; height: number; background?: unknown } | undefined;
+      const { layoutId, name, fill, afterIndex, afterPageId } = ctx.payload;
+      // Re-anchor by id first (the doc may have changed during the async
+      // resolve); the index is only the fallback for an unmoved page.
+      const liveIndex = st.doc.pages.findIndex((p) => (p as unknown as { id: string }).id === afterPageId);
+      const anchor = liveIndex >= 0 ? liveIndex : Math.min(afterIndex, st.doc.pages.length - 1);
+      const ref = st.doc.pages[anchor] as unknown as { width: number; height: number; background?: unknown } | undefined;
       if (!ref) return false;
+      st.ensureSlideLayouts({ width: ref.width, height: ref.height }); // inside the turn
       const deckLike = {
         title: "",
         pages: [{ name, background: structuredClone(ref.background), nodes: [] }],
       } as unknown as Parameters<typeof st.buildDeckFromOutline>[0];
       const ids = st.appendDeckPages(deckLike, { width: ref.width, height: ref.height });
       if (!ids.length) return false;
-      const to = afterIndex + 1;
+      const to = anchor + 1;
       st.movePage(st.doc.pages.length - 1, to);
       st.applyLayoutToPage(layoutId, to);
       st.fillPlaceholderContent(to, { texts: fill.texts, lists: fill.lists });
@@ -2745,8 +2818,27 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       // the placeholder boxes, and queue the picture-slot images. All inside
       // the caller's one-undo turn.
       if (ctx?.payload?.kind === "layoutDeck") {
-        const { deckTitle, pages, background, imageSize, size, workspaceId, designId, append } = ctx.payload;
-        st.ensureSlideLayouts(); // no-op when the document already has layouts
+        const { deckTitle, pages, background, imageSize, size, brandPalette, brandFonts, heroPlans, workspaceId, designId, append } = ctx.payload;
+        st.ensureSlideLayouts(size); // sized to the generated pages, no-op when layouts exist
+        const installed = (st.doc as unknown as { layouts?: SlideLayout[] }).layouts ?? [];
+        // Brand fonts + a background-readable ink applied per slot role: the
+        // materialized boxes carry the master's defaults, which would drop the
+        // Brand Kit typography and go unreadable on a dark theme background.
+        const bgFill = background as { type?: string; color?: Color; stops?: { color: Color }[] } | undefined;
+        const bgColor = bgFill?.type === "solid" ? bgFill.color : bgFill?.stops?.[0]?.color;
+        const dark = bgColor ? relativeLuminance(bgColor) < 0.45 : false;
+        const ink: Fill = { type: "solid", color: { srgb: dark ? { r: 0.97, g: 0.97, b: 0.97, a: 1 } : { r: 0.12, g: 0.14, b: 0.18, a: 1 } } };
+        const stylesFor = (layoutId: string): Record<string, { fontFamily?: string; fill?: Fill }> => {
+          const layout = installed.find((l) => l.id === layoutId);
+          const out: Record<string, { fontFamily?: string; fill?: Fill }> = {};
+          for (const ph of layout?.placeholders ?? []) {
+            if (ph.role !== "title" && ph.role !== "body" && ph.role !== "content") continue;
+            const fontFamily = ph.role === "title" ? brandFonts.heading : brandFonts.body;
+            out[ph.id] = { ...(fontFamily ? { fontFamily } : {}), fill: ink };
+          }
+          return out;
+        };
+        const aspect = size.width >= size.height * 1.2 ? "landscape" : size.height >= size.width * 1.2 ? "portrait" : "square";
         const deckLike = {
           title: deckTitle,
           pages: pages.map((p) => ({ name: p.name, note: p.note, background, nodes: [] })),
@@ -2757,19 +2849,23 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
         const imageTasks: Parameters<typeof enqueueAiImages>[0] = [];
         pages.forEach((p, i) => {
           st.applyLayoutToPage(p.layoutId, base + i);
-          st.fillPlaceholderContent(base + i, { texts: p.fill.texts, lists: p.fill.lists });
+          st.fillPlaceholderContent(base + i, { texts: p.fill.texts, lists: p.fill.lists }, { styles: stylesFor(p.layoutId) });
           for (const [placeholderId, prompt] of Object.entries(p.fill.imagePrompts)) {
             imageTasks.push({
               workspaceId,
               designId: designId ?? "",
               pageId: ids[i],
               placeholderId,
-              prompt: groundImagePrompt(prompt, { palette: [] }),
+              prompt: groundImagePrompt(prompt, { palette: brandPalette, aspect }),
               subject: prompt,
               size: imageSize,
             });
           }
         });
+        // Hero backgrounds for the impact pages (already grounded in resolve).
+        for (const h of heroPlans) {
+          if (ids[h.pageIndex]) imageTasks.push({ workspaceId, designId: designId ?? "", pageId: ids[h.pageIndex], prompt: h.prompt, subject: h.subject, size: imageSize });
+        }
         enqueueAiImages(imageTasks);
         st.goToPage(base);
         return true;

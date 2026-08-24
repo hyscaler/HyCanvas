@@ -114,3 +114,66 @@ describe("per-slide regeneration keeps node identity", () => {
     expect(title?.content?.[0]?.runs[0]?.text).toBe("Rewritten");
   });
 });
+
+describe("a composed generation turn survives undo + redo", () => {
+  it("redo restores layoutId, placeholder boxes, and filled text", () => {
+    const st = useEditor.getState();
+    st.ensureSlideLayouts();
+    const before = useEditor.getState().doc.pages.length;
+    st.runAsTurn(() => {
+      const deckLike = {
+        title: "Turn",
+        pages: [{ name: "P", background: { type: "solid", color: { srgb: { r: 1, g: 1, b: 1, a: 1 } } }, nodes: [] }],
+      } as unknown as Parameters<typeof st.buildDeckFromOutline>[0];
+      const ids = st.appendDeckPages(deckLike, { width: 1920, height: 1080 });
+      const idx = useEditor.getState().doc.pages.length - 1;
+      useEditor.getState().applyLayoutToPage("layout-title-content", idx);
+      useEditor.getState().fillPlaceholderContent(idx, { texts: { "ph-title": "Survives" }, lists: { "ph-content": ["a", "b"] } });
+      void ids;
+    });
+    const idx = useEditor.getState().doc.pages.length - 1;
+    const readTitle = () => {
+      const page = useEditor.getState().doc.pages[idx] as unknown as { layoutId?: string; children: Textish[] } | undefined;
+      const box = page?.children.find((n) => n.data?.placeholderId === "ph-title");
+      return { layoutId: page?.layoutId, text: box?.content?.[0]?.runs[0]?.text, boxes: page?.children.filter((n) => n.data?.placeholderId).length ?? 0 };
+    };
+    expect(readTitle()).toMatchObject({ layoutId: "layout-title-content", text: "Survives" });
+
+    // Undo removes the whole turn; redo must bring EVERYTHING back - the
+    // page-replacing redo re-clones pages, so the layout/fill redos must
+    // resolve by id instead of mutating detached captures.
+    useEditor.getState().undo();
+    expect(useEditor.getState().doc.pages.length).toBe(before);
+    useEditor.getState().redo();
+    expect(useEditor.getState().doc.pages.length).toBe(before + 1);
+    expect(readTitle()).toMatchObject({ layoutId: "layout-title-content", text: "Survives" });
+    expect(readTitle().boxes).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("relayout pruning", () => {
+  it("removes obsolete slot boxes and keeps shared-slot node ids", () => {
+    const st = useEditor.getState();
+    st.ensureSlideLayouts();
+    const deckLike = {
+      title: "Prune",
+      pages: [{ name: "P", background: { type: "solid", color: { srgb: { r: 1, g: 1, b: 1, a: 1 } } }, nodes: [] }],
+    } as unknown as Parameters<typeof st.buildDeckFromOutline>[0];
+    st.appendDeckPages(deckLike, { width: 1920, height: 1080 });
+    const idx = useEditor.getState().doc.pages.length - 1;
+    st.applyLayoutToPage("layout-title-content", idx);
+    const titleId = pageChildren(idx).find((n) => n.data?.placeholderId === "ph-title")?.id;
+    expect(pageChildren(idx).some((n) => n.data?.placeholderId === "ph-content")).toBe(true);
+
+    // Switch to the comparison layout with pruning: ph-content (absent there)
+    // goes away, ph-title keeps its identity, the new slots materialize.
+    useEditor.getState().applyLayoutToPage("layout-comparison", idx, { pruneObsolete: true });
+    expect(pageChildren(idx).some((n) => n.data?.placeholderId === "ph-content")).toBe(false);
+    expect(pageChildren(idx).find((n) => n.data?.placeholderId === "ph-title")?.id).toBe(titleId);
+    expect(pageChildren(idx).some((n) => n.data?.placeholderId === "ph-left")).toBe(true);
+
+    // Undo restores the pruned box.
+    useEditor.getState().undo();
+    expect(pageChildren(idx).some((n) => n.data?.placeholderId === "ph-content")).toBe(true);
+  });
+});

@@ -186,7 +186,15 @@ async function resolveTask(task: AiImageTask): Promise<boolean> {
 async function describeAppliedBackground(task: AiImageTask): Promise<void> {
   const st = useEditor.getState();
   const page = st.doc.pages.find((p) => p.id === task.pageId);
-  const node = page?.children.find((n) => n.type === "image" && (n.data as { aiImagePrompt?: string } | undefined)?.aiImagePrompt === task.prompt);
+  type D = { aiImagePrompt?: string; placeholderId?: string };
+  // Slot-scoped tasks locate by placeholderId (a deterministic fallback can
+  // stamp several slots with the SAME prompt); background tasks match the
+  // prompt on untagged images only.
+  const node = page?.children.find((n) => {
+    if (n.type !== "image") return false;
+    const d = n.data as D | undefined;
+    return task.placeholderId ? d?.placeholderId === task.placeholderId : d?.aiImagePrompt === task.prompt && !d?.placeholderId;
+  });
   if (!node) return;
   const assetId = (node as { source?: { assetId?: string } }).source?.assetId;
   const ref = assetId ? st.doc.assets.find((a) => a.id === assetId) : null;

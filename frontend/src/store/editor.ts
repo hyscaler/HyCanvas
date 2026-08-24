@@ -460,12 +460,12 @@ interface EditorState {
   /** Link a page to a layout (null unlinks) and materialize it: the layout's
    *  background applies and missing placeholders land as editable text boxes
    *  (tagged via data.placeholderId). One undo step. */
-  applyLayoutToPage(layoutId: string | null, pageIndex?: number): boolean;
+  applyLayoutToPage(layoutId: string | null, pageIndex?: number, opts?: { pruneObsolete?: boolean }): boolean;
   /** T12: write generated content into a page's materialized placeholder boxes
    *  (matched by data.placeholderId): plain text for title/body slots, one
    *  bulleted paragraph per item for content lists. One undo step; boxes not
    *  named in the fill keep their current content. */
-  fillPlaceholderContent(pageIndex: number, fill: { texts: Record<string, string>; lists: Record<string, string[]> }): boolean;
+  fillPlaceholderContent(pageIndex: number, fill: { texts: Record<string, string>; lists: Record<string, string[]> }, opts?: { styles?: Record<string, { fontFamily?: string; fill?: Fill }> }): boolean;
   /** T12/T10: place a resolved image into a picture placeholder, addressed by
    *  page id + placeholder id (late async results must not depend on the
    *  active page). Replaces the placeholder's materialized box (or a previous
@@ -721,7 +721,7 @@ interface EditorState {
   /** Assign (or clear) the slide layout this page inherits (doc 28 FR-3). */
   setPageLayout(layoutId: string | undefined, pageIndex?: number): void;
   /** Install the built-in master + layouts on a deck that has none (FR-3). */
-  ensureSlideLayouts(): void;
+  ensureSlideLayouts(size?: { width: number; height: number }): void;
   /** Adopt a theme for the whole deck in one undoable action (FR-4). */
   setDeckTheme(theme: Theme | undefined): void;
   /** Set/clear the active (or given) page's autopilot dwell in ms;
@@ -2098,13 +2098,14 @@ export const useEditor = create<EditorState>((set, get) => {
       return layoutId;
     },
 
-    fillPlaceholderContent: (pageIndex, fill) => {
+    fillPlaceholderContent: (pageIndex, fill, opts) => {
       const doc = get().doc;
-      const page = doc.pages[pageIndex] as unknown as { children: Node[] };
+      const page = doc.pages[pageIndex] as unknown as { id: string; children: Node[] };
       if (!page) return false;
+      const pageId = page.id;
       type Paragraph = { runs: { text: string; style: Record<string, unknown> }[]; style: Record<string, unknown> };
-      type Textish = { type: string; data?: { placeholderId?: string }; content?: Paragraph[] };
-      const targets: { node: Textish; before: Paragraph[]; after: Paragraph[] }[] = [];
+      type Textish = { id: string; type: string; data?: { placeholderId?: string }; content?: Paragraph[] };
+      const targets: { nodeId: string; before: Paragraph[]; after: Paragraph[] }[] = [];
       for (const child of page.children as unknown as Textish[]) {
         const phId = child.data?.placeholderId;
         if (!phId || child.type !== "text" || !child.content?.length) continue;
@@ -2112,19 +2113,38 @@ export const useEditor = create<EditorState>((set, get) => {
         const list = fill.lists[phId];
         if (text === undefined && list === undefined) continue;
         // Reuse the materialized box's own run/paragraph style so the fill
-        // inherits the layout's typography instead of resetting it.
+        // inherits the layout's typography, then apply any explicit override
+        // (brand fonts, a readable ink for the theme background).
         const proto = child.content[0];
-        const runStyle = proto.runs[0]?.style ?? {};
+        const override = opts?.styles?.[phId];
+        const runStyle: Record<string, unknown> = {
+          ...(proto.runs[0]?.style ?? {}),
+          ...(override?.fontFamily ? { fontFamily: override.fontFamily } : {}),
+          ...(override?.fill ? { fill: structuredClone(override.fill) } : {}),
+        };
         const paraStyle = proto.style ?? {};
         const paragraphs: Paragraph[] = list !== undefined
           ? list.map((item) => ({ runs: [{ text: `\u2022  ${item}`, style: structuredClone(runStyle) }], style: structuredClone(paraStyle) }))
           : [{ runs: [{ text: text!, style: structuredClone(runStyle) }], style: structuredClone(paraStyle) }];
-        targets.push({ node: child, before: structuredClone(child.content), after: paragraphs });
+        targets.push({ nodeId: child.id, before: structuredClone(child.content), after: paragraphs });
       }
       if (!targets.length) return false;
+      // Resolve page and nodes BY ID inside the closures: when this op shares a
+      // one-undo turn with a page-replacing op, redo re-clones the pages, so a
+      // captured object reference would mutate a detached copy and the redo
+      // would silently drop the generated content.
+      const applyContent = (which: "before" | "after") => {
+        const live = get().doc.pages.find((pg) => pg.id === pageId) as unknown as { children: Textish[] } | undefined;
+        if (!live) return;
+        for (const t of targets) {
+          const node = live.children.find((n) => n.id === t.nodeId);
+          if (node) node.content = structuredClone(which === "after" ? t.after : t.before);
+        }
+        get().tick();
+      };
       perform(
-        () => { for (const t of targets) t.node.content = structuredClone(t.after); get().tick(); },
-        () => { for (const t of targets) t.node.content = structuredClone(t.before); get().tick(); },
+        () => applyContent("after"),
+        () => applyContent("before"),
       );
       return true;
     },
@@ -2195,21 +2215,27 @@ export const useEditor = create<EditorState>((set, get) => {
       }
       return true;
     },
-    applyLayoutToPage: (layoutId, pageIndex) => {
+    applyLayoutToPage: (layoutId, pageIndex, opts) => {
       const doc = get().doc as unknown as {
         masters?: { id: string; background?: Fill }[];
         layouts?: { id: string; masterId: string; background?: Fill; placeholders: { id: string; role: string; rect: { x: number; y: number; width: number; height: number } }[] }[];
         pages: Page[];
       };
       const idx = pageIndex ?? curPageIndex();
-      const page = doc.pages[idx] as unknown as { background?: Fill; children: Node[]; layoutId?: string };
+      const page = doc.pages[idx] as unknown as { id: string; background?: Fill; children: Node[]; layoutId?: string };
       if (!page) return false;
+      // Resolve the page BY ID inside every closure: when this op shares a
+      // one-undo turn with a page-replacing op, redo re-clones the pages, so a
+      // captured object reference would mutate a detached copy (the redo would
+      // silently drop the link and the materialized boxes).
+      const pageId = page.id;
+      const livePage = () => get().doc.pages.find((pg) => pg.id === pageId) as unknown as typeof page | undefined;
       const prevLayoutId = page.layoutId;
       if (layoutId === null) {
         // Unlink only: the materialized content stays (nothing is destroyed).
         perform(
-          () => { delete page.layoutId; },
-          () => { if (prevLayoutId) page.layoutId = prevLayoutId; },
+          () => { const lp = livePage(); if (lp) delete lp.layoutId; },
+          () => { const lp = livePage(); if (lp && prevLayoutId) lp.layoutId = prevLayoutId; },
         );
         return true;
       }
@@ -2240,18 +2266,43 @@ export const useEditor = create<EditorState>((set, get) => {
           }],
         } as Partial<Node>));
       }
+      // Prune (T14 relayout): placeholder-tagged nodes whose slot is absent
+      // from the NEW layout are removed, so a layout switch does not leave the
+      // old layout's boxes overlapping the new ones. Untagged nodes are never
+      // touched. Snapshots + indexes captured now for a faithful undo.
+      const slotIds = new Set((layout.placeholders ?? []).map((ph) => ph.id));
+      const pruned: { snapshot: Node; index: number }[] = [];
+      if (opts?.pruneObsolete) {
+        (page.children as Node[]).forEach((n, i) => {
+          const phId = (n.data as { placeholderId?: string } | undefined)?.placeholderId;
+          if (phId && !slotIds.has(phId)) pruned.push({ snapshot: structuredClone(n), index: i });
+        });
+      }
+      const prunedIds = new Set(pruned.map((x) => x.snapshot.id));
       perform(
         () => {
-          page.layoutId = layoutId;
-          if (bg) page.background = structuredClone(bg);
-          page.children.push(...(made as never[]));
+          const lp = livePage();
+          if (!lp) return;
+          lp.layoutId = layoutId;
+          if (bg) lp.background = structuredClone(bg);
+          if (prunedIds.size) {
+            for (let i = lp.children.length - 1; i >= 0; i--) {
+              if (prunedIds.has((lp.children[i] as Node).id)) lp.children.splice(i, 1);
+            }
+          }
+          lp.children.push(...(structuredClone(made) as never[]));
         },
         () => {
-          if (prevLayoutId) page.layoutId = prevLayoutId; else delete page.layoutId;
-          page.background = prevBg;
+          const lp = livePage();
+          if (!lp) return;
+          if (prevLayoutId) lp.layoutId = prevLayoutId; else delete lp.layoutId;
+          lp.background = prevBg;
           for (const n of made) {
-            const i = page.children.findIndex((c) => c.id === n.id);
-            if (i >= 0) page.children.splice(i, 1);
+            const i = lp.children.findIndex((c) => c.id === n.id);
+            if (i >= 0) lp.children.splice(i, 1);
+          }
+          for (const x of pruned) {
+            lp.children.splice(Math.min(x.index, lp.children.length), 0, structuredClone(x.snapshot) as never);
           }
         },
       );
@@ -3704,10 +3755,13 @@ export const useEditor = create<EditorState>((set, get) => {
         () => { page.layoutId = before; },
       );
     },
-    ensureSlideLayouts: () => {
+    ensureSlideLayouts: (size) => {
       const doc = get().doc as unknown as { masters?: unknown[]; layouts?: unknown[]; pages: { width: number; height: number }[] };
       if (doc.layouts?.length) return; // already installed
-      const { master, layouts } = builtinMasterAndLayouts(doc.pages[0] ?? { width: 1920, height: 1080 });
+      // Size the built-ins to the caller's target page (generation runs at the
+      // ACTIVE page size, which in a mixed-size document may differ from
+      // pages[0]); rects and capacities are derived from this size.
+      const { master, layouts } = builtinMasterAndLayouts(size ?? doc.pages[0] ?? { width: 1920, height: 1080 });
       const beforeM = doc.masters;
       const beforeL = doc.layouts;
       perform(

@@ -251,11 +251,16 @@ export function layoutSelectionSystemPrompt(count: number, layouts: SlideLayout[
   );
 }
 
-/** System prompt for one per-page fill call against a derived schema. */
-export function layoutFillSystemPrompt(schema: Record<string, unknown>): string {
+/** System prompt for one per-page fill call against a derived schema. An
+ *  optional styleClause (generation dials, brand voice) travels verbatim; the
+ *  language rule keeps the fill in the outline's language rather than
+ *  drifting back to English on the second pass. */
+export function layoutFillSystemPrompt(schema: Record<string, unknown>, styleClause = ""): string {
   return (
     "You write the final content for ONE presentation slide, filling exactly the slots the schema names (keyed by slot id). " +
+    "Write the slide text in the same language as the outline content provided. " +
     contentOnlyRule() + " " + lengthLimitRule() +
+    (styleClause.trim() ? " " + styleClause.trim() : "") +
     " Output ONLY a single JSON object matching the schema, no prose or fences. Schema: " + JSON.stringify(schema)
   );
 }
@@ -286,9 +291,11 @@ export function relayoutDecisionSystemPrompt(layouts: SlideLayout[]): string {
 /** System prompt for the regeneration fill: rewrite against the slide's own
  *  current content, honoring the instruction, never inventing off-slide facts
  *  unless the instruction asks for new material. */
-export function regenerateFillSystemPrompt(schema: Record<string, unknown>): string {
+export function regenerateFillSystemPrompt(schema: Record<string, unknown>, styleClause = ""): string {
   return (
     "You REWRITE the content of ONE existing presentation slide per the user's instruction, filling exactly the slots the schema names (keyed by slot id). Ground the rewrite in the slide's current content; add new material only where the instruction asks for it. " +
+    "Write the slide text in the same language as the current content unless the instruction says otherwise. " +
+    (styleClause.trim() ? styleClause.trim() + " " : "") +
     "Output ONLY a single JSON object matching the schema, no prose or fences. Schema: " + JSON.stringify(schema)
   );
 }

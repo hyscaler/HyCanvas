@@ -33,6 +33,15 @@ func designAtV21WithLayout() DesignFile {
 	}
 }
 
+// The paired EXACT pins are the cross-language drift alarm: a future bump
+// must update this line, the TS twin (capacities.test.ts), and both
+// currentSchemaVersion mirrors in the SAME change (CLAUDE.md bump protocol).
+func TestV21PinsTheVersionPair(t *testing.T) {
+	if currentSchemaVersion != 21 {
+		t.Fatalf("currentSchemaVersion = %d: update this pin and the TS twin as part of the bump", currentSchemaVersion)
+	}
+}
+
 func TestWriteBoundaryAcceptsV21(t *testing.T) {
 	if err := validateForWrite(designAtV21WithLayout()); err != nil {
 		t.Fatalf("a current-version document was rejected: %v", err)
