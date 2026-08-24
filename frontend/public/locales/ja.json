@@ -3454,5 +3454,19 @@
   "editor.no_layouts_could_be_extracted": "このデッキからレイアウトを抽出できませんでした。",
   "editor.extracted_layouts_count.one": "{count}件のレイアウトを抽出しました",
   "editor.extracted_layouts_count.other": "{count}件のレイアウトを抽出しました",
-  "editor.analyzing_slides": "スライドを分析中…"
+  "editor.analyzing_slides": "スライドを分析中…",
+  "editor.draft_from_website": "ウェブサイトから下書き",
+  "editor.company_website": "会社のウェブサイト",
+  "editor.scanning": "スキャン中…",
+  "editor.discard": "破棄",
+  "editor.website_palette": "ウェブサイトのパレット",
+  "editor.brand_from_website": "ウェブサイトからのブランド",
+  "editor.brand_kit_created_from_website": "ウェブサイトの下書きからブランドキットを作成しました。",
+  "editor.couldnt_draft_a_brand_from_that_site": "そのサイトからブランドの下書きを作成できませんでした。",
+  "editor.couldnt_create_that_brand_kit": "そのブランドキットを作成できませんでした。",
+  "editor.use_as_the_kit_logo": "キットのロゴとして使用",
+  "errors.api_brand_from_url_failed": "そのウェブサイトを取得できませんでした。",
+  "errors.api_brand_page_status": "ウェブサイトがエラーページを返しました。",
+  "errors.api_brand_url_not_html": "そのURLはウェブページではありません。",
+  "editor.acme_com": "acme.com"
 }

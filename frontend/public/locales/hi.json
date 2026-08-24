@@ -3454,5 +3454,19 @@
   "editor.no_layouts_could_be_extracted": "इस डेक से कोई लेआउट नहीं निकाला जा सका।",
   "editor.extracted_layouts_count.one": "{count} लेआउट निकाला गया",
   "editor.extracted_layouts_count.other": "{count} लेआउट निकाले गए",
-  "editor.analyzing_slides": "स्लाइड्स का विश्लेषण हो रहा है…"
+  "editor.analyzing_slides": "स्लाइड्स का विश्लेषण हो रहा है…",
+  "editor.draft_from_website": "वेबसाइट से ड्राफ़्ट",
+  "editor.company_website": "कंपनी की वेबसाइट",
+  "editor.scanning": "स्कैन हो रहा है…",
+  "editor.discard": "हटाएं",
+  "editor.website_palette": "वेबसाइट पैलेट",
+  "editor.brand_from_website": "वेबसाइट से ब्रांड",
+  "editor.brand_kit_created_from_website": "वेबसाइट ड्राफ़्ट से ब्रांड किट बनाई गई।",
+  "editor.couldnt_draft_a_brand_from_that_site": "उस साइट से ब्रांड ड्राफ़्ट नहीं बनाया जा सका।",
+  "editor.couldnt_create_that_brand_kit": "वह ब्रांड किट नहीं बनाई जा सकी।",
+  "editor.use_as_the_kit_logo": "किट लोगो के रूप में उपयोग करें",
+  "errors.api_brand_from_url_failed": "वह वेबसाइट प्राप्त नहीं की जा सकी।",
+  "errors.api_brand_page_status": "वेबसाइट ने एक त्रुटि पृष्ठ लौटाया।",
+  "errors.api_brand_url_not_html": "वह URL वेब पृष्ठ नहीं है।",
+  "editor.acme_com": "acme.com"
 }

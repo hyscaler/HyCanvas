@@ -52,7 +52,7 @@ You are implementing one task at a time from the table below. For each session:
 | T18 | 3 Trust | Streaming per-slide generation progress | done 2026-08-24 |
 | T19 | 4 Design | Theme UI, brand-to-theme bridge, AI theme generation | done 2026-08-24 |
 | T20 | 4 Design | Import a deck as a reusable layout set | done 2026-08-24 |
-| T21 | 4 Design | Brand kit draft from a company domain | todo |
+| T21 | 4 Design | Brand kit draft from a company domain | done 2026-08-24 |
 | T22 | 5 Tail | PPTX fidelity golden set + present-and-record camera bubble | todo |
 | T23 | 5 Tail | Programmatic generation API (blocked) | blocked: integrations layer |
 

@@ -3454,5 +3454,19 @@
   "editor.no_layouts_could_be_extracted": "No se pudieron extraer diseños de esta presentación.",
   "editor.extracted_layouts_count.one": "Se extrajo {count} diseño",
   "editor.extracted_layouts_count.other": "Se extrajeron {count} diseños",
-  "editor.analyzing_slides": "Analizando diapositivas…"
+  "editor.analyzing_slides": "Analizando diapositivas…",
+  "editor.draft_from_website": "Borrador desde el sitio web",
+  "editor.company_website": "Sitio web de la empresa",
+  "editor.scanning": "Escaneando…",
+  "editor.discard": "Descartar",
+  "editor.website_palette": "Paleta del sitio web",
+  "editor.brand_from_website": "Marca desde el sitio web",
+  "editor.brand_kit_created_from_website": "Kit de marca creado a partir del borrador del sitio web.",
+  "editor.couldnt_draft_a_brand_from_that_site": "No se pudo crear un borrador de marca desde ese sitio.",
+  "editor.couldnt_create_that_brand_kit": "No se pudo crear ese kit de marca.",
+  "editor.use_as_the_kit_logo": "Usar como logotipo del kit",
+  "errors.api_brand_from_url_failed": "No se pudo acceder a ese sitio web.",
+  "errors.api_brand_page_status": "El sitio web devolvió una página de error.",
+  "errors.api_brand_url_not_html": "Esa URL no es una página web.",
+  "editor.acme_com": "acme.com"
 }

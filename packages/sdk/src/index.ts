@@ -1825,6 +1825,12 @@ export class HyCanvasClient {
   aiExtractFile(input: { filename: string; mimeType?: string; dataBase64: string }): Promise<{ name: string; text: string }> {
     return this.request("POST", "/v1/ai/extract-file", input);
   }
+  /** Draft a brand kit from a company web page (F28 T21): candidate logo URLs,
+   *  3..6 palette colors, and font guesses, scanned behind the SSRF gate. A
+   *  DRAFT only - the caller confirms before anything is saved. */
+  aiBrandFromUrl(input: { workspaceId: string; url: string }): Promise<{ name: string; logoUrls: string[]; colors: string[]; fonts: string[] }> {
+    return this.request("POST", "/v1/ai/brand-from-url", input);
+  }
   /** The workspace's web-search provider config, or null when unset. */
   getSearchConfig(workspaceId: string): Promise<{ provider: string; baseUrl: string | null; hasKey: boolean } | null> {
     return this.request("GET", `/v1/workspaces/${workspaceId}/search-config`);

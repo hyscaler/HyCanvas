@@ -3454,5 +3454,19 @@
   "editor.no_layouts_could_be_extracted": "Aus diesem Deck konnten keine Layouts extrahiert werden.",
   "editor.extracted_layouts_count.one": "{count} Layout extrahiert",
   "editor.extracted_layouts_count.other": "{count} Layouts extrahiert",
-  "editor.analyzing_slides": "Folien werden analysiert…"
+  "editor.analyzing_slides": "Folien werden analysiert…",
+  "editor.draft_from_website": "Entwurf von der Website",
+  "editor.company_website": "Unternehmenswebsite",
+  "editor.scanning": "Wird gescannt…",
+  "editor.discard": "Verwerfen",
+  "editor.website_palette": "Website-Palette",
+  "editor.brand_from_website": "Marke von der Website",
+  "editor.brand_kit_created_from_website": "Brand-Kit aus dem Website-Entwurf erstellt.",
+  "editor.couldnt_draft_a_brand_from_that_site": "Aus dieser Website konnte kein Marken-Entwurf erstellt werden.",
+  "editor.couldnt_create_that_brand_kit": "Dieses Brand-Kit konnte nicht erstellt werden.",
+  "editor.use_as_the_kit_logo": "Als Kit-Logo verwenden",
+  "errors.api_brand_from_url_failed": "Diese Website konnte nicht abgerufen werden.",
+  "errors.api_brand_page_status": "Die Website hat eine Fehlerseite zurückgegeben.",
+  "errors.api_brand_url_not_html": "Diese URL ist keine Webseite.",
+  "editor.acme_com": "acme.com"
 }
