@@ -66,6 +66,9 @@ A living checklist of what ships today versus what is planned. Shipped items are
 - [x] Narrative assistant ops: insertAgenda (algorithmic TOC with accurate final page numbers), splitSlide (one slide into two coherent halves), insertComparison (side-by-side layout fill)
 - [x] Layout-grounded generation: decks target the master/layout/placeholder model (per-layout derived content schemas with v21 capacities, deterministic layout selection repair with variety, placeholder fills, picture slots through the image queue; freeform engine remains the no-layout fallback)
 - [x] Placeholder-first generation imagery: decks land instantly and hero images stream in behind (prompt-keyed asset reuse, license-free stock routing, AI generation fallback, per-design guard, alt text, chat retry on failure)
+- [x] Deck themes end to end: 13 curated seed themes, create-theme-from-brand-kit, AI generateTheme (strict hex/font validation, deterministic OKLCH contrast repair), generation stamps its visual system as the file theme, and a theme swap restyles exactly what the previous theme painted in one undo step
+- [x] Extract layouts from a deck: heuristic slot decomposition with capacity hints, near-identical page dedupe, optional vision role correction (one self-review pass, heuristic fallback), capacity verification against simulated max fill (qualityCheck-gated)
+- [x] Brand kit draft from a company domain: SSRF-gated page scan (logo candidates, frequency-ranked palette with an observed-colors-only model re-rank, webfont-first font guesses) behind an explicit confirm step; the chosen logo imports as a workspace asset
 
 ### Export and publishing
 - [x] Export: PNG/JPG/PDF/SVG/APNG/GIF/Lottie, size multipliers, page selection, zip
