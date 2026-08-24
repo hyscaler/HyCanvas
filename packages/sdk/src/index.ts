@@ -1834,6 +1834,50 @@ export class HyCanvasClient {
   setSearchConfig(workspaceId: string, input: { provider: string; baseUrl?: string; apiKey?: string }): Promise<{ provider: string; baseUrl: string | null; hasKey: boolean } | null> {
     return this.request("PUT", `/v1/workspaces/${workspaceId}/search-config`, input);
   }
+  /** Streaming design generation (SSE): onEvent receives ("outline", outline)
+   *  as soon as the outline validates, ("page", {index, points}) per polished
+   *  page, ("done", outline) at the end, and ("error", {code,message}) on a
+   *  provider failure. Resolves when the stream closes; rejects on transport
+   *  failure (callers fall back to the job-based endpoint). */
+  async aiGenerateDesignStream(
+    input: { workspaceId: string; designType: string; prompt: string; brandClause?: string; pageCount?: number },
+    onEvent: (event: string, data: unknown) => void,
+  ): Promise<void> {
+    const headers: Record<string, string> = { "content-type": "application/json" };
+    if (this.token) headers.authorization = `Bearer ${this.token}`;
+    const res = await this.fetchImpl(`${this.baseUrl}/v1/ai/generate-design/stream`, {
+      method: "POST",
+      headers,
+      credentials: this.credentials,
+      body: JSON.stringify(input),
+    });
+    if (!res.ok || !res.body) throw new ApiError(res.status, "/v1/ai/generate-design/stream", await res.json().catch(() => null));
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      // SSE frames are separated by a blank line; parse complete frames only.
+      for (let sep = buf.indexOf("\n\n"); sep >= 0; sep = buf.indexOf("\n\n")) {
+        const frame = buf.slice(0, sep);
+        buf = buf.slice(sep + 2);
+        let event = "message";
+        let data = "";
+        for (const line of frame.split("\n")) {
+          if (line.startsWith("event: ")) event = line.slice(7).trim();
+          else if (line.startsWith("data: ")) data += line.slice(6);
+        }
+        if (!data) continue;
+        try {
+          onEvent(event, JSON.parse(data));
+        } catch {
+          // a malformed frame is skipped; the stream continues
+        }
+      }
+    }
+  }
   /** Web search for generation grounding: the server writes ONE query from the
    *  brief and executes it. Results are UNTRUSTED reference material. */
   aiSearch(input: { workspaceId: string; prompt: string; maxResults?: number }): Promise<{ query: string; results: { title: string; url: string; content: string }[] }> {

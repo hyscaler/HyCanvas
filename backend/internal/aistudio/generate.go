@@ -119,9 +119,23 @@ func (s *Service) Outline(ctx context.Context, workspaceID, designType, prompt, 
 // copy. Returns the enriched outline for the client to lay out (FR-1/FR-5). This
 // is the multi-call work that runs inside a job (FR-25).
 func (s *Service) GenerateDesign(ctx context.Context, workspaceID, designType, prompt, brandClause string, pageCount int) (*DesignOutline, error) {
+	return s.GenerateDesignStream(ctx, workspaceID, designType, prompt, brandClause, pageCount, nil)
+}
+
+// GenerateDesignStream is GenerateDesign with per-stage progress: emit (when
+// non-nil) receives "outline" with the validated outline as soon as it exists
+// and one "page" per finished polish ({index, points}), so an SSE handler can
+// stream a deck's progress (F28 T18). An emit error means the client is gone:
+// the context the caller passed should already be canceled, and the run winds
+// down. Emit is called from the polish goroutines and must be safe for
+// concurrent use (the SSE handler serializes with a mutex).
+func (s *Service) GenerateDesignStream(ctx context.Context, workspaceID, designType, prompt, brandClause string, pageCount int, emit func(event string, data any)) (*DesignOutline, error) {
 	outline, err := s.Outline(ctx, workspaceID, designType, prompt, brandClause, pageCount)
 	if err != nil {
 		return nil, err
+	}
+	if emit != nil {
+		emit("outline", outline)
 	}
 	// Polish each page's copy. The in-process job runs synchronously (per the
 	// platform convention), so to keep total latency near one round-trip rather
@@ -163,6 +177,9 @@ func (s *Service) GenerateDesign(ctx context.Context, workspaceID, designType, p
 			})
 			if perr == nil && len(res.Points) > 0 {
 				p.Points = res.Points
+			}
+			if emit != nil {
+				emit("page", map[string]any{"index": idx, "points": p.Points})
 			}
 		}(i)
 	}

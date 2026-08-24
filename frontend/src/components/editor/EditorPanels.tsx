@@ -60,6 +60,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { mirrorInRtl } from "@/lib/locale";
 import { tr, trOr } from "@/lib/i18n";
 import { enqueueAiImages, retryFailedAiImages, subscribeAiImageQueue } from "@/lib/aiImageQueue";
+import { enqueueAiFills } from "@/lib/aiFillQueue";
 import { stickerLabel, stickerCategoryLabel } from "@/lib/stickers";
 import { documentDirection } from "@/lib/locale";
 import { apiCodeMessage, CodedError, userMessage } from "@/lib/errors";
@@ -1859,7 +1860,7 @@ type ResolvedPayload =
   | { kind: "clusters"; clusters: { title: string; ids: string[] }[] }
   | { kind: "summary"; text: string }
   | { kind: "outline"; outline: DesignOutline; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroPlans: { pageIndex: number; prompt: string; subject: string; size: string }[]; workspaceId: string; designId: string | null; append: boolean }
-  | { kind: "layoutDeck"; deckTitle: string; pages: { layoutId: string; name: string; note?: string; fill: LayoutFill }[]; background: unknown; imageSize: string; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroPlans: { pageIndex: number; prompt: string; subject: string }[]; generateAllowed: boolean; workspaceId: string; designId: string | null; append: boolean }
+  | { kind: "layoutDeck"; deckTitle: string; pages: { layoutId: string; name: string; note?: string; fill: LayoutFill; fillPrompt: string }[]; background: unknown; imageSize: string; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; styleClause: string; heroPlans: { pageIndex: number; prompt: string; subject: string }[]; generateAllowed: boolean; workspaceId: string; designId: string | null; append: boolean }
   | { kind: "splitSlide"; pageIndex: number; pageId: string; halves: { layoutId: string; name: string; fill: LayoutFill }[] }
   | { kind: "insertComparison"; layoutId: string; name: string; fill: LayoutFill; afterIndex: number; afterPageId: string }
   | { kind: "webSearch"; query: string; count: number }
@@ -1950,6 +1951,39 @@ function normalizeDesignType(v: unknown): DesignType {
  *  copy polish), fall back to the sync outline endpoint; real provider/policy
  *  errors surface, a missing endpoint degrades to null. */
 async function fetchAssistantOutline(workspaceId: string, dt: DesignType, prompt: string, brandClause: string, pageCount?: number): Promise<DesignOutline | null> {
+  // T18: prefer the SSE stream. For deck/doc the outline event alone is enough
+  // (the layout-grounded path writes its own per-slide content, so the polish
+  // pass adds nothing) - resolving there skips the whole polish wait. Freeform
+  // types keep the polished copy, resolving at done. Transport failure falls
+  // through to the job-based endpoint below.
+  try {
+    return await new Promise<DesignOutline>((resolve, reject) => {
+      const wantEarly = dt === "deck" || dt === "doc";
+      let settled = false;
+      let last: DesignOutline | null = null;
+      oc.aiGenerateDesignStream({ workspaceId, designType: dt, prompt, brandClause, pageCount }, (event, data) => {
+        if (settled) return;
+        if (event === "outline") {
+          last = normalizeOutline(data);
+          if (wantEarly) { settled = true; resolve(last); }
+        } else if (event === "done") {
+          settled = true;
+          resolve(normalizeOutline(data));
+        } else if (event === "error") {
+          settled = true;
+          reject(new Error(String((data as { message?: string })?.message ?? "generation failed")));
+        }
+      }).then(() => {
+        if (!settled) {
+          settled = true;
+          if (last) resolve(last); else reject(new Error("stream ended without an outline"));
+        }
+      }, (e) => { if (!settled) { settled = true; reject(e); } });
+    });
+  } catch (e) {
+    if (e instanceof ApiError && !endpointUnavailable(e)) throw e;
+    // fall through to the job path
+  }
   try {
     const { jobId } = await oc.aiGenerateDesign({ workspaceId, designType: dt, prompt, brandClause, pageCount });
     return normalizeOutline(await pollJob<unknown>(jobId));
@@ -2558,32 +2592,14 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
           // Generation dials and the brand voice shape the FILL text too, not
           // just the outline (the second pass would otherwise drift neutral).
           const styleClause = [dialsClause(deps.dials), deps.voiceClause].filter(Boolean).join(" ");
-
-          const fills: LayoutFill[] = new Array(items.length);
-          const pool = 4;
-          let next = 0;
-          const worker = async () => {
-            while (next < items.length) {
-              const i = next++;
-              const layout = byId.get(selection[i])!;
-              const item = items[i];
-              const schema = deriveLayoutContentSchema(layout);
-              try {
-                const { text } = await oc.aiTextStructured({
-                  workspaceId: deps.workspaceId,
-                  system: layoutFillSystemPrompt(schema, styleClause),
-                  prompt: `Deck: ${outline.title}${outline.theme ? ` (${outline.theme})` : ""}\nSlide ${i + 1} of ${items.length}: ${item.title}\nKey points:\n${item.points.map((x) => `- ${x}`).join("\n") || "(none)"}${item.note ? `\nSpeaker note (context, not slide text): ${item.note}` : ""}`,
-                  schema,
-                });
-                const fill = normalizeLayoutFill(layout, parseModelJson(text));
-                const usable = Object.keys(fill.texts).length + Object.keys(fill.lists).length > 0;
-                fills[i] = usable ? fill : fallbackLayoutFill(layout, item);
-              } catch {
-                fills[i] = fallbackLayoutFill(layout, item);
-              }
-            }
-          };
-          await Promise.all(Array.from({ length: Math.min(pool, items.length) }, worker));
+          // T18 placeholder-first TEXT: the pages land instantly with the
+          // outline's own content (real titles and points via the
+          // deterministic fill), and the per-slide model fills stream in
+          // behind through the refinement queue - nothing here awaits a
+          // per-page model call.
+          const fills: LayoutFill[] = items.map((item, i) => fallbackLayoutFill(byId.get(selection[i])!, item));
+          const fillPrompts = items.map((item, i) =>
+            `Deck: ${outline.title}${outline.theme ? ` (${outline.theme})` : ""}\nSlide ${i + 1} of ${items.length}: ${item.title}\nKey points:\n${item.points.map((x) => `- ${x}`).join("\n") || "(none)"}${item.note ? `\nSpeaker note (context, not slide text): ${item.note}` : ""}`);
           const { aspect, imageSize } = aspectAndImageSize(size);
           // Hero backgrounds for the impact pages (the T10 behavior): layout
           // grounding fills picture SLOTS, but most layouts have none, so the
@@ -2611,12 +2627,13 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
             payload: {
               kind: "layoutDeck",
               deckTitle: outline.title,
-              pages: items.map((item, i) => ({ layoutId: selection[i], name: item.title || `Page ${i + 1}`, note: item.note, fill: fills[i] })),
+              pages: items.map((item, i) => ({ layoutId: selection[i], name: item.title || `Page ${i + 1}`, note: item.note, fill: fills[i], fillPrompt: fillPrompts[i] })),
               background,
               imageSize,
               size,
               brandPalette: deps.brandPalette,
               brandFonts: deps.brandFonts,
+              styleClause,
               heroPlans,
               generateAllowed: deps.imageCapable,
               workspaceId: deps.workspaceId,
@@ -2964,7 +2981,7 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       // the placeholder boxes, and queue the picture-slot images. All inside
       // the caller's one-undo turn.
       if (ctx?.payload?.kind === "layoutDeck") {
-        const { deckTitle, pages, background, imageSize, size, brandPalette, brandFonts, heroPlans, generateAllowed, workspaceId, designId, append } = ctx.payload;
+        const { deckTitle, pages, background, imageSize, size, brandPalette, brandFonts, styleClause, heroPlans, generateAllowed, workspaceId, designId, append } = ctx.payload;
         st.ensureSlideLayouts(size); // sized to the generated pages, no-op when layouts exist
         const installed = (st.doc as unknown as { layouts?: SlideLayout[] }).layouts ?? [];
         const masters = (st.doc as unknown as { masters?: { id: string; background?: Fill }[] }).masters ?? [];
@@ -3011,9 +3028,37 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
         });
         // Hero backgrounds for the impact pages (already grounded in resolve).
         for (const h of heroPlans) {
-          if (ids[h.pageIndex]) imageTasks.push({ workspaceId, designId: designId ?? "", pageId: ids[h.pageIndex], prompt: h.prompt, subject: h.subject, size: imageSize });
+          if (ids[h.pageIndex]) imageTasks.push({ workspaceId, designId: designId ?? "", pageId: ids[h.pageIndex], prompt: h.prompt, subject: h.subject, size: imageSize, generateAllowed });
         }
         enqueueAiImages(imageTasks);
+        // T18: per-slide model refinements stream in behind the instant deck,
+        // each landing by page id (an undo of the turn removes the pages, so
+        // late refinements no-op). A picture prompt the REAL fill decides
+        // routes to the image queue with the same grounding as resolve-time
+        // slot prompts.
+        enqueueAiFills(pages.map((p, i) => {
+          const layoutId = availableIds.has(p.layoutId) ? p.layoutId : installed[0]?.id ?? "";
+          return {
+            workspaceId,
+            pageId: ids[i],
+            layout: installed.find((l) => l.id === layoutId)!,
+            prompt: p.fillPrompt,
+            styleClause,
+            styles: stylesFor(layoutId),
+            onImagePrompts: (pageId: string, prompts: Record<string, string>) => {
+              enqueueAiImages(Object.entries(prompts).map(([placeholderId, prompt]) => ({
+                workspaceId,
+                designId: designId ?? "",
+                pageId,
+                placeholderId,
+                prompt: groundImagePrompt(prompt, { palette: brandPalette, aspect }),
+                subject: prompt,
+                size: imageSize,
+                generateAllowed,
+              })));
+            },
+          };
+        }).filter((t) => !!t.pageId && !!t.layout));
         st.goToPage(base);
         return true;
       }

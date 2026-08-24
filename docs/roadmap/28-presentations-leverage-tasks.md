@@ -49,7 +49,7 @@ You are implementing one task at a time from the table below. For each session:
 | T15 | 3 Trust | Ingestion depth: multi-file, office formats, scanned-PDF detection | done 2026-08-24 |
 | T16 | 3 Trust | Web search tool with untrusted-source framing | done 2026-08-24 |
 | T17 | 3 Trust | Computed chart values from attached data | done 2026-08-24 |
-| T18 | 3 Trust | Streaming per-slide generation progress | todo |
+| T18 | 3 Trust | Streaming per-slide generation progress | done 2026-08-24 |
 | T19 | 4 Design | Theme UI, brand-to-theme bridge, AI theme generation | todo |
 | T20 | 4 Design | Import a deck as a reusable layout set | todo |
 | T21 | 4 Design | Brand kit draft from a company domain | todo |

@@ -177,6 +177,7 @@ func NewRouter(d Deps) http.Handler {
 		}
 		if d.Accounts != nil && d.AIStudio != nil && d.Persistence != nil && d.Jobs != nil {
 			mountAIStudio(api, d.AIStudio, d.Accounts, d.Persistence, d.Jobs)
+			mountAIStream(api, d.AIStudio, d.Accounts)
 		}
 		if d.Accounts != nil && d.AI != nil {
 			mountAI(api, d.AI, d.Accounts, d.Uploads)
