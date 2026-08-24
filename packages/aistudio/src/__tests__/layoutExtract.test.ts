@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractLayoutSet, type ExtractPageLike } from "../layoutExtract";
+import { applyLayoutReview, estimatedFillHeight, extractLayoutSet, layoutReviewInstruction, parseLayoutReview, verifyLayoutCapacities, type ExtractPageLike } from "../layoutExtract";
 
 const PAGE = { width: 1920, height: 1080 };
 
@@ -90,5 +90,105 @@ describe("T20 stage 1: layout extraction heuristics", () => {
     const bg = { type: "solid", color: { srgb: { r: 0.1, g: 0.1, b: 0.2, a: 1 } } };
     const { layouts } = extractLayoutSet([page([text(100, 80, 1700, 150, 54)], bg)]);
     expect(layouts[0].background).toEqual(bg);
+  });
+});
+
+describe("T20 stage 2: vision review parsing and application", () => {
+  const PAGE_SIZE = { width: 1920, height: 1080 };
+  const baseLayout = () =>
+    extractLayoutSet([
+      page([
+        text(100, 80, 1700, 150, 54), // ph-1 title
+        text(100, 300, 1700, 500, 24, 4), // ph-2 content
+        text(100, 950, 500, 60, 14), // ph-3 body (actually a logo, says vision)
+      ]),
+    ]).layouts[0];
+
+  it("instruction names every slot with its role and % geometry", () => {
+    const layout = baseLayout();
+    const instruction = layoutReviewInstruction(layout, PAGE_SIZE);
+    expect(instruction).toContain("ph-1: title");
+    expect(instruction).toContain("ph-2: content");
+    expect(instruction).toContain('{"corrections":[]}');
+  });
+
+  it("parses corrections tolerantly: fences stripped, unknown ids/roles dropped, garbage yields none", () => {
+    const ids = ["ph-1", "ph-2", "ph-3"];
+    const ok = parseLayoutReview('```json\n{"corrections":[{"id":"ph-3","role":"decorative"},{"id":"ph-9","role":"body"},{"id":"ph-2","role":"sidebar"}]}\n```', ids);
+    expect(ok).toEqual([{ id: "ph-3", role: "decorative" }]);
+    expect(parseLayoutReview("Sure! The layout looks great.", ids)).toEqual([]);
+    expect(parseLayoutReview('{"corrections":"all good"}', ids)).toEqual([]);
+  });
+
+  it("applies role changes with recomputed capacities and removes decorative slots", () => {
+    const layout = baseLayout();
+    const out = applyLayoutReview(
+      layout,
+      [
+        { id: "ph-2", role: "picture" },
+        { id: "ph-3", role: "decorative" },
+      ],
+      PAGE_SIZE,
+    );
+    expect(out.placeholders.map((p) => p.role)).toEqual(["title", "picture"]);
+    const pic = out.placeholders[1];
+    expect(pic.maxChars).toBeUndefined(); // content capacities did not linger
+    expect(out.name).toBe("Title + picture");
+  });
+
+  it("never deletes the last slot and demotes a second title to body", () => {
+    const layout = baseLayout();
+    const wipe = applyLayoutReview(
+      layout,
+      layout.placeholders.map((p) => ({ id: p.id, role: "decorative" as const })),
+      PAGE_SIZE,
+    );
+    expect(wipe.placeholders).toHaveLength(3); // refused: heuristics stand
+    const twoTitles = applyLayoutReview(layout, [{ id: "ph-2", role: "title" }], PAGE_SIZE);
+    expect(twoTitles.placeholders.filter((p) => p.role === "title")).toHaveLength(1);
+    expect(twoTitles.placeholders[1].role).toBe("body");
+  });
+});
+
+describe("T20 stage 3: capacity verification", () => {
+  const PAGE_SIZE = { width: 1920, height: 1080 };
+
+  it("shrinks a capacity whose max fill outgrows its box", () => {
+    // A narrow, SHORT multi-item box: the area-derived floor (100 chars, 3
+    // items) over-promises what two fill lines can hold.
+    const layout = extractLayoutSet([page([text(100, 80, 1700, 150, 54), text(100, 300, 400, 60, 14, 4)])]).layouts[0];
+    const slot = layout.placeholders[1];
+    expect(slot.role).toBe("content");
+    expect(estimatedFillHeight(slot)).toBeGreaterThan(slot.rect.height);
+    const verified = verifyLayoutCapacities(layout, PAGE_SIZE);
+    const fixed = verified.placeholders[1];
+    expect(fixed.maxChars!).toBeLessThan(slot.maxChars!);
+    expect(estimatedFillHeight(fixed)).toBeLessThanOrEqual(fixed.rect.height);
+    expect(fixed.minChars!).toBeLessThanOrEqual(fixed.maxChars!);
+    if (fixed.maxItems !== undefined) expect(fixed.minItems!).toBeLessThanOrEqual(fixed.maxItems);
+  });
+
+  it("keeps a capacity that already fits, verbatim", () => {
+    const layout = extractLayoutSet([page([text(100, 80, 1700, 150, 54), text(100, 300, 1700, 600, 24, 4)])]).layouts[0];
+    const verified = verifyLayoutCapacities(layout, PAGE_SIZE);
+    expect(verified.placeholders).toEqual(layout.placeholders);
+  });
+
+  it("drops the hints on a box too small for a single line", () => {
+    const layout = extractLayoutSet([page([text(100, 80, 1700, 150, 54), text(100, 300, 400, 100, 14)])]).layouts[0];
+    // Force a pathological slot: shrink its rect below one fill line.
+    const tiny = {
+      ...layout,
+      placeholders: layout.placeholders.map((p, i) => (i === 1 ? { ...p, rect: { ...p.rect, height: 10 } } : p)),
+    };
+    const verified = verifyLayoutCapacities(tiny, PAGE_SIZE);
+    expect(verified.placeholders[1].maxChars).toBeUndefined();
+    expect(verified.placeholders[1].minChars).toBeUndefined();
+  });
+
+  it("is idempotent: verifying a verified layout changes nothing", () => {
+    const layout = extractLayoutSet([page([text(100, 80, 1700, 150, 54), text(100, 300, 400, 60, 14, 4)])]).layouts[0];
+    const once = verifyLayoutCapacities(layout, PAGE_SIZE);
+    expect(verifyLayoutCapacities(once, PAGE_SIZE)).toEqual(once);
   });
 });

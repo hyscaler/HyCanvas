@@ -3453,5 +3453,6 @@
   "editor.extract_layouts_from_this_deck": "इस डेक से लेआउट निकालें",
   "editor.no_layouts_could_be_extracted": "इस डेक से कोई लेआउट नहीं निकाला जा सका।",
   "editor.extracted_layouts_count.one": "{count} लेआउट निकाला गया",
-  "editor.extracted_layouts_count.other": "{count} लेआउट निकाले गए"
+  "editor.extracted_layouts_count.other": "{count} लेआउट निकाले गए",
+  "editor.analyzing_slides": "स्लाइड्स का विश्लेषण हो रहा है…"
 }

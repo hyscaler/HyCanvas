@@ -3453,5 +3453,6 @@
   "editor.extract_layouts_from_this_deck": "このデッキからレイアウトを抽出",
   "editor.no_layouts_could_be_extracted": "このデッキからレイアウトを抽出できませんでした。",
   "editor.extracted_layouts_count.one": "{count}件のレイアウトを抽出しました",
-  "editor.extracted_layouts_count.other": "{count}件のレイアウトを抽出しました"
+  "editor.extracted_layouts_count.other": "{count}件のレイアウトを抽出しました",
+  "editor.analyzing_slides": "スライドを分析中…"
 }

@@ -98,7 +98,7 @@ import { imageAssets } from "@/lib/assetProvider";
 import { measuredTextHeight } from "@/lib/textFit";
 import { pageGap, pageOffsets, pageTop } from "@/lib/pageLayout";
 import type { MagicDesignSpec } from "@/lib/magicDesign";
-import { extractLayoutSet, layoutDesign, type AiDesignSpec, type DeckResult, type ExtractPageLike } from "@hc/aistudio";
+import { extractLayoutSet, layoutDesign, verifyLayoutCapacities, type AiDesignSpec, type DeckResult, type ExtractedLayoutSet, type ExtractPageLike } from "@hc/aistudio";
 import { qrModules } from "@/lib/qr";
 import { frameMaskFor } from "@/lib/maskPath";
 import { flattenSvgToNodes } from "@/lib/svgFlatten";
@@ -462,8 +462,10 @@ interface EditorState {
    *  with capacity hints, images/charts/media = slots, decoration ignored);
    *  near-identical pages collapse into one layout. Installs the set and
    *  links each source page that has no layout yet, as ONE undo step.
-   *  Returns the counts, or null when the deck yields no layouts. */
-  extractLayoutsFromDeck(): { created: number; linked: number } | null;
+   *  Returns the counts, or null when the deck yields no layouts. Stage 2
+   *  passes a precomputed set (vision-corrected off-store); without one the
+   *  heuristics run right here. */
+  extractLayoutsFromDeck(precomputed?: ExtractedLayoutSet): { created: number; linked: number } | null;
   /** Link a page to a layout (null unlinks) and materialize it: the layout's
    *  background applies and missing placeholders land as editable text boxes
    *  (tagged via data.placeholderId). One undo step. */
@@ -2109,23 +2111,32 @@ export const useEditor = create<EditorState>((set, get) => {
       return layoutId;
     },
 
-    extractLayoutsFromDeck: () => {
+    extractLayoutsFromDeck: (precomputed) => {
       const doc = get().doc as unknown as {
         masters?: { id: string; name?: string; placeholders: unknown[] }[];
         layouts?: { id: string; masterId: string; name: string; background?: Fill; placeholders: unknown[] }[];
         pages: Page[];
       };
-      const set = extractLayoutSet(doc.pages as unknown as ExtractPageLike[]);
+      const set = precomputed ?? extractLayoutSet(doc.pages as unknown as ExtractPageLike[]);
       if (!set.layouts.length) return null;
       const masterId = (doc.masters ?? [])[0]?.id ?? "master-default";
       const run = crypto.randomUUID().slice(0, 6);
-      const records = set.layouts.map((l, i) => ({
-        id: `layout-ext-${run}-${i + 1}`,
-        masterId,
-        name: l.name,
-        ...(l.background ? { background: structuredClone(l.background) } : {}),
-        placeholders: structuredClone(l.placeholders) as unknown[],
-      }));
+      const records = set.layouts.map((l, i) => {
+        // T20 stage 3: capacities are verified against the source page's size
+        // right before install - a hint that overflows at max fill shrinks to
+        // what fits (or is dropped), whether the set came from the heuristics
+        // here or from the vision-corrected path.
+        const src = doc.pages[l.sourcePageIndexes[0]] as unknown as { width?: number; height?: number } | undefined;
+        const dims = src?.width && src?.height ? { width: src.width, height: src.height } : doc.pages[0];
+        const verified = verifyLayoutCapacities(l, dims as { width: number; height: number });
+        return {
+          id: `layout-ext-${run}-${i + 1}`,
+          masterId,
+          name: verified.name,
+          ...(verified.background ? { background: structuredClone(verified.background) } : {}),
+          placeholders: structuredClone(verified.placeholders) as unknown[],
+        };
+      });
       const prevMasters = doc.masters;
       const prevLayouts = doc.layouts;
       // Only pages that are not already linked adopt their extracted layout,

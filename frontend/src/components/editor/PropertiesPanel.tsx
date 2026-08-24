@@ -11,7 +11,8 @@ import type {
   TableConditionalRule, TableNode, TextEffect, Theme,
 } from "@hc/schema";
 import { themeFromPalette } from "@hc/schema";
-import { deriveThemeSlots, repairThemeSlots, themeSlotNames } from "@hc/aistudio";
+import { deriveThemeSlots, extractLayoutSet, repairThemeSlots, themeSlotNames, type ExtractedLayoutSet, type ExtractPageLike } from "@hc/aistudio";
+import { refineExtractedLayoutSet } from "@/lib/layoutVision";
 import { colorHarmony, harmonySchemes, type HarmonyScheme, extractPalette, toHex } from "@hc/color";
 import { evalExpression, locate, rotateAboutPoint } from "@hc/editor";
 import { isLowResolution, computeEffectivePpi } from "@hc/engine";
@@ -737,7 +738,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
             </Section>
           );
         })()}
-        <PageLayoutSection page={page} />
+        <PageLayoutSection page={page} workspaceId={workspaceId ?? null} />
         <DeckThemeSection />
         <PageTransitionSection page={page} />
         <Section title={tr("editor.build_order")} defaultOpen={false}>
@@ -2361,10 +2362,11 @@ function InteractionSection({ node, doc }: { node: Node; doc: DesignFile }) {
  *  placeholder cascade, including the title placeholder that makes its name a
  *  real, screen-reader-navigable slide title. Installing the built-in layouts
  *  is itself one undoable action, so a deck opts in explicitly. */
-function PageLayoutSection({ page }: { page: Page }) {
+function PageLayoutSection({ page, workspaceId }: { page: Page; workspaceId: string | null }) {
   const st = useEditor.getState();
   const rev = useEditor((s) => s.rev);
   const toast = useToast();
+  const [extracting, setExtracting] = useState(false);
   const doc = useEditor.getState().doc as unknown as {
     layouts?: { id: string; name: string }[];
     pages: unknown[];
@@ -2375,10 +2377,39 @@ function PageLayoutSection({ page }: { page: Page }) {
   const known = layouts.some((l) => l.id === current);
   void rev; // re-render when the deck's layouts change
 
-  // T20 stage 1: turn an imported or hand-built deck into a reusable layout
-  // set - one undoable action; near-identical slides collapse to one layout.
-  const extract = () => {
-    const result = st.extractLayoutsFromDeck();
+  // T20: turn an imported or hand-built deck into a reusable layout set - one
+  // undoable action; near-identical slides collapse to one layout. Stage 2:
+  // when the provider can see, each unique layout gets a vision correction
+  // pass over the rendered page before installing; any failure keeps the
+  // heuristic result, so the pass can only improve the set.
+  const extract = async () => {
+    const live = useEditor.getState().doc;
+    const set = extractLayoutSet(live.pages as unknown as ExtractPageLike[]);
+    if (!set.layouts.length) {
+      toast.toast(tr("editor.no_layouts_could_be_extracted"), "info");
+      return;
+    }
+    let install: ExtractedLayoutSet = set;
+    if (workspaceId) {
+      setExtracting(true);
+      try {
+        const idsAt = live.pages.map((p) => p.id);
+        const { layouts: corrected } = await refineExtractedLayoutSet(workspaceId, live, set);
+        // Pages may have been added, removed, or moved while the vision pass
+        // ran: re-anchor the page links by page id before installing.
+        const now = useEditor.getState().doc;
+        install = {
+          layouts: corrected,
+          assignments: now.pages.map((p) => {
+            const i = idsAt.indexOf(p.id);
+            return i >= 0 ? set.assignments[i] : null;
+          }),
+        };
+      } finally {
+        setExtracting(false);
+      }
+    }
+    const result = useEditor.getState().extractLayoutsFromDeck(install);
     if (!result) {
       toast.toast(tr("editor.no_layouts_could_be_extracted"), "info");
       return;
@@ -2386,8 +2417,8 @@ function PageLayoutSection({ page }: { page: Page }) {
     toast.success(tr("editor.extracted_layouts_count", { count: result.created }));
   };
   const extractButton = doc.pages.length > 1 && (
-    <button type="button" onClick={extract} className={`${actionBtnCls} mt-1.5`} data-testid="extract-layouts">
-      {tr("editor.extract_layouts_from_this_deck")}
+    <button type="button" onClick={() => void extract()} disabled={extracting} className={`${actionBtnCls} mt-1.5 disabled:opacity-50`} data-testid="extract-layouts">
+      {extracting ? tr("editor.analyzing_slides") : tr("editor.extract_layouts_from_this_deck")}
     </button>
   );
 

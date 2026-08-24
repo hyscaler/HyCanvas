@@ -16,6 +16,7 @@
 // undo, and installation into the document.
 
 import { capacityForPlaceholder, type Fill, type Placeholder, type PlaceholderRole } from "@hc/schema";
+import { qualityCheck, type PageInput } from "./quality";
 
 /** The minimal shape of a page this extraction reads (a schema Page fits). */
 export interface ExtractPageLike {
@@ -171,4 +172,218 @@ export function extractLayoutSet(pages: ExtractPageLike[]): ExtractedLayoutSet {
     if (n > 1) l.name = `${l.name} ${n}`;
   }
   return { layouts, assignments };
+}
+
+// --- Stage 2: vision-assisted correction --------------------------------------
+//
+// The heuristics above only see geometry; a vision-capable model looking at the
+// RENDERED page can tell a decorative pull-quote from body copy, or a logo from
+// a picture region. The client renders the source page with the candidate
+// slots drawn over it, sends it through the describe-image provider with the
+// instruction below, and applies the corrections that come back - then does
+// ONE self-review pass with the corrected overlay; an empty reply confirms.
+// Everything the model returns is validated here: unknown slot ids and roles
+// are dropped, a layout never loses its last slot, and a second title demotes
+// to body, so a bad reply can only ever fall back to the heuristic result.
+
+const reviewableRoles: PlaceholderRole[] = ["title", "body", "content", "picture", "chart", "media"];
+
+export interface LayoutReviewCorrection {
+  id: string;
+  role: PlaceholderRole | "decorative";
+}
+
+// i18n-ignore: model instruction, never translated.
+export function layoutReviewInstruction(
+  layout: Pick<ExtractedLayout, "placeholders">,
+  page: { width: number; height: number },
+): string {
+  const pct = (v: number, span: number) => Math.round((v / span) * 100);
+  const slots = layout.placeholders
+    .map((p) => `${p.id}: ${p.role} at ${pct(p.rect.x, page.width)},${pct(p.rect.y, page.height)} size ${pct(p.rect.width, page.width)}x${pct(p.rect.height, page.height)} (% of page)`)
+    .join("; ");
+  return [
+    "This slide render has candidate layout slots drawn as labeled boxes.",
+    `Slots: ${slots}.`,
+    "Correct any slot whose role is wrong, judging from what the box actually contains:",
+    "title (the slide's one heading), body (short text, captions, labels), content (the main text/list region),",
+    "picture (photos/illustrations), chart, media (video), or decorative (logos, ornaments, page furniture - not a content slot).",
+    'Reply with ONLY JSON, no prose: {"corrections":[{"id":"ph-2","role":"picture"}]} listing JUST the slots to change;',
+    'reply {"corrections":[]} when every role is already right.',
+  ].join(" ");
+}
+
+/** Parse the model's reply tolerantly: fences stripped, non-JSON rejected,
+ *  unknown ids and roles dropped. A garbage reply yields no corrections. */
+export function parseLayoutReview(text: string, validIds: string[]): LayoutReviewCorrection[] {
+  const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start < 0 || end <= start) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(cleaned.slice(start, end + 1));
+  } catch {
+    return [];
+  }
+  const list = (parsed as { corrections?: unknown }).corrections;
+  if (!Array.isArray(list)) return [];
+  const ids = new Set(validIds);
+  const out: LayoutReviewCorrection[] = [];
+  for (const c of list as { id?: unknown; role?: unknown }[]) {
+    if (typeof c?.id !== "string" || typeof c?.role !== "string" || !ids.has(c.id)) continue;
+    const role = c.role as PlaceholderRole | "decorative";
+    if (role !== "decorative" && !reviewableRoles.includes(role as PlaceholderRole)) continue;
+    if (!out.some((x) => x.id === c.id)) out.push({ id: c.id, role });
+  }
+  return out;
+}
+
+/** Apply validated corrections to a layout, returning a new one: decorative
+ *  slots are removed (never the last one), role changes recompute the T11
+ *  capacities, at most one title survives (later ones demote to body), and
+ *  the structural name is refreshed. No-op corrections return the input. */
+export function applyLayoutReview(
+  layout: ExtractedLayout,
+  corrections: LayoutReviewCorrection[],
+  page: { width: number; height: number },
+): ExtractedLayout {
+  if (!corrections.length) return layout;
+  const byId = new Map(corrections.map((c) => [c.id, c.role]));
+  let changed = false;
+  const kept: Placeholder[] = [];
+  for (const ph of layout.placeholders) {
+    const next = byId.get(ph.id);
+    if (next === undefined || next === ph.role) {
+      kept.push(ph);
+      continue;
+    }
+    changed = true;
+    if (next === "decorative") continue; // removed
+    // Rebuild the slot for its new role: capacities are role-derived, so the
+    // old ones must not linger (a picture slot with maxChars is nonsense).
+    kept.push({ id: ph.id, role: next, rect: ph.rect, ...capacityForPlaceholder(next, ph.rect, page) });
+  }
+  if (!changed) return layout;
+  if (!kept.length) return layout; // the model tried to delete everything: keep the heuristics
+  let sawTitle = false;
+  const singleTitle = kept.map((ph) => {
+    if (ph.role !== "title") return ph;
+    if (!sawTitle) {
+      sawTitle = true;
+      return ph;
+    }
+    return { id: ph.id, role: "body" as PlaceholderRole, rect: ph.rect, ...capacityForPlaceholder("body", ph.rect, page) };
+  });
+  return { ...layout, placeholders: singleTitle, name: structuralName(singleTitle) };
+}
+
+// --- Stage 3: capacity verification --------------------------------------------
+//
+// A capacity hint is a promise to generation: "maxChars of text fits here".
+// The T11 heuristic derives it from area alone, which over-promises on wide,
+// short boxes and on slots the vision pass re-roled. This pass simulates the
+// MAX fill in every text slot (the same conservative glyph-advance estimate
+// the layout engine uses), shrinks any capacity whose fill outgrows its box to
+// what actually fits, and then runs qualityCheck over the simulated page as
+// the final gate: a slot that still produces a NEW overflow/overlap at max
+// fill (relative to the layout's own baseline geometry) loses its capacity
+// hints entirely rather than shipping a false promise.
+
+/** Font sizes the placeholder materialization uses per role, and the line
+ *  height the estimate assumes (conservative, mirrors the layout engine). */
+const fillFontSize: Record<string, number> = { title: 44, body: 20, content: 20 };
+const fillLineHeight = 1.35;
+const textCapacityRoles = new Set<PlaceholderRole>(["title", "body", "content"]);
+
+function fillMetrics(role: PlaceholderRole, rect: { width: number; height: number }): { charsPerLine: number; maxLines: number; lineH: number } {
+  const fontSize = fillFontSize[role] ?? 20;
+  const lineH = fontSize * fillLineHeight;
+  return {
+    charsPerLine: Math.max(1, Math.floor(rect.width / (fontSize * 0.52))),
+    maxLines: Math.floor(rect.height / lineH),
+    lineH,
+  };
+}
+
+/** Estimated rendered height of a slot filled to its capacity. Lists render
+ *  one bulleted paragraph per item, each wrapping independently. */
+export function estimatedFillHeight(ph: Placeholder): number {
+  const { charsPerLine, lineH } = fillMetrics(ph.role, ph.rect);
+  const maxChars = ph.maxChars ?? 0;
+  let lines: number;
+  if (ph.role === "content" && ph.maxItems) {
+    const perItem = Math.max(1, Math.ceil(maxChars / ph.maxItems / charsPerLine));
+    lines = ph.maxItems * perItem;
+  } else {
+    lines = Math.max(1, Math.ceil(maxChars / charsPerLine));
+  }
+  return lines * lineH;
+}
+
+const issueKey = (i: { kind: string; nodeId: string; message: string }) => `${i.kind}:${i.nodeId}:${i.message}`;
+
+/**
+ * Verify (and shrink) the capacity hints on one extracted layout against its
+ * source page size. Deterministic: shrink-to-fit first, then the qualityCheck
+ * gate; a slot that cannot honestly hold even one line loses its hints.
+ */
+export function verifyLayoutCapacities(layout: ExtractedLayout, page: { width: number; height: number }): ExtractedLayout {
+  const hasTextCaps = layout.placeholders.some((p) => textCapacityRoles.has(p.role) && p.maxChars);
+  if (!hasTextCaps) return layout;
+
+  let changed = false;
+  const shrunk: Placeholder[] = layout.placeholders.map((ph) => {
+    if (!textCapacityRoles.has(ph.role) || !ph.maxChars) return ph;
+    const { charsPerLine, maxLines } = fillMetrics(ph.role, ph.rect);
+    if (maxLines < 1) {
+      // The box cannot hold a single line at the fill size: the hint is a lie.
+      changed = true;
+      const { maxChars: _mc, minChars: _nc, minItems: _ni, maxItems: _xi, ...rest } = ph;
+      return rest as Placeholder;
+    }
+    const fitItems = ph.maxItems !== undefined ? Math.max(1, Math.min(ph.maxItems, maxLines)) : undefined;
+    // Lists reserve one line per item; prose uses every line.
+    const fitChars = (fitItems !== undefined ? Math.floor(maxLines / fitItems) * fitItems : maxLines) * charsPerLine;
+    const nextMax = Math.min(ph.maxChars, fitChars);
+    if (nextMax === ph.maxChars && fitItems === ph.maxItems) return ph;
+    changed = true;
+    return {
+      ...ph,
+      maxChars: nextMax,
+      ...(ph.minChars !== undefined ? { minChars: Math.min(ph.minChars, Math.round(nextMax / 2)) } : {}),
+      ...(fitItems !== undefined ? { maxItems: fitItems } : {}),
+      ...(ph.minItems !== undefined && fitItems !== undefined ? { minItems: Math.min(ph.minItems, fitItems) } : {}),
+    };
+  });
+
+  // The qualityCheck gate: simulate every slot at its (possibly shrunken) max
+  // fill and compare against the layout's own baseline geometry, so slots that
+  // legitimately overlap by design are not punished - only NEW issues caused
+  // by the grown fill count, and those slots lose their hints.
+  const white: Fill = { type: "solid", color: { srgb: { r: 1, g: 1, b: 1, a: 1 } } } as Fill;
+  const background = layout.background ?? white;
+  const simulate = (grown: boolean) => ({
+    background,
+    size: page,
+    nodes: shrunk.map((ph) => ({
+      id: ph.id,
+      type: "shape", // geometry-only: the contrast check does not apply here
+      transform: { x: ph.rect.x, y: ph.rect.y, scaleX: 1, scaleY: 1, rotation: 0 },
+      size: {
+        width: ph.rect.width,
+        height: grown && textCapacityRoles.has(ph.role) && ph.maxChars ? Math.max(ph.rect.height, estimatedFillHeight(ph)) : ph.rect.height,
+      },
+    })) as unknown as PageInput["nodes"],
+  });
+  const baseline = new Set(qualityCheck(simulate(false)).issues.map(issueKey));
+  const grownIssues = qualityCheck(simulate(true)).issues.filter((i) => (i.kind === "overflow" || i.kind === "overlap") && !baseline.has(issueKey(i)));
+  if (!grownIssues.length && !changed) return layout;
+  const offenders = new Set(grownIssues.map((i) => i.nodeId));
+  const final = shrunk.map((ph) => {
+    if (!offenders.has(ph.id) || !textCapacityRoles.has(ph.role) || !ph.maxChars) return ph;
+    const { maxChars: _mc, minChars: _nc, minItems: _ni, maxItems: _xi, ...rest } = ph;
+    return rest as Placeholder;
+  });
+  return { ...layout, placeholders: final };
 }
