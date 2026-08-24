@@ -24,6 +24,9 @@ func stripSchema(dsn string) string {
 	return dsn
 }
 
+// strp builds the pointer form ConfigInput.BaseURL takes (PATCH semantics).
+func strp(s string) *string { return &s }
+
 func TestIsSafeBaseURL(t *testing.T) {
 	cases := []struct {
 		url   string
@@ -125,7 +128,7 @@ func TestAI_DB(t *testing.T) {
 	}
 
 	// Set a custom provider pointing at the stub, with a key.
-	cfg, err := svc.SetConfig(ctx, ws.ID, ConfigInput{Provider: "custom", BaseURL: server.URL, APIKey: "sk-secret"})
+	cfg, err := svc.SetConfig(ctx, ws.ID, ConfigInput{Provider: "custom", BaseURL: strp(server.URL), APIKey: "sk-secret"})
 	if err != nil {
 		t.Fatalf("SetConfig: %v", err)
 	}
@@ -151,21 +154,38 @@ func TestAI_DB(t *testing.T) {
 		t.Fatalf("text = %q", text)
 	}
 
-	// Changing the provider WITHOUT a new key clears the stored key.
-	cfg2, err := svc.SetConfig(ctx, ws.ID, ConfigInput{Provider: "anthropic"})
+	// PATCH semantics: a same-provider save that omits baseUrl (nil) keeps the
+	// stored URL - the exact save an API key rotation makes.
+	cfgKeep, err := svc.SetConfig(ctx, ws.ID, ConfigInput{Provider: "custom", APIKey: "sk-secret"})
+	if err != nil {
+		t.Fatalf("SetConfig key rotation: %v", err)
+	}
+	if cfgKeep.BaseURL == nil || *cfgKeep.BaseURL != server.URL {
+		t.Fatalf("omitted baseUrl must preserve the stored URL, got %+v", cfgKeep.BaseURL)
+	}
+	// An explicit empty string clears - but custom REQUIRES a URL, so the
+	// clear is rejected at the boundary rather than persisting a dead config.
+	if _, err := svc.SetConfig(ctx, ws.ID, ConfigInput{Provider: "custom", BaseURL: strp("")}); err != ErrBaseURLRequired {
+		t.Fatalf("clearing a required baseUrl = %v, want ErrBaseURLRequired", err)
+	}
+
+	// Changing the provider WITHOUT a new key is rejected: the stored key is
+	// neither silently destroyed nor carried to another vendor.
+	if _, err := svc.SetConfig(ctx, ws.ID, ConfigInput{Provider: "anthropic"}); err != ErrKeyRequiredForProviderChange {
+		t.Fatalf("keyless provider change = %v, want ErrKeyRequiredForProviderChange", err)
+	}
+	// With the new provider's key it succeeds, and the stale base URL does not
+	// follow the new provider.
+	cfg2, err := svc.SetConfig(ctx, ws.ID, ConfigInput{Provider: "anthropic", APIKey: "sk-ant-1"})
 	if err != nil {
 		t.Fatalf("SetConfig provider change: %v", err)
 	}
-	if cfg2.HasKey {
-		t.Fatalf("changing provider should clear the key: %+v", cfg2)
-	}
-	// Now generation fails (no key) with BadRequest.
-	if _, err := svc.Text(ctx, ws.ID, "hi", ""); err != ErrBadRequest {
-		t.Fatalf("text after key cleared should be BadRequest, got %v", err)
+	if !cfg2.HasKey || cfg2.Provider != "anthropic" || cfg2.BaseURL != nil {
+		t.Fatalf("provider change wrong: %+v", cfg2)
 	}
 
 	// A custom provider with a private/SSRF base URL is rejected.
-	if _, err := svc.SetConfig(ctx, ws.ID, ConfigInput{Provider: "custom", BaseURL: "https://10.0.0.1/v1"}); err != ErrBadRequest {
+	if _, err := svc.SetConfig(ctx, ws.ID, ConfigInput{Provider: "custom", BaseURL: strp("https://10.0.0.1/v1"), APIKey: "sk-x"}); err != ErrBadRequest {
 		t.Fatalf("private baseUrl should be BadRequest, got %v", err)
 	}
 
@@ -260,12 +280,14 @@ func TestSetConfigRequiresBaseURLForEndpointProviders(t *testing.T) {
 			continue
 		}
 		covered++
-		if _, err := svc.SetConfig(context.Background(), "ws", ConfigInput{Provider: p.ID, APIKey: "k"}); err != ErrBaseURLRequired {
-			t.Errorf("SetConfig(%s, no baseUrl) = %v, want ErrBaseURLRequired", p.ID, err)
+		// An explicit empty URL is rejected before any DB access (this service
+		// has no DB); a whitespace-only URL is trimmed at the boundary and must
+		// hit the same field-specific rejection, not read as present-but-unsafe.
+		// (The omitted-URL case needs stored state and lives in TestAI_DB.)
+		if _, err := svc.SetConfig(context.Background(), "ws", ConfigInput{Provider: p.ID, BaseURL: strp(""), APIKey: "k"}); err != ErrBaseURLRequired {
+			t.Errorf("SetConfig(%s, empty baseUrl) = %v, want ErrBaseURLRequired", p.ID, err)
 		}
-		// A whitespace-only URL is trimmed at the boundary and must hit the
-		// same field-specific rejection, not read as present-but-unsafe.
-		if _, err := svc.SetConfig(context.Background(), "ws", ConfigInput{Provider: p.ID, BaseURL: "   ", APIKey: "k"}); err != ErrBaseURLRequired {
+		if _, err := svc.SetConfig(context.Background(), "ws", ConfigInput{Provider: p.ID, BaseURL: strp("   "), APIKey: "k"}); err != ErrBaseURLRequired {
 			t.Errorf("SetConfig(%s, blank baseUrl) = %v, want ErrBaseURLRequired", p.ID, err)
 		}
 	}
@@ -278,11 +300,11 @@ func TestSetConfigRequiresBaseURLForEndpointProviders(t *testing.T) {
 // provider that generates but cannot edit (azure-openai, zhipu) is rejected
 // with the capability error instead of reaching the provider and 502ing.
 func TestEditImageGatesOnEditCapability(t *testing.T) {
-	if err := assertEditImageCapable(CallConfig{Provider: ProviderAzureOpenAI}); err != ErrImageUnsupported {
-		t.Errorf("azure-openai edit = %v, want ErrImageUnsupported", err)
+	if err := assertEditImageCapable(CallConfig{Provider: ProviderAzureOpenAI}); err != ErrEditImageUnsupported {
+		t.Errorf("azure-openai edit = %v, want ErrEditImageUnsupported", err)
 	}
-	if err := assertEditImageCapable(CallConfig{Provider: ProviderZhipu}); err != ErrImageUnsupported {
-		t.Errorf("zhipu edit = %v, want ErrImageUnsupported", err)
+	if err := assertEditImageCapable(CallConfig{Provider: ProviderZhipu}); err != ErrEditImageUnsupported {
+		t.Errorf("zhipu edit = %v, want ErrEditImageUnsupported", err)
 	}
 	if err := assertEditImageCapable(CallConfig{Provider: ProviderOpenAI}); err != nil {
 		t.Errorf("openai edit = %v, want nil", err)

@@ -37,6 +37,15 @@ var (
 	// provider (Azure/custom) is saved without a base URL. Distinct from
 	// ErrBadRequest so the UI can point the user at the missing field.
 	ErrBaseURLRequired = errors.New("provider requires a base URL")
+	// ErrKeyRequiredForProviderChange is returned when a provider change
+	// arrives without a new API key while one is stored: silently clearing
+	// the credential (data loss) and silently carrying it to another vendor
+	// (leak) are both unacceptable, so the change must bring its own key.
+	ErrKeyRequiredForProviderChange = errors.New("changing the provider requires its API key")
+	// ErrEditImageUnsupported is the edit-specific capability rejection:
+	// several providers generate images but cannot edit them (azure-openai,
+	// zhipu), so the generation-worded message would be wrong.
+	ErrEditImageUnsupported = errors.New("provider does not support image editing")
 )
 
 // DBTX is the query surface (satisfied by *pgxpool.Pool and pgx.Tx).
@@ -59,12 +68,15 @@ func NewService(db DBTX, secret string, allowLocalHTTP bool) *Service {
 	return &Service{db: db, secret: secret, allowLocal: allowLocalHTTP, client: newHTTPClient()}
 }
 
-// ConfigInput is the set-config payload.
+// ConfigInput is the set-config payload. BaseURL is a pointer for PATCH
+// semantics: nil preserves the stored URL, an empty string clears it. (Model
+// and ImageModel keep plain overwrite semantics: an omitted model means "use
+// the preset default", which is a reset, not data loss.)
 type ConfigInput struct {
 	Provider   string
 	Model      string
 	ImageModel string
-	BaseURL    string
+	BaseURL    *string
 	APIKey     string
 }
 
@@ -146,30 +158,59 @@ func (s *Service) SetConfig(ctx context.Context, workspaceID string, in ConfigIn
 	if !providerSet[in.Provider] {
 		return nil, ErrBadRequest
 	}
-	// Trim before every check and before persisting: a copy-pasted URL with
-	// stray whitespace would otherwise survive validation (url.Parse accepts
-	// spaces) and break every later call, and a whitespace-only URL must hit
-	// the required-URL check below, not read as "present but unsafe".
-	in.BaseURL = strings.TrimSpace(in.BaseURL)
-	if in.BaseURL != "" && !isSafeBaseURL(in.BaseURL, s.allowLocal) {
-		return nil, ErrBadRequest
-	}
-	// Providers that route by a user-supplied endpoint (Azure/custom) are
-	// unusable without one: reject at the write boundary with a 400 instead of
-	// letting every later call fail as an opaque 502 against a host-less URL.
-	if p := PresetFor(in.Provider); p != nil && p.NeedsBaseURL && in.BaseURL == "" {
-		return nil, ErrBaseURLRequired
+	// Statically decidable URL rejections run before any DB access: an
+	// explicitly supplied URL is trimmed (pasted whitespace must not persist;
+	// url.Parse accepts spaces), SSRF-checked, and - for endpoint-routed
+	// providers - required to be non-empty.
+	if in.BaseURL != nil {
+		trimmed := strings.TrimSpace(*in.BaseURL)
+		in.BaseURL = &trimmed
+		if trimmed != "" && !isSafeBaseURL(trimmed, s.allowLocal) {
+			return nil, ErrBadRequest
+		}
+		if p := PresetFor(in.Provider); p != nil && p.NeedsBaseURL && trimmed == "" {
+			return nil, ErrBaseURLRequired
+		}
 	}
 	existing, err := s.getRow(ctx, workspaceID)
 	if err != nil {
 		return nil, err
 	}
-	model := nilIfEmpty(in.Model)
-	imageModel := nilIfEmpty(in.ImageModel)
-	baseURL := nilIfEmpty(in.BaseURL)
+	providerChanged := existing != nil && existing.provider != in.Provider
+
+	// A provider change may never silently carry or destroy the stored key:
+	// it must arrive with the NEW provider's key (rejected here), and the old
+	// key never survives onto a different vendor (a fresh one is written).
+	// With no stored key there is nothing to protect, so the change is free.
+	in.APIKey = strings.TrimSpace(in.APIKey)
+	if providerChanged && in.APIKey == "" && existing.keyCipher != nil {
+		return nil, ErrKeyRequiredForProviderChange
+	}
+
+	// Resolve the base URL under PATCH semantics: nil preserves the stored
+	// URL, an empty string clears it (validated above), and a provider change
+	// drops it (a stale URL must never follow the new provider). The preserved
+	// value passed validation when it was stored, but the required-URL check
+	// runs again on the RESOLVED value so an endpoint-routed provider can
+	// never end up saved host-less (a 400 here beats an opaque 502 per call).
+	resolvedBase := ""
+	switch {
+	case in.BaseURL != nil:
+		resolvedBase = *in.BaseURL // already trimmed + validated above
+	case providerChanged || existing == nil:
+		resolvedBase = ""
+	default:
+		resolvedBase = deref(existing.baseURL)
+	}
+	if p := PresetFor(in.Provider); p != nil && p.NeedsBaseURL && resolvedBase == "" {
+		return nil, ErrBaseURLRequired
+	}
+
+	model := nilIfEmpty(strings.TrimSpace(in.Model))
+	imageModel := nilIfEmpty(strings.TrimSpace(in.ImageModel))
+	baseURL := nilIfEmpty(resolvedBase)
 
 	var cipher, iv, tag *string
-	clearKey := false
 	if in.APIKey != "" {
 		nonce := make([]byte, 12)
 		if _, err := rand.Read(nonce); err != nil {
@@ -180,12 +221,11 @@ func (s *Service) SetConfig(ctx context.Context, workspaceID string, in ConfigIn
 			return nil, err
 		}
 		cipher, iv, tag = &enc.Cipher, &enc.IV, &enc.Tag
-	} else if existing != nil && existing.provider != in.Provider {
-		clearKey = true
 	}
 
-	// Upsert. When a new key is supplied, write it; when clearing, null it; when
-	// neither, COALESCE keeps the existing key columns.
+	// Upsert. When a new key is supplied, write it; otherwise keep the stored
+	// one (a keyless provider change was rejected above, so a stale key can
+	// never survive onto a different provider).
 	const q = `INSERT INTO "ai_configs" ("workspace_id",provider,model,"image_model","base_url","key_cipher","key_iv","key_tag","updated_at")
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,now())
 		ON CONFLICT ("workspace_id") DO UPDATE SET
@@ -193,11 +233,11 @@ func (s *Service) SetConfig(ctx context.Context, workspaceID string, in ConfigIn
 			model = EXCLUDED.model,
 			"image_model" = EXCLUDED."image_model",
 			"base_url" = EXCLUDED."base_url",
-			"key_cipher" = CASE WHEN $9 THEN NULL WHEN $6 IS NOT NULL THEN $6 ELSE "ai_configs"."key_cipher" END,
-			"key_iv"     = CASE WHEN $9 THEN NULL WHEN $7 IS NOT NULL THEN $7 ELSE "ai_configs"."key_iv" END,
-			"key_tag"    = CASE WHEN $9 THEN NULL WHEN $8 IS NOT NULL THEN $8 ELSE "ai_configs"."key_tag" END,
+			"key_cipher" = CASE WHEN $6 IS NOT NULL THEN $6 ELSE "ai_configs"."key_cipher" END,
+			"key_iv"     = CASE WHEN $7 IS NOT NULL THEN $7 ELSE "ai_configs"."key_iv" END,
+			"key_tag"    = CASE WHEN $8 IS NOT NULL THEN $8 ELSE "ai_configs"."key_tag" END,
 			"updated_at" = now()`
-	if _, err := s.db.Exec(ctx, q, workspaceID, in.Provider, model, imageModel, baseURL, cipher, iv, tag, clearKey); err != nil {
+	if _, err := s.db.Exec(ctx, q, workspaceID, in.Provider, model, imageModel, baseURL, cipher, iv, tag); err != nil {
 		return nil, err
 	}
 	return s.GetConfig(ctx, workspaceID)
@@ -275,7 +315,7 @@ func assertImageCapable(cfg CallConfig) error {
 // FeatureImage alone would let those calls through to an opaque 502.
 func assertEditImageCapable(cfg CallConfig) error {
 	if !ResolveRoute(string(cfg.Provider), cfg.Model, cfg.ImageModel, FeatureEditImage).Supported {
-		return ErrImageUnsupported
+		return ErrEditImageUnsupported
 	}
 	return nil
 }

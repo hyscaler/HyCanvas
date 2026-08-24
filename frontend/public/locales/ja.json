@@ -3391,5 +3391,7 @@
   "editor.vector_generation_failed": "ベクターの生成に失敗しました。",
   "editor.image_model_optional": "画像モデル（任意）",
   "errors.api_ai_base_url_required": "このプロバイダーにはベースURLが必要です。保存するにはエンドポイントのURLを入力してください。",
-  "editor.couldnt_load_ai_settings": "AI設定を読み込めませんでした。"
+  "editor.couldnt_load_ai_settings": "AI設定を読み込めませんでした。",
+  "errors.api_ai_key_required_for_provider_change": "プロバイダーを変更するには、新しいプロバイダーのAPIキーが必要です。入力して保存してください。",
+  "errors.api_ai_image_edit_unsupported": "ご利用のAIプロバイダーは画像編集に対応していません。AI設定で画像編集に対応したプロバイダー（例：OpenAI）に切り替えてください。"
 }

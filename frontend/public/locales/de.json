@@ -3391,5 +3391,7 @@
   "editor.vector_generation_failed": "Vektorerstellung fehlgeschlagen.",
   "editor.image_model_optional": "Bildmodell (optional)",
   "errors.api_ai_base_url_required": "Dieser Anbieter benötigt eine Basis-URL. Gib deine Endpunkt-URL ein, um zu speichern.",
-  "editor.couldnt_load_ai_settings": "KI-Einstellungen konnten nicht geladen werden."
+  "editor.couldnt_load_ai_settings": "KI-Einstellungen konnten nicht geladen werden.",
+  "errors.api_ai_key_required_for_provider_change": "Der Anbieterwechsel benötigt den API-Schlüssel des neuen Anbieters. Gib ihn ein, um zu speichern.",
+  "errors.api_ai_image_edit_unsupported": "Dein KI-Anbieter unterstützt keine Bildbearbeitung. Wechsle in den KI-Einstellungen zu einem Anbieter mit Bildbearbeitung (z. B. OpenAI)."
 }

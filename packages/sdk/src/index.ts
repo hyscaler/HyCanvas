@@ -1754,6 +1754,11 @@ export class HyCanvasClient {
   getAiConfig(workspaceId: string): Promise<AiConfigView | null> {
     return this.request("GET", `/v1/workspaces/${workspaceId}/ai-config`);
   }
+  /** Upsert the workspace AI provider config. `baseUrl` uses PATCH semantics:
+   *  omitted preserves the stored URL (the server clears it itself on a
+   *  provider change), an empty string clears it explicitly. Changing the
+   *  provider while a key is stored requires `apiKey` for the new provider
+   *  (400 `ai_key_required_for_provider_change` otherwise). */
   setAiConfig(workspaceId: string, input: { provider: string; model?: string; imageModel?: string; baseUrl?: string; apiKey?: string }): Promise<AiConfigView> {
     return this.request("PUT", `/v1/workspaces/${workspaceId}/ai-config`, input);
   }

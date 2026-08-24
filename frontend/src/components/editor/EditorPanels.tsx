@@ -1874,6 +1874,8 @@ interface AssistantDeps {
   brandPalette: string[];
   brandFonts: { heading?: string; body?: string };
   imageCapable: boolean;
+  /** Whether the provider supports image EDITING (some generate but cannot edit). */
+  editImageCapable: boolean;
   /** Attached source content (doc 28 FR-23 doc/URL/file-to-deck ingestion):
    *  generateDesign grounds its outline strictly in this text when present. */
   sourceText?: string;
@@ -2145,7 +2147,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       return { payload: { kind: "bgimage", image } };
     }
     case "editSelectedImage": {
-      if (!deps.imageCapable) return { error: "this provider can't edit images - connect an image-capable provider (e.g. OpenAI)" };
+      if (!deps.editImageCapable) return { error: "this provider can't edit images - connect a provider with image editing (e.g. OpenAI)" };
       const sel = st.selection[0];
       const node = sel ? locate(st.doc, sel)?.node : null;
       if (!node || node.type !== "image") return { error: "select an image first" };
@@ -2399,13 +2401,14 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
   }
 }
 
-function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brandFonts, imageCapable }: {
+function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable }: {
   workspaceId: string | null;
   aiReady: boolean;
   voiceClause: string;
   brandPalette: string[];
   brandFonts: { heading?: string; body?: string };
   imageCapable: boolean;
+  editImageCapable: boolean;
 }) {
   const toast = useToast();
   const runAsTurn = useEditor((s) => s.runAsTurn);
@@ -2496,7 +2499,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
           // best-effort; the applyBrand step will simply report nothing to fix
         }
       }
-      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, sourceText: source?.text, sourceName: source?.name };
+      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sourceText: source?.text, sourceName: source?.name };
       const payloads: (ResolvedPayload | undefined)[] = [];
       const skips: (string | undefined)[] = [];
       for (let i = 0; i < plan.length; i++) {
@@ -3189,12 +3192,20 @@ const FALLBACK_PRESETS: AiProviderPreset[] = [
   { id: "openai", label: "OpenAI", baseUrl: "", defaultModel: "gpt-4o-mini", defaultImageModel: "dall-e-3", capabilities: { text: true, image: true, describeImage: true, editImage: true } },
   { id: "anthropic", label: "Anthropic (Claude)", baseUrl: "", defaultModel: "claude-opus-4-8", capabilities: { text: true, image: false, describeImage: true, editImage: false } },
   { id: "deepseek", label: "DeepSeek", baseUrl: "", defaultModel: "deepseek-chat", capabilities: { text: true, image: false, describeImage: false, editImage: false } },
+  { id: "zhipu", label: "Zhipu AI (GLM)", baseUrl: "", defaultModel: "glm-4.6", defaultImageModel: "cogview-4-250304", capabilities: { text: true, image: true, describeImage: false, editImage: false } },
+  { id: "google", label: "Google (Gemini)", baseUrl: "", defaultModel: "gemini-1.5-flash", capabilities: { text: true, image: false, describeImage: true, editImage: false } },
+  { id: "mistral", label: "Mistral", baseUrl: "", defaultModel: "mistral-large-latest", capabilities: { text: true, image: false, describeImage: false, editImage: false } },
+  { id: "groq", label: "Groq", baseUrl: "", defaultModel: "llama-3.3-70b-versatile", capabilities: { text: true, image: false, describeImage: false, editImage: false } },
+  { id: "together", label: "Together AI", baseUrl: "", defaultModel: "meta-llama/Llama-3.3-70B-Instruct-Turbo", defaultImageModel: "black-forest-labs/FLUX.1-schnell", capabilities: { text: true, image: true, describeImage: false, editImage: false } },
+  { id: "openrouter", label: "OpenRouter", baseUrl: "", defaultModel: "openai/gpt-4o-mini", capabilities: { text: true, image: false, describeImage: false, editImage: false } },
   { id: "azure-openai", label: "Azure OpenAI", baseUrl: "", defaultModel: "gpt-4o-mini", defaultImageModel: "dall-e-3", capabilities: { text: true, image: true, describeImage: true, editImage: false }, needsBaseUrl: true },
   { id: "custom", label: "Custom (OpenAI-compatible)", baseUrl: "", defaultModel: "", capabilities: { text: true, image: true, describeImage: true, editImage: true }, needsBaseUrl: true },
 ];
 
-// Session cache for the server's provider catalog (a constant baked into the
-// binary): fetched at most once, shared by every AiPanel mount.
+// Last known server provider catalog, shared by every AiPanel mount: seeds
+// the dropdown instantly, while each mount still revalidates in the
+// background (stale-while-revalidate) so a long-lived tab converges after a
+// self-host binary swap.
 let providerCatalogCache: AiProviderPreset[] | null = null;
 
 export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
@@ -3236,51 +3247,73 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
   const [baseUrl, setBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
   // The server's preset catalog drives the dropdown (11 providers, defaults,
-  // capabilities); the hardcoded fallback only covers a failed fetch. The
-  // catalog is baked into the server binary, so one successful fetch is cached
-  // for the whole session instead of refetching on every panel mount.
+  // capabilities); the hardcoded fallback only covers the never-fetched case.
+  // Seeded from the shared cache, revalidated by the load effect below.
   const [presets, setPresets] = useState<AiProviderPreset[]>(providerCatalogCache ?? FALLBACK_PRESETS);
 
   // A failed settings load is NOT "no config yet": showing the setup form on
-  // a transient error invites a Save that (via the provider-change key-clear
-  // rule) would destroy the stored key. Track failure separately and offer a
-  // retry instead. loadNonce re-arms the effect for that retry.
+  // a transient error invites a save the server would reject as a keyless
+  // provider change. Track failure separately and offer a retry instead.
+  // loadNonce re-arms the effect for that retry.
   const [loadFailed, setLoadFailed] = useState(false);
   const [loadNonce, setLoadNonce] = useState(0);
+
+  // Re-arm the panel when the workspace changes (render-time state adjustment,
+  // the React pattern for prop-driven resets): never show the previous
+  // workspace's form state while the new fetch is in flight.
+  const [armedFor, setArmedFor] = useState(workspaceId);
+  if (workspaceId !== armedFor) {
+    setArmedFor(workspaceId);
+    setLoading(true);
+    setLoadFailed(false);
+  }
 
   useEffect(() => {
     if (!workspaceId) return;
     let cancelled = false;
     void (async () => {
-      const [loaded, list] = await Promise.all([
-        oc.getAiConfig(workspaceId).then(
-          (c) => ({ ok: true as const, c }),
-          () => ({ ok: false as const, c: null }),
-        ),
-        // Stale-while-revalidate: seed from the session cache (see its decl)
-        // but still refetch, so a tab left open across a binary swap converges
-        // on the new registry instead of trusting the old one forever.
-        oc.aiProviders().catch(() => null),
-      ]);
+      const loaded = await oc.getAiConfig(workspaceId).then(
+        (c) => ({ ok: true as const, c }),
+        () => ({ ok: false as const, c: null }),
+      );
       if (cancelled) return;
-      if (list?.length) { providerCatalogCache = list; setPresets(list); }
       setLoadFailed(!loaded.ok);
       const c = loaded.c;
       setConfig(c);
       setShowConfig(loaded.ok && !c?.hasKey);
-      if (c) { setProvider(c.provider); setModel(c.model ?? ""); setImageModel(c.imageModel ?? ""); setBaseUrl(c.baseUrl ?? ""); }
+      setProvider(c?.provider ?? "openai");
+      setModel(c?.model ?? "");
+      setImageModel(c?.imageModel ?? "");
+      setBaseUrl(c?.baseUrl ?? "");
+      setApiKey("");
       setLoading(false);
     })();
+    // Revalidate the provider catalog WITHOUT gating panel readiness on it
+    // (a hung catalog request must not hold the spinner): the cache/fallback
+    // already seeded the dropdown, and a fresh fetch converges a long-lived
+    // tab after a self-host binary swap.
+    void oc.aiProviders().then(
+      (list) => {
+        if (!cancelled && list?.length) { providerCatalogCache = list; setPresets(list); }
+      },
+      () => {},
+    );
     return () => { cancelled = true; };
   }, [workspaceId, loadNonce]);
 
-  // The selected provider's preset: drives the base-URL requirement, the
-  // image-model field, and the placeholder hints. A provider we cannot resolve
-  // (legacy id, or a preset missing from the offline fallback) keeps a STORED
-  // base URL editable - latched on the loaded config, never on the live input,
-  // so clearing the field mid-edit cannot unmount it.
+  // The selected provider's preset drives the field set and hints. Three
+  // distinct base-URL concerns, deliberately decoupled:
+  // - requiresBaseUrl: the preset demands one (Azure/custom); gates the save.
+  // - showBaseUrl: the field also renders whenever the SAME provider already
+  //   stores a URL (an API-configured proxy on e.g. openai, or a legacy id),
+  //   so a stored URL is always visible, auditable, and clearable. Latched on
+  //   the loaded config, never the live input, so emptying it cannot unmount
+  //   the field. Hidden again the moment another provider is selected - a
+  //   stale URL (or stale field state) must never follow a provider switch.
   const selPreset = presets.find((p) => p.id === provider);
-  const needsBaseUrl = selPreset ? !!selPreset.needsBaseUrl : !!config?.baseUrl;
+  const requiresBaseUrl = !!selPreset?.needsBaseUrl;
+  const sameProvider = provider === config?.provider;
+  const showBaseUrl = requiresBaseUrl || (sameProvider && !!config?.baseUrl);
   const modelHint = selPreset?.defaultModel ?? "";
 
   async function saveConfig() {
@@ -3289,22 +3322,27 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
     // Endpoint-routed providers are unusable without their URL; the server
     // rejects the save too (ai_base_url_required), but catching it here points
     // at the field without a round trip.
-    if (needsBaseUrl && !url) {
+    if (requiresBaseUrl && !url) {
       toast.error(tr("errors.api_ai_base_url_required"));
       return;
     }
+    // A provider change must bring the new provider's key (the server rejects
+    // it as ai_key_required_for_provider_change); say so before the round trip.
+    if (!sameProvider && config?.hasKey && !apiKey.trim()) {
+      toast.error(tr("errors.api_ai_key_required_for_provider_change"));
+      return;
+    }
     try {
-      // A provider may carry a base URL even when its preset does not REQUIRE
-      // one (an OpenAI-compatible proxy configured via the API), and the
-      // upsert overwrites base_url unconditionally - so while the provider is
-      // unchanged, always resend what is in the field (loaded from the stored
-      // config). Switching providers deliberately clears it: a stale URL must
-      // never follow the new provider.
+      // baseUrl uses PATCH semantics server-side: omitted (undefined) keeps
+      // the stored URL - and the server itself clears it on a provider change
+      // - while a rendered field sends its exact value, so emptying a visible
+      // field is an explicit clear. Stale client state can no longer leak a
+      // URL across providers or silently wipe one.
       const c = await oc.setAiConfig(workspaceId, {
         provider,
         model: model || undefined,
         imageModel: imageModel || undefined,
-        baseUrl: needsBaseUrl || provider === config?.provider ? (url || undefined) : undefined,
+        baseUrl: showBaseUrl ? url : undefined,
         apiKey: apiKey || undefined,
       });
       setConfig(c);
@@ -3325,6 +3363,7 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
   // Whether the configured provider can generate images (gates AI imagery in
   // generated designs). DeepSeek/Anthropic are text-only; OpenAI/custom can.
   const imageCapable = !!config?.capabilities?.image;
+  const editImageCapable = !!config?.capabilities?.editImage;
 
   return (
     <PanelShell title="AI" fill={chatView}>
@@ -3334,16 +3373,23 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
         <div className="grid place-items-center py-8 text-neutral-400"><Spinner /></div>
       ) : loadFailed ? (
         // A transient load failure must NOT render the setup form: it starts
-        // blank on the default provider, and one Save from there would clear
-        // the stored key (provider-change rule). Offer a retry instead.
-        <div className="flex flex-col items-center gap-2 py-8 text-center">
-          <p className="text-xs text-neutral-500">{tr("editor.couldnt_load_ai_settings")}</p>
-          <button
-            onClick={() => { setLoading(true); setLoadFailed(false); setLoadNonce((n) => n + 1); }}
-            className="rounded border border-neutral-300 px-2.5 py-1 text-xs text-neutral-600 hover:border-brand-300 hover:text-brand-ink"
-          >
-            {tr("editor.retry")}
-          </button>
+        // blank on the default provider, and one Save from there is a rejected
+        // (key-required) provider change. Offer a retry - announced to
+        // assistive tech - and keep the no-AI tools reachable: they never
+        // depended on this fetch.
+        <div className="flex flex-col gap-3">
+          <div role="alert" className="flex flex-col items-center gap-2 py-8 text-center">
+            <p className="text-xs text-neutral-500">{tr("editor.couldnt_load_ai_settings")}</p>
+            <button
+              onClick={() => { setLoading(true); setLoadFailed(false); setLoadNonce((n) => n + 1); }}
+              className="rounded border border-neutral-300 px-2.5 py-1 text-xs text-neutral-600 hover:border-brand-300 hover:text-brand-ink"
+            >
+              {tr("editor.retry")}
+            </button>
+          </div>
+          <CollapsibleSection title={tr("editor.assist_no_ai_needed")} icon={Stethoscope}>
+            <PolishPanel />
+          </CollapsibleSection>
         </div>
       ) : showConfig || !config?.hasKey ? (
         <div className="flex flex-col gap-3">
@@ -3368,7 +3414,7 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
               {(selPreset?.capabilities.image ?? true) && (
                 <input value={imageModel} onChange={(e) => setImageModel(e.target.value)} placeholder={selPreset?.defaultImageModel ? `Image model (optional, default ${selPreset.defaultImageModel})` : tr("editor.image_model_optional")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
               )}
-              {needsBaseUrl && (
+              {showBaseUrl && (
                 <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder={tr("editor.base_url_https_v1")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
               )}
               <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={config?.hasKey ? tr("editor.api_key_leave_blank_to_keep") : tr("editor.api_key")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
@@ -3422,7 +3468,7 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
           {/* Single conversational surface: one thread plans and applies every
               capability (write, image, whole-design, restyle, chart, critique).
               The model routes the intent to the right tool from the catalog. */}
-          <AssistantPanel workspaceId={workspaceId} aiReady voiceClause={voiceClause} brandPalette={brandPalette} brandFonts={brandFonts} imageCapable={imageCapable} />
+          <AssistantPanel workspaceId={workspaceId} aiReady voiceClause={voiceClause} brandPalette={brandPalette} brandFonts={brandFonts} imageCapable={imageCapable} editImageCapable={editImageCapable} />
         </div>
       )}
     </PanelShell>

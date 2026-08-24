@@ -75,8 +75,12 @@ func aiProblem(w http.ResponseWriter, r *http.Request, err error) {
 		problemWithCode(w, r, http.StatusForbidden, "Forbidden", err.Error(), "ai_policy_blocked")
 	case errors.Is(err, ai.ErrImageUnsupported):
 		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "your AI provider does not support image generation; switch to an image-capable provider (e.g. OpenAI or Together AI) in AI settings", "ai_image_unsupported")
+	case errors.Is(err, ai.ErrEditImageUnsupported):
+		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "your AI provider does not support image editing; switch to a provider with image editing (e.g. OpenAI) in AI settings", "ai_image_edit_unsupported")
 	case errors.Is(err, ai.ErrBaseURLRequired):
 		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "this provider needs a base URL; enter your endpoint URL in AI settings", "ai_base_url_required")
+	case errors.Is(err, ai.ErrKeyRequiredForProviderChange):
+		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "changing the provider requires the new provider's API key; enter it and save again", "ai_key_required_for_provider_change")
 	case errors.Is(err, ai.ErrBadRequest):
 		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid AI request or no provider configured", "ai_not_configured")
 	case errors.Is(err, ai.ErrBadGateway):
@@ -119,8 +123,10 @@ func aiSetConfigHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFun
 			Provider   string `json:"provider"`
 			Model      string `json:"model"`
 			ImageModel string `json:"imageModel"`
-			BaseURL    string `json:"baseUrl"`
-			APIKey     string `json:"apiKey"`
+			// Pointer for PATCH semantics: absent preserves the stored URL,
+			// an empty string clears it (see ai.ConfigInput).
+			BaseURL *string `json:"baseUrl"`
+			APIKey  string  `json:"apiKey"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")

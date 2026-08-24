@@ -3391,5 +3391,7 @@
   "editor.vector_generation_failed": "La generación del vector falló.",
   "editor.image_model_optional": "Modelo de imágenes (opcional)",
   "errors.api_ai_base_url_required": "Este proveedor necesita una URL base. Introduce la URL de tu endpoint para guardar.",
-  "editor.couldnt_load_ai_settings": "No se pudo cargar la configuración de IA."
+  "editor.couldnt_load_ai_settings": "No se pudo cargar la configuración de IA.",
+  "errors.api_ai_key_required_for_provider_change": "Cambiar de proveedor requiere la clave de API del nuevo proveedor. Introdúcela para guardar.",
+  "errors.api_ai_image_edit_unsupported": "Tu proveedor de IA no admite la edición de imágenes. Cambia a un proveedor con edición de imágenes (p. ej., OpenAI) en la configuración de IA."
 }

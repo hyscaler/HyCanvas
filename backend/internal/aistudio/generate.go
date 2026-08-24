@@ -12,15 +12,15 @@ import (
 // Design-type guidance mirrors the client prompts so server and client
 // generation stay consistent.
 var typeGuidance = map[string]string{
-	"deck":       "A presentation deck: a cover, an optional agenda, several content pages, an optional data/comparison page, and a closing/CTA page. Aim for a clear narrative arc.",
+	"deck":       "A presentation deck: a cover, an optional agenda, several content pages, an optional data or comparison page, and a closing/CTA page. Aim for a clear narrative arc.",
 	"doc":        "A multi-page document: a title page then sectioned pages, each a heading plus supporting points. Favor the 'content' visual role.",
-	"social-set": "A set of standalone social posts on one theme; each page is self-contained with its own punchy hook.",
+	"social-set": "A set of standalone social posts on one theme; each page is self-contained with its own punchy hook. Use 'cover' or 'quote' roles for impact.",
 	"poster":     "A single strong poster composition: one page, one bold message. Use the 'cover' role.",
 }
 
 // outlineSchema derives its note cap from maxNoteChars (specs.go) so the
 // prompt's advertised limit can never drift from what validation truncates at.
-var outlineSchema = fmt.Sprintf(`{"type":"object","required":["title","pages"],"properties":{"title":{"type":"string"},"theme":{"type":"string"},"pages":{"type":"array","items":{"type":"object","required":["title","visualRole","note"],"properties":{"title":{"type":"string"},"points":{"type":"array","items":{"type":"string"}},"visualRole":{"type":"string","enum":["cover","agenda","content","comparison","quote","data","closing"]},"note":{"type":"string","minLength":100,"maxLength":%d,"description":"speaker note: 1-3 spoken-style sentences of plain text (no markdown) that add presenter context and delivery cues; never restate the slide's visible text"}}}}}}`, maxNoteChars)
+var outlineSchema = fmt.Sprintf(`{"type":"object","additionalProperties":false,"required":["title","pages"],"properties":{"title":{"type":"string"},"theme":{"type":"string","description":"short mood/topic phrase"},"pages":{"type":"array","minItems":1,"items":{"type":"object","additionalProperties":false,"required":["title","visualRole","note"],"properties":{"title":{"type":"string"},"points":{"type":"array","items":{"type":"string"}},"visualRole":{"type":"string","enum":["cover","agenda","content","comparison","quote","data","closing"]},"note":{"type":"string","minLength":100,"maxLength":%d,"description":"speaker note: 1-3 spoken-style sentences of plain text (no markdown) that add presenter context and delivery cues; never restate the slide's visible text"}}}}}}`, maxNoteChars)
 
 func outlineSystem(designType, brandClause string, pageCount int) string {
 	guide := typeGuidance[designType]
@@ -38,7 +38,7 @@ func outlineSystem(designType, brandClause string, pageCount int) string {
 		"Schema: " + outlineSchema + ".",
 		"Each page has a short title, 0-6 concise key points (real final copy, not placeholders), a visualRole from the enum, and a note.",
 		fmt.Sprintf("The note is a REQUIRED speaker note for the presenter: 1-3 spoken-style sentences of plain text (no markdown, 100-%d characters) that add context, evidence, or delivery cues. It must never restate the slide's visible text. Never exceed the length limit; rephrase rather than clipping mid-sentence.", maxNoteChars),
-		"Use 'cover' for the first page and 'closing' for the last when it fits.",
+		"Use 'cover' for the first page, 'closing' for the last when it fits, and pick roles that match each page's purpose.",
 		"Do NOT include any layout, colors, sizes, or positions - only titles, points, and roles.",
 	}
 	if strings.TrimSpace(brandClause) != "" {

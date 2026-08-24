@@ -258,6 +258,12 @@ func TestNormalizeNote(t *testing.T) {
 	if got := normalizeNote("A\u0085B\uFEFFC  D"); got != "A B C D" {
 		t.Errorf("NEL/FEFF not collapsed like the TS mirror: %q", got)
 	}
+	if got := normalizeNote("\u0085Hello\uFEFF"); got != "Hello" {
+		t.Errorf("edge NEL/FEFF must vanish like the TS mirror: %q", got)
+	}
+	if got := normalizeNote("\u0085"); got != "" {
+		t.Errorf("whitespace-only note must normalize empty: %q", got)
+	}
 	if got := normalizeNote("  Open with the story.\n\nPause  here. "); got != "Open with the story. Pause here." {
 		t.Errorf("whitespace not flattened: %q", got)
 	}

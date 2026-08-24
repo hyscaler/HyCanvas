@@ -3391,5 +3391,7 @@
   "editor.vector_generation_failed": "La génération du vecteur a échoué.",
   "editor.image_model_optional": "Modèle d'image (facultatif)",
   "errors.api_ai_base_url_required": "Ce fournisseur nécessite une URL de base. Saisissez l’URL de votre point de terminaison pour enregistrer.",
-  "editor.couldnt_load_ai_settings": "Impossible de charger les paramètres d'IA."
+  "editor.couldnt_load_ai_settings": "Impossible de charger les paramètres d'IA.",
+  "errors.api_ai_key_required_for_provider_change": "Le changement de fournisseur nécessite la clé d'API du nouveau fournisseur. Saisissez-la pour enregistrer.",
+  "errors.api_ai_image_edit_unsupported": "Votre fournisseur d'IA ne prend pas en charge la retouche d'images. Passez à un fournisseur qui la propose (p. ex. OpenAI) dans les paramètres d'IA."
 }

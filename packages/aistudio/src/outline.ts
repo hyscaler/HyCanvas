@@ -85,7 +85,7 @@ export function normalizeNote(v: unknown): string {
   // Whitespace class: JS \s plus U+0085 NEL, i.e. the union of JS \s and Go's
   // unicode.IsSpace - the Go mirror collapses the same union (IsSpace plus
   // U+FEFF), so both sides flatten identically.
-  const flat = str(v).replace(/[\s\u0085]+/g, " ");
+  const flat = str(v).replace(/[\s\u0085]+/g, " ").trim(); // trim AFTER collapsing: an edge NEL leaves an ASCII space str() could not see
   // Fast path: UTF-16 length is >= the code-point count, so an under-cap
   // UTF-16 length can never hide an over-cap note.
   if (flat.length <= maxNoteChars) return flat;

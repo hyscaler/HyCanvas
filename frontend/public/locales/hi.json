@@ -3391,5 +3391,7 @@
   "editor.vector_generation_failed": "वेक्टर बनाना विफल रहा।",
   "editor.image_model_optional": "इमेज मॉडल (वैकल्पिक)",
   "errors.api_ai_base_url_required": "इस प्रदाता के लिए बेस URL आवश्यक है। सहेजने के लिए अपना एंडपॉइंट URL दर्ज करें।",
-  "editor.couldnt_load_ai_settings": "AI सेटिंग्स लोड नहीं हो सकीं।"
+  "editor.couldnt_load_ai_settings": "AI सेटिंग्स लोड नहीं हो सकीं।",
+  "errors.api_ai_key_required_for_provider_change": "प्रदाता बदलने के लिए नए प्रदाता की API कुंजी आवश्यक है। सहेजने के लिए इसे दर्ज करें।",
+  "errors.api_ai_image_edit_unsupported": "आपका AI प्रदाता इमेज संपादन का समर्थन नहीं करता। AI सेटिंग्स में इमेज संपादन वाले प्रदाता (जैसे OpenAI) पर स्विच करें।"
 }

@@ -179,6 +179,9 @@ describe("speaker notes on outline items", () => {
 
   it("collapses NEL and FEFF whitespace identically to the Go mirror", () => {
     expect(normalizeNote("A\u0085B\uFEFFC  D")).toBe("A B C D");
+    // Edge NEL/FEFF must vanish, not become a kept space (Go drops them).
+    expect(normalizeNote("\u0085Hello\uFEFF")).toBe("Hello");
+    expect(normalizeNote("\u0085")).toBe("");
   });
 
   it("normalizeNote truncates hard when no sentence boundary exists", () => {
