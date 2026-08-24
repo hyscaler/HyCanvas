@@ -3,6 +3,7 @@ package aistudio
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -107,8 +108,9 @@ func TestValidateStyleProfile(t *testing.T) {
 // stubGen returns a scripted sequence of replies to exercise retry-on-mismatch.
 type stubGen struct {
 	lastSchema string
-	replies []string
-	calls   int
+	prompts    []string
+	replies    []string
+	calls      int
 }
 
 // TextStructured delegates to Text: the orchestrator must treat structured
@@ -119,7 +121,8 @@ func (s *stubGen) TextStructured(ctx context.Context, ws, prompt, system, schema
 	return s.Text(ctx, ws, prompt, system)
 }
 
-func (s *stubGen) Text(_ context.Context, _, _, _ string) (string, error) {
+func (s *stubGen) Text(_ context.Context, _, prompt, _ string) (string, error) {
+	s.prompts = append(s.prompts, prompt)
 	if s.calls >= len(s.replies) {
 		return "", errors.New("no more replies")
 	}
@@ -153,7 +156,7 @@ func TestGenerateValidated_RetriesOnMismatch(t *testing.T) {
 }
 
 func TestGenerateValidated_GivesUp(t *testing.T) {
-	gen := &stubGen{replies: []string{"junk", "junk", "junk"}}
+	gen := &stubGen{replies: []string{"junk", "junk", "junk", "junk"}} // one per validation pass
 	svc := NewService(nil, gen)
 	if _, err := svc.Chart(context.Background(), "ws", "x"); !errors.Is(err, ErrInvalidOutput) {
 		t.Errorf("expected ErrInvalidOutput, got %v", err)
@@ -313,5 +316,78 @@ func TestValidateOutlineNormalizesNotes(t *testing.T) {
 	}
 	if o.Pages[1].Note != "" {
 		t.Errorf("absent note should stay empty, got %q", o.Pages[1].Note)
+	}
+}
+
+// T07: a validation failure's repair message carries the CONCRETE validation
+// errors and the previous invalid output, not a generic hint.
+func TestRepairLoopFeedsBackConcreteErrors(t *testing.T) {
+	gen := &stubGen{replies: []string{
+		`{"chartType":"bar","categories":[],"series":[]}`, // invalid: no categories
+		`{"chartType":"bar","categories":["a"],"series":[]}`, // invalid: no series
+		`{"chartType":"bar","categories":["a"],"series":[{"name":"s","values":[1]}]}`,
+	}}
+	svc := NewService(nil, gen)
+	if _, err := svc.Chart(context.Background(), "ws", "data"); err != nil {
+		t.Fatalf("expected success on pass 3, got %v", err)
+	}
+	if len(gen.prompts) != 3 {
+		t.Fatalf("want 3 passes, got %d", len(gen.prompts))
+	}
+	// Pass 2's message names pass 1's actual validation error and echoes the output.
+	if !strings.Contains(gen.prompts[1], "chart has no categories") {
+		t.Errorf("repair message lacks the concrete error: %q", gen.prompts[1])
+	}
+	if !strings.Contains(gen.prompts[1], `"chartType":"bar"`) || !strings.Contains(gen.prompts[1], "Previous invalid JSON") {
+		t.Errorf("repair message lacks the previous output: %q", gen.prompts[1])
+	}
+	// Pass 3's message names pass 2's DIFFERENT error (fresh, not accumulated).
+	if !strings.Contains(gen.prompts[2], "chart has no series") || strings.Contains(gen.prompts[2], "chart has no categories") {
+		t.Errorf("repair message not rebuilt per pass: %q", gen.prompts[2])
+	}
+}
+
+// T07: an outline tolerates a parseable-but-invalid final pass (accept with a
+// warning) while an assistant plan stays fail-closed.
+func TestRepairLoopToleranceByCaller(t *testing.T) {
+	// Outline: 4 parseable replies with zero usable pages -> accepted anyway.
+	empty := `{"title":"x","theme":"","pages":[]}`
+	gen := &stubGen{replies: []string{empty, empty, empty, empty}}
+	svc := NewService(nil, gen)
+	o, err := svc.Outline(context.Background(), "ws", "deck", "brief", "", 0)
+	if err != nil {
+		t.Fatalf("tolerant outline must accept on the last pass, got %v", err)
+	}
+	if len(o.Pages) != 0 || gen.calls != maxValidationPasses {
+		t.Fatalf("want empty outline after %d passes, got %d pages after %d calls", maxValidationPasses, len(o.Pages), gen.calls)
+	}
+
+	// Assistant: 4 parseable replies whose every action is unknown -> fail closed.
+	bad := `{"reply":"ok","plan":[{"action":"notATool","args":{}}]}`
+	gen2 := &stubGen{replies: []string{bad, bad, bad, bad}}
+	svc2 := NewService(nil, gen2)
+	if _, err := svc2.Assistant(context.Background(), "ws", "Pages: 1", "", "do the thing"); !errors.Is(err, ErrInvalidOutput) {
+		t.Fatalf("assistant must fail closed, got %v", err)
+	}
+	if gen2.calls != maxValidationPasses {
+		t.Fatalf("pass cap not respected: %d calls", gen2.calls)
+	}
+}
+
+// T07: the repair message caps the error list and truncates the previous output.
+func TestRepairMessageBudgets(t *testing.T) {
+	errs := make([]string, 15)
+	for i := range errs {
+		errs[i] = fmt.Sprintf("error %d", i)
+	}
+	msg := repairMessage("ask", strings.Repeat("x", 7000), errs)
+	if !strings.Contains(msg, "...and 5 more validation errors.") {
+		t.Errorf("error list not capped: %q", msg[:200])
+	}
+	if !strings.Contains(msg, "... (truncated)") {
+		t.Error("previous output not truncated")
+	}
+	if strings.Contains(msg, "error 12") {
+		t.Error("overflow errors must be dropped, not listed")
 	}
 }

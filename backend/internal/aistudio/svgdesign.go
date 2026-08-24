@@ -39,7 +39,11 @@ func (s *Service) GenerateSvg(ctx context.Context, workspaceID, prompt, designTy
 	user := fmt.Sprintf("Design type: %s\nBrief: %s", designType, strings.TrimSpace(prompt))
 	msg := user
 	var lastErr error
-	for attempt := 0; attempt < maxRetries; attempt++ {
+	// SVG generation keeps its own small retry budget: its validator is
+	// cheap-pass/fail (well-formed XML), so the JSON repair loop's
+	// error-feedback shape does not apply.
+	const maxSvgRetries = 3
+	for attempt := 0; attempt < maxSvgRetries; attempt++ {
 		out, err := s.ai.Text(ctx, workspaceID, msg, system)
 		if err != nil {
 			return nil, err // provider/policy errors propagate unchanged

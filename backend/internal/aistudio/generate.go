@@ -76,7 +76,7 @@ func capOutlinePages(o *DesignOutline, designType string, pageCount int) {
 // Outline generates and validates a DesignOutline (FR-2).
 func (s *Service) Outline(ctx context.Context, workspaceID, designType, prompt, brandClause string, pageCount int) (*DesignOutline, error) {
 	user := fmt.Sprintf("Design type: %s\nBrief: %s", designType, strings.TrimSpace(prompt))
-	o, err := generateValidated(ctx, s, workspaceID, outlineSystem(designType, brandClause, pageCount), user, outlineSchema, validateOutline)
+	o, err := generateValidated(ctx, s, workspaceID, outlineSystem(designType, brandClause, pageCount), user, outlineSchema, true, validateOutline)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +118,7 @@ func (s *Service) GenerateDesign(ctx context.Context, workspaceID, designType, p
 			type polished struct {
 				Points []string `json:"points"`
 			}
-			res, perr := generateValidated(ctx, s, workspaceID, system, user, polishSchema, func(v *polished) error {
+			res, perr := generateValidated(ctx, s, workspaceID, system, user, polishSchema, false, func(v *polished) error {
 				clean := v.Points[:0]
 				for _, t := range v.Points {
 					if strings.TrimSpace(t) != "" {
@@ -188,7 +188,7 @@ func (s *Service) Chart(ctx context.Context, workspaceID, description string) (*
 		"Output ONLY one JSON object, no prose/markdown/fences. Schema: " + chartSchemaStr + ". " +
 		"Pick the chartType that best fits (bar for comparisons, line/area for trends, pie/donut for parts of a whole, scatter for correlation, radar for multivariate). " +
 		"Every series.values array must align 1:1 with categories. Use real numbers from the description."
-	return generateValidated(ctx, s, workspaceID, system, strings.TrimSpace(description), chartSchemaStr, validateChart)
+	return generateValidated(ctx, s, workspaceID, system, strings.TrimSpace(description), chartSchemaStr, false, validateChart)
 }
 
 // The assistant tool catalog is AUTHORED in toolCatalog() in
@@ -279,7 +279,7 @@ func (s *Service) Assistant(ctx context.Context, workspaceID, designSummary, his
 	if strings.TrimSpace(history) != "" {
 		user = history + "\nuser: " + message
 	}
-	return generateValidated(ctx, s, workspaceID, system, user, assistantReplySchema, validateAssistant(assistantCatalog))
+	return generateValidated(ctx, s, workspaceID, system, user, assistantReplySchema, false, validateAssistant(assistantCatalog))
 }
 
 // StyleProfile extracts a style profile (palette + feel) from a reference
@@ -292,7 +292,7 @@ func (s *Service) StyleProfile(ctx context.Context, workspaceID, referenceText s
 	if len(seedPalette) > 0 {
 		user += "\nSeed colors: " + strings.Join(seedPalette, ", ")
 	}
-	return generateValidated(ctx, s, workspaceID, system, user, styleProfileSchema, validateStyleProfile)
+	return generateValidated(ctx, s, workspaceID, system, user, styleProfileSchema, false, validateStyleProfile)
 }
 
 // Critique returns AI design-improvement suggestions for a posted design summary
