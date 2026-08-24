@@ -1858,10 +1858,10 @@ type ResolvedPayload =
   | { kind: "clusters"; clusters: { title: string; ids: string[] }[] }
   | { kind: "summary"; text: string }
   | { kind: "outline"; outline: DesignOutline; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroPlans: { pageIndex: number; prompt: string; subject: string; size: string }[]; workspaceId: string; designId: string | null; append: boolean }
-  | { kind: "layoutDeck"; deckTitle: string; pages: { layoutId: string; name: string; note?: string; fill: LayoutFill }[]; background: unknown; imageSize: string; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroPlans: { pageIndex: number; prompt: string; subject: string }[]; workspaceId: string; designId: string | null; append: boolean }
+  | { kind: "layoutDeck"; deckTitle: string; pages: { layoutId: string; name: string; note?: string; fill: LayoutFill }[]; background: unknown; imageSize: string; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroPlans: { pageIndex: number; prompt: string; subject: string }[]; generateAllowed: boolean; workspaceId: string; designId: string | null; append: boolean }
   | { kind: "splitSlide"; pageIndex: number; pageId: string; halves: { layoutId: string; name: string; fill: LayoutFill }[] }
   | { kind: "insertComparison"; layoutId: string; name: string; fill: LayoutFill; afterIndex: number; afterPageId: string }
-  | { kind: "regenerateSlide"; pageIndex: number; pageId: string; layoutId: string; layoutChanged: boolean; fill: LayoutFill; imageTasks: { placeholderId: string; prompt: string; subject: string }[]; imageSize: string; workspaceId: string; designId: string | null };
+  | { kind: "regenerateSlide"; pageIndex: number; pageId: string; layoutId: string; layoutChanged: boolean; hadLayout: boolean; fill: LayoutFill; imageTasks: { placeholderId: string; prompt: string; subject: string }[]; imageSize: string; generateAllowed: boolean; workspaceId: string; designId: string | null };
 
 /** Parse a model reply that must be a JSON array of exactly `n` strings.
  *  Tolerates markdown fences; anything else (wrong shape, wrong length,
@@ -2009,12 +2009,50 @@ function hasTitleSlide(doc: { layouts?: SlideLayout[]; pages: { layoutId?: strin
   if (!first) return false;
   if (first.layoutId) {
     const layout = doc.layouts?.find((l) => l.id === first.layoutId);
-    if (layout) return !(layout.placeholders ?? []).some((ph) => ph.role === "content");
+    // Cover-ish = a title slot and NO substantive slots (a picture-with-caption
+    // or content layout is a real slide, not a cover).
+    if (layout) {
+      const roles = new Set((layout.placeholders ?? []).map((ph) => ph.role));
+      return roles.has("title") && !roles.has("content") && !roles.has("picture") && !roles.has("chart");
+    }
   }
   type Typed = { type: string };
   const texts = (first.children as Typed[]).filter((n) => n.type === "text").length;
   const heavy = (first.children as Typed[]).some((n) => n.type === "chart" || n.type === "table");
-  return !heavy && texts > 0 && texts <= 3;
+  // A freeform cover is a hero image plus a few text blocks, or (hand-built /
+  // imported) an image-only splash: both count.
+  return !heavy && texts <= 3 && (texts > 0 || first.children.length <= 2);
+}
+
+/** The frame aspect and matching provider size string for a page: ONE ladder
+ *  (1.2 threshold) shared by every image-planning site, so a tuning change
+ *  cannot leave a drifted copy behind. */
+function aspectAndImageSize(size: { width: number; height: number }): { aspect: "landscape" | "portrait" | "square"; imageSize: string } {
+  const aspect = size.width >= size.height * 1.2 ? "landscape" : size.height >= size.width * 1.2 ? "portrait" : "square";
+  return { aspect, imageSize: aspect === "landscape" ? "1792x1024" : aspect === "portrait" ? "1024x1792" : "1024x1024" };
+}
+
+/** Per-slot style overrides for a layout's text slots: the brand fonts by
+ *  role, and an ink readable against the EFFECTIVE background (the layout's,
+ *  else its master's, else the page's) - the materialized defaults are dark
+ *  and would vanish on a dark theme. */
+function slotStylesFor(
+  layout: SlideLayout | undefined,
+  brandFonts: { heading?: string; body?: string } | undefined,
+  background: unknown,
+): Record<string, { fontFamily?: string; fill?: Fill }> {
+  // One darkness judgment for the whole file: pageIsDark's threshold and
+  // bgSolidColor's fill handling (a drifted local copy split light/dark at a
+  // different luminance than writeText and friends).
+  const dark = pageIsDark({ background });
+  const ink: Fill = { type: "solid", color: dark ? { srgb: { r: 0.97, g: 0.97, b: 0.97, a: 1 } } : { srgb: { r: 0.12, g: 0.14, b: 0.18, a: 1 } } };
+  const out: Record<string, { fontFamily?: string; fill?: Fill }> = {};
+  for (const ph of layout?.placeholders ?? []) {
+    if (ph.role !== "title" && ph.role !== "body" && ph.role !== "content") continue;
+    const fontFamily = ph.role === "title" ? brandFonts?.heading : brandFonts?.body;
+    out[ph.id] = { ...(fontFamily ? { fontFamily } : {}), fill: ink };
+  }
+  return out;
 }
 
 /** True when the document already holds work worth protecting: more than one
@@ -2294,10 +2332,10 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       }
       if (!fill) return { error: "couldn't regenerate that slide" };
       // Image diff: only changed prompts regenerate; unchanged images stay.
-      // A text-only provider gets none (a queued task could only fail).
-      const changed = deps.imageCapable ? changedImagePrompts(currentImagePrompts, fill.imagePrompts) : {};
-      const aspect = page.width >= page.height * 1.2 ? "landscape" : page.height >= page.width * 1.2 ? "portrait" : "square";
-      const imageSize = aspect === "landscape" ? "1792x1024" : aspect === "portrait" ? "1024x1792" : "1024x1024";
+      // (Text-only providers keep their tasks: the queue's reuse and stock
+      // steps need no image provider, and a miss skips quietly.)
+      const changed = changedImagePrompts(currentImagePrompts, fill.imagePrompts);
+      const { aspect, imageSize } = aspectAndImageSize(page);
       return {
         payload: {
           kind: "regenerateSlide",
@@ -2305,9 +2343,11 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
           pageId: page.id,
           layoutId,
           layoutChanged: layoutId !== page.layoutId,
+          hadLayout: !!page.layoutId,
           fill,
           imageTasks: Object.entries(changed).map(([placeholderId, prompt]) => ({ placeholderId, prompt: groundImagePrompt(prompt, { palette: deps.brandPalette, aspect }), subject: prompt })),
           imageSize,
+          generateAllowed: deps.imageCapable,
           workspaceId: deps.workspaceId,
           designId: deps.designId ?? null,
         },
@@ -2429,13 +2469,10 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       // engine only when layout grounding is impossible.
       {
         const docLayouts = (st.doc as unknown as { layouts?: SlideLayout[] }).layouts;
-        let layouts = docLayouts?.length ? docLayouts : builtinMasterAndLayouts(size).layouts;
-        // A text-only provider cannot fill picture slots: prefer layouts
-        // without them (when any exist) so no un-fillable slot is offered.
-        if (!deps.imageCapable) {
-          const noPicture = layouts.filter((l) => !(l.placeholders ?? []).some((ph) => ph.role === "picture"));
-          if (noPicture.length) layouts = noPicture;
-        }
+        const layouts = docLayouts?.length ? docLayouts : builtinMasterAndLayouts(size).layouts;
+        // Picture slots stay available on text-only providers: the image queue
+        // still resolves them via asset reuse and stock (no image provider
+        // needed) and quietly skips a miss (generateAllowed=false).
         if (layouts.length && (dt === "deck" || dt === "doc")) {
           const items = outline.pages;
           const ids = layouts.map((l) => l.id);
@@ -2482,11 +2519,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
             }
           };
           await Promise.all(Array.from({ length: Math.min(pool, items.length) }, worker));
-          const aspect = size.width >= size.height * 1.2 ? "landscape" : size.height >= size.width * 1.2 ? "portrait" : "square";
-          const imageSize = aspect === "landscape" ? "1792x1024" : aspect === "portrait" ? "1024x1792" : "1024x1024";
-          // A text-only provider gets no image tasks at all: a queued task
-          // could only fail and nag with a retry that can never succeed.
-          if (!deps.imageCapable) for (const f of fills) f.imagePrompts = {};
+          const { aspect, imageSize } = aspectAndImageSize(size);
           // Hero backgrounds for the impact pages (the T10 behavior): layout
           // grounding fills picture SLOTS, but most layouts have none, so the
           // cover/quote/closing pages keep their streamed hero backgrounds.
@@ -2520,6 +2553,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
               brandPalette: deps.brandPalette,
               brandFonts: deps.brandFonts,
               heroPlans,
+              generateAllowed: deps.imageCapable,
               workspaceId: deps.workspaceId,
               designId: deps.designId ?? null,
               append,
@@ -2533,8 +2567,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       // blocks on the image provider, and a failure never touches the deck.
       let heroPlans: { pageIndex: number; prompt: string; subject: string; size: string }[] = [];
       if (deps.imageCapable) {
-        const aspect = size.width >= size.height * 1.2 ? "landscape" : size.height >= size.width * 1.2 ? "portrait" : "square";
-        const sizeStr = aspect === "landscape" ? "1792x1024" : aspect === "portrait" ? "1024x1792" : "1024x1024";
+        const { aspect, imageSize: sizeStr } = aspectAndImageSize(size);
         heroPlans = outline.pages
           .map((p, i) => ({ p, i }))
           .filter(({ p }) => HERO_ROLES.has(p.visualRole))
@@ -2560,7 +2593,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
 // changed (or read) the document successfully. Runs inside runAsTurn so all
 // steps collapse into a single undo entry. Generative steps consume the payload
 // pre-resolved by resolvePlanStep.
-function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; payload?: ResolvedPayload }): boolean {
+function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; payload?: ResolvedPayload; brandFonts?: { heading?: string; body?: string } }): boolean {
   const st = useEditor.getState();
   const a = step.args;
   switch (step.action) {
@@ -2725,17 +2758,18 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       plans.forEach((plan, j) => {
         st.movePage(firstAppended + j, insertAt + j);
         st.applyLayoutToPage(agendaLayout.id, insertAt + j);
+        const liveBg = (st.doc.pages[insertAt + j] as unknown as { background?: unknown }).background;
         st.fillPlaceholderContent(insertAt + j, {
           texts: titleSlot ? { [titleSlot.id]: tr("editor.agenda") } : {},
           lists: contentSlot ? { [contentSlot.id]: plan.entries.map((e) => `${e.pageNumber}. ${e.title}`) } : {},
-        });
+        }, { styles: slotStylesFor(agendaLayout, ctx?.brandFonts, liveBg) });
       });
       st.goToPage(insertAt);
       return true;
     }
     case "regenerateSlide": {
       if (ctx?.payload?.kind !== "regenerateSlide") return false;
-      const { pageIndex, pageId, layoutId, layoutChanged, fill, imageTasks, imageSize, workspaceId, designId } = ctx.payload;
+      const { pageIndex, pageId, layoutId, layoutChanged, hadLayout, fill, imageTasks, imageSize, generateAllowed, workspaceId, designId } = ctx.payload;
       // The page must still be the one that was resolved (identity guard).
       const live = st.doc.pages[pageIndex] as unknown as { id: string; width: number; height: number } | undefined;
       if (!live || live.id !== pageId) return false;
@@ -2744,9 +2778,15 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
         // Prune the OLD layout's boxes for slots absent from the new layout, or
         // they would keep their stale content overlapping the new slots. Slots
         // present in both layouts keep their node ids (Magic Move contract).
-        st.applyLayoutToPage(layoutId, pageIndex, { pruneObsolete: true });
+        // An UNLINKED page (the user deliberately detached it) is never pruned:
+        // its tagged boxes are the user's arrangement, so the new layout only
+        // adds what is missing.
+        st.applyLayoutToPage(layoutId, pageIndex, { pruneObsolete: hadLayout });
       }
-      st.fillPlaceholderContent(pageIndex, { texts: fill.texts, lists: fill.lists });
+      const regenLayouts = (st.doc as unknown as { layouts?: SlideLayout[] }).layouts ?? [];
+      const regenBg = (st.doc.pages[pageIndex] as unknown as { background?: unknown }).background;
+      st.fillPlaceholderContent(pageIndex, { texts: fill.texts, lists: fill.lists },
+        { styles: slotStylesFor(regenLayouts.find((l) => l.id === layoutId), ctx?.brandFonts, regenBg) });
       enqueueAiImages(imageTasks.map((t) => ({
         workspaceId,
         designId: designId ?? "",
@@ -2755,6 +2795,7 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
         prompt: t.prompt,
         subject: t.subject,
         size: imageSize,
+        generateAllowed,
       })));
       st.goToPage(pageIndex);
       return true;
@@ -2767,12 +2808,29 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       // must still be the one that was split, or the wrong page gets deleted.
       if (!orig || orig.id !== pageId || halves.length !== 2) return false;
       st.ensureSlideLayouts({ width: orig.width, height: orig.height }); // inside the turn
+      // The halves' layouts must exist NOW (the async resolve may be stale):
+      // bail before anything is created or destroyed, or a failed layout link
+      // would leave two empty pages where the original's text used to be.
+      const available = new Set(((st.doc as unknown as { layouts?: SlideLayout[] }).layouts ?? []).map((l) => l.id));
+      if (!halves.every((h) => available.has(h.layoutId))) return false;
       const size = { width: orig.width, height: orig.height };
       // The split redistributes TEXT; everything else on the original slide
       // (charts, images, shapes) carries onto the first half instead of being
-      // silently discarded with the deleted page. Ids stay unique in the final
-      // document: the original page (the only other holder) is removed below.
-      const keepNodes = structuredClone((orig.children as { type: string }[]).filter((n) => n.type !== "text"));
+      // silently discarded with the deleted page. Carried nodes take FRESH ids
+      // (the original page exists alongside the halves until deletePage runs,
+      // and duplicated ids must never be observable, e.g. by a CRDT broadcast
+      // mid-turn) and DROP their placeholder tags: the tags belonged to the
+      // original page's layout, and a stale tag would both block the new
+      // layout's slot materialization and misdirect later slot-scoped fills.
+      const keepNodes = structuredClone((orig.children as { id: string; type: string; data?: { placeholderId?: string; aiImagePrompt?: string } }[]).filter((n) => n.type !== "text"));
+      for (const n of keepNodes) {
+        n.id = `node-${crypto.randomUUID()}`;
+        // The slot tag belonged to the ORIGINAL page's layout, and a prompt
+        // stamp on an untagged image would make applyGeneratedBackground
+        // mistake the carried image for a replaceable generated background.
+        if (n.data?.placeholderId) delete n.data.placeholderId;
+        if (n.data?.aiImagePrompt) delete n.data.aiImagePrompt;
+      }
       const deckLike = {
         title: "",
         pages: halves.map((h, j) => ({ name: h.name, background: structuredClone(orig.background), nodes: j === 0 ? keepNodes : [] })),
@@ -2781,10 +2839,13 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       if (ids.length !== 2) return false;
       st.deletePage(pageIndex); // the two halves REPLACE the original
       const firstAppended = st.doc.pages.length - 2;
+      const layoutsNow = (st.doc as unknown as { layouts?: SlideLayout[] }).layouts ?? [];
       halves.forEach((h, j) => {
         st.movePage(firstAppended + j, pageIndex + j);
         st.applyLayoutToPage(h.layoutId, pageIndex + j);
-        st.fillPlaceholderContent(pageIndex + j, { texts: h.fill.texts, lists: h.fill.lists });
+        const liveBg = (st.doc.pages[pageIndex + j] as unknown as { background?: unknown }).background;
+        st.fillPlaceholderContent(pageIndex + j, { texts: h.fill.texts, lists: h.fill.lists },
+          { styles: slotStylesFor(layoutsNow.find((l) => l.id === h.layoutId), ctx?.brandFonts, liveBg) });
       });
       st.goToPage(pageIndex);
       return true;
@@ -2792,13 +2853,20 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
     case "insertComparison": {
       if (ctx?.payload?.kind !== "insertComparison") return false;
       const { layoutId, name, fill, afterIndex, afterPageId } = ctx.payload;
-      // Re-anchor by id first (the doc may have changed during the async
-      // resolve); the index is only the fallback for an unmoved page.
-      const liveIndex = st.doc.pages.findIndex((p) => (p as unknown as { id: string }).id === afterPageId);
-      const anchor = liveIndex >= 0 ? liveIndex : Math.min(afterIndex, st.doc.pages.length - 1);
+      // Re-anchor by id, failing CLOSED like the sibling ops: the anchor page
+      // vanishing means the document changed under the async resolve (deleted
+      // page, or another design opened), and inserting anywhere else would
+      // mutate a document the user never aimed at.
+      void afterIndex; // superseded by the id anchor
+      const anchor = st.doc.pages.findIndex((p) => (p as unknown as { id: string }).id === afterPageId);
+      if (anchor < 0) return false;
       const ref = st.doc.pages[anchor] as unknown as { width: number; height: number; background?: unknown } | undefined;
       if (!ref) return false;
       st.ensureSlideLayouts({ width: ref.width, height: ref.height }); // inside the turn
+      // The layout must exist NOW (the async resolve may be stale): bail before
+      // the page appears, or a failed link would insert a silently blank slide.
+      const availableCmp = new Set(((st.doc as unknown as { layouts?: SlideLayout[] }).layouts ?? []).map((l) => l.id));
+      if (!availableCmp.has(layoutId)) return false;
       const deckLike = {
         title: "",
         pages: [{ name, background: structuredClone(ref.background), nodes: [] }],
@@ -2808,7 +2876,10 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       const to = anchor + 1;
       st.movePage(st.doc.pages.length - 1, to);
       st.applyLayoutToPage(layoutId, to);
-      st.fillPlaceholderContent(to, { texts: fill.texts, lists: fill.lists });
+      const cmpLayouts = (st.doc as unknown as { layouts?: SlideLayout[] }).layouts ?? [];
+      const liveBg = (st.doc.pages[to] as unknown as { background?: unknown }).background;
+      st.fillPlaceholderContent(to, { texts: fill.texts, lists: fill.lists },
+        { styles: slotStylesFor(cmpLayouts.find((l) => l.id === layoutId), ctx?.brandFonts, liveBg) });
       st.goToPage(to);
       return true;
     }
@@ -2818,27 +2889,22 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       // the placeholder boxes, and queue the picture-slot images. All inside
       // the caller's one-undo turn.
       if (ctx?.payload?.kind === "layoutDeck") {
-        const { deckTitle, pages, background, imageSize, size, brandPalette, brandFonts, heroPlans, workspaceId, designId, append } = ctx.payload;
+        const { deckTitle, pages, background, imageSize, size, brandPalette, brandFonts, heroPlans, generateAllowed, workspaceId, designId, append } = ctx.payload;
         st.ensureSlideLayouts(size); // sized to the generated pages, no-op when layouts exist
         const installed = (st.doc as unknown as { layouts?: SlideLayout[] }).layouts ?? [];
-        // Brand fonts + a background-readable ink applied per slot role: the
-        // materialized boxes carry the master's defaults, which would drop the
-        // Brand Kit typography and go unreadable on a dark theme background.
-        const bgFill = background as { type?: string; color?: Color; stops?: { color: Color }[] } | undefined;
-        const bgColor = bgFill?.type === "solid" ? bgFill.color : bgFill?.stops?.[0]?.color;
-        const dark = bgColor ? relativeLuminance(bgColor) < 0.45 : false;
-        const ink: Fill = { type: "solid", color: { srgb: dark ? { r: 0.97, g: 0.97, b: 0.97, a: 1 } : { r: 0.12, g: 0.14, b: 0.18, a: 1 } } };
+        const masters = (st.doc as unknown as { masters?: { id: string; background?: Fill }[] }).masters ?? [];
+        // Brand fonts + a background-readable ink per slot role, decided
+        // against the layout's EFFECTIVE background (applyLayoutToPage will
+        // overwrite the theme background when the layout or master carries
+        // one, so the ink must follow that, not the theme's).
         const stylesFor = (layoutId: string): Record<string, { fontFamily?: string; fill?: Fill }> => {
           const layout = installed.find((l) => l.id === layoutId);
-          const out: Record<string, { fontFamily?: string; fill?: Fill }> = {};
-          for (const ph of layout?.placeholders ?? []) {
-            if (ph.role !== "title" && ph.role !== "body" && ph.role !== "content") continue;
-            const fontFamily = ph.role === "title" ? brandFonts.heading : brandFonts.body;
-            out[ph.id] = { ...(fontFamily ? { fontFamily } : {}), fill: ink };
-          }
-          return out;
+          const effectiveBg = (layout as { background?: Fill } | undefined)?.background
+            ?? masters.find((m) => m.id === layout?.masterId)?.background
+            ?? background;
+          return slotStylesFor(layout, brandFonts, effectiveBg);
         };
-        const aspect = size.width >= size.height * 1.2 ? "landscape" : size.height >= size.width * 1.2 ? "portrait" : "square";
+        const { aspect } = aspectAndImageSize(size);
         const deckLike = {
           title: deckTitle,
           pages: pages.map((p) => ({ name: p.name, note: p.note, background, nodes: [] })),
@@ -2847,9 +2913,14 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
         const ids = append ? st.appendDeckPages(deckLike, size) : st.buildDeckFromOutline(deckLike, size);
         if (!ids.length) return false;
         const imageTasks: Parameters<typeof enqueueAiImages>[0] = [];
+        const availableIds = new Set(installed.map((l) => l.id));
         pages.forEach((p, i) => {
-          st.applyLayoutToPage(p.layoutId, base + i);
-          st.fillPlaceholderContent(base + i, { texts: p.fill.texts, lists: p.fill.lists }, { styles: stylesFor(p.layoutId) });
+          // The selection came from the async resolve; a since-removed layout
+          // falls back to any installed one rather than leaving a blank page.
+          const layoutId = availableIds.has(p.layoutId) ? p.layoutId : installed[0]?.id;
+          if (!layoutId) return;
+          st.applyLayoutToPage(layoutId, base + i);
+          st.fillPlaceholderContent(base + i, { texts: p.fill.texts, lists: p.fill.lists }, { styles: stylesFor(layoutId) });
           for (const [placeholderId, prompt] of Object.entries(p.fill.imagePrompts)) {
             imageTasks.push({
               workspaceId,
@@ -2859,6 +2930,7 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
               prompt: groundImagePrompt(prompt, { palette: brandPalette, aspect }),
               subject: prompt,
               size: imageSize,
+              generateAllowed,
             });
           }
         });
@@ -3073,7 +3145,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
           if (skips[i]) { results.push({ action: step.action, ok: false }); return; }
           let ok = false;
           try {
-            ok = runPlanStep(step, { brandTargets, payload: payloads[i] });
+            ok = runPlanStep(step, { brandTargets, payload: payloads[i], brandFonts });
           } catch {
             ok = false;
           }

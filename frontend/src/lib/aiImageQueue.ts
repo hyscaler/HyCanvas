@@ -30,6 +30,10 @@ export interface AiImageTask {
   /** When set, the image fills THIS placeholder slot (T12 picture roles)
    *  instead of becoming a full-bleed page background. */
   placeholderId?: string;
+  /** false = the provider cannot generate images: the reuse and stock steps
+   *  still run (they need no image provider), and a ladder miss SKIPS the
+   *  slot quietly instead of failing (a retry could never succeed). */
+  generateAllowed?: boolean;
 }
 
 export interface AiImageQueueEvent {
@@ -158,6 +162,9 @@ async function resolveTask(task: AiImageTask): Promise<boolean> {
     }
   }
   // 3. Generate, then tag the persisted asset with the prompt key for reuse.
+  // Gated HERE (the single choke point): text-only providers still get the
+  // reuse and stock steps above, and a miss is a quiet skip, not a failure.
+  if (!url && task.generateAllowed === false) return true;
   if (!url) {
     try {
       const { image } = await oc.aiImage({ workspaceId: task.workspaceId, prompt: task.prompt, size: task.size });
@@ -172,8 +179,11 @@ async function resolveTask(task: AiImageTask): Promise<boolean> {
   // Apply through the page-id-guarded store mutation; false = design changed
   // (or the user deleted the slot) - a late result never lands elsewhere.
   const st = useEditor.getState();
+  // Slot images are stamped with the RAW subject: regenerateSlide diffs the
+  // stamp against the model's next raw slot prompts, so stamping the grounded
+  // prompt would make every unchanged image look changed.
   const applied = task.placeholderId
-    ? st.applyGeneratedImageToPlaceholder(task.pageId, task.placeholderId, url, task.prompt)
+    ? st.applyGeneratedImageToPlaceholder(task.pageId, task.placeholderId, url, task.subject?.trim() ? task.subject : task.prompt)
     : st.applyGeneratedBackground(task.pageId, url, task.prompt);
   if (!applied) return true; // not a failure: the deck this belonged to is gone
   // Alt text in the same resolution step (best-effort; background images are

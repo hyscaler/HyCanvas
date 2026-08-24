@@ -2111,12 +2111,30 @@ export const useEditor = create<EditorState>((set, get) => {
         if (!phId || child.type !== "text" || !child.content?.length) continue;
         const text = fill.texts[phId];
         const list = fill.lists[phId];
-        if (text === undefined && list === undefined) continue;
+        const override = opts?.styles?.[phId];
+        if (text === undefined && list === undefined) {
+          // Style-only pass: a slot the fill leaves alone still needs the
+          // override (readable ink on a dark background, brand font) applied
+          // to its EXISTING content, or its placeholder text stays unreadable.
+          if (!override) continue;
+          const restyled = structuredClone(child.content).map((par) => ({
+            ...par,
+            runs: par.runs.map((r) => ({
+              ...r,
+              style: {
+                ...r.style,
+                ...(override.fontFamily ? { fontFamily: override.fontFamily } : {}),
+                ...(override.fill ? { fill: structuredClone(override.fill) } : {}),
+              },
+            })),
+          }));
+          targets.push({ nodeId: child.id, before: structuredClone(child.content), after: restyled });
+          continue;
+        }
         // Reuse the materialized box's own run/paragraph style so the fill
         // inherits the layout's typography, then apply any explicit override
         // (brand fonts, a readable ink for the theme background).
         const proto = child.content[0];
-        const override = opts?.styles?.[phId];
         const runStyle: Record<string, unknown> = {
           ...(proto.runs[0]?.style ?? {}),
           ...(override?.fontFamily ? { fontFamily: override.fontFamily } : {}),
@@ -2138,7 +2156,12 @@ export const useEditor = create<EditorState>((set, get) => {
         if (!live) return;
         for (const t of targets) {
           const node = live.children.find((n) => n.id === t.nodeId);
-          if (node) node.content = structuredClone(which === "after" ? t.after : t.before);
+          if (node) {
+            node.content = structuredClone(which === "after" ? t.after : t.before);
+            // Every content-mutation path clamps a fixed box to its content
+            // (the render never clips text); the fill honors the same rule.
+            refitTextHeight(node as unknown as Node);
+          }
         }
         get().tick();
       };
@@ -2251,14 +2274,28 @@ export const useEditor = create<EditorState>((set, get) => {
           .map((n) => (n.data as { placeholderId?: string } | undefined)?.placeholderId)
           .filter((v): v is string => !!v),
       );
+      // Layout rects are absolute, authored for some page size; on a page of a
+      // DIFFERENT size (mixed-size documents) materializing them verbatim
+      // overflows, so scale the rects down proportionally when the layout's
+      // extent exceeds this page. A same-size page scales by exactly 1.
+      const pageDims = doc.pages[idx] as unknown as { width: number; height: number };
+      let extentW = 0;
+      let extentH = 0;
+      for (const ph of layout.placeholders ?? []) {
+        extentW = Math.max(extentW, ph.rect.x + ph.rect.width);
+        extentH = Math.max(extentH, ph.rect.y + ph.rect.height);
+      }
+      const scaleX = extentW > pageDims.width && extentW > 0 ? pageDims.width / extentW : 1;
+      const scaleY = extentH > pageDims.height && extentH > 0 ? pageDims.height / extentH : 1;
       const made: Node[] = [];
       for (const ph of layout.placeholders ?? []) {
         if (have.has(ph.id)) continue;
+        const r = { x: ph.rect.x * scaleX, y: ph.rect.y * scaleY, width: ph.rect.width * scaleX, height: ph.rect.height * scaleY };
         made.push(createNode("text", {
           name: ph.role === "title" ? tr("app.title") : tr("app.text"),
-          transform: { x: ph.rect.x, y: ph.rect.y, scaleX: 1, scaleY: 1, rotation: 0 },
-          size: { width: ph.rect.width, height: ph.rect.height },
-          box: { mode: "fixed", width: ph.rect.width, height: ph.rect.height, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
+          transform: { x: r.x, y: r.y, scaleX: 1, scaleY: 1, rotation: 0 },
+          size: { width: r.width, height: r.height },
+          box: { mode: "fixed", width: r.width, height: r.height, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
           data: { placeholderId: ph.id },
           content: [{
             runs: [{ text: ph.role === "title" ? tr("app.title") : tr("app.text"), style: { fontFamily: "system", fontStyle: ph.role === "title" ? boldFontStyle : regularFontStyle, fontSize: ph.role === "title" ? 44 : 20, fill: { type: "solid", color: { srgb: { r: 0.12, g: 0.14, b: 0.18, a: 1 } } } } }],
