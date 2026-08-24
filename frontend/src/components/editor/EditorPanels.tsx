@@ -13,7 +13,7 @@ import { stickers, stickerCategories, type Sticker } from "@/lib/stickers";
 import { parseModelJson } from "@/lib/magicDesign";
 import {
   normalizeOutline, deckThemes, layoutDeck, groundImagePrompt, untrustedSourceRule,
-  sanitizeEditedOutline, dialsClause, dialDensities, dialTones, dialAudiences, dialScenarios,
+  sanitizeEditedOutline, dialsClause, dialDensities, dialTones, dialAudiences, dialScenarios, maxOutlinePages,
   type DesignOutline, type DesignType, type GenerationDials, type OutlineItem,
   toolCatalog, assistantSystemPrompt, parseAssistantReply, planMutates, summarizeDesign, type PlanStep,
 } from "@hc/aistudio";
@@ -1852,7 +1852,7 @@ type ResolvedPayload =
   | { kind: "diagram"; spec: DiagramSpec }
   | { kind: "clusters"; clusters: { title: string; ids: string[] }[] }
   | { kind: "summary"; text: string }
-  | { kind: "outline"; outline: DesignOutline; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroPlans: { pageIndex: number; prompt: string; size: string }[]; workspaceId: string; designId: string | null; append: boolean };
+  | { kind: "outline"; outline: DesignOutline; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroPlans: { pageIndex: number; prompt: string; subject: string; size: string }[]; workspaceId: string; designId: string | null; append: boolean };
 
 /** Parse a model reply that must be a JSON array of exactly `n` strings.
  *  Tolerates markdown fences; anything else (wrong shape, wrong length,
@@ -2209,25 +2209,32 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       const append = docHasContent(st.doc) ? requestedMode !== "replace" : requestedMode === "append";
       // A user-reviewed outline (T09) is final: use it directly instead of a
       // second model call. Otherwise fetch one as before.
-      const outline = deps.reviewedOutline
-        ? structuredClone(deps.reviewedOutline)
+      const reviewed = deps.reviewedOutline;
+      if (reviewed) deps.reviewedOutline = undefined; // consumed once: later steps fetch their own
+      const outline = reviewed
+        ? structuredClone(reviewed)
         : await fetchAssistantOutline(deps.workspaceId, dt, brief, brandClause, pageCount);
       if (!outline || !outline.pages.length) return { error: "couldn't plan that design" };
       // Defensive page cap (the server caps too, but the sync-fallback outline
       // and a non-compliant model can still over-produce): a poster is exactly
       // one page, and an explicit pageCount is a hard ceiling. This also bounds
       // the hero-image pass below so a single poster gets at most one image.
-      if (dt === "poster" && outline.pages.length > 1) {
-        const cover = outline.pages.find((p) => p.visualRole === "cover");
-        outline.pages = [cover ?? outline.pages[0]];
-      } else if (typeof pageCount === "number" && pageCount > 0 && outline.pages.length > pageCount) {
-        outline.pages = outline.pages.slice(0, pageCount);
+      // A REVIEWED outline is exempt: it guards against model over-production,
+      // and pages the user explicitly added in the review card are intentional
+      // (the review path already caps at maxOutlinePages via sanitize).
+      if (!reviewed) {
+        if (dt === "poster" && outline.pages.length > 1) {
+          const cover = outline.pages.find((p) => p.visualRole === "cover");
+          outline.pages = [cover ?? outline.pages[0]];
+        } else if (typeof pageCount === "number" && pageCount > 0 && outline.pages.length > pageCount) {
+          outline.pages = outline.pages.slice(0, pageCount);
+        }
       }
       // T10 placeholder-first: the pages land INSTANTLY and the hero images for
       // high-impact pages stream in behind through the resolution queue
       // (reuse -> stock -> generate). Only the prompts are planned here; nothing
       // blocks on the image provider, and a failure never touches the deck.
-      let heroPlans: { pageIndex: number; prompt: string; size: string }[] = [];
+      let heroPlans: { pageIndex: number; prompt: string; subject: string; size: string }[] = [];
       if (deps.imageCapable) {
         const aspect = size.width >= size.height * 1.2 ? "landscape" : size.height >= size.width * 1.2 ? "portrait" : "square";
         const sizeStr = aspect === "landscape" ? "1792x1024" : aspect === "portrait" ? "1024x1792" : "1024x1024";
@@ -2238,6 +2245,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
           .map(({ p, i }) => ({
             pageIndex: i,
             size: sizeStr,
+            subject: p.title,
             prompt: groundImagePrompt(
               `${outline.title}${p.title ? ` - ${p.title}` : ""}. ${outline.theme ?? ""}. A soft, uncluttered, low-contrast background with generous empty space so overlaid text stays readable. No text, no words, no logos in the image.`,
               { palette: deps.brandPalette, aspect },
@@ -2414,6 +2422,7 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
         designId: designId ?? "",
         pageId: ids[h.pageIndex],
         prompt: h.prompt,
+        subject: h.subject,
         size: h.size,
       })).filter((t) => !!t.pageId));
       st.goToPage(base); // land on the first new page (and scroll it into view)
@@ -2439,12 +2448,17 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   const runAsTurn = useEditor((s) => s.runAsTurn);
   const undo = useEditor((s) => s.undo);
   const designId = useComments((s) => s.designId); // current design (for persisted history)
+  const [input, setInput] = useState("");
+  const [turns, setTurns] = useState<ChatTurn[]>([]);
   // T10: image resolutions settle in the background; surface failures with a
   // retry chip (never a failed deck - the pages are already placed).
   const [failedImages, setFailedImages] = useState(0);
   useEffect(() => {
+    // Unsaved designs are queued under the empty-string key; subscribe and
+    // retry under the same key so their failures still surface.
+    const key = designId ?? "";
     return subscribeAiImageQueue((ev) => {
-      if (!designId || ev.designId !== designId) return;
+      if (ev.designId !== key) return;
       if (ev.failed > 0) {
         setFailedImages(ev.failed);
         setTurns((t) => [...t, { role: "assistant", text: tr("editor.n_images_couldnt_be_added", { count: ev.failed }) }]);
@@ -2455,8 +2469,6 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     // setTurns is stable (useState setter); re-subscribe only per design.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [designId]);
-  const [input, setInput] = useState("");
-  const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [busy, setBusy] = useState(false);
   // Attached source content for create-from-document/URL/file (FR-23).
   const [source, setSource] = useState<{ name: string; text: string } | null>(null);
@@ -2471,6 +2483,9 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   // (non-design plans); loading = outline still being fetched.
   const [review, setReview] = useState<{ outline: DesignOutline | null; loading: boolean; dials: GenerationDials } | null>(null);
   const reviewSeq = useRef(0);
+  // Monotonic id source for review-added outline items: a length-derived id
+  // collides after add-remove-add (same length twice) and duplicates React keys.
+  const reviewAddSeq = useRef(0);
   // FR-9/FR-27: persisted session id for this design (created lazily).
   const sessionRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -2919,7 +2934,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                   ))}
                   <div className="flex flex-wrap items-center gap-1.5">
                     <button
-                      onClick={() => editReviewOutline((pages) => pages.length >= 20 ? pages : [...pages, { id: `edit-${pages.length}-${pending?.plan.length ?? 0}-${review.outline!.pages.length}`, title: "", points: [], visualRole: "content" }])}
+                      onClick={() => editReviewOutline((pages) => pages.length >= maxOutlinePages ? pages : [...pages, { id: `edit-${++reviewAddSeq.current}`, title: "", points: [], visualRole: "content" }])}
                       className="rounded border border-neutral-300 px-2 py-0.5 hover:border-brand-300 hover:text-brand-ink"
                     >
                       <Plus size={10} className="inline" /> {tr("editor.add_page")}
@@ -2948,10 +2963,10 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       )}
 
       {/* T10: failed image resolutions offer a one-click retry. */}
-      {failedImages > 0 && designId && !busy && (
+      {failedImages > 0 && !busy && (
         <div className="mt-2 flex shrink-0 items-center gap-1.5">
           <button
-            onClick={() => { setFailedImages(0); retryFailedAiImages(designId); }}
+            onClick={() => { setFailedImages(0); retryFailedAiImages(designId ?? ""); }}
             className="rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-[11px] text-amber-800 hover:border-amber-400"
           >
             {tr("editor.retry_images", { count: failedImages })}

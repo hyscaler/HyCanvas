@@ -4725,7 +4725,25 @@ export const useEditor = create<EditorState>((set, get) => {
           if (ai >= 0) assets.splice(ai, 1);
         },
       );
-      if (typeof window !== "undefined") imageAssets.register(assetId, url);
+      // Patch the real natural dimensions once loaded so PPI/fit math is exact
+      // (same idiom as addPageBackgroundImage: resolve via the LIVE doc).
+      if (typeof window !== "undefined") {
+        imageAssets.register(assetId, url);
+        const off = imageAssets.onChange((changed) => {
+          if (changed !== assetId) return;
+          if (imageAssets.status(assetId) === "ready") {
+            const img = imageAssets.image(assetId) as { naturalWidth?: number; naturalHeight?: number } | null;
+            const loc = locate(get().doc, node.id);
+            const n = loc?.node.type === "image" ? (loc.node as unknown as { source: { naturalWidth: number; naturalHeight: number } }) : undefined;
+            if (img?.naturalWidth && n) {
+              n.source.naturalWidth = img.naturalWidth;
+              n.source.naturalHeight = img.naturalHeight ?? page.height;
+              get().tick();
+            }
+          }
+          off();
+        });
+      }
       return true;
     },
     addPageBackgroundImage: (url) => {

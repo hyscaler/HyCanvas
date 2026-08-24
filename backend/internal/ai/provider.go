@@ -431,7 +431,16 @@ func (s *Service) generateStructuredText(cfg CallConfig, prompt, system, schemaJ
 		if !isNegotiable4xx(err) {
 			return "", err
 		}
-		if raw, err = s.postJSON(buildTextRequest(cfg, prompt, system)); err != nil {
+		plain := buildTextRequest(cfg, prompt, system)
+		// Keep the structured-scale output budget on the fallback: the plain
+		// builder's conversational 1024-token Anthropic cap would truncate a
+		// whole-deck outline into unparseable JSON on every retry.
+		if cfg.Provider == ProviderAnthropic {
+			if body, ok := plain.body.(map[string]any); ok {
+				body["max_tokens"] = 4096
+			}
+		}
+		if raw, err = s.postJSON(plain); err != nil {
 			return "", err
 		}
 		return parseTextResponse(cfg.Provider, raw), nil

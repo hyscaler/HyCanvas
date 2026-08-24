@@ -309,7 +309,9 @@ func (s *Service) TextStructured(ctx context.Context, workspaceID, prompt, syste
 	if err != nil {
 		return "", err
 	}
-	if err := s.enforce(ctx, workspaceID, string(cfg.Provider), estimateTokens(prompt+system, 1024)); err != nil {
+	// Structured payloads carry a 4096-token output allowance (see the
+	// Anthropic dialect), so the policy estimate uses the same figure.
+	if err := s.enforce(ctx, workspaceID, string(cfg.Provider), estimateTokens(prompt+system, 4096)); err != nil {
 		return "", err
 	}
 	out, err := s.generateStructuredText(cfg, prompt, system, schemaJSON)

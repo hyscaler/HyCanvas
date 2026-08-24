@@ -81,7 +81,11 @@ func validationErrorList(err error) []string {
 func repairMessage(user, prev string, verrs []string) string {
 	if len(verrs) > maxRepairErrors {
 		rest := len(verrs) - maxRepairErrors
-		verrs = append(verrs[:maxRepairErrors], fmt.Sprintf("...and %d more validation errors.", rest))
+		// Copy before appending: append(verrs[:n], ...) would write into the
+		// caller's backing array, corrupting the slice it logs afterwards.
+		capped := make([]string, maxRepairErrors, maxRepairErrors+1)
+		copy(capped, verrs[:maxRepairErrors])
+		verrs = append(capped, fmt.Sprintf("...and %d more validation errors.", rest))
 	}
 	if len(prev) > maxRepairJSONChars {
 		prev = prev[:maxRepairJSONChars] + "\n... (truncated)"

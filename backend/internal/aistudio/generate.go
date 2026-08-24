@@ -102,7 +102,10 @@ func capOutlinePages(o *DesignOutline, designType string, pageCount int) {
 // Outline generates and validates a DesignOutline (FR-2).
 func (s *Service) Outline(ctx context.Context, workspaceID, designType, prompt, brandClause string, pageCount int) (*DesignOutline, error) {
 	user := fmt.Sprintf("Design type: %s\nBrief: %s", designType, strings.TrimSpace(prompt))
-	o, err := generateValidated(ctx, s, workspaceID, outlineSystem(designType, brandClause, pageCount), user, outlineSchema, true, validateOutline)
+	// Fail closed: validateOutline REPAIRS every imperfection except emptiness,
+	// so a tolerant final pass could only ever admit a zero-page outline - which
+	// no caller can use (the client normalizer rejects it too).
+	o, err := generateValidated(ctx, s, workspaceID, outlineSystem(designType, brandClause, pageCount), user, outlineSchema, false, validateOutline)
 	if err != nil {
 		return nil, err
 	}

@@ -347,19 +347,39 @@ func TestRepairLoopFeedsBackConcreteErrors(t *testing.T) {
 	}
 }
 
-// T07: an outline tolerates a parseable-but-invalid final pass (accept with a
-// warning) while an assistant plan stays fail-closed.
+// T07: the tolerant final pass accepts a parseable-but-invalid value with a
+// warning (tested directly: the wired callers are all fail-closed today, since
+// their validators self-repair everything short of unusability), while the
+// outline and assistant plan endpoints stay fail-closed.
 func TestRepairLoopToleranceByCaller(t *testing.T) {
-	// Outline: 4 parseable replies with zero usable pages -> accepted anyway.
+	// Direct tolerant call: a validator that always rejects still yields the
+	// parsed value on the final pass instead of an error.
+	reply := `{"title":"x"}`
+	gen0 := &stubGen{replies: []string{reply, reply, reply, reply}}
+	svc0 := NewService(nil, gen0)
+	type titled struct {
+		Title string `json:"title"`
+	}
+	v, err := generateValidated(context.Background(), svc0, "ws", "sys", "user", "", true, func(*titled) error {
+		return errors.New("always invalid")
+	})
+	if err != nil || v == nil || v.Title != "x" {
+		t.Fatalf("tolerant accept failed: v=%+v err=%v", v, err)
+	}
+	if gen0.calls != maxValidationPasses {
+		t.Fatalf("pass cap not respected: %d calls", gen0.calls)
+	}
+
+	// Outline: zero-page replies FAIL CLOSED (an empty outline is unusable and
+	// the client normalizer rejects it too; tolerance would only mask that).
 	empty := `{"title":"x","theme":"","pages":[]}`
 	gen := &stubGen{replies: []string{empty, empty, empty, empty}}
 	svc := NewService(nil, gen)
-	o, err := svc.Outline(context.Background(), "ws", "deck", "brief", "", 0)
-	if err != nil {
-		t.Fatalf("tolerant outline must accept on the last pass, got %v", err)
+	if _, err := svc.Outline(context.Background(), "ws", "deck", "brief", "", 0); !errors.Is(err, ErrInvalidOutput) {
+		t.Fatalf("empty outline must fail closed, got %v", err)
 	}
-	if len(o.Pages) != 0 || gen.calls != maxValidationPasses {
-		t.Fatalf("want empty outline after %d passes, got %d pages after %d calls", maxValidationPasses, len(o.Pages), gen.calls)
+	if gen.calls != maxValidationPasses {
+		t.Fatalf("outline pass cap not respected: %d calls", gen.calls)
 	}
 
 	// Assistant: 4 parseable replies whose every action is unknown -> fail closed.
@@ -389,6 +409,10 @@ func TestRepairMessageBudgets(t *testing.T) {
 	}
 	if strings.Contains(msg, "error 12") {
 		t.Error("overflow errors must be dropped, not listed")
+	}
+	// The cap must not write into the caller's backing array (append aliasing).
+	if errs[maxRepairErrors] != fmt.Sprintf("error %d", maxRepairErrors) {
+		t.Errorf("caller's slice corrupted by the cap: %q", errs[maxRepairErrors])
 	}
 }
 
