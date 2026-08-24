@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@hc/a11y": "*",
+    "@hc/aistudio": "*",
     "@hc/audio": "*",
     "@hc/authz": "*",
     "@hc/brandkit": "*",

@@ -43,7 +43,11 @@ type brandScan struct {
 	Fonts       []string
 }
 
-var hexColorRe = regexp.MustCompile(`#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b`)
+var hexColorRe = regexp.MustCompile(`#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b`)
+
+// A standalone "logo" token (word-ish boundaries), so logout/catalogo/dialogo
+// never qualify while acme-logo.svg and class="logo" do.
+var logoTokenRe = regexp.MustCompile(`(?:^|[^a-z])logo(?:[^a-z]|$)`)
 var fontFamilyRe = regexp.MustCompile("(?i)font-family\\s*:\\s*([^;}{]+)")
 
 // Families that mean "the platform default", not a brand choice.
@@ -57,6 +61,9 @@ func normalizeHex(h string) string {
 	h = strings.ToLower(h)
 	if len(h) == 4 { // #abc -> #aabbcc
 		return "#" + strings.Repeat(string(h[1]), 2) + strings.Repeat(string(h[2]), 2) + strings.Repeat(string(h[3]), 2)
+	}
+	if len(h) == 9 { // #rrggbbaa -> #rrggbb (the alpha byte is not a swatch)
+		return h[:7]
 	}
 	return h
 }
@@ -128,6 +135,12 @@ func resolveHTTP(base *url.URL, ref string) string {
 		return ""
 	}
 	if strings.HasPrefix(ref, "data:image/") {
+		// Cap inline candidates: a page can embed multi-MiB data URIs, and an
+		// uncapped one would balloon the JSON reply (the client uploads the
+		// chosen one as an asset, so small favicons still work end to end).
+		if len(ref) > 64*1024 {
+			return ""
+		}
 		return ref
 	}
 	u, err := base.Parse(ref)
@@ -174,8 +187,11 @@ func scanBrandHTML(raw []byte, base *url.URL) brandScan {
 		fontSeen[strings.ToLower(fam)] = true
 		*list = append(*list, fam)
 	}
-	var walk func(n *html.Node)
-	walk = func(n *html.Node) {
+	var walk func(n *html.Node, depth int)
+	walk = func(n *html.Node, depth int) {
+		if depth > 512 {
+			return // a hostile page of unclosed tags must not overflow the stack
+		}
 		if n.Type == html.ElementNode {
 			switch n.Data {
 			case "title":
@@ -211,15 +227,18 @@ func scanBrandHTML(raw []byte, base *url.URL) brandScan {
 						plainIcon = append(plainIcon, u)
 					}
 				case strings.Contains(rel, "stylesheet"):
-					for _, fam := range webfontFamilies(href) {
-						if strings.Contains(href, "fonts.googleapis.com") || strings.Contains(href, "fonts.bunny.net") {
-							addFont(&webfonts, fam)
+					if u, err := base.Parse(href); err == nil {
+						host := strings.ToLower(u.Hostname())
+						if host == "fonts.googleapis.com" || host == "fonts.bunny.net" {
+							for _, fam := range webfontFamilies(href) {
+								addFont(&webfonts, fam)
+							}
 						}
 					}
 				}
 			case "img":
 				hint := strings.ToLower(attr(n, "src") + " " + attr(n, "class") + " " + attr(n, "id") + " " + attr(n, "alt"))
-				if strings.Contains(hint, "logo") {
+				if logoTokenRe.MatchString(hint) {
 					if u := resolveHTTP(base, attr(n, "src")); u != "" {
 						logoImg = append(logoImg, u)
 					}
@@ -243,10 +262,10 @@ func scanBrandHTML(raw []byte, base *url.URL) brandScan {
 			}
 		}
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			walk(c)
+			walk(c, depth+1)
 		}
 	}
-	walk(doc)
+	walk(doc, 0)
 
 	// Palette: theme-color first (the site's own declaration), then observed
 	// hexes by frequency (first-seen order breaks ties deterministically).
@@ -367,6 +386,17 @@ func brandFromURLHandler(studio *aistudio.Service, acct *accounts.Service) http.
 		name := scan.Title
 		if name == "" {
 			name = base.Hostname()
+		}
+		// Empty buckets must serialize as [] (a nil slice marshals as JSON
+		// null, and the client types these as arrays).
+		if scan.LogoURLs == nil {
+			scan.LogoURLs = []string{}
+		}
+		if colors == nil {
+			colors = []string{}
+		}
+		if scan.Fonts == nil {
+			scan.Fonts = []string{}
 		}
 		writeJSON(w, http.StatusOK, map[string]any{
 			"name":     name,

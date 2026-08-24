@@ -9,7 +9,6 @@ package aistudio
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -52,8 +51,12 @@ func (s *Service) PickBrandColors(ctx context.Context, workspaceID, pageSummary 
 			seen[c] = true
 			out = append(out, c)
 		}
-		if len(out) == 0 {
-			return errors.New("no valid candidate colors selected")
+		need := 3
+		if len(candidates) < need {
+			need = len(candidates)
+		}
+		if len(out) < need {
+			return fmt.Errorf("selected %d valid candidate colors, need at least %d chosen from the observed list", len(out), need)
 		}
 		v.Colors = out
 		return nil

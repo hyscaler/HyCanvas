@@ -68,8 +68,15 @@ export function renderPageWithSlots(
   }
 }
 
-/** Run the vision correction over every unique layout in the set. Returns the
- *  (possibly) corrected layouts; `refined` says whether any pass ran. */
+/** Vision spend is bounded: at most this many UNIQUE layouts get the (up to
+ *  two-call) correction pass in one extraction; the rest keep the heuristics.
+ *  A 40-distinct-slide deck must not turn one click into 80 model calls. */
+const maxVisionLayouts = 10;
+
+/** Run the vision correction over every unique layout in the set (bounded by
+ *  maxVisionLayouts). Returns the corrected layouts; `refined` says whether
+ *  any pass ran. */
+
 export async function refineExtractedLayoutSet(
   workspaceId: string,
   file: DesignFile,
@@ -78,14 +85,16 @@ export async function refineExtractedLayoutSet(
   const out: ExtractedLayout[] = [];
   let refined = false;
   let providerDead = false; // a 502 means no vision model: stop asking
+  let visited = 0;
   for (const layout of set.layouts) {
     let current = layout;
     const pageIndex = layout.sourcePageIndexes[0];
     const page = file.pages[pageIndex];
-    if (!page || providerDead) {
+    if (!page || providerDead || visited >= maxVisionLayouts) {
       out.push(current);
       continue;
     }
+    visited++;
     // Round 1 corrects the heuristics; round 2 is the single self-review of
     // the corrected overlay. An empty corrections reply confirms and stops.
     for (let round = 0; round < 2; round++) {

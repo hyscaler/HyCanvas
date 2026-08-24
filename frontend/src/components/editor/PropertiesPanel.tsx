@@ -11,7 +11,7 @@ import type {
   TableConditionalRule, TableNode, TextEffect, Theme,
 } from "@hc/schema";
 import { themeFromPalette } from "@hc/schema";
-import { deriveThemeSlots, extractLayoutSet, repairThemeSlots, themeSlotNames, type ExtractedLayoutSet, type ExtractPageLike } from "@hc/aistudio";
+import { deriveThemeSlots, extractLayoutSet, repairThemeSlots, themeIdFor, themeSlotNames, type ExtractedLayoutSet, type ExtractPageLike } from "@hc/aistudio";
 import { refineExtractedLayoutSet } from "@/lib/layoutVision";
 import { colorHarmony, harmonySchemes, type HarmonyScheme, extractPalette, toHex } from "@hc/color";
 import { evalExpression, locate, rotateAboutPoint } from "@hc/editor";
@@ -2384,6 +2384,7 @@ function PageLayoutSection({ page, workspaceId }: { page: Page; workspaceId: str
   // heuristic result, so the pass can only improve the set.
   const extract = async () => {
     const live = useEditor.getState().doc;
+    const docId = live.id;
     const set = extractLayoutSet(live.pages as unknown as ExtractPageLike[]);
     if (!set.layouts.length) {
       toast.toast(tr("editor.no_layouts_could_be_extracted"), "info");
@@ -2393,8 +2394,12 @@ function PageLayoutSection({ page, workspaceId }: { page: Page; workspaceId: str
     if (workspaceId) {
       setExtracting(true);
       try {
+        // The vision pass renders against a FROZEN snapshot: the live doc
+        // mutates in place while the model calls run, and a reordered or
+        // deleted slide must not be judged as some layout's source page.
+        const frozen = structuredClone(live);
         const idsAt = live.pages.map((p) => p.id);
-        const { layouts: corrected } = await refineExtractedLayoutSet(workspaceId, live, set);
+        const { layouts: corrected } = await refineExtractedLayoutSet(workspaceId, frozen, set);
         // Pages may have been added, removed, or moved while the vision pass
         // ran: re-anchor the page links by page id before installing.
         const now = useEditor.getState().doc;
@@ -2409,7 +2414,15 @@ function PageLayoutSection({ page, workspaceId }: { page: Page; workspaceId: str
         setExtracting(false);
       }
     }
-    const result = useEditor.getState().extractLayoutsFromDeck(install);
+    // The awaits above may have outlived this document: never install layouts
+    // extracted from design A into design B, and never into a version-history
+    // preview (the store also refuses previews).
+    const st2 = useEditor.getState();
+    if (st2.doc.id !== docId || st2.preview) {
+      toast.toast(tr("editor.no_layouts_could_be_extracted"), "info");
+      return;
+    }
+    const result = st2.extractLayoutsFromDeck(install);
     if (!result) {
       toast.toast(tr("editor.no_layouts_could_be_extracted"), "info");
       return;
@@ -2532,7 +2545,11 @@ function DeckThemeSection() {
       mode,
     );
     const fonts = brandFontFamilies(brandKit);
-    const id = `theme-brand-${brandKit.id}`;
+    // The id hashes the DERIVED content, not just the kit: setDeckTheme
+    // no-ops on an unchanged id, and a kit whose colors changed since the
+    // last click must re-apply, while re-clicking an unchanged kit stays a
+    // clean no-op.
+    const id = themeIdFor(`theme-brand-${brandKit.id}`, [...themeSlotNames.map((slot) => slots[slot]), ...fonts]);
     st.setDeckTheme(
       themeFromPalette(id, themeSlotNames.map((slot) => ({ id: `${id}-${slot}`, name: slot, color: colorFromHex(slots[slot]) })), {
         name: brandKit.name,

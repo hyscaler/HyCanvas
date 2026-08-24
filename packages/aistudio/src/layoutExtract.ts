@@ -16,7 +16,7 @@
 // undo, and installation into the document.
 
 import { capacityForPlaceholder, type Fill, type Placeholder, type PlaceholderRole } from "@hc/schema";
-import { qualityCheck, type PageInput } from "./quality";
+import type { PageInput } from "./quality";
 
 /** The minimal shape of a page this extraction reads (a schema Page fits). */
 export interface ExtractPageLike {
@@ -33,6 +33,9 @@ export interface ExtractedLayout {
   background?: Fill;
   placeholders: Placeholder[];
   sourcePageIndexes: number[];
+  /** The dimensions the rects (and capacities) were derived against, so later
+   *  passes never have to re-find the source page in a mutated document. */
+  sourcePageSize: { width: number; height: number };
 }
 
 export interface ExtractedLayoutSet {
@@ -118,7 +121,19 @@ export function extractLayoutSet(pages: ExtractPageLike[]): ExtractedLayoutSet {
     const page = pages[pi];
     const nodes = (page.children as NodeLike[]).filter((n) => !n.hidden);
     const texts = nodes.filter((n) => n.type === "text" && rectOf(n) && (n.content?.length ?? 0) > 0);
-    const titleNode = texts.length ? texts.reduce((a, b) => (maxFontOf(b) > maxFontOf(a) ? b : a)) : null;
+    // Largest font wins; ties break by READING ORDER (top, then left), never
+    // by child z-order, so two identical pages whose children are stacked
+    // differently still pick the same title and dedupe.
+    const titleNode = texts.length
+      ? texts.reduce((a, b) => {
+          const fa = maxFontOf(a);
+          const fb = maxFontOf(b);
+          if (fb !== fa) return fb > fa ? b : a;
+          const ra = rectOf(a)!;
+          const rb = rectOf(b)!;
+          return rb.y < ra.y || (rb.y === ra.y && rb.x < ra.x) ? b : a;
+        })
+      : null;
 
     const slots: { role: PlaceholderRole; rect: { x: number; y: number; width: number; height: number } }[] = [];
     for (const n of nodes) {
@@ -138,7 +153,11 @@ export function extractLayoutSet(pages: ExtractPageLike[]): ExtractedLayoutSet {
     // Reading order (top-to-bottom, then left-to-right) keeps ids stable and
     // fills sensible.
     slots.sort((a, b) => a.rect.y - b.rect.y || a.rect.x - b.rect.x);
-    const signature = slots.map((s) => signatureCell(s.role, s.rect, page)).sort().join("|");
+    // Page dimensions lead the signature: rects are ABSOLUTE (from the source
+    // page) and applying a layout only scales DOWN, so proportionally equal
+    // pages of DIFFERENT sizes must stay separate layouts - collapsing them
+    // would materialize the smaller page's boxes miniature on the larger one.
+    const signature = `${page.width}x${page.height}|` + slots.map((s) => signatureCell(s.role, s.rect, page)).sort().join("|");
 
     const existing = bySignature.get(signature);
     if (existing !== undefined) {
@@ -157,6 +176,7 @@ export function extractLayoutSet(pages: ExtractPageLike[]): ExtractedLayoutSet {
       ...(page.background ? { background: page.background } : {}),
       placeholders,
       sourcePageIndexes: [pi],
+      sourcePageSize: { width: page.width, height: page.height },
     };
     bySignature.set(signature, layouts.length);
     assignments.push(layouts.length);
@@ -284,11 +304,13 @@ export function applyLayoutReview(
 // The T11 heuristic derives it from area alone, which over-promises on wide,
 // short boxes and on slots the vision pass re-roled. This pass simulates the
 // MAX fill in every text slot (the same conservative glyph-advance estimate
-// the layout engine uses), shrinks any capacity whose fill outgrows its box to
-// what actually fits, and then runs qualityCheck over the simulated page as
-// the final gate: a slot that still produces a NEW overflow/overlap at max
-// fill (relative to the layout's own baseline geometry) loses its capacity
-// hints entirely rather than shipping a false promise.
+// the layout engine uses) and shrinks any capacity whose fill outgrows its box
+// to what actually fits; a box too small for a single fill line loses its
+// hints entirely. Shrink-to-fit guarantees the qualityCheck invariant by
+// construction (a shrunk slot's estimated fill never exceeds its rect, so max
+// fill can never create a NEW overflow or overlap) - the invariant is pinned
+// by a test running qualityCheck over maxFillSimulationNodes, rather than by
+// an unreachable runtime gate.
 
 /** Font sizes the placeholder materialization uses per role, and the line
  *  height the estimate assumes (conservative, mirrors the layout engine). */
@@ -321,12 +343,32 @@ export function estimatedFillHeight(ph: Placeholder): number {
   return lines * lineH;
 }
 
-const issueKey = (i: { kind: string; nodeId: string; message: string }) => `${i.kind}:${i.nodeId}:${i.message}`;
+/**
+ * The geometry-only node list for a max-fill simulation of a layout: every
+ * slot at its rect, text slots grown to their estimated fill height. Feed it
+ * to qualityCheck to verify the shrink-to-fit invariant (tests do exactly
+ * that); shapes carry no text so the contrast check does not apply.
+ */
+export function maxFillSimulationNodes(placeholders: Placeholder[], opts: { grown: boolean }): PageInput["nodes"] {
+  return placeholders.map((ph) => ({
+    id: ph.id,
+    type: "shape",
+    transform: { x: ph.rect.x, y: ph.rect.y, scaleX: 1, scaleY: 1, rotation: 0 },
+    size: {
+      width: ph.rect.width,
+      height:
+        opts.grown && textCapacityRoles.has(ph.role) && ph.maxChars
+          ? Math.max(ph.rect.height, estimatedFillHeight(ph))
+          : ph.rect.height,
+    },
+  })) as unknown as PageInput["nodes"];
+}
 
 /**
  * Verify (and shrink) the capacity hints on one extracted layout against its
- * source page size. Deterministic: shrink-to-fit first, then the qualityCheck
- * gate; a slot that cannot honestly hold even one line loses its hints.
+ * source page size. Deterministic and idempotent: a slot whose max fill
+ * outgrows its box shrinks to what fits; a slot that cannot honestly hold
+ * even one line loses its hints.
  */
 export function verifyLayoutCapacities(layout: ExtractedLayout, page: { width: number; height: number }): ExtractedLayout {
   const hasTextCaps = layout.placeholders.some((p) => textCapacityRoles.has(p.role) && p.maxChars);
@@ -357,33 +399,6 @@ export function verifyLayoutCapacities(layout: ExtractedLayout, page: { width: n
     };
   });
 
-  // The qualityCheck gate: simulate every slot at its (possibly shrunken) max
-  // fill and compare against the layout's own baseline geometry, so slots that
-  // legitimately overlap by design are not punished - only NEW issues caused
-  // by the grown fill count, and those slots lose their hints.
-  const white: Fill = { type: "solid", color: { srgb: { r: 1, g: 1, b: 1, a: 1 } } } as Fill;
-  const background = layout.background ?? white;
-  const simulate = (grown: boolean) => ({
-    background,
-    size: page,
-    nodes: shrunk.map((ph) => ({
-      id: ph.id,
-      type: "shape", // geometry-only: the contrast check does not apply here
-      transform: { x: ph.rect.x, y: ph.rect.y, scaleX: 1, scaleY: 1, rotation: 0 },
-      size: {
-        width: ph.rect.width,
-        height: grown && textCapacityRoles.has(ph.role) && ph.maxChars ? Math.max(ph.rect.height, estimatedFillHeight(ph)) : ph.rect.height,
-      },
-    })) as unknown as PageInput["nodes"],
-  });
-  const baseline = new Set(qualityCheck(simulate(false)).issues.map(issueKey));
-  const grownIssues = qualityCheck(simulate(true)).issues.filter((i) => (i.kind === "overflow" || i.kind === "overlap") && !baseline.has(issueKey(i)));
-  if (!grownIssues.length && !changed) return layout;
-  const offenders = new Set(grownIssues.map((i) => i.nodeId));
-  const final = shrunk.map((ph) => {
-    if (!offenders.has(ph.id) || !textCapacityRoles.has(ph.role) || !ph.maxChars) return ph;
-    const { maxChars: _mc, minChars: _nc, minItems: _ni, maxItems: _xi, ...rest } = ph;
-    return rest as Placeholder;
-  });
-  return { ...layout, placeholders: final };
+  if (!changed) return layout;
+  return { ...layout, placeholders: shrunk };
 }

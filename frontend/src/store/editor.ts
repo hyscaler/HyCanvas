@@ -2112,23 +2112,27 @@ export const useEditor = create<EditorState>((set, get) => {
     },
 
     extractLayoutsFromDeck: (precomputed) => {
+      // Never mutate a version-history preview: the undo entry would capture
+      // the HISTORICAL doc's layouts/masters and a later undo on the live doc
+      // would overwrite current state with them.
+      if (get().preview) return null;
       const doc = get().doc as unknown as {
         masters?: { id: string; name?: string; placeholders: unknown[] }[];
         layouts?: { id: string; masterId: string; name: string; background?: Fill; placeholders: unknown[] }[];
         pages: Page[];
       };
-      const set = precomputed ?? extractLayoutSet(doc.pages as unknown as ExtractPageLike[]);
-      if (!set.layouts.length) return null;
+      // Named to avoid shadowing zustand's `set` parameter.
+      const extracted = precomputed ?? extractLayoutSet(doc.pages as unknown as ExtractPageLike[]);
+      if (!extracted.layouts.length) return null;
       const masterId = (doc.masters ?? [])[0]?.id ?? "master-default";
       const run = crypto.randomUUID().slice(0, 6);
-      const records = set.layouts.map((l, i) => {
-        // T20 stage 3: capacities are verified against the source page's size
-        // right before install - a hint that overflows at max fill shrinks to
-        // what fits (or is dropped), whether the set came from the heuristics
-        // here or from the vision-corrected path.
-        const src = doc.pages[l.sourcePageIndexes[0]] as unknown as { width?: number; height?: number } | undefined;
-        const dims = src?.width && src?.height ? { width: src.width, height: src.height } : doc.pages[0];
-        const verified = verifyLayoutCapacities(l, dims as { width: number; height: number });
+      const records = extracted.layouts.map((l, i) => {
+        // T20 stage 3: capacities are verified against the size the layout was
+        // EXTRACTED at (stamped on the layout, so a document mutated since
+        // extraction cannot mislead the math) - a hint that overflows at max
+        // fill shrinks to what fits (or is dropped), whether the set came from
+        // the heuristics here or from the vision-corrected path.
+        const verified = verifyLayoutCapacities(l, l.sourcePageSize);
         return {
           id: `layout-ext-${run}-${i + 1}`,
           masterId,
@@ -2143,8 +2147,8 @@ export const useEditor = create<EditorState>((set, get) => {
       // so re-running extraction never severs an existing cascade.
       const prevAssign = doc.pages.map((p) => (p as unknown as { layoutId?: string }).layoutId);
       let linked = 0;
-      for (let i = 0; i < set.assignments.length; i++) {
-        if (set.assignments[i] !== null && !prevAssign[i]) linked++;
+      for (let i = 0; i < extracted.assignments.length; i++) {
+        if (extracted.assignments[i] !== null && !prevAssign[i]) linked++;
       }
       perform(
         () => {
@@ -2155,7 +2159,7 @@ export const useEditor = create<EditorState>((set, get) => {
             live.masters = [...(live.masters ?? []), { id: masterId, name: tr("app.default_master"), placeholders: [] }];
           }
           live.layouts = [...(live.layouts ?? []), ...structuredClone(records)];
-          set.assignments.forEach((a, i) => {
+          extracted.assignments.forEach((a, i) => {
             const pg = live.pages[i] as unknown as { layoutId?: string } | undefined;
             if (a !== null && !prevAssign[i] && pg) pg.layoutId = records[a].id;
           });
@@ -2165,7 +2169,11 @@ export const useEditor = create<EditorState>((set, get) => {
           live.masters = prevMasters;
           live.layouts = prevLayouts;
           live.pages.forEach((p, i) => {
-            (p as unknown as { layoutId?: string }).layoutId = prevAssign[i];
+            const pg = p as unknown as { layoutId?: string };
+            // Restore exactly: a page that never had a link must not keep an
+            // explicit undefined-valued key.
+            if (prevAssign[i] === undefined) delete pg.layoutId;
+            else pg.layoutId = prevAssign[i];
           });
         },
       );
@@ -3897,9 +3905,15 @@ export const useEditor = create<EditorState>((set, get) => {
       // the new fonts by role. Exact matches only: a user's own colors and
       // fonts never match a theme slot and never move. Clearing the theme
       // leaves content untouched.
+      //
+      // Everything mutates IN PLACE, preserving page/node/fill identity: many
+      // other undo closures capture page or node references, and replacing
+      // doc.pages with clones would detach them (their undo/redo would then
+      // mutate dead objects). Undo/redo of THIS action restores per-page
+      // snapshots by page id, field-by-field into the existing page object.
       const pages = get().doc.pages;
-      const beforePages = theme && restyle ? structuredClone(pages) : null;
-      let pagesChanged = false;
+      const pageDiffs: { id: string; before: Page; after: Page }[] = [];
+      let pagesChanged = false; // per-page flag, reset per page below
       if (theme && restyle) {
         const rgbKey = (c: Color) => toHex({ srgb: { ...c.srgb, a: 1 } });
         const colorMap = new Map<string, Color>();
@@ -3919,26 +3933,36 @@ export const useEditor = create<EditorState>((set, get) => {
         if (before?.fontBody && theme.fontBody && before.fontBody !== theme.fontBody)
           fontMap.set(before.fontBody.toLowerCase(), theme.fontBody);
 
-        const mapColor = (c: Color | undefined): Color | undefined => {
-          if (!c) return c;
+        // Returns the replacement color, or null when the color maps to
+        // nothing (leave it untouched - identity preserved).
+        const mapColor = (c: Color | undefined): Color | null => {
+          if (!c) return null;
           const to = colorMap.get(rgbKey(c));
-          if (!to) return c;
+          if (!to) return null;
           pagesChanged = true;
           return { srgb: { ...to.srgb, a: c.srgb.a } }; // keep the painted alpha
         };
-        const mapFill = (fill: Fill | undefined): Fill | undefined => {
-          if (!fill) return fill;
+        // Remap a fill's colors IN PLACE (object identity preserved).
+        const mapFillInPlace = (fill: Fill | undefined): void => {
+          if (!fill) return;
           const f = fill as unknown as { type?: string; color?: Color; stops?: { color: Color }[] };
-          if (f.type === "solid" && f.color) return { ...fill, color: mapColor(f.color) } as Fill;
-          if (Array.isArray(f.stops))
-            return { ...fill, stops: f.stops.map((s) => ({ ...s, color: mapColor(s.color)! })) } as Fill;
-          return fill;
+          if (f.type === "solid" && f.color) {
+            const to = mapColor(f.color);
+            if (to) f.color = to;
+          } else if (Array.isArray(f.stops)) {
+            for (const st of f.stops) {
+              const to = mapColor(st.color);
+              if (to) st.color = to;
+            }
+          }
         };
 
         // Placeholder roles per page (ids repeat across layouts, so resolve
         // against each page's OWN layout, master placeholders included).
         const layoutById = new Map((doc.layouts ?? []).map((l) => [l.id, l]));
         for (const page of pages) {
+          const beforeSnap = structuredClone(page);
+          pagesChanged = false;
           const layout = layoutById.get((page as unknown as { layoutId?: string }).layoutId ?? "");
           const roleById = new Map<string, string>();
           if (layout) {
@@ -3947,7 +3971,7 @@ export const useEditor = create<EditorState>((set, get) => {
             for (const ph of layout.placeholders) roleById.set(ph.id, ph.role);
           }
           const pg = page as unknown as { background?: Fill };
-          if (pg.background) pg.background = mapFill(pg.background);
+          mapFillInPlace(pg.background);
           const applyNode = (n: Node) => {
             if (n.locked || editBlocked(n.id)) return;
             const rec = n as unknown as {
@@ -3957,10 +3981,13 @@ export const useEditor = create<EditorState>((set, get) => {
               content?: { runs: { style: { fill?: Fill; color?: Color; fontFamily?: string } }[] }[];
               children?: Node[];
             };
-            if (rec.fills) rec.fills = rec.fills.map((f) => mapFill(f)!) as Fill[];
+            for (const f of rec.fills ?? []) mapFillInPlace(f);
             if (rec.stroke) {
-              if (rec.stroke.fill) rec.stroke.fill = mapFill(rec.stroke.fill);
-              if (rec.stroke.color) rec.stroke.color = mapColor(rec.stroke.color);
+              mapFillInPlace(rec.stroke.fill);
+              if (rec.stroke.color) {
+                const to = mapColor(rec.stroke.color);
+                if (to) rec.stroke.color = to;
+              }
             }
             // Master-linked text adopts the new pair by role - but only where
             // the run still wears the OLD theme's font for that role (or none
@@ -3972,8 +3999,11 @@ export const useEditor = create<EditorState>((set, get) => {
             let fontChanged = false;
             for (const para of rec.content ?? [])
               for (const run of para.runs) {
-                if (run.style.fill) run.style.fill = mapFill(run.style.fill);
-                if (run.style.color) run.style.color = mapColor(run.style.color);
+                mapFillInPlace(run.style.fill);
+                if (run.style.color) {
+                  const to = mapColor(run.style.color);
+                  if (to) run.style.color = to;
+                }
                 const wearsOldRole = !run.style.fontFamily ||
                   (!!oldRoleFont && run.style.fontFamily.toLowerCase() === oldRoleFont.toLowerCase());
                 const target = (roleFont && wearsOldRole ? roleFont : undefined) ??
@@ -3988,16 +4018,31 @@ export const useEditor = create<EditorState>((set, get) => {
             for (const kid of rec.children ?? []) applyNode(kid);
           };
           for (const n of page.children) applyNode(n);
+          if (pagesChanged) {
+            pageDiffs.push({ id: (page as unknown as { id: string }).id, before: beforeSnap, after: structuredClone(page) });
+          }
         }
       }
-      const afterPages = pagesChanged ? structuredClone(get().doc.pages) : null;
-      if (beforePages && !pagesChanged) get().doc.pages = structuredClone(beforePages) as never; // undo identity churn
 
+      // Restore a snapshot INTO the existing page object (found by id), so
+      // the page's identity survives undo/redo and other closures' captured
+      // references stay live. Unknown keys ride along in the snapshots.
+      const restorePage = (id: string, snap: Page) => {
+        const livePage = get().doc.pages.find((p) => p.id === id) as unknown as Record<string, unknown> | undefined;
+        if (!livePage) return; // page deleted since: nothing to restore
+        const clone = structuredClone(snap) as unknown as Record<string, unknown>;
+        for (const k of Object.keys(livePage)) if (!(k in clone)) delete livePage[k];
+        Object.assign(livePage, clone);
+      };
+
+      // The pages are ALREADY in their after state (mutated in place above);
+      // the first forward run must not re-clone them, only redo does.
+      let firstRun = true;
       perform(
         () => {
           // Reuse the pure helper so the file-level swap (and master repointing)
           // stays in one place; then mirror it onto the live mutable doc.
-          const live = get().doc as unknown as { theme?: Theme; masters?: { theme?: string }[]; pages: Page[] };
+          const live = get().doc as unknown as { theme?: Theme; masters?: { theme?: string }[] };
           if (theme) {
             const next = applyTheme(get().doc, theme);
             live.theme = next.theme;
@@ -4005,13 +4050,14 @@ export const useEditor = create<EditorState>((set, get) => {
           } else {
             live.theme = undefined;
           }
-          if (afterPages) live.pages = structuredClone(afterPages) as never;
+          if (!firstRun) for (const d of pageDiffs) restorePage(d.id, d.after);
+          firstRun = false;
         },
         () => {
-          const live = get().doc as unknown as { theme?: Theme; masters?: { theme?: string }[]; pages: Page[] };
+          const live = get().doc as unknown as { theme?: Theme; masters?: { theme?: string }[] };
           live.theme = before;
           if (beforeMasters && live.masters) live.masters.forEach((m, i) => { m.theme = beforeMasters[i]; });
-          if (afterPages && beforePages) live.pages = structuredClone(beforePages) as never;
+          for (const d of pageDiffs) restorePage(d.id, d.before);
         },
       );
     },

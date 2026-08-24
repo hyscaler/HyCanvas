@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { applyLayoutReview, estimatedFillHeight, extractLayoutSet, layoutReviewInstruction, parseLayoutReview, verifyLayoutCapacities, type ExtractPageLike } from "../layoutExtract";
+import { applyLayoutReview, estimatedFillHeight, extractLayoutSet, layoutReviewInstruction, maxFillSimulationNodes, parseLayoutReview, verifyLayoutCapacities, type ExtractPageLike } from "../layoutExtract";
+import { qualityCheck } from "../quality";
 
 const PAGE = { width: 1920, height: 1080 };
 
@@ -184,6 +185,28 @@ describe("T20 stage 3: capacity verification", () => {
     const verified = verifyLayoutCapacities(tiny, PAGE_SIZE);
     expect(verified.placeholders[1].maxChars).toBeUndefined();
     expect(verified.placeholders[1].minChars).toBeUndefined();
+  });
+
+  it("qualityCheck invariant: max fill after verification adds no overflow or overlap", () => {
+    // The runtime relies on shrink-to-fit guaranteeing this; qualityCheck is
+    // the independent judge here, over adversarial geometries.
+    const adversarial = [
+      [text(100, 80, 1700, 150, 54), text(100, 300, 400, 60, 14, 4)], // over-promising short box
+      [text(100, 80, 400, 40, 30), text(120, 130, 380, 50, 12, 5), text(520, 130, 380, 50, 12, 5)], // tight neighbors
+      [text(100, 900, 1700, 170, 24, 6)], // bottom-edge region
+    ];
+    for (const children of adversarial) {
+      const layout = extractLayoutSet([page(children)]).layouts[0];
+      const verified = verifyLayoutCapacities(layout, PAGE_SIZE);
+      const bg = { type: "solid", color: { srgb: { r: 1, g: 1, b: 1, a: 1 } } };
+      const key = (i: { kind: string; nodeId: string; message: string }) => `${i.kind}:${i.nodeId}:${i.message}`;
+      const baseline = new Set(
+        qualityCheck({ background: bg as never, size: PAGE_SIZE, nodes: maxFillSimulationNodes(verified.placeholders, { grown: false }) }).issues.map(key),
+      );
+      const grown = qualityCheck({ background: bg as never, size: PAGE_SIZE, nodes: maxFillSimulationNodes(verified.placeholders, { grown: true }) }).issues
+        .filter((i) => (i.kind === "overflow" || i.kind === "overlap") && !baseline.has(key(i)));
+      expect(grown).toEqual([]);
+    }
   });
 
   it("is idempotent: verifying a verified layout changes nothing", () => {

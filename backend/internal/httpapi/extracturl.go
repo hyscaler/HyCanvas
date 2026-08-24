@@ -241,8 +241,11 @@ func htmlToText(raw []byte) (title, text string) {
 	var b strings.Builder
 	skip := map[string]bool{"script": true, "style": true, "noscript": true, "nav": true, "header": true, "footer": true, "aside": true, "template": true, "svg": true, "iframe": true}
 	block := map[string]bool{"p": true, "div": true, "section": true, "article": true, "li": true, "h1": true, "h2": true, "h3": true, "h4": true, "h5": true, "h6": true, "tr": true, "br": true, "blockquote": true, "pre": true}
-	var walk func(n *html.Node)
-	walk = func(n *html.Node) {
+	var walk func(n *html.Node, depth int)
+	walk = func(n *html.Node, depth int) {
+		if depth > 512 {
+			return // a hostile page of unclosed tags must not overflow the stack
+		}
 		if n.Type == html.ElementNode {
 			if skip[n.Data] {
 				return
@@ -259,13 +262,13 @@ func htmlToText(raw []byte) (title, text string) {
 			}
 		}
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			walk(c)
+			walk(c, depth+1)
 		}
 		if n.Type == html.ElementNode && block[n.Data] {
 			b.WriteString("\n")
 		}
 	}
-	walk(doc)
+	walk(doc, 0)
 	// Collapse runaway blank lines.
 	lines := strings.Split(b.String(), "\n")
 	out := make([]string, 0, len(lines))

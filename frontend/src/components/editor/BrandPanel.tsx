@@ -1193,12 +1193,20 @@ function BrandFromWebsite({
 
   const fetchDraft = async () => {
     const target = url.trim();
-    if (!target) return;
+    if (!target || busy) return; // Enter fires this too; never stack scans
     setBusy(true);
     try {
       const d = await oc.aiBrandFromUrl({ workspaceId, url: /^https?:\/\//i.test(target) ? target : `https://${target}` });
-      setDraft(d);
-      setLogoChoice(d.logoUrls[0] ?? null);
+      // Normalize defensively: a missing bucket must be an array, or every
+      // .length/.map below throws mid-render.
+      const clean = {
+        name: d.name ?? "",
+        logoUrls: Array.isArray(d.logoUrls) ? d.logoUrls : [],
+        colors: Array.isArray(d.colors) ? d.colors : [],
+        fonts: Array.isArray(d.fonts) ? d.fonts : [],
+      };
+      setDraft(clean);
+      setLogoChoice(clean.logoUrls[0] ?? null);
     } catch (e) {
       toast.error(userMessage(e, tr("editor.couldnt_draft_a_brand_from_that_site")));
     } finally {
@@ -1212,14 +1220,22 @@ function BrandFromWebsite({
     const defaultFam = "Inter"; // i18n-ignore: a font family name, not UI text
     const headingFam = draft.fonts[0] ?? defaultFam;
     const bodyFam = draft.fonts[1] ?? draft.fonts[0] ?? defaultFam;
+    let created: BrandKit | null = null;
     try {
       // The logo imports through the server (asset pipeline + its own SSRF
-      // gate); a failed import just means a kit without a logo.
+      // gate); an inline data-URI candidate (a data favicon) uploads its bytes
+      // directly instead, since the URL importer is http(s)-only. A failed
+      // import just means a kit without a logo.
       let logoAssetId: string | null = null;
-      if (logoChoice) {
+      if (logoChoice?.startsWith("data:image/")) {
+        const b64 = logoChoice.split(",")[1] ?? "";
+        logoAssetId = b64
+          ? await oc.uploadAsset(workspaceId, { filename: "logo", dataBase64: b64 }).then((a) => a.id, () => null)
+          : null;
+      } else if (logoChoice) {
         logoAssetId = await oc.importAssetFromUrl(workspaceId, logoChoice).then((a) => a.id, () => null);
       }
-      const created = await oc.createBrandKit(workspaceId, { name: draft.name.slice(0, 80) || tr("editor.brand_from_website") });
+      created = await oc.createBrandKit(workspaceId, { name: draft.name.slice(0, 80) || tr("editor.brand_from_website") });
       const filled = await oc.updateBrandKit(created.id, {
         palettes: draft.colors.length
           ? [{
@@ -1246,6 +1262,10 @@ function BrandFromWebsite({
       setUrl("");
       toast.success(tr("editor.brand_kit_created_from_website"));
     } catch (e) {
+      // Roll back a half-made kit: without this, a failed fill leaves an
+      // empty kit that also hides this whole flow (it only shows when the
+      // workspace has no kits), so a retry would be impossible.
+      if (created) await oc.deleteBrandKit(created.id).catch(() => {});
       toast.error(userMessage(e, tr("editor.couldnt_create_that_brand_kit")));
     } finally {
       setCreating(false);
@@ -1295,7 +1315,18 @@ function BrandFromWebsite({
                   className={`rounded border p-0.5 ${logoChoice === u ? "border-brand-500 ring-2 ring-brand-100" : "border-neutral-200"}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={u} alt="" className="h-8 w-8 rounded object-contain" />
+                  <img
+                    src={u}
+                    alt=""
+                    className="h-8 w-8 rounded object-contain"
+                    onError={(e) => {
+                      // A broken candidate (404, mixed content) is useless:
+                      // hide its button and drop it as the selection.
+                      const btn = e.currentTarget.closest("button");
+                      if (btn) btn.style.display = "none";
+                      setLogoChoice((cur) => (cur === u ? null : cur));
+                    }}
+                  />
                 </button>
               ))}
             </div>

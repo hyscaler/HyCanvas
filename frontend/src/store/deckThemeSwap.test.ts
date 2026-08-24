@@ -151,6 +151,39 @@ describe("setDeckTheme remap (T19)", () => {
     expect(page().background!.color.srgb).toEqual(RED.srgb);
   });
 
+  it("a prior edit's undo survives a no-match theme swap (identity preserved)", () => {
+    // Nothing on the page wears a slot color: the swap must not churn page or
+    // node identity, or the earlier edit's captured-reference closure would
+    // mutate a detached object.
+    const st = useEditor.getState();
+    const p0 = page();
+    p0.background = { type: "solid", color: c(0.42, 0.13, 0.37) } as never; // USER color, no slot match
+    const beforeChildren = p0.children;
+    st.setPageBackground({ type: "solid", color: c(0, 0.5, 0) } as never);
+    st.setDeckTheme({ ...structuredClone(newTheme), colors: [{ id: "n-0", name: "primary", color: c(0.9, 0.9, 0.1) }] });
+    expect(page().children).toBe(beforeChildren); // no identity churn
+    useEditor.getState().undo(); // theme swap
+    useEditor.getState().undo(); // background edit
+    expect(page().background!.color.srgb).toEqual({ r: 0.42, g: 0.13, b: 0.37, a: 1 });
+  });
+
+  it("an edit made after a matching swap survives an undo+redo round trip", () => {
+    // Redo of the swap must restore INTO the existing page objects (by id),
+    // never re-clone them, or the later edit's redo mutates a detached page.
+    const st = useEditor.getState();
+    st.setDeckTheme(structuredClone(newTheme)); // remaps RED
+    expect(page().background!.color.srgb).toEqual(BLUE.srgb);
+    useEditor.getState().setPageBackground({ type: "solid", color: GREEN } as never);
+    expect(page().background!.color.srgb).toEqual(GREEN.srgb);
+    useEditor.getState().undo(); // background edit
+    useEditor.getState().undo(); // theme swap
+    expect(page().background!.color.srgb).toEqual(RED.srgb);
+    useEditor.getState().redo(); // theme swap
+    expect(page().background!.color.srgb).toEqual(BLUE.srgb);
+    useEditor.getState().redo(); // background edit
+    expect(page().background!.color.srgb).toEqual(GREEN.srgb);
+  });
+
   it("swapping between different slot counts remaps the shared prefix", () => {
     const wide: Theme = {
       id: "t-wide",
