@@ -1852,7 +1852,7 @@
   "editor.reconnecting": "Wird neu verbunden",
   "editor.record_a_voiceover_the_timeline_plays_from_t": "Voiceover aufnehmen: Die Zeitleiste läuft ab dem Abspielkopf, während Sie sprechen, dann wird die Aufnahme als Audioclip eingefügt",
   "editor.record_screen": "Bildschirm aufnehmen",
-  "editor.record_the_presentation_slides_ink_narration": "Präsentation aufnehmen: Folien + Tinte + Erzählung",
+  "editor.record_the_presentation_slides_ink_narration": "Präsentation aufnehmen: Folien + Stift + Kommentar + optionale Kamera",
   "editor.record_voice": "Stimme aufnehmen",
   "editor.record_webcam": "Webcam aufnehmen",
   "editor.recording": "Aufnahme",
@@ -3468,5 +3468,6 @@
   "errors.api_brand_from_url_failed": "Diese Website konnte nicht abgerufen werden.",
   "errors.api_brand_page_status": "Die Website hat eine Fehlerseite zurückgegeben.",
   "errors.api_brand_url_not_html": "Diese URL ist keine Webseite.",
-  "editor.acme_com": "acme.com"
+  "editor.acme_com": "acme.com",
+  "editor.drag_to_move_the_camera_bubble": "Ziehen, um die Kamerablase zu verschieben"
 }

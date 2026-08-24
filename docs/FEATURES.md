@@ -69,6 +69,8 @@ A living checklist of what ships today versus what is planned. Shipped items are
 - [x] Deck themes end to end: 13 curated seed themes, create-theme-from-brand-kit, AI generateTheme (strict hex/font validation, deterministic OKLCH contrast repair), generation stamps its visual system as the file theme, and a theme swap restyles exactly what the previous theme painted in one undo step
 - [x] Extract layouts from a deck: heuristic slot decomposition with capacity hints, near-identical page dedupe, optional vision role correction (one self-review pass, heuristic fallback), capacity verification against simulated max fill (qualityCheck-gated)
 - [x] Brand kit draft from a company domain: SSRF-gated page scan (logo candidates, frequency-ranked palette with an observed-colors-only model re-rank, webfont-first font guesses) behind an explicit confirm step; the chosen logo imports as a workspace asset
+- [x] PPTX fidelity golden set: regression fixtures pinning gradient fills with stops, the weight-600 bold threshold, decorated runs, group flattening vs rotated-group rasterization, explicit crops via srcRect, multi-paragraph notes, z-order, chOff/chExt group scaling, and the no-silent-drop placeholder rule
+- [x] Present-and-record camera bubble: optional webcam (declining keeps slides+ink+narration), draggable preview whose position drives the composite, cover-cropped rounded-rect bubble drawn over slide + ink, fully client-side
 
 ### Export and publishing
 - [x] Export: PNG/JPG/PDF/SVG/APNG/GIF/Lottie, size multipliers, page selection, zip

@@ -1852,7 +1852,7 @@
   "editor.reconnecting": "再接続中",
   "editor.record_a_voiceover_the_timeline_plays_from_t": "ナレーションを録音:話している間タイムラインが再生ヘッドから再生され、テイクがオーディオクリップとして追加されます",
   "editor.record_screen": "画面を録画",
-  "editor.record_the_presentation_slides_ink_narration": "プレゼンを録画:スライド+インク+ナレーション",
+  "editor.record_the_presentation_slides_ink_narration": "プレゼンテーションを録画：スライド＋インク＋ナレーション＋カメラ（任意）",
   "editor.record_voice": "音声を録音",
   "editor.record_webcam": "ウェブカメラを録画",
   "editor.recording": "録画中",
@@ -3468,5 +3468,6 @@
   "errors.api_brand_from_url_failed": "そのウェブサイトを取得できませんでした。",
   "errors.api_brand_page_status": "ウェブサイトがエラーページを返しました。",
   "errors.api_brand_url_not_html": "そのURLはウェブページではありません。",
-  "editor.acme_com": "acme.com"
+  "editor.acme_com": "acme.com",
+  "editor.drag_to_move_the_camera_bubble": "ドラッグしてカメラバブルを移動"
 }

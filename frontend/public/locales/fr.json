@@ -1852,7 +1852,7 @@
   "editor.reconnecting": "Reconnexion",
   "editor.record_a_voiceover_the_timeline_plays_from_t": "Enregistrez une voix off : la chronologie joue depuis la tête de lecture pendant que vous narrez, puis la prise s'insère comme clip audio",
   "editor.record_screen": "Enregistrer l'écran",
-  "editor.record_the_presentation_slides_ink_narration": "Enregistrer la présentation : diapositives + encre + narration",
+  "editor.record_the_presentation_slides_ink_narration": "Enregistrer la présentation : diapositives + encre + narration + caméra en option",
   "editor.record_voice": "Enregistrer la voix",
   "editor.record_webcam": "Enregistrer la webcam",
   "editor.recording": "Enregistrement",
@@ -3468,5 +3468,6 @@
   "errors.api_brand_from_url_failed": "Ce site web n'a pas pu être récupéré.",
   "errors.api_brand_page_status": "Le site web a renvoyé une page d'erreur.",
   "errors.api_brand_url_not_html": "Cette URL n'est pas une page web.",
-  "editor.acme_com": "acme.com"
+  "editor.acme_com": "acme.com",
+  "editor.drag_to_move_the_camera_bubble": "Faites glisser pour déplacer la bulle de caméra"
 }

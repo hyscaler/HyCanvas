@@ -94,6 +94,64 @@ import {
   type SlideLike,
   type ZoomTransform,
 } from "@/lib/present";
+
+/** Composite the webcam bubble onto the recording canvas: 16:9 at one sixth of
+ *  the canvas width, positioned by the draggable preview's normalized offset,
+ *  cover-cropped into a rounded rect with a white border. The cover-crop and
+ *  rounded-rect clip math is closely adapted from an MIT-licensed reference
+ *  (see THIRD_PARTY.md). Drawn AFTER the slide and the ink overlay, so the
+ *  bubble records exactly where the presenter sees it (F28 T22). */
+function drawCameraBubble(
+  ctx: CanvasRenderingContext2D,
+  video: HTMLVideoElement,
+  cw: number,
+  ch: number,
+  pos: { x: number; y: number },
+): void {
+  if (video.readyState < 2 || !video.videoWidth || !video.videoHeight) return;
+  const bw = Math.round(cw / 6);
+  const bh = Math.round((bw * 9) / 16);
+  const margin = Math.round(cw * 0.02);
+  const x = Math.round(margin + pos.x * Math.max(0, cw - bw - margin * 2));
+  const y = Math.round(margin + pos.y * Math.max(0, ch - bh - margin * 2));
+  const r = Math.round(bh * 0.15);
+  // Cover-crop: center-crop the camera frame to the bubble's aspect.
+  const videoAspect = video.videoWidth / video.videoHeight;
+  const targetAspect = bw / bh;
+  let sx = 0;
+  let sy = 0;
+  let sw = video.videoWidth;
+  let sh = video.videoHeight;
+  if (videoAspect > targetAspect) {
+    sw = video.videoHeight * targetAspect;
+    sx = (video.videoWidth - sw) / 2;
+  } else {
+    sh = video.videoWidth / targetAspect;
+    sy = (video.videoHeight - sh) / 2;
+  }
+  const path = () => {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + bw - r, y);
+    ctx.quadraticCurveTo(x + bw, y, x + bw, y + r);
+    ctx.lineTo(x + bw, y + bh - r);
+    ctx.quadraticCurveTo(x + bw, y + bh, x + bw - r, y + bh);
+    ctx.lineTo(x + r, y + bh);
+    ctx.quadraticCurveTo(x, y + bh, x, y + bh - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  };
+  ctx.save();
+  path();
+  ctx.clip();
+  ctx.drawImage(video, sx, sy, sw, sh, x, y, bw, bh);
+  ctx.restore();
+  path();
+  ctx.lineWidth = Math.max(2, Math.round(cw / 640));
+  ctx.strokeStyle = "#ffffff";
+  ctx.stroke();
+}
 import { tr } from "@/lib/i18n";
 
 // The active presenter magic tool (FR-8). At most one pointer tool is active at a
@@ -370,7 +428,66 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
   // user grants it (declining still records video-only), and save a .webm on
   // stop. Everything is client-side MediaRecorder; nothing uploads.
   const [recording, setRecording] = useState(false);
-  const recRef = useRef<{ rec: MediaRecorder; raf: number; stream: MediaStream; audio: MediaStream | null } | null>(null);
+  const recRef = useRef<{ rec: MediaRecorder; raf: number; stream: MediaStream; audio: MediaStream | null; cam: MediaStream | null } | null>(null);
+  // Camera bubble (T22): the visible draggable preview doubles as the
+  // compositing source. Its position is normalized (0..1 of the slide's free
+  // area) so the preview and the recorded bubble stay in lockstep.
+  const [camStream, setCamStream] = useState<MediaStream | null>(null);
+  const camPreviewRef = useRef<HTMLVideoElement>(null);
+  const camPosRef = useRef({ x: 1, y: 1 }); // default: bottom-right
+  const positionCamPreview = useCallback(() => {
+    const v = camPreviewRef.current;
+    const cv = canvasRef.current;
+    const wrap = wrapRef.current;
+    if (!v || !cv || !wrap) return;
+    const c = cv.getBoundingClientRect();
+    const w0 = wrap.getBoundingClientRect();
+    const bw = c.width / 6;
+    const bh = (bw * 9) / 16;
+    const margin = c.width * 0.02;
+    v.style.width = `${bw}px`;
+    v.style.height = `${bh}px`;
+    v.style.left = `${c.left - w0.left + margin + camPosRef.current.x * Math.max(0, c.width - bw - margin * 2)}px`;
+    v.style.top = `${c.top - w0.top + margin + camPosRef.current.y * Math.max(0, c.height - bh - margin * 2)}px`;
+  }, []);
+  // Attach the stream once the preview element exists, and keep it placed
+  // through window resizes.
+  useEffect(() => {
+    const v = camPreviewRef.current;
+    if (!v || !camStream) return;
+    v.srcObject = camStream;
+    void v.play().catch(() => {});
+    positionCamPreview();
+    const onResize = () => positionCamPreview();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [camStream, positionCamPreview]);
+  const onCamDragStart = useCallback((e: React.PointerEvent<HTMLVideoElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const el = e.currentTarget;
+    el.setPointerCapture(e.pointerId);
+    const move = (ev: PointerEvent) => {
+      const cv = canvasRef.current;
+      if (!cv) return;
+      const c = cv.getBoundingClientRect();
+      const bw = c.width / 6;
+      const bh = (bw * 9) / 16;
+      const margin = c.width * 0.02;
+      camPosRef.current = {
+        x: Math.max(0, Math.min(1, (ev.clientX - c.left - margin - bw / 2) / Math.max(1, c.width - bw - margin * 2))),
+        y: Math.max(0, Math.min(1, (ev.clientY - c.top - margin - bh / 2) / Math.max(1, c.height - bh - margin * 2))),
+      };
+      positionCamPreview();
+    };
+    const up = (ev: PointerEvent) => {
+      el.releasePointerCapture(ev.pointerId);
+      el.removeEventListener("pointermove", move);
+      el.removeEventListener("pointerup", up);
+    };
+    el.addEventListener("pointermove", move);
+    el.addEventListener("pointerup", up);
+  }, [positionCamPreview]);
   // Set while start-up is in flight (the mic permission prompt can sit open for
   // as long as the user ignores it) and cleared on unmount. Without it a second
   // click starts a second pipeline that the first recRef write orphans, and an
@@ -404,6 +521,9 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
       const ov = overlayRef.current;
       if (sl) cctx.drawImage(sl, 0, 0, comp.width, comp.height);
       if (ov && ov.width > 0) cctx.drawImage(ov, 0, 0, comp.width, comp.height);
+      // Camera bubble last, so it records over slide + ink (T22).
+      const camEl = camPreviewRef.current;
+      if (camEl) drawCameraBubble(cctx, camEl, comp.width, comp.height, camPosRef.current);
       raf = requestAnimationFrame(draw);
     };
     draw();
@@ -413,14 +533,24 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
     } catch {
       audio = null; // no mic permission: record the slides silently
     }
+    // Optional camera (T22): granting it puts a draggable bubble on the
+    // recording; declining keeps today's slides+ink+narration behavior.
+    let cam: MediaStream | null = null;
+    try {
+      cam = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } } });
+    } catch {
+      cam = null;
+    }
     recStartingRef.current = false;
     // Present mode may have closed while the permission prompt was open. Drop
     // everything we just acquired rather than recording into a dead component.
     if (!presentAliveRef.current) {
       cancelAnimationFrame(raf);
       audio?.getTracks().forEach((t) => t.stop());
+      cam?.getTracks().forEach((t) => t.stop());
       return;
     }
+    if (cam) setCamStream(cam);
     const stream = comp.captureStream(30);
     if (audio) for (const t of audio.getAudioTracks()) stream.addTrack(t);
     const mime = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"].find((m) => MediaRecorder.isTypeSupported(m));
@@ -432,6 +562,8 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
     rec.onstop = () => {
       cancelAnimationFrame(raf);
       audio?.getTracks().forEach((t) => t.stop());
+      cam?.getTracks().forEach((t) => t.stop());
+      setCamStream(null);
       stream.getTracks().forEach((t) => t.stop());
       recRef.current = null;
       setRecording(false);
@@ -447,7 +579,7 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
       setTimeout(() => URL.revokeObjectURL(a.href), 5000);
     };
     rec.start(1000);
-    recRef.current = { rec, raf, stream, audio };
+    recRef.current = { rec, raf, stream, audio, cam };
     setRecording(true);
   }, []);
   // Leaving present mode stops (and saves) an in-flight recording, and tells a
@@ -1278,6 +1410,21 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
           }}
           onClick={(e) => { if (tool !== "none") e.stopPropagation(); }}
         />
+        {/* Camera bubble preview (T22): visible only while recording with a
+            granted camera; dragging it repositions the recorded bubble live.
+            The element itself is the compositing source. */}
+        {camStream && (
+          <video
+            ref={camPreviewRef}
+            muted
+            playsInline
+            title={tr("editor.drag_to_move_the_camera_bubble")}
+            aria-label={tr("editor.drag_to_move_the_camera_bubble")}
+            className="absolute z-[107] cursor-move rounded-lg border-2 border-white object-cover shadow-lg"
+            onPointerDown={onCamDragStart}
+            onClick={(e) => e.stopPropagation()}
+          />
+        )}
         {/* Black/white blanking screen (FR-8): full-surface attention pause. Any
             nav key or pressing B/W again restores; clicking it also restores. */}
         {blank !== "none" && (

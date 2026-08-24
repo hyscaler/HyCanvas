@@ -1852,7 +1852,7 @@
   "editor.reconnecting": "重新连接中",
   "editor.record_a_voiceover_the_timeline_plays_from_t": "录制配音:旁白时时间线从播放头开始播放,录音将作为音频剪辑插入",
   "editor.record_screen": "录制屏幕",
-  "editor.record_the_presentation_slides_ink_narration": "录制演示:幻灯片+墨迹+旁白",
+  "editor.record_the_presentation_slides_ink_narration": "录制演示：幻灯片 + 墨迹 + 旁白 + 可选摄像头",
   "editor.record_voice": "录制语音",
   "editor.record_webcam": "录制摄像头",
   "editor.recording": "录制中",
@@ -3468,5 +3468,6 @@
   "errors.api_brand_from_url_failed": "无法获取该网站。",
   "errors.api_brand_page_status": "该网站返回了错误页面。",
   "errors.api_brand_url_not_html": "该网址不是网页。",
-  "editor.acme_com": "acme.com"
+  "editor.acme_com": "acme.com",
+  "editor.drag_to_move_the_camera_bubble": "拖动以移动摄像头气泡"
 }

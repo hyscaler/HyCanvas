@@ -1852,7 +1852,7 @@
   "editor.reconnecting": "Reconectando",
   "editor.record_a_voiceover_the_timeline_plays_from_t": "Grave uma narração: a linha do tempo reproduz do cursor enquanto você narra, e a gravação entra como clipe de áudio",
   "editor.record_screen": "Gravar tela",
-  "editor.record_the_presentation_slides_ink_narration": "Gravar a apresentação: slides + tinta + narração",
+  "editor.record_the_presentation_slides_ink_narration": "Gravar a apresentação: slides + tinta + narração + câmera opcional",
   "editor.record_voice": "Gravar voz",
   "editor.record_webcam": "Gravar webcam",
   "editor.recording": "Gravando",
@@ -3468,5 +3468,6 @@
   "errors.api_brand_from_url_failed": "Não foi possível acessar esse site.",
   "errors.api_brand_page_status": "O site retornou uma página de erro.",
   "errors.api_brand_url_not_html": "Esse URL não é uma página da web.",
-  "editor.acme_com": "acme.com"
+  "editor.acme_com": "acme.com",
+  "editor.drag_to_move_the_camera_bubble": "Arraste para mover a bolha da câmera"
 }

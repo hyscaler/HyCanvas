@@ -216,3 +216,155 @@ describe("pptxToDesign", () => {
     await expect(pptxToDesign(new Uint8Array([1, 2, 3]))).rejects.toThrow();
   });
 });
+
+// --- Fidelity golden set (F28 T22 part 1) ------------------------------------
+// The import half: decorated multi-run text, the b="1" -> Bold mapping,
+// gradient fills with their stops, explicit crops, multi-paragraph notes,
+// z-order, group flattening through chOff/chExt, and the no-silent-drop rule
+// (an unconvertible graphicFrame lands as a labelled placeholder in place).
+describe("pptxToDesign fidelity goldens", () => {
+  it("round-trips decorated runs, gradients, crops, notes, and z-order through our exporter", async () => {
+    const file = createBlankDesign({ title: "golden", width: 1280, height: 720 });
+    (file.pages[0] as { notes?: string }).notes = "First cue.\nSecond cue.";
+    (file.pages[0] as { background?: unknown }).background = {
+      type: "gradient", gradient: "linear", angle: 135,
+      stops: [
+        { position: 0, color: { srgb: { r: 0.1, g: 0.2, b: 0.9, a: 1 } } },
+        { position: 1, color: { srgb: { r: 0, g: 0, b: 0.2, a: 1 } } },
+      ],
+    };
+    file.pages[0].children = [
+      // z-order bottom: a gradient-filled shape.
+      createNode("shape", {
+        id: "z0", shape: "rect",
+        transform: { x: 40, y: 40, scaleX: 1, scaleY: 1, rotation: 0 },
+        size: { width: 200, height: 100 },
+        fills: [{
+          type: "gradient", gradient: "linear", angle: 90,
+          stops: [
+            { position: 0, color: { srgb: { r: 1, g: 0.5, b: 0, a: 1 } } },
+            { position: 0.5, color: { srgb: { r: 1, g: 1, b: 0, a: 1 } } },
+            { position: 1, color: { srgb: { r: 0, g: 0.5, b: 0, a: 1 } } },
+          ],
+        }],
+      } as Partial<Node>),
+      // z-order middle: a paragraph mixing four styling shapes in one run list.
+      createNode("text", {
+        id: "z1",
+        transform: { x: 60, y: 300, scaleX: 1, scaleY: 1, rotation: 0 },
+        size: { width: 900, height: 80 },
+        content: [{
+          runs: [
+            { text: "bold ", style: { fontFamily: "Inter", fontStyle: "Bold", fontSize: 24 } },
+            { text: "italic ", style: { fontFamily: "Inter", fontStyle: "Italic", fontSize: 24 } },
+            { text: "deco ", style: { fontFamily: "Inter", fontStyle: "Regular", fontSize: 24, decoration: ["underline", "strikethrough"] } },
+            { text: "both", style: { fontFamily: "Inter", fontStyle: "Bold Italic", fontSize: 24 } },
+          ],
+          style: { align: "left" },
+        }],
+      } as Partial<Node>),
+      // z-order top: an explicitly cropped image.
+      createNode("image", {
+        id: "z2",
+        transform: { x: 800, y: 80, scaleX: 1, scaleY: 1, rotation: 0 },
+        size: { width: 320, height: 180 },
+        source: { assetId: "asset-1", naturalWidth: 1280, naturalHeight: 720 },
+        fit: "cover",
+        crop: { x: 0.25, y: 0.25, width: 0.5, height: 0.5 },
+      } as Partial<Node>),
+    ];
+    const back = await pptxToDesign(
+      await deckToPptx(file, { resolveImage: async () => ({ data: PNG_STUB, mime: "image/png" }) }),
+    );
+    const page = back.pages[0];
+    // Notes: both paragraphs survive.
+    expect((page as { notes?: string }).notes).toBe("First cue.\nSecond cue.");
+    // Background gradient with both stops.
+    const bg = (page as { background?: { type?: string; stops?: { color: { srgb: { b: number } } }[] } }).background;
+    expect(bg?.type).toBe("gradient");
+    expect(bg?.stops).toHaveLength(2);
+    expect(bg!.stops![0].color.srgb.b).toBeCloseTo(0.9, 1);
+    // Z-order: children come back in spTree order (bottom first).
+    const kinds = (page.children as Node[]).map((n) => n.type);
+    expect(kinds).toEqual(["shape", "text", "image"]);
+    // Shape gradient: all three stops, in order.
+    const shape = page.children[0] as unknown as { fills: { type: string; stops?: { position: number }[] }[] };
+    expect(shape.fills[0].type).toBe("gradient");
+    expect(shape.fills[0].stops?.map((s) => s.position)).toEqual([0, 0.5, 1]);
+    // Runs: styles and decorations mapped back.
+    const paras = (page.children[1] as unknown as { content: { runs: { text: string; style: { fontStyle: string; decoration?: string[] } }[] }[] }).content;
+    expect(paras[0].runs.map((r) => r.style.fontStyle)).toEqual(["Bold", "Italic", "Regular", "Bold Italic"]);
+    expect(paras[0].runs[2].style.decoration).toEqual(["underline", "strikethrough"]);
+    // Crop: the explicit crop round-trips through a:srcRect.
+    const crop = (page.children[2] as unknown as { crop?: { x: number; y: number; width: number; height: number } }).crop!;
+    expect(crop.x).toBeCloseTo(0.25, 3);
+    expect(crop.y).toBeCloseTo(0.25, 3);
+    expect(crop.width).toBeCloseTo(0.5, 3);
+    expect(crop.height).toBeCloseTo(0.5, 3);
+  });
+
+  it("a group flattens through chOff/chExt scaling on import", async () => {
+    // A raw grpSp whose child coordinate space (chOff/chExt) differs from its
+    // placed extent: the child's frame must scale into slide space.
+    const slide = `<?xml version="1.0"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <p:cSld><p:spTree>
+    <p:grpSp>
+      <p:grpSpPr><a:xfrm>
+        <a:off x="952500" y="952500"/><a:ext cx="1905000" cy="1905000"/>
+        <a:chOff x="0" y="0"/><a:chExt cx="952500" cy="952500"/>
+      </a:xfrm></p:grpSpPr>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="2" name="kid"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="95250" y="190500"/><a:ext cx="190500" cy="95250"/></a:xfrm>
+          <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+          <a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>
+        </p:spPr>
+      </p:sp>
+    </p:grpSp>
+  </p:spTree></p:cSld>
+</p:sld>`;
+    const bytes = zipStore([
+      { name: "ppt/presentation.xml", data: new TextEncoder().encode('<?xml version="1.0"?><p:presentation xmlns:p="p" xmlns:r="r"><p:sldIdLst><p:sldId id="256" r:id="rId1"/></p:sldIdLst><p:sldSz cx="12192000" cy="6858000"/></p:presentation>') },
+      { name: "ppt/_rels/presentation.xml.rels", data: new TextEncoder().encode('<?xml version="1.0"?><Relationships><Relationship Id="rId1" Target="slides/slide1.xml"/></Relationships>') },
+      { name: "ppt/slides/slide1.xml", data: new TextEncoder().encode(slide) },
+    ]);
+    const file = await pptxToDesign(bytes);
+    const shape = (file.pages[0].children as Node[]).find((n) => n.type === "shape")!;
+    // Group: placed at (100,100)px, 200x200; child space 100x100 -> scale 2.
+    // Child at (10,20) 20x10 in child units -> (100+20, 100+40) 40x20 on the slide.
+    expect(shape.transform.x).toBeCloseTo(120, 0);
+    expect(shape.transform.y).toBeCloseTo(140, 0);
+    expect(shape.size.width).toBeCloseTo(40, 0);
+    expect(shape.size.height).toBeCloseTo(20, 0);
+  });
+
+  it("no silent drops: a chart graphicFrame imports as a labelled placeholder in place", async () => {
+    const slide = `<?xml version="1.0"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+  <p:cSld><p:spTree>
+    <p:graphicFrame>
+      <p:nvGraphicFramePr><p:cNvPr id="5" name="Sales chart"/></p:nvGraphicFramePr>
+      <p:xfrm><a:off x="952500" y="1905000"/><a:ext cx="3810000" cy="2857500"/></p:xfrm>
+      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"/></a:graphic>
+    </p:graphicFrame>
+  </p:spTree></p:cSld>
+</p:sld>`;
+    const bytes = zipStore([
+      { name: "ppt/presentation.xml", data: new TextEncoder().encode('<?xml version="1.0"?><p:presentation xmlns:p="p" xmlns:r="r"><p:sldIdLst><p:sldId id="256" r:id="rId1"/></p:sldIdLst><p:sldSz cx="12192000" cy="6858000"/></p:presentation>') },
+      { name: "ppt/_rels/presentation.xml.rels", data: new TextEncoder().encode('<?xml version="1.0"?><Relationships><Relationship Id="rId1" Target="slides/slide1.xml"/></Relationships>') },
+      { name: "ppt/slides/slide1.xml", data: new TextEncoder().encode(slide) },
+    ]);
+    const file = await pptxToDesign(bytes);
+    const kids = file.pages[0].children as Node[];
+    expect(kids).toHaveLength(1); // present, not dropped
+    const box = kids[0] as unknown as { type: string; content: { runs: { text: string }[] }[]; transform: { x: number; y: number }; size: { width: number } };
+    expect(box.type).toBe("text");
+    expect(box.content[0].runs[0].text).toContain("Chart");
+    expect(box.content[0].runs[0].text).toContain("Sales chart");
+    expect(box.transform.x).toBeCloseTo(100, 0); // in position (952500 EMU = 100px)
+    expect(box.transform.y).toBeCloseTo(200, 0);
+    expect(box.size.width).toBeCloseTo(400, 0);
+  });
+});

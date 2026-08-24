@@ -1852,7 +1852,7 @@
   "editor.reconnecting": "पुनः कनेक्ट हो रहा है",
   "editor.record_a_voiceover_the_timeline_plays_from_t": "वॉइसओवर रिकॉर्ड करें: आपके बोलते समय समयरेखा प्लेहेड से चलती है, फिर टेक ऑडियो क्लिप के रूप में जुड़ जाता है",
   "editor.record_screen": "स्क्रीन रिकॉर्ड करें",
-  "editor.record_the_presentation_slides_ink_narration": "प्रस्तुति रिकॉर्ड करें: स्लाइड + स्याही + वर्णन",
+  "editor.record_the_presentation_slides_ink_narration": "प्रस्तुति रिकॉर्ड करें: स्लाइड + इंक + वर्णन + वैकल्पिक कैमरा",
   "editor.record_voice": "आवाज़ रिकॉर्ड करें",
   "editor.record_webcam": "वेबकैम रिकॉर्ड करें",
   "editor.recording": "रिकॉर्ड हो रहा है",
@@ -3468,5 +3468,6 @@
   "errors.api_brand_from_url_failed": "वह वेबसाइट प्राप्त नहीं की जा सकी।",
   "errors.api_brand_page_status": "वेबसाइट ने एक त्रुटि पृष्ठ लौटाया।",
   "errors.api_brand_url_not_html": "वह URL वेब पृष्ठ नहीं है।",
-  "editor.acme_com": "acme.com"
+  "editor.acme_com": "acme.com",
+  "editor.drag_to_move_the_camera_bubble": "कैमरा बबल को हिलाने के लिए खींचें"
 }

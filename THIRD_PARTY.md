@@ -16,3 +16,7 @@ repository, the source path, its license, and the date of adaptation.
 - presentation-ai (`src/lib/presentation/generated-theme.ts`), MIT,
   2026-08-24: the strict 6-digit hex validation approach for AI-generated
   theme colors in `packages/aistudio/src/themeGen.ts`.
+- presentation-ai (`src/hooks/presentation/useRecording.ts`), MIT, 2026-08-24:
+  the webcam bubble compositor math (object-fit cover-cropping and the
+  rounded-rect clipping path) in `drawCameraBubble`,
+  `frontend/src/components/editor/PresentMode.tsx`.
