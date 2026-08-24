@@ -74,8 +74,14 @@ function fillFrom(container: XmlElement, theme: Map<string, string>): unknown | 
       .filter((s): s is NonNullable<typeof s> => !!s)
       .sort((a, b) => a.position - b.position);
     if (stops.length >= 2) {
+      // A circular path is a radial gradient; otherwise linear, whose ang is
+      // the engine's own convention (clockwise from 3 o'clock) verbatim.
+      const path = findFirst(grad, "a:path");
+      if (path?.attrs.path === "circle" || path?.attrs.path === "shape") {
+        return { type: "gradient", gradient: "radial", angle: 0, stops };
+      }
       const lin = findFirst(grad, "a:lin");
-      const angle = lin ? (Number(lin.attrs.ang ?? 0) / DEG + 90) % 360 : 135;
+      const angle = lin ? (Number(lin.attrs.ang ?? 0) / DEG) % 360 : 0;
       return { type: "gradient", gradient: "linear", angle, stops };
     }
   }
@@ -570,11 +576,12 @@ export async function pptxToDesign(bytes: Uint8Array, opts: { title?: string } =
           const tx = findFirst(sp, "p:txBody");
           if (!tx) continue;
           for (const p of childrenOf(tx, "a:p")) {
-            const line = findAll(p, "a:t").map((t) => t.text).join("");
-            if (line.trim()) texts.push(line);
+            // Keep blank paragraphs: they are the presenter's deliberate
+            // spacing; only the OUTER blank edges trim below.
+            texts.push(findAll(p, "a:t").map((t) => t.text).join(""));
           }
         }
-        notes = texts.join("\n");
+        notes = texts.join("\n").replace(/^\n+/, "").replace(/\n+$/, "");
       }
     }
 

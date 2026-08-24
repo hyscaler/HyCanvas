@@ -19,6 +19,7 @@
 // bytes and node rasterization, so it runs in browser, worker, or tests alike.
 
 import type { DesignFile, Node, Page } from "@hc/schema";
+import { weightFromFontStyle } from "@hc/engine";
 import { zipStore, type StoredZipEntry } from "./zipstore";
 
 const EMU_PER_PX = 9525; // 914400 EMU/inch at 96 px/inch
@@ -88,9 +89,16 @@ function fillXml(fill: unknown): string {
         return `<a:gs pos="${Math.round(Math.max(0, Math.min(1, s.position ?? 0)) * 100000)}">${`<a:srgbClr val="${rgbHex(c)}"${c.a != null && c.a < 1 ? `><a:alpha val="${Math.round(c.a * 100000)}"/></a:srgbClr` : "/"}>`}</a:gs>`;
       })
       .join("");
-    // Design angle: degrees clockwise from "up" is CSS-like; DrawingML ang is
-    // clockwise from 3 o'clock. Best-effort mapping keeps the visual direction.
-    const ang = Math.round((((f.angle ?? 135) - 90 + 360) % 360) * DEG);
+    // A radial gradient maps to a centered circular path; conic/mesh have no
+    // DrawingML equivalent and degrade to linear (pinned by the goldens).
+    const kind = (f as { gradient?: string }).gradient;
+    if (kind === "radial") {
+      return `<a:gradFill><a:gsLst>${gs}</a:gsLst><a:path path="circle"><a:fillToRect l="50000" t="50000" r="50000" b="50000"/></a:path></a:gradFill>`;
+    }
+    // Both the engine (fills.ts) and DrawingML measure the linear angle
+    // CLOCKWISE FROM 3 O'CLOCK (y-down), so the mapping is the identity; the
+    // engine renders a missing angle as 0 (left to right).
+    const ang = Math.round(((((f.angle ?? 0) % 360) + 360) % 360) * DEG);
     return `<a:gradFill><a:gsLst>${gs}</a:gsLst><a:lin ang="${ang}" scaled="1"/></a:gradFill>`;
   }
   const c = colorOf(fill);
@@ -159,7 +167,12 @@ function runXml(r: Run): string {
   const st = r.style ?? {};
   const sizePt100 = Math.max(100, Math.round((st.fontSize ?? 16) * 0.75 * 100)); // px -> pt -> 1/100 pt
   const styleName = (st.fontStyle ?? "").toLowerCase();
-  const bold = styleName.includes("bold") || (st.axes?.wght ?? 0) >= 600;
+  // Weight resolves exactly as the engine renders it: a variable wght axis
+  // takes PRECEDENCE over the style name (so "Bold" forced to wght 400
+  // renders - and exports - regular), and named weights use the engine's own
+  // table so Black/Heavy (900) bold correctly, not just names containing
+  // "bold". PPTX has no numeric weight; >= 600 becomes b="1".
+  const bold = (st.axes?.wght ?? weightFromFontStyle(st.fontStyle)) >= 600;
   const italic = styleName.includes("italic") || styleName.includes("oblique");
   const under = st.decoration?.includes("underline");
   const strike = st.decoration?.includes("strikethrough");

@@ -94,6 +94,7 @@ import {
   type SlideLike,
   type ZoomTransform,
 } from "@/lib/present";
+import { tr } from "@/lib/i18n";
 
 /** Composite the webcam bubble onto the recording canvas: 16:9 at one sixth of
  *  the canvas width, positioned by the draggable preview's normalized offset,
@@ -152,7 +153,7 @@ function drawCameraBubble(
   ctx.strokeStyle = "#ffffff";
   ctx.stroke();
 }
-import { tr } from "@/lib/i18n";
+
 
 // The active presenter magic tool (FR-8). At most one pointer tool is active at a
 // time so they cannot fight over the cursor: entering pen disables laser, etc.
@@ -480,13 +481,20 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
       };
       positionCamPreview();
     };
-    const up = (ev: PointerEvent) => {
-      el.releasePointerCapture(ev.pointerId);
+    const done = (ev: PointerEvent) => {
+      // pointerup, pointercancel (gesture takeover, OS interruption), and a
+      // lost capture all end the drag - without the cancel paths a hovering
+      // cursor would keep dragging the bubble with no button held.
+      if (ev.type === "pointerup" && el.hasPointerCapture(ev.pointerId)) el.releasePointerCapture(ev.pointerId);
       el.removeEventListener("pointermove", move);
-      el.removeEventListener("pointerup", up);
+      el.removeEventListener("pointerup", done);
+      el.removeEventListener("pointercancel", done);
+      el.removeEventListener("lostpointercapture", done);
     };
     el.addEventListener("pointermove", move);
-    el.addEventListener("pointerup", up);
+    el.addEventListener("pointerup", done);
+    el.addEventListener("pointercancel", done);
+    el.addEventListener("lostpointercapture", done);
   }, [positionCamPreview]);
   // Set while start-up is in flight (the mic permission prompt can sit open for
   // as long as the user ignores it) and cleared on unmount. Without it a second
@@ -520,7 +528,32 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
       const sl = canvasRef.current;
       const ov = overlayRef.current;
       if (sl) cctx.drawImage(sl, 0, 0, comp.width, comp.height);
-      if (ov && ov.width > 0) cctx.drawImage(ov, 0, 0, comp.width, comp.height);
+      // The ink overlay covers the whole WRAP while the comp is the slide
+      // canvas, so map only the overlay's slide-covering sub-rect - stretching
+      // the full overlay recorded every stroke shrunk toward center by the
+      // letterbox margins.
+      if (ov && ov.width > 0 && sl) {
+        const wrapEl = wrapRef.current;
+        const cvRect = sl.getBoundingClientRect();
+        const wrapRect = wrapEl ? wrapEl.getBoundingClientRect() : null;
+        if (wrapRect && wrapRect.width > 0 && wrapRect.height > 0 && cvRect.width > 0) {
+          const kx = ov.width / wrapRect.width;
+          const ky = ov.height / wrapRect.height;
+          cctx.drawImage(
+            ov,
+            (cvRect.left - wrapRect.left) * kx,
+            (cvRect.top - wrapRect.top) * ky,
+            cvRect.width * kx,
+            cvRect.height * ky,
+            0,
+            0,
+            comp.width,
+            comp.height,
+          );
+        } else {
+          cctx.drawImage(ov, 0, 0, comp.width, comp.height);
+        }
+      }
       // Camera bubble last, so it records over slide + ink (T22).
       const camEl = camPreviewRef.current;
       if (camEl) drawCameraBubble(cctx, camEl, comp.width, comp.height, camPosRef.current);
@@ -532,6 +565,14 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
       audio = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
       audio = null; // no mic permission: record the slides silently
+    }
+    // Present mode may have closed while the MIC prompt was open; bail before
+    // popping a camera prompt over whatever screen the user is on now.
+    if (!presentAliveRef.current) {
+      recStartingRef.current = false;
+      cancelAnimationFrame(raf);
+      audio?.getTracks().forEach((t) => t.stop());
+      return;
     }
     // Optional camera (T22): granting it puts a draggable bubble on the
     // recording; declining keeps today's slides+ink+narration behavior.
@@ -551,10 +592,24 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
       return;
     }
     if (cam) setCamStream(cam);
-    const stream = comp.captureStream(30);
-    if (audio) for (const t of audio.getAudioTracks()) stream.addTrack(t);
-    const mime = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"].find((m) => MediaRecorder.isTypeSupported(m));
-    const rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 8_000_000 } : undefined);
+    // From here to rec.start() any throw (a tainted canvas failing
+    // captureStream, a browser with no webm encoder failing the MediaRecorder
+    // ctor) would otherwise leak the mic, the camera, and the rAF loop with
+    // recRef never set - nothing in the UI could stop them.
+    let stream: MediaStream;
+    let rec: MediaRecorder;
+    try {
+      stream = comp.captureStream(30);
+      if (audio) for (const t of audio.getAudioTracks()) stream.addTrack(t);
+      const mime = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"].find((m) => MediaRecorder.isTypeSupported(m));
+      rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 8_000_000 } : undefined);
+    } catch {
+      cancelAnimationFrame(raf);
+      audio?.getTracks().forEach((t) => t.stop());
+      cam?.getTracks().forEach((t) => t.stop());
+      setCamStream(null);
+      return;
+    }
     const chunks: Blob[] = [];
     rec.ondataavailable = (e) => {
       if (e.data.size) chunks.push(e.data);
@@ -578,7 +633,16 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 5000);
     };
-    rec.start(1000);
+    try {
+      rec.start(1000);
+    } catch {
+      cancelAnimationFrame(raf);
+      audio?.getTracks().forEach((t) => t.stop());
+      cam?.getTracks().forEach((t) => t.stop());
+      setCamStream(null);
+      stream.getTracks().forEach((t) => t.stop());
+      return;
+    }
     recRef.current = { rec, raf, stream, audio, cam };
     setRecording(true);
   }, []);
@@ -1420,7 +1484,8 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
             playsInline
             title={tr("editor.drag_to_move_the_camera_bubble")}
             aria-label={tr("editor.drag_to_move_the_camera_bubble")}
-            className="absolute z-[107] cursor-move rounded-lg border-2 border-white object-cover shadow-lg"
+            className={`absolute z-[107] touch-none cursor-move rounded-lg border-2 border-white object-cover shadow-lg ${zoom.scale > 1 ? "hidden" : ""}`}
+            style={{ left: "-9999px", top: "-9999px" }}
             onPointerDown={onCamDragStart}
             onClick={(e) => e.stopPropagation()}
           />

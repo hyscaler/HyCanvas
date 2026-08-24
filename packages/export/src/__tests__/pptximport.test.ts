@@ -225,7 +225,7 @@ describe("pptxToDesign", () => {
 describe("pptxToDesign fidelity goldens", () => {
   it("round-trips decorated runs, gradients, crops, notes, and z-order through our exporter", async () => {
     const file = createBlankDesign({ title: "golden", width: 1280, height: 720 });
-    (file.pages[0] as { notes?: string }).notes = "First cue.\nSecond cue.";
+    (file.pages[0] as { notes?: string }).notes = "First cue.\n\nSecond cue."; // the blank line is deliberate spacing
     (file.pages[0] as { background?: unknown }).background = {
       type: "gradient", gradient: "linear", angle: 135,
       stops: [
@@ -277,20 +277,22 @@ describe("pptxToDesign fidelity goldens", () => {
       await deckToPptx(file, { resolveImage: async () => ({ data: PNG_STUB, mime: "image/png" }) }),
     );
     const page = back.pages[0];
-    // Notes: both paragraphs survive.
-    expect((page as { notes?: string }).notes).toBe("First cue.\nSecond cue.");
-    // Background gradient with both stops.
-    const bg = (page as { background?: { type?: string; stops?: { color: { srgb: { b: number } } }[] } }).background;
+    // Notes: both paragraphs AND the deliberate blank line between them.
+    expect((page as { notes?: string }).notes).toBe("First cue.\n\nSecond cue.");
+    // Background gradient with both stops AND the angle (identity both ways).
+    const bg = (page as { background?: { type?: string; angle?: number; stops?: { color: { srgb: { b: number } } }[] } }).background;
     expect(bg?.type).toBe("gradient");
     expect(bg?.stops).toHaveLength(2);
     expect(bg!.stops![0].color.srgb.b).toBeCloseTo(0.9, 1);
+    expect(bg!.angle).toBeCloseTo(135, 3);
     // Z-order: children come back in spTree order (bottom first).
     const kinds = (page.children as Node[]).map((n) => n.type);
     expect(kinds).toEqual(["shape", "text", "image"]);
-    // Shape gradient: all three stops, in order.
-    const shape = page.children[0] as unknown as { fills: { type: string; stops?: { position: number }[] }[] };
+    // Shape gradient: all three stops in order, angle preserved.
+    const shape = page.children[0] as unknown as { fills: { type: string; angle?: number; stops?: { position: number }[] }[] };
     expect(shape.fills[0].type).toBe("gradient");
     expect(shape.fills[0].stops?.map((s) => s.position)).toEqual([0, 0.5, 1]);
+    expect(shape.fills[0].angle).toBeCloseTo(90, 3);
     // Runs: styles and decorations mapped back.
     const paras = (page.children[1] as unknown as { content: { runs: { text: string; style: { fontStyle: string; decoration?: string[] } }[] }[] }).content;
     expect(paras[0].runs.map((r) => r.style.fontStyle)).toEqual(["Bold", "Italic", "Regular", "Bold Italic"]);
@@ -301,6 +303,55 @@ describe("pptxToDesign fidelity goldens", () => {
     expect(crop.y).toBeCloseTo(0.25, 3);
     expect(crop.width).toBeCloseTo(0.5, 3);
     expect(crop.height).toBeCloseTo(0.5, 3);
+  });
+
+  it("a radial gradient round-trips as radial", async () => {
+    const file = createBlankDesign({ title: "radial-rt", width: 1000, height: 1000 });
+    file.pages[0].children = [
+      createNode("shape", {
+        id: "rad", shape: "rect",
+        transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+        size: { width: 100, height: 100 },
+        fills: [{
+          type: "gradient", gradient: "radial",
+          stops: [
+            { position: 0, color: { srgb: { r: 1, g: 1, b: 1, a: 1 } } },
+            { position: 1, color: { srgb: { r: 0, g: 0, b: 0, a: 1 } } },
+          ],
+        }],
+      } as Partial<Node>),
+    ];
+    const back = await pptxToDesign(await deckToPptx(file));
+    const shape = (back.pages[0].children as Node[]).find((n) => n.type === "shape")!;
+    const fill = (shape as unknown as { fills: { type: string; gradient?: string }[] }).fills[0];
+    expect(fill.type).toBe("gradient");
+    expect(fill.gradient).toBe("radial");
+  });
+
+  it("table cells map b=1 to weight 700 and its absence to 400 on import", async () => {
+    const cell = (text: string, bold: boolean) =>
+      `<a:tc><a:txBody><a:p><a:r><a:rPr${bold ? ' b="1"' : ""} sz="1400"/><a:t>${text}</a:t></a:r></a:p></a:txBody></a:tc>`;
+    const tbl =
+      `<a:tbl><a:tblGrid><a:gridCol w="1905000"/><a:gridCol w="1905000"/></a:tblGrid>` +
+      `<a:tr h="381000">${cell("Head", true)}${cell("Body", false)}</a:tr></a:tbl>`;
+    const slide =
+      `<?xml version="1.0"?><p:sld xmlns:p="p" xmlns:a="a"><p:cSld><p:spTree>` +
+      `<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="3" name="t"/></p:nvGraphicFramePr>` +
+      `<p:xfrm><a:off x="952500" y="952500"/><a:ext cx="3810000" cy="381000"/></p:xfrm>` +
+      `<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">${tbl}</a:graphicData></a:graphic>` +
+      `</p:graphicFrame></p:spTree></p:cSld></p:sld>`;
+    const bytes = zipStore([
+      { name: "ppt/presentation.xml", data: new TextEncoder().encode('<?xml version="1.0"?><p:presentation xmlns:p="p" xmlns:r="r"><p:sldIdLst><p:sldId id="256" r:id="rId1"/></p:sldIdLst><p:sldSz cx="12192000" cy="6858000"/></p:presentation>') },
+      { name: "ppt/_rels/presentation.xml.rels", data: new TextEncoder().encode('<?xml version="1.0"?><Relationships><Relationship Id="rId1" Target="slides/slide1.xml"/></Relationships>') },
+      { name: "ppt/slides/slide1.xml", data: new TextEncoder().encode(slide) },
+    ]);
+    const file = await pptxToDesign(bytes);
+    const table = (file.pages[0].children as Node[]).find((n) => n.type === "table") as unknown as {
+      cells: { content: { text: string; weight: number }[] }[];
+    };
+    expect(table).toBeTruthy();
+    expect(table.cells[0].content[0].weight).toBe(700); // b="1" -> bold
+    expect(table.cells[1].content[0].weight).toBe(400); // absent -> regular
   });
 
   it("a group flattens through chOff/chExt scaling on import", async () => {

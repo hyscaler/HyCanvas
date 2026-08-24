@@ -230,10 +230,30 @@ describe("deckToPptx fidelity goldens", () => {
     expect(s1).toContain('<a:gs pos="50000">');
     expect(s1).toContain('<a:gs pos="100000">');
     expect(s1).toContain('<a:gs pos="0"><a:srgbClr val="00FF00"/>'); // full-alpha stops self-close
-    // Background is a gradient too (inside <p:bg>).
+    // The ANGLE is the identity mapping: the engine and DrawingML both measure
+    // clockwise from 3 o'clock, so design 135deg = ang 8100000 (1/60000 deg).
+    expect(s1).toContain('<a:lin ang="8100000"');
+    // Background is a gradient too (inside <p:bg>), angle 90 = top-to-bottom.
     const bg = s1.slice(s1.indexOf("<p:bg>"), s1.indexOf("</p:bg>"));
     expect(bg).toContain("<a:gradFill>");
     expect(bg).toContain('val="FF0000"');
+    expect(bg).toContain('<a:lin ang="5400000"');
+  });
+
+  it("a radial gradient exports as a centered circular path; conic degrades to linear", async () => {
+    const stops = [
+      { position: 0, color: { srgb: { r: 1, g: 1, b: 1, a: 1 } } },
+      { position: 1, color: { srgb: { r: 0, g: 0, b: 0, a: 1 } } },
+    ];
+    const file = createBlankDesign({ title: "radial", width: 1000, height: 1000 });
+    file.pages[0].children = [
+      createNode("shape", { id: "rad", shape: "rect", transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: 100, height: 100 }, fills: [{ type: "gradient", gradient: "radial", stops }] } as Partial<Node>),
+      createNode("shape", { id: "con", shape: "rect", transform: { x: 200, y: 0, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: 100, height: 100 }, fills: [{ type: "gradient", gradient: "conic", angle: 45, stops }] } as Partial<Node>),
+    ];
+    const s1 = textOf(readZip(await deckToPptx(file)), "ppt/slides/slide1.xml");
+    expect(s1).toContain('<a:path path="circle">'); // radial is native
+    // Conic has no DrawingML equivalent: the linear degrade is DELIBERATE.
+    expect((s1.match(/<a:lin /g) ?? []).length).toBe(1);
   });
 
   it("bold threshold: named weights and variable wght >= 600 export b=1, below stays regular", async () => {
@@ -249,7 +269,9 @@ describe("deckToPptx fidelity goldens", () => {
             run("semibold-name ", { fontStyle: "SemiBold" }),
             run("wght600 ", { fontStyle: "Regular", axes: { wght: 600 } }),
             run("wght400 ", { fontStyle: "Regular", axes: { wght: 400 } }),
-            run("decorated", { fontStyle: "Italic", decoration: ["underline", "strikethrough"] }),
+            run("decorated ", { fontStyle: "Italic", decoration: ["underline", "strikethrough"] }),
+            run("black-name ", { fontStyle: "Black" }),
+            run("bold-forced-regular", { fontStyle: "Bold", axes: { wght: 400 } }),
           ],
           style: { align: "left" },
         }],
@@ -257,13 +279,15 @@ describe("deckToPptx fidelity goldens", () => {
     ];
     const s1 = textOf(readZip(await deckToPptx(file)), "ppt/slides/slide1.xml");
     const runs = [...s1.matchAll(/<a:rPr ([^>]*)>/g)].map((m) => m[1]);
-    expect(runs).toHaveLength(4);
+    expect(runs).toHaveLength(6);
     expect(runs[0]).toContain('b="1"'); // "SemiBold" name >= 600
     expect(runs[1]).toContain('b="1"'); // variable axis 600
     expect(runs[2]).not.toContain('b="1"'); // 400 stays regular
     expect(runs[3]).toContain('i="1"');
     expect(runs[3]).toContain('u="sng"');
     expect(runs[3]).toContain('strike="sngStrike"');
+    expect(runs[4]).toContain('b="1"'); // "Black" (900) bolds, not just names containing "bold"
+    expect(runs[5]).not.toContain('b="1"'); // the wght axis OVERRIDES the name, as the engine renders
   });
 
   it("an unrotated group flattens natively; a rotated group rasterizes in place as one unit", async () => {
@@ -288,7 +312,7 @@ describe("deckToPptx fidelity goldens", () => {
     p2.children = [group("gRot", 30, kid("k2")) as never];
     file.pages.push(p2);
 
-    let rasterized: string[] = [];
+    const rasterized: string[] = [];
     const zip = readZip(await deckToPptx(file, {
       rasterizeNode: async (_pi, id) => {
         rasterized.push(id);
