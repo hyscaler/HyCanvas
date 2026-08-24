@@ -298,6 +298,28 @@ func (s *Service) Text(ctx context.Context, workspaceID, prompt, system string) 
 	return out, nil
 }
 
+// TextStructured runs a text call constrained by a JSON Schema, natively where
+// the provider supports it (response_format on the OpenAI-compatible dialect,
+// a forced tool on Anthropic) with one automatic retry as plain text when the
+// provider rejects the parameter. Callers keep the schema restated in the
+// prompt and keep validating the reply: this primitive raises the odds of
+// schema-valid output, it does not guarantee them.
+func (s *Service) TextStructured(ctx context.Context, workspaceID, prompt, system, schemaJSON string) (string, error) {
+	cfg, err := s.callConfig(ctx, workspaceID)
+	if err != nil {
+		return "", err
+	}
+	if err := s.enforce(ctx, workspaceID, string(cfg.Provider), estimateTokens(prompt+system, 1024)); err != nil {
+		return "", err
+	}
+	out, err := s.generateStructuredText(cfg, prompt, system, schemaJSON)
+	if err != nil {
+		return "", ErrBadGateway
+	}
+	s.meter(ctx, workspaceID, countTokens(prompt)+countTokens(system)+countTokens(out))
+	return out, nil
+}
+
 // assertImageCapable rejects image ops on Anthropic (no image endpoint), so an
 // Anthropic key is never POSTed to api.openai.com.
 // assertImageCapable rejects image generation on a provider the registry marks

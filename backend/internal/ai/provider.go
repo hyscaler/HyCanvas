@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -113,6 +114,104 @@ func buildTextRequest(cfg CallConfig, prompt, system string) httpRequest {
 		headers: headers,
 		body:    map[string]any{"model": model, "messages": messages},
 	}
+}
+
+// structuredToolName is the forced tool the Anthropic dialect uses to obtain
+// schema-constrained output (their structured-output idiom: one tool whose
+// input schema IS the target schema, with tool_choice forcing it).
+const structuredToolName = "emit_result"
+
+// buildStructuredTextRequest builds a text request that asks the provider for
+// SCHEMA-CONSTRAINED output natively: the OpenAI-compatible dialect sends
+// response_format json_schema (strict:false, matching the widest provider
+// support), the Anthropic dialect forces a single tool whose input schema is
+// the schema. The schema is ALSO restated in the caller's prompt, so a
+// provider that rejects the parameter still gets prompt-level guidance (the
+// caller retries once without the parameter on a negotiable 4xx). An
+// unparseable schemaJSON falls back to the plain request - the prompt
+// embedding is then the only constraint, never a hard failure.
+func buildStructuredTextRequest(cfg CallConfig, prompt, system, schemaJSON string) httpRequest {
+	var schema any
+	if err := json.Unmarshal([]byte(schemaJSON), &schema); err != nil || schema == nil {
+		return buildTextRequest(cfg, prompt, system)
+	}
+	if cfg.Provider == ProviderAnthropic {
+		body := map[string]any{
+			// A larger cap than plain Text: structured payloads (a whole deck
+			// outline) routinely exceed the 1024-token conversational default.
+			"model":      orDefault(cfg.Model, "claude-opus-4-8"),
+			"max_tokens": 4096,
+			"messages":   []any{map[string]any{"role": "user", "content": prompt}},
+			"tools": []any{map[string]any{
+				"name":         structuredToolName,
+				"description":  "Return the structured result matching the schema exactly.",
+				"input_schema": schema,
+			}},
+			"tool_choice": map[string]any{"type": "tool", "name": structuredToolName},
+		}
+		if system != "" {
+			body["system"] = system
+		}
+		return httpRequest{
+			url: orDefault(cfg.BaseURL, "https://api.anthropic.com") + "/v1/messages",
+			headers: map[string]string{
+				"content-type": "application/json", "x-api-key": cfg.APIKey, "anthropic-version": "2023-06-01",
+			},
+			body: body,
+		}
+	}
+	messages := []any{}
+	if system != "" {
+		messages = append(messages, map[string]any{"role": "system", "content": system})
+	}
+	messages = append(messages, map[string]any{"role": "user", "content": prompt})
+	model := orDefault(cfg.Model, "gpt-4o-mini")
+	u, headers := openAICompatEndpoint(cfg, model, "chat/completions")
+	return httpRequest{
+		url:     u,
+		headers: headers,
+		body: map[string]any{
+			"model":    model,
+			"messages": messages,
+			"response_format": map[string]any{
+				"type": "json_schema",
+				"json_schema": map[string]any{
+					"name":   "result",
+					"schema": schema,
+					"strict": false,
+				},
+			},
+		},
+	}
+}
+
+// parseStructuredResponse extracts the structured payload: the Anthropic
+// dialect returns it as the forced tool call's input (serialized back to JSON
+// so every caller sees one shape), falling back to a plain text block; the
+// OpenAI-compatible dialect returns ordinary message content.
+func parseStructuredResponse(provider Provider, raw []byte) string {
+	if provider == ProviderAnthropic {
+		var j struct {
+			Content []struct {
+				Type  string          `json:"type"`
+				Text  string          `json:"text"`
+				Input json.RawMessage `json:"input"`
+			} `json:"content"`
+		}
+		_ = json.Unmarshal(raw, &j)
+		for _, c := range j.Content {
+			if c.Type == "tool_use" && len(c.Input) > 0 {
+				return strings.TrimSpace(string(c.Input))
+			}
+		}
+		for _, c := range j.Content {
+			if c.Text != "" {
+				return strings.TrimSpace(c.Text)
+			}
+		}
+		return ""
+	}
+	return parseTextResponse(provider, raw)
 }
 
 // DescribeImageInput is a describe-image (alt-text/vision) call.
@@ -254,6 +353,30 @@ func isSafeBaseURL(raw string, allowLocalhostHTTP bool) bool {
 // response (the service maps it to a friendly 502 without echoing the body).
 var errProviderFailed = errors.New("provider request failed")
 
+// httpStatusError carries the provider's HTTP status so a caller can decide
+// whether a failure is negotiable (a 4xx rejecting an unsupported request
+// parameter) without ever echoing the provider's body. It IS an
+// errProviderFailed for every existing errors.Is check.
+type httpStatusError struct{ status int }
+
+func (e *httpStatusError) Error() string { return fmt.Sprintf("provider request failed (%d)", e.status) }
+func (e *httpStatusError) Is(target error) bool { return target == errProviderFailed }
+
+// isNegotiable4xx reports whether a provider rejection plausibly means "this
+// request parameter is unsupported" - worth one retry WITHOUT the parameter.
+// Auth and rate-limit statuses are excluded: retrying cannot help those.
+func isNegotiable4xx(err error) bool {
+	var se *httpStatusError
+	if !errors.As(err, &se) {
+		return false
+	}
+	switch se.status {
+	case http.StatusUnauthorized, http.StatusForbidden, http.StatusTooManyRequests:
+		return false
+	}
+	return se.status >= 400 && se.status < 500
+}
+
 func newHTTPClient() *http.Client { return &http.Client{Timeout: 60 * time.Second} }
 
 func (s *Service) postJSON(req httpRequest) ([]byte, error) {
@@ -274,9 +397,10 @@ func (s *Service) do(httpReq *http.Request) ([]byte, error) {
 		return nil, errProviderFailed
 	}
 	defer res.Body.Close()
-	// Do not echo the provider's error body to the client (may leak internals).
+	// Do not echo the provider's error body to the client (may leak internals);
+	// the status alone travels so callers can negotiate unsupported parameters.
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return nil, errProviderFailed
+		return nil, &httpStatusError{status: res.StatusCode}
 	}
 	if cl, err := strconv.ParseInt(res.Header.Get("content-length"), 10, 64); err == nil && cl > maxResponseBytes {
 		return nil, errProviderFailed
@@ -294,6 +418,25 @@ func (s *Service) generateText(cfg CallConfig, prompt, system string) (string, e
 		return "", err
 	}
 	return parseTextResponse(cfg.Provider, raw), nil
+}
+
+// generateStructuredText asks for native schema-constrained output, and on a
+// negotiable 4xx (the provider rejecting the response_format / forced-tool
+// parameter) retries ONCE as a plain text call - the schema restated in the
+// caller's prompt still applies, so the fallback degrades quality, not
+// correctness (the caller's validators are the final gate).
+func (s *Service) generateStructuredText(cfg CallConfig, prompt, system, schemaJSON string) (string, error) {
+	raw, err := s.postJSON(buildStructuredTextRequest(cfg, prompt, system, schemaJSON))
+	if err != nil {
+		if !isNegotiable4xx(err) {
+			return "", err
+		}
+		if raw, err = s.postJSON(buildTextRequest(cfg, prompt, system)); err != nil {
+			return "", err
+		}
+		return parseTextResponse(cfg.Provider, raw), nil
+	}
+	return parseStructuredResponse(cfg.Provider, raw), nil
 }
 
 func (s *Service) describeImageCall(cfg CallConfig, in DescribeImageInput) (string, error) {

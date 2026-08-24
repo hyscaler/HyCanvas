@@ -106,8 +106,17 @@ func TestValidateStyleProfile(t *testing.T) {
 
 // stubGen returns a scripted sequence of replies to exercise retry-on-mismatch.
 type stubGen struct {
+	lastSchema string
 	replies []string
 	calls   int
+}
+
+// TextStructured delegates to Text: the orchestrator must treat structured
+// mode as a quality upgrade, not a different contract. lastSchema records the
+// schema so tests can assert structured mode was requested.
+func (s *stubGen) TextStructured(ctx context.Context, ws, prompt, system, schemaJSON string) (string, error) {
+	s.lastSchema = schemaJSON
+	return s.Text(ctx, ws, prompt, system)
 }
 
 func (s *stubGen) Text(_ context.Context, _, _, _ string) (string, error) {
@@ -129,6 +138,11 @@ func TestGenerateValidated_RetriesOnMismatch(t *testing.T) {
 	spec, err := svc.Chart(context.Background(), "ws", "some data")
 	if err != nil {
 		t.Fatalf("expected success after retries, got %v", err)
+	}
+	// T06: the orchestrator requests NATIVE structured output, passing the
+	// chart schema through to the provider layer.
+	if gen.lastSchema != chartSchemaStr {
+		t.Errorf("structured schema not passed to the provider: %q", gen.lastSchema)
 	}
 	if gen.calls != 3 {
 		t.Errorf("expected 3 attempts, got %d", gen.calls)

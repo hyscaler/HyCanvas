@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -312,5 +313,106 @@ func TestEditImageGatesOnEditCapability(t *testing.T) {
 	// Generation stays allowed where only editing is missing.
 	if err := assertImageCapable(CallConfig{Provider: ProviderAzureOpenAI}); err != nil {
 		t.Errorf("azure-openai generate = %v, want nil", err)
+	}
+}
+
+// T06 acceptance: the OpenAI-compatible dialect carries response_format with
+// the schema; a provider that rejects the parameter still succeeds via ONE
+// plain-text retry (the prompt-embedded schema remains the constraint).
+func TestTextStructuredTransport(t *testing.T) {
+	schema := `{"type":"object","required":["a"],"properties":{"a":{"type":"number"}}}`
+
+	// 1. Happy path: the request body carries response_format json_schema.
+	var bodies [][]byte
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		bodies = append(bodies, b)
+		w.Header().Set("content-type", "application/json")
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"{\"a\":1}"}}]}`))
+	}))
+	defer server.Close()
+	svc := &Service{client: server.Client()}
+	cfg := CallConfig{Provider: ProviderCustom, APIKey: "k", BaseURL: server.URL, Model: "m"}
+	out, err := svc.generateStructuredText(cfg, "p", "s", schema)
+	if err != nil || out != `{"a":1}` {
+		t.Fatalf("structured call: out=%q err=%v", out, err)
+	}
+	if len(bodies) != 1 {
+		t.Fatalf("want 1 request, got %d", len(bodies))
+	}
+	var sent map[string]any
+	_ = json.Unmarshal(bodies[0], &sent)
+	rf, _ := sent["response_format"].(map[string]any)
+	if rf == nil || rf["type"] != "json_schema" {
+		t.Fatalf("request missing response_format json_schema: %s", bodies[0])
+	}
+	js, _ := rf["json_schema"].(map[string]any)
+	if js == nil || js["strict"] != false || js["schema"] == nil {
+		t.Fatalf("json_schema envelope wrong: %v", rf)
+	}
+
+	// 2. Rejecting provider: 400 on response_format, success without it.
+	bodies = nil
+	reject := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		bodies = append(bodies, b)
+		if strings.Contains(string(b), "response_format") {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("content-type", "application/json")
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"{\"a\":2}"}}]}`))
+	}))
+	defer reject.Close()
+	svc2 := &Service{client: reject.Client()}
+	cfg2 := CallConfig{Provider: ProviderCustom, APIKey: "k", BaseURL: reject.URL, Model: "m"}
+	out, err = svc2.generateStructuredText(cfg2, "p", "s", schema)
+	if err != nil || out != `{"a":2}` {
+		t.Fatalf("fallback call: out=%q err=%v", out, err)
+	}
+	if len(bodies) != 2 || strings.Contains(string(bodies[1]), "response_format") {
+		t.Fatalf("want structured-then-plain, got %d requests (last: %s)", len(bodies), bodies[len(bodies)-1])
+	}
+
+	// 3. Auth failures are NOT negotiable: no blind retry against a 401.
+	calls := 0
+	authFail := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer authFail.Close()
+	svc3 := &Service{client: authFail.Client()}
+	if _, err := (svc3).generateStructuredText(CallConfig{Provider: ProviderCustom, APIKey: "k", BaseURL: authFail.URL, Model: "m"}, "p", "s", schema); err == nil {
+		t.Fatal("401 must fail")
+	}
+	if calls != 1 {
+		t.Fatalf("401 must not retry, got %d calls", calls)
+	}
+}
+
+// The Anthropic structured dialect: one forced tool whose input schema is the
+// target schema; the reply's tool_use input is the structured payload.
+func TestStructuredAnthropicDialect(t *testing.T) {
+	schema := `{"type":"object","properties":{"a":{"type":"number"}}}`
+	req := buildStructuredTextRequest(CallConfig{Provider: ProviderAnthropic, APIKey: "k"}, "p", "s", schema)
+	body, _ := json.Marshal(req.body)
+	if !strings.Contains(string(body), `"tool_choice"`) || !strings.Contains(string(body), structuredToolName) || !strings.Contains(string(body), `"input_schema"`) {
+		t.Fatalf("anthropic structured body missing forced tool: %s", body)
+	}
+	// tool_use input is extracted and re-serialized.
+	raw := []byte(`{"content":[{"type":"tool_use","name":"emit_result","input":{"a":3}}]}`)
+	if got := parseStructuredResponse(ProviderAnthropic, raw); got != `{"a":3}` {
+		t.Fatalf("tool_use parse = %q", got)
+	}
+	// Text-block fallback when the model answered in prose.
+	raw = []byte(`{"content":[{"type":"text","text":"{\"a\":4}"}]}`)
+	if got := parseStructuredResponse(ProviderAnthropic, raw); got != `{"a":4}` {
+		t.Fatalf("text fallback parse = %q", got)
+	}
+	// An unparseable schema degrades to the PLAIN request, never an error.
+	plain := buildStructuredTextRequest(CallConfig{Provider: ProviderAnthropic, APIKey: "k"}, "p", "s", "{not json")
+	pbody, _ := json.Marshal(plain.body)
+	if strings.Contains(string(pbody), "tool_choice") {
+		t.Fatalf("invalid schema must fall back to a plain request: %s", pbody)
 	}
 }

@@ -23,9 +23,14 @@ import (
 var ErrInvalidOutput = errors.New("model did not return valid structured output")
 
 // TextGenerator is the slice of the AI proxy this package needs. *ai.Service
-// satisfies it; tests stub it.
+// satisfies it; tests stub it. TextStructured asks the provider for natively
+// schema-constrained output (with the proxy falling back to plain text when
+// the provider rejects the parameter); the schema stays restated in the prompt
+// and the reply stays validated here, so structured mode raises JSON validity,
+// never replaces validation.
 type TextGenerator interface {
 	Text(ctx context.Context, workspaceID, prompt, system string) (string, error)
+	TextStructured(ctx context.Context, workspaceID, prompt, system, schemaJSON string) (string, error)
 }
 
 // Service orchestrates studio generation on top of the AI proxy + a DB for
@@ -49,12 +54,23 @@ const maxRetries = 3
 
 // generateValidated runs the model with a schema-constrained prompt and retries
 // (with a corrective hint) until the reply unmarshals into T and passes
-// validate, or the retry budget is spent (FR-12 retry-on-mismatch).
-func generateValidated[T any](ctx context.Context, s *Service, workspaceID, system, user string, validate func(*T) error) (*T, error) {
+// validate, or the retry budget is spent (FR-12 retry-on-mismatch). A non-empty
+// schemaJSON additionally requests NATIVE schema-constrained output from the
+// provider (the proxy falls back to plain text when a provider rejects the
+// parameter); the schema stays embedded in the prompt and every reply still
+// passes through extractJSON + validate, so structured mode only raises the
+// odds of a first-attempt success.
+func generateValidated[T any](ctx context.Context, s *Service, workspaceID, system, user, schemaJSON string, validate func(*T) error) (*T, error) {
 	msg := user
 	var lastErr error
 	for attempt := 0; attempt < maxRetries; attempt++ {
-		out, err := s.ai.Text(ctx, workspaceID, msg, system)
+		var out string
+		var err error
+		if schemaJSON != "" {
+			out, err = s.ai.TextStructured(ctx, workspaceID, msg, system, schemaJSON)
+		} else {
+			out, err = s.ai.Text(ctx, workspaceID, msg, system)
+		}
 		if err != nil {
 			return nil, err // provider/policy errors propagate unchanged
 		}

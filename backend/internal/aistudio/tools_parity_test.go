@@ -87,6 +87,10 @@ func (c *capturingGen) Text(_ context.Context, _, _, system string) (string, err
 	return c.reply, nil
 }
 
+func (c *capturingGen) TextStructured(ctx context.Context, ws, prompt, system, _ string) (string, error) {
+	return c.Text(ctx, ws, prompt, system)
+}
+
 // The server assistant path must offer the once-missing tools to the model and
 // pass their plan steps through: the exact end-to-end flow of "translate this
 // deck to German" via POST /v1/ai/assistant.

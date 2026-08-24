@@ -37,7 +37,7 @@ You are implementing one task at a time from the table below. For each session:
 | T03 | 0 Repair | Non-destructive generation default | done 2026-08-23 |
 | T04 | 0 Repair | Provider config gaps (dropdown, imageModel, azure preset) | done 2026-08-23 |
 | T05 | 0 Repair | Sync stale docs to code | done 2026-08-23 |
-| T06 | 1 Core | Native structured output in the provider layer | todo |
+| T06 | 1 Core | Native structured output in the provider layer | done 2026-08-24 |
 | T07 | 1 Core | Validation-repair loop in the orchestrator | todo |
 | T08 | 1 Core | Port the prompt rule corpus | todo |
 | T09 | 1 Core | Outline review step + generation dials | todo |
