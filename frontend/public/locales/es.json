@@ -3431,5 +3431,6 @@
   "errors.api_extract_file_too_large": "El archivo supera el límite de extracción de 20 MiB.",
   "errors.api_extract_file_unsupported": "Solo se pueden extraer archivos .docx, .pptx y .xlsx.",
   "errors.api_extract_file_unreadable": "No se pudo leer el documento.",
-  "errors.api_search_not_configured": "La búsqueda web no está configurada para este espacio de trabajo. Un administrador puede conectar un proveedor de búsqueda en la configuración de IA."
+  "errors.api_search_not_configured": "La búsqueda web no está configurada para este espacio de trabajo. Un administrador puede conectar un proveedor de búsqueda en la configuración de IA.",
+  "editor.health": "Salud"
 }

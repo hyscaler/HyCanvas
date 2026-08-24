@@ -17,6 +17,7 @@ import {
   deriveLayoutContentSchema, layoutSelectionSchema, layoutSelectionSystemPrompt, layoutFillSystemPrompt, repairLayoutSelection,
   normalizeLayoutFill, fallbackLayoutFill, preferredLayoutFor, type LayoutFill,
   buildAgendaPages, pickAgendaLayout, extractTitleFromText, splitSlideSchema, splitSlideSystemPrompt,
+  firstTabularSource, parseDataMatrix, chartColumnSelectionSchema, chartColumnSelectionSystemPrompt, chartColumnSelectionUserPrompt, buildChartFromSelection,
   relayoutDecisionSchema, relayoutDecisionSystemPrompt, regenerateFillSystemPrompt, changedImagePrompts,
   type DesignOutline, type DesignType, type GenerationDials, type OutlineItem,
   toolCatalog, assistantSystemPrompt, parseAssistantReply, planMutates, summarizeDesign, type PlanStep,
@@ -1862,6 +1863,7 @@ type ResolvedPayload =
   | { kind: "splitSlide"; pageIndex: number; pageId: string; halves: { layoutId: string; name: string; fill: LayoutFill }[] }
   | { kind: "insertComparison"; layoutId: string; name: string; fill: LayoutFill; afterIndex: number; afterPageId: string }
   | { kind: "webSearch"; query: string; count: number }
+  | { kind: "chartData"; chartType: ChartType; categories: string[]; series: { name: string; values: number[] }[]; csv: string }
   | { kind: "regenerateSlide"; pageIndex: number; pageId: string; layoutId: string; layoutChanged: boolean; hadLayout: boolean; fill: LayoutFill; imageTasks: { placeholderId: string; prompt: string; subject: string }[]; imageSize: string; generateAllowed: boolean; workspaceId: string; designId: string | null };
 
 /** Parse a model reply that must be a JSON array of exactly `n` strings.
@@ -2441,6 +2443,32 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       const afterPageId = (st.doc.pages[afterIndex] as unknown as { id: string }).id;
       return { payload: { kind: "insertComparison", layoutId: layout.id, name: `${topicA} vs ${topicB}`, fill, afterIndex, afterPageId } };
     }
+    case "insertChart": {
+      // T17: with tabular source data attached, chart values are COMPUTED
+      // from the data - the model picks only the chart type and columns (from
+      // enums of the real headers). No tabular source = today's behavior (the
+      // plan's own numbers, applied synchronously by runPlanStep).
+      const tabular = firstTabularSource(deps.sources);
+      if (!tabular) return {};
+      const matrix = parseDataMatrix(tabular.text);
+      if (!matrix || !matrix.numericColumns.length) return {};
+      let selection: unknown = null;
+      try {
+        const { text } = await oc.aiTextStructured({
+          workspaceId: deps.workspaceId,
+          system: chartColumnSelectionSystemPrompt(matrix),
+          prompt: chartColumnSelectionUserPrompt({ chartType: a.chartType, categories: a.categories }, matrix, tabular.name),
+          schema: chartColumnSelectionSchema(matrix),
+        });
+        selection = parseModelJson(text);
+      } catch {
+        selection = null; // deterministic repair inside the builder
+      }
+      const chart = buildChartFromSelection(matrix, selection);
+      // Inline CSV binding so Refresh re-parses the exact source data.
+      const csv = [matrix.headers.join(","), ...matrix.rows.map((r) => r.map((c) => (/[",\n]/.test(c) ? `"${c.replace(/"/g, '""')}"` : c)).join(","))].join("\n");
+      return { payload: { kind: "chartData", chartType: chart.chartType as ChartType, categories: chart.categories, series: chart.series, csv } };
+    }
     case "webSearch": {
       // T16: research the topic and attach the results as a grounding source
       // for LATER steps in the same plan (deps is shared across the resolve
@@ -2688,6 +2716,16 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       st.magicAnimatePage();
       return true;
     case "insertChart": {
+      // T17: a computed payload (values parsed from attached data) wins over
+      // the plan's own numbers, and carries an inline binding so Refresh
+      // re-parses the source.
+      if (ctx?.payload?.kind === "chartData") {
+        const { chartType, categories, series, csv } = ctx.payload;
+        if (!series.length || !categories.length) return false;
+        const id = st.insertChartData({ chartType, categories, series });
+        if (id) st.setDataBinding(id, { kind: "inline", csv, hasHeaderRow: true });
+        return !!id;
+      }
       const series = (a.series as { name: string; values: number[] }[]) ?? [];
       const categories = (a.categories as string[]) ?? [];
       if (!series.length || !categories.length) return false;
@@ -3451,7 +3489,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       {/* FR-8: confirm a large/destructive plan before it mutates the document.
           For generateDesign plans the confirmation carries the T09 outline
           review: an editable outline plus generation dials; Generate proceeds
-          with the EDITED outline, while "Generate now" skips the review. */}
+          with the EDITED outline, while tr("editor.generate_now") skips the review. */}
       {pending && (
         <div className="mt-2 flex max-h-[50%] shrink-0 flex-col gap-2 overflow-y-auto rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-800">
           <div className="flex items-center justify-between gap-2">
@@ -4315,7 +4353,7 @@ const stockKinds = (): { label: string; kind: string }[] => [
 const stockChipCls = (active: boolean) =>
   `whitespace-nowrap rounded-full border px-2.5 py-1 text-xs ${active ? "border-brand-500 bg-brand-50 text-brand-ink" : "border-neutral-200 text-neutral-600 hover:bg-neutral-100"}`;
 
-// Facet ids are catalog slugs; render them as words ("health" -> "Health").
+// Facet ids are catalog slugs; render them as words ("health" -> tr("editor.health")).
 const FACET_LABELS: Record<string, string> = { ui: "UI" };
 const facetLabel = (id: string) => FACET_LABELS[id] ?? id.charAt(0).toUpperCase() + id.slice(1);
 
@@ -4519,16 +4557,16 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
   // Load the active tab's contents. Distinguishes a failed fetch (error banner +
   // retry) from a genuinely empty result (the "no results" message). Browse
   // results are paged (the bundled library holds ~10k assets): a full page means
-  // more may follow, surfaced as a "Load more" button.
+  // more may follow, surfaced as a tr("editor.load_more") button.
   const STOCK_PAGE = 60;
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   // Generation guard: the SDK has no request cancellation, so an in-flight
-  // "Load more" must drop its append when a filter/query change has already
+  // tr("editor.load_more") must drop its append when a filter/query change has already
   // replaced the grid (a stale page would violate the active filters).
   const fetchGen = useRef(0);
   // Next page's offset, advanced by a fixed page size rather than results.length.
-  // The merged "All" search can return a page that id-dedups against what's
+  // The merged tr("editor.all") search can return a page that id-dedups against what's
   // already shown (a live provider flapping between pages); paging by
   // results.length would then drift below the true backend offset and compound
   // skips, so track the offset explicitly instead.

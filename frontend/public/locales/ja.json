@@ -3431,5 +3431,6 @@
   "errors.api_extract_file_too_large": "ファイルが20 MiBの抽出上限を超えています。",
   "errors.api_extract_file_unsupported": ".docx、.pptx、.xlsx ファイルのみ抽出できます。",
   "errors.api_extract_file_unreadable": "ドキュメントを読み取れませんでした。",
-  "errors.api_search_not_configured": "このワークスペースではウェブ検索が設定されていません。管理者がAI設定で検索プロバイダーを接続できます。"
+  "errors.api_search_not_configured": "このワークスペースではウェブ検索が設定されていません。管理者がAI設定で検索プロバイダーを接続できます。",
+  "editor.health": "健康"
 }

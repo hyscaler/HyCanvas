@@ -3362,7 +3362,7 @@
   "ui.loading": "加载中…",
   "ui.notice": "通知",
   "ui.page_not_found": "页面未找到",
-  "ui.the_page_you_are_looking_for_does_not_exist": "你要找的页面不存在或已被移动。",
+  "ui.the_page_you_are_looking_for_does_not_exist": "您查找的页面不存在或可能已移动。",
   "editor.effect_stack": "效果堆栈",
   "editor.effect_stack_order_hint": "效果自上而下应用。重新排序可改变结果。",
   "editor.disable_effect": "停用效果",
@@ -3431,5 +3431,6 @@
   "errors.api_extract_file_too_large": "文件超过 20 MiB 的提取上限。",
   "errors.api_extract_file_unsupported": "只能提取 .docx、.pptx 和 .xlsx 文件。",
   "errors.api_extract_file_unreadable": "无法读取该文档。",
-  "errors.api_search_not_configured": "此工作区未配置网页搜索。管理员可以在 AI 设置中连接搜索提供商。"
+  "errors.api_search_not_configured": "此工作区未配置网页搜索。管理员可以在 AI 设置中连接搜索提供商。",
+  "editor.health": "健康"
 }

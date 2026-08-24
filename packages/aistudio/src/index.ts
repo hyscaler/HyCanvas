@@ -12,6 +12,7 @@ export * from "./outlineEdit";
 export * from "./imagePlan";
 export * from "./layoutSchema";
 export * from "./narrativeOps";
+export * from "./chartData";
 export * from "./theme";
 export * from "./deck";
 export * from "./prompts";

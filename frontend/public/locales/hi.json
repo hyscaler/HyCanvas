@@ -3362,7 +3362,7 @@
   "ui.loading": "लोड हो रहा है…",
   "ui.notice": "सूचना",
   "ui.page_not_found": "पृष्ठ नहीं मिला",
-  "ui.the_page_you_are_looking_for_does_not_exist": "आप जो पृष्ठ खोज रहे हैं वह मौजूद नहीं है या हटाया जा चुका है।",
+  "ui.the_page_you_are_looking_for_does_not_exist": "आप जिस पृष्ठ को खोज रहे हैं वह मौजूद नहीं है या स्थानांतरित हो गया है।",
   "editor.effect_stack": "प्रभाव स्टैक",
   "editor.effect_stack_order_hint": "प्रभाव ऊपर से नीचे लागू होते हैं। परिणाम बदलने के लिए क्रम बदलें।",
   "editor.disable_effect": "प्रभाव अक्षम करें",
@@ -3431,5 +3431,6 @@
   "errors.api_extract_file_too_large": "फ़ाइल 20 MiB की निष्कर्षण सीमा से अधिक है।",
   "errors.api_extract_file_unsupported": "केवल .docx, .pptx और .xlsx फ़ाइलें ही निकाली जा सकती हैं।",
   "errors.api_extract_file_unreadable": "दस्तावेज़ पढ़ा नहीं जा सका।",
-  "errors.api_search_not_configured": "इस वर्कस्पेस के लिए वेब खोज कॉन्फ़िगर नहीं है। व्यवस्थापक AI सेटिंग्स में खोज प्रदाता जोड़ सकते हैं।"
+  "errors.api_search_not_configured": "इस वर्कस्पेस के लिए वेब खोज कॉन्फ़िगर नहीं है। व्यवस्थापक AI सेटिंग्स में खोज प्रदाता जोड़ सकते हैं।",
+  "editor.health": "स्वास्थ्य"
 }

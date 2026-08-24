@@ -1285,6 +1285,7 @@
   "editor.heading_1": "Heading 1",
   "editor.heading_2": "Heading 2",
   "editor.heading_3": "Heading 3",
+  "editor.health": "Health",
   "editor.help": "Help",
   "editor.heres_my_plan_confirm_to_apply": "Here's my plan - confirm to apply.",
   "editor.hero_mosaic": "Hero mosaic",
@@ -2558,6 +2559,9 @@
   "errors.api_email_is_required": "Enter your email address.",
   "errors.api_export_not_found": "That could not be found.",
   "errors.api_export_request_unreadable": "Something went wrong. Please try again.",
+  "errors.api_extract_file_too_large": "The file exceeds the 20 MiB extraction limit.",
+  "errors.api_extract_file_unreadable": "The document could not be read.",
+  "errors.api_extract_file_unsupported": "Only .docx, .pptx, and .xlsx files can be extracted.",
   "errors.api_ffmpeg_unavailable": "Video encoding is unavailable on this server.",
   "errors.api_forbidden_action": "You do not have permission to do that.",
   "errors.api_fps_out_of_range": "Frame rate must be between 1 and 120.",
@@ -2611,6 +2615,7 @@
   "errors.api_resource_not_found": "That could not be found.",
   "errors.api_restore_failed": "Something went wrong. Please try again.",
   "errors.api_role_invalid": "That request could not be processed. Please try again.",
+  "errors.api_search_not_configured": "Web search is not configured for this workspace. An admin can connect a search provider in AI settings.",
   "errors.api_session_not_found": "That could not be found.",
   "errors.api_setup_db_step_required": "That check failed. Review the settings and try again.",
   "errors.api_setup_db_test_failed": "That check failed. Review the settings and try again.",
@@ -3427,9 +3432,5 @@
   "ui.loading": "Loading…",
   "ui.notice": "Notice",
   "ui.page_not_found": "Page not found",
-  "ui.the_page_you_are_looking_for_does_not_exist": "The page you are looking for does not exist or may have moved.",
-  "errors.api_extract_file_too_large": "The file exceeds the 20 MiB extraction limit.",
-  "errors.api_extract_file_unsupported": "Only .docx, .pptx, and .xlsx files can be extracted.",
-  "errors.api_extract_file_unreadable": "The document could not be read.",
-  "errors.api_search_not_configured": "Web search is not configured for this workspace. An admin can connect a search provider in AI settings."
+  "ui.the_page_you_are_looking_for_does_not_exist": "The page you are looking for does not exist or may have moved."
 }
