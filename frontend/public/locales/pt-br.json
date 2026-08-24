@@ -868,7 +868,6 @@
   "editor.couldnt_read_any_pages_from_that_pdf": "Não foi possível ler páginas desse PDF.",
   "editor.couldnt_read_that_file": "Não foi possível ler esse arquivo.",
   "editor.couldnt_read_that_page": "Não foi possível ler essa página.",
-  "editor.couldnt_read_that_pdf": "Não foi possível ler esse PDF.",
   "editor.couldnt_rename_that_folder": "Não foi possível renomear essa pasta.",
   "editor.couldnt_rename_that_upload": "Não foi possível renomear esse upload.",
   "editor.couldnt_restore_that_version": "Não foi possível restaurar essa versão.",
@@ -3426,5 +3425,10 @@
   "editor.n_images_couldnt_be_added.other": "{count} imagens não puderam ser adicionadas. A apresentação está completa sem elas.",
   "editor.retry_images.one": "Tentar novamente {count} imagem",
   "editor.retry_images.other": "Tentar novamente {count} imagens",
-  "app.image": "Imagem"
+  "app.image": "Imagem",
+  "editor.pdf_looks_scanned_no_text_layer": "Este PDF parece digitalizado (sem camada de texto), então não há texto para usar. OCR ainda não é suportado.",
+  "editor.edit_extracted_text": "Editar texto extraído",
+  "errors.api_extract_file_too_large": "O arquivo excede o limite de extração de 20 MiB.",
+  "errors.api_extract_file_unsupported": "Apenas arquivos .docx, .pptx e .xlsx podem ser extraídos.",
+  "errors.api_extract_file_unreadable": "Não foi possível ler o documento."
 }

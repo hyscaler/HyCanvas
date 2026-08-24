@@ -58,6 +58,7 @@ A living checklist of what ships today versus what is planned. Shipped items are
 - [x] Design assistant chat: one agentic surface over the validated tool catalog (generate deck/doc/poster, images, restyle, charts, diagrams, whole-deck translation, speaker notes, critique); the earlier dedicated AI panels were consolidated into it
 - [x] Multi-page generation from server-validated outlines with speaker notes; doc/URL/file-to-deck ingestion (.txt/.md/.pdf text layer); no-key Assist tools
 - [x] Outline review before generation: editable outline (edit/reorder/add/remove) + generation dials (density/tone/audience/scenario) in the confirmation gate, with regenerate and skip
+- [x] Ingestion depth: up to 8 grounding attachments per generation (paste/URL/files), office-format extraction (.docx paragraphs, .pptx slides in deck order, .xlsx tab-separated rows), scanned-PDF detection with a friendly message, per-attachment editable extracted text
 - [x] Per-slide AI regeneration: regenerateSlide rewrites one slide per instruction, optionally re-selecting the layout, preserving node ids (Magic Move) and any images whose prompts are unchanged
 - [x] Narrative assistant ops: insertAgenda (algorithmic TOC with accurate final page numbers), splitSlide (one slide into two coherent halves), insertComparison (side-by-side layout fill)
 - [x] Layout-grounded generation: decks target the master/layout/placeholder model (per-layout derived content schemas with v21 capacities, deterministic layout selection repair with variety, placeholder fills, picture slots through the image queue; freeform engine remains the no-layout fallback)
@@ -95,7 +96,6 @@ A living checklist of what ships today versus what is planned. Shipped items are
 - [ ] Camera bubble in present-and-record
 - [ ] Live captions (blocked on the AI media pipeline, spec 23)
 - [ ] PPTX fidelity: native chart/SmartArt import, animation and master-inheritance preservation
-- [ ] Office-format ingestion (.docx/.pptx/.xlsx), multi-file grounding, scanned-PDF detection
 - [ ] 60fps present at scale (unverified)
 
 ### Whiteboard ([spec 30](roadmap/30-whiteboard.md))

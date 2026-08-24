@@ -868,7 +868,6 @@
   "editor.couldnt_read_any_pages_from_that_pdf": "そのPDFからページを読み取れませんでした。",
   "editor.couldnt_read_that_file": "そのファイルを読み込めませんでした。",
   "editor.couldnt_read_that_page": "そのページを読み取れませんでした。",
-  "editor.couldnt_read_that_pdf": "そのPDFを読み込めませんでした。",
   "editor.couldnt_rename_that_folder": "そのフォルダの名前を変更できませんでした。",
   "editor.couldnt_rename_that_upload": "そのアップロードの名前を変更できませんでした。",
   "editor.couldnt_restore_that_version": "そのバージョンを復元できませんでした。",
@@ -3426,5 +3425,10 @@
   "editor.n_images_couldnt_be_added.other": "{count}枚の画像を追加できませんでした。デッキはこのままでも完成しています。",
   "editor.retry_images.one": "画像{count}枚を再試行",
   "editor.retry_images.other": "画像{count}枚を再試行",
-  "app.image": "画像"
+  "app.image": "画像",
+  "editor.pdf_looks_scanned_no_text_layer": "このPDFはスキャン画像のようです（テキストレイヤーなし）。元にできるテキストがありません。OCRは未対応です。",
+  "editor.edit_extracted_text": "抽出テキストを編集",
+  "errors.api_extract_file_too_large": "ファイルが20 MiBの抽出上限を超えています。",
+  "errors.api_extract_file_unsupported": ".docx、.pptx、.xlsx ファイルのみ抽出できます。",
+  "errors.api_extract_file_unreadable": "ドキュメントを読み取れませんでした。"
 }

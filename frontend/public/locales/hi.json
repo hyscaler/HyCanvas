@@ -868,7 +868,6 @@
   "editor.couldnt_read_any_pages_from_that_pdf": "उस PDF से कोई पृष्ठ पढ़ा नहीं जा सका।",
   "editor.couldnt_read_that_file": "वह फ़ाइल पढ़ी नहीं जा सकी।",
   "editor.couldnt_read_that_page": "वह पृष्ठ पढ़ा नहीं जा सका।",
-  "editor.couldnt_read_that_pdf": "वह PDF पढ़ी नहीं जा सकी।",
   "editor.couldnt_rename_that_folder": "उस फ़ोल्डर का नाम बदला नहीं जा सका।",
   "editor.couldnt_rename_that_upload": "उस अपलोड का नाम बदला नहीं जा सका।",
   "editor.couldnt_restore_that_version": "वह संस्करण पुनर्स्थापित नहीं हो सका।",
@@ -3426,5 +3425,10 @@
   "editor.n_images_couldnt_be_added.other": "{count} छवियां जोड़ी नहीं जा सकीं। डेक इनके बिना भी पूर्ण है।",
   "editor.retry_images.one": "{count} छवि पुनः प्रयास करें",
   "editor.retry_images.other": "{count} छवियां पुनः प्रयास करें",
-  "app.image": "छवि"
+  "app.image": "छवि",
+  "editor.pdf_looks_scanned_no_text_layer": "यह PDF स्कैन की हुई लगती है (कोई टेक्स्ट परत नहीं), इसलिए बनाने के लिए कोई टेक्स्ट नहीं है। OCR अभी समर्थित नहीं है।",
+  "editor.edit_extracted_text": "निकाले गए टेक्स्ट को संपादित करें",
+  "errors.api_extract_file_too_large": "फ़ाइल 20 MiB की निष्कर्षण सीमा से अधिक है।",
+  "errors.api_extract_file_unsupported": "केवल .docx, .pptx और .xlsx फ़ाइलें ही निकाली जा सकती हैं।",
+  "errors.api_extract_file_unreadable": "दस्तावेज़ पढ़ा नहीं जा सका।"
 }

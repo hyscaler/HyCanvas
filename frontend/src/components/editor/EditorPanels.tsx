@@ -47,7 +47,7 @@ import { ApiError, type AiConfigView, type AiProviderPreset, type AssetFolder, t
 import { DesignThumb } from "@/components/dashboard/DesignThumb";
 import { checkAppAction, type AppAction } from "@hc/stock";
 import { oc, resolveAssetUrl, stockProxyUrl, uploadAssetWithProgress } from "@/lib/sdk";
-import { pdfFileToText } from "@/lib/pdfImport";
+import { pdfFileToTextWithScanCheck } from "@/lib/pdfImport";
 import { mermaidToDiagram, normalizeDiagramSpec, type DiagramSpec } from "@hc/whiteboard";
 import type { BrandVoice, BrandLintViolation } from "@hc/sdk";
 import { useEditor, type BrandFixTarget, type DeckTextEntry } from "@/store/editor";
@@ -1896,8 +1896,8 @@ interface AssistantDeps {
   designId?: string | null;
   /** Attached source content (doc 28 FR-23 doc/URL/file-to-deck ingestion):
    *  generateDesign grounds its outline strictly in this text when present. */
-  sourceText?: string;
-  sourceName?: string;
+  /** Attached grounding sources (T15: up to 8, combined under one budget). */
+  sources?: { name: string; text: string }[];
 }
 
 // Outline roles that get a generated hero background image (the high-impact
@@ -1964,6 +1964,24 @@ async function fetchAssistantOutline(workspaceId: string, dt: DesignType, prompt
   }
 }
 
+/** Combined attachment budget: 8 sources, sharing one character cap split
+ *  evenly (per the multi-file ingestion contract). */
+const maxSources = 8;
+const combinedSourceChars = 48000;
+
+/** Concatenate the attached sources into ONE grounding block: a header per
+ *  source (name + ordinal, so the model can cite "per source 2"), the shared
+ *  budget split evenly across however many sources there are, and the
+ *  untrusted framing applied to the block as a whole. Empty when nothing is
+ *  attached. */
+function combinedSourceBlock(sources: { name: string; text: string }[] | undefined): string {
+  const list = (sources ?? []).filter((sc) => sc.text.trim()).slice(0, maxSources);
+  if (!list.length) return "";
+  const per = Math.floor(combinedSourceChars / list.length);
+  const parts = list.map((sc, i) => `--- SOURCE ${i + 1}: ${sc.name} ---\n${sc.text.slice(0, per)}`);
+  return `Ground every page STRICTLY in the attached source content: keep its structure, facts, and key points, and do not invent material that is not in it. ${untrustedSourceRule("the source content")}\n${parts.join("\n")}\n--- SOURCES END ---`;
+}
+
 /** Derive the generateDesign request pieces (type, size, brief with source
  *  grounding and dials, brand clause, page count) so the review fetch and the
  *  resolve path build IDENTICAL outline requests. */
@@ -1981,9 +1999,8 @@ function prepareGenerateBrief(a: Record<string, unknown>, deps: AssistantDeps): 
   let brief = String(a.prompt);
   const dials = dialsClause(deps.dials);
   if (dials) brief = `${brief}\n\n${dials}`;
-  if (deps.sourceText) {
-    brief = `${brief}\n\nGround every page STRICTLY in this source content ("${deps.sourceName ?? "attached document"}"): keep its structure, facts, and key points, and do not invent material that is not in it. ${untrustedSourceRule("the source content")}\n--- SOURCE START ---\n${deps.sourceText.slice(0, 24000)}\n--- SOURCE END ---`;
-  }
+  const sourceBlock = combinedSourceBlock(deps.sources);
+  if (sourceBlock) brief = `${brief}\n\n${sourceBlock}`;
   return { dt, size, brief, brandClause, pageCount };
 }
 
@@ -3012,7 +3029,9 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   }, [designId]);
   const [busy, setBusy] = useState(false);
   // Attached source content for create-from-document/URL/file (FR-23).
-  const [source, setSource] = useState<{ name: string; text: string } | null>(null);
+  // T15: multiple grounding attachments (cap 8), each editable before use.
+  const [sources, setSources] = useState<{ name: string; text: string }[]>([]);
+  const [editingSource, setEditingSource] = useState<number | null>(null);
   const [attachOpen, setAttachOpen] = useState(false);
   const [attachUrl, setAttachUrl] = useState("");
   const [attachBusy, setAttachBusy] = useState(false);
@@ -3092,7 +3111,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     const seq = ++reviewSeq.current;
     setReview({ outline: null, loading: true, dials });
     try {
-      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sourceText: source?.text, sourceName: source?.name, dials, designId };
+      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sources, dials, designId };
       const { dt, brief, brandClause, pageCount } = prepareGenerateBrief(step.args, deps);
       const outline = await fetchAssistantOutline(workspaceId, dt, brief, brandClause, pageCount);
       if (seq !== reviewSeq.current) return; // superseded by a newer fetch or cancel
@@ -3130,7 +3149,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
           // best-effort; the applyBrand step will simply report nothing to fix
         }
       }
-      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sourceText: source?.text, sourceName: source?.name, reviewedOutline, dials, designId };
+      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sources, reviewedOutline, dials, designId };
       const payloads: (ResolvedPayload | undefined)[] = [];
       const skips: (string | undefined)[] = [];
       for (let i = 0; i < plan.length; i++) {
@@ -3208,10 +3227,10 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       // Prefer the backend orchestrator (server-side validation/retry, FR-12);
       // fall back to the free-text path. Either way the client re-validates arg
       // types via parseAssistantReply before anything executes.
-      // With a source attached, tell the planner it exists (the executor does
+      // With sources attached, tell the planner they exist (the executor does
       // the grounding); the user's words alone often don't mention it.
-      const plannerText = source
-        ? `${userText}\n[Note: the user attached source content "${source.name}" (${source.text.length} chars). To create a deck/design from it, plan generateDesign - the executor grounds the outline in the attachment automatically.]`
+      const plannerText = sources.length
+        ? `${userText}\n[Note: the user attached ${sources.length} source${sources.length === 1 ? "" : "s"} (${sources.map((sc) => sc.name).join(", ")}; ${sources.reduce((n, sc) => n + sc.text.length, 0)} chars total). To create a deck/design from them, plan generateDesign - the executor grounds the outline in the attachments automatically.]`
         : userText;
       let res;
       try {
@@ -3523,16 +3542,34 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
         </div>
       )}
 
-      {/* Source attachment (FR-23): paste text, fetch a URL, or pick a file;
-          the next "create a deck from this" grounds its outline in it. */}
-      {source && (
-        <div className="mt-2 flex shrink-0 items-center gap-2 rounded-lg border border-brand-200 bg-brand-50 px-2.5 py-1.5 text-[11px] text-brand-ink">
-          <FileText size={12} className="shrink-0" />
-          <span className="min-w-0 flex-1 truncate" title={source.name}>{source.name} · {Math.round(source.text.length / 1000)}k chars</span>
-          <button onClick={() => setSource(null)} aria-label={tr("editor.remove_attached_content")} className="rounded p-0.5 hover:bg-brand-100"><X size={12} /></button>
+      {/* Source attachments (FR-23/T15): paste text, fetch URLs, or pick files
+          (multiple, cap 8); each is editable before the next generation
+          grounds its outline in ALL of them. */}
+      {sources.map((sc, i) => (
+        <div key={`${sc.name}-${i}`} className="mt-2 flex shrink-0 flex-col gap-1 rounded-lg border border-brand-200 bg-brand-50 px-2.5 py-1.5 text-[11px] text-brand-ink">
+          <div className="flex items-center gap-2">
+            <FileText size={12} className="shrink-0" />
+            <span className="min-w-0 flex-1 truncate" title={sc.name}>{sc.name} · {Math.round(sc.text.length / 1000)}k chars</span>
+            <button
+              onClick={() => setEditingSource(editingSource === i ? null : i)}
+              aria-label={tr("editor.edit_extracted_text")}
+              className="rounded p-0.5 hover:bg-brand-100"
+            >
+              <Pencil size={12} />
+            </button>
+            <button onClick={() => { setSources((xs) => xs.filter((_, j) => j !== i)); setEditingSource(null); }} aria-label={tr("editor.remove_attached_content")} className="rounded p-0.5 hover:bg-brand-100"><X size={12} /></button>
+          </div>
+          {editingSource === i && (
+            <textarea
+              value={sc.text}
+              rows={6}
+              onChange={(e) => setSources((xs) => xs.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))}
+              className="w-full resize-y rounded-md border border-brand-200 bg-surface px-2 py-1.5 text-xs text-neutral-800 outline-none focus:border-brand-400"
+            />
+          )}
         </div>
-      )}
-      {attachOpen && !source && (
+      ))}
+      {attachOpen && sources.length < 8 && (
         <div className="mt-2 flex shrink-0 flex-col gap-1.5 rounded-lg border border-neutral-200 bg-neutral-50 p-2">
           <textarea
             placeholder={tr("editor.paste_text_or_notes_to_build_from")}
@@ -3540,7 +3577,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
             className="w-full resize-none rounded-md border border-neutral-200 bg-surface px-2 py-1.5 text-xs outline-none focus:border-brand-400"
             onBlur={(e) => {
               const t = e.target.value.trim();
-              if (t) { setSource({ name: tr("editor.pasted_text"), text: t }); setAttachOpen(false); }
+              if (t) { setSources((xs) => [...xs, { name: tr("editor.pasted_text"), text: t }]); e.target.value = ""; setAttachOpen(false); }
             }}
           />
           <div className="flex items-center gap-1.5">
@@ -3556,7 +3593,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                 const url = attachUrl.trim();
                 setAttachBusy(true);
                 void oc.aiExtractUrl({ url })
-                  .then((r) => { setSource({ name: r.title || url, text: r.text }); setAttachOpen(false); setAttachUrl(""); })
+                  .then((r) => { setSources((xs) => [...xs, { name: r.title || url, text: r.text }]); setAttachOpen(false); setAttachUrl(""); })
                   .catch(() => toast.error(tr("editor.couldnt_read_that_page")))
                   .finally(() => setAttachBusy(false));
               }}
@@ -3568,24 +3605,56 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
               {tr("editor.file")}
               <input
                 type="file"
-                accept=".txt,.md,.markdown,.pdf,text/plain,text/markdown,application/pdf"
+                multiple
+                accept=".txt,.md,.markdown,.pdf,.docx,.pptx,.xlsx,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 className="hidden"
                 onChange={(e) => {
-                  const f = e.target.files?.[0];
+                  const files = Array.from(e.target.files ?? []);
                   e.target.value = "";
-                  if (!f) return;
+                  if (!files.length) return;
                   setAttachBusy(true);
-                  const finish = (text: string) => {
+                  const addSource = (name: string, text: string) => {
                     const t = text.trim();
-                    if (t) { setSource({ name: f.name, text: t.slice(0, 60000) }); setAttachOpen(false); }
+                    if (t) setSources((xs) => (xs.length < 8 ? [...xs, { name, text: t.slice(0, 60000) }] : xs));
                     else toast.error(tr("editor.no_readable_text_in_that_file"));
-                    setAttachBusy(false);
                   };
-                  if (/\.pdf$/i.test(f.name) || f.type === "application/pdf") {
-                    void pdfFileToText(f).then(finish).catch(() => { toast.error(tr("editor.couldnt_read_that_pdf")); setAttachBusy(false); });
-                  } else {
-                    void f.text().then(finish).catch(() => { toast.error(tr("editor.couldnt_read_that_file")); setAttachBusy(false); });
-                  }
+                  const extractOne = async (f: File): Promise<void> => {
+                    if (/\.pdf$/i.test(f.name) || f.type === "application/pdf") {
+                      // Scanned-PDF detection (first 5 pages under 50 chars):
+                      // an image-only PDF has no text layer to ground on, and
+                      // OCR is out of scope, so say so instead of attaching
+                      // an empty source.
+                      const { text, scanned } = await pdfFileToTextWithScanCheck(f);
+                      if (scanned) { toast.error(tr("editor.pdf_looks_scanned_no_text_layer")); return; }
+                      addSource(f.name, text);
+                      return;
+                    }
+                    if (/\.(docx|pptx|xlsx)$/i.test(f.name)) {
+                      const buf = await f.arrayBuffer();
+                      let binary = "";
+                      const bytes = new Uint8Array(buf);
+                      const chunk = 0x8000;
+                      for (let i = 0; i < bytes.length; i += chunk) binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+                      const r = await oc.aiExtractFile({ filename: f.name, mimeType: f.type || undefined, dataBase64: btoa(binary) });
+                      addSource(r.name, r.text);
+                      return;
+                    }
+                    addSource(f.name, await f.text());
+                  };
+                  void (async () => {
+                    for (const f of files.slice(0, 8)) {
+                      try {
+                        await extractOne(f);
+                      } catch (err) {
+                        // Server rejections carry a stable code (too large /
+                        // unsupported / unreadable); name the reason when known.
+                        const coded = err instanceof ApiError ? apiCodeMessage(err.body) : null;
+                        toast.error(`${coded ?? tr("editor.couldnt_read_that_file")} (${f.name})`);
+                      }
+                    }
+                    setAttachOpen(false);
+                    setAttachBusy(false);
+                  })();
                 }}
               />
             </label>
@@ -3600,7 +3669,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
             onClick={() => setAttachOpen((v) => !v)}
             title={tr("editor.attach_content_to_build_from_paste_url_or_fi")}
             aria-label={tr("editor.attach_content")}
-            className={`mb-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg ${attachOpen || source ? "bg-brand-50 text-brand-ink" : "text-neutral-400 hover:bg-neutral-100"}`}
+            className={`mb-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg ${attachOpen || sources.length ? "bg-brand-50 text-brand-ink" : "text-neutral-400 hover:bg-neutral-100"}`}
           >
             <Paperclip size={15} />
           </button>

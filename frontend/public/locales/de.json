@@ -868,7 +868,6 @@
   "editor.couldnt_read_any_pages_from_that_pdf": "Aus diesem PDF konnten keine Seiten gelesen werden.",
   "editor.couldnt_read_that_file": "Diese Datei konnte nicht gelesen werden.",
   "editor.couldnt_read_that_page": "Diese Seite konnte nicht gelesen werden.",
-  "editor.couldnt_read_that_pdf": "Dieses PDF konnte nicht gelesen werden.",
   "editor.couldnt_rename_that_folder": "Dieser Ordner konnte nicht umbenannt werden.",
   "editor.couldnt_rename_that_upload": "Dieser Upload konnte nicht umbenannt werden.",
   "editor.couldnt_restore_that_version": "Diese Version konnte nicht wiederhergestellt werden.",
@@ -3426,5 +3425,10 @@
   "editor.n_images_couldnt_be_added.other": "{count} Bilder konnten nicht hinzugefügt werden. Das Deck ist auch ohne vollständig.",
   "editor.retry_images.one": "{count} Bild erneut versuchen",
   "editor.retry_images.other": "{count} Bilder erneut versuchen",
-  "app.image": "Bild"
+  "app.image": "Bild",
+  "editor.pdf_looks_scanned_no_text_layer": "Diese PDF wirkt gescannt (keine Textebene), es gibt also keinen Text zum Aufbauen. OCR wird noch nicht unterstützt.",
+  "editor.edit_extracted_text": "Extrahierten Text bearbeiten",
+  "errors.api_extract_file_too_large": "Die Datei überschreitet das 20-MiB-Extraktionslimit.",
+  "errors.api_extract_file_unsupported": "Nur .docx-, .pptx- und .xlsx-Dateien können extrahiert werden.",
+  "errors.api_extract_file_unreadable": "Das Dokument konnte nicht gelesen werden."
 }

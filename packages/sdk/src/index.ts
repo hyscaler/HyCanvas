@@ -1819,6 +1819,12 @@ export class HyCanvasClient {
   aiExtractUrl(input: { url: string }): Promise<{ title: string; text: string }> {
     return this.request("POST", "/v1/ai/extract-url", input);
   }
+  /** Extract text from an office document (.docx/.pptx/.xlsx) for generation
+   *  grounding: paragraphs, slide texts in deck order, or tab-separated sheet
+   *  rows. Nothing is stored server-side. */
+  aiExtractFile(input: { filename: string; mimeType?: string; dataBase64: string }): Promise<{ name: string; text: string }> {
+    return this.request("POST", "/v1/ai/extract-file", input);
+  }
   aiText(input: { workspaceId: string; prompt: string; system?: string }): Promise<{ text: string }> {
     return this.request("POST", "/v1/ai/text", input);
   }

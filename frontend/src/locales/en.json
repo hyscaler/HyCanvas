@@ -875,7 +875,6 @@
   "editor.couldnt_read_any_pages_from_that_pdf": "Couldn't read any pages from that PDF.",
   "editor.couldnt_read_that_file": "Couldn't read that file.",
   "editor.couldnt_read_that_page": "Couldn't read that page.",
-  "editor.couldnt_read_that_pdf": "Couldn't read that PDF.",
   "editor.couldnt_rename_that_folder": "Couldn't rename that folder.",
   "editor.couldnt_rename_that_upload": "Couldn't rename that upload.",
   "editor.couldnt_restore_that_version": "Couldn't restore that version.",
@@ -1092,6 +1091,7 @@
   "editor.edit": "Edit",
   "editor.edit_color": "Edit color",
   "editor.edit_comment": "Edit comment",
+  "editor.edit_extracted_text": "Edit extracted text",
   "editor.edit_failed": "Edit failed.",
   "editor.edit_tags": "Edit tags",
   "editor.editable_slides_for_powerpoint_keynote_google": "Editable slides for PowerPoint, Keynote, and Google Slides; text and shapes stay editable, complex elements embed as images",
@@ -1774,6 +1774,7 @@
   "editor.pattern_fill": "Pattern fill",
   "editor.pause": "Pause",
   "editor.pause_autopilot_p": "Pause autopilot (P)",
+  "editor.pdf_looks_scanned_no_text_layer": "This PDF looks scanned (no text layer), so there is no text to build from. OCR isn't supported yet.",
   "editor.pen": "Pen",
   "editor.pen_draw_d": "Pen draw (D)",
   "editor.pen_draw_ephemeral": "Pen draw (ephemeral)",
@@ -3426,5 +3427,8 @@
   "ui.loading": "Loading…",
   "ui.notice": "Notice",
   "ui.page_not_found": "Page not found",
-  "ui.the_page_you_are_looking_for_does_not_exist": "The page you are looking for does not exist or may have moved."
+  "ui.the_page_you_are_looking_for_does_not_exist": "The page you are looking for does not exist or may have moved.",
+  "errors.api_extract_file_too_large": "The file exceeds the 20 MiB extraction limit.",
+  "errors.api_extract_file_unsupported": "Only .docx, .pptx, and .xlsx files can be extracted.",
+  "errors.api_extract_file_unreadable": "The document could not be read."
 }
