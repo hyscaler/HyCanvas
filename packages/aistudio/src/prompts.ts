@@ -5,6 +5,7 @@
 // in one place and the frontend thin.
 
 import { maxNoteChars, outlineJsonSchema, type DesignType } from "./outline";
+import { composeRules, contentOnlyRule, lengthLimitRule, scopedInstructionRule, settingsAuthorityRule, verbosityRule, type Verbosity } from "./promptRules";
 
 const TYPE_GUIDANCE: Record<DesignType, string> = {
   deck: "A presentation deck: a cover, an optional agenda, several content pages, an optional data or comparison page, and a closing/CTA page. Aim for a clear narrative arc.",
@@ -15,7 +16,7 @@ const TYPE_GUIDANCE: Record<DesignType, string> = {
 
 /** System prompt asking the model for a DesignOutline (titles + points + roles),
  *  never positions or styling. The client validates with normalizeOutline. */
-export function outlineSystemPrompt(designType: DesignType, brandClause: string, pageCount?: number): string {
+export function outlineSystemPrompt(designType: DesignType, brandClause: string, pageCount?: number, verbosity?: Verbosity): string {
   const count = pageCount && pageCount > 0 ? `Aim for about ${pageCount} pages. ` : "";
   return [
     "You are an expert content strategist and presentation designer.",
@@ -26,6 +27,7 @@ export function outlineSystemPrompt(designType: DesignType, brandClause: string,
     `The note is a REQUIRED speaker note for the presenter: 1-3 spoken-style sentences of plain text (no markdown, 100-${maxNoteChars} characters) that add context, evidence, or delivery cues. It must never restate the slide's visible text. Never exceed the length limit; rephrase rather than clipping mid-sentence.`,
     "Use 'cover' for the first page, 'closing' for the last when it fits, and pick roles that match each page's purpose.",
     "Do NOT include any layout, colors, sizes, or positions - only titles, points, and roles.",
+    composeRules(settingsAuthorityRule(), contentOnlyRule(), verbosityRule(verbosity), lengthLimitRule(), scopedInstructionRule()),
     brandClause,
   ].filter(Boolean).join(" ");
 }

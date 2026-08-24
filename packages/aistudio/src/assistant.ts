@@ -5,6 +5,8 @@
 // validates the model's reply against the catalog so the executor (the store)
 // only ever runs known, well-typed actions - never raw scene JSON (FR-6/7/10).
 
+import { assetLanguageRule, composeRules, contentOnlyRule, scopedInstructionRule } from "./promptRules";
+
 export type ToolParamType = "string" | "number" | "color" | "stringArray" | "series";
 
 export interface ToolParam {
@@ -233,6 +235,7 @@ export function assistantSystemPrompt(catalog: ToolDef[], designSummary: string)
     "Strongly prefer producing a plan over asking. Do NOT ask the user about page size, theme, or whether to add content - just generate it. Use \"clarify\" ONLY when the request is truly ambiguous (you cannot tell what to make) or would destroy specific existing work in more than one plausible way; otherwise return an empty clarify and a real plan.",
     'Example - user: "professional marketing poster, fresh content and fresh layout" -> {"reply":"Creating a professional marketing poster.","plan":[{"action":"generateDesign","args":{"prompt":"professional marketing poster","designType":"poster"}}]}.',
     "Use action names verbatim from the catalog and provide every required arg with the correct type. Keep the plan minimal: only the steps needed. Prefer existing-selection actions (setSelectedText, recolorSelection) when the user refers to 'this' or 'the selected'.",
+    composeRules(contentOnlyRule(), scopedInstructionRule(), assetLanguageRule()),
     "",
     "Tool catalog:",
     tools,

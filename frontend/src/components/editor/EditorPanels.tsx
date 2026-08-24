@@ -12,7 +12,7 @@ import { qrModules } from "@/lib/qr";
 import { stickers, stickerCategories, type Sticker } from "@/lib/stickers";
 import { parseModelJson } from "@/lib/magicDesign";
 import {
-  normalizeOutline, deckThemes, layoutDeck, groundImagePrompt,
+  normalizeOutline, deckThemes, layoutDeck, groundImagePrompt, untrustedSourceRule,
   type DesignOutline, type DesignType,
   toolCatalog, assistantSystemPrompt, parseAssistantReply, planMutates, summarizeDesign, type PlanStep,
 } from "@hc/aistudio";
@@ -2185,7 +2185,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       // outline is grounded strictly in it rather than invented from the brief.
       let brief = String(a.prompt);
       if (deps.sourceText) {
-        brief = `${brief}\n\nGround every page STRICTLY in this source content ("${deps.sourceName ?? "attached document"}"): keep its structure, facts, and key points, and do not invent material that is not in it.\n--- SOURCE START ---\n${deps.sourceText.slice(0, 24000)}\n--- SOURCE END ---`;
+        brief = `${brief}\n\nGround every page STRICTLY in this source content ("${deps.sourceName ?? "attached document"}"): keep its structure, facts, and key points, and do not invent material that is not in it. ${untrustedSourceRule("the source content")}\n--- SOURCE START ---\n${deps.sourceText.slice(0, 24000)}\n--- SOURCE END ---`;
       }
       const outline = await fetchAssistantOutline(deps.workspaceId, dt, brief, brandClause, pageCount);
       if (!outline) return { error: "couldn't plan that design" };

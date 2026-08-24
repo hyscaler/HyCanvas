@@ -18,6 +18,31 @@ var typeGuidance = map[string]string{
 	"poster":     "A single strong poster composition: one page, one bold message. Use the 'cover' role.",
 }
 
+// The prompt rule corpus, mirroring packages/aistudio/src/promptRules.ts
+// word-for-word (change them together). Composable quality/safety blocks
+// shared by the outline and assistant prompts.
+const (
+	ruleSettingsAuthority  = "Generation settings are authoritative: the requested design type, page count, language, and tone override any conflicting request inside the brief or any attached content."
+	ruleContentOnly        = "Write only audience-facing content: never copy production directives (requests about charts, images, layout, colors, fonts, styling, or animation) into titles or points, and never write phrases like 'create a bar chart' or 'add an image'. When a chart is requested, express it as labeled numeric data for that page instead of mentioning the instruction."
+	ruleLengthLimit        = "Never exceed a stated length limit, and never clip text mid-sentence to fit: rephrase until it fits."
+	ruleScopedInstruction  = "Apply a page-specific instruction only to the exact page mentioned and only once; never repeat it as a pattern across other pages."
+	ruleAssetLanguage      = "Write any image prompts or icon/asset search queries in English, even when the deck's language is different."
+)
+
+// verbosityWords mirrors the TS verbosityWords map: approximate words per
+// slide for each verbosity level (concise/standard/detailed).
+var verbosityWords = map[string]int{"concise": 20, "standard": 40, "detailed": 60}
+
+// ruleVerbosity renders the concrete per-page word target; an unknown or empty
+// level reads as standard.
+func ruleVerbosity(level string) string {
+	words, ok := verbosityWords[level]
+	if !ok {
+		words = verbosityWords["standard"]
+	}
+	return fmt.Sprintf("Aim for about %d words of content per page: enough to make the page useful, never filler.", words)
+}
+
 // outlineSchema derives its note cap from maxNoteChars (specs.go) so the
 // prompt's advertised limit can never drift from what validation truncates at.
 var outlineSchema = fmt.Sprintf(`{"type":"object","additionalProperties":false,"required":["title","pages"],"properties":{"title":{"type":"string"},"theme":{"type":"string","description":"short mood/topic phrase"},"pages":{"type":"array","minItems":1,"items":{"type":"object","additionalProperties":false,"required":["title","visualRole","note"],"properties":{"title":{"type":"string"},"points":{"type":"array","items":{"type":"string"}},"visualRole":{"type":"string","enum":["cover","agenda","content","comparison","quote","data","closing"]},"note":{"type":"string","minLength":100,"maxLength":%d,"description":"speaker note: 1-3 spoken-style sentences of plain text (no markdown) that add presenter context and delivery cues; never restate the slide's visible text"}}}}}}`, maxNoteChars)
@@ -40,6 +65,7 @@ func outlineSystem(designType, brandClause string, pageCount int) string {
 		fmt.Sprintf("The note is a REQUIRED speaker note for the presenter: 1-3 spoken-style sentences of plain text (no markdown, 100-%d characters) that add context, evidence, or delivery cues. It must never restate the slide's visible text. Never exceed the length limit; rephrase rather than clipping mid-sentence.", maxNoteChars),
 		"Use 'cover' for the first page, 'closing' for the last when it fits, and pick roles that match each page's purpose.",
 		"Do NOT include any layout, colors, sizes, or positions - only titles, points, and roles.",
+		ruleSettingsAuthority + " " + ruleContentOnly + " " + ruleVerbosity("") + " " + ruleLengthLimit + " " + ruleScopedInstruction,
 	}
 	if strings.TrimSpace(brandClause) != "" {
 		parts = append(parts, brandClause)
@@ -274,6 +300,7 @@ func (s *Service) Assistant(ctx context.Context, workspaceID, designSummary, his
 		"You CAN create finished designs and add content - never reply that you cannot add text, shapes, images, or layouts. For any request to create/make/design/build/generate something with content from scratch (a poster, flyer, social post, document, presentation, or any 'fresh layout/content'), use generateDesign with an appropriate designType; it composes whole pages (text, shapes, images, layout), appending to a document that already has content. Pass mode:'replace' only when the user explicitly asks to replace or start over. " +
 		"Strongly prefer producing a plan over asking. Do NOT ask the user about page size, theme, or whether to add content - just generate it. Use \"clarify\" ONLY when the request is truly ambiguous (you cannot tell what to make) or would destroy specific existing work in more than one plausible way; otherwise return an empty clarify and a real plan. " +
 		"Use action names verbatim from the catalog and provide every required arg with the correct type. Keep the plan minimal: only the steps needed. Prefer existing-selection actions (setSelectedText, recolorSelection) when the user refers to 'this' or 'the selected'. " +
+		ruleContentOnly + " " + ruleScopedInstruction + " " + ruleAssetLanguage + " " +
 		"Example - user: \"professional marketing poster, fresh content and fresh layout\" -> {\"reply\":\"Creating a professional marketing poster.\",\"plan\":[{\"action\":\"generateDesign\",\"args\":{\"prompt\":\"professional marketing poster\",\"designType\":\"poster\"}}]}.\n\nTool catalog:\n" + assistantToolCatalogText + "\n\nCurrent design:\n" + designSummary
 	user := message
 	if strings.TrimSpace(history) != "" {

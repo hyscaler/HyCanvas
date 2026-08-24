@@ -391,3 +391,37 @@ func TestRepairMessageBudgets(t *testing.T) {
 		t.Error("overflow errors must be dropped, not listed")
 	}
 }
+
+// T08: the outline and assistant prompts carry the rule corpus (mirrored
+// word-for-word from packages/aistudio/src/promptRules.ts).
+func TestPromptRuleCorpusWired(t *testing.T) {
+	outline := outlineSystem("deck", "", 0)
+	for name, rule := range map[string]string{
+		"settings authority": ruleSettingsAuthority,
+		"content only":       ruleContentOnly,
+		"verbosity":          ruleVerbosity(""),
+		"length limit":       ruleLengthLimit,
+		"scoped instruction": ruleScopedInstruction,
+	} {
+		if !strings.Contains(outline, rule) {
+			t.Errorf("outline prompt missing the %s rule", name)
+		}
+	}
+	if ruleVerbosity("concise") == ruleVerbosity("detailed") || !strings.Contains(ruleVerbosity("concise"), "20 words") {
+		t.Errorf("verbosity levels wrong: %q", ruleVerbosity("concise"))
+	}
+	gen := &capturingGen{reply: `{"reply":"ok","plan":[]}`}
+	svc := NewService(nil, gen)
+	if _, err := svc.Assistant(context.Background(), "ws", "Pages: 1", "", "hello"); err != nil {
+		t.Fatal(err)
+	}
+	for name, rule := range map[string]string{
+		"content only":       ruleContentOnly,
+		"scoped instruction": ruleScopedInstruction,
+		"asset language":     ruleAssetLanguage,
+	} {
+		if !strings.Contains(gen.system, rule) {
+			t.Errorf("assistant prompt missing the %s rule", name)
+		}
+	}
+}

@@ -7,6 +7,7 @@ export * from "./spec";
 export * from "./layout";
 export * from "./quality";
 export * from "./outline";
+export * from "./promptRules";
 export * from "./theme";
 export * from "./deck";
 export * from "./prompts";

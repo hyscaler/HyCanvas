@@ -39,7 +39,7 @@ You are implementing one task at a time from the table below. For each session:
 | T05 | 0 Repair | Sync stale docs to code | done 2026-08-23 |
 | T06 | 1 Core | Native structured output in the provider layer | done 2026-08-24 |
 | T07 | 1 Core | Validation-repair loop in the orchestrator | done 2026-08-24 |
-| T08 | 1 Core | Port the prompt rule corpus | todo |
+| T08 | 1 Core | Port the prompt rule corpus | done 2026-08-24 |
 | T09 | 1 Core | Outline review step + generation dials | todo |
 | T10 | 1 Core | Placeholder-first per-slide image pipeline + stock selection | todo |
 | T11 | 2 Layout | Capacity fields on Placeholder (schema bump) | todo |
