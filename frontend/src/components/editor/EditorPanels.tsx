@@ -13,7 +13,8 @@ import { stickers, stickerCategories, type Sticker } from "@/lib/stickers";
 import { parseModelJson } from "@/lib/magicDesign";
 import {
   normalizeOutline, deckThemes, layoutDeck, groundImagePrompt, untrustedSourceRule,
-  type DesignOutline, type DesignType,
+  sanitizeEditedOutline, dialsClause, dialDensities, dialTones, dialAudiences, dialScenarios,
+  type DesignOutline, type DesignType, type GenerationDials, type OutlineItem,
   toolCatalog, assistantSystemPrompt, parseAssistantReply, planMutates, summarizeDesign, type PlanStep,
 } from "@hc/aistudio";
 import { promptText } from "@/lib/promptDialog";
@@ -51,7 +52,7 @@ import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { mirrorInRtl } from "@/lib/locale";
-import { tr } from "@/lib/i18n";
+import { tr, trOr } from "@/lib/i18n";
 import { stickerLabel, stickerCategoryLabel } from "@/lib/stickers";
 import { documentDirection } from "@/lib/locale";
 import { apiCodeMessage, CodedError, userMessage } from "@/lib/errors";
@@ -1876,6 +1877,11 @@ interface AssistantDeps {
   imageCapable: boolean;
   /** Whether the provider supports image EDITING (some generate but cannot edit). */
   editImageCapable: boolean;
+  /** A user-reviewed outline for the pending generateDesign step: when set, the
+   *  resolve uses it directly instead of fetching one (T09 review flow). */
+  reviewedOutline?: DesignOutline;
+  /** Generation dials chosen in the review UI, woven into the outline brief. */
+  dials?: GenerationDials;
   /** Attached source content (doc 28 FR-23 doc/URL/file-to-deck ingestion):
    *  generateDesign grounds its outline strictly in this text when present. */
   sourceText?: string;
@@ -1944,6 +1950,29 @@ async function fetchAssistantOutline(workspaceId: string, dt: DesignType, prompt
       return null;
     }
   }
+}
+
+/** Derive the generateDesign request pieces (type, size, brief with source
+ *  grounding and dials, brand clause, page count) so the review fetch and the
+ *  resolve path build IDENTICAL outline requests. */
+function prepareGenerateBrief(a: Record<string, unknown>, deps: AssistantDeps): {
+  dt: DesignType; size: { width: number; height: number }; brief: string; brandClause: string; pageCount?: number;
+} {
+  const st = useEditor.getState();
+  const dt = a.designType != null && String(a.designType).trim()
+    ? normalizeDesignType(a.designType)
+    : normalizeDesignType(a.prompt);
+  const page = st.doc.pages[st.activePage];
+  const size = { width: page?.width ?? 1280, height: page?.height ?? 720 };
+  const brandClause = [deps.voiceClause, deps.brandPalette.length ? `Use this brand palette: ${deps.brandPalette.join(", ")}.` : ""].filter(Boolean).join(" ").trim();
+  const pageCount = typeof a.pageCount === "number" ? a.pageCount : dt === "poster" ? 1 : undefined;
+  let brief = String(a.prompt);
+  const dials = dialsClause(deps.dials);
+  if (dials) brief = `${brief}\n\n${dials}`;
+  if (deps.sourceText) {
+    brief = `${brief}\n\nGround every page STRICTLY in this source content ("${deps.sourceName ?? "attached document"}"): keep its structure, facts, and key points, and do not invent material that is not in it. ${untrustedSourceRule("the source content")}\n--- SOURCE START ---\n${deps.sourceText.slice(0, 24000)}\n--- SOURCE END ---`;
+  }
+  return { dt, size, brief, brandClause, pageCount };
 }
 
 /** True when the document already holds work worth protecting: more than one
@@ -2162,17 +2191,11 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       return { payload: { kind: "image", image, targetId: sel } };
     }
     case "generateDesign": {
-      // The explicit designType wins when the model supplies one; otherwise infer
-      // it from the brief so "make a poster" still maps to a single-page poster
-      // even when the model omits designType (it often does), instead of silently
-      // defaulting to a multi-page deck.
-      const dt = a.designType != null && String(a.designType).trim()
-        ? normalizeDesignType(a.designType)
-        : normalizeDesignType(a.prompt);
-      const page = st.doc.pages[st.activePage];
-      const size = { width: page?.width ?? 1280, height: page?.height ?? 720 };
-      const brandClause = [deps.voiceClause, deps.brandPalette.length ? `Use this brand palette: ${deps.brandPalette.join(", ")}.` : ""].filter(Boolean).join(" ").trim();
-      const pageCount = typeof a.pageCount === "number" ? a.pageCount : dt === "poster" ? 1 : undefined;
+      // The explicit designType wins when the model supplies one; otherwise the
+      // brief infers it ("make a poster" maps to a single-page poster even when
+      // the model omits designType). The brief builder is shared with the T09
+      // review fetch so both paths request the identical outline.
+      const { dt, size, brief, brandClause, pageCount } = prepareGenerateBrief(a, deps);
       // Replacement is destructive and never the silent default: on a document
       // that already has content (more than one page, or any non-empty page) the
       // generated pages APPEND unless the plan step explicitly carries
@@ -2181,14 +2204,12 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       // generation fills it in place.
       const requestedMode = String(a.mode ?? "").toLowerCase();
       const append = docHasContent(st.doc) ? requestedMode !== "replace" : requestedMode === "append";
-      // Document/URL/file-to-deck (FR-23): with attached source content, the
-      // outline is grounded strictly in it rather than invented from the brief.
-      let brief = String(a.prompt);
-      if (deps.sourceText) {
-        brief = `${brief}\n\nGround every page STRICTLY in this source content ("${deps.sourceName ?? "attached document"}"): keep its structure, facts, and key points, and do not invent material that is not in it. ${untrustedSourceRule("the source content")}\n--- SOURCE START ---\n${deps.sourceText.slice(0, 24000)}\n--- SOURCE END ---`;
-      }
-      const outline = await fetchAssistantOutline(deps.workspaceId, dt, brief, brandClause, pageCount);
-      if (!outline) return { error: "couldn't plan that design" };
+      // A user-reviewed outline (T09) is final: use it directly instead of a
+      // second model call. Otherwise fetch one as before.
+      const outline = deps.reviewedOutline
+        ? structuredClone(deps.reviewedOutline)
+        : await fetchAssistantOutline(deps.workspaceId, dt, brief, brandClause, pageCount);
+      if (!outline || !outline.pages.length) return { error: "couldn't plan that design" };
       // Defensive page cap (the server caps too, but the sync-fallback outline
       // and a non-compliant model can still over-produce): a poster is exactly
       // one page, and an explicit pageCount is a hard ceiling. This also bounds
@@ -2424,6 +2445,12 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   const [attachBusy, setAttachBusy] = useState(false);
   // FR-8: a plan awaiting confirmation before it mutates the document.
   const [pending, setPending] = useState<{ plan: PlanStep[]; reply: string } | null>(null);
+  // T09 outline review: for a gated generateDesign plan, the outline is fetched
+  // up front and shown as an editable list with generation dials; Generate
+  // proceeds with the EDITED outline (no second model call). null = no review
+  // (non-design plans); loading = outline still being fetched.
+  const [review, setReview] = useState<{ outline: DesignOutline | null; loading: boolean; dials: GenerationDials } | null>(null);
+  const reviewSeq = useRef(0);
   // FR-9/FR-27: persisted session id for this design (created lazily).
   const sessionRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -2480,7 +2507,35 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   }
 
   // Execute a validated plan as ONE undo turn, then report per-step status.
-  async function execute(plan: PlanStep[], reply: string) {
+  // Fetch the outline for the pending generateDesign step so the user can
+  // review and edit it before anything is generated (T09). Re-invoked by the
+  // dials row's Regenerate; a sequence guard drops stale responses.
+  async function startOutlineReview(plan: PlanStep[], dials: GenerationDials) {
+    const step = plan.find((s) => s.action === "generateDesign");
+    if (!step || !workspaceId) return;
+    const seq = ++reviewSeq.current;
+    setReview({ outline: null, loading: true, dials });
+    try {
+      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sourceText: source?.text, sourceName: source?.name, dials };
+      const { dt, brief, brandClause, pageCount } = prepareGenerateBrief(step.args, deps);
+      const outline = await fetchAssistantOutline(workspaceId, dt, brief, brandClause, pageCount);
+      if (seq !== reviewSeq.current) return; // superseded by a newer fetch or cancel
+      setReview({ outline, loading: false, dials });
+    } catch {
+      if (seq === reviewSeq.current) setReview({ outline: null, loading: false, dials });
+    }
+  }
+
+  // Immutable outline-edit helpers for the review card.
+  function editReviewOutline(fn: (pages: OutlineItem[]) => OutlineItem[]) {
+    setReview((r) => (r?.outline ? { ...r, outline: { ...r.outline, pages: fn(r.outline.pages) } } : r));
+  }
+  function clearReview() {
+    reviewSeq.current++; // invalidate any in-flight fetch
+    setReview(null);
+  }
+
+  async function execute(plan: PlanStep[], reply: string, reviewedOutline?: DesignOutline, dials?: GenerationDials) {
     if (!workspaceId) return;
     setBusy(true);
     try {
@@ -2499,7 +2554,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
           // best-effort; the applyBrand step will simply report nothing to fix
         }
       }
-      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sourceText: source?.text, sourceName: source?.name };
+      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sourceText: source?.text, sourceName: source?.name, reviewedOutline, dials };
       const payloads: (ResolvedPayload | undefined)[] = [];
       const skips: (string | undefined)[] = [];
       for (let i = 0; i < plan.length; i++) {
@@ -2555,6 +2610,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     if (!workspaceId || !userText || !aiReady || busy) return;
     if (!textArg) setInput("");
     setPending(null);
+    clearReview();
     setTurns((t) => [...t, { role: "user", text: userText }]);
     void persistTurn("user", userText);
     setBusy(true);
@@ -2626,6 +2682,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       const heavy = res.plan.some((s) => s.action === "generateDesign");
       if (heavy || (res.plan.length >= 2 && planMutates(res.plan, ASSISTANT_CATALOG))) {
         setPending({ plan: res.plan, reply: res.reply });
+        if (heavy) void startOutlineReview(res.plan, {});
         setTurns((t) => [...t, { role: "assistant", text: res.reply || tr("editor.heres_my_plan_confirm_to_apply"), steps: res.plan.map((s) => ({ action: s.action, ok: true })) }]);
         return;
       }
@@ -2651,6 +2708,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   function startNewChat() {
     setTurns([]);
     setPending(null);
+    clearReview();
     setInput("");
     sessionRef.current = null; // a fresh session is created on the next send
   }
@@ -2766,20 +2824,106 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
         )}
       </div>
 
-      {/* FR-8: confirm a large/destructive plan before it mutates the document. */}
+      {/* FR-8: confirm a large/destructive plan before it mutates the document.
+          For generateDesign plans the confirmation carries the T09 outline
+          review: an editable outline plus generation dials; Generate proceeds
+          with the EDITED outline, while "Generate now" skips the review. */}
       {pending && (
-        <div className="mt-2 flex shrink-0 items-center justify-between gap-2 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-800">
-          <span>
-            Apply {pending.plan.length} step{pending.plan.length === 1 ? "" : "s"}?
-            {(() => {
-              const n = planReplacePageCount(pending.plan, useEditor.getState().doc);
-              return n > 0 ? <strong className="ms-1">{tr("editor.replaces_all_n_pages", { count: n })}</strong> : null;
-            })()}
-          </span>
-          <span className="flex gap-1">
-            <button onClick={() => { const p = pending; setPending(null); void execute(p.plan, p.reply); }} className="rounded bg-amber-600 px-2 py-0.5 font-medium text-white hover:bg-amber-700">{tr("editor.confirm")}</button>
-            <button onClick={() => { setPending(null); setTurns((t) => [...t, { role: "assistant", text: tr("editor.cancelled") }]); }} className="rounded border border-amber-300 px-2 py-0.5 hover:bg-amber-100">{tr("editor.cancel")}</button>
-          </span>
+        <div className="mt-2 flex max-h-[50%] shrink-0 flex-col gap-2 overflow-y-auto rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-800">
+          <div className="flex items-center justify-between gap-2">
+            <span>
+              Apply {pending.plan.length} step{pending.plan.length === 1 ? "" : "s"}?
+              {(() => {
+                const n = planReplacePageCount(pending.plan, useEditor.getState().doc);
+                return n > 0 ? <strong className="ms-1">{tr("editor.replaces_all_n_pages", { count: n })}</strong> : null;
+              })()}
+            </span>
+            <span className="flex gap-1">
+              <button onClick={() => { const p = pending; setPending(null); clearReview(); void execute(p.plan, p.reply); }} className="rounded bg-amber-600 px-2 py-0.5 font-medium text-white hover:bg-amber-700">{review ? tr("editor.generate_now") : tr("editor.confirm")}</button>
+              <button onClick={() => { setPending(null); clearReview(); setTurns((t) => [...t, { role: "assistant", text: tr("editor.cancelled") }]); }} className="rounded border border-amber-300 px-2 py-0.5 hover:bg-amber-100">{tr("editor.cancel")}</button>
+            </span>
+          </div>
+          {review && (
+            <div className="flex flex-col gap-2 rounded-md border border-amber-200 bg-surface p-2 text-neutral-700">
+              <div className="grid grid-cols-2 gap-1.5">
+                {([
+                  ["density", dialDensities],
+                  ["tone", dialTones],
+                  ["audience", dialAudiences],
+                  ["scenario", dialScenarios],
+                ] as const).map(([key, options]) => (
+                  <label key={key} className="flex flex-col gap-0.5 text-[10px] text-neutral-500">
+                    {trOr(`editor.dial_${key}`, key)}
+                    <select
+                      value={(review.dials[key] as string | undefined) ?? "auto"}
+                      onChange={(e) => setReview((r) => (r ? { ...r, dials: { ...r.dials, [key]: e.target.value } } : r))}
+                      className="rounded border border-neutral-300 px-1 py-0.5 text-[11px] text-neutral-700"
+                    >
+                      {options.map((v) => (
+                        <option key={v} value={v}>{trOr(`editor.dial_${v.replace(/-/g, "_")}`, v.replace(/-/g, " "))}</option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+              </div>
+              {review.loading ? (
+                <div className="flex items-center gap-2 py-2 text-neutral-500"><Spinner /> {tr("editor.preparing_outline")}</div>
+              ) : !review.outline ? (
+                <div className="flex items-center justify-between gap-2 py-1 text-neutral-500">
+                  <span>{tr("editor.couldnt_prepare_the_outline")}</span>
+                  <button onClick={() => pending && void startOutlineReview(pending.plan, review.dials)} className="rounded border border-neutral-300 px-2 py-0.5 hover:border-brand-300 hover:text-brand-ink">{tr("editor.retry")}</button>
+                </div>
+              ) : (
+                <>
+                  {review.outline.pages.map((item, i) => (
+                    <div key={item.id} className="flex flex-col gap-1 rounded border border-neutral-200 p-1.5">
+                      <div className="flex items-center gap-1">
+                        <span className="w-4 shrink-0 text-[10px] text-neutral-400">{i + 1}</span>
+                        <input
+                          value={item.title}
+                          onChange={(e) => editReviewOutline((pages) => pages.map((p, j) => (j === i ? { ...p, title: e.target.value } : p)))}
+                          className="min-w-0 flex-1 rounded border border-neutral-200 px-1 py-0.5 text-[11px] font-medium"
+                        />
+                        <button title={tr("editor.move_up")} disabled={i === 0} onClick={() => editReviewOutline((pages) => { const c = [...pages]; [c[i - 1], c[i]] = [c[i], c[i - 1]]; return c; })} className="rounded px-1 text-neutral-400 hover:text-brand-ink disabled:opacity-30">↑</button>
+                        <button title={tr("editor.move_down")} disabled={i === review.outline!.pages.length - 1} onClick={() => editReviewOutline((pages) => { const c = [...pages]; [c[i], c[i + 1]] = [c[i + 1], c[i]]; return c; })} className="rounded px-1 text-neutral-400 hover:text-brand-ink disabled:opacity-30">↓</button>
+                        <button title={tr("editor.remove")} onClick={() => editReviewOutline((pages) => pages.filter((_, j) => j !== i))} className="rounded px-1 text-neutral-400 hover:text-red-600"><X size={11} /></button>
+                      </div>
+                      <textarea
+                        value={item.points.join("\n")}
+                        rows={Math.max(1, Math.min(4, item.points.length))}
+                        placeholder={tr("editor.one_point_per_line")}
+                        onChange={(e) => editReviewOutline((pages) => pages.map((p, j) => (j === i ? { ...p, points: e.target.value.split("\n") } : p)))}
+                        className="ms-5 resize-y rounded border border-neutral-200 px-1 py-0.5 text-[11px]"
+                      />
+                    </div>
+                  ))}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      onClick={() => editReviewOutline((pages) => pages.length >= 20 ? pages : [...pages, { id: `edit-${pages.length}-${pending?.plan.length ?? 0}-${review.outline!.pages.length}`, title: "", points: [], visualRole: "content" }])}
+                      className="rounded border border-neutral-300 px-2 py-0.5 hover:border-brand-300 hover:text-brand-ink"
+                    >
+                      <Plus size={10} className="inline" /> {tr("editor.add_page")}
+                    </button>
+                    <button onClick={() => pending && void startOutlineReview(pending.plan, review.dials)} className="rounded border border-neutral-300 px-2 py-0.5 hover:border-brand-300 hover:text-brand-ink">{tr("editor.regenerate_outline")}</button>
+                    <button
+                      onClick={() => {
+                        const p = pending;
+                        const clean = sanitizeEditedOutline(review.outline!);
+                        setPending(null);
+                        const dials = review.dials;
+                        clearReview();
+                        if (p && clean.pages.length) void execute(p.plan, p.reply, clean, dials);
+                        else toast.error(tr("editor.the_outline_needs_at_least_one_page"));
+                      }}
+                      className="ms-auto rounded bg-brand-600 px-2.5 py-0.5 font-medium text-white hover:bg-brand-700"
+                    >
+                      {tr("editor.generate_with_this_outline")}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
 

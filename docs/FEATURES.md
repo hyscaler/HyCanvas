@@ -57,6 +57,7 @@ A living checklist of what ships today versus what is planned. Shipped items are
 - [x] Bring-your-own-key providers (11 presets incl. OpenAI/Anthropic/DeepSeek/Azure OpenAI + custom), encrypted per workspace
 - [x] Design assistant chat: one agentic surface over the validated tool catalog (generate deck/doc/poster, images, restyle, charts, diagrams, whole-deck translation, speaker notes, critique); the earlier dedicated AI panels were consolidated into it
 - [x] Multi-page generation from server-validated outlines with speaker notes; doc/URL/file-to-deck ingestion (.txt/.md/.pdf text layer); no-key Assist tools
+- [x] Outline review before generation: editable outline (edit/reorder/add/remove) + generation dials (density/tone/audience/scenario) in the confirmation gate, with regenerate and skip
 
 ### Export and publishing
 - [x] Export: PNG/JPG/PDF/SVG/APNG/GIF/Lottie, size multipliers, page selection, zip
@@ -90,7 +91,6 @@ A living checklist of what ships today versus what is planned. Shipped items are
 - [ ] Camera bubble in present-and-record
 - [ ] Live captions (blocked on the AI media pipeline, spec 23)
 - [ ] PPTX fidelity: native chart/SmartArt import, animation and master-inheritance preservation
-- [ ] Outline review step before generation (core ships; UI removed in the panel-to-chat consolidation)
 - [ ] Layout-grounded generation (AI decks targeting the master/layout/placeholder model)
 - [ ] Office-format ingestion (.docx/.pptx/.xlsx), multi-file grounding, scanned-PDF detection
 - [ ] 60fps present at scale (unverified)
