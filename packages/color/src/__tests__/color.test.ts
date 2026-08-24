@@ -14,8 +14,10 @@ import {
   hslToRgb,
   nearestPaletteColor,
   deltaE,
+  oklchToRgb,
   rgbToCmyk,
   rgbToHsl,
+  rgbToOklch,
   seriesColorAt,
   seriesPalette,
   seriesPaletteHex,
@@ -285,5 +287,39 @@ describe("F18 AC-2: nearest brand color (CIELAB deltaE)", () => {
 
   it("returns null for an empty palette (keep the original color)", () => {
     expect(nearestPaletteColor(RED, [])).toBeNull();
+  });
+});
+
+describe("OKLCH conversions (F28 T19)", () => {
+  it("white and black hit the lightness extremes with no chroma", () => {
+    const w = rgbToOklch({ srgb: { r: 1, g: 1, b: 1, a: 1 } });
+    expect(w.l).toBeCloseTo(1, 3);
+    expect(w.c).toBeCloseTo(0, 3);
+    const k = rgbToOklch({ srgb: { r: 0, g: 0, b: 0, a: 1 } });
+    expect(k.l).toBeCloseTo(0, 3);
+    expect(k.c).toBeCloseTo(0, 3);
+  });
+
+  it("round-trips in-gamut colors", () => {
+    for (const hex of ["#1f3a93", "#b91c1c", "#0f766e", "#f4e883", "#334155"]) {
+      const c = fromHex(hex)!;
+      const back = oklchToRgb(rgbToOklch(c));
+      expect(back.srgb.r).toBeCloseTo(c.srgb.r, 2);
+      expect(back.srgb.g).toBeCloseTo(c.srgb.g, 2);
+      expect(back.srgb.b).toBeCloseTo(c.srgb.b, 2);
+    }
+  });
+
+  it("stepping lightness preserves hue and clamps out-of-gamut results", () => {
+    const base = rgbToOklch(fromHex("#1f3a93")!);
+    // A light tint keeps the hue when chroma is eased into gamut (a saturated
+    // blue at l=0.93 is out of sRGB, so full chroma would clamp hue away).
+    const lighter = oklchToRgb({ ...base, l: 0.93, c: Math.min(base.c, 0.06) });
+    const hue = rgbToOklch(lighter).h;
+    expect(Math.abs(hue - base.h)).toBeLessThan(15);
+    for (const ch of [lighter.srgb.r, lighter.srgb.g, lighter.srgb.b]) {
+      expect(ch).toBeGreaterThanOrEqual(0);
+      expect(ch).toBeLessThanOrEqual(1);
+    }
   });
 });

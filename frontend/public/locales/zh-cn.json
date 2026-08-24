@@ -2258,7 +2258,7 @@
   "editor.the_whole_deck_as_a_video_slide_timing_eleme": "整个演示文稿导出为视频:幻灯片时长、元素动画和转场(在服务器上渲染)",
   "editor.theme": "主题",
   "editor.theme_name": "主题名称",
-  "editor.theme_palette_scope_hint": "主题决定演示文稿的配色和字体，不会改变幻灯片内容的样式。",
+  "editor.theme_palette_scope_hint": "主题设置演示文稿的调色板和字体。使用先前主题颜色的内容会跟随切换；您自己选择的颜色和字体不会被更改。",
   "editor.thickness": "粗细",
   "editor.thinking": "思考中…",
   "editor.this_app_cant_do_that": "此应用无法执行该操作。",
@@ -3437,5 +3437,17 @@
   "editor.web_search_optional": "网页搜索（可选）",
   "editor.search_off": "关闭",
   "editor.search_provider_hosted": "Tavily（托管）",
-  "editor.search_provider_metasearch": "SearXNG（自托管）"
+  "editor.search_provider_metasearch": "SearXNG（自托管）",
+  "editor.azure": "蔚蓝",
+  "editor.sunset": "日落",
+  "editor.ocean": "海洋",
+  "editor.sakura": "樱花",
+  "editor.sand": "沙色",
+  "editor.mint": "薄荷",
+  "editor.lavender": "薰衣草",
+  "editor.noir": "暗夜",
+  "editor.indigo": "靛蓝",
+  "editor.gilded": "鎏金",
+  "editor.custom_theme": "自定义主题",
+  "editor.create_theme_from_brand_kit": "从品牌套件创建主题"
 }

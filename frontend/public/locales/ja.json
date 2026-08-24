@@ -2258,7 +2258,7 @@
   "editor.the_whole_deck_as_a_video_slide_timing_eleme": "デッキ全体を動画に:スライドの時間・要素のアニメーション・トランジション(サーバーでレンダリング)",
   "editor.theme": "テーマ",
   "editor.theme_name": "テーマ名",
-  "editor.theme_palette_scope_hint": "テーマはデッキのカラーパレットとフォントを設定します。スライドの内容のスタイルは変更されません。",
+  "editor.theme_palette_scope_hint": "テーマはデッキのパレットとフォントを設定します。以前のテーマの色で塗られたコンテンツは切り替えに追従し、自分で選んだ色やフォントは変更されません。",
   "editor.thickness": "太さ",
   "editor.thinking": "考え中…",
   "editor.this_app_cant_do_that": "このアプリではその操作はできません。",
@@ -3437,5 +3437,17 @@
   "editor.web_search_optional": "ウェブ検索（任意）",
   "editor.search_off": "オフ",
   "editor.search_provider_hosted": "Tavily（ホスト型）",
-  "editor.search_provider_metasearch": "SearXNG（セルフホスト）"
+  "editor.search_provider_metasearch": "SearXNG（セルフホスト）",
+  "editor.azure": "アジュール",
+  "editor.sunset": "サンセット",
+  "editor.ocean": "オーシャン",
+  "editor.sakura": "桜",
+  "editor.sand": "サンド",
+  "editor.mint": "ミント",
+  "editor.lavender": "ラベンダー",
+  "editor.noir": "ノワール",
+  "editor.indigo": "インディゴ",
+  "editor.gilded": "ゴールド",
+  "editor.custom_theme": "カスタムテーマ",
+  "editor.create_theme_from_brand_kit": "ブランドキットからテーマを作成"
 }

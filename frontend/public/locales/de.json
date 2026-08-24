@@ -2258,7 +2258,7 @@
   "editor.the_whole_deck_as_a_video_slide_timing_eleme": "Die ganze Präsentation als Video: Folien-Timing, Element-Animationen und Übergänge (wird auf dem Server gerendert)",
   "editor.theme": "Design",
   "editor.theme_name": "Designname",
-  "editor.theme_palette_scope_hint": "Themes legen Palette und Schriften des Foliensatzes fest. Deine Folieninhalte werden nicht umgestaltet.",
+  "editor.theme_palette_scope_hint": "Themen legen Palette und Schriften des Decks fest. Inhalte in den Farben des vorherigen Themas folgen dem Wechsel; eigene Farben und Schriften bleiben unberührt.",
   "editor.thickness": "Dicke",
   "editor.thinking": "Denkt nach…",
   "editor.this_app_cant_do_that": "Diese App kann das nicht.",
@@ -3437,5 +3437,17 @@
   "editor.web_search_optional": "Websuche (optional)",
   "editor.search_off": "Aus",
   "editor.search_provider_hosted": "Tavily (gehostet)",
-  "editor.search_provider_metasearch": "SearXNG (selbst gehostet)"
+  "editor.search_provider_metasearch": "SearXNG (selbst gehostet)",
+  "editor.azure": "Azur",
+  "editor.sunset": "Sonnenuntergang",
+  "editor.ocean": "Ozean",
+  "editor.sakura": "Blüte",
+  "editor.sand": "Sand",
+  "editor.mint": "Minze",
+  "editor.lavender": "Lavendel",
+  "editor.noir": "Noir",
+  "editor.indigo": "Indigo",
+  "editor.gilded": "Vergoldet",
+  "editor.custom_theme": "Eigenes Design-Thema",
+  "editor.create_theme_from_brand_kit": "Thema aus dem Brand-Kit erstellen"
 }

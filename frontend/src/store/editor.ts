@@ -722,8 +722,12 @@ interface EditorState {
   setPageLayout(layoutId: string | undefined, pageIndex?: number): void;
   /** Install the built-in master + layouts on a deck that has none (FR-3). */
   ensureSlideLayouts(size?: { width: number; height: number }): void;
-  /** Adopt a theme for the whole deck in one undoable action (FR-4). */
-  setDeckTheme(theme: Theme | undefined): void;
+  /** Adopt a theme for the whole deck in one undoable action (FR-4). By
+   *  default content painted with the previous theme's exact slot colors and
+   *  fonts follows the swap (T19); `restyle: false` swaps only the record -
+   *  for stamping a theme onto pages ALREADY painted with its colors, where a
+   *  remap from the outgoing theme would misfire. */
+  setDeckTheme(theme: Theme | undefined, opts?: { restyle?: boolean }): void;
   /** Set/clear the active (or given) page's autopilot dwell in ms;
    *  pass null to clear (fall back to the global default). Undoable. */
   setPageAutoAdvance(ms: number | null, pageIndex?: number): void;
@@ -3806,23 +3810,138 @@ export const useEditor = create<EditorState>((set, get) => {
         () => { doc.masters = beforeM; doc.layouts = beforeL; },
       );
     },
-    setDeckTheme: (theme) => {
-      const doc = get().doc as unknown as { theme?: Theme; masters?: { theme?: string }[] };
+    setDeckTheme: (theme, opts) => {
+      const doc = get().doc as unknown as {
+        theme?: Theme;
+        masters?: { theme?: string; placeholders?: { id: string; role: string }[] }[];
+        layouts?: { id: string; placeholders: { id: string; role: string }[] }[];
+      };
       const before = doc.theme;
       const beforeMasters = doc.masters?.map((m) => m.theme);
       if (before?.id === theme?.id) return;
+      const restyle = opts?.restyle !== false;
+
+      // T19: adopting a theme also restyles what the OLD theme painted - an
+      // exact slot-by-slot color remap (alpha preserved) plus the font-pair
+      // swap - and master-linked text (placeholder-materialized nodes) adopts
+      // the new fonts by role. Exact matches only: a user's own colors and
+      // fonts never match a theme slot and never move. Clearing the theme
+      // leaves content untouched.
+      const pages = get().doc.pages;
+      const beforePages = theme && restyle ? structuredClone(pages) : null;
+      let pagesChanged = false;
+      if (theme && restyle) {
+        const rgbKey = (c: Color) => toHex({ srgb: { ...c.srgb, a: 1 } });
+        const colorMap = new Map<string, Color>();
+        const slots = Math.min(before?.colors.length ?? 0, theme.colors.length);
+        for (let i = 0; i < slots; i++) {
+          const from = before?.colors[i]?.color;
+          const to = theme.colors[i]?.color;
+          if (!from || !to) continue;
+          const key = rgbKey(from);
+          // First slot wins when two slots share a color (a generated theme's
+          // primary and paper are both the page background).
+          if (key !== rgbKey(to) && !colorMap.has(key)) colorMap.set(key, to);
+        }
+        const fontMap = new Map<string, string>();
+        if (before?.fontHeading && theme.fontHeading && before.fontHeading !== theme.fontHeading)
+          fontMap.set(before.fontHeading.toLowerCase(), theme.fontHeading);
+        if (before?.fontBody && theme.fontBody && before.fontBody !== theme.fontBody)
+          fontMap.set(before.fontBody.toLowerCase(), theme.fontBody);
+
+        const mapColor = (c: Color | undefined): Color | undefined => {
+          if (!c) return c;
+          const to = colorMap.get(rgbKey(c));
+          if (!to) return c;
+          pagesChanged = true;
+          return { srgb: { ...to.srgb, a: c.srgb.a } }; // keep the painted alpha
+        };
+        const mapFill = (fill: Fill | undefined): Fill | undefined => {
+          if (!fill) return fill;
+          const f = fill as unknown as { type?: string; color?: Color; stops?: { color: Color }[] };
+          if (f.type === "solid" && f.color) return { ...fill, color: mapColor(f.color) } as Fill;
+          if (Array.isArray(f.stops))
+            return { ...fill, stops: f.stops.map((s) => ({ ...s, color: mapColor(s.color)! })) } as Fill;
+          return fill;
+        };
+
+        // Placeholder roles per page (ids repeat across layouts, so resolve
+        // against each page's OWN layout, master placeholders included).
+        const layoutById = new Map((doc.layouts ?? []).map((l) => [l.id, l]));
+        for (const page of pages) {
+          const layout = layoutById.get((page as unknown as { layoutId?: string }).layoutId ?? "");
+          const roleById = new Map<string, string>();
+          if (layout) {
+            const master = doc.masters?.find((m) => (m as { id?: string }).id === (layout as unknown as { masterId?: string }).masterId);
+            for (const ph of master?.placeholders ?? []) roleById.set(ph.id, ph.role);
+            for (const ph of layout.placeholders) roleById.set(ph.id, ph.role);
+          }
+          const pg = page as unknown as { background?: Fill };
+          if (pg.background) pg.background = mapFill(pg.background);
+          const applyNode = (n: Node) => {
+            if (n.locked || editBlocked(n.id)) return;
+            const rec = n as unknown as {
+              fills?: Fill[];
+              stroke?: { fill?: Fill; color?: Color };
+              data?: { placeholderId?: string };
+              content?: { runs: { style: { fill?: Fill; color?: Color; fontFamily?: string } }[] }[];
+              children?: Node[];
+            };
+            if (rec.fills) rec.fills = rec.fills.map((f) => mapFill(f)!) as Fill[];
+            if (rec.stroke) {
+              if (rec.stroke.fill) rec.stroke.fill = mapFill(rec.stroke.fill);
+              if (rec.stroke.color) rec.stroke.color = mapColor(rec.stroke.color);
+            }
+            // Master-linked text adopts the new pair by role - but only where
+            // the run still wears the OLD theme's font for that role (or none
+            // at all). A font the user picked by hand matches neither and
+            // stays. Non-placeholder text only follows an exact pair match.
+            const role = rec.data?.placeholderId ? roleById.get(rec.data.placeholderId) : undefined;
+            const roleFont = role ? (role === "title" ? theme.fontHeading : theme.fontBody) : undefined;
+            const oldRoleFont = role ? (role === "title" ? before?.fontHeading : before?.fontBody) : undefined;
+            let fontChanged = false;
+            for (const para of rec.content ?? [])
+              for (const run of para.runs) {
+                if (run.style.fill) run.style.fill = mapFill(run.style.fill);
+                if (run.style.color) run.style.color = mapColor(run.style.color);
+                const wearsOldRole = !run.style.fontFamily ||
+                  (!!oldRoleFont && run.style.fontFamily.toLowerCase() === oldRoleFont.toLowerCase());
+                const target = (roleFont && wearsOldRole ? roleFont : undefined) ??
+                  (run.style.fontFamily ? fontMap.get(run.style.fontFamily.toLowerCase()) : undefined);
+                if (target && run.style.fontFamily !== target) {
+                  run.style.fontFamily = target;
+                  fontChanged = true;
+                  pagesChanged = true;
+                }
+              }
+            if (fontChanged) refitTextHeight(n);
+            for (const kid of rec.children ?? []) applyNode(kid);
+          };
+          for (const n of page.children) applyNode(n);
+        }
+      }
+      const afterPages = pagesChanged ? structuredClone(get().doc.pages) : null;
+      if (beforePages && !pagesChanged) get().doc.pages = structuredClone(beforePages) as never; // undo identity churn
+
       perform(
         () => {
           // Reuse the pure helper so the file-level swap (and master repointing)
           // stays in one place; then mirror it onto the live mutable doc.
-          if (!theme) { doc.theme = undefined; return; }
-          const next = applyTheme(get().doc, theme);
-          doc.theme = next.theme;
-          if (next.masters && doc.masters) next.masters.forEach((m, i) => { if (doc.masters![i]) doc.masters![i].theme = m.theme; });
+          const live = get().doc as unknown as { theme?: Theme; masters?: { theme?: string }[]; pages: Page[] };
+          if (theme) {
+            const next = applyTheme(get().doc, theme);
+            live.theme = next.theme;
+            if (next.masters && live.masters) next.masters.forEach((m, i) => { if (live.masters![i]) live.masters![i].theme = m.theme; });
+          } else {
+            live.theme = undefined;
+          }
+          if (afterPages) live.pages = structuredClone(afterPages) as never;
         },
         () => {
-          doc.theme = before;
-          if (beforeMasters && doc.masters) doc.masters.forEach((m, i) => { m.theme = beforeMasters[i]; });
+          const live = get().doc as unknown as { theme?: Theme; masters?: { theme?: string }[]; pages: Page[] };
+          live.theme = before;
+          if (beforeMasters && live.masters) live.masters.forEach((m, i) => { m.theme = beforeMasters[i]; });
+          if (afterPages && beforePages) live.pages = structuredClone(beforePages) as never;
         },
       );
     },

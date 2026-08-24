@@ -98,6 +98,9 @@ export function toolCatalog(): ToolDef[] {
       { name: "pageIndex", type: "number", required: true, description: "the 1-based page number to regenerate" },
       { name: "instruction", type: "string", required: true, description: "how to change it, e.g. 'more data-driven' or 'shorter, punchier'" },
     ], mutates: true },
+    { name: "generateTheme", description: "Create and apply a cohesive deck theme - a color palette plus a heading/body font pair - from an optional style description, validated for readable contrast. Use for 'make/apply a <mood> theme', 'theme this deck', 'give this a warm editorial look'.", params: [
+      { name: "description", type: "string", required: false, description: "the requested mood or style, e.g. 'warm editorial' or 'dark, techy product launch'" },
+    ], mutates: true },
     { name: "generateDiagram", description: "Create a flowchart or mind map ON THE BOARD from a description - native sticky notes + connectors, auto-laid-out. Also accepts pasted Mermaid source verbatim. Use for 'draw/make a flowchart/diagram/mind map of X'.", params: [
       { name: "prompt", type: "string", required: true, description: "what to diagram (a plain description, or Mermaid flowchart source pasted verbatim)" },
       { name: "kind", type: "string", required: false, description: "flowchart|mindmap (default flowchart)" },

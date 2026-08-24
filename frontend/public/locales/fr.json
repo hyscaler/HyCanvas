@@ -2258,7 +2258,7 @@
   "editor.the_whole_deck_as_a_video_slide_timing_eleme": "Toute la présentation en vidéo : minutage des diapositives, animations des éléments et transitions (rendu sur le serveur)",
   "editor.theme": "Thème",
   "editor.theme_name": "Nom du thème",
-  "editor.theme_palette_scope_hint": "Les thèmes définissent la palette et les polices du diaporama. Le contenu de vos diapositives n'est pas restylé.",
+  "editor.theme_palette_scope_hint": "Les thèmes définissent la palette et les polices de la présentation. Le contenu peint avec le thème précédent suit le changement ; vos propres couleurs et polices ne sont jamais modifiées.",
   "editor.thickness": "Épaisseur",
   "editor.thinking": "Réflexion…",
   "editor.this_app_cant_do_that": "Cette application ne peut pas faire ça.",
@@ -3437,5 +3437,17 @@
   "editor.web_search_optional": "Recherche web (facultatif)",
   "editor.search_off": "Désactivée",
   "editor.search_provider_hosted": "Tavily (hébergé)",
-  "editor.search_provider_metasearch": "SearXNG (auto-hébergé)"
+  "editor.search_provider_metasearch": "SearXNG (auto-hébergé)",
+  "editor.azure": "Azur",
+  "editor.sunset": "Coucher de soleil",
+  "editor.ocean": "Océan",
+  "editor.sakura": "Fleur de cerisier",
+  "editor.sand": "Sable",
+  "editor.mint": "Menthe",
+  "editor.lavender": "Lavande",
+  "editor.noir": "Noir",
+  "editor.indigo": "Indigo",
+  "editor.gilded": "Doré",
+  "editor.custom_theme": "Thème personnalisé",
+  "editor.create_theme_from_brand_kit": "Créer un thème à partir du kit de marque"
 }

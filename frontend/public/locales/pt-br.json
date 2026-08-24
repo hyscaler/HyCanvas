@@ -2258,7 +2258,7 @@
   "editor.the_whole_deck_as_a_video_slide_timing_eleme": "A apresentação inteira como vídeo: tempo dos slides, animações dos elementos e transições (renderiza no servidor)",
   "editor.theme": "Tema",
   "editor.theme_name": "Nome do tema",
-  "editor.theme_palette_scope_hint": "Os temas definem a paleta e as fontes da apresentação. O conteúdo dos seus slides não é reestilizado.",
+  "editor.theme_palette_scope_hint": "Os temas definem a paleta e as fontes da apresentação. O conteúdo pintado com o tema anterior acompanha a troca; suas próprias cores e fontes nunca são alteradas.",
   "editor.thickness": "Espessura",
   "editor.thinking": "Pensando…",
   "editor.this_app_cant_do_that": "Este aplicativo não pode fazer isso.",
@@ -3437,5 +3437,17 @@
   "editor.web_search_optional": "Pesquisa na web (opcional)",
   "editor.search_off": "Desativada",
   "editor.search_provider_hosted": "Tavily (hospedado)",
-  "editor.search_provider_metasearch": "SearXNG (auto-hospedado)"
+  "editor.search_provider_metasearch": "SearXNG (auto-hospedado)",
+  "editor.azure": "Azul-celeste",
+  "editor.sunset": "Pôr do sol",
+  "editor.ocean": "Oceano",
+  "editor.sakura": "Flor de cerejeira",
+  "editor.sand": "Areia",
+  "editor.mint": "Menta",
+  "editor.lavender": "Lavanda",
+  "editor.noir": "Noir",
+  "editor.indigo": "Índigo",
+  "editor.gilded": "Dourado",
+  "editor.custom_theme": "Tema personalizado",
+  "editor.create_theme_from_brand_kit": "Criar tema a partir do kit de marca"
 }

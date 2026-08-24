@@ -2258,7 +2258,7 @@
   "editor.the_whole_deck_as_a_video_slide_timing_eleme": "पूरा डेक एक वीडियो के रूप में: स्लाइड समय, तत्व एनिमेशन और ट्रांज़िशन (सर्वर पर रेंडर होता है)",
   "editor.theme": "थीम",
   "editor.theme_name": "थीम का नाम",
-  "editor.theme_palette_scope_hint": "थीम डेक की रंग-पट्टिका और फ़ॉन्ट तय करती हैं। आपकी स्लाइड सामग्री की शैली नहीं बदली जाती।",
+  "editor.theme_palette_scope_hint": "थीम डेक का पैलेट और फ़ॉन्ट निर्धारित करती हैं। पिछली थीम के रंगों वाली सामग्री बदलाव के साथ बदलती है; आपके अपने रंग और फ़ॉन्ट कभी नहीं बदले जाते।",
   "editor.thickness": "मोटाई",
   "editor.thinking": "सोच रहा है…",
   "editor.this_app_cant_do_that": "यह ऐप वह नहीं कर सकता।",
@@ -3437,5 +3437,17 @@
   "editor.web_search_optional": "वेब खोज (वैकल्पिक)",
   "editor.search_off": "बंद",
   "editor.search_provider_hosted": "Tavily (होस्टेड)",
-  "editor.search_provider_metasearch": "SearXNG (स्व-होस्टेड)"
+  "editor.search_provider_metasearch": "SearXNG (स्व-होस्टेड)",
+  "editor.azure": "आसमानी",
+  "editor.sunset": "सूर्यास्त",
+  "editor.ocean": "महासागर",
+  "editor.sakura": "पुष्प",
+  "editor.sand": "रेत",
+  "editor.mint": "पुदीना",
+  "editor.lavender": "लैवेंडर",
+  "editor.noir": "नॉयर",
+  "editor.indigo": "नील",
+  "editor.gilded": "स्वर्णिम",
+  "editor.custom_theme": "कस्टम थीम",
+  "editor.create_theme_from_brand_kit": "ब्रांड किट से थीम बनाएं"
 }

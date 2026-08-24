@@ -152,3 +152,53 @@ export function cmykToRgb(cmyk: Cmyk, _profile?: string): Color {
   out.cmyk = { c, m, y, k };
   return out;
 }
+
+// --- OKLCH (perceptual) -----------------------------------------------------
+// Used by deck-theme palette derivation (F28 T19): stepping lightness in OKLCH
+// keeps perceived hue and colorfulness stable in a way HSL cannot. Matrices are
+// the standard OKLab reference constants; the derivation logic that uses these
+// is closely adapted from an Apache-2.0 reference (see THIRD_PARTY.md).
+
+export type Oklch = { l: number; c: number; h: number }; // l 0..1, c >=0, h 0..360
+
+function srgbToLinear(ch: number): number {
+  return ch <= 0.04045 ? ch / 12.92 : ((ch + 0.055) / 1.055) ** 2.4;
+}
+
+function linearToSrgb(ch: number): number {
+  return ch <= 0.0031308 ? 12.92 * ch : 1.055 * ch ** (1 / 2.4) - 0.055;
+}
+
+/** Convert a Color's sRGB channels to OKLCH (alpha is not carried). */
+export function rgbToOklch(color: Color): Oklch {
+  const { r, g, b } = color.srgb;
+  const rl = srgbToLinear(clamp01(r));
+  const gl = srgbToLinear(clamp01(g));
+  const bl = srgbToLinear(clamp01(b));
+  const l0 = 0.4122214708 * rl + 0.5363325363 * gl + 0.0514459929 * bl;
+  const m0 = 0.2119034982 * rl + 0.6806995451 * gl + 0.1073969566 * bl;
+  const s0 = 0.0883024619 * rl + 0.2817188376 * gl + 0.6299787005 * bl;
+  const lc = Math.cbrt(l0);
+  const mc = Math.cbrt(m0);
+  const sc = Math.cbrt(s0);
+  const lightness = 0.2104542553 * lc + 0.793617785 * mc - 0.0040720468 * sc;
+  const a = 1.9779984951 * lc - 2.428592205 * mc + 0.4505937099 * sc;
+  const bb = 0.0259040371 * lc + 0.7827717662 * mc - 0.808675766 * sc;
+  const chroma = Math.hypot(a, bb);
+  const hue = ((Math.atan2(bb, a) * 180) / Math.PI + 360) % 360;
+  return { l: lightness, c: chroma, h: hue };
+}
+
+/** Convert OKLCH to a Color (out-of-gamut channels clamp into sRGB). */
+export function oklchToRgb(ok: Oklch, alpha = 1): Color {
+  const hueRad = (((ok.h % 360) + 360) % 360) * (Math.PI / 180);
+  const a = ok.c * Math.cos(hueRad);
+  const b = ok.c * Math.sin(hueRad);
+  const lc = (ok.l + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const mc = (ok.l - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const sc = (ok.l - 0.0894841775 * a - 1.291485548 * b) ** 3;
+  const r = 4.0767416621 * lc - 3.3077115913 * mc + 0.2309699292 * sc;
+  const g = -1.2684380046 * lc + 2.6097574011 * mc - 0.3413193965 * sc;
+  const bl = -0.0041960863 * lc - 0.7034186147 * mc + 1.707614701 * sc;
+  return color(linearToSrgb(Math.max(0, r)), linearToSrgb(Math.max(0, g)), linearToSrgb(Math.max(0, bl)), alpha);
+}

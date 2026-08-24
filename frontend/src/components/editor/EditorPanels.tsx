@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type FormEvent } from "react";
 import { Square, SquareRoundCorner, Circle, Triangle, Pentagon, Hexagon, Star, Diamond, Octagon, Frame, QrCode, Type, Upload, Search, Table as TableIcon, BarChart3, LineChart, AreaChart, PieChart, Donut, ScatterChart, Radar, Wand2, ImagePlus, Settings2, Trash2, Folder, FolderPlus, Pencil, X, Tag, ChevronLeft, Link as LinkIcon, Mic, Video, MonitorUp, CircleStop, Spline, Clock, LayoutGrid, Shapes, Sparkles, Stethoscope, AlignStartVertical, Play, ChevronDown, Send, Plus, RotateCcw, FileDown, FileText, Paperclip } from "lucide-react";
-import { migrate, type ChartType, type Node, type Fill, type Color } from "@hc/schema";
+import { migrate, type ChartType, type Node, type Fill, type Color, type Theme } from "@hc/schema";
 import { searchFonts, type FontCatalogEntry } from "@hc/text";
 import { toHex, fromHex, relativeLuminance } from "@hc/color";
 import { formatBytes } from "@/lib/format";
@@ -19,6 +19,7 @@ import {
   buildAgendaPages, pickAgendaLayout, extractTitleFromText, splitSlideSchema, splitSlideSystemPrompt,
   firstTabularSource, parseDataMatrix, chartColumnSelectionSchema, chartColumnSelectionSystemPrompt, chartColumnSelectionUserPrompt, buildChartFromSelection,
   relayoutDecisionSchema, relayoutDecisionSystemPrompt, regenerateFillSystemPrompt, changedImagePrompts,
+  buildGeneratedTheme, generatedThemeSchema, themeGenSystemPrompt, themeGenUserPrompt, themeIdFor, themeRecordFromDeckTheme,
   type DesignOutline, type DesignType, type GenerationDials, type OutlineItem,
   toolCatalog, assistantSystemPrompt, parseAssistantReply, planMutates, summarizeDesign, type PlanStep,
 } from "@hc/aistudio";
@@ -1860,10 +1861,11 @@ type ResolvedPayload =
   | { kind: "clusters"; clusters: { title: string; ids: string[] }[] }
   | { kind: "summary"; text: string }
   | { kind: "outline"; outline: DesignOutline; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroPlans: { pageIndex: number; prompt: string; subject: string; size: string }[]; workspaceId: string; designId: string | null; append: boolean }
-  | { kind: "layoutDeck"; deckTitle: string; pages: { layoutId: string; name: string; note?: string; fill: LayoutFill; fillPrompt: string }[]; background: unknown; imageSize: string; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; styleClause: string; heroPlans: { pageIndex: number; prompt: string; subject: string }[]; generateAllowed: boolean; workspaceId: string; designId: string | null; append: boolean }
+  | { kind: "layoutDeck"; deckTitle: string; themeRecord: Theme; pages: { layoutId: string; name: string; note?: string; fill: LayoutFill; fillPrompt: string }[]; background: unknown; imageSize: string; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; styleClause: string; heroPlans: { pageIndex: number; prompt: string; subject: string }[]; generateAllowed: boolean; workspaceId: string; designId: string | null; append: boolean }
   | { kind: "splitSlide"; pageIndex: number; pageId: string; halves: { layoutId: string; name: string; fill: LayoutFill }[] }
   | { kind: "insertComparison"; layoutId: string; name: string; fill: LayoutFill; afterIndex: number; afterPageId: string }
   | { kind: "webSearch"; query: string; count: number }
+  | { kind: "deckTheme"; theme: Theme }
   | { kind: "chartData"; chartType: ChartType; categories: string[]; series: { name: string; values: number[] }[]; csv: string }
   | { kind: "regenerateSlide"; pageIndex: number; pageId: string; layoutId: string; layoutChanged: boolean; hadLayout: boolean; fill: LayoutFill; imageTasks: { placeholderId: string; prompt: string; subject: string }[]; imageSize: string; generateAllowed: boolean; workspaceId: string; designId: string | null };
 
@@ -2524,6 +2526,29 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       ];
       return { payload: { kind: "chartData", chartType: chart.chartType as ChartType, categories: chart.categories, series: chart.series, csv: csvRows.join("\n") } };
     }
+    case "generateTheme": {
+      // T19: one structured call proposes the palette + font pair; validation
+      // is strict (hex, font allowlist) and contrast failures repair
+      // deterministically, so even a bad reply yields a readable theme.
+      let raw: unknown = null;
+      try {
+        const { text } = await oc.aiTextStructured({
+          workspaceId: deps.workspaceId,
+          system: themeGenSystemPrompt(),
+          prompt: themeGenUserPrompt(typeof a.description === "string" ? a.description : undefined, {
+            deckTitle: st.doc.title || undefined,
+            brandPalette: deps.brandPalette.length ? deps.brandPalette : undefined,
+          }),
+          schema: generatedThemeSchema(),
+        });
+        raw = parseModelJson(text);
+      } catch {
+        raw = null; // the builder derives a full theme from nothing
+      }
+      const r = raw as { colors?: Record<string, string>; fontHeading?: string; fontBody?: string } | null;
+      const id = themeIdFor("theme-ai", [JSON.stringify(r?.colors ?? {}), String(r?.fontHeading ?? ""), String(r?.fontBody ?? "")]);
+      return { payload: { kind: "deckTheme", theme: buildGeneratedTheme(raw, { id }) } };
+    }
     case "webSearch": {
       // T16: research the topic and attach the results as a grounding source
       // for LATER steps in the same plan (deps is shared across the resolve
@@ -2649,10 +2674,15 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
           const seed = Array.from(outline.title).reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) | 0, 7);
           const theme = deckThemes({ brandPalette: deps.brandPalette, kicker: outline.title, count: 1, fontHeading: deps.brandFonts.heading, fontBody: deps.brandFonts.body, seed })[0];
           const background = layoutDesign({ layout: "centered", background: theme.background, blocks: [], dir: "ltr" }, size).background;
+          // T19 (d): the deck's visual system doubles as the file theme, so
+          // the theme picker reflects it and a later swap remaps exactly the
+          // colors these pages are painted with.
+          const themeRecord = themeRecordFromDeckTheme(theme, { name: outline.theme ? outline.theme.slice(0, 40) : undefined });
           return {
             payload: {
               kind: "layoutDeck",
               deckTitle: outline.title,
+              themeRecord,
               pages: items.map((item, i) => ({ layoutId: selection[i], name: item.title || `Page ${i + 1}`, note: item.note, fill: fills[i], fillPrompt: fillPrompts[i] })),
               background,
               imageSize,
@@ -3007,7 +3037,7 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       // the placeholder boxes, and queue the picture-slot images. All inside
       // the caller's one-undo turn.
       if (ctx?.payload?.kind === "layoutDeck") {
-        const { deckTitle, pages, background, imageSize, size, brandPalette, brandFonts, styleClause, heroPlans, generateAllowed, workspaceId, designId, append } = ctx.payload;
+        const { deckTitle, themeRecord, pages, background, imageSize, size, brandPalette, brandFonts, styleClause, heroPlans, generateAllowed, workspaceId, designId, append } = ctx.payload;
         st.ensureSlideLayouts(size); // sized to the generated pages, no-op when layouts exist
         const installed = (st.doc as unknown as { layouts?: SlideLayout[] }).layouts ?? [];
         const masters = (st.doc as unknown as { masters?: { id: string; background?: Fill }[] }).masters ?? [];
@@ -3091,6 +3121,10 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
             },
           };
         }).filter((t) => !!t.pageId && !!t.layout));
+        // T19 (d): stamp the deck's theme record - record only, no remap: the
+        // pages are already painted with these very colors. An appended deck
+        // never overrides a theme the document already has.
+        if (!append || !(st.doc as unknown as { theme?: unknown }).theme) st.setDeckTheme(themeRecord, { restyle: false });
         st.goToPage(base);
         return true;
       }
@@ -3105,6 +3139,12 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       const base = append ? st.doc.pages.length : 0;
       const ids = append ? st.appendDeckPages(deck, size) : st.buildDeckFromOutline(deck, size);
       if (!ids.length) return false;
+      // T19 (d): stamp the generated visual system as the file theme (record
+      // only - these pages already wear its colors; a remap from any outgoing
+      // theme would misfire). Appending never overrides an existing theme.
+      if (!append || !(st.doc as unknown as { theme?: unknown }).theme) {
+        st.setDeckTheme(themeRecordFromDeckTheme(themes[0], { name: clean.theme ? clean.theme.slice(0, 40) : undefined }), { restyle: false });
+      }
       // T10 placeholder-first: the deck is fully laid out NOW; hero images for
       // the impact pages resolve in the background (reuse -> stock -> generate)
       // and land by page id, so a failure or a design switch never breaks the
@@ -3119,6 +3159,13 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
         size: h.size,
       })).filter((t) => !!t.pageId));
       st.goToPage(base); // land on the first new page (and scroll it into view)
+      return true;
+    }
+    case "generateTheme": {
+      // T19: adopt the validated theme - one undoable swap that also remaps
+      // whatever the previous theme painted (the store owns those semantics).
+      if (ctx?.payload?.kind !== "deckTheme") return false;
+      st.setDeckTheme(ctx.payload.theme);
       return true;
     }
     case "webSearch":

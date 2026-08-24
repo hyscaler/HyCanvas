@@ -8,8 +8,10 @@ import type {
   BlendMode, CharStyle, ChartNode, ChartStyle, Color, DataBinding, DesignFile, Easing, Effect, ElementLink, EmphasisPreset,
   EntrancePreset, ExitPreset, Fill, GradientFill, GradientStop, ImageFit, ImageMotion, ImageNode,
   Interaction, InteractionAction, Keyframe, KeyframeTrack, Node, NodeAnimation, Page, ParagraphStyle,
-  TableConditionalRule, TableNode, TextEffect,
+  TableConditionalRule, TableNode, TextEffect, Theme,
 } from "@hc/schema";
+import { themeFromPalette } from "@hc/schema";
+import { deriveThemeSlots, repairThemeSlots, themeSlotNames } from "@hc/aistudio";
 import { colorHarmony, harmonySchemes, type HarmonyScheme, extractPalette, toHex } from "@hc/color";
 import { evalExpression, locate, rotateAboutPoint } from "@hc/editor";
 import { isLowResolution, computeEffectivePpi } from "@hc/engine";
@@ -2407,55 +2409,122 @@ function PageLayoutSection({ page }: { page: Page }) {
   );
 }
 
-/** Deck theme swap (doc 28 FR-4). Adopting a theme restyles the deck's palette
- *  and font pair in one undoable action; it never rewrites page content, which
- *  is what keeps it reversible (recoloring nodes is the Brand panel's re-skin). */
+/** Deck theme swap (doc 28 FR-4, F28 T19). Adopting a theme swaps the deck's
+ *  palette and font pair in one undoable action; content painted with the
+ *  PREVIOUS theme's slot colors and fonts follows the swap (exact matches
+ *  only), so a themed deck restyles while a user's own choices never move.
+ *  The seed palettes adapt an MIT-licensed catalog (see THIRD_PARTY.md) into
+ *  the 6-slot convention: primary, accent, deep, tint, ink, paper. */
 const builtinThemes = (): { id: string; name: string; colors: string[]; fontHeading: string; fontBody: string }[] => [
   { id: "theme-plum", name: tr("editor.plum"), colors: ["#9B2C72", "#C84B9A", "#3E1030", "#FBEFF7", "#18181b", "#ffffff"], fontHeading: "Plus Jakarta Sans", fontBody: "Plus Jakarta Sans" },
   { id: "theme-slate", name: tr("editor.slate"), colors: ["#0f172a", "#334155", "#64748b", "#e2e8f0", "#020617", "#ffffff"], fontHeading: "Inter", fontBody: "Inter" },
   { id: "theme-forest", name: tr("editor.forest"), colors: ["#14532d", "#16a34a", "#4ade80", "#dcfce7", "#052e16", "#ffffff"], fontHeading: "Inter", fontBody: "Inter" },
+  { id: "theme-azure", name: tr("editor.azure"), colors: ["#3b82f6", "#60a5fa", "#1e40af", "#f3f4f6", "#1f2937", "#ffffff"], fontHeading: "Inter", fontBody: "Inter" },
+  { id: "theme-sunset", name: tr("editor.sunset"), colors: ["#ea580c", "#fb923c", "#9a3412", "#ffffff", "#292524", "#fffbeb"], fontHeading: "DM Serif Display", fontBody: "DM Sans" },
+  { id: "theme-ocean", name: tr("editor.ocean"), colors: ["#0284c7", "#38bdf8", "#0369a1", "#ffffff", "#0c4a6e", "#f0f9ff"], fontHeading: "Outfit", fontBody: "Work Sans" },
+  { id: "theme-sakura", name: tr("editor.sakura"), colors: ["#ec4899", "#f472b6", "#be185d", "#ffffff", "#831843", "#fdf2f8"], fontHeading: "Cormorant Garamond", fontBody: "Lato" },
+  { id: "theme-sand", name: tr("editor.sand"), colors: ["#a16207", "#ca8a04", "#713f12", "#ffffff", "#422006", "#fefce8"], fontHeading: "Fraunces", fontBody: "Nunito" },
+  { id: "theme-mint", name: tr("editor.mint"), colors: ["#10b981", "#34d399", "#047857", "#ffffff", "#064e3b", "#ecfdf5"], fontHeading: "Plus Jakarta Sans", fontBody: "Inter" },
+  { id: "theme-lavender", name: tr("editor.lavender"), colors: ["#9333ea", "#a855f7", "#7e22ce", "#ffffff", "#3b0764", "#faf5ff"], fontHeading: "Sora", fontBody: "Rubik" },
+  { id: "theme-noir", name: tr("editor.noir"), colors: ["#60a5fa", "#93c5fd", "#1d4ed8", "#1f2937", "#e5e7eb", "#111827"], fontHeading: "Inter", fontBody: "Inter" },
+  { id: "theme-indigo", name: tr("editor.indigo"), colors: ["#818cf8", "#a5b4fc", "#4338ca", "#312e81", "#e2e8f0", "#1e1b4b"], fontHeading: "Poppins", fontBody: "Source Sans 3" },
+  { id: "theme-gilded", name: tr("editor.gilded"), colors: ["#d2ac47", "#f4e883", "#ae8625", "#1b1c1d", "#cfcbbf", "#0a0a0a"], fontHeading: "Prata", fontBody: "Raleway" },
 ];
+
+/** One selectable theme row: four palette chips + the name. */
+function ThemeRow({ active, colors, name, testId, onClick }: { active: boolean; colors: string[]; name: string; testId: string; onClick?: () => void }) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={active}
+      data-testid={testId}
+      onClick={onClick}
+      className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-start text-sm transition ${
+        active ? "border-brand-500 bg-brand-50 text-brand-ink" : "border-neutral-200 hover:bg-neutral-50"
+      }`}
+    >
+      <span className="flex shrink-0 gap-0.5">
+        {colors.slice(0, 4).map((c, i) => (
+          <span key={`${c}-${i}`} style={{ background: c }} className="h-4 w-2.5 rounded-sm ring-1 ring-black/10" />
+        ))}
+      </span>
+      <span className="min-w-0 flex-1 truncate">{name}</span>
+    </button>
+  );
+}
 
 function DeckThemeSection() {
   const st = useEditor.getState();
   const rev = useEditor((s) => s.rev);
-  const doc = useEditor.getState().doc as unknown as { theme?: { id: string } };
+  const brandKit = useBrand((s) => s.kit);
+  const doc = useEditor.getState().doc as unknown as { theme?: Theme };
   const current = doc.theme?.id;
   void rev;
+  const seeds = builtinThemes();
+  // A theme this list doesn't know (AI-generated, brand-derived, or stamped by
+  // deck generation) still shows as the active choice instead of vanishing.
+  const custom = doc.theme && !seeds.some((t) => t.id === current) ? doc.theme : null;
+
+  // T19 (b): the brand kit -> theme bridge. The kit's leading colors seed the
+  // 6-slot palette (missing slots derived, contrast repaired) and the kit's
+  // fonts become the pair; applying is the same undoable swap as any theme.
+  const brandColors = brandHexColors(brandKit);
+  const applyBrandTheme = () => {
+    if (!brandKit || !brandColors.length) return;
+    const mode = (() => {
+      const c = colorFromHex(brandColors[0]);
+      return 0.2126 * c.srgb.r + 0.7152 * c.srgb.g + 0.0722 * c.srgb.b < 0.35 ? "dark" : "light";
+    })();
+    const slots = repairThemeSlots(
+      deriveThemeSlots({ primary: brandColors[0], accent: brandColors[1], deep: brandColors[2] }, mode),
+      mode,
+    );
+    const fonts = brandFontFamilies(brandKit);
+    const id = `theme-brand-${brandKit.id}`;
+    st.setDeckTheme(
+      themeFromPalette(id, themeSlotNames.map((slot) => ({ id: `${id}-${slot}`, name: slot, color: colorFromHex(slots[slot]) })), {
+        name: brandKit.name,
+        fontHeading: fonts[0],
+        fontBody: fonts[1] ?? fonts[0],
+      }),
+    );
+  };
+
   return (
     <Section title={tr("editor.deck_theme")}>
       <div className="flex flex-col gap-1.5" role="radiogroup" aria-label={tr("editor.deck_theme")}>
-        {builtinThemes().map((t) => {
-          const active = current === t.id;
-          return (
-            <button
-              key={t.id}
-              type="button"
-              role="radio"
-              aria-checked={active}
-              data-testid={`theme-${t.id}`}
-              onClick={() =>
-                st.setDeckTheme({
-                  id: t.id,
-                  name: t.name,
-                  colors: t.colors.map((hex, i) => ({ id: `${t.id}-${i}`, color: colorFromHex(hex) })),
-                  fontHeading: t.fontHeading,
-                  fontBody: t.fontBody,
-                })
-              }
-              className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-start text-sm transition ${
-                active ? "border-brand-500 bg-brand-50 text-brand-ink" : "border-neutral-200 hover:bg-neutral-50"
-              }`}
-            >
-              <span className="flex shrink-0 gap-0.5">
-                {t.colors.slice(0, 4).map((c) => (
-                  <span key={c} style={{ background: c }} className="h-4 w-2.5 rounded-sm ring-1 ring-black/10" />
-                ))}
-              </span>
-              <span className="min-w-0 flex-1 truncate">{t.name}</span>
-            </button>
-          );
-        })}
+        {custom && (
+          <ThemeRow
+            active
+            testId="theme-current-custom"
+            name={custom.name ?? tr("editor.custom_theme")}
+            colors={custom.colors.map((c) => colorHex(c.color))}
+          />
+        )}
+        {seeds.map((t) => (
+          <ThemeRow
+            key={t.id}
+            active={current === t.id}
+            testId={`theme-${t.id}`}
+            name={t.name}
+            colors={t.colors}
+            onClick={() =>
+              st.setDeckTheme({
+                id: t.id,
+                name: t.name,
+                colors: t.colors.map((hex, i) => ({ id: `${t.id}-${i}`, name: themeSlotNames[i], color: colorFromHex(hex) })),
+                fontHeading: t.fontHeading,
+                fontBody: t.fontBody,
+              })
+            }
+          />
+        ))}
+        {brandKit && brandColors.length > 0 && (
+          <button type="button" onClick={applyBrandTheme} className={actionBtnCls} data-testid="theme-from-brand">
+            {tr("editor.create_theme_from_brand_kit")}
+          </button>
+        )}
         {current && (
           <button type="button" onClick={() => st.setDeckTheme(undefined)} className="mt-0.5 text-start text-[11px] text-neutral-500 hover:underline" data-testid="clear-theme">
             {tr("editor.clear_theme")}

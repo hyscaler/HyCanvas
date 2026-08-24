@@ -91,6 +91,14 @@ function readableOn(refs: Color[]): Color {
   return fixToAA(base, worstRef(base, refs));
 }
 
+/** The exact ink this engine paints over the given background references -
+ *  exported for theme derivation (T19): a theme record built from a generated
+ *  deck must carry the very color the pages were painted with, so a later
+ *  theme swap can remap it precisely. */
+export function readableTextColor(refs: Color[]): Color {
+  return readableOn(refs.length ? refs : [WHITE]);
+}
+
 /** Readable text color for a block: honor the spec hint only if it already clears
  *  AA against every background reference; otherwise auto-pick a readable color. */
 function textColorFor(block: DesignBlock, refs: Color[]): Color {
