@@ -95,6 +95,33 @@ describe("reskinToBrand identity safety", () => {
     expect(useEditor.getState().undoStack.length).toBe(0);
   });
 
+  it("NODE identity survives undo and redo of a re-skin", () => {
+    // Neighboring undo closures capture node references (page resize, sticky
+    // text, find/replace); the snapshot restore must land INTO the existing
+    // node objects, never replace them with clones.
+    const st = useEditor.getState();
+    const nodeBefore = page().children[0];
+    st.reskinToBrand({ palette: [BRAND_BLUE], fonts: [] });
+    expect(page().children[0]).toBe(nodeBefore); // in-place apply
+    useEditor.getState().undo();
+    expect(page().children[0]).toBe(nodeBefore); // undo restores into the node
+    expect(page().children[0].fills![0].color.srgb).toEqual({ ...RED.srgb, a: 0.5 });
+    useEditor.getState().redo();
+    expect(page().children[0]).toBe(nodeBefore); // redo too
+    expect(page().children[0].fills![0].color.srgb).toEqual({ ...BRAND_BLUE.srgb, a: 0.5 });
+  });
+
+  it("a recorded-but-inapplicable override leaves no dead history step", () => {
+    // A malformed override hex is reported in the mapping but applies nothing;
+    // the history must not gain an undo step that restores nothing.
+    const st = useEditor.getState();
+    page().children[0].fills![0].color = c(1, 0, 0, 1);
+    const result = st.reskinToBrand({ palette: [BRAND_BLUE], fonts: [] }, { "#ff0000": "not-a-hex" });
+    expect(result.colors).toEqual([{ from: "#ff0000", to: "not-a-hex" }]); // reported, per the mapping UI contract
+    expect(page().background!.color.srgb).toEqual(RED.srgb); // nothing applied
+    expect(useEditor.getState().undoStack.length).toBe(0); // no dead step
+  });
+
   it("the overrides re-apply flow (undo then re-skin) still lands as one entry", () => {
     // BrandPanel's per-color override flow undoes the prior re-skin and
     // re-applies with overrides; the result must stay a single undo step

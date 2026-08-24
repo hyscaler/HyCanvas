@@ -1409,17 +1409,38 @@ export const useEditor = create<EditorState>((set, get) => {
   });
 
   // Restore a page snapshot INTO the existing page object (found by id), so
-  // the page's identity survives undo/redo and other closures' captured
-  // references stay live. Unknown keys ride along in the snapshots. Shared by
-  // the whole-deck restyle actions (setDeckTheme, reskinToBrand), whose undo
-  // must never replace page objects with clones - other undo entries hold
-  // references into them.
+  // identity survives undo/redo and other closures' captured references stay
+  // live - at the NODE level too: children are matched by node id and each
+  // surviving node's fields restore into the existing node object (recursively
+  // through groups), because most neighboring undo closures capture NODE
+  // references (page resize, sticky text, find/replace), not just pages.
+  // Unknown keys ride along in the snapshots. Shared by the whole-deck
+  // restyle actions (setDeckTheme, reskinToBrand).
+  const restoreNodeInPlace = (live: Record<string, unknown>, snap: Record<string, unknown>): void => {
+    for (const k of Object.keys(live)) if (!(k in snap) && k !== "children") delete live[k];
+    for (const [k, v] of Object.entries(snap)) {
+      if (k === "children") continue;
+      live[k] = structuredClone(v);
+    }
+    const snapKids = snap.children as Record<string, unknown>[] | undefined;
+    if (!snapKids) {
+      if ("children" in live && !("children" in snap)) delete live.children;
+      return;
+    }
+    const byId = new Map(((live.children as Record<string, unknown>[] | undefined) ?? []).map((n) => [n.id, n]));
+    live.children = snapKids.map((sk) => {
+      const ln = byId.get(sk.id);
+      if (ln) {
+        restoreNodeInPlace(ln, sk);
+        return ln;
+      }
+      return structuredClone(sk); // node deleted since: the clone is all there is
+    });
+  };
   const restorePageSnapshot = (id: string, snap: Page) => {
     const livePage = get().doc.pages.find((p) => p.id === id) as unknown as Record<string, unknown> | undefined;
     if (!livePage) return; // page deleted since: nothing to restore
-    const clone = structuredClone(snap) as unknown as Record<string, unknown>;
-    for (const k of Object.keys(livePage)) if (!(k in clone)) delete livePage[k];
-    Object.assign(livePage, clone);
+    restoreNodeInPlace(livePage, snap as unknown as Record<string, unknown>);
   };
 
   // Re-fit a text box to its content, with the same measurer the inline editor
@@ -6171,9 +6192,10 @@ export const useEditor = create<EditorState>((set, get) => {
         for (const n of page.children) applyNode(n);
         if (pageChanged) pageDiffs.push({ id: page.id, before: beforeSnap, after: structuredClone(page) });
       }
-      if (colors.length === 0 && fonts.length === 0) {
-        // Nothing changed (and nothing was mutated); skip the undo entry so
-        // the history stays clean.
+      if (pageDiffs.length === 0) {
+        // Nothing was actually mutated (either nothing mapped, or the only
+        // recorded mapping was a malformed override that could not apply);
+        // skip the undo entry so the history holds no dead step.
         return { colors, fonts };
       }
       // The pages are ALREADY in their after state; the first forward run must

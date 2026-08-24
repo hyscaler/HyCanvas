@@ -184,6 +184,18 @@ describe("setDeckTheme remap (T19)", () => {
     expect(page().background!.color.srgb).toEqual(GREEN.srgb);
   });
 
+  it("NODE identity survives undo and redo of a theme swap", () => {
+    const st = useEditor.getState();
+    const shapeBefore = page().children.find((n) => n.id === "shape")!;
+    st.setDeckTheme(structuredClone(newTheme));
+    expect(page().children.find((n) => n.id === "shape")).toBe(shapeBefore);
+    useEditor.getState().undo();
+    expect(page().children.find((n) => n.id === "shape")).toBe(shapeBefore);
+    useEditor.getState().redo();
+    expect(page().children.find((n) => n.id === "shape")).toBe(shapeBefore);
+    expect(shapeBefore.fills![0].color.srgb).toEqual({ ...BLUE.srgb, a: 0.5 });
+  });
+
   it("swapping between different slot counts remaps the shared prefix", () => {
     const wide: Theme = {
       id: "t-wide",
