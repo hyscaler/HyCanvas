@@ -32,3 +32,20 @@ export function routeImageSource(prompt: string): "stock" | "generate" {
   const words = p.toLowerCase().split(/\s+/).filter((w) => !["a", "an", "the", "of", "in", "on", "at", "with", "and"].includes(w));
   return words.length <= 5 ? "stock" : "generate";
 }
+
+/** Diff desired image prompts against the ones already materialized on the
+ *  page: only slots whose prompt CHANGED (or is new) get regenerated, so a
+ *  per-slide regeneration keeps its unchanged images (and their cost) intact.
+ *  Comparison uses the same normalization as the reuse key, so a whitespace or
+ *  case difference is not a change. */
+export function changedImagePrompts(
+  current: Record<string, string>,
+  next: Record<string, string>,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [slot, prompt] of Object.entries(next)) {
+    const prev = current[slot];
+    if (!prev || promptAssetKey(prev) !== promptAssetKey(prompt)) out[slot] = prompt;
+  }
+  return out;
+}

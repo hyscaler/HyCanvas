@@ -29,3 +29,17 @@ describe("routeImageSource", () => {
     expect(routeImageSource("  ")).toBe("generate");
   });
 });
+
+describe("changedImagePrompts", () => {
+  it("returns only new or genuinely changed prompts", async () => {
+    const { changedImagePrompts } = await import("../index");
+    const current = { pic: "a lighthouse at dusk", side: "a harbor" };
+    expect(changedImagePrompts(current, { pic: "a lighthouse at dusk", side: "a MOUNTAIN" })).toEqual({ side: "a MOUNTAIN" });
+    expect(changedImagePrompts(current, { fresh: "something new" })).toEqual({ fresh: "something new" });
+  });
+
+  it("normalizes case and whitespace like the reuse key (not a change)", async () => {
+    const { changedImagePrompts } = await import("../index");
+    expect(changedImagePrompts({ pic: "A  Lighthouse at dusk" }, { pic: "a lighthouse at DUSK " })).toEqual({});
+  });
+});

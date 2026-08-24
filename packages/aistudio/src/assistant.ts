@@ -91,6 +91,10 @@ export function toolCatalog(): ToolDef[] {
       { name: "topicB", type: "string", required: true },
       { name: "afterPageIndex", type: "number", required: false, description: "1-based page to insert after (default: the current page)" },
     ], mutates: true },
+    { name: "regenerateSlide", description: "Regenerate ONE slide's content per an instruction, keeping the deck's layout system, the slide's identity, and any images whose prompts are unchanged. Use for 'redo/rewrite/improve slide N' or 'make slide N more data-driven'.", params: [
+      { name: "pageIndex", type: "number", required: true, description: "the 1-based page number to regenerate" },
+      { name: "instruction", type: "string", required: true, description: "how to change it, e.g. 'more data-driven' or 'shorter, punchier'" },
+    ], mutates: true },
     { name: "generateDiagram", description: "Create a flowchart or mind map ON THE BOARD from a description - native sticky notes + connectors, auto-laid-out. Also accepts pasted Mermaid source verbatim. Use for 'draw/make a flowchart/diagram/mind map of X'.", params: [
       { name: "prompt", type: "string", required: true, description: "what to diagram (a plain description, or Mermaid flowchart source pasted verbatim)" },
       { name: "kind", type: "string", required: false, description: "flowchart|mindmap (default flowchart)" },

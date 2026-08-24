@@ -17,6 +17,7 @@ import {
   deriveLayoutContentSchema, layoutSelectionSchema, layoutSelectionSystemPrompt, layoutFillSystemPrompt, repairLayoutSelection,
   normalizeLayoutFill, fallbackLayoutFill, preferredLayoutFor, type LayoutFill,
   buildAgendaPages, pickAgendaLayout, extractTitleFromText, splitSlideSchema, splitSlideSystemPrompt,
+  relayoutDecisionSchema, relayoutDecisionSystemPrompt, regenerateFillSystemPrompt, changedImagePrompts,
   type DesignOutline, type DesignType, type GenerationDials, type OutlineItem,
   toolCatalog, assistantSystemPrompt, parseAssistantReply, planMutates, summarizeDesign, type PlanStep,
 } from "@hc/aistudio";
@@ -1859,7 +1860,8 @@ type ResolvedPayload =
   | { kind: "outline"; outline: DesignOutline; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroPlans: { pageIndex: number; prompt: string; subject: string; size: string }[]; workspaceId: string; designId: string | null; append: boolean }
   | { kind: "layoutDeck"; deckTitle: string; pages: { layoutId: string; name: string; note?: string; fill: LayoutFill }[]; background: unknown; imageSize: string; size: { width: number; height: number }; workspaceId: string; designId: string | null; append: boolean }
   | { kind: "splitSlide"; pageIndex: number; halves: { layoutId: string; name: string; fill: LayoutFill }[] }
-  | { kind: "insertComparison"; layoutId: string; name: string; fill: LayoutFill; afterIndex: number };
+  | { kind: "insertComparison"; layoutId: string; name: string; fill: LayoutFill; afterIndex: number }
+  | { kind: "regenerateSlide"; pageIndex: number; pageId: string; layoutId: string; layoutChanged: boolean; fill: LayoutFill; imageTasks: { placeholderId: string; prompt: string; subject: string }[]; imageSize: string; workspaceId: string; designId: string | null };
 
 /** Parse a model reply that must be a JSON array of exactly `n` strings.
  *  Tolerates markdown fences; anything else (wrong shape, wrong length,
@@ -2220,6 +2222,79 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       const { image } = await oc.aiEditImage({ workspaceId: deps.workspaceId, imageBase64, prompt: String(a.instruction) });
       if (!image) return { error: "no image returned" };
       return { payload: { kind: "image", image, targetId: sel } };
+    }
+    case "regenerateSlide": {
+      // T14: slide-scoped context in, one optional relayout decision, one fill
+      // against the (possibly new) layout's schema, and an image diff so only
+      // CHANGED prompts regenerate. Node ids stay put: the fill mutates the
+      // existing placeholder boxes and a relayout only adds missing slots.
+      const idx = Math.round(Number(a.pageIndex)) - 1; // the tool speaks 1-based
+      const page = st.doc.pages[idx] as unknown as { id: string; name?: string; layoutId?: string; width: number; height: number; children: unknown[] } | undefined;
+      if (!page) return { error: "that page doesn't exist" };
+      const instruction = String(a.instruction ?? "").trim();
+      if (!instruction) return { error: "an instruction is needed" };
+      st.ensureSlideLayouts();
+      const layouts = (st.doc as unknown as { layouts: SlideLayout[] }).layouts;
+      type Slotted = { type: string; data?: { placeholderId?: string; aiImagePrompt?: string }; content?: { runs: { text: string }[] }[] };
+      const slotted = (page.children as Slotted[]).filter((n) => n.data?.placeholderId);
+      const currentTexts = slotted
+        .filter((n) => n.type === "text" && n.content?.length)
+        .map((n) => `${n.data!.placeholderId}: ${(n.content ?? []).map((par) => par.runs.map((r) => r.text).join("")).join(" / ")}`)
+        .join("\n");
+      const currentImagePrompts: Record<string, string> = {};
+      for (const n of slotted) {
+        if (n.type === "image" && n.data?.aiImagePrompt && n.data.placeholderId) currentImagePrompts[n.data.placeholderId] = n.data.aiImagePrompt;
+      }
+      // Relayout only when the instruction warrants it; keep on any failure.
+      let layoutId = page.layoutId && layouts.some((l) => l.id === page.layoutId) ? page.layoutId : preferredLayoutFor("content", layouts);
+      try {
+        const { text } = await oc.aiTextStructured({
+          workspaceId: deps.workspaceId,
+          system: relayoutDecisionSystemPrompt(layouts),
+          prompt: `Current layout: ${layoutId}\nInstruction: ${instruction}\nSlide content:\n${currentTexts.slice(0, 2000)}`,
+          schema: relayoutDecisionSchema(layouts.map((l) => l.id)),
+        });
+        const decision = parseModelJson(text) as { relayout?: boolean; layoutId?: string } | null;
+        if (decision?.relayout && typeof decision.layoutId === "string" && layouts.some((l) => l.id === decision.layoutId)) {
+          layoutId = decision.layoutId;
+        }
+      } catch {
+        // keep the current layout
+      }
+      const layout = layouts.find((l) => l.id === layoutId)!;
+      const schema = deriveLayoutContentSchema(layout);
+      let fill: LayoutFill | null = null;
+      try {
+        const { text } = await oc.aiTextStructured({
+          workspaceId: deps.workspaceId,
+          system: regenerateFillSystemPrompt(schema),
+          prompt: `Slide ${idx + 1} (${pageTitleOf(page)})\nInstruction: ${instruction}\nCurrent content by slot:\n${currentTexts.slice(0, 4000) || "(empty)"}`,
+          schema,
+        });
+        const norm = normalizeLayoutFill(layout, parseModelJson(text));
+        if (Object.keys(norm.texts).length + Object.keys(norm.lists).length > 0) fill = norm;
+      } catch {
+        fill = null;
+      }
+      if (!fill) return { error: "couldn't regenerate that slide" };
+      // Image diff: only changed prompts regenerate; unchanged images stay.
+      const changed = changedImagePrompts(currentImagePrompts, fill.imagePrompts);
+      const aspect = page.width >= page.height * 1.2 ? "landscape" : page.height >= page.width * 1.2 ? "portrait" : "square";
+      const imageSize = aspect === "landscape" ? "1792x1024" : aspect === "portrait" ? "1024x1792" : "1024x1024";
+      return {
+        payload: {
+          kind: "regenerateSlide",
+          pageIndex: idx,
+          pageId: page.id,
+          layoutId,
+          layoutChanged: layoutId !== page.layoutId,
+          fill,
+          imageTasks: Object.entries(changed).map(([placeholderId, prompt]) => ({ placeholderId, prompt: groundImagePrompt(prompt, { palette: [] }), subject: prompt })),
+          imageSize,
+          workspaceId: deps.workspaceId,
+          designId: deps.designId ?? null,
+        },
+      };
     }
     case "splitSlide": {
       // One structured call splits the page's content into two outline items;
@@ -2602,6 +2677,26 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
         });
       });
       st.goToPage(insertAt);
+      return true;
+    }
+    case "regenerateSlide": {
+      if (ctx?.payload?.kind !== "regenerateSlide") return false;
+      const { pageIndex, pageId, layoutId, layoutChanged, fill, imageTasks, imageSize, workspaceId, designId } = ctx.payload;
+      // The page must still be the one that was resolved (identity guard).
+      const live = st.doc.pages[pageIndex] as unknown as { id: string } | undefined;
+      if (!live || live.id !== pageId) return false;
+      if (layoutChanged) st.applyLayoutToPage(layoutId, pageIndex); // adds missing slots, keeps existing ids
+      st.fillPlaceholderContent(pageIndex, { texts: fill.texts, lists: fill.lists });
+      enqueueAiImages(imageTasks.map((t) => ({
+        workspaceId,
+        designId: designId ?? "",
+        pageId,
+        placeholderId: t.placeholderId,
+        prompt: t.prompt,
+        subject: t.subject,
+        size: imageSize,
+      })));
+      st.goToPage(pageIndex);
       return true;
     }
     case "splitSlide": {

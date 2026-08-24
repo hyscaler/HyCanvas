@@ -259,3 +259,36 @@ export function layoutFillSystemPrompt(schema: Record<string, unknown>): string 
     " Output ONLY a single JSON object matching the schema, no prose or fences. Schema: " + JSON.stringify(schema)
   );
 }
+
+/** Schema for the regenerate-slide relayout decision: keep or switch. */
+export function relayoutDecisionSchema(layoutIds: string[]): Record<string, unknown> {
+  return {
+    type: "object",
+    additionalProperties: false,
+    required: ["relayout"],
+    properties: {
+      relayout: { type: "boolean", description: "true ONLY when the instruction warrants a different layout" },
+      layoutId: { type: "string", enum: layoutIds, description: "the layout to switch to when relayout is true" },
+    },
+  };
+}
+
+/** System prompt for the relayout decision. */
+export function relayoutDecisionSystemPrompt(layouts: SlideLayout[]): string {
+  return (
+    "Decide whether regenerating this slide per the instruction warrants a DIFFERENT layout. Keep the current layout unless the instruction clearly asks for a structural change (comparison, picture, more columns). " +
+    "Output ONLY a single JSON object matching the schema, no prose or fences. Schema: " +
+    JSON.stringify(relayoutDecisionSchema(layouts.map((l) => l.id))) +
+    "\n\nAvailable layouts:\n" + layoutCatalogText(layouts)
+  );
+}
+
+/** System prompt for the regeneration fill: rewrite against the slide's own
+ *  current content, honoring the instruction, never inventing off-slide facts
+ *  unless the instruction asks for new material. */
+export function regenerateFillSystemPrompt(schema: Record<string, unknown>): string {
+  return (
+    "You REWRITE the content of ONE existing presentation slide per the user's instruction, filling exactly the slots the schema names (keyed by slot id). Ground the rewrite in the slide's current content; add new material only where the instruction asks for it. " +
+    "Output ONLY a single JSON object matching the schema, no prose or fences. Schema: " + JSON.stringify(schema)
+  );
+}

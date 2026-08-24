@@ -91,3 +91,26 @@ describe("layout-grounded deck generation", () => {
     expect(restored?.type).toBe("text");
   });
 });
+
+describe("per-slide regeneration keeps node identity", () => {
+  it("fillPlaceholderContent rewrites content without rotating node ids", () => {
+    const st = useEditor.getState();
+    st.ensureSlideLayouts();
+    const deckLike = {
+      title: "Regen",
+      pages: [{ name: "P", background: { type: "solid", color: { srgb: { r: 1, g: 1, b: 1, a: 1 } } }, nodes: [] }],
+    } as unknown as Parameters<typeof st.buildDeckFromOutline>[0];
+    st.buildDeckFromOutline(deckLike, { width: 1920, height: 1080 });
+    const idx = useEditor.getState().doc.pages.length - 1;
+    st.applyLayoutToPage("layout-title-content", idx);
+    const before = pageChildren(idx).map((n) => n.id);
+    useEditor.getState().fillPlaceholderContent(idx, { texts: { "ph-title": "First" }, lists: { "ph-content": ["a", "b"] } });
+    useEditor.getState().fillPlaceholderContent(idx, { texts: { "ph-title": "Rewritten" }, lists: { "ph-content": ["x"] } });
+    const after = pageChildren(idx).map((n) => n.id);
+    // Magic Move matches by node id across neighbors: a regeneration must
+    // never rotate the placeholder boxes' identities.
+    expect(after).toEqual(before);
+    const title = pageChildren(idx).find((n) => n.data?.placeholderId === "ph-title");
+    expect(title?.content?.[0]?.runs[0]?.text).toBe("Rewritten");
+  });
+});
