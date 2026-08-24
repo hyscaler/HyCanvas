@@ -3449,5 +3449,9 @@
   "editor.indigo": "Índigo",
   "editor.gilded": "Dorado",
   "editor.custom_theme": "Tema personalizado",
-  "editor.create_theme_from_brand_kit": "Crear tema desde el kit de marca"
+  "editor.create_theme_from_brand_kit": "Crear tema desde el kit de marca",
+  "editor.extract_layouts_from_this_deck": "Extraer diseños de esta presentación",
+  "editor.no_layouts_could_be_extracted": "No se pudieron extraer diseños de esta presentación.",
+  "editor.extracted_layouts_count.one": "Se extrajo {count} diseño",
+  "editor.extracted_layouts_count.other": "Se extrajeron {count} diseños"
 }

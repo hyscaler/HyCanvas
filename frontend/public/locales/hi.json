@@ -3449,5 +3449,9 @@
   "editor.indigo": "नील",
   "editor.gilded": "स्वर्णिम",
   "editor.custom_theme": "कस्टम थीम",
-  "editor.create_theme_from_brand_kit": "ब्रांड किट से थीम बनाएं"
+  "editor.create_theme_from_brand_kit": "ब्रांड किट से थीम बनाएं",
+  "editor.extract_layouts_from_this_deck": "इस डेक से लेआउट निकालें",
+  "editor.no_layouts_could_be_extracted": "इस डेक से कोई लेआउट नहीं निकाला जा सका।",
+  "editor.extracted_layouts_count.one": "{count} लेआउट निकाला गया",
+  "editor.extracted_layouts_count.other": "{count} लेआउट निकाले गए"
 }

@@ -15,6 +15,7 @@ export * from "./narrativeOps";
 export * from "./chartData";
 export * from "./theme";
 export * from "./themeGen";
+export * from "./layoutExtract";
 export * from "./deck";
 export * from "./prompts";
 export * from "./assistant";

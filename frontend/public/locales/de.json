@@ -3449,5 +3449,9 @@
   "editor.indigo": "Indigo",
   "editor.gilded": "Vergoldet",
   "editor.custom_theme": "Eigenes Design-Thema",
-  "editor.create_theme_from_brand_kit": "Thema aus dem Brand-Kit erstellen"
+  "editor.create_theme_from_brand_kit": "Thema aus dem Brand-Kit erstellen",
+  "editor.extract_layouts_from_this_deck": "Layouts aus diesem Deck extrahieren",
+  "editor.no_layouts_could_be_extracted": "Aus diesem Deck konnten keine Layouts extrahiert werden.",
+  "editor.extracted_layouts_count.one": "{count} Layout extrahiert",
+  "editor.extracted_layouts_count.other": "{count} Layouts extrahiert"
 }

@@ -98,7 +98,7 @@ import { imageAssets } from "@/lib/assetProvider";
 import { measuredTextHeight } from "@/lib/textFit";
 import { pageGap, pageOffsets, pageTop } from "@/lib/pageLayout";
 import type { MagicDesignSpec } from "@/lib/magicDesign";
-import { layoutDesign, type AiDesignSpec, type DeckResult } from "@hc/aistudio";
+import { extractLayoutSet, layoutDesign, type AiDesignSpec, type DeckResult, type ExtractPageLike } from "@hc/aistudio";
 import { qrModules } from "@/lib/qr";
 import { frameMaskFor } from "@/lib/maskPath";
 import { flattenSvgToNodes } from "@/lib/svgFlatten";
@@ -457,6 +457,13 @@ interface EditorState {
    *  ACTIVE page as a named reusable layout (background + text placeholders).
    *  Ensures a default master exists. Returns the new layout id. */
   savePageAsLayout(name: string): string | null;
+  /** F28 T20 stage 1: extract a reusable layout set from EVERY page of the
+   *  deck, heuristics only (largest text = title, other text = body/content
+   *  with capacity hints, images/charts/media = slots, decoration ignored);
+   *  near-identical pages collapse into one layout. Installs the set and
+   *  links each source page that has no layout yet, as ONE undo step.
+   *  Returns the counts, or null when the deck yields no layouts. */
+  extractLayoutsFromDeck(): { created: number; linked: number } | null;
   /** Link a page to a layout (null unlinks) and materialize it: the layout's
    *  background applies and missing placeholders land as editable text boxes
    *  (tagged via data.placeholderId). One undo step. */
@@ -2100,6 +2107,58 @@ export const useEditor = create<EditorState>((set, get) => {
         },
       );
       return layoutId;
+    },
+
+    extractLayoutsFromDeck: () => {
+      const doc = get().doc as unknown as {
+        masters?: { id: string; name?: string; placeholders: unknown[] }[];
+        layouts?: { id: string; masterId: string; name: string; background?: Fill; placeholders: unknown[] }[];
+        pages: Page[];
+      };
+      const set = extractLayoutSet(doc.pages as unknown as ExtractPageLike[]);
+      if (!set.layouts.length) return null;
+      const masterId = (doc.masters ?? [])[0]?.id ?? "master-default";
+      const run = crypto.randomUUID().slice(0, 6);
+      const records = set.layouts.map((l, i) => ({
+        id: `layout-ext-${run}-${i + 1}`,
+        masterId,
+        name: l.name,
+        ...(l.background ? { background: structuredClone(l.background) } : {}),
+        placeholders: structuredClone(l.placeholders) as unknown[],
+      }));
+      const prevMasters = doc.masters;
+      const prevLayouts = doc.layouts;
+      // Only pages that are not already linked adopt their extracted layout,
+      // so re-running extraction never severs an existing cascade.
+      const prevAssign = doc.pages.map((p) => (p as unknown as { layoutId?: string }).layoutId);
+      let linked = 0;
+      for (let i = 0; i < set.assignments.length; i++) {
+        if (set.assignments[i] !== null && !prevAssign[i]) linked++;
+      }
+      perform(
+        () => {
+          // Re-check the DOC on every run (redo included), like savePageAsLayout:
+          // the default master may need re-adding after other undo traffic.
+          const live = get().doc as unknown as typeof doc;
+          if (!(live.masters ?? []).some((m) => m.id === masterId)) {
+            live.masters = [...(live.masters ?? []), { id: masterId, name: tr("app.default_master"), placeholders: [] }];
+          }
+          live.layouts = [...(live.layouts ?? []), ...structuredClone(records)];
+          set.assignments.forEach((a, i) => {
+            const pg = live.pages[i] as unknown as { layoutId?: string } | undefined;
+            if (a !== null && !prevAssign[i] && pg) pg.layoutId = records[a].id;
+          });
+        },
+        () => {
+          const live = get().doc as unknown as typeof doc;
+          live.masters = prevMasters;
+          live.layouts = prevLayouts;
+          live.pages.forEach((p, i) => {
+            (p as unknown as { layoutId?: string }).layoutId = prevAssign[i];
+          });
+        },
+      );
+      return { created: records.length, linked };
     },
 
     fillPlaceholderContent: (pageIndex, fill, opts) => {

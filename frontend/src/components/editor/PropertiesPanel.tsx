@@ -2364,14 +2364,32 @@ function InteractionSection({ node, doc }: { node: Node; doc: DesignFile }) {
 function PageLayoutSection({ page }: { page: Page }) {
   const st = useEditor.getState();
   const rev = useEditor((s) => s.rev);
+  const toast = useToast();
   const doc = useEditor.getState().doc as unknown as {
     layouts?: { id: string; name: string }[];
+    pages: unknown[];
   };
   const layouts = doc.layouts ?? [];
   const current = (page as { layoutId?: string }).layoutId;
   // Resolve against the live doc so a deleted layout shows as "None".
   const known = layouts.some((l) => l.id === current);
   void rev; // re-render when the deck's layouts change
+
+  // T20 stage 1: turn an imported or hand-built deck into a reusable layout
+  // set - one undoable action; near-identical slides collapse to one layout.
+  const extract = () => {
+    const result = st.extractLayoutsFromDeck();
+    if (!result) {
+      toast.toast(tr("editor.no_layouts_could_be_extracted"), "info");
+      return;
+    }
+    toast.success(tr("editor.extracted_layouts_count", { count: result.created }));
+  };
+  const extractButton = doc.pages.length > 1 && (
+    <button type="button" onClick={extract} className={`${actionBtnCls} mt-1.5`} data-testid="extract-layouts">
+      {tr("editor.extract_layouts_from_this_deck")}
+    </button>
+  );
 
   if (!layouts.length) {
     return (
@@ -2383,6 +2401,7 @@ function PageLayoutSection({ page }: { page: Page }) {
         <button type="button" onClick={() => st.ensureSlideLayouts()} className={actionBtnCls} data-testid="add-layouts">
           {tr("editor.add_slide_layouts")}
         </button>
+        {extractButton}
       </Section>
     );
   }
@@ -2405,6 +2424,7 @@ function PageLayoutSection({ page }: { page: Page }) {
       <p className="mt-1.5 text-[11px] text-neutral-500">
         {tr("editor.layout_supplies_regions")}
       </p>
+      {extractButton}
     </Section>
   );
 }
