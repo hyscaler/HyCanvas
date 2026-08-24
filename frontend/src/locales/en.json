@@ -3430,5 +3430,6 @@
   "ui.the_page_you_are_looking_for_does_not_exist": "The page you are looking for does not exist or may have moved.",
   "errors.api_extract_file_too_large": "The file exceeds the 20 MiB extraction limit.",
   "errors.api_extract_file_unsupported": "Only .docx, .pptx, and .xlsx files can be extracted.",
-  "errors.api_extract_file_unreadable": "The document could not be read."
+  "errors.api_extract_file_unreadable": "The document could not be read.",
+  "errors.api_search_not_configured": "Web search is not configured for this workspace. An admin can connect a search provider in AI settings."
 }

@@ -82,6 +82,9 @@ export function toolCatalog(): ToolDef[] {
       { name: "pageCount", type: "number", required: false },
       { name: "mode", type: "string", required: false, description: "'append' adds the generated pages (already the default when the document has content); 'replace' DESTROYS and replaces every existing page - pass it ONLY when the user explicitly asks to replace/wipe/start over (they are asked to confirm)" },
     ], mutates: true },
+    { name: "webSearch", description: "Search the web for current facts and figures and attach the results as grounding for the NEXT generation step in the same plan (plan it BEFORE generateDesign when the user asks for recent/current/latest information). Results are reference material only.", params: [
+      { name: "prompt", type: "string", required: true, description: "what to research, e.g. 'current EV market share numbers'" },
+    ], mutates: false },
     { name: "insertAgenda", description: "Insert an agenda (table of contents) after the title slide: every page listed with its final page number, split across agenda pages when the deck is long. Use for 'add an agenda / table of contents'.", params: [], mutates: true },
     { name: "splitSlide", description: "Split one overloaded slide into two coherent slides that replace it, keeping the deck's layout system. Use for 'split slide N' or 'this slide is too dense'.", params: [
       { name: "pageIndex", type: "number", required: true, description: "the 1-based page number to split" },

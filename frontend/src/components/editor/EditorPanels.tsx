@@ -1861,6 +1861,7 @@ type ResolvedPayload =
   | { kind: "layoutDeck"; deckTitle: string; pages: { layoutId: string; name: string; note?: string; fill: LayoutFill }[]; background: unknown; imageSize: string; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroPlans: { pageIndex: number; prompt: string; subject: string }[]; generateAllowed: boolean; workspaceId: string; designId: string | null; append: boolean }
   | { kind: "splitSlide"; pageIndex: number; pageId: string; halves: { layoutId: string; name: string; fill: LayoutFill }[] }
   | { kind: "insertComparison"; layoutId: string; name: string; fill: LayoutFill; afterIndex: number; afterPageId: string }
+  | { kind: "webSearch"; query: string; count: number }
   | { kind: "regenerateSlide"; pageIndex: number; pageId: string; layoutId: string; layoutChanged: boolean; hadLayout: boolean; fill: LayoutFill; imageTasks: { placeholderId: string; prompt: string; subject: string }[]; imageSize: string; generateAllowed: boolean; workspaceId: string; designId: string | null };
 
 /** Parse a model reply that must be a JSON array of exactly `n` strings.
@@ -2440,6 +2441,25 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       const afterPageId = (st.doc.pages[afterIndex] as unknown as { id: string }).id;
       return { payload: { kind: "insertComparison", layoutId: layout.id, name: `${topicA} vs ${topicB}`, fill, afterIndex, afterPageId } };
     }
+    case "webSearch": {
+      // T16: research the topic and attach the results as a grounding source
+      // for LATER steps in the same plan (deps is shared across the resolve
+      // loop, so a following generateDesign picks them up via its combined
+      // source block, which applies the untrusted framing). No search
+      // configured = a skipped step with a reason; the plan continues.
+      const prompt = String(a.prompt ?? "").trim();
+      if (!prompt) return { error: "nothing to research" };
+      try {
+        const { query, results } = await oc.aiSearch({ workspaceId: deps.workspaceId, prompt, maxResults: 6 });
+        if (!results.length) return { error: "no results found" };
+        const text = results.map((r0, i) => `${i + 1}. ${r0.title}\n${r0.url}\n${r0.content}`).join("\n\n");
+        deps.sources = [...(deps.sources ?? []), { name: `Web search: ${query}`, text }].slice(0, 8);
+        return { payload: { kind: "webSearch", query, count: results.length } };
+      } catch (err) {
+        const coded = err instanceof ApiError ? apiCodeMessage(err.body) : null;
+        return { error: coded ?? "web search isn't configured for this workspace" };
+      }
+    }
     case "generateDesign": {
       // The explicit designType wins when the model supplies one; otherwise the
       // brief infers it ("make a poster" maps to a single-page poster even when
@@ -2986,6 +3006,10 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       st.goToPage(base); // land on the first new page (and scroll it into view)
       return true;
     }
+    case "webSearch":
+      // Read-only: the resolve step attached the results as a grounding
+      // source; nothing mutates here.
+      return ctx?.payload?.kind === "webSearch";
     case "critique":
       return true; // read-only; handled by the caller for messaging
     default:
@@ -3178,6 +3202,11 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       if (results.some((r, i) => r.ok && (plan[i].action === "generateImage" || plan[i].action === "generateBackgroundImage"))) {
         void generateAltText(workspaceId).catch(() => {});
       }
+      // A webSearch step attached its results to deps.sources during resolve;
+      // reflect them in the panel state so the user sees (and can remove) the
+      // grounding chip after the turn.
+      const searched = payloads.find((p0): p0 is Extract<ResolvedPayload, { kind: "webSearch" }> => p0?.kind === "webSearch");
+      if (searched && deps.sources) setSources(deps.sources);
       // A planned critique step is read-only; surface its actual findings instead
       // of just a "done" chip.
       let extra = "";

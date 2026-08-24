@@ -416,3 +416,45 @@ func TestStructuredAnthropicDialect(t *testing.T) {
 		t.Fatalf("invalid schema must fall back to a plain request: %s", pbody)
 	}
 }
+
+// T16: search transports. Cleaned results, caps, and the SearXNG SSRF gate.
+func TestSearchTransports(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("content-type", "application/json")
+		if r.Method == http.MethodPost { // hosted-API shape
+			_, _ = w.Write([]byte(`{"results":[{"title":"A","url":"https://a","content":" first "},{"title":"","url":"","content":""},{"title":"B","url":"https://b","content":"second"}]}`))
+			return
+		}
+		// metasearch shape
+		if r.URL.Query().Get("format") != "json" || r.URL.Query().Get("q") == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		_, _ = w.Write([]byte(`{"results":[{"title":"S","url":"https://s","content":"meta"}]}`))
+	}))
+	defer server.Close()
+	svc := &Service{client: server.Client(), allowLocal: true}
+
+	hits, err := svc.searchTavily(server.URL, "k", "query", 10)
+	if err != nil || len(hits) != 2 || hits[0].Content != "first" {
+		t.Fatalf("hosted search: hits=%+v err=%v", hits, err)
+	}
+	hits, err = svc.searchSearx(server.URL, "query terms", 5)
+	if err != nil || len(hits) != 1 || hits[0].Title != "S" {
+		t.Fatalf("metasearch: hits=%+v err=%v", hits, err)
+	}
+}
+
+func TestCleanResultsCapsAndDropsEmpties(t *testing.T) {
+	in := make([]SearchResult, 0, 15)
+	for i := 0; i < 15; i++ {
+		in = append(in, SearchResult{Title: "t", URL: "https://x", Content: strings.Repeat("c", 3000)})
+	}
+	out := cleanResults(in, 10)
+	if len(out) != 10 || len(out[0].Content) != 2000 {
+		t.Fatalf("caps wrong: n=%d len=%d", len(out), len(out[0].Content))
+	}
+	if got := cleanResults([]SearchResult{{URL: "https://x"}}, 5); len(got) != 0 {
+		t.Fatalf("empty hit kept: %+v", got)
+	}
+}

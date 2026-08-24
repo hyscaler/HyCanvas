@@ -1825,6 +1825,20 @@ export class HyCanvasClient {
   aiExtractFile(input: { filename: string; mimeType?: string; dataBase64: string }): Promise<{ name: string; text: string }> {
     return this.request("POST", "/v1/ai/extract-file", input);
   }
+  /** The workspace's web-search provider config, or null when unset. */
+  getSearchConfig(workspaceId: string): Promise<{ provider: string; baseUrl: string | null; hasKey: boolean } | null> {
+    return this.request("GET", `/v1/workspaces/${workspaceId}/search-config`);
+  }
+  /** Set (or clear, with provider "") the workspace's web-search provider.
+   *  baseUrl uses PATCH semantics like setAiConfig. */
+  setSearchConfig(workspaceId: string, input: { provider: string; baseUrl?: string; apiKey?: string }): Promise<{ provider: string; baseUrl: string | null; hasKey: boolean } | null> {
+    return this.request("PUT", `/v1/workspaces/${workspaceId}/search-config`, input);
+  }
+  /** Web search for generation grounding: the server writes ONE query from the
+   *  brief and executes it. Results are UNTRUSTED reference material. */
+  aiSearch(input: { workspaceId: string; prompt: string; maxResults?: number }): Promise<{ query: string; results: { title: string; url: string; content: string }[] }> {
+    return this.request("POST", "/v1/ai/search", input);
+  }
   aiText(input: { workspaceId: string; prompt: string; system?: string }): Promise<{ text: string }> {
     return this.request("POST", "/v1/ai/text", input);
   }

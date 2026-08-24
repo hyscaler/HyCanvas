@@ -3430,5 +3430,6 @@
   "editor.edit_extracted_text": "Modifier le texte extrait",
   "errors.api_extract_file_too_large": "Le fichier dépasse la limite d'extraction de 20 Mio.",
   "errors.api_extract_file_unsupported": "Seuls les fichiers .docx, .pptx et .xlsx peuvent être extraits.",
-  "errors.api_extract_file_unreadable": "Le document n'a pas pu être lu."
+  "errors.api_extract_file_unreadable": "Le document n'a pas pu être lu.",
+  "errors.api_search_not_configured": "La recherche web n'est pas configurée pour cet espace de travail. Un administrateur peut connecter un fournisseur de recherche dans les paramètres d'IA."
 }

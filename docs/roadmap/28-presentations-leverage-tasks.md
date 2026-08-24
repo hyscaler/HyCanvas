@@ -47,7 +47,7 @@ You are implementing one task at a time from the table below. For each session:
 | T13 | 2 Layout | Narrative ops: insertAgenda, splitSlide, insertComparison | done 2026-08-24 |
 | T14 | 2 Layout | Per-slide AI regeneration | done 2026-08-24 |
 | T15 | 3 Trust | Ingestion depth: multi-file, office formats, scanned-PDF detection | done 2026-08-24 |
-| T16 | 3 Trust | Web search tool with untrusted-source framing | todo |
+| T16 | 3 Trust | Web search tool with untrusted-source framing | done 2026-08-24 |
 | T17 | 3 Trust | Computed chart values from attached data | todo |
 | T18 | 3 Trust | Streaming per-slide generation progress | todo |
 | T19 | 4 Design | Theme UI, brand-to-theme bridge, AI theme generation | todo |

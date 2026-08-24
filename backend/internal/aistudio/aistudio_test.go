@@ -449,3 +449,34 @@ func TestPromptRuleCorpusWired(t *testing.T) {
 		}
 	}
 }
+
+// T16: the query writer enforces 12 words / 200 chars on the model reply AND
+// falls back to the truncated raw prompt on model failure.
+func TestWriteSearchQuery(t *testing.T) {
+	// Model returns a valid query -> used (and truncated to the word cap).
+	gen := &stubGen{replies: []string{`{"query":"latest renewable energy adoption statistics 2026 europe"}`}}
+	svc := NewService(nil, gen)
+	q := svc.WriteSearchQuery(context.Background(), "ws", "a deck about renewable energy in europe with recent numbers")
+	if q != "latest renewable energy adoption statistics 2026 europe" {
+		t.Fatalf("query = %q", q)
+	}
+	if gen.lastSchema != searchQuerySchema {
+		t.Errorf("structured schema not passed: %q", gen.lastSchema)
+	}
+
+	// Model over-produces -> truncated to 12 words.
+	long := strings.Repeat("word ", 30)
+	gen2 := &stubGen{replies: []string{`{"query":"` + strings.TrimSpace(long) + `"}`}}
+	svc2 := NewService(nil, gen2)
+	if got := svc2.WriteSearchQuery(context.Background(), "ws", "brief"); len(strings.Fields(got)) != 12 {
+		t.Fatalf("word cap not enforced: %q", got)
+	}
+
+	// Every pass fails -> the truncated raw prompt, never an error.
+	bad := &stubGen{replies: []string{"junk", "junk", "junk", "junk"}}
+	svc3 := NewService(nil, bad)
+	raw := "one two three four five six seven eight nine ten eleven twelve thirteen fourteen"
+	if got := svc3.WriteSearchQuery(context.Background(), "ws", raw); len(strings.Fields(got)) != 12 {
+		t.Fatalf("fallback not truncated: %q", got)
+	}
+}

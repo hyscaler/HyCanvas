@@ -3430,5 +3430,6 @@
   "editor.edit_extracted_text": "निकाले गए टेक्स्ट को संपादित करें",
   "errors.api_extract_file_too_large": "फ़ाइल 20 MiB की निष्कर्षण सीमा से अधिक है।",
   "errors.api_extract_file_unsupported": "केवल .docx, .pptx और .xlsx फ़ाइलें ही निकाली जा सकती हैं।",
-  "errors.api_extract_file_unreadable": "दस्तावेज़ पढ़ा नहीं जा सका।"
+  "errors.api_extract_file_unreadable": "दस्तावेज़ पढ़ा नहीं जा सका।",
+  "errors.api_search_not_configured": "इस वर्कस्पेस के लिए वेब खोज कॉन्फ़िगर नहीं है। व्यवस्थापक AI सेटिंग्स में खोज प्रदाता जोड़ सकते हैं।"
 }

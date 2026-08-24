@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -331,4 +332,48 @@ func (s *Service) Critique(ctx context.Context, workspaceID, designSummary strin
 	system := "You are a senior design critic. Given a compact summary of a design, give specific, actionable improvements for contrast, alignment, spacing, hierarchy, and copy. " +
 		"Return a short, plain list (no markdown headings, no preamble). Be concrete."
 	return s.ai.Text(ctx, workspaceID, "Design summary:\n"+designSummary, system)
+}
+
+const searchQuerySchema = `{"type":"object","additionalProperties":false,"required":["query"],"properties":{"query":{"type":"string","minLength":1,"maxLength":200}}}`
+
+// searchQuery is the validated reply shape of WriteSearchQuery.
+type searchQuery struct {
+	Query string `json:"query"`
+}
+
+// truncateQueryWords enforces the 12-word / 200-char query contract on both
+// the model's reply and the raw-prompt fallback.
+func truncateQueryWords(s string) string {
+	words := strings.Fields(s)
+	if len(words) > 12 {
+		words = words[:12]
+	}
+	out := strings.Join(words, " ")
+	if len(out) > 200 {
+		out = out[:200]
+	}
+	return out
+}
+
+// WriteSearchQuery turns a generation brief into ONE search-engine-style query
+// (max 12 words / 200 chars, names and dates preserved, recency terms where
+// they help, in English). On any model failure it falls back to the truncated
+// raw prompt, so search degrades rather than blocks (F28 T16).
+func (s *Service) WriteSearchQuery(ctx context.Context, workspaceID, brief string) string {
+	system := "You turn a presentation brief into ONE web search query that would add useful, current, factual context. " +
+		"Keep it focused and at most 12 words; preserve important names, places, dates, products, and technical terms; " +
+		"include terms like 'latest', the relevant year, statistics, or trends when they would improve the result; " +
+		"write it in English; do not answer the request; no quotes, operators, or multiple queries. " +
+		"Output ONLY a single JSON object, no prose/markdown/fences. Schema: " + searchQuerySchema
+	res, err := generateValidated(ctx, s, workspaceID, system, strings.TrimSpace(brief), searchQuerySchema, false, func(v *searchQuery) error {
+		v.Query = strings.TrimSpace(v.Query)
+		if v.Query == "" {
+			return errors.New("empty query")
+		}
+		return nil
+	})
+	if err != nil {
+		return truncateQueryWords(brief)
+	}
+	return truncateQueryWords(res.Query)
 }
