@@ -240,6 +240,8 @@ All configuration is read from the root `.env` (copy `.env.example`). The most i
 | `PORT` | both | Backend port (default `8005`). |
 | `NODE_ENV` | both | `development` or `production`. |
 | `DB_AUTO_MIGRATE` | both | When `true`, the server applies migrations on boot. |
+| `DB_CONNECT_ATTEMPTS` | both | Times to retry the initial DB connect before giving up (default `12`). Tolerates Postgres still starting after a host reboot. |
+| `DB_CONNECT_RETRY_DELAY` | both | Wait between initial-connect retries, as a Go duration (default `5s`). |
 | `NEXT_PUBLIC_BACKEND_URL` | dev | Frontend API base in dev (`http://localhost:8005/api`). Unused in the dist build (it calls same-origin `/api`). |
 | `FRONTEND_URL` | both | Allowed CORS origin for the API (dev: `http://localhost:3000`). |
 | `APP_URL` | prod | Public base URL used in generated links (verify-email, magic-link, share). |

@@ -68,3 +68,36 @@ func Connect(ctx context.Context, raw string) (*pgxpool.Pool, error) {
 	}
 	return pool, nil
 }
+
+// ConnectWithRetry opens the pool like Connect, but tolerates a database that is
+// still coming up when the app boots, which is common right after a host reboot
+// when the process races Postgres. It retries a failed connect up to `attempts`
+// times, waiting `delay` between tries, and returns the first pool that connects
+// or the last error. attempts < 1 is treated as a single try (no retry). When
+// set, onRetry is called before each wait (with the attempt just made and how
+// many remain) so the caller can log progress. A cancelled ctx aborts the wait.
+func ConnectWithRetry(ctx context.Context, raw string, attempts int, delay time.Duration, onRetry func(attempt, remaining int, err error)) (*pgxpool.Pool, error) {
+	if attempts < 1 {
+		attempts = 1
+	}
+	var lastErr error
+	for i := 1; i <= attempts; i++ {
+		pool, err := Connect(ctx, raw)
+		if err == nil {
+			return pool, nil
+		}
+		lastErr = err
+		if i == attempts {
+			break
+		}
+		if onRetry != nil {
+			onRetry(i, attempts-i, err)
+		}
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(delay):
+		}
+	}
+	return nil, lastErr
+}
