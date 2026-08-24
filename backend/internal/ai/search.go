@@ -116,9 +116,14 @@ func (s *Service) SetSearchConfig(ctx context.Context, workspaceID string, in Se
 	}
 	providerChanged := existing != nil && existing.provider != in.Provider
 	in.APIKey = strings.TrimSpace(in.APIKey)
-	if providerChanged && in.APIKey == "" && existing.keyCipher != nil {
+	// A provider change may not silently carry the old key - but unlike the
+	// AI config, a search provider can be KEYLESS (the metasearch endpoint),
+	// so switching to one is free: the stored key is cleared below instead of
+	// demanded. Only a change to a KEYED provider requires its key.
+	if providerChanged && in.APIKey == "" && existing.keyCipher != nil && in.Provider == SearchProviderTavily {
 		return nil, ErrKeyRequiredForProviderChange
 	}
+	clearKey := providerChanged && in.APIKey == "" && in.Provider != SearchProviderTavily
 	// Resolve the base URL under the same PATCH semantics as the AI config.
 	resolvedBase := ""
 	switch {
@@ -134,7 +139,7 @@ func (s *Service) SetSearchConfig(ctx context.Context, workspaceID string, in Se
 	}
 	hasStoredKey := existing != nil && !providerChanged && existing.keyCipher != nil
 	if in.Provider == SearchProviderTavily && in.APIKey == "" && !hasStoredKey {
-		return nil, ErrBadRequest
+		return nil, ErrSearchKeyRequired
 	}
 
 	var cipher, iv, tag *string
@@ -155,11 +160,11 @@ func (s *Service) SetSearchConfig(ctx context.Context, workspaceID string, in Se
 		ON CONFLICT ("workspace_id") DO UPDATE SET
 			provider = EXCLUDED.provider,
 			"base_url" = EXCLUDED."base_url",
-			"key_cipher" = CASE WHEN $4 IS NOT NULL THEN $4 ELSE "ai_search_configs"."key_cipher" END,
-			"key_iv"     = CASE WHEN $5 IS NOT NULL THEN $5 ELSE "ai_search_configs"."key_iv" END,
-			"key_tag"    = CASE WHEN $6 IS NOT NULL THEN $6 ELSE "ai_search_configs"."key_tag" END,
+			"key_cipher" = CASE WHEN $7 THEN NULL WHEN $4 IS NOT NULL THEN $4 ELSE "ai_search_configs"."key_cipher" END,
+			"key_iv"     = CASE WHEN $7 THEN NULL WHEN $5 IS NOT NULL THEN $5 ELSE "ai_search_configs"."key_iv" END,
+			"key_tag"    = CASE WHEN $7 THEN NULL WHEN $6 IS NOT NULL THEN $6 ELSE "ai_search_configs"."key_tag" END,
 			"updated_at" = now()`
-	if _, err := s.db.Exec(ctx, q, workspaceID, in.Provider, baseURL, cipher, iv, tag); err != nil {
+	if _, err := s.db.Exec(ctx, q, workspaceID, in.Provider, baseURL, cipher, iv, tag, clearKey); err != nil {
 		return nil, err
 	}
 	return s.GetSearchConfig(ctx, workspaceID)
@@ -218,7 +223,12 @@ func cleanResults(in []SearchResult, max int) []SearchResult {
 			continue
 		}
 		if len(r.Content) > 2000 {
-			r.Content = r.Content[:2000]
+			// Rune-safe: back off to a boundary rather than splitting UTF-8.
+			cut := 2000
+			for cut > 0 && (r.Content[cut]&0xC0) == 0x80 {
+				cut--
+			}
+			r.Content = r.Content[:cut]
 		}
 		out = append(out, r)
 		if len(out) >= max {

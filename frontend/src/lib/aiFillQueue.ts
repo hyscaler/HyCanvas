@@ -27,6 +27,26 @@ export interface AiFillTask {
   /** Called with the fill's image prompts so picture slots route to the image
    *  queue only after the REAL fill decided them. */
   onImagePrompts?: (pageId: string, prompts: Record<string, string>) => void;
+  /** The content each slot landed with (the deterministic fill): a slot whose
+   *  live text no longer matches was EDITED by the user while the refinement
+   *  ran, and is left alone. */
+  expected: { texts: Record<string, string>; lists: Record<string, string[]> };
+}
+
+/** Flatten a placeholder box's live text for the edited-slot comparison. */
+function liveSlotText(page: { children: unknown[] }, placeholderId: string): string | null {
+  type Textish = { type: string; data?: { placeholderId?: string }; content?: { runs: { text: string }[] }[] };
+  const node = (page.children as Textish[]).find((n) => n.type === "text" && n.data?.placeholderId === placeholderId);
+  if (!node?.content) return null;
+  return node.content.map((par) => par.runs.map((r) => r.text).join("")).join("\n");
+}
+
+/** The text a slot was landed with (mirrors fillPlaceholderContent's shape:
+ *  lists render one bulleted paragraph per item). */
+function expectedSlotText(expected: AiFillTask["expected"], placeholderId: string): string | null {
+  if (placeholderId in expected.texts) return expected.texts[placeholderId];
+  if (placeholderId in expected.lists) return expected.lists[placeholderId].map((x) => `\u2022  ${x}`).join("\n");
+  return null;
 }
 
 const queue: AiFillTask[] = [];
@@ -68,7 +88,22 @@ async function refine(task: AiFillTask): Promise<void> {
   const st = useEditor.getState();
   const idx = st.doc.pages.findIndex((p) => p.id === task.pageId);
   if (idx < 0) return; // undone or switched away: the late result no-ops
-  st.fillPlaceholderContent(idx, { texts: fill.texts, lists: fill.lists }, { styles: task.styles as never });
+  // Never overwrite a user edit: a slot whose live text diverged from what the
+  // deck landed with was touched by the user while this call ran; drop the
+  // refinement for that slot and keep theirs.
+  const page = st.doc.pages[idx] as unknown as { children: unknown[] };
+  const keepTexts: Record<string, string> = {};
+  const keepLists: Record<string, string[]> = {};
+  for (const [slot, v] of Object.entries(fill.texts)) {
+    const expectedText = expectedSlotText(task.expected, slot);
+    if (expectedText === null || liveSlotText(page, slot) === expectedText) keepTexts[slot] = v;
+  }
+  for (const [slot, v] of Object.entries(fill.lists)) {
+    const expectedText = expectedSlotText(task.expected, slot);
+    if (expectedText === null || liveSlotText(page, slot) === expectedText) keepLists[slot] = v;
+  }
+  if (!Object.keys(keepTexts).length && !Object.keys(keepLists).length) return;
+  st.fillPlaceholderContent(idx, { texts: keepTexts, lists: keepLists }, { styles: task.styles as never });
   if (task.onImagePrompts && Object.keys(fill.imagePrompts).length) {
     task.onImagePrompts(task.pageId, fill.imagePrompts);
   }

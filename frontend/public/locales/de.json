@@ -3432,5 +3432,10 @@
   "errors.api_extract_file_unsupported": "Nur .docx-, .pptx- und .xlsx-Dateien können extrahiert werden.",
   "errors.api_extract_file_unreadable": "Das Dokument konnte nicht gelesen werden.",
   "errors.api_search_not_configured": "Websuche ist für diesen Workspace nicht konfiguriert. Ein Admin kann in den KI-Einstellungen einen Suchanbieter verbinden.",
-  "editor.health": "Gesundheit"
+  "errors.api_search_key_required": "Dieser Suchanbieter benötigt einen API-Schlüssel. Gib ihn ein und speichere erneut.",
+  "errors.api_search_config_invalid": "Ungültige Suchanbieter-Konfiguration.",
+  "editor.web_search_optional": "Websuche (optional)",
+  "editor.search_off": "Aus",
+  "editor.search_provider_hosted": "Tavily (gehostet)",
+  "editor.search_provider_metasearch": "SearXNG (selbst gehostet)"
 }

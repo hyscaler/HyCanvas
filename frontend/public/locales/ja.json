@@ -3432,5 +3432,10 @@
   "errors.api_extract_file_unsupported": ".docx、.pptx、.xlsx ファイルのみ抽出できます。",
   "errors.api_extract_file_unreadable": "ドキュメントを読み取れませんでした。",
   "errors.api_search_not_configured": "このワークスペースではウェブ検索が設定されていません。管理者がAI設定で検索プロバイダーを接続できます。",
-  "editor.health": "健康"
+  "errors.api_search_key_required": "この検索プロバイダーにはAPIキーが必要です。入力して再度保存してください。",
+  "errors.api_search_config_invalid": "検索プロバイダーの設定が無効です。",
+  "editor.web_search_optional": "ウェブ検索（任意）",
+  "editor.search_off": "オフ",
+  "editor.search_provider_hosted": "Tavily（ホスト型）",
+  "editor.search_provider_metasearch": "SearXNG（セルフホスト）"
 }

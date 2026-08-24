@@ -1842,6 +1842,8 @@ export class HyCanvasClient {
   async aiGenerateDesignStream(
     input: { workspaceId: string; designType: string; prompt: string; brandClause?: string; pageCount?: number },
     onEvent: (event: string, data: unknown) => void,
+    opts?: { signal?: AbortSignal },
+    retried = false,
   ): Promise<void> {
     const headers: Record<string, string> = { "content-type": "application/json" };
     if (this.token) headers.authorization = `Bearer ${this.token}`;
@@ -1850,7 +1852,16 @@ export class HyCanvasClient {
       headers,
       credentials: this.credentials,
       body: JSON.stringify(input),
+      // Aborting cancels the server run too: the request context propagates
+      // into every model call, so an early-resolved caller stops paying for
+      // polish passes it will discard.
+      signal: opts?.signal,
     });
+    // Same transparent one-shot refresh as request(): an expired access token
+    // mid-session must not fail a generation the JSON path would survive.
+    if (res.status === 401 && !retried) {
+      if (await this.tryRefresh()) return this.aiGenerateDesignStream(input, onEvent, opts, true);
+    }
     if (!res.ok || !res.body) throw new ApiError(res.status, "/v1/ai/generate-design/stream", await res.json().catch(() => null));
     const reader = res.body.getReader();
     const decoder = new TextDecoder();

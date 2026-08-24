@@ -3432,5 +3432,10 @@
   "errors.api_extract_file_unsupported": "Seuls les fichiers .docx, .pptx et .xlsx peuvent être extraits.",
   "errors.api_extract_file_unreadable": "Le document n'a pas pu être lu.",
   "errors.api_search_not_configured": "La recherche web n'est pas configurée pour cet espace de travail. Un administrateur peut connecter un fournisseur de recherche dans les paramètres d'IA.",
-  "editor.health": "Santé"
+  "errors.api_search_key_required": "Ce fournisseur de recherche nécessite une clé d'API. Saisissez-la et enregistrez à nouveau.",
+  "errors.api_search_config_invalid": "Configuration du fournisseur de recherche non valide.",
+  "editor.web_search_optional": "Recherche web (facultatif)",
+  "editor.search_off": "Désactivée",
+  "editor.search_provider_hosted": "Tavily (hébergé)",
+  "editor.search_provider_metasearch": "SearXNG (auto-hébergé)"
 }

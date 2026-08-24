@@ -7,14 +7,22 @@ import (
 	"context"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 
 	"hycanvas/backend/internal/aistudio"
 )
 
-type scriptedGen struct{ replies []string; calls int }
+type scriptedGen struct {
+	mu      sync.Mutex
+	replies []string
+	calls   int
+}
 
 func (s *scriptedGen) Text(_ context.Context, _, _, _ string) (string, error) {
+	// The polish pool calls concurrently; guard the script cursor.
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if s.calls >= len(s.replies) {
 		return s.replies[len(s.replies)-1], nil
 	}
@@ -37,8 +45,9 @@ func TestGenerateDesignStreamEvents(t *testing.T) {
 	// asserter is not possible here, so exercise the service + emit contract
 	// directly the way the handler does.
 	_ = req
+	var mu sync.Mutex
 	var events []string
-	emit := func(event string, data any) { events = append(events, event) }
+	emit := func(event string, data any) { mu.Lock(); events = append(events, event); mu.Unlock() }
 	out, err := svc.GenerateDesignStream(req.Context(), "ws", "deck", "brief", "", 0, emit)
 	if err != nil {
 		t.Fatal(err)

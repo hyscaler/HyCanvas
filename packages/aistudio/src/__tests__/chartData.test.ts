@@ -95,3 +95,14 @@ describe("firstTabularSource", () => {
     expect(firstTabularSource(undefined)).toBeNull();
   });
 });
+
+describe("coerceNumber hardening", () => {
+  it("parses accounting negatives and rejects malformed grouping", async () => {
+    const { coerceNumber } = await import("../index");
+    expect(coerceNumber("(500)")).toBe(-500);
+    expect(coerceNumber("($1,250.75)")).toBe(-1250.75);
+    expect(coerceNumber("1,2,3")).toBeNull(); // NOT 123
+    expect(coerceNumber("12,34")).toBeNull();
+    expect(coerceNumber("1,234,567.5")).toBe(1234567.5);
+  });
+});

@@ -367,7 +367,12 @@ func truncateQueryWords(s string) string {
 	}
 	out := strings.Join(words, " ")
 	if len(out) > 200 {
-		out = out[:200]
+		// Rune-safe cut: back off to a boundary rather than splitting UTF-8.
+		cut := 200
+		for cut > 0 && (out[cut]&0xC0) == 0x80 {
+			cut--
+		}
+		out = out[:cut]
 	}
 	return out
 }

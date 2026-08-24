@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -62,7 +63,17 @@ func searchSetConfigHandler(svc *ai.Service, acct *accounts.Service) http.Handle
 		}
 		cfg, err := svc.SetSearchConfig(r.Context(), id, ai.SearchConfigInput{Provider: body.Provider, BaseURL: body.BaseURL, APIKey: body.APIKey})
 		if err != nil {
-			aiProblem(w, r, err)
+			// Search-specific codes: the generic ai_not_configured message
+			// talks about the AI provider and would send the admin to debug
+			// the wrong settings.
+			switch {
+			case errors.Is(err, ai.ErrSearchKeyRequired):
+				problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "this search provider needs an API key; enter it and save again", "search_key_required")
+			case errors.Is(err, ai.ErrBadRequest):
+				problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid search provider configuration", "search_config_invalid")
+			default:
+				aiProblem(w, r, err)
+			}
 			return
 		}
 		writeJSON(w, http.StatusOK, cfg) // null after a clear
@@ -82,6 +93,20 @@ func aiSearchHandler(svc *ai.Service, studio *aistudio.Service, acct *accounts.S
 		}
 		if !aiAssert(r, acct, body.WorkspaceID, "member") {
 			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace", "not_workspace_member")
+			return
+		}
+		if strings.TrimSpace(body.Prompt) == "" {
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
+			return
+		}
+		// One indexed SELECT before any model call: an unconfigured workspace
+		// (the default) must not pay 1-4 query-writing round-trips just to be
+		// told search is off.
+		if cfg, err := svc.GetSearchConfig(r.Context(), body.WorkspaceID); err != nil {
+			aiProblem(w, r, err)
+			return
+		} else if cfg == nil {
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "web search is not configured for this workspace", "search_not_configured")
 			return
 		}
 		// The query is AI-written from the brief (12 words / 200 chars, with

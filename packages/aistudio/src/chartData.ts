@@ -39,10 +39,25 @@ function splitLine(line: string, delim: string): string[] {
 /** Coerce one cell to a number: plain, thousands separators, %, and common
  *  currency prefixes; null when it is not numeric. */
 export function coerceNumber(cell: string): number | null {
-  const cleaned = cell.trim().replace(/^[$€£¥₹]/, "").replace(/,/g, "").replace(/%$/, "");
-  if (cleaned === "" || cleaned === "-") return null;
-  const n = Number(cleaned);
-  return Number.isFinite(n) ? n : null;
+  let t = cell.trim();
+  // Accounting negatives: (500) means -500.
+  let negative = false;
+  const paren = /^\((.*)\)$/.exec(t);
+  if (paren) {
+    negative = true;
+    t = paren[1].trim();
+  }
+  t = t.replace(/^[$€£¥₹]/, "").replace(/%$/, "").trim();
+  // Commas are stripped only when they form VALID thousands grouping:
+  // "1,234,567.5" qualifies, "1,2,3" is not a number and must stay null.
+  if (t.includes(",")) {
+    if (!/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(t)) return null;
+    t = t.replace(/,/g, "");
+  }
+  if (t === "" || t === "-") return null;
+  const n = Number(t);
+  if (!Number.isFinite(n)) return null;
+  return negative ? -n : n;
 }
 
 /** True when the text READS as tabular data: several lines sharing a
@@ -126,6 +141,8 @@ export function chartColumnSelectionSystemPrompt(matrix: DataMatrix): string {
 
 export interface ComputedChart {
   chartType: (typeof chartTypes)[number];
+  /** The source column the categories came from (its real header name). */
+  categoryName: string;
   categories: string[];
   series: { name: string; values: number[] }[];
 }
@@ -159,7 +176,7 @@ export function buildChartFromSelection(matrix: DataMatrix, selection: unknown):
     name: matrix.headers[c],
     values: rows.map((r) => coerceNumber(r[c] ?? "") ?? 0),
   }));
-  return { chartType, categories, series };
+  return { chartType, categoryName: matrix.headers[catCol], categories, series };
 }
 
 /** The attached sources' first tabular text, or null. */

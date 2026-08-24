@@ -3432,5 +3432,10 @@
   "errors.api_extract_file_unsupported": "केवल .docx, .pptx और .xlsx फ़ाइलें ही निकाली जा सकती हैं।",
   "errors.api_extract_file_unreadable": "दस्तावेज़ पढ़ा नहीं जा सका।",
   "errors.api_search_not_configured": "इस वर्कस्पेस के लिए वेब खोज कॉन्फ़िगर नहीं है। व्यवस्थापक AI सेटिंग्स में खोज प्रदाता जोड़ सकते हैं।",
-  "editor.health": "स्वास्थ्य"
+  "errors.api_search_key_required": "इस खोज प्रदाता के लिए API कुंजी आवश्यक है। इसे दर्ज करें और फिर से सहेजें।",
+  "errors.api_search_config_invalid": "खोज प्रदाता कॉन्फ़िगरेशन अमान्य है।",
+  "editor.web_search_optional": "वेब खोज (वैकल्पिक)",
+  "editor.search_off": "बंद",
+  "editor.search_provider_hosted": "Tavily (होस्टेड)",
+  "editor.search_provider_metasearch": "SearXNG (स्व-होस्टेड)"
 }

@@ -3432,5 +3432,10 @@
   "errors.api_extract_file_unsupported": "只能提取 .docx、.pptx 和 .xlsx 文件。",
   "errors.api_extract_file_unreadable": "无法读取该文档。",
   "errors.api_search_not_configured": "此工作区未配置网页搜索。管理员可以在 AI 设置中连接搜索提供商。",
-  "editor.health": "健康"
+  "errors.api_search_key_required": "此搜索提供商需要 API 密钥。请输入后重新保存。",
+  "errors.api_search_config_invalid": "搜索提供商配置无效。",
+  "editor.web_search_optional": "网页搜索（可选）",
+  "editor.search_off": "关闭",
+  "editor.search_provider_hosted": "Tavily（托管）",
+  "editor.search_provider_metasearch": "SearXNG（自托管）"
 }

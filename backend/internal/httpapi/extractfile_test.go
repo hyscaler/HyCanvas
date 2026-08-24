@@ -121,3 +121,64 @@ func TestExtractRejectsNonOffice(t *testing.T) {
 		t.Fatal("zip without sheets must error")
 	}
 }
+
+func TestExtractXlsxSparseCellsAndRichStrings(t *testing.T) {
+	// Excel omits empty cells: C2's value must land under column C, not B.
+	// A rich inline string (two t runs) is ONE cell, not two.
+	sheet := `<?xml version="1.0"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <sheetData>
+    <row r="1"><c r="A1" t="inlineStr"><is><r><t>Rev</t></r><r><t>enue</t></r></is></c><c r="B1" t="inlineStr"><is><t>Units</t></is></c><c r="C1" t="inlineStr"><is><t>Zone</t></is></c></row>
+    <row r="2"><c r="A2" t="inlineStr"><is><t>North</t></is></c><c r="C2"><v>30</v></c></row>
+  </sheetData>
+</worksheet>`
+	data := buildZip(t, map[string]string{"xl/worksheets/sheet1.xml": sheet})
+	text, err := extractXlsx(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(text, "Revenue\tUnits\tZone") {
+		t.Fatalf("rich runs split into cells:\n%s", text)
+	}
+	if !strings.Contains(text, "North\t\t30") {
+		t.Fatalf("sparse cell not placed at its referenced column:\n%s", text)
+	}
+}
+
+func TestExtractXlsxWorkbookOrderAndNames(t *testing.T) {
+	sheet := func(v string) string {
+		return `<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>` + v + `</t></is></c><c r="B1"><v>1</v></c></row><row r="2"><c r="A2" t="inlineStr"><is><t>x</t></is></c><c r="B2"><v>2</v></c></row></sheetData></worksheet>`
+	}
+	workbook := `<?xml version="1.0"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets>
+    <sheet name="Revenue" sheetId="7" r:id="rId2"/>
+    <sheet name="Costs" sheetId="3" r:id="rId1"/>
+  </sheets>
+</workbook>`
+	rels := `<?xml version="1.0"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="t" Target="worksheets/sheet1.xml"/>
+  <Relationship Id="rId2" Type="t" Target="worksheets/sheet2.xml"/>
+</Relationships>`
+	data := buildZip(t, map[string]string{
+		"xl/workbook.xml":            workbook,
+		"xl/_rels/workbook.xml.rels": rels,
+		"xl/worksheets/sheet1.xml":   sheet("CostRow"),
+		"xl/worksheets/sheet2.xml":   sheet("RevRow"),
+	})
+	text, err := extractXlsx(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Display order: Revenue (sheet2) first, Costs (sheet1) second - the
+	// opposite of file-number order - under the user-visible names.
+	iRev := strings.Index(text, "[Sheet: Revenue]")
+	iCost := strings.Index(text, "[Sheet: Costs]")
+	if iRev < 0 || iCost < 0 || iRev > iCost {
+		t.Fatalf("workbook order/names not honored:\n%s", text)
+	}
+	if !strings.Contains(text[iRev:iCost], "RevRow") {
+		t.Fatalf("sheet name mapped to the wrong worksheet part:\n%s", text)
+	}
+}

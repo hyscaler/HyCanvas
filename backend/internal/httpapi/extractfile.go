@@ -13,6 +13,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -59,7 +60,13 @@ func extractFileHandler() http.HandlerFunc {
 			DataBase64 string `json:"dataBase64"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			problemWithCode(w, r, http.StatusRequestEntityTooLarge, "Payload Too Large", "the file exceeds the 20 MiB extraction limit", "extract_file_too_large")
+			// Distinguish the body-cap trip (413) from plain malformed JSON (400).
+			var tooBig *http.MaxBytesError
+			if errors.As(err, &tooBig) {
+				problemWithCode(w, r, http.StatusRequestEntityTooLarge, "Payload Too Large", "the file exceeds the 20 MiB extraction limit", "extract_file_too_large")
+				return
+			}
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		ext := strings.ToLower(path.Ext(body.Filename))
@@ -105,7 +112,12 @@ func extractFileHandler() http.HandlerFunc {
 		}
 		text = strings.TrimSpace(text)
 		if len(text) > maxExtractedChars {
-			text = text[:maxExtractedChars]
+			// Rune-safe cut: back off to a boundary rather than splitting UTF-8.
+			cut := maxExtractedChars
+			for cut > 0 && (text[cut]&0xC0) == 0x80 {
+				cut--
+			}
+			text = text[:cut]
 		}
 		writeJSON(w, http.StatusOK, map[string]string{"name": body.Filename, "text": text})
 	}
@@ -178,11 +190,20 @@ func extractDocx(data []byte) (string, error) {
 	if doc == nil {
 		return "", fmt.Errorf("word/document.xml missing")
 	}
-	// Paragraph-granular walk: track w:p boundaries, join w:t runs inside.
+	// Paragraph-granular walk with a DEPTH counter: w:p nests (a text box
+	// inside a paragraph carries its own w:p), and a boolean would close the
+	// outer paragraph at the inner's end, dropping everything after the shape.
 	dec := xml.NewDecoder(bytes.NewReader(doc))
 	var paragraphs []string
 	var para strings.Builder
-	inPara, inText := false, false
+	paraDepth := 0
+	inText := false
+	flush := func() {
+		if s := strings.TrimSpace(para.String()); s != "" {
+			paragraphs = append(paragraphs, s)
+		}
+		para.Reset()
+	}
 	for {
 		tok, err := dec.Token()
 		if err != nil {
@@ -192,25 +213,24 @@ func extractDocx(data []byte) (string, error) {
 		case xml.StartElement:
 			switch t.Name.Local {
 			case "p":
-				inPara = true
+				paraDepth++
 			case "t":
 				inText = true
 			}
 		case xml.EndElement:
 			switch t.Name.Local {
 			case "p":
-				if inPara {
-					if s := strings.TrimSpace(para.String()); s != "" {
-						paragraphs = append(paragraphs, s)
+				if paraDepth > 0 {
+					paraDepth--
+					if paraDepth == 0 {
+						flush()
 					}
-					para.Reset()
-					inPara = false
 				}
 			case "t":
 				inText = false
 			}
 		case xml.CharData:
-			if inPara && inText {
+			if paraDepth > 0 && inText {
 				para.Write(t)
 			}
 		}
@@ -258,124 +278,270 @@ func extractPptx(data []byte) (string, error) {
 	return strings.Join(blocks, "\n\n"), nil
 }
 
-// extractXlsx returns each sheet's rows tab-separated, one row per line, with
-// shared strings resolved (the common cell-text encoding) and inline strings
-// handled. Formulas contribute their cached values.
+// extractXlsx returns each sheet's rows tab-separated, one row per line, in
+// the WORKBOOK's display order and under the user-visible sheet names
+// (xl/workbook.xml + its rels; sheetN.xml file numbering is creation order
+// and diverges after deletes/reorders). Cells land in their REFERENCED
+// columns (Excel omits empty cells, so positional appends would shift values
+// under the wrong headers), shared strings are resolved, rich inline strings
+// join their runs into one cell, and formulas contribute cached values.
 func extractXlsx(data []byte) (string, error) {
 	zr, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {
 		return "", err
 	}
-	// Shared strings: si elements in order; each may hold plain t or rich runs.
-	var shared []string
-	if ss := zipEntry(zr, "xl/sharedStrings.xml"); ss != nil {
-		dec := xml.NewDecoder(bytes.NewReader(ss))
-		var cur strings.Builder
-		inSI, inT := false, false
+	shared := xlsxSharedStrings(zr)
+	sheets := xlsxSheetOrder(zr)
+	if len(sheets) == 0 {
+		return "", fmt.Errorf("no sheets")
+	}
+	var blocks []string
+	for _, sh := range sheets {
+		rows := xlsxSheetRows(zipEntry(zr, sh.path), shared)
+		if len(rows) > 0 {
+			blocks = append(blocks, fmt.Sprintf("[Sheet: %s]\n%s", sh.name, strings.Join(rows, "\n")))
+		}
+	}
+	return strings.Join(blocks, "\n\n"), nil
+}
+
+type xlsxSheet struct {
+	name string
+	path string
+}
+
+// xlsxSheetOrder reads the workbook's sheet list (display order + names) and
+// resolves each sheet's worksheet part via the workbook rels. Falls back to
+// numeric file order with synthetic names when either part is missing.
+func xlsxSheetOrder(zr *zip.Reader) []xlsxSheet {
+	rels := map[string]string{} // rId -> part path
+	if b := zipEntry(zr, "xl/_rels/workbook.xml.rels"); b != nil {
+		dec := xml.NewDecoder(bytes.NewReader(b))
 		for {
 			tok, err := dec.Token()
 			if err != nil {
 				break
 			}
-			switch t := tok.(type) {
-			case xml.StartElement:
-				switch t.Name.Local {
-				case "si":
-					inSI = true
-				case "t":
-					inT = true
+			if t, ok := tok.(xml.StartElement); ok && t.Name.Local == "Relationship" {
+				var id, target string
+				for _, a := range t.Attr {
+					switch a.Name.Local {
+					case "Id":
+						id = a.Value
+					case "Target":
+						target = a.Value
+					}
 				}
-			case xml.EndElement:
-				switch t.Name.Local {
-				case "si":
-					shared = append(shared, cur.String())
-					cur.Reset()
-					inSI = false
-				case "t":
-					inT = false
-				}
-			case xml.CharData:
-				if inSI && inT {
-					cur.Write(t)
+				if id != "" && target != "" {
+					if !strings.HasPrefix(target, "/") {
+						target = "xl/" + strings.TrimPrefix(target, "./")
+					} else {
+						target = strings.TrimPrefix(target, "/")
+					}
+					rels[id] = target
 				}
 			}
 		}
 	}
-	// Sheets in workbook order (sheetN.xml sorts numerically like slides).
+	var sheets []xlsxSheet
+	if b := zipEntry(zr, "xl/workbook.xml"); b != nil {
+		dec := xml.NewDecoder(bytes.NewReader(b))
+		for {
+			tok, err := dec.Token()
+			if err != nil {
+				break
+			}
+			if t, ok := tok.(xml.StartElement); ok && t.Name.Local == "sheet" {
+				var name, rid string
+				for _, a := range t.Attr {
+					switch a.Name.Local {
+					case "name":
+						name = a.Value
+					case "id": // r:id resolves to Local "id" in the r namespace
+						rid = a.Value
+					}
+				}
+				if path, ok := rels[rid]; ok && name != "" {
+					sheets = append(sheets, xlsxSheet{name: name, path: path})
+				}
+			}
+		}
+	}
+	if len(sheets) > 0 {
+		return sheets
+	}
+	// Fallback: numeric file order, synthetic names.
 	var names []string
 	for _, f := range zr.File {
 		if strings.HasPrefix(f.Name, "xl/worksheets/sheet") && strings.HasSuffix(f.Name, ".xml") {
 			names = append(names, f.Name)
 		}
 	}
-	if len(names) == 0 {
-		return "", fmt.Errorf("no sheets")
-	}
 	sheetNum := func(name string) int {
-		s := strings.TrimSuffix(strings.TrimPrefix(name, "xl/worksheets/sheet"), ".xml")
-		n, _ := strconv.Atoi(s)
+		n, _ := strconv.Atoi(strings.TrimSuffix(strings.TrimPrefix(name, "xl/worksheets/sheet"), ".xml"))
 		return n
 	}
 	sort.Slice(names, func(i, j int) bool { return sheetNum(names[i]) < sheetNum(names[j]) })
+	for i, n := range names {
+		sheets = append(sheets, xlsxSheet{name: fmt.Sprintf("Sheet %d", i+1), path: n})
+	}
+	return sheets
+}
 
-	var blocks []string
-	for si, name := range names {
-		dec := xml.NewDecoder(bytes.NewReader(zipEntry(zr, name)))
-		var rows []string
-		var cells []string
-		var cellType string
-		var val strings.Builder
-		inV := false
-		for {
-			tok, err := dec.Token()
-			if err != nil {
-				break
-			}
-			switch t := tok.(type) {
-			case xml.StartElement:
-				switch t.Name.Local {
-				case "row":
-					cells = cells[:0]
-				case "c":
-					cellType = ""
-					for _, a := range t.Attr {
-						if a.Name.Local == "t" {
-							cellType = a.Value
-						}
-					}
-				case "v", "t":
-					inV = true
-					val.Reset()
-				}
-			case xml.EndElement:
-				switch t.Name.Local {
-				case "row":
-					if line := strings.TrimRight(strings.Join(cells, "\t"), "\t"); strings.TrimSpace(line) != "" {
-						rows = append(rows, line)
-					}
-				case "c":
-					// nothing: the v/t handler already appended
-				case "v", "t":
-					if inV {
-						s := val.String()
-						if cellType == "s" {
-							if i, err := strconv.Atoi(strings.TrimSpace(s)); err == nil && i >= 0 && i < len(shared) {
-								s = shared[i]
-							}
-						}
-						cells = append(cells, s)
-						inV = false
-					}
-				}
-			case xml.CharData:
-				if inV {
-					val.Write(t)
-				}
-			}
+// xlsxSharedStrings reads the shared-string table (si entries in order; plain
+// t or rich runs both concatenate).
+func xlsxSharedStrings(zr *zip.Reader) []string {
+	b := zipEntry(zr, "xl/sharedStrings.xml")
+	if b == nil {
+		return nil
+	}
+	var shared []string
+	dec := xml.NewDecoder(bytes.NewReader(b))
+	var cur strings.Builder
+	inSI, inT := false, false
+	for {
+		tok, err := dec.Token()
+		if err != nil {
+			break
 		}
-		if len(rows) > 0 {
-			blocks = append(blocks, fmt.Sprintf("[Sheet %d]\n%s", si+1, strings.Join(rows, "\n")))
+		switch t := tok.(type) {
+		case xml.StartElement:
+			switch t.Name.Local {
+			case "si":
+				inSI = true
+			case "t":
+				inT = true
+			}
+		case xml.EndElement:
+			switch t.Name.Local {
+			case "si":
+				shared = append(shared, cur.String())
+				cur.Reset()
+				inSI = false
+			case "t":
+				inT = false
+			}
+		case xml.CharData:
+			if inSI && inT {
+				cur.Write(t)
+			}
 		}
 	}
-	return strings.Join(blocks, "\n\n"), nil
+	return shared
+}
+
+// colIndexFromRef turns a cell reference's column letters into a 0-based
+// index ("A1" -> 0, "BC12" -> 54); -1 when the ref carries no letters.
+func colIndexFromRef(ref string) int {
+	n := 0
+	seen := false
+	for _, ch := range ref {
+		if ch >= 'A' && ch <= 'Z' {
+			n = n*26 + int(ch-'A') + 1
+			seen = true
+			continue
+		}
+		break
+	}
+	if !seen {
+		return -1
+	}
+	return n - 1
+}
+
+// xlsxSheetRows walks one worksheet: cells land at their REFERENCED column
+// (missing cells stay empty), a cell's value accumulates across every v/t
+// inside it (rich inline strings are several t runs, ONE cell), and shared
+// refs resolve at cell end.
+func xlsxSheetRows(sheet []byte, shared []string) []string {
+	if sheet == nil {
+		return nil
+	}
+	dec := xml.NewDecoder(bytes.NewReader(sheet))
+	var rows []string
+	cells := map[int]string{}
+	maxCol := -1
+	nextCol := 0 // positional fallback for cells without an r attribute
+	curCol := 0
+	cellType := ""
+	var val strings.Builder
+	inCell, inV := false, false
+	flushRow := func() {
+		if maxCol < 0 {
+			return
+		}
+		out := make([]string, maxCol+1)
+		for c, v := range cells {
+			if c >= 0 && c <= maxCol {
+				out[c] = v
+			}
+		}
+		if line := strings.TrimRight(strings.Join(out, "\t"), "\t"); strings.TrimSpace(line) != "" {
+			rows = append(rows, line)
+		}
+		cells = map[int]string{}
+		maxCol = -1
+		nextCol = 0
+	}
+	for {
+		tok, err := dec.Token()
+		if err != nil {
+			break
+		}
+		switch t := tok.(type) {
+		case xml.StartElement:
+			switch t.Name.Local {
+			case "row":
+				cells = map[int]string{}
+				maxCol = -1
+				nextCol = 0
+			case "c":
+				inCell = true
+				cellType = ""
+				val.Reset()
+				curCol = nextCol
+				for _, a := range t.Attr {
+					switch a.Name.Local {
+					case "t":
+						cellType = a.Value
+					case "r":
+						if c := colIndexFromRef(a.Value); c >= 0 {
+							curCol = c
+						}
+					}
+				}
+			case "v", "t":
+				if inCell {
+					inV = true
+				}
+			}
+		case xml.EndElement:
+			switch t.Name.Local {
+			case "row":
+				flushRow()
+			case "c":
+				if inCell {
+					s := val.String()
+					if cellType == "s" {
+						if i, err := strconv.Atoi(strings.TrimSpace(s)); err == nil && i >= 0 && i < len(shared) {
+							s = shared[i]
+						}
+					}
+					cells[curCol] = s
+					if curCol > maxCol {
+						maxCol = curCol
+					}
+					nextCol = curCol + 1
+					inCell = false
+				}
+			case "v", "t":
+				inV = false
+			}
+		case xml.CharData:
+			if inCell && inV {
+				val.Write(t)
+			}
+		}
+	}
+	return rows
 }

@@ -3432,5 +3432,10 @@
   "errors.api_extract_file_unsupported": "Solo se pueden extraer archivos .docx, .pptx y .xlsx.",
   "errors.api_extract_file_unreadable": "No se pudo leer el documento.",
   "errors.api_search_not_configured": "La búsqueda web no está configurada para este espacio de trabajo. Un administrador puede conectar un proveedor de búsqueda en la configuración de IA.",
-  "editor.health": "Salud"
+  "errors.api_search_key_required": "Este proveedor de búsqueda necesita una clave de API. Introdúcela y guarda de nuevo.",
+  "errors.api_search_config_invalid": "Configuración del proveedor de búsqueda no válida.",
+  "editor.web_search_optional": "Búsqueda web (opcional)",
+  "editor.search_off": "Desactivada",
+  "editor.search_provider_hosted": "Tavily (alojado)",
+  "editor.search_provider_metasearch": "SearXNG (autoalojado)"
 }

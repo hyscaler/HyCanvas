@@ -1959,21 +1959,33 @@ async function fetchAssistantOutline(workspaceId: string, dt: DesignType, prompt
   try {
     return await new Promise<DesignOutline>((resolve, reject) => {
       const wantEarly = dt === "deck" || dt === "doc";
+      const aborter = new AbortController();
       let settled = false;
       let last: DesignOutline | null = null;
       oc.aiGenerateDesignStream({ workspaceId, designType: dt, prompt, brandClause, pageCount }, (event, data) => {
         if (settled) return;
         if (event === "outline") {
           last = normalizeOutline(data);
-          if (wantEarly) { settled = true; resolve(last); }
+          if (wantEarly) {
+            settled = true;
+            resolve(last);
+            // Stop the server run: the layout path writes its own per-slide
+            // content, so every remaining polish call would be discarded.
+            aborter.abort();
+          }
         } else if (event === "done") {
           settled = true;
           resolve(normalizeOutline(data));
         } else if (event === "error") {
+          // A REAL provider failure, not a transport one: surface it as an
+          // ApiError carrying the stable code so the caller's guard throws it
+          // instead of silently re-running the whole generation via the job
+          // path (double latency and token spend for a deterministic failure).
           settled = true;
-          reject(new Error(String((data as { message?: string })?.message ?? "generation failed")));
+          const d = data as { code?: string; message?: string } | null;
+          reject(new ApiError(502, "/v1/ai/generate-design/stream", { code: d?.code ?? "ai_provider_failed", detail: d?.message ?? "generation failed" }));
         }
-      }).then(() => {
+      }, { signal: aborter.signal }).then(() => {
         if (!settled) {
           settled = true;
           if (last) resolve(last); else reject(new Error("stream ended without an outline"));
@@ -1982,7 +1994,7 @@ async function fetchAssistantOutline(workspaceId: string, dt: DesignType, prompt
     });
   } catch (e) {
     if (e instanceof ApiError && !endpointUnavailable(e)) throw e;
-    // fall through to the job path
+    // fall through to the job path (transport failures only)
   }
   try {
     const { jobId } = await oc.aiGenerateDesign({ workspaceId, designType: dt, prompt, brandClause, pageCount });
@@ -2499,9 +2511,18 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
         selection = null; // deterministic repair inside the builder
       }
       const chart = buildChartFromSelection(matrix, selection);
-      // Inline CSV binding so Refresh re-parses the exact source data.
-      const csv = [matrix.headers.join(","), ...matrix.rows.map((r) => r.map((c) => (/[",\n]/.test(c) ? `"${c.replace(/"/g, '""')}"` : c)).join(","))].join("\n");
-      return { payload: { kind: "chartData", chartType: chart.chartType as ChartType, categories: chart.categories, series: chart.series, csv } };
+      // Inline CSV binding carrying ONLY the plotted columns: Refresh re-maps
+      // the whole csv through the generic tabular importer, so serializing the
+      // full source would silently reshape the chart (every numeric column
+      // becoming a series) on the first refresh.
+      const esc = (c: string) => (/[",\n]/.test(c) ? `"${c.replace(/"/g, '""')}"` : c);
+      const csvRows = [
+        // The header row is DATA (Refresh parses it), never UI text: it
+        // carries the source column's own name, locale-independent.
+        [chart.categoryName, ...chart.series.map((sr) => sr.name)].map(esc).join(","),
+        ...chart.categories.map((cat, ri) => [cat, ...chart.series.map((sr) => String(sr.values[ri] ?? 0))].map(esc).join(",")),
+      ];
+      return { payload: { kind: "chartData", chartType: chart.chartType as ChartType, categories: chart.categories, series: chart.series, csv: csvRows.join("\n") } };
     }
     case "webSearch": {
       // T16: research the topic and attach the results as a grounding source
@@ -2512,10 +2533,15 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       const prompt = String(a.prompt ?? "").trim();
       if (!prompt) return { error: "nothing to research" };
       try {
+        if ((deps.sources?.length ?? 0) >= maxSources) {
+          // Appending would silently drop the results (the cap keeps the
+          // oldest); an honest skip beats a success chip over lost grounding.
+          return { error: "the attachment limit is reached - remove a source first" };
+        }
         const { query, results } = await oc.aiSearch({ workspaceId: deps.workspaceId, prompt, maxResults: 6 });
         if (!results.length) return { error: "no results found" };
         const text = results.map((r0, i) => `${i + 1}. ${r0.title}\n${r0.url}\n${r0.content}`).join("\n\n");
-        deps.sources = [...(deps.sources ?? []), { name: `Web search: ${query}`, text }].slice(0, 8);
+        deps.sources = [...(deps.sources ?? []), { name: `Web search: ${query}`, text }];
         return { payload: { kind: "webSearch", query, count: results.length } };
       } catch (err) {
         const coded = err instanceof ApiError ? apiCodeMessage(err.body) : null;
@@ -3045,8 +3071,14 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
             prompt: p.fillPrompt,
             styleClause,
             styles: stylesFor(layoutId),
+            expected: { texts: p.fill.texts, lists: p.fill.lists },
             onImagePrompts: (pageId: string, prompts: Record<string, string>) => {
-              enqueueAiImages(Object.entries(prompts).map(([placeholderId, prompt]) => ({
+              // The fallback fill's slot prompts were already enqueued when the
+              // deck landed; only prompts the REAL fill genuinely changed get a
+              // second generation (same normalization as the reuse key), so a
+              // slot never pays for two images of the same idea.
+              const changed = changedImagePrompts(p.fill.imagePrompts, prompts);
+              enqueueAiImages(Object.entries(changed).map(([placeholderId, prompt]) => ({
                 workspaceId,
                 designId: designId ?? "",
                 pageId,
@@ -3148,7 +3180,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   // up front and shown as an editable list with generation dials; Generate
   // proceeds with the EDITED outline (no second model call). null = no review
   // (non-design plans); loading = outline still being fetched.
-  const [review, setReview] = useState<{ outline: DesignOutline | null; loading: boolean; dials: GenerationDials } | null>(null);
+  const [review, setReview] = useState<{ outline: DesignOutline | null; loading: boolean; dials: GenerationDials; searchedSources?: { name: string; text: string }[] } | null>(null);
   const reviewSeq = useRef(0);
   // Monotonic id source for review-added outline items: a length-derived id
   // collides after add-remove-add (same length twice) and duplicates React keys.
@@ -3219,10 +3251,18 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     setReview({ outline: null, loading: true, dials });
     try {
       const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sources, dials, designId };
+      // A planned webSearch grounds the OUTLINE, and in the review flow the
+      // outline is fetched here (the reviewed outline then bypasses the
+      // execute-time fetch entirely) - so the search must run FIRST or its
+      // results never reach the deck. The executed plan later drops the step
+      // so the search is not paid for twice; the found sources surface as
+      // chips via the review state.
+      const searchStep = plan.find((s) => s.action === "webSearch");
+      if (searchStep) await resolvePlanStep(searchStep, deps).catch(() => ({}));
       const { dt, brief, brandClause, pageCount } = prepareGenerateBrief(step.args, deps);
       const outline = await fetchAssistantOutline(workspaceId, dt, brief, brandClause, pageCount);
       if (seq !== reviewSeq.current) return; // superseded by a newer fetch or cancel
-      setReview({ outline, loading: false, dials });
+      setReview({ outline, loading: false, dials, searchedSources: searchStep ? deps.sources : undefined });
     } catch {
       if (seq === reviewSeq.current) setReview({ outline: null, loading: false, dials });
     }
@@ -3289,7 +3329,13 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       // reflect them in the panel state so the user sees (and can remove) the
       // grounding chip after the turn.
       const searched = payloads.find((p0): p0 is Extract<ResolvedPayload, { kind: "webSearch" }> => p0?.kind === "webSearch");
-      if (searched && deps.sources) setSources(deps.sources);
+      if (searched && deps.sources) {
+        // Append only the sources the search ADDED: replacing the whole list
+        // with the captured copy would overwrite any edit the user made to an
+        // attachment while the generation ran.
+        const added = deps.sources.slice(sources.length);
+        if (added.length) setSources((cur) => [...cur, ...added].slice(0, maxSources));
+      }
       // A planned critique step is read-only; surface its actual findings instead
       // of just a "done" chip.
       let extra = "";
@@ -3618,8 +3664,15 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                         const clean = sanitizeEditedOutline(review.outline!);
                         setPending(null);
                         const dials = review.dials;
+                        // The review fetch already ran any planned webSearch and
+                        // grounded the outline in it: drop the step from the
+                        // executed plan (no double search) and surface the
+                        // found sources as chips.
+                        const searched = review.searchedSources;
+                        if (searched) setSources(searched.slice(0, maxSources));
                         clearReview();
-                        if (p && clean.pages.length) void execute(p.plan, p.reply, clean, dials);
+                        const planToRun = searched ? p?.plan.filter((s) => s.action !== "webSearch") ?? [] : p?.plan ?? [];
+                        if (p && clean.pages.length) void execute(planToRun, p.reply, clean, dials);
                         else toast.error(tr("editor.the_outline_needs_at_least_one_page"));
                       }}
                       className="ms-auto rounded bg-brand-600 px-2.5 py-0.5 font-medium text-white hover:bg-brand-700"
@@ -3681,7 +3734,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
           )}
         </div>
       ))}
-      {attachOpen && sources.length < 8 && (
+      {attachOpen && sources.length < maxSources && (
         <div className="mt-2 flex shrink-0 flex-col gap-1.5 rounded-lg border border-neutral-200 bg-neutral-50 p-2">
           <textarea
             placeholder={tr("editor.paste_text_or_notes_to_build_from")}
@@ -3727,7 +3780,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                   setAttachBusy(true);
                   const addSource = (name: string, text: string) => {
                     const t = text.trim();
-                    if (t) setSources((xs) => (xs.length < 8 ? [...xs, { name, text: t.slice(0, 60000) }] : xs));
+                    if (t) setSources((xs) => (xs.length < maxSources ? [...xs, { name, text: t.slice(0, 60000) }] : xs));
                     else toast.error(tr("editor.no_readable_text_in_that_file"));
                   };
                   const extractOne = async (f: File): Promise<void> => {
@@ -3754,7 +3807,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                     addSource(f.name, await f.text());
                   };
                   void (async () => {
-                    for (const f of files.slice(0, 8)) {
+                    for (const f of files.slice(0, maxSources)) {
                       try {
                         await extractOne(f);
                       } catch (err) {
@@ -4158,6 +4211,10 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
   const [imageModel, setImageModel] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
+  // T16: the optional web-search provider, saved alongside the AI config.
+  const [searchProvider, setSearchProvider] = useState("");
+  const [searchUrl, setSearchUrl] = useState("");
+  const [searchKey, setSearchKey] = useState("");
   // The server's preset catalog drives the dropdown (11 providers, defaults,
   // capabilities); the hardcoded fallback only covers the never-fetched case.
   // Seeded from the shared cache, revalidated by the load effect below.
@@ -4184,10 +4241,13 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
     if (!workspaceId) return;
     let cancelled = false;
     void (async () => {
-      const loaded = await oc.getAiConfig(workspaceId).then(
-        (c) => ({ ok: true as const, c }),
-        () => ({ ok: false as const, c: null }),
-      );
+      const [loaded, searchCfg] = await Promise.all([
+        oc.getAiConfig(workspaceId).then(
+          (c) => ({ ok: true as const, c }),
+          () => ({ ok: false as const, c: null }),
+        ),
+        oc.getSearchConfig(workspaceId).catch(() => null),
+      ]);
       if (cancelled) return;
       setLoadFailed(!loaded.ok);
       const c = loaded.c;
@@ -4198,6 +4258,9 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
       setImageModel(c?.imageModel ?? "");
       setBaseUrl(c?.baseUrl ?? "");
       setApiKey("");
+      setSearchProvider(searchCfg?.provider ?? "");
+      setSearchUrl(searchCfg?.baseUrl ?? "");
+      setSearchKey("");
       setLoading(false);
     })();
     // Revalidate the provider catalog WITHOUT gating panel readiness on it
@@ -4259,6 +4322,14 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
       });
       setConfig(c);
       setApiKey("");
+      // The optional web-search provider saves in the same gesture (provider
+      // "" clears it); its coded rejections surface like the AI config's.
+      await oc.setSearchConfig(workspaceId, {
+        provider: searchProvider,
+        ...(searchProvider === "searxng" ? { baseUrl: searchUrl.trim() } : {}),
+        ...(searchKey.trim() ? { apiKey: searchKey.trim() } : {}),
+      });
+      setSearchKey("");
       setShowConfig(false);
       toast.success(tr("editor.ai_provider_saved"));
     } catch (e) {
@@ -4330,6 +4401,21 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
                 <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder={tr("editor.base_url_https_v1")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
               )}
               <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={config?.hasKey ? tr("editor.api_key_leave_blank_to_keep") : tr("editor.api_key")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
+              {/* T16: optional web-search grounding provider. */}
+              <label className="mt-1 flex flex-col gap-1 text-[11px] text-neutral-500">
+                {tr("editor.web_search_optional")}
+                <select value={searchProvider} onChange={(e) => setSearchProvider(e.target.value)} className="rounded border border-neutral-300 px-2 py-1.5 text-sm text-neutral-800">
+                  <option value="">{tr("editor.search_off")}</option>
+                  <option value="tavily">{tr("editor.search_provider_hosted")}</option>
+                  <option value="searxng">{tr("editor.search_provider_metasearch")}</option>
+                </select>
+              </label>
+              {searchProvider === "searxng" && (
+                <input value={searchUrl} onChange={(e) => setSearchUrl(e.target.value)} placeholder={tr("editor.base_url_https_v1")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
+              )}
+              {searchProvider === "tavily" && (
+                <input type="password" value={searchKey} onChange={(e) => setSearchKey(e.target.value)} placeholder={tr("editor.api_key")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
+              )}
               <Button block onClick={() => void saveConfig()} disabled={!workspaceId}>{tr("editor.save_provider")}</Button>
               {config?.hasKey && (
                 <button onClick={() => setShowConfig(false)} className="text-xs text-neutral-500 hover:underline">{tr("editor.cancel")}</button>
@@ -4398,7 +4484,7 @@ const stockKinds = (): { label: string; kind: string }[] => [
 const stockChipCls = (active: boolean) =>
   `whitespace-nowrap rounded-full border px-2.5 py-1 text-xs ${active ? "border-brand-500 bg-brand-50 text-brand-ink" : "border-neutral-200 text-neutral-600 hover:bg-neutral-100"}`;
 
-// Facet ids are catalog slugs; render them as words ("health" -> tr("editor.health")).
+// Facet ids are catalog slugs; rendered as words with a leading capital.
 const FACET_LABELS: Record<string, string> = { ui: "UI" };
 const facetLabel = (id: string) => FACET_LABELS[id] ?? id.charAt(0).toUpperCase() + id.slice(1);
 
@@ -4602,16 +4688,16 @@ export function StockPanel({ workspaceId }: { workspaceId: string | null }) {
   // Load the active tab's contents. Distinguishes a failed fetch (error banner +
   // retry) from a genuinely empty result (the "no results" message). Browse
   // results are paged (the bundled library holds ~10k assets): a full page means
-  // more may follow, surfaced as a tr("editor.load_more") button.
+  // more may follow, surfaced by the load-more button.
   const STOCK_PAGE = 60;
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   // Generation guard: the SDK has no request cancellation, so an in-flight
-  // tr("editor.load_more") must drop its append when a filter/query change has already
+  // the load-more append must drop when a filter/query change has already
   // replaced the grid (a stale page would violate the active filters).
   const fetchGen = useRef(0);
   // Next page's offset, advanced by a fixed page size rather than results.length.
-  // The merged tr("editor.all") search can return a page that id-dedups against what's
+  // The merged all-kinds search can return a page that id-dedups against what's
   // already shown (a live provider flapping between pages); paging by
   // results.length would then drift below the true backend offset and compound
   // skips, so track the offset explicitly instead.

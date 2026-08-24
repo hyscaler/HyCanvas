@@ -1285,7 +1285,6 @@
   "editor.heading_1": "Heading 1",
   "editor.heading_2": "Heading 2",
   "editor.heading_3": "Heading 3",
-  "editor.health": "Health",
   "editor.help": "Help",
   "editor.heres_my_plan_confirm_to_apply": "Here's my plan - confirm to apply.",
   "editor.hero_mosaic": "Hero mosaic",
@@ -3432,5 +3431,11 @@
   "ui.loading": "Loading…",
   "ui.notice": "Notice",
   "ui.page_not_found": "Page not found",
-  "ui.the_page_you_are_looking_for_does_not_exist": "The page you are looking for does not exist or may have moved."
+  "ui.the_page_you_are_looking_for_does_not_exist": "The page you are looking for does not exist or may have moved.",
+  "errors.api_search_key_required": "This search provider needs an API key. Enter it and save again.",
+  "errors.api_search_config_invalid": "Invalid search provider configuration.",
+  "editor.web_search_optional": "Web search (optional)",
+  "editor.search_off": "Off",
+  "editor.search_provider_hosted": "Tavily (hosted)",
+  "editor.search_provider_metasearch": "SearXNG (self-hosted)"
 }

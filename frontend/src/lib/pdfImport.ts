@@ -71,7 +71,12 @@ export async function pdfFileToTextWithScanCheck(file: File, maxPages = 60): Pro
   } finally {
     await doc.destroy?.();
   }
-  return { text: parts.join("\n\n"), scanned: probeChars < 50 };
+  const total = parts.join("\n\n");
+  // Scanned = the probe pages AND the document as a whole are text-poor: a
+  // report whose first pages are a full-bleed image section but which carries
+  // real text later must still attach.
+  const totalChars = total.replace(/\s+/g, "").length;
+  return { text: total, scanned: probeChars < 50 && totalChars < 200 };
 }
 
 export async function pdfFileToText(file: File, maxPages = 60): Promise<string> {

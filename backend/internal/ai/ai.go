@@ -42,6 +42,9 @@ var (
 	// the credential (data loss) and silently carrying it to another vendor
 	// (leak) are both unacceptable, so the change must bring its own key.
 	ErrKeyRequiredForProviderChange = errors.New("changing the provider requires its API key")
+	// ErrSearchKeyRequired is returned when the hosted search provider is
+	// configured without an API key (distinct so the UI points at the field).
+	ErrSearchKeyRequired = errors.New("the search provider requires an API key")
 	// ErrEditImageUnsupported is the edit-specific capability rejection:
 	// several providers generate images but cannot edit them (azure-openai,
 	// zhipu), so the generation-worded message would be wrong.
