@@ -65,8 +65,13 @@ import { z } from "zod";
  *      Removal previously overwrote `source` with the flattened cutout, which
  *      discarded the original pixels; keeping both makes the cutout a view
  *      rather than a replacement, and therefore undoable and refinable.
- *      Additive: a v19 file has no mask and renders exactly as before. */
-export const currentSchemaVersion = 20;
+ *      Additive: a v19 file has no mask and renders exactly as before.
+ *  v21: placeholder capacities. `Placeholder` gains optional `maxChars`,
+ *      `minChars`, `minItems`, `maxItems` - hints telling layout-grounded
+ *      generation how much text a slot comfortably holds (F28 T11). Rendering
+ *      never reads them, so a v20 file (no capacities) and a v21 file render
+ *      identically; older clients preserve the unknown keys end to end. */
+export const currentSchemaVersion = 21;
 
 /** Maximum container nesting depth; guards traversal against stack overflow (FR-4). */
 export const maxNestingDepth = 32;
@@ -1857,11 +1862,24 @@ export interface Placeholder {
   id: string;
   role: PlaceholderRole;
   rect: { x: number; y: number; width: number; height: number };
+  /** Capacity hints for layout-grounded generation (v21, all optional): how
+   *  much text this slot comfortably holds. maxChars is the hard fit ceiling,
+   *  minChars (about half of max) the floor below which the slot looks empty;
+   *  minItems/maxItems bound list-capable roles (content). Rendering ignores
+   *  them entirely - they only shape generated content. */
+  maxChars?: number;
+  minChars?: number;
+  minItems?: number;
+  maxItems?: number;
 }
 export const PlaceholderSchema = z.object({
   id: z.string(),
   role: PlaceholderRoleSchema,
   rect: z.object({ x: z.number(), y: z.number(), width: unit, height: unit }),
+  maxChars: z.number().int().positive().optional(),
+  minChars: z.number().int().nonnegative().optional(),
+  minItems: z.number().int().nonnegative().optional(),
+  maxItems: z.number().int().positive().optional(),
 });
 
 /** A slide master: the root of a style cascade (background + shared

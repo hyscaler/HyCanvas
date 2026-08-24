@@ -46,9 +46,11 @@ func TestWriteBoundaryStillAcceptsOlderVersions(t *testing.T) {
 
 func TestWriteBoundaryRejectsAVersionFromTheFuture(t *testing.T) {
 	// The check is what tells an operator their binary is behind, rather than
-	// silently persisting a file it cannot render.
-	if err := validateForWrite(designAtVersion(21, maskedImage())); !errors.Is(err, ErrInvalidFile) {
-		t.Fatalf("v21 accepted by a v20 binary: %v", err)
+	// silently persisting a file it cannot render. Pinned to the ceiling + 1 so
+	// this test never goes stale across bumps.
+	future := float64(currentSchemaVersion + 1)
+	if err := validateForWrite(designAtVersion(future, maskedImage())); !errors.Is(err, ErrInvalidFile) {
+		t.Fatalf("v%.0f accepted by a v%d binary: %v", future, currentSchemaVersion, err)
 	}
 }
 

@@ -42,7 +42,7 @@ You are implementing one task at a time from the table below. For each session:
 | T08 | 1 Core | Port the prompt rule corpus | done 2026-08-24 |
 | T09 | 1 Core | Outline review step + generation dials | done 2026-08-24 |
 | T10 | 1 Core | Placeholder-first per-slide image pipeline + stock selection | done 2026-08-24 |
-| T11 | 2 Layout | Capacity fields on Placeholder (schema bump) | todo |
+| T11 | 2 Layout | Capacity fields on Placeholder (schema bump) | done 2026-08-24 |
 | T12 | 2 Layout | Derived layout schemas + layout-grounded generation | todo |
 | T13 | 2 Layout | Narrative ops: insertAgenda, splitSlide, insertComparison | todo |
 | T14 | 2 Layout | Per-slide AI regeneration | todo |

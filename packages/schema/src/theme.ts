@@ -8,7 +8,7 @@
 // Nothing here mutates the design. `applyTheme` returns a new file, because
 // swapping a deck's theme must be one undoable action (FR-4).
 
-import type { Color, ColorSwatch, DesignFile, Fill, Page, Placeholder, SlideLayout, SlideMaster, Theme } from "./schema";
+import type { Color, ColorSwatch, DesignFile, Fill, Page, Placeholder, PlaceholderRole, SlideLayout, SlideMaster, Theme } from "./schema";
 
 /** The layout a page inherits from, or undefined when it stands alone (no
  *  `layoutId`, or one that dangles because the layout was deleted). */
@@ -120,6 +120,39 @@ export const builtinMasterId = "master-default";
 /** The default master + the five built-in layouts PowerPoint users expect
  *  (title, title+content, two-content, comparison, picture). Sized to `page`,
  *  so a 16:9 deck and an A4 deck both get sane placeholder rects. */
+/** Derive capacity hints for a placeholder from its rect (as page fractions)
+ *  and role, per the chars-per-area heuristic layout-grounded generation uses:
+ *  titles cap at a headline length, bodies scale with area up to a few hundred
+ *  characters, content slots also bound their list length; the floor is about
+ *  half the ceiling so a slot is neither overflowed nor left looking empty
+ *  (F28 T11). Picture/chart/media/footer roles carry no text capacity. */
+export function capacityForPlaceholder(
+  role: PlaceholderRole,
+  rect: { width: number; height: number },
+  page: { width: number; height: number },
+): Pick<Placeholder, "maxChars" | "minChars" | "minItems" | "maxItems"> {
+  const wFrac = rect.width / page.width;
+  const hFrac = rect.height / page.height;
+  const area = wFrac * hFrac;
+  const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.round(v)));
+  switch (role) {
+    case "title": {
+      const max = clamp(45 * wFrac + 120 * area, 20, 60);
+      return { maxChars: max, minChars: Math.round(max / 2) };
+    }
+    case "body": {
+      const max = clamp(1800 * area, 40, 300);
+      return { maxChars: max, minChars: Math.round(max / 2) };
+    }
+    case "content": {
+      const max = clamp(1500 * area, 100, 500);
+      return { maxChars: max, minChars: Math.round(max / 2), minItems: 2, maxItems: clamp(12 * hFrac, 3, 6) };
+    }
+    default:
+      return {};
+  }
+}
+
 export function builtinMasterAndLayouts(page: { width: number; height: number }): {
   master: SlideMaster;
   layouts: SlideLayout[];
@@ -133,7 +166,10 @@ export function builtinMasterAndLayouts(page: { width: number; height: number })
     id,
     masterId: master.id,
     name,
-    placeholders,
+    // Built-ins carry capacity hints derived from their rects (v21) so
+    // layout-grounded generation can size content; user-captured layouts may
+    // leave them unset.
+    placeholders: placeholders.map((ph) => ({ ...ph, ...capacityForPlaceholder(ph.role, ph.rect, page) })),
   });
   return {
     master,

@@ -357,6 +357,12 @@ export const migrations: Record<number, Migration> = {
   // exactly as it did. The Go mirror reaches the same result through its
   // generic additive branch, which is why there is no matching `case 19`.
   19: (file: AnyObj) => ({ ...file, schemaVersion: 20 }),
+  // v20 -> v21: placeholder capacity hints (Placeholder.maxChars/minChars/
+  // minItems/maxItems). Purely additive, with no transform: a v20 file's
+  // placeholders omit them all, generation just gets no sizing hints, and
+  // rendering never reads them. The Go mirror reaches the same result through
+  // its generic additive branch, which is why there is no matching `case 20`.
+  20: (file: AnyObj) => ({ ...file, schemaVersion: 21 }),
 };
 
 export class MigrationError extends Error {
