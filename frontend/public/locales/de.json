@@ -3421,5 +3421,9 @@
   "editor.dial_analysis_report": "Analysebericht",
   "editor.dial_teaching_training": "Lehre & Schulung",
   "editor.dial_promotional_materials": "Werbematerial",
-  "editor.dial_public_speeches": "Reden"
+  "editor.dial_public_speeches": "Reden",
+  "editor.n_images_couldnt_be_added.one": "{count} Bild konnte nicht hinzugefügt werden. Das Deck ist auch ohne vollständig.",
+  "editor.n_images_couldnt_be_added.other": "{count} Bilder konnten nicht hinzugefügt werden. Das Deck ist auch ohne vollständig.",
+  "editor.retry_images.one": "{count} Bild erneut versuchen",
+  "editor.retry_images.other": "{count} Bilder erneut versuchen"
 }

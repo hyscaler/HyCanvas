@@ -3421,5 +3421,9 @@
   "editor.dial_analysis_report": "分析报告",
   "editor.dial_teaching_training": "教学与培训",
   "editor.dial_promotional_materials": "宣传材料",
-  "editor.dial_public_speeches": "公开演讲"
+  "editor.dial_public_speeches": "公开演讲",
+  "editor.n_images_couldnt_be_added.one": "有 {count} 张图片无法添加。演示文稿在没有它的情况下也是完整的。",
+  "editor.n_images_couldnt_be_added.other": "有 {count} 张图片无法添加。演示文稿在没有它们的情况下也是完整的。",
+  "editor.retry_images.one": "重试 {count} 张图片",
+  "editor.retry_images.other": "重试 {count} 张图片"
 }

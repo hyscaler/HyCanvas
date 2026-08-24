@@ -53,6 +53,7 @@ import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { mirrorInRtl } from "@/lib/locale";
 import { tr, trOr } from "@/lib/i18n";
+import { enqueueAiImages, retryFailedAiImages, subscribeAiImageQueue } from "@/lib/aiImageQueue";
 import { stickerLabel, stickerCategoryLabel } from "@/lib/stickers";
 import { documentDirection } from "@/lib/locale";
 import { apiCodeMessage, CodedError, userMessage } from "@/lib/errors";
@@ -1851,7 +1852,7 @@ type ResolvedPayload =
   | { kind: "diagram"; spec: DiagramSpec }
   | { kind: "clusters"; clusters: { title: string; ids: string[] }[] }
   | { kind: "summary"; text: string }
-  | { kind: "outline"; outline: DesignOutline; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroImages: { pageIndex: number; url: string }[]; append: boolean };
+  | { kind: "outline"; outline: DesignOutline; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroPlans: { pageIndex: number; prompt: string; size: string }[]; workspaceId: string; designId: string | null; append: boolean };
 
 /** Parse a model reply that must be a JSON array of exactly `n` strings.
  *  Tolerates markdown fences; anything else (wrong shape, wrong length,
@@ -1882,6 +1883,8 @@ interface AssistantDeps {
   reviewedOutline?: DesignOutline;
   /** Generation dials chosen in the review UI, woven into the outline brief. */
   dials?: GenerationDials;
+  /** The open design's id, stamped onto queued image resolutions (T10). */
+  designId?: string | null;
   /** Attached source content (doc 28 FR-23 doc/URL/file-to-deck ingestion):
    *  generateDesign grounds its outline strictly in this text when present. */
   sourceText?: string;
@@ -2220,33 +2223,28 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       } else if (typeof pageCount === "number" && pageCount > 0 && outline.pages.length > pageCount) {
         outline.pages = outline.pages.slice(0, pageCount);
       }
-      // Generate a soft hero background image for the high-impact pages so the
-      // result ships WITH imagery (only when the provider supports images).
-      let heroImages: { pageIndex: number; url: string }[] = [];
+      // T10 placeholder-first: the pages land INSTANTLY and the hero images for
+      // high-impact pages stream in behind through the resolution queue
+      // (reuse -> stock -> generate). Only the prompts are planned here; nothing
+      // blocks on the image provider, and a failure never touches the deck.
+      let heroPlans: { pageIndex: number; prompt: string; size: string }[] = [];
       if (deps.imageCapable) {
         const aspect = size.width >= size.height * 1.2 ? "landscape" : size.height >= size.width * 1.2 ? "portrait" : "square";
         const sizeStr = aspect === "landscape" ? "1792x1024" : aspect === "portrait" ? "1024x1792" : "1024x1024";
-        const targets = outline.pages
+        heroPlans = outline.pages
           .map((p, i) => ({ p, i }))
           .filter(({ p }) => HERO_ROLES.has(p.visualRole))
-          .slice(0, MAX_HERO_IMAGES);
-        const results = await Promise.all(
-          targets.map(async ({ p, i }) => {
-            try {
-              const prompt = groundImagePrompt(
-                `${outline.title}${p.title ? ` - ${p.title}` : ""}. ${outline.theme ?? ""}. A soft, uncluttered, low-contrast background with generous empty space so overlaid text stays readable. No text, no words, no logos in the image.`,
-                { palette: deps.brandPalette, aspect },
-              );
-              const { image } = await oc.aiImage({ workspaceId: deps.workspaceId, prompt, size: sizeStr });
-              return image ? { pageIndex: i, url: image } : null;
-            } catch {
-              return null;
-            }
-          }),
-        );
-        heroImages = results.filter((x): x is { pageIndex: number; url: string } => !!x);
+          .slice(0, MAX_HERO_IMAGES)
+          .map(({ p, i }) => ({
+            pageIndex: i,
+            size: sizeStr,
+            prompt: groundImagePrompt(
+              `${outline.title}${p.title ? ` - ${p.title}` : ""}. ${outline.theme ?? ""}. A soft, uncluttered, low-contrast background with generous empty space so overlaid text stays readable. No text, no words, no logos in the image.`,
+              { palette: deps.brandPalette, aspect },
+            ),
+          }));
       }
-      return { payload: { kind: "outline", outline, size, brandPalette: deps.brandPalette, brandFonts: deps.brandFonts, heroImages, append } };
+      return { payload: { kind: "outline", outline, size, brandPalette: deps.brandPalette, brandFonts: deps.brandFonts, heroPlans, workspaceId: deps.workspaceId, designId: deps.designId ?? null, append } };
     }
     default:
       return {};
@@ -2396,7 +2394,7 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
     }
     case "generateDesign": {
       if (ctx?.payload?.kind !== "outline") return false;
-      const { outline, size, brandPalette, brandFonts, heroImages, append } = ctx.payload;
+      const { outline, size, brandPalette, brandFonts, heroPlans, workspaceId, designId, append } = ctx.payload;
       const clean: DesignOutline = { ...outline, pages: outline.pages.map((p) => ({ ...p, points: p.points.map((s) => s.trim()).filter(Boolean) })) };
       // Seed the default hue from the title so different briefs don't all fall
       // back to the same first curated color (a brand palette overrides this).
@@ -2406,12 +2404,18 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       const base = append ? st.doc.pages.length : 0;
       const ids = append ? st.appendDeckPages(deck, size) : st.buildDeckFromOutline(deck, size);
       if (!ids.length) return false;
-      // Drop a generated hero image behind the impact pages (full-bleed, at the
-      // back of the z-order). Applied here inside the one-undo turn.
-      for (const h of heroImages) {
-        st.setActivePage(base + h.pageIndex);
-        st.addPageBackgroundImage(h.url);
-      }
+      // T10 placeholder-first: the deck is fully laid out NOW; hero images for
+      // the impact pages resolve in the background (reuse -> stock -> generate)
+      // and land by page id, so a failure or a design switch never breaks the
+      // deck. Enqueueing only schedules async work - the one-undo turn stays
+      // synchronous, and each resolution is its own small undoable mutation.
+      enqueueAiImages(heroPlans.map((h) => ({
+        workspaceId,
+        designId: designId ?? "",
+        pageId: ids[h.pageIndex],
+        prompt: h.prompt,
+        size: h.size,
+      })).filter((t) => !!t.pageId));
       st.goToPage(base); // land on the first new page (and scroll it into view)
       return true;
     }
@@ -2435,6 +2439,22 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   const runAsTurn = useEditor((s) => s.runAsTurn);
   const undo = useEditor((s) => s.undo);
   const designId = useComments((s) => s.designId); // current design (for persisted history)
+  // T10: image resolutions settle in the background; surface failures with a
+  // retry chip (never a failed deck - the pages are already placed).
+  const [failedImages, setFailedImages] = useState(0);
+  useEffect(() => {
+    return subscribeAiImageQueue((ev) => {
+      if (!designId || ev.designId !== designId) return;
+      if (ev.failed > 0) {
+        setFailedImages(ev.failed);
+        setTurns((t) => [...t, { role: "assistant", text: tr("editor.n_images_couldnt_be_added", { count: ev.failed }) }]);
+      } else if (ev.resolved > 0) {
+        setFailedImages(0);
+      }
+    });
+    // setTurns is stable (useState setter); re-subscribe only per design.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [designId]);
   const [input, setInput] = useState("");
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [busy, setBusy] = useState(false);
@@ -2516,7 +2536,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     const seq = ++reviewSeq.current;
     setReview({ outline: null, loading: true, dials });
     try {
-      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sourceText: source?.text, sourceName: source?.name, dials };
+      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sourceText: source?.text, sourceName: source?.name, dials, designId };
       const { dt, brief, brandClause, pageCount } = prepareGenerateBrief(step.args, deps);
       const outline = await fetchAssistantOutline(workspaceId, dt, brief, brandClause, pageCount);
       if (seq !== reviewSeq.current) return; // superseded by a newer fetch or cancel
@@ -2554,7 +2574,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
           // best-effort; the applyBrand step will simply report nothing to fix
         }
       }
-      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sourceText: source?.text, sourceName: source?.name, reviewedOutline, dials };
+      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sourceText: source?.text, sourceName: source?.name, reviewedOutline, dials, designId };
       const payloads: (ResolvedPayload | undefined)[] = [];
       const skips: (string | undefined)[] = [];
       for (let i = 0; i < plan.length; i++) {
@@ -2927,6 +2947,17 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
         </div>
       )}
 
+      {/* T10: failed image resolutions offer a one-click retry. */}
+      {failedImages > 0 && designId && !busy && (
+        <div className="mt-2 flex shrink-0 items-center gap-1.5">
+          <button
+            onClick={() => { setFailedImages(0); retryFailedAiImages(designId); }}
+            className="rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-[11px] text-amber-800 hover:border-amber-400"
+          >
+            {tr("editor.retry_images", { count: failedImages })}
+          </button>
+        </div>
+      )}
       {/* Art-direction follow-ups, shown right after a design was generated. */}
       {lastWasDesign && !pending && !busy && (
         <div className="mt-2 flex shrink-0 flex-wrap gap-1.5">

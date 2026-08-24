@@ -780,6 +780,13 @@ interface EditorState {
   /** F39 FR-24: place a generated/selected image as a full-page background -
    *  sized to the active page, at the back of the z-order, as ONE undo step. */
   addPageBackgroundImage(url: string): void;
+  /** T10: apply a resolved AI/stock image as a page's full-bleed background,
+   *  addressed BY PAGE ID (late async resolutions must not depend on the
+   *  active page), stamped with the generation prompt (node.data.aiImagePrompt)
+   *  so identical prompts can be diffed/reused later. Replaces a previous
+   *  generated background instead of stacking. Returns false when the page no
+   *  longer exists (the design changed - the guard against late results). */
+  applyGeneratedBackground(pageId: string, url: string, prompt: string): boolean;
   /** Insert an SVG icon as an editable, scaled vector group, viewport-centered.
    *  `provenance` (e.g. stock asset id + license) is stamped on the group's data
    *  in the same undo step, so attribution can be compiled from the design. */
@@ -4675,6 +4682,52 @@ export const useEditor = create<EditorState>((set, get) => {
       }
     },
 
+    applyGeneratedBackground: (pageId, url, prompt) => {
+      const doc = get().doc;
+      ensureDocArrays(doc);
+      const page = doc.pages.find((p) => p.id === pageId);
+      if (!page) return false; // design changed: a late resolution never lands elsewhere
+      const assetId = `asset-${crypto.randomUUID()}`;
+      const node = createNode("image", {
+        name: tr("app.background"),
+        source: { assetId, naturalWidth: 0, naturalHeight: 0 },
+        fit: "cover",
+        transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+        size: { width: page.width, height: page.height },
+      } as Partial<Node>);
+      node.data = { aiImagePrompt: prompt };
+      const ref: AssetRef = { id: assetId, kind: "image", url, mime: "image/*", checksum: "" };
+      // A retry or regeneration replaces the previous generated background
+      // rather than stacking: remove any existing prompt-stamped background.
+      const prevNode = page.children.find((n) => n.type === "image" && (n.data as { aiImagePrompt?: string } | undefined)?.aiImagePrompt);
+      const prevId = prevNode?.id;
+      const prevSnapshot = prevNode ? structuredClone(prevNode) : null;
+      perform(
+        () => {
+          const live = get().doc.pages.find((p) => p.id === pageId);
+          if (!live) return;
+          if (prevId) {
+            const i = live.children.findIndex((n) => n.id === prevId);
+            if (i >= 0) live.children.splice(i, 1);
+          }
+          get().doc.assets.push(ref);
+          live.children.unshift(node); // back of the z-order, full bleed
+        },
+        () => {
+          const live = get().doc.pages.find((p) => p.id === pageId);
+          if (live) {
+            const i = live.children.findIndex((n) => n.id === node.id);
+            if (i >= 0) live.children.splice(i, 1);
+            if (prevSnapshot) live.children.unshift(structuredClone(prevSnapshot));
+          }
+          const assets = get().doc.assets;
+          const ai = assets.findIndex((a) => a.id === assetId);
+          if (ai >= 0) assets.splice(ai, 1);
+        },
+      );
+      if (typeof window !== "undefined") imageAssets.register(assetId, url);
+      return true;
+    },
     addPageBackgroundImage: (url) => {
       const doc = get().doc;
       ensureDocArrays(doc);

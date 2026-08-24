@@ -3421,5 +3421,9 @@
   "editor.dial_analysis_report": "Rapport d'analyse",
   "editor.dial_teaching_training": "Enseignement et formation",
   "editor.dial_promotional_materials": "Supports promotionnels",
-  "editor.dial_public_speeches": "Discours publics"
+  "editor.dial_public_speeches": "Discours publics",
+  "editor.n_images_couldnt_be_added.one": "{count} image n'a pas pu être ajoutée. La présentation reste complète sans elle.",
+  "editor.n_images_couldnt_be_added.other": "{count} images n'ont pas pu être ajoutées. La présentation reste complète sans elles.",
+  "editor.retry_images.one": "Réessayer {count} image",
+  "editor.retry_images.other": "Réessayer {count} images"
 }
