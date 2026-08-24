@@ -10,6 +10,7 @@ export * from "./outline";
 export * from "./promptRules";
 export * from "./outlineEdit";
 export * from "./imagePlan";
+export * from "./layoutSchema";
 export * from "./theme";
 export * from "./deck";
 export * from "./prompts";

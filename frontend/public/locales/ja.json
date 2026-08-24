@@ -3425,5 +3425,6 @@
   "editor.n_images_couldnt_be_added.one": "{count}枚の画像を追加できませんでした。デッキはこのままでも完成しています。",
   "editor.n_images_couldnt_be_added.other": "{count}枚の画像を追加できませんでした。デッキはこのままでも完成しています。",
   "editor.retry_images.one": "画像{count}枚を再試行",
-  "editor.retry_images.other": "画像{count}枚を再試行"
+  "editor.retry_images.other": "画像{count}枚を再試行",
+  "app.image": "画像"
 }

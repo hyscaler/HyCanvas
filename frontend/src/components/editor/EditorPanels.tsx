@@ -12,11 +12,14 @@ import { qrModules } from "@/lib/qr";
 import { stickers, stickerCategories, type Sticker } from "@/lib/stickers";
 import { parseModelJson } from "@/lib/magicDesign";
 import {
-  normalizeOutline, deckThemes, layoutDeck, groundImagePrompt, untrustedSourceRule,
+  normalizeOutline, deckThemes, layoutDeck, layoutDesign, groundImagePrompt, untrustedSourceRule,
   sanitizeEditedOutline, dialsClause, dialDensities, dialTones, dialAudiences, dialScenarios, maxOutlinePages,
+  deriveLayoutContentSchema, layoutSelectionSchema, layoutSelectionSystemPrompt, layoutFillSystemPrompt, repairLayoutSelection,
+  normalizeLayoutFill, fallbackLayoutFill, type LayoutFill,
   type DesignOutline, type DesignType, type GenerationDials, type OutlineItem,
   toolCatalog, assistantSystemPrompt, parseAssistantReply, planMutates, summarizeDesign, type PlanStep,
 } from "@hc/aistudio";
+import { builtinMasterAndLayouts, type SlideLayout } from "@hc/schema";
 import { promptText } from "@/lib/promptDialog";
 import { downloadHycFile } from "@/lib/hycFile";
 import { generateAltText } from "@/lib/altText";
@@ -1852,7 +1855,8 @@ type ResolvedPayload =
   | { kind: "diagram"; spec: DiagramSpec }
   | { kind: "clusters"; clusters: { title: string; ids: string[] }[] }
   | { kind: "summary"; text: string }
-  | { kind: "outline"; outline: DesignOutline; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroPlans: { pageIndex: number; prompt: string; subject: string; size: string }[]; workspaceId: string; designId: string | null; append: boolean };
+  | { kind: "outline"; outline: DesignOutline; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroPlans: { pageIndex: number; prompt: string; subject: string; size: string }[]; workspaceId: string; designId: string | null; append: boolean }
+  | { kind: "layoutDeck"; deckTitle: string; pages: { layoutId: string; name: string; note?: string; fill: LayoutFill }[]; background: unknown; imageSize: string; size: { width: number; height: number }; workspaceId: string; designId: string | null; append: boolean };
 
 /** Parse a model reply that must be a JSON array of exactly `n` strings.
  *  Tolerates markdown fences; anything else (wrong shape, wrong length,
@@ -2230,6 +2234,81 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
           outline.pages = outline.pages.slice(0, pageCount);
         }
       }
+      // T12 layout-grounded generation: when the document has slide layouts
+      // (built-ins are installed on first use), one structured call assigns a
+      // layout per page (repaired deterministically) and one per page fills the
+      // layout's derived content schema; picture slots route through the T10
+      // image queue. A per-page failure degrades to the deterministic fill from
+      // the outline item, never an aborted deck. Falls through to the freeform
+      // engine only when layout grounding is impossible.
+      {
+        const docLayouts = (st.doc as unknown as { layouts?: SlideLayout[] }).layouts;
+        const layouts = docLayouts?.length ? docLayouts : builtinMasterAndLayouts(size).layouts;
+        if (layouts.length && (dt === "deck" || dt === "doc")) {
+          const items = outline.pages;
+          const ids = layouts.map((l) => l.id);
+          let selection: string[];
+          try {
+            const { text } = await oc.aiTextStructured({
+              workspaceId: deps.workspaceId,
+              system: layoutSelectionSystemPrompt(items.length, layouts),
+              prompt: items.map((p, i) => `${i + 1}. [${p.visualRole}] ${p.title}${p.points.length ? ` (${p.points.length} points)` : ""}`).join("\n"),
+              schema: layoutSelectionSchema(items.length, ids),
+            });
+            const parsed = parseModelJson(text) as { layouts?: unknown } | null;
+            selection = repairLayoutSelection(parsed?.layouts, items, layouts);
+          } catch {
+            selection = repairLayoutSelection(null, items, layouts); // deterministic role preference
+          }
+          const byId = new Map(layouts.map((l) => [l.id, l] as const));
+
+          const fills: LayoutFill[] = new Array(items.length);
+          const pool = 4;
+          let next = 0;
+          const worker = async () => {
+            while (next < items.length) {
+              const i = next++;
+              const layout = byId.get(selection[i])!;
+              const item = items[i];
+              const schema = deriveLayoutContentSchema(layout);
+              try {
+                const { text } = await oc.aiTextStructured({
+                  workspaceId: deps.workspaceId,
+                  system: layoutFillSystemPrompt(schema),
+                  prompt: `Deck: ${outline.title}${outline.theme ? ` (${outline.theme})` : ""}\nSlide ${i + 1} of ${items.length}: ${item.title}\nKey points:\n${item.points.map((x) => `- ${x}`).join("\n") || "(none)"}${item.note ? `\nSpeaker note (context, not slide text): ${item.note}` : ""}`,
+                  schema,
+                });
+                const fill = normalizeLayoutFill(layout, parseModelJson(text));
+                const usable = Object.keys(fill.texts).length + Object.keys(fill.lists).length > 0;
+                fills[i] = usable ? fill : fallbackLayoutFill(layout, item);
+              } catch {
+                fills[i] = fallbackLayoutFill(layout, item);
+              }
+            }
+          };
+          await Promise.all(Array.from({ length: Math.min(pool, items.length) }, worker));
+          const aspect = size.width >= size.height * 1.2 ? "landscape" : size.height >= size.width * 1.2 ? "portrait" : "square";
+          const imageSize = aspect === "landscape" ? "1792x1024" : aspect === "portrait" ? "1024x1792" : "1024x1024";
+          // The theme's page background, converted exactly as the freeform
+          // engine converts it (an empty layout pass yields just the Fill).
+          const seed = Array.from(outline.title).reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) | 0, 7);
+          const theme = deckThemes({ brandPalette: deps.brandPalette, kicker: outline.title, count: 1, fontHeading: deps.brandFonts.heading, fontBody: deps.brandFonts.body, seed })[0];
+          const background = layoutDesign({ layout: "centered", background: theme.background, blocks: [], dir: "ltr" }, size).background;
+          return {
+            payload: {
+              kind: "layoutDeck",
+              deckTitle: outline.title,
+              pages: items.map((item, i) => ({ layoutId: selection[i], name: item.title || `Page ${i + 1}`, note: item.note, fill: fills[i] })),
+              background,
+              imageSize,
+              size,
+              workspaceId: deps.workspaceId,
+              designId: deps.designId ?? null,
+              append,
+            },
+          };
+        }
+      }
       // T10 placeholder-first: the pages land INSTANTLY and the hero images for
       // high-impact pages stream in behind through the resolution queue
       // (reuse -> stock -> generate). Only the prompts are planned here; nothing
@@ -2401,6 +2480,40 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       return true;
     }
     case "generateDesign": {
+      // T12 layout-grounded apply: create the pages empty (theme background),
+      // link + materialize each page's layout, write the filled content into
+      // the placeholder boxes, and queue the picture-slot images. All inside
+      // the caller's one-undo turn.
+      if (ctx?.payload?.kind === "layoutDeck") {
+        const { deckTitle, pages, background, imageSize, size, workspaceId, designId, append } = ctx.payload;
+        st.ensureSlideLayouts(); // no-op when the document already has layouts
+        const deckLike = {
+          title: deckTitle,
+          pages: pages.map((p) => ({ name: p.name, note: p.note, background, nodes: [] })),
+        } as unknown as Parameters<typeof st.buildDeckFromOutline>[0];
+        const base = append ? st.doc.pages.length : 0;
+        const ids = append ? st.appendDeckPages(deckLike, size) : st.buildDeckFromOutline(deckLike, size);
+        if (!ids.length) return false;
+        const imageTasks: Parameters<typeof enqueueAiImages>[0] = [];
+        pages.forEach((p, i) => {
+          st.applyLayoutToPage(p.layoutId, base + i);
+          st.fillPlaceholderContent(base + i, { texts: p.fill.texts, lists: p.fill.lists });
+          for (const [placeholderId, prompt] of Object.entries(p.fill.imagePrompts)) {
+            imageTasks.push({
+              workspaceId,
+              designId: designId ?? "",
+              pageId: ids[i],
+              placeholderId,
+              prompt: groundImagePrompt(prompt, { palette: [] }),
+              subject: prompt,
+              size: imageSize,
+            });
+          }
+        });
+        enqueueAiImages(imageTasks);
+        st.goToPage(base);
+        return true;
+      }
       if (ctx?.payload?.kind !== "outline") return false;
       const { outline, size, brandPalette, brandFonts, heroPlans, workspaceId, designId, append } = ctx.payload;
       const clean: DesignOutline = { ...outline, pages: outline.pages.map((p) => ({ ...p, points: p.points.map((s) => s.trim()).filter(Boolean) })) };

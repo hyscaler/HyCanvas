@@ -43,7 +43,7 @@ You are implementing one task at a time from the table below. For each session:
 | T09 | 1 Core | Outline review step + generation dials | done 2026-08-24 |
 | T10 | 1 Core | Placeholder-first per-slide image pipeline + stock selection | done 2026-08-24 |
 | T11 | 2 Layout | Capacity fields on Placeholder (schema bump) | done 2026-08-24 |
-| T12 | 2 Layout | Derived layout schemas + layout-grounded generation | todo |
+| T12 | 2 Layout | Derived layout schemas + layout-grounded generation | done 2026-08-24 |
 | T13 | 2 Layout | Narrative ops: insertAgenda, splitSlide, insertComparison | todo |
 | T14 | 2 Layout | Per-slide AI regeneration | todo |
 | T15 | 3 Trust | Ingestion depth: multi-file, office formats, scanned-PDF detection | todo |

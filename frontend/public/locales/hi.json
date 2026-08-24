@@ -3425,5 +3425,6 @@
   "editor.n_images_couldnt_be_added.one": "{count} छवि जोड़ी नहीं जा सकी। डेक इसके बिना भी पूर्ण है।",
   "editor.n_images_couldnt_be_added.other": "{count} छवियां जोड़ी नहीं जा सकीं। डेक इनके बिना भी पूर्ण है।",
   "editor.retry_images.one": "{count} छवि पुनः प्रयास करें",
-  "editor.retry_images.other": "{count} छवियां पुनः प्रयास करें"
+  "editor.retry_images.other": "{count} छवियां पुनः प्रयास करें",
+  "app.image": "छवि"
 }

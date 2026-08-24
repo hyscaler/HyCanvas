@@ -3425,5 +3425,6 @@
   "editor.n_images_couldnt_be_added.one": "No se pudo añadir {count} imagen. La presentación está completa sin ella.",
   "editor.n_images_couldnt_be_added.other": "No se pudieron añadir {count} imágenes. La presentación está completa sin ellas.",
   "editor.retry_images.one": "Reintentar {count} imagen",
-  "editor.retry_images.other": "Reintentar {count} imágenes"
+  "editor.retry_images.other": "Reintentar {count} imágenes",
+  "app.image": "Imagen"
 }

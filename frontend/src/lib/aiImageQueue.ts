@@ -27,6 +27,9 @@ export interface AiImageTask {
   subject?: string;
   /** Provider size string, e.g. "1792x1024". */
   size: string;
+  /** When set, the image fills THIS placeholder slot (T12 picture roles)
+   *  instead of becoming a full-bleed page background. */
+  placeholderId?: string;
 }
 
 export interface AiImageQueueEvent {
@@ -166,8 +169,12 @@ async function resolveTask(task: AiImageTask): Promise<boolean> {
       return false;
     }
   }
-  // Apply through the page-id-guarded store mutation; false = design changed.
-  const applied = useEditor.getState().applyGeneratedBackground(task.pageId, url, task.prompt);
+  // Apply through the page-id-guarded store mutation; false = design changed
+  // (or the user deleted the slot) - a late result never lands elsewhere.
+  const st = useEditor.getState();
+  const applied = task.placeholderId
+    ? st.applyGeneratedImageToPlaceholder(task.pageId, task.placeholderId, url, task.prompt)
+    : st.applyGeneratedBackground(task.pageId, url, task.prompt);
   if (!applied) return true; // not a failure: the deck this belonged to is gone
   // Alt text in the same resolution step (best-effort; background images are
   // decorative-leaning, but a description beats silence for screen readers).

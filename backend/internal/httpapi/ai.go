@@ -61,6 +61,7 @@ func mountAI(api chi.Router, svc *ai.Service, acct *accounts.Service, up *upload
 		r.Put("/workspaces/{id}/ai-policy", aiSetPolicyHandler(svc, acct))
 		r.Get("/workspaces/{id}/ai-usage", aiGetUsageHandler(svc, acct))
 		r.Post("/ai/text", aiTextHandler(svc, acct))
+		r.Post("/ai/text-structured", aiTextStructuredHandler(svc, acct))
 		r.Post("/ai/image", aiImageHandler(svc, acct, up))
 		r.Post("/ai/describe-image", aiDescribeImageHandler(svc, acct))
 		r.Post("/ai/image/edit", aiEditImageHandler(svc, acct, up))
@@ -216,6 +217,35 @@ func aiTextHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFunc {
 			return
 		}
 		text, err := svc.Text(r.Context(), body.WorkspaceID, body.Prompt, body.System)
+		if err != nil {
+			aiProblem(w, r, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]string{"text": text})
+	}
+}
+
+// aiTextStructuredHandler is the schema-constrained variant of /ai/text: the
+// provider is asked for natively schema-valid output (with the proxy's plain
+// fallback when a provider rejects the parameter). Same policy/metering path
+// as Text; the schema shapes the reply, it grants nothing extra.
+func aiTextStructuredHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			WorkspaceID string          `json:"workspaceId"`
+			Prompt      string          `json:"prompt"`
+			System      string          `json:"system"`
+			Schema      json.RawMessage `json:"schema"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
+			return
+		}
+		if !aiAssert(r, acct, body.WorkspaceID, "member") {
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace", "not_workspace_member")
+			return
+		}
+		text, err := svc.TextStructured(r.Context(), body.WorkspaceID, body.Prompt, body.System, string(body.Schema))
 		if err != nil {
 			aiProblem(w, r, err)
 			return

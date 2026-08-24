@@ -1822,6 +1822,12 @@ export class HyCanvasClient {
   aiText(input: { workspaceId: string; prompt: string; system?: string }): Promise<{ text: string }> {
     return this.request("POST", "/v1/ai/text", input);
   }
+  /** Schema-constrained text generation: the provider is asked for natively
+   *  schema-valid output (falling back to plain text where unsupported). The
+   *  reply is still free text - callers keep validating. */
+  aiTextStructured(input: { workspaceId: string; prompt: string; system?: string; schema: Record<string, unknown> }): Promise<{ text: string }> {
+    return this.request("POST", "/v1/ai/text-structured", input);
+  }
   aiImage(input: { workspaceId: string; prompt: string; size?: string }): Promise<{ image: string }> {
     return this.request("POST", "/v1/ai/image", input);
   }

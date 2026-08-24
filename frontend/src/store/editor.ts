@@ -461,6 +461,18 @@ interface EditorState {
    *  background applies and missing placeholders land as editable text boxes
    *  (tagged via data.placeholderId). One undo step. */
   applyLayoutToPage(layoutId: string | null, pageIndex?: number): boolean;
+  /** T12: write generated content into a page's materialized placeholder boxes
+   *  (matched by data.placeholderId): plain text for title/body slots, one
+   *  bulleted paragraph per item for content lists. One undo step; boxes not
+   *  named in the fill keep their current content. */
+  fillPlaceholderContent(pageIndex: number, fill: { texts: Record<string, string>; lists: Record<string, string[]> }): boolean;
+  /** T12/T10: place a resolved image into a picture placeholder, addressed by
+   *  page id + placeholder id (late async results must not depend on the
+   *  active page). Replaces the placeholder's materialized box (or a previous
+   *  generated image for the slot) with an image node at the slot's rect,
+   *  stamped with data.placeholderId + data.aiImagePrompt. Returns false when
+   *  the page or slot no longer exists. */
+  applyGeneratedImageToPlaceholder(pageId: string, placeholderId: string, url: string, prompt: string): boolean;
   /** Re-capture the layout's background + placeholders from the active page. */
   updateLayoutFromPage(layoutId: string): boolean;
   /** Re-apply a layout to EVERY page linked to it (background + missing
@@ -2086,6 +2098,103 @@ export const useEditor = create<EditorState>((set, get) => {
       return layoutId;
     },
 
+    fillPlaceholderContent: (pageIndex, fill) => {
+      const doc = get().doc;
+      const page = doc.pages[pageIndex] as unknown as { children: Node[] };
+      if (!page) return false;
+      type Paragraph = { runs: { text: string; style: Record<string, unknown> }[]; style: Record<string, unknown> };
+      type Textish = { type: string; data?: { placeholderId?: string }; content?: Paragraph[] };
+      const targets: { node: Textish; before: Paragraph[]; after: Paragraph[] }[] = [];
+      for (const child of page.children as unknown as Textish[]) {
+        const phId = child.data?.placeholderId;
+        if (!phId || child.type !== "text" || !child.content?.length) continue;
+        const text = fill.texts[phId];
+        const list = fill.lists[phId];
+        if (text === undefined && list === undefined) continue;
+        // Reuse the materialized box's own run/paragraph style so the fill
+        // inherits the layout's typography instead of resetting it.
+        const proto = child.content[0];
+        const runStyle = proto.runs[0]?.style ?? {};
+        const paraStyle = proto.style ?? {};
+        const paragraphs: Paragraph[] = list !== undefined
+          ? list.map((item) => ({ runs: [{ text: `\u2022  ${item}`, style: structuredClone(runStyle) }], style: structuredClone(paraStyle) }))
+          : [{ runs: [{ text: text!, style: structuredClone(runStyle) }], style: structuredClone(paraStyle) }];
+        targets.push({ node: child, before: structuredClone(child.content), after: paragraphs });
+      }
+      if (!targets.length) return false;
+      perform(
+        () => { for (const t of targets) t.node.content = structuredClone(t.after); get().tick(); },
+        () => { for (const t of targets) t.node.content = structuredClone(t.before); get().tick(); },
+      );
+      return true;
+    },
+    applyGeneratedImageToPlaceholder: (pageId, placeholderId, url, prompt) => {
+      const doc = get().doc;
+      ensureDocArrays(doc);
+      const page = doc.pages.find((p) => p.id === pageId);
+      if (!page) return false; // design changed: a late resolution never lands elsewhere
+      type Tagged = { id: string; type: string; data?: { placeholderId?: string }; transform?: { x: number; y: number }; size?: { width: number; height: number } };
+      const slot = (page.children as unknown as Tagged[]).find((n) => n.data?.placeholderId === placeholderId);
+      if (!slot) return false; // slot gone (user deleted it): nothing to fill
+      const rect = {
+        x: slot.transform?.x ?? 0,
+        y: slot.transform?.y ?? 0,
+        width: slot.size?.width ?? page.width,
+        height: slot.size?.height ?? page.height,
+      };
+      const assetId = `asset-${crypto.randomUUID()}`;
+      const node = createNode("image", {
+        name: tr("app.image"),
+        source: { assetId, naturalWidth: 0, naturalHeight: 0 },
+        fit: "cover",
+        transform: { x: rect.x, y: rect.y, scaleX: 1, scaleY: 1, rotation: 0 },
+        size: { width: rect.width, height: rect.height },
+      } as Partial<Node>);
+      node.data = { placeholderId, aiImagePrompt: prompt };
+      const ref: AssetRef = { id: assetId, kind: "image", url, mime: "image/*", checksum: "" };
+      const replacedId = slot.id;
+      const replacedSnapshot = structuredClone(slot);
+      perform(
+        () => {
+          const live = get().doc.pages.find((p) => p.id === pageId);
+          if (!live) return;
+          const i = live.children.findIndex((n) => n.id === replacedId);
+          get().doc.assets.push(ref);
+          if (i >= 0) live.children.splice(i, 1, node as never);
+          else live.children.push(node as never);
+        },
+        () => {
+          const live = get().doc.pages.find((p) => p.id === pageId);
+          if (live) {
+            const i = live.children.findIndex((n) => n.id === node.id);
+            if (i >= 0) live.children.splice(i, 1, structuredClone(replacedSnapshot) as never);
+          }
+          const assets = get().doc.assets;
+          const ai = assets.findIndex((a) => a.id === assetId);
+          if (ai >= 0) assets.splice(ai, 1);
+        },
+      );
+      // Patch the real natural dimensions once loaded (same idiom as the
+      // background variants).
+      if (typeof window !== "undefined") {
+        imageAssets.register(assetId, url);
+        const off = imageAssets.onChange((changed) => {
+          if (changed !== assetId) return;
+          if (imageAssets.status(assetId) === "ready") {
+            const img = imageAssets.image(assetId) as { naturalWidth?: number; naturalHeight?: number } | null;
+            const loc = locate(get().doc, node.id);
+            const n = loc?.node.type === "image" ? (loc.node as unknown as { source: { naturalWidth: number; naturalHeight: number } }) : undefined;
+            if (img?.naturalWidth && n) {
+              n.source.naturalWidth = img.naturalWidth;
+              n.source.naturalHeight = img.naturalHeight ?? rect.height;
+              get().tick();
+            }
+          }
+          off();
+        });
+      }
+      return true;
+    },
     applyLayoutToPage: (layoutId, pageIndex) => {
       const doc = get().doc as unknown as {
         masters?: { id: string; background?: Fill }[];
@@ -4699,7 +4808,12 @@ export const useEditor = create<EditorState>((set, get) => {
       const ref: AssetRef = { id: assetId, kind: "image", url, mime: "image/*", checksum: "" };
       // A retry or regeneration replaces the previous generated background
       // rather than stacking: remove any existing prompt-stamped background.
-      const prevNode = page.children.find((n) => n.type === "image" && (n.data as { aiImagePrompt?: string } | undefined)?.aiImagePrompt);
+      const prevNode = page.children.find((n) => {
+        const d = n.data as { aiImagePrompt?: string; placeholderId?: string } | undefined;
+        // Only a previous generated BACKGROUND qualifies: a picture-slot image
+        // also carries aiImagePrompt but belongs to its placeholder.
+        return n.type === "image" && !!d?.aiImagePrompt && !d?.placeholderId;
+      });
       const prevId = prevNode?.id;
       const prevSnapshot = prevNode ? structuredClone(prevNode) : null;
       perform(
