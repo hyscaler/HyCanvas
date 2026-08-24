@@ -1408,6 +1408,20 @@ export const useEditor = create<EditorState>((set, get) => {
     undo: () => applyCommand(get().doc, invertCommand(cmd)),
   });
 
+  // Restore a page snapshot INTO the existing page object (found by id), so
+  // the page's identity survives undo/redo and other closures' captured
+  // references stay live. Unknown keys ride along in the snapshots. Shared by
+  // the whole-deck restyle actions (setDeckTheme, reskinToBrand), whose undo
+  // must never replace page objects with clones - other undo entries hold
+  // references into them.
+  const restorePageSnapshot = (id: string, snap: Page) => {
+    const livePage = get().doc.pages.find((p) => p.id === id) as unknown as Record<string, unknown> | undefined;
+    if (!livePage) return; // page deleted since: nothing to restore
+    const clone = structuredClone(snap) as unknown as Record<string, unknown>;
+    for (const k of Object.keys(livePage)) if (!(k in clone)) delete livePage[k];
+    Object.assign(livePage, clone);
+  };
+
   // Re-fit a text box to its content, with the same measurer the inline editor
   // and the resize gizmo use, after anything that changes how the text wraps
   // (restyles, content rewrites, translations). One rule everywhere: a box may
@@ -4024,17 +4038,6 @@ export const useEditor = create<EditorState>((set, get) => {
         }
       }
 
-      // Restore a snapshot INTO the existing page object (found by id), so
-      // the page's identity survives undo/redo and other closures' captured
-      // references stay live. Unknown keys ride along in the snapshots.
-      const restorePage = (id: string, snap: Page) => {
-        const livePage = get().doc.pages.find((p) => p.id === id) as unknown as Record<string, unknown> | undefined;
-        if (!livePage) return; // page deleted since: nothing to restore
-        const clone = structuredClone(snap) as unknown as Record<string, unknown>;
-        for (const k of Object.keys(livePage)) if (!(k in clone)) delete livePage[k];
-        Object.assign(livePage, clone);
-      };
-
       // The pages are ALREADY in their after state (mutated in place above);
       // the first forward run must not re-clone them, only redo does.
       let firstRun = true;
@@ -4050,14 +4053,14 @@ export const useEditor = create<EditorState>((set, get) => {
           } else {
             live.theme = undefined;
           }
-          if (!firstRun) for (const d of pageDiffs) restorePage(d.id, d.after);
+          if (!firstRun) for (const d of pageDiffs) restorePageSnapshot(d.id, d.after);
           firstRun = false;
         },
         () => {
           const live = get().doc as unknown as { theme?: Theme; masters?: { theme?: string }[] };
           live.theme = before;
           if (beforeMasters && live.masters) live.masters.forEach((m, i) => { m.theme = beforeMasters[i]; });
-          for (const d of pageDiffs) restorePage(d.id, d.before);
+          for (const d of pageDiffs) restorePageSnapshot(d.id, d.before);
         },
       );
     },
@@ -6059,37 +6062,48 @@ export const useEditor = create<EditorState>((set, get) => {
 
       // Map one color to its target: an explicit override (a chosen brand hex, or
       // "keep" to leave it) when present, else its nearest brand color. Records
-      // the mapping once per distinct source color.
-      const mapColor = (c: Color | undefined): Color | undefined => {
-        if (!c || brand.palette.length === 0) return c;
+      // the mapping once per distinct source color. Returns the replacement, or
+      // null when the color stays - the caller mutates IN PLACE only on a real
+      // change, so page/node/fill identity survives (other undo entries hold
+      // references into these objects).
+      let pageChanged = false; // per page, reset in the page loop below
+      const mapColor = (c: Color | undefined): Color | null => {
+        if (!c || brand.palette.length === 0) return null;
         const from = toHex(c);
         const override = ov[from.toLowerCase()];
         let to: string;
         if (override !== undefined) {
-          if (override === "keep") return c; // user chose to keep the original
+          if (override === "keep") return null; // user chose to keep the original
           to = override;
         } else {
           const m = nearestPaletteColor(c, brand.palette);
-          if (!m) return c;
+          if (!m) return null;
           to = toHex(m.color);
         }
         if (from !== to && !colorSeen.has(from)) {
           colorSeen.add(from);
           colors.push({ from, to });
         }
-        if (from === to) return c;
+        if (from === to) return null;
         const toColor = fromHex(to);
-        if (!toColor) return c; // malformed override hex: leave the color untouched
+        if (!toColor) return null; // malformed override hex: leave the color untouched
+        pageChanged = true;
         // Preserve the original alpha so a re-skin never makes a color opaque.
         return { srgb: { ...toColor.srgb, a: c.srgb.a } };
       };
-      const mapFill = (fill: Fill | undefined): Fill | undefined => {
-        if (!fill) return fill;
+      // Remap a fill's colors IN PLACE (object identity preserved).
+      const mapFillInPlace = (fill: Fill | undefined): void => {
+        if (!fill) return;
         const f = fill as unknown as { type?: string; color?: Color; stops?: { color: Color }[] };
-        if (f.type === "solid" && f.color) return { ...fill, color: mapColor(f.color) } as Fill;
-        if (Array.isArray(f.stops))
-          return { ...fill, stops: f.stops.map((s) => ({ ...s, color: mapColor(s.color)! })) } as Fill;
-        return fill;
+        if (f.type === "solid" && f.color) {
+          const to = mapColor(f.color);
+          if (to) f.color = to;
+        } else if (Array.isArray(f.stops)) {
+          for (const stop of f.stops) {
+            const to = mapColor(stop.color);
+            if (to) stop.color = to;
+          }
+        }
       };
       // Map a font family to the kit's first font (heading/body convention).
       const mapFont = (fam: string | undefined): string | undefined => {
@@ -6112,19 +6126,28 @@ export const useEditor = create<EditorState>((set, get) => {
           content?: { runs: { style: { fill?: Fill; color?: Color; fontFamily?: string } }[] }[];
           children?: Node[];
         };
-        if (rec.fills) rec.fills = rec.fills.map((f) => mapFill(f)!) as Fill[];
+        for (const f of rec.fills ?? []) mapFillInPlace(f);
         if (rec.stroke) {
-          if (rec.stroke.fill) rec.stroke.fill = mapFill(rec.stroke.fill);
-          if (rec.stroke.color) rec.stroke.color = mapColor(rec.stroke.color);
+          mapFillInPlace(rec.stroke.fill);
+          if (rec.stroke.color) {
+            const to = mapColor(rec.stroke.color);
+            if (to) rec.stroke.color = to;
+          }
         }
         let fontChanged = false;
         for (const para of rec.content ?? [])
           for (const run of para.runs) {
-            if (run.style.fill) run.style.fill = mapFill(run.style.fill);
-            if (run.style.color) run.style.color = mapColor(run.style.color);
+            mapFillInPlace(run.style.fill);
+            if (run.style.color) {
+              const to = mapColor(run.style.color);
+              if (to) run.style.color = to;
+            }
             const swapped = mapFont(run.style.fontFamily);
-            if (swapped !== run.style.fontFamily) fontChanged = true;
-            run.style.fontFamily = swapped;
+            if (swapped !== run.style.fontFamily) {
+              fontChanged = true;
+              pageChanged = true;
+              run.style.fontFamily = swapped;
+            }
           }
         // A swapped family wraps differently; keep the box on the text. Only
         // when a font actually changed, so a color-only re-skin can't fold
@@ -6133,24 +6156,37 @@ export const useEditor = create<EditorState>((set, get) => {
         for (const kid of rec.children ?? []) applyNode(kid);
       };
 
-      // One undo step over the whole pages array (before/after deep clones), so
-      // re-skin + every individual remap is a single reversible operation.
-      const before = structuredClone(doc.pages);
+      // One undo step built from per-page diffs. Mutation is strictly in place
+      // (nothing changed = nothing touched, no identity churn to revert), and
+      // undo/redo restore snapshots BY PAGE ID into the existing page objects,
+      // never replacing them with clones - the old whole-array clone swap
+      // detached every page reference other undo entries had captured, so a
+      // neighboring entry's undo/redo mutated dead objects.
+      const pageDiffs: { id: string; before: Page; after: Page }[] = [];
       for (const page of doc.pages) {
+        const beforeSnap = structuredClone(page);
+        pageChanged = false;
         const pg = page as unknown as { background?: Fill };
-        if (pg.background) pg.background = mapFill(pg.background);
+        mapFillInPlace(pg.background);
         for (const n of page.children) applyNode(n);
+        if (pageChanged) pageDiffs.push({ id: page.id, before: beforeSnap, after: structuredClone(page) });
       }
       if (colors.length === 0 && fonts.length === 0) {
-        // Nothing changed; revert any structural identity churn and skip the
-        // undo entry so the history stays clean.
-        doc.pages = structuredClone(before) as never;
+        // Nothing changed (and nothing was mutated); skip the undo entry so
+        // the history stays clean.
         return { colors, fonts };
       }
-      const after = structuredClone(doc.pages);
+      // The pages are ALREADY in their after state; the first forward run must
+      // not re-clone them, only redo does.
+      let firstRun = true;
       perform(
-        () => { get().doc.pages = structuredClone(after) as never; },
-        () => { get().doc.pages = structuredClone(before) as never; },
+        () => {
+          if (!firstRun) for (const d of pageDiffs) restorePageSnapshot(d.id, d.after);
+          firstRun = false;
+        },
+        () => {
+          for (const d of pageDiffs) restorePageSnapshot(d.id, d.before);
+        },
       );
       // Preload any brand fonts now in use so the canvas reflows to them.
       return { colors, fonts };
