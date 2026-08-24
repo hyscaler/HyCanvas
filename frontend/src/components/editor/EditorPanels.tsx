@@ -15,7 +15,8 @@ import {
   normalizeOutline, deckThemes, layoutDeck, layoutDesign, groundImagePrompt, untrustedSourceRule,
   sanitizeEditedOutline, dialsClause, dialDensities, dialTones, dialAudiences, dialScenarios, maxOutlinePages,
   deriveLayoutContentSchema, layoutSelectionSchema, layoutSelectionSystemPrompt, layoutFillSystemPrompt, repairLayoutSelection,
-  normalizeLayoutFill, fallbackLayoutFill, type LayoutFill,
+  normalizeLayoutFill, fallbackLayoutFill, preferredLayoutFor, type LayoutFill,
+  buildAgendaPages, pickAgendaLayout, extractTitleFromText, splitSlideSchema, splitSlideSystemPrompt,
   type DesignOutline, type DesignType, type GenerationDials, type OutlineItem,
   toolCatalog, assistantSystemPrompt, parseAssistantReply, planMutates, summarizeDesign, type PlanStep,
 } from "@hc/aistudio";
@@ -1856,7 +1857,9 @@ type ResolvedPayload =
   | { kind: "clusters"; clusters: { title: string; ids: string[] }[] }
   | { kind: "summary"; text: string }
   | { kind: "outline"; outline: DesignOutline; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroPlans: { pageIndex: number; prompt: string; subject: string; size: string }[]; workspaceId: string; designId: string | null; append: boolean }
-  | { kind: "layoutDeck"; deckTitle: string; pages: { layoutId: string; name: string; note?: string; fill: LayoutFill }[]; background: unknown; imageSize: string; size: { width: number; height: number }; workspaceId: string; designId: string | null; append: boolean };
+  | { kind: "layoutDeck"; deckTitle: string; pages: { layoutId: string; name: string; note?: string; fill: LayoutFill }[]; background: unknown; imageSize: string; size: { width: number; height: number }; workspaceId: string; designId: string | null; append: boolean }
+  | { kind: "splitSlide"; pageIndex: number; halves: { layoutId: string; name: string; fill: LayoutFill }[] }
+  | { kind: "insertComparison"; layoutId: string; name: string; fill: LayoutFill; afterIndex: number };
 
 /** Parse a model reply that must be a JSON array of exactly `n` strings.
  *  Tolerates markdown fences; anything else (wrong shape, wrong length,
@@ -1980,6 +1983,27 @@ function prepareGenerateBrief(a: Record<string, unknown>, deps: AssistantDeps): 
     brief = `${brief}\n\nGround every page STRICTLY in this source content ("${deps.sourceName ?? "attached document"}"): keep its structure, facts, and key points, and do not invent material that is not in it. ${untrustedSourceRule("the source content")}\n--- SOURCE START ---\n${deps.sourceText.slice(0, 24000)}\n--- SOURCE END ---`;
   }
   return { dt, size, brief, brandClause, pageCount };
+}
+
+/** A page's display title for narrative ops: the title-placeholder box's text
+ *  first, else the longest text node's first line/sentence, else the page
+ *  name (the reference fallback chain, adapted to the scene graph). */
+function pageTitleOf(page: { name?: string; children: unknown[] }): string {
+  type Textish = { type: string; data?: { placeholderId?: string }; content?: { runs: { text: string }[] }[] };
+  const texts = (page.children as Textish[]).filter((n) => n.type === "text" && n.content?.length);
+  const flat = (n: Textish) => (n.content ?? []).map((p) => p.runs.map((r) => r.text).join("")).join("\n");
+  const titleBox = texts.find((n) => n.data?.placeholderId?.includes("title"));
+  const candidate = titleBox ? flat(titleBox) : texts.map(flat).sort((a, b) => b.length - a.length)[0] ?? "";
+  const extracted = extractTitleFromText(candidate);
+  return extracted !== "Slide" ? extracted : (page.name || tr("editor.slide"));
+}
+
+/** Whether the deck opens on a title slide (drives agenda insertion position):
+ *  the first page links a title-only layout, or carries at most two nodes. */
+function hasTitleSlide(doc: { pages: { layoutId?: string; children: unknown[] }[] }): boolean {
+  const first = doc.pages[0];
+  if (!first) return false;
+  return first.layoutId === "layout-title" || first.children.length <= 2;
 }
 
 /** True when the document already holds work worth protecting: more than one
@@ -2196,6 +2220,71 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       const { image } = await oc.aiEditImage({ workspaceId: deps.workspaceId, imageBase64, prompt: String(a.instruction) });
       if (!image) return { error: "no image returned" };
       return { payload: { kind: "image", image, targetId: sel } };
+    }
+    case "splitSlide": {
+      // One structured call splits the page's content into two outline items;
+      // the two replacement pages fill deterministically from those items.
+      const idx = Math.round(Number(a.pageIndex)) - 1; // the tool speaks 1-based
+      const page = st.doc.pages[idx] as unknown as { name?: string; children: unknown[] } | undefined;
+      if (!page) return { error: "that page doesn't exist" };
+      st.ensureSlideLayouts();
+      const layouts = (st.doc as unknown as { layouts: SlideLayout[] }).layouts;
+      type Textish = { type: string; content?: { runs: { text: string }[] }[] };
+      const pageText = (page.children as Textish[])
+        .filter((n) => n.type === "text" && n.content?.length)
+        .map((n) => (n.content ?? []).map((p) => p.runs.map((r) => r.text).join("")).join("\n"))
+        .join("\n");
+      type SplitHalf = { title?: string; points?: string[] };
+      let parsed: { a?: SplitHalf; b?: SplitHalf } | null = null;
+      try {
+        const { text } = await oc.aiTextStructured({
+          workspaceId: deps.workspaceId,
+          system: splitSlideSystemPrompt(),
+          prompt: `Slide title: ${pageTitleOf(page)}\nSlide text:\n${pageText.slice(0, 4000)}`,
+          schema: splitSlideSchema(),
+        });
+        parsed = parseModelJson(text) as { a?: SplitHalf; b?: SplitHalf } | null;
+      } catch {
+        parsed = null;
+      }
+      if (!parsed?.a?.title || !parsed?.b?.title) return { error: "couldn't split that slide" };
+      const halves = [parsed.a, parsed.b].map((half) => {
+        const item: OutlineItem = { id: "split", title: String(half.title), points: (half.points ?? []).map(String).filter(Boolean), visualRole: "content" };
+        const layoutId = preferredLayoutFor("content", layouts);
+        const layout = layouts.find((l) => l.id === layoutId)!;
+        return { layoutId, name: item.title, fill: fallbackLayoutFill(layout, item) };
+      });
+      return { payload: { kind: "splitSlide", pageIndex: idx, halves } };
+    }
+    case "insertComparison": {
+      st.ensureSlideLayouts();
+      const layouts = (st.doc as unknown as { layouts: SlideLayout[] }).layouts;
+      const layout = layouts.find((l) => l.id === "layout-comparison")
+        ?? layouts.find((l) => (l.placeholders ?? []).filter((p) => p.role === "content").length >= 2);
+      if (!layout) return { error: "no comparison layout available" };
+      const topicA = String(a.topicA ?? "").trim();
+      const topicB = String(a.topicB ?? "").trim();
+      if (!topicA || !topicB) return { error: "both topics are needed" };
+      const schema = deriveLayoutContentSchema(layout);
+      let fill: LayoutFill | null = null;
+      try {
+        const { text } = await oc.aiTextStructured({
+          workspaceId: deps.workspaceId,
+          system: layoutFillSystemPrompt(schema),
+          prompt: `Write a side-by-side comparison slide of "${topicA}" versus "${topicB}": a heading naming both, one column of concrete points per topic (left = ${topicA}, right = ${topicB}).`,
+          schema,
+        });
+        const norm = normalizeLayoutFill(layout, parseModelJson(text));
+        if (Object.keys(norm.texts).length + Object.keys(norm.lists).length > 0) fill = norm;
+      } catch {
+        fill = null;
+      }
+      if (!fill) {
+        fill = fallbackLayoutFill(layout, { id: "cmp", title: `${topicA} vs ${topicB}`, points: [topicA, topicB], visualRole: "comparison" });
+      }
+      const after = typeof a.afterPageIndex === "number" ? Math.round(a.afterPageIndex) - 1 : st.activePage;
+      const afterIndex = Math.max(0, Math.min(after, st.doc.pages.length - 1));
+      return { payload: { kind: "insertComparison", layoutId: layout.id, name: `${topicA} vs ${topicB}`, fill, afterIndex } };
     }
     case "generateDesign": {
       // The explicit designType wins when the model supplies one; otherwise the
@@ -2477,6 +2566,82 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
     case "editSelectedImage": {
       if (ctx?.payload?.kind !== "image" || !ctx.payload.targetId) return false;
       st.setImageSource(ctx.payload.targetId, ctx.payload.image);
+      return true;
+    }
+    case "insertAgenda": {
+      // Fully algorithmic (T13): titles from the live pages, entry math and
+      // numbering from the pure core, the layout via the priority picker; a
+      // deck with no list-capable layout skips silently.
+      st.ensureSlideLayouts();
+      const layouts = (st.doc as unknown as { layouts: SlideLayout[] }).layouts;
+      const agendaLayout = pickAgendaLayout(layouts);
+      if (!agendaLayout) return false;
+      const docPages = st.doc.pages as unknown as { name?: string; layoutId?: string; children: unknown[]; background?: unknown; width: number; height: number }[];
+      const titles = docPages.map((p) => pageTitleOf(p));
+      const withTitle = hasTitleSlide({ pages: docPages });
+      const plans = buildAgendaPages(titles, withTitle);
+      if (!plans.length) return false;
+      const insertAt = withTitle ? 1 : 0;
+      const refPage = docPages[insertAt] ?? docPages[0];
+      const size = { width: refPage.width, height: refPage.height };
+      const deckLike = {
+        title: tr("editor.agenda"),
+        pages: plans.map(() => ({ name: tr("editor.agenda"), background: structuredClone(refPage.background), nodes: [] })),
+      } as unknown as Parameters<typeof st.buildDeckFromOutline>[0];
+      const ids = st.appendDeckPages(deckLike, size);
+      if (!ids.length) return false;
+      const firstAppended = st.doc.pages.length - ids.length;
+      const titleSlot = (agendaLayout.placeholders ?? []).find((p) => p.role === "title");
+      const contentSlot = (agendaLayout.placeholders ?? []).find((p) => p.role === "content");
+      plans.forEach((plan, j) => {
+        st.movePage(firstAppended + j, insertAt + j);
+        st.applyLayoutToPage(agendaLayout.id, insertAt + j);
+        st.fillPlaceholderContent(insertAt + j, {
+          texts: titleSlot ? { [titleSlot.id]: tr("editor.agenda") } : {},
+          lists: contentSlot ? { [contentSlot.id]: plan.entries.map((e) => `${e.pageNumber}. ${e.title}`) } : {},
+        });
+      });
+      st.goToPage(insertAt);
+      return true;
+    }
+    case "splitSlide": {
+      if (ctx?.payload?.kind !== "splitSlide") return false;
+      const { pageIndex, halves } = ctx.payload;
+      const orig = st.doc.pages[pageIndex] as unknown as { width: number; height: number; background?: unknown } | undefined;
+      if (!orig || halves.length !== 2) return false;
+      const size = { width: orig.width, height: orig.height };
+      const deckLike = {
+        title: "",
+        pages: halves.map((h) => ({ name: h.name, background: structuredClone(orig.background), nodes: [] })),
+      } as unknown as Parameters<typeof st.buildDeckFromOutline>[0];
+      const ids = st.appendDeckPages(deckLike, size);
+      if (ids.length !== 2) return false;
+      st.deletePage(pageIndex); // the two halves REPLACE the original
+      const firstAppended = st.doc.pages.length - 2;
+      halves.forEach((h, j) => {
+        st.movePage(firstAppended + j, pageIndex + j);
+        st.applyLayoutToPage(h.layoutId, pageIndex + j);
+        st.fillPlaceholderContent(pageIndex + j, { texts: h.fill.texts, lists: h.fill.lists });
+      });
+      st.goToPage(pageIndex);
+      return true;
+    }
+    case "insertComparison": {
+      if (ctx?.payload?.kind !== "insertComparison") return false;
+      const { layoutId, name, fill, afterIndex } = ctx.payload;
+      const ref = st.doc.pages[afterIndex] as unknown as { width: number; height: number; background?: unknown } | undefined;
+      if (!ref) return false;
+      const deckLike = {
+        title: "",
+        pages: [{ name, background: structuredClone(ref.background), nodes: [] }],
+      } as unknown as Parameters<typeof st.buildDeckFromOutline>[0];
+      const ids = st.appendDeckPages(deckLike, { width: ref.width, height: ref.height });
+      if (!ids.length) return false;
+      const to = afterIndex + 1;
+      st.movePage(st.doc.pages.length - 1, to);
+      st.applyLayoutToPage(layoutId, to);
+      st.fillPlaceholderContent(to, { texts: fill.texts, lists: fill.lists });
+      st.goToPage(to);
       return true;
     }
     case "generateDesign": {

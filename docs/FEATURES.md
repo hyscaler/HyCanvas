@@ -58,6 +58,7 @@ A living checklist of what ships today versus what is planned. Shipped items are
 - [x] Design assistant chat: one agentic surface over the validated tool catalog (generate deck/doc/poster, images, restyle, charts, diagrams, whole-deck translation, speaker notes, critique); the earlier dedicated AI panels were consolidated into it
 - [x] Multi-page generation from server-validated outlines with speaker notes; doc/URL/file-to-deck ingestion (.txt/.md/.pdf text layer); no-key Assist tools
 - [x] Outline review before generation: editable outline (edit/reorder/add/remove) + generation dials (density/tone/audience/scenario) in the confirmation gate, with regenerate and skip
+- [x] Narrative assistant ops: insertAgenda (algorithmic TOC with accurate final page numbers), splitSlide (one slide into two coherent halves), insertComparison (side-by-side layout fill)
 - [x] Layout-grounded generation: decks target the master/layout/placeholder model (per-layout derived content schemas with v21 capacities, deterministic layout selection repair with variety, placeholder fills, picture slots through the image queue; freeform engine remains the no-layout fallback)
 - [x] Placeholder-first generation imagery: decks land instantly and hero images stream in behind (prompt-keyed asset reuse, license-free stock routing, AI generation fallback, per-design guard, alt text, chat retry on failure)
 

@@ -252,6 +252,48 @@
     "mutates": true
   },
   {
+    "name": "insertAgenda",
+    "description": "Insert an agenda (table of contents) after the title slide: every page listed with its final page number, split across agenda pages when the deck is long. Use for 'add an agenda / table of contents'.",
+    "params": [],
+    "mutates": true
+  },
+  {
+    "name": "splitSlide",
+    "description": "Split one overloaded slide into two coherent slides that replace it, keeping the deck's layout system. Use for 'split slide N' or 'this slide is too dense'.",
+    "params": [
+      {
+        "name": "pageIndex",
+        "type": "number",
+        "required": true,
+        "description": "the 1-based page number to split"
+      }
+    ],
+    "mutates": true
+  },
+  {
+    "name": "insertComparison",
+    "description": "Insert a side-by-side comparison slide of two topics using the comparison layout. Use for 'compare X and Y' / 'add a comparison slide'.",
+    "params": [
+      {
+        "name": "topicA",
+        "type": "string",
+        "required": true
+      },
+      {
+        "name": "topicB",
+        "type": "string",
+        "required": true
+      },
+      {
+        "name": "afterPageIndex",
+        "type": "number",
+        "required": false,
+        "description": "1-based page to insert after (default: the current page)"
+      }
+    ],
+    "mutates": true
+  },
+  {
     "name": "generateDiagram",
     "description": "Create a flowchart or mind map ON THE BOARD from a description - native sticky notes + connectors, auto-laid-out. Also accepts pasted Mermaid source verbatim. Use for 'draw/make a flowchart/diagram/mind map of X'.",
     "params": [
