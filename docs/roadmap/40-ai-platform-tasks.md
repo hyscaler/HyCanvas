@@ -33,8 +33,8 @@ The rules from `28-presentations-completion-tasks.md` apply unchanged. In brief:
 | E10 | 3 Catalog | Theme catalog: 14 to 30+, extracted to a shared module | done 2026-08-28 |
 | E11 | 3 Catalog | Presentation template seeds: 11 to 40+ | done 2026-08-28 |
 | E12 | 3 Catalog | Generate-with-template: pick a template/theme as the generation base | done 2026-08-28 |
-| E13 | 4 Template-from-PPTX | One-click AI template builder from an uploaded PPTX | todo |
-| E14 | 4 Template-from-PPTX | Custom templates as first-class generation targets | todo |
+| E13 | 4 Template-from-PPTX | One-click AI template builder from an uploaded PPTX | done 2026-08-29 |
+| E14 | 4 Template-from-PPTX | Custom templates as first-class generation targets | done 2026-08-29 |
 | E15 | 5 Reflow | Pure adaptive-reflow engine over placeholder capacity hints | todo |
 | E16 | 5 Reflow | Live reflow on edit for layout-linked slides (opt-out, one undo) | todo |
 | E17 | 5 Reflow | Layout-variant switching on over/underflow | todo |
@@ -107,7 +107,7 @@ The pitch: generation quality is bounded by the layout library (T12 grounding pi
 
 ### E14: Custom templates as generation targets
 
-- Templates saved by E13 (and by save-as-template generally) appear in E12's generation chooser like builtins, including through the Phase 1 API (`templateId`). Acceptance: upload a branded PPTX, build the template, generate a new deck on it via BOTH the panel and a curl call, and the deck wears the uploaded deck's layout system and palette.
+- Shipped: a Template select in the outline-review card (all visible templates; on generate the template's masters/layouts merge into the document by id via the new adoptLayoutSet and its theme record drives the composition, with theme-only fallback and an honest toast when a template carries neither), `templateId` on the API and the MCP generate tool (resolved server-side with per-user visibility PLUS key workspace pinning; missing/cross-tenant/invisible all read as template_not_found), the MCP `list_templates` tool (pinned to public + the key's workspace), and a NEW layout-grounded composition path in the goja composer - deterministic per-page selection, placeholder-materialized text boxes with readable ink and record fonts, layout/master backgrounds, masters/layouts riding into the file so the generated deck stays layout-linked. Picture slots are skipped headlessly (the editor's image queue owns images); the deterministic fallback fill stands in for the panel's model fill pass on the API path.
 
 ## Phase 5: Adaptive smart-slide reflow
 

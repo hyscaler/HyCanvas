@@ -750,6 +750,11 @@ interface EditorState {
   setPageLayout(layoutId: string | undefined, pageIndex?: number): void;
   /** Install the built-in master + layouts on a deck that has none (FR-3). */
   ensureSlideLayouts(size?: { width: number; height: number }): void;
+  /** Adopt a template's layout system (F40 E14): masters and layouts merge
+   *  into the document BY ID (existing ids keep their local definitions, so
+   *  re-adopting or overlapping with builtins never duplicates or clobbers).
+   *  One undo step. Returns how many layouts were added. */
+  adoptLayoutSet(masters: unknown[], layouts: unknown[]): number;
   /** Adopt a theme for the whole deck in one undoable action (FR-4). By
    *  default content painted with the previous theme's exact slot colors and
    *  fonts follows the swap (T19); `restyle: false` swaps only the record -
@@ -4008,6 +4013,30 @@ export const useEditor = create<EditorState>((set, get) => {
         () => { page.layoutId = layoutId; },
         () => { page.layoutId = before; },
       );
+    },
+    adoptLayoutSet: (masters, layouts) => {
+      if (!usePresence.getState().canEdit() || get().readonlyPreview()) return 0;
+      const doc = get().doc as unknown as { masters?: { id: string }[]; layouts?: { id: string }[] };
+      const haveM = new Set((doc.masters ?? []).map((m) => m.id));
+      const haveL = new Set((doc.layouts ?? []).map((l) => l.id));
+      const newMasters = structuredClone((masters as { id: string }[]).filter((m) => m?.id && !haveM.has(m.id)));
+      const newLayouts = structuredClone((layouts as { id: string }[]).filter((l) => l?.id && !haveL.has(l.id)));
+      if (!newMasters.length && !newLayouts.length) return 0;
+      const beforeM = doc.masters;
+      const beforeL = doc.layouts;
+      perform(
+        () => {
+          const live = get().doc as unknown as typeof doc;
+          live.masters = [...(live.masters ?? []), ...structuredClone(newMasters)];
+          live.layouts = [...(live.layouts ?? []), ...structuredClone(newLayouts)];
+        },
+        () => {
+          const live = get().doc as unknown as typeof doc;
+          live.masters = beforeM;
+          live.layouts = beforeL;
+        },
+      );
+      return newLayouts.length;
     },
     ensureSlideLayouts: (size) => {
       const doc = get().doc as unknown as { masters?: unknown[]; layouts?: unknown[]; pages: { width: number; height: number }[] };

@@ -25,10 +25,11 @@ import (
 	"hycanvas/backend/internal/composer"
 	"hycanvas/backend/internal/jobs"
 	"hycanvas/backend/internal/persistence"
+	"hycanvas/backend/internal/templates"
 )
 
-func mountGenerate(api chi.Router, svc *aistudio.Service, acct *accounts.Service, p *persistence.Service, reg *jobs.Registry) {
-	api.With(requireAuth(acct)).Post("/generate/presentation", generatePresentationHandler(svc, acct, p, reg))
+func mountGenerate(api chi.Router, svc *aistudio.Service, acct *accounts.Service, p *persistence.Service, reg *jobs.Registry, tpl *templates.Service) {
+	api.With(requireAuth(acct)).Post("/generate/presentation", generatePresentationHandler(svc, acct, p, reg, tpl))
 	// The built-in theme catalog (F40 E12): harmless metadata, any session or
 	// valid key may list it (the generation themeId is validated against it).
 	api.With(requireAuth(acct)).Get("/themes", func(w http.ResponseWriter, _ *http.Request) {
@@ -82,6 +83,7 @@ type generateInput struct {
 	PageCount    int      `json:"pageCount"`
 	Language     string   `json:"language"`
 	ThemeID      string   `json:"themeId"`
+	TemplateID   string   `json:"templateId"`
 	BrandPalette []string `json:"brandPalette"`
 	Sources      []struct {
 		Name string `json:"name"`
@@ -98,6 +100,10 @@ type generatePlan struct {
 	Brief     string
 	Palette   []string
 	ThemeID   string
+	// Template contribution (E14), resolved by the caller (needs the
+	// templates service): the layout system and/or theme record.
+	LayoutSet   any
+	ThemeRecord any
 }
 
 // generateReject carries a validation failure in both dialects: the HTTP
@@ -244,7 +250,8 @@ func startGenerationJob(svc *aistudio.Service, p *persistence.Service, reg *jobs
 			return
 		}
 		fileJSON, err := composer.Compose(ctx, composer.Input{
-			Outline: outline, Width: plan.Size.w, Height: plan.Size.h, BrandPalette: plan.Palette, ThemeID: plan.ThemeID,
+			Outline: outline, Width: plan.Size.w, Height: plan.Size.h, BrandPalette: plan.Palette,
+			ThemeID: plan.ThemeID, LayoutSet: plan.LayoutSet, ThemeRecord: plan.ThemeRecord,
 		})
 		if err != nil {
 			reg.Fail(job.ID, "composition failed")
@@ -273,7 +280,38 @@ func startGenerationJob(svc *aistudio.Service, p *persistence.Service, reg *jobs
 	return job
 }
 
-func generatePresentationHandler(svc *aistudio.Service, acct *accounts.Service, p *persistence.Service, reg *jobs.Registry) http.HandlerFunc {
+// resolveTemplateForGeneration loads a template's layout system + theme for a
+// generation (E14). The templates service enforces per-user visibility; the
+// KEY path additionally pins non-public templates to the key's workspace (a
+// key must not reach templates from the minting user's other workspaces).
+// Missing, invisible, and cross-tenant all read the same on purpose.
+func resolveTemplateForGeneration(ctx context.Context, tpl *templates.Service, userID string, key *apikeys.KeyInfo, templateID string) (layoutSet, themeRecord any, rej *generateReject) {
+	if tpl == nil {
+		return nil, nil, &generateReject{http.StatusBadRequest, "template_not_found", "templates are not available on this server"}
+	}
+	t, err := tpl.Get(ctx, userID, templateID)
+	if err != nil {
+		return nil, nil, &generateReject{http.StatusNotFound, "template_not_found", "template not found"}
+	}
+	if key != nil && t.Visibility != "public" && (t.WorkspaceID == nil || *t.WorkspaceID != key.WorkspaceID) {
+		return nil, nil, &generateReject{http.StatusNotFound, "template_not_found", "template not found"}
+	}
+	file, err := tpl.GetFile(ctx, userID, templateID)
+	if err != nil {
+		return nil, nil, &generateReject{http.StatusNotFound, "template_not_found", "template not found"}
+	}
+	layouts, _ := file["layouts"].([]any)
+	theme := file["theme"]
+	if len(layouts) == 0 && theme == nil {
+		return nil, nil, &generateReject{http.StatusBadRequest, "template_without_style", "this template carries no layout system or theme to generate with"}
+	}
+	if len(layouts) > 0 {
+		layoutSet = map[string]any{"masters": file["masters"], "layouts": layouts}
+	}
+	return layoutSet, theme, nil
+}
+
+func generatePresentationHandler(svc *aistudio.Service, acct *accounts.Service, p *persistence.Service, reg *jobs.Registry, tpl *templates.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var body generateInput
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -283,6 +321,9 @@ func generatePresentationHandler(svc *aistudio.Service, acct *accounts.Service, 
 		u := userFrom(r.Context())
 		key := apiKeyFrom(r.Context())
 		plan, rej := planGeneration(r.Context(), acct, u.ID, key, body)
+		if rej == nil && strings.TrimSpace(body.TemplateID) != "" {
+			plan.LayoutSet, plan.ThemeRecord, rej = resolveTemplateForGeneration(r.Context(), tpl, u.ID, key, strings.TrimSpace(body.TemplateID))
+		}
 		if rej != nil {
 			if rej.Status == http.StatusTooManyRequests {
 				w.Header().Set("Retry-After", "20")
@@ -299,6 +340,10 @@ func generatePresentationHandler(svc *aistudio.Service, acct *accounts.Service, 
 				problemWithCode(w, r, rej.Status, http.StatusText(rej.Status), rej.Msg, "invalid_design_type")
 			case "invalid_page_count":
 				problemWithCode(w, r, rej.Status, http.StatusText(rej.Status), rej.Msg, "invalid_page_count")
+			case "template_not_found":
+				problemWithCode(w, r, rej.Status, http.StatusText(rej.Status), rej.Msg, "template_not_found")
+			case "template_without_style":
+				problemWithCode(w, r, rej.Status, http.StatusText(rej.Status), rej.Msg, "template_without_style")
 			case "invalid_theme_id":
 				problemWithCode(w, r, rej.Status, http.StatusText(rej.Status), rej.Msg, "invalid_theme_id")
 			case "generation_rate_limited":

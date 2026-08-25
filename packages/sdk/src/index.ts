@@ -1252,7 +1252,7 @@ export class HyCanvasClient {
   /** Kick off a headless prompt-to-deck generation (F40): returns a job to
    *  poll via getJob. Works with a session or a generate-scoped API key.
    *  `themeId` names a built-in catalog theme (see themes()). */
-  generatePresentation(input: { workspaceId: string; prompt: string; designType?: "deck" | "doc" | "poster" | "social"; pageCount?: number; language?: string; brandPalette?: string[]; themeId?: string; sources?: { name: string; text: string }[] }): Promise<{ jobId: string; poll: string }> {
+  generatePresentation(input: { workspaceId: string; prompt: string; designType?: "deck" | "doc" | "poster" | "social"; pageCount?: number; language?: string; brandPalette?: string[]; themeId?: string; templateId?: string; sources?: { name: string; text: string }[] }): Promise<{ jobId: string; poll: string }> {
     return this.request("POST", "/v1/generate/presentation", input);
   }
   /** The built-in theme catalog (F40 E12): id, name, style group, six palette

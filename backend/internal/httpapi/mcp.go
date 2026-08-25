@@ -37,6 +37,7 @@ import (
 	"hycanvas/backend/internal/jobs"
 	"hycanvas/backend/internal/persistence"
 	"hycanvas/backend/internal/sharing"
+	"hycanvas/backend/internal/templates"
 )
 
 // mcpProtocolVersion is what this server speaks; earlier revisions are
@@ -59,10 +60,11 @@ type mcpDeps struct {
 	p     *persistence.Service
 	reg   *jobs.Registry
 	share *sharing.Service
+	tpl   *templates.Service
 }
 
-func mountMCP(r chi.Router, keys *apikeys.Service, acct *accounts.Service, ai *aistudio.Service, p *persistence.Service, reg *jobs.Registry, share *sharing.Service) {
-	d := mcpDeps{keys: keys, acct: acct, ai: ai, p: p, reg: reg, share: share}
+func mountMCP(r chi.Router, keys *apikeys.Service, acct *accounts.Service, ai *aistudio.Service, p *persistence.Service, reg *jobs.Registry, share *sharing.Service, tpl *templates.Service) {
+	d := mcpDeps{keys: keys, acct: acct, ai: ai, p: p, reg: reg, share: share, tpl: tpl}
 	r.Post("/mcp", d.handle)
 	// The spec allows refusing the server-initiated stream outright.
 	r.Get("/mcp", func(w http.ResponseWriter, _ *http.Request) {
@@ -221,6 +223,7 @@ func mcpToolList() []map[string]any {
 				"pageCount":  map[string]any{"type": "integer", "minimum": 1, "maximum": 40},
 				"language":   str("Write all text in this language, e.g. 'Spanish'."),
 				"themeId":    str("A built-in theme id from list_themes (e.g. 'theme-slate'); omit for an auto-picked look."),
+				"templateId": str("A template id from list_templates: the deck is composed on that template's layout system and theme."),
 				"brandPalette": map[string]any{
 					"type": "array", "items": map[string]any{"type": "string", "pattern": "^#[0-9a-fA-F]{6}$"}, "maxItems": 12,
 					"description": "Brand hex colors to ground the theme in.",
@@ -236,6 +239,11 @@ func mcpToolList() []map[string]any {
 			"name":        "get_job",
 			"description": "Poll a generation or export job by id. A completed generation job's result carries designId and editorUrl.",
 			"inputSchema": obj(map[string]any{"jobId": str("The job id returned by generate_presentation.")}, "jobId"),
+		},
+		{
+			"name":        "list_templates",
+			"description": "List the templates visible to this key's workspace (built-ins and workspace templates). Pass an id as generate_presentation's templateId to compose on that template's layout system and theme.",
+			"inputSchema": obj(map[string]any{"query": str("Optional search text.")}),
 		},
 		{
 			"name":        "list_themes",
@@ -290,6 +298,9 @@ func (d mcpDeps) callTool(r *http.Request, key *apikeys.KeyInfo, name string, ar
 			return toolResult("invalid arguments: "+err.Error(), true)
 		}
 		plan, rej := planGeneration(ctx, d.acct, key.UserID, key, in)
+		if rej == nil && strings.TrimSpace(in.TemplateID) != "" {
+			plan.LayoutSet, plan.ThemeRecord, rej = resolveTemplateForGeneration(ctx, d.tpl, key.UserID, key, strings.TrimSpace(in.TemplateID))
+		}
 		if rej != nil {
 			return toolResult(rej.Msg, true)
 		}
@@ -331,6 +342,34 @@ func (d mcpDeps) callTool(r *http.Request, key *apikeys.KeyInfo, name string, ar
 			return toolResult("job not found", true)
 		}
 		return toolResult(j.View(), false)
+
+	case "list_templates":
+		var in struct {
+			Query string `json:"query"`
+		}
+		_ = json.Unmarshal(args, &in)
+		list, err := d.tpl.List(ctx, key.UserID, templates.TemplateQuery{Text: in.Query}, key.WorkspaceID, "")
+		if err != nil {
+			return toolResult("could not list templates", true)
+		}
+		// Compact by contract, and PINNED: only public built-ins and this
+		// key's workspace templates leave the tool (the minting user may see
+		// more workspaces than the key does).
+		type row struct {
+			ID         string   `json:"id"`
+			Title      string   `json:"title"`
+			Categories []string `json:"categories"`
+			PageCount  int      `json:"pageCount"`
+			Visibility string   `json:"visibility"`
+		}
+		out := make([]row, 0, len(list))
+		for _, t := range list {
+			if t.Visibility != "public" && (t.WorkspaceID == nil || *t.WorkspaceID != key.WorkspaceID) {
+				continue
+			}
+			out = append(out, row{ID: t.ID, Title: t.Title, Categories: t.Categories, PageCount: t.PageCount, Visibility: t.Visibility})
+		}
+		return toolResult(out, false)
 
 	case "list_themes":
 		return toolResult(aistudio.ThemeCatalog(), false)

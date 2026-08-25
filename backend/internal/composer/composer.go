@@ -52,7 +52,12 @@ type Input struct {
 	// ThemeID names a built-in catalog theme (F40 E12); the bundle resolves
 	// it and THROWS on an unknown id, so validate before composing.
 	ThemeID string `json:"themeId,omitempty"`
-	Dir     string `json:"dir,omitempty"`
+	// LayoutSet + ThemeRecord (F40 E14): a template's layout system and theme
+	// record, passed through as raw JSON from the template file; the bundle
+	// composes layout-grounded pages on them.
+	LayoutSet   any    `json:"layoutSet,omitempty"`
+	ThemeRecord any    `json:"themeRecord,omitempty"`
+	Dir         string `json:"dir,omitempty"`
 }
 
 // Compose runs the embedded composer on one outline and returns the

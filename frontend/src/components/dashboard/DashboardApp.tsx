@@ -92,6 +92,7 @@ import { DesignThumb } from "./DesignThumb";
 import { BulkCreateModal } from "./BulkCreateModal";
 import { MembersPanel } from "./MembersPanel";
 import { ApiKeysPanel } from "./ApiKeysPanel";
+import { TemplateFromPptxDialog } from "./TemplateFromPptxDialog";
 import { VerifyEmailBanner } from "@/components/auth/VerifyEmailBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { HeroArt, EmptyArt, RailArt } from "@/components/ui/CanvasBackdrop";
@@ -232,6 +233,8 @@ export function DashboardApp({ view }: { view: DashboardView }) {
   // Template gallery filters.
   const [tplCategory, setTplCategory] = useState<string | null>(null);
   const [tplCollection, setTplCollection] = useState<string | null>(null);
+  const [pptxTemplateOpen, setPptxTemplateOpen] = useState(false); // F40 E13
+  const [tplRefresh, setTplRefresh] = useState(0); // bump to re-fetch the template shelf
   const [collections, setCollections] = useState<TemplateCollectionSummary[]>([]);
 
   const load = useCallback(async (q: string) => {
@@ -326,7 +329,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
     return () => {
       cancelled = true;
     };
-  }, [view, activeWorkspaceId, tplCollection]);
+  }, [view, activeWorkspaceId, tplCollection, tplRefresh]);
 
   // Categories present across the loaded templates, for the filter chips.
   const templateCategories = Array.from(
@@ -875,6 +878,9 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                 <Button variant="secondary" size="sm" disabled={busy} onClick={() => importTemplateRef.current?.click()} title={tr("dashboard.import_a_template_from_a_hyc_file")}>
                   <FileUp size={15} /> {tr("dashboard.import_template")}
                 </Button>
+                <Button variant="secondary" size="sm" onClick={() => setPptxTemplateOpen(true)} title={tr("dashboard.build_a_template_from_a_powerpoint_file")}>
+                  <FileUp size={15} /> {tr("dashboard.template_from_powerpoint")}
+                </Button>
                 <input
                   ref={importTemplateRef}
                   type="file"
@@ -1034,6 +1040,16 @@ export function DashboardApp({ view }: { view: DashboardView }) {
           )}
         </div>
       </main>
+      {/* F40 E13: the PPTX-to-template builder. onSaved re-fetches the shelf
+          by nudging the collection filter effect. */}
+      {pptxTemplateOpen && (
+        <TemplateFromPptxDialog
+          open={pptxTemplateOpen}
+          onClose={() => setPptxTemplateOpen(false)}
+          workspaceId={activeWorkspaceId}
+          onSaved={() => setTplRefresh((n) => n + 1)}
+        />
+      )}
 
       {/* Modals */}
 

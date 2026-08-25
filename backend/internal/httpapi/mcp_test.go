@@ -128,12 +128,12 @@ func TestMCPSurface_DB(t *testing.T) {
 		t.Fatalf("notification: want 202, got %d", code)
 	}
 
-	// tools/list names the six tools (list_themes joined in F40 E12).
+	// tools/list names the seven tools (list_themes E12, list_templates E14).
 	_, out = rpc(fullRaw, `{"jsonrpc":"2.0","id":2,"method":"tools/list"}`)
 	res, _ = out["result"].(map[string]any)
 	tools, _ := res["tools"].([]any)
-	if len(tools) != 6 {
-		t.Fatalf("want 6 tools, got %d", len(tools))
+	if len(tools) != 7 {
+		t.Fatalf("want 7 tools, got %d", len(tools))
 	}
 
 	// list_themes answers the embedded catalog for any valid key.

@@ -30117,6 +30117,7 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
     "packages/aistudio/dist/compose.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
+      exports.deckThemeFromRecord = deckThemeFromRecord;
       exports.deckThemeFromCatalog = deckThemeFromCatalog;
       exports.themeRecordFromCatalog = themeRecordFromCatalog;
       exports.composeDeckFile = composeDeckFile2;
@@ -30124,8 +30125,41 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
       var outline_1 = require_outline();
       var theme_1 = require_theme2();
       var deck_1 = require_deck();
+      var layout_1 = require_layout();
+      var layoutSchema_1 = require_layoutSchema();
       var themeGen_1 = require_themeGen();
       var themeCatalog_1 = require_themeCatalog();
+      function deckThemeFromRecord(rec, kicker) {
+        var _a5, _b, _c, _d;
+        const slot = (name) => {
+          var _a6;
+          return (_a6 = rec.colors.find((c) => c.name === name)) == null ? void 0 : _a6.color;
+        };
+        const toHex6 = (c, fallback) => {
+          if (!c)
+            return fallback;
+          const h = (v) => Math.round(v * 255).toString(16).padStart(2, "0");
+          return `#${h(c.srgb.r)}${h(c.srgb.g)}${h(c.srgb.b)}`;
+        };
+        const deep = toHex6((_b = slot("deep")) != null ? _b : (_a5 = rec.colors[2]) == null ? void 0 : _a5.color, "#1f2937");
+        const primary = toHex6((_d = slot("primary")) != null ? _d : (_c = rec.colors[0]) == null ? void 0 : _c.color, "#334155");
+        return {
+          background: { kind: "gradient", color: deep, color2: primary, angle: 145 },
+          kicker,
+          fontHeading: rec.fontHeading,
+          fontBody: rec.fontBody
+        };
+      }
+      function fillRefs(fill) {
+        const f = fill;
+        if (!f)
+          return [];
+        if (f.type === "solid" && f.color)
+          return [f.color];
+        if (Array.isArray(f.stops))
+          return f.stops.map((s) => s.color);
+        return [];
+      }
       function deckThemeFromCatalog(entry, kicker) {
         const [primary, , deep] = entry.colors;
         return {
@@ -30147,32 +30181,99 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
         return { srgb: { r: (n >> 16 & 255) / 255, g: (n >> 8 & 255) / 255, b: (n & 255) / 255, a: 1 } };
       }
       function composeDeckFile2(input) {
-        var _a5;
+        var _a5, _b, _c, _d, _e;
         const outline = (0, outline_1.normalizeOutline)(input.outline);
         const width = Math.max(1, Math.round(input.width));
         const height = Math.max(1, Math.round(input.height));
         let theme;
-        let catalogRecord = null;
-        if (input.themeId) {
+        let record2 = null;
+        if (input.themeRecord) {
+          record2 = input.themeRecord;
+          theme = deckThemeFromRecord(record2, outline.title);
+        } else if (input.themeId) {
           const entry = (0, themeCatalog_1.themeCatalogEntry)(input.themeId);
           if (!entry)
             throw new Error(`unknown themeId: ${input.themeId}`);
           theme = deckThemeFromCatalog(entry, outline.title);
-          catalogRecord = themeRecordFromCatalog(entry);
+          record2 = themeRecordFromCatalog(entry);
         } else {
           const seed = Array.from(outline.title).reduce((h, ch) => Math.imul(h, 31) + ch.charCodeAt(0) | 0, 7);
           theme = (0, theme_1.deckThemes)({ brandPalette: (_a5 = input.brandPalette) != null ? _a5 : [], kicker: outline.title, count: 1, seed })[0];
         }
-        const deck = (0, deck_1.layoutDeck)(outline, theme, { width, height }, { dir: input.dir });
-        const pages = deck.pages.map((p, i) => __spreadValues({
-          id: `api-page-${i + 1}`,
-          name: p.name || `Page ${i + 1}`,
-          width,
-          height,
-          background: p.background,
-          children: p.nodes
-        }, p.note ? { notes: p.note } : {}));
-        const file2 = {
+        let pages;
+        let masters;
+        let layoutsOut;
+        if ((_c = (_b = input.layoutSet) == null ? void 0 : _b.layouts) == null ? void 0 : _c.length) {
+          masters = structuredClone((_d = input.layoutSet.masters) != null ? _d : []);
+          layoutsOut = structuredClone(input.layoutSet.layouts);
+          const layouts = layoutsOut;
+          const byId = new Map(layouts.map((l) => [l.id, l]));
+          const masterById = new Map((masters != null ? masters : []).map((m) => [m.id, m]));
+          const selection = (0, layoutSchema_1.repairLayoutSelection)(null, outline.pages, layouts);
+          const themedBg = (0, layout_1.layoutDesign)({ layout: "centered", background: theme.background, blocks: [], dir: (_e = input.dir) != null ? _e : "ltr" }, { width, height }).background;
+          pages = outline.pages.map((item, i) => {
+            var _a6, _b2, _c2, _d2, _e2;
+            const layout = (_a6 = byId.get(selection[i])) != null ? _a6 : layouts[0];
+            const master = masterById.get(layout.masterId);
+            const bg = (_c2 = (_b2 = layout.background) != null ? _b2 : master == null ? void 0 : master.background) != null ? _c2 : themedBg;
+            const ink = (0, layout_1.readableTextColor)(fillRefs(bg));
+            const fill = (0, layoutSchema_1.fallbackLayoutFill)(layout, item);
+            let extentW = 0;
+            let extentH = 0;
+            for (const ph of (_d2 = layout.placeholders) != null ? _d2 : []) {
+              extentW = Math.max(extentW, ph.rect.x + ph.rect.width);
+              extentH = Math.max(extentH, ph.rect.y + ph.rect.height);
+            }
+            const sx = extentW > width && extentW > 0 ? width / extentW : 1;
+            const sy = extentH > height && extentH > 0 ? height / extentH : 1;
+            const children = ((_e2 = layout.placeholders) != null ? _e2 : []).filter((ph) => ph.role === "title" || ph.role === "body" || ph.role === "content").map((ph) => {
+              var _a7;
+              const r = { x: ph.rect.x * sx, y: ph.rect.y * sy, width: ph.rect.width * sx, height: ph.rect.height * sy };
+              const isTitle = ph.role === "title";
+              const runStyle = {
+                fontFamily: (_a7 = isTitle ? theme.fontHeading : theme.fontBody) != null ? _a7 : "system",
+                fontStyle: isTitle ? "Bold" : "Regular",
+                fontSize: isTitle ? 44 : 20,
+                fill: { type: "solid", color: structuredClone(ink) }
+              };
+              const paraStyle = { align: "left", direction: "auto" };
+              const list = fill.lists[ph.id];
+              const text2 = fill.texts[ph.id];
+              const content = list !== void 0 && list.length ? list.map((li) => ({ runs: [{ text: `\u2022  ${li}`, style: structuredClone(runStyle) }], style: structuredClone(paraStyle) })) : [{ runs: [{ text: text2 != null ? text2 : "", style: structuredClone(runStyle) }], style: structuredClone(paraStyle) }];
+              return (0, schema_1.createNode)("text", {
+                name: isTitle ? "Title" : "Text",
+                transform: { x: r.x, y: r.y, scaleX: 1, scaleY: 1, rotation: 0 },
+                size: { width: r.width, height: r.height },
+                box: { mode: "fixed", width: r.width, height: r.height, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
+                data: { placeholderId: ph.id },
+                content
+              });
+            }).filter((n) => {
+              const c = n.content;
+              return c.some((par) => par.runs.some((run) => run.text.trim()));
+            });
+            return __spreadValues({
+              id: `api-page-${i + 1}`,
+              name: item.title || `Page ${i + 1}`,
+              width,
+              height,
+              background: structuredClone(bg),
+              layoutId: layout.id,
+              children
+            }, item.note ? { notes: item.note } : {});
+          });
+        } else {
+          const deck = (0, deck_1.layoutDeck)(outline, theme, { width, height }, { dir: input.dir });
+          pages = deck.pages.map((p, i) => __spreadValues({
+            id: `api-page-${i + 1}`,
+            name: p.name || `Page ${i + 1}`,
+            width,
+            height,
+            background: p.background,
+            children: p.nodes
+          }, p.note ? { notes: p.note } : {}));
+        }
+        const file2 = __spreadProps(__spreadValues(__spreadValues({
           format: "hycanvas.design",
           schemaVersion: schema_1.currentSchemaVersion,
           id: "pending",
@@ -30181,9 +30282,10 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
           dpi: 96,
           pages,
           assets: [],
-          fonts: [],
-          theme: catalogRecord != null ? catalogRecord : (0, themeGen_1.themeRecordFromDeckTheme)(theme, { name: outline.theme ? outline.theme.slice(0, 40) : void 0 })
-        };
+          fonts: []
+        }, masters ? { masters } : {}), layoutsOut ? { layouts: layoutsOut } : {}), {
+          theme: record2 != null ? record2 : (0, themeGen_1.themeRecordFromDeckTheme)(theme, { name: outline.theme ? outline.theme.slice(0, 40) : void 0 })
+        });
         return file2;
       }
     }

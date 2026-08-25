@@ -23,7 +23,7 @@ import {
   type DesignOutline, type DesignType, type GenerationDials, type OutlineItem,
   toolCatalog, assistantSystemPrompt, parseAssistantReply, planMutates, summarizeDesign, type PlanStep,
   deriveOutline, switchOutline, sourcesOutlineItem, type PageText, type SourceCitation,
-  themeCatalogEntry, deckThemeFromCatalog, themeRecordFromCatalog,
+  themeCatalogEntry, deckThemeFromCatalog, themeRecordFromCatalog, deckThemeFromRecord,
 } from "@hc/aistudio";
 import { builtinMasterAndLayouts, type SlideLayout } from "@hc/schema";
 import { promptText } from "@/lib/promptDialog";
@@ -1923,6 +1923,9 @@ interface AssistantDeps {
   /** A built-in catalog theme chosen in the review card (F40 E12): the deck is
    *  composed on it instead of the title-seeded generated theme. */
   styleThemeId?: string;
+  /** A template's theme record (F40 E14): wins over styleThemeId; the deck is
+   *  composed on the template's palette and fonts. */
+  styleThemeRecord?: Theme;
 }
 
 // Outline roles that get a generated hero background image (the high-impact
@@ -2759,14 +2762,16 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
           // generated theme with brand grounding, as before.
           const chosen = deps.styleThemeId ? themeCatalogEntry(deps.styleThemeId) : null;
           const seed = Array.from(outline.title).reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) | 0, 7);
-          const theme = chosen
-            ? deckThemeFromCatalog(chosen, outline.title)
-            : deckThemes({ brandPalette: deps.brandPalette, kicker: outline.title, count: 1, fontHeading: deps.brandFonts.heading, fontBody: deps.brandFonts.body, seed })[0];
+          const theme = deps.styleThemeRecord
+            ? deckThemeFromRecord(deps.styleThemeRecord, outline.title)
+            : chosen
+              ? deckThemeFromCatalog(chosen, outline.title)
+              : deckThemes({ brandPalette: deps.brandPalette, kicker: outline.title, count: 1, fontHeading: deps.brandFonts.heading, fontBody: deps.brandFonts.body, seed })[0];
           const background = layoutDesign({ layout: "centered", background: theme.background, blocks: [], dir: "ltr" }, size).background;
           // T19 (d): the deck's visual system doubles as the file theme, so
           // the theme picker reflects it and a later swap remaps exactly the
           // colors these pages are painted with.
-          const themeRecord = chosen ? themeRecordFromCatalog(chosen) : themeRecordFromDeckTheme(theme, { name: outline.theme ? outline.theme.slice(0, 40) : undefined });
+          const themeRecord = deps.styleThemeRecord ?? (chosen ? themeRecordFromCatalog(chosen) : themeRecordFromDeckTheme(theme, { name: outline.theme ? outline.theme.slice(0, 40) : undefined }));
           return {
             payload: {
               kind: "layoutDeck",
@@ -3326,7 +3331,25 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   // up front and shown as an editable list with generation dials; Generate
   // proceeds with the EDITED outline (no second model call). null = no review
   // (non-design plans); loading = outline still being fetched.
-  const [review, setReview] = useState<{ outline: DesignOutline | null; loading: boolean; dials: GenerationDials; searchedSources?: { name: string; text: string }[]; citations?: SourceCitation[]; themeId?: string } | null>(null);
+  const [review, setReview] = useState<{ outline: DesignOutline | null; loading: boolean; dials: GenerationDials; searchedSources?: { name: string; text: string }[]; citations?: SourceCitation[]; themeId?: string; templateId?: string } | null>(null);
+  // Templates offered as a generation base (F40 E14). Fetched once per panel
+  // mount; only templates that can contribute a layout system or theme are
+  // useful, but that is only knowable from the FILE, so the list shows all
+  // visible templates and the generate step degrades to theme-only or refuses
+  // with a toast when the chosen one carries neither.
+  const [reviewTemplates, setReviewTemplates] = useState<{ id: string; title: string }[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const list = await oc.listTemplates();
+        if (!cancelled) setReviewTemplates(list.map((t) => ({ id: t.id, title: t.title })));
+      } catch {
+        if (!cancelled) setReviewTemplates([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
   const reviewSeq = useRef(0);
   // Monotonic id source for review-added outline items: a length-derived id
   // collides after add-remove-add (same length twice) and duplicates React keys.
@@ -3411,7 +3434,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     const step = plan.find((s) => s.action === "generateDesign");
     if (!step || !workspaceId) return;
     const seq = ++reviewSeq.current;
-    setReview((r) => ({ outline: null, loading: true, dials, themeId: r?.themeId }));
+    setReview((r) => ({ outline: null, loading: true, dials, themeId: r?.themeId, templateId: r?.templateId }));
     try {
       const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sources, dials, designId };
       // A planned webSearch grounds the OUTLINE, and in the review flow the
@@ -3428,9 +3451,9 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       // C33: the search's structured citations must survive into the eventual
       // execute (which drops the webSearch step), or the reviewed deck would
       // lose its Sources page.
-      setReview((r) => ({ outline, loading: false, dials, searchedSources: searchStep ? deps.sources : undefined, citations: deps.citations, themeId: r?.themeId }));
+      setReview((r) => ({ outline, loading: false, dials, searchedSources: searchStep ? deps.sources : undefined, citations: deps.citations, themeId: r?.themeId, templateId: r?.templateId }));
     } catch {
-      if (seq === reviewSeq.current) setReview((r) => ({ outline: null, loading: false, dials, themeId: r?.themeId }));
+      if (seq === reviewSeq.current) setReview((r) => ({ outline: null, loading: false, dials, themeId: r?.themeId, templateId: r?.templateId }));
     }
   }
 
@@ -3443,7 +3466,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     setReview(null);
   }
 
-  async function execute(plan: PlanStep[], reply: string, reviewedOutline?: DesignOutline, dials?: GenerationDials, citations?: SourceCitation[], styleThemeId?: string) {
+  async function execute(plan: PlanStep[], reply: string, reviewedOutline?: DesignOutline, dials?: GenerationDials, citations?: SourceCitation[], styleThemeId?: string, styleTemplateId?: string) {
     if (!workspaceId) return;
     setBusy(true);
     try {
@@ -3463,6 +3486,25 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
         }
       }
       const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sources, reviewedOutline, dials, designId, citations, styleThemeId };
+      // F40 E14: a template base contributes its layout system + theme. The
+      // adoption happens BEFORE the resolve pass so the layout-grounded path
+      // naturally picks up the adopted layouts from the document.
+      if (styleTemplateId) {
+        try {
+          const tplFile = migrate(await oc.getTemplateFile(styleTemplateId)) as unknown as { masters?: unknown[]; layouts?: unknown[]; theme?: Theme };
+          const hasLayouts = Array.isArray(tplFile.layouts) && tplFile.layouts.length > 0;
+          if (hasLayouts) {
+            useEditor.getState().adoptLayoutSet(tplFile.masters ?? [], tplFile.layouts ?? []);
+          }
+          if (tplFile.theme) {
+            deps.styleThemeRecord = tplFile.theme;
+          } else if (!hasLayouts) {
+            toast.error(tr("editor.template_has_no_style_to_generate_with"));
+          }
+        } catch {
+          toast.error(tr("editor.couldnt_load_that_template"));
+        }
+      }
       const payloads: (ResolvedPayload | undefined)[] = [];
       const skips: (string | undefined)[] = [];
       for (let i = 0; i < plan.length; i++) {
@@ -3850,6 +3892,22 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                   </button>
                 ))}
               </div>
+              {/* F40 E14: generate ON a template's layout system + theme. */}
+              {reviewTemplates.length > 0 && (
+                <label className="flex items-center gap-1.5 text-[10px] text-neutral-500">
+                  {tr("editor.template_base")}
+                  <select
+                    value={review.templateId ?? ""}
+                    onChange={(e) => setReview((r) => (r ? { ...r, templateId: e.target.value || undefined } : r))}
+                    className="min-w-0 flex-1 rounded border border-neutral-300 px-1 py-0.5 text-[11px] text-neutral-700"
+                  >
+                    <option value="">{tr("editor.template_none")}</option>
+                    {reviewTemplates.map((t) => (
+                      <option key={t.id} value={t.id}>{t.title}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
               {review.loading ? (
                 <div className="flex items-center gap-2 py-2 text-neutral-500"><Spinner /> {tr("editor.preparing_outline")}</div>
               ) : !review.outline ? (
@@ -3904,7 +3962,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                         if (searched) setSources(searched.slice(0, maxSources));
                         clearReview();
                         const planToRun = searched ? p?.plan.filter((s) => s.action !== "webSearch") ?? [] : p?.plan ?? [];
-                        if (p && clean.pages.length) void execute(planToRun, p.reply, clean, dials, cites, review.themeId);
+                        if (p && clean.pages.length) void execute(planToRun, p.reply, clean, dials, cites, review.themeId, review.templateId);
                         else toast.error(tr("editor.the_outline_needs_at_least_one_page"));
                       }}
                       className="ms-auto rounded bg-brand-600 px-2.5 py-0.5 font-medium text-white hover:bg-brand-700"

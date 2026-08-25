@@ -102,6 +102,10 @@
           "themeId": {
             "type": "string",
             "description": "A built-in theme id (see GET /themes), e.g. 'theme-slate'; omit for an auto-picked look."
+          },
+          "templateId": {
+            "type": "string",
+            "description": "A template id: the deck is composed on that template's layout system and theme (workspace templates and public built-ins; see the MCP list_templates tool)."
           }
         }
       },

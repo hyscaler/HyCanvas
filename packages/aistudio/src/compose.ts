@@ -8,13 +8,26 @@
 // goja entry and the parity test both replace with a counter, so the same
 // input composes to the same bytes on both runtimes.
 
-import { currentSchemaVersion, themeFromPalette, type DesignFile, type Page, type Theme } from "@hc/schema";
+import {
+  createNode,
+  currentSchemaVersion,
+  themeFromPalette,
+  type DesignFile,
+  type Fill,
+  type Page,
+  type SlideLayout,
+  type SlideMaster,
+  type Theme,
+} from "@hc/schema";
 import { normalizeOutline } from "./outline";
 import { deckThemes } from "./theme";
 import { layoutDeck } from "./deck";
+import { layoutDesign, readableTextColor } from "./layout";
+import { fallbackLayoutFill, repairLayoutSelection } from "./layoutSchema";
 import { themeRecordFromDeckTheme, themeSlotNames } from "./themeGen";
 import { themeCatalogEntry, type ThemeCatalogEntry } from "./themeCatalog";
 import type { DeckTheme } from "./outline";
+import type { Color } from "@hc/schema";
 
 export interface ComposeDeckInput {
   /** The generated outline, exactly as the server outline endpoint returns it
@@ -29,7 +42,44 @@ export interface ComposeDeckInput {
    *  catalog theme record is stamped on the file. Unknown ids THROW - a
    *  caller who names a theme means it, and silence would be a wrong deck. */
   themeId?: string;
+  /** A template's layout system (F40 E14): when present with layouts, pages
+   *  are composed LAYOUT-GROUNDED - deterministic per-page layout selection,
+   *  placeholder-materialized text boxes, layout/master backgrounds - and the
+   *  masters/layouts ride into the file so the deck stays layout-linked. */
+  layoutSet?: { masters: SlideMaster[]; layouts: SlideLayout[] };
+  /** The template's theme record (E14): stamps the file theme and styles the
+   *  materialized text (fonts by role, ink readable against the background). */
+  themeRecord?: Theme;
   dir?: "ltr" | "rtl";
+}
+
+/** A T19 theme record as a generation DeckTheme (the template path's
+ *  counterpart of deckThemeFromCatalog): deep-to-primary gradient, pair fonts.
+ *  Slots resolve by NAME so a hand-edited record still reads correctly. */
+export function deckThemeFromRecord(rec: Theme, kicker?: string): DeckTheme {
+  const slot = (name: string) => rec.colors.find((c) => c.name === name)?.color;
+  const toHex6 = (c: Color | undefined, fallback: string) => {
+    if (!c) return fallback;
+    const h = (v: number) => Math.round(v * 255).toString(16).padStart(2, "0");
+    return `#${h(c.srgb.r)}${h(c.srgb.g)}${h(c.srgb.b)}`;
+  };
+  const deep = toHex6(slot("deep") ?? rec.colors[2]?.color, "#1f2937");
+  const primary = toHex6(slot("primary") ?? rec.colors[0]?.color, "#334155");
+  return {
+    background: { kind: "gradient", color: deep, color2: primary, angle: 145 },
+    kicker,
+    fontHeading: rec.fontHeading,
+    fontBody: rec.fontBody,
+  };
+}
+
+/** Contrast references of a Fill (solid color or gradient stops). */
+function fillRefs(fill: Fill | undefined): Color[] {
+  const f = fill as unknown as { type?: string; color?: Color; stops?: { color: Color }[] } | undefined;
+  if (!f) return [];
+  if (f.type === "solid" && f.color) return [f.color];
+  if (Array.isArray(f.stops)) return f.stops.map((s) => s.color);
+  return [];
 }
 
 /** A catalog entry as a generation DeckTheme: the deep-to-primary gradient
@@ -71,30 +121,112 @@ export function composeDeckFile(input: ComposeDeckInput): DesignFile {
   const outline = normalizeOutline(input.outline);
   const width = Math.max(1, Math.round(input.width));
   const height = Math.max(1, Math.round(input.height));
-  // A named catalog theme wins (E12); otherwise the same title-seeded hue
-  // selection as the editor panel, so the API and the panel generate the
-  // same deck for the same brief.
+  // Theme resolution order: an explicit template record (E14), a named
+  // catalog theme (E12), else the same title-seeded hue selection as the
+  // editor panel, so the API and the panel generate the same deck for the
+  // same brief.
   let theme: DeckTheme;
-  let catalogRecord: Theme | null = null;
-  if (input.themeId) {
+  let record: Theme | null = null;
+  if (input.themeRecord) {
+    record = input.themeRecord;
+    theme = deckThemeFromRecord(record, outline.title);
+  } else if (input.themeId) {
     const entry = themeCatalogEntry(input.themeId);
     if (!entry) throw new Error(`unknown themeId: ${input.themeId}`);
     theme = deckThemeFromCatalog(entry, outline.title);
-    catalogRecord = themeRecordFromCatalog(entry);
+    record = themeRecordFromCatalog(entry);
   } else {
     const seed = Array.from(outline.title).reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) | 0, 7);
     theme = deckThemes({ brandPalette: input.brandPalette ?? [], kicker: outline.title, count: 1, seed })[0];
   }
-  const deck = layoutDeck(outline, theme, { width, height }, { dir: input.dir });
-  const pages: Page[] = deck.pages.map((p, i) => ({
-    id: `api-page-${i + 1}`,
-    name: p.name || `Page ${i + 1}`,
-    width,
-    height,
-    background: p.background,
-    children: p.nodes,
-    ...(p.note ? { notes: p.note } : {}),
-  }) as unknown as Page);
+
+  let pages: Page[];
+  let masters: SlideMaster[] | undefined;
+  let layoutsOut: SlideLayout[] | undefined;
+  if (input.layoutSet?.layouts?.length) {
+    // Layout-grounded composition (E14): the template's own layout system,
+    // materialized the way the editor's apply pass does it - deterministic
+    // selection, one text box per fillable text slot, layout/master
+    // background, readable ink, fonts by role. Picture slots are skipped
+    // (headless composition places no images; the editor's queue does).
+    masters = structuredClone(input.layoutSet.masters ?? []);
+    layoutsOut = structuredClone(input.layoutSet.layouts);
+    const layouts = layoutsOut;
+    const byId = new Map(layouts.map((l) => [l.id, l] as const));
+    const masterById = new Map((masters ?? []).map((m) => [m.id, m] as const));
+    const selection = repairLayoutSelection(null, outline.pages, layouts);
+    const themedBg = layoutDesign({ layout: "centered", background: theme.background, blocks: [], dir: input.dir ?? "ltr" }, { width, height }).background;
+    pages = outline.pages.map((item, i) => {
+      const layout = byId.get(selection[i]) ?? layouts[0];
+      const master = masterById.get(layout.masterId);
+      const bg = (layout.background ?? (master as { background?: Fill } | undefined)?.background ?? themedBg) as Fill;
+      const ink = readableTextColor(fillRefs(bg));
+      const fill = fallbackLayoutFill(layout, item);
+      // Proportional shrink when the layout was authored for a larger page
+      // (the store's applyLayoutToPage does the same).
+      let extentW = 0;
+      let extentH = 0;
+      for (const ph of layout.placeholders ?? []) {
+        extentW = Math.max(extentW, ph.rect.x + ph.rect.width);
+        extentH = Math.max(extentH, ph.rect.y + ph.rect.height);
+      }
+      const sx = extentW > width && extentW > 0 ? width / extentW : 1;
+      const sy = extentH > height && extentH > 0 ? height / extentH : 1;
+      const children = (layout.placeholders ?? [])
+        .filter((ph) => ph.role === "title" || ph.role === "body" || ph.role === "content")
+        .map((ph) => {
+          const r = { x: ph.rect.x * sx, y: ph.rect.y * sy, width: ph.rect.width * sx, height: ph.rect.height * sy };
+          const isTitle = ph.role === "title";
+          const runStyle = {
+            fontFamily: (isTitle ? theme.fontHeading : theme.fontBody) ?? "system",
+            fontStyle: isTitle ? "Bold" : "Regular",
+            fontSize: isTitle ? 44 : 20,
+            fill: { type: "solid", color: structuredClone(ink) },
+          };
+          const paraStyle = { align: "left", direction: "auto" };
+          const list = fill.lists[ph.id];
+          const text = fill.texts[ph.id];
+          const content = list !== undefined && list.length
+            ? list.map((li) => ({ runs: [{ text: `•  ${li}`, style: structuredClone(runStyle) }], style: structuredClone(paraStyle) }))
+            : [{ runs: [{ text: text ?? "", style: structuredClone(runStyle) }], style: structuredClone(paraStyle) }];
+          return createNode("text", {
+            name: isTitle ? "Title" : "Text",
+            transform: { x: r.x, y: r.y, scaleX: 1, scaleY: 1, rotation: 0 },
+            size: { width: r.width, height: r.height },
+            box: { mode: "fixed", width: r.width, height: r.height, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
+            data: { placeholderId: ph.id },
+            content,
+          } as never);
+        })
+        // An empty slot renders as an empty box; drop boxes with no text at all.
+        .filter((n) => {
+          const c = (n as unknown as { content: { runs: { text: string }[] }[] }).content;
+          return c.some((par) => par.runs.some((run) => run.text.trim()));
+        });
+      return {
+        id: `api-page-${i + 1}`,
+        name: item.title || `Page ${i + 1}`,
+        width,
+        height,
+        background: structuredClone(bg),
+        layoutId: layout.id,
+        children,
+        ...(item.note ? { notes: item.note } : {}),
+      } as unknown as Page;
+    });
+  } else {
+    const deck = layoutDeck(outline, theme, { width, height }, { dir: input.dir });
+    pages = deck.pages.map((p, i) => ({
+      id: `api-page-${i + 1}`,
+      name: p.name || `Page ${i + 1}`,
+      width,
+      height,
+      background: p.background,
+      children: p.nodes,
+      ...(p.note ? { notes: p.note } : {}),
+    }) as unknown as Page);
+  }
+
   const file = {
     format: "hycanvas.design",
     schemaVersion: currentSchemaVersion,
@@ -105,7 +237,9 @@ export function composeDeckFile(input: ComposeDeckInput): DesignFile {
     pages,
     assets: [],
     fonts: [],
-    theme: catalogRecord ?? themeRecordFromDeckTheme(theme, { name: outline.theme ? outline.theme.slice(0, 40) : undefined }),
+    ...(masters ? { masters } : {}),
+    ...(layoutsOut ? { layouts: layoutsOut } : {}),
+    theme: record ?? themeRecordFromDeckTheme(theme, { name: outline.theme ? outline.theme.slice(0, 40) : undefined }),
   } as unknown as DesignFile;
   return file;
 }

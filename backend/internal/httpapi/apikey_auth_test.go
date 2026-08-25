@@ -67,7 +67,7 @@ func TestAPIKeySurface_DB(t *testing.T) {
 	r := chi.NewRouter()
 	r.Route("/api/v1", func(api chi.Router) {
 		mountAPIKeys(api, keys, acct)
-		mountGenerate(api, studio, acct, nil, reg)
+		mountGenerate(api, studio, acct, nil, reg, nil)
 		mountJobs(api, reg, acct)
 		// A design-scoped allowlisted route, minimal body, to test the tenancy
 		// guard without the persistence/storage stack.
