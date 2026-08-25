@@ -464,3 +464,20 @@ func TestSharing_RoleAssignAuthz_DB(t *testing.T) {
 		t.Fatalf("owner UpdateGrant with roleId should succeed, got %v", err)
 	}
 }
+
+func TestNormalizeLabel(t *testing.T) {
+	if normalizeLabel("  ") != nil {
+		t.Fatal("blank label must normalize to nil")
+	}
+	if got := normalizeLabel("  Investors "); got == nil || *got != "Investors" {
+		t.Fatalf("trim wrong: %v", got)
+	}
+	long := make([]rune, 0, 100)
+	for i := 0; i < 100; i++ {
+		long = append(long, 'ü') // multi-byte: the cap must count runes, not bytes
+	}
+	got := normalizeLabel(string(long))
+	if got == nil || len([]rune(*got)) != linkLabelMax {
+		t.Fatalf("cap wrong: %v", got)
+	}
+}

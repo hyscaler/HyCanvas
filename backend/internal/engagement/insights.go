@@ -14,6 +14,18 @@ type DesignInsights struct {
 	Views             []DayCount       `json:"views"`
 	AvgTimeMs         int64            `json:"avgTimeMs"`
 	PerPage           []PageEngagement `json:"perPage"`
+	// Per-link attribution (C36): sessions grouped by the share link they
+	// arrived through. Sessions with no link (members, legacy rows) are absent.
+	Links []LinkEngagement `json:"links,omitempty"`
+}
+
+// LinkEngagement is one share link's aggregated engagement (C36).
+type LinkEngagement struct {
+	LinkID  string `json:"linkId"`
+	Label   string `json:"label,omitempty"`
+	Views   int    `json:"views"`
+	Viewers int    `json:"viewers"`
+	TotalMs int64  `json:"totalMs"`
 }
 
 type DayCount struct {
@@ -32,6 +44,13 @@ func aggregateInsights(sessions []DesignViewRow) DesignInsights {
 	anon := map[string]bool{}
 	byDay := map[string]int{}
 	perPage := map[string]int64{}
+	type linkAgg struct {
+		label   string
+		views   int
+		viewers map[string]bool
+		totalMs int64
+	}
+	byLink := map[string]*linkAgg{}
 	var totalDuration int64
 
 	for _, s := range sessions {
@@ -50,6 +69,25 @@ func aggregateInsights(sessions []DesignViewRow) DesignInsights {
 				perPage[pageID] += int64(ms)
 			}
 		}
+		if s.LinkID != nil {
+			agg := byLink[*s.LinkID]
+			if agg == nil {
+				agg = &linkAgg{viewers: map[string]bool{}}
+				byLink[*s.LinkID] = agg
+			}
+			if s.LinkLabel != nil {
+				agg.label = *s.LinkLabel
+			}
+			agg.views++
+			if s.ViewerID != nil {
+				agg.viewers["u:"+*s.ViewerID] = true
+			} else if s.AnonID != nil {
+				agg.viewers["a:"+*s.AnonID] = true
+			}
+			if s.DurationMs > 0 {
+				agg.totalMs += int64(s.DurationMs)
+			}
+		}
 	}
 
 	views := make([]DayCount, 0, len(byDay))
@@ -64,6 +102,18 @@ func aggregateInsights(sessions []DesignViewRow) DesignInsights {
 	}
 	sort.Slice(perPageOut, func(i, j int) bool { return perPageOut[i].EngagementMs > perPageOut[j].EngagementMs })
 
+	linksOut := make([]LinkEngagement, 0, len(byLink))
+	for id, agg := range byLink {
+		linksOut = append(linksOut, LinkEngagement{LinkID: id, Label: agg.label, Views: agg.views, Viewers: len(agg.viewers), TotalMs: agg.totalMs})
+	}
+	// Most-viewed first; the link id ties deterministically.
+	sort.Slice(linksOut, func(i, j int) bool {
+		if linksOut[i].Views != linksOut[j].Views {
+			return linksOut[i].Views > linksOut[j].Views
+		}
+		return linksOut[i].LinkID < linksOut[j].LinkID
+	})
+
 	total := len(sessions)
 	var avg int64
 	if total > 0 {
@@ -76,5 +126,6 @@ func aggregateInsights(sessions []DesignViewRow) DesignInsights {
 		Views:             views,
 		AvgTimeMs:         avg,
 		PerPage:           perPageOut,
+		Links:             linksOut,
 	}
 }

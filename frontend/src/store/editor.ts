@@ -445,6 +445,12 @@ interface EditorState {
   duplicatePage(index?: number): void;
   /** Rename a page (its title in the page list / continuous-scroll header). */
   setPageName(index: number, name: string): void;
+  /** Per-slide workflow status (F28 completion C35), stored in the page's open
+   *  data record. Null clears it. Plain string on purpose: never an enum. */
+  setPageWorkStatus(index: number, status: string | null): void;
+  /** Per-slide assignee (C35): a workspace member's id + display name, stored
+   *  in the page's open data record. Null clears it. */
+  setPageAssignee(index: number, assignee: { id: string; name: string } | null): void;
   /** Lock or unlock every element on a page in one undo step (page header lock). */
   setPageLocked(index: number, locked: boolean): void;
   /** Delete a page (keeps at least one), undoable. */
@@ -851,6 +857,11 @@ interface EditorState {
    *  false when nothing was applied (read-only session, history preview, or an
    *  empty template). */
   applyTemplateFile(file: DesignFile, title: string): boolean;
+  /** Reuse slides from another deck (F28 completion C38): append copies of the
+   *  chosen pages after the active page's run, ids regenerated, assets carried
+   *  (colliding ids reminted), and optionally restyled to this document's
+   *  theme via the exact slot-by-slot remap. Returns the inserted count. */
+  importPagesFrom(file: DesignFile, pageIndices: number[], opts?: { matchTheme?: boolean }): number;
   /** Import a full SVG file (e.g. an SVG export from another design tool) as editable elements:
    *  shapes/paths/text/images, registered assets, scaled to fit the page and
    *  grouped (ungroup to edit each element). Undoable. */
@@ -4221,6 +4232,36 @@ export const useEditor = create<EditorState>((set, get) => {
         () => { page.name = before; },
       );
     },
+    setPageWorkStatus: (index, status) => {
+      const page = get().doc.pages[index] as unknown as { data?: Record<string, unknown> };
+      if (!page) return;
+      const before = page.data?.status as string | undefined;
+      const next = status?.trim() || undefined;
+      if (before === next) return;
+      // Write into the page's open data record, and DELETE cleared keys (an
+      // explicit undefined would propagate through the key-driven CRDT).
+      const write = (v: string | undefined) => {
+        if (v === undefined) { if (page.data) delete page.data.status; }
+        else (page.data ??= {}).status = v;
+      };
+      perform(() => write(next), () => write(before));
+    },
+    setPageAssignee: (index, assignee) => {
+      const page = get().doc.pages[index] as unknown as { data?: Record<string, unknown> };
+      if (!page) return;
+      const before = { id: page.data?.assigneeId as string | undefined, name: page.data?.assigneeName as string | undefined };
+      const next = assignee ? { id: assignee.id, name: assignee.name } : { id: undefined, name: undefined };
+      if (before.id === next.id && before.name === next.name) return;
+      // Per-key delete-or-set (never an explicit undefined, which would
+      // propagate through the key-driven CRDT reconcile).
+      const write = (v: { id: string | undefined; name: string | undefined }) => {
+        if (!page.data && v.id === undefined && v.name === undefined) return;
+        const d = (page.data ??= {});
+        if (v.id === undefined) delete d.assigneeId; else d.assigneeId = v.id;
+        if (v.name === undefined) delete d.assigneeName; else d.assigneeName = v.name;
+      };
+      perform(() => write(next), () => write(before));
+    },
     setPageLocked: (index, locked) => {
       const doc = get().doc;
       const page = doc.pages[index];
@@ -5118,6 +5159,198 @@ export const useEditor = create<EditorState>((set, get) => {
         },
       );
       return true;
+    },
+    importPagesFrom: (file, pageIndices, opts) => {
+      if (!usePresence.getState().canEdit() || get().readonlyPreview()) return 0;
+      const doc = get().doc;
+      ensureDocArrays(doc);
+      const srcPages = pageIndices
+        .map((i) => (file.pages ?? [])[i])
+        .filter((p): p is Page => !!p);
+      if (!srcPages.length) return 0;
+      const idGen = () => `n_${crypto.randomUUID().slice(0, 12)}`;
+
+      // Assets the chosen pages actually reference (any nested `assetId`
+      // string, so image/video sources and future carriers all count).
+      const usedAssetIds = new Set<string>();
+      const collectAssetIds = (v: unknown): void => {
+        if (!v || typeof v !== "object") return;
+        if (Array.isArray(v)) { v.forEach(collectAssetIds); return; }
+        const rec = v as Record<string, unknown>;
+        if (typeof rec.assetId === "string") usedAssetIds.add(rec.assetId);
+        for (const k of Object.keys(rec)) collectAssetIds(rec[k]);
+      };
+      srcPages.forEach((p) => collectAssetIds(p.children));
+      // Carry each used asset ref. A colliding id pointing at a DIFFERENT url
+      // is reminted and the imported pages' references rewritten, or the
+      // inserted slide would silently render this document's other image.
+      const byId = new Map(doc.assets.map((a) => [a.id, a] as const));
+      const newAssets: AssetRef[] = [];
+      const assetIdRewrite = new Map<string, string>();
+      for (const id of usedAssetIds) {
+        const src = (file.assets ?? []).find((a) => a.id === id);
+        if (!src) continue; // an unresolvable ref stays as-is (renders missing, same as in the source)
+        const existing = byId.get(id);
+        if (existing && existing.url === src.url) continue; // the same asset: reuse
+        if (!existing) { newAssets.push(structuredClone(src) as AssetRef); continue; }
+        const fresh = `asset_${crypto.randomUUID().slice(0, 12)}`;
+        assetIdRewrite.set(id, fresh);
+        const clone = structuredClone(src) as AssetRef;
+        (clone as { id: string }).id = fresh;
+        newAssets.push(clone);
+      }
+      const rewriteAssetIds = (v: unknown): void => {
+        if (!v || typeof v !== "object") return;
+        if (Array.isArray(v)) { v.forEach(rewriteAssetIds); return; }
+        const rec = v as Record<string, unknown>;
+        if (typeof rec.assetId === "string" && assetIdRewrite.has(rec.assetId)) {
+          rec.assetId = assetIdRewrite.get(rec.assetId);
+        }
+        for (const k of Object.keys(rec)) rewriteAssetIds(rec[k]);
+      };
+
+      // Theme match (T19 semantics, page-scoped): the source theme's slot i
+      // color maps to this document's slot i color where the paint matches
+      // EXACTLY (alpha preserved); the font pair swaps the same way. A hand-
+      // picked color or font matches neither theme and never moves.
+      const destTheme = (doc as unknown as { theme?: Theme }).theme;
+      const srcTheme = (file as unknown as { theme?: Theme }).theme;
+      const wantMatch = opts?.matchTheme !== false && !!destTheme && !!srcTheme && destTheme.id !== srcTheme.id;
+      const rgbKey = (c: Color) => toHex({ srgb: { ...c.srgb, a: 1 } });
+      const colorMap = new Map<string, Color>();
+      const fontMap = new Map<string, string>();
+      if (wantMatch && srcTheme && destTheme) {
+        const slots = Math.min(srcTheme.colors.length, destTheme.colors.length);
+        for (let i = 0; i < slots; i++) {
+          const from = srcTheme.colors[i]?.color;
+          const to = destTheme.colors[i]?.color;
+          if (!from || !to) continue;
+          const key = rgbKey(from);
+          if (key !== rgbKey(to) && !colorMap.has(key)) colorMap.set(key, to);
+        }
+        if (srcTheme.fontHeading && destTheme.fontHeading && srcTheme.fontHeading !== destTheme.fontHeading)
+          fontMap.set(srcTheme.fontHeading.toLowerCase(), destTheme.fontHeading);
+        if (srcTheme.fontBody && destTheme.fontBody && srcTheme.fontBody !== destTheme.fontBody)
+          fontMap.set(srcTheme.fontBody.toLowerCase(), destTheme.fontBody);
+      }
+      const mapColor = (c: Color | undefined): Color | null => {
+        if (!c) return null;
+        const to = colorMap.get(rgbKey(c));
+        return to ? { srgb: { ...to.srgb, a: c.srgb.a } } : null;
+      };
+      const mapFill = (fill: unknown): void => {
+        const f = fill as { type?: string; color?: Color; stops?: { color: Color }[] } | undefined;
+        if (!f) return;
+        if (f.type === "solid" && f.color) {
+          const to = mapColor(f.color);
+          if (to) f.color = to;
+        } else if (Array.isArray(f.stops)) {
+          for (const stp of f.stops) {
+            const to = mapColor(stp.color);
+            if (to) stp.color = to;
+          }
+        }
+      };
+      const restyleNode = (n: Node): void => {
+        const rec = n as unknown as {
+          fills?: unknown[];
+          stroke?: { fill?: unknown; color?: Color };
+          content?: { runs: { style: { fill?: unknown; color?: Color; fontFamily?: string } }[] }[];
+          children?: Node[];
+        };
+        for (const f of rec.fills ?? []) mapFill(f);
+        if (rec.stroke) {
+          mapFill(rec.stroke.fill);
+          if (rec.stroke.color) {
+            const to = mapColor(rec.stroke.color);
+            if (to) rec.stroke.color = to;
+          }
+        }
+        let fontChanged = false;
+        for (const para of rec.content ?? [])
+          for (const run of para.runs) {
+            mapFill(run.style.fill);
+            if (run.style.color) {
+              const to = mapColor(run.style.color);
+              if (to) run.style.color = to;
+            }
+            const target = run.style.fontFamily ? fontMap.get(run.style.fontFamily.toLowerCase()) : undefined;
+            if (target && run.style.fontFamily !== target) {
+              run.style.fontFamily = target;
+              fontChanged = true;
+            }
+          }
+        if (fontChanged) refitTextHeight(n);
+        for (const kid of rec.children ?? []) restyleNode(kid);
+      };
+
+      const cur = doc.pages[Math.min(get().activePage, Math.max(0, doc.pages.length - 1))];
+      const target = cur && cur.width > 0 && cur.height > 0 ? { width: cur.width, height: cur.height } : null;
+      const made = srcPages.map((p, i) => {
+        let page = structuredClone(p) as Page & { name?: string; readingOrder?: string[]; layoutId?: string; sectionId?: string };
+        page.id = `page_${crypto.randomUUID().slice(0, 12)}`;
+        page.name = page.name || `Slide ${i + 1}`;
+        // Source-document references that cannot resolve here are dropped: a
+        // dangling layout link would break the title sync and restyle role
+        // lookups, and a dangling section id belongs to the other deck.
+        delete page.layoutId;
+        delete page.sectionId;
+        const remapped = remapIds(structuredClone(p.children ?? []) as Node[], idGen);
+        page.children = remapped.nodes as never[];
+        if (Array.isArray(page.readingOrder)) {
+          const ro = page.readingOrder
+            .map((id) => remapped.idMap.get(id))
+            .filter((id): id is string => !!id);
+          if (ro.length) page.readingOrder = ro;
+          else delete page.readingOrder;
+        }
+        rewriteAssetIds(page.children);
+        if (wantMatch) {
+          mapFill((page as unknown as { background?: unknown }).background);
+          for (const n of page.children) restyleNode(n as Node);
+        }
+        if (
+          target &&
+          page.width > 0 &&
+          page.height > 0 &&
+          (Math.round(page.width) !== Math.round(target.width) || Math.round(page.height) !== Math.round(target.height))
+        ) {
+          page = resizePage(page, target) as typeof page;
+        }
+        return page;
+      });
+
+      // Custom fonts ride along (family-deduped), same as the template path.
+      const docFonts = (doc as unknown as { fonts: FontRef[] }).fonts;
+      const haveFamily = new Set(docFonts.map((f) => f.family.toLowerCase()));
+      const newFonts = structuredClone(
+        ((file.fonts ?? []) as FontRef[]).filter((f) => f?.family && !haveFamily.has(f.family.toLowerCase())),
+      );
+
+      const at = Math.min(get().activePage + 1, doc.pages.length);
+      const prevPage = get().activePage;
+      const prevSel = get().selection;
+      perform(
+        () => {
+          doc.assets.push(...(structuredClone(newAssets) as never[]));
+          docFonts.push(...structuredClone(newFonts));
+          doc.pages.splice(at, 0, ...(made.map((m) => structuredClone(m)) as never[]));
+          set({ activePage: at, selection: [] });
+        },
+        () => {
+          doc.pages.splice(at, made.length);
+          for (const a of newAssets) {
+            const i = doc.assets.findIndex((x) => x.id === a.id);
+            if (i >= 0) doc.assets.splice(i, 1);
+          }
+          for (const f of newFonts) {
+            const i = docFonts.findIndex((x) => x.id === f.id && x.family === f.family);
+            if (i >= 0) docFonts.splice(i, 1);
+          }
+          set({ activePage: Math.min(prevPage, doc.pages.length - 1), selection: prevSel });
+        },
+      );
+      return made.length;
     },
     importSvg: (svg) => {
       // Flatten group transforms first so positions/scales/rotations are correct.

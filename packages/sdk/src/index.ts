@@ -533,6 +533,9 @@ export interface ShareLinkView {
   expiresAt?: string | null;
   disabled: boolean;
   requireSignin: boolean;
+  /** Audience name for the link ("Investors", "All-hands"); labels per-link
+   *  analytics (C36). Empty when unnamed. */
+  label?: string;
   createdAt: string;
 }
 
@@ -783,6 +786,9 @@ export interface DesignInsights {
   views: { date: string; count: number }[];
   avgTimeMs: number;
   perPage: { pageId: string; engagementMs: number }[];
+  /** Per share link (C36): sessions attributed to the link they arrived
+   *  through. Absent/empty when no share-link views were recorded. */
+  links?: { linkId: string; label?: string; views: number; viewers: number; totalMs: number }[];
 }
 
 export interface UploadedAsset {
@@ -1363,10 +1369,10 @@ export class HyCanvasClient {
   }
   /** Create a share link at an access mode, optionally password-protected and/or
    *  expiring (FR-5, FR-6). */
-  createShareLink(designId: string, input: { mode: AccessMode; password?: string; expiresAt?: string; requireSignin?: boolean }): Promise<ShareLinkView> {
+  createShareLink(designId: string, input: { mode: AccessMode; password?: string; expiresAt?: string; requireSignin?: boolean; label?: string }): Promise<ShareLinkView> {
     return this.request("POST", `/v1/designs/${designId}/links`, input);
   }
-  updateShareLink(linkId: string, patch: { mode?: AccessMode; disabled?: boolean; expiresAt?: string | null; requireSignin?: boolean }): Promise<ShareLinkView> {
+  updateShareLink(linkId: string, patch: { mode?: AccessMode; disabled?: boolean; expiresAt?: string | null; requireSignin?: boolean; label?: string }): Promise<ShareLinkView> {
     return this.request("PATCH", `/v1/links/${linkId}`, patch);
   }
   /** Rotate a link's token: the old URL stops working (FR-6). */

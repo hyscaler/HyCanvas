@@ -136,17 +136,17 @@ func (s *Service) findGrantForPrincipal(ctx context.Context, designID string, ui
 func scanLink(row pgx.Row) (LinkRow, error) {
 	var l LinkRow
 	var mode string
-	err := row.Scan(&l.ID, &l.DesignID, &l.Token, &mode, &l.PasswordHash, &l.ExpiresAt, &l.Disabled, &l.RequireSignin, &l.CreatedByID, &l.CreatedAt)
+	err := row.Scan(&l.ID, &l.DesignID, &l.Token, &mode, &l.PasswordHash, &l.ExpiresAt, &l.Disabled, &l.RequireSignin, &l.Label, &l.CreatedByID, &l.CreatedAt)
 	l.Mode = authz.AccessMode(mode)
 	return l, err
 }
 
-const linkCols = `id, "design_id", token, mode, "password_hash", "expires_at", disabled, "require_signin", "created_by_id", "created_at"`
+const linkCols = `id, "design_id", token, mode, "password_hash", "expires_at", disabled, "require_signin", label, "created_by_id", "created_at"`
 
 func (s *Service) createLink(ctx context.Context, in LinkRow) (LinkRow, error) {
-	const q = `INSERT INTO "share_links" (id,"design_id",token,mode,"password_hash","expires_at","require_signin","created_by_id")
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING ` + linkCols
-	return scanLink(s.db.QueryRow(ctx, q, uuid.NewString(), in.DesignID, in.Token, string(in.Mode), in.PasswordHash, in.ExpiresAt, in.RequireSignin, in.CreatedByID))
+	const q = `INSERT INTO "share_links" (id,"design_id",token,mode,"password_hash","expires_at","require_signin",label,"created_by_id")
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING ` + linkCols
+	return scanLink(s.db.QueryRow(ctx, q, uuid.NewString(), in.DesignID, in.Token, string(in.Mode), in.PasswordHash, in.ExpiresAt, in.RequireSignin, in.Label, in.CreatedByID))
 }
 
 func (s *Service) getLink(ctx context.Context, id string) (LinkRow, error) {
@@ -189,6 +189,8 @@ type linkPatch struct {
 	expiresSet    bool
 	token         *string
 	requireSignin *bool
+	label         *string
+	labelSet      bool
 }
 
 func (s *Service) updateLink(ctx context.Context, id string, p linkPatch) (LinkRow, error) {
@@ -202,9 +204,10 @@ func (s *Service) updateLink(ctx context.Context, id string, p linkPatch) (LinkR
 		    disabled = COALESCE($3, disabled),
 		    "expires_at" = CASE WHEN $5 THEN $4 ELSE "expires_at" END,
 		    token = COALESCE($6, token),
-		    "require_signin" = COALESCE($7, "require_signin")
+		    "require_signin" = COALESCE($7, "require_signin"),
+		    label = CASE WHEN $9 THEN $8 ELSE label END
 		WHERE id = $1 RETURNING ` + linkCols
-	l, err := scanLink(s.db.QueryRow(ctx, q, id, modeStr, p.disabled, p.expiresAt, p.expiresSet, p.token, p.requireSignin))
+	l, err := scanLink(s.db.QueryRow(ctx, q, id, modeStr, p.disabled, p.expiresAt, p.expiresSet, p.token, p.requireSignin, p.label, p.labelSet))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return LinkRow{}, ErrNotFound
 	}

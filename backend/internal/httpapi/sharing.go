@@ -157,13 +157,14 @@ func createLinkHandler(sh *sharing.Service) http.HandlerFunc {
 			Password      string `json:"password"`
 			ExpiresAt     string `json:"expiresAt"`
 			RequireSignin bool   `json:"requireSignin"`
+			Label         string `json:"label"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		u := userFrom(r.Context())
-		l, err := sh.CreateLink(r.Context(), chi.URLParam(r, "id"), u.ID, sharing.CreateLinkInput{Mode: body.Mode, Password: body.Password, ExpiresAt: body.ExpiresAt, RequireSignin: body.RequireSignin})
+		l, err := sh.CreateLink(r.Context(), chi.URLParam(r, "id"), u.ID, sharing.CreateLinkInput{Mode: body.Mode, Password: body.Password, ExpiresAt: body.ExpiresAt, RequireSignin: body.RequireSignin, Label: body.Label})
 		if err != nil {
 			sharingProblem(w, r, err)
 			return
@@ -192,6 +193,11 @@ func updateLinkHandler(sh *sharing.Service) http.HandlerFunc {
 		}
 		if v, ok := raw["requireSignin"]; ok {
 			_ = json.Unmarshal(v, &in.RequireSignin)
+		}
+		if v, ok := raw["label"]; ok {
+			var s string
+			_ = json.Unmarshal(v, &s) // JSON null decodes to "" -> clears the label
+			in.Label = &s
 		}
 		u := userFrom(r.Context())
 		l, err := sh.UpdateLink(r.Context(), chi.URLParam(r, "lid"), u.ID, in)

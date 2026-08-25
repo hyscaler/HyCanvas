@@ -204,6 +204,10 @@ type DesignViewRow struct {
 	DurationMs int
 	PageID     *string
 	PerPage    map[string]int
+	// Per-link attribution (C36): the share link the session arrived through,
+	// and its current label (nil when unlabeled or the link was deleted).
+	LinkID    *string
+	LinkLabel *string
 }
 
 // recordViewBeat upserts a heartbeat keyed by (designId, sessionId): creates the
@@ -222,12 +226,13 @@ func (s *Service) recordViewBeat(ctx context.Context, in ViewBeatInput) error {
 
 	// On conflict, accumulate duration + per-page. jsonb_set with COALESCE adds
 	// deltaMs to the current page's accumulated ms (defaulting missing to 0).
-	const q = `INSERT INTO "design_views" (id,"design_id","viewer_id","anon_id","session_id","opened_at","last_seen_at","duration_ms","page_id","per_page")
-		VALUES ($1,$2,$3,$4,$5,now(),now(),$6,$7,$8)
+	const q = `INSERT INTO "design_views" (id,"design_id","viewer_id","anon_id","session_id","opened_at","last_seen_at","duration_ms","page_id","per_page","link_id")
+		VALUES ($1,$2,$3,$4,$5,now(),now(),$6,$7,$8,$9)
 		ON CONFLICT ("design_id","session_id") DO UPDATE SET
 			"last_seen_at" = now(),
 			"duration_ms" = "design_views"."duration_ms" + $6,
 			"page_id" = COALESCE($7, "design_views"."page_id"),
+			"link_id" = COALESCE("design_views"."link_id", $9),
 			"per_page" = CASE
 				WHEN $7 IS NULL OR $6 = 0 THEN "design_views"."per_page"
 				ELSE jsonb_set(
@@ -238,13 +243,16 @@ func (s *Service) recordViewBeat(ctx context.Context, in ViewBeatInput) error {
 			END`
 	_, err := s.db.Exec(ctx, q,
 		uuid.NewString(), in.DesignID, in.ViewerID, in.AnonID, in.SessionID,
-		in.DeltaMs, in.PageID, initRaw)
+		in.DeltaMs, in.PageID, initRaw, in.LinkID)
 	return err
 }
 
 func (s *Service) listViews(ctx context.Context, designID string) ([]DesignViewRow, error) {
-	const q = `SELECT id,"design_id","viewer_id","anon_id","session_id","opened_at","last_seen_at","duration_ms","page_id","per_page"
-		FROM "design_views" WHERE "design_id" = $1`
+	// LEFT JOIN pulls the link's current label for per-link attribution (C36);
+	// a session from a since-deleted link keeps its link_id with a NULL label.
+	const q = `SELECT v.id, v."design_id", v."viewer_id", v."anon_id", v."session_id", v."opened_at", v."last_seen_at", v."duration_ms", v."page_id", v."per_page", v."link_id", l.label
+		FROM "design_views" v LEFT JOIN "share_links" l ON l.id = v."link_id"
+		WHERE v."design_id" = $1`
 	rows, err := s.db.Query(ctx, q, designID)
 	if err != nil {
 		return nil, err
@@ -254,7 +262,7 @@ func (s *Service) listViews(ctx context.Context, designID string) ([]DesignViewR
 	for rows.Next() {
 		var v DesignViewRow
 		var raw []byte
-		if err := rows.Scan(&v.ID, &v.DesignID, &v.ViewerID, &v.AnonID, &v.SessionID, &v.OpenedAt, &v.LastSeenAt, &v.DurationMs, &v.PageID, &raw); err != nil {
+		if err := rows.Scan(&v.ID, &v.DesignID, &v.ViewerID, &v.AnonID, &v.SessionID, &v.OpenedAt, &v.LastSeenAt, &v.DurationMs, &v.PageID, &raw, &v.LinkID, &v.LinkLabel); err != nil {
 			return nil, err
 		}
 		if len(raw) > 0 {
@@ -265,7 +273,8 @@ func (s *Service) listViews(ctx context.Context, designID string) ([]DesignViewR
 	return out, rows.Err()
 }
 
-// ViewBeatInput carries a single heartbeat (FR-14).
+// ViewBeatInput carries a single heartbeat (FR-14). LinkID attributes the
+// session to the share link it arrived through (C36); nil for member views.
 type ViewBeatInput struct {
 	DesignID  string
 	ViewerID  *string
@@ -273,4 +282,5 @@ type ViewBeatInput struct {
 	SessionID string
 	PageID    *string
 	DeltaMs   int
+	LinkID    *string
 }

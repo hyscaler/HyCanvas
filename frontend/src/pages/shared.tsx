@@ -97,6 +97,13 @@ function tokenFromLocation(query: unknown): string {
   return m ? decodeURIComponent(m[1]) : "";
 }
 
+/** Embed mode (F28 C37): ?embed=1 renders the chrome-less iframe player. Read
+ *  straight from the location (like ?remote=1): the param is not a Next route
+ *  segment in the static export. */
+function isEmbedMode(): boolean {
+  return typeof window !== "undefined" && new URLSearchParams(window.location.search).get("embed") === "1";
+}
+
 export default function SharedLinkPage() {
   const router = useRouter();
   const authStatus = useAuth((s) => s.status);
@@ -121,8 +128,10 @@ export default function SharedLinkPage() {
         }
         // First resolve access. A signed-in visitor is routed to the editor so
         // they get the live (collaborative) surface; an anonymous visitor gets a
-        // read-only render of the snapshot.
-        if (authStatus === "authed") {
+        // read-only render of the snapshot. An EMBED (C37) always takes the
+        // read-only render: redirecting an iframe into the editor would trap
+        // the full app inside someone's blog post.
+        if (authStatus === "authed" && !isEmbedMode()) {
           const resolved = await oc.resolveShareLink(token, pwd);
           await router.replace(`/editor?id=${encodeURIComponent(resolved.designId)}`);
           return;
@@ -165,6 +174,20 @@ export default function SharedLinkPage() {
     [authStatus, router],
   );
 
+  // C37: an embedded player announces itself and its natural page size to the
+  // host page, so the embedding site can size the iframe to the deck's aspect
+  // without guessing. Nothing sensitive crosses the boundary (dimensions and a
+  // page count), so the target origin can stay open.
+  useEffect(() => {
+    if (state.kind !== "viewing" || !isEmbedMode()) return;
+    if (typeof window === "undefined" || window.parent === window) return;
+    const pg = state.file.pages[0];
+    window.parent.postMessage(
+      { type: "hycanvas:embed:ready", pageCount: state.file.pages.length, width: pg?.width ?? 0, height: pg?.height ?? 0 },
+      "*",
+    );
+  }, [state]);
+
   useEffect(() => {
     // Wait for both the route and the auth bootstrap before resolving, so a
     // signed-in visitor is routed to the editor rather than the anonymous path.
@@ -201,6 +224,22 @@ export default function SharedLinkPage() {
             <title>{designTitle} · HyCanvas</title>
           </Head>
           <RemoteControlScreen token={token} password={password || undefined} title={designTitle} />
+        </>
+      );
+    }
+    // C37: the embed player is the same read-only viewer with no chrome at
+    // all - the host page provides the frame. Link modes, passcodes, and
+    // expiry were already enforced by the resolve above.
+    if (isEmbedMode()) {
+      const embedToken = tokenFromLocation(router.query.token);
+      return (
+        <>
+          <Head>
+            <title>{designTitle}</title>
+          </Head>
+          <div className="flex h-screen flex-col bg-neutral-100">
+            <SharedViewer doc={state.file} token={embedToken || undefined} password={password || undefined} />
+          </div>
         </>
       );
     }

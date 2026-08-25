@@ -370,25 +370,33 @@ func (s *Service) RecordViewBeat(ctx context.Context, designID, userID string, i
 	return s.recordViewBeat(ctx, ViewBeatInput{DesignID: designID, ViewerID: &uid, SessionID: in.SessionID, PageID: in.PageID, DeltaMs: in.Ms})
 }
 
-// AnonViewBeat is the anonymous (share-link) heartbeat payload.
+// AnonViewBeat is the anonymous (share-link) heartbeat payload. LinkID is
+// stamped by the shared-beat path (server-resolved from the token, never
+// client-supplied) so insights can attribute engagement per link (C36).
 type AnonViewBeat struct {
 	AnonID    string
 	SessionID string
 	PageID    *string
 	Ms        int
+	LinkID    *string
 }
 
 func (s *Service) RecordAnonViewBeat(ctx context.Context, designID string, in AnonViewBeat) error {
 	anon := in.AnonID
-	return s.recordViewBeat(ctx, ViewBeatInput{DesignID: designID, AnonID: &anon, SessionID: in.SessionID, PageID: in.PageID, DeltaMs: in.Ms})
+	return s.recordViewBeat(ctx, ViewBeatInput{DesignID: designID, AnonID: &anon, SessionID: in.SessionID, PageID: in.PageID, DeltaMs: in.Ms, LinkID: in.LinkID})
 }
 
 // RecordSharedViewBeat validates a share-link token, then records an anonymous
-// heartbeat against the design it grants (FR-14, FR-15).
+// heartbeat against the design it grants (FR-14, FR-15). The resolved link id
+// rides along so the session is attributed to ITS link (C36).
 func (s *Service) RecordSharedViewBeat(ctx context.Context, token, password string, in AnonViewBeat) error {
 	resolved, err := s.access.ResolveLink(ctx, token, sharing.ResolveLinkOpts{Password: password})
 	if err != nil {
 		return err
+	}
+	if resolved.LinkID != "" {
+		lid := resolved.LinkID
+		in.LinkID = &lid
 	}
 	return s.RecordAnonViewBeat(ctx, resolved.DesignID, in)
 }

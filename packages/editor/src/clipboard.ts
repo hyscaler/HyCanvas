@@ -159,9 +159,10 @@ export function remapIds(
       n.id = fresh;
     });
   }
-  // Rewrite intra-fragment id references: connector endpoint attachments, and
-  // a photo grid's cell -> frame links (stale childIds would make a later
-  // grid re-layout treat every cell as missing and rebuild them empty).
+  // Rewrite intra-fragment id references: connector endpoint attachments, a
+  // photo grid's cell -> frame links (stale childIds would make a later grid
+  // re-layout treat every cell as missing and rebuild them empty), an
+  // animation's media trigger (v23), and an interaction's v24 target.
   for (const root of cloned) {
     visitTree(root, (n) => {
       if (n.type === "connector") {
@@ -179,6 +180,13 @@ export function remapIds(
           if (old && idMap.has(old)) c.childId = idMap.get(old);
         }
       }
+      const rec = n as unknown as AnyRec;
+      const trigger = (rec.animation as AnyRec | undefined)?.trigger as AnyRec | undefined;
+      const mediaId = trigger?.mediaNodeId as string | undefined;
+      if (mediaId && idMap.has(mediaId)) trigger!.mediaNodeId = idMap.get(mediaId);
+      const actionV2 = (rec.interaction as AnyRec | undefined)?.actionV2 as AnyRec | undefined;
+      const targetId = actionV2?.targetNodeId as string | undefined;
+      if (targetId && idMap.has(targetId)) actionV2!.targetNodeId = idMap.get(targetId);
     });
   }
   return { nodes: cloned, idMap };

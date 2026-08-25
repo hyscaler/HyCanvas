@@ -53,10 +53,10 @@ The rules from `28-presentations-leverage-tasks.md` apply unchanged. In brief:
 | C32 | 6 A11y+AI | Critique-and-improve loop with per-issue apply | done 2026-08-25 |
 | C33 | 6 A11y+AI | Citations from web research into slides | done 2026-08-25 |
 | C34 | 6 A11y+AI | Reference-image style transfer to a theme | done 2026-08-25 |
-| C35 | 7 Collab+Share | Per-slide status and assignees (board view) | todo |
-| C36 | 7 Collab+Share | Named share links + per-link analytics | todo |
-| C37 | 7 Collab+Share | Public embeddable deck player | todo |
-| C38 | 7 Collab+Share | Reuse slides from another deck (theme-matched) | todo |
+| C35 | 7 Collab+Share | Per-slide status and assignees (board view) | done 2026-08-26 |
+| C36 | 7 Collab+Share | Named share links + per-link analytics | done 2026-08-26 |
+| C37 | 7 Collab+Share | Public embeddable deck player | done 2026-08-26 |
+| C38 | 7 Collab+Share | Reuse slides from another deck (theme-matched) | done 2026-08-26 |
 
 Dependencies: C02 before C03/C04 (one schema bump, then UI); C17 before C18 and C20 (captions feed both); C06 before C07/C08/C09/C10; C12 before C11 (channel plumbing first); C36 before C37 (links carry the embed surface).
 
