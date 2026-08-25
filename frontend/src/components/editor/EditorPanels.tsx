@@ -1873,7 +1873,7 @@ type ResolvedPayload =
   | { kind: "diagram"; spec: DiagramSpec }
   | { kind: "clusters"; clusters: { title: string; ids: string[] }[] }
   | { kind: "summary"; text: string }
-  | { kind: "outline"; outline: DesignOutline; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroPlans: { pageIndex: number; prompt: string; subject: string; size: string }[]; workspaceId: string; designId: string | null; append: boolean; themeId?: string }
+  | { kind: "outline"; outline: DesignOutline; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroPlans: { pageIndex: number; prompt: string; subject: string; size: string }[]; workspaceId: string; designId: string | null; append: boolean; themeId?: string; themeRecord?: Theme }
   | { kind: "layoutDeck"; deckTitle: string; themeRecord: Theme; pages: { layoutId: string; name: string; note?: string; fill: LayoutFill; fillPrompt: string; verbatim?: boolean }[]; background: unknown; imageSize: string; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; styleClause: string; heroPlans: { pageIndex: number; prompt: string; subject: string }[]; generateAllowed: boolean; workspaceId: string; designId: string | null; append: boolean }
   | { kind: "splitSlide"; pageIndex: number; pageId: string; halves: { layoutId: string; name: string; fill: LayoutFill }[] }
   | { kind: "insertComparison"; layoutId: string; name: string; fill: LayoutFill; afterIndex: number; afterPageId: string }
@@ -2814,7 +2814,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
             ),
           }));
       }
-      return { payload: { kind: "outline", outline, size, brandPalette: deps.brandPalette, brandFonts: deps.brandFonts, heroPlans, workspaceId: deps.workspaceId, designId: deps.designId ?? null, append, themeId: deps.styleThemeId } };
+      return { payload: { kind: "outline", outline, size, brandPalette: deps.brandPalette, brandFonts: deps.brandFonts, heroPlans, workspaceId: deps.workspaceId, designId: deps.designId ?? null, append, themeId: deps.styleThemeId, themeRecord: deps.styleThemeRecord } };
     }
     default:
       return {};
@@ -3227,16 +3227,19 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
         return true;
       }
       if (ctx?.payload?.kind !== "outline") return false;
-      const { outline, size, brandPalette, brandFonts, heroPlans, workspaceId, designId, append, themeId } = ctx.payload;
+      const { outline, size, brandPalette, brandFonts, heroPlans, workspaceId, designId, append, themeId, themeRecord } = ctx.payload;
       const clean: DesignOutline = { ...outline, pages: outline.pages.map((p) => ({ ...p, points: p.points.map((s) => s.trim()).filter(Boolean) })) };
-      // F40 E12: a chosen catalog theme wins; else seed the default hue from
-      // the title so different briefs don't all fall back to the same first
-      // curated color (a brand palette overrides this).
+      // F40 E12/E14: a template's theme record wins, then a chosen catalog
+      // theme; else seed the default hue from the title so different briefs
+      // don't all fall back to the same first curated color (a brand palette
+      // overrides this).
       const chosenEntry = themeId ? themeCatalogEntry(themeId) : null;
       const seed = Array.from(clean.title).reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) | 0, 7);
-      const themes = chosenEntry
-        ? [deckThemeFromCatalog(chosenEntry, clean.title)]
-        : deckThemes({ brandPalette, kicker: clean.title, count: 1, fontHeading: brandFonts.heading, fontBody: brandFonts.body, seed });
+      const themes = themeRecord
+        ? [deckThemeFromRecord(themeRecord, clean.title)]
+        : chosenEntry
+          ? [deckThemeFromCatalog(chosenEntry, clean.title)]
+          : deckThemes({ brandPalette, kicker: clean.title, count: 1, fontHeading: brandFonts.heading, fontBody: brandFonts.body, seed });
       const deck = layoutDeck(clean, themes[0], size);
       const base = append ? st.doc.pages.length : 0;
       const ids = append ? st.appendDeckPages(deck, size) : st.buildDeckFromOutline(deck, size);
@@ -3245,7 +3248,7 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       // only - these pages already wear its colors; a remap from any outgoing
       // theme would misfire). Appending never overrides an existing theme.
       if (!append || !(st.doc as unknown as { theme?: unknown }).theme) {
-        st.setDeckTheme(chosenEntry ? themeRecordFromCatalog(chosenEntry) : themeRecordFromDeckTheme(themes[0], { name: clean.theme ? clean.theme.slice(0, 40) : undefined }), { restyle: false });
+        st.setDeckTheme(themeRecord ?? (chosenEntry ? themeRecordFromCatalog(chosenEntry) : themeRecordFromDeckTheme(themes[0], { name: clean.theme ? clean.theme.slice(0, 40) : undefined })), { restyle: false });
       }
       // T10 placeholder-first: the deck is fully laid out NOW; hero images for
       // the impact pages resolve in the background (reuse -> stock -> generate)
