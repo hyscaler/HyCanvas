@@ -93,12 +93,14 @@ export function reflowPage(layout: SlideLayout, slots: ReflowSlotInput[]): Reflo
       continue;
     }
     const baseLadder = reflowLadders[role];
-    // A hand-enlarged slot keeps the user's size as its own ceiling: the
-    // ladder below it still absorbs overflow, but reflow never shrinks a
-    // deliberate style choice while the content fits.
-    const ladder = slot.fontSize > baseLadder[0]
-      ? [slot.fontSize, ...baseLadder]
-      : baseLadder;
+    // A size the user chose deliberately (any size OFF the ladder, above the
+    // cap or between steps) becomes that slot's own ceiling: the ladder below
+    // it still absorbs overflow, but while the content fits reflow never
+    // "corrects" a deliberate style choice onto the ladder in either
+    // direction. On-ladder sizes step freely both ways.
+    const ladder = baseLadder.includes(slot.fontSize)
+      ? baseLadder
+      : [slot.fontSize, ...baseLadder.filter((s) => s < slot.fontSize)];
 
     let chosen: number | null = null;
     for (const size of ladder) {

@@ -237,7 +237,10 @@ function AccessBanner({ mode, suppressed }: { mode: AccessMode; suppressed?: boo
 function ReflowHintChip() {
   const hint = useEditor((s) => s.reflowHint);
   const activePage = useEditor((s) => s.activePage);
-  if (!hint || hint.pageIndex !== activePage) return null;
+  // Hints are keyed by page ID so page adds/deletes/reorders can never make
+  // the chip (or its one-click switch) land on a different slide.
+  const activePageId = useEditor((s) => (s.doc.pages[s.activePage] as { id?: string } | undefined)?.id);
+  if (!hint || hint.pageId !== activePageId) return null;
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center">
       <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-brand-200 bg-surface px-3 py-1.5 shadow-md">
@@ -246,7 +249,7 @@ function ReflowHintChip() {
         </span>
         <button
           onClick={() => {
-            const ok = useEditor.getState().switchPageLayout(hint.pageIndex, hint.toLayoutId);
+            const ok = useEditor.getState().switchPageLayout(activePage, hint.toLayoutId);
             if (!ok) useEditor.getState().dismissReflowHint();
           }}
           className="rounded-full bg-brand-600 px-2.5 py-0.5 text-xs font-medium text-white hover:bg-brand-700"

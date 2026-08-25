@@ -74,6 +74,14 @@ describe("live reflow on edit (E16)", () => {
     expect(contentBox().content[0].runs[0].style.fontSize).toBe(20);
   });
 
+  it("treats a hand-RESIZED box as link-broken too (width off the slot)", () => {
+    const st = useEditor.getState();
+    const box = contentBox();
+    (box as unknown as { size: { width: number } }).size.width += 40;
+    st.setContent(box.id, crowd(48));
+    expect(contentBox().content[0].runs[0].style.fontSize).toBe(20);
+  });
+
   it("leaves mixed run sizes alone (deliberate styling)", () => {
     const st = useEditor.getState();
     const mixed: Paragraphs = [
@@ -112,5 +120,57 @@ describe("variant switching (E17)", () => {
     expect(useEditor.getState().reflowHint).toBeTruthy();
     st.setContent(contentBox().id, [para("fits fine", 12)]);
     expect(useEditor.getState().reflowHint).toBeNull();
+  });
+
+  it("clears the hint on undo (the state it described is gone)", () => {
+    const st = useEditor.getState();
+    st.setContent(contentBox().id, crowd(120));
+    expect(useEditor.getState().reflowHint).toBeTruthy();
+    st.undo();
+    expect(useEditor.getState().reflowHint).toBeNull();
+  });
+
+  it("snaps a surviving same-id box onto the NEW layout's slot rect", () => {
+    const st = useEditor.getState();
+    st.setContent(contentBox().id, crowd(120));
+    const hint = useEditor.getState().reflowHint!;
+    st.switchPageLayout(0, hint.toLayoutId);
+    // Layouts share the "ph-title" slot id with different rects: the title
+    // box survives the switch and must sit on the NEW layout's rect (at the
+    // same proportional page scale materialization uses).
+    const doc = useEditor.getState().doc as unknown as {
+      pages: { width: number; height: number; children: (Node & { data?: { placeholderId?: string } })[] }[];
+      layouts: { id: string; placeholders: { id: string; rect: { x: number; y: number; width: number; height: number } }[] }[];
+    };
+    const to = doc.layouts.find((l) => l.id === hint.toLayoutId)!;
+    let extentW = 0;
+    let extentH = 0;
+    for (const p of to.placeholders) {
+      extentW = Math.max(extentW, p.rect.x + p.rect.width);
+      extentH = Math.max(extentH, p.rect.y + p.rect.height);
+    }
+    const page = doc.pages[0];
+    const sx = extentW > page.width ? page.width / extentW : 1;
+    const sy = extentH > page.height ? page.height / extentH : 1;
+    const slot = to.placeholders.find((p) => p.id === "ph-title")!.rect;
+    const titleBox = page.children.find((n) => n.data?.placeholderId === "ph-title")! as unknown as { transform: { x: number; y: number }; size: { width: number } };
+    expect(titleBox.transform.x).toBeCloseTo(slot.x * sx, 3);
+    expect(titleBox.transform.y).toBeCloseTo(slot.y * sy, 3);
+    expect(titleBox.size.width).toBeCloseTo(slot.width * sx, 3);
+  });
+
+  it("never turns scaffold text into content bullets on a switch", () => {
+    const st = useEditor.getState();
+    st.setContent(contentBox().id, crowd(120));
+    const hint = useEditor.getState().reflowHint!;
+    st.switchPageLayout(0, hint.toLayoutId);
+    const page = useEditor.getState().doc.pages[0] as unknown as { children: (Node & { data?: { placeholderId?: string }; content?: Paragraphs })[] };
+    const bullets = page.children
+      .filter((n) => n.data?.placeholderId && n.content?.length)
+      .flatMap((n) => n.content!.map((p) => p.runs.map((r) => r.text).join("")))
+      .filter((t) => t.startsWith("•"));
+    // The untouched title scaffold ("Title") and any body scaffold ("Text")
+    // must not be swept into the redistributed points.
+    expect(bullets.some((t) => /^•\s*(Title|Text)$/.test(t))).toBe(false);
   });
 });

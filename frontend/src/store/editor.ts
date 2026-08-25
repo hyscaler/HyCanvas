@@ -450,8 +450,10 @@ interface EditorState {
   setPageWorkStatus(index: number, status: string | null): void;
   /** Adaptive reflow (F40 E16/E17). reflowHint is transient UI state: the
    *  latest over/underflow variant proposal for a page, cleared on apply,
-   *  dismiss, or when an edit resolves the pressure. */
-  reflowHint: { pageIndex: number; toLayoutId: string; toName: string; direction: "denser" | "sparser" } | null;
+   *  dismiss, undo/redo, or when an edit resolves the pressure. Keyed by page
+   *  ID, not index: adding, deleting, or reordering pages must never make the
+   *  hint (or its one-click apply) land on a different slide. */
+  reflowHint: { pageId: string; toLayoutId: string; toName: string; direction: "denser" | "sparser" } | null;
   dismissReflowHint(): void;
   /** Per-page reflow opt-out (rides the open Page.data record; absent = on). */
   setPageAutoflow(index: number, on: boolean): void;
@@ -485,7 +487,7 @@ interface EditorState {
   /** Link a page to a layout (null unlinks) and materialize it: the layout's
    *  background applies and missing placeholders land as editable text boxes
    *  (tagged via data.placeholderId). One undo step. */
-  applyLayoutToPage(layoutId: string | null, pageIndex?: number, opts?: { pruneObsolete?: boolean }): boolean;
+  applyLayoutToPage(layoutId: string | null, pageIndex?: number, opts?: { pruneObsolete?: boolean; snapExisting?: boolean }): boolean;
   /** T12: write generated content into a page's materialized placeholder boxes
    *  (matched by data.placeholderId): plain text for title/body slots, one
    *  bulleted paragraph per item for content lists. One undo step; boxes not
@@ -2518,6 +2520,46 @@ export const useEditor = create<EditorState>((set, get) => {
         });
       }
       const prunedIds = new Set(pruned.map((x) => x.snapshot.id));
+      // Snap (E17 variant switch): a tagged box the page ALREADY has for a
+      // slot of the NEW layout is skipped by materialization above, so it
+      // keeps the geometry the OLD layout gave it - layouts reuse slot ids
+      // ("ph-title") with different rects. A variant switch snaps survivors
+      // onto the new layout's rects; the manual layout picker deliberately
+      // does not (T14: re-applying respects the user's arrangement).
+      type Snappable = { id: string; transform: { x: number; y: number }; size: { width: number; height: number }; box?: { width: number; height: number } };
+      const snaps: { id: string; to: { x: number; y: number; width: number; height: number }; from: { x: number; y: number; width: number; height: number } }[] = [];
+      if (opts?.snapExisting) {
+        for (const ph of layout.placeholders ?? []) {
+          if (!have.has(ph.id)) continue;
+          const n = (page.children as Node[]).find((c) => (c.data as { placeholderId?: string } | undefined)?.placeholderId === ph.id) as unknown as Snappable | undefined;
+          if (!n) continue;
+          snaps.push({
+            id: n.id,
+            to: { x: ph.rect.x * scaleX, y: ph.rect.y * scaleY, width: ph.rect.width * scaleX, height: ph.rect.height * scaleY },
+            from: { x: n.transform.x, y: n.transform.y, width: n.size.width, height: n.size.height },
+          });
+        }
+      }
+      const placeSnapped = (which: "to" | "from") => {
+        const lp = livePage();
+        if (!lp) return;
+        for (const s of snaps) {
+          const n = (lp.children as Node[]).find((c) => c.id === s.id) as unknown as Snappable | undefined;
+          if (!n) continue;
+          const r = s[which];
+          n.transform.x = r.x;
+          n.transform.y = r.y;
+          n.size.width = r.width;
+          n.size.height = r.height;
+          if (n.box) {
+            n.box.width = r.width;
+            n.box.height = r.height;
+          }
+          // A text box may never lie about containing its text (the render
+          // does not clip): re-clamp after the geometry change.
+          if ((n as unknown as Node).type === "text") refitTextHeight(n as unknown as Node);
+        }
+      };
       perform(
         () => {
           const lp = livePage();
@@ -2529,6 +2571,7 @@ export const useEditor = create<EditorState>((set, get) => {
               if (prunedIds.has((lp.children[i] as Node).id)) lp.children.splice(i, 1);
             }
           }
+          placeSnapped("to");
           lp.children.push(...(structuredClone(made) as never[]));
         },
         () => {
@@ -2540,6 +2583,7 @@ export const useEditor = create<EditorState>((set, get) => {
             const i = lp.children.findIndex((c) => c.id === n.id);
             if (i >= 0) lp.children.splice(i, 1);
           }
+          placeSnapped("from");
           for (const x of pruned) {
             lp.children.splice(Math.min(x.index, lp.children.length), 0, structuredClone(x.snapshot) as never);
           }
@@ -4332,25 +4376,38 @@ export const useEditor = create<EditorState>((set, get) => {
       if (!page || !to) return false;
       // Capture the page's placeholder text BY ROLE before the switch: slot
       // ids differ between layouts, so applyLayoutToPage's prune would
-      // otherwise drop the content with the old boxes.
+      // otherwise drop the content with the old boxes. Only text-carrying
+      // roles feed the redistribution - a footer travels to the new layout's
+      // footer slot (never becomes a bullet), other roles (picture, chart,
+      // media) hold scaffold text that must not either. Untouched scaffold
+      // strings are skipped: the new layout materializes its own.
       const fromLayout = doc.layouts?.find((l) => l.id === (doc.pages[pageIndex] as unknown as { layoutId?: string }).layoutId);
       const roleById = new Map((fromLayout?.placeholders ?? []).map((ph) => [ph.id, ph.role] as const));
+      const scaffold = new Set([tr("app.title"), tr("app.text")]);
       let title = "";
+      let footer = "";
       const points: string[] = [];
       type Textish = { type: string; data?: { placeholderId?: string }; content?: { runs: { text: string }[] }[] };
       for (const n of page.children as unknown as Textish[]) {
         const phId = n.data?.placeholderId;
         if (!phId || n.type !== "text" || !n.content?.length) continue;
         const role = roleById.get(phId);
-        const lines = n.content.map((par) => par.runs.map((r) => r.text).join("").replace(/^•\s*/, "").trim()).filter(Boolean);
-        if (role === "title" && !title) title = lines.join(" ");
-        else points.push(...lines);
+        const lines = n.content
+          .map((par) => par.runs.map((r) => r.text).join("").replace(/^•\s*/, "").trim())
+          .filter((l) => l && !scaffold.has(l));
+        if (role === "title") { if (!title) title = lines.join(" "); }
+        else if (role === "footer") { if (!footer) footer = lines.join(" "); }
+        else if (role === "body" || role === "content") points.push(...lines);
       }
       let ok = false;
       get().runAsTurn(() => {
-        ok = get().applyLayoutToPage(toLayoutId, pageIndex, { pruneObsolete: true });
+        ok = get().applyLayoutToPage(toLayoutId, pageIndex, { pruneObsolete: true, snapExisting: true });
         if (!ok) return;
         const fill = fallbackLayoutFill(to as never, { id: "reflow", title, points, visualRole: "content" });
+        const footerSlot = (to.placeholders as { id: string; role: string }[]).find((p) => p.role === "footer");
+        if (footer && footerSlot) fill.texts[footerSlot.id] = footer;
+        // An empty capture must not blank the new layout's scaffold text.
+        for (const k of Object.keys(fill.texts)) if (!fill.texts[k].trim()) delete fill.texts[k];
         get().fillPlaceholderContent(pageIndex, { texts: fill.texts, lists: fill.lists });
       });
       set({ reflowHint: null });
@@ -6800,13 +6857,17 @@ export const useEditor = create<EditorState>((set, get) => {
         if (!phId) return null;
         const docx = get().doc as unknown as { pages: Page[]; layouts?: { id: string; name: string; placeholders: { id: string; role: string; rect: { x: number; y: number; width: number; height: number } }[] }[] };
         const pageIdx = docx.pages.findIndex((pp) => pp.children.some((n) => (n as Node).id === id));
-        const pg = docx.pages[pageIdx] as unknown as { layoutId?: string; data?: Record<string, unknown> } | undefined;
+        const pg = docx.pages[pageIdx] as unknown as { id: string; layoutId?: string; data?: Record<string, unknown> } | undefined;
         if (!pg?.layoutId || pg.data?.autoflow === false) return null;
         const layout = docx.layouts?.find((l) => l.id === pg.layoutId);
         const ph = layout?.placeholders.find((p) => p.id === phId);
         if (!layout || !ph) return null;
         const slot = slotRectOnPage(layout, ph, docx.pages[pageIdx] as unknown as { width: number; height: number });
+        // Hand-MOVING or hand-RESIZING the box off its slot breaks the link
+        // for that box (the C28 rule). Height is exempt: the refit rule grows
+        // it legitimately as content needs the room.
         if (Math.abs(rec.transform.x - slot.x) > 2 || Math.abs(rec.transform.y - slot.y) > 2) return null;
+        if (Math.abs(rec.size.width - slot.width) > 2) return null;
         const sizes = new Set(after.flatMap((par) => par.runs.map((r) => (r as { style: { fontSize: number } }).style.fontSize)));
         if (sizes.size !== 1) return null;
         const res = reflowPage(layout as never, [{
@@ -6816,7 +6877,7 @@ export const useEditor = create<EditorState>((set, get) => {
           fontSize: [...sizes][0],
           paragraphs: after.map((par) => par.runs.map((r) => (r as { text: string }).text).join("")),
         }]);
-        return { res, phId, pageIdx, layoutId: pg.layoutId };
+        return { res, phId, pageId: pg.id, layoutId: pg.layoutId };
       })();
       if (reflow?.res.changed) {
         const size = reflow.res.adjustments[0].fontSize;
@@ -6850,8 +6911,8 @@ export const useEditor = create<EditorState>((set, get) => {
         if (v === "overfull" || v === "underfull") {
           const layouts = (get().doc as unknown as { layouts?: { id: string; name: string; placeholders: unknown[] }[] }).layouts ?? [];
           const cand = variantCandidate(layouts as never, reflow.layoutId, v === "overfull" ? "denser" : "sparser");
-          set({ reflowHint: cand ? { pageIndex: reflow.pageIdx, toLayoutId: cand.id, toName: cand.name, direction: v === "overfull" ? "denser" : "sparser" } : null });
-        } else if (get().reflowHint?.pageIndex === reflow.pageIdx) {
+          set({ reflowHint: cand ? { pageId: reflow.pageId, toLayoutId: cand.id, toName: cand.name, direction: v === "overfull" ? "denser" : "sparser" } : null });
+        } else if (get().reflowHint?.pageId === reflow.pageId) {
           set({ reflowHint: null });
         }
       }
@@ -7979,7 +8040,9 @@ export const useEditor = create<EditorState>((set, get) => {
       // undo revert the undo. perform() keeps the stacks empty while bound.
       const cu = get().collabUndo;
       if (cu) {
-        if (cu.canUndo()) cu.undo();
+        // A reflow hint describes the state AFTER the last edit; reverting
+        // that edit invalidates it (same below and in redo).
+        if (cu.canUndo()) { cu.undo(); set({ reflowHint: null }); }
         return;
       }
       const { undoStack } = get();
@@ -7988,6 +8051,7 @@ export const useEditor = create<EditorState>((set, get) => {
       entry.undo();
       set((s) => ({
         rev: s.rev + 1,
+        reflowHint: null,
         undoStack: s.undoStack.slice(0, -1),
         redoStack: [...s.redoStack, entry],
       }));
@@ -7995,7 +8059,7 @@ export const useEditor = create<EditorState>((set, get) => {
     redo: () => {
       const cu = get().collabUndo;
       if (cu) {
-        if (cu.canRedo()) cu.redo();
+        if (cu.canRedo()) { cu.redo(); set({ reflowHint: null }); }
         return;
       }
       const { redoStack } = get();
@@ -8004,6 +8068,7 @@ export const useEditor = create<EditorState>((set, get) => {
       entry.redo();
       set((s) => ({
         rev: s.rev + 1,
+        reflowHint: null,
         redoStack: s.redoStack.slice(0, -1),
         undoStack: [...s.undoStack, entry],
       }));

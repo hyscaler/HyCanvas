@@ -61,6 +61,19 @@ describe("reflowPage (F40 E15)", () => {
     expect(empty.adjustments).toHaveLength(0);
   });
 
+  it("keeps a deliberate OFF-ladder size while it fits, steps below it when it does not", () => {
+    // 19 sits between ladder steps: a user's explicit choice. Fitting content
+    // must not be "corrected" up to 20.
+    const fitting = reflowPage(layout, [slot("ph-content", 19, ["one short point"])]);
+    expect(fitting.adjustments).toHaveLength(0);
+    const many = Array.from({ length: 40 }, () => "A long wrapped line of body copy that keeps going for quite a while in the box");
+    const crowded = reflowPage(layout, [slot("ph-content", 19, many, { width: 700, height: 300 })]);
+    const adj = crowded.adjustments.find((a) => a.nodeId === "n-ph-content");
+    expect(adj).toBeTruthy();
+    expect(adj!.fontSize).toBeLessThan(19);
+    expect(reflowLadders.content).toContain(adj!.fontSize);
+  });
+
   it("ignores roles without a ladder", () => {
     const withPic: SlideLayout = {
       ...layout,
