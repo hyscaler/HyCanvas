@@ -57,7 +57,7 @@ Deferred:
 - Non-linear / Prezi-style continuous-canvas zoom presenting (architectural; transitions are pairwise full-frame composites today). Hyperlink-only kiosk navigation covers the interactive/branching need first; continuous-canvas zoom is a spike.
 - Publish-as-standalone-website / custom domain (Gamma microsite), pending the website feature; the web player ships first.
 - Template-library breadth as a content moat: the catalog (vs Canva's thousands) is an ongoing content investment tracked with `@hc/templates`, not a code milestone here.
-- Add-ons / automation API for programmatic deck generation, pending an integrations layer.
+- Add-ons / automation API for programmatic deck generation: now planned as F40 Phase 1-2 (`40-ai-platform-tasks.md`, generation API + MCP server).
 
 ## 3. User Stories
 
