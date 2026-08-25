@@ -8,6 +8,8 @@ package audience
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -416,10 +418,13 @@ func (s *Service) React(designID, emoji string) error {
 }
 
 // Remote fans a phone-remote control action to the room, tagged with the
-// pairing code (F28 completion C21). Like reactions it is ephemeral and never
-// stored; the PRESENTER verifies the code locally and ignores mismatches, so
-// the server-side exposure is exactly a reaction's: a rate-limited,
-// share-scoped broadcast. Actions are allowlisted.
+// SHA-256 of the pairing code (F28 completion C21). The raw code never enters
+// the broadcast: audience frames fan out to every room member (share-link
+// viewers included, for slide-follow), so a raw code would leak to anyone
+// listening and let them drive the deck. A hash lets the presenter verify
+// while a listener cannot recover the code to replay through this endpoint.
+// Like reactions the event is ephemeral and never stored; actions are
+// allowlisted and the write budget rate-limits the caller.
 func (s *Service) Remote(designID, code, action string) error {
 	allowed := map[string]bool{"next": true, "prev": true, "blank": true}
 	if !allowed[action] {
@@ -428,7 +433,8 @@ func (s *Service) Remote(designID, code, action string) error {
 	if len(code) == 0 || len(code) > 12 {
 		return fmt.Errorf("%w: bad pairing code", ErrInvalid)
 	}
-	s.emit(designID, map[string]any{"t": "audience", "kind": "remote", "action": action, "code": code})
+	sum := sha256.Sum256([]byte(code))
+	s.emit(designID, map[string]any{"t": "audience", "kind": "remote", "action": action, "code": hex.EncodeToString(sum[:])})
 	return nil
 }
 

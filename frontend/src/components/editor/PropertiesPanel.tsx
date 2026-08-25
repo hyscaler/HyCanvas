@@ -2415,7 +2415,12 @@ function InteractionSection({ node, doc }: { node: Node; doc: DesignFile }) {
   // stale one would shadow the new choice.
   const setAction = (next: InteractionAction) => {
     if (next.kind === "none") { st.setInteraction(id, undefined); return; }
-    st.setInteraction(id, { ...interaction, trigger: interaction?.trigger ?? "click", action: next, actionV2: undefined } as Interaction);
+    // Rebuild WITHOUT the actionV2 key (an explicit undefined-valued own key
+    // would flow into the CRDT via Object.keys); unknown keys still ride the
+    // spread first.
+    const rebuilt = { ...interaction, trigger: interaction?.trigger ?? "click", action: next } as Interaction & { actionV2?: unknown };
+    delete rebuilt.actionV2;
+    st.setInteraction(id, rebuilt);
   };
   // v24 actions (C16): stored on actionV2 with a benign legacy action, so an
   // older client validates the file and simply does nothing on click.

@@ -670,15 +670,23 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
   // without the code can do nothing but burn their own write budget).
   const [remoteCode, setRemoteCode] = useState<string | null>(null);
   const [remoteUrl, setRemoteUrl] = useState<string | null>(null);
+  const remoteHashRef = useRef<string | null>(null); // sha256(code): the relay carries the HASH, never the raw code
   const remoteHandlersRef = useRef({ next: () => {}, prev: () => {}, blank: () => {} });
   const toggleRemote = useCallback(async () => {
     if (remoteCode) {
       setRemoteCode(null);
       setRemoteUrl(null);
+      remoteHashRef.current = null;
       return;
     }
     const code = Array.from({ length: 6 }, () => "ACDEFHJKLMNPRTUVWXY34679"[Math.floor(Math.random() * 24)]).join("");
     setRemoteCode(code);
+    try {
+      const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(code));
+      remoteHashRef.current = Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+    } catch {
+      remoteHashRef.current = null; // no subtle crypto (non-secure context): remote stays paired-off
+    }
     if (designId) {
       // The remote page is the share link with ?remote=1; pick the first
       // enabled link. No link yet = show the code with a hint instead.
@@ -694,7 +702,7 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     if (!remoteCode) return;
     return onAudienceEvent((e) => {
-      if (e.kind !== "remote" || e.code !== remoteCode || !e.action) return;
+      if (e.kind !== "remote" || !e.action || !remoteHashRef.current || e.code !== remoteHashRef.current) return;
       const h = remoteHandlersRef.current;
       if (e.action === "next") h.next();
       else if (e.action === "prev") h.prev();
@@ -709,6 +717,7 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
   // frees the seat for the next presenter to claim.
   const facilitator = usePresence((s) => s.facilitator);
   const selfClient = usePresence((s) => s.self);
+  const peerCount = usePresence((s) => Object.keys(s.peers).length);
   const controlledElsewhere = !!facilitator && facilitator.clientId !== selfClient?.clientId;
   const iHoldControl = !!facilitator && facilitator.clientId === selfClient?.clientId;
   const followNavRef = useRef<(i: number) => void>(() => {});
@@ -1991,7 +2000,7 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
         {designId && (
           <ToolButton active={!!remoteCode} onClick={() => void toggleRemote()} title={remoteCode ? tr("editor.phone_remote_on") : tr("editor.phone_remote_pair_a_phone")}><Smartphone size={16} /></ToolButton>
         )}
-        {(facilitator || (selfClient?.role === "editor" && Object.keys(usePresence.getState().peers).length > 0)) && (
+        {(facilitator || (selfClient?.role === "editor" && peerCount > 0)) && (
           <ToolButton
             active={iHoldControl}
             onClick={() => {

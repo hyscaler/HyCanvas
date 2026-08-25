@@ -84,9 +84,11 @@ export class SpeechSession {
       // The browser ends sessions after silence; keep going while attached.
       if (!this.stopped && this.listeners.size > 0) this.ensure();
     };
-    rec.onerror = () => {
-      /* onend follows and restarts; a denied mic keeps failing quietly and
-         the caller's UI explains the unsupported/denied state */
+    rec.onerror = (e) => {
+      // A permission denial would otherwise loop: onend fires, ensure()
+      // restarts, the engine denies again, forever. Stop for good on the
+      // not-allowed family; transient errors (no-speech, network) restart.
+      if (e?.error === "not-allowed" || e?.error === "service-not-allowed") this.stopped = true;
     };
     this.rec = rec;
     this.stopped = false;
