@@ -131,7 +131,7 @@ export interface OutlinePageLike {
 export function serializeOutlineMarkdown(title: string, pages: OutlinePageLike[]): string {
   const out: string[] = [`# ${title.trim() || "Presentation"}`];
   pages.forEach((page, i) => {
-    if (page.children.every((n) => n.hidden) && page.children.length === 0) return;
+    if (page.children.length === 0) return; // an empty page adds nothing to an outline
     const texts = page.children.filter((n) => n.type === "text" && !n.hidden && n.content?.length);
     const lineOf = (n: OutlinePageLike["children"][number]) =>
       (n.content ?? [])

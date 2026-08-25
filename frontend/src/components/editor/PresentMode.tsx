@@ -1127,6 +1127,11 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
     });
     return () => cancelIdle(handle);
   }, [doc, idx, rev, pages]);
+  // Leaving present mode releases the cached clone: without this, one full
+  // document clone stays pinned in memory until the doc object is replaced.
+  useEffect(() => () => {
+    prefetchedSlides.delete(doc);
+  }, [doc]);
 
   // A scene over the RESTING current slide for pointer hit-testing (rebuilt with
   // the slide). createScene reads the (unanimated) clone's transforms.

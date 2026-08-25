@@ -46,7 +46,11 @@ function toBase64(bytes: Uint8Array): string {
 }
 
 /** Concatenated visible text of a text:p paragraph (spans, nested, tabs/breaks
- *  as separators). */
+ *  as separators). LIMITATION: the compact XML parser concatenates an
+ *  element's direct text fragments, so a paragraph that INTERLEAVES plain
+ *  text around styled spans ("A <span>B</span> C") comes out with the plain
+ *  text first ("A C B"); the common shapes - all-plain or all-span
+ *  paragraphs, or a leading plain run - keep their order. */
 function paragraphText(p: XmlElement): string {
   let out = "";
   const walk = (el: XmlElement): void => {
@@ -83,7 +87,7 @@ function collectStyles(content: XmlElement): OdpStyles {
     const fill = pageProps?.attrs["draw:fill-color"];
     if (fill && /^#[0-9a-fA-F]{6}$/.test(fill)) pageFill.set(name, fill.toLowerCase());
   }
-  return fontSizePx.size || pageFill.size ? { fontSizePx, pageFill } : { fontSizePx, pageFill };
+  return { fontSizePx, pageFill };
 }
 
 function hexColor(hex: string): { srgb: { r: number; g: number; b: number; a: number } } {
