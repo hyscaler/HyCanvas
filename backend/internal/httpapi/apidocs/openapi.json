@@ -91,7 +91,7 @@
     "/jobs/{id}": {
       "get": {
         "summary": "Poll a job",
-        "description": "Any valid key can poll its own user's jobs. A completed generation job's result carries designId and editorUrl.",
+        "description": "Any valid key can poll jobs the API itself started (generation, document export). A completed generation job's result carries designId and editorUrl.",
         "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
         "responses": {
           "200": { "description": "The job.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Job" } } } },

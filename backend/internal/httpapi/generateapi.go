@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/go-chi/chi/v5"
 
@@ -43,6 +44,19 @@ const (
 )
 
 var generateHexRE = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
+
+// cutUTF8 truncates to at most max BYTES without ever splitting a multibyte
+// rune (a byte slice mid-rune would hand the model invalid UTF-8).
+func cutUTF8(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	cut := max
+	for cut > 0 && !utf8.RuneStart(s[cut]) {
+		cut--
+	}
+	return s[:cut]
+}
 
 // generateSizes maps a design type to its natural page size (the same sizes
 // the editor's Magic Switch uses).
@@ -101,9 +115,7 @@ func generatePresentationHandler(svc *aistudio.Service, acct *accounts.Service, 
 			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "missing prompt", "missing_prompt")
 			return
 		}
-		if len(prompt) > generateMaxPrompt {
-			prompt = prompt[:generateMaxPrompt]
-		}
+		prompt = cutUTF8(prompt, generateMaxPrompt)
 		dt := strings.ToLower(strings.TrimSpace(body.DesignType))
 		if dt == "" {
 			dt = "deck"
@@ -139,9 +151,7 @@ func generatePresentationHandler(svc *aistudio.Service, acct *accounts.Service, 
 		// editor panel uses (packages/aistudio promptRules untrustedSourceRule).
 		brief := prompt
 		if lang := strings.TrimSpace(body.Language); lang != "" {
-			if len(lang) > 40 {
-				lang = lang[:40]
-			}
+			lang = cutUTF8(lang, 40)
 			brief += "\n\nWrite every text in " + lang + "."
 		}
 		if len(body.Sources) > generateMaxSources {
@@ -160,9 +170,7 @@ func generatePresentationHandler(svc *aistudio.Service, acct *accounts.Service, 
 				if text == "" {
 					continue
 				}
-				if len(text) > budget {
-					text = text[:budget]
-				}
+				text = cutUTF8(text, budget)
 				budget -= len(text)
 				sb.WriteString("\n--- SOURCE: " + name + " ---\n" + text + "\n")
 				if budget <= 0 {
@@ -235,9 +243,5 @@ func generatePresentationHandler(svc *aistudio.Service, acct *accounts.Service, 
 // internals: the aistudio service already returns coded, human-safe errors
 // for the common cases (no provider configured, quota, refusal).
 func userMessageForAI(err error) string {
-	msg := err.Error()
-	if len(msg) > 300 {
-		msg = msg[:300]
-	}
-	return msg
+	return cutUTF8(err.Error(), 300)
 }

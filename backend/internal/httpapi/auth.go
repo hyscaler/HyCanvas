@@ -468,18 +468,21 @@ func mfaProblem(w http.ResponseWriter, r *http.Request, err error) {
 func requireAuth(svc *accounts.Service) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// F40: an API key ("hyk_" prefix) authenticates as its minting
+			// user on the allowlisted API surface only (scope + tenancy +
+			// rate budget enforced inside). HEADER-ONLY on purpose: a key in
+			// a cookie would be an ambient credential a cross-site request
+			// could ride; read the Authorization header directly so a
+			// cookie-borne key never authenticates.
+			if h := r.Header.Get("Authorization"); strings.HasPrefix(h, "Bearer "+apikeys.Prefix) {
+				if r2 := authenticateAPIKey(w, r, strings.TrimPrefix(h, "Bearer ")); r2 != nil {
+					next.ServeHTTP(w, r2)
+				}
+				return
+			}
 			token := bearerOrCookie(r)
 			if token == "" {
 				problemWithCode(w, r, http.StatusUnauthorized, "Unauthorized", "missing access token", "missing_access_token")
-				return
-			}
-			// F40: an API key ("hyk_" prefix) authenticates as its minting
-			// user on the allowlisted API surface only (scope + tenancy +
-			// rate budget enforced inside).
-			if strings.HasPrefix(token, apikeys.Prefix) {
-				if r2 := authenticateAPIKey(w, r, token); r2 != nil {
-					next.ServeHTTP(w, r2)
-				}
 				return
 			}
 			uid, sid, err := svc.VerifyAccess(r.Context(), token)

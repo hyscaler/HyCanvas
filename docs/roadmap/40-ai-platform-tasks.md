@@ -67,7 +67,7 @@ The pitch: presenton ships a generation API and positions it as the differentiat
 
 ### E06: OpenAPI + docs page
 
-- A hand-maintained OpenAPI 3.1 document for the API-key surface (generate, jobs, exports, share links, templates/themes list), served from the binary (embedded, like the locales) at `/api/docs`, with copy-paste curl examples. README gains the "Generation API" section.
+- A hand-maintained OpenAPI 3.1 document for the API-key surface (generate, jobs, exports, share links; the templates/themes list endpoints join in Phase 3 when E12 wires them into generation), served from the binary (embedded, like the locales) at `/api/docs`, with copy-paste curl examples. README gains the "Generation API" section.
 
 ## Phase 2: MCP server
 

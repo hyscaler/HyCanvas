@@ -185,6 +185,22 @@ func TestAPIKeySurface_DB(t *testing.T) {
 	}
 	res.Body.Close()
 
+	// A key is HEADER-ONLY: the same key in the access cookie must never
+	// authenticate (a cookie-borne key would be an ambient CSRF credential).
+	{
+		req, _ := http.NewRequest("POST", srv.URL+"/api/v1/generate/presentation", bytes.NewReader([]byte(`{"prompt":"x"}`)))
+		req.AddCookie(&http.Cookie{Name: accessCookie, Value: minted.Key})
+		req.Header.Set("Content-Type", "application/json")
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("cookie-key request: %v", err)
+		}
+		if res.StatusCode != http.StatusUnauthorized {
+			t.Fatalf("cookie-borne key must not authenticate: want 401, got %d", res.StatusCode)
+		}
+		res.Body.Close()
+	}
+
 	// Revoked keys stop authenticating.
 	if err := keys.Revoke(ctx, minted.View.ID, ws.ID); err != nil {
 		t.Fatalf("revoke: %v", err)

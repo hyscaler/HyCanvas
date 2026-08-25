@@ -61,7 +61,7 @@ const apiDocsHTML = `<!doctype html>
 <tr><td><code>read</code></td><td>GET design record + open-format file</td></tr>
 <tr><td><code>export</code></td><td>PDF/PNG renders, document export, share-link creation</td></tr>
 </table>
-<p>Any valid key can poll <code>GET /api/v1/jobs/{id}</code>. Everything else is session-only. Errors are RFC 7807 problem+json with a stable <code>code</code>.</p>
+<p>Any valid key can poll <code>GET /api/v1/jobs/{id}</code> for jobs the API itself started (generation and document export). Everything else is session-only. Errors are RFC 7807 problem+json with a stable <code>code</code>.</p>
 
 <h2>Generate a deck</h2>
 <pre><code>curl -sS -X POST "$HYCANVAS/api/v1/generate/presentation" \
