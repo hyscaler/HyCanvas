@@ -91,6 +91,7 @@ import { dashboardPath, type DashboardView } from "./views";
 import { DesignThumb } from "./DesignThumb";
 import { BulkCreateModal } from "./BulkCreateModal";
 import { MembersPanel } from "./MembersPanel";
+import { ApiKeysPanel } from "./ApiKeysPanel";
 import { VerifyEmailBanner } from "@/components/auth/VerifyEmailBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { HeroArt, EmptyArt, RailArt } from "@/components/ui/CanvasBackdrop";
@@ -1024,6 +1025,11 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                 myUserId={user?.id ?? ""}
                 onExit={() => { gotoView("home"); void refreshWorkspaces(); }}
               />
+              {/* F40: API keys live on the workspace administration surface,
+                  admin-gated like the mint endpoint itself. */}
+              {activeWorkspaceId && (activeWs?.role === "owner" || activeWs?.role === "admin") && (
+                <ApiKeysPanel workspaceId={activeWorkspaceId} />
+              )}
             </section>
           )}
         </div>

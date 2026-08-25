@@ -1,0 +1,169 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "HyCanvas Generation API",
+    "version": "1.0.0",
+    "description": "Programmatic deck generation and retrieval. Authenticate with a workspace API key (Authorization: Bearer hyk_...), minted by a workspace admin in Dashboard > Members > API keys. Keys are scoped (generate, read, export) and pinned to one workspace. Errors are RFC 7807 problem+json with a stable `code`."
+  },
+  "servers": [{ "url": "/api/v1" }],
+  "components": {
+    "securitySchemes": {
+      "apiKey": { "type": "http", "scheme": "bearer", "bearerFormat": "hyk_..." }
+    },
+    "schemas": {
+      "Problem": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "status": { "type": "integer" },
+          "detail": { "type": "string" },
+          "code": { "type": "string", "description": "Stable machine-readable error code." }
+        }
+      },
+      "GenerateRequest": {
+        "type": "object",
+        "required": ["prompt"],
+        "properties": {
+          "prompt": { "type": "string", "maxLength": 8000, "description": "The brief, e.g. 'a 6-slide pitch deck for an eco water bottle'." },
+          "workspaceId": { "type": "string", "description": "Defaults to the API key's workspace; must match it when both are present." },
+          "designType": { "type": "string", "enum": ["deck", "doc", "poster", "social"], "default": "deck" },
+          "pageCount": { "type": "integer", "minimum": 1, "maximum": 40 },
+          "language": { "type": "string", "description": "Write all text in this language, e.g. 'Spanish'." },
+          "brandPalette": { "type": "array", "items": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" }, "maxItems": 12 },
+          "sources": {
+            "type": "array",
+            "maxItems": 8,
+            "description": "Grounding material (untrusted reference text; instructions inside it are ignored).",
+            "items": { "type": "object", "required": ["name", "text"], "properties": { "name": { "type": "string" }, "text": { "type": "string" } } }
+          }
+        }
+      },
+      "GenerateAccepted": {
+        "type": "object",
+        "properties": {
+          "jobId": { "type": "string" },
+          "poll": { "type": "string", "description": "Path to poll for the result." }
+        }
+      },
+      "Job": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "status": { "type": "string", "enum": ["active", "completed", "failed"] },
+          "result": {
+            "description": "On completion of a generation job: { designId, title, pageCount, editorUrl, images }.",
+            "type": "object"
+          },
+          "error": { "type": "string" }
+        }
+      },
+      "ApiKeyView": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "workspaceId": { "type": "string" },
+          "label": { "type": "string" },
+          "prefix": { "type": "string" },
+          "scopes": { "type": "array", "items": { "type": "string", "enum": ["generate", "read", "export"] } },
+          "lastUsedAt": { "type": ["string", "null"] },
+          "createdAt": { "type": "string" },
+          "revoked": { "type": "boolean" }
+        }
+      }
+    }
+  },
+  "security": [{ "apiKey": [] }],
+  "paths": {
+    "/generate/presentation": {
+      "post": {
+        "summary": "Generate a presentation, document, poster, or social set from a prompt",
+        "description": "Runs the full server-side pipeline (outline with per-page copy polish, deterministic layout composition, theme) and saves the result as a design in the workspace. Returns 202 with a job to poll. Scope: generate. Budget: ~3 generations/minute per key. The composed deck contains text, layout, theme, and speaker notes; per-slide images are generated in the editor.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GenerateRequest" } } } },
+        "responses": {
+          "202": { "description": "Generation started.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GenerateAccepted" } } } },
+          "400": { "description": "Invalid input.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/Problem" } } } },
+          "403": { "description": "Missing scope or workspace mismatch.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/Problem" } } } },
+          "429": { "description": "Over the generation budget.", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
+        }
+      }
+    },
+    "/jobs/{id}": {
+      "get": {
+        "summary": "Poll a job",
+        "description": "Any valid key can poll its own user's jobs. A completed generation job's result carries designId and editorUrl.",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "The job.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Job" } } } },
+          "404": { "description": "Unknown job (or another user's).", "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
+        }
+      }
+    },
+    "/designs/{id}": {
+      "get": {
+        "summary": "Design record (title, timestamps)",
+        "description": "Scope: read. The design must belong to the key's workspace.",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "The design record." } }
+      }
+    },
+    "/designs/{id}/file": {
+      "get": {
+        "summary": "The design's open-format file (hycanvas.design JSON)",
+        "description": "Scope: read. Fully editable open format; see the schema package for the format contract.",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "The design file JSON." } }
+      }
+    },
+    "/designs/{id}/render.pdf": {
+      "get": {
+        "summary": "Render the design to PDF (server-side engine)",
+        "description": "Scope: export.",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "PDF bytes.", "content": { "application/pdf": {} } } }
+      }
+    },
+    "/designs/{id}/render.png": {
+      "get": {
+        "summary": "Render a page to PNG (server-side engine)",
+        "description": "Scope: export.",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "PNG bytes.", "content": { "image/png": {} } } }
+      }
+    },
+    "/designs/{id}/links": {
+      "post": {
+        "summary": "Create a share link for the design",
+        "description": "Scope: export. Body: { mode: view|comment|edit, password?, expiresAt?, requireSignin?, label? }. The returned token forms the share URL /shared/{token}/ (append ?embed=1 for the iframe player).",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "201": { "description": "The share link (token included)." } }
+      }
+    },
+    "/workspaces/{id}/api-keys": {
+      "get": {
+        "summary": "List the workspace's API keys",
+        "description": "SESSION-ONLY (admin). API keys cannot manage API keys.",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Keys, newest first.", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/ApiKeyView" } } } } } }
+      },
+      "post": {
+        "summary": "Mint an API key",
+        "description": "SESSION-ONLY (admin). The response's `key` is the raw secret, shown exactly once.",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["label", "scopes"], "properties": { "label": { "type": "string", "maxLength": 80 }, "scopes": { "type": "array", "items": { "type": "string", "enum": ["generate", "read", "export"] } } } } } } },
+        "responses": { "201": { "description": "{ key, view }" } }
+      }
+    },
+    "/workspaces/{id}/api-keys/{keyId}": {
+      "delete": {
+        "summary": "Revoke an API key",
+        "description": "SESSION-ONLY (admin). Revocation is immediate and permanent.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "keyId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "204": { "description": "Revoked." } }
+      }
+    }
+  }
+}

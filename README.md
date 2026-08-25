@@ -35,6 +35,10 @@ The frontend and shared packages are an npm-workspaces monorepo (orchestrated wi
 - `docs/roadmap/` - forward-looking specs for work not yet built (realtime collaboration, AI media, accessibility/i18n/enterprise).
 - `CLAUDE.md` - working guidance for this repository.
 
+### Generation API
+
+Generate complete, editable presentations programmatically: a workspace admin mints a scoped API key (Dashboard > Members > API keys), then `POST /api/v1/generate/presentation` with a prompt (plus optional grounding sources, language, brand palette) returns a job whose result is a real design in the workspace, ready to open, render to PDF/PNG, or share by link. The full reference is served by every instance at `/api/docs` (OpenAPI at `/api/docs/openapi.json`), and `scripts/api-demo.sh` walks prompt to PDF to share URL with plain curl.
+
 ## Prerequisites
 
 - Node 24 (see `.nvmrc`) for the frontend and shared packages.

@@ -1,0 +1,15 @@
+{
+  "outline": {
+    "title": "Solar for Small Business",
+    "theme": "clean, optimistic, energy",
+    "pages": [
+      { "title": "Solar for Small Business", "points": ["Cut energy costs by up to 60%", "Federal incentives cover 30%"], "visualRole": "cover", "note": "Welcome everyone and set the stakes: energy is the second-largest overhead for most small shops." },
+      { "title": "The Cost Problem", "points": ["Commercial rates rose 24% in five years", "Peak-hour pricing punishes daytime businesses", "Diesel backup is loud, dirty, expensive"], "visualRole": "content" },
+      { "title": "Payback Timeline", "points": ["Year 0-1: installation and incentives", "Year 2-5: net savings begin", "Year 6+: pure margin"], "visualRole": "data", "note": "Pause on the year-two crossover point." },
+      { "title": "Start This Quarter", "points": ["Free site assessment", "Financing from $0 down"], "visualRole": "closing" }
+    ]
+  },
+  "width": 1920,
+  "height": 1080,
+  "brandPalette": ["#0e7a5f", "#f4b942"]
+}

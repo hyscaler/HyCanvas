@@ -21,12 +21,12 @@ The rules from `28-presentations-completion-tasks.md` apply unchanged. In brief:
 
 | Task | Phase | Title | Status |
 | --- | --- | --- | --- |
-| E01 | 1 Generation API | API keys: additive table, hashed storage, mint/revoke UI | todo |
-| E02 | 1 Generation API | Bearer API-key auth middleware + scopes + rate budget | todo |
-| E03 | 1 Generation API | Headless deck composition service (goja-embedded composer) | todo |
-| E04 | 1 Generation API | POST /v1/generate/presentation through the job registry | todo |
-| E05 | 1 Generation API | Export + share hookup for API-generated decks | todo |
-| E06 | 1 Generation API | OpenAPI document + served API docs page | todo |
+| E01 | 1 Generation API | API keys: additive table, hashed storage, mint/revoke UI | done 2026-08-27 |
+| E02 | 1 Generation API | Bearer API-key auth middleware + scopes + rate budget | done 2026-08-27 |
+| E03 | 1 Generation API | Headless deck composition service (goja-embedded composer) | done 2026-08-27 |
+| E04 | 1 Generation API | POST /v1/generate/presentation through the job registry | done 2026-08-27 |
+| E05 | 1 Generation API | Export + share hookup for API-generated decks | done 2026-08-27 |
+| E06 | 1 Generation API | OpenAPI document + served API docs page | done 2026-08-27 |
 | E07 | 2 MCP | MCP server (streamable HTTP) over the generation API | todo |
 | E08 | 2 MCP | MCP hardening: per-key scopes, audit log, docs | todo |
 | E09 | 3 Catalog | Slide layout library: ~5 to 15+ layouts with capacity hints | todo |
@@ -63,7 +63,7 @@ The pitch: presenton ships a generation API and positions it as the differentiat
 
 ### E05: Export + share hookup
 
-- Document and, where a gap exists, wire: API-created design -> existing export jobs (PPTX/PDF/PNG) via the API-key auth path, and share-link creation (named links land per-link analytics for API-generated decks for free). Acceptance: a curl script goes prompt -> deck -> PPTX bytes -> share URL with no browser session.
+- Document and, where a gap exists, wire: API-created design -> existing export surface (server-side PDF/PNG renders + document export) via the API-key auth path, and share-link creation (named links land per-link analytics for API-generated decks for free). Shipped honest scope: PPTX export runs CLIENT-side in the editor today, so the API's export formats are PDF and PNG (stated in the docs page); the acceptance script (`scripts/api-demo.sh`) goes prompt -> deck -> PDF bytes -> share URL with no browser session.
 
 ### E06: OpenAPI + docs page
 

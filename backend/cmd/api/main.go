@@ -26,6 +26,7 @@ import (
 	"hycanvas/backend/internal/accounts"
 	"hycanvas/backend/internal/ai"
 	"hycanvas/backend/internal/aistudio"
+	"hycanvas/backend/internal/apikeys"
 	"hycanvas/backend/internal/approvals"
 	"hycanvas/backend/internal/audience"
 	"hycanvas/backend/internal/brand"
@@ -371,6 +372,7 @@ func main() {
 			Logger:        logger,
 			Version:       version,
 			Accounts:      acct,
+			APIKeys:       apikeys.NewService(pool),
 			Persistence:   persist,
 			Home:          homeSvc,
 			Sharing:       sharingSvc,

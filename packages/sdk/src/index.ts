@@ -106,6 +106,20 @@ export interface WorkspaceMemberView {
   joinedAt?: string;
 }
 
+/** A workspace API key as the management UI sees it (F40): label, display
+ *  prefix, scopes, and usage; never the hash and never the raw secret. */
+export interface ApiKeyView {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  label: string;
+  prefix: string;
+  scopes: string[];
+  lastUsedAt?: string | null;
+  createdAt: string;
+  revoked: boolean;
+}
+
 /** A pending or accepted workspace invitation. `workspaceName` is populated for
  *  the invitee's own view (the in-app accept/decline surface). */
 export interface WorkspaceInvitation {
@@ -1215,6 +1229,25 @@ export class HyCanvasClient {
   }
   workspaceMembers(workspaceId: string): Promise<WorkspaceMemberView[]> {
     return this.request("GET", `/v1/workspaces/${workspaceId}/members`);
+  }
+  // --- API keys (F40) ----------------------------------------------
+  /** List the workspace's API keys (admin only; never includes secrets). */
+  apiKeys(workspaceId: string): Promise<ApiKeyView[]> {
+    return this.request("GET", `/v1/workspaces/${workspaceId}/api-keys`);
+  }
+  /** Mint an API key. `key` in the response is the raw secret, shown exactly
+   *  once; store it now or lose it. Scopes: "generate" | "read" | "export". */
+  createApiKey(workspaceId: string, input: { label: string; scopes: string[] }): Promise<{ key: string; view: ApiKeyView }> {
+    return this.request("POST", `/v1/workspaces/${workspaceId}/api-keys`, input);
+  }
+  /** Revoke an API key in place; its bearer token stops authenticating. */
+  revokeApiKey(workspaceId: string, keyId: string): Promise<void> {
+    return this.request("DELETE", `/v1/workspaces/${workspaceId}/api-keys/${keyId}`);
+  }
+  /** Kick off a headless prompt-to-deck generation (F40): returns a job to
+   *  poll via getJob. Works with a session or a generate-scoped API key. */
+  generatePresentation(input: { workspaceId: string; prompt: string; designType?: "deck" | "doc" | "poster" | "social"; pageCount?: number; language?: string; brandPalette?: string[]; sources?: { name: string; text: string }[] }): Promise<{ jobId: string; poll: string }> {
+    return this.request("POST", "/v1/generate/presentation", input);
   }
   invite(workspaceId: string, input: { email: string; role?: WorkspaceRole }): Promise<{ invitation: WorkspaceInvitation; token: string }> {
     return this.request("POST", `/v1/workspaces/${workspaceId}/invitations`, input);

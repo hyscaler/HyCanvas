@@ -17,6 +17,7 @@ export * from "./theme";
 export * from "./themeGen";
 export * from "./layoutExtract";
 export * from "./mdoutline";
+export * from "./compose";
 export * from "./deck";
 export * from "./prompts";
 export * from "./assistant";

@@ -14,6 +14,7 @@
     "i18n:coverage": "node scripts/i18n-coverage.mjs",
     "gen:theme:check": "node scripts/gen-theme.mjs --check",
     "gen:crdt-fold": "node scripts/build-crdt-fold.mjs",
+    "gen:composer": "node scripts/build-composer.mjs",
     "lint:theme": "node scripts/check-theme-tokens.mjs",
     "dev": "dotenv -e .env -- concurrently -n backend,frontend -c blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "dotenv -e .env -- sh -c 'cd backend && PUBLIC_DIR= PORT=8005 go run ./cmd/api'",

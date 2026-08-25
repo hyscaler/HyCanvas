@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"hycanvas/backend/internal/accounts"
+	"hycanvas/backend/internal/apikeys"
 	"hycanvas/backend/internal/captcha"
 	"hycanvas/backend/internal/platform/config"
 )
@@ -470,6 +471,15 @@ func requireAuth(svc *accounts.Service) func(http.Handler) http.Handler {
 			token := bearerOrCookie(r)
 			if token == "" {
 				problemWithCode(w, r, http.StatusUnauthorized, "Unauthorized", "missing access token", "missing_access_token")
+				return
+			}
+			// F40: an API key ("hyk_" prefix) authenticates as its minting
+			// user on the allowlisted API surface only (scope + tenancy +
+			// rate budget enforced inside).
+			if strings.HasPrefix(token, apikeys.Prefix) {
+				if r2 := authenticateAPIKey(w, r, token); r2 != nil {
+					next.ServeHTTP(w, r2)
+				}
 				return
 			}
 			uid, sid, err := svc.VerifyAccess(r.Context(), token)
