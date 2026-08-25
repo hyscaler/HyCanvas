@@ -116,6 +116,14 @@ func toolResult(payload any, isErr bool) map[string]any {
 }
 
 func (d mcpDeps) handle(w http.ResponseWriter, r *http.Request) {
+	// On the spec's Origin-validation requirement (DNS-rebinding defense):
+	// this endpoint is protected differently and equivalently. A rebound
+	// browser page cannot attach the Authorization header cross-origin
+	// (CORS preflight blocks it, and this server's credentialed CORS is
+	// dev-localhost only), and without a valid hyk_ bearer every request
+	// answers 401 below. Rejecting on the Origin header instead would break
+	// legitimate Electron-based MCP clients that send one.
+	//
 	// API-key auth, header-only (same rule as the HTTP surface).
 	h := r.Header.Get("Authorization")
 	if !strings.HasPrefix(h, "Bearer "+apikeys.Prefix) {
@@ -390,6 +398,9 @@ func (d mcpDeps) callTool(r *http.Request, key *apikeys.KeyInfo, name string, ar
 		if err != nil {
 			if errors.Is(err, sharing.ErrBadRequest) {
 				return toolResult("invalid link input (mode must be view, comment, or edit; expiresAt must be RFC3339)", true)
+			}
+			if errors.Is(err, sharing.ErrForbidden) {
+				return toolResult("the key's user cannot share this design", true)
 			}
 			return toolResult("could not create the share link", true)
 		}
