@@ -415,6 +415,23 @@ func (s *Service) React(designID, emoji string) error {
 	return nil
 }
 
+// Remote fans a phone-remote control action to the room, tagged with the
+// pairing code (F28 completion C21). Like reactions it is ephemeral and never
+// stored; the PRESENTER verifies the code locally and ignores mismatches, so
+// the server-side exposure is exactly a reaction's: a rate-limited,
+// share-scoped broadcast. Actions are allowlisted.
+func (s *Service) Remote(designID, code, action string) error {
+	allowed := map[string]bool{"next": true, "prev": true, "blank": true}
+	if !allowed[action] {
+		return fmt.Errorf("%w: unsupported remote action", ErrInvalid)
+	}
+	if len(code) == 0 || len(code) > 12 {
+		return fmt.Errorf("%w: bad pairing code", ErrInvalid)
+	}
+	s.emit(designID, map[string]any{"t": "audience", "kind": "remote", "action": action, "code": code})
+	return nil
+}
+
 func (s *Service) emit(designID string, payload map[string]any) {
 	if s.notify != nil {
 		s.notify.BroadcastEvent(designID, payload)

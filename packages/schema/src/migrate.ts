@@ -370,6 +370,9 @@ export const migrations: Record<number, Migration> = {
   // KeyframeTrack path/orient, AnimationClip.spring, NodeAnimation.trigger).
   // Purely additive and optional.
   22: (file: AnyObj) => ({ ...file, schemaVersion: 23 }),
+  // v23 -> v24: Interaction.actionV2 (play/pause/toggle media, run-animation).
+  // Purely additive and optional.
+  23: (file: AnyObj) => ({ ...file, schemaVersion: 24 }),
 };
 
 export class MigrationError extends Error {

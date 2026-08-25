@@ -2409,10 +2409,28 @@ function InteractionSection({ node, doc }: { node: Node; doc: DesignFile }) {
   const id = node.id;
   const interaction = (node as { interaction?: Interaction }).interaction;
   const action = interaction?.action ?? { kind: "none" as const };
+  const actionV2 = (interaction as { actionV2?: { kind: string; targetNodeId?: string } } | undefined)?.actionV2;
+  // Spread the EXISTING interaction first (unknown keys survive); choosing a
+  // legacy action CLEARS actionV2, because a capable runtime prefers v2 and a
+  // stale one would shadow the new choice.
   const setAction = (next: InteractionAction) => {
     if (next.kind === "none") { st.setInteraction(id, undefined); return; }
-    st.setInteraction(id, { trigger: interaction?.trigger ?? "click", action: next });
+    st.setInteraction(id, { ...interaction, trigger: interaction?.trigger ?? "click", action: next, actionV2: undefined } as Interaction);
   };
+  // v24 actions (C16): stored on actionV2 with a benign legacy action, so an
+  // older client validates the file and simply does nothing on click.
+  const setActionV2 = (kind: string, targetNodeId?: string) => {
+    st.setInteraction(id, {
+      ...interaction,
+      trigger: interaction?.trigger ?? "click",
+      action: { kind: "none" },
+      actionV2: { kind, ...(targetNodeId ? { targetNodeId } : {}) },
+    } as Interaction);
+  };
+  const pageIdx = useEditor.getState().activePage;
+  const pageNodes = (doc.pages[pageIdx]?.children ?? []) as Node[];
+  const mediaNodes = pageNodes.filter((n) => n.type === "video");
+  const animatedNodes = pageNodes.filter((n) => !!(n as { animation?: { entrance?: unknown } }).animation?.entrance && n.id !== id);
   return (
     <Section title={tr("editor.interaction")} order={ORDER.interactivity} defaultOpen={false}>
       <div className="grid grid-cols-2 gap-2">
@@ -2426,20 +2444,43 @@ function InteractionSection({ node, doc }: { node: Node; doc: DesignFile }) {
           <option value="hover">{tr("editor.on_hover")}</option>
         </select>
         <select aria-label={tr("editor.on_hover")}
-          value={action.kind}
+          value={actionV2 ? actionV2.kind : action.kind}
           onChange={(e) => {
             const k = e.target.value;
             if (k === "none") setAction({ kind: "none" });
             else if (k === "navigate") setAction({ kind: "navigate", to: "next" });
-            else setAction({ kind: "open-link", link: { kind: "url", target: "" } });
+            else if (k === "open-link") setAction({ kind: "open-link", link: { kind: "url", target: "" } });
+            else if (k === "toggle-media" || k === "play-media" || k === "pause-media") setActionV2(k, mediaNodes[0]?.id);
+            else if (k === "run-animation") setActionV2(k, animatedNodes[0]?.id);
           }}
           className={selectCls}
         >
           <option value="none">{tr("editor.none")}</option>
           <option value="navigate">{tr("editor.go_to_page")}</option>
           <option value="open-link">{tr("editor.open_link")}</option>
+          {mediaNodes.length > 0 && <option value="toggle-media">{tr("editor.play_pause_media")}</option>}
+          {animatedNodes.length > 0 && <option value="run-animation">{tr("editor.run_animation")}</option>}
         </select>
       </div>
+      {/* v24 target pickers: which media/element the action drives. */}
+      {actionV2 && (actionV2.kind === "toggle-media" || actionV2.kind === "play-media" || actionV2.kind === "pause-media") && (
+        <select aria-label={tr("editor.play_pause_media")}
+          value={actionV2.targetNodeId ?? ""}
+          onChange={(e) => setActionV2(actionV2.kind, e.target.value || undefined)}
+          className={selectCls}
+        >
+          {mediaNodes.map((m, i) => <option key={m.id} value={m.id}>{m.name ?? `${tr("editor.video")} ${i + 1}`}</option>)}
+        </select>
+      )}
+      {actionV2?.kind === "run-animation" && (
+        <select aria-label={tr("editor.run_animation")}
+          value={actionV2.targetNodeId ?? ""}
+          onChange={(e) => setActionV2("run-animation", e.target.value || undefined)}
+          className={selectCls}
+        >
+          {animatedNodes.map((m, i) => <option key={m.id} value={m.id}>{m.name ?? `${tr("editor.element")} ${i + 1}`}</option>)}
+        </select>
+      )}
       {action.kind === "navigate" && (
         <select aria-label={tr("editor.go_to_page")}
           value={action.to === "page" ? `page:${action.pageId ?? ""}` : action.to}

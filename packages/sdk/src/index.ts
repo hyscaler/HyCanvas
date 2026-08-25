@@ -1789,6 +1789,11 @@ export class HyCanvasClient {
   audienceReact(token: string, input: { emoji: string; password?: string }): Promise<void> {
     return this.request("POST", `/v1/links/${encodeURIComponent(token)}/audience/react`, input);
   }
+  /** Phone remote (F28 C21): relay a control action to the presenter, tagged
+   *  with the pairing code the presenter verifies locally. */
+  audienceRemote(token: string, input: { code: string; action: "next" | "prev" | "blank"; password?: string }): Promise<void> {
+    return this.request("POST", `/v1/links/${encodeURIComponent(token)}/audience/remote`, input);
+  }
   /** Presenter: full audience state incl. dismissed questions. */
   presenterAudienceState(designId: string): Promise<AudienceState> {
     return this.request("GET", `/v1/designs/${designId}/audience/state`);

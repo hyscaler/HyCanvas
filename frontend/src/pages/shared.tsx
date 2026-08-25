@@ -50,6 +50,44 @@ function problemCode(body: unknown): string | undefined {
   return undefined;
 }
 
+/** Phone remote control (F28 C21): pairing-code entry + big controls. Every
+ *  press posts to the audience relay; only the presenter holding the matching
+ *  code reacts. Fully anonymous-capable, same trust boundary as reactions. */
+function RemoteControlScreen({ token, password, title }: { token: string; password?: string; title: string }) {
+  const [code, setCode] = useState("");
+  const [sending, setSending] = useState(false);
+  const send = async (action: "next" | "prev" | "blank") => {
+    if (code.trim().length < 4 || sending) return;
+    setSending(true);
+    try {
+      await oc.audienceRemote(token, { code: code.trim().toUpperCase(), action, password });
+    } catch {
+      /* over-budget or offline: the next press retries */
+    } finally {
+      setSending(false);
+    }
+  };
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-neutral-900 p-6 text-white">
+      <div className="text-sm text-white/60">{title}</div>
+      <input
+        value={code}
+        onChange={(e) => setCode(e.target.value.toUpperCase())}
+        placeholder={tr("page.pairing_code")}
+        aria-label={tr("page.pairing_code")}
+        maxLength={8}
+        className="w-48 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-center text-2xl font-bold tracking-widest text-white outline-none placeholder:text-white/30"
+      />
+      <div className="grid w-full max-w-sm grid-cols-2 gap-3">
+        <button onClick={() => void send("prev")} disabled={code.trim().length < 4} className="rounded-2xl bg-white/10 py-10 text-lg font-semibold active:bg-white/20 disabled:opacity-30">{tr("page.previous")}</button>
+        <button onClick={() => void send("next")} disabled={code.trim().length < 4} className="rounded-2xl bg-brand-600 py-10 text-lg font-semibold active:bg-brand-700 disabled:opacity-30">{tr("page.next")}</button>
+      </div>
+      <button onClick={() => void send("blank")} disabled={code.trim().length < 4} className="w-full max-w-sm rounded-2xl bg-white/10 py-4 text-sm font-semibold active:bg-white/20 disabled:opacity-30">{tr("page.blank_screen")}</button>
+      <div className="text-center text-xs text-white/40">{tr("page.enter_the_code_shown_on_the_presenters_screen")}</div>
+    </div>
+  );
+}
+
 /** The link token, path-style (/shared/<token>, the canonical form the Go
  *  server rewrites) or legacy query (?token=). */
 function tokenFromLocation(query: unknown): string {
@@ -150,6 +188,22 @@ export default function SharedLinkPage() {
 
   if (state.kind === "viewing") {
     const designTitle = state.file.title?.trim() || tr("page.shared_design");
+    // Phone remote (F28 C21): ?remote=1 turns this share link into a remote
+    // control - big prev/next/blank buttons posting through the rate-limited
+    // audience relay; the PRESENTER verifies the pairing code, so a wrong
+    // code does nothing.
+    const remoteMode = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("remote") === "1";
+    if (remoteMode) {
+      const token = tokenFromLocation(router.query.token);
+      return (
+        <>
+          <Head>
+            <title>{designTitle} · HyCanvas</title>
+          </Head>
+          <RemoteControlScreen token={token} password={password || undefined} title={designTitle} />
+        </>
+      );
+    }
     // An anonymous visitor only ever gets a read-only render here, even on a
     // comment/edit link (commenting/editing need an account). Show "View only"
     // honestly and offer a sign-in CTA that unlocks what the link grants.

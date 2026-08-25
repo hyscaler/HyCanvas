@@ -4,16 +4,11 @@
 // additive.
 
 import { describe, expect, it } from "vitest";
-import { createBlankDesign, createNode, currentSchemaVersion, migrate, validate, type Node } from "../index";
+import { createBlankDesign, createNode, migrate, validate, type Node } from "../index";
 
 describe("migration to v23", () => {
-  it("pins the exact version pair (see the Go twin in v23_test.go)", () => {
-    // The paired EXACT pins are the cross-language drift alarm: a future bump
-    // must update this line, the Go pin, and both currentSchemaVersion
-    // mirrors in the SAME change (CLAUDE.md bump protocol). A >= assertion
-    // would let the mirrors drift apart silently.
-    expect(currentSchemaVersion).toBe(23);
-  });
+  // The exact version pin lives with the LATEST bump (interactions.test.ts),
+  // so there is exactly one drift alarm per side at any time.
 
   it("is a pure no-op on a v22 document", () => {
     const before = { ...createBlankDesign(), schemaVersion: 22 } as Record<string, unknown>;

@@ -37,6 +37,7 @@ export function AudienceStage({ designId, initialSlide }: { designId: string; in
   const [error, setError] = useState<string | null>(null);
   const [index, setIndex] = useState(initialSlide);
   const [blank, setBlank] = useState<"black" | "white" | null>(null);
+  const [caption, setCaption] = useState("");
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const bufA = useRef<HTMLCanvasElement | null>(null);
@@ -76,6 +77,7 @@ export function AudienceStage({ designId, initialSlide }: { designId: string; in
         return;
       }
       setBlank(s.blank ?? null);
+      setCaption(s.caption ?? "");
       setIndex((cur) => {
         if (s.index === cur) return cur;
         blend.current = s.index > cur ? { fromIndex: cur, startedAt: performance.now() } : null;
@@ -207,6 +209,13 @@ export function AudienceStage({ designId, initialSlide }: { designId: string; in
         <canvas ref={canvasRef} data-testid="audience-canvas" aria-label={tr("editor.presented_slide")} role="img" />
       </div>
       {/* Blanking covers the projection without disturbing the presenter. */}
+      {caption && !blank && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-8 z-[60] flex justify-center px-8">
+          <div className="max-w-4xl rounded-lg bg-black/75 px-4 py-2 text-center text-2xl leading-snug text-white">
+            {caption}
+          </div>
+        </div>
+      )}
       {blank && (
         <div
           className={`absolute inset-0 ${blank === "black" ? "bg-black" : "bg-white"}`}

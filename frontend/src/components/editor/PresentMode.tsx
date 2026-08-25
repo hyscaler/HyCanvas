@@ -7,6 +7,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Smartphone, Crown,
+  Captions, Gauge,
+  MousePointerClick,
   ChevronLeft,
   ChevronRight,
   X,
@@ -45,7 +48,6 @@ import {
   appliedOpacity,
   sequenceStarts,
   revealEntranceText,
-  renderTransition,
   renderTransitionPair,
   transitionPairDurationMs,
   pairEnterTransition,
@@ -74,9 +76,12 @@ import { useBrand } from "@/store/brand";
 import { oc } from "@/lib/sdk";
 import { designSurfaceDir } from "@/lib/locale";
 import { onAudienceEvent } from "@/lib/realtime";
+import { usePresence } from "@/store/presence";
+import { getRealtimeClient } from "@/lib/useRealtime";
 import { useToast } from "@/components/ui/Toast";
 import type { AudienceState } from "@hc/sdk";
 import { AudienceLink, openAudienceWindow } from "@/lib/audienceWindow";
+import { CoachTracker, SpeechSession, speechRecognitionCtor, type CoachStats } from "@/lib/speech";
 import {
   adjustSpotlightRadius,
   defaultAutoAdvanceMs,
@@ -163,6 +168,20 @@ function drawCameraBubble(
 // time so they cannot fight over the cursor: entering pen disables laser, etc.
 // "none" is the default (clicks advance / hit-test interactions as before).
 type PresentTool = "none" | "laser" | "pen" | "spotlight";
+
+// Caption translation targets (C18). The labels are language ENDONYMS - each
+// language's own name - deliberately identical in every UI locale, so they
+// are data, not translatable strings.
+const captionTargetLanguages: { value: string; endonym: string }[] = [
+  { value: "English", endonym: "English" }, // i18n-ignore: endonym
+  { value: "Spanish", endonym: "Español" }, // i18n-ignore: endonym
+  { value: "French", endonym: "Français" }, // i18n-ignore: endonym
+  { value: "German", endonym: "Deutsch" }, // i18n-ignore: endonym
+  { value: "Portuguese", endonym: "Português" }, // i18n-ignore: endonym
+  { value: "Hindi", endonym: "हिन्दी" },
+  { value: "Japanese", endonym: "日本語" },
+  { value: "Chinese", endonym: "中文" },
+];
 
 // Full-surface blanking (FR-8 black/white screen): a B or W overlay that pauses
 // audience attention; any nav key or pressing the key again restores the slide.
@@ -521,6 +540,7 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null); // presenter-only tools layer
+  const slideStartRef = useRef(0); // the active slide's clock origin, stamped by the paint loop (C16 run-animation)
 
   // Present-and-record (doc 28 FR-19): capture a composite of the slide canvas
   // + the presenter ink/laser overlay at 30fps, mix in mic narration when the
@@ -561,6 +581,146 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, [camStream, positionCamPreview]);
+  // --- Live captions (C17) + translation (C18) + speaker coach (C20) --------
+  // One shared LOCAL speech session feeds both features; nothing uploads
+  // except caption chunks explicitly sent for translation through the
+  // workspace's own BYO-key provider.
+  const speechSupported = speechRecognitionCtor() !== null;
+  const [captionsOn, setCaptionsOn] = useState(false);
+  const [captionLang, setCaptionLang] = useState(""); // "" = no translation (C18)
+  const [captionText, setCaptionText] = useState("");
+  const [coachOn, setCoachOn] = useState(false);
+  const [coachStats, setCoachStats] = useState<CoachStats | null>(null);
+  const [coachReport, setCoachReport] = useState<CoachStats | null>(null);
+  const speechRef = useRef<SpeechSession | null>(null);
+  const coachRef = useRef<CoachTracker | null>(null);
+  const captionSeqRef = useRef(0);
+  const workspaceId = useBrand((s) => s.workspaceId);
+  const designId = useBrand((s) => s.designId);
+  const docLang = (useEditor.getState().doc as { language?: string }).language;
+
+  const speechSession = useCallback((): SpeechSession => {
+    if (!speechRef.current) speechRef.current = new SpeechSession(docLang || (typeof navigator !== "undefined" ? navigator.language : "en-US"));
+    return speechRef.current;
+  }, [docLang]);
+
+  // Captions: interim text shows raw immediately; FINAL chunks optionally
+  // translate (latest-wins sequencing so a slow reply never regresses the
+  // band; any provider failure degrades that chunk to the raw text).
+  useEffect(() => {
+    if (!captionsOn || !speechSupported) return;
+    const detach = speechSession().attach({
+      onInterim: (t) => { if (t) setCaptionText(t); },
+      onFinal: (chunk) => {
+        const seq = ++captionSeqRef.current;
+        if (!captionLang || !workspaceId) {
+          setCaptionText(chunk.text);
+          return;
+        }
+        setCaptionText(chunk.text); // raw first; the translation replaces it
+        void oc
+          .aiText({
+            workspaceId,
+            prompt: chunk.text,
+            // i18n-ignore: model system prompt, never translated.
+            system: `Translate the following live speech caption into ${captionLang}. Return ONLY the translation, no quotes or preamble.`,
+          })
+          .then(({ text }) => {
+            if (captionSeqRef.current === seq && text.trim()) setCaptionText(text.trim());
+          })
+          .catch(() => {
+            /* raw caption already showing */
+          });
+      },
+    });
+    return () => {
+      detach();
+      setCaptionText("");
+    };
+  }, [captionsOn, captionLang, workspaceId, speechSupported, speechSession]);
+
+  // Coach: rehearsal analysis over the same stream (WPM, fillers, pauses).
+  useEffect(() => {
+    if (!coachOn || !speechSupported) return;
+    coachRef.current = new CoachTracker();
+    const detach = speechSession().attach({
+      onFinal: (chunk) => {
+        coachRef.current?.feed(chunk);
+        setCoachStats(coachRef.current?.stats(performance.now()) ?? null);
+      },
+    });
+    const tick = window.setInterval(() => {
+      if (coachRef.current) setCoachStats(coachRef.current.stats(performance.now()));
+    }, 1000);
+    return () => {
+      detach();
+      window.clearInterval(tick);
+      if (coachRef.current) setCoachReport(coachRef.current.stats(performance.now()));
+      coachRef.current = null;
+    };
+  }, [coachOn, speechSupported, speechSession]);
+
+  // Present-mode teardown stops any live recognition session.
+  useEffect(() => () => speechRef.current?.stop(), []);
+
+  // --- Phone remote (C21) ----------------------------------------------------
+  // The presenter shows a pairing code + the share URL; the phone posts
+  // next/prev/blank through the rate-limited audience relay, and THIS side
+  // verifies the code (a mismatch is silently ignored, so a share-link holder
+  // without the code can do nothing but burn their own write budget).
+  const [remoteCode, setRemoteCode] = useState<string | null>(null);
+  const [remoteUrl, setRemoteUrl] = useState<string | null>(null);
+  const remoteHandlersRef = useRef({ next: () => {}, prev: () => {}, blank: () => {} });
+  const toggleRemote = useCallback(async () => {
+    if (remoteCode) {
+      setRemoteCode(null);
+      setRemoteUrl(null);
+      return;
+    }
+    const code = Array.from({ length: 6 }, () => "ACDEFHJKLMNPRTUVWXY34679"[Math.floor(Math.random() * 24)]).join("");
+    setRemoteCode(code);
+    if (designId) {
+      // The remote page is the share link with ?remote=1; pick the first
+      // enabled link. No link yet = show the code with a hint instead.
+      try {
+        const sharing = await oc.designSharing(designId);
+        const link = sharing.links.find((l) => !l.disabled);
+        if (link) setRemoteUrl(`${window.location.origin}/shared/${encodeURIComponent(link.token)}?remote=1`);
+      } catch {
+        /* the panel shows the code either way */
+      }
+    }
+  }, [remoteCode, designId]);
+  useEffect(() => {
+    if (!remoteCode) return;
+    return onAudienceEvent((e) => {
+      if (e.kind !== "remote" || e.code !== remoteCode || !e.action) return;
+      const h = remoteHandlersRef.current;
+      if (e.action === "next") h.next();
+      else if (e.action === "prev") h.prev();
+      else if (e.action === "blank") h.blank();
+    });
+  }, [remoteCode]);
+
+  // --- Co-presenter control hand-off (C22) -----------------------------------
+  // Rides the session facilitator role the realtime hub already arbitrates:
+  // when ANOTHER editor holds control, this presenter's own advance is
+  // paused and the deck follows the holder's live slide instead; releasing
+  // frees the seat for the next presenter to claim.
+  const facilitator = usePresence((s) => s.facilitator);
+  const selfClient = usePresence((s) => s.self);
+  const controlledElsewhere = !!facilitator && facilitator.clientId !== selfClient?.clientId;
+  const iHoldControl = !!facilitator && facilitator.clientId === selfClient?.clientId;
+  const followNavRef = useRef<(i: number) => void>(() => {});
+  useEffect(() => {
+    if (!controlledElsewhere) return;
+    // Follow the control holder's published slide while they drive (navigate
+    // is declared later in the component; the ref is kept current below).
+    return onAudienceEvent((e) => {
+      if (e.kind === "live" && typeof e.slide === "number" && e.slide >= 0) followNavRef.current(e.slide);
+    });
+  }, [controlledElsewhere]);
+
   const onCamDragStart = useCallback((e: React.PointerEvent<HTMLVideoElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -814,7 +974,6 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
   // the slide over a BroadcastChannel while this window keeps the HUD. Popups
   // can be blocked, so this only gates the affordance; the same-window overlay
   // keeps working either way (AC-3).
-  const designId = useBrand((s) => s.designId);
 
   // Live audience (doc 28): questions/polls arrive over the realtime socket
   // (the editor session stays connected beneath present mode); reactions float
@@ -894,10 +1053,10 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
     audienceWin.current = win;
     setPopupBlocked(false);
     if (!audienceLink.current) audienceLink.current = new AudienceLink(designId);
-    audienceLink.current.post({ index: idx, blank: blank === "none" ? null : blank });
+    audienceLink.current.post({ index: idx, blank: blank === "none" ? null : blank, caption: captionsOn ? captionText : "" });
     setAudienceOpen(true);
     return true;
-  }, [designId, idx, blank]);
+  }, [designId, idx, blank, captionsOn, captionText]);
 
   const closeAudience = useCallback(() => {
     audienceLink.current?.close();
@@ -911,11 +1070,11 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
     setAudienceOpen(false);
   }, []);
 
-  // Mirror slide + blanking to the audience display whenever either changes.
+  // Mirror slide + blanking + captions to the audience display on any change.
   useEffect(() => {
     if (!audienceOpen) return;
-    audienceLink.current?.post({ index: idx, blank: blank === "none" ? null : blank });
-  }, [audienceOpen, idx, blank]);
+    audienceLink.current?.post({ index: idx, blank: blank === "none" ? null : blank, caption: captionsOn ? captionText : "" });
+  }, [audienceOpen, idx, blank, captionsOn, captionText]);
 
   // Leaving present mode closes the projection with it.
   useEffect(() => () => closeAudience(), [closeAudience]);
@@ -966,16 +1125,26 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
     [pages, doc],
   );
 
+  // Kiosk / links-only mode (C19): linear advance (click zones, arrow keys,
+  // wheel, space) is disabled; only INTERACTIONS - links, navigate actions,
+  // media/animation triggers - move the deck. Escape still exits for the
+  // owner, and autopilot is unaffected (a kiosk loop is its main use).
+  const [kiosk, setKiosk] = useState(false);
+
   // Next/prev step over visible slides only (FR-1); at the deck ends they no-op
   // (navigate clamps), except autopilot loop which jumps to the first slide.
   const next = useCallback(() => {
+    if (kiosk) return; // links-only: linear advance is off
+    if (controlledElsewhere) return; // a co-presenter holds control (C22)
     const n = nextVisibleIndex(pages as SlideLike[], idx);
     if (n >= 0) navigate(n);
-  }, [navigate, idx, pages]);
+  }, [navigate, idx, pages, kiosk, controlledElsewhere]);
   const prev = useCallback(() => {
+    if (kiosk) return;
+    if (controlledElsewhere) return;
     const p = prevVisibleIndex(pages as SlideLike[], idx);
     if (p >= 0) navigate(p);
-  }, [navigate, idx, pages]);
+  }, [navigate, idx, pages, kiosk, controlledElsewhere]);
 
   // Toggle a pointer tool. Tools are mutually exclusive (FR-8): selecting one
   // while it is already active turns it off; selecting a different one replaces
@@ -996,6 +1165,17 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
     if (blank !== "none") { setBlank("none"); return; }
     prev();
   }, [blank, prev]);
+
+  // The remote fires whatever next/prev/blank mean RIGHT NOW (guarded
+  // versions, so a blank screen resumes exactly like a local keypress).
+  useEffect(() => {
+    remoteHandlersRef.current = {
+      next: guardedNext,
+      prev: guardedPrev,
+      blank: () => setBlank((b) => (b === "none" ? "black" : "none")),
+    };
+    followNavRef.current = navigate;
+  }, [guardedNext, guardedPrev, navigate]);
 
   // Ephemeral pen ink ops (FR-8). Undo removes the last stroke on THIS slide;
   // Clear wipes this slide's ink. Both touch only the per-slide ref, never the
@@ -1145,6 +1325,7 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
     const fit = layout();
     if (!fit) return;
     const slideStart = performance.now();
+    slideStartRef.current = slideStart; // mirrored for interaction handlers (C16)
     const { ctx } = fit;
     const canvas = canvasRef.current;
     // Offscreen buffers reused for transition compositing (avoid per-frame alloc).
@@ -1445,6 +1626,41 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
   // (so the default "advance" is suppressed).
   const runInteraction = useCallback(
     (interaction: Interaction): boolean => {
+      // v24 actions first (C16): a capable runtime prefers actionV2; an
+      // unknown kind falls back to the legacy action below.
+      const v2 = (interaction as { actionV2?: { kind: string; targetNodeId?: string } }).actionV2;
+      if (v2) {
+        if (v2.kind === "play-media" || v2.kind === "pause-media" || v2.kind === "toggle-media") {
+          const target = (pages[idx]?.children as Node[] | undefined)?.find((n) => n.id === v2.targetNodeId) as
+            | (Node & { assetId?: string })
+            | undefined;
+          const el = target?.assetId ? imageAssets.videoEl(target.assetId) : null;
+          if (el) {
+            if (v2.kind === "play-media") void el.play().catch(() => {});
+            else if (v2.kind === "pause-media") el.pause();
+            else if (el.paused) void el.play().catch(() => {});
+            else el.pause();
+            return true;
+          }
+          return false; // dangling target: fall back to the legacy action
+        }
+        if (v2.kind === "run-animation") {
+          // Restart the target's entrance on its own clock (the same replay
+          // mechanism media triggers use).
+          const d = slide.driven.find((dd) => dd.node.id === v2.targetNodeId);
+          if (d && d.anim?.entrance) {
+            d.triggeredAtMs = performance.now() - slideStartRef.current;
+            if (!d.anim.trigger) {
+              // Non-triggered nodes replay through the trigger path: mark a
+              // synthetic trigger so poseEnter runs the held-entrance clock.
+              (d.anim as { trigger?: { mediaNodeId: string; atMs: number } }).trigger = { mediaNodeId: "", atMs: 0 };
+            }
+            return true;
+          }
+          return false;
+        }
+        // Unknown future kind: fall through to the legacy action.
+      }
       const a = interaction.action;
       if (a.kind === "open-link") {
         if (a.link.kind === "url" || a.link.kind === "email") {
@@ -1471,7 +1687,7 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
       }
       return false; // kind === "none" leaves the default behavior alone
     },
-    [pages, idx, navigate],
+    [pages, idx, navigate, slide],
   );
 
   // Click on the canvas: hit-test for an interactive node, else advance.
@@ -1635,6 +1851,51 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
             onClick={(e) => e.stopPropagation()}
           />
         )}
+        {/* Phone-remote pairing panel (C21). */}
+        {remoteCode && (
+          <div className="absolute left-3 top-16 z-[106] w-64 rounded-lg bg-black/80 p-3 text-xs text-white" data-testid="remote-panel">
+            <div className="mb-1 font-semibold">{tr("editor.phone_remote")}</div>
+            <div className="mb-1 text-2xl font-bold tracking-widest">{remoteCode}</div>
+            {remoteUrl ? (
+              <div className="break-all text-[10px] text-white/70">{remoteUrl}</div>
+            ) : (
+              <div className="text-[10px] text-white/70">{tr("editor.create_a_share_link_to_pair_a_phone")}</div>
+            )}
+          </div>
+        )}
+        {/* Live caption band (C17/C18): local speech recognition over the
+            slide; translated text replaces the raw chunk when C18 is active. */}
+        {captionsOn && captionText && blank === "none" && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-6 z-[106] flex justify-center px-8" data-testid="caption-band">
+            <div className="max-w-4xl rounded-lg bg-black/75 px-4 py-2 text-center text-xl leading-snug text-white">
+              {captionText}
+            </div>
+          </div>
+        )}
+        {/* Speaker coach (C20): live pacing while rehearsing; a report on stop. */}
+        {coachOn && coachStats && (
+          <div className="absolute right-3 top-16 z-[106] w-52 rounded-lg bg-black/75 p-3 text-xs text-white" data-testid="coach-panel">
+            <div className="mb-1 font-semibold">{tr("editor.speaker_coach")}</div>
+            <div>{tr("editor.pace_wpm", { count: coachStats.wpm })}</div>
+            <div>{tr("editor.filler_words_count", { count: coachStats.fillerTotal })}</div>
+            <div>{tr("editor.long_pauses_count", { count: coachStats.longPauses })}</div>
+          </div>
+        )}
+        {!coachOn && coachReport && (
+          <div className="absolute inset-0 z-[108] flex items-center justify-center bg-black/60" onClick={() => setCoachReport(null)}>
+            <div className="w-80 rounded-xl bg-surface p-5 text-sm text-neutral-800 shadow-2xl" onClick={(e) => e.stopPropagation()} data-testid="coach-report">
+              <div className="mb-2 text-base font-semibold">{tr("editor.rehearsal_report")}</div>
+              <div className="flex flex-col gap-1">
+                <div>{tr("editor.duration_colon", { count: Math.round(coachReport.elapsedMs / 1000) })}</div>
+                <div>{tr("editor.words_spoken_count", { count: coachReport.totalWords })}</div>
+                <div>{tr("editor.pace_wpm", { count: coachReport.wpm })} {coachReport.wpm > 0 && (coachReport.wpm > 170 ? tr("editor.pace_fast_hint") : coachReport.wpm < 110 ? tr("editor.pace_slow_hint") : tr("editor.pace_good_hint"))}</div>
+                <div>{tr("editor.filler_words_count", { count: coachReport.fillerTotal })}{coachReport.fillerTotal > 0 ? ` (${Object.entries(coachReport.fillers).map(([w, n]) => `${w}: ${n}`).join(", ")})` : ""}</div>
+                <div>{tr("editor.long_pauses_count", { count: coachReport.longPauses })}</div>
+              </div>
+              <button onClick={() => setCoachReport(null)} className="mt-3 w-full rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-700">{tr("editor.done")}</button>
+            </div>
+          </div>
+        )}
         {/* Black/white blanking screen (FR-8): full-surface attention pause. Any
             nav key or pressing B/W again restores; clicking it also restores. */}
         {blank !== "none" && (
@@ -1706,6 +1967,42 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
         <span className="mx-1 h-5 w-px bg-white/15" />
         <ToolButton active={autopilot} onClick={() => setAutopilot((v) => !v)} title={autopilot ? tr("editor.pause_autopilot_p") : tr("editor.play_autopilot_p")}>{autopilot ? <Pause size={16} /> : <Play size={16} />}</ToolButton>
         <ToolButton active={loop} onClick={() => setLoop((v) => !v)} title={loop ? tr("editor.loop_on") : tr("editor.loop_off")}><Repeat size={16} /></ToolButton>
+        <ToolButton active={kiosk} onClick={() => setKiosk((v) => !v)} title={kiosk ? tr("editor.kiosk_mode_on_links_only") : tr("editor.kiosk_mode_links_only_navigation")}><MousePointerClick size={16} /></ToolButton>
+        {speechSupported && (
+          <ToolButton active={captionsOn} onClick={() => setCaptionsOn((v) => !v)} title={captionsOn ? tr("editor.captions_on_local_speech_recognition") : tr("editor.live_captions_local_speech_recognition")}><Captions size={16} /></ToolButton>
+        )}
+        {speechSupported && captionsOn && (
+          <select
+            value={captionLang}
+            onChange={(e) => setCaptionLang(e.target.value)}
+            aria-label={tr("editor.caption_translation_language")}
+            title={tr("editor.caption_translation_language")}
+            className="h-8 rounded-md border border-white/20 bg-black/40 px-1 text-xs text-white"
+          >
+            <option value="">{tr("editor.no_translation")}</option>
+            {captionTargetLanguages.map((l) => (
+              <option key={l.value} value={l.value}>{l.endonym}</option>
+            ))}
+          </select>
+        )}
+        {speechSupported && (
+          <ToolButton active={coachOn} onClick={() => { setCoachReport(null); setCoachStats(null); setCoachOn((v) => !v); }} title={coachOn ? tr("editor.stop_the_speaker_coach_and_see_the_report") : tr("editor.speaker_coach_pacing_fillers_pauses")}><Gauge size={16} /></ToolButton>
+        )}
+        {designId && (
+          <ToolButton active={!!remoteCode} onClick={() => void toggleRemote()} title={remoteCode ? tr("editor.phone_remote_on") : tr("editor.phone_remote_pair_a_phone")}><Smartphone size={16} /></ToolButton>
+        )}
+        {(facilitator || (selfClient?.role === "editor" && Object.keys(usePresence.getState().peers).length > 0)) && (
+          <ToolButton
+            active={iHoldControl}
+            onClick={() => {
+              const c = getRealtimeClient();
+              if (!c) return;
+              if (iHoldControl) c.sendFacilitator("release");
+              else if (!facilitator) c.sendFacilitator("claim");
+            }}
+            title={iHoldControl ? tr("editor.release_slide_control") : controlledElsewhere ? tr("editor.controlled_by_name", { name: facilitator?.name ?? "" }) : tr("editor.take_slide_control")}
+          ><Crown size={16} /></ToolButton>
+        )}
         <ToolButton active={showHud} onClick={() => setShowHud((v) => !v)} title={tr("editor.presenter_view_s")}><PanelRightOpen size={16} /></ToolButton>
         {designId && (
           <ToolButton

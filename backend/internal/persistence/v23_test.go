@@ -33,14 +33,8 @@ func designAtV23WithAnimation() DesignFile {
 	}
 }
 
-// The paired EXACT pins are the cross-language drift alarm: a future bump
-// must update this line, the TS twin (animchannels.test.ts), and both
-// currentSchemaVersion mirrors in the SAME change (CLAUDE.md bump protocol).
-func TestV23PinsTheVersionPair(t *testing.T) {
-	if currentSchemaVersion != 23 {
-		t.Fatalf("currentSchemaVersion = %d: update this pin and the TS twin as part of the bump", currentSchemaVersion)
-	}
-}
+// The exact version pin lives with the LATEST bump (v24_test.go), so there is
+// exactly one drift alarm per side at any time.
 
 func TestWriteBoundaryAcceptsV23(t *testing.T) {
 	if err := validateForWrite(designAtV23WithAnimation()); err != nil {

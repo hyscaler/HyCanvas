@@ -34,13 +34,13 @@ The rules from `28-presentations-leverage-tasks.md` apply unchanged. In brief:
 | C13 | 3 Animation | Configurable spring physics | done 2026-08-25 |
 | C14 | 3 Animation | Animation painter (copy animations between elements) | done 2026-08-25 |
 | C15 | 3 Animation | Animation triggers tied to media timestamps | done 2026-08-25 |
-| C16 | 4 Present | Element interaction actions: play media, run animation | todo |
-| C17 | 4 Present | Live captions overlay (local speech recognition) | todo |
-| C18 | 4 Present | Translated captions | todo |
-| C19 | 4 Present | Kiosk / links-only navigation mode | todo |
-| C20 | 4 Present | Speaker coach (pacing, filler words, long pauses) | todo |
-| C21 | 4 Present | Phone-as-remote pairing | todo |
-| C22 | 4 Present | Co-presenter control hand-off | todo |
+| C16 | 4 Present | Element interaction actions: play media, run animation | done 2026-08-25 |
+| C17 | 4 Present | Live captions overlay (local speech recognition) | done 2026-08-25 |
+| C18 | 4 Present | Translated captions | done 2026-08-25 |
+| C19 | 4 Present | Kiosk / links-only navigation mode | done 2026-08-25 |
+| C20 | 4 Present | Speaker coach (pacing, filler words, long pauses) | done 2026-08-25 |
+| C21 | 4 Present | Phone-as-remote pairing | done 2026-08-25 |
+| C22 | 4 Present | Co-presenter control hand-off | done 2026-08-25 |
 | C23 | 5 Scale+Interop | Present prefetch: precompute the next slide | todo |
 | C24 | 5 Scale+Interop | Large-deck PagesBar virtualization + lazy thumbnails | todo |
 | C25 | 5 Scale+Interop | ODP import (Keynote/Slides documented via the PPTX bridge) | todo |

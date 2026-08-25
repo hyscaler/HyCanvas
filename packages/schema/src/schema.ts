@@ -81,8 +81,13 @@ import { z } from "zod";
  *      paths), `AnimationClip` gains optional `spring` parameters, and
  *      `NodeAnimation` gains an optional media `trigger` (F28 completion
  *      C11/C12/C13/C15). All additive: a v22 file animates exactly as
- *      before, and older clients preserve the unknown keys end to end. */
-export const currentSchemaVersion = 23;
+ *      before, and older clients preserve the unknown keys end to end.
+ *  v24: interaction actions. `Interaction` gains optional `actionV2` (a
+ *      plain-string kind + optional target node), carrying play/pause/toggle
+ *      media and run-animation without widening the legacy action enum, so
+ *      older clients keep validating and fall back to the legacy `action`
+ *      (F28 completion C16). Additive. */
+export const currentSchemaVersion = 24;
 
 /** Maximum container nesting depth; guards traversal against stack overflow (FR-4). */
 export const maxNestingDepth = 32;
@@ -560,10 +565,18 @@ export const InteractionActionSchema = z.discriminatedUnion("kind", [
 export interface Interaction {
   trigger: "click" | "hover";
   action: InteractionAction;
+  /** Newer interaction actions (v24). A SEPARATE optional field, never a
+   *  widening of the `action` enum: widening looks additive but breaks every
+   *  older client's whole-file validation (CLAUDE.md). `kind` is a PLAIN
+   *  string ("play-media" | "pause-media" | "toggle-media" | "run-animation"
+   *  today); a runtime that does not recognize it simply falls back to the
+   *  legacy `action`. When set, a capable runtime prefers it. */
+  actionV2?: { kind: string; targetNodeId?: string };
 }
 export const InteractionSchema = z.object({
   trigger: z.enum(["click", "hover"]),
   action: InteractionActionSchema,
+  actionV2: z.object({ kind: z.string(), targetNodeId: z.string().optional() }).optional(),
 });
 
 /** Per-page slide transition, applied when advancing to this page (FR-6). */
