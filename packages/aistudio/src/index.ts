@@ -16,6 +16,7 @@ export * from "./chartData";
 export * from "./theme";
 export * from "./themeGen";
 export * from "./layoutExtract";
+export * from "./mdoutline";
 export * from "./deck";
 export * from "./prompts";
 export * from "./assistant";

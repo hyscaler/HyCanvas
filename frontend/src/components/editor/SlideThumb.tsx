@@ -6,7 +6,7 @@
 // differ between renders; its repaint is gated on `rev` accordingly, which
 // keeps a single drag from rebuilding every page's scene.
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createScene, renderScene, type CanvasLike, type Viewport } from "@hc/engine";
 import { imageAssets } from "@/lib/assetProvider";
 import { useEditor } from "@/store/editor";
@@ -16,8 +16,30 @@ export function SlideThumb({ index, width, height }: { index: number; width: num
   const activePage = useEditor((s) => s.activePage);
   const liveRev = index === activePage ? rev : 0;
   const ref = useRef<HTMLCanvasElement>(null);
+  // Large-deck handling (C24): each thumb is a full engine render, so a
+  // 300-slide deck must not pay 300 renders up front. Render only when the
+  // tile is near the strip's viewport; offscreen tiles stay blank canvases
+  // (fixed size, so scroll geometry never shifts) until scrolled close.
+  const [near, setNear] = useState(false);
 
   useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas || typeof IntersectionObserver === "undefined") {
+      setNear(true); // no observer: render everything (old behavior)
+      return;
+    }
+    const obs = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) if (e.isIntersecting) setNear(true);
+      },
+      { root: canvas.closest(".oc-scroll-none"), rootMargin: "400px" },
+    );
+    obs.observe(canvas);
+    return () => obs.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!near) return;
     const canvas = ref.current;
     if (!canvas) return;
     const doc = useEditor.getState().doc;
@@ -38,7 +60,7 @@ export function SlideThumb({ index, width, height }: { index: number; width: num
     } catch {
       /* a tainted/cross-origin image can throw; the thumbnail just shows white */
     }
-  }, [liveRev, index, width, height]);
+  }, [near, liveRev, index, width, height]);
 
   return <canvas ref={ref} className="max-h-full max-w-full" />;
 }

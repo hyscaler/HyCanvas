@@ -41,10 +41,10 @@ The rules from `28-presentations-leverage-tasks.md` apply unchanged. In brief:
 | C20 | 4 Present | Speaker coach (pacing, filler words, long pauses) | done 2026-08-25 |
 | C21 | 4 Present | Phone-as-remote pairing | done 2026-08-25 |
 | C22 | 4 Present | Co-presenter control hand-off | done 2026-08-25 |
-| C23 | 5 Scale+Interop | Present prefetch: precompute the next slide | todo |
-| C24 | 5 Scale+Interop | Large-deck PagesBar virtualization + lazy thumbnails | todo |
-| C25 | 5 Scale+Interop | ODP import (Keynote/Slides documented via the PPTX bridge) | todo |
-| C26 | 5 Scale+Interop | Markdown outline import / export | todo |
+| C23 | 5 Scale+Interop | Present prefetch: precompute the next slide | done 2026-08-25 |
+| C24 | 5 Scale+Interop | Large-deck PagesBar virtualization + lazy thumbnails | done 2026-08-25 |
+| C25 | 5 Scale+Interop | ODP import (Keynote/Slides documented via the PPTX bridge) | done 2026-08-25 |
+| C26 | 5 Scale+Interop | Markdown outline import / export | done 2026-08-25 |
 | C27 | 6 A11y+AI | One-click accessibility fixes in the checker | todo |
 | C28 | 6 A11y+AI | Slide titles auto-derived from the title placeholder | todo |
 | C29 | 6 A11y+AI | AI chart descriptions | todo |

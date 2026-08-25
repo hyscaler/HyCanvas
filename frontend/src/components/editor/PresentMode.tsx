@@ -237,6 +237,27 @@ interface Slide {
 
 const cloneTransform = (t: Transform): Transform => ({ ...t });
 
+// Prefetch cache (C23): the NEXT visible slide's clone is built during idle
+// time so advancing never pays the structuredClone + collect on the click.
+// Keyed by document object (WeakMap: closed docs release) and revision, so
+// any edit invalidates. Consuming removes the entry (a Slide is stateful).
+const prefetchedSlides = new WeakMap<DesignFile, Map<string, Slide>>();
+function storePrefetchedSlide(doc: DesignFile, key: string, slide: Slide): void {
+  let m = prefetchedSlides.get(doc);
+  if (!m) {
+    m = new Map();
+    prefetchedSlides.set(doc, m);
+  }
+  m.clear(); // at most one prefetched slide per doc; stale keys never pile up
+  m.set(key, slide);
+}
+function takePrefetchedSlide(doc: DesignFile, key: string): Slide | null {
+  const m = prefetchedSlides.get(doc);
+  const hit = m?.get(key);
+  if (m && hit) m.delete(key);
+  return hit ?? null;
+}
+
 // Compose an AnimPatch over a node's resting transform/opacity, writing the
 // result back into the (cloned) node. Mirrors the store's applyPatch so the
 // editor preview and present mode agree exactly. A null patch restores rest.
@@ -1091,7 +1112,21 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
   // Build the slide clone for the current page; rebuilt on page/edit change. The
   // store mutates `doc` in place, so `rev` (not `doc`'s identity) signals edits.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const slide = useMemo(() => buildSlide(doc, idx), [doc, idx, rev]);
+  const slide = useMemo(() => takePrefetchedSlide(doc, `${rev}:${idx}`) ?? buildSlide(doc, idx), [doc, idx, rev]);
+  useEffect(() => {
+    const nextIdx = nextVisibleIndex(pages as SlideLike[], idx);
+    if (nextIdx < 0) return;
+    const w = window as unknown as {
+      requestIdleCallback?: (f: () => void, o?: { timeout: number }) => number;
+      cancelIdleCallback?: (h: number) => void;
+    };
+    const idle = (cb: () => void): number => (w.requestIdleCallback ? w.requestIdleCallback(cb, { timeout: 1500 }) : window.setTimeout(cb, 300));
+    const cancelIdle = (h: number) => (w.cancelIdleCallback ? w.cancelIdleCallback(h) : window.clearTimeout(h));
+    const handle = idle(() => {
+      storePrefetchedSlide(doc, `${rev}:${nextIdx}`, buildSlide(doc, nextIdx));
+    });
+    return () => cancelIdle(handle);
+  }, [doc, idx, rev, pages]);
 
   // A scene over the RESTING current slide for pointer hit-testing (rebuilt with
   // the slide). createScene reads the (unanimated) clone's transforms.
@@ -1341,11 +1376,28 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
     const bufA = document.createElement("canvas");
     const bufB = document.createElement("canvas");
 
+    // Dev-only frame budget meter (C23): a rolling average over 120 frames,
+    // logged when the present loop misses 60fps. Compiled out of production.
+    let frameCount = 0;
+    let frameAccum = 0;
+    let lastFrameAt = 0;
     const frame = () => {
       const f = layout();
       if (!f || !canvas) return;
       const vp = f.vp;
       const now = performance.now();
+      if (process.env.NODE_ENV !== "production") {
+        if (lastFrameAt > 0) {
+          frameAccum += now - lastFrameAt;
+          if (++frameCount >= 120) {
+            const avg = frameAccum / frameCount;
+            if (avg > 17) console.debug(`[present] frame budget: ${avg.toFixed(1)}ms avg over ${frameCount} frames (target 16.7ms)`);
+            frameCount = 0;
+            frameAccum = 0;
+          }
+        }
+        lastFrameAt = now;
+      }
       const tSlide = now - slideStart;
 
       const tr = transitionRef.current;

@@ -3527,5 +3527,7 @@
   "page.previous": "Précédent",
   "page.next": "Suivant",
   "page.blank_screen": "Écran noir",
-  "page.enter_the_code_shown_on_the_presenters_screen": "Saisissez le code affiché sur l'écran du présentateur."
+  "page.enter_the_code_shown_on_the_presenters_screen": "Saisissez le code affiché sur l'écran du présentateur.",
+  "editor.markdown_outline": "Plan Markdown",
+  "editor.slide_structure_and_text_as_a_markdown_outline": "Structure et texte des diapositives en plan markdown"
 }

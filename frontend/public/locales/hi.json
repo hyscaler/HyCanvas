@@ -3527,5 +3527,7 @@
   "page.previous": "पिछला",
   "page.next": "अगला",
   "page.blank_screen": "खाली स्क्रीन",
-  "page.enter_the_code_shown_on_the_presenters_screen": "प्रस्तुतकर्ता की स्क्रीन पर दिखाया गया कोड दर्ज करें।"
+  "page.enter_the_code_shown_on_the_presenters_screen": "प्रस्तुतकर्ता की स्क्रीन पर दिखाया गया कोड दर्ज करें।",
+  "editor.markdown_outline": "मार्कडाउन रूपरेखा",
+  "editor.slide_structure_and_text_as_a_markdown_outline": "स्लाइड संरचना और पाठ मार्कडाउन रूपरेखा के रूप में"
 }
