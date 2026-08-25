@@ -3471,5 +3471,8 @@
   "editor.acme_com": "acme.com",
   "editor.drag_to_move_the_camera_bubble": "拖动以移动摄像头气泡",
   "editor.easing_default": "平滑（默认）",
-  "editor.exit_transition": "退出过渡"
+  "editor.exit_transition": "退出过渡",
+  "editor.animate_all_slides": "为所有幻灯片添加动画",
+  "editor.animated_slides_count.one": "已为 {count} 张幻灯片添加动画",
+  "editor.animated_slides_count.other": "已为 {count} 张幻灯片添加动画"
 }

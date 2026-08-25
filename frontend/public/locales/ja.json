@@ -3471,5 +3471,8 @@
   "editor.acme_com": "acme.com",
   "editor.drag_to_move_the_camera_bubble": "ドラッグしてカメラバブルを移動",
   "editor.easing_default": "スムーズ（既定）",
-  "editor.exit_transition": "退出トランジション"
+  "editor.exit_transition": "退出トランジション",
+  "editor.animate_all_slides": "すべてのスライドをアニメーション",
+  "editor.animated_slides_count.one": "{count}枚のスライドをアニメーションしました",
+  "editor.animated_slides_count.other": "{count}枚のスライドをアニメーションしました"
 }

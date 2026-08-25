@@ -715,6 +715,10 @@ interface EditorState {
   /** Magic Animate: apply tasteful, staggered entrance animations to every
    *  top-level element on the active page in one undoable step (or clear them). */
   magicAnimatePage(clear?: boolean): void;
+  /** Magic-animate EVERY slide in one undo turn (C05). Slides that already
+   *  carry any node animation are skipped unless `replaceExisting`; returns
+   *  how many slides were animated. */
+  magicAnimateAllPages(replaceExisting?: boolean): number;
   /** Set/clear a node's custom keyframe timeline (F25), preserving presets. */
   setNodeKeyframes(id: string, track: KeyframeTrack | undefined): void;
   /** Set/clear a node's interaction (trigger + action), undoable. Mirrors the
@@ -3853,6 +3857,33 @@ export const useEditor = create<EditorState>((set, get) => {
         },
         () => { nodes.forEach((n, i) => { (n as unknown as { animation?: NodeAnimation }).animation = before[i]; }); },
       );
+    },
+    magicAnimateAllPages: (replaceExisting) => {
+      const doc = get().doc;
+      const presetFor = (n: Node): EntrancePreset =>
+        n.type === "text" ? "rise" : n.type === "image" || n.type === "frame" || n.type === "grid" ? "pop" : "fade";
+      let animated = 0;
+      get().runAsTurn(() => {
+        for (const page of doc.pages) {
+          const nodes = page.children as Node[];
+          if (!nodes.length) continue;
+          const hasAny = nodes.some((n) => !!(n as unknown as { animation?: NodeAnimation }).animation);
+          if (hasAny && !replaceExisting) continue; // hand-authored builds win by default
+          const before = nodes.map((n) => (n as unknown as { animation?: NodeAnimation }).animation);
+          perform(
+            () => {
+              nodes.forEach((n, i) => {
+                const rec = n as unknown as { animation?: NodeAnimation; animations?: unknown[] };
+                rec.animation = { entrance: { preset: presetFor(n), durationMs: 500, delayMs: Math.min(i * 120, 1500), easing: "ease-out" } };
+                delete rec.animations;
+              });
+            },
+            () => { nodes.forEach((n, i) => { (n as unknown as { animation?: NodeAnimation }).animation = before[i]; }); },
+          );
+          animated++;
+        }
+      });
+      return animated;
     },
     setNodeKeyframes: (id, track) => {
       const loc = locate(get().doc, id);

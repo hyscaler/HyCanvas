@@ -3471,5 +3471,8 @@
   "editor.acme_com": "acme.com",
   "editor.drag_to_move_the_camera_bubble": "Faites glisser pour déplacer la bulle de caméra",
   "editor.easing_default": "Fluide (par défaut)",
-  "editor.exit_transition": "Transition de sortie"
+  "editor.exit_transition": "Transition de sortie",
+  "editor.animate_all_slides": "Animer toutes les diapositives",
+  "editor.animated_slides_count.one": "{count} diapositive animée",
+  "editor.animated_slides_count.other": "{count} diapositives animées"
 }

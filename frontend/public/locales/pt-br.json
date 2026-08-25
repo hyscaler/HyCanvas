@@ -3471,5 +3471,8 @@
   "editor.acme_com": "acme.com",
   "editor.drag_to_move_the_camera_bubble": "Arraste para mover a bolha da câmera",
   "editor.easing_default": "Suave (padrão)",
-  "editor.exit_transition": "Transição de saída"
+  "editor.exit_transition": "Transição de saída",
+  "editor.animate_all_slides": "Animar todos os slides",
+  "editor.animated_slides_count.one": "{count} slide animado",
+  "editor.animated_slides_count.other": "{count} slides animados"
 }

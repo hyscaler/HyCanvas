@@ -3471,5 +3471,8 @@
   "editor.acme_com": "acme.com",
   "editor.drag_to_move_the_camera_bubble": "कैमरा बबल को हिलाने के लिए खींचें",
   "editor.easing_default": "स्मूद (डिफ़ॉल्ट)",
-  "editor.exit_transition": "निकास ट्रांज़िशन"
+  "editor.exit_transition": "निकास ट्रांज़िशन",
+  "editor.animate_all_slides": "सभी स्लाइड्स को एनिमेट करें",
+  "editor.animated_slides_count.one": "{count} स्लाइड एनिमेट की गई",
+  "editor.animated_slides_count.other": "{count} स्लाइड्स एनिमेट की गईं"
 }

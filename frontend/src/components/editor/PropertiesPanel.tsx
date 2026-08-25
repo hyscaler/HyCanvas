@@ -15,7 +15,9 @@ import { deriveThemeSlots, extractLayoutSet, repairThemeSlots, themeIdFor, theme
 import { refineExtractedLayoutSet } from "@/lib/layoutVision";
 import { colorHarmony, harmonySchemes, type HarmonyScheme, extractPalette, toHex } from "@hc/color";
 import { evalExpression, locate, rotateAboutPoint } from "@hc/editor";
-import { isLowResolution, computeEffectivePpi } from "@hc/engine";
+import { isLowResolution, computeEffectivePpi, renderTransition } from "@hc/engine";
+import type { CanvasLike as CanvasLikeCtx } from "@hc/engine";
+import { prefersReducedMotion } from "@/lib/theme";
 import { fontCatalog, type FontCategory } from "@hc/text";
 import {
   AlignStartVertical, AlignCenterVertical, AlignEndVertical,
@@ -2648,33 +2650,130 @@ function NodeAccessibilitySection({ node }: { node: Node }) {
 }
 
 /** Per-page transition control shown in the empty-selection page panel. */
+/** One transition-gallery tile: a miniature two-slide preview rendered by the
+ *  SAME engine compositor present mode uses, so the swatch cannot lie. Static
+ *  at a characteristic mid-frame; animates on hover/focus unless the user
+ *  prefers reduced motion. */
+function TransitionSwatch({ type, label, active, onPick }: {
+  type: import("@hc/schema").PageTransition["type"] | "none";
+  label: string;
+  active: boolean;
+  onPick: () => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rafRef = useRef(0);
+  const W = 64;
+  const H = 36;
+
+  const buffers = useCallback(() => {
+    const mk = (bg: string, bar: string, barY: number) => {
+      const c = document.createElement("canvas");
+      c.width = W;
+      c.height = H;
+      const g = c.getContext("2d")!;
+      g.fillStyle = bg;
+      g.fillRect(0, 0, W, H);
+      g.fillStyle = bar;
+      g.fillRect(8, barY, W - 16, 6);
+      g.fillRect(8, barY + 10, (W - 16) * 0.6, 4);
+      return c;
+    };
+    return { a: mk("#e2e8f0", "#475569", 8), b: mk("#334155", "#e2e8f0", 12) };
+  }, []);
+
+  const drawAt = useCallback((p: number) => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+    const { a, b } = buffers();
+    if (type === "none") {
+      ctx.drawImage(p < 0.5 ? a : b, 0, 0);
+      return;
+    }
+    renderTransition(ctx as unknown as CanvasLikeCtx, { type, durationMs: 300 } as import("@hc/schema").PageTransition, {
+      from: a, to: b, width: W, height: H, progress: p,
+    });
+  }, [type, buffers]);
+
+  useEffect(() => {
+    drawAt(0.4); // characteristic mid-frame as the resting state
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [drawAt]);
+
+  const animate = useCallback(() => {
+    if (prefersReducedMotion()) return; // static swatches under reduced motion
+    cancelAnimationFrame(rafRef.current);
+    const started = performance.now();
+    const loop = (now: number) => {
+      const p = ((now - started) % 1100) / 900; // 900ms sweep + a 200ms hold
+      drawAt(Math.min(1, p));
+      rafRef.current = requestAnimationFrame(loop);
+    };
+    rafRef.current = requestAnimationFrame(loop);
+  }, [drawAt]);
+
+  const settle = useCallback(() => {
+    cancelAnimationFrame(rafRef.current);
+    drawAt(0.4);
+  }, [drawAt]);
+
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={active}
+      title={label}
+      data-testid={`transition-${type}`}
+      onClick={onPick}
+      onMouseEnter={animate}
+      onMouseLeave={settle}
+      onFocus={animate}
+      onBlur={settle}
+      className={`flex flex-col items-center gap-0.5 rounded-lg border p-1 transition ${
+        active ? "border-brand-500 bg-brand-50" : "border-neutral-200 hover:bg-neutral-50"
+      }`}
+    >
+      <canvas ref={canvasRef} width={W} height={H} className="rounded" aria-hidden="true" />
+      <span className="max-w-full truncate text-[10px] leading-tight text-neutral-600">{label}</span>
+    </button>
+  );
+}
+
 function PageTransitionSection({ page }: { page: Page }) {
   const st = useEditor.getState();
+  const toast = useToast();
   const t = (page as { transition?: import("@hc/schema").PageTransition }).transition;
   const tOut = (page as { transitionOut?: import("@hc/schema").PageTransition }).transitionOut;
   type TransitionType = import("@hc/schema").PageTransition["type"];
   return (
     <Section title={tr("editor.transition")}>
-      <select aria-label={tr("editor.transition")}
-        value={t?.type ?? "none"}
-        onChange={(e) => {
-          const v = e.target.value as TransitionType;
-          if (v === "none") st.setPageTransition(undefined);
-          else st.setPageTransition({ type: v, direction: t?.direction ?? "left", durationMs: t?.durationMs ?? 400 });
-        }}
-        className={selectCls}
-      >
-        <option value="none">{tr("editor.none")}</option>
-        <option value="fade">{tr("editor.fade")}</option>
-        <option value="slide">{tr("editor.slide")}</option>
-        <option value="push">{tr("editor.push")}</option>
-        <option value="dissolve">{tr("editor.dissolve")}</option>
-        <option value="morph-lite">{tr("editor.morph_lite")}</option>
-        <option value="morph">{tr("editor.morph_magic_move")}</option>
-        <option value="wipe">{tr("editor.wipe")}</option>
-        <option value="flip">{tr("editor.flip")}</option>
-        <option value="zoom">{tr("editor.zoom")}</option>
-      </select>
+      {/* Gallery picker (C04): every tile previews through the real engine
+          compositor on hover/focus, so what you see is what plays. */}
+      <div role="radiogroup" aria-label={tr("editor.transition")} className="grid grid-cols-3 gap-1">
+        {([
+          ["none", tr("editor.none")],
+          ["fade", tr("editor.fade")],
+          ["slide", tr("editor.slide")],
+          ["push", tr("editor.push")],
+          ["dissolve", tr("editor.dissolve")],
+          ["morph-lite", tr("editor.morph_lite")],
+          ["morph", tr("editor.morph_magic_move")],
+          ["wipe", tr("editor.wipe")],
+          ["flip", tr("editor.flip")],
+          ["zoom", tr("editor.zoom")],
+        ] as [TransitionType | "none", string][]).map(([v, label]) => (
+          <TransitionSwatch
+            key={v}
+            type={v}
+            label={label}
+            active={(t?.type ?? "none") === v}
+            onPick={() => {
+              if (v === "none") st.setPageTransition(undefined);
+              else st.setPageTransition({ type: v, direction: t?.direction ?? "left", durationMs: t?.durationMs ?? 400, ...(t?.easing ? { easing: t.easing } : {}) });
+            }}
+          />
+        ))}
+      </div>
       {t && t.type !== "none" && (
         <div className="grid grid-cols-2 gap-2">
           {(t.type === "slide" || t.type === "push" || t.type === "wipe") && (
@@ -2747,6 +2846,19 @@ function PageTransitionSection({ page }: { page: Page }) {
         className="mt-2 w-full rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
       >
         {tr("editor.apply_to_all_slides")}
+      </button>
+      {/* C05: bulk magic-animate, one undo turn; hand-authored builds are
+          skipped so the button is always safe to press. */}
+      <button
+        type="button"
+        data-testid="animate-all-slides"
+        onClick={() => {
+          const n = useEditor.getState().magicAnimateAllPages();
+          toast.success(tr("editor.animated_slides_count", { count: n }));
+        }}
+        className="mt-1 w-full rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
+      >
+        {tr("editor.animate_all_slides")}
       </button>
     </Section>
   );
