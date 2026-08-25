@@ -58,7 +58,7 @@ function usedKeys(): Map<string, string> {
  * frozen in English. Keep this list short: every entry is a gap in the orphan
  * check above.
  */
-const DYNAMIC_PREFIXES = ["stickers.", "errors.api_", "editor.node_type_", "editor.effect_", "editor.dial_"];
+const DYNAMIC_PREFIXES = ["stickers.", "errors.api_", "editor.node_type_", "editor.effect_", "editor.dial_", "editor.theme_name_"];
 
 describe("catalog", () => {
   it("has an entry for every key the app asks for", () => {

@@ -1,0 +1,74 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-course-lecture",
+ "title": "Course Lecture",
+ "categories": [
+  "presentations",
+  "education"
+ ],
+ "tags": [
+  "education",
+  "lecture",
+  "course",
+  "teaching"
+ ],
+ "styleTags": [
+  "warm"
+ ],
+ "themeId": "theme-sand",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 44,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Lecture",
+  "theme": "clear, paced for learning",
+  "pages": [
+   {
+    "title": "Today's topic",
+    "points": [
+     "What you will be able to do by the end"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "Where we left off",
+    "points": [
+     "The three ideas from last time"
+    ],
+    "visualRole": "agenda"
+   },
+   {
+    "title": "The core concept",
+    "points": [
+     "The definition, in plain words",
+     "The intuition behind it"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Worked example",
+    "points": [
+     "Step through one real case together"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Common mistakes",
+    "points": [
+     "Where students usually stumble"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Practice and next steps",
+    "points": [
+     "What to try before next session"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

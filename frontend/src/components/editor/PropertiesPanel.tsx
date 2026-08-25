@@ -14,6 +14,7 @@ import { themeFromPalette } from "@hc/schema";
 import { deriveThemeSlots, extractLayoutSet, repairThemeSlots, themeIdFor, themeSlotNames, type ExtractedLayoutSet, type ExtractPageLike } from "@hc/aistudio";
 import { refineExtractedLayoutSet } from "@/lib/layoutVision";
 import { generateAltText, generateChartAltText } from "@/lib/altText";
+import { builtinThemes, themeStyleLabel, themeStyleOrder } from "@/lib/themeCatalog";
 import { colorHarmony, harmonySchemes, type HarmonyScheme, extractPalette, toHex } from "@hc/color";
 import { evalExpression, locate, rotateAboutPoint } from "@hc/editor";
 import { isLowResolution, computeEffectivePpi, renderTransition } from "@hc/engine";
@@ -2642,21 +2643,9 @@ function PageLayoutSection({ page, workspaceId }: { page: Page; workspaceId: str
  *  only), so a themed deck restyles while a user's own choices never move.
  *  The seed palettes adapt an MIT-licensed catalog (see THIRD_PARTY.md) into
  *  the 6-slot convention: primary, accent, deep, tint, ink, paper. */
-const builtinThemes = (): { id: string; name: string; colors: string[]; fontHeading: string; fontBody: string }[] => [
-  { id: "theme-plum", name: tr("editor.plum"), colors: ["#9B2C72", "#C84B9A", "#3E1030", "#FBEFF7", "#18181b", "#ffffff"], fontHeading: "Plus Jakarta Sans", fontBody: "Plus Jakarta Sans" },
-  { id: "theme-slate", name: tr("editor.slate"), colors: ["#0f172a", "#334155", "#64748b", "#e2e8f0", "#020617", "#ffffff"], fontHeading: "Inter", fontBody: "Inter" },
-  { id: "theme-forest", name: tr("editor.forest"), colors: ["#14532d", "#16a34a", "#4ade80", "#dcfce7", "#052e16", "#ffffff"], fontHeading: "Inter", fontBody: "Inter" },
-  { id: "theme-azure", name: tr("editor.azure"), colors: ["#3b82f6", "#60a5fa", "#1e40af", "#f3f4f6", "#1f2937", "#ffffff"], fontHeading: "Inter", fontBody: "Inter" },
-  { id: "theme-sunset", name: tr("editor.sunset"), colors: ["#ea580c", "#fb923c", "#9a3412", "#ffffff", "#292524", "#fffbeb"], fontHeading: "DM Serif Display", fontBody: "DM Sans" },
-  { id: "theme-ocean", name: tr("editor.ocean"), colors: ["#0284c7", "#38bdf8", "#0369a1", "#ffffff", "#0c4a6e", "#f0f9ff"], fontHeading: "Outfit", fontBody: "Work Sans" },
-  { id: "theme-sakura", name: tr("editor.sakura"), colors: ["#ec4899", "#f472b6", "#be185d", "#ffffff", "#831843", "#fdf2f8"], fontHeading: "Cormorant Garamond", fontBody: "Lato" },
-  { id: "theme-sand", name: tr("editor.sand"), colors: ["#a16207", "#ca8a04", "#713f12", "#ffffff", "#422006", "#fefce8"], fontHeading: "Fraunces", fontBody: "Nunito" },
-  { id: "theme-mint", name: tr("editor.mint"), colors: ["#10b981", "#34d399", "#047857", "#ffffff", "#064e3b", "#ecfdf5"], fontHeading: "Plus Jakarta Sans", fontBody: "Inter" },
-  { id: "theme-lavender", name: tr("editor.lavender"), colors: ["#9333ea", "#a855f7", "#7e22ce", "#ffffff", "#3b0764", "#faf5ff"], fontHeading: "Sora", fontBody: "Rubik" },
-  { id: "theme-noir", name: tr("editor.noir"), colors: ["#60a5fa", "#93c5fd", "#1d4ed8", "#1f2937", "#e5e7eb", "#111827"], fontHeading: "Inter", fontBody: "Inter" },
-  { id: "theme-indigo", name: tr("editor.indigo"), colors: ["#818cf8", "#a5b4fc", "#4338ca", "#312e81", "#e2e8f0", "#1e1b4b"], fontHeading: "Poppins", fontBody: "Source Sans 3" },
-  { id: "theme-gilded", name: tr("editor.gilded"), colors: ["#d2ac47", "#f4e883", "#ae8625", "#1b1c1d", "#cfcbbf", "#0a0a0a"], fontHeading: "Prata", fontBody: "Raleway" },
-];
+// F40 E10: the theme seeds moved to the shared catalog (@hc/aistudio via
+// frontend/src/lib/themeCatalog), one source of truth for the picker,
+// headless generation, and the Go manifest.
 
 /** One selectable theme row: four palette chips + the name. */
 function ThemeRow({ active, colors, name, testId, onClick }: { active: boolean; colors: string[]; name: string; testId: string; onClick?: () => void }) {
@@ -2817,24 +2806,33 @@ function DeckThemeSection() {
             colors={custom.colors.map((c) => colorHex(c.color))}
           />
         )}
-        {seeds.map((t) => (
-          <ThemeRow
-            key={t.id}
-            active={current === t.id}
-            testId={`theme-${t.id}`}
-            name={t.name}
-            colors={t.colors}
-            onClick={() =>
-              st.setDeckTheme({
-                id: t.id,
-                name: t.name,
-                colors: t.colors.map((hex, i) => ({ id: `${t.id}-${i}`, name: themeSlotNames[i], color: colorFromHex(hex) })),
-                fontHeading: t.fontHeading,
-                fontBody: t.fontBody,
-              })
-            }
-          />
-        ))}
+        {themeStyleOrder.map((style) => {
+          const group = seeds.filter((t) => t.style === style);
+          if (!group.length) return null;
+          return (
+            <div key={style} className="flex flex-col gap-1.5">
+              <span className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">{themeStyleLabel(style)}</span>
+              {group.map((t) => (
+                <ThemeRow
+                  key={t.id}
+                  active={current === t.id}
+                  testId={`theme-${t.id}`}
+                  name={t.displayName}
+                  colors={[...t.colors]}
+                  onClick={() =>
+                    st.setDeckTheme({
+                      id: t.id,
+                      name: t.displayName,
+                      colors: t.colors.map((hex, i) => ({ id: `${t.id}-${i}`, name: themeSlotNames[i], color: colorFromHex(hex) })),
+                      fontHeading: t.fontHeading,
+                      fontBody: t.fontBody,
+                    })
+                  }
+                />
+              ))}
+            </div>
+          );
+        })}
         {brandKit && brandColors.length > 0 && (
           <button type="button" onClick={applyBrandTheme} className={actionBtnCls} data-testid="theme-from-brand">
             {tr("editor.create_theme_from_brand_kit")}

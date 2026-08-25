@@ -1,0 +1,66 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-sprint-demo",
+ "title": "Sprint Demo",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "demo",
+  "sprint",
+  "engineering",
+  "agile"
+ ],
+ "styleTags": [
+  "tech"
+ ],
+ "themeId": "theme-circuit",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 62,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Sprint Demo",
+  "theme": "show, then tell",
+  "pages": [
+   {
+    "title": "This sprint",
+    "points": [
+     "The goal we committed to"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "Demo one",
+    "points": [
+     "The feature, the flow, the edge cases handled"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Demo two",
+    "points": [
+     "What changed under the hood and why it matters"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "The numbers",
+    "points": [
+     "Velocity, bugs, and the trend"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "Next sprint",
+    "points": [
+     "What we pull and what we park"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

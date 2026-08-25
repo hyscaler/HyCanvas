@@ -1,0 +1,67 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-design-review",
+ "title": "Design Review",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "design",
+  "review",
+  "critique",
+  "ux"
+ ],
+ "styleTags": [
+  "editorial"
+ ],
+ "themeId": "theme-orchid",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 60,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Design Review",
+  "theme": "visual, focused critique",
+  "pages": [
+   {
+    "title": "The brief",
+    "points": [
+     "The problem this design answers"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "The flow",
+    "points": [
+     "The user's path, screen by screen"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Key decisions",
+    "points": [
+     "The three choices that shaped it",
+     "The alternatives we rejected"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Open questions",
+    "points": [
+     "Where we want the room's judgment"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Next iteration",
+    "points": [
+     "What changes before build"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

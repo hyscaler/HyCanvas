@@ -107,7 +107,9 @@ const rolePreference: Record<VisualRole, string[]> = {
   content: ["title+content", "title+content+content"],
   comparison: ["title+body+content+body+content", "title+content+content"],
   quote: ["title", "title+body"],
-  data: ["title+content", "title+picture+body"],
+  // Data pages prefer the stat row (three content slots, F40 E09) when the
+  // library carries it; older layout sets fall through unchanged.
+  data: ["title+content+content+content", "title+content", "title+picture+body"],
   closing: ["title", "title+body"],
 };
 

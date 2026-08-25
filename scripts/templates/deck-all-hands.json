@@ -1,0 +1,75 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-all-hands",
+ "title": "Company All-Hands",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "all hands",
+  "company",
+  "update",
+  "culture"
+ ],
+ "styleTags": [
+  "professional",
+  "friendly"
+ ],
+ "themeId": "theme-azure",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 38,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "All-Hands",
+  "theme": "warm, honest, energizing",
+  "pages": [
+   {
+    "title": "Welcome",
+    "points": [
+     "What this month looked like"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "Wins to celebrate",
+    "points": [
+     "Team wins worth naming",
+     "Customer moments that made us proud"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "The numbers",
+    "points": [
+     "Where we stand against the plan"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "What we are fixing",
+    "points": [
+     "The honest view of what is not working"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Next month",
+    "points": [
+     "Priorities everyone should know"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Shoutouts",
+    "points": [
+     "People who made the difference"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

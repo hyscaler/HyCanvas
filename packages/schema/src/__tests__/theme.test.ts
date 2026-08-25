@@ -180,7 +180,7 @@ describe("themes", () => {
 });
 
 describe("builtinMasterAndLayouts", () => {
-  it("ships the five expected layouts", () => {
+  it("ships the sixteen expected layouts (originals first, F40 E09 additions after)", () => {
     const { layouts } = builtinMasterAndLayouts({ width: 1920, height: 1080 });
     expect(layouts.map((l) => l.name)).toEqual([
       "Title",
@@ -188,6 +188,17 @@ describe("builtinMasterAndLayouts", () => {
       "Two content",
       "Comparison",
       "Picture with caption",
+      "Section header",
+      "Agenda",
+      "Quote",
+      "Stat row",
+      "Timeline",
+      "Team grid",
+      "Picture left",
+      "Big picture",
+      "Content with picture",
+      "Headline stat",
+      "Closing",
     ]);
   });
 

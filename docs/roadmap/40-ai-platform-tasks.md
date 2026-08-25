@@ -29,10 +29,10 @@ The rules from `28-presentations-completion-tasks.md` apply unchanged. In brief:
 | E06 | 1 Generation API | OpenAPI document + served API docs page | done 2026-08-27 |
 | E07 | 2 MCP | MCP server (streamable HTTP) over the generation API | done 2026-08-28 |
 | E08 | 2 MCP | MCP hardening: per-key scopes, audit log, docs | done 2026-08-28 |
-| E09 | 3 Catalog | Slide layout library: ~5 to 15+ layouts with capacity hints | todo |
-| E10 | 3 Catalog | Theme catalog: 14 to 30+, extracted to a shared module | todo |
-| E11 | 3 Catalog | Presentation template seeds: 11 to 40+ | todo |
-| E12 | 3 Catalog | Generate-with-template: pick a template/theme as the generation base | todo |
+| E09 | 3 Catalog | Slide layout library: ~5 to 15+ layouts with capacity hints | done 2026-08-28 |
+| E10 | 3 Catalog | Theme catalog: 14 to 30+, extracted to a shared module | done 2026-08-28 |
+| E11 | 3 Catalog | Presentation template seeds: 11 to 40+ | done 2026-08-28 |
+| E12 | 3 Catalog | Generate-with-template: pick a template/theme as the generation base | done 2026-08-28 |
 | E13 | 4 Template-from-PPTX | One-click AI template builder from an uploaded PPTX | todo |
 | E14 | 4 Template-from-PPTX | Custom templates as first-class generation targets | todo |
 | E15 | 5 Reflow | Pure adaptive-reflow engine over placeholder capacity hints | todo |
@@ -97,7 +97,7 @@ The pitch: generation quality is bounded by the layout library (T12 grounding pi
 
 ### E12: Generate with a chosen template/theme
 
-- The generation flows (panel + Phase 1 API) accept an optional template or theme as the visual base: a chosen template contributes its masters/layouts + theme (generation fills ITS layout system instead of the builtins); a chosen theme seeds `deckThemes`. Panel UI: an optional style row in the outline-review card (template/theme thumbnails). This is presenton's template-bound generation matched, without giving up the freeform path.
+- Shipped: the generation flows accept an optional THEME as the visual base end to end - a theme strip in the outline-review card (Auto + all 33 catalog chips), `themeId` on the API and the MCP `generate_presentation` tool (validated against the embedded manifest; unknown ids 400 with `invalid_theme_id`), `GET /v1/themes` + the MCP `list_themes` tool, and both panel paths (layout-grounded and freeform) plus the composer resolving the catalog identically. Template-as-base moved to E14 deliberately: today only PPTX-derived templates carry masters/layouts (E13 creates them), so a template chooser here would offer an empty shelf - it lands with E13/E14 where it has real inventory.
 
 ## Phase 4: AI template-from-PPTX
 

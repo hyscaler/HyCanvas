@@ -106,3 +106,38 @@ describe("built-in layouts carry capacities", () => {
     }
   });
 });
+
+describe("layout library expansion (F40 E09)", () => {
+  it("ships 16 layouts with unique ids and unchanged originals", () => {
+    const { layouts } = builtinMasterAndLayouts(PAGE);
+    expect(layouts).toHaveLength(16);
+    const ids = layouts.map((l) => l.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    // The original five keep their ids AND their order (linked pages resolve
+    // by id; generation fallbacks index layouts[0]).
+    expect(ids.slice(0, 5)).toEqual([
+      "layout-title", "layout-title-content", "layout-two-content", "layout-comparison", "layout-picture",
+    ]);
+    // Every placeholder rect stays inside the page.
+    for (const l of layouts) {
+      for (const ph of l.placeholders) {
+        expect(ph.rect.x, `${l.id}/${ph.id} x`).toBeGreaterThanOrEqual(0);
+        expect(ph.rect.y, `${l.id}/${ph.id} y`).toBeGreaterThanOrEqual(0);
+        expect(ph.rect.x + ph.rect.width, `${l.id}/${ph.id} right`).toBeLessThanOrEqual(PAGE.width + 0.5);
+        expect(ph.rect.y + ph.rect.height, `${l.id}/${ph.id} bottom`).toBeLessThanOrEqual(PAGE.height + 0.5);
+      }
+    }
+    // No two placeholders inside one layout overlap (a slot fighting another
+    // slot for the same area produces unreadable fills).
+    for (const l of layouts) {
+      const phs = l.placeholders;
+      for (let i = 0; i < phs.length; i++) {
+        for (let j = i + 1; j < phs.length; j++) {
+          const a = phs[i].rect, b = phs[j].rect;
+          const overlap = a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+          expect(overlap, `${l.id}: ${phs[i].id} overlaps ${phs[j].id}`).toBe(false);
+        }
+      }
+    }
+  });
+});

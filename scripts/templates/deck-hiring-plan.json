@@ -1,0 +1,74 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-hiring-plan",
+ "title": "Hiring Plan",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "hiring",
+  "recruiting",
+  "plan",
+  "team"
+ ],
+ "styleTags": [
+  "minimal",
+  "professional"
+ ],
+ "themeId": "theme-sage",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 68,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Hiring Plan",
+  "theme": "structured, realistic",
+  "pages": [
+   {
+    "title": "The plan",
+    "points": [
+     "Headcount against the roadmap"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "The roles",
+    "points": [
+     "Each role, its quarter, and its why"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "The funnel",
+    "points": [
+     "Pipeline math from sourcing to signed"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "The process",
+    "points": [
+     "Stages, owners, and time targets"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Risks",
+    "points": [
+     "Comp bands, competing offers, and timing"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Asks",
+    "points": [
+     "Referrals and interviewer time"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

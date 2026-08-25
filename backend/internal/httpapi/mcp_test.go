@@ -128,12 +128,19 @@ func TestMCPSurface_DB(t *testing.T) {
 		t.Fatalf("notification: want 202, got %d", code)
 	}
 
-	// tools/list names the five tools.
+	// tools/list names the six tools (list_themes joined in F40 E12).
 	_, out = rpc(fullRaw, `{"jsonrpc":"2.0","id":2,"method":"tools/list"}`)
 	res, _ = out["result"].(map[string]any)
 	tools, _ := res["tools"].([]any)
-	if len(tools) != 5 {
-		t.Fatalf("want 5 tools, got %d", len(tools))
+	if len(tools) != 6 {
+		t.Fatalf("want 6 tools, got %d", len(tools))
+	}
+
+	// list_themes answers the embedded catalog for any valid key.
+	_, out = rpc(readRaw, `{"jsonrpc":"2.0","id":12,"method":"tools/call","params":{"name":"list_themes","arguments":{}}}`)
+	res, _ = out["result"].(map[string]any)
+	if res == nil || res["isError"] != false || !strings.Contains(toolText(res), "theme-slate") {
+		t.Fatalf("list_themes: want catalog, got %v", out)
 	}
 
 	// Batching was removed in 2025-06-18: refuse arrays.

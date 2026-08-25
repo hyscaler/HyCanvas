@@ -220,6 +220,7 @@ func mcpToolList() []map[string]any {
 				"designType": map[string]any{"type": "string", "enum": []string{"deck", "doc", "poster", "social"}, "description": "Defaults to deck."},
 				"pageCount":  map[string]any{"type": "integer", "minimum": 1, "maximum": 40},
 				"language":   str("Write all text in this language, e.g. 'Spanish'."),
+				"themeId":    str("A built-in theme id from list_themes (e.g. 'theme-slate'); omit for an auto-picked look."),
 				"brandPalette": map[string]any{
 					"type": "array", "items": map[string]any{"type": "string", "pattern": "^#[0-9a-fA-F]{6}$"}, "maxItems": 12,
 					"description": "Brand hex colors to ground the theme in.",
@@ -235,6 +236,11 @@ func mcpToolList() []map[string]any {
 			"name":        "get_job",
 			"description": "Poll a generation or export job by id. A completed generation job's result carries designId and editorUrl.",
 			"inputSchema": obj(map[string]any{"jobId": str("The job id returned by generate_presentation.")}, "jobId"),
+		},
+		{
+			"name":        "list_themes",
+			"description": "List the built-in theme catalog (id, name, style group, six palette slots, font pair). Pass an id as generate_presentation's themeId.",
+			"inputSchema": obj(map[string]any{}),
 		},
 		{
 			"name":        "get_design_file",
@@ -325,6 +331,9 @@ func (d mcpDeps) callTool(r *http.Request, key *apikeys.KeyInfo, name string, ar
 			return toolResult("job not found", true)
 		}
 		return toolResult(j.View(), false)
+
+	case "list_themes":
+		return toolResult(aistudio.ThemeCatalog(), false)
 
 	case "get_design_file":
 		if !key.HasScope(apikeys.ScopeRead) {

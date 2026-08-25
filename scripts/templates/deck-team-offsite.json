@@ -1,0 +1,74 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-team-offsite",
+ "title": "Team Offsite",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "offsite",
+  "team",
+  "planning",
+  "culture"
+ ],
+ "styleTags": [
+  "warm",
+  "friendly"
+ ],
+ "themeId": "theme-sunset",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 66,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Team Offsite",
+  "theme": "relaxed but purposeful",
+  "pages": [
+   {
+    "title": "Welcome to the offsite",
+    "points": [
+     "Why we are here in person"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "The agenda",
+    "points": [
+     "Two days, four sessions, one dinner"
+    ],
+    "visualRole": "agenda"
+   },
+   {
+    "title": "State of the team",
+    "points": [
+     "What the team said in the survey"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "The big conversation",
+    "points": [
+     "The one topic we keep avoiding"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Planning session",
+    "points": [
+     "Next quarter, drafted together"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Commitments",
+    "points": [
+     "What each of us takes home"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

@@ -1,0 +1,73 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-nonprofit-impact",
+ "title": "Nonprofit Impact Report",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "nonprofit",
+  "impact",
+  "report",
+  "donors"
+ ],
+ "styleTags": [
+  "warm"
+ ],
+ "themeId": "theme-olive",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 74,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Impact Report",
+  "theme": "human, accountable",
+  "pages": [
+   {
+    "title": "Our mission",
+    "points": [
+     "Why this work matters"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "The year's impact",
+    "points": [
+     "People reached and outcomes achieved"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "One story",
+    "points": [
+     "A single life the numbers cannot capture"
+    ],
+    "visualRole": "quote"
+   },
+   {
+    "title": "Where the money went",
+    "points": [
+     "Programs, operations, and fundraising"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "What is next",
+    "points": [
+     "The gap we close next year"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Join us",
+    "points": [
+     "How supporters can help"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

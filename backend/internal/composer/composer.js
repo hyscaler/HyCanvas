@@ -27449,6 +27449,64 @@ ${err.toString()}`);
               { id: "ph-title", role: "title", rect: rect(page, 0.06, 0.08, 0.88, 0.12) },
               { id: "ph-pic", role: "picture", rect: rect(page, 0.06, 0.24, 0.56, 0.62) },
               { id: "ph-cap", role: "body", rect: rect(page, 0.66, 0.24, 0.28, 0.62) }
+            ]),
+            // --- F40 E09 additions. Additive only: the five layouts above keep
+            // their ids and rects (linked pages must not shift), and every new
+            // placeholder carries derived capacity hints like the originals. ---
+            L("layout-section", "Section header", [
+              { id: "ph-title", role: "title", rect: rect(page, 0.08, 0.38, 0.84, 0.18) },
+              { id: "ph-sub", role: "body", rect: rect(page, 0.08, 0.6, 0.7, 0.1) }
+            ]),
+            L("layout-agenda", "Agenda", [
+              { id: "ph-title", role: "title", rect: rect(page, 0.06, 0.1, 0.44, 0.14) },
+              { id: "ph-content", role: "content", rect: rect(page, 0.55, 0.12, 0.39, 0.76) }
+            ]),
+            L("layout-quote", "Quote", [
+              { id: "ph-title", role: "title", rect: rect(page, 0.12, 0.3, 0.76, 0.28) },
+              { id: "ph-attr", role: "body", rect: rect(page, 0.12, 0.62, 0.5, 0.08) }
+            ]),
+            L("layout-stats", "Stat row", [
+              { id: "ph-title", role: "title", rect: rect(page, 0.06, 0.08, 0.88, 0.13) },
+              { id: "ph-stat-1", role: "content", rect: rect(page, 0.06, 0.3, 0.27, 0.5) },
+              { id: "ph-stat-2", role: "content", rect: rect(page, 0.365, 0.3, 0.27, 0.5) },
+              { id: "ph-stat-3", role: "content", rect: rect(page, 0.67, 0.3, 0.27, 0.5) }
+            ]),
+            L("layout-timeline", "Timeline", [
+              { id: "ph-title", role: "title", rect: rect(page, 0.06, 0.08, 0.88, 0.13) },
+              { id: "ph-step-1", role: "content", rect: rect(page, 0.06, 0.32, 0.2, 0.48) },
+              { id: "ph-step-2", role: "content", rect: rect(page, 0.285, 0.32, 0.2, 0.48) },
+              { id: "ph-step-3", role: "content", rect: rect(page, 0.51, 0.32, 0.2, 0.48) },
+              { id: "ph-step-4", role: "content", rect: rect(page, 0.735, 0.32, 0.2, 0.48) }
+            ]),
+            L("layout-team", "Team grid", [
+              { id: "ph-title", role: "title", rect: rect(page, 0.06, 0.07, 0.88, 0.12) },
+              { id: "ph-cell-1", role: "content", rect: rect(page, 0.06, 0.24, 0.42, 0.3) },
+              { id: "ph-cell-2", role: "content", rect: rect(page, 0.52, 0.24, 0.42, 0.3) },
+              { id: "ph-cell-3", role: "content", rect: rect(page, 0.06, 0.58, 0.42, 0.3) },
+              { id: "ph-cell-4", role: "content", rect: rect(page, 0.52, 0.58, 0.42, 0.3) }
+            ]),
+            L("layout-picture-left", "Picture left", [
+              { id: "ph-title", role: "title", rect: rect(page, 0.5, 0.1, 0.44, 0.14) },
+              { id: "ph-pic", role: "picture", rect: rect(page, 0.06, 0.1, 0.4, 0.8) },
+              { id: "ph-body", role: "body", rect: rect(page, 0.5, 0.28, 0.44, 0.56) }
+            ]),
+            L("layout-big-picture", "Big picture", [
+              { id: "ph-pic", role: "picture", rect: rect(page, 0.06, 0.08, 0.88, 0.64) },
+              { id: "ph-title", role: "title", rect: rect(page, 0.06, 0.75, 0.6, 0.1) },
+              { id: "ph-cap", role: "body", rect: rect(page, 0.06, 0.86, 0.88, 0.08) }
+            ]),
+            L("layout-content-picture", "Content with picture", [
+              { id: "ph-title", role: "title", rect: rect(page, 0.06, 0.08, 0.88, 0.13) },
+              { id: "ph-content", role: "content", rect: rect(page, 0.06, 0.26, 0.5, 0.6) },
+              { id: "ph-pic", role: "picture", rect: rect(page, 0.6, 0.26, 0.34, 0.6) }
+            ]),
+            L("layout-headline-stat", "Headline stat", [
+              { id: "ph-stat", role: "title", rect: rect(page, 0.1, 0.28, 0.8, 0.24) },
+              { id: "ph-context", role: "body", rect: rect(page, 0.16, 0.58, 0.68, 0.14) }
+            ]),
+            L("layout-closing", "Closing", [
+              { id: "ph-title", role: "title", rect: rect(page, 0.1, 0.32, 0.8, 0.18) },
+              { id: "ph-cta", role: "body", rect: rect(page, 0.2, 0.56, 0.6, 0.12) }
             ])
           ]
         };
@@ -28835,7 +28893,9 @@ ${err.toString()}`);
         content: ["title+content", "title+content+content"],
         comparison: ["title+body+content+body+content", "title+content+content"],
         quote: ["title", "title+body"],
-        data: ["title+content", "title+picture+body"],
+        // Data pages prefer the stat row (three content slots, F40 E09) when the
+        // library carries it; older layout sets fall through unchanged.
+        data: ["title+content+content+content", "title+content", "title+picture+body"],
         closing: ["title", "title+body"]
       };
       function signature(l) {
@@ -29241,7 +29301,24 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
       Object.defineProperty(exports, "__esModule", { value: true });
       exports.deckThemes = deckThemes;
       var color_1 = require_dist2();
-      var DEFAULT_HUES = ["#1f3a93", "#0f766e", "#7c3aed", "#b91c1c", "#c2410c", "#0e7490", "#4d7c0f", "#9d174d"];
+      var DEFAULT_HUES = [
+        "#1f3a93",
+        "#0f766e",
+        "#7c3aed",
+        "#b91c1c",
+        "#c2410c",
+        "#0e7490",
+        "#4d7c0f",
+        "#9d174d",
+        "#92400e",
+        "#1e40af",
+        "#374151",
+        "#86198f",
+        "#0f766e",
+        "#78350f",
+        "#155e75",
+        "#3f6212"
+      ];
       function rotateHue(c, deg) {
         const { r, g, b, a } = c.srgb;
         const max2 = Math.max(r, g, b);
@@ -29540,6 +29617,58 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
           fontHeading: deck.fontHeading,
           fontBody: deck.fontBody
         };
+      }
+    }
+  });
+
+  // packages/aistudio/dist/themeCatalog.js
+  var require_themeCatalog = __commonJS({
+    "packages/aistudio/dist/themeCatalog.js"(exports) {
+      "use strict";
+      Object.defineProperty(exports, "__esModule", { value: true });
+      exports.themeCatalog = void 0;
+      exports.themeCatalogEntry = themeCatalogEntry;
+      exports.themeCatalog = [
+        // --- the original thirteen (ids and looks stable; only slots that failed
+        // contrast validation were nudged to the nearest passing shade) -----------
+        { id: "theme-plum", name: "Plum", style: "bold", colors: ["#9B2C72", "#C84B9A", "#3E1030", "#FBEFF7", "#18181b", "#ffffff"], fontHeading: "Plus Jakarta Sans", fontBody: "Plus Jakarta Sans" },
+        { id: "theme-slate", name: "Slate", style: "professional", colors: ["#0f172a", "#334155", "#64748b", "#e2e8f0", "#020617", "#ffffff"], fontHeading: "Inter", fontBody: "Inter" },
+        { id: "theme-forest", name: "Forest", style: "professional", colors: ["#14532d", "#16a34a", "#4ade80", "#dcfce7", "#052e16", "#ffffff"], fontHeading: "Inter", fontBody: "Inter" },
+        { id: "theme-azure", name: "Azure", style: "professional", colors: ["#3b82f6", "#60a5fa", "#1e40af", "#f3f4f6", "#1f2937", "#ffffff"], fontHeading: "Inter", fontBody: "Inter" },
+        { id: "theme-sunset", name: "Sunset", style: "warm", colors: ["#ea580c", "#fb923c", "#9a3412", "#ffffff", "#292524", "#fffbeb"], fontHeading: "DM Serif Display", fontBody: "DM Sans" },
+        { id: "theme-ocean", name: "Ocean", style: "professional", colors: ["#0284c7", "#38bdf8", "#0369a1", "#ffffff", "#0c4a6e", "#f0f9ff"], fontHeading: "Outfit", fontBody: "Work Sans" },
+        { id: "theme-sakura", name: "Sakura", style: "editorial", colors: ["#ec4899", "#f472b6", "#be185d", "#ffffff", "#831843", "#fdf2f8"], fontHeading: "Cormorant Garamond", fontBody: "Lato" },
+        { id: "theme-sand", name: "Sand", style: "warm", colors: ["#a16207", "#ca8a04", "#713f12", "#ffffff", "#422006", "#fefce8"], fontHeading: "Fraunces", fontBody: "Nunito" },
+        { id: "theme-mint", name: "Mint", style: "minimal", colors: ["#059669", "#34d399", "#047857", "#ffffff", "#064e3b", "#ecfdf5"], fontHeading: "Plus Jakarta Sans", fontBody: "Inter" },
+        { id: "theme-lavender", name: "Lavender", style: "bold", colors: ["#9333ea", "#a855f7", "#7e22ce", "#ffffff", "#3b0764", "#faf5ff"], fontHeading: "Sora", fontBody: "Rubik" },
+        { id: "theme-noir", name: "Noir", style: "dark", colors: ["#60a5fa", "#93c5fd", "#1d4ed8", "#1f2937", "#e5e7eb", "#111827"], fontHeading: "Inter", fontBody: "Inter" },
+        { id: "theme-indigo", name: "Indigo", style: "dark", colors: ["#818cf8", "#a5b4fc", "#4338ca", "#312e81", "#e2e8f0", "#1e1b4b"], fontHeading: "Poppins", fontBody: "Source Sans 3" },
+        { id: "theme-gilded", name: "Gilded", style: "dark", colors: ["#d2ac47", "#f4e883", "#ae8625", "#1b1c1d", "#cfcbbf", "#0a0a0a"], fontHeading: "Prata", fontBody: "Raleway" },
+        // --- the F40 E10 expansion ------------------------------------------------
+        { id: "theme-royal", name: "Royal", style: "professional", colors: ["#1e3a8a", "#3b82f6", "#172554", "#eff6ff", "#0f172a", "#ffffff"], fontHeading: "Poppins", fontBody: "Source Sans 3" },
+        { id: "theme-teal", name: "Teal", style: "professional", colors: ["#0f766e", "#14b8a6", "#042f2e", "#f0fdfa", "#0f172a", "#ffffff"], fontHeading: "Inter", fontBody: "Inter" },
+        { id: "theme-denim", name: "Denim", style: "professional", colors: ["#1e40af", "#60a5fa", "#1e3a8a", "#eff6ff", "#1e293b", "#ffffff"], fontHeading: "Rubik", fontBody: "Inter" },
+        { id: "theme-graphite", name: "Graphite", style: "minimal", colors: ["#374151", "#6b7280", "#111827", "#f3f4f6", "#111827", "#ffffff"], fontHeading: "Inter", fontBody: "Inter" },
+        { id: "theme-porcelain", name: "Porcelain", style: "minimal", colors: ["#52525b", "#a1a1aa", "#27272a", "#fafafa", "#18181b", "#ffffff"], fontHeading: "DM Sans", fontBody: "DM Sans" },
+        { id: "theme-sage", name: "Sage", style: "minimal", colors: ["#3f6212", "#65a30d", "#1a2e05", "#f7fee7", "#1a2e05", "#ffffff"], fontHeading: "Work Sans", fontBody: "Work Sans" },
+        { id: "theme-copper", name: "Copper", style: "editorial", colors: ["#92400e", "#d97706", "#451a03", "#fffbeb", "#292524", "#fffdf9"], fontHeading: "Playfair Display", fontBody: "Source Sans 3" },
+        { id: "theme-orchid", name: "Orchid", style: "editorial", colors: ["#86198f", "#c026d3", "#4a044e", "#fdf4ff", "#27272a", "#ffffff"], fontHeading: "Cormorant Garamond", fontBody: "Lato" },
+        { id: "theme-blush", name: "Blush", style: "editorial", colors: ["#be123c", "#fb7185", "#881337", "#fff1f2", "#27272a", "#ffffff"], fontHeading: "Prata", fontBody: "Raleway" },
+        { id: "theme-crimson", name: "Crimson", style: "bold", colors: ["#b91c1c", "#ef4444", "#7f1d1d", "#fef2f2", "#1c1917", "#ffffff"], fontHeading: "Montserrat", fontBody: "Inter" },
+        { id: "theme-mango", name: "Mango", style: "bold", colors: ["#c2410c", "#f59e0b", "#7c2d12", "#fffbeb", "#1c1917", "#ffffff"], fontHeading: "Poppins", fontBody: "DM Sans" },
+        { id: "theme-terra", name: "Terra", style: "warm", colors: ["#9a3412", "#c2410c", "#431407", "#fff7ed", "#292524", "#fffefb"], fontHeading: "Fraunces", fontBody: "Nunito" },
+        { id: "theme-olive", name: "Olive", style: "warm", colors: ["#4d7c0f", "#84cc16", "#1a2e05", "#f7fee7", "#1c1917", "#fffef8"], fontHeading: "Lora", fontBody: "Nunito" },
+        { id: "theme-cocoa", name: "Cocoa", style: "warm", colors: ["#78350f", "#b45309", "#451a03", "#fef3c7", "#292524", "#fffbf5"], fontHeading: "Merriweather", fontBody: "Source Sans 3" },
+        { id: "theme-cobalt", name: "Cobalt", style: "tech", colors: ["#1d4ed8", "#60a5fa", "#172554", "#eff6ff", "#111827", "#ffffff"], fontHeading: "Space Grotesk", fontBody: "Inter" },
+        { id: "theme-circuit", name: "Circuit", style: "tech", colors: ["#7c3aed", "#a78bfa", "#4c1d95", "#f5f3ff", "#1e1b4b", "#ffffff"], fontHeading: "Space Grotesk", fontBody: "DM Sans" },
+        { id: "theme-ember", name: "Ember", style: "dark", colors: ["#f97316", "#fb923c", "#ea580c", "#292524", "#f5f5f4", "#1c1917"], fontHeading: "Outfit", fontBody: "Work Sans" },
+        { id: "theme-midnight", name: "Midnight", style: "dark", colors: ["#38bdf8", "#7dd3fc", "#0ea5e9", "#0f172a", "#e2e8f0", "#020617"], fontHeading: "Inter", fontBody: "Inter" },
+        { id: "theme-neon", name: "Neon", style: "dark", colors: ["#22d3ee", "#67e8f9", "#06b6d4", "#171717", "#fafafa", "#0a0a0a"], fontHeading: "Space Grotesk", fontBody: "DM Sans" },
+        { id: "theme-fern", name: "Fern", style: "dark", colors: ["#4ade80", "#86efac", "#22c55e", "#14532d", "#ecfdf5", "#052e16"], fontHeading: "Plus Jakarta Sans", fontBody: "Inter" }
+      ];
+      function themeCatalogEntry(id2) {
+        var _a5;
+        return (_a5 = exports.themeCatalog.find((t) => t.id === id2)) != null ? _a5 : null;
       }
     }
   });
@@ -29988,19 +30117,52 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
     "packages/aistudio/dist/compose.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
+      exports.deckThemeFromCatalog = deckThemeFromCatalog;
+      exports.themeRecordFromCatalog = themeRecordFromCatalog;
       exports.composeDeckFile = composeDeckFile2;
       var schema_1 = require_dist();
       var outline_1 = require_outline();
       var theme_1 = require_theme2();
       var deck_1 = require_deck();
       var themeGen_1 = require_themeGen();
+      var themeCatalog_1 = require_themeCatalog();
+      function deckThemeFromCatalog(entry, kicker) {
+        const [primary, , deep] = entry.colors;
+        return {
+          background: { kind: "gradient", color: deep, color2: primary, angle: 145 },
+          kicker,
+          fontHeading: entry.fontHeading,
+          fontBody: entry.fontBody
+        };
+      }
+      function themeRecordFromCatalog(entry) {
+        return (0, schema_1.themeFromPalette)(entry.id, entry.colors.map((hex3, i) => ({
+          id: `${entry.id}-${i}`,
+          name: themeGen_1.themeSlotNames[i],
+          color: hexToColor(hex3)
+        })), { name: entry.name, fontHeading: entry.fontHeading, fontBody: entry.fontBody });
+      }
+      function hexToColor(hex3) {
+        const n = parseInt(hex3.slice(1), 16);
+        return { srgb: { r: (n >> 16 & 255) / 255, g: (n >> 8 & 255) / 255, b: (n & 255) / 255, a: 1 } };
+      }
       function composeDeckFile2(input) {
         var _a5;
         const outline = (0, outline_1.normalizeOutline)(input.outline);
         const width = Math.max(1, Math.round(input.width));
         const height = Math.max(1, Math.round(input.height));
-        const seed = Array.from(outline.title).reduce((h, ch) => Math.imul(h, 31) + ch.charCodeAt(0) | 0, 7);
-        const theme = (0, theme_1.deckThemes)({ brandPalette: (_a5 = input.brandPalette) != null ? _a5 : [], kicker: outline.title, count: 1, seed })[0];
+        let theme;
+        let catalogRecord = null;
+        if (input.themeId) {
+          const entry = (0, themeCatalog_1.themeCatalogEntry)(input.themeId);
+          if (!entry)
+            throw new Error(`unknown themeId: ${input.themeId}`);
+          theme = deckThemeFromCatalog(entry, outline.title);
+          catalogRecord = themeRecordFromCatalog(entry);
+        } else {
+          const seed = Array.from(outline.title).reduce((h, ch) => Math.imul(h, 31) + ch.charCodeAt(0) | 0, 7);
+          theme = (0, theme_1.deckThemes)({ brandPalette: (_a5 = input.brandPalette) != null ? _a5 : [], kicker: outline.title, count: 1, seed })[0];
+        }
         const deck = (0, deck_1.layoutDeck)(outline, theme, { width, height }, { dir: input.dir });
         const pages = deck.pages.map((p, i) => __spreadValues({
           id: `api-page-${i + 1}`,
@@ -30020,7 +30182,7 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
           pages,
           assets: [],
           fonts: [],
-          theme: (0, themeGen_1.themeRecordFromDeckTheme)(theme, { name: outline.theme ? outline.theme.slice(0, 40) : void 0 })
+          theme: catalogRecord != null ? catalogRecord : (0, themeGen_1.themeRecordFromDeckTheme)(theme, { name: outline.theme ? outline.theme.slice(0, 40) : void 0 })
         };
         return file2;
       }
@@ -30478,6 +30640,7 @@ ${cites.map((c, i) => `${i + 1}. ${c.name.trim()} - ${c.url.trim()}`).join("\n")
       __exportStar(require_chartData(), exports);
       __exportStar(require_theme2(), exports);
       __exportStar(require_themeGen(), exports);
+      __exportStar(require_themeCatalog(), exports);
       __exportStar(require_layoutExtract(), exports);
       __exportStar(require_mdoutline(), exports);
       __exportStar(require_compose(), exports);

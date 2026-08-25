@@ -49,7 +49,10 @@ type Input struct {
 	Width        int      `json:"width"`
 	Height       int      `json:"height"`
 	BrandPalette []string `json:"brandPalette,omitempty"`
-	Dir          string   `json:"dir,omitempty"`
+	// ThemeID names a built-in catalog theme (F40 E12); the bundle resolves
+	// it and THROWS on an unknown id, so validate before composing.
+	ThemeID string `json:"themeId,omitempty"`
+	Dir     string `json:"dir,omitempty"`
 }
 
 // Compose runs the embedded composer on one outline and returns the

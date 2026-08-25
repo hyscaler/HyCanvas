@@ -23,6 +23,7 @@ import {
   type DesignOutline, type DesignType, type GenerationDials, type OutlineItem,
   toolCatalog, assistantSystemPrompt, parseAssistantReply, planMutates, summarizeDesign, type PlanStep,
   deriveOutline, switchOutline, sourcesOutlineItem, type PageText, type SourceCitation,
+  themeCatalogEntry, deckThemeFromCatalog, themeRecordFromCatalog,
 } from "@hc/aistudio";
 import { builtinMasterAndLayouts, type SlideLayout } from "@hc/schema";
 import { promptText } from "@/lib/promptDialog";
@@ -62,6 +63,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { mirrorInRtl } from "@/lib/locale";
 import { tr, trOr } from "@/lib/i18n";
 import { enqueueAiImages, retryFailedAiImages, subscribeAiImageQueue } from "@/lib/aiImageQueue";
+import { builtinThemes } from "@/lib/themeCatalog";
 import { enqueueAiFills } from "@/lib/aiFillQueue";
 import { stickerLabel, stickerCategoryLabel } from "@/lib/stickers";
 import { documentDirection } from "@/lib/locale";
@@ -1871,7 +1873,7 @@ type ResolvedPayload =
   | { kind: "diagram"; spec: DiagramSpec }
   | { kind: "clusters"; clusters: { title: string; ids: string[] }[] }
   | { kind: "summary"; text: string }
-  | { kind: "outline"; outline: DesignOutline; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroPlans: { pageIndex: number; prompt: string; subject: string; size: string }[]; workspaceId: string; designId: string | null; append: boolean }
+  | { kind: "outline"; outline: DesignOutline; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroPlans: { pageIndex: number; prompt: string; subject: string; size: string }[]; workspaceId: string; designId: string | null; append: boolean; themeId?: string }
   | { kind: "layoutDeck"; deckTitle: string; themeRecord: Theme; pages: { layoutId: string; name: string; note?: string; fill: LayoutFill; fillPrompt: string; verbatim?: boolean }[]; background: unknown; imageSize: string; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; styleClause: string; heroPlans: { pageIndex: number; prompt: string; subject: string }[]; generateAllowed: boolean; workspaceId: string; designId: string | null; append: boolean }
   | { kind: "splitSlide"; pageIndex: number; pageId: string; halves: { layoutId: string; name: string; fill: LayoutFill }[] }
   | { kind: "insertComparison"; layoutId: string; name: string; fill: LayoutFill; afterIndex: number; afterPageId: string }
@@ -1918,6 +1920,9 @@ interface AssistantDeps {
   /** Structured citations captured by a webSearch step (C33): the next deck/doc
    *  generation in the same run appends a Sources page from them. */
   citations?: SourceCitation[];
+  /** A built-in catalog theme chosen in the review card (F40 E12): the deck is
+   *  composed on it instead of the title-seeded generated theme. */
+  styleThemeId?: string;
 }
 
 // Outline roles that get a generated hero background image (the high-impact
@@ -2749,13 +2754,19 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
             : [];
           // The theme's page background, converted exactly as the freeform
           // engine converts it (an empty layout pass yields just the Fill).
+          // F40 E12: an explicitly chosen catalog theme wins (its own fonts
+          // included - the user picked the look); otherwise the title-seeded
+          // generated theme with brand grounding, as before.
+          const chosen = deps.styleThemeId ? themeCatalogEntry(deps.styleThemeId) : null;
           const seed = Array.from(outline.title).reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) | 0, 7);
-          const theme = deckThemes({ brandPalette: deps.brandPalette, kicker: outline.title, count: 1, fontHeading: deps.brandFonts.heading, fontBody: deps.brandFonts.body, seed })[0];
+          const theme = chosen
+            ? deckThemeFromCatalog(chosen, outline.title)
+            : deckThemes({ brandPalette: deps.brandPalette, kicker: outline.title, count: 1, fontHeading: deps.brandFonts.heading, fontBody: deps.brandFonts.body, seed })[0];
           const background = layoutDesign({ layout: "centered", background: theme.background, blocks: [], dir: "ltr" }, size).background;
           // T19 (d): the deck's visual system doubles as the file theme, so
           // the theme picker reflects it and a later swap remaps exactly the
           // colors these pages are painted with.
-          const themeRecord = themeRecordFromDeckTheme(theme, { name: outline.theme ? outline.theme.slice(0, 40) : undefined });
+          const themeRecord = chosen ? themeRecordFromCatalog(chosen) : themeRecordFromDeckTheme(theme, { name: outline.theme ? outline.theme.slice(0, 40) : undefined });
           return {
             payload: {
               kind: "layoutDeck",
@@ -2798,7 +2809,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
             ),
           }));
       }
-      return { payload: { kind: "outline", outline, size, brandPalette: deps.brandPalette, brandFonts: deps.brandFonts, heroPlans, workspaceId: deps.workspaceId, designId: deps.designId ?? null, append } };
+      return { payload: { kind: "outline", outline, size, brandPalette: deps.brandPalette, brandFonts: deps.brandFonts, heroPlans, workspaceId: deps.workspaceId, designId: deps.designId ?? null, append, themeId: deps.styleThemeId } };
     }
     default:
       return {};
@@ -3211,12 +3222,16 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
         return true;
       }
       if (ctx?.payload?.kind !== "outline") return false;
-      const { outline, size, brandPalette, brandFonts, heroPlans, workspaceId, designId, append } = ctx.payload;
+      const { outline, size, brandPalette, brandFonts, heroPlans, workspaceId, designId, append, themeId } = ctx.payload;
       const clean: DesignOutline = { ...outline, pages: outline.pages.map((p) => ({ ...p, points: p.points.map((s) => s.trim()).filter(Boolean) })) };
-      // Seed the default hue from the title so different briefs don't all fall
-      // back to the same first curated color (a brand palette overrides this).
+      // F40 E12: a chosen catalog theme wins; else seed the default hue from
+      // the title so different briefs don't all fall back to the same first
+      // curated color (a brand palette overrides this).
+      const chosenEntry = themeId ? themeCatalogEntry(themeId) : null;
       const seed = Array.from(clean.title).reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) | 0, 7);
-      const themes = deckThemes({ brandPalette, kicker: clean.title, count: 1, fontHeading: brandFonts.heading, fontBody: brandFonts.body, seed });
+      const themes = chosenEntry
+        ? [deckThemeFromCatalog(chosenEntry, clean.title)]
+        : deckThemes({ brandPalette, kicker: clean.title, count: 1, fontHeading: brandFonts.heading, fontBody: brandFonts.body, seed });
       const deck = layoutDeck(clean, themes[0], size);
       const base = append ? st.doc.pages.length : 0;
       const ids = append ? st.appendDeckPages(deck, size) : st.buildDeckFromOutline(deck, size);
@@ -3225,7 +3240,7 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       // only - these pages already wear its colors; a remap from any outgoing
       // theme would misfire). Appending never overrides an existing theme.
       if (!append || !(st.doc as unknown as { theme?: unknown }).theme) {
-        st.setDeckTheme(themeRecordFromDeckTheme(themes[0], { name: clean.theme ? clean.theme.slice(0, 40) : undefined }), { restyle: false });
+        st.setDeckTheme(chosenEntry ? themeRecordFromCatalog(chosenEntry) : themeRecordFromDeckTheme(themes[0], { name: clean.theme ? clean.theme.slice(0, 40) : undefined }), { restyle: false });
       }
       // T10 placeholder-first: the deck is fully laid out NOW; hero images for
       // the impact pages resolve in the background (reuse -> stock -> generate)
@@ -3311,7 +3326,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   // up front and shown as an editable list with generation dials; Generate
   // proceeds with the EDITED outline (no second model call). null = no review
   // (non-design plans); loading = outline still being fetched.
-  const [review, setReview] = useState<{ outline: DesignOutline | null; loading: boolean; dials: GenerationDials; searchedSources?: { name: string; text: string }[]; citations?: SourceCitation[] } | null>(null);
+  const [review, setReview] = useState<{ outline: DesignOutline | null; loading: boolean; dials: GenerationDials; searchedSources?: { name: string; text: string }[]; citations?: SourceCitation[]; themeId?: string } | null>(null);
   const reviewSeq = useRef(0);
   // Monotonic id source for review-added outline items: a length-derived id
   // collides after add-remove-add (same length twice) and duplicates React keys.
@@ -3428,7 +3443,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     setReview(null);
   }
 
-  async function execute(plan: PlanStep[], reply: string, reviewedOutline?: DesignOutline, dials?: GenerationDials, citations?: SourceCitation[]) {
+  async function execute(plan: PlanStep[], reply: string, reviewedOutline?: DesignOutline, dials?: GenerationDials, citations?: SourceCitation[], styleThemeId?: string) {
     if (!workspaceId) return;
     setBusy(true);
     try {
@@ -3447,7 +3462,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
           // best-effort; the applyBrand step will simply report nothing to fix
         }
       }
-      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sources, reviewedOutline, dials, designId, citations };
+      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sources, reviewedOutline, dials, designId, citations, styleThemeId };
       const payloads: (ResolvedPayload | undefined)[] = [];
       const skips: (string | undefined)[] = [];
       for (let i = 0; i < plan.length; i++) {
@@ -3810,6 +3825,31 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                   </label>
                 ))}
               </div>
+              {/* F40 E12: pick a built-in theme as the deck's visual base;
+                  the Auto chip keeps the title-seeded generated look. */}
+              <div className="oc-scroll-none flex items-center gap-1 overflow-x-auto pb-0.5">
+                <button
+                  onClick={() => setReview((r) => (r ? { ...r, themeId: undefined } : r))}
+                  className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] ${!review.themeId ? "border-brand-400 bg-brand-50 text-brand-ink" : "border-neutral-300 text-neutral-600 hover:border-brand-300"}`}
+                >
+                  {tr("editor.theme_auto")}
+                </button>
+                {builtinThemes().map((t) => (
+                  <button
+                    key={t.id}
+                    title={t.displayName}
+                    onClick={() => setReview((r) => (r ? { ...r, themeId: t.id } : r))}
+                    className={`flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] ${review.themeId === t.id ? "border-brand-400 bg-brand-50 text-brand-ink" : "border-neutral-300 text-neutral-600 hover:border-brand-300"}`}
+                  >
+                    <span className="flex gap-px">
+                      {t.colors.slice(0, 4).map((c, ci) => (
+                        <span key={ci} className="h-2.5 w-2.5 rounded-full border border-black/10" style={{ backgroundColor: c }} />
+                      ))}
+                    </span>
+                    {t.displayName}
+                  </button>
+                ))}
+              </div>
               {review.loading ? (
                 <div className="flex items-center gap-2 py-2 text-neutral-500"><Spinner /> {tr("editor.preparing_outline")}</div>
               ) : !review.outline ? (
@@ -3864,7 +3904,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                         if (searched) setSources(searched.slice(0, maxSources));
                         clearReview();
                         const planToRun = searched ? p?.plan.filter((s) => s.action !== "webSearch") ?? [] : p?.plan ?? [];
-                        if (p && clean.pages.length) void execute(planToRun, p.reply, clean, dials, cites);
+                        if (p && clean.pages.length) void execute(planToRun, p.reply, clean, dials, cites, review.themeId);
                         else toast.error(tr("editor.the_outline_needs_at_least_one_page"));
                       }}
                       className="ms-auto rounded bg-brand-600 px-2.5 py-0.5 font-medium text-white hover:bg-brand-700"

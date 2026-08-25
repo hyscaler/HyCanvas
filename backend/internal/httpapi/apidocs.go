@@ -86,6 +86,11 @@ curl -sS -X POST "$HYCANVAS/api/v1/designs/$ID/links" \
   -d '{"mode": "view", "label": "Investors"}'</code></pre>
 <p><span class="pill">Note</span> PPTX export runs client-side in the editor today; the API's export formats are PDF and PNG.</p>
 
+<h2>Themes</h2>
+<p>List the built-in theme catalog and pin a generation to one of them:</p>
+<pre><code>curl -sS "$HYCANVAS/api/v1/themes" -H "Authorization: Bearer $HYK"
+# then: -d '{"prompt": "...", "themeId": "theme-slate"}'</code></pre>
+
 <h2>Grounding sources</h2>
 <p>Attach up to 8 text sources; the outline is grounded strictly in them (their content is treated as untrusted reference material):</p>
 <pre><code>-d '{"prompt": "quarterly review deck", "sources": [{"name": "Q3 notes", "text": "..."}]}'</code></pre>
@@ -94,7 +99,7 @@ curl -sS -X POST "$HYCANVAS/api/v1/designs/$ID/links" \
 <p>Per key: 5 requests/second (burst 20) across the surface, and about 3 generations/minute on the generate endpoint. Over-budget calls return 429 with <code>Retry-After</code>.</p>
 
 <h2>MCP server</h2>
-<p>The same capabilities are exposed to AI agents over the <a href="https://modelcontextprotocol.io">Model Context Protocol</a> (streamable HTTP) at <code>/mcp</code>, authenticated by the same API keys with the same scopes, workspace pinning, and budgets. Tools: <code>generate_presentation</code>, <code>get_job</code>, <code>get_design_file</code>, <code>export_design</code>, <code>create_share_link</code>.</p>
+<p>The same capabilities are exposed to AI agents over the <a href="https://modelcontextprotocol.io">Model Context Protocol</a> (streamable HTTP) at <code>/mcp</code>, authenticated by the same API keys with the same scopes, workspace pinning, and budgets. Tools: <code>generate_presentation</code>, <code>get_job</code>, <code>list_themes</code>, <code>get_design_file</code>, <code>export_design</code>, <code>create_share_link</code>.</p>
 <p>Claude Code:</p>
 <pre><code>claude mcp add --transport http hycanvas https://YOUR-INSTANCE/mcp \
   --header "Authorization: Bearer hyk_..."</code></pre>

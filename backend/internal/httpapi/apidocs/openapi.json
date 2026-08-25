@@ -98,6 +98,10 @@
                 }
               }
             }
+          },
+          "themeId": {
+            "type": "string",
+            "description": "A built-in theme id (see GET /themes), e.g. 'theme-slate'; omit for an auto-picked look."
           }
         }
       },
@@ -521,6 +525,17 @@
         "responses": {
           "200": {
             "description": "Audit entries: { id, keyId, workspaceId, userId, surface, designId, at }."
+          }
+        }
+      }
+    },
+    "/themes": {
+      "get": {
+        "summary": "The built-in theme catalog",
+        "description": "Any session or valid key. Entries carry id, name, style group, six palette slots [primary, accent, deep, tint, ink, paper], and the font pair; ids are valid generate themeIds.",
+        "responses": {
+          "200": {
+            "description": "The theme catalog."
           }
         }
       }

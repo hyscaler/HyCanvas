@@ -53,6 +53,7 @@ type apiKeyRoute struct {
 var apiKeyRoutes = []apiKeyRoute{
 	{method: http.MethodPost, re: regexp.MustCompile(`^/api/v1/generate/presentation$`), scope: apikeys.ScopeGenerate, designIdx: -1, label: "http:generate_presentation"},
 	{method: http.MethodGet, re: regexp.MustCompile(`^/api/v1/jobs/([^/]+)$`), scope: "", designIdx: -1, label: ""},
+	{method: http.MethodGet, re: regexp.MustCompile(`^/api/v1/themes$`), scope: "", designIdx: -1, label: ""},
 	{method: http.MethodGet, re: regexp.MustCompile(`^/api/v1/designs/([^/]+)$`), scope: apikeys.ScopeRead, designIdx: 1, label: "http:get_design"},
 	{method: http.MethodGet, re: regexp.MustCompile(`^/api/v1/designs/([^/]+)/file$`), scope: apikeys.ScopeRead, designIdx: 1, label: "http:get_design_file"},
 	{method: http.MethodGet, re: regexp.MustCompile(`^/api/v1/designs/([^/]+)/render\.pdf$`), scope: apikeys.ScopeExport, designIdx: 1, label: "http:render_pdf"},

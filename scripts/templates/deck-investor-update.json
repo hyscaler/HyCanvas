@@ -1,0 +1,67 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-investor-update",
+ "title": "Investor Update",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "investors",
+  "update",
+  "metrics",
+  "startup"
+ ],
+ "styleTags": [
+  "minimal",
+  "professional"
+ ],
+ "themeId": "theme-porcelain",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 54,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Investor Update",
+  "theme": "concise, no spin",
+  "pages": [
+   {
+    "title": "The month",
+    "points": [
+     "The one-paragraph summary"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "Metrics",
+    "points": [
+     "Revenue, burn, runway, and growth"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "Highlights",
+    "points": [
+     "What went right"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Lowlights",
+    "points": [
+     "What went wrong and what we changed"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Asks",
+    "points": [
+     "Intros, hires, and advice we need"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

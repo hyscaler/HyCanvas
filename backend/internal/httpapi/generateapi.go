@@ -29,6 +29,11 @@ import (
 
 func mountGenerate(api chi.Router, svc *aistudio.Service, acct *accounts.Service, p *persistence.Service, reg *jobs.Registry) {
 	api.With(requireAuth(acct)).Post("/generate/presentation", generatePresentationHandler(svc, acct, p, reg))
+	// The built-in theme catalog (F40 E12): harmless metadata, any session or
+	// valid key may list it (the generation themeId is validated against it).
+	api.With(requireAuth(acct)).Get("/themes", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, http.StatusOK, aistudio.ThemeCatalog())
+	})
 }
 
 // Input bounds: a brief is a paragraph, not a book, and grounding sources ride
@@ -76,6 +81,7 @@ type generateInput struct {
 	DesignType   string   `json:"designType"`
 	PageCount    int      `json:"pageCount"`
 	Language     string   `json:"language"`
+	ThemeID      string   `json:"themeId"`
 	BrandPalette []string `json:"brandPalette"`
 	Sources      []struct {
 		Name string `json:"name"`
@@ -91,6 +97,7 @@ type generatePlan struct {
 	PageCount int
 	Brief     string
 	Palette   []string
+	ThemeID   string
 }
 
 // generateReject carries a validation failure in both dialects: the HTTP
@@ -146,6 +153,10 @@ func planGeneration(ctx context.Context, acct *accounts.Service, userID string, 
 	}
 	if dt == "poster" {
 		pageCount = 1
+	}
+	themeID := strings.TrimSpace(in.ThemeID)
+	if themeID != "" && !aistudio.ValidThemeID(themeID) {
+		return plan, &generateReject{http.StatusBadRequest, "invalid_theme_id", "unknown themeId; list the built-in themes at GET /v1/themes"}
 	}
 
 	// The tighter generation budget: keyed per API key when present, else
@@ -205,6 +216,7 @@ func planGeneration(ctx context.Context, acct *accounts.Service, userID string, 
 	plan.PageCount = pageCount
 	plan.Brief = brief
 	plan.Palette = palette
+	plan.ThemeID = themeID
 	return plan, nil
 }
 
@@ -232,7 +244,7 @@ func startGenerationJob(svc *aistudio.Service, p *persistence.Service, reg *jobs
 			return
 		}
 		fileJSON, err := composer.Compose(ctx, composer.Input{
-			Outline: outline, Width: plan.Size.w, Height: plan.Size.h, BrandPalette: plan.Palette,
+			Outline: outline, Width: plan.Size.w, Height: plan.Size.h, BrandPalette: plan.Palette, ThemeID: plan.ThemeID,
 		})
 		if err != nil {
 			reg.Fail(job.ID, "composition failed")
@@ -287,6 +299,8 @@ func generatePresentationHandler(svc *aistudio.Service, acct *accounts.Service, 
 				problemWithCode(w, r, rej.Status, http.StatusText(rej.Status), rej.Msg, "invalid_design_type")
 			case "invalid_page_count":
 				problemWithCode(w, r, rej.Status, http.StatusText(rej.Status), rej.Msg, "invalid_page_count")
+			case "invalid_theme_id":
+				problemWithCode(w, r, rej.Status, http.StatusText(rej.Status), rej.Msg, "invalid_theme_id")
 			case "generation_rate_limited":
 				problemWithCode(w, r, rej.Status, http.StatusText(rej.Status), rej.Msg, "generation_rate_limited")
 			case "missing_workspaceid":

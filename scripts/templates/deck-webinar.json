@@ -1,0 +1,73 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-webinar",
+ "title": "Webinar Deck",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "webinar",
+  "online",
+  "presentation",
+  "marketing"
+ ],
+ "styleTags": [
+  "dark"
+ ],
+ "themeId": "theme-fern",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 86,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Webinar",
+  "theme": "engaging on a small screen",
+  "pages": [
+   {
+    "title": "Welcome",
+    "points": [
+     "What attendees will take away"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "Agenda",
+    "points": [
+     "Four sections, forty minutes"
+    ],
+    "visualRole": "agenda"
+   },
+   {
+    "title": "The landscape",
+    "points": [
+     "What changed in the last year"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "The method",
+    "points": [
+     "The framework, explained simply"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Live example",
+    "points": [
+     "Walk through a real case"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Q&A and offer",
+    "points": [
+     "How to go deeper after today"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

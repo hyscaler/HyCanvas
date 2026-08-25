@@ -1,0 +1,74 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-onboarding",
+ "title": "Employee Onboarding",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "onboarding",
+  "hr",
+  "new hire",
+  "welcome"
+ ],
+ "styleTags": [
+  "bold",
+  "friendly"
+ ],
+ "themeId": "theme-lavender",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 82,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Welcome Aboard",
+  "theme": "warm, orienting",
+  "pages": [
+   {
+    "title": "Welcome",
+    "points": [
+     "We are glad you are here"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "Who we are",
+    "points": [
+     "The mission and how we make money"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "How we work",
+    "points": [
+     "Rituals, tools, and unwritten rules"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Your first 30 days",
+    "points": [
+     "Week by week, what good looks like"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "The people to meet",
+    "points": [
+     "Your map of the org"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Questions",
+    "points": [
+     "Where to ask anything"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

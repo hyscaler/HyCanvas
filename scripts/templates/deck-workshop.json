@@ -1,0 +1,75 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-workshop",
+ "title": "Workshop Facilitation",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "workshop",
+  "facilitation",
+  "exercise",
+  "team"
+ ],
+ "styleTags": [
+  "bold",
+  "friendly"
+ ],
+ "themeId": "theme-mango",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 46,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Workshop",
+  "theme": "participatory, hands-on",
+  "pages": [
+   {
+    "title": "Welcome",
+    "points": [
+     "What we will make together today"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "How today works",
+    "points": [
+     "The arc: diverge, discuss, decide",
+     "Ground rules that keep it safe"
+    ],
+    "visualRole": "agenda"
+   },
+   {
+    "title": "Exercise one",
+    "points": [
+     "Instructions, time box, and what good looks like"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Share back",
+    "points": [
+     "Each group's one-minute readout"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Converge",
+    "points": [
+     "Dot-vote and cluster the strongest ideas"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Commitments",
+    "points": [
+     "Who takes what forward, by when"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

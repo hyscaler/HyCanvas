@@ -1,0 +1,67 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-retrospective",
+ "title": "Team Retrospective",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "retro",
+  "retrospective",
+  "team",
+  "agile"
+ ],
+ "styleTags": [
+  "minimal",
+  "friendly"
+ ],
+ "themeId": "theme-mint",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 48,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Retrospective",
+  "theme": "candid, blameless",
+  "pages": [
+   {
+    "title": "This sprint",
+    "points": [
+     "The work, the wins, the weather"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "What went well",
+    "points": [
+     "Things worth repeating"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "What was hard",
+    "points": [
+     "Friction we should name"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "The data",
+    "points": [
+     "Cycle time and scope change, without judgment"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "Actions",
+    "points": [
+     "Two changes we commit to, with owners"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

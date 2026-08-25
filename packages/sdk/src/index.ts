@@ -1250,9 +1250,15 @@ export class HyCanvasClient {
     return this.request("GET", `/v1/workspaces/${workspaceId}/api-keys/audit`);
   }
   /** Kick off a headless prompt-to-deck generation (F40): returns a job to
-   *  poll via getJob. Works with a session or a generate-scoped API key. */
-  generatePresentation(input: { workspaceId: string; prompt: string; designType?: "deck" | "doc" | "poster" | "social"; pageCount?: number; language?: string; brandPalette?: string[]; sources?: { name: string; text: string }[] }): Promise<{ jobId: string; poll: string }> {
+   *  poll via getJob. Works with a session or a generate-scoped API key.
+   *  `themeId` names a built-in catalog theme (see themes()). */
+  generatePresentation(input: { workspaceId: string; prompt: string; designType?: "deck" | "doc" | "poster" | "social"; pageCount?: number; language?: string; brandPalette?: string[]; themeId?: string; sources?: { name: string; text: string }[] }): Promise<{ jobId: string; poll: string }> {
     return this.request("POST", "/v1/generate/presentation", input);
+  }
+  /** The built-in theme catalog (F40 E12): id, name, style group, six palette
+   *  slots, and the font pair; ids are valid generatePresentation themeIds. */
+  themes(): Promise<{ id: string; name: string; style: string; colors: string[]; fontHeading: string; fontBody: string }[]> {
+    return this.request("GET", "/v1/themes");
   }
   invite(workspaceId: string, input: { email: string; role?: WorkspaceRole }): Promise<{ invitation: WorkspaceInvitation; token: string }> {
     return this.request("POST", `/v1/workspaces/${workspaceId}/invitations`, input);
