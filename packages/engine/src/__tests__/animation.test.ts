@@ -196,7 +196,7 @@ describe("v23 keyframe channels (C12)", () => {
     expect(mid.height).toBeUndefined(); // never defined: no override
   });
 
-  it("a channel defined on ONE keyframe holds from it; sparse channels sample independently", () => {
+  it("a channel defined on ONE keyframe holds at both boundaries; sparse channels sample independently", () => {
     const track = {
       durationMs: 1000,
       keyframes: [
@@ -205,7 +205,7 @@ describe("v23 keyframe channels (C12)", () => {
         { t: 1000, dx: 100 },
       ],
     };
-    expect(customPatch(track as never, 250).width).toBeUndefined(); // before the first defined
+    expect(customPatch(track as never, 250).width).toBe(200); // held BEFORE the first defined too (no mid-track snap)
     expect(customPatch(track as never, 750).width).toBe(200); // held past the last defined
     expect(customPatch(track as never, 750).dx).toBeCloseTo(50, 5); // transform segments unaffected
   });

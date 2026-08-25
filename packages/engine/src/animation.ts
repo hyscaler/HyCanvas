@@ -300,8 +300,10 @@ export function samplePath(path: { x: number; y: number }[], e: number): { x: nu
 }
 
 /** Sample one keyframe channel independently: interpolate between the
- *  keyframes that DEFINE it (v23 channels are sparse), hold past the last
- *  defined one, no override before the first. `sorted` is time-ascending. */
+ *  keyframes that DEFINE it (v23 channels are sparse), HOLDING at both
+ *  boundaries - the first defined value before its time, the last past its
+ *  time - exactly as the transform channels hold, so a lone width/color
+ *  keyframe mid-track never makes the node snap. `sorted` is time-ascending. */
 function sampleChannel<T>(
   sorted: Keyframe[],
   t: number,
@@ -316,8 +318,8 @@ function sampleChannel<T>(
     else { next = k; break; }
   }
   if (!prev && !next) return undefined;
-  if (!prev) return t >= 0 ? undefined : undefined; // before the first defined: no override
-  if (!next) return get(prev)!; // hold the last defined value
+  if (!prev) return get(next!)!; // hold the first defined value before its time
+  if (!next) return get(prev)!; // hold the last defined value past its time
   const span = Math.max(1e-6, next.t - prev.t);
   const e = evalEasing(prev.easing ?? "linear", (t - prev.t) / span);
   return mix(get(prev)!, get(next)!, e);

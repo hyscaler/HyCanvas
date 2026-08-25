@@ -426,7 +426,10 @@ function poseEnter(slide: Slide, tMs: number, reduced: boolean): void {
     let patch: AnimPatch | null = null;
     // Media trigger (v23, C15): a triggered entrance is HELD at its start pose
     // until the media fires it, then plays on its own clock. Reduced motion
-    // settles immediately, like every other entrance.
+    // settles immediately, like every other entrance. Once the triggered
+    // entrance has FINISHED, fall through to the normal logic so emphasis and
+    // custom tracks still run (tMs is far past the clip by then, which the
+    // normal path reads as settled-into-emphasis).
     if (d.anim?.trigger && d.anim.entrance && !reduced) {
       const entT = { ...d.anim.entrance, delayMs: 0 };
       if (d.triggeredAtMs === undefined) {
@@ -434,8 +437,11 @@ function poseEnter(slide: Slide, tMs: number, reduced: boolean): void {
         continue;
       }
       const local = tMs - d.triggeredAtMs;
-      applyPatch(d, entrancePatch(entT, Math.min(local, clipEnd(entT))));
-      continue;
+      if (local <= clipEnd(entT)) {
+        applyPatch(d, entrancePatch(entT, local));
+        continue;
+      }
+      // finished: fall through (entrance settles, emphasis/custom take over)
     }
     // Effective entrance honors cross-element sequencing (the resolved start).
     const ent = d.anim?.entrance ? { ...d.anim.entrance, delayMs: d.entStart ?? d.anim.entrance.delayMs } : undefined;

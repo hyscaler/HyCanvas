@@ -478,7 +478,8 @@ export interface Keyframe {
   /** v23 channels: an absolute fill-color override, and absolute width/height
    *  in px (the pose keeps the node's center fixed while resizing). Each
    *  channel interpolates between the keyframes that DEFINE it, independent
-   *  of the others; omitted everywhere means no override. */
+   *  of the others, holding at both boundaries like the transform channels;
+   *  omitted everywhere means no override. */
   color?: Color;
   width?: number;
   height?: number;

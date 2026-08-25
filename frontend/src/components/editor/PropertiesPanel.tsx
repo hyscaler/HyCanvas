@@ -2206,6 +2206,7 @@ function AnimateSection({ node }: { node: Node }) {
   const [tab, setTab] = useState<AnimTab>("entrance");
   const st = useEditor.getState();
   const toast = useToast();
+  const hasCopiedAnimation = useEditor((s2) => !!s2.copiedAnimation);
   const id = node.id;
   const anim = (node as { animation?: NodeAnimation }).animation ?? {};
   // Typewriter reveal only makes sense for text, so offer it only there.
@@ -2328,7 +2329,7 @@ function AnimateSection({ node }: { node: Node }) {
             const n = st.pasteAnimation(useEditor.getState().selection);
             toast.success(tr("editor.animation_pasted_count", { count: n }));
           }}
-          disabled={!useEditor((s2) => s2.copiedAnimation)}
+          disabled={!hasCopiedAnimation}
           className="flex-1 rounded-md border border-neutral-200 px-2 py-1 text-[11px] hover:bg-neutral-50 disabled:opacity-40"
           data-testid="paste-animation"
         >{tr("editor.paste_animation")}</button>
