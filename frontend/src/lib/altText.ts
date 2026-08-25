@@ -6,6 +6,7 @@
 // lives there) by the caller.
 
 import { walkNodes, type ImageNode } from "@hc/schema";
+import { locate } from "@hc/editor";
 import { useEditor } from "@/store/editor";
 import { oc } from "@/lib/sdk";
 import { resolveAssetUrl } from "@/lib/sdk";
@@ -120,11 +121,10 @@ function collectImages(nodes: Parameters<typeof walkNodes>[0]): ImageNode[] {
 export async function generateChartAltText(workspaceId: string, nodeId: string): Promise<boolean> {
   type ChartLike = { id: string; type: string; chartType?: string; categories?: string[]; series?: { name: string; values: number[] }[] };
   const st = useEditor.getState();
-  let chart: ChartLike | null = null;
-  for (const p of st.doc.pages) {
-    const hit = p.children.find((n) => n.id === nodeId && n.type === "chart");
-    if (hit) { chart = hit as unknown as ChartLike; break; }
-  }
+  // locate() finds a chart nested in a frame/group too, not just direct
+  // page children.
+  const loc = locate(st.doc, nodeId);
+  const chart = loc && loc.node.type === "chart" ? (loc.node as unknown as ChartLike) : null;
   if (!chart) return false;
   const cats = (chart.categories ?? []).slice(0, 24);
   const rows = (chart.series ?? []).slice(0, 8).map((s2) => `${s2.name}: ${s2.values.slice(0, 24).join(", ")}`);

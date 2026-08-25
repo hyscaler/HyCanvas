@@ -6441,7 +6441,13 @@ export const useEditor = create<EditorState>((set, get) => {
           node.content = structuredClone(before);
           node.size.height = hBefore;
           node.box.height = hBefore;
-          if (titleSync) titleSync.pg.name = titleSync.beforeName;
+          // Never write an explicit `name: undefined` own key: the CRDT
+          // reconcile is key-driven and would propagate it (same hazard as
+          // the interactions actionV2 fix).
+          if (titleSync) {
+            if (titleSync.beforeName === undefined) delete (titleSync.pg as { name?: string }).name;
+            else titleSync.pg.name = titleSync.beforeName;
+          }
         },
       );
     },
@@ -6773,8 +6779,10 @@ export const useEditor = create<EditorState>((set, get) => {
     fixTextContrast: (id) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return 0;
-      const pageIdx = get().doc.pages.findIndex((p) => p.children.some((n) => n.id === id));
-      const bgFill = pageIdx >= 0 ? (get().doc.pages[pageIdx] as unknown as { background?: { type?: string; color?: Color; stops?: { color: Color }[] } }).background : undefined;
+      // locate() already carries the page, and works for text NESTED in a
+      // frame/group too (a direct-children scan would miss it and judge
+      // contrast against white instead of the real page background).
+      const bgFill = (loc.page as unknown as { background?: { type?: string; color?: Color; stops?: { color: Color }[] } }).background;
       const bg: Color = bgFill?.type === "solid" && bgFill.color ? bgFill.color : bgFill?.stops?.[0]?.color ?? { srgb: { r: 1, g: 1, b: 1, a: 1 } };
       const node = loc.node as unknown as { content: { runs: { style: { fill?: { type?: string; color?: Color } } }[] }[] };
       const before = structuredClone(node.content);

@@ -161,10 +161,10 @@ export function AccessibilityDialog({ open, onClose }: { open: boolean; onClose:
           </p>
           <ul className="oc-scroll flex max-h-[60vh] flex-col gap-1.5 overflow-y-auto">
             {issues.map((i, idx) => (
-              <li key={`${i.nodeId}-${i.kind}-${idx}`}>
+              <li key={`${i.nodeId}-${i.kind}-${idx}`} className="flex items-start gap-1.5">
                 <button
                   onClick={() => jump(i)}
-                  className="flex w-full items-start gap-2.5 rounded-lg border border-neutral-200 bg-surface px-3 py-2 text-start transition hover:border-brand-300 hover:bg-brand-50/40"
+                  className="flex min-w-0 flex-1 items-start gap-2.5 rounded-lg border border-neutral-200 bg-surface px-3 py-2 text-start transition hover:border-brand-300 hover:bg-brand-50/40"
                 >
                   {i.severity === "error" ? (
                     <AlertTriangle size={16} className="mt-0.5 shrink-0 text-red-500" />
@@ -180,35 +180,34 @@ export function AccessibilityDialog({ open, onClose }: { open: boolean; onClose:
                         : `${kindLabel()[i.kind]} · ${i.nodeName || "element"} · page ${i.pageIndex + 1}`}
                     </span>
                   </span>
-                  {/* One-click fix (C27): applied in place, one undo step; the
-                      list recomputes on the store revision so the row clears. */}
-                  {canEdit && (() => {
-                    const fix = fixFor(i);
-                    if (!fix) return null;
-                    const key = `${i.nodeId}-${i.kind}`;
-                    return (
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        aria-label={fix.label}
-                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); (e.target as HTMLElement).click(); } }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (fixing) return;
-                          setFixing(key);
-                          void fix.run(workspaceId)
-                            .then((ok) => { if (!ok) toast.error(tr("editor.nothing_to_fix_automatically_here")); })
-                            .catch((err) => toast.error(userMessage(err, tr("editor.couldnt_apply_that_fix"))))
-                            .finally(() => setFixing(null));
-                        }}
-                        className={`mt-0.5 flex shrink-0 items-center gap-1 rounded-md border border-brand-200 bg-brand-50 px-2 py-1 text-xs font-medium text-brand-ink hover:bg-brand-100 ${fixing === key ? "opacity-50" : ""}`}
-                        data-testid={`fix-${i.kind}`}
-                      >
-                        <Wand2 size={12} /> {fixing === key ? tr("editor.fixing") : fix.label}
-                      </span>
-                    );
-                  })()}
                 </button>
+                {/* One-click fix (C27): a real sibling button (never an
+                    interactive element nested inside the jump button), one
+                    undo step; the list recomputes on the store revision so
+                    the row clears. */}
+                {canEdit && (() => {
+                  const fix = fixFor(i);
+                  if (!fix) return null;
+                  const key = `${i.nodeId}-${i.kind}`;
+                  return (
+                    <button
+                      type="button"
+                      disabled={!!fixing}
+                      onClick={() => {
+                        if (fixing) return;
+                        setFixing(key);
+                        void fix.run(workspaceId)
+                          .then((ok) => { if (!ok) toast.error(tr("editor.nothing_to_fix_automatically_here")); })
+                          .catch((err) => toast.error(userMessage(err, tr("editor.couldnt_apply_that_fix"))))
+                          .finally(() => setFixing(null));
+                      }}
+                      className="mt-1 flex shrink-0 items-center gap-1 rounded-md border border-brand-200 bg-brand-50 px-2 py-1 text-xs font-medium text-brand-ink transition hover:bg-brand-100 disabled:opacity-50"
+                      data-testid={`fix-${i.kind}`}
+                    >
+                      <Wand2 size={12} /> {fixing === key ? tr("editor.fixing") : fix.label}
+                    </button>
+                  );
+                })()}
               </li>
             ))}
           </ul>

@@ -1872,7 +1872,7 @@ type ResolvedPayload =
   | { kind: "clusters"; clusters: { title: string; ids: string[] }[] }
   | { kind: "summary"; text: string }
   | { kind: "outline"; outline: DesignOutline; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroPlans: { pageIndex: number; prompt: string; subject: string; size: string }[]; workspaceId: string; designId: string | null; append: boolean }
-  | { kind: "layoutDeck"; deckTitle: string; themeRecord: Theme; pages: { layoutId: string; name: string; note?: string; fill: LayoutFill; fillPrompt: string }[]; background: unknown; imageSize: string; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; styleClause: string; heroPlans: { pageIndex: number; prompt: string; subject: string }[]; generateAllowed: boolean; workspaceId: string; designId: string | null; append: boolean }
+  | { kind: "layoutDeck"; deckTitle: string; themeRecord: Theme; pages: { layoutId: string; name: string; note?: string; fill: LayoutFill; fillPrompt: string; verbatim?: boolean }[]; background: unknown; imageSize: string; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; styleClause: string; heroPlans: { pageIndex: number; prompt: string; subject: string }[]; generateAllowed: boolean; workspaceId: string; designId: string | null; append: boolean }
   | { kind: "splitSlide"; pageIndex: number; pageId: string; halves: { layoutId: string; name: string; fill: LayoutFill }[] }
   | { kind: "insertComparison"; layoutId: string; name: string; fill: LayoutFill; afterIndex: number; afterPageId: string }
   | { kind: "webSearch"; query: string; count: number }
@@ -2617,17 +2617,26 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
           .filter((t) => t.text),
       }));
       if (!pageTexts.some((p) => p.texts.length)) return { error: "there's no text content to re-shape yet" };
-      deps.reviewedOutline = switchOutline(deriveOutline({ title: st.doc.title, pages: pageTexts }), target);
       const sizeFor: Record<string, { width: number; height: number }> = {
         doc: { width: 1240, height: 1754 },
         "social-set": { width: 1080, height: 1080 },
         poster: { width: 1080, height: 1350 },
       };
-      return resolvePlanStep({
-        action: "generateDesign",
-        args: { prompt: `re-shape this design as a ${target}`, designType: target, mode: "append", canvasSize: sizeFor[target] },
-        status: "planned",
-      }, deps);
+      // Stash any USER-reviewed outline meant for a later generateDesign step
+      // in the same plan: the delegate consumes deps.reviewedOutline, and
+      // without the restore that step would silently refetch, discarding the
+      // user's review edits.
+      const prevReviewed = deps.reviewedOutline;
+      deps.reviewedOutline = switchOutline(deriveOutline({ title: st.doc.title, pages: pageTexts }), target);
+      try {
+        return await resolvePlanStep({
+          action: "generateDesign",
+          args: { prompt: `re-shape this design as a ${target}`, designType: target, mode: "append", canvasSize: sizeFor[target] },
+          status: "planned",
+        }, deps);
+      } finally {
+        deps.reviewedOutline = prevReviewed;
+      }
     }
     case "generateDesign": {
       // The explicit designType wins when the model supplies one; otherwise the
@@ -2671,8 +2680,13 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       // the page cap on purpose - the cap guards model over-production, and the
       // citations page is ours). The slide lists name+URL; the speaker note
       // carries the numbered list so the references survive slide-text edits.
+      // The page is marked verbatim: source names and URLs are exact records,
+      // so the per-slide model refinement must never rewrite them.
+      const verbatimIds = new Set<string>();
       if (deps.citations?.length && (dt === "deck" || dt === "doc")) {
-        outline.pages = [...outline.pages, sourcesOutlineItem(deps.citations, tr("editor.sources"))];
+        const srcItem = sourcesOutlineItem(deps.citations, tr("editor.sources"));
+        outline.pages = [...outline.pages, srcItem];
+        verbatimIds.add(srcItem.id);
       }
       // T12 layout-grounded generation: when the document has slide layouts
       // (built-ins are installed on first use), one structured call assigns a
@@ -2747,7 +2761,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
               kind: "layoutDeck",
               deckTitle: outline.title,
               themeRecord,
-              pages: items.map((item, i) => ({ layoutId: selection[i], name: item.title || `Page ${i + 1}`, note: item.note, fill: fills[i], fillPrompt: fillPrompts[i] })),
+              pages: items.map((item, i) => ({ layoutId: selection[i], name: item.title || `Page ${i + 1}`, note: item.note, fill: fills[i], fillPrompt: fillPrompts[i], verbatim: verbatimIds.has(item.id) || undefined })),
               background,
               imageSize,
               size,
@@ -3157,9 +3171,12 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
         // late refinements no-op). A picture prompt the REAL fill decides
         // routes to the image queue with the same grounding as resolve-time
         // slot prompts.
-        enqueueAiFills(pages.map((p, i) => {
+        enqueueAiFills(pages.flatMap((p, i) => {
+          // C33: a verbatim page (the Sources citations) keeps its exact
+          // deterministic fill; a model rewrite could mangle names and URLs.
+          if (p.verbatim) return [];
           const layoutId = availableIds.has(p.layoutId) ? p.layoutId : installed[0]?.id ?? "";
-          return {
+          return [{
             workspaceId,
             pageId: ids[i],
             layout: installed.find((l) => l.id === layoutId)!,
@@ -3184,7 +3201,7 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
                 generateAllowed,
               })));
             },
-          };
+          }];
         }).filter((t) => !!t.pageId && !!t.layout));
         // T19 (d): stamp the deck's theme record - record only, no remap: the
         // pages are already painted with these very colors. An appended deck
@@ -3646,7 +3663,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   const hasApplied = turns.some((t) => t.steps?.some((s) => s.ok));
   // Show art-direction follow-ups right after a design was generated.
   const lastTurn = turns[turns.length - 1];
-  const lastWasDesign = lastTurn?.role === "assistant" && !!lastTurn.steps?.some((s) => s.action === "generateDesign" && s.ok);
+  const lastWasDesign = lastTurn?.role === "assistant" && !!lastTurn.steps?.some((s) => (s.action === "generateDesign" || s.action === "magicSwitch") && s.ok);
   const AssistantAvatar = (
     <div className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-100 text-brand-ink"><Sparkles size={13} /></div>
   );

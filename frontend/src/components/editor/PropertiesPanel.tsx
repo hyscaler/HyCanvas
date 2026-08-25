@@ -2730,6 +2730,16 @@ function DeckThemeSection() {
       cx.drawImage(img, 0, 0, canvas.width, canvas.height);
       const palette = [...new Set(extractPalette(cx.getImageData(0, 0, canvas.width, canvas.height), 6).map(toHex))];
       if (!palette.length) throw new Error("no colors");
+      // The vision call gets a bounded PNG (<=512px on the long edge), never
+      // the raw file bytes: a full-resolution photo as base64 would blow the
+      // request budget for no gain in style judgment.
+      const V = 512;
+      const vScale = Math.min(1, V / Math.max(img.naturalWidth, img.naturalHeight));
+      const vCanvas = document.createElement("canvas");
+      vCanvas.width = Math.max(1, Math.round(img.naturalWidth * vScale));
+      vCanvas.height = Math.max(1, Math.round(img.naturalHeight * vScale));
+      vCanvas.getContext("2d")?.drawImage(img, 0, 0, vCanvas.width, vCanvas.height);
+      const visionUrl = vCanvas.toDataURL("image/png");
       const lumOf = (hex: string) => { const c = colorFromHex(hex); return 0.2126 * c.srgb.r + 0.7152 * c.srgb.g + 0.0722 * c.srgb.b; };
       const mode = lumOf(palette[0]) < 0.35 ? ("dark" as const) : ("light" as const);
       const deep = [...palette].sort((a, b) => lumOf(a) - lumOf(b))[0];
@@ -2743,7 +2753,7 @@ function DeckThemeSection() {
         try {
           const { text } = await oc.aiDescribeImage({
             workspaceId: panelWorkspaceId,
-            imageBase64: dataUrl,
+            imageBase64: visionUrl,
             instruction: "Which typography feel matches this image's visual style? Answer with exactly one word: serif, sans, or display.",
           });
           const feel = /\bserif\b/i.test(text) && !/sans/i.test(text) ? "serif" : /display/i.test(text) ? "display" : "sans";
