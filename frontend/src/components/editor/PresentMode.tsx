@@ -1069,14 +1069,17 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
         // Each layer runs on its OWN clock: the arriving transition's
         // duration/easing for the arriving slide, the exit's for the leaving.
         const enterT = pairEnterTransition(arrivingTransition);
-        const p = transitionProgress(elapsed, enterT.type === "none" ? windowDur : enterT.durationMs, enterT.easing);
+        const enterDur = enterT.type === "none" ? windowDur : enterT.durationMs;
+        const p = transitionProgress(elapsed, enterDur, enterT.easing);
         const pExit = exitT ? transitionProgress(elapsed, exitT.durationMs, exitT.easing) : p;
+        // Un-eased clock for per-element morph easing (C07).
+        const pLinear = enterDur > 0 ? Math.min(1, Math.max(0, elapsed / enterDur)) : 1;
         const { from } = tr;
         // Pose both slides: the leaving slide plays its exit, the arriving slide
         // begins its entrance (from the start of the transition window).
         poseExit(from, elapsed, reducedMotion);
         poseEnter(slide, tSlide, reducedMotion);
-        compositeTransition(ctx.canvas, ctx, vp, from, slide, enterT, exitT, p, pExit, bufA, bufB, drawSlide);
+        compositeTransition(ctx.canvas, ctx, vp, from, slide, enterT, exitT, p, pExit, pLinear, bufA, bufB, drawSlide);
       } else if (phase === "exit" && tr) {
         // No page transition, but the leaving slide has exit clips: play them in a
         // brief exit window so a configured exit always shows on slide-leave.
@@ -2119,6 +2122,7 @@ function compositeTransition(
   exitTransition: PageTransition | undefined,
   p: number,
   pExit: number,
+  pLinear: number,
   bufA: HTMLCanvasElement,
   bufB: HTMLCanvasElement,
   draw: (s: Slide, ctx: CanvasRenderingContext2D, vp: Viewport) => void,
@@ -2163,7 +2167,7 @@ function compositeTransition(
   // The morphed layer needs a scene render, so it stays with the caller: the
   // engine helper has already cross-faded the shared-element-free buffers.
   if (morph && morph.ids.length) {
-    const tempDoc = morphDesignAt(morph, to.doc, to.pageIndex, p);
+    const tempDoc = morphDesignAt(morph, to.doc, to.pageIndex, p, { linearProgress: pLinear });
     try {
       renderScene(createScene(tempDoc, to.pageIndex), destCtx as unknown as CanvasLike, vp, { assets: imageAssets });
     } catch { /* a cross-origin image can throw; skip the morphed layer */ }

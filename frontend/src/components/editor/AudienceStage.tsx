@@ -140,8 +140,10 @@ export function AudienceStage({ designId, initialSlide }: { designId: string; in
 
       if (b && dur > 0 && elapsed < dur) {
         const enterT = pairEnterTransition(arriving);
-        const p = transitionProgress(elapsed, enterT.type === "none" ? dur : enterT.durationMs, enterT.easing);
+        const enterDur = enterT.type === "none" ? dur : enterT.durationMs;
+        const p = transitionProgress(elapsed, enterDur, enterT.easing);
         const pExit = exitT ? transitionProgress(elapsed, exitT.durationMs, exitT.easing) : p;
+        const pLinear = enterDur > 0 ? Math.min(1, Math.max(0, elapsed / enterDur)) : 1;
         const A = bufA.current!;
         const B = bufB.current!;
         for (const buf of [A, B]) {
@@ -170,7 +172,7 @@ export function AudienceStage({ designId, initialSlide }: { designId: string; in
           renderTransitionPair(ctx as unknown as CanvasLike, enterT, exitT, { from: A, to: B, width: cw, height: ch, progress: p, exitProgress: pExit });
 
           if (morph && morph.ids.length) {
-            const posed = morphDesignAt(morph, doc, index, p);
+            const posed = morphDesignAt(morph, doc, index, p, { linearProgress: pLinear });
             try {
               renderScene(createScene(posed, index), ctx as unknown as CanvasLike, vp, { assets: imageAssets });
             } catch {

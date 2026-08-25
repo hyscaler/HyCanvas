@@ -17,7 +17,9 @@
 // translate/scale on the interface), clip + rect, drawImage, and globalAlpha.
 
 import type { CanvasLike } from "./types";
-import type { DesignFile, Node, PageTransition } from "@hc/schema";
+import type { Color, DesignFile, Node, PageTransition, TextNode } from "@hc/schema";
+import { evalEasing, transitionEasing } from "./animation";
+import { planWordMorph, wordMorphEligible, wordMorphNodes } from "./textmorph";
 
 /** Anything the destination context can `drawImage`: an HTMLCanvasElement, an
  *  OffscreenCanvas, an ImageBitmap, or a server canvas surface. */
@@ -350,61 +352,211 @@ export function pairEnterTransition(enter: PageTransition | undefined): PageTran
   return enter ?? { type: "none", durationMs: 0 };
 }
 
-/** The shared elements a Magic Move tweens, indexed under the arriving node id. */
+/** The shared elements a Magic Move tweens, indexed under the arriving node id.
+ *  `fromNodes`/`toNodes` are ORIGINAL document references (callers hide them
+ *  while rendering the crossfade buffers); `fromPose`/`toPose` are flattened
+ *  clones whose transforms are ABSOLUTE (group offsets baked in), which is
+ *  what the tweened overlay renders (C06 nested matching). */
 export interface MorphPlan {
   ids: string[];
   fromNodes: Map<string, Node>;
   toNodes: Map<string, Node>;
+  fromPose: Map<string, Node>;
+  toPose: Map<string, Node>;
+}
+
+/** A match candidate: the original node plus its accumulated page-absolute
+ *  translate/scale (containers with rotation or flips are never descended -
+ *  flattening them would skew member positions, same rule as PPTX export). */
+interface MorphCandidate {
+  node: Node;
+  tx: number;
+  ty: number;
+  sx: number;
+  sy: number;
+}
+
+/** The forced-match token (C09): a node NAME starting with `!!` pair-matches
+ *  across slides by that name regardless of id, one per side. */
+function forcedToken(n: Node): string | null {
+  const name = n.name?.trim();
+  return name && name.startsWith("!!") && name.length > 2 ? name : null;
+}
+
+/** Flatten a candidate into a standalone clone with an absolute transform. */
+function poseOf(c: MorphCandidate): Node {
+  const t = c.node.transform;
+  return {
+    ...c.node,
+    transform: {
+      ...t,
+      x: c.tx + t.x * c.sx,
+      y: c.ty + t.y * c.sy,
+      scaleX: t.scaleX * c.sx,
+      scaleY: t.scaleY * c.sy,
+    },
+  } as Node;
+}
+
+/** Children of an unmatched, unrotated, unflipped container, as candidates in
+ *  the container's accumulated space. */
+function descend(c: MorphCandidate): MorphCandidate[] {
+  const n = c.node;
+  if (n.type !== "group" && n.type !== "frame") return [];
+  const t = n.transform;
+  if ((t.rotation ?? 0) !== 0 || t.scaleX * c.sx < 0 || t.scaleY * c.sy < 0) return [];
+  const kids = (n as { children?: Node[] }).children ?? [];
+  return kids
+    .filter((k) => !k.hidden)
+    .map((k) => ({ node: k, tx: c.tx + t.x * c.sx, ty: c.ty + t.y * c.sy, sx: c.sx * t.scaleX, sy: c.sy * t.scaleY }));
 }
 
 /**
- * Plan a Magic Move: the top-level children shared between two slides.
+ * Plan a Magic Move: the elements shared between two slides.
  *
- * Matching is by stable schema node id first (the open format's advantage over
- * PowerPoint's name heuristics), then by a name unique on BOTH sides, which
- * covers "duplicate the slide, then move an element" since duplication
- * regenerates ids but keeps names. Returns null when nothing is shared, so the
- * caller can fall back to a plain cross-fade.
+ * Matching precedence per round: a forced `!!name` token (C09, exactly one
+ * carrier per side), then stable schema node id (the open format's advantage
+ * over name heuristics), then a name unique on BOTH sides, which covers
+ * "duplicate the slide, then move an element" since duplication regenerates
+ * ids but keeps names. Top-level elements (groups included, tweened as units)
+ * match first; containers that stay UNMATCHED are then descended so a node
+ * moving into or out of a group still morphs, round by round (C06). Returns
+ * null when nothing is shared, so the caller falls back to a plain crossfade.
  */
 export function morphPlan(from: DesignFile, fromPage: number, to: DesignFile, toPage: number): MorphPlan | null {
-  const fromCh = from.pages[fromPage]?.children ?? [];
-  const toCh = to.pages[toPage]?.children ?? [];
-  const fromById = new Map(fromCh.map((n) => [n.id, n]));
-  const fromByName = new Map<string, Node[]>();
-  for (const n of fromCh) {
-    if (!n.name) continue;
-    const bucket = fromByName.get(n.name);
-    if (bucket) bucket.push(n);
-    else fromByName.set(n.name, [n]);
-  }
-  const toNameCount = new Map<string, number>();
-  for (const n of toCh) if (n.name) toNameCount.set(n.name, (toNameCount.get(n.name) ?? 0) + 1);
-
   const ids: string[] = [];
   const fromNodes = new Map<string, Node>();
   const toNodes = new Map<string, Node>();
-  for (const tn of toCh) {
-    let match: Node | undefined = fromById.get(tn.id);
-    if (!match && tn.name && toNameCount.get(tn.name) === 1) {
-      const byName = fromByName.get(tn.name);
-      if (byName && byName.length === 1) match = byName[0]; // unique on both sides
+  const fromPose = new Map<string, Node>();
+  const toPose = new Map<string, Node>();
+
+  let fromPool: MorphCandidate[] = (from.pages[fromPage]?.children ?? [])
+    .filter((n) => !n.hidden)
+    .map((n) => ({ node: n, tx: 0, ty: 0, sx: 1, sy: 1 }));
+  let toPool: MorphCandidate[] = (to.pages[toPage]?.children ?? [])
+    .filter((n) => !n.hidden)
+    .map((n) => ({ node: n, tx: 0, ty: 0, sx: 1, sy: 1 }));
+
+  for (let round = 0; round < 8 && fromPool.length && toPool.length; round++) {
+    const matchedFrom = new Set<MorphCandidate>();
+    const matchedTo = new Set<MorphCandidate>();
+    const record = (f: MorphCandidate, t: MorphCandidate) => {
+      ids.push(t.node.id);
+      fromNodes.set(t.node.id, f.node);
+      toNodes.set(t.node.id, t.node);
+      fromPose.set(t.node.id, poseOf(f));
+      toPose.set(t.node.id, poseOf(t));
+      matchedFrom.add(f);
+      matchedTo.add(t);
+    };
+
+    // 1. Forced tokens: exactly one carrier per side, else automatic rules.
+    const forcedFrom = new Map<string, MorphCandidate[]>();
+    for (const c of fromPool) {
+      const tok = forcedToken(c.node);
+      if (tok) (forcedFrom.get(tok) ?? forcedFrom.set(tok, []).get(tok)!).push(c);
     }
-    if (match) {
-      ids.push(tn.id);
-      fromNodes.set(tn.id, match);
-      toNodes.set(tn.id, tn);
+    const forcedTo = new Map<string, MorphCandidate[]>();
+    for (const c of toPool) {
+      const tok = forcedToken(c.node);
+      if (tok) (forcedTo.get(tok) ?? forcedTo.set(tok, []).get(tok)!).push(c);
     }
+    for (const [tok, tos] of forcedTo) {
+      const froms = forcedFrom.get(tok);
+      if (froms?.length === 1 && tos.length === 1) record(froms[0], tos[0]);
+    }
+
+    // 2. Stable id, then 3. name unique on both sides (within this round).
+    const fromById = new Map(fromPool.filter((c) => !matchedFrom.has(c)).map((c) => [c.node.id, c]));
+    const fromByName = new Map<string, MorphCandidate[]>();
+    for (const c of fromPool) {
+      if (matchedFrom.has(c) || !c.node.name) continue;
+      (fromByName.get(c.node.name) ?? fromByName.set(c.node.name, []).get(c.node.name)!).push(c);
+    }
+    const toNameCount = new Map<string, number>();
+    for (const c of toPool) {
+      if (matchedTo.has(c) || !c.node.name) continue;
+      toNameCount.set(c.node.name, (toNameCount.get(c.node.name) ?? 0) + 1);
+    }
+    for (const tc of toPool) {
+      if (matchedTo.has(tc)) continue;
+      let match = fromById.get(tc.node.id);
+      if (match && matchedFrom.has(match)) match = undefined;
+      if (!match && tc.node.name && toNameCount.get(tc.node.name) === 1) {
+        const byName = fromByName.get(tc.node.name)?.filter((c) => !matchedFrom.has(c));
+        if (byName && byName.length === 1) match = byName[0];
+      }
+      if (match) record(match, tc);
+    }
+
+    // 4. Descend UNMATCHED containers on both sides for the next round, so
+    // regrouped elements still find each other (matched containers tween as
+    // units and never expose their children separately). Unmatched LEAVES
+    // stay in the pool: the other side may only reach their partner after
+    // descending one more level.
+    const next = (pool: MorphCandidate[], matched: Set<MorphCandidate>) => {
+      const out: MorphCandidate[] = [];
+      let descended = false;
+      for (const c of pool) {
+        if (matched.has(c)) continue;
+        const kids = descend(c);
+        if (kids.length) {
+          descended = true;
+          out.push(...kids);
+        } else if (c.node.type !== "group" && c.node.type !== "frame") {
+          out.push(c); // leaves persist; exhausted containers drop
+        }
+      }
+      return { out, descended };
+    };
+    const nf = next(fromPool, matchedFrom);
+    const nt = next(toPool, matchedTo);
+    // No new depth on either side means another round cannot match anything
+    // the current round could not; stop rather than spin on stable pools.
+    if (!nf.descended && !nt.descended) break;
+    fromPool = nf.out;
+    toPool = nt.out;
   }
-  return ids.length ? { ids, fromNodes, toNodes } : null;
+
+  return ids.length ? { ids, fromNodes, toNodes, fromPose, toPose } : null;
 }
 
-/** Interpolate a node between its outgoing and incoming pose (transform/size/
- *  opacity) at eased progress `p`; appearance is taken from the destination. */
+/** Lerp a solid color in sRGB (alpha included). */
+function lerpColor(a: Color, b: Color, p: number): Color {
+  const L = (x: number, y: number) => x + (y - x) * p;
+  return { srgb: { r: L(a.srgb.r, b.srgb.r), g: L(a.srgb.g, b.srgb.g), b: L(a.srgb.b, b.srgb.b), a: L(a.srgb.a, b.srgb.a) } };
+}
+
+/** Tween one fill toward another when their shapes agree: solid-to-solid
+ *  lerps the color; gradient-to-gradient with the SAME kind and stop count
+ *  lerps stop colors and positions; anything else snaps to the destination
+ *  (C08 - path/shape morphing stays out of scope). */
+function lerpFill(a: unknown, b: unknown, p: number): unknown {
+  const fa = a as { type?: string; color?: Color; gradient?: string; stops?: { position: number; color: Color }[] } | undefined;
+  const fb = b as { type?: string; color?: Color; gradient?: string; stops?: { position: number; color: Color }[] } | undefined;
+  if (!fa || !fb) return b;
+  if (fa.type === "solid" && fb.type === "solid" && fa.color && fb.color) {
+    return { ...fb, color: lerpColor(fa.color, fb.color, p) };
+  }
+  if (
+    fa.type === "gradient" && fb.type === "gradient" && fa.gradient === fb.gradient &&
+    Array.isArray(fa.stops) && Array.isArray(fb.stops) && fa.stops.length === fb.stops.length
+  ) {
+    const L = (x: number, y: number) => x + (y - x) * p;
+    return { ...fb, stops: fb.stops.map((sb, i) => ({ ...sb, position: L(fa.stops![i].position, sb.position), color: lerpColor(fa.stops![i].color, sb.color, p) })) };
+  }
+  return b;
+}
+
+/** Interpolate a node between its outgoing and incoming pose at eased progress
+ *  `p`: transform/size/opacity, and (C08) appearance where the shapes agree -
+ *  solid fill colors, index-matched gradient stops, stroke color and width,
+ *  and per-corner radius. Unmatched appearance snaps to the destination. */
 export function lerpNode(a: Node, b: Node, p: number): Node {
   const L = (x: number, y: number) => x + (y - x) * p;
   const ta = a.transform;
   const tb = b.transform;
-  return {
+  const out = {
     ...b,
     transform: {
       ...tb,
@@ -417,12 +569,62 @@ export function lerpNode(a: Node, b: Node, p: number): Node {
     size: { width: L(a.size.width, b.size.width), height: L(a.size.height, b.size.height) },
     opacity: L(a.opacity, b.opacity),
   } as Node;
+  const ra = a as unknown as { fills?: unknown[]; stroke?: { color?: Color; fill?: unknown; width?: number }; cornerRadius?: { topLeft: number; topRight: number; bottomRight: number; bottomLeft: number } };
+  const rb = b as unknown as { fills?: unknown[]; stroke?: { color?: Color; fill?: unknown; width?: number }; cornerRadius?: { topLeft: number; topRight: number; bottomRight: number; bottomLeft: number } };
+  const ro = out as unknown as typeof rb;
+  if (Array.isArray(ra.fills) && Array.isArray(rb.fills) && ra.fills.length === rb.fills.length) {
+    ro.fills = rb.fills.map((fb, i) => lerpFill(ra.fills![i], fb, p));
+  }
+  if (ra.stroke && rb.stroke) {
+    ro.stroke = { ...rb.stroke };
+    if (ra.stroke.color && rb.stroke.color) ro.stroke.color = lerpColor(ra.stroke.color, rb.stroke.color, p);
+    if (ra.stroke.fill && rb.stroke.fill) ro.stroke.fill = lerpFill(ra.stroke.fill, rb.stroke.fill, p);
+    if (typeof ra.stroke.width === "number" && typeof rb.stroke.width === "number") ro.stroke.width = L(ra.stroke.width, rb.stroke.width);
+  }
+  if (ra.cornerRadius || rb.cornerRadius) {
+    const z = { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 };
+    const ca = ra.cornerRadius ?? z;
+    const cb = rb.cornerRadius ?? z;
+    ro.cornerRadius = {
+      topLeft: L(ca.topLeft, cb.topLeft),
+      topRight: L(ca.topRight, cb.topRight),
+      bottomRight: L(ca.bottomRight, cb.bottomRight),
+      bottomLeft: L(ca.bottomLeft, cb.bottomLeft),
+    };
+  }
+  return out;
 }
 
-/** Build the design a morph draws on top: the arriving page with only the
- *  shared elements, posed at `p`. Render this after `renderTransition`. */
-export function morphDesignAt(plan: MorphPlan, to: DesignFile, toPage: number, p: number): DesignFile {
-  const children = plan.ids.map((id) => lerpNode(plan.fromNodes.get(id)!, plan.toNodes.get(id)!, p));
+/**
+ * Build the design a morph draws on top: the arriving page with only the
+ * shared elements, posed at `p`. Render this after `renderTransition`.
+ *
+ * Poses come from the plan's FLATTENED clones, so nested matches (C06) draw
+ * at their true page positions. Per-element easing (C07): when the arriving
+ * node's entrance easing is set and the caller supplies `linearProgress`,
+ * that element re-eases its own motion from the LINEAR clock (spring
+ * included) instead of riding the transition's global curve. Word-level text
+ * morph (C10): an eligible text pair whose words differ dances its common
+ * words instead of snapping content.
+ */
+export function morphDesignAt(plan: MorphPlan, to: DesignFile, toPage: number, p: number, opts: { linearProgress?: number } = {}): DesignFile {
+  const children: Node[] = [];
+  for (const id of plan.ids) {
+    const a = plan.fromPose.get(id)!;
+    const b = plan.toPose.get(id)!;
+    const easing = (plan.toNodes.get(id) as unknown as { animation?: { entrance?: { easing?: string } } }).animation?.entrance?.easing;
+    const pe = easing && opts.linearProgress !== undefined
+      ? evalEasing(transitionEasing(easing), Math.min(1, Math.max(0, opts.linearProgress)))
+      : p;
+    if (a.type === "text" && b.type === "text" && wordMorphEligible(a, b)) {
+      const wordPlan = planWordMorph(a as TextNode, b as TextNode);
+      if (wordPlan) {
+        children.push(...wordMorphNodes(a as TextNode, b as TextNode, wordPlan, pe));
+        continue;
+      }
+    }
+    children.push(lerpNode(a, b, pe));
+  }
   const pages = to.pages.map((pg, i) => (i === toPage ? { ...pg, children } : pg));
   return { ...to, pages } as DesignFile;
 }

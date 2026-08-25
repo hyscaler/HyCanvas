@@ -328,3 +328,123 @@ describe("pair window helpers (exit-only fix)", () => {
     expect(leaving.alpha).toBeCloseTo(0, 5);
   });
 });
+
+// --- Phase 2: Magic Move depth (C06-C09) ---------------------------------------
+function group(id: string, x: number, y: number, kids: Node[], opts: { rotation?: number; scale?: number } = {}): Node {
+  return {
+    id, type: "group",
+    transform: { x, y, scaleX: opts.scale ?? 1, scaleY: opts.scale ?? 1, rotation: opts.rotation ?? 0 },
+    size: { width: 200, height: 200 }, opacity: 1, blendMode: "normal",
+    children: kids,
+  } as unknown as Node;
+}
+
+describe("morphPlan nested matching (C06)", () => {
+  it("a node moving OUT of a group matches at its absolute position", () => {
+    // From: shape "a" at (10,20) inside a group at (100,50). To: "a" top-level at (400,0).
+    const d = deck([group("g1", 100, 50, [shape("a", 10)])], [shape("a", 400)]);
+    (((d.pages[0].children[0] as unknown as { children: Node[] }).children[0]) as { transform: { y: number } }).transform.y = 20;
+    const plan = morphPlan(d, 0, d, 1)!;
+    expect(plan.ids).toEqual(["a"]);
+    // Pose is FLATTENED: absolute from-position is group + child offset.
+    expect(plan.fromPose.get("a")!.transform.x).toBe(110);
+    expect(plan.fromPose.get("a")!.transform.y).toBe(70);
+    expect(plan.toPose.get("a")!.transform.x).toBe(400);
+    // Original refs (for buffer hiding) are the real document nodes.
+    expect(plan.fromNodes.get("a")!.transform.x).toBe(10);
+  });
+
+  it("group scale bakes into the flattened pose", () => {
+    const d = deck([group("g1", 100, 0, [shape("a", 10)], { scale: 2 })], [shape("a", 0)]);
+    const plan = morphPlan(d, 0, d, 1)!;
+    const pose = plan.fromPose.get("a")!;
+    expect(pose.transform.x).toBe(120); // 100 + 10*2
+    expect(pose.transform.scaleX).toBe(2);
+  });
+
+  it("matched groups still tween as units and never expose their children", () => {
+    const d = deck(
+      [group("g1", 0, 0, [shape("a", 10)])],
+      [group("g1", 300, 0, [shape("a", 10)])],
+    );
+    const plan = morphPlan(d, 0, d, 1)!;
+    expect(plan.ids).toEqual(["g1"]);
+  });
+
+  it("a rotated group is never descended (flattening would skew)", () => {
+    const d = deck([group("g1", 0, 0, [shape("a", 10)], { rotation: 30 })], [shape("a", 400)]);
+    expect(morphPlan(d, 0, d, 1)).toBeNull();
+  });
+});
+
+describe("morphPlan forced matching (C09)", () => {
+  it("a shared !!token pairs different-id nodes, beating automatic rules", () => {
+    const d = deck([shape("x1", 0, "!!logo")], [shape("y9", 500, "!!logo")]);
+    const plan = morphPlan(d, 0, d, 1)!;
+    expect(plan.ids).toEqual(["y9"]);
+    expect(plan.fromNodes.get("y9")!.id).toBe("x1");
+  });
+
+  it("a forced-token collision on one side falls back to automatic matching", () => {
+    const d = deck([shape("x1", 0, "!!logo"), shape("x2", 50, "!!logo")], [shape("y9", 500, "!!logo")]);
+    expect(morphPlan(d, 0, d, 1)).toBeNull(); // two carriers on the from side: no forced pair, names ambiguous
+  });
+});
+
+describe("lerpNode appearance tween (C08)", () => {
+  it("tweens solid fill color, stroke, and corner radius; alpha preserved", () => {
+    const a = shape("s", 0);
+    (a as unknown as { fills: unknown[] }).fills = [{ type: "solid", color: { srgb: { r: 1, g: 0, b: 0, a: 0.5 } } }];
+    (a as unknown as { stroke?: unknown }).stroke = { fill: { type: "solid", color: { srgb: { r: 0, g: 0, b: 0, a: 1 } } }, width: 2, align: "center", cap: "butt", join: "miter" };
+    const b = structuredClone(a);
+    (b as unknown as { fills: unknown[] }).fills = [{ type: "solid", color: { srgb: { r: 0, g: 0, b: 1, a: 0.5 } } }];
+    (b as unknown as { stroke: { width: number } }).stroke.width = 6;
+    (b as unknown as { cornerRadius?: unknown }).cornerRadius = { topLeft: 20, topRight: 20, bottomRight: 20, bottomLeft: 20 };
+    const mid = lerpNode(a, b, 0.5) as unknown as {
+      fills: { color: { srgb: { r: number; b: number; a: number } } }[];
+      stroke: { width: number };
+      cornerRadius: { topLeft: number };
+    };
+    expect(mid.fills[0].color.srgb.r).toBeCloseTo(0.5, 5);
+    expect(mid.fills[0].color.srgb.b).toBeCloseTo(0.5, 5);
+    expect(mid.fills[0].color.srgb.a).toBeCloseTo(0.5, 5);
+    expect(mid.stroke.width).toBeCloseTo(4, 5);
+    expect(mid.cornerRadius.topLeft).toBeCloseTo(10, 5); // absent radius lerps from 0
+  });
+
+  it("gradient stops tween index-matched; mismatched shapes snap to the destination", () => {
+    const a = shape("s", 0);
+    (a as unknown as { fills: unknown[] }).fills = [{
+      type: "gradient", gradient: "linear", angle: 0,
+      stops: [{ position: 0, color: { srgb: { r: 1, g: 0, b: 0, a: 1 } } }, { position: 1, color: { srgb: { r: 0, g: 0, b: 0, a: 1 } } }],
+    }];
+    const b = structuredClone(a);
+    (b as unknown as { fills: { stops: { position: number; color: { srgb: { r: number } } }[] }[] }).fills[0].stops[0].color.srgb.r = 0;
+    const mid = lerpNode(a, b, 0.5) as unknown as { fills: { stops: { color: { srgb: { r: number } } }[] }[] };
+    expect(mid.fills[0].stops[0].color.srgb.r).toBeCloseTo(0.5, 5);
+    // Mismatched stop count: destination wins whole.
+    const c = structuredClone(a);
+    (c as unknown as { fills: { stops: unknown[] }[] }).fills[0].stops.push({ position: 0.5, color: { srgb: { r: 0, g: 1, b: 0, a: 1 } } });
+    const snap = lerpNode(a, c, 0.25) as unknown as { fills: { stops: unknown[] }[] };
+    expect(snap.fills[0].stops).toHaveLength(3);
+  });
+});
+
+describe("morphDesignAt per-element easing (C07)", () => {
+  it("an element with an entrance easing re-eases from the linear clock", () => {
+    const a = shape("a", 0);
+    const b = shape("a", 1000);
+    (b as unknown as { animation?: unknown }).animation = { entrance: { preset: "fade", durationMs: 300, delayMs: 0, easing: "linear" } };
+    const d = deck([a], [b]);
+    const plan = morphPlan(d, 0, d, 1)!;
+    // Global eased progress 0.8 but linear clock 0.5: the linear-eased element
+    // sits at its halfway point, not at 0.8.
+    const posed = morphDesignAt(plan, d, 1, 0.8, { linearProgress: 0.5 });
+    expect(posed.pages[1].children[0].transform.x).toBeCloseTo(500, 3);
+    // Without a per-element easing the global progress applies.
+    (b as unknown as { animation?: unknown }).animation = undefined;
+    const plan2 = morphPlan(d, 0, d, 1)!;
+    const posed2 = morphDesignAt(plan2, d, 1, 0.8, { linearProgress: 0.5 });
+    expect(posed2.pages[1].children[0].transform.x).toBeCloseTo(800, 3);
+  });
+});

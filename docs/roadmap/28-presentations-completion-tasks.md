@@ -24,11 +24,11 @@ The rules from `28-presentations-leverage-tasks.md` apply unchanged. In brief:
 | C03 | 1 Hardening | Exit / asymmetric transitions (schema v22, same bump) | done 2026-08-25 |
 | C04 | 1 Hardening | Transition picker gallery with live preview swatches | done 2026-08-25 |
 | C05 | 1 Hardening | Animate-all-slides bulk action | done 2026-08-25 |
-| C06 | 2 Morph | Nested / grouped element morph matching | todo |
-| C07 | 2 Morph | Per-element morph easing | todo |
-| C08 | 2 Morph | Fill / stroke / color / radius morph tween | todo |
-| C09 | 2 Morph | Forced-match naming convention | todo |
-| C10 | 2 Morph | Word-level text morph | todo |
+| C06 | 2 Morph | Nested / grouped element morph matching | done 2026-08-25 |
+| C07 | 2 Morph | Per-element morph easing | done 2026-08-25 |
+| C08 | 2 Morph | Fill / stroke / color / radius morph tween | done 2026-08-25 |
+| C09 | 2 Morph | Forced-match naming convention | done 2026-08-25 |
+| C10 | 2 Morph | Word-level text morph | done 2026-08-25 |
 | C11 | 3 Animation | Motion paths (follow a curve, orient-to-path) | todo |
 | C12 | 3 Animation | Color and size keyframe channels | todo |
 | C13 | 3 Animation | Configurable spring physics | todo |

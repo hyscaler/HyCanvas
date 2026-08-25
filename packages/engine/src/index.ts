@@ -52,6 +52,15 @@ export {
   type MorphPlan,
 } from "./transition";
 export {
+  wordBoxes,
+  planWordMorph,
+  wordMorphEligible,
+  wordMorphNodes,
+  maxMorphWords,
+  type WordBox,
+  type WordMorphPlan,
+} from "./textmorph";
+export {
   planBuildOrder,
   childIndexForBuildOrder,
   startModeLabel,
