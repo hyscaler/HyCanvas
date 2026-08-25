@@ -37,7 +37,7 @@ The frontend and shared packages are an npm-workspaces monorepo (orchestrated wi
 
 ### Generation API
 
-Generate complete, editable presentations programmatically: a workspace admin mints a scoped API key (Dashboard > Members > API keys), then `POST /api/v1/generate/presentation` with a prompt (plus optional grounding sources, language, brand palette) returns a job whose result is a real design in the workspace, ready to open, render to PDF/PNG, or share by link. The full reference is served by every instance at `/api/docs` (OpenAPI at `/api/docs/openapi.json`), and `scripts/api-demo.sh` walks prompt to PDF to share URL with plain curl.
+Generate complete, editable presentations programmatically: a workspace admin mints a scoped API key (Dashboard > Members > API keys), then `POST /api/v1/generate/presentation` with a prompt (plus optional grounding sources, language, brand palette) returns a job whose result is a real design in the workspace, ready to open, render to PDF/PNG, or share by link. The full reference is served by every instance at `/api/docs` (OpenAPI at `/api/docs/openapi.json`), and `scripts/api-demo.sh` walks prompt to PDF to share URL with plain curl. AI agents get the same capabilities over the Model Context Protocol: every instance serves an MCP endpoint at `/mcp` (streamable HTTP, same keys, scopes, and budgets) with generate/fetch/export/share tools, plus a 90-day audit trail of key activity for workspace admins.
 
 ## Prerequisites
 

@@ -19,6 +19,24 @@ func mountAPIKeys(api chi.Router, keys *apikeys.Service, acct *accounts.Service)
 	api.With(requireAuth(acct)).Post("/workspaces/{id}/api-keys", mintAPIKeyHandler(keys, acct))
 	api.With(requireAuth(acct)).Get("/workspaces/{id}/api-keys", listAPIKeysHandler(keys, acct))
 	api.With(requireAuth(acct)).Delete("/workspaces/{id}/api-keys/{keyId}", revokeAPIKeyHandler(keys, acct))
+	api.With(requireAuth(acct)).Get("/workspaces/{id}/api-keys/audit", auditAPIKeysHandler(keys, acct))
+}
+
+// auditAPIKeysHandler returns the workspace's recent key activity (F40 E08):
+// which key called which surface against which design, newest first.
+func auditAPIKeysHandler(keys *apikeys.Service, acct *accounts.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ws := chi.URLParam(r, "id")
+		if !apiKeysAssertAdmin(w, r, acct, ws) {
+			return
+		}
+		out, err := keys.AuditList(r.Context(), ws, 100)
+		if err != nil {
+			problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "could not list the API activity", "api_audit_list_failed")
+			return
+		}
+		writeJSON(w, http.StatusOK, out)
+	}
 }
 
 func apiKeysAssertAdmin(w http.ResponseWriter, r *http.Request, acct *accounts.Service, workspaceID string) bool {

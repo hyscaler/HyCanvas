@@ -27,8 +27,8 @@ The rules from `28-presentations-completion-tasks.md` apply unchanged. In brief:
 | E04 | 1 Generation API | POST /v1/generate/presentation through the job registry | done 2026-08-27 |
 | E05 | 1 Generation API | Export + share hookup for API-generated decks | done 2026-08-27 |
 | E06 | 1 Generation API | OpenAPI document + served API docs page | done 2026-08-27 |
-| E07 | 2 MCP | MCP server (streamable HTTP) over the generation API | todo |
-| E08 | 2 MCP | MCP hardening: per-key scopes, audit log, docs | todo |
+| E07 | 2 MCP | MCP server (streamable HTTP) over the generation API | done 2026-08-28 |
+| E08 | 2 MCP | MCP hardening: per-key scopes, audit log, docs | done 2026-08-28 |
 | E09 | 3 Catalog | Slide layout library: ~5 to 15+ layouts with capacity hints | todo |
 | E10 | 3 Catalog | Theme catalog: 14 to 30+, extracted to a shared module | todo |
 | E11 | 3 Catalog | Presentation template seeds: 11 to 40+ | todo |
@@ -73,11 +73,11 @@ The pitch: presenton ships a generation API and positions it as the differentiat
 
 ### E07: MCP server over the API
 
-- A streamable-HTTP MCP endpoint at `/mcp`, authenticated by the same API keys, implemented in Go (no new runtime). Tools map 1:1 onto Phase 1: `generate_presentation`, `get_job`, `list_templates`, `list_themes`, `get_design_file`, `export_design`, `create_share_link`. Tool schemas mirror the OpenAPI shapes; results return compact JSON (ids + URLs, never megabyte files inline; exports return a download URL).
+- A streamable-HTTP MCP endpoint at `/mcp`, authenticated by the same API keys, implemented in Go (no new runtime, no new dependency: a minimal JSON-RPC 2.0 handler, stateless, batching refused per the 2025-06-18 revision). Tools ship 1:1 on Phase 1 and SHARE its validation/job code paths: `generate_presentation` (waits inline up to ~110s, then degrades to a get_job poll handle), `get_job`, `get_design_file` (files over 256KB summarize and point at the HTTP route), `export_design` (download URLs), `create_share_link`. `list_templates`/`list_themes` join in Phase 3 with E12, when templates/themes become generation inputs.
 
 ### E08: MCP hardening + docs
 
-- Per-key scopes enforced tool-by-tool; an `api_audit_log` additive table (key id, tool/route, design id, at) with a retention cap; docs page section with Claude Desktop / generic MCP client setup snippets. Acceptance: an MCP client generates a deck and fetches its PPTX using a generate+export key, and a read-only key is refused for generation with a clean error.
+- Per-key scopes enforced tool-by-tool (a refusal is a TOOL error the model can read, not a protocol error); an `api_audit_log` additive table (key id, surface, design id, at; design_id TEXT on purpose - a log line, not a relation) covering BOTH doors (HTTP routes via the auth middleware, MCP via the tools; job polling excluded as noise), 90-day retention pruned by the writer, listed to admins at GET /workspaces/{id}/api-keys/audit; docs page section with Claude Code / generic MCP client setup snippets. Acceptance (shipped as tests): the MCP surface test drives initialize/tools/list/generate/poll end to end, a read-only key is refused for generation with a clean tool error, and the audit trail lists the calls to an admin session while refusing keys. PDF stands in for PPTX per the E05 honest scope.
 
 ## Phase 3: Theme and template catalog breadth
 

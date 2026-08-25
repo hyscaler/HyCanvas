@@ -45,18 +45,21 @@ type apiKeyRoute struct {
 	re        *regexp.Regexp
 	scope     string // "" = any valid key (e.g. job polling)
 	designIdx int
+	// label names the surface in the audit trail; "" (job polling) is the
+	// one read that is too chatty and too low-value to audit.
+	label string
 }
 
 var apiKeyRoutes = []apiKeyRoute{
-	{method: http.MethodPost, re: regexp.MustCompile(`^/api/v1/generate/presentation$`), scope: apikeys.ScopeGenerate, designIdx: -1},
-	{method: http.MethodGet, re: regexp.MustCompile(`^/api/v1/jobs/([^/]+)$`), scope: "", designIdx: -1},
-	{method: http.MethodGet, re: regexp.MustCompile(`^/api/v1/designs/([^/]+)$`), scope: apikeys.ScopeRead, designIdx: 1},
-	{method: http.MethodGet, re: regexp.MustCompile(`^/api/v1/designs/([^/]+)/file$`), scope: apikeys.ScopeRead, designIdx: 1},
-	{method: http.MethodGet, re: regexp.MustCompile(`^/api/v1/designs/([^/]+)/render\.pdf$`), scope: apikeys.ScopeExport, designIdx: 1},
-	{method: http.MethodGet, re: regexp.MustCompile(`^/api/v1/designs/([^/]+)/render\.png$`), scope: apikeys.ScopeExport, designIdx: 1},
-	{method: http.MethodPost, re: regexp.MustCompile(`^/api/v1/designs/([^/]+)/export/doc$`), scope: apikeys.ScopeExport, designIdx: 1},
-	{method: http.MethodGet, re: regexp.MustCompile(`^/api/v1/designs/([^/]+)/export/doc/([^/]+)/download$`), scope: apikeys.ScopeExport, designIdx: 1},
-	{method: http.MethodPost, re: regexp.MustCompile(`^/api/v1/designs/([^/]+)/links$`), scope: apikeys.ScopeExport, designIdx: 1},
+	{method: http.MethodPost, re: regexp.MustCompile(`^/api/v1/generate/presentation$`), scope: apikeys.ScopeGenerate, designIdx: -1, label: "http:generate_presentation"},
+	{method: http.MethodGet, re: regexp.MustCompile(`^/api/v1/jobs/([^/]+)$`), scope: "", designIdx: -1, label: ""},
+	{method: http.MethodGet, re: regexp.MustCompile(`^/api/v1/designs/([^/]+)$`), scope: apikeys.ScopeRead, designIdx: 1, label: "http:get_design"},
+	{method: http.MethodGet, re: regexp.MustCompile(`^/api/v1/designs/([^/]+)/file$`), scope: apikeys.ScopeRead, designIdx: 1, label: "http:get_design_file"},
+	{method: http.MethodGet, re: regexp.MustCompile(`^/api/v1/designs/([^/]+)/render\.pdf$`), scope: apikeys.ScopeExport, designIdx: 1, label: "http:render_pdf"},
+	{method: http.MethodGet, re: regexp.MustCompile(`^/api/v1/designs/([^/]+)/render\.png$`), scope: apikeys.ScopeExport, designIdx: 1, label: "http:render_png"},
+	{method: http.MethodPost, re: regexp.MustCompile(`^/api/v1/designs/([^/]+)/export/doc$`), scope: apikeys.ScopeExport, designIdx: 1, label: "http:export_doc"},
+	{method: http.MethodGet, re: regexp.MustCompile(`^/api/v1/designs/([^/]+)/export/doc/([^/]+)/download$`), scope: apikeys.ScopeExport, designIdx: 1, label: "http:export_doc_download"},
+	{method: http.MethodPost, re: regexp.MustCompile(`^/api/v1/designs/([^/]+)/links$`), scope: apikeys.ScopeExport, designIdx: 1, label: "http:create_share_link"},
 }
 
 // matchAPIKeyRoute returns the allowlist entry and the design id (or "").
@@ -156,6 +159,12 @@ func authenticateAPIKey(w http.ResponseWriter, r *http.Request, token string) *h
 			problemWithCode(w, r, http.StatusNotFound, "Not Found", "design not found", "design_not_found")
 			return nil
 		}
+	}
+	// The audit trail (E08): one row per meaningful key action, written here
+	// so every allowlisted route is covered without per-handler hooks. Job
+	// polling (label "") is deliberately not audited.
+	if rt.label != "" {
+		apiKeyAuth.Audit(r.Context(), &info, rt.label, designID)
 	}
 	ctx := context.WithValue(r.Context(), userKey, &authedUser{ID: info.UserID})
 	ctx = context.WithValue(ctx, apiKeyCtx{}, &info)

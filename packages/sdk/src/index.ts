@@ -1244,6 +1244,11 @@ export class HyCanvasClient {
   revokeApiKey(workspaceId: string, keyId: string): Promise<void> {
     return this.request("DELETE", `/v1/workspaces/${workspaceId}/api-keys/${keyId}`);
   }
+  /** Recent API-key activity (admin only): one entry per meaningful key
+   *  action on the HTTP or MCP surface, newest first, 90-day retention. */
+  apiKeyAudit(workspaceId: string): Promise<{ id: string; keyId: string; workspaceId: string; userId: string; surface: string; designId?: string | null; at: string }[]> {
+    return this.request("GET", `/v1/workspaces/${workspaceId}/api-keys/audit`);
+  }
   /** Kick off a headless prompt-to-deck generation (F40): returns a job to
    *  poll via getJob. Works with a session or a generate-scoped API key. */
   generatePresentation(input: { workspaceId: string; prompt: string; designType?: "deck" | "doc" | "poster" | "social"; pageCount?: number; language?: string; brandPalette?: string[]; sources?: { name: string; text: string }[] }): Promise<{ jobId: string; poll: string }> {

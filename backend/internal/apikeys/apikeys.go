@@ -51,9 +51,11 @@ type DBTX interface {
 type Service struct {
 	db DBTX
 	// last_used_at writes are throttled per key id so a busy key does not
-	// turn every request into an UPDATE.
-	mu       sync.Mutex
-	lastUsed map[string]time.Time
+	// turn every request into an UPDATE; lastPrune throttles the audit
+	// retention sweep (audit.go) to once an hour per process.
+	mu        sync.Mutex
+	lastUsed  map[string]time.Time
+	lastPrune time.Time
 }
 
 func NewService(db DBTX) *Service {

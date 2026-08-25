@@ -118,6 +118,12 @@ func NewRouter(d Deps) http.Handler {
 	// F40 E06: the embedded API reference (no auth; describes, never exposes).
 	mountAPIDocs(r)
 
+	// F40 E07: the MCP endpoint (API-key auth only), at the root like
+	// /realtime - it is a protocol surface, not an /api/v1 REST route.
+	if d.APIKeys != nil && d.Accounts != nil && d.AIStudio != nil && d.Persistence != nil && d.Jobs != nil && d.Sharing != nil {
+		mountMCP(r, d.APIKeys, d.Accounts, d.AIStudio, d.Persistence, d.Jobs, d.Sharing)
+	}
+
 	// The /api/v1 surface. Ported modules register their routes here; until a
 	// route exists in Go, the reverse proxy keeps sending it to the Node API.
 	r.Route("/api/v1", func(api chi.Router) {

@@ -92,6 +92,27 @@ curl -sS -X POST "$HYCANVAS/api/v1/designs/$ID/links" \
 
 <h2>Budgets</h2>
 <p>Per key: 5 requests/second (burst 20) across the surface, and about 3 generations/minute on the generate endpoint. Over-budget calls return 429 with <code>Retry-After</code>.</p>
+
+<h2>MCP server</h2>
+<p>The same capabilities are exposed to AI agents over the <a href="https://modelcontextprotocol.io">Model Context Protocol</a> (streamable HTTP) at <code>/mcp</code>, authenticated by the same API keys with the same scopes, workspace pinning, and budgets. Tools: <code>generate_presentation</code>, <code>get_job</code>, <code>get_design_file</code>, <code>export_design</code>, <code>create_share_link</code>.</p>
+<p>Claude Code:</p>
+<pre><code>claude mcp add --transport http hycanvas https://YOUR-INSTANCE/mcp \
+  --header "Authorization: Bearer hyk_..."</code></pre>
+<p>Claude Desktop / any MCP client (streamable HTTP):</p>
+<pre><code>{
+  "mcpServers": {
+    "hycanvas": {
+      "type": "http",
+      "url": "https://YOUR-INSTANCE/mcp",
+      "headers": { "Authorization": "Bearer hyk_..." }
+    }
+  }
+}</code></pre>
+<p><span class="pill">Note</span> <code>generate_presentation</code> waits for the result inline when generation is quick; if it returns <code>status: "active"</code>, poll <code>get_job</code>.</p>
+
+<h2>Audit trail</h2>
+<p>Every meaningful key action (HTTP route or MCP tool; job polling excluded) is recorded for 90 days. Workspace admins list recent activity with a session:</p>
+<pre><code>GET /api/v1/workspaces/{id}/api-keys/audit</code></pre>
 </body>
 </html>
 `
