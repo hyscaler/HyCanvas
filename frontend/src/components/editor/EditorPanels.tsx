@@ -3411,7 +3411,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     const step = plan.find((s) => s.action === "generateDesign");
     if (!step || !workspaceId) return;
     const seq = ++reviewSeq.current;
-    setReview({ outline: null, loading: true, dials });
+    setReview((r) => ({ outline: null, loading: true, dials, themeId: r?.themeId }));
     try {
       const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sources, dials, designId };
       // A planned webSearch grounds the OUTLINE, and in the review flow the
@@ -3428,9 +3428,9 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       // C33: the search's structured citations must survive into the eventual
       // execute (which drops the webSearch step), or the reviewed deck would
       // lose its Sources page.
-      setReview({ outline, loading: false, dials, searchedSources: searchStep ? deps.sources : undefined, citations: deps.citations });
+      setReview((r) => ({ outline, loading: false, dials, searchedSources: searchStep ? deps.sources : undefined, citations: deps.citations, themeId: r?.themeId }));
     } catch {
-      if (seq === reviewSeq.current) setReview({ outline: null, loading: false, dials });
+      if (seq === reviewSeq.current) setReview((r) => ({ outline: null, loading: false, dials, themeId: r?.themeId }));
     }
   }
 

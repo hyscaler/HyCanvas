@@ -95,3 +95,38 @@ func TestCompose_RejectsBadSize(t *testing.T) {
 		t.Fatal("zero width must be rejected")
 	}
 }
+
+// Themed composition (F40 E12): a catalog themeId resolves inside the bundle,
+// stamps the CATALOG record as the file theme, and an unknown id fails loudly
+// (silence would be a wrong deck).
+func TestCompose_ThemeID(t *testing.T) {
+	raw, err := os.ReadFile("testdata/compose-input.json")
+	if err != nil {
+		t.Fatalf("read input: %v", err)
+	}
+	var in Input
+	if err := json.Unmarshal(raw, &in); err != nil {
+		t.Fatalf("parse input: %v", err)
+	}
+	in.ThemeID = "theme-slate"
+	got, err := Compose(context.Background(), in)
+	if err != nil {
+		t.Fatalf("themed compose: %v", err)
+	}
+	var file map[string]any
+	if err := json.Unmarshal(got, &file); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	theme, _ := file["theme"].(map[string]any)
+	if theme == nil || theme["id"] != "theme-slate" {
+		t.Fatalf("catalog theme record not stamped: %v", file["theme"])
+	}
+	if theme["fontHeading"] != "Inter" {
+		t.Fatalf("catalog fonts not carried: %v", theme["fontHeading"])
+	}
+
+	in.ThemeID = "theme-nonexistent"
+	if _, err := Compose(context.Background(), in); err == nil {
+		t.Fatal("unknown themeId must fail, not silently fall back")
+	}
+}
