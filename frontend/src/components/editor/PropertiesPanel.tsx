@@ -2665,7 +2665,11 @@ function TransitionSwatch({ type, label, active, onPick }: {
   const W = 64;
   const H = 36;
 
+  // Built once and cached: the hover animation calls drawAt every rAF frame,
+  // and allocating two canvases per frame is pointless churn.
+  const buffersRef = useRef<{ a: HTMLCanvasElement; b: HTMLCanvasElement } | null>(null);
   const buffers = useCallback(() => {
+    if (buffersRef.current) return buffersRef.current;
     const mk = (bg: string, bar: string, barY: number) => {
       const c = document.createElement("canvas");
       c.width = W;
@@ -2678,7 +2682,8 @@ function TransitionSwatch({ type, label, active, onPick }: {
       g.fillRect(8, barY + 10, (W - 16) * 0.6, 4);
       return c;
     };
-    return { a: mk("#e2e8f0", "#475569", 8), b: mk("#334155", "#e2e8f0", 12) };
+    buffersRef.current = { a: mk("#e2e8f0", "#475569", 8), b: mk("#334155", "#e2e8f0", 12) };
+    return buffersRef.current;
   }, []);
 
   const drawAt = useCallback((p: number) => {
@@ -2768,8 +2773,10 @@ function PageTransitionSection({ page }: { page: Page }) {
             label={label}
             active={(t?.type ?? "none") === v}
             onPick={() => {
+              // Spread the EXISTING transition first: a newer client's unknown
+              // keys must survive this rebuild (zero-data-loss).
               if (v === "none") st.setPageTransition(undefined);
-              else st.setPageTransition({ type: v, direction: t?.direction ?? "left", durationMs: t?.durationMs ?? 400, ...(t?.easing ? { easing: t.easing } : {}) });
+              else st.setPageTransition({ ...t, type: v, direction: t?.direction ?? "left", durationMs: t?.durationMs ?? 400 });
             }}
           />
         ))}
@@ -2813,7 +2820,7 @@ function PageTransitionSection({ page }: { page: Page }) {
         onChange={(e) => {
           const v = e.target.value as TransitionType;
           if (v === "none") st.setPageTransitionOut(undefined);
-          else st.setPageTransitionOut({ type: v, direction: tOut?.direction ?? "left", durationMs: tOut?.durationMs ?? 400 });
+          else st.setPageTransitionOut({ ...tOut, type: v, direction: tOut?.direction ?? "left", durationMs: tOut?.durationMs ?? 400 });
         }}
         className={selectCls}
       >
@@ -2825,17 +2832,22 @@ function PageTransitionSection({ page }: { page: Page }) {
         <option value="zoom">{tr("editor.zoom")}</option>
         <option value="flip">{tr("editor.flip")}</option>
       </select>
-      {tOut && (tOut.type === "slide" || tOut.type === "push" || tOut.type === "wipe") && (
-        <select aria-label={tr("editor.direction")}
-          value={tOut.direction ?? "left"}
-          onChange={(e) => st.setPageTransitionOut({ ...tOut, direction: e.target.value as NonNullable<typeof tOut.direction> })}
-          className={`${selectCls} mt-1`}
-        >
-          <option value="left">{tr("editor.left")}</option>
-          <option value="right">{tr("editor.right")}</option>
-          <option value="up">{tr("editor.up")}</option>
-          <option value="down">{tr("editor.down")}</option>
-        </select>
+      {tOut && (
+        <div className="mt-1 grid grid-cols-2 gap-2">
+          {(tOut.type === "slide" || tOut.type === "push" || tOut.type === "wipe") && (
+            <select aria-label={tr("editor.direction")}
+              value={tOut.direction ?? "left"}
+              onChange={(e) => st.setPageTransitionOut({ ...tOut, direction: e.target.value as NonNullable<typeof tOut.direction> })}
+              className={selectCls}
+            >
+              <option value="left">{tr("editor.left")}</option>
+              <option value="right">{tr("editor.right")}</option>
+              <option value="up">{tr("editor.up")}</option>
+              <option value="down">{tr("editor.down")}</option>
+            </select>
+          )}
+          <Field key={`pto${tOut.durationMs}`} label={tr("editor.dur")} value={tOut.durationMs} onCommit={(n) => st.setPageTransitionOut({ ...tOut, durationMs: Math.max(0, n) })} />
+        </div>
       )}
       <p className="text-[11px] text-neutral-400">{tr("editor.plays_when_advancing_to_this_page_in_present")}</p>
       {/* Apply-to-all (doc 28 FR-10): PowerPoint's "Apply To All", one undo step. */}

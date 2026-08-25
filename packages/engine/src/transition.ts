@@ -34,6 +34,10 @@ export interface TransitionFrame {
   height: number;
   /** Eased progress, 0 (fully `from`) to 1 (fully `to`). */
   progress: number;
+  /** Eased progress for the LEAVING layer when it runs on its own clock (the
+   *  exit transition's duration/easing differ from the arriving one's). Only
+   *  `renderTransitionPair` reads it; absent means the shared `progress`. */
+  exitProgress?: number;
   /** Background painted before compositing; slides may be transparent. */
   background?: string;
 }
@@ -303,7 +307,10 @@ function drawLeavingLayer(ctx: CanvasLike, t: PageTransition, img: TransitionSur
  * Composite one navigation step honoring the leaving page's exit transition.
  * With no `exit` this IS `renderTransition(enter)` - callers can switch to
  * this helper unconditionally. With an exit set, the arriving slide draws per
- * `enter` first, then the leaving slide draws per `exit` on top.
+ * `enter` first, then the leaving slide draws per `exit` on top; each layer
+ * runs on ITS OWN clock (`progress` for arriving, `exitProgress` for leaving,
+ * both clamped), so an exit's own duration and easing are honored even when
+ * they differ from the arriving transition's.
  */
 export function renderTransitionPair(
   ctx: CanvasLike,
@@ -317,14 +324,30 @@ export function renderTransitionPair(
   }
   const { from, to, width: W, height: H, background = "#ffffff" } = frame;
   const p = Math.min(1, Math.max(0, frame.progress));
+  const pExit = Math.min(1, Math.max(0, frame.exitProgress ?? frame.progress));
   reset(ctx);
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = background;
   ctx.fillRect(0, 0, W, H);
   drawArrivingLayer(ctx, enter, to, p, W, H);
-  drawLeavingLayer(ctx, exit, from, p, W, H);
+  drawLeavingLayer(ctx, exit, from, pExit, W, H);
   ctx.globalAlpha = 1;
   reset(ctx);
+}
+
+/** The composite window for one navigation step: the longer of the arriving
+ *  transition and the leaving page's exit (0 when neither is set). Callers
+ *  size their transition phase with this so an EXIT-ONLY page still plays. */
+export function transitionPairDurationMs(enter: PageTransition | undefined, exit: PageTransition | undefined): number {
+  const enterMs = enter && enter.type !== "none" ? enter.durationMs : 0;
+  const exitMs = exit && exit.type !== "none" ? exit.durationMs : 0;
+  return Math.max(enterMs, exitMs);
+}
+
+/** The effective arriving transition for a pair window: a page with no own
+ *  transition arrives as `none` (placed at once beneath the leaving layer). */
+export function pairEnterTransition(enter: PageTransition | undefined): PageTransition {
+  return enter ?? { type: "none", durationMs: 0 };
 }
 
 /** The shared elements a Magic Move tweens, indexed under the arriving node id. */

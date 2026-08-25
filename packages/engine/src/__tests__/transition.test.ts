@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createBlankDesign, createNode, type DesignFile, type Node, type PageTransition } from "@hc/schema";
-import { renderTransition, renderTransitionPair, morphPlan, morphDesignAt, morphHiddenIds, lerpNode } from "../transition";
+import { renderTransition, renderTransitionPair, transitionPairDurationMs, pairEnterTransition, morphPlan, morphDesignAt, morphHiddenIds, lerpNode } from "../transition";
 import { transitionProgress } from "../animation";
 import type { CanvasLike } from "../types";
 
@@ -302,5 +302,29 @@ describe("transitionProgress easing (v22, C02)", () => {
     expect(transitionProgress(250, 1000)).toBeCloseTo(transitionProgress(250, 1000, "a-future-easing"), 10);
     expect(transitionProgress(250, 1000)).not.toBeCloseTo(0.25, 3); // eased, not linear
     expect(transitionProgress(0, 0, "linear")).toBe(1); // zero duration snaps
+  });
+});
+
+describe("pair window helpers (exit-only fix)", () => {
+  it("transitionPairDurationMs is the longer side; none counts as absent", () => {
+    expect(transitionPairDurationMs(undefined, undefined)).toBe(0);
+    expect(transitionPairDurationMs({ type: "fade", durationMs: 400 }, undefined)).toBe(400);
+    expect(transitionPairDurationMs(undefined, { type: "fade", durationMs: 700 })).toBe(700);
+    expect(transitionPairDurationMs({ type: "slide", durationMs: 400 }, { type: "fade", durationMs: 900 })).toBe(900);
+    expect(transitionPairDurationMs({ type: "none", durationMs: 500 }, undefined)).toBe(0);
+  });
+
+  it("pairEnterTransition substitutes none for a page with no own transition", () => {
+    expect(pairEnterTransition(undefined).type).toBe("none");
+    expect(pairEnterTransition({ type: "zoom", durationMs: 300 }).type).toBe("zoom");
+  });
+
+  it("exitProgress drives the leaving layer independently of progress", () => {
+    const r = recorder();
+    renderTransitionPair(r.ctx, t("none"), t("fade"), { ...frame(0.2), exitProgress: 1 });
+    // Arriving drawn in full; leaving at alpha 0 (fully exited) is still drawn
+    // but invisible - assert the alpha came from exitProgress, not progress.
+    const leaving = r.draws.find((d) => d.img === "FROM")!;
+    expect(leaving.alpha).toBeCloseTo(0, 5);
   });
 });

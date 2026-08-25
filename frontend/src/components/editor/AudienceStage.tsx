@@ -14,6 +14,8 @@ import {
   poseDesignAt,
   renderTransition,
   renderTransitionPair,
+  transitionPairDurationMs,
+  pairEnterTransition,
   transitionProgress,
   morphPlan,
   morphDesignAt,
@@ -127,15 +129,19 @@ export function AudienceStage({ designId, initialSlide }: { designId: string; in
       const now = performance.now();
       const b = blend.current;
       const arriving = page.transition;
-      const dur = arriving?.durationMs ?? 0;
+      // v22: the leaving page's exit transition opens/extends the window too.
+      const exitT = b ? (doc.pages[b.fromIndex] as { transitionOut?: import("@hc/schema").PageTransition } | undefined)?.transitionOut : undefined;
+      const dur = transitionPairDurationMs(arriving, exitT);
       const elapsed = b ? now - b.startedAt : 0;
 
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, cw, ch);
 
-      if (b && arriving && elapsed < dur) {
-        const p = transitionProgress(elapsed, dur, arriving?.easing);
+      if (b && dur > 0 && elapsed < dur) {
+        const enterT = pairEnterTransition(arriving);
+        const p = transitionProgress(elapsed, enterT.type === "none" ? dur : enterT.durationMs, enterT.easing);
+        const pExit = exitT ? transitionProgress(elapsed, exitT.durationMs, exitT.easing) : p;
         const A = bufA.current!;
         const B = bufB.current!;
         for (const buf of [A, B]) {
@@ -151,7 +157,7 @@ export function AudienceStage({ designId, initialSlide }: { designId: string; in
             c.fillStyle = "#ffffff";
             c.fillRect(0, 0, cw, ch);
           }
-          const morph = arriving.type === "morph" ? morphPlan(doc, b.fromIndex, doc, index) : null;
+          const morph = enterT.type === "morph" ? morphPlan(doc, b.fromIndex, doc, index) : null;
           const restore: { n: { hidden?: boolean }; prev: boolean | undefined }[] = [];
           if (morph) {
             for (const n of morph.fromNodes.values()) { restore.push({ n, prev: n.hidden }); (n as { hidden?: boolean }).hidden = true; }
@@ -161,8 +167,7 @@ export function AudienceStage({ designId, initialSlide }: { designId: string; in
           drawPosed(cb, index, elapsed, vp);
           for (const r of restore) r.n.hidden = r.prev;
 
-          const exitT = (doc.pages[b.fromIndex] as { transitionOut?: import("@hc/schema").PageTransition } | undefined)?.transitionOut;
-          renderTransitionPair(ctx as unknown as CanvasLike, arriving, exitT, { from: A, to: B, width: cw, height: ch, progress: p });
+          renderTransitionPair(ctx as unknown as CanvasLike, enterT, exitT, { from: A, to: B, width: cw, height: ch, progress: p, exitProgress: pExit });
 
           if (morph && morph.ids.length) {
             const posed = morphDesignAt(morph, doc, index, p);

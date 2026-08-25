@@ -19,6 +19,8 @@ import {
   poseDesignAt,
   renderTransition,
   renderTransitionPair,
+  transitionPairDurationMs,
+  pairEnterTransition,
   transitionProgress,
   morphPlan,
   morphDesignAt,
@@ -201,15 +203,19 @@ export function DeckPlayer({ doc, token, password }: { doc: DesignFile; token?: 
       const now = performance.now();
       const b = blend.current;
       const arriving = page.transition as Transition | undefined;
-      const dur = arriving?.durationMs ?? 0;
+      // v22: the leaving page's exit transition opens/extends the window too.
+      const exitT = b ? (doc.pages[b.fromIndex] as { transitionOut?: Transition } | undefined)?.transitionOut : undefined;
+      const dur = transitionPairDurationMs(arriving, exitT);
       const elapsed = b ? now - b.startedAt : 0;
 
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, cw, ch);
 
-      if (b && arriving && elapsed < dur) {
-        const p = transitionProgress(elapsed, dur, arriving?.easing);
+      if (b && dur > 0 && elapsed < dur) {
+        const enterT = pairEnterTransition(arriving);
+        const p = transitionProgress(elapsed, enterT.type === "none" ? dur : enterT.durationMs, enterT.easing);
+        const pExit = exitT ? transitionProgress(elapsed, exitT.durationMs, exitT.easing) : p;
         const A = bufA.current!;
         const B = bufB.current!;
         for (const buf of [A, B]) {
@@ -228,7 +234,7 @@ export function DeckPlayer({ doc, token, password }: { doc: DesignFile; token?: 
           // Magic Move: hide the shared elements in both buffers so the pure
           // compositor cross-fades only the non-shared content; the tweened
           // layer is drawn on top afterwards (same split as present mode).
-          const morph = arriving.type === "morph" ? morphPlan(doc, b.fromIndex, doc, index) : null;
+          const morph = enterT.type === "morph" ? morphPlan(doc, b.fromIndex, doc, index) : null;
           const restore: { n: { hidden?: boolean }; prev: boolean | undefined }[] = [];
           if (morph) {
             for (const n of morph.fromNodes.values()) { restore.push({ n, prev: n.hidden }); (n as { hidden?: boolean }).hidden = true; }
@@ -238,13 +244,13 @@ export function DeckPlayer({ doc, token, password }: { doc: DesignFile; token?: 
           drawPosed(cb, index, elapsed, vp); // arriving slide begins its entrance
           for (const r of restore) r.n.hidden = r.prev;
 
-          const exitT = (doc.pages[b.fromIndex] as { transitionOut?: Transition } | undefined)?.transitionOut;
-          renderTransitionPair(ctx as unknown as CanvasLike, arriving, exitT, {
+          renderTransitionPair(ctx as unknown as CanvasLike, enterT, exitT, {
             from: A,
             to: B,
             width: cw,
             height: ch,
             progress: p,
+            exitProgress: pExit,
           });
 
           if (morph && morph.ids.length) {

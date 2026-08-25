@@ -47,6 +47,8 @@ import {
   revealEntranceText,
   renderTransition,
   renderTransitionPair,
+  transitionPairDurationMs,
+  pairEnterTransition,
   morphPlan,
   morphDesignAt,
   type AnimPatch,
@@ -278,12 +280,17 @@ export function navigateTargetIndex(
 //  - "settled": the leaving slide is done; show the arriving slide.
 // `reduced` skips all motion (transition and exit windows collapse immediately).
 export function presentLeavePhase(
-  opts: { transitionType?: string; transitionDurationMs?: number; exitTotal: number; elapsedMs: number; reduced: boolean },
+  opts: { transitionType?: string; transitionDurationMs?: number; exitTransitionDurationMs?: number; exitTotal: number; elapsedMs: number; reduced: boolean },
 ): "transition" | "exit" | "settled" {
   if (opts.reduced) return "settled";
-  const hasTransition = !!opts.transitionType && opts.transitionType !== "none";
-  if (hasTransition) {
-    return opts.elapsedMs < (opts.transitionDurationMs ?? 0) ? "transition" : "settled";
+  // The composite window opens when EITHER side has a transition: the
+  // arriving page's own, or the leaving page's exit (v22) - an exit-only
+  // page must still play. The window is the longer of the two.
+  const enterMs = opts.transitionType && opts.transitionType !== "none" ? (opts.transitionDurationMs ?? 0) : 0;
+  const exitMs = opts.exitTransitionDurationMs ?? 0;
+  const windowMs = Math.max(enterMs, exitMs);
+  if (windowMs > 0) {
+    return opts.elapsedMs < windowMs ? "transition" : "settled";
   }
   if (opts.exitTotal > 0 && opts.elapsedMs < opts.exitTotal) return "exit";
   return "settled";
@@ -1043,11 +1050,15 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
       // type/duration come from the ARRIVING slide (`slide`), not the leaving one.
       // `tr.from` is kept only as the outgoing image composited during the blend.
       const arrivingTransition = slide.transition;
-      const dur = reducedMotion ? 0 : arrivingTransition?.durationMs ?? 0;
+      // v22: the leaving page's exit transition (if any) opens/extends the
+      // composite window, so an exit-only page still plays.
+      const exitT = tr ? (pages[tr.from.pageIndex] as { transitionOut?: PageTransition } | undefined)?.transitionOut : undefined;
+      const windowDur = reducedMotion ? 0 : transitionPairDurationMs(arrivingTransition, exitT);
       const phase = tr
         ? presentLeavePhase({
             transitionType: arrivingTransition?.type,
             transitionDurationMs: arrivingTransition?.durationMs,
+            exitTransitionDurationMs: exitT && exitT.type !== "none" ? exitT.durationMs : 0,
             exitTotal: tr.from.exitTotal,
             elapsedMs: elapsed,
             reduced: reducedMotion,
@@ -1055,16 +1066,17 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
         : "settled";
 
       if (phase === "transition" && tr) {
-        const p = transitionProgress(elapsed, dur, arrivingTransition?.easing);
+        // Each layer runs on its OWN clock: the arriving transition's
+        // duration/easing for the arriving slide, the exit's for the leaving.
+        const enterT = pairEnterTransition(arrivingTransition);
+        const p = transitionProgress(elapsed, enterT.type === "none" ? windowDur : enterT.durationMs, enterT.easing);
+        const pExit = exitT ? transitionProgress(elapsed, exitT.durationMs, exitT.easing) : p;
         const { from } = tr;
         // Pose both slides: the leaving slide plays its exit, the arriving slide
         // begins its entrance (from the start of the transition window).
         poseExit(from, elapsed, reducedMotion);
         poseEnter(slide, tSlide, reducedMotion);
-        // v22: the leaving page's exit transition (if any) composites with the
-        // arriving page's own, both over this one window.
-        const exitT = (pages[from.pageIndex] as { transitionOut?: PageTransition } | undefined)?.transitionOut;
-        compositeTransition(ctx.canvas, ctx, vp, from, slide, arrivingTransition!, exitT, p, bufA, bufB, drawSlide);
+        compositeTransition(ctx.canvas, ctx, vp, from, slide, enterT, exitT, p, pExit, bufA, bufB, drawSlide);
       } else if (phase === "exit" && tr) {
         // No page transition, but the leaving slide has exit clips: play them in a
         // brief exit window so a configured exit always shows on slide-leave.
@@ -2106,6 +2118,7 @@ function compositeTransition(
   transition: PageTransition,
   exitTransition: PageTransition | undefined,
   p: number,
+  pExit: number,
   bufA: HTMLCanvasElement,
   bufB: HTMLCanvasElement,
   draw: (s: Slide, ctx: CanvasRenderingContext2D, vp: Viewport) => void,
@@ -2144,6 +2157,7 @@ function compositeTransition(
     width: W,
     height: H,
     progress: p,
+    exitProgress: pExit,
   });
 
   // The morphed layer needs a scene render, so it stays with the caller: the

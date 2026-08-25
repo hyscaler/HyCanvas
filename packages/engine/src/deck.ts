@@ -50,8 +50,12 @@ export interface DeckTransitionFrame {
   fromIndex: number;
   toIndex: number;
   transition: PageTransition;
+  /** The LEAVING page's exit transition (v22), when set. */
+  exitTransition?: PageTransition;
   /** Eased progress, 0..1, ready to hand to `renderTransition`. */
   progress: number;
+  /** Eased progress for the leaving layer on its own clock (v22). */
+  exitProgress?: number;
   /** Arriving slide's animation time. */
   toTMs: number;
   delayMs: number;
@@ -105,9 +109,15 @@ export function planDeckFrames(file: DesignFile, opts: DeckPlanOptions = {}): De
     // The transition INTO this slide (skipped for the first slide and when the
     // arriving page declares none, or under reduced motion).
     if (s > 0 && !opts.reducedMotion) {
-      const transition = file.pages[pageIndex]?.transition as PageTransition | undefined;
-      const dur = transition?.durationMs ?? 0;
-      if (transition && dur > 0) {
+      const arriving = file.pages[pageIndex]?.transition as PageTransition | undefined;
+      // v22: the LEAVING page's exit transition opens/extends the window, so
+      // an exit-only page still plays in the exported playthrough.
+      const exitT = (file.pages[order[s - 1]] as { transitionOut?: PageTransition } | undefined)?.transitionOut;
+      const enterMs = arriving && arriving.type !== "none" ? arriving.durationMs : 0;
+      const exitMs = exitT && exitT.type !== "none" ? exitT.durationMs : 0;
+      const dur = Math.max(enterMs, exitMs);
+      if (dur > 0) {
+        const transition = arriving ?? ({ type: "none", durationMs: 0 } as PageTransition);
         const steps = Math.max(1, Math.round((dur / 1000) * fps));
         for (let i = 1; i <= steps; i++) {
           const elapsed = (i / steps) * dur;
@@ -117,7 +127,9 @@ export function planDeckFrames(file: DesignFile, opts: DeckPlanOptions = {}): De
               fromIndex: order[s - 1],
               toIndex: pageIndex,
               transition,
-              progress: transitionProgress(elapsed, dur, transition.easing),
+              ...(exitT ? { exitTransition: exitT } : {}),
+              progress: transitionProgress(elapsed, transition.type === "none" ? dur : transition.durationMs, transition.easing),
+              ...(exitT ? { exitProgress: transitionProgress(elapsed, exitT.durationMs, exitT.easing) } : {}),
               toTMs: elapsed,
               delayMs,
             })

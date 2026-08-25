@@ -156,3 +156,36 @@ describe("planDeckFrames", () => {
     expect(planDeckFrames(deck(1), { fps: 999, holdMs: 1000 })[0].delayMs).toBe(17); // 60 fps
   });
 });
+
+// --- Exit transitions in the planner (v22, F28 completion review) -------------
+describe("planDeckFrames with exit transitions", () => {
+  it("an EXIT-ONLY page still gets a transition window in the export", () => {
+    const file = deck(2); // page 2 has NO transition of its own
+    (file.pages[0] as { transitionOut?: unknown }).transitionOut = { type: "fade", durationMs: 1000 };
+    const frames = planDeckFrames(file, { fps: 10 });
+    const transitions = frames.filter((f) => f.kind === "transition");
+    expect(transitions.length).toBe(10); // 1s at 10fps
+    const t0 = transitions[0] as { transition: { type: string }; exitTransition?: { type: string }; exitProgress?: number };
+    expect(t0.transition.type).toBe("none"); // arriving placed at once
+    expect(t0.exitTransition?.type).toBe("fade");
+    expect(t0.exitProgress).toBeGreaterThan(0);
+  });
+
+  it("each layer runs its own clock: a short exit finishes before a long enter", () => {
+    const file = deck(2, { type: "slide", durationMs: 1000 });
+    (file.pages[0] as { transitionOut?: unknown }).transitionOut = { type: "fade", durationMs: 500, easing: "linear" };
+    const frames = planDeckFrames(file, { fps: 10 }).filter((f) => f.kind === "transition") as {
+      progress: number; exitProgress?: number; toTMs: number;
+    }[];
+    expect(frames.length).toBe(10); // window = max(1000, 500)
+    // At 600ms the exit (500ms, linear) is already clamped to 1.
+    const at600 = frames.find((f) => Math.round(f.toTMs) === 600)!;
+    expect(at600.exitProgress).toBe(1);
+    expect(at600.progress).toBeLessThan(1);
+  });
+
+  it("no transition on either side plans no transition frames (unchanged)", () => {
+    const frames = planDeckFrames(deck(2), { fps: 10 });
+    expect(frames.every((f) => f.kind === "slide")).toBe(true);
+  });
+});

@@ -179,6 +179,7 @@ function renderDeckFrame(
   }
   // A transition composite: pose both slides, then blend them.
   const { fromIndex, toIndex, transition, progress, toTMs } = frame;
+  const exitProgress = (frame as { exitProgress?: number }).exitProgress;
   const pg = doc.pages[toIndex];
   if (!pg) return null;
   const w = Math.max(1, Math.round(pg.width * scale));
@@ -211,6 +212,7 @@ function renderDeckFrame(
     width: w,
     height: h,
     progress,
+    ...(exitProgress !== undefined ? { exitProgress } : {}),
     background: opaque ? "#ffffff" : "transparent",
   });
 

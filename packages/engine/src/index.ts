@@ -41,6 +41,8 @@ export { poseDesignAt, pageAnimationDuration, sequenceStarts, revealEntranceText
 export {
   renderTransition,
   renderTransitionPair,
+  transitionPairDurationMs,
+  pairEnterTransition,
   morphPlan,
   morphDesignAt,
   morphHiddenIds,
