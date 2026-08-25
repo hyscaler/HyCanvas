@@ -117,7 +117,7 @@ export function planDeckFrames(file: DesignFile, opts: DeckPlanOptions = {}): De
               fromIndex: order[s - 1],
               toIndex: pageIndex,
               transition,
-              progress: transitionProgress(elapsed, dur),
+              progress: transitionProgress(elapsed, dur, transition.easing),
               toTMs: elapsed,
               delayMs,
             })

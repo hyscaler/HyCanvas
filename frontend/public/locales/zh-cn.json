@@ -3469,5 +3469,7 @@
   "errors.api_brand_page_status": "该网站返回了错误页面。",
   "errors.api_brand_url_not_html": "该网址不是网页。",
   "editor.acme_com": "acme.com",
-  "editor.drag_to_move_the_camera_bubble": "拖动以移动摄像头气泡"
+  "editor.drag_to_move_the_camera_bubble": "拖动以移动摄像头气泡",
+  "editor.easing_default": "平滑（默认）",
+  "editor.exit_transition": "退出过渡"
 }

@@ -363,6 +363,9 @@ export const migrations: Record<number, Migration> = {
   // rendering never reads them. The Go mirror reaches the same result through
   // its generic additive branch, which is why there is no matching `case 20`.
   20: (file: AnyObj) => ({ ...file, schemaVersion: 21 }),
+  // v21 -> v22: PageTransition.easing + Page.transitionOut. Purely additive
+  // and optional; the spread preserves every key, known or not.
+  21: (file: AnyObj) => ({ ...file, schemaVersion: 22 }),
 };
 
 export class MigrationError extends Error {

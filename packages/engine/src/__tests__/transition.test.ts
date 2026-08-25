@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { createBlankDesign, createNode, type DesignFile, type Node, type PageTransition } from "@hc/schema";
-import { renderTransition, morphPlan, morphDesignAt, morphHiddenIds, lerpNode } from "../transition";
+import { renderTransition, renderTransitionPair, morphPlan, morphDesignAt, morphHiddenIds, lerpNode } from "../transition";
+import { transitionProgress } from "../animation";
 import type { CanvasLike } from "../types";
 
 // A recording context: the compositor only needs matrix ops, clip/rect,
@@ -246,5 +247,60 @@ describe("morphDesignAt / morphHiddenIds", () => {
     const d = deck([shape("old", 0, "Title")], [shape("new", 300, "Title")]);
     const plan = morphPlan(d, 0, d, 1)!;
     expect(morphHiddenIds(plan)).toEqual(new Set(["old", "new"]));
+  });
+});
+
+// --- Exit / asymmetric transitions (v22, C03) ---------------------------------
+describe("renderTransitionPair", () => {
+  it("with no exit set it is exactly renderTransition", () => {
+    const a = recorder();
+    const b = recorder();
+    renderTransition(a.ctx, t("slide", "left"), frame(0.5));
+    renderTransitionPair(b.ctx, t("slide", "left"), undefined, frame(0.5));
+    expect(b.draws).toEqual(a.draws);
+  });
+
+  it("composites the arriving layer beneath and the leaving layer on top", () => {
+    const r = recorder();
+    // B slides in from the right edge while A fades out over it.
+    renderTransitionPair(r.ctx, t("slide", "left"), t("fade"), frame(0.5));
+    expect(r.draws).toHaveLength(2);
+    // First draw: the ARRIVING slide, translated in (halfway across).
+    expect(r.draws[0].img).toBe("TO");
+    expect(r.draws[0].dx).toBeCloseTo(50, 5); // W=100, (1-p)*W
+    // Second draw (on top): the LEAVING slide at half alpha.
+    expect(r.draws[1].img).toBe("FROM");
+    expect(r.draws[1].alpha).toBeCloseTo(0.5, 5);
+  });
+
+  it("a slide exit moves the outgoing slide OUT in its own direction", () => {
+    const r = recorder();
+    renderTransitionPair(r.ctx, t("fade"), t("slide", "left"), frame(0.25));
+    const leaving = r.draws.find((d) => d.img === "FROM")!;
+    expect(leaving.dx).toBeCloseTo(-25, 5); // exits leftward by p*W
+  });
+
+  it("an explicit none exit drops the outgoing slide immediately", () => {
+    const r = recorder();
+    renderTransitionPair(r.ctx, t("fade"), t("none"), frame(0.5));
+    expect(r.draws.map((d) => d.img)).toEqual(["TO"]); // no FROM layer at all
+  });
+
+  it("a wipe exit clips the outgoing slide to its shrinking remainder", () => {
+    const r = recorder();
+    renderTransitionPair(r.ctx, t("fade"), t("wipe", "left"), frame(0.4));
+    // Remainder is (1-p)*W wide anchored at the right edge for a left wipe.
+    const clip = r.clips[r.clips.length - 1];
+    expect(clip.w).toBeCloseTo(60, 5);
+    expect(clip.x).toBeCloseTo(40, 5);
+  });
+});
+
+describe("transitionProgress easing (v22, C02)", () => {
+  it("linear runs at constant speed; the default stays ease-in-out; unknown names clamp", () => {
+    expect(transitionProgress(250, 1000, "linear")).toBeCloseTo(0.25, 6);
+    expect(transitionProgress(250, 1000)).toBeCloseTo(transitionProgress(250, 1000, "a-future-easing"), 10);
+    expect(transitionProgress(250, 1000)).not.toBeCloseTo(0.25, 3); // eased, not linear
+    expect(transitionProgress(0, 0, "linear")).toBe(1); // zero duration snaps
   });
 });

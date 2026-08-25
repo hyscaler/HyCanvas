@@ -19,6 +19,7 @@ import {
   pageAnimationDuration,
   planDeckFrames,
   renderTransition,
+  renderTransitionPair,
   morphPlan,
   morphDesignAt,
   type CanvasLike,
@@ -201,7 +202,10 @@ function renderDeckFrame(
   const bufB = renderPageCanvas(toPosed, toIndex, scale, opaque);
   if (!bufA || !bufB) return null;
 
-  renderTransition(ctx as unknown as CanvasLike, transition, {
+  // v22: honor the leaving page's exit transition in the exported playthrough
+  // exactly as present mode composites it.
+  const exitT = (doc.pages[fromIndex] as { transitionOut?: import("@hc/schema").PageTransition } | undefined)?.transitionOut;
+  renderTransitionPair(ctx as unknown as CanvasLike, transition, exitT, {
     from: bufA,
     to: bufB,
     width: w,

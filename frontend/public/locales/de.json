@@ -3469,5 +3469,7 @@
   "errors.api_brand_page_status": "Die Website hat eine Fehlerseite zurückgegeben.",
   "errors.api_brand_url_not_html": "Diese URL ist keine Webseite.",
   "editor.acme_com": "acme.com",
-  "editor.drag_to_move_the_camera_bubble": "Ziehen, um die Kamerablase zu verschieben"
+  "editor.drag_to_move_the_camera_bubble": "Ziehen, um die Kamerablase zu verschieben",
+  "editor.easing_default": "Weich (Standard)",
+  "editor.exit_transition": "Ausgangsübergang"
 }

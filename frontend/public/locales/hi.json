@@ -3469,5 +3469,7 @@
   "errors.api_brand_page_status": "वेबसाइट ने एक त्रुटि पृष्ठ लौटाया।",
   "errors.api_brand_url_not_html": "वह URL वेब पृष्ठ नहीं है।",
   "editor.acme_com": "acme.com",
-  "editor.drag_to_move_the_camera_bubble": "कैमरा बबल को हिलाने के लिए खींचें"
+  "editor.drag_to_move_the_camera_bubble": "कैमरा बबल को हिलाने के लिए खींचें",
+  "editor.easing_default": "स्मूद (डिफ़ॉल्ट)",
+  "editor.exit_transition": "निकास ट्रांज़िशन"
 }

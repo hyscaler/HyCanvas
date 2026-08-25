@@ -20,8 +20,8 @@ The rules from `28-presentations-leverage-tasks.md` apply unchanged. In brief:
 | Task | Phase | Title | Status |
 | --- | --- | --- | --- |
 | C01 | 1 Hardening | Archive-bomb guards on the client zip reader | done 2026-08-25 |
-| C02 | 1 Hardening | Per-transition easing control (schema v22) | todo |
-| C03 | 1 Hardening | Exit / asymmetric transitions (schema v22, same bump) | todo |
+| C02 | 1 Hardening | Per-transition easing control (schema v22) | done 2026-08-25 |
+| C03 | 1 Hardening | Exit / asymmetric transitions (schema v22, same bump) | done 2026-08-25 |
 | C04 | 1 Hardening | Transition picker gallery with live preview swatches | todo |
 | C05 | 1 Hardening | Animate-all-slides bulk action | todo |
 | C06 | 2 Morph | Nested / grouped element morph matching | todo |

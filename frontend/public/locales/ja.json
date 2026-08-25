@@ -3469,5 +3469,7 @@
   "errors.api_brand_page_status": "ウェブサイトがエラーページを返しました。",
   "errors.api_brand_url_not_html": "そのURLはウェブページではありません。",
   "editor.acme_com": "acme.com",
-  "editor.drag_to_move_the_camera_bubble": "ドラッグしてカメラバブルを移動"
+  "editor.drag_to_move_the_camera_bubble": "ドラッグしてカメラバブルを移動",
+  "editor.easing_default": "スムーズ（既定）",
+  "editor.exit_transition": "退出トランジション"
 }

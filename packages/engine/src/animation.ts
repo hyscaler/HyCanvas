@@ -293,15 +293,28 @@ export function appliedOpacity(baseOpacity: number, opacityMul: number): number 
   return clamp01(baseOpacity * opacityMul);
 }
 
+/** The easing names a transition may carry (v22). The schema deliberately
+ *  stores a PLAIN string so future names keep validating on older clients;
+ *  THIS clamp is where an unknown name degrades to the classic default. */
+const transitionEasings: ReadonlySet<string> = new Set([
+  "linear", "ease-in", "ease-out", "ease-in-out", "spring", "ease-in-cubic", "ease-out-cubic", "ease-out-back", "bounce",
+]);
+
+/** Resolve a transition's easing string to a known Easing (default ease-in-out). */
+export function transitionEasing(easing: string | undefined): Easing {
+  return easing && transitionEasings.has(easing) ? (easing as Easing) : "ease-in-out";
+}
+
 /**
  * Normalized, eased progress (0..1) of a page transition `durationMs` long at
  * elapsed time `tMs`, shared by present mode's slide-to-slide cross effects so
  * the math lives next to the rest of the playback engine. A zero/absent duration
- * snaps straight to 1 (an instant switch). Transitions use a soft ease-in-out.
+ * snaps straight to 1 (an instant switch). The per-transition easing (v22)
+ * shapes the curve; absent or unknown names use the classic soft ease-in-out.
  */
-export function transitionProgress(tMs: number, durationMs: number): number {
+export function transitionProgress(tMs: number, durationMs: number, easing?: string): number {
   if (durationMs <= 0) return 1;
-  return evalEasing("ease-in-out", clamp01(tMs / durationMs));
+  return evalEasing(transitionEasing(easing), clamp01(tMs / durationMs));
 }
 
 /**

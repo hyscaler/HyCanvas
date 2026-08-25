@@ -40,6 +40,7 @@ export { benchmarkRender, createNullContext, type BenchResult, type BenchOptions
 export { poseDesignAt, pageAnimationDuration, sequenceStarts, revealEntranceText } from "./pose";
 export {
   renderTransition,
+  renderTransitionPair,
   morphPlan,
   morphDesignAt,
   morphHiddenIds,

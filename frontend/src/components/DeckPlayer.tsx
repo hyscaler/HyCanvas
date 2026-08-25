@@ -18,6 +18,7 @@ import {
   renderScene,
   poseDesignAt,
   renderTransition,
+  renderTransitionPair,
   transitionProgress,
   morphPlan,
   morphDesignAt,
@@ -208,7 +209,7 @@ export function DeckPlayer({ doc, token, password }: { doc: DesignFile; token?: 
       ctx.fillRect(0, 0, cw, ch);
 
       if (b && arriving && elapsed < dur) {
-        const p = transitionProgress(elapsed, dur);
+        const p = transitionProgress(elapsed, dur, arriving?.easing);
         const A = bufA.current!;
         const B = bufB.current!;
         for (const buf of [A, B]) {
@@ -237,7 +238,8 @@ export function DeckPlayer({ doc, token, password }: { doc: DesignFile; token?: 
           drawPosed(cb, index, elapsed, vp); // arriving slide begins its entrance
           for (const r of restore) r.n.hidden = r.prev;
 
-          renderTransition(ctx as unknown as CanvasLike, arriving, {
+          const exitT = (doc.pages[b.fromIndex] as { transitionOut?: Transition } | undefined)?.transitionOut;
+          renderTransitionPair(ctx as unknown as CanvasLike, arriving, exitT, {
             from: A,
             to: B,
             width: cw,

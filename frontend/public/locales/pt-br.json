@@ -3469,5 +3469,7 @@
   "errors.api_brand_page_status": "O site retornou uma página de erro.",
   "errors.api_brand_url_not_html": "Esse URL não é uma página da web.",
   "editor.acme_com": "acme.com",
-  "editor.drag_to_move_the_camera_bubble": "Arraste para mover a bolha da câmera"
+  "editor.drag_to_move_the_camera_bubble": "Arraste para mover a bolha da câmera",
+  "editor.easing_default": "Suave (padrão)",
+  "editor.exit_transition": "Transição de saída"
 }

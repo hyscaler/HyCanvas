@@ -27,6 +27,7 @@ A version is a single global counter mirrored in Go (`backend/internal/persisten
 | 19 | Effect stack | `Effect.enabled` and `TextEffect.enabled`, the per-effect enable |
 | 20 | shipped | `ImageNode.alphaMask`, non-destructive background removal (August 2026; landed without claiming here - backfilled) |
 | 21 | F28 T11 | `Placeholder.maxChars/minChars/minItems/maxItems`, optional capacity hints for layout-grounded generation |
+| 22 | F28 completion C02+C03 | `PageTransition.easing` (plain string, engine-clamped) and `Page.transitionOut`, per-transition easing + exit transitions |
 
 This table was already wrong once, which is the case for keeping it. F38
 shipped `DesignFile.language` as v18 in August 2026 without reclaiming the

@@ -2651,6 +2651,7 @@ function NodeAccessibilitySection({ node }: { node: Node }) {
 function PageTransitionSection({ page }: { page: Page }) {
   const st = useEditor.getState();
   const t = (page as { transition?: import("@hc/schema").PageTransition }).transition;
+  const tOut = (page as { transitionOut?: import("@hc/schema").PageTransition }).transitionOut;
   type TransitionType = import("@hc/schema").PageTransition["type"];
   return (
     <Section title={tr("editor.transition")}>
@@ -2689,7 +2690,53 @@ function PageTransitionSection({ page }: { page: Page }) {
             </select>
           )}
           <Field key={`pt${t.durationMs}`} label={tr("editor.dur")} value={t.durationMs} onCommit={(n) => st.setPageTransition({ ...t, durationMs: Math.max(0, n) })} />
+          {/* v22 per-transition easing: the engine clamps unknown names, so the
+              set here can grow without a schema change. */}
+          <select aria-label={tr("editor.easing")}
+            value={t.easing ?? "default"}
+            onChange={(e) => st.setPageTransition({ ...t, easing: e.target.value === "default" ? undefined : e.target.value })}
+            className={selectCls}
+          >
+            <option value="default">{tr("editor.easing_default")}</option>
+            <option value="linear">{tr("editor.linear")}</option>
+            <option value="ease-in">{tr("editor.ease_in")}</option>
+            <option value="ease-out">{tr("editor.ease_out")}</option>
+            <option value="ease-in-out">{tr("editor.ease_in_out")}</option>
+            <option value="spring">{tr("editor.spring")}</option>
+          </select>
         </div>
+      )}
+      {/* v22 exit transition: how THIS page leaves, composited with the next
+          page's own transition. */}
+      <label className="mt-2 block text-[11px] font-medium text-neutral-500">{tr("editor.exit_transition")}</label>
+      <select aria-label={tr("editor.exit_transition")}
+        value={tOut?.type ?? "none"}
+        onChange={(e) => {
+          const v = e.target.value as TransitionType;
+          if (v === "none") st.setPageTransitionOut(undefined);
+          else st.setPageTransitionOut({ type: v, direction: tOut?.direction ?? "left", durationMs: tOut?.durationMs ?? 400 });
+        }}
+        className={selectCls}
+      >
+        <option value="none">{tr("editor.none")}</option>
+        <option value="fade">{tr("editor.fade")}</option>
+        <option value="slide">{tr("editor.slide")}</option>
+        <option value="push">{tr("editor.push")}</option>
+        <option value="wipe">{tr("editor.wipe")}</option>
+        <option value="zoom">{tr("editor.zoom")}</option>
+        <option value="flip">{tr("editor.flip")}</option>
+      </select>
+      {tOut && (tOut.type === "slide" || tOut.type === "push" || tOut.type === "wipe") && (
+        <select aria-label={tr("editor.direction")}
+          value={tOut.direction ?? "left"}
+          onChange={(e) => st.setPageTransitionOut({ ...tOut, direction: e.target.value as NonNullable<typeof tOut.direction> })}
+          className={`${selectCls} mt-1`}
+        >
+          <option value="left">{tr("editor.left")}</option>
+          <option value="right">{tr("editor.right")}</option>
+          <option value="up">{tr("editor.up")}</option>
+          <option value="down">{tr("editor.down")}</option>
+        </select>
       )}
       <p className="text-[11px] text-neutral-400">{tr("editor.plays_when_advancing_to_this_page_in_present")}</p>
       {/* Apply-to-all (doc 28 FR-10): PowerPoint's "Apply To All", one undo step. */}

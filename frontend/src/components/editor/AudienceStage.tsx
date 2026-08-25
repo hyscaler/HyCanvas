@@ -13,6 +13,7 @@ import {
   renderScene,
   poseDesignAt,
   renderTransition,
+  renderTransitionPair,
   transitionProgress,
   morphPlan,
   morphDesignAt,
@@ -134,7 +135,7 @@ export function AudienceStage({ designId, initialSlide }: { designId: string; in
       ctx.fillRect(0, 0, cw, ch);
 
       if (b && arriving && elapsed < dur) {
-        const p = transitionProgress(elapsed, dur);
+        const p = transitionProgress(elapsed, dur, arriving?.easing);
         const A = bufA.current!;
         const B = bufB.current!;
         for (const buf of [A, B]) {
@@ -160,7 +161,8 @@ export function AudienceStage({ designId, initialSlide }: { designId: string; in
           drawPosed(cb, index, elapsed, vp);
           for (const r of restore) r.n.hidden = r.prev;
 
-          renderTransition(ctx as unknown as CanvasLike, arriving, { from: A, to: B, width: cw, height: ch, progress: p });
+          const exitT = (doc.pages[b.fromIndex] as { transitionOut?: import("@hc/schema").PageTransition } | undefined)?.transitionOut;
+          renderTransitionPair(ctx as unknown as CanvasLike, arriving, exitT, { from: A, to: B, width: cw, height: ch, progress: p });
 
           if (morph && morph.ids.length) {
             const posed = morphDesignAt(morph, doc, index, p);

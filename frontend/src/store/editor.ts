@@ -725,6 +725,8 @@ interface EditorState {
   setImageMotion(id: string, motion: ImageMotion | undefined): void;
   /** Set/clear the active (or given) page's slide transition, undoable. */
   setPageTransition(transition: PageTransition | undefined, pageIndex?: number): void;
+  /** Set/clear how this page LEAVES when advancing away (v22 exit transition). */
+  setPageTransitionOut(transition: PageTransition | undefined, pageIndex?: number): void;
   /** Set the active (or given) page's speaker notes, undoable. */
   setPageNotes(notes: string, pageIndex?: number): void;
   /** Assign (or clear) the slide layout this page inherits (doc 28 FR-3). */
@@ -3896,6 +3898,16 @@ export const useEditor = create<EditorState>((set, get) => {
       perform(
         () => { page.transition = transition; },
         () => { page.transition = before; },
+      );
+    },
+    setPageTransitionOut: (transition, pageIndex) => {
+      const idx = pageIndex ?? curPageIndex();
+      const page = get().doc.pages[idx] as unknown as { transitionOut?: PageTransition };
+      if (!page) return;
+      const before = page.transitionOut;
+      perform(
+        () => { page.transitionOut = transition; },
+        () => { page.transitionOut = before; },
       );
     },
     setPageLayout: (layoutId, pageIndex) => {

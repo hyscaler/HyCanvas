@@ -46,6 +46,7 @@ import {
   sequenceStarts,
   revealEntranceText,
   renderTransition,
+  renderTransitionPair,
   morphPlan,
   morphDesignAt,
   type AnimPatch,
@@ -1054,13 +1055,16 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
         : "settled";
 
       if (phase === "transition" && tr) {
-        const p = transitionProgress(elapsed, dur);
+        const p = transitionProgress(elapsed, dur, arrivingTransition?.easing);
         const { from } = tr;
         // Pose both slides: the leaving slide plays its exit, the arriving slide
         // begins its entrance (from the start of the transition window).
         poseExit(from, elapsed, reducedMotion);
         poseEnter(slide, tSlide, reducedMotion);
-        compositeTransition(ctx.canvas, ctx, vp, from, slide, arrivingTransition!, p, bufA, bufB, drawSlide);
+        // v22: the leaving page's exit transition (if any) composites with the
+        // arriving page's own, both over this one window.
+        const exitT = (pages[from.pageIndex] as { transitionOut?: PageTransition } | undefined)?.transitionOut;
+        compositeTransition(ctx.canvas, ctx, vp, from, slide, arrivingTransition!, exitT, p, bufA, bufB, drawSlide);
       } else if (phase === "exit" && tr) {
         // No page transition, but the leaving slide has exit clips: play them in a
         // brief exit window so a configured exit always shows on slide-leave.
@@ -2100,6 +2104,7 @@ function compositeTransition(
   from: Slide,
   to: Slide,
   transition: PageTransition,
+  exitTransition: PageTransition | undefined,
   p: number,
   bufA: HTMLCanvasElement,
   bufB: HTMLCanvasElement,
@@ -2133,7 +2138,7 @@ function compositeTransition(
   draw(to, cb, vp);
   for (const h of restoreHidden) (h.node as { hidden?: boolean }).hidden = h.prev;
 
-  renderTransition(destCtx as unknown as CanvasLike, transition, {
+  renderTransitionPair(destCtx as unknown as CanvasLike, transition, exitTransition, {
     from: bufA,
     to: bufB,
     width: W,

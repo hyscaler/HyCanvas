@@ -32,13 +32,8 @@ describe("the fields are additive", () => {
 });
 
 describe("migration to v21", () => {
-  it("pins the exact version pair (see the Go twin in v21_test.go)", () => {
-    // The paired EXACT pins are the cross-language drift alarm: a future bump
-    // must update this line, the Go pin, and both currentSchemaVersion
-    // mirrors in the SAME change (CLAUDE.md bump protocol). A >= assertion
-    // would let the mirrors drift apart silently.
-    expect(currentSchemaVersion).toBe(21);
-  });
+  // The exact version pin lives with the LATEST bump (transitions.test.ts),
+  // so there is exactly one drift alarm per side at any time.
 
   it("is a pure no-op on a v20 document", () => {
     const before = { ...createBlankDesign(), schemaVersion: 20 } as Record<string, unknown>;

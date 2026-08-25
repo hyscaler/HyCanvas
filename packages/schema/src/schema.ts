@@ -70,8 +70,13 @@ import { z } from "zod";
  *      `minChars`, `minItems`, `maxItems` - hints telling layout-grounded
  *      generation how much text a slot comfortably holds (F28 T11). Rendering
  *      never reads them, so a v20 file (no capacities) and a v21 file render
- *      identically; older clients preserve the unknown keys end to end. */
-export const currentSchemaVersion = 21;
+ *      identically; older clients preserve the unknown keys end to end.
+ *  v22: transition polish. `PageTransition` gains optional `easing` (a plain
+ *      string clamped by the engine, so unknown future values keep validating
+ *      everywhere) and `Page` gains optional `transitionOut`, an exit
+ *      transition composited with the arriving page's own (F28 completion
+ *      C02+C03). Both additive: a v21 file renders exactly as before. */
+export const currentSchemaVersion = 22;
 
 /** Maximum container nesting depth; guards traversal against stack overflow (FR-4). */
 export const maxNestingDepth = 32;
@@ -530,11 +535,16 @@ export interface PageTransition {
   type: "none" | "fade" | "slide" | "push" | "dissolve" | "morph-lite" | "wipe" | "flip" | "zoom" | "morph";
   direction?: "left" | "right" | "up" | "down";
   durationMs: number;
+  /** Easing curve name (v22). A PLAIN string, never an enum: an unknown value
+   *  must keep validating on every client (the engine clamps unknowns to its
+   *  default), so future easings can ship without a schema change. */
+  easing?: string;
 }
 export const PageTransitionSchema = z.object({
   type: z.enum(["none", "fade", "slide", "push", "dissolve", "morph-lite", "wipe", "flip", "zoom", "morph"]),
   direction: z.enum(["left", "right", "up", "down"]).optional(),
   durationMs: z.number().nonnegative(),
+  easing: z.string().optional(),
 });
 
 /** Photo motion on an ImageNode: a slow zoom/pan during present-mode display. */
@@ -1975,6 +1985,10 @@ export interface Page {
   guides?: Guide[];
   notes?: string;
   transition?: PageTransition; // applied when advancing to this page
+  /** Exit transition (v22): how THIS page leaves when advancing away from it.
+   *  Composited simultaneously with the arriving page's own transition; absent
+   *  means today's behavior (only the arriving page's transition plays). */
+  transitionOut?: PageTransition;
   // presentations (additive, optional; older files still validate):
   layoutId?: string; // slide layout this page inherits from (doc 28 FR-3)
   sectionId?: string; // the section this slide belongs to (doc 28 FR-5)
@@ -2000,6 +2014,7 @@ export const PageSchema = z.object({
   guides: z.array(GuideSchema).optional(),
   notes: z.string().optional(),
   transition: PageTransitionSchema.optional(),
+  transitionOut: PageTransitionSchema.optional(),
   layoutId: z.string().optional(),
   sectionId: z.string().optional(),
   readingOrder: z.array(z.string()).optional(),

@@ -3469,5 +3469,7 @@
   "errors.api_brand_page_status": "Le site web a renvoyé une page d'erreur.",
   "errors.api_brand_url_not_html": "Cette URL n'est pas une page web.",
   "editor.acme_com": "acme.com",
-  "editor.drag_to_move_the_camera_bubble": "Faites glisser pour déplacer la bulle de caméra"
+  "editor.drag_to_move_the_camera_bubble": "Faites glisser pour déplacer la bulle de caméra",
+  "editor.easing_default": "Fluide (par défaut)",
+  "editor.exit_transition": "Transition de sortie"
 }
