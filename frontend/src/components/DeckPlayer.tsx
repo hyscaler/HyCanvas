@@ -21,6 +21,7 @@ import {
   renderTransitionPair,
   transitionPairDurationMs,
   pairEnterTransition,
+  measureFnFor,
   transitionProgress,
   morphPlan,
   morphDesignAt,
@@ -256,7 +257,7 @@ export function DeckPlayer({ doc, token, password }: { doc: DesignFile; token?: 
           });
 
           if (morph && morph.ids.length) {
-            const posed = morphDesignAt(morph, doc, index, p, { linearProgress: pLinear });
+            const posed = morphDesignAt(morph, doc, index, p, { linearProgress: pLinear, measure: measureFnFor(ctx as unknown as CanvasLike) ?? undefined });
             try {
               renderScene(createScene(posed, index), ctx as unknown as CanvasLike, vp, { assets: imageAssets });
             } catch {

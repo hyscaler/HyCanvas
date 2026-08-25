@@ -49,6 +49,7 @@ import {
   renderTransitionPair,
   transitionPairDurationMs,
   pairEnterTransition,
+  measureFnFor,
   morphPlan,
   morphDesignAt,
   type AnimPatch,
@@ -2167,7 +2168,7 @@ function compositeTransition(
   // The morphed layer needs a scene render, so it stays with the caller: the
   // engine helper has already cross-faded the shared-element-free buffers.
   if (morph && morph.ids.length) {
-    const tempDoc = morphDesignAt(morph, to.doc, to.pageIndex, p, { linearProgress: pLinear });
+    const tempDoc = morphDesignAt(morph, to.doc, to.pageIndex, p, { linearProgress: pLinear, measure: measureFnFor(destCtx as unknown as CanvasLike) ?? undefined });
     try {
       renderScene(createScene(tempDoc, to.pageIndex), destCtx as unknown as CanvasLike, vp, { assets: imageAssets });
     } catch { /* a cross-origin image can throw; skip the morphed layer */ }

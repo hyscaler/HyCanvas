@@ -16,6 +16,7 @@ import {
   renderTransitionPair,
   transitionPairDurationMs,
   pairEnterTransition,
+  measureFnFor,
   transitionProgress,
   morphPlan,
   morphDesignAt,
@@ -172,7 +173,7 @@ export function AudienceStage({ designId, initialSlide }: { designId: string; in
           renderTransitionPair(ctx as unknown as CanvasLike, enterT, exitT, { from: A, to: B, width: cw, height: ch, progress: p, exitProgress: pExit });
 
           if (morph && morph.ids.length) {
-            const posed = morphDesignAt(morph, doc, index, p, { linearProgress: pLinear });
+            const posed = morphDesignAt(morph, doc, index, p, { linearProgress: pLinear, measure: measureFnFor(ctx as unknown as CanvasLike) ?? undefined });
             try {
               renderScene(createScene(posed, index), ctx as unknown as CanvasLike, vp, { assets: imageAssets });
             } catch {

@@ -20,6 +20,7 @@ import {
   planDeckFrames,
   renderTransition,
   renderTransitionPair,
+  measureFnFor,
   morphPlan,
   morphDesignAt,
   type CanvasLike,
@@ -221,7 +222,7 @@ function renderDeckFrame(
     // first would not change the tween; render the tweened layer as planned.
     const enterDur = transition.type !== "none" && transition.durationMs > 0 ? transition.durationMs : 0;
     const linearProgress = enterDur > 0 ? Math.min(1, Math.max(0, toTMs / enterDur)) : 1;
-    const tweened = morphDesignAt(morph, toPosed, toIndex, progress, { linearProgress });
+    const tweened = morphDesignAt(morph, toPosed, toIndex, progress, { linearProgress, measure: measureFnFor(ctx as unknown as CanvasLike) ?? undefined });
     for (const n of tweened.pages[toIndex].children) (n as { hidden?: boolean }).hidden = false;
     const vp: Viewport = { zoom: scale, panX: 0, panY: 0, dpr: 1, width: w, height: h };
     try {

@@ -52,6 +52,7 @@ export {
   type MorphPlan,
 } from "./transition";
 export {
+  measureFnFor,
   wordBoxes,
   planWordMorph,
   wordMorphEligible,

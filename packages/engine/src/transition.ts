@@ -19,7 +19,8 @@
 import type { CanvasLike } from "./types";
 import type { Color, DesignFile, Node, PageTransition, TextNode } from "@hc/schema";
 import { evalEasing, transitionEasing } from "./animation";
-import { planWordMorph, wordMorphEligible, wordMorphNodes } from "./textmorph";
+import { planWordMorph, wordMorphEligible, wordMorphNodes, type WordMorphPlan } from "./textmorph";
+import type { MeasureFn } from "@hc/text";
 
 /** Anything the destination context can `drawImage`: an HTMLCanvasElement, an
  *  OffscreenCanvas, an ImageBitmap, or a server canvas surface. */
@@ -607,7 +608,19 @@ export function lerpNode(a: Node, b: Node, p: number): Node {
  * morph (C10): an eligible text pair whose words differ dances its common
  * words instead of snapping content.
  */
-export function morphDesignAt(plan: MorphPlan, to: DesignFile, toPage: number, p: number, opts: { linearProgress?: number } = {}): DesignFile {
+// Word plans are stable for a given node PAIR (positions are node-local), but
+// morphPlan runs per frame and rebuilds its pose clones, so the cache keys on
+// the ORIGINAL node references, which persist across a transition's frames.
+// WeakMaps let edited/discarded documents release their entries naturally.
+const wordPlanCache = new WeakMap<Node, WeakMap<Node, WordMorphPlan | null>>();
+
+export function morphDesignAt(
+  plan: MorphPlan,
+  to: DesignFile,
+  toPage: number,
+  p: number,
+  opts: { linearProgress?: number; measure?: MeasureFn } = {},
+): DesignFile {
   const children: Node[] = [];
   for (const id of plan.ids) {
     const a = plan.fromPose.get(id)!;
@@ -617,7 +630,18 @@ export function morphDesignAt(plan: MorphPlan, to: DesignFile, toPage: number, p
       ? evalEasing(transitionEasing(easing), Math.min(1, Math.max(0, opts.linearProgress)))
       : p;
     if (a.type === "text" && b.type === "text" && wordMorphEligible(a, b)) {
-      const wordPlan = planWordMorph(a as TextNode, b as TextNode);
+      const fromOrig = plan.fromNodes.get(id)!;
+      const toOrig = plan.toNodes.get(id)!;
+      let inner = wordPlanCache.get(fromOrig);
+      if (!inner) {
+        inner = new WeakMap();
+        wordPlanCache.set(fromOrig, inner);
+      }
+      let wordPlan = inner.get(toOrig);
+      if (wordPlan === undefined) {
+        wordPlan = planWordMorph(a as TextNode, b as TextNode, undefined, opts.measure);
+        inner.set(toOrig, wordPlan);
+      }
       if (wordPlan) {
         children.push(...wordMorphNodes(a as TextNode, b as TextNode, wordPlan, pe));
         continue;
