@@ -944,6 +944,12 @@ interface EditorState {
   setImageAlt(id: string, alt: string | undefined): void;
   /** Set/clear any node's accessibility description (doc 28 FR-29), undoable. */
   setNodeAltText(id: string, altText: string | undefined): void;
+  /** One-click a11y fix (C27): nudge every failing solid run fill on a text
+   *  node to WCAG AA against the page background. Returns changed-run count. */
+  fixTextContrast(id: string): number;
+  /** One-click a11y fix (C27): raise runs below `min` px to `min`, leaving
+   *  larger runs untouched. Returns changed-run count. */
+  raiseMinFontSize(id: string, min?: number): number;
   /** Mark a node presentational, so checkers and accessible exports skip it. */
   setNodeDecorative(id: string, decorative: boolean): void;
   /** Reorder a page's reading order by moving index `from` to `to` (FR-29). */
@@ -6382,6 +6388,28 @@ export const useEditor = create<EditorState>((set, get) => {
     setContent: (id, content, boxHeight, boxHeightBefore) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return;
+      // C28: a slide's name follows its TITLE placeholder while the user has
+      // not renamed the page by hand (name empty, or still equal to the old
+      // derived title); an explicit rename breaks the link for that page.
+      const titleSync = (() => {
+        const rec = loc.node as unknown as { data?: { placeholderId?: string } };
+        const phId = rec.data?.placeholderId;
+        if (!phId) return null;
+        const docx = get().doc as unknown as { pages: Page[]; layouts?: { id: string; masterId: string; placeholders: { id: string; role: string }[] }[]; masters?: { id: string; placeholders?: { id: string; role: string }[] }[] };
+        const pg = docx.pages.find((pp) => pp.children.some((n) => n.id === id)) as (Page & { name?: string; layoutId?: string }) | undefined;
+        if (!pg) return null;
+        const layout = docx.layouts?.find((l) => l.id === pg.layoutId);
+        if (!layout) return null;
+        const master = docx.masters?.find((m) => m.id === layout.masterId);
+        const role = layout.placeholders.find((ph) => ph.id === phId)?.role ?? master?.placeholders?.find((ph) => ph.id === phId)?.role;
+        if (role !== "title") return null;
+        const firstLine = (c: Paragraph[]) => (c[0]?.runs ?? []).map((r) => (r as { text: string }).text).join("").split("\n")[0].trim().slice(0, 80);
+        const oldTitle = firstLine((loc.node as unknown as { content: Paragraph[] }).content);
+        const newTitle = firstLine(content);
+        if (!newTitle || newTitle === oldTitle) return null;
+        if (pg.name && pg.name !== oldTitle) return null; // hand-renamed: the link is broken
+        return { pg, beforeName: pg.name, afterName: newTitle };
+      })();
       const node = loc.node as unknown as { content: Paragraph[]; size: { width: number; height: number }; box: { height: number; mode?: string } };
       if (!content.length) return; // never leave a text node with zero paragraphs
       const before = structuredClone(node.content);
@@ -6403,8 +6431,18 @@ export const useEditor = create<EditorState>((set, get) => {
       }
       if (Math.abs(hNext - hBefore) <= 0.5) hNext = hBefore;
       perform(
-        () => { node.content = structuredClone(after); node.size.height = hNext; node.box.height = hNext; },
-        () => { node.content = structuredClone(before); node.size.height = hBefore; node.box.height = hBefore; },
+        () => {
+          node.content = structuredClone(after);
+          node.size.height = hNext;
+          node.box.height = hNext;
+          if (titleSync) titleSync.pg.name = titleSync.afterName;
+        },
+        () => {
+          node.content = structuredClone(before);
+          node.size.height = hBefore;
+          node.box.height = hBefore;
+          if (titleSync) titleSync.pg.name = titleSync.beforeName;
+        },
       );
     },
     growTextBoxLive: (id, height, fixedBase) => {
@@ -6731,6 +6769,54 @@ export const useEditor = create<EditorState>((set, get) => {
           rec.fit = before;
         },
       );
+    },
+    fixTextContrast: (id) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return 0;
+      const pageIdx = get().doc.pages.findIndex((p) => p.children.some((n) => n.id === id));
+      const bgFill = pageIdx >= 0 ? (get().doc.pages[pageIdx] as unknown as { background?: { type?: string; color?: Color; stops?: { color: Color }[] } }).background : undefined;
+      const bg: Color = bgFill?.type === "solid" && bgFill.color ? bgFill.color : bgFill?.stops?.[0]?.color ?? { srgb: { r: 1, g: 1, b: 1, a: 1 } };
+      const node = loc.node as unknown as { content: { runs: { style: { fill?: { type?: string; color?: Color } } }[] }[] };
+      const before = structuredClone(node.content);
+      let changed = 0;
+      const after = structuredClone(node.content);
+      for (const para of after) {
+        for (const run of para.runs) {
+          const f = run.style.fill;
+          if (f?.type === "solid" && f.color && contrastRatio(f.color, bg) < 4.5) {
+            f.color = fixToAA(f.color, bg, 4.5);
+            changed++;
+          }
+        }
+      }
+      if (!changed) return 0;
+      perform(
+        () => { node.content = structuredClone(after); },
+        () => { node.content = structuredClone(before); },
+      );
+      return changed;
+    },
+    raiseMinFontSize: (id, min = 12) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return 0;
+      const node = loc.node as unknown as { content: { runs: { style: { fontSize: number } }[] }[] };
+      const before = structuredClone(node.content);
+      let changed = 0;
+      const after = structuredClone(node.content);
+      for (const para of after) {
+        for (const run of para.runs) {
+          if (run.style.fontSize < min) {
+            run.style.fontSize = min;
+            changed++;
+          }
+        }
+      }
+      if (!changed) return 0;
+      perform(
+        () => { node.content = structuredClone(after); refitTextHeight(loc.node); },
+        () => { node.content = structuredClone(before); refitTextHeight(loc.node); },
+      );
+      return changed;
     },
     setNodeAltText: (id, altText) => {
       const loc = locate(get().doc, id);

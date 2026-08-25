@@ -13,6 +13,7 @@ import type {
 import { themeFromPalette } from "@hc/schema";
 import { deriveThemeSlots, extractLayoutSet, repairThemeSlots, themeIdFor, themeSlotNames, type ExtractedLayoutSet, type ExtractPageLike } from "@hc/aistudio";
 import { refineExtractedLayoutSet } from "@/lib/layoutVision";
+import { generateAltText, generateChartAltText } from "@/lib/altText";
 import { colorHarmony, harmonySchemes, type HarmonyScheme, extractPalette, toHex } from "@hc/color";
 import { evalExpression, locate, rotateAboutPoint } from "@hc/editor";
 import { isLowResolution, computeEffectivePpi, renderTransition } from "@hc/engine";
@@ -2692,6 +2693,80 @@ function DeckThemeSection() {
   // deck generation) still shows as the active choice instead of vanishing.
   const custom = doc.theme && !seeds.some((t) => t.id === current) ? doc.theme : null;
 
+  // C34: reference-image style transfer state. The proposal is a full T19
+  // Theme record shown behind a confirm; nothing applies until Apply.
+  const panelWorkspaceId = useBrand((s) => s.workspaceId);
+  const imgFileRef = useRef<HTMLInputElement>(null);
+  const [imgProposal, setImgProposal] = useState<Theme | null>(null);
+  const [imgBusy, setImgBusy] = useState(false);
+  const [imgError, setImgError] = useState<string | null>(null);
+
+  async function proposeThemeFromImage(file: File) {
+    setImgBusy(true);
+    setImgError(null);
+    setImgProposal(null);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result));
+        r.onerror = () => reject(new Error("read failed"));
+        r.readAsDataURL(file);
+      });
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const el = new Image();
+        el.onload = () => resolve(el);
+        el.onerror = () => reject(new Error("decode failed"));
+        el.src = dataUrl;
+      });
+      // Downscaled sample, exactly like the photo-palette flow: dominant hues,
+      // not per-pixel precision.
+      const SAMPLE = 128;
+      const scale = Math.min(1, SAMPLE / Math.max(img.naturalWidth, img.naturalHeight));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+      const cx = canvas.getContext("2d");
+      if (!cx) throw new Error("no canvas");
+      cx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const palette = [...new Set(extractPalette(cx.getImageData(0, 0, canvas.width, canvas.height), 6).map(toHex))];
+      if (!palette.length) throw new Error("no colors");
+      const lumOf = (hex: string) => { const c = colorFromHex(hex); return 0.2126 * c.srgb.r + 0.7152 * c.srgb.g + 0.0722 * c.srgb.b; };
+      const mode = lumOf(palette[0]) < 0.35 ? ("dark" as const) : ("light" as const);
+      const deep = [...palette].sort((a, b) => lumOf(a) - lumOf(b))[0];
+      const slots = repairThemeSlots(deriveThemeSlots({ primary: palette[0], accent: palette[1], deep }, mode), mode);
+      // One vision call decides the type feel, mapped onto the loadable theme
+      // font pairings; a text-only provider degrades to the theme's default
+      // fonts instead of failing the flow.
+      let fontHeading: string | undefined;
+      let fontBody: string | undefined;
+      if (panelWorkspaceId) {
+        try {
+          const { text } = await oc.aiDescribeImage({
+            workspaceId: panelWorkspaceId,
+            imageBase64: dataUrl,
+            instruction: "Which typography feel matches this image's visual style? Answer with exactly one word: serif, sans, or display.",
+          });
+          const feel = /\bserif\b/i.test(text) && !/sans/i.test(text) ? "serif" : /display/i.test(text) ? "display" : "sans";
+          [fontHeading, fontBody] = feel === "serif"
+            ? ["Playfair Display", "Source Sans 3"] // i18n-ignore: font family names
+            : feel === "display"
+              ? ["Space Grotesk", "Work Sans"] // i18n-ignore: font family names
+              : ["Montserrat", "Inter"]; // i18n-ignore: font family names
+        } catch { /* no vision capability: palette-only theme */ }
+      }
+      const id = themeIdFor("theme-image", [...themeSlotNames.map((slot) => slots[slot]), fontHeading ?? "", fontBody ?? ""]);
+      setImgProposal(themeFromPalette(id, themeSlotNames.map((slot) => ({ id: `${id}-${slot}`, name: slot, color: colorFromHex(slots[slot]) })), {
+        name: tr("editor.from_image"),
+        fontHeading,
+        fontBody,
+      }));
+    } catch {
+      setImgError(tr("editor.couldnt_read_that_image"));
+    } finally {
+      setImgBusy(false);
+    }
+  }
+
   // T19 (b): the brand kit -> theme bridge. The kit's leading colors seed the
   // 6-slot palette (missing slots derived, contrast repaired) and the kit's
   // fonts become the pair; applying is the same undoable swap as any theme.
@@ -2755,6 +2830,49 @@ function DeckThemeSection() {
             {tr("editor.create_theme_from_brand_kit")}
           </button>
         )}
+        {/* C34 reference-image style transfer: a picked (or dropped) reference
+            image proposes a theme - palette via extractPalette, type feel via
+            one vision call - applied only after an explicit confirm. */}
+        <input
+          ref={imgFileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void proposeThemeFromImage(f); }}
+        />
+        <button
+          type="button"
+          onClick={() => imgFileRef.current?.click()}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f && f.type.startsWith("image/")) void proposeThemeFromImage(f); }}
+          disabled={imgBusy}
+          className={`${actionBtnCls} disabled:opacity-50`}
+          data-testid="theme-from-image"
+        >
+          {imgBusy ? tr("editor.reading_image") : tr("editor.create_theme_from_image")}
+        </button>
+        {imgError && <span className="text-[11px] text-red-500">{imgError}</span>}
+        {imgProposal && (
+          <div className="flex flex-col gap-1.5 rounded-lg border border-neutral-200 bg-surface p-1.5" data-testid="image-theme-proposal">
+            <ThemeRow active={false} testId="theme-image-proposal-row" name={imgProposal.name ?? tr("editor.from_image")} colors={imgProposal.colors.map((c) => colorHex(c.color))} />
+            {(imgProposal.fontHeading || imgProposal.fontBody) && (
+              <span className="px-1 text-[11px] text-neutral-500">{[imgProposal.fontHeading, imgProposal.fontBody].filter(Boolean).join(" + ")}</span>
+            )}
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                onClick={() => { const p = imgProposal; setImgProposal(null); st.setDeckTheme(p); }}
+                className="rounded-md bg-brand-600 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-brand-700"
+                data-testid="apply-image-theme"
+              >
+                {tr("editor.apply_theme")}
+              </button>
+              <button type="button" onClick={() => setImgProposal(null)} className="rounded-md border border-neutral-200 px-2.5 py-1 text-[11px] text-neutral-600 hover:bg-neutral-50">
+                {tr("editor.cancel")}
+              </button>
+            </div>
+          </div>
+        )}
         {current && (
           <button type="button" onClick={() => st.setDeckTheme(undefined)} className="mt-0.5 text-start text-[11px] text-neutral-500 hover:underline" data-testid="clear-theme">
             {tr("editor.clear_theme")}
@@ -2775,6 +2893,9 @@ function NodeAccessibilitySection({ node }: { node: Node }) {
   const st = useEditor.getState();
   const rev = useEditor((s) => s.rev);
   void rev;
+  const toast = useToast();
+  const [altBusy, setAltBusy] = useState(false);
+  const panelWorkspaceId = useBrand((s) => s.workspaceId);
   const rec = node as unknown as { altText?: string; alt?: string; decorative?: boolean };
   const decorative = rec.decorative === true;
   // The generic field wins; the legacy image-only `alt` still shows so an older
@@ -2805,6 +2926,28 @@ function NodeAccessibilitySection({ node }: { node: Node }) {
         />
         {tr("editor.decorative_skip_for_screen_readers")}
       </label>
+      {/* AI description (F22 images; C29 charts from their DATA). */}
+      {(node.type === "image" || node.type === "chart") && !decorative && (
+        <button
+          type="button"
+          data-testid="generate-alt"
+          disabled={altBusy || !panelWorkspaceId}
+          onClick={() => {
+            if (!panelWorkspaceId) return;
+            setAltBusy(true);
+            const run = node.type === "chart"
+              ? generateChartAltText(panelWorkspaceId, node.id)
+              : (useEditor.getState().select([node.id]), generateAltText(panelWorkspaceId));
+            void Promise.resolve(run)
+              .then((ok) => { if (!ok) toast.error(tr("editor.couldnt_describe_this_element")); })
+              .catch((e) => toast.error(userMessage(e, tr("editor.couldnt_describe_this_element"))))
+              .finally(() => setAltBusy(false));
+          }}
+          className={`mt-2 w-full rounded-lg border border-brand-200 bg-brand-50 px-2 py-1.5 text-sm font-medium text-brand-ink hover:bg-brand-100 disabled:opacity-50`}
+        >
+          {altBusy ? tr("editor.describing") : tr("editor.generate_description_with_ai")}
+        </button>
+      )}
     </Section>
   );
 }

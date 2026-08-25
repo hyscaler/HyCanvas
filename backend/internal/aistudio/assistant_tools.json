@@ -265,6 +265,19 @@
     "mutates": false
   },
   {
+    "name": "magicSwitch",
+    "description": "Re-shape the CURRENT design's content into a different design type - a summary document, a set of social posts, or a single poster - re-laid-out for the new form. The re-shaped pages are APPENDED after the existing ones; nothing is replaced. Use for 'turn this deck into a doc / social posts / a one-page poster'.",
+    "params": [
+      {
+        "name": "designType",
+        "type": "string",
+        "required": true,
+        "description": "doc|social|poster"
+      }
+    ],
+    "mutates": true
+  },
+  {
     "name": "insertAgenda",
     "description": "Insert an agenda (table of contents) after the title slide: every page listed with its final page number, split across agenda pages when the deck is long. Use for 'add an agenda / table of contents'.",
     "params": [],

@@ -22,6 +22,7 @@ import {
   buildGeneratedTheme, generatedThemeSchema, themeGenSystemPrompt, themeGenUserPrompt, themeIdFor, themeRecordFromDeckTheme,
   type DesignOutline, type DesignType, type GenerationDials, type OutlineItem,
   toolCatalog, assistantSystemPrompt, parseAssistantReply, planMutates, summarizeDesign, type PlanStep,
+  deriveOutline, switchOutline, sourcesOutlineItem, type PageText, type SourceCitation,
 } from "@hc/aistudio";
 import { builtinMasterAndLayouts, type SlideLayout } from "@hc/schema";
 import { promptText } from "@/lib/promptDialog";
@@ -1846,6 +1847,16 @@ interface ChatTurn {
   role: "user" | "assistant";
   text: string;
   steps?: { action: string; ok: boolean }[];
+  /** Quick-reply chips under an assistant turn (e.g. the "Just generate"
+   *  escape on a clarifying-questions interview, C31). Session-local. */
+  quick?: string[];
+  /** Structured critique findings rendered as a per-issue fix list (C32).
+   *  Session-local (not persisted); applying a fix re-critiques and refreshes
+   *  the list (an empty array renders as "resolved"). */
+  critique?: CritiqueIssue[];
+  /** The page index the critique analyzed, so the post-fix re-critique checks
+   *  the same page even after the user navigates away. */
+  critiqueAt?: number;
 }
 
 // A generative step's pre-resolved result (text/image/outline), produced by the
@@ -1904,6 +1915,9 @@ interface AssistantDeps {
    *  generateDesign grounds its outline strictly in this text when present. */
   /** Attached grounding sources (T15: up to 8, combined under one budget). */
   sources?: { name: string; text: string }[];
+  /** Structured citations captured by a webSearch step (C33): the next deck/doc
+   *  generation in the same run appends a Sources page from them. */
+  citations?: SourceCitation[];
 }
 
 // Outline roles that get a generated hero background image (the high-impact
@@ -2044,7 +2058,13 @@ function prepareGenerateBrief(a: Record<string, unknown>, deps: AssistantDeps): 
     ? normalizeDesignType(a.designType)
     : normalizeDesignType(a.prompt);
   const page = st.doc.pages[st.activePage];
-  const size = { width: page?.width ?? 1280, height: page?.height ?? 720 };
+  // An explicit canvas size wins (magicSwitch passes the target form's natural
+  // size); a model-planned generateDesign never carries one (validateStep drops
+  // undeclared args), so plans from the model keep the current-page size.
+  const explicit = a.canvasSize as { width: number; height: number } | undefined;
+  const size = explicit && explicit.width > 0 && explicit.height > 0
+    ? { width: explicit.width, height: explicit.height }
+    : { width: page?.width ?? 1280, height: page?.height ?? 720 };
   const brandClause = [deps.voiceClause, deps.brandPalette.length ? `Use this brand palette: ${deps.brandPalette.join(", ")}.` : ""].filter(Boolean).join(" ").trim();
   const pageCount = typeof a.pageCount === "number" ? a.pageCount : dt === "poster" ? 1 : undefined;
   let brief = String(a.prompt);
@@ -2567,11 +2587,47 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
         if (!results.length) return { error: "no results found" };
         const text = results.map((r0, i) => `${i + 1}. ${r0.title}\n${r0.url}\n${r0.content}`).join("\n\n");
         deps.sources = [...(deps.sources ?? []), { name: `Web search: ${query}`, text }];
+        // C33: keep the structured name+URL pairs too, so a deck generated from
+        // this grounding can append a Sources page with real citations.
+        deps.citations = [
+          ...(deps.citations ?? []),
+          ...results.filter((r0) => r0.title && r0.url).map((r0) => ({ name: r0.title, url: r0.url })),
+        ].slice(0, 12);
         return { payload: { kind: "webSearch", query, count: results.length } };
       } catch (err) {
         const coded = err instanceof ApiError ? apiCodeMessage(err.body) : null;
         return { error: coded ?? "web search isn't configured for this workspace" };
       }
+    }
+    case "magicSwitch": {
+      // C30: re-shape the CURRENT design into another form. Deterministic
+      // derivation (largest text per page = title, the rest = points), then the
+      // switched outline rides the normal generateDesign pipeline as a
+      // pre-reviewed outline - layout grounding, theme, and hero images all
+      // behave exactly as a generated deck's. Always APPENDS.
+      const target = normalizeDesignType(a.designType);
+      const pageTexts: PageText[] = st.doc.pages.map((pg) => ({
+        name: pg.name,
+        texts: ((pg.children ?? []) as { type: string; hidden?: boolean; content?: { runs: { text: string; style?: { fontSize?: number } }[] }[] }[])
+          .filter((n) => n.type === "text" && !n.hidden)
+          .map((n) => ({
+            text: (n.content ?? []).map((p) => p.runs.map((r) => r.text).join("")).join("\n").trim(),
+            fontSize: Math.max(0, ...(n.content ?? []).flatMap((p) => p.runs.map((r) => r.style?.fontSize ?? 0))),
+          }))
+          .filter((t) => t.text),
+      }));
+      if (!pageTexts.some((p) => p.texts.length)) return { error: "there's no text content to re-shape yet" };
+      deps.reviewedOutline = switchOutline(deriveOutline({ title: st.doc.title, pages: pageTexts }), target);
+      const sizeFor: Record<string, { width: number; height: number }> = {
+        doc: { width: 1240, height: 1754 },
+        "social-set": { width: 1080, height: 1080 },
+        poster: { width: 1080, height: 1350 },
+      };
+      return resolvePlanStep({
+        action: "generateDesign",
+        args: { prompt: `re-shape this design as a ${target}`, designType: target, mode: "append", canvasSize: sizeFor[target] },
+        status: "planned",
+      }, deps);
     }
     case "generateDesign": {
       // The explicit designType wins when the model supplies one; otherwise the
@@ -2609,6 +2665,14 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
         } else if (typeof pageCount === "number" && pageCount > 0 && outline.pages.length > pageCount) {
           outline.pages = outline.pages.slice(0, pageCount);
         }
+      }
+      // C33: a webSearch step in this run captured structured citations; a
+      // research-grounded deck/doc closes with a Sources page (appended AFTER
+      // the page cap on purpose - the cap guards model over-production, and the
+      // citations page is ours). The slide lists name+URL; the speaker note
+      // carries the numbered list so the references survive slide-text edits.
+      if (deps.citations?.length && (dt === "deck" || dt === "doc")) {
+        outline.pages = [...outline.pages, sourcesOutlineItem(deps.citations, tr("editor.sources"))];
       }
       // T12 layout-grounded generation: when the document has slide layouts
       // (built-ins are installed on first use), one structured call assigns a
@@ -3031,6 +3095,7 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       st.goToPage(to);
       return true;
     }
+    case "magicSwitch": // C30: its resolve delegated to generateDesign, so the payload applies identically
     case "generateDesign": {
       // T12 layout-grounded apply: create the pages empty (theme background),
       // link + materialize each page's layout, write the filled content into
@@ -3192,6 +3257,8 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   const runAsTurn = useEditor((s) => s.runAsTurn);
   const undo = useEditor((s) => s.undo);
   const designId = useComments((s) => s.designId); // current design (for persisted history)
+  // Gates the Magic Switch row (C30): a form switch is offered on multi-page documents.
+  const switchPageCount = useEditor((s) => s.doc.pages.length);
   const [input, setInput] = useState("");
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   // T10: image resolutions settle in the background; surface failures with a
@@ -3227,7 +3294,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   // up front and shown as an editable list with generation dials; Generate
   // proceeds with the EDITED outline (no second model call). null = no review
   // (non-design plans); loading = outline still being fetched.
-  const [review, setReview] = useState<{ outline: DesignOutline | null; loading: boolean; dials: GenerationDials; searchedSources?: { name: string; text: string }[] } | null>(null);
+  const [review, setReview] = useState<{ outline: DesignOutline | null; loading: boolean; dials: GenerationDials; searchedSources?: { name: string; text: string }[]; citations?: SourceCitation[] } | null>(null);
   const reviewSeq = useRef(0);
   // Monotonic id source for review-added outline items: a length-derived id
   // collides after add-remove-add (same length twice) and duplicates React keys.
@@ -3287,6 +3354,23 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     }
   }
 
+  // C32: apply one critique fix from a chat turn's issue list (one undo step -
+  // each store action is its own entry), then re-critique the SAME page so the
+  // turn's list reflects what actually remains.
+  function applyChatFix(turnIndex: number, issue: CritiqueIssue) {
+    const f = issue.fix;
+    if (!f) return;
+    const st = useEditor.getState();
+    if (f.kind === "set_text_color") st.setTextColor(f.nodeId, f.hex);
+    else st.moveNodeBy(f.nodeId, f.dx, f.dy);
+    const now = useEditor.getState();
+    setTurns((t) => t.map((turn, i) => (
+      i === turnIndex && turn.critique !== undefined
+        ? { ...turn, critique: critiquePage(now.doc, turn.critiqueAt ?? now.activePage) }
+        : turn
+    )));
+  }
+
   // Execute a validated plan as ONE undo turn, then report per-step status.
   // Fetch the outline for the pending generateDesign step so the user can
   // review and edit it before anything is generated (T09). Re-invoked by the
@@ -3309,7 +3393,10 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       const { dt, brief, brandClause, pageCount } = prepareGenerateBrief(step.args, deps);
       const outline = await fetchAssistantOutline(workspaceId, dt, brief, brandClause, pageCount);
       if (seq !== reviewSeq.current) return; // superseded by a newer fetch or cancel
-      setReview({ outline, loading: false, dials, searchedSources: searchStep ? deps.sources : undefined });
+      // C33: the search's structured citations must survive into the eventual
+      // execute (which drops the webSearch step), or the reviewed deck would
+      // lose its Sources page.
+      setReview({ outline, loading: false, dials, searchedSources: searchStep ? deps.sources : undefined, citations: deps.citations });
     } catch {
       if (seq === reviewSeq.current) setReview({ outline: null, loading: false, dials });
     }
@@ -3324,7 +3411,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     setReview(null);
   }
 
-  async function execute(plan: PlanStep[], reply: string, reviewedOutline?: DesignOutline, dials?: GenerationDials) {
+  async function execute(plan: PlanStep[], reply: string, reviewedOutline?: DesignOutline, dials?: GenerationDials, citations?: SourceCitation[]) {
     if (!workspaceId) return;
     setBusy(true);
     try {
@@ -3343,7 +3430,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
           // best-effort; the applyBrand step will simply report nothing to fix
         }
       }
-      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sources, reviewedOutline, dials, designId };
+      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sources, reviewedOutline, dials, designId, citations };
       const payloads: (ResolvedPayload | undefined)[] = [];
       const skips: (string | undefined)[] = [];
       for (let i = 0; i < plan.length; i++) {
@@ -3386,15 +3473,19 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       // A planned critique step is read-only; surface its actual findings instead
       // of just a "done" chip.
       let extra = "";
+      let critique: CritiqueIssue[] | undefined;
       if (plan.some((s) => s.action === "critique")) {
         const st = useEditor.getState();
         const issues = critiquePage(st.doc, st.activePage);
-        extra = issues.length ? ` Critique: ${issues.slice(0, 4).map((i) => i.message).join("; ")}${issues.length > 4 ? "…" : ""}` : " Critique: this page looks clean.";
+        // C32: the findings render as a structured per-issue fix list on the
+        // turn; the text carries just the count so nothing is said twice.
+        critique = issues.length ? issues : undefined;
+        extra = issues.length ? ` ${tr("editor.critique_found_issues", { count: issues.length })}` : ` ${tr("editor.critique_page_clean")}`;
       }
       const skipNote = skips.find(Boolean);
       const done = results.filter((r) => r.ok).length;
       const text = (reply || tr("editor.done_2")) + extra + (done === 0 && skipNote ? ` (${skipNote})` : "");
-      setTurns((t) => [...t, { role: "assistant", text, steps: results }]);
+      setTurns((t) => [...t, { role: "assistant", text, steps: results, critique, critiqueAt: critique ? useEditor.getState().activePage : undefined }]);
       void persistTurn("assistant", text, plan);
       if (done) toast.success(`Applied ${done} step${done === 1 ? "" : "s"} (one undo reverts the turn).`);
       else if (!extra) toast.error(skipNote ? `Nothing applied: ${skipNote}.` : tr("editor.nothing_was_applied_try_selecting_an_element"));
@@ -3455,16 +3546,24 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       }
 
       if (res.clarify) {
-        setTurns((t) => [...t, { role: "assistant", text: res.clarify! }]);
+        // C31: a clarifying interview on a creation ask always carries the
+        // "just generate" escape as a quick reply, so the questions never
+        // become a gate the user can't skip.
+        const creationAsk = /\b(deck|presentation|slides?|poster|flyer|docs?|documents?|posts?|design|make|create|build|generate)\b/i.test(userText);
+        setTurns((t) => [...t, { role: "assistant", text: res.clarify!, quick: creationAsk ? [tr("editor.just_generate")] : undefined }]);
         void persistTurn("assistant", res.clarify);
         return;
       }
       if (!res.plan.length) {
-        // A read-only critique request: surface the page critique.
+        // A read-only critique request: surface the page critique as a
+        // structured per-issue fix list (C32).
         if (/\b(critique|review|feedback|improve|issues?)\b/i.test(userText)) {
-          const issues = critiquePage(st.doc, st.activePage);
-          const msg = issues.length ? `${issues.length} issue${issues.length === 1 ? "" : "s"}: ${issues.slice(0, 4).map((i) => i.message).join("; ")}${issues.length > 4 ? "…" : ""}` : "No issues found - this page looks clean.";
-          setTurns((t) => [...t, { role: "assistant", text: msg }]);
+          // Fresh state on purpose: the user may have switched pages while the
+          // planner call was in flight.
+          const now = useEditor.getState();
+          const issues = critiquePage(now.doc, now.activePage);
+          const msg = issues.length ? tr("editor.critique_found_issues", { count: issues.length }) : tr("editor.critique_page_clean");
+          setTurns((t) => [...t, { role: "assistant", text: msg, critique: issues.length ? issues : undefined, critiqueAt: issues.length ? now.activePage : undefined }]);
           void persistTurn("assistant", msg);
           return;
         }
@@ -3607,6 +3706,34 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                       ))}
                     </div>
                   )}
+                  {/* C32: structured critique findings with per-issue fixes;
+                      applying re-critiques so the list shows what remains. */}
+                  {t.critique !== undefined && (
+                    t.critique.length === 0 ? (
+                      <p className="mt-1.5 flex items-center gap-1 text-[11px] text-emerald-700"><Sparkles size={12} /> {tr("editor.looks_good_no_issues_found")}</p>
+                    ) : (
+                      <ul className="mt-1.5 flex flex-col gap-1">
+                        {t.critique.map((issue) => (
+                          <li key={issue.id} className="flex items-start gap-1.5 rounded-md bg-surface px-2 py-1 text-[11px] text-neutral-600">
+                            <span className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${ISSUE_DOT[issue.severity]}`} />
+                            <button onClick={() => issue.nodeId && highlightNode(issue.nodeId)} disabled={!issue.nodeId} className="min-w-0 flex-1 text-start hover:text-brand-ink disabled:cursor-default" title={issue.nodeId ? tr("editor.show_on_canvas") : undefined}>{issue.message}</button>
+                            {issue.fix && (
+                              <button onClick={() => applyChatFix(i, issue)} className="shrink-0 font-medium text-brand-ink hover:underline">{tr("editor.fix")}</button>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )
+                  )}
+                  {/* C31: quick replies (the "just generate" interview escape),
+                      only on the latest turn so stale chips never resend. */}
+                  {t.quick && t.quick.length > 0 && i === turns.length - 1 && !busy && (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {t.quick.map((q, j) => (
+                        <button key={j} onClick={() => void send(q)} className="rounded-full border border-brand-200 bg-surface px-2 py-0.5 text-[11px] text-brand-ink hover:border-brand-400">{q}</button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ),
@@ -3716,10 +3843,11 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                         // executed plan (no double search) and surface the
                         // found sources as chips.
                         const searched = review.searchedSources;
+                        const cites = review.citations;
                         if (searched) setSources(searched.slice(0, maxSources));
                         clearReview();
                         const planToRun = searched ? p?.plan.filter((s) => s.action !== "webSearch") ?? [] : p?.plan ?? [];
-                        if (p && clean.pages.length) void execute(planToRun, p.reply, clean, dials);
+                        if (p && clean.pages.length) void execute(planToRun, p.reply, clean, dials, cites);
                         else toast.error(tr("editor.the_outline_needs_at_least_one_page"));
                       }}
                       className="ms-auto rounded bg-brand-600 px-2.5 py-0.5 font-medium text-white hover:bg-brand-700"
@@ -3750,6 +3878,23 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
         <div className="mt-2 flex shrink-0 flex-wrap gap-1.5">
           {designFollowups().map((f) => (
             <button key={f} onClick={() => void send(f)} className="rounded-full border border-neutral-200 bg-surface px-2.5 py-1 text-[11px] text-neutral-600 hover:border-brand-300 hover:text-brand-ink">{f}</button>
+          ))}
+        </div>
+      )}
+      {/* C30 Magic Switch: re-shape the current content into another form
+          (appended, never replacing). Shown on multi-page documents, where a
+          form switch is worth offering. */}
+      {switchPageCount >= 2 && !pending && !busy && aiReady && (
+        <div className="mt-2 flex shrink-0 flex-wrap items-center gap-1.5">
+          <span className="text-[11px] text-neutral-400">{tr("editor.magic_switch")}:</span>
+          {([["doc", tr("editor.switch_to_doc")], ["social", tr("editor.switch_to_social_posts")], ["poster", tr("editor.switch_to_poster")]] as const).map(([k, label]) => (
+            <button
+              key={k}
+              onClick={() => void execute([{ action: "magicSwitch", args: { designType: k }, status: "planned" }], tr("editor.reshaping_your_content", { form: label }))}
+              className="rounded-full border border-neutral-200 bg-surface px-2.5 py-1 text-[11px] text-neutral-600 hover:border-brand-300 hover:text-brand-ink"
+            >
+              {label}
+            </button>
           ))}
         </div>
       )}

@@ -45,14 +45,14 @@ The rules from `28-presentations-leverage-tasks.md` apply unchanged. In brief:
 | C24 | 5 Scale+Interop | Large-deck PagesBar virtualization + lazy thumbnails | done 2026-08-25 |
 | C25 | 5 Scale+Interop | ODP import (Keynote/Slides documented via the PPTX bridge) | done 2026-08-25 |
 | C26 | 5 Scale+Interop | Markdown outline import / export | done 2026-08-25 |
-| C27 | 6 A11y+AI | One-click accessibility fixes in the checker | todo |
-| C28 | 6 A11y+AI | Slide titles auto-derived from the title placeholder | todo |
-| C29 | 6 A11y+AI | AI chart descriptions | todo |
-| C30 | 6 A11y+AI | Magic Switch wiring (deck to doc/social/poster) | todo |
-| C31 | 6 A11y+AI | Clarifying-questions interview before thin-brief generation | todo |
-| C32 | 6 A11y+AI | Critique-and-improve loop with per-issue apply | todo |
-| C33 | 6 A11y+AI | Citations from web research into slides | todo |
-| C34 | 6 A11y+AI | Reference-image style transfer to a theme | todo |
+| C27 | 6 A11y+AI | One-click accessibility fixes in the checker | done 2026-08-25 |
+| C28 | 6 A11y+AI | Slide titles auto-derived from the title placeholder | done 2026-08-25 |
+| C29 | 6 A11y+AI | AI chart descriptions | done 2026-08-25 |
+| C30 | 6 A11y+AI | Magic Switch wiring (deck to doc/social/poster) | done 2026-08-25 |
+| C31 | 6 A11y+AI | Clarifying-questions interview before thin-brief generation | done 2026-08-25 |
+| C32 | 6 A11y+AI | Critique-and-improve loop with per-issue apply | done 2026-08-25 |
+| C33 | 6 A11y+AI | Citations from web research into slides | done 2026-08-25 |
+| C34 | 6 A11y+AI | Reference-image style transfer to a theme | done 2026-08-25 |
 | C35 | 7 Collab+Share | Per-slide status and assignees (board view) | todo |
 | C36 | 7 Collab+Share | Named share links + per-link analytics | todo |
 | C37 | 7 Collab+Share | Public embeddable deck player | todo |
