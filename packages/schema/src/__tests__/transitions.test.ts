@@ -4,16 +4,11 @@
 // everywhere (the engine clamps unknowns to its default at render time).
 
 import { describe, expect, it } from "vitest";
-import { createBlankDesign, currentSchemaVersion, migrate, PageTransitionSchema, validate } from "../index";
+import { createBlankDesign, migrate, PageTransitionSchema, validate } from "../index";
 
 describe("migration to v22", () => {
-  it("pins the exact version pair (see the Go twin in v22_test.go)", () => {
-    // The paired EXACT pins are the cross-language drift alarm: a future bump
-    // must update this line, the Go pin, and both currentSchemaVersion
-    // mirrors in the SAME change (CLAUDE.md bump protocol). A >= assertion
-    // would let the mirrors drift apart silently.
-    expect(currentSchemaVersion).toBe(22);
-  });
+  // The exact version pin lives with the LATEST bump (animchannels.test.ts),
+  // so there is exactly one drift alarm per side at any time.
 
   it("is a pure no-op on a v21 document", () => {
     const before = { ...createBlankDesign(), schemaVersion: 21 } as Record<string, unknown>;

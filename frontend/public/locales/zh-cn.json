@@ -3474,5 +3474,20 @@
   "editor.exit_transition": "退出过渡",
   "editor.animate_all_slides": "为所有幻灯片添加动画",
   "editor.animated_slides_count.one": "已为 {count} 张幻灯片添加动画",
-  "editor.animated_slides_count.other": "已为 {count} 张幻灯片添加动画"
+  "editor.animated_slides_count.other": "已为 {count} 张幻灯片添加动画",
+  "editor.w": "宽",
+  "editor.h": "高",
+  "editor.keyframe_color": "关键帧颜色",
+  "editor.motion_path_n_points.one": "运动路径（{count} 个点）",
+  "editor.motion_path_n_points.other": "运动路径（{count} 个点）",
+  "editor.orient_to_path": "沿路径旋转",
+  "editor.set_motion_path_from_keyframes": "根据关键帧创建运动路径",
+  "editor.stiffness": "刚度",
+  "editor.damping": "阻尼",
+  "editor.copy_animation": "复制动画",
+  "editor.paste_animation": "粘贴动画",
+  "editor.animation_copied": "已复制动画",
+  "editor.animation_pasted_count.one": "已将动画粘贴到 {count} 个元素",
+  "editor.animation_pasted_count.other": "已将动画粘贴到 {count} 个元素",
+  "editor.start_entrance_at_media_time": "在媒体时间点开始进入动画"
 }

@@ -3474,5 +3474,20 @@
   "editor.exit_transition": "निकास ट्रांज़िशन",
   "editor.animate_all_slides": "सभी स्लाइड्स को एनिमेट करें",
   "editor.animated_slides_count.one": "{count} स्लाइड एनिमेट की गई",
-  "editor.animated_slides_count.other": "{count} स्लाइड्स एनिमेट की गईं"
+  "editor.animated_slides_count.other": "{count} स्लाइड्स एनिमेट की गईं",
+  "editor.w": "चौ",
+  "editor.h": "ऊं",
+  "editor.keyframe_color": "कीफ़्रेम रंग",
+  "editor.motion_path_n_points.one": "गति पथ ({count} बिंदु)",
+  "editor.motion_path_n_points.other": "गति पथ ({count} बिंदु)",
+  "editor.orient_to_path": "पथ के अनुसार घुमाएं",
+  "editor.set_motion_path_from_keyframes": "कीफ़्रेम से गति पथ बनाएं",
+  "editor.stiffness": "कठोरता",
+  "editor.damping": "अवमंदन",
+  "editor.copy_animation": "एनीमेशन कॉपी करें",
+  "editor.paste_animation": "एनीमेशन पेस्ट करें",
+  "editor.animation_copied": "एनीमेशन कॉपी किया गया",
+  "editor.animation_pasted_count.one": "{count} तत्व पर एनीमेशन पेस्ट किया गया",
+  "editor.animation_pasted_count.other": "{count} तत्वों पर एनीमेशन पेस्ट किया गया",
+  "editor.start_entrance_at_media_time": "मीडिया समय पर प्रवेश शुरू करें"
 }

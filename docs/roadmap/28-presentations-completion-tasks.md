@@ -29,11 +29,11 @@ The rules from `28-presentations-leverage-tasks.md` apply unchanged. In brief:
 | C08 | 2 Morph | Fill / stroke / color / radius morph tween | done 2026-08-25 |
 | C09 | 2 Morph | Forced-match naming convention | done 2026-08-25 |
 | C10 | 2 Morph | Word-level text morph | done 2026-08-25 |
-| C11 | 3 Animation | Motion paths (follow a curve, orient-to-path) | todo |
-| C12 | 3 Animation | Color and size keyframe channels | todo |
-| C13 | 3 Animation | Configurable spring physics | todo |
-| C14 | 3 Animation | Animation painter (copy animations between elements) | todo |
-| C15 | 3 Animation | Animation triggers tied to media timestamps | todo |
+| C11 | 3 Animation | Motion paths (follow a curve, orient-to-path) | done 2026-08-25 |
+| C12 | 3 Animation | Color and size keyframe channels | done 2026-08-25 |
+| C13 | 3 Animation | Configurable spring physics | done 2026-08-25 |
+| C14 | 3 Animation | Animation painter (copy animations between elements) | done 2026-08-25 |
+| C15 | 3 Animation | Animation triggers tied to media timestamps | done 2026-08-25 |
 | C16 | 4 Present | Element interaction actions: play media, run animation | todo |
 | C17 | 4 Present | Live captions overlay (local speech recognition) | todo |
 | C18 | 4 Present | Translated captions | todo |

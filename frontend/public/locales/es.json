@@ -3474,5 +3474,20 @@
   "editor.exit_transition": "Transición de salida",
   "editor.animate_all_slides": "Animar todas las diapositivas",
   "editor.animated_slides_count.one": "Se animó {count} diapositiva",
-  "editor.animated_slides_count.other": "Se animaron {count} diapositivas"
+  "editor.animated_slides_count.other": "Se animaron {count} diapositivas",
+  "editor.w": "An",
+  "editor.h": "Al",
+  "editor.keyframe_color": "Color del fotograma clave",
+  "editor.motion_path_n_points.one": "Trayectoria ({count} punto)",
+  "editor.motion_path_n_points.other": "Trayectoria ({count} puntos)",
+  "editor.orient_to_path": "Orientar a la trayectoria",
+  "editor.set_motion_path_from_keyframes": "Crear trayectoria desde los fotogramas",
+  "editor.stiffness": "Rigidez",
+  "editor.damping": "Amortiguación",
+  "editor.copy_animation": "Copiar animación",
+  "editor.paste_animation": "Pegar animación",
+  "editor.animation_copied": "Animación copiada",
+  "editor.animation_pasted_count.one": "Animación pegada en {count} elemento",
+  "editor.animation_pasted_count.other": "Animación pegada en {count} elementos",
+  "editor.start_entrance_at_media_time": "Iniciar la entrada en el tiempo del medio"
 }

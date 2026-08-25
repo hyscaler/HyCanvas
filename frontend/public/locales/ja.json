@@ -3474,5 +3474,20 @@
   "editor.exit_transition": "退出トランジション",
   "editor.animate_all_slides": "すべてのスライドをアニメーション",
   "editor.animated_slides_count.one": "{count}枚のスライドをアニメーションしました",
-  "editor.animated_slides_count.other": "{count}枚のスライドをアニメーションしました"
+  "editor.animated_slides_count.other": "{count}枚のスライドをアニメーションしました",
+  "editor.w": "幅",
+  "editor.h": "高",
+  "editor.keyframe_color": "キーフレームの色",
+  "editor.motion_path_n_points.one": "モーションパス（{count}点）",
+  "editor.motion_path_n_points.other": "モーションパス（{count}点）",
+  "editor.orient_to_path": "パスに沿って回転",
+  "editor.set_motion_path_from_keyframes": "キーフレームからモーションパスを作成",
+  "editor.stiffness": "硬さ",
+  "editor.damping": "減衰",
+  "editor.copy_animation": "アニメーションをコピー",
+  "editor.paste_animation": "アニメーションを貼り付け",
+  "editor.animation_copied": "アニメーションをコピーしました",
+  "editor.animation_pasted_count.one": "{count}個の要素にアニメーションを貼り付けました",
+  "editor.animation_pasted_count.other": "{count}個の要素にアニメーションを貼り付けました",
+  "editor.start_entrance_at_media_time": "メディア時間でエントランスを開始"
 }

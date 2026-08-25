@@ -366,6 +366,10 @@ export const migrations: Record<number, Migration> = {
   // v21 -> v22: PageTransition.easing + Page.transitionOut. Purely additive
   // and optional; the spread preserves every key, known or not.
   21: (file: AnyObj) => ({ ...file, schemaVersion: 22 }),
+  // v22 -> v23: animation depth channels (Keyframe color/width/height,
+  // KeyframeTrack path/orient, AnimationClip.spring, NodeAnimation.trigger).
+  // Purely additive and optional.
+  22: (file: AnyObj) => ({ ...file, schemaVersion: 23 }),
 };
 
 export class MigrationError extends Error {

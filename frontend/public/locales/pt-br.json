@@ -3474,5 +3474,20 @@
   "editor.exit_transition": "Transição de saída",
   "editor.animate_all_slides": "Animar todos os slides",
   "editor.animated_slides_count.one": "{count} slide animado",
-  "editor.animated_slides_count.other": "{count} slides animados"
+  "editor.animated_slides_count.other": "{count} slides animados",
+  "editor.w": "L",
+  "editor.h": "A",
+  "editor.keyframe_color": "Cor do quadro-chave",
+  "editor.motion_path_n_points.one": "Trajetória ({count} ponto)",
+  "editor.motion_path_n_points.other": "Trajetória ({count} pontos)",
+  "editor.orient_to_path": "Orientar pela trajetória",
+  "editor.set_motion_path_from_keyframes": "Criar trajetória a partir dos quadros-chave",
+  "editor.stiffness": "Rigidez",
+  "editor.damping": "Amortecimento",
+  "editor.copy_animation": "Copiar animação",
+  "editor.paste_animation": "Colar animação",
+  "editor.animation_copied": "Animação copiada",
+  "editor.animation_pasted_count.one": "Animação colada em {count} elemento",
+  "editor.animation_pasted_count.other": "Animação colada em {count} elementos",
+  "editor.start_entrance_at_media_time": "Iniciar a entrada no tempo da mídia"
 }

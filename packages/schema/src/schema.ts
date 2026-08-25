@@ -75,8 +75,14 @@ import { z } from "zod";
  *      string clamped by the engine, so unknown future values keep validating
  *      everywhere) and `Page` gains optional `transitionOut`, an exit
  *      transition composited with the arriving page's own (F28 completion
- *      C02+C03). Both additive: a v21 file renders exactly as before. */
-export const currentSchemaVersion = 22;
+ *      C02+C03). Both additive: a v21 file renders exactly as before.
+ *  v23: animation depth. `Keyframe` gains optional `color`/`width`/`height`
+ *      channels, `KeyframeTrack` gains optional `path`/`orient` (motion
+ *      paths), `AnimationClip` gains optional `spring` parameters, and
+ *      `NodeAnimation` gains an optional media `trigger` (F28 completion
+ *      C11/C12/C13/C15). All additive: a v22 file animates exactly as
+ *      before, and older clients preserve the unknown keys end to end. */
+export const currentSchemaVersion = 23;
 
 /** Maximum container nesting depth; guards traversal against stack overflow (FR-4). */
 export const maxNestingDepth = 32;
@@ -439,6 +445,10 @@ export interface AnimationClip<P extends string = AnimationPreset> {
   /** Optional custom cubic-bezier timing [x1,y1,x2,y2] (CSS-style). When present
    *  it overrides `easing`, enabling a freeform curve editor. */
   bezier?: [number, number, number, number];
+  /** Spring parameters (v23) when `easing` is "spring": stiffness maps to the
+   *  oscillation frequency and damping to the settle character. Plain numbers
+   *  the ENGINE clamps into its stable range, so any stored value renders. */
+  spring?: { stiffness?: number; damping?: number };
 }
 function animationClipSchema<P extends string>(preset: z.ZodType<P>) {
   return z.object({
@@ -448,6 +458,7 @@ function animationClipSchema<P extends string>(preset: z.ZodType<P>) {
     easing: EasingSchema,
     startMode: z.enum(["delay", "with-previous", "after-previous"]).optional(),
     bezier: z.tuple([z.number(), z.number(), z.number(), z.number()]).optional(),
+    spring: z.object({ stiffness: z.number().optional(), damping: z.number().optional() }).optional(),
   });
 }
 
@@ -464,6 +475,13 @@ export interface Keyframe {
   rotate?: number;
   opacity?: number;
   easing?: Easing;
+  /** v23 channels: an absolute fill-color override, and absolute width/height
+   *  in px (the pose keeps the node's center fixed while resizing). Each
+   *  channel interpolates between the keyframes that DEFINE it, independent
+   *  of the others; omitted everywhere means no override. */
+  color?: Color;
+  width?: number;
+  height?: number;
 }
 export const KeyframeSchema = z.object({
   t: z.number().nonnegative(),
@@ -473,6 +491,9 @@ export const KeyframeSchema = z.object({
   rotate: z.number().optional(),
   opacity: z.number().optional(),
   easing: EasingSchema.optional(),
+  color: ColorSchema.optional(),
+  width: z.number().positive().optional(),
+  height: z.number().positive().optional(),
 });
 
 /** A per-element keyframe timeline (F25 FR-1/3): an ordered set of keyframes
@@ -481,11 +502,19 @@ export interface KeyframeTrack {
   durationMs: number;
   loop?: boolean;
   keyframes: Keyframe[];
+  /** Motion path (v23): node-relative offsets sampled over the track. When
+   *  present (2+ points) it drives dx/dy INSTEAD of the keyframes' dx/dy
+   *  channels; the other channels keep evaluating from the keyframes. */
+  path?: { x: number; y: number }[];
+  /** Rotate the node along the path's tangent (v23, orient-to-path). */
+  orient?: boolean;
 }
 export const KeyframeTrackSchema = z.object({
   durationMs: z.number().positive(),
   loop: z.boolean().optional(),
   keyframes: z.array(KeyframeSchema),
+  path: z.array(z.object({ x: z.number(), y: z.number() })).optional(),
+  orient: z.boolean().optional(),
 });
 
 /** Per-node animation set: an entrance (slide-enter), an exit (slide-leave),
@@ -496,12 +525,18 @@ export interface NodeAnimation {
   exit?: AnimationClip<ExitPreset>;
   emphasis?: AnimationClip<EmphasisPreset>;
   custom?: KeyframeTrack;
+  /** Media trigger (v23): hold the ENTRANCE until the referenced video/audio
+   *  node's playback reaches `atMs`, then play it (F25 media bookmarks). A
+   *  dangling id or a surface with no live media simply never fires - the
+   *  node then behaves as if it had no entrance hold. */
+  trigger?: { mediaNodeId: string; atMs: number };
 }
 export const NodeAnimationSchema = z.object({
   entrance: animationClipSchema(EntrancePresetSchema).optional(),
   exit: animationClipSchema(ExitPresetSchema).optional(),
   emphasis: animationClipSchema(EmphasisPresetSchema).optional(),
   custom: KeyframeTrackSchema.optional(),
+  trigger: z.object({ mediaNodeId: z.string(), atMs: z.number().nonnegative() }).optional(),
 });
 
 /** What an interaction trigger does. `openLink` reuses the node's ElementLink

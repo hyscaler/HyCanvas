@@ -2951,6 +2951,33 @@ export function Canvas() {
         if (!els.length) return null;
         return <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">{els}</svg>;
       })()}
+      {/* Motion path overlay (v23, C11): when ONE node with a keyframe path is
+          selected, draw the path anchored at the node's center - the offsets
+          are node-relative, so the polyline shows where the node will travel. */}
+      {selection.length === 1 && (() => {
+        const loc = locate(useEditor.getState().doc, selection[0]);
+        const track = loc ? (loc.node as unknown as { animation?: { custom?: { path?: { x: number; y: number }[] } } }).animation?.custom : undefined;
+        const path = track?.path;
+        if (!loc || !path || path.length < 2) return null;
+        const n = loc.node;
+        const cx = n.transform.x + (n.size.width * n.transform.scaleX) / 2;
+        const cy = n.transform.y + (n.size.height * n.transform.scaleY) / 2;
+        const pts = path.map((pt) => api.toScreen({ x: cx + pt.x, y: cy + pt.y }));
+        return (
+          <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" data-testid="motion-path-overlay">
+            <polyline
+              points={pts.map((q) => `${q.x},${q.y}`).join(" ")}
+              fill="none"
+              stroke={overlay.guideConflict}
+              strokeWidth={1.5}
+              strokeDasharray="4 3"
+            />
+            {pts.map((q, i) => (
+              <circle key={i} cx={q.x} cy={q.y} r={i === 0 ? 4 : 3} fill={i === 0 ? overlay.guideConflict : "white"} stroke={overlay.guideConflict} strokeWidth={1} />
+            ))}
+          </svg>
+        );
+      })()}
       {(guides ?? snapGuides) && (() => {
         const live = guides ?? snapGuides!;
         const vp = api.viewport();

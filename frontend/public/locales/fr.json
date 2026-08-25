@@ -3474,5 +3474,20 @@
   "editor.exit_transition": "Transition de sortie",
   "editor.animate_all_slides": "Animer toutes les diapositives",
   "editor.animated_slides_count.one": "{count} diapositive animée",
-  "editor.animated_slides_count.other": "{count} diapositives animées"
+  "editor.animated_slides_count.other": "{count} diapositives animées",
+  "editor.w": "L",
+  "editor.h": "H",
+  "editor.keyframe_color": "Couleur de l'image clé",
+  "editor.motion_path_n_points.one": "Trajectoire ({count} point)",
+  "editor.motion_path_n_points.other": "Trajectoire ({count} points)",
+  "editor.orient_to_path": "Orienter selon la trajectoire",
+  "editor.set_motion_path_from_keyframes": "Créer la trajectoire depuis les images clés",
+  "editor.stiffness": "Rigidité",
+  "editor.damping": "Amortissement",
+  "editor.copy_animation": "Copier l'animation",
+  "editor.paste_animation": "Coller l'animation",
+  "editor.animation_copied": "Animation copiée",
+  "editor.animation_pasted_count.one": "Animation collée sur {count} élément",
+  "editor.animation_pasted_count.other": "Animation collée sur {count} éléments",
+  "editor.start_entrance_at_media_time": "Démarrer l'entrée au moment du média"
 }

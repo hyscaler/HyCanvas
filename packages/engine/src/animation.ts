@@ -24,6 +24,10 @@ export interface AnimPatch {
   scale: number; // uniform scale multiplier
   rotate: number; // additional rotation in degrees
   opacityMul: number; // 0..1 multiplier on the node's opacity
+  /** v23 keyframe channels (absolute overrides; undefined = no override). */
+  color?: import("@hc/schema").Color;
+  width?: number;
+  height?: number;
 }
 
 export const identityPatch: Readonly<AnimPatch> = Object.freeze({
@@ -73,18 +77,28 @@ export function evalEasing(easing: Easing, t: number): number {
       if (t < 2.5 / d1) { t -= 2.25 / d1; return n1 * t * t + 0.9375; }
       t -= 2.625 / d1; return n1 * t * t + 0.984375;
     }
-    case "spring": {
-      // Damped oscillation settling to 1; fixed params keep it deterministic.
-      if (x >= 1) return 1;
-      const omega = 8; // angular frequency
-      const zeta = 0.32; // damping ratio (underdamped -> a little overshoot)
-      const wd = omega * Math.sqrt(1 - zeta * zeta);
-      const env = Math.exp(-zeta * omega * x);
-      return 1 - env * (Math.cos(wd * x) + ((zeta * omega) / wd) * Math.sin(wd * x));
-    }
+    case "spring":
+      return springEase(x);
     default:
       return x;
   }
+}
+
+/**
+ * Damped-oscillation spring settling to 1, deterministic for given params
+ * (F28 completion C13). `stiffness` maps to the angular frequency (default 8)
+ * and `damping` to the damping ratio (default 0.32, underdamped for a little
+ * overshoot); both CLAMP into the stable range here, so any stored value -
+ * including one written by a newer client - renders sanely.
+ */
+export function springEase(t: number, stiffness?: number, damping?: number): number {
+  const x = clamp01(t);
+  if (x >= 1) return 1;
+  const omega = Math.min(40, Math.max(1, stiffness ?? 8));
+  const zeta = Math.min(0.999, Math.max(0.05, damping ?? 0.32));
+  const wd = omega * Math.sqrt(1 - zeta * zeta);
+  const env = Math.exp(-zeta * omega * x);
+  return 1 - env * (Math.cos(wd * x) + ((zeta * omega) / wd) * Math.sin(wd * x));
 }
 
 /** Evaluate a CSS-style cubic-bezier easing [x1,y1,x2,y2] at progress x in [0,1].
@@ -113,8 +127,10 @@ export function cubicBezierEase(x: number, x1: number, y1: number, x2: number, y
 
 /** Eased progress for a clip, using its custom cubic-bezier when present, else
  *  its named easing curve. Single source of truth for clip timing. */
-export function clipEase(clip: { easing: Easing; bezier?: [number, number, number, number] }, t: number): number {
-  return clip.bezier ? cubicBezierEase(t, clip.bezier[0], clip.bezier[1], clip.bezier[2], clip.bezier[3]) : evalEasing(clip.easing, t);
+export function clipEase(clip: { easing: Easing; bezier?: [number, number, number, number]; spring?: { stiffness?: number; damping?: number } }, t: number): number {
+  if (clip.bezier) return cubicBezierEase(t, clip.bezier[0], clip.bezier[1], clip.bezier[2], clip.bezier[3]);
+  if (clip.easing === "spring" && clip.spring) return springEase(t, clip.spring.stiffness, clip.spring.damping);
+  return evalEasing(clip.easing, t);
 }
 
 /**
@@ -252,30 +268,125 @@ function keyframePatch(k: Keyframe): AnimPatch {
  *  started), returning the interpolated AnimPatch. Before the first / after the
  *  last keyframe it holds that keyframe's pose; looping wraps t by the duration.
  *  Each keyframe's `easing` shapes the segment to the next. Pure. */
+/** Sample a polyline motion path at progress e (0..1 of total arc length),
+ *  returning the offset and the tangent angle in degrees (F28 completion
+ *  C11). Pure; exported for the editor overlay and tests. */
+export function samplePath(path: { x: number; y: number }[], e: number): { x: number; y: number; angleDeg: number } {
+  if (path.length === 0) return { x: 0, y: 0, angleDeg: 0 };
+  if (path.length === 1) return { x: path[0].x, y: path[0].y, angleDeg: 0 };
+  const segs: number[] = [];
+  let total = 0;
+  for (let i = 0; i < path.length - 1; i++) {
+    const len = Math.hypot(path[i + 1].x - path[i].x, path[i + 1].y - path[i].y);
+    segs.push(len);
+    total += len;
+  }
+  if (total <= 0) return { x: path[0].x, y: path[0].y, angleDeg: 0 };
+  let dist = clamp01(e) * total;
+  for (let i = 0; i < segs.length; i++) {
+    if (dist <= segs[i] || i === segs.length - 1) {
+      const f = segs[i] > 0 ? Math.min(1, dist / segs[i]) : 1;
+      const ax = path[i].x, ay = path[i].y;
+      const bx = path[i + 1].x, by = path[i + 1].y;
+      return {
+        x: ax + (bx - ax) * f,
+        y: ay + (by - ay) * f,
+        angleDeg: (Math.atan2(by - ay, bx - ax) * 180) / Math.PI,
+      };
+    }
+    dist -= segs[i];
+  }
+  return { x: path[path.length - 1].x, y: path[path.length - 1].y, angleDeg: 0 };
+}
+
+/** Sample one keyframe channel independently: interpolate between the
+ *  keyframes that DEFINE it (v23 channels are sparse), hold past the last
+ *  defined one, no override before the first. `sorted` is time-ascending. */
+function sampleChannel<T>(
+  sorted: Keyframe[],
+  t: number,
+  get: (k: Keyframe) => T | undefined,
+  mix: (a: T, b: T, e: number) => T,
+): T | undefined {
+  let prev: Keyframe | null = null;
+  let next: Keyframe | null = null;
+  for (const k of sorted) {
+    if (get(k) === undefined) continue;
+    if (k.t <= t) prev = k;
+    else { next = k; break; }
+  }
+  if (!prev && !next) return undefined;
+  if (!prev) return t >= 0 ? undefined : undefined; // before the first defined: no override
+  if (!next) return get(prev)!; // hold the last defined value
+  const span = Math.max(1e-6, next.t - prev.t);
+  const e = evalEasing(prev.easing ?? "linear", (t - prev.t) / span);
+  return mix(get(prev)!, get(next)!, e);
+}
+
 export function customPatch(track: KeyframeTrack, tMs: number): AnimPatch {
   const kfs = track.keyframes;
-  if (!kfs.length) return { ...identityPatch };
+  const hasPath = Array.isArray(track.path) && track.path.length >= 2;
+  if (!kfs.length && !hasPath) return { ...identityPatch };
   const dur = Math.max(1, track.durationMs);
   let t = tMs;
   if (track.loop) t = ((tMs % dur) + dur) % dur;
   else t = t < 0 ? 0 : t > dur ? dur : t;
-  const sorted = kfs.length > 1 ? [...kfs].sort((a, b) => a.t - b.t) : kfs;
-  if (t <= sorted[0].t) return keyframePatch(sorted[0]);
-  const last = sorted[sorted.length - 1];
-  if (t >= last.t) return keyframePatch(last);
-  let i = 0;
-  while (i < sorted.length - 1 && sorted[i + 1].t <= t) i++;
-  const a = sorted[i];
-  const b = sorted[i + 1];
-  const span = Math.max(1e-6, b.t - a.t);
-  const e = evalEasing(a.easing ?? "linear", (t - a.t) / span);
-  return {
-    dx: lerp(a.dx ?? 0, b.dx ?? 0, e),
-    dy: lerp(a.dy ?? 0, b.dy ?? 0, e),
-    scale: lerp(a.scale ?? 1, b.scale ?? 1, e),
-    rotate: lerp(a.rotate ?? 0, b.rotate ?? 0, e),
-    opacityMul: lerp(a.opacity ?? 1, b.opacity ?? 1, e),
-  };
+
+  // Base pose from the classic segment interpolation (unchanged math).
+  let base: AnimPatch;
+  if (!kfs.length) {
+    base = { ...identityPatch };
+  } else {
+    const sorted = kfs.length > 1 ? [...kfs].sort((a, b) => a.t - b.t) : kfs;
+    if (t <= sorted[0].t) base = keyframePatch(sorted[0]);
+    else {
+      const last = sorted[sorted.length - 1];
+      if (t >= last.t) base = keyframePatch(last);
+      else {
+        let i = 0;
+        while (i < sorted.length - 1 && sorted[i + 1].t <= t) i++;
+        const a = sorted[i];
+        const b = sorted[i + 1];
+        const span = Math.max(1e-6, b.t - a.t);
+        const e = evalEasing(a.easing ?? "linear", (t - a.t) / span);
+        base = {
+          dx: lerp(a.dx ?? 0, b.dx ?? 0, e),
+          dy: lerp(a.dy ?? 0, b.dy ?? 0, e),
+          scale: lerp(a.scale ?? 1, b.scale ?? 1, e),
+          rotate: lerp(a.rotate ?? 0, b.rotate ?? 0, e),
+          opacityMul: lerp(a.opacity ?? 1, b.opacity ?? 1, e),
+        };
+      }
+    }
+    // v23 channels sample INDEPENDENTLY of the transform segments, between the
+    // keyframes that define them.
+    const sorted2 = kfs.length > 1 ? [...kfs].sort((a, b) => a.t - b.t) : kfs;
+    const num = (x: number, y: number, e: number) => x + (y - x) * e;
+    const width = sampleChannel(sorted2, t, (k) => k.width, num);
+    const height = sampleChannel(sorted2, t, (k) => k.height, num);
+    const color = sampleChannel(sorted2, t, (k) => k.color, (a, b, e) => ({
+      srgb: {
+        r: num(a.srgb.r, b.srgb.r, e),
+        g: num(a.srgb.g, b.srgb.g, e),
+        b: num(a.srgb.b, b.srgb.b, e),
+        a: num(a.srgb.a, b.srgb.a, e),
+      },
+    }));
+    if (width !== undefined) base.width = width;
+    if (height !== undefined) base.height = height;
+    if (color !== undefined) base.color = color;
+  }
+
+  // Motion path (C11): drives dx/dy INSTEAD of the keyframe dx/dy channels,
+  // eased over the whole track by the first keyframe's easing (or linear).
+  if (hasPath) {
+    const e = evalEasing(kfs[0]?.easing ?? "linear", t / dur);
+    const s = samplePath(track.path!, e);
+    base.dx = s.x;
+    base.dy = s.y;
+    if (track.orient) base.rotate += s.angleDeg;
+  }
+  return base;
 }
 
 /** The end time (ms) of a custom track, for sequencing/total-duration math. */

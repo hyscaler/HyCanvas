@@ -3474,5 +3474,20 @@
   "editor.exit_transition": "Ausgangsübergang",
   "editor.animate_all_slides": "Alle Folien animieren",
   "editor.animated_slides_count.one": "{count} Folie animiert",
-  "editor.animated_slides_count.other": "{count} Folien animiert"
+  "editor.animated_slides_count.other": "{count} Folien animiert",
+  "editor.w": "B",
+  "editor.h": "H",
+  "editor.keyframe_color": "Keyframe-Farbe",
+  "editor.motion_path_n_points.one": "Bewegungspfad ({count} Punkt)",
+  "editor.motion_path_n_points.other": "Bewegungspfad ({count} Punkte)",
+  "editor.orient_to_path": "Am Pfad ausrichten",
+  "editor.set_motion_path_from_keyframes": "Bewegungspfad aus Keyframes erstellen",
+  "editor.stiffness": "Steifigkeit",
+  "editor.damping": "Dämpfung",
+  "editor.copy_animation": "Animation kopieren",
+  "editor.paste_animation": "Animation einfügen",
+  "editor.animation_copied": "Animation kopiert",
+  "editor.animation_pasted_count.one": "Animation auf {count} Element eingefügt",
+  "editor.animation_pasted_count.other": "Animation auf {count} Elemente eingefügt",
+  "editor.start_entrance_at_media_time": "Eingang bei Medienzeitpunkt starten"
 }

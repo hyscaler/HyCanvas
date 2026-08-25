@@ -194,6 +194,15 @@ interface Driven {
   /** Original text content for a typewriter/word-wipe reveal, restored each frame
    *  before re-truncating (the reveal helper mutates in place). */
   baseContent?: unknown;
+  /** Present-clock ms when this node's media trigger fired (v23, C15);
+   *  undefined = not fired yet, so a triggered entrance stays held. */
+  triggeredAtMs?: number;
+  /** Resting size + original fill references, restored when a v23 keyframe
+   *  size/color channel stops overriding (the node is a slide-local clone, so
+   *  frame-by-frame mutation is safe; restore is by original reference). */
+  baseSize: { width: number; height: number };
+  baseFills?: unknown[];
+  baseRunFills?: (unknown | undefined)[];
 }
 
 // One ready-to-render slide: a single-page clone of the design plus its driven
@@ -212,21 +221,68 @@ const cloneTransform = (t: Transform): Transform => ({ ...t });
 // Compose an AnimPatch over a node's resting transform/opacity, writing the
 // result back into the (cloned) node. Mirrors the store's applyPatch so the
 // editor preview and present mode agree exactly. A null patch restores rest.
-function applyPatch(node: Node, base: Transform, baseOpacity: number, patch: AnimPatch | null): void {
+function applyPatch(d: Driven, patch: AnimPatch | null): void {
+  const node = d.node;
+  const base = d.baseTransform;
+  const rec = node as unknown as { fills?: unknown[]; content?: { runs: { style: { fill?: unknown } }[] }[] };
+  const restoreAppearance = () => {
+    node.size = { ...d.baseSize };
+    if (d.baseFills) rec.fills = d.baseFills as never;
+    if (d.baseRunFills && rec.content) {
+      let i = 0;
+      for (const p of rec.content) for (const r of p.runs) r.style.fill = d.baseRunFills[i++];
+    }
+  };
   if (!patch) {
-    node.opacity = baseOpacity;
+    node.opacity = d.baseOpacity;
     node.transform = cloneTransform(base);
+    restoreAppearance();
     return;
   }
-  node.opacity = appliedOpacity(baseOpacity, patch.opacityMul);
+  node.opacity = appliedOpacity(d.baseOpacity, patch.opacityMul);
+  // v23 size channels: absolute px keeping the CENTER fixed, mirroring the
+  // engine poser exactly.
+  let cx = 0;
+  let cy = 0;
+  if (patch.width !== undefined || patch.height !== undefined) {
+    const w = patch.width ?? d.baseSize.width;
+    const h = patch.height ?? d.baseSize.height;
+    cx = ((d.baseSize.width - w) / 2) * base.scaleX;
+    cy = ((d.baseSize.height - h) / 2) * base.scaleY;
+    node.size = { width: w, height: h };
+  } else {
+    node.size = { ...d.baseSize };
+  }
   node.transform = {
     ...base,
-    x: base.x + patch.dx,
-    y: base.y + patch.dy,
+    x: base.x + patch.dx + cx,
+    y: base.y + patch.dy + cy,
     scaleX: base.scaleX * patch.scale,
     scaleY: base.scaleY * patch.scale,
     rotation: base.rotation + patch.rotate,
   };
+  // v23 color channel over solid fills (node + text runs), restored from the
+  // original references whenever the override lapses.
+  if (patch.color !== undefined) {
+    if (Array.isArray(d.baseFills)) {
+      rec.fills = (d.baseFills as { type?: string }[]).map((f) => (f && f.type === "solid" ? { ...f, color: patch.color } : f)) as never;
+    }
+    if (d.baseRunFills && rec.content) {
+      let i = 0;
+      for (const p of rec.content) {
+        for (const r of p.runs) {
+          const orig = d.baseRunFills[i++] as { type?: string } | undefined;
+          r.style.fill = orig && orig.type === "solid" ? { ...orig, color: patch.color } : orig;
+        }
+      }
+    }
+  } else {
+    if (d.baseFills) rec.fills = d.baseFills as never;
+    if (d.baseRunFills && rec.content) {
+      let i = 0;
+      for (const p of rec.content) for (const r of p.runs) r.style.fill = d.baseRunFills[i++];
+    }
+  }
 }
 
 // A legacy `node.link` (hyperlink) reads as a click open-link interaction.
@@ -304,7 +360,17 @@ function collectDriven(nodes: Node[], out: Driven[]): void {
     const anim = (n as unknown as { animation?: NodeAnimation }).animation;
     const motion = n.type === "image" ? (n as unknown as { motion?: ImageMotion }).motion : undefined;
     if ((anim && (anim.entrance || anim.exit || anim.emphasis || anim.custom)) || motion) {
-      out.push({ node: n, baseOpacity: n.opacity, baseTransform: cloneTransform(n.transform), anim, motion });
+      const rec = n as unknown as { fills?: unknown[]; content?: { runs: { style: { fill?: unknown } }[] }[] };
+      out.push({
+        node: n,
+        baseOpacity: n.opacity,
+        baseTransform: cloneTransform(n.transform),
+        anim,
+        motion,
+        baseSize: { ...n.size },
+        baseFills: rec.fills,
+        baseRunFills: rec.content?.flatMap((p) => p.runs.map((r) => r.style.fill)),
+      });
     }
     const kids = (n as unknown as { children?: Node[] }).children;
     if (Array.isArray(kids)) collectDriven(kids, out);
@@ -358,6 +424,19 @@ function buildSlide(doc: DesignFile, pageIndex: number): Slide {
 function poseEnter(slide: Slide, tMs: number, reduced: boolean): void {
   for (const d of slide.driven) {
     let patch: AnimPatch | null = null;
+    // Media trigger (v23, C15): a triggered entrance is HELD at its start pose
+    // until the media fires it, then plays on its own clock. Reduced motion
+    // settles immediately, like every other entrance.
+    if (d.anim?.trigger && d.anim.entrance && !reduced) {
+      const entT = { ...d.anim.entrance, delayMs: 0 };
+      if (d.triggeredAtMs === undefined) {
+        applyPatch(d, entrancePatch(entT, 0));
+        continue;
+      }
+      const local = tMs - d.triggeredAtMs;
+      applyPatch(d, entrancePatch(entT, Math.min(local, clipEnd(entT))));
+      continue;
+    }
     // Effective entrance honors cross-element sequencing (the resolved start).
     const ent = d.anim?.entrance ? { ...d.anim.entrance, delayMs: d.entStart ?? d.anim.entrance.delayMs } : undefined;
     const emp = d.anim?.emphasis;
@@ -385,6 +464,10 @@ function poseEnter(slide: Slide, tMs: number, reduced: boolean): void {
         scale: base.scale * c.scale,
         rotate: base.rotate + c.rotate,
         opacityMul: base.opacityMul * c.opacityMul,
+        // v23 absolute channels ride the custom track.
+        ...(c.color !== undefined ? { color: c.color } : {}),
+        ...(c.width !== undefined ? { width: c.width } : {}),
+        ...(c.height !== undefined ? { height: c.height } : {}),
       };
     }
     // Photo motion composes additively onto whatever pose we have (it only
@@ -400,7 +483,7 @@ function poseEnter(slide: Slide, tMs: number, reduced: boolean): void {
         opacityMul: base.opacityMul * m.opacityMul,
       };
     }
-    applyPatch(d.node, d.baseTransform, d.baseOpacity, patch);
+    applyPatch(d, patch);
   }
 }
 
@@ -410,7 +493,7 @@ function poseExit(slide: Slide, tMs: number, reduced: boolean): void {
   for (const d of slide.driven) {
     const ex = d.anim?.exit;
     const patch = ex && !reduced ? exitPatch(ex, tMs) : null;
-    applyPatch(d.node, d.baseTransform, d.baseOpacity, patch);
+    applyPatch(d, patch);
   }
 }
 
@@ -664,6 +747,30 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
       recRef.current?.rec.stop();
     };
   }, []);
+
+  // Slide media playback (v23, C15): the active slide's videos play (muted -
+  // the elements are registered muted for programmatic play) from the start;
+  // leaving the slide pauses and rewinds them. This is what media-timestamp
+  // triggers fire against.
+  useEffect(() => {
+    const els: HTMLVideoElement[] = [];
+    for (const n of (pages[idx]?.children ?? []) as (Node & { assetId?: string })[]) {
+      if (n.type === "video" && n.assetId) {
+        const el = imageAssets.videoEl(n.assetId);
+        if (el) {
+          el.currentTime = 0;
+          void el.play().catch(() => {}); // an unloadable source just never plays
+          els.push(el);
+        }
+      }
+    }
+    return () => {
+      for (const el of els) {
+        el.pause();
+        el.currentTime = 0;
+      }
+    };
+  }, [idx, pages]);
 
   const [interactiveCursor, setInteractiveCursor] = useState(false);
 
@@ -1050,6 +1157,18 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
       // FR-2: a page's transition plays when advancing TO it, so the transition
       // type/duration come from the ARRIVING slide (`slide`), not the leaving one.
       // `tr.from` is kept only as the outgoing image composited during the blend.
+      // Media triggers (v23, C15): fire held entrances when their video
+      // reaches the timestamp. Videos are matched by node id on the ACTIVE
+      // page; a dangling reference simply never fires.
+      for (const d of slide.driven) {
+        const trig = d.anim?.trigger;
+        if (!trig || d.triggeredAtMs !== undefined) continue;
+        const mediaNode = (pages[idx]?.children as Node[] | undefined)?.find((n) => n.id === trig.mediaNodeId) as
+          | (Node & { assetId?: string })
+          | undefined;
+        const el = mediaNode?.assetId ? imageAssets.videoEl(mediaNode.assetId) : null;
+        if (el && el.currentTime * 1000 >= trig.atMs) d.triggeredAtMs = tSlide;
+      }
       const arrivingTransition = slide.transition;
       // v22: the leaving page's exit transition (if any) opens/extends the
       // composite window, so an exit-only page still plays.

@@ -2146,10 +2146,55 @@ function KeyframeEditor({ node }: { node: Node }) {
         <Field key={`sc${curIdx}-${cur.scale}`} label={tr("editor.scale")} value={cur.scale ?? 1} onCommit={(n) => upd({ scale: n })} />
         <Field key={`rot${curIdx}-${cur.rotate}`} label={tr("editor.rotate")} value={cur.rotate ?? 0} onCommit={(n) => upd({ rotate: n })} />
         <Field key={`op${curIdx}-${cur.opacity}`} label={tr("editor.opacity_2")} value={cur.opacity ?? 1} onCommit={(n) => upd({ opacity: Math.max(0, Math.min(1, n)) })} />
+        {/* v23 size channels: absolute px, 0 clears the override. */}
+        <Field key={`w${curIdx}-${cur.width}`} label={tr("editor.w")} value={cur.width ?? 0} onCommit={(n) => upd({ width: n > 0 ? n : undefined })} />
+        <Field key={`h${curIdx}-${cur.height}`} label={tr("editor.h")} value={cur.height ?? 0} onCommit={(n) => upd({ height: n > 0 ? n : undefined })} />
+      </div>
+      {/* v23 color channel: an absolute fill override at this keyframe. */}
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={cur.color ? colorHex(cur.color) : "#000000"}
+          onChange={(e) => upd({ color: colorFromHex(e.target.value) })}
+          className="oc-color h-6 w-8 shrink-0"
+          title={tr("editor.keyframe_color")}
+          aria-label={tr("editor.keyframe_color")}
+        />
+        <span className="flex-1 text-[10px] text-neutral-500">{tr("editor.keyframe_color")}</span>
+        {cur.color && (
+          <button onClick={() => upd({ color: undefined })} className="text-[10px] text-neutral-400 hover:underline">{tr("editor.clear")}</button>
+        )}
       </div>
       <select aria-label={tr("editor.easing")} value={cur.easing ?? "linear"} onChange={(e) => upd({ easing: e.target.value as Easing })} className={selectCls}>
         {easings().map((es) => <option key={es.v} value={es.v}>{es.label}</option>)}
       </select>
+      {/* Motion path (v23): built from the keyframes' dx/dy offsets; while set
+          it DRIVES the position instead of them. Drawn as a canvas overlay
+          when this node is selected. */}
+      <div className="flex flex-col gap-1 rounded-md border border-neutral-100 bg-neutral-50 p-1.5">
+        {track.path && track.path.length >= 2 ? (
+          <>
+            <div className="flex items-center justify-between text-[10px] text-neutral-600">
+              <span>{tr("editor.motion_path_n_points", { count: track.path.length })}</span>
+              <button onClick={() => set({ ...track, path: undefined, orient: undefined })} className="text-rose-600 hover:underline">{tr("editor.clear")}</button>
+            </div>
+            <label className="flex items-center gap-1 text-[10px] text-neutral-500">
+              <input type="checkbox" checked={!!track.orient} onChange={(e) => set({ ...track, orient: e.target.checked || undefined })} className="h-3 w-3 accent-brand-600" />
+              {tr("editor.orient_to_path")}
+            </label>
+          </>
+        ) : (
+          <button
+            onClick={() => {
+              const pts = [...kfs].sort((a, b) => a.t - b.t).map((k) => ({ x: k.dx ?? 0, y: k.dy ?? 0 }));
+              if (pts.length < 2) pts.push({ x: (pts[0]?.x ?? 0) + 120, y: pts[0]?.y ?? 0 });
+              set({ ...track, path: pts });
+            }}
+            className="rounded-md border border-neutral-200 px-2 py-1 text-[11px] hover:bg-neutral-50"
+            data-testid="path-from-keyframes"
+          >{tr("editor.set_motion_path_from_keyframes")}</button>
+        )}
+      </div>
     </div>
   );
 }
@@ -2160,6 +2205,7 @@ function KeyframeEditor({ node }: { node: Node }) {
 function AnimateSection({ node }: { node: Node }) {
   const [tab, setTab] = useState<AnimTab>("entrance");
   const st = useEditor.getState();
+  const toast = useToast();
   const id = node.id;
   const anim = (node as { animation?: NodeAnimation }).animation ?? {};
   // Typewriter reveal only makes sense for text, so offer it only there.
@@ -2235,6 +2281,25 @@ function AnimateSection({ node }: { node: Node }) {
           <select aria-label={tr("editor.easing")} value={clip.easing} disabled={!!(clip as { bezier?: unknown }).bezier} onChange={(e) => set({ ...clip, easing: e.target.value as Easing, bezier: undefined })} className={`${selectCls} disabled:opacity-40`}>
             {easings().map((es) => <option key={es.v} value={es.v}>{es.label}</option>)}
           </select>
+          {/* Spring physics (v23): stiffness maps to frequency, damping to the
+              settle character; the engine clamps into its stable range. */}
+          {clip.easing === "spring" && !(clip as { bezier?: unknown }).bezier && (() => {
+            const sp = (clip as { spring?: { stiffness?: number; damping?: number } }).spring;
+            return (
+              <div className="grid grid-cols-2 gap-2">
+                <label className="flex flex-col gap-0.5 text-[10px] text-neutral-500">
+                  {tr("editor.stiffness")} ({sp?.stiffness ?? 8})
+                  <input type="range" min={1} max={40} step={1} value={sp?.stiffness ?? 8}
+                    onChange={(e) => set({ ...clip, spring: { ...sp, stiffness: Number(e.target.value) } })} className="accent-brand-600" />
+                </label>
+                <label className="flex flex-col gap-0.5 text-[10px] text-neutral-500">
+                  {tr("editor.damping")} ({(sp?.damping ?? 0.32).toFixed(2)})
+                  <input type="range" min={0.05} max={1} step={0.01} value={sp?.damping ?? 0.32}
+                    onChange={(e) => set({ ...clip, spring: { ...sp, damping: Number(e.target.value) } })} className="accent-brand-600" />
+                </label>
+              </div>
+            );
+          })()}
           {/* Entrance sequencing across siblings: start with/after the previous
               animated element ("with/after previous" timing). */}
           {tab === "entrance" && (
@@ -2249,6 +2314,54 @@ function AnimateSection({ node }: { node: Node }) {
           {tab === "emphasis" && <p className="text-[11px] text-neutral-400">{tr("editor.loops_while_the_slide_is_shown")}</p>}
         </>
       )}
+      {/* Animation painter (C14): copy this element's whole animation set,
+          paste onto the selection. */}
+      <div className="flex gap-1.5">
+        <button
+          onClick={() => { st.copyAnimation(id); toast.success(tr("editor.animation_copied")); }}
+          disabled={!anim.entrance && !anim.exit && !anim.emphasis && !anim.custom}
+          className="flex-1 rounded-md border border-neutral-200 px-2 py-1 text-[11px] hover:bg-neutral-50 disabled:opacity-40"
+          data-testid="copy-animation"
+        >{tr("editor.copy_animation")}</button>
+        <button
+          onClick={() => {
+            const n = st.pasteAnimation(useEditor.getState().selection);
+            toast.success(tr("editor.animation_pasted_count", { count: n }));
+          }}
+          disabled={!useEditor((s2) => s2.copiedAnimation)}
+          className="flex-1 rounded-md border border-neutral-200 px-2 py-1 text-[11px] hover:bg-neutral-50 disabled:opacity-40"
+          data-testid="paste-animation"
+        >{tr("editor.paste_animation")}</button>
+      </div>
+      {/* Media trigger (v23, C15): hold the entrance until a video on this page
+          reaches a timestamp; fires in present mode. */}
+      {(() => {
+        const pageIdx = useEditor.getState().activePage;
+        const mediaNodes = (useEditor.getState().doc.pages[pageIdx]?.children ?? []).filter((n) => n.type === "video");
+        if (!mediaNodes.length || !anim.entrance) return null;
+        const trig = anim.trigger;
+        return (
+          <label className="flex flex-col gap-1 text-[11px] text-neutral-400">{tr("editor.start_entrance_at_media_time")}
+            <div className="grid grid-cols-2 gap-1.5">
+              <select
+                value={trig?.mediaNodeId ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  st.setNodeAnimation(id, { ...anim, trigger: v ? { mediaNodeId: v, atMs: trig?.atMs ?? 0 } : undefined } as NodeAnimation);
+                }}
+                className={selectCls}
+                aria-label={tr("editor.start_entrance_at_media_time")}
+              >
+                <option value="">{tr("editor.none")}</option>
+                {mediaNodes.map((m, i) => <option key={m.id} value={m.id}>{m.name ?? `${tr("editor.video")} ${i + 1}`}</option>)}
+              </select>
+              {trig && (
+                <Field key={`trg${trig.atMs}`} label={tr("editor.t_ms")} value={trig.atMs} onCommit={(n) => st.setNodeAnimation(id, { ...anim, trigger: { ...trig, atMs: Math.max(0, n) } } as NodeAnimation)} />
+              )}
+            </div>
+          </label>
+        );
+      })()}
       <KeyframeEditor node={node} />
     </Section>
   );

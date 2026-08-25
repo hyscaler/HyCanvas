@@ -710,6 +710,13 @@ interface EditorState {
    *  Pass undefined to clear all animation. Clears the legacy `animations`/`link`
    *  slots so the typed model is the single source of truth. */
   setNodeAnimation(id: string, anim: NodeAnimation | undefined): void;
+  /** The animation set held by the animation painter (C14), or null. */
+  copiedAnimation: NodeAnimation | null;
+  /** Copy a node's whole animation set into the painter clipboard. */
+  copyAnimation(id: string): void;
+  /** Paste the copied animation set onto every given node (one undo step);
+   *  returns how many nodes changed. Locked/brand-locked nodes are skipped. */
+  pasteAnimation(ids: string[]): number;
   /** Apply the active page's transition to every page, one undo step (FR-10). */
   applyTransitionToAllPages(): void;
   /** Magic Animate: apply tasteful, staggered entrance animations to every
@@ -3823,6 +3830,39 @@ export const useEditor = create<EditorState>((set, get) => {
         () => { pages.forEach((p) => { p.transition = transition ? { ...transition } : undefined; }); },
         () => { pages.forEach((p, i) => { p.transition = before[i]; }); },
       );
+    },
+    copiedAnimation: null,
+    copyAnimation: (id) => {
+      const loc = locate(get().doc, id);
+      const anim = loc ? (loc.node as unknown as { animation?: NodeAnimation }).animation : undefined;
+      if (anim) set({ copiedAnimation: structuredClone(anim) });
+    },
+    pasteAnimation: (ids) => {
+      const copied = get().copiedAnimation;
+      if (!copied) return 0;
+      const targets: { id: string; before: NodeAnimation | undefined }[] = [];
+      for (const id of ids) {
+        const loc = locate(get().doc, id);
+        if (!loc || loc.node.locked || editBlocked(id)) continue;
+        targets.push({ id, before: structuredClone((loc.node as unknown as { animation?: NodeAnimation }).animation) });
+      }
+      if (!targets.length) return 0;
+      const next = structuredClone(copied);
+      perform(
+        () => {
+          for (const t of targets) {
+            const loc = locate(get().doc, t.id);
+            if (loc) (loc.node as unknown as { animation?: NodeAnimation }).animation = structuredClone(next);
+          }
+        },
+        () => {
+          for (const t of targets) {
+            const loc = locate(get().doc, t.id);
+            if (loc) (loc.node as unknown as { animation?: NodeAnimation }).animation = t.before ? structuredClone(t.before) : undefined;
+          }
+        },
+      );
+      return targets.length;
     },
     setNodeAnimation: (id, anim) => {
       const loc = locate(get().doc, id);
