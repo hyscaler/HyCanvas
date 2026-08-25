@@ -98,7 +98,7 @@ import { imageAssets } from "@/lib/assetProvider";
 import { measuredTextHeight } from "@/lib/textFit";
 import { pageGap, pageOffsets, pageTop } from "@/lib/pageLayout";
 import type { MagicDesignSpec } from "@/lib/magicDesign";
-import { extractLayoutSet, layoutDesign, verifyLayoutCapacities, type AiDesignSpec, type DeckResult, type ExtractedLayoutSet, type ExtractPageLike } from "@hc/aistudio";
+import { extractLayoutSet, fallbackLayoutFill, layoutDesign, reflowPage, variantCandidate, verifyLayoutCapacities, type AiDesignSpec, type DeckResult, type ExtractedLayoutSet, type ExtractPageLike } from "@hc/aistudio";
 import { qrModules } from "@/lib/qr";
 import { frameMaskFor } from "@/lib/maskPath";
 import { flattenSvgToNodes } from "@/lib/svgFlatten";
@@ -448,6 +448,16 @@ interface EditorState {
   /** Per-slide workflow status (F28 completion C35), stored in the page's open
    *  data record. Null clears it. Plain string on purpose: never an enum. */
   setPageWorkStatus(index: number, status: string | null): void;
+  /** Adaptive reflow (F40 E16/E17). reflowHint is transient UI state: the
+   *  latest over/underflow variant proposal for a page, cleared on apply,
+   *  dismiss, or when an edit resolves the pressure. */
+  reflowHint: { pageIndex: number; toLayoutId: string; toName: string; direction: "denser" | "sparser" } | null;
+  dismissReflowHint(): void;
+  /** Per-page reflow opt-out (rides the open Page.data record; absent = on). */
+  setPageAutoflow(index: number, on: boolean): void;
+  /** Switch a layout-linked page to a variant layout and redistribute its
+   *  text content into the new slots, as ONE undo turn (F40 E17). */
+  switchPageLayout(pageIndex: number, toLayoutId: string): boolean;
   /** Per-slide assignee (C35): a workspace member's id + display name, stored
    *  in the page's open data record. Null clears it. */
   setPageAssignee(index: number, assignee: { id: string; name: string } | null): void;
@@ -1500,6 +1510,25 @@ export const useEditor = create<EditorState>((set, get) => {
     n.box!.height = h;
   };
 
+  // The slot rect AS MATERIALIZED on a page: applyLayoutToPage shrinks a
+  // layout authored for a larger page proportionally, so any comparison with
+  // a node's actual transform must use the same scale (F40 E16).
+  const slotRectOnPage = (
+    layout: { placeholders: { rect: { x: number; y: number; width: number; height: number } }[] },
+    ph: { rect: { x: number; y: number; width: number; height: number } },
+    page: { width: number; height: number },
+  ) => {
+    let extentW = 0;
+    let extentH = 0;
+    for (const p of layout.placeholders ?? []) {
+      extentW = Math.max(extentW, p.rect.x + p.rect.width);
+      extentH = Math.max(extentH, p.rect.y + p.rect.height);
+    }
+    const sx = extentW > page.width && extentW > 0 ? page.width / extentW : 1;
+    const sy = extentH > page.height && extentH > 0 ? page.height / extentH : 1;
+    return { x: ph.rect.x * sx, y: ph.rect.y * sy, width: ph.rect.width * sx, height: ph.rect.height * sy };
+  };
+
   // Index of the page being edited, clamped to the document's page count.
   const curPageIndex = () => {
     const n = get().doc.pages.length;
@@ -1614,6 +1643,7 @@ export const useEditor = create<EditorState>((set, get) => {
     redoStack: [],
     collabUndo: null,
     preview: null,
+    reflowHint: null,
 
     select: (ids) => {
       const doc = get().doc;
@@ -2252,9 +2282,14 @@ export const useEditor = create<EditorState>((set, get) => {
 
     fillPlaceholderContent: (pageIndex, fill, opts) => {
       const doc = get().doc;
-      const page = doc.pages[pageIndex] as unknown as { id: string; children: Node[] };
+      const page = doc.pages[pageIndex] as unknown as { id: string; children: Node[]; layoutId?: string; data?: Record<string, unknown> };
       if (!page) return false;
       const pageId = page.id;
+      // F40 E16: generation fills reflow too - the model's real copy can run
+      // past the capacity hints, and the same ladder absorbs it here.
+      const reflowLayout = page.layoutId && page.data?.autoflow !== false
+        ? (doc as unknown as { layouts?: { id: string; placeholders: { id: string; role: string; rect: { x: number; y: number; width: number; height: number } }[] }[] }).layouts?.find((l) => l.id === page.layoutId)
+        : undefined;
       type Paragraph = { runs: { text: string; style: Record<string, unknown> }[]; style: Record<string, unknown> };
       type Textish = { id: string; type: string; data?: { placeholderId?: string }; content?: Paragraph[] };
       const targets: { nodeId: string; before: Paragraph[]; after: Paragraph[] }[] = [];
@@ -2296,6 +2331,21 @@ export const useEditor = create<EditorState>((set, get) => {
         const paragraphs: Paragraph[] = list !== undefined
           ? list.map((item) => ({ runs: [{ text: `\u2022  ${item}`, style: structuredClone(runStyle) }], style: structuredClone(paraStyle) }))
           : [{ runs: [{ text: text!, style: structuredClone(runStyle) }], style: structuredClone(paraStyle) }];
+        const ph = reflowLayout?.placeholders.find((pp) => pp.id === phId);
+        if (ph && typeof runStyle.fontSize === "number") {
+          const slot = slotRectOnPage(reflowLayout!, ph, doc.pages[pageIndex] as unknown as { width: number; height: number });
+          const res = reflowPage(reflowLayout as never, [{
+            nodeId: child.id,
+            placeholderId: phId,
+            rect: { width: slot.width, height: slot.height },
+            fontSize: runStyle.fontSize,
+            paragraphs: paragraphs.map((par) => par.runs.map((r) => r.text).join("")),
+          }]);
+          if (res.changed) {
+            const size = res.adjustments[0].fontSize;
+            for (const par of paragraphs) for (const run of par.runs) (run.style as { fontSize?: number }).fontSize = size;
+          }
+        }
         targets.push({ nodeId: child.id, before: structuredClone(child.content), after: paragraphs });
       }
       if (!targets.length) return false;
@@ -4260,6 +4310,51 @@ export const useEditor = create<EditorState>((set, get) => {
         () => { page.name = next; },
         () => { page.name = before; },
       );
+    },
+    dismissReflowHint: () => set({ reflowHint: null }),
+    setPageAutoflow: (index, on) => {
+      const page = get().doc.pages[index] as unknown as { data?: Record<string, unknown> };
+      if (!page) return;
+      const before = page.data?.autoflow as boolean | undefined;
+      const next = on ? undefined : false; // absent = on (the default)
+      if (before === next) return;
+      const write = (v: boolean | undefined) => {
+        if (v === undefined) { if (page.data) delete page.data.autoflow; }
+        else (page.data ??= {}).autoflow = v;
+      };
+      perform(() => write(next), () => write(before));
+      if (!on) set({ reflowHint: null });
+    },
+    switchPageLayout: (pageIndex, toLayoutId) => {
+      const doc = get().doc as unknown as { pages: Page[]; layouts?: { id: string; name: string; placeholders: { id: string; role: string }[] }[] };
+      const page = doc.pages[pageIndex] as unknown as { children: Node[] };
+      const to = doc.layouts?.find((l) => l.id === toLayoutId);
+      if (!page || !to) return false;
+      // Capture the page's placeholder text BY ROLE before the switch: slot
+      // ids differ between layouts, so applyLayoutToPage's prune would
+      // otherwise drop the content with the old boxes.
+      const fromLayout = doc.layouts?.find((l) => l.id === (doc.pages[pageIndex] as unknown as { layoutId?: string }).layoutId);
+      const roleById = new Map((fromLayout?.placeholders ?? []).map((ph) => [ph.id, ph.role] as const));
+      let title = "";
+      const points: string[] = [];
+      type Textish = { type: string; data?: { placeholderId?: string }; content?: { runs: { text: string }[] }[] };
+      for (const n of page.children as unknown as Textish[]) {
+        const phId = n.data?.placeholderId;
+        if (!phId || n.type !== "text" || !n.content?.length) continue;
+        const role = roleById.get(phId);
+        const lines = n.content.map((par) => par.runs.map((r) => r.text).join("").replace(/^•\s*/, "").trim()).filter(Boolean);
+        if (role === "title" && !title) title = lines.join(" ");
+        else points.push(...lines);
+      }
+      let ok = false;
+      get().runAsTurn(() => {
+        ok = get().applyLayoutToPage(toLayoutId, pageIndex, { pruneObsolete: true });
+        if (!ok) return;
+        const fill = fallbackLayoutFill(to as never, { id: "reflow", title, points, visualRole: "content" });
+        get().fillPlaceholderContent(pageIndex, { texts: fill.texts, lists: fill.lists });
+      });
+      set({ reflowHint: null });
+      return ok;
     },
     setPageWorkStatus: (index, status) => {
       const page = get().doc.pages[index] as unknown as { data?: Record<string, unknown> };
@@ -6694,11 +6789,45 @@ export const useEditor = create<EditorState>((set, get) => {
         else if (box.mode === "fixed" && !box.autoFit?.enabled) hNext = Math.max(hBefore, boxHeight);
       }
       if (Math.abs(hNext - hBefore) <= 0.5) hNext = hBefore;
+      // F40 E16 adaptive reflow: a placeholder-tagged box on a layout-linked,
+      // autoflow-on page steps its font along the role ladder as the content
+      // changes, INSIDE this same undo step. Guards: the box must still sit on
+      // its slot (a hand-moved box broke the link, the C28 rule), and its runs
+      // must share ONE size (mixed sizes read as deliberate styling).
+      const reflow = (() => {
+        const rec = loc.node as unknown as { data?: { placeholderId?: string }; transform: { x: number; y: number }; size: { width: number } };
+        const phId = rec.data?.placeholderId;
+        if (!phId) return null;
+        const docx = get().doc as unknown as { pages: Page[]; layouts?: { id: string; name: string; placeholders: { id: string; role: string; rect: { x: number; y: number; width: number; height: number } }[] }[] };
+        const pageIdx = docx.pages.findIndex((pp) => pp.children.some((n) => (n as Node).id === id));
+        const pg = docx.pages[pageIdx] as unknown as { layoutId?: string; data?: Record<string, unknown> } | undefined;
+        if (!pg?.layoutId || pg.data?.autoflow === false) return null;
+        const layout = docx.layouts?.find((l) => l.id === pg.layoutId);
+        const ph = layout?.placeholders.find((p) => p.id === phId);
+        if (!layout || !ph) return null;
+        const slot = slotRectOnPage(layout, ph, docx.pages[pageIdx] as unknown as { width: number; height: number });
+        if (Math.abs(rec.transform.x - slot.x) > 2 || Math.abs(rec.transform.y - slot.y) > 2) return null;
+        const sizes = new Set(after.flatMap((par) => par.runs.map((r) => (r as { style: { fontSize: number } }).style.fontSize)));
+        if (sizes.size !== 1) return null;
+        const res = reflowPage(layout as never, [{
+          nodeId: id,
+          placeholderId: phId,
+          rect: { width: slot.width, height: slot.height },
+          fontSize: [...sizes][0],
+          paragraphs: after.map((par) => par.runs.map((r) => (r as { text: string }).text).join("")),
+        }]);
+        return { res, phId, pageIdx, layoutId: pg.layoutId };
+      })();
+      if (reflow?.res.changed) {
+        const size = reflow.res.adjustments[0].fontSize;
+        for (const par of after) for (const run of par.runs) (run as { style: { fontSize: number } }).style.fontSize = size;
+      }
       perform(
         () => {
           node.content = structuredClone(after);
           node.size.height = hNext;
           node.box.height = hNext;
+          if (reflow?.res.changed) refitTextHeight(loc.node);
           if (titleSync) titleSync.pg.name = titleSync.afterName;
         },
         () => {
@@ -6714,6 +6843,18 @@ export const useEditor = create<EditorState>((set, get) => {
           }
         },
       );
+      // E17: past what the ladder absorbs, propose the nearest layout variant
+      // (never applied automatically). A fitting edit clears any stale hint.
+      if (reflow) {
+        const v = reflow.res.verdicts[reflow.phId];
+        if (v === "overfull" || v === "underfull") {
+          const layouts = (get().doc as unknown as { layouts?: { id: string; name: string; placeholders: unknown[] }[] }).layouts ?? [];
+          const cand = variantCandidate(layouts as never, reflow.layoutId, v === "overfull" ? "denser" : "sparser");
+          set({ reflowHint: cand ? { pageIndex: reflow.pageIdx, toLayoutId: cand.id, toName: cand.name, direction: v === "overfull" ? "denser" : "sparser" } : null });
+        } else if (get().reflowHint?.pageIndex === reflow.pageIdx) {
+          set({ reflowHint: null });
+        }
+      }
     },
     growTextBoxLive: (id, height, fixedBase) => {
       const loc = locate(get().doc, id);

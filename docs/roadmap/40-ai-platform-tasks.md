@@ -35,9 +35,9 @@ The rules from `28-presentations-completion-tasks.md` apply unchanged. In brief:
 | E12 | 3 Catalog | Generate-with-template: pick a template/theme as the generation base | done 2026-08-28 |
 | E13 | 4 Template-from-PPTX | One-click AI template builder from an uploaded PPTX | done 2026-08-29 |
 | E14 | 4 Template-from-PPTX | Custom templates as first-class generation targets | done 2026-08-29 |
-| E15 | 5 Reflow | Pure adaptive-reflow engine over placeholder capacity hints | todo |
-| E16 | 5 Reflow | Live reflow on edit for layout-linked slides (opt-out, one undo) | todo |
-| E17 | 5 Reflow | Layout-variant switching on over/underflow | todo |
+| E15 | 5 Reflow | Pure adaptive-reflow engine over placeholder capacity hints | done 2026-08-29 |
+| E16 | 5 Reflow | Live reflow on edit for layout-linked slides (opt-out, one undo) | done 2026-08-29 |
+| E17 | 5 Reflow | Layout-variant switching on over/underflow | done 2026-08-29 |
 
 Deferred (documented, deliberately not tasks): outbound webhooks on job completion (revisit once the API has real consumers); publish-as-website / custom domain (overlaps the website feature); AI voice/TTS narration (`23-ai-media.md`); a paid/community template marketplace beyond the existing `@hc/templates` marketplace scaffolding; Zapier/Make connectors (build on the API once it is stable).
 
@@ -115,12 +115,12 @@ The pitch: the one Beautiful.ai capability with no HyCanvas answer (`28-presenta
 
 ### E15: Pure reflow engine
 
-- A pure module (`@hc/aistudio` or `@hc/editor`): given a layout-linked page, its layout (with capacity hints), and current content, return deterministic adjustments: type-scale step-downs within bounds, placeholder rect grow/shrink along the layout's declared flow axis, spacing redistribution, and an overflow verdict per placeholder. Unit-tested on fixture layouts; no store or DOM dependency.
+- Shipped as `@hc/aistudio` reflow.ts: deterministic role ladders (title 44..28, body 20..14, content 20..12 - discrete steps so two crowded slides land on the SAME size), the layout engine's own conservative fit model (0.52em glyphs, 1.3 line height), both directions (down on overflow, back up as content shrinks), hand-enlarged sizes as per-node ceilings, and over/underfull verdicts per slot plus the deterministic variantCandidate picker. Rect growth is deliberately NOT emitted: the editor's refit rule (a box may never lie about containing its text) already grows fixed boxes past their slot and returns them, so reflow's job is making that rarely necessary.
 
 ### E16: Live reflow on edit
 
-- Layout-linked slides reflow as content changes: the store applies E15's adjustments inside the SAME undo step as the triggering edit (`setContent`/`fillPlaceholderContent` paths). Per-page opt-out rides `Page.data.autoflow` (open record, no schema bump; absent = on for layout-linked pages, and the C28 rule applies: hand-moving a placeholder box breaks the link for that box). Collaborative safety: adjustments mutate in place (the setDeckTheme identity rules), never rebuild nodes.
+- Shipped: both edit paths reflow inside the SAME undo step (setContent adjusts the edited slot; fillPlaceholderContent adjusts every filled slot so a model's real copy that outruns the capacity hints steps down on landing). Guards: layout-linked page, `Page.data.autoflow` opt-out (open record, no schema bump; a toggle sits in the page's Layout section), the box still ON its slot (compared against the SAME proportional scale applyLayoutToPage materializes with - the C28 hand-move rule), and uniform run sizes (mixed sizes read as deliberate styling). Adjustments mutate the edit's own cloned content, never rebuild nodes.
 
 ### E17: Layout-variant switching
 
-- When content over/underflows past what E15's adjustments absorb, propose the nearest denser/sparser variant in the same layout family (E09's expanded library makes families real): a subtle inline chip ("Switch to 2-column?") applying `applyLayoutToPage` + refill in one undo step, never automatic replacement of user-arranged content. Flip the `28-presentations.md` adaptive-layout row with honest scope (text/list reflow and variant switching; table-cell autoflow stays out).
+- Shipped: past the ladder floor (or with a content slot under a third full) the edit raises a bottom-center canvas chip proposing the nearest denser/sparser layout (content-slot-count distance, id tiebreak; E09's library makes the families real); applying runs applyLayoutToPage + a role-mapped refill (title to title, points redistributed across the new content slots) as ONE undo turn, and a later fitting edit clears a stale hint. Never automatic. Honest scope on the spec row: text/list reflow and variant switching; table-cell autoflow stays out.

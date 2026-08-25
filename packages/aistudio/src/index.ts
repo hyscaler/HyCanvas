@@ -19,6 +19,7 @@ export * from "./themeCatalog";
 export * from "./layoutExtract";
 export * from "./mdoutline";
 export * from "./compose";
+export * from "./reflow";
 export * from "./deck";
 export * from "./prompts";
 export * from "./assistant";

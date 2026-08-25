@@ -229,6 +229,42 @@ function AccessBanner({ mode, suppressed }: { mode: AccessMode; suppressed?: boo
   );
 }
 
+// Adaptive-reflow variant proposal (F40 E17): when an edit over- or
+// underfills a layout-linked slide past what the font ladder absorbs, this
+// chip offers the nearest denser/sparser layout - applied as ONE undo turn,
+// never automatically. Bottom-center so it reads as a canvas affordance, not
+// an alert.
+function ReflowHintChip() {
+  const hint = useEditor((s) => s.reflowHint);
+  const activePage = useEditor((s) => s.activePage);
+  if (!hint || hint.pageIndex !== activePage) return null;
+  return (
+    <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center">
+      <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-brand-200 bg-surface px-3 py-1.5 shadow-md">
+        <span className="text-xs text-neutral-600">
+          {hint.direction === "denser" ? tr("editor.this_slide_is_getting_crowded") : tr("editor.this_slide_has_room_to_spare")}
+        </span>
+        <button
+          onClick={() => {
+            const ok = useEditor.getState().switchPageLayout(hint.pageIndex, hint.toLayoutId);
+            if (!ok) useEditor.getState().dismissReflowHint();
+          }}
+          className="rounded-full bg-brand-600 px-2.5 py-0.5 text-xs font-medium text-white hover:bg-brand-700"
+        >
+          {tr("editor.try_layout_name", { name: hint.toName })}
+        </button>
+        <button
+          onClick={() => useEditor.getState().dismissReflowHint()}
+          aria-label={tr("editor.dismiss_layout_suggestion")}
+          className="grid h-5 w-5 place-items-center rounded-full text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
+        >
+          <X size={12} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function EditorApp() {
   const router = useRouter();
   const toast = useToast();
@@ -1105,6 +1141,7 @@ export function EditorApp() {
           <main className="relative flex min-w-0 flex-1" dir={designSurfaceDir}>
             <DocumentSurface kind={docKind} workspaceId={workspaceId ?? undefined} designId={designId ?? undefined} />
             <PreviewBanner />
+            <ReflowHintChip />
           </main>
         ) : (
         <>

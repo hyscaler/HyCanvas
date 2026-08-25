@@ -2539,6 +2539,7 @@ function PageLayoutSection({ page, workspaceId }: { page: Page; workspaceId: str
   const current = (page as { layoutId?: string }).layoutId;
   // Resolve against the live doc so a deleted layout shows as "None".
   const known = layouts.some((l) => l.id === current);
+  const autoflowOn = (page as { data?: Record<string, unknown> }).data?.autoflow !== false;
   void rev; // re-render when the deck's layouts change
 
   // T20: turn an imported or hand-built deck into a reusable layout set - one
@@ -2632,6 +2633,20 @@ function PageLayoutSection({ page, workspaceId }: { page: Page; workspaceId: str
       <p className="mt-1.5 text-[11px] text-neutral-500">
         {tr("editor.layout_supplies_regions")}
       </p>
+      {/* F40 E16: per-page adaptive-reflow opt-out (absent = on). Shown only
+          while the page is layout-linked, where reflow can act. */}
+      {known && (
+        <label className="mt-1.5 flex cursor-pointer items-center gap-2 text-xs text-neutral-600">
+          <input
+            type="checkbox"
+            data-testid="autoflow-toggle"
+            checked={autoflowOn}
+            onChange={(e) => st.setPageAutoflow(useEditor.getState().activePage, e.target.checked)}
+            className="h-3.5 w-3.5 rounded border-neutral-300 accent-brand-600"
+          />
+          {tr("editor.auto_fit_slide_content")}
+        </label>
+      )}
       {extractButton}
     </Section>
   );
