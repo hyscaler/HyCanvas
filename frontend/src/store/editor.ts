@@ -5171,7 +5171,9 @@ export const useEditor = create<EditorState>((set, get) => {
       const idGen = () => `n_${crypto.randomUUID().slice(0, 12)}`;
 
       // Assets the chosen pages actually reference (any nested `assetId`
-      // string, so image/video sources and future carriers all count).
+      // string, so image/video sources, image FILLS - including a page
+      // background image - and future carriers all count). Walk the whole
+      // page, not just children.
       const usedAssetIds = new Set<string>();
       const collectAssetIds = (v: unknown): void => {
         if (!v || typeof v !== "object") return;
@@ -5180,7 +5182,7 @@ export const useEditor = create<EditorState>((set, get) => {
         if (typeof rec.assetId === "string") usedAssetIds.add(rec.assetId);
         for (const k of Object.keys(rec)) collectAssetIds(rec[k]);
       };
-      srcPages.forEach((p) => collectAssetIds(p.children));
+      srcPages.forEach((p) => collectAssetIds(p));
       // Carry each used asset ref. A colliding id pointing at a DIFFERENT url
       // is reminted and the imported pages' references rewritten, or the
       // inserted slide would silently render this document's other image.
@@ -5304,7 +5306,7 @@ export const useEditor = create<EditorState>((set, get) => {
           if (ro.length) page.readingOrder = ro;
           else delete page.readingOrder;
         }
-        rewriteAssetIds(page.children);
+        rewriteAssetIds(page); // whole page: an image-fill background carries an assetId too
         if (wantMatch) {
           mapFill((page as unknown as { background?: unknown }).background);
           for (const n of page.children) restyleNode(n as Node);

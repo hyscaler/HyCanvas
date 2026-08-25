@@ -104,6 +104,19 @@ describe("importPagesFrom (C38)", () => {
     expect(img.source!.assetId).toBe(minted!.id);
   });
 
+  it("carries an asset referenced only by the page background image fill", () => {
+    const st = useEditor.getState();
+    const file = sourceFile();
+    file.assets.push({ id: "bg-asset", kind: "image", name: "bg", url: "https://src.example/bg.png", mime: "image/png", checksum: "" } as never);
+    (file.pages[0] as unknown as { background?: unknown }).background = {
+      type: "image",
+      source: { assetId: "bg-asset", naturalWidth: 0, naturalHeight: 0 },
+      fit: "cover",
+    };
+    st.importPagesFrom(file, [0]);
+    expect(st.doc.assets.some((a) => a.id === "bg-asset")).toBe(true);
+  });
+
   it("reuses an identical asset (same id and url) without duplicating the ref", () => {
     const st = useEditor.getState();
     st.doc.assets.push({ id: "shared-asset", kind: "image", name: "pic", url: "https://src.example/pic.png", mime: "image/png", checksum: "" } as never);

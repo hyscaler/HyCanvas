@@ -207,6 +207,10 @@ function StatusBoard({ onOpen }: { onOpen: (i: number) => void }) {
     return () => { cancelled = true; };
   }, [workspaceId]);
 
+  // The dragged card index lives in a ref as well as state: drop reads it
+  // synchronously in the same event turn (same contract as the grid view's
+  // dragFrom); state only drives the highlight.
+  const dragRef = useRef<number | null>(null);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [overCol, setOverCol] = useState<string | null>(null);
 
@@ -221,7 +225,8 @@ function StatusBoard({ onOpen }: { onOpen: (i: number) => void }) {
   ];
 
   const dropOn = (col: string | null) => {
-    const from = dragIdx;
+    const from = dragRef.current;
+    dragRef.current = null;
     setDragIdx(null);
     setOverCol(null);
     if (from === null || !canEdit) return;
@@ -253,15 +258,18 @@ function StatusBoard({ onOpen }: { onOpen: (i: number) => void }) {
                 const page = doc.pages[i];
                 const assignee = pageAssigneeOf(page);
                 return (
-                  <div
-                    key={page.id}
-                    draggable={canEdit}
-                    data-testid={`board-card-${i}`}
-                    onDragStart={() => setDragIdx(i)}
-                    onDragEnd={() => { setDragIdx(null); setOverCol(null); }}
-                    className="rounded-lg bg-white/10 p-1.5"
-                  >
-                    <button onClick={() => onOpen(i)} className="block w-full overflow-hidden rounded bg-white" title={slideTitle(page, i)}>
+                  <div key={page.id} data-testid={`board-card-${i}`} className="rounded-lg bg-white/10 p-1.5">
+                    {/* Only the thumbnail is the drag handle: a draggable
+                        wrapper would steal mousedown from the selects below
+                        on some browsers. */}
+                    <button
+                      draggable={canEdit}
+                      onDragStart={() => { dragRef.current = i; setDragIdx(i); }}
+                      onDragEnd={() => { dragRef.current = null; setDragIdx(null); setOverCol(null); }}
+                      onClick={() => onOpen(i)}
+                      className="block w-full overflow-hidden rounded bg-white"
+                      title={slideTitle(page, i)}
+                    >
                       <SlideThumb index={i} width={216} height={122} />
                     </button>
                     <div className="mt-1 flex items-center gap-1 px-0.5">

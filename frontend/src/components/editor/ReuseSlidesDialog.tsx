@@ -24,10 +24,32 @@ const THUMB_W = 148;
 const THUMB_H = 90;
 
 /** A thumbnail of one page of a FOREIGN design file (SlideThumb renders only
- *  the open document). Same engine path, so the preview cannot lie. */
+ *  the open document). Same engine path, so the preview cannot lie. Renders
+ *  only near the picker's viewport (the C24 large-deck rule): a 300-slide
+ *  source deck must not pay 300 engine renders the moment it is picked.
+ *  Known preview-only limitation: an asset id this document already resolves
+ *  to a DIFFERENT image previews with this document's image (insertion is
+ *  correct - importPagesFrom remints the id). */
 function ForeignThumb({ file, index }: { file: DesignFile; index: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const [near, setNear] = useState(false);
   useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas || typeof IntersectionObserver === "undefined") {
+      setNear(true);
+      return;
+    }
+    const obs = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) if (e.isIntersecting) setNear(true);
+      },
+      { root: canvas.closest(".oc-scroll"), rootMargin: "300px" },
+    );
+    obs.observe(canvas);
+    return () => obs.disconnect();
+  }, []);
+  useEffect(() => {
+    if (!near) return;
     const canvas = ref.current;
     const pg = file.pages[index];
     if (!canvas || !pg) return;
@@ -51,7 +73,7 @@ function ForeignThumb({ file, index }: { file: DesignFile; index: number }) {
     // Repaint as the foreign deck's images finish loading.
     const off = imageAssets.onChange(() => paint());
     return off;
-  }, [file, index]);
+  }, [near, file, index]);
   return <canvas ref={ref} className="max-h-full max-w-full" />;
 }
 
