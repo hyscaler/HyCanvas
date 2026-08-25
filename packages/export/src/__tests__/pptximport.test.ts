@@ -419,3 +419,88 @@ describe("pptxToDesign fidelity goldens", () => {
     expect(box.size.width).toBeCloseTo(400, 0);
   });
 });
+
+// --- Archive-bomb guards (F28 completion C01) ---------------------------------
+// Untrusted archives must be rejected, never allowed to exhaust the tab: entry
+// count, per-entry decompressed size, and total decompressed size all cap, and
+// the per-entry cap trips DURING inflation (a lying directory cannot bypass it).
+describe("unzip archive-bomb guards", () => {
+  const deflated = (payload: Uint8Array) => deflateRawSync(payload);
+
+  function zipWithDeflate(entries: { name: string; raw: Uint8Array; comp: Uint8Array }[]): Uint8Array {
+    // Hand-build a minimal method-8 zip (zipStore only writes method 0).
+    const enc = new TextEncoder();
+    const locals: Uint8Array[] = [];
+    const centrals: Uint8Array[] = [];
+    let offset = 0;
+    for (const e of entries) {
+      const nameB = enc.encode(e.name);
+      const local = new Uint8Array(30 + nameB.length + e.comp.length);
+      const ldv = new DataView(local.buffer);
+      ldv.setUint32(0, 0x04034b50, true);
+      ldv.setUint16(8, 8, true); // method deflate
+      ldv.setUint32(18, e.comp.length, true);
+      ldv.setUint32(22, e.raw.length, true);
+      ldv.setUint16(26, nameB.length, true);
+      local.set(nameB, 30);
+      local.set(e.comp, 30 + nameB.length);
+      locals.push(local);
+      const central = new Uint8Array(46 + nameB.length);
+      const cdv = new DataView(central.buffer);
+      cdv.setUint32(0, 0x02014b50, true);
+      cdv.setUint16(10, 8, true);
+      cdv.setUint32(20, e.comp.length, true);
+      cdv.setUint32(24, e.raw.length, true);
+      cdv.setUint16(28, nameB.length, true);
+      cdv.setUint32(42, offset, true);
+      central.set(nameB, 46);
+      centrals.push(central);
+      offset += local.length;
+    }
+    const cdStart = offset;
+    let cdLen = 0;
+    for (const c of centrals) cdLen += c.length;
+    const eocd = new Uint8Array(22);
+    const edv = new DataView(eocd.buffer);
+    edv.setUint32(0, 0x06054b50, true);
+    edv.setUint16(8, entries.length, true);
+    edv.setUint16(10, entries.length, true);
+    edv.setUint32(12, cdLen, true);
+    edv.setUint32(16, cdStart, true);
+    const out = new Uint8Array(offset + cdLen + 22);
+    let p = 0;
+    for (const l of locals) { out.set(l, p); p += l.length; }
+    for (const c of centrals) { out.set(c, p); p += c.length; }
+    out.set(eocd, p);
+    return out;
+  }
+
+  it("rejects an archive with too many entries before reading any", async () => {
+    const bytes = zipStore(Array.from({ length: 3 }, (_, i) => ({ name: `e${i}.txt`, data: new Uint8Array([1]) })));
+    await expect(unzip(bytes, { maxEntries: 2 })).rejects.toThrow(/too many entries/);
+  });
+
+  it("rejects an entry that expands past the per-entry cap mid-inflate", async () => {
+    const big = new Uint8Array(1 << 20); // 1 MiB of zeros compresses to ~1 KB
+    const bytes = zipWithDeflate([{ name: "bomb.xml", raw: big, comp: deflated(big) }]);
+    await expect(unzip(bytes, { maxEntryBytes: 64 << 10 })).rejects.toThrow(/expands past the .* limit: bomb\.xml/);
+  });
+
+  it("rejects when the archive total crosses the total cap", async () => {
+    const chunk = new Uint8Array(1 << 20);
+    const comp = deflated(chunk);
+    const bytes = zipWithDeflate([
+      { name: "a.xml", raw: chunk, comp },
+      { name: "b.xml", raw: chunk, comp },
+      { name: "c.xml", raw: chunk, comp },
+    ]);
+    await expect(unzip(bytes, { maxTotalBytes: 2 << 20 })).rejects.toThrow(/total decompression limit/);
+  });
+
+  it("real archives under the caps are untouched", async () => {
+    const payload = new TextEncoder().encode("hello world");
+    const bytes = zipWithDeflate([{ name: "ok.xml", raw: payload, comp: deflated(payload) }]);
+    const files = await unzip(bytes);
+    expect(new TextDecoder().decode(files.get("ok.xml"))).toBe("hello world");
+  });
+});
