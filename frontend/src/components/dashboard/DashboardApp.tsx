@@ -44,11 +44,11 @@ import {
   List,
   Users,
   Moon,
-  Sun, Sparkles } from "lucide-react";
+  Sun, Sparkles, Wand2 } from "lucide-react";
 import { createBlankDesign, type DesignFile } from "@hc/schema";
 import { hycAccept, downloadHycFile, importedTitle, parseHycFile, readFileText } from "@/lib/hycFile";
 import { odpToDesign, pptxToDesign } from "@hc/export";
-import { deckThemes, layoutDeck, parseMarkdownOutline } from "@hc/aistudio";
+import { deckThemes, dialTones, layoutDeck, parseMarkdownOutline } from "@hc/aistudio";
 
 // Markdown outline import (F28 C26): DETERMINISTIC, no AI - headings become
 // slides, list items become points, laid out through the same pure deck
@@ -95,7 +95,7 @@ import { TemplateFromPptxDialog } from "./TemplateFromPptxDialog";
 import { VerifyEmailBanner } from "@/components/auth/VerifyEmailBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { HeroArt, EmptyArt, RailArt } from "@/components/ui/CanvasBackdrop";
-import { tr } from "@/lib/i18n";
+import { tr, trOr } from "@/lib/i18n";
 import { apiCodeMessage, userMessage } from "@/lib/errors";
 
 // Time-aware greeting for the dashboard hero band.
@@ -119,6 +119,18 @@ const DASH_BACKDROP: React.CSSProperties = {
 };
 
 type Format = { label: string; icon: typeof Plus; w: number; h: number; kind?: string };
+
+/** Canvases the brief composer can generate for. Short on purpose: these are
+ *  the shapes AI generation actually composes well for, and the full format
+ *  shelf sits directly below for everything else. */
+const briefFormats = (): Format[] => [
+  { label: tr("dashboard.presentation_16_9"), icon: Plus, w: 1920, h: 1080 },
+  { label: tr("dashboard.instagram_post_2"), icon: Plus, w: 1080, h: 1080 },
+  { label: tr("dashboard.instagram_story_2"), icon: Plus, w: 1080, h: 1920 },
+  { label: tr("dashboard.linkedin_post_2"), icon: Plus, w: 1200, h: 627 },
+  { label: tr("dashboard.poster"), icon: Plus, w: 1080, h: 1350 },
+  { label: tr("dashboard.a4_document"), icon: Plus, w: 1240, h: 1754 },
+];
 
 const formatGroups = (): { title: string; items: Format[] }[] => [
   {
@@ -192,6 +204,29 @@ export function DashboardApp({ view }: { view: DashboardView }) {
   const [wsModal, setWsModal] = useState(false);
   const [sizeOpen, setSizeOpen] = useState(false);
   const [aiBrief, setAiBrief] = useState("");
+  const [aiFormat, setAiFormat] = useState(() => briefFormats()[0].label);
+  const [aiTone, setAiTone] = useState("auto");
+
+  /** Create the design for the chosen canvas and hand the brief to the editor's
+   *  assistant. The tone rides the same per-workspace store the editor's dials
+   *  use, so a choice made here is the choice the generation runs with. */
+  function submitBrief() {
+    const brief = aiBrief.trim();
+    if (!brief || busy || !activeWorkspaceId) return;
+    const fmt = briefFormats().find((f) => f.label === aiFormat) ?? briefFormats()[0];
+    try {
+      const key = `oc-ai-dials:${activeWorkspaceId}`;
+      const saved = JSON.parse(window.localStorage.getItem(key) ?? "{}") as Record<string, string>;
+      if (aiTone === "auto") delete saved.tone;
+      else saved.tone = aiTone;
+      window.localStorage.setItem(key, JSON.stringify(saved));
+    } catch {
+      /* private mode: the generation simply runs without the tone */
+    }
+    // Created untitled on purpose: the generation names it from the outline it
+    // produces, which reads far better than the raw prompt.
+    void createDesign(fmt.w, fmt.h, undefined, fmt.kind, brief);
+  }
   const [bulkOpen, setBulkOpen] = useState(false);
   const [customW, setCustomW] = useState(1080);
   const [customH, setCustomH] = useState(1080);
@@ -760,30 +795,72 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                 {/* The headline capability used to require: make a blank
                     deck, open the editor, notice the fourth of nine rail
                     icons, then connect a provider. Describing it here creates
-                    the design and starts the generation. */}
+                    the design and starts the generation. The controls under
+                    the brief are the two that actually change the output -
+                    the canvas it composes for, and the voice it writes in -
+                    rather than decoration. */}
                 <form
-                  className="mt-5 flex max-w-xl gap-2"
+                  className="mt-5 max-w-2xl rounded-2xl border border-neutral-200 bg-surface p-2.5 shadow-sm transition focus-within:border-brand-400"
                   onSubmit={(e) => {
                     e.preventDefault();
-                    const brief = aiBrief.trim();
-                    if (!brief || busy || !activeWorkspaceId) return;
-                    // Created untitled on purpose: the generation names it
-                    // from the outline it produces, which reads far better
-                    // than the raw prompt.
-                    void createDesign(1920, 1080, undefined, undefined, brief);
+                    submitBrief();
                   }}
                 >
-                  <Input
+                  <textarea
                     value={aiBrief}
                     onChange={(e) => setAiBrief(e.target.value)}
+                    onKeyDown={(e) => {
+                      // Enter sends, Shift+Enter breaks the line - the same
+                      // contract as the editor's composer. IME composition is
+                      // excluded, or the first Enter of a conversion submits.
+                      if (e.key !== "Enter" || e.shiftKey || e.nativeEvent.isComposing) return;
+                      e.preventDefault();
+                      submitBrief();
+                    }}
+                    rows={2}
                     placeholder={tr("dashboard.describe_a_deck_to_generate")}
                     aria-label={tr("dashboard.describe_a_deck_to_generate")}
                     disabled={busy || !activeWorkspaceId}
-                    className="h-10 flex-1"
+                    className="max-h-40 w-full resize-none bg-transparent px-2 pt-1.5 text-[15px] leading-relaxed outline-none placeholder:text-neutral-400 disabled:opacity-50"
                   />
-                  <Button type="submit" disabled={busy || !activeWorkspaceId || !aiBrief.trim()}>
-                    <Sparkles size={16} /> {tr("dashboard.generate")}
-                  </Button>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <label className="flex items-center gap-1.5 rounded-full border border-neutral-200 py-1 ps-2.5 pe-1 text-xs text-neutral-600 focus-within:border-brand-400">
+                      <LayoutTemplate size={13} className="shrink-0 text-neutral-400" />
+                      <span className="sr-only">{tr("dashboard.output_format")}</span>
+                      <select
+                        value={aiFormat}
+                        onChange={(e) => setAiFormat(e.target.value)}
+                        disabled={busy || !activeWorkspaceId}
+                        className="max-w-[9rem] cursor-pointer truncate bg-transparent pe-1 outline-none"
+                      >
+                        {briefFormats().map((f) => (
+                          <option key={f.label} value={f.label}>{f.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="flex items-center gap-1.5 rounded-full border border-neutral-200 py-1 ps-2.5 pe-1 text-xs text-neutral-600 focus-within:border-brand-400">
+                      <Wand2 size={13} className="shrink-0 text-neutral-400" />
+                      <span className="sr-only">{tr("dashboard.tone")}</span>
+                      <select
+                        value={aiTone}
+                        onChange={(e) => setAiTone(e.target.value)}
+                        disabled={busy || !activeWorkspaceId}
+                        className="max-w-[8rem] cursor-pointer truncate bg-transparent pe-1 outline-none"
+                      >
+                        {dialTones.map((t) => (
+                          <option key={t} value={t}>{trOr(`editor.dial_${t}`, t)}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <span className="flex-1" />
+                    <button
+                      type="submit"
+                      disabled={busy || !activeWorkspaceId || !aiBrief.trim()}
+                      className="flex items-center gap-1.5 rounded-full bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:opacity-40"
+                    >
+                      <Sparkles size={15} /> {tr("dashboard.generate")}
+                    </button>
+                  </div>
                 </form>
                 <div className="mt-3 flex flex-wrap gap-2.5">
                   <Button variant="secondary" onClick={() => setSizeOpen(true)} disabled={busy || !activeWorkspaceId}>
