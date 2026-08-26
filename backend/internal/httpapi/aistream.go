@@ -75,8 +75,13 @@ func aiStudioGenerateStreamHandler(svc *aistudio.Service, acct *accounts.Service
 		outline, err := svc.GenerateDesignStream(r.Context(), body.WorkspaceID, body.DesignType, body.Prompt, body.BrandClause, body.PageCount, emit)
 		if err != nil {
 			// The stream is already 200; the error travels as an event with a
-			// stable code (the client maps it like a problem+json code).
-			emit("error", map[string]string{"code": "ai_provider_failed", "message": "the AI provider request failed"})
+			// stable code (the client maps it like a problem+json code). It
+			// uses the SAME classifier as the request-scoped path, so a
+			// rejected key, an exhausted account, an unknown model and a rate
+			// limit stay distinguishable here too - hardcoding one code made
+			// every failure on the main generation flow read alike.
+			_, _, detail, code := aiFailure(err)
+			emit("error", map[string]string{"code": code, "message": detail})
 			return
 		}
 		emit("done", outline)

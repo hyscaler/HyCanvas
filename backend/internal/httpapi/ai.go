@@ -68,43 +68,82 @@ func mountAI(api chi.Router, svc *ai.Service, acct *accounts.Service, up *upload
 	})
 }
 
-func aiProblem(w http.ResponseWriter, r *http.Request, err error) {
-	// Each branch carries a stable `code` so the frontend can translate the
-	// failure (F38 FR-9); the English detail stays as the fallback wording.
+// aiFailure classifies an AI error into the HTTP status, title, human-readable
+// detail and stable code the frontend translates.
+//
+// Shared by the problem+json path and the SSE path on purpose: those two
+// diverged once, with the stream hardcoding "ai_provider_failed" for every
+// cause, which made a rejected key, an exhausted account, an unknown model and
+// a rate limit indistinguishable on the MAIN design-generation flow. One
+// classifier means a streamed failure can never say less than a request-scoped
+// one.
+func aiFailure(err error) (status int, title, detail, code string) {
 	switch {
 	case errors.Is(err, ai.ErrPolicyBlocked):
-		problemWithCode(w, r, http.StatusForbidden, "Forbidden", err.Error(), "ai_policy_blocked")
+		return http.StatusForbidden, "Forbidden", err.Error(), "ai_policy_blocked"
 	case errors.Is(err, ai.ErrImageUnsupported):
-		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "your AI provider does not support image generation; switch to an image-capable provider (e.g. OpenAI or Together AI) in AI settings", "ai_image_unsupported")
+		return http.StatusBadRequest, "Bad Request", "your AI provider does not support image generation; switch to an image-capable provider (e.g. OpenAI or Together AI) in AI settings", "ai_image_unsupported"
 	case errors.Is(err, ai.ErrEditImageUnsupported):
-		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "your AI provider does not support image editing; switch to a provider with image editing (e.g. OpenAI) in AI settings", "ai_image_edit_unsupported")
+		return http.StatusBadRequest, "Bad Request", "your AI provider does not support image editing; switch to a provider with image editing (e.g. OpenAI) in AI settings", "ai_image_edit_unsupported"
 	case errors.Is(err, ai.ErrBaseURLRequired):
-		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "this provider needs a base URL; enter your endpoint URL in AI settings", "ai_base_url_required")
+		return http.StatusBadRequest, "Bad Request", "this provider needs a base URL; enter your endpoint URL in AI settings", "ai_base_url_required"
 	case errors.Is(err, ai.ErrKeyRequiredForProviderChange):
-		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "changing the provider requires the new provider's API key; enter it and save again", "ai_key_required_for_provider_change")
+		return http.StatusBadRequest, "Bad Request", "changing the provider requires the new provider's API key; enter it and save again", "ai_key_required_for_provider_change"
 	case errors.Is(err, ai.ErrBadRequest):
-		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid AI request or no provider configured", "ai_not_configured")
+		return http.StatusBadRequest, "Bad Request", "invalid AI request or no provider configured", "ai_not_configured"
 	case errors.Is(err, ai.ErrBadGateway):
 		// The upstream status (attached by the ai package, body never echoed)
 		// separates the self-fixable failures: a rejected key, an exhausted
 		// account, a mistyped model, a rate limit.
 		var up *ai.UpstreamError
-		status := 0
+		upstream := 0
 		if errors.As(err, &up) {
-			status = up.Status
+			upstream = up.Status
 		}
-		switch status {
+		switch upstream {
 		case http.StatusUnauthorized, http.StatusForbidden:
-			problemWithCode(w, r, http.StatusBadGateway, "Bad Gateway", "the AI provider rejected the workspace API key; check the key in AI settings", "ai_provider_auth_failed")
+			return http.StatusBadGateway, "Bad Gateway", "the AI provider rejected the workspace API key; check the key in AI settings", "ai_provider_auth_failed"
 		case http.StatusPaymentRequired:
-			problemWithCode(w, r, http.StatusBadGateway, "Bad Gateway", "the AI provider account is out of credit; top up or switch providers in AI settings", "ai_provider_quota_exhausted")
+			return http.StatusBadGateway, "Bad Gateway", "the AI provider account is out of credit; top up or switch providers in AI settings", "ai_provider_quota_exhausted"
 		case http.StatusNotFound:
-			problemWithCode(w, r, http.StatusBadGateway, "Bad Gateway", "the AI provider does not recognize the configured model or endpoint; check the model name and base URL in AI settings", "ai_provider_model_not_found")
+			return http.StatusBadGateway, "Bad Gateway", "the AI provider does not recognize the configured model or endpoint; check the model name and base URL in AI settings", "ai_provider_model_not_found"
 		case http.StatusTooManyRequests:
-			problemWithCode(w, r, http.StatusBadGateway, "Bad Gateway", "the AI provider rate-limited the request; wait a moment and try again", "ai_provider_rate_limited")
-		default:
-			problemWithCode(w, r, http.StatusBadGateway, "Bad Gateway", "the AI provider request failed", "ai_provider_failed")
+			return http.StatusBadGateway, "Bad Gateway", "the AI provider rate-limited the request; wait a moment and try again", "ai_provider_rate_limited"
 		}
+		return http.StatusBadGateway, "Bad Gateway", "the AI provider request failed", "ai_provider_failed"
+	}
+	return http.StatusInternalServerError, "Internal Server Error", "request failed", "ai_failed"
+}
+
+// aiProblem writes the classification as problem+json. The codes are repeated
+// as LITERALS here on purpose: they must stay greppable and enumerable for
+// translation (problem_code_test.go rejects a computed code), while aiFailure
+// above stays the single place that decides WHICH one applies.
+func aiProblem(w http.ResponseWriter, r *http.Request, err error) {
+	status, title, detail, code := aiFailure(err)
+	switch code {
+	case "ai_policy_blocked":
+		problemWithCode(w, r, status, title, detail, "ai_policy_blocked")
+	case "ai_image_unsupported":
+		problemWithCode(w, r, status, title, detail, "ai_image_unsupported")
+	case "ai_image_edit_unsupported":
+		problemWithCode(w, r, status, title, detail, "ai_image_edit_unsupported")
+	case "ai_base_url_required":
+		problemWithCode(w, r, status, title, detail, "ai_base_url_required")
+	case "ai_key_required_for_provider_change":
+		problemWithCode(w, r, status, title, detail, "ai_key_required_for_provider_change")
+	case "ai_not_configured":
+		problemWithCode(w, r, status, title, detail, "ai_not_configured")
+	case "ai_provider_auth_failed":
+		problemWithCode(w, r, status, title, detail, "ai_provider_auth_failed")
+	case "ai_provider_quota_exhausted":
+		problemWithCode(w, r, status, title, detail, "ai_provider_quota_exhausted")
+	case "ai_provider_model_not_found":
+		problemWithCode(w, r, status, title, detail, "ai_provider_model_not_found")
+	case "ai_provider_rate_limited":
+		problemWithCode(w, r, status, title, detail, "ai_provider_rate_limited")
+	case "ai_provider_failed":
+		problemWithCode(w, r, status, title, detail, "ai_provider_failed")
 	default:
 		problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed", "ai_failed")
 	}

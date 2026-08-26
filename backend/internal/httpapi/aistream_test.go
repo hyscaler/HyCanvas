@@ -5,11 +5,15 @@ package httpapi
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync"
 	"testing"
 
+	"hycanvas/backend/internal/ai"
 	"hycanvas/backend/internal/aistudio"
 )
 
@@ -69,5 +73,71 @@ func TestGenerateDesignStreamEvents(t *testing.T) {
 	}
 	if len(out.Pages) != 2 || out.Pages[0].Points[0] != "polished" {
 		t.Fatalf("final outline not polished: %+v", out.Pages)
+	}
+}
+
+// The SSE path must carry the SAME failure classification the problem+json
+// path does. It hardcoded "ai_provider_failed" for every cause once, which
+// made a rejected key, an exhausted account, an unknown model and a rate limit
+// indistinguishable on the main design-generation flow.
+func TestAIFailureClassificationIsShared(t *testing.T) {
+	cases := []struct {
+		name string
+		err  error
+		code string
+	}{
+		{"auth", errors.Join(ai.ErrBadGateway, &ai.UpstreamError{Provider: "p", Status: http.StatusUnauthorized}), "ai_provider_auth_failed"},
+		{"quota", errors.Join(ai.ErrBadGateway, &ai.UpstreamError{Provider: "p", Status: http.StatusPaymentRequired}), "ai_provider_quota_exhausted"},
+		{"model", errors.Join(ai.ErrBadGateway, &ai.UpstreamError{Provider: "p", Status: http.StatusNotFound}), "ai_provider_model_not_found"},
+		{"rate", errors.Join(ai.ErrBadGateway, &ai.UpstreamError{Provider: "p", Status: http.StatusTooManyRequests}), "ai_provider_rate_limited"},
+		{"generic", ai.ErrBadGateway, "ai_provider_failed"},
+		{"policy", ai.ErrPolicyBlocked, "ai_policy_blocked"},
+		{"not-configured", ai.ErrBadRequest, "ai_not_configured"},
+	}
+	for _, c := range cases {
+		status, _, detail, code := aiFailure(c.err)
+		if code != c.code {
+			t.Fatalf("%s: code = %q, want %q", c.name, code, c.code)
+		}
+		if detail == "" {
+			t.Fatalf("%s: detail must never be empty (it is the fallback wording)", c.name)
+		}
+		if status < 400 {
+			t.Fatalf("%s: status = %d, want a failure status", c.name, status)
+		}
+	}
+}
+
+// aiProblem must emit exactly the code aiFailure decided. The literal switch
+// in aiProblem exists only to keep codes greppable for translation, so this
+// pins the two against each other: a new branch in one that is missing from
+// the other falls through to "ai_failed" and fails here.
+func TestAIProblemEmitsClassifiedCode(t *testing.T) {
+	cases := []error{
+		errors.Join(ai.ErrBadGateway, &ai.UpstreamError{Provider: "p", Status: http.StatusUnauthorized}),
+		errors.Join(ai.ErrBadGateway, &ai.UpstreamError{Provider: "p", Status: http.StatusPaymentRequired}),
+		errors.Join(ai.ErrBadGateway, &ai.UpstreamError{Provider: "p", Status: http.StatusNotFound}),
+		errors.Join(ai.ErrBadGateway, &ai.UpstreamError{Provider: "p", Status: http.StatusTooManyRequests}),
+		ai.ErrBadGateway,
+		ai.ErrPolicyBlocked,
+		ai.ErrBadRequest,
+		ai.ErrImageUnsupported,
+		ai.ErrEditImageUnsupported,
+		ai.ErrBaseURLRequired,
+		ai.ErrKeyRequiredForProviderChange,
+	}
+	for _, err := range cases {
+		_, _, _, want := aiFailure(err)
+		rec := httptest.NewRecorder()
+		aiProblem(rec, httptest.NewRequest("POST", "/x", nil), err)
+		var body struct {
+			Code string `json:"code"`
+		}
+		if e := json.Unmarshal(rec.Body.Bytes(), &body); e != nil {
+			t.Fatalf("parse problem body: %v", e)
+		}
+		if body.Code != want {
+			t.Fatalf("aiProblem emitted %q for %v, aiFailure said %q", body.Code, err, want)
+		}
 	}
 }
