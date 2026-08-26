@@ -2050,6 +2050,9 @@ async function fetchAssistantOutline(workspaceId: string, dt: DesignType, prompt
 /** Combined attachment budget: 8 sources, sharing one character cap split
  *  evenly (per the multi-file ingestion contract). */
 const maxSources = 8;
+/** File types the grounding extractor can read. Kept beside the picker's
+ *  accept list so a drop and a pick agree about what can be attached. */
+const ATTACHABLE_FILE = /\.(txt|md|markdown|pdf|docx|pptx|xlsx)$/i;
 const combinedSourceChars = 48000;
 
 /** Concatenate the attached sources into ONE grounding block: a header per
@@ -3359,6 +3362,11 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   const [attachOpen, setAttachOpen] = useState(false);
   const [attachUrl, setAttachUrl] = useState("");
   const [attachBusy, setAttachBusy] = useState(false);
+  // Drag-and-drop attaching: a file dragged from the desktop onto the panel is
+  // the same gesture users expect from any chat, and it lands on exactly the
+  // pipeline the file picker uses. The canvas has its own image drop handler,
+  // scoped to the canvas element, so the two never compete.
+  const [dropActive, setDropActive] = useState(false);
   // FR-8: a plan awaiting confirmation before it mutates the document.
   const [pending, setPending] = useState<{ plan: PlanStep[]; reply: string } | null>(null);
   // T09 outline review: for a gated generateDesign plan, the outline is fetched
@@ -3613,6 +3621,63 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     }
   }
 
+  /** Extract and attach a batch of dropped or picked files. Honors the cap,
+   *  names the reason when a file cannot be read, and never throws into the
+   *  caller (a bad file must not take the panel down with it). */
+  function attachFiles(picked: File[]) {
+    const files = picked.filter((f) => ATTACHABLE_FILE.test(f.name));
+    const rejected = picked.length - files.length;
+    if (rejected) toast.error(tr("editor.only_documents_can_be_attached"));
+    if (!files.length) return;
+    const room = maxSources - sources.length;
+    if (room <= 0) {
+      toast.error(tr("editor.attachment_limit_reached", { max: maxSources }));
+      return;
+    }
+    setAttachBusy(true);
+    const addSource = (name: string, text: string) => {
+      const t = text.trim();
+      if (t) setSources((xs) => (xs.length < maxSources ? [...xs, { name, text: t.slice(0, 60000) }] : xs));
+      else toast.error(tr("editor.no_readable_text_in_that_file"));
+    };
+    const extractOne = async (f: File): Promise<void> => {
+      if (/\.pdf$/i.test(f.name) || f.type === "application/pdf") {
+        // Scanned-PDF detection (first 5 pages under 50 chars): an image-only
+        // PDF has no text layer to ground on, and OCR is out of scope, so say
+        // so instead of attaching an empty source.
+        const { text, scanned } = await pdfFileToTextWithScanCheck(f);
+        if (scanned) { toast.error(tr("editor.pdf_looks_scanned_no_text_layer")); return; }
+        addSource(f.name, text);
+        return;
+      }
+      if (/\.(docx|pptx|xlsx)$/i.test(f.name)) {
+        const buf = await f.arrayBuffer();
+        let binary = "";
+        const bytes = new Uint8Array(buf);
+        const chunk = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunk) binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+        const r = await oc.aiExtractFile({ filename: f.name, mimeType: f.type || undefined, dataBase64: btoa(binary) });
+        addSource(r.name, r.text);
+        return;
+      }
+      addSource(f.name, await f.text());
+    };
+    void (async () => {
+      for (const f of files.slice(0, room)) {
+        try {
+          await extractOne(f);
+        } catch (err) {
+          // Server rejections carry a stable code (too large / unsupported /
+          // unreadable); name the reason when known.
+          const coded = err instanceof ApiError ? apiCodeMessage(err.body) : null;
+          toast.error(`${coded ?? tr("editor.couldnt_read_that_file")} (${f.name})`);
+        }
+      }
+      if (files.length > room) toast.error(tr("editor.attachment_limit_reached", { max: maxSources }));
+      setAttachBusy(false);
+    })();
+  }
+
   async function send(textArg?: string) {
     const userText = (textArg ?? input).trim();
     if (!workspaceId || !userText || !aiReady || busy) return;
@@ -3775,7 +3840,33 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div
+      className="relative flex min-h-0 flex-1 flex-col"
+      onDragOver={(e) => {
+        if (!e.dataTransfer.types.includes("Files") || attachBusy) return;
+        e.preventDefault();
+        setDropActive(true);
+      }}
+      onDragLeave={(e) => {
+        // Ignore the dragleave fired by moving between this element's own
+        // children, or the hint flickers across every nested box.
+        if (e.currentTarget.contains(e.relatedTarget as globalThis.Node | null)) return;
+        setDropActive(false);
+      }}
+      onDrop={(e) => {
+        if (!e.dataTransfer.types.includes("Files")) return;
+        e.preventDefault();
+        setDropActive(false);
+        attachFiles(Array.from(e.dataTransfer.files ?? []));
+      }}
+    >
+      {dropActive && (
+        <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center rounded-lg border-2 border-dashed border-brand-400 bg-brand-50/90">
+          <span className="flex items-center gap-1.5 text-xs font-medium text-brand-ink">
+            <Paperclip size={13} /> {tr("editor.drop_to_attach_as_source")}
+          </span>
+        </div>
+      )}
       {/* Thread toolbar: undo the last applied turn + start a new chat. */}
       {turns.length > 0 && (
         <div className="flex shrink-0 items-center justify-between pb-1.5">
@@ -4144,49 +4235,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                 onChange={(e) => {
                   const files = Array.from(e.target.files ?? []);
                   e.target.value = "";
-                  if (!files.length) return;
-                  setAttachBusy(true);
-                  const addSource = (name: string, text: string) => {
-                    const t = text.trim();
-                    if (t) setSources((xs) => (xs.length < maxSources ? [...xs, { name, text: t.slice(0, 60000) }] : xs));
-                    else toast.error(tr("editor.no_readable_text_in_that_file"));
-                  };
-                  const extractOne = async (f: File): Promise<void> => {
-                    if (/\.pdf$/i.test(f.name) || f.type === "application/pdf") {
-                      // Scanned-PDF detection (first 5 pages under 50 chars):
-                      // an image-only PDF has no text layer to ground on, and
-                      // OCR is out of scope, so say so instead of attaching
-                      // an empty source.
-                      const { text, scanned } = await pdfFileToTextWithScanCheck(f);
-                      if (scanned) { toast.error(tr("editor.pdf_looks_scanned_no_text_layer")); return; }
-                      addSource(f.name, text);
-                      return;
-                    }
-                    if (/\.(docx|pptx|xlsx)$/i.test(f.name)) {
-                      const buf = await f.arrayBuffer();
-                      let binary = "";
-                      const bytes = new Uint8Array(buf);
-                      const chunk = 0x8000;
-                      for (let i = 0; i < bytes.length; i += chunk) binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-                      const r = await oc.aiExtractFile({ filename: f.name, mimeType: f.type || undefined, dataBase64: btoa(binary) });
-                      addSource(r.name, r.text);
-                      return;
-                    }
-                    addSource(f.name, await f.text());
-                  };
-                  void (async () => {
-                    for (const f of files.slice(0, maxSources)) {
-                      try {
-                        await extractOne(f);
-                      } catch (err) {
-                        // Server rejections carry a stable code (too large /
-                        // unsupported / unreadable); name the reason when known.
-                        const coded = err instanceof ApiError ? apiCodeMessage(err.body) : null;
-                        toast.error(`${coded ?? tr("editor.couldnt_read_that_file")} (${f.name})`);
-                      }
-                    }
-                    setAttachBusy(false);
-                  })();
+                  attachFiles(files);
                 }}
               />
             </label>
