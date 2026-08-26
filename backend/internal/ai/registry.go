@@ -34,6 +34,16 @@ var PRESETS = []ProviderPreset{
 	{ID: "openai", Label: "OpenAI", BaseURL: "https://api.openai.com/v1", DefaultModel: "gpt-4o-mini", DefaultImageModel: "dall-e-3", Capabilities: Capabilities{Text: true, Image: true, DescribeImage: true, EditImage: true}},
 	{ID: "anthropic", Label: "Anthropic (Claude)", BaseURL: "https://api.anthropic.com", DefaultModel: "claude-opus-4-8", Capabilities: Capabilities{Text: true, DescribeImage: true}},
 	{ID: "deepseek", Label: "DeepSeek", BaseURL: "https://api.deepseek.com/v1", DefaultModel: "deepseek-chat", Capabilities: Capabilities{Text: true}},
+	// Moonshot AI (Kimi). OpenAI-compatible chat/completions. kimi-latest is the
+	// default because it auto-selects the context window (8k/32k/128k): a
+	// whole-deck outline plus per-slide fills overruns a pinned 8k model, and a
+	// truncated reply is a failed generation. Image GENERATION is absent from
+	// the API, so it stays off and the panel shows the text-only hint. Vision
+	// (describe/alt text) rides on the same model; both of its callers degrade
+	// quietly if a user pins a text-only Kimi model instead. The preset points
+	// at the international endpoint; the mainland one (api.moonshot.cn) is
+	// reachable through the Custom provider, which takes an explicit base URL.
+	{ID: "moonshot", Label: "Moonshot (Kimi)", BaseURL: "https://api.moonshot.ai/v1", DefaultModel: "kimi-latest", Capabilities: Capabilities{Text: true, DescribeImage: true}},
 	// Zhipu AI (GLM). OpenAI-compatible; text via GLM chat models, image via the
 	// CogView models on the same /images/generations endpoint. DescribeImage/edit
 	// are left off (vision needs GLM-4V; CogView has no OpenAI-style edit route).
