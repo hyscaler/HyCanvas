@@ -2271,7 +2271,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
         deps.voiceClause,
       ].filter(Boolean).join(" ");
       const { text } = await oc.aiText({ workspaceId: deps.workspaceId, prompt: String(a.prompt), system });
-      if (!text.trim()) return { error: "no text returned" };
+      if (!text.trim()) return { error: tr("editor.skip_no_text_returned") };
       const sel = st.selection[0];
       const node = sel ? locate(st.doc, sel)?.node : null;
       return { payload: { kind: "text", text: text.trim(), targetId: node?.type === "text" ? sel : undefined } };
@@ -2279,19 +2279,19 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
     case "rewriteSelectedText": {
       const sel = st.selection[0];
       const node = sel ? locate(st.doc, sel)?.node : null;
-      if (!node || node.type !== "text") return { error: "select a text box first" };
+      if (!node || node.type !== "text") return { error: tr("editor.skip_select_text_box") };
       const current = textContentOf(node);
-      if (!current) return { error: "that text box is empty" };
+      if (!current) return { error: tr("editor.skip_text_box_empty") };
       const system = `${withBrandVoice(String(a.instruction), deps.voiceClause)} Return only the resulting text, with no preamble or quotes.`;
       const { text } = await oc.aiText({ workspaceId: deps.workspaceId, prompt: current, system });
-      if (!text.trim()) return { error: "no text returned" };
+      if (!text.trim()) return { error: tr("editor.skip_no_text_returned") };
       return { payload: { kind: "text", text: text.trim(), targetId: sel } };
     }
     case "translateDeck": {
       const language = String(a.language ?? "").trim();
-      if (!language) return { error: "which language?" };
+      if (!language) return { error: tr("editor.skip_language_needed") };
       const entries = st.collectDeckTexts();
-      if (!entries.length) return { error: "there's no text to translate" };
+      if (!entries.length) return { error: tr("editor.skip_no_text_to_translate") };
       // Translate as ordered JSON string arrays in bounded batches: order and
       // length are the contract, so each string maps back to its collected
       // address (text run / sticky / notes) and styling is untouched.
@@ -2308,14 +2308,14 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
         ].join(" ");
         const { text } = await oc.aiText({ workspaceId: deps.workspaceId, prompt: JSON.stringify(batch), system });
         const parsed = parseStringArray(text, batch.length);
-        if (!parsed) return { error: "the translation came back malformed - try again" };
+        if (!parsed) return { error: tr("editor.skip_translation_malformed") };
         translated.push(...parsed);
       }
       return { payload: { kind: "decktexts", entries: entries.map((e, i) => ({ ref: e.ref, text: translated[i] })) } };
     }
     case "generateSpeakerNotes": {
       const pages = st.doc.pages;
-      if (!pages.length) return { error: "there are no slides yet" };
+      if (!pages.length) return { error: tr("editor.skip_no_slides") };
       // One compact text summary per slide (what's visibly on it), capped so a
       // dense deck stays inside a single prompt.
       const entries = st.collectDeckTexts();
@@ -2354,14 +2354,14 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
         ].filter(Boolean).join(" ");
         const { text } = await oc.aiText({ workspaceId: deps.workspaceId, prompt: JSON.stringify(batch), system });
         const parsed = parseStringArray(text, batch.length);
-        if (!parsed) return { error: "the notes came back malformed - try again" };
+        if (!parsed) return { error: tr("editor.skip_notes_malformed") };
         notes.push(...parsed);
       }
       return { payload: { kind: "notes", notes } };
     }
     case "generateDiagram": {
       const prompt = String(a.prompt ?? "").trim();
-      if (!prompt) return { error: "what should the diagram show?" };
+      if (!prompt) return { error: tr("editor.skip_diagram_subject_needed") };
       // Pasted Mermaid source imports directly - no AI round-trip (doc 30
       // diagram-as-code). Anything else asks the model for a spec.
       const direct = mermaidToDiagram(prompt);
@@ -2378,13 +2378,13 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       ].join(" ");
       const { text } = await oc.aiText({ workspaceId: deps.workspaceId, prompt, system });
       const spec = normalizeDiagramSpec(parseModelJson(text));
-      if (!spec) return { error: "the diagram came back malformed - try again" };
+      if (!spec) return { error: tr("editor.skip_diagram_malformed") };
       spec.kind = kind;
       return { payload: { kind: "diagram", spec } };
     }
     case "clusterStickies": {
       const stickies = st.collectBoardStickies();
-      if (stickies.length < 3) return { error: "add at least 3 sticky notes to cluster" };
+      if (stickies.length < 3) return { error: tr("editor.skip_need_more_stickies") };
       const guidance = String(a.instruction ?? "").trim();
       // i18n-ignore: model system prompt, never translated.
       const system = [
@@ -2394,7 +2394,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       ].filter(Boolean).join(" ");
       const { text } = await oc.aiText({ workspaceId: deps.workspaceId, prompt: JSON.stringify(stickies), system });
       const parsed = parseModelJson(text);
-      if (!Array.isArray(parsed)) return { error: "the clustering came back malformed - try again" };
+      if (!Array.isArray(parsed)) return { error: tr("editor.skip_clustering_malformed") };
       const known = new Set(stickies.map((sk) => sk.id));
       const clusters = parsed
         .map((c) => {
@@ -2403,12 +2403,12 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
           return { title: typeof o.title === "string" ? o.title : tr("editor.theme"), ids };
         })
         .filter((c) => c.ids.length > 0);
-      if (!clusters.length) return { error: "no usable clusters came back - try again" };
+      if (!clusters.length) return { error: tr("editor.skip_clusters_unusable") };
       return { payload: { kind: "clusters", clusters } };
     }
     case "summarizeStickies": {
       const stickies = st.collectBoardStickies();
-      if (!stickies.length) return { error: "there are no sticky notes to summarize" };
+      if (!stickies.length) return { error: tr("editor.skip_no_stickies") };
       // i18n-ignore: model system prompt, never translated.
       const system = [
         "You summarize a brainstorm board's sticky notes.",
@@ -2417,39 +2417,39 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
         deps.voiceClause,
       ].filter(Boolean).join(" ");
       const { text } = await oc.aiText({ workspaceId: deps.workspaceId, prompt: stickies.map((sk) => `- ${sk.text}`).join("\n"), system });
-      if (!text.trim()) return { error: "no summary returned" };
+      if (!text.trim()) return { error: tr("editor.skip_no_summary_returned") };
       return { payload: { kind: "summary", text: text.trim() } };
     }
     case "generateImage": {
-      if (!deps.imageCapable) return { error: "this provider can't generate images - connect an image-capable provider (e.g. OpenAI)" };
+      if (!deps.imageCapable) return { error: tr("editor.skip_provider_no_images") };
       const logo = String(a.style ?? "").toLowerCase().includes("logo");
       const prompt = logo
         ? `A clean, modern, flat vector-style logo for: ${String(a.prompt)}. Centered, simple, bold shapes, solid background, no text or lettering unless explicitly requested.`
         : groundImagePrompt(`${String(a.prompt)}. Well-composed, high detail, professional quality.`, { palette: deps.brandPalette, aspect: "square" });
       const { image } = await oc.aiImage({ workspaceId: deps.workspaceId, prompt, size: "1024x1024" });
-      if (!image) return { error: "no image returned" };
+      if (!image) return { error: tr("editor.skip_no_image_returned") };
       return { payload: { kind: "image", image } };
     }
     case "generateBackgroundImage": {
-      if (!deps.imageCapable) return { error: "this provider can't generate images - connect an image-capable provider (e.g. OpenAI)" };
+      if (!deps.imageCapable) return { error: tr("editor.skip_provider_no_images") };
       const prompt = groundImagePrompt(`${String(a.prompt)}. A full-bleed background image, subtle and uncluttered so text stays readable on top.`, { palette: deps.brandPalette, aspect: "landscape" });
       const { image } = await oc.aiImage({ workspaceId: deps.workspaceId, prompt, size: "1792x1024" });
-      if (!image) return { error: "no image returned" };
+      if (!image) return { error: tr("editor.skip_no_image_returned") };
       return { payload: { kind: "bgimage", image } };
     }
     case "editSelectedImage": {
-      if (!deps.editImageCapable) return { error: "this provider can't edit images - connect a provider with image editing (e.g. OpenAI)" };
+      if (!deps.editImageCapable) return { error: tr("editor.skip_provider_no_image_edit") };
       const sel = st.selection[0];
       const node = sel ? locate(st.doc, sel)?.node : null;
-      if (!node || node.type !== "image") return { error: "select an image first" };
+      if (!node || node.type !== "image") return { error: tr("editor.skip_select_image") };
       // An ImageNode carries source.assetId; the actual URL lives on the asset table.
       const assetId = (node as { source?: { assetId?: string } }).source?.assetId;
       const ref = assetId ? st.doc.assets.find((aRef) => aRef.id === assetId) : undefined;
       const url = ref?.url ? resolveAssetUrl(ref.url) : null;
-      if (!url) return { error: "that image has no source" };
+      if (!url) return { error: tr("editor.skip_image_no_source") };
       const imageBase64 = await imageUrlToPngDataUrl(url);
       const { image } = await oc.aiEditImage({ workspaceId: deps.workspaceId, imageBase64, prompt: String(a.instruction) });
-      if (!image) return { error: "no image returned" };
+      if (!image) return { error: tr("editor.skip_no_image_returned") };
       return { payload: { kind: "image", image, targetId: sel } };
     }
     case "regenerateSlide": {
@@ -2459,9 +2459,9 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       // existing placeholder boxes and a relayout only adds missing slots.
       const idx = Math.round(Number(a.pageIndex)) - 1; // the tool speaks 1-based
       const page = st.doc.pages[idx] as unknown as { id: string; name?: string; layoutId?: string; width: number; height: number; children: unknown[] } | undefined;
-      if (!page) return { error: "that page doesn't exist" };
+      if (!page) return { error: tr("editor.skip_page_missing") };
       const instruction = String(a.instruction ?? "").trim();
-      if (!instruction) return { error: "an instruction is needed" };
+      if (!instruction) return { error: tr("editor.skip_instruction_needed") };
       // Read-only planning: the resolve phase must not mutate the document
       // (ensureSlideLayouts runs inside the APPLY turn); built-ins here only
       // shape the schemas, and their ids match what the apply installs.
@@ -2472,7 +2472,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       // A slide with no placeholder boxes (freeform/pre-layout generation) has
       // nothing this tool can rewrite in place: refuse cleanly instead of
       // stacking new boxes over the existing content.
-      if (!slotted.length) return { error: "this slide isn't layout-linked - regenerate the deck to enable per-slide regeneration" };
+      if (!slotted.length) return { error: tr("editor.skip_slide_not_layout_linked") };
       const currentTexts = slotted
         .filter((n) => n.type === "text" && n.content?.length)
         .map((n) => `${n.data!.placeholderId}: ${(n.content ?? []).map((par) => par.runs.map((r) => r.text).join("")).join(" / ")}`)
@@ -2512,7 +2512,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       } catch {
         fill = null;
       }
-      if (!fill) return { error: "couldn't regenerate that slide" };
+      if (!fill) return { error: tr("editor.skip_couldnt_regenerate_slide") };
       // Image diff: only changed prompts regenerate; unchanged images stay.
       // (Text-only providers keep their tasks: the queue's reuse and stock
       // steps need no image provider, and a miss skips quietly.)
@@ -2540,7 +2540,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       // the two replacement pages fill deterministically from those items.
       const idx = Math.round(Number(a.pageIndex)) - 1; // the tool speaks 1-based
       const page = st.doc.pages[idx] as unknown as { id: string; name?: string; width: number; height: number; children: unknown[] } | undefined;
-      if (!page) return { error: "that page doesn't exist" };
+      if (!page) return { error: tr("editor.skip_page_missing") };
       // Read-only planning: layouts are only consulted here; the apply turn
       // installs the built-ins when the document has none (same ids).
       const docLayouts = (st.doc as unknown as { layouts?: SlideLayout[] }).layouts;
@@ -2563,7 +2563,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       } catch {
         parsed = null;
       }
-      if (!parsed?.a?.title || !parsed?.b?.title) return { error: "couldn't split that slide" };
+      if (!parsed?.a?.title || !parsed?.b?.title) return { error: tr("editor.skip_couldnt_split_slide") };
       const halves = [parsed.a, parsed.b].map((half) => {
         const item: OutlineItem = { id: "split", title: String(half.title), points: (half.points ?? []).map(String).filter(Boolean), visualRole: "content" };
         const layoutId = preferredLayoutFor("content", layouts);
@@ -2579,10 +2579,10 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       const layouts = docLayouts?.length ? docLayouts : builtinMasterAndLayouts(activePage ?? { width: 1920, height: 1080 }).layouts;
       const layout = layouts.find((l) => l.id === "layout-comparison")
         ?? layouts.find((l) => (l.placeholders ?? []).filter((p) => p.role === "content").length >= 2);
-      if (!layout) return { error: "no comparison layout available" };
+      if (!layout) return { error: tr("editor.skip_no_comparison_layout") };
       const topicA = String(a.topicA ?? "").trim();
       const topicB = String(a.topicB ?? "").trim();
-      if (!topicA || !topicB) return { error: "both topics are needed" };
+      if (!topicA || !topicB) return { error: tr("editor.skip_both_topics_needed") };
       const schema = deriveLayoutContentSchema(layout);
       let fill: LayoutFill | null = null;
       try {
@@ -2672,15 +2672,15 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       // source block, which applies the untrusted framing). No search
       // configured = a skipped step with a reason; the plan continues.
       const prompt = String(a.prompt ?? "").trim();
-      if (!prompt) return { error: "nothing to research" };
+      if (!prompt) return { error: tr("editor.skip_nothing_to_research") };
       try {
         if ((deps.sources?.length ?? 0) >= maxSources) {
           // Appending would silently drop the results (the cap keeps the
           // oldest); an honest skip beats a success chip over lost grounding.
-          return { error: "the attachment limit is reached - remove a source first" };
+          return { error: tr("editor.skip_attachment_limit") };
         }
         const { query, results } = await oc.aiSearch({ workspaceId: deps.workspaceId, prompt, maxResults: 6 });
-        if (!results.length) return { error: "no results found" };
+        if (!results.length) return { error: tr("editor.skip_no_results_found") };
         const text = results.map((r0, i) => `${i + 1}. ${r0.title}\n${r0.url}\n${r0.content}`).join("\n\n");
         deps.sources = [...(deps.sources ?? []), { name: `Web search: ${query}`, text }];
         // C33: keep the structured name+URL pairs too, so a deck generated from
@@ -2712,7 +2712,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
           }))
           .filter((t) => t.text),
       }));
-      if (!pageTexts.some((p) => p.texts.length)) return { error: "there's no text content to re-shape yet" };
+      if (!pageTexts.some((p) => p.texts.length)) return { error: tr("editor.skip_no_text_to_reshape") };
       const sizeFor: Record<string, { width: number; height: number }> = {
         doc: { width: 1240, height: 1754 },
         "social-set": { width: 1080, height: 1080 },
@@ -2755,7 +2755,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       const outline = reviewed
         ? structuredClone(reviewed)
         : await fetchAssistantOutline(deps.workspaceId, dt, brief, brandClause, pageCount, { signal: deps.signal, onStage: deps.onStage });
-      if (!outline || !outline.pages.length) return { error: "couldn't plan that design" };
+      if (!outline || !outline.pages.length) return { error: tr("editor.skip_couldnt_plan_design") };
       // Defensive page cap (the server caps too, but the sync-fallback outline
       // and a non-compliant model can still over-produce): a poster is exactly
       // one page, and an explicit pageCount is a hard ceiling. This also bounds
