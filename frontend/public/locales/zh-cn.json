@@ -2282,7 +2282,7 @@
   "editor.saved_as_template": "已保存为模板。",
   "editor.saved_views": "已保存的视图",
   "editor.saved_views_agenda": "已保存的视图/议程",
-  "editor.saving": "保存中…",
+  "editor.saving": "正在保存……",
   "editor.scale": "缩放",
   "editor.scale_2": "缩放",
   "editor.scale_text_down_so_it_never_overflows_the_bo": "缩小文本使其永不溢出文本框",

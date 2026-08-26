@@ -294,11 +294,11 @@ export function AiProviderSettings({
       {/* End-aligned: the form now spans the section, so the action sits at
           the page's end edge, level with the last column. justify-end follows
           the writing direction, so it mirrors correctly in RTL. */}
-      <div className={`flex items-center gap-3 ${wide ? "mt-2 justify-end" : "mt-0.5 flex-col"}`}>
-        {onCancel && (
-          <button onClick={onCancel} className="text-xs text-neutral-500 hover:underline">{tr("editor.cancel")}</button>
-        )}
-        {wide ? (
+      {wide ? (
+        <div className="mt-2 flex items-center justify-end gap-3">
+          {onCancel && (
+            <button onClick={onCancel} className="text-xs text-neutral-500 hover:underline">{tr("editor.cancel")}</button>
+          )}
           <button
             onClick={() => void save()}
             disabled={!workspaceId || saving}
@@ -306,12 +306,20 @@ export function AiProviderSettings({
           >
             {saving ? tr("editor.saving") : tr("editor.save_provider")}
           </button>
-        ) : (
+        </div>
+      ) : (
+        // Stacked, the primary action comes FIRST and fills the panel; Cancel
+        // is the quiet way back underneath it. items-stretch matters: centring
+        // would leave the block button sized to its text.
+        <div className="mt-0.5 flex flex-col items-stretch gap-2">
           <Button block onClick={() => void save()} disabled={!workspaceId || saving}>
             {saving ? tr("editor.saving") : tr("editor.save_provider")}
           </Button>
-        )}
-      </div>
+          {onCancel && (
+            <button onClick={onCancel} className="text-xs text-neutral-500 hover:underline">{tr("editor.cancel")}</button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
