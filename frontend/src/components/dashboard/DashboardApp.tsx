@@ -210,6 +210,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
   const [aiTone, setAiTone] = useState("auto");
   const [briefSources, setBriefSources] = useState<AiSource[]>([]);
   const [briefBusy, setBriefBusy] = useState(false);
+  const [briefDrop, setBriefDrop] = useState(false);
   const briefFileRef = useRef<HTMLInputElement | null>(null);
 
   /** Read attached files into grounding text, using the same pipeline the
@@ -829,12 +830,41 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                     the canvas it composes for, and the voice it writes in -
                     rather than decoration. */}
                 <form
-                  className="mt-6 rounded-2xl border border-neutral-200 bg-surface p-3 text-start shadow-sm transition focus-within:border-brand-400 focus-within:ring-4 focus-within:ring-brand-50"
+                  className={`relative mt-6 rounded-2xl border bg-surface p-3 text-start shadow-sm transition focus-within:ring-4 focus-within:ring-brand-50 ${
+                    briefDrop ? "border-brand-400 ring-4 ring-brand-50" : "border-neutral-200 focus-within:border-brand-400"
+                  }`}
                   onSubmit={(e) => {
                     e.preventDefault();
                     submitBrief();
                   }}
+                  onDragOver={(e) => {
+                    // Dragging a document onto the brief is the same gesture the
+                    // editor's assistant accepts; the dashboard had no drop
+                    // target at all, so nothing else competes for it here.
+                    if (!e.dataTransfer.types.includes("Files") || briefBusy) return;
+                    e.preventDefault();
+                    setBriefDrop(true);
+                  }}
+                  onDragLeave={(e) => {
+                    // Ignore the dragleave fired by crossing this form's own
+                    // children, or the hint flickers over every nested control.
+                    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+                    setBriefDrop(false);
+                  }}
+                  onDrop={(e) => {
+                    if (!e.dataTransfer.types.includes("Files")) return;
+                    e.preventDefault();
+                    setBriefDrop(false);
+                    void attachBriefFiles(Array.from(e.dataTransfer.files ?? []));
+                  }}
                 >
+                  {briefDrop && (
+                    <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center rounded-2xl border-2 border-dashed border-brand-400 bg-brand-50/90">
+                      <span className="flex items-center gap-1.5 text-xs font-medium text-brand-ink">
+                        <Paperclip size={13} /> {tr("dashboard.drop_documents_to_build_from")}
+                      </span>
+                    </div>
+                  )}
                   <textarea
                     value={aiBrief}
                     onChange={(e) => setAiBrief(e.target.value)}
