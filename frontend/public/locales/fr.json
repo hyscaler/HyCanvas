@@ -193,7 +193,6 @@
   "dashboard.banner": "Bannière",
   "dashboard.blank": "Vierge",
   "dashboard.blank_custom_size": "Vierge / taille personnalisée",
-  "dashboard.browse_templates": "Parcourir les modèles",
   "dashboard.build_a_template_from_a_powerpoint_file": "Créer un modèle réutilisable depuis un fichier .pptx",
   "dashboard.bulk_create": "Création en masse",
   "dashboard.bulk_create_failed": "La création en masse a échoué.",

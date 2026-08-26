@@ -785,11 +785,11 @@ export function DashboardApp({ view }: { view: DashboardView }) {
           {!query.trim() && (
             <section className="relative mb-9 min-h-[8rem]">
               <HeroArt />
-              <div className="relative max-w-3xl">
+              <div className="relative mx-auto max-w-3xl text-center">
                 <h1 className="text-2xl font-bold tracking-tight text-neutral-900 sm:text-3xl">
                   {greetByHour()}, {firstName} <span className="inline-block">👋</span>
                 </h1>
-                <p className="mt-2 max-w-xl text-sm text-neutral-500">
+                <p className="mx-auto mt-2 max-w-xl text-sm text-neutral-500">
                   {tr("dashboard.let_s_make_something_today_start_from_a_blan")}
                 </p>
                 {/* The headline capability used to require: make a blank
@@ -800,7 +800,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                     the canvas it composes for, and the voice it writes in -
                     rather than decoration. */}
                 <form
-                  className="mt-5 rounded-2xl border border-neutral-200 bg-surface p-3 shadow-sm transition focus-within:border-brand-400 focus-within:ring-4 focus-within:ring-brand-50"
+                  className="mt-6 rounded-2xl border border-neutral-200 bg-surface p-3 text-start shadow-sm transition focus-within:border-brand-400 focus-within:ring-4 focus-within:ring-brand-50"
                   onSubmit={(e) => {
                     e.preventDefault();
                     submitBrief();
@@ -867,21 +867,23 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                     </button>
                   </div>
                 </form>
-                <div className="mt-3 flex flex-wrap gap-2.5">
-                  <Button variant="secondary" onClick={() => setSizeOpen(true)} disabled={busy || !activeWorkspaceId}>
-                    <Plus size={16} /> {tr("dashboard.start_a_design")}
-                  </Button>
-                  <Button variant="secondary" onClick={() => gotoView("templates")}>
-                    <LayoutTemplate size={16} /> {tr("dashboard.browse_templates")}
-                  </Button>
-                </div>
               </div>
             </section>
           )}
 
           {/* Create row: every format together in one wrap. */}
           <section className="mb-10">
-            <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-neutral-400">{tr("dashboard.start_a_design")}</h2>
+            <div className="mb-3 flex items-center gap-3">
+              <h2 className="text-sm font-bold uppercase tracking-wide text-neutral-400">{tr("dashboard.start_a_design")}</h2>
+              <span className="flex-1" />
+              <button
+                onClick={() => setSizeOpen(true)}
+                disabled={busy || !activeWorkspaceId}
+                className="flex items-center gap-1.5 rounded-full border border-neutral-200 bg-surface px-3 py-1.5 text-xs font-medium text-neutral-600 transition hover:border-neutral-300 hover:text-neutral-800 disabled:opacity-40"
+              >
+                <Plus size={14} /> {tr("dashboard.blank_custom_size")}
+              </button>
+            </div>
             <div className="flex flex-wrap gap-3">
               {[{ label: tr("dashboard.blank"), icon: Plus, w: 1080, h: 1080 } as Format, ...formatGroups().flatMap((g) => g.items)].map((f) => (
                 <FormatTile key={f.label} f={f} disabled={busy} onClick={() => startFormat(f)} />

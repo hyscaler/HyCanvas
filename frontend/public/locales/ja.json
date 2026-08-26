@@ -193,7 +193,6 @@
   "dashboard.banner": "バナー",
   "dashboard.blank": "空白",
   "dashboard.blank_custom_size": "空白/カスタムサイズ",
-  "dashboard.browse_templates": "テンプレートを見る",
   "dashboard.build_a_template_from_a_powerpoint_file": ".pptxファイルから再利用可能なテンプレートを作成",
   "dashboard.bulk_create": "一括作成",
   "dashboard.bulk_create_failed": "一括作成に失敗しました。",

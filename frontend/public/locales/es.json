@@ -193,7 +193,6 @@
   "dashboard.banner": "Banner",
   "dashboard.blank": "En blanco",
   "dashboard.blank_custom_size": "En blanco / tamaño personalizado",
-  "dashboard.browse_templates": "Explorar plantillas",
   "dashboard.build_a_template_from_a_powerpoint_file": "Crear una plantilla reutilizable desde un archivo .pptx",
   "dashboard.bulk_create": "Creación masiva",
   "dashboard.bulk_create_failed": "La creación masiva falló.",

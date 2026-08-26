@@ -193,7 +193,6 @@
   "dashboard.banner": "横幅",
   "dashboard.blank": "空白",
   "dashboard.blank_custom_size": "空白/自定义尺寸",
-  "dashboard.browse_templates": "浏览模板",
   "dashboard.build_a_template_from_a_powerpoint_file": "从 .pptx 文件构建可复用模板",
   "dashboard.bulk_create": "批量创建",
   "dashboard.bulk_create_failed": "批量创建失败。",
