@@ -767,7 +767,10 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                     e.preventDefault();
                     const brief = aiBrief.trim();
                     if (!brief || busy || !activeWorkspaceId) return;
-                    void createDesign(1920, 1080, brief.slice(0, 80), undefined, brief);
+                    // Created untitled on purpose: the generation names it
+                    // from the outline it produces, which reads far better
+                    // than the raw prompt.
+                    void createDesign(1920, 1080, undefined, undefined, brief);
                   }}
                 >
                   <Input

@@ -63,7 +63,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { mirrorInRtl } from "@/lib/locale";
 import { tr, trOr } from "@/lib/i18n";
 import { cancelAiImages, enqueueAiImages, retryFailedAiImages, subscribeAiImageQueue } from "@/lib/aiImageQueue";
-import { subscribeAiRequests } from "@/lib/aiRequests";
+import { subscribeAiRequests, type AiRequest } from "@/lib/aiRequests";
 import { builtinThemes } from "@/lib/themeCatalog";
 import { cancelAiFills, enqueueAiFills, retryFailedAiFills, subscribeAiFillQueue } from "@/lib/aiFillQueue";
 import { stickerLabel, stickerCategoryLabel } from "@/lib/stickers";
@@ -1978,6 +1978,15 @@ function abortError(): DOMException {
   return new DOMException("aborted", "AbortError");
 }
 
+/** Whether a document still carries a placeholder name, so generation may set
+ *  one. Matches the labels new designs are created with, in any language, plus
+ *  an empty title. */
+function isUntitledDoc(title: string | undefined): boolean {
+  const t = (title ?? "").trim();
+  if (!t) return true;
+  return t === tr("dashboard.untitled_design") || t === tr("editor.untitled_design_2") || t === tr("editor.untitled");
+}
+
 function actionLabel(action: string): string {
   const key = `editor.action_${action.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)}`;
   return trOr(key, action.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase());
@@ -3236,6 +3245,12 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
         const base = append ? st.doc.pages.length : 0;
         const ids = append ? st.appendDeckPages(deckLike, size) : st.buildDeckFromOutline(deckLike, size);
         if (!ids.length) return false;
+        // Name an untitled document after what was generated. Nothing renamed
+        // it before, so a deck arriving from the dashboard brief would have
+        // kept the raw prompt as its title, and one generated in the editor
+        // kept its placeholder name however good the deck was. A title the
+        // user chose is never overwritten.
+        if (deckTitle.trim() && isUntitledDoc(st.doc.title)) st.setDocTitle(deckTitle.trim().slice(0, 120));
         const turnId = st.currentTurnId();
         const imageTasks: Parameters<typeof enqueueAiImages>[0] = [];
         const availableIds = new Set(installed.map((l) => l.id));
@@ -3420,7 +3435,6 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   const attachToggleRef = useRef<HTMLButtonElement | null>(null);
   const reviewAbort = useRef<AbortController | null>(null);
   const busyRef = useRef(false);
-  busyRef.current = busy;
   // Generation dials persist per workspace. They used to be created empty for
   // every plan and to live only inside the confirm card, so setting "concise /
   // investor" and regenerating silently reset all four to Auto, and there was
@@ -3452,28 +3466,38 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   // a page's toolbar). An `action` request runs the tool DIRECTLY: routing a
   // canned sentence through the planner is non-deterministic, and this one is
   // unambiguous. The user still sees it in the thread, and it is one undo.
+  // The subscription must NOT re-run per render (a queued request would be
+  // dropped and re-delivered), but the handler it holds must still see the
+  // CURRENT attachments, dials and brand state. A ref keeps the latest
+  // implementation behind a stable subscription.
+  const handleAiRequest = useRef<(req: AiRequest) => void>(() => {});
+  const onAiRequest = (req: AiRequest) => {
+    if (busyRef.current) {
+      toast.error(tr("editor.the_assistant_is_still_working"));
+      return;
+    }
+    if (req.kind === "prompt") {
+      void send(req.text);
+      return;
+    }
+    const text = tr("editor.regenerate_slide_n_instruction", { n: req.pageIndex + 1, instruction: req.instruction });
+    setTurns((t) => [...demoteProposals(t), { role: "user", text }]);
+    void persistTurn("user", text);
+    void execute(
+      [{ action: "regenerateSlide", args: { pageIndex: req.pageIndex + 1, instruction: req.instruction }, status: "planned" }],
+      tr("editor.regenerating_slide_n", { n: req.pageIndex + 1 }),
+    );
+  };
+  // Refs are written in an effect, never during render: this is the "latest
+  // ref" pattern, so the stable subscription below always calls the current
+  // implementation (with the current attachments, dials and brand state).
   useEffect(() => {
-    return subscribeAiRequests((req) => {
-      if (busyRef.current) {
-        toast.error(tr("editor.the_assistant_is_still_working"));
-        return;
-      }
-      if (req.kind === "prompt") {
-        void send(req.text);
-        return;
-      }
-      const text = tr("editor.regenerate_slide_n_instruction", { n: req.pageIndex + 1, instruction: req.instruction });
-      setTurns((t) => [...demoteProposals(t), { role: "user", text }]);
-      void persistTurn("user", text);
-      void execute(
-        [{ action: "regenerateSlide", args: { pageIndex: req.pageIndex + 1, instruction: req.instruction }, status: "planned" }],
-        tr("editor.regenerating_slide_n", { n: req.pageIndex + 1 }),
-      );
-    }, Date.now());
-    // send/execute are stable for a given design; re-subscribing per keystroke
-    // would drop a queued request.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [designId, workspaceId]);
+    busyRef.current = busy;
+    handleAiRequest.current = onAiRequest;
+  });
+  useEffect(() => {
+    return subscribeAiRequests((req) => handleAiRequest.current(req), Date.now());
+  }, []);
 
   // Per-slide refinements land silently after the deck does; this makes that
   // phase visible instead of letting text change by itself.
