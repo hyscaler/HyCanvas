@@ -1789,8 +1789,22 @@ async function imageUrlToPngDataUrl(url: string): Promise<string> {
 /** Extract a small dominant-color palette (hex) from an image URL for F39
  *  reference-image style transfer (FR-18). Samples at ~128px for speed; returns
  *  [] if the image can't be read (e.g. cross-origin). */
-async function pollJob<R>(jobId: string, tries = 12): Promise<R> {
-  for (let i = 0; i < tries; i++) {
+/** Poll a generation job to completion.
+ *
+ *  The budget is in MINUTES, not seconds: this is the fallback whenever the
+ *  SSE stream cannot connect (proxies that buffer server-sent events are
+ *  common), and it waits on a language model composing a whole deck. The old
+ *  12 tries at 400ms gave up after 4.8 seconds, so every affected user saw a
+ *  guaranteed "generation timed out" while the server run went on to succeed.
+ *
+ *  Backoff keeps the early polls responsive for a fast job without hammering
+ *  the API for the length of a slow one. */
+const jobPollBudgetMs = 4 * 60 * 1000;
+
+async function pollJob<R>(jobId: string, budgetMs = jobPollBudgetMs): Promise<R> {
+  const started = Date.now();
+  let waitMs = 400;
+  while (Date.now() - started < budgetMs) {
     const job = await oc.getJob<R>(jobId);
     if (job.status === "completed") {
       if (job.result === undefined) throw new CodedError("errors.generation_failed", "job completed without a result");
@@ -1799,7 +1813,8 @@ async function pollJob<R>(jobId: string, tries = 12): Promise<R> {
     // A server-provided failure detail is shown as-is; only the generic
     // fallback carries a code for translation.
     if (job.status === "failed") throw job.error ? new Error(job.error) : new CodedError("errors.generation_failed", "generation failed");
-    await new Promise((r) => setTimeout(r, 400));
+    await new Promise((r) => setTimeout(r, waitMs));
+    waitMs = Math.min(2000, Math.round(waitMs * 1.4));
   }
   throw new CodedError("errors.generation_timed_out", "generation timed out");
 }
