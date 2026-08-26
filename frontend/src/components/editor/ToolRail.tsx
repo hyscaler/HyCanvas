@@ -40,7 +40,6 @@ export function ToolRail({ workspaceId, overlay = false, defaultCollapsed = fals
       case "templates": return <TemplatesPanel />;
       case "elements": return <ElementsPanel />;
       case "text": return <TextPanel />;
-      case "ai": return <AiPanel workspaceId={workspaceId} />;
       case "uploads": return <UploadsPanel workspaceId={workspaceId} />;
       case "stock": return <StockPanel workspaceId={workspaceId} />;
       case "apps": return <AppsPanel />;
@@ -88,6 +87,15 @@ export function ToolRail({ workspaceId, overlay = false, defaultCollapsed = fals
       ) : (
         panel
       )}
+      {/* The AI panel is a CONVERSATION with in-flight work (a planner call, a
+          pending confirm, a running generation): it stays MOUNTED at this one
+          stable tree position and is hidden, never unmounted, while another
+          tool is active or the viewport crosses the overlay breakpoint -
+          unmounting would silently drop the busy state, the confirm gate, and
+          the response of a message already sent. */}
+      <div className={active === "ai" ? (overlay ? "absolute start-full top-0 z-30 h-full shadow-xl" : "contents") : "hidden"}>
+        <AiPanel workspaceId={workspaceId} />
+      </div>
     </aside>
   );
 }

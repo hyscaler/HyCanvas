@@ -3582,9 +3582,11 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       else if (!extra) toast.error(skipNote ? `Nothing applied: ${skipNote}.` : tr("editor.nothing_was_applied_try_selecting_an_element"));
     } catch (e) {
       // A failed confirm leaves no execution report: demote the proposal so a
-      // LATER unrelated report can't replace it.
-      if (opts?.fromProposal) setTurns(demoteProposals);
-      toast.error(aiErr(e));
+      // LATER unrelated report can't replace it, and land the failure IN the
+      // thread (a toast alone disappears).
+      const msg = aiErr(e);
+      setTurns((t) => [...(opts?.fromProposal ? demoteProposals(t) : t), { role: "assistant", text: msg }]);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
@@ -3681,7 +3683,11 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       }
       await execute(res.plan, res.reply);
     } catch (e) {
-      toast.error(aiErr(e));
+      // The failure lands IN the thread: a toast alone disappears and leaves
+      // the conversation looking ignored (a lone user bubble, no reply).
+      const msg = aiErr(e);
+      setTurns((t) => [...t, { role: "assistant", text: msg }]);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
@@ -3842,6 +3848,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400 [animation-delay:-0.3s]" />
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400 [animation-delay:-0.15s]" />
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400" />
+              <span className="ms-1.5 text-xs text-neutral-500">{tr("editor.thinking")}</span>
             </div>
           </div>
         )}
