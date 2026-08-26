@@ -14,6 +14,7 @@ import { Sparkles, Activity } from "lucide-react";
 import type { AiConfigView, AiProviderPreset } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
 import { AiProviderSettings } from "@/components/ai/AiProviderSettings";
+import { WorkspaceAiPolicy } from "./WorkspaceAiPolicy";
 import { tr } from "@/lib/i18n";
 
 export function WorkspaceAiPanel({ workspaceId, canEdit }: { workspaceId: string | null; canEdit: boolean }) {
@@ -90,6 +91,10 @@ export function WorkspaceAiPanel({ workspaceId, canEdit }: { workspaceId: string
           </span>
         )}
       </div>
+
+      {/* Governance sits with the provider it governs, and only for the
+          admins who can change either. */}
+      {!loading && canEdit && <WorkspaceAiPolicy workspaceId={workspaceId} presets={presets} />}
 
       {!loading && (
         <div>
