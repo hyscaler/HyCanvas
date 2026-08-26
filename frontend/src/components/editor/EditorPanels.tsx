@@ -62,9 +62,9 @@ import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { mirrorInRtl } from "@/lib/locale";
 import { tr, trOr } from "@/lib/i18n";
-import { enqueueAiImages, retryFailedAiImages, subscribeAiImageQueue } from "@/lib/aiImageQueue";
+import { cancelAiImages, enqueueAiImages, retryFailedAiImages, subscribeAiImageQueue } from "@/lib/aiImageQueue";
 import { builtinThemes } from "@/lib/themeCatalog";
-import { enqueueAiFills } from "@/lib/aiFillQueue";
+import { cancelAiFills, enqueueAiFills, subscribeAiFillQueue } from "@/lib/aiFillQueue";
 import { stickerLabel, stickerCategoryLabel } from "@/lib/stickers";
 import { documentDirection } from "@/lib/locale";
 import { apiCodeMessage, CodedError, userMessage } from "@/lib/errors";
@@ -1951,11 +1951,36 @@ interface AssistantDeps {
   /** A template's theme record (F40 E14): wins over styleThemeId; the deck is
    *  composed on the template's palette and fonts. */
   styleThemeRecord?: Theme;
+  /** Aborts every model call in this run: a generation can take minutes, and
+   *  a user who changed their mind should not have to wait it out and pay for
+   *  it. Passed to the SDK, which forwards it to fetch. */
+  signal?: AbortSignal;
+  /** Reports the current stage so the thread can say what is happening
+   *  instead of showing one anonymous spinner for the whole run. */
+  onStage?: (stage: string) => void;
 }
 
 // Outline roles that get a generated hero background image (the high-impact
 // pages). Content/agenda/data pages stay on clean themed backgrounds so dense
 // text never sits on a busy photo.
+/** A plan action in the user's words. The thread showed raw tool identifiers
+ *  ("generateBackgroundImage") in its step chips and would have done the same
+ *  in the progress line; those are internal names, not English. Unknown
+ *  actions fall back to a spaced-out form rather than a blank. */
+/** The rejection fetch itself raises when a request is aborted, so a
+ *  cooperative stop between plan steps is indistinguishable from one that
+ *  landed mid-request. "AbortError" is the DOM's own name for this condition -
+ *  a protocol value callers match on, never a label - so it is not translated. */
+function abortError(): DOMException {
+  // i18n-ignore: DOMException name, matched by callers, never shown to anyone.
+  return new DOMException("aborted", "AbortError");
+}
+
+function actionLabel(action: string): string {
+  const key = `editor.action_${action.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)}`;
+  return trOr(key, action.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase());
+}
+
 const HERO_ROLES = new Set(["cover", "quote", "closing"]);
 const MAX_HERO_IMAGES = 6;
 
@@ -3243,6 +3268,7 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
           const layoutId = availableIds.has(p.layoutId) ? p.layoutId : installed[0]?.id ?? "";
           return [{
             workspaceId,
+            designId: designId ?? "",
             pageId: ids[i],
             layout: installed.find((l) => l.id === layoutId)!,
             prompt: p.fillPrompt,
@@ -3369,6 +3395,20 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     // setTurns is stable (useState setter); re-subscribe only per design.
   }, [designId]);
   const [busy, setBusy] = useState(false);
+  // The running plan's aborter and its current stage. One anonymous spinner for
+  // a minute of work told the user nothing and gave them no way out; these two
+  // make the wait legible and escapable.
+  const runAbort = useRef<AbortController | null>(null);
+  const [stage, setStage] = useState<string | null>(null);
+  const [fillProgress, setFillProgress] = useState<{ done: number; total: number } | null>(null);
+  // Per-slide refinements land silently after the deck does; this makes that
+  // phase visible instead of letting text change by itself.
+  useEffect(() => {
+    return subscribeAiFillQueue((ev) => {
+      if (ev.designId !== (designId ?? "")) return;
+      setFillProgress(ev.total > 0 && ev.done < ev.total ? { done: ev.done, total: ev.total } : null);
+    });
+  }, [designId]);
   // Attached source content for create-from-document/URL/file (FR-23).
   // T15: multiple grounding attachments (cap 8), each editable before use.
   const [sources, setSources] = useState<{ name: string; text: string }[]>([]);
@@ -3525,6 +3565,9 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   async function execute(plan: PlanStep[], reply: string, reviewedOutline?: DesignOutline, dials?: GenerationDials, citations?: SourceCitation[], styleThemeId?: string, styleTemplateId?: string, opts?: { fromProposal?: boolean }) {
     if (!workspaceId) return;
     setBusy(true);
+    const aborter = new AbortController();
+    runAbort.current = aborter;
+    setStage(tr("editor.stage_preparing"));
     try {
       // Resolve every async prerequisite BEFORE the synchronous undo turn so the
       // whole plan still collapses into one undo entry: applyBrand needs brand-lint
@@ -3545,12 +3588,14 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       // the SAME store when the route switches design, so every mutation point
       // below re-checks that this is still the document the plan was made for.
       const stillOnDesign = () => !designId || useComments.getState().designId === designId;
+      const stageFor = (action: string, i: number, total: number) =>
+        total > 1 ? tr("editor.stage_step_of", { step: i + 1, total, action: actionLabel(action) }) : actionLabel(action);
       const wrongDesign = () => {
         const msg = tr("editor.that_generation_was_for_a_different_design");
         setTurns((t) => [...t, { role: "assistant", text: msg }]);
         toast.error(msg);
       };
-      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sources, reviewedOutline, dials, designId, citations, styleThemeId };
+      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sources, reviewedOutline, dials, designId, citations, styleThemeId, signal: aborter.signal, onStage: setStage };
       // F40 E14: a template base contributes its layout system + theme. The
       // adoption happens BEFORE the resolve pass so the layout-grounded path
       // naturally picks up the adopted layouts from the document.
@@ -3576,10 +3621,16 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       const payloads: (ResolvedPayload | undefined)[] = [];
       const skips: (string | undefined)[] = [];
       for (let i = 0; i < plan.length; i++) {
+        // Cooperative stop between steps: the in-flight call carries the
+        // signal, and nothing further is started once the user has asked to
+        // stop, so no work lands from a run they abandoned.
+        if (aborter.signal.aborted) throw abortError();
+        setStage(stageFor(plan[i].action, i, plan.length));
         const r = await resolvePlanStep(plan[i], deps);
         payloads[i] = r.payload;
         skips[i] = r.error;
       }
+      if (aborter.signal.aborted) throw abortError();
 
       // A plan resolves across tens of seconds of model calls, and the editor
       // keeps the SAME store when the route switches to another design
@@ -3646,6 +3697,10 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       if (done) toast.success(`Applied ${done} step${done === 1 ? "" : "s"} (one undo reverts the turn).`);
       else if (!extra) toast.error(skipNote ? `Nothing applied: ${skipNote}.` : tr("editor.nothing_was_applied_try_selecting_an_element"));
     } catch (e) {
+      if (aborter.signal.aborted) {
+        setTurns((t) => [...demoteProposals(t), { role: "assistant", text: tr("editor.stopped") }]);
+        return;
+      }
       // A failed confirm leaves no execution report: demote the proposal so a
       // LATER unrelated report can't replace it, and land the failure IN the
       // thread (a toast alone disappears).
@@ -3653,8 +3708,23 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       setTurns((t) => [...(opts?.fromProposal ? demoteProposals(t) : t), { role: "assistant", text: msg }]);
       toast.error(msg);
     } finally {
+      if (runAbort.current === aborter) runAbort.current = null;
+      setStage(null);
       setBusy(false);
     }
+  }
+
+  /** Stop the running plan: abort the in-flight model call and drop every
+   *  queued refinement and image for this design. Work already applied stays
+   *  (it is the user's document now) and remains one undo away. */
+  function stopRun() {
+    runAbort.current?.abort();
+    const id = designId ?? "";
+    if (id) {
+      cancelAiFills(id);
+      cancelAiImages(id);
+    }
+    setFillProgress(null);
   }
 
   /** Extract and attach a batch of dropped or picked files. Honors the cap,
@@ -3723,6 +3793,9 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     setTurns((t) => [...demoteProposals(t), { role: "user", text: userText }]);
     void persistTurn("user", userText);
     setBusy(true);
+    const aborter = new AbortController();
+    runAbort.current = aborter;
+    setStage(tr("editor.stage_planning"));
     try {
       const st = useEditor.getState();
       const summaryDoc = {
@@ -3748,7 +3821,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
         : userText;
       let res;
       try {
-        const r = await oc.aiAssistant({ workspaceId, designSummary: summary, history, message: plannerText });
+        const r = await oc.aiAssistant({ workspaceId, designSummary: summary, history, message: plannerText }, aborter.signal);
         res = parseAssistantReply(r, ASSISTANT_CATALOG);
       } catch (e) {
         if (e instanceof ApiError && !endpointUnavailable(e)) throw e; // surface provider/policy errors
@@ -3805,12 +3878,19 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       }
       await execute(res.plan, res.reply);
     } catch (e) {
+      if (aborter.signal.aborted) {
+        // The user stopped it; that is an outcome, not an error.
+        setTurns((t) => [...demoteProposals(t), { role: "assistant", text: tr("editor.stopped") }]);
+        return;
+      }
       // The failure lands IN the thread: a toast alone disappears and leaves
       // the conversation looking ignored (a lone user bubble, no reply).
       const msg = aiErr(e);
       setTurns((t) => [...t, { role: "assistant", text: msg }]);
       toast.error(msg);
     } finally {
+      if (runAbort.current === aborter) runAbort.current = null;
+      setStage(null);
       setBusy(false);
     }
   }
@@ -3952,7 +4032,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                   {t.steps && t.steps.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-1">
                       {t.steps.map((s, j) => (
-                        <span key={j} className={`rounded px-1.5 py-0.5 text-[10px] ${t.proposed ? "bg-neutral-200 text-neutral-600" : s.ok ? "bg-emerald-100 text-emerald-700" : "bg-neutral-200 text-neutral-500 line-through"}`}>{s.action}</span>
+                        <span key={j} className={`rounded px-1.5 py-0.5 text-[10px] ${t.proposed ? "bg-neutral-200 text-neutral-600" : s.ok ? "bg-emerald-100 text-emerald-700" : "bg-neutral-200 text-neutral-500 line-through"}`}>{actionLabel(s.action)}</span>
                       ))}
                     </div>
                   )}
@@ -3990,13 +4070,33 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
           )
         )}
         {busy && (
-          <div className="flex items-start gap-2">
+          // role=status so the wait is announced, not just drawn: a screen
+          // reader user pressed Enter and heard nothing until the reply landed.
+          <div className="flex items-start gap-2" role="status" aria-live="polite">
             {AssistantAvatar}
-            <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-neutral-100 px-3 py-2.5">
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400 [animation-delay:-0.3s]" />
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400 [animation-delay:-0.15s]" />
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400" />
-              <span className="ms-1.5 text-xs text-neutral-500">{tr("editor.thinking")}</span>
+            <div className="flex items-center gap-2 rounded-2xl rounded-bl-sm bg-neutral-100 px-3 py-2.5">
+              <span className="flex items-center gap-1">
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400 [animation-delay:-0.3s]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400 [animation-delay:-0.15s]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400" />
+              </span>
+              <span className="text-xs text-neutral-600">{stage ?? tr("editor.thinking")}</span>
+              <button onClick={stopRun} className="rounded-full border border-neutral-300 px-2 py-0.5 text-[11px] font-medium text-neutral-600 hover:border-neutral-400 hover:text-neutral-800">
+                {tr("editor.stop")}
+              </button>
+            </div>
+          </div>
+        )}
+        {/* The refinement phase runs AFTER the deck lands, so it needs its own
+            line: without it, slides silently rewrite themselves. */}
+        {!busy && fillProgress && (
+          <div className="flex items-start gap-2" role="status" aria-live="polite">
+            {AssistantAvatar}
+            <div className="flex items-center gap-2 rounded-2xl rounded-bl-sm bg-neutral-100 px-3 py-2.5 text-xs text-neutral-600">
+              <span>{tr("editor.writing_slide_of", { done: fillProgress.done + 1, total: fillProgress.total })}</span>
+              <button onClick={stopRun} className="rounded-full border border-neutral-300 px-2 py-0.5 text-[11px] font-medium text-neutral-600 hover:border-neutral-400 hover:text-neutral-800">
+                {tr("editor.stop")}
+              </button>
             </div>
           </div>
         )}

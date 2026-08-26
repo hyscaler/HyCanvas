@@ -31,6 +31,55 @@ export interface AiFillTask {
    *  live text no longer matches was EDITED by the user while the refinement
    *  ran, and is left alone. */
   expected: { texts: Record<string, string>; lists: Record<string, string[]> };
+  /** The design these refinements belong to, so a Stop can drop the ones that
+   *  have not started and progress can be reported per design. */
+  designId: string;
+}
+
+/** Queue progress for one design, so the panel can say "refining slide 3 of 9"
+ *  instead of leaving the user watching text change by itself. */
+export interface AiFillProgress {
+  designId: string;
+  done: number;
+  total: number;
+}
+type FillListener = (p: AiFillProgress) => void;
+const fillListeners = new Set<FillListener>();
+
+export function subscribeAiFillQueue(cb: FillListener): () => void {
+  fillListeners.add(cb);
+  return () => fillListeners.delete(cb);
+}
+
+// Per design: how many refinements were queued in this batch and how many have
+// settled. Reset once a batch drains, so a later generation counts from zero.
+const totalByDesign = new Map<string, number>();
+const doneByDesign = new Map<string, number>();
+
+function reportProgress(designId: string): void {
+  const total = totalByDesign.get(designId) ?? 0;
+  const done = doneByDesign.get(designId) ?? 0;
+  for (const cb of fillListeners) cb({ designId, done, total });
+  if (total > 0 && done >= total) {
+    totalByDesign.delete(designId);
+    doneByDesign.delete(designId);
+  }
+}
+
+/** Drop every refinement for a design that has not started yet (the chat's
+ *  Stop). In-flight calls are left to settle: their result is discarded by the
+ *  page checks in refine(), and aborting them buys nothing already paid for. */
+export function cancelAiFills(designId: string): number {
+  let dropped = 0;
+  for (let i = queue.length - 1; i >= 0; i--) {
+    if (queue[i].designId === designId) {
+      queue.splice(i, 1);
+      dropped++;
+    }
+  }
+  totalByDesign.delete(designId);
+  doneByDesign.delete(designId);
+  return dropped;
 }
 
 /** Flatten a placeholder box's live text for the edited-slot comparison. */
@@ -56,7 +105,9 @@ const maxConcurrent = 3;
 /** Queue per-slide refinements; each lands independently as it completes. */
 export function enqueueAiFills(tasks: AiFillTask[]): void {
   if (!tasks.length) return;
+  for (const t of tasks) totalByDesign.set(t.designId, (totalByDesign.get(t.designId) ?? 0) + 1);
   queue.push(...tasks);
+  for (const id of new Set(tasks.map((t) => t.designId))) reportProgress(id);
   pump();
 }
 
@@ -68,6 +119,8 @@ function pump(): void {
       .catch(() => {}) // the outline content stays; a failed refinement is silent
       .finally(() => {
         running--;
+        doneByDesign.set(task.designId, (doneByDesign.get(task.designId) ?? 0) + 1);
+        reportProgress(task.designId);
         if (queue.length) pump();
       });
   }

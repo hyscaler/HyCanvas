@@ -1022,7 +1022,7 @@ export class HyCanvasClient {
     method: string,
     path: string,
     body?: unknown,
-    opts?: { headers?: Record<string, string> },
+    opts?: { headers?: Record<string, string>; signal?: AbortSignal },
     retried = false,
   ): Promise<T> {
     const headers: Record<string, string> = {};
@@ -1034,6 +1034,9 @@ export class HyCanvasClient {
       headers,
       credentials: this.credentials,
       body: body === undefined ? undefined : JSON.stringify(body),
+      // Callers that can run for minutes (AI generation) pass a signal so the
+      // user can stop the work instead of waiting it out and paying for it.
+      signal: opts?.signal,
     });
     // Cookie-auth sessions: the short-lived access token expires well before the
     // refresh token. On a 401, transparently refresh once (using the refresh
@@ -1670,8 +1673,8 @@ export class HyCanvasClient {
   }
   /** Poll a background job (export, video render, bulk create, ...) by id. Only
    *  visible to the user that enqueued it (job-status contract). */
-  getJob<R = unknown>(jobId: string): Promise<JobStatusView<R>> {
-    return this.request("GET", `/v1/jobs/${jobId}`);
+  getJob<R = unknown>(jobId: string, signal?: AbortSignal): Promise<JobStatusView<R>> {
+    return this.request("GET", `/v1/jobs/${jobId}`, undefined, { signal });
   }
   /** Enqueue an MP4 render of a design's video timeline. Poll the
    *  returned jobId via getJob, then download from videoExportDownloadUrl. */
@@ -1955,14 +1958,14 @@ export class HyCanvasClient {
   aiSearch(input: { workspaceId: string; prompt: string; maxResults?: number }): Promise<{ query: string; results: { title: string; url: string; content: string }[] }> {
     return this.request("POST", "/v1/ai/search", input);
   }
-  aiText(input: { workspaceId: string; prompt: string; system?: string }): Promise<{ text: string }> {
-    return this.request("POST", "/v1/ai/text", input);
+  aiText(input: { workspaceId: string; prompt: string; system?: string }, signal?: AbortSignal): Promise<{ text: string }> {
+    return this.request("POST", "/v1/ai/text", input, { signal });
   }
   /** Schema-constrained text generation: the provider is asked for natively
    *  schema-valid output (falling back to plain text where unsupported). The
    *  reply is still free text - callers keep validating. */
-  aiTextStructured(input: { workspaceId: string; prompt: string; system?: string; schema: Record<string, unknown> }): Promise<{ text: string }> {
-    return this.request("POST", "/v1/ai/text-structured", input);
+  aiTextStructured(input: { workspaceId: string; prompt: string; system?: string; schema: Record<string, unknown> }, signal?: AbortSignal): Promise<{ text: string }> {
+    return this.request("POST", "/v1/ai/text-structured", input, { signal });
   }
   aiImage(input: { workspaceId: string; prompt: string; size?: string }): Promise<{ image: string }> {
     return this.request("POST", "/v1/ai/image", input);
@@ -1986,13 +1989,13 @@ export class HyCanvasClient {
   // happens client-side from the returned outline/specs.
 
   /** Generate + validate a multi-page design outline (FR-2). */
-  aiOutline(input: { workspaceId: string; designType: AiStudioDesignType; prompt: string; brandClause?: string; pageCount?: number }): Promise<AiDesignOutline> {
-    return this.request("POST", "/v1/ai/outline", input);
+  aiOutline(input: { workspaceId: string; designType: AiStudioDesignType; prompt: string; brandClause?: string; pageCount?: number }, signal?: AbortSignal): Promise<AiDesignOutline> {
+    return this.request("POST", "/v1/ai/outline", input, { signal });
   }
   /** Generate a polished design as a job (outline + per-page copy). Poll getJob;
    *  the result is an AiDesignOutline to lay out (FR-1/FR-25). */
-  aiGenerateDesign(input: { workspaceId: string; designType: AiStudioDesignType; prompt: string; brandClause?: string; pageCount?: number }): Promise<{ jobId: string }> {
-    return this.request("POST", "/v1/ai/generate-design", input);
+  aiGenerateDesign(input: { workspaceId: string; designType: AiStudioDesignType; prompt: string; brandClause?: string; pageCount?: number }, signal?: AbortSignal): Promise<{ jobId: string }> {
+    return this.request("POST", "/v1/ai/generate-design", input, { signal });
   }
   /** Generate N distinct outline options as a job (FR-4). Result: {variations}. */
   aiVariations(input: { workspaceId: string; designType: AiStudioDesignType; prompt: string; brandClause?: string; count?: number }): Promise<{ jobId: string }> {
@@ -2004,8 +2007,8 @@ export class HyCanvasClient {
   }
   /** Run one agentic assistant turn: a validated plan or a clarifying question
    *  (FR-6/7/10). The client executes the plan and re-validates arg types. */
-  aiAssistant(input: { workspaceId: string; designSummary: string; history?: string; message: string }): Promise<AiAssistantReply> {
-    return this.request("POST", "/v1/ai/assistant", input);
+  aiAssistant(input: { workspaceId: string; designSummary: string; history?: string; message: string }, signal?: AbortSignal): Promise<AiAssistantReply> {
+    return this.request("POST", "/v1/ai/assistant", input, { signal });
   }
   /** Extract a style profile from a reference for style transfer (FR-18). */
   aiStyleProfile(input: { workspaceId: string; referenceText?: string; seedPalette?: string[] }): Promise<AiStyleProfile> {

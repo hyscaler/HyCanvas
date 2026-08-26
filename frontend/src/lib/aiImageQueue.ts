@@ -65,6 +65,21 @@ export function enqueueAiImages(tasks: AiImageTask[]): void {
   pump();
 }
 
+/** Drop every image resolution for a design that has not started yet (the
+ *  chat's Stop). In-flight work settles on its own: its result is discarded by
+ *  the page checks in the applier. */
+export function cancelAiImages(designId: string): number {
+  let dropped = 0;
+  for (let i = queue.length - 1; i >= 0; i--) {
+    if (queue[i].designId === designId) {
+      queue.splice(i, 1);
+      dropped++;
+      pendingByDesign.set(designId, Math.max(0, (pendingByDesign.get(designId) ?? 0) - 1));
+    }
+  }
+  return dropped;
+}
+
 /** Re-queue the failed resolutions for a design (the chat's Retry). Returns
  *  how many were re-queued. */
 export function retryFailedAiImages(designId: string): number {
