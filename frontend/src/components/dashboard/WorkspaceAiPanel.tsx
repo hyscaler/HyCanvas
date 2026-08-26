@@ -66,27 +66,33 @@ export function WorkspaceAiPanel({ workspaceId, canEdit }: { workspaceId: string
       </h2>
       <p className="mb-3 max-w-xl text-xs text-neutral-500">{tr("dashboard.ai_workspace_hint")}</p>
 
-      <div className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-surface p-4">
-        <div className="flex items-center gap-2 text-xs">
-          <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${connected ? "bg-emerald-500" : "bg-neutral-300"}`} />
-          <span className="text-neutral-600">
+      {/* Status line, then the form directly on the page. The card that used
+          to wrap this added a second border inside a page that already has
+          plenty of structure, and made a full-width section look like a
+          narrow widget. */}
+      <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+        <span className="flex items-center gap-2">
+          <span className={`h-2 w-2 shrink-0 rounded-full ${connected ? "bg-emerald-500" : "bg-neutral-300"}`} />
+          <span className="text-neutral-700">
             {loading
               ? tr("dashboard.loading")
               : connected
                 ? tr("dashboard.ai_connected_provider", { provider: providerLabel })
                 : tr("dashboard.no_ai_provider_connected")}
           </span>
-          {usage !== null && (
-            <span className="ms-auto flex items-center gap-1 text-[11px] text-neutral-500" title={tr("dashboard.tokens_used_this_month")}>
-              <Activity size={12} />
-              {/* Thousands separators come from the user's locale, so a large
-                  number stays readable wherever they are. */}
-              {tr("dashboard.n_tokens_this_month", { count: usage })}
-            </span>
-          )}
-        </div>
+        </span>
+        {usage !== null && (
+          <span className="flex items-center gap-1 text-xs text-neutral-500" title={tr("dashboard.tokens_used_this_month")}>
+            <Activity size={12} />
+            {/* Thousands separators come from the user's locale, so a large
+                number stays readable wherever they are. */}
+            {tr("dashboard.n_tokens_this_month", { count: usage })}
+          </span>
+        )}
+      </div>
 
-        {!loading && (
+      {!loading && (
+        <div className="max-w-3xl">
           <AiProviderSettings
             workspaceId={workspaceId}
             config={config}
@@ -95,8 +101,8 @@ export function WorkspaceAiPanel({ workspaceId, canEdit }: { workspaceId: string
             layout="wide"
             onSaved={(c) => { setConfig(c); loadUsage(); }}
           />
-        )}
-      </div>
+        </div>
+      )}
     </section>
   );
 }

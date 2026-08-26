@@ -167,7 +167,16 @@ export function AiProviderSettings({
   }
 
   const wide = layout === "wide";
-  const fieldCls = "w-full rounded border border-neutral-300 bg-surface px-2 py-1.5 text-sm text-neutral-800 outline-none transition focus:border-brand-400";
+  // Two densities for two homes. The settings page follows the app's standard
+  // field (the shared Input component's shape), so it sits beside every other
+  // form in the product; the editor's 288px tool panel keeps a compact field,
+  // where a 44px control would eat the panel.
+  const fieldCls = wide
+    ? "h-11 w-full rounded-xl border border-neutral-200 bg-surface px-3.5 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+    : "w-full rounded-lg border border-neutral-200 bg-surface px-2.5 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100";
+  const labelCls = wide
+    ? "flex min-w-0 flex-col gap-1.5 text-sm font-medium text-neutral-700"
+    : "flex min-w-0 flex-col gap-1 text-[11px] font-medium text-neutral-500";
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -175,8 +184,8 @@ export function AiProviderSettings({
           placeholder vanishes as soon as the field has a value, which left a
           saved model name sitting in an unnamed box - confusing to read and a
           3.3.2 failure. */}
-      <div className={wide ? "grid grid-cols-2 gap-2.5" : "flex flex-col gap-2.5"}>
-        <label className="flex min-w-0 flex-col gap-1 text-[11px] font-medium text-neutral-500">
+      <div className={wide ? "grid grid-cols-2 gap-x-4 gap-y-3.5" : "flex flex-col gap-2.5"}>
+        <label className={labelCls}>
           {tr("editor.provider")}
           <select
             value={provider}
@@ -203,7 +212,7 @@ export function AiProviderSettings({
           </select>
         </label>
 
-        <label className="flex min-w-0 flex-col gap-1 text-[11px] font-medium text-neutral-500">
+        <label className={labelCls}>
           {tr("editor.model_optional")}
           <input
             value={model}
@@ -214,7 +223,7 @@ export function AiProviderSettings({
         </label>
 
         {(selPreset?.capabilities.image ?? true) && (
-          <label className="flex min-w-0 flex-col gap-1 text-[11px] font-medium text-neutral-500">
+          <label className={labelCls}>
             {tr("editor.image_model_optional")}
             <input
               value={imageModel}
@@ -229,7 +238,7 @@ export function AiProviderSettings({
             (Moonshot's international and mainland platforms issue separate
             keys, and proxies are common), and a hidden field meant a key for
             the other host could only ever 401 with no way to correct it. */}
-        <label className="flex min-w-0 flex-col gap-1 text-[11px] font-medium text-neutral-500">
+        <label className={labelCls}>
           {tr("editor.base_url")}
           <input
             value={baseUrl}
@@ -239,7 +248,7 @@ export function AiProviderSettings({
           />
         </label>
 
-        <label className="flex min-w-0 flex-col gap-1 text-[11px] font-medium text-neutral-500">
+        <label className={labelCls}>
           {tr("editor.api_key")}
           <input
             type="password"
@@ -254,7 +263,7 @@ export function AiProviderSettings({
             is known, so the control never shows "off" for something that is
             on, and a save cannot clear what it never loaded. */}
         {searchLoaded && (
-          <label className="flex min-w-0 flex-col gap-1 text-[11px] font-medium text-neutral-500">
+          <label className={labelCls}>
             {tr("editor.web_search_optional")}
             <select value={searchProvider} onChange={(e) => setSearchProvider(e.target.value)} className={fieldCls}>
               <option value="">{tr("editor.search_off")}</option>
@@ -265,20 +274,20 @@ export function AiProviderSettings({
         )}
 
         {searchLoaded && searchProvider === "searxng" && (
-          <label className="flex min-w-0 flex-col gap-1 text-[11px] font-medium text-neutral-500">
+          <label className={labelCls}>
             {tr("editor.base_url")}
             <input value={searchUrl} onChange={(e) => setSearchUrl(e.target.value)} placeholder={tr("editor.base_url_https_v1")} className={fieldCls} />
           </label>
         )}
         {searchLoaded && searchProvider === "tavily" && (
-          <label className="flex min-w-0 flex-col gap-1 text-[11px] font-medium text-neutral-500">
+          <label className={labelCls}>
             {tr("editor.api_key")}
             <input type="password" value={searchKey} onChange={(e) => setSearchKey(e.target.value)} placeholder={tr("editor.api_key")} className={fieldCls} />
           </label>
         )}
       </div>
 
-      <div className={`flex items-center gap-3 ${wide ? "justify-end" : "flex-col"}`}>
+      <div className={`flex items-center gap-3 ${wide ? "mt-1 justify-end" : "mt-0.5 flex-col"}`}>
         {onCancel && (
           <button onClick={onCancel} className="text-xs text-neutral-500 hover:underline">{tr("editor.cancel")}</button>
         )}
@@ -286,7 +295,7 @@ export function AiProviderSettings({
           <button
             onClick={() => void save()}
             disabled={!workspaceId || saving}
-            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:opacity-40"
+            className="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-brand-700 disabled:bg-neutral-200 disabled:text-neutral-400"
           >
             {saving ? tr("editor.saving") : tr("editor.save_provider")}
           </button>
