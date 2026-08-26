@@ -3653,6 +3653,10 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     try {
       const s = await oc.createAiSession(designId);
       sessionRef.current = s.id;
+      // Put it in the list immediately, or History stays hidden until a
+      // reload - which is exactly the moment it is wanted, since starting a
+      // new chat is what makes the previous conversation worth returning to.
+      setSessions((xs) => (xs.some((x) => x.id === s.id) ? xs : [s, ...xs]));
       return s.id;
     } catch {
       return null;

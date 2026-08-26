@@ -6,7 +6,7 @@
 // the controls existed and nobody could reach them. Admin-only, matching the
 // server, and folded into the AI section rather than given a page of its own.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ShieldCheck } from "lucide-react";
 import type { AiPolicy, AiProviderPreset } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
@@ -19,6 +19,12 @@ export function WorkspaceAiPolicy({ workspaceId, presets }: { workspaceId: strin
   const [policy, setPolicy] = useState<AiPolicy | null>(null);
   const [cap, setCap] = useState("");
   const [saving, setSaving] = useState(false);
+  // The latest saved policy, readable by a handler that fires before React has
+  // re-rendered with an optimistic update. Without it, blurring the cap field
+  // and immediately clicking a provider chip built the second request from the
+  // pre-cap policy and silently dropped the cap that had just been saved.
+  const latest = useRef<AiPolicy>({});
+  useEffect(() => { latest.current = policy ?? {}; });
 
   useEffect(() => {
     if (!workspaceId) return;
@@ -56,14 +62,16 @@ export function WorkspaceAiPolicy({ workspaceId, presets }: { workspaceId: strin
   }
 
   const toggleBlocked = (id: string) => {
-    const nextBlocked = blocked.includes(id) ? blocked.filter((p) => p !== id) : [...blocked, id];
-    void save({ ...policy, blockedProviders: nextBlocked });
+    const current = latest.current;
+    const from = current.blockedProviders ?? [];
+    const nextBlocked = from.includes(id) ? from.filter((p) => p !== id) : [...from, id];
+    void save({ ...current, blockedProviders: nextBlocked });
   };
 
   const commitCap = () => {
     const n = Math.max(0, Math.floor(Number(cap.replace(/[^0-9]/g, "")) || 0));
-    if ((policy?.monthlyTokenCap ?? 0) === n) return;
-    void save({ ...policy, monthlyTokenCap: n || undefined });
+    if ((latest.current.monthlyTokenCap ?? 0) === n) return;
+    void save({ ...latest.current, monthlyTokenCap: n || undefined });
   };
 
   return (
@@ -93,6 +101,7 @@ export function WorkspaceAiPolicy({ workspaceId, presets }: { workspaceId: strin
               value={cap}
               onChange={(e) => setCap(e.target.value)}
               onBlur={commitCap}
+              disabled={saving}
               inputMode="numeric"
               placeholder={tr("dashboard.no_cap")}
               className="h-11 rounded-xl border border-neutral-200 bg-surface px-3.5 text-sm tabular-nums outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
@@ -111,7 +120,12 @@ export function WorkspaceAiPolicy({ workspaceId, presets }: { workspaceId: strin
                     key={p.id}
                     onClick={() => toggleBlocked(p.id)}
                     aria-pressed={off}
-                    className={`rounded-full border px-3 py-1 text-xs transition ${
+                    // Disabled rather than ignored while a save is in flight:
+                    // save() drops a second edit to avoid racing PUTs, and a
+                    // click that does nothing with no explanation reads as a
+                    // broken control.
+                    disabled={saving}
+                    className={`rounded-full border px-3 py-1 text-xs transition disabled:opacity-50 ${
                       off
                         ? "border-amber-300 bg-amber-50 text-amber-800 line-through"
                         : "border-neutral-200 bg-surface text-neutral-600 hover:border-neutral-300"
