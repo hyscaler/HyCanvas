@@ -4,6 +4,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
 import { useRouter } from "next/router";
+import { requestAi } from "@/lib/aiRequests";
 import type { Node as DesignNode } from "@hc/schema";
 import { ChevronLeft, Undo2, Redo2, Download, Play, MonitorPlay, Ruler, Grid3x3, Magnet, LayoutTemplate, History, Eye, Share2, MessageSquare, ShieldCheck, Activity, BarChart3, MoreHorizontal, Send, Globe, Printer, PanelRightClose, PanelRightOpen, Keyboard, Info, X, Accessibility, Maximize2, Minimize2, LayoutGrid, FileDown, Film, Table2 } from "lucide-react";
 import type { AccessMode } from "@hc/sdk";
@@ -341,6 +342,10 @@ export function EditorApp() {
   // instead of taking layout width so the canvas keeps usable space; below the
   // very-narrow width we show a one-time advisory banner.
   const isCompact = useMediaQuery("(max-width: 1023px)"); // below Tailwind `lg`
+  // A brief carried from the dashboard: the AI panel opens on it and starts
+  // generating, so "describe a deck" is one step rather than seven. Read once
+  // and stripped from the URL below, so a reload does not regenerate.
+  const aiBrief = typeof router.query.ai === "string" ? router.query.ai : "";
   const isVeryNarrow = useMediaQuery("(max-width: 639px)"); // below Tailwind `sm`
   // One-time, dismissible "optimized for larger screens" notice (non-blocking).
   const [narrowNoticeDismissed, setNarrowNoticeDismissed] = useState(false);
@@ -602,6 +607,19 @@ export function EditorApp() {
       cancelled = true;
     };
   }, [router.isReady, router.query.id, loadDoc]);
+
+  // Hand the brief to the assistant once the design is open, then strip it
+  // from the URL: it is a one-shot intent, not part of the design's address,
+  // and leaving it would regenerate on every reload or share of that link.
+  const briefSent = useRef(false);
+  useEffect(() => {
+    if (!router.isReady || !aiBrief || briefSent.current || !designId) return;
+    briefSent.current = true;
+    requestAi({ kind: "prompt", text: aiBrief }, Date.now());
+    const rest = { ...router.query };
+    delete rest.ai;
+    void router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
+  }, [router, aiBrief, designId]);
 
   // Deep link: an access-request notification routes to
   // /editor?id=...&share=requests. Once the design is loaded, open the Share
@@ -1136,7 +1154,7 @@ export function EditorApp() {
         {(docKind === "design" || docKind === "whiteboard") && !inFocus && (
           // key by kind so switching surface re-applies its default; boards open
           // with the slide-out panel collapsed (canvas-first).
-          <ToolRail key={docKind} workspaceId={workspaceId} overlay={isCompact} defaultCollapsed={isBoard} kind={docKind === "whiteboard" ? "whiteboard" : "design"} />
+          <ToolRail key={docKind} workspaceId={workspaceId} overlay={isCompact} defaultCollapsed={isBoard} kind={docKind === "whiteboard" ? "whiteboard" : "design"} openTool={aiBrief ? "ai" : undefined} />
         )}
         {docKind !== "design" ? (
           // Same relative wrapper as the design canvas so overlays (the

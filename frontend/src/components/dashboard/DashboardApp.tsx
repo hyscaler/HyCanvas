@@ -44,8 +44,7 @@ import {
   List,
   Users,
   Moon,
-  Sun,
-} from "lucide-react";
+  Sun, Sparkles } from "lucide-react";
 import { createBlankDesign, type DesignFile } from "@hc/schema";
 import { hycAccept, downloadHycFile, importedTitle, parseHycFile, readFileText } from "@/lib/hycFile";
 import { odpToDesign, pptxToDesign } from "@hc/export";
@@ -192,6 +191,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
   const [deleteTarget, setDeleteTarget] = useState<HomeItem | null>(null);
   const [wsModal, setWsModal] = useState(false);
   const [sizeOpen, setSizeOpen] = useState(false);
+  const [aiBrief, setAiBrief] = useState("");
   const [bulkOpen, setBulkOpen] = useState(false);
   const [customW, setCustomW] = useState(1080);
   const [customH, setCustomH] = useState(1080);
@@ -365,7 +365,8 @@ export function DashboardApp({ view }: { view: DashboardView }) {
   const activeWs = workspaces.find((w) => w.id === activeWorkspaceId);
   const firstName = user?.name?.trim().split(/\s+/)[0] || user?.email?.split("@")[0] || "there";
 
-  const open = (id: string) => router.push({ pathname: "/editor", query: { id } });
+  const open = (id: string, brief?: string) =>
+    router.push({ pathname: "/editor", query: brief ? { id, ai: brief } : { id } });
 
   // Star/unstar a design; optimistically flip the flag in the open lists, then
   // reconcile from the server response (and drop it from Favorites when unstarred).
@@ -485,7 +486,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
     }
   }
 
-  async function createDesign(width = 1080, height = 1080, label = tr("dashboard.untitled_design"), kind?: string) {
+  async function createDesign(width = 1080, height = 1080, label = tr("dashboard.untitled_design"), kind?: string, brief?: string) {
     if (!activeWorkspaceId) return;
     setSizeOpen(false);
     setBusy(true);
@@ -495,7 +496,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
       // plain design leaves it unset (treated as "design").
       if (kind) from.meta.kind = kind;
       const rec = await oc.createDesign({ workspaceId: activeWorkspaceId, title: label, from });
-      await open(rec.id);
+      await open(rec.id, brief);
     } catch {
       toast.error(tr("dashboard.could_not_create_design"));
       setBusy(false);
@@ -756,8 +757,33 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                 <p className="mt-2 text-sm text-neutral-500">
                   {tr("dashboard.let_s_make_something_today_start_from_a_blan")}
                 </p>
-                <div className="mt-5 flex flex-wrap gap-2.5">
-                  <Button onClick={() => setSizeOpen(true)} disabled={busy || !activeWorkspaceId}>
+                {/* The headline capability used to require: make a blank
+                    deck, open the editor, notice the fourth of nine rail
+                    icons, then connect a provider. Describing it here creates
+                    the design and starts the generation. */}
+                <form
+                  className="mt-5 flex max-w-xl gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const brief = aiBrief.trim();
+                    if (!brief || busy || !activeWorkspaceId) return;
+                    void createDesign(1920, 1080, brief.slice(0, 80), undefined, brief);
+                  }}
+                >
+                  <Input
+                    value={aiBrief}
+                    onChange={(e) => setAiBrief(e.target.value)}
+                    placeholder={tr("dashboard.describe_a_deck_to_generate")}
+                    aria-label={tr("dashboard.describe_a_deck_to_generate")}
+                    disabled={busy || !activeWorkspaceId}
+                    className="h-10 flex-1"
+                  />
+                  <Button type="submit" disabled={busy || !activeWorkspaceId || !aiBrief.trim()}>
+                    <Sparkles size={16} /> {tr("dashboard.generate")}
+                  </Button>
+                </form>
+                <div className="mt-3 flex flex-wrap gap-2.5">
+                  <Button variant="secondary" onClick={() => setSizeOpen(true)} disabled={busy || !activeWorkspaceId}>
                     <Plus size={16} /> {tr("dashboard.start_a_design")}
                   </Button>
                   <Button variant="secondary" onClick={() => gotoView("templates")}>

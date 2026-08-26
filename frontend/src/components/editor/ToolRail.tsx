@@ -23,11 +23,12 @@ const tools = (): { id: Tool; icon: typeof Shapes; label: string }[] => [
   { id: "layers", icon: Layers, label: tr("editor.layers") },
 ];
 
-export function ToolRail({ workspaceId, overlay = false, defaultCollapsed = false, kind = "design" }: { workspaceId: string | null; overlay?: boolean; defaultCollapsed?: boolean; kind?: "design" | "whiteboard" }) {
+export function ToolRail({ workspaceId, overlay = false, defaultCollapsed = false, kind = "design", openTool }: { workspaceId: string | null; overlay?: boolean; defaultCollapsed?: boolean; kind?: "design" | "whiteboard"; openTool?: Tool }) {
   // null = panel collapsed (just the icon rail shows). Clicking the active tab
   // toggles it closed. Boards open with the panel collapsed for a canvas-first
-  // start; the icon rail stays so any tool is one click away.
-  const [active, setActive] = useState<Tool | null>(defaultCollapsed ? null : "elements");
+  // start; the icon rail stays so any tool is one click away. openTool lets the
+  // route decide (arriving from the dashboard with a brief opens AI).
+  const [active, setActive] = useState<Tool | null>(openTool ?? (defaultCollapsed ? null : "elements"));
   // The AI panel stays mounted once opened (its conversation must survive a
   // tool switch), but mounting it before that would make every editor load pay
   // for its provider-config and session-history fetches even when the user
