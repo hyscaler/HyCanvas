@@ -2518,6 +2518,25 @@ export const useEditor = create<EditorState>((set, get) => {
       const made: Node[] = [];
       for (const ph of layout.placeholders ?? []) {
         if (have.has(ph.id)) continue;
+        // A picture/media slot is not a text slot. Materializing every role as
+        // a text box left image slots reading the literal word "Text" until an
+        // image arrived - permanently, on a provider that cannot make images -
+        // and the headless composer never did this. It gets a neutral tinted
+        // frame instead, which reads as "an image belongs here" and is
+        // replaced wholesale when one lands.
+        if (ph.role === "picture" || ph.role === "media" || ph.role === "chart") {
+          const r0 = { x: ph.rect.x * scaleX, y: ph.rect.y * scaleY, width: ph.rect.width * scaleX, height: ph.rect.height * scaleY };
+          made.push(createNode("shape", {
+            name: tr("app.image_placeholder"),
+            shape: "rect",
+            transform: { x: r0.x, y: r0.y, scaleX: 1, scaleY: 1, rotation: 0 },
+            size: { width: r0.width, height: r0.height },
+            fills: [{ type: "solid", color: { srgb: { r: 0.898, g: 0.906, b: 0.922, a: 1 } } }],
+            cornerRadius: Math.round(Math.min(r0.width, r0.height) * 0.02),
+            data: { placeholderId: ph.id },
+          } as Partial<Node>));
+          continue;
+        }
         const r = { x: ph.rect.x * scaleX, y: ph.rect.y * scaleY, width: ph.rect.width * scaleX, height: ph.rect.height * scaleY };
         const isTitle = ph.role === "title";
         // The slot's own geometry decides the type size (@hc/aistudio owns the

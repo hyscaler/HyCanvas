@@ -42,6 +42,10 @@ export interface AiFillProgress {
   designId: string;
   done: number;
   total: number;
+  /** Slides whose model copy failed. They keep the deterministic outline text,
+   *  which reads as finished, so the count has to be surfaced or the user
+   *  cannot tell written copy from their own brief echoed back. */
+  failed: number;
 }
 type FillListener = (p: AiFillProgress) => void;
 const fillListeners = new Set<FillListener>();
@@ -55,15 +59,26 @@ export function subscribeAiFillQueue(cb: FillListener): () => void {
 // settled. Reset once a batch drains, so a later generation counts from zero.
 const totalByDesign = new Map<string, number>();
 const doneByDesign = new Map<string, number>();
+const failedByDesign = new Map<string, AiFillTask[]>();
 
 function reportProgress(designId: string): void {
   const total = totalByDesign.get(designId) ?? 0;
   const done = doneByDesign.get(designId) ?? 0;
-  for (const cb of fillListeners) cb({ designId, done, total });
+  const failed = (failedByDesign.get(designId) ?? []).length;
+  for (const cb of fillListeners) cb({ designId, done, total, failed });
   if (total > 0 && done >= total) {
     totalByDesign.delete(designId);
     doneByDesign.delete(designId);
   }
+}
+
+/** Re-queue the slides whose copy failed (the chat's Retry). Returns how many
+ *  were re-queued. */
+export function retryFailedAiFills(designId: string): number {
+  const failed = failedByDesign.get(designId) ?? [];
+  failedByDesign.delete(designId);
+  enqueueAiFills(failed);
+  return failed.length;
 }
 
 /** Drop every refinement for a design that has not started yet (the chat's
@@ -79,6 +94,7 @@ export function cancelAiFills(designId: string): number {
   }
   totalByDesign.delete(designId);
   doneByDesign.delete(designId);
+  failedByDesign.delete(designId);
   return dropped;
 }
 
@@ -116,7 +132,14 @@ function pump(): void {
     const task = queue.shift()!;
     running++;
     void refine(task)
-      .catch(() => {}) // the outline content stays; a failed refinement is silent
+      .catch(() => {
+        // The outline content stays on the slide, so nothing is broken - but
+        // the user must be able to see which slides never got model copy, and
+        // ask for them again.
+        const list = failedByDesign.get(task.designId) ?? [];
+        list.push(task);
+        failedByDesign.set(task.designId, list);
+      })
       .finally(() => {
         running--;
         doneByDesign.set(task.designId, (doneByDesign.get(task.designId) ?? 0) + 1);

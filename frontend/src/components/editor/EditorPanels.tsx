@@ -64,7 +64,7 @@ import { mirrorInRtl } from "@/lib/locale";
 import { tr, trOr } from "@/lib/i18n";
 import { cancelAiImages, enqueueAiImages, retryFailedAiImages, subscribeAiImageQueue } from "@/lib/aiImageQueue";
 import { builtinThemes } from "@/lib/themeCatalog";
-import { cancelAiFills, enqueueAiFills, subscribeAiFillQueue } from "@/lib/aiFillQueue";
+import { cancelAiFills, enqueueAiFills, retryFailedAiFills, subscribeAiFillQueue } from "@/lib/aiFillQueue";
 import { stickerLabel, stickerCategoryLabel } from "@/lib/stickers";
 import { documentDirection } from "@/lib/locale";
 import { apiCodeMessage, CodedError, userMessage } from "@/lib/errors";
@@ -3401,12 +3401,14 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   const runAbort = useRef<AbortController | null>(null);
   const [stage, setStage] = useState<string | null>(null);
   const [fillProgress, setFillProgress] = useState<{ done: number; total: number } | null>(null);
+  const [failedFills, setFailedFills] = useState(0);
   // Per-slide refinements land silently after the deck does; this makes that
   // phase visible instead of letting text change by itself.
   useEffect(() => {
     return subscribeAiFillQueue((ev) => {
       if (ev.designId !== (designId ?? "")) return;
       setFillProgress(ev.total > 0 && ev.done < ev.total ? { done: ev.done, total: ev.total } : null);
+      setFailedFills(ev.failed);
     });
   }, [designId]);
   // Attached source content for create-from-document/URL/file (FR-23).
@@ -4283,6 +4285,19 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       )}
 
       {/* T10: failed image resolutions offer a one-click retry. */}
+      {/* A deck whose copy partly failed still LOOKS finished - those slides
+          keep the outline text - so the count and a retry have to be offered
+          or the user cannot tell written copy from their own brief. */}
+      {failedFills > 0 && !busy && !fillProgress && (
+        <div className="mt-2 flex shrink-0 items-center gap-1.5">
+          <button
+            onClick={() => { setFailedFills(0); retryFailedAiFills(designId ?? ""); }}
+            className="rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-[11px] text-amber-800 hover:border-amber-400"
+          >
+            {tr("editor.retry_slide_copy", { count: failedFills })}
+          </button>
+        </div>
+      )}
       {failedImages > 0 && !busy && (
         <div className="mt-2 flex shrink-0 items-center gap-1.5">
           <button

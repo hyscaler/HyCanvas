@@ -85,10 +85,18 @@ describe("layout-grounded deck generation", () => {
 
     // Unknown page id: refused, nothing thrown.
     expect(useEditor.getState().applyGeneratedImageToPlaceholder("page-gone", "ph-pic", "https://x", "p")).toBe(false);
-    // Undo restores the placeholder box.
+    // Undo restores the placeholder box. A picture slot materializes as a
+    // neutral SHAPE, not a text box: materializing every role as text left
+    // image slots reading the literal word "Text" until an image arrived, and
+    // permanently on a provider that cannot generate images.
     useEditor.getState().undo();
     const restored = pageChildren(0).find((n) => n.data?.placeholderId === "ph-pic");
-    expect(restored?.type).toBe("text");
+    expect(restored?.type).toBe("shape");
+    // The regression itself: no picture slot may carry scaffold text.
+    const scaffold = pageChildren(0).filter(
+      (n) => n.data?.placeholderId === "ph-pic" && n.type === "text",
+    );
+    expect(scaffold).toHaveLength(0);
   });
 });
 
