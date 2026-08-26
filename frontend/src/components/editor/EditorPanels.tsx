@@ -23,7 +23,7 @@ import {
   type DesignOutline, type DesignType, type GenerationDials, type OutlineItem,
   toolCatalog, assistantSystemPrompt, parseAssistantReply, planMutates, summarizeDesign, type PlanStep,
   deriveOutline, switchOutline, sourcesOutlineItem, type PageText, type SourceCitation,
-  themeCatalogEntry, deckThemeFromCatalog, themeRecordFromCatalog, deckThemeFromRecord,
+  themeCatalogEntry, deckThemeFromCatalog, themeRecordFromCatalog, deckThemeFromRecord, pageTreatment,
 } from "@hc/aistudio";
 import { builtinMasterAndLayouts, type SlideLayout } from "@hc/schema";
 import { promptText } from "@/lib/promptDialog";
@@ -1884,7 +1884,7 @@ type ResolvedPayload =
   | { kind: "clusters"; clusters: { title: string; ids: string[] }[] }
   | { kind: "summary"; text: string }
   | { kind: "outline"; outline: DesignOutline; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; heroPlans: { pageIndex: number; prompt: string; subject: string; size: string }[]; workspaceId: string; designId: string | null; append: boolean; themeId?: string; themeRecord?: Theme }
-  | { kind: "layoutDeck"; deckTitle: string; themeRecord: Theme; pages: { layoutId: string; name: string; note?: string; fill: LayoutFill; fillPrompt: string; verbatim?: boolean }[]; background: unknown; imageSize: string; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; styleClause: string; heroPlans: { pageIndex: number; prompt: string; subject: string }[]; generateAllowed: boolean; workspaceId: string; designId: string | null; append: boolean }
+  | { kind: "layoutDeck"; deckTitle: string; themeRecord: Theme; pages: { layoutId: string; name: string; note?: string; fill: LayoutFill; fillPrompt: string; verbatim?: boolean; background: unknown; accent: string | null }[]; background: unknown; imageSize: string; size: { width: number; height: number }; brandPalette: string[]; brandFonts: { heading?: string; body?: string }; styleClause: string; heroPlans: { pageIndex: number; prompt: string; subject: string }[]; generateAllowed: boolean; workspaceId: string; designId: string | null; append: boolean }
   | { kind: "splitSlide"; pageIndex: number; pageId: string; halves: { layoutId: string; name: string; fill: LayoutFill }[] }
   | { kind: "insertComparison"; layoutId: string; name: string; fill: LayoutFill; afterIndex: number; afterPageId: string }
   | { kind: "webSearch"; query: string; count: number }
@@ -2787,7 +2787,23 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
               kind: "layoutDeck",
               deckTitle: outline.title,
               themeRecord,
-              pages: items.map((item, i) => ({ layoutId: selection[i], name: item.title || `Page ${i + 1}`, note: item.note, fill: fills[i], fillPrompt: fillPrompts[i], verbatim: verbatimIds.has(item.id) || undefined })),
+              pages: items.map((item, i) => {
+                // Per-role treatment (deckStyle): impact pages keep the deep
+                // themed background, reading pages get paper in the same hue
+                // plus an accent rule, so a deck alternates instead of
+                // repeating one flat color on every slide.
+                const treat = pageTreatment(item.visualRole, theme.background);
+                return {
+                  layoutId: selection[i],
+                  name: item.title || `Page ${i + 1}`,
+                  note: item.note,
+                  fill: fills[i],
+                  fillPrompt: fillPrompts[i],
+                  verbatim: verbatimIds.has(item.id) || undefined,
+                  background: treat.impact ? background : layoutDesign({ layout: "centered", background: treat.background, blocks: [], dir: "ltr" }, size).background,
+                  accent: treat.accent,
+                };
+              }),
               background,
               imageSize,
               size,
@@ -3150,17 +3166,18 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
         // against the layout's EFFECTIVE background (applyLayoutToPage will
         // overwrite the theme background when the layout or master carries
         // one, so the ink must follow that, not the theme's).
-        const stylesFor = (layoutId: string): Record<string, { fontFamily?: string; fill?: Fill }> => {
+        const stylesFor = (layoutId: string, pageBg: unknown): Record<string, { fontFamily?: string; fill?: Fill }> => {
           const layout = installed.find((l) => l.id === layoutId);
           const effectiveBg = (layout as { background?: Fill } | undefined)?.background
             ?? masters.find((m) => m.id === layout?.masterId)?.background
+            ?? (pageBg as Fill | undefined)
             ?? background;
           return slotStylesFor(layout, brandFonts, effectiveBg);
         };
         const { aspect } = aspectAndImageSize(size);
         const deckLike = {
           title: deckTitle,
-          pages: pages.map((p) => ({ name: p.name, note: p.note, background, nodes: [] })),
+          pages: pages.map((p) => ({ name: p.name, note: p.note, background: p.background ?? background, nodes: [] })),
         } as unknown as Parameters<typeof st.buildDeckFromOutline>[0];
         const base = append ? st.doc.pages.length : 0;
         const ids = append ? st.appendDeckPages(deckLike, size) : st.buildDeckFromOutline(deckLike, size);
@@ -3173,7 +3190,11 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
           const layoutId = availableIds.has(p.layoutId) ? p.layoutId : installed[0]?.id;
           if (!layoutId) return;
           st.applyLayoutToPage(layoutId, base + i);
-          st.fillPlaceholderContent(base + i, { texts: p.fill.texts, lists: p.fill.lists }, { styles: stylesFor(layoutId) });
+          st.fillPlaceholderContent(base + i, { texts: p.fill.texts, lists: p.fill.lists }, { styles: stylesFor(layoutId, p.background) });
+          // One accent rule above the title on a reading page (deckStyle):
+          // the smallest mark that makes a page read as designed. Skipped on
+          // impact pages, whose whole background already carries the color.
+          if (p.accent) st.addAccentRule(base + i, layoutId, p.accent);
           for (const [placeholderId, prompt] of Object.entries(p.fill.imagePrompts)) {
             imageTasks.push({
               workspaceId,
@@ -3208,7 +3229,7 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
             layout: installed.find((l) => l.id === layoutId)!,
             prompt: p.fillPrompt,
             styleClause,
-            styles: stylesFor(layoutId),
+            styles: stylesFor(layoutId, p.background),
             expected: { texts: p.fill.texts, lists: p.fill.lists },
             onImagePrompts: (pageId: string, prompts: Record<string, string>) => {
               // The fallback fill's slot prompts were already enqueued when the

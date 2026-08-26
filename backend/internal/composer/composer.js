@@ -30112,6 +30112,207 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
     }
   });
 
+  // packages/aistudio/dist/deckStyle.js
+  var require_deckStyle = __commonJS({
+    "packages/aistudio/dist/deckStyle.js"(exports) {
+      "use strict";
+      Object.defineProperty(exports, "__esModule", { value: true });
+      exports.slotTypeScale = slotTypeScale;
+      exports.sizeFloor = sizeFloor;
+      exports.ladderFrom = ladderFrom;
+      exports.pageTreatment = pageTreatment;
+      exports.accentRuleRect = accentRuleRect;
+      var color_1 = require_dist2();
+      var LADDER_STEPS = [1, 0.88, 0.78, 0.68, 0.6, 0.52];
+      var MIN_SIZE_FRAC = 0.011;
+      function slotTypeScale(role, rect, page) {
+        const ph = Math.max(1, page.height);
+        const h = Math.max(1, rect.height);
+        const w = Math.max(1, rect.width);
+        const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+        let base;
+        switch (role) {
+          case "title":
+            base = clamp(h * 0.46, ph * 0.042, ph * 0.095);
+            base = Math.min(base, w * 0.075);
+            break;
+          case "body":
+            base = clamp(h * 0.3, ph * 0.024, ph * 0.045);
+            base = Math.min(base, w * 0.055);
+            break;
+          default:
+            base = clamp(h * 0.13, ph * 0.026, ph * 0.042);
+            base = Math.min(base, w * 0.05);
+            break;
+        }
+        const rounded = Math.max(sizeFloor(page), Math.round(base));
+        return { base: rounded, ladder: ladderFrom(rounded, page) };
+      }
+      function sizeFloor(page) {
+        return Math.max(9, Math.round(Math.max(1, page.height) * MIN_SIZE_FRAC));
+      }
+      function ladderFrom(base, page) {
+        const floor2 = sizeFloor(page);
+        const start = Math.max(floor2, Math.round(base));
+        const ladder = [];
+        for (const step of LADDER_STEPS) {
+          const size2 = Math.max(floor2, Math.round(start * step));
+          if (!ladder.includes(size2))
+            ladder.push(size2);
+        }
+        return ladder;
+      }
+      var IMPACT_ROLES = /* @__PURE__ */ new Set(["cover", "quote", "closing", "statement", "section"]);
+      function mix(a, b, t) {
+        const l = (x, y) => x + (y - x) * t;
+        return {
+          srgb: {
+            r: l(a.srgb.r, b.srgb.r),
+            g: l(a.srgb.g, b.srgb.g),
+            b: l(a.srgb.b, b.srgb.b),
+            a: 1
+          }
+        };
+      }
+      var WHITE = { srgb: { r: 1, g: 1, b: 1, a: 1 } };
+      var BLACK = { srgb: { r: 0, g: 0, b: 0, a: 1 } };
+      function accentOnPaper(seed, paper) {
+        const hsl = (0, color_1.rgbToHsl)(seed);
+        let out = seed;
+        out = (0, color_1.hslToRgb)({ h: hsl.h, s: Math.min(1, Math.max(hsl.s, 0.45)), l: Math.min(0.55, Math.max(0.34, hsl.l)), a: 1 });
+        if ((0, color_1.contrastRatio)(out, paper) < 1.6)
+          out = mix(out, BLACK, 0.25);
+        return (0, color_1.toHex)(out);
+      }
+      function pageTreatment(visualRole, themeBackground) {
+        var _a5, _b, _c, _d;
+        const deepHex = (_a5 = themeBackground.color) != null ? _a5 : "#1f2937";
+        const accentHex = (_b = themeBackground.color2) != null ? _b : deepHex;
+        if (!visualRole || IMPACT_ROLES.has(visualRole)) {
+          return { background: __spreadValues({}, themeBackground), impact: true, accent: null };
+        }
+        const seed = (_d = (_c = (0, color_1.fromHex)(accentHex)) != null ? _c : (0, color_1.fromHex)(deepHex)) != null ? _d : BLACK;
+        const paper = mix(WHITE, seed, 0.055);
+        return {
+          background: { kind: "solid", color: (0, color_1.toHex)(paper) },
+          impact: false,
+          accent: accentOnPaper(seed, paper)
+        };
+      }
+      function accentRuleRect(titleRect, page) {
+        const gap = page.height * 0.022;
+        const barHeight = Math.max(3, Math.round(page.height * 75e-4));
+        const y = titleRect.y - gap - barHeight;
+        if (y < page.height * 0.015)
+          return null;
+        return {
+          x: titleRect.x,
+          y,
+          width: Math.max(24, Math.round(Math.min(titleRect.width * 0.16, page.width * 0.07))),
+          height: barHeight
+        };
+      }
+    }
+  });
+
+  // packages/aistudio/dist/reflow.js
+  var require_reflow = __commonJS({
+    "packages/aistudio/dist/reflow.js"(exports) {
+      "use strict";
+      Object.defineProperty(exports, "__esModule", { value: true });
+      exports.reflowPage = reflowPage;
+      exports.variantCandidate = variantCandidate;
+      var deckStyle_1 = require_deckStyle();
+      var AVG_GLYPH_EM = 0.52;
+      var LINE_HEIGHT = 1.3;
+      function neededLines(paragraphs, fontSize, boxWidth) {
+        const charsPerLine = Math.max(4, Math.floor(boxWidth / (AVG_GLYPH_EM * fontSize)));
+        let lines = 0;
+        for (const p of paragraphs) {
+          const len = p.trim().length;
+          lines += Math.max(1, Math.ceil(len / charsPerLine));
+        }
+        return lines;
+      }
+      function availableLines(fontSize, boxHeight) {
+        return Math.max(1, Math.floor(boxHeight / (LINE_HEIGHT * fontSize)));
+      }
+      function fitsAt(slot, fontSize) {
+        return neededLines(slot.paragraphs, fontSize, slot.rect.width) <= availableLines(fontSize, slot.rect.height);
+      }
+      function reflowPage(layout, slots, page) {
+        var _a5;
+        const roleById = /* @__PURE__ */ new Map();
+        for (const ph of (_a5 = layout.placeholders) != null ? _a5 : [])
+          roleById.set(ph.id, ph.role);
+        const adjustments = [];
+        const verdicts = {};
+        for (const slot of slots) {
+          const role = roleById.get(slot.placeholderId);
+          if (role !== "title" && role !== "body" && role !== "content")
+            continue;
+          const hasText = slot.paragraphs.some((p) => p.trim().length > 0);
+          if (!hasText) {
+            verdicts[slot.placeholderId] = "fits";
+            continue;
+          }
+          const baseLadder = (0, deckStyle_1.slotTypeScale)(role, slot.rect, page).ladder;
+          const ladder = baseLadder.includes(slot.fontSize) ? baseLadder : (0, deckStyle_1.ladderFrom)(slot.fontSize, page);
+          let chosen = null;
+          for (const size2 of ladder) {
+            if (fitsAt(slot, size2)) {
+              chosen = size2;
+              break;
+            }
+          }
+          const floor2 = ladder[ladder.length - 1];
+          const applied = chosen != null ? chosen : floor2;
+          if (applied !== slot.fontSize) {
+            adjustments.push({ nodeId: slot.nodeId, fontSize: applied });
+          }
+          if (chosen === null) {
+            verdicts[slot.placeholderId] = "overfull";
+          } else if (role === "content" && chosen === ladder[0] && neededLines(slot.paragraphs, chosen, slot.rect.width) * 3 < availableLines(chosen, slot.rect.height)) {
+            verdicts[slot.placeholderId] = "underfull";
+          } else {
+            verdicts[slot.placeholderId] = "fits";
+          }
+        }
+        return { adjustments, verdicts, changed: adjustments.length > 0 };
+      }
+      function contentSlots(l) {
+        var _a5;
+        return ((_a5 = l.placeholders) != null ? _a5 : []).filter((p) => p.role === "content").length;
+      }
+      function variantCandidate(layouts, currentId, direction) {
+        const current = layouts.find((l) => l.id === currentId);
+        if (!current)
+          return null;
+        const base = contentSlots(current);
+        const hasTitle = (l) => {
+          var _a5;
+          return ((_a5 = l.placeholders) != null ? _a5 : []).some((p) => p.role === "title");
+        };
+        const candidates = layouts.filter((l) => {
+          if (l.id === currentId || !hasTitle(l))
+            return false;
+          const n = contentSlots(l);
+          return direction === "denser" ? n > base : n < base && n >= 1;
+        });
+        if (!candidates.length)
+          return null;
+        candidates.sort((a, b) => {
+          const da = Math.abs(contentSlots(a) - base);
+          const db = Math.abs(contentSlots(b) - base);
+          if (da !== db)
+            return da - db;
+          return a.id < b.id ? -1 : 1;
+        });
+        return candidates[0];
+      }
+    }
+  });
+
   // packages/aistudio/dist/compose.js
   var require_compose = __commonJS({
     "packages/aistudio/dist/compose.js"(exports) {
@@ -30122,11 +30323,14 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
       exports.themeRecordFromCatalog = themeRecordFromCatalog;
       exports.composeDeckFile = composeDeckFile2;
       var schema_1 = require_dist();
+      var color_1 = require_dist2();
       var outline_1 = require_outline();
       var theme_1 = require_theme2();
       var deck_1 = require_deck();
       var layout_1 = require_layout();
       var layoutSchema_1 = require_layoutSchema();
+      var deckStyle_1 = require_deckStyle();
+      var reflow_1 = require_reflow();
       var themeGen_1 = require_themeGen();
       var themeCatalog_1 = require_themeCatalog();
       function deckThemeFromRecord(rec, kicker) {
@@ -30212,39 +30416,57 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
           const selection = (0, layoutSchema_1.repairLayoutSelection)(null, outline.pages, layouts);
           const themedBg = (0, layout_1.layoutDesign)({ layout: "centered", background: theme.background, blocks: [], dir: (_e = input.dir) != null ? _e : "ltr" }, { width, height }).background;
           pages = outline.pages.map((item, i) => {
-            var _a6, _b2, _c2, _d2, _e2;
+            var _a6, _b2, _c2, _d2, _e2, _f, _g, _h;
             const layout = (_a6 = byId.get(selection[i])) != null ? _a6 : layouts[0];
             const master = masterById.get(layout.masterId);
-            const bg = (_c2 = (_b2 = layout.background) != null ? _b2 : master == null ? void 0 : master.background) != null ? _c2 : themedBg;
+            const treatment = (0, deckStyle_1.pageTreatment)(item.visualRole, theme.background);
+            const treatedBg = treatment.impact ? themedBg : (0, layout_1.layoutDesign)({ layout: "centered", background: treatment.background, blocks: [], dir: (_b2 = input.dir) != null ? _b2 : "ltr" }, { width, height }).background;
+            const bg = (_d2 = (_c2 = layout.background) != null ? _c2 : master == null ? void 0 : master.background) != null ? _d2 : treatedBg;
             const ink = (0, layout_1.readableTextColor)(fillRefs(bg));
             const fill = (0, layoutSchema_1.fallbackLayoutFill)(layout, item);
             let extentW = 0;
             let extentH = 0;
-            for (const ph of (_d2 = layout.placeholders) != null ? _d2 : []) {
+            for (const ph of (_e2 = layout.placeholders) != null ? _e2 : []) {
               extentW = Math.max(extentW, ph.rect.x + ph.rect.width);
               extentH = Math.max(extentH, ph.rect.y + ph.rect.height);
             }
             const sx = extentW > width && extentW > 0 ? width / extentW : 1;
             const sy = extentH > height && extentH > 0 ? height / extentH : 1;
-            const children = ((_e2 = layout.placeholders) != null ? _e2 : []).filter((ph) => ph.role === "title" || ph.role === "body" || ph.role === "content").map((ph) => {
-              var _a7;
+            const children = ((_f = layout.placeholders) != null ? _f : []).filter((ph) => ph.role === "title" || ph.role === "body" || ph.role === "content").map((ph) => {
+              var _a7, _b3, _c3;
               const r = { x: ph.rect.x * sx, y: ph.rect.y * sy, width: ph.rect.width * sx, height: ph.rect.height * sy };
               const isTitle = ph.role === "title";
+              const scale = (0, deckStyle_1.slotTypeScale)(ph.role, r, { width, height });
+              const list = fill.lists[ph.id];
+              const text2 = fill.texts[ph.id];
+              const paragraphs = list !== void 0 && list.length ? list.map((li) => `\u2022  ${li}`) : [text2 != null ? text2 : ""];
+              const fitted = (0, reflow_1.reflowPage)(layout, [{
+                nodeId: `probe-${ph.id}`,
+                placeholderId: ph.id,
+                rect: { width: r.width, height: r.height },
+                fontSize: scale.base,
+                paragraphs
+              }], { width, height });
+              const fontSize = (_b3 = (_a7 = fitted.adjustments[0]) == null ? void 0 : _a7.fontSize) != null ? _b3 : scale.base;
               const runStyle = {
-                fontFamily: (_a7 = isTitle ? theme.fontHeading : theme.fontBody) != null ? _a7 : "system",
+                fontFamily: (_c3 = isTitle ? theme.fontHeading : theme.fontBody) != null ? _c3 : "system",
                 fontStyle: isTitle ? "Bold" : "Regular",
-                fontSize: isTitle ? 44 : 20,
+                fontSize,
                 fill: { type: "solid", color: structuredClone(ink) }
               };
               const paraStyle = { align: "left", direction: "auto" };
-              const list = fill.lists[ph.id];
-              const text2 = fill.texts[ph.id];
-              const content = list !== void 0 && list.length ? list.map((li) => ({ runs: [{ text: `\u2022  ${li}`, style: structuredClone(runStyle) }], style: structuredClone(paraStyle) })) : [{ runs: [{ text: text2 != null ? text2 : "", style: structuredClone(runStyle) }], style: structuredClone(paraStyle) }];
+              const content = paragraphs.map((line) => ({
+                runs: [{ text: line, style: structuredClone(runStyle) }],
+                style: structuredClone(paraStyle)
+              }));
               return (0, schema_1.createNode)("text", {
                 name: isTitle ? "Title" : "Text",
                 transform: { x: r.x, y: r.y, scaleX: 1, scaleY: 1, rotation: 0 },
                 size: { width: r.width, height: r.height },
-                box: { mode: "fixed", width: r.width, height: r.height, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
+                // Middle-anchored: a slot is usually far taller than its text, and
+                // top-anchoring left every page's copy clinging to the ceiling
+                // above a field of empty background.
+                box: { mode: "fixed", width: r.width, height: r.height, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: isTitle ? "middle" : "top" },
                 data: { placeholderId: ph.id },
                 content
               });
@@ -30252,6 +30474,22 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
               const c = n.content;
               return c.some((par) => par.runs.some((run) => run.text.trim()));
             });
+            const titlePh = ((_g = layout.placeholders) != null ? _g : []).find((p) => p.role === "title");
+            const authoredBg = !!((_h = layout.background) != null ? _h : master == null ? void 0 : master.background);
+            if (treatment.accent && titlePh && !authoredBg) {
+              const bar = (0, deckStyle_1.accentRuleRect)({ x: titlePh.rect.x * sx, y: titlePh.rect.y * sy, width: titlePh.rect.width * sx, height: titlePh.rect.height * sy }, { width, height });
+              const accentColor = (0, color_1.fromHex)(treatment.accent);
+              if (bar && accentColor) {
+                children.unshift((0, schema_1.createNode)("shape", {
+                  name: "Accent",
+                  shape: "rect",
+                  transform: { x: bar.x, y: bar.y, scaleX: 1, scaleY: 1, rotation: 0 },
+                  size: { width: bar.width, height: bar.height },
+                  fills: [{ type: "solid", color: accentColor }],
+                  cornerRadius: Math.round(bar.height / 2)
+                }));
+              }
+            }
             return __spreadValues({
               id: `api-page-${i + 1}`,
               name: item.title || `Page ${i + 1}`,
@@ -30746,6 +30984,8 @@ ${cites.map((c, i) => `${i + 1}. ${c.name.trim()} - ${c.url.trim()}`).join("\n")
       __exportStar(require_layoutExtract(), exports);
       __exportStar(require_mdoutline(), exports);
       __exportStar(require_compose(), exports);
+      __exportStar(require_deckStyle(), exports);
+      __exportStar(require_reflow(), exports);
       __exportStar(require_deck(), exports);
       __exportStar(require_prompts(), exports);
       __exportStar(require_assistant(), exports);
@@ -30770,6 +31010,19 @@ ${cites.map((c, i) => `${i + 1}. ${c.name.trim()} - ${c.url.trim()}`).join("\n")
   });
   if (typeof globalThis.performance === "undefined") {
     globalThis.performance = { now: () => 0 };
+  }
+  if (typeof globalThis.structuredClone !== "function") {
+    globalThis.structuredClone = function structuredClone2(value) {
+      if (value === null || typeof value !== "object") return value;
+      if (Array.isArray(value)) {
+        const out2 = new Array(value.length);
+        for (let i = 0; i < value.length; i++) out2[i] = structuredClone2(value[i]);
+        return out2;
+      }
+      const out = {};
+      for (const k of Object.keys(value)) out[k] = structuredClone2(value[k]);
+      return out;
+    };
   }
 
   // scripts/composer-entry.mjs

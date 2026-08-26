@@ -130,3 +130,78 @@ func TestCompose_ThemeID(t *testing.T) {
 		t.Fatal("unknown themeId must fail, not silently fall back")
 	}
 }
+
+// Layout-grounded composition carries the deck visual system (deckStyle): the
+// type scale comes from each slot's geometry rather than fixed pixels, and a
+// reading page gets the paper treatment instead of repeating the cover's deep
+// background on every slide. Run through goja, so this also proves the
+// embedded bundle carries the change.
+func TestCompose_LayoutGroundedVisualSystem(t *testing.T) {
+	raw, err := os.ReadFile("testdata/compose-input.json")
+	if err != nil {
+		t.Fatalf("read input: %v", err)
+	}
+	var in Input
+	if err := json.Unmarshal(raw, &in); err != nil {
+		t.Fatalf("parse input: %v", err)
+	}
+	layout := map[string]any{
+		"id": "l-content", "masterId": "m-1", "name": "Title and content",
+		"placeholders": []any{
+			map[string]any{"id": "ph-title", "role": "title", "rect": map[string]any{"x": 115, "y": 86, "width": 1690, "height": 151}},
+			map[string]any{"id": "ph-content", "role": "content", "rect": map[string]any{"x": 115, "y": 280, "width": 1690, "height": 648}},
+		},
+	}
+	in.LayoutSet = map[string]any{
+		"masters": []any{map[string]any{"id": "m-1", "name": "Default", "placeholders": []any{}}},
+		"layouts": []any{layout},
+	}
+	got, err := Compose(context.Background(), in)
+	if err != nil {
+		t.Fatalf("layout-grounded compose: %v", err)
+	}
+	var file struct {
+		Pages []struct {
+			Background map[string]any `json:"background"`
+			Children   []struct {
+				Type    string `json:"type"`
+				Content []struct {
+					Runs []struct {
+						Style struct {
+							FontSize float64 `json:"fontSize"`
+						} `json:"style"`
+					} `json:"runs"`
+				} `json:"content"`
+			} `json:"children"`
+		} `json:"pages"`
+	}
+	if err := json.Unmarshal(got, &file); err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if len(file.Pages) < 2 {
+		t.Fatalf("expected a multi-page deck, got %d", len(file.Pages))
+	}
+	// Page 1 is the cover (impact), page 2 is content (reading): a deck whose
+	// every page shares one background is the bug this guards.
+	if reflect.DeepEqual(file.Pages[0].Background, file.Pages[1].Background) {
+		t.Fatal("content page must not repeat the cover's background")
+	}
+	var maxSize float64
+	for _, ch := range file.Pages[1].Children {
+		if ch.Type != "text" {
+			continue
+		}
+		for _, par := range ch.Content {
+			for _, run := range par.Runs {
+				if run.Style.FontSize > maxSize {
+					maxSize = run.Style.FontSize
+				}
+			}
+		}
+	}
+	// The old fixed scale topped out at 44px on a 1080-tall slide (~4%); the
+	// geometry scale must put a title well past that.
+	if maxSize < 60 {
+		t.Fatalf("title type did not scale with the slot: max font size %v on a 1080-tall page", maxSize)
+	}
+}

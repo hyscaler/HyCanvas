@@ -14,15 +14,7 @@
 // is to make that growth rarely necessary.
 
 import type { SlideLayout, Placeholder } from "@hc/schema";
-
-/** The discrete size ladders reflow may choose from, per slot role. Stepping
- *  through a ladder (never arbitrary values) keeps decks visually consistent:
- *  two slides that both overflow a little land on the SAME smaller size. */
-export const reflowLadders: Record<"title" | "body" | "content", number[]> = {
-  title: [44, 40, 36, 32, 28],
-  body: [20, 18, 16, 14],
-  content: [20, 18, 16, 14, 12],
-};
+import { ladderFrom, slotTypeScale } from "./deckStyle";
 
 const AVG_GLYPH_EM = 0.52;
 const LINE_HEIGHT = 1.3;
@@ -77,7 +69,11 @@ function fitsAt(slot: ReflowSlotInput, fontSize: number): boolean {
  *  chart, media, footer) are ignored; a slot whose CURRENT size sits above
  *  its ladder cap is treated as deliberately styled - reflow steps down from
  *  the user's own size on overflow but never "restores" past it. */
-export function reflowPage(layout: SlideLayout, slots: ReflowSlotInput[]): ReflowResult {
+export function reflowPage(
+  layout: SlideLayout,
+  slots: ReflowSlotInput[],
+  page: { width: number; height: number },
+): ReflowResult {
   const roleById = new Map<string, Placeholder["role"]>();
   for (const ph of layout.placeholders ?? []) roleById.set(ph.id, ph.role);
 
@@ -92,15 +88,20 @@ export function reflowPage(layout: SlideLayout, slots: ReflowSlotInput[]): Reflo
       verdicts[slot.placeholderId] = "fits";
       continue;
     }
-    const baseLadder = reflowLadders[role];
-    // A size the user chose deliberately (any size OFF the ladder, above the
-    // cap or between steps) becomes that slot's own ceiling: the ladder below
-    // it still absorbs overflow, but while the content fits reflow never
-    // "corrects" a deliberate style choice onto the ladder in either
-    // direction. On-ladder sizes step freely both ways.
+    // The ladder comes from the SLOT'S geometry, not fixed pixels: a title
+    // strip on a 1920x1080 deck and the same layout on a poster get sizes
+    // proportional to their own slots (deckStyle owns the scale, so
+    // materialization and reflow can never disagree about it).
+    const baseLadder = slotTypeScale(role, slot.rect, page).ladder;
+    // A size the user chose deliberately (any size OFF the slot's ladder,
+    // above the cap or between steps) becomes that slot's own ceiling: it
+    // gets its OWN descending ladder, so overflow is still absorbed, but a
+    // deliberate style choice is never "corrected" upward while it fits.
+    // On-ladder sizes - the ones reflow and materialization set - step freely
+    // both ways.
     const ladder = baseLadder.includes(slot.fontSize)
       ? baseLadder
-      : [slot.fontSize, ...baseLadder.filter((s) => s < slot.fontSize)];
+      : ladderFrom(slot.fontSize, page);
 
     let chosen: number | null = null;
     for (const size of ladder) {

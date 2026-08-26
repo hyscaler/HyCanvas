@@ -98,7 +98,7 @@ import { imageAssets } from "@/lib/assetProvider";
 import { measuredTextHeight } from "@/lib/textFit";
 import { pageGap, pageOffsets, pageTop } from "@/lib/pageLayout";
 import type { MagicDesignSpec } from "@/lib/magicDesign";
-import { extractLayoutSet, fallbackLayoutFill, layoutDesign, reflowPage, variantCandidate, verifyLayoutCapacities, type AiDesignSpec, type DeckResult, type ExtractedLayoutSet, type ExtractPageLike } from "@hc/aistudio";
+import { accentRuleRect, extractLayoutSet, fallbackLayoutFill, layoutDesign, reflowPage, slotTypeScale, variantCandidate, verifyLayoutCapacities, type AiDesignSpec, type DeckResult, type ExtractedLayoutSet, type ExtractPageLike } from "@hc/aistudio";
 import { qrModules } from "@/lib/qr";
 import { frameMaskFor } from "@/lib/maskPath";
 import { flattenSvgToNodes } from "@/lib/svgFlatten";
@@ -488,6 +488,9 @@ interface EditorState {
    *  background applies and missing placeholders land as editable text boxes
    *  (tagged via data.placeholderId). One undo step. */
   applyLayoutToPage(layoutId: string | null, pageIndex?: number, opts?: { pruneObsolete?: boolean; snapExisting?: boolean }): boolean;
+  /** Draw the generated deck's accent rule above a page's title slot (the
+   *  reading-page treatment). One undo step, joins the caller's turn. */
+  addAccentRule(pageIndex: number, layoutId: string, accentHex: string): boolean;
   /** T12: write generated content into a page's materialized placeholder boxes
    *  (matched by data.placeholderId): plain text for title/body slots, one
    *  bulleted paragraph per item for content lists. One undo step; boxes not
@@ -2335,14 +2338,15 @@ export const useEditor = create<EditorState>((set, get) => {
           : [{ runs: [{ text: text!, style: structuredClone(runStyle) }], style: structuredClone(paraStyle) }];
         const ph = reflowLayout?.placeholders.find((pp) => pp.id === phId);
         if (ph && typeof runStyle.fontSize === "number") {
-          const slot = slotRectOnPage(reflowLayout!, ph, doc.pages[pageIndex] as unknown as { width: number; height: number });
+          const pageDims = doc.pages[pageIndex] as unknown as { width: number; height: number };
+          const slot = slotRectOnPage(reflowLayout!, ph, pageDims);
           const res = reflowPage(reflowLayout as never, [{
             nodeId: child.id,
             placeholderId: phId,
             rect: { width: slot.width, height: slot.height },
             fontSize: runStyle.fontSize,
             paragraphs: paragraphs.map((par) => par.runs.map((r) => r.text).join("")),
-          }]);
+          }], pageDims);
           if (res.changed) {
             const size = res.adjustments[0].fontSize;
             for (const par of paragraphs) for (const run of par.runs) (run.style as { fontSize?: number }).fontSize = size;
@@ -2495,14 +2499,21 @@ export const useEditor = create<EditorState>((set, get) => {
       for (const ph of layout.placeholders ?? []) {
         if (have.has(ph.id)) continue;
         const r = { x: ph.rect.x * scaleX, y: ph.rect.y * scaleY, width: ph.rect.width * scaleX, height: ph.rect.height * scaleY };
+        const isTitle = ph.role === "title";
+        // The slot's own geometry decides the type size (@hc/aistudio owns the
+        // scale, so a materialized box, a generated deck, and adaptive reflow
+        // can never disagree). Fixed 44/20 made every box fine print on a
+        // 1920x1080 slide and oversized type on a small canvas.
+        const typeRole = isTitle ? "title" : ph.role === "body" ? "body" : "content";
+        const fontSize = slotTypeScale(typeRole, r, pageDims).base;
         made.push(createNode("text", {
-          name: ph.role === "title" ? tr("app.title") : tr("app.text"),
+          name: isTitle ? tr("app.title") : tr("app.text"),
           transform: { x: r.x, y: r.y, scaleX: 1, scaleY: 1, rotation: 0 },
           size: { width: r.width, height: r.height },
-          box: { mode: "fixed", width: r.width, height: r.height, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
+          box: { mode: "fixed", width: r.width, height: r.height, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: isTitle ? "middle" : "top" },
           data: { placeholderId: ph.id },
           content: [{
-            runs: [{ text: ph.role === "title" ? tr("app.title") : tr("app.text"), style: { fontFamily: "system", fontStyle: ph.role === "title" ? boldFontStyle : regularFontStyle, fontSize: ph.role === "title" ? 44 : 20, fill: { type: "solid", color: { srgb: { r: 0.12, g: 0.14, b: 0.18, a: 1 } } } } }],
+            runs: [{ text: isTitle ? tr("app.title") : tr("app.text"), style: { fontFamily: "system", fontStyle: isTitle ? boldFontStyle : regularFontStyle, fontSize, fill: { type: "solid", color: { srgb: { r: 0.12, g: 0.14, b: 0.18, a: 1 } } } } }],
             style: { align: "left", direction: "auto" },
           }],
         } as Partial<Node>));
@@ -2587,6 +2598,41 @@ export const useEditor = create<EditorState>((set, get) => {
           for (const x of pruned) {
             lp.children.splice(Math.min(x.index, lp.children.length), 0, structuredClone(x.snapshot) as never);
           }
+        },
+      );
+      return true;
+    },
+
+    addAccentRule: (pageIndex, layoutId, accentHex) => {
+      const doc = get().doc as unknown as {
+        pages: Page[];
+        layouts?: { id: string; placeholders: { id: string; role: string; rect: { x: number; y: number; width: number; height: number } }[] }[];
+      };
+      const page = doc.pages[pageIndex] as unknown as { id: string; children: Node[]; width: number; height: number } | undefined;
+      const layout = doc.layouts?.find((l) => l.id === layoutId);
+      const titlePh = layout?.placeholders.find((p) => p.role === "title");
+      const color = fromHex(accentHex);
+      if (!page || !layout || !titlePh || !color) return false;
+      const slot = slotRectOnPage(layout, titlePh, page);
+      const bar = accentRuleRect(slot, { width: page.width, height: page.height });
+      if (!bar) return false;
+      const node = createNode("shape", {
+        name: tr("app.accent_rule"),
+        shape: "rect",
+        transform: { x: bar.x, y: bar.y, scaleX: 1, scaleY: 1, rotation: 0 },
+        size: { width: bar.width, height: bar.height },
+        fills: [{ type: "solid", color }],
+        cornerRadius: Math.round(bar.height / 2),
+      } as Partial<Node>);
+      const pageId = page.id;
+      const livePage = () => get().doc.pages.find((pg) => pg.id === pageId) as unknown as { children: Node[] } | undefined;
+      perform(
+        () => { const lp = livePage(); if (lp) lp.children.unshift(structuredClone(node) as never); },
+        () => {
+          const lp = livePage();
+          if (!lp) return;
+          const i = lp.children.findIndex((c) => c.id === node.id);
+          if (i >= 0) lp.children.splice(i, 1);
         },
       );
       return true;
@@ -6862,7 +6908,8 @@ export const useEditor = create<EditorState>((set, get) => {
         const layout = docx.layouts?.find((l) => l.id === pg.layoutId);
         const ph = layout?.placeholders.find((p) => p.id === phId);
         if (!layout || !ph) return null;
-        const slot = slotRectOnPage(layout, ph, docx.pages[pageIdx] as unknown as { width: number; height: number });
+        const pageDims = docx.pages[pageIdx] as unknown as { width: number; height: number };
+        const slot = slotRectOnPage(layout, ph, pageDims);
         // Hand-MOVING or hand-RESIZING the box off its slot breaks the link
         // for that box (the C28 rule). Height is exempt: the refit rule grows
         // it legitimately as content needs the room.
@@ -6876,7 +6923,7 @@ export const useEditor = create<EditorState>((set, get) => {
           rect: { width: slot.width, height: slot.height },
           fontSize: [...sizes][0],
           paragraphs: after.map((par) => par.runs.map((r) => (r as { text: string }).text).join("")),
-        }]);
+        }], pageDims);
         return { res, phId, pageId: pg.id, layoutId: pg.layoutId };
       })();
       if (reflow?.res.changed) {

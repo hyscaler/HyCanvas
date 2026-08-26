@@ -7,6 +7,7 @@
   "a11y.very_small_text": "文字过小（{size}px），难以阅读",
   "app.a_short_subtitle_goes_here": "简短的副标题写在这里",
   "app.accent": "强调色",
+  "app.accent_rule": "强调线条",
   "app.align_left_edges": "左边缘对齐",
   "app.align_top_edges": "上边缘对齐",
   "app.alt": "Alt",

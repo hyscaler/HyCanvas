@@ -19,11 +19,14 @@ import {
   type SlideMaster,
   type Theme,
 } from "@hc/schema";
+import { fromHex } from "@hc/color";
 import { normalizeOutline } from "./outline";
 import { deckThemes } from "./theme";
 import { layoutDeck } from "./deck";
 import { layoutDesign, readableTextColor } from "./layout";
 import { fallbackLayoutFill, repairLayoutSelection } from "./layoutSchema";
+import { accentRuleRect, pageTreatment, slotTypeScale } from "./deckStyle";
+import { reflowPage } from "./reflow";
 import { themeRecordFromDeckTheme, themeSlotNames } from "./themeGen";
 import { themeCatalogEntry, type ThemeCatalogEntry } from "./themeCatalog";
 import type { DeckTheme } from "./outline";
@@ -159,7 +162,16 @@ export function composeDeckFile(input: ComposeDeckInput): DesignFile {
     pages = outline.pages.map((item, i) => {
       const layout = byId.get(selection[i]) ?? layouts[0];
       const master = masterById.get(layout.masterId);
-      const bg = (layout.background ?? (master as { background?: Fill } | undefined)?.background ?? themedBg) as Fill;
+      // Per-role treatment: impact pages (cover, section, quote, closing) keep
+      // the deep themed background; reading pages flip to a paper tinted with
+      // the same hue, so a deck alternates instead of showing eight identical
+      // flat pages. A layout (or its master) that carries its OWN background
+      // is an authored decision and always wins.
+      const treatment = pageTreatment(item.visualRole, theme.background);
+      const treatedBg = treatment.impact
+        ? themedBg
+        : (layoutDesign({ layout: "centered", background: treatment.background, blocks: [], dir: input.dir ?? "ltr" }, { width, height }).background as Fill);
+      const bg = (layout.background ?? (master as { background?: Fill } | undefined)?.background ?? treatedBg) as Fill;
       const ink = readableTextColor(fillRefs(bg));
       const fill = fallbackLayoutFill(layout, item);
       // Proportional shrink when the layout was authored for a larger page
@@ -177,23 +189,41 @@ export function composeDeckFile(input: ComposeDeckInput): DesignFile {
         .map((ph) => {
           const r = { x: ph.rect.x * sx, y: ph.rect.y * sy, width: ph.rect.width * sx, height: ph.rect.height * sy };
           const isTitle = ph.role === "title";
+          // Type scale from the slot's own geometry (deckStyle), so a title on
+          // a 1920x1080 slide is a title and not the fixed 44px that read as
+          // fine print. The content itself then steps down the same ladder
+          // when it outruns the slot.
+          const scale = slotTypeScale(ph.role as "title" | "body" | "content", r, { width, height });
+          const list = fill.lists[ph.id];
+          const text = fill.texts[ph.id];
+          const paragraphs = list !== undefined && list.length ? list.map((li) => `•  ${li}`) : [text ?? ""];
+          const fitted = reflowPage(layout, [{
+            nodeId: `probe-${ph.id}`,
+            placeholderId: ph.id,
+            rect: { width: r.width, height: r.height },
+            fontSize: scale.base,
+            paragraphs,
+          }], { width, height });
+          const fontSize = fitted.adjustments[0]?.fontSize ?? scale.base;
           const runStyle = {
             fontFamily: (isTitle ? theme.fontHeading : theme.fontBody) ?? "system",
             fontStyle: isTitle ? "Bold" : "Regular",
-            fontSize: isTitle ? 44 : 20,
+            fontSize,
             fill: { type: "solid", color: structuredClone(ink) },
           };
           const paraStyle = { align: "left", direction: "auto" };
-          const list = fill.lists[ph.id];
-          const text = fill.texts[ph.id];
-          const content = list !== undefined && list.length
-            ? list.map((li) => ({ runs: [{ text: `•  ${li}`, style: structuredClone(runStyle) }], style: structuredClone(paraStyle) }))
-            : [{ runs: [{ text: text ?? "", style: structuredClone(runStyle) }], style: structuredClone(paraStyle) }];
+          const content = paragraphs.map((line) => ({
+            runs: [{ text: line, style: structuredClone(runStyle) }],
+            style: structuredClone(paraStyle),
+          }));
           return createNode("text", {
             name: isTitle ? "Title" : "Text",
             transform: { x: r.x, y: r.y, scaleX: 1, scaleY: 1, rotation: 0 },
             size: { width: r.width, height: r.height },
-            box: { mode: "fixed", width: r.width, height: r.height, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
+            // Middle-anchored: a slot is usually far taller than its text, and
+            // top-anchoring left every page's copy clinging to the ceiling
+            // above a field of empty background.
+            box: { mode: "fixed", width: r.width, height: r.height, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: isTitle ? "middle" : "top" },
             data: { placeholderId: ph.id },
             content,
           } as never);
@@ -203,6 +233,30 @@ export function composeDeckFile(input: ComposeDeckInput): DesignFile {
           const c = (n as unknown as { content: { runs: { text: string }[] }[] }).content;
           return c.some((par) => par.runs.some((run) => run.text.trim()));
         });
+      // One accent rule above the title on a reading page: the smallest mark
+      // that makes a page read as designed rather than as a text box on a
+      // colored rectangle. Skipped when the layout brings its own background
+      // (an authored look is never overdrawn) or when the title sits too high
+      // for the rule to fit above it.
+      const titlePh = (layout.placeholders ?? []).find((p) => p.role === "title");
+      const authoredBg = !!(layout.background ?? (master as { background?: Fill } | undefined)?.background);
+      if (treatment.accent && titlePh && !authoredBg) {
+        const bar = accentRuleRect(
+          { x: titlePh.rect.x * sx, y: titlePh.rect.y * sy, width: titlePh.rect.width * sx, height: titlePh.rect.height * sy },
+          { width, height },
+        );
+        const accentColor = fromHex(treatment.accent);
+        if (bar && accentColor) {
+          children.unshift(createNode("shape", {
+            name: "Accent",
+            shape: "rect",
+            transform: { x: bar.x, y: bar.y, scaleX: 1, scaleY: 1, rotation: 0 },
+            size: { width: bar.width, height: bar.height },
+            fills: [{ type: "solid", color: accentColor }],
+            cornerRadius: Math.round(bar.height / 2),
+          } as never) as never);
+        }
+      }
       return {
         id: `api-page-${i + 1}`,
         name: item.title || `Page ${i + 1}`,

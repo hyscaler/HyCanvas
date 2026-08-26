@@ -37,16 +37,24 @@ const contentBox = () => {
   return page.children.find((n) => n.data?.placeholderId === "ph-content")!;
 };
 
-const crowd = (n: number): Paragraphs =>
-  Array.from({ length: n }, (_, i) => para(`•  Bullet ${i + 1}: a reasonably long line of body copy that wraps at least once inside the slot`, 20));
+/** The size the content slot materialized at (derived from the slot's own
+ *  geometry now, not a fixed 20px), so the fixtures edit a box the way a user
+ *  actually would: starting from what the layout gave them. */
+const materialized = () => contentBox().content[0].runs[0].style.fontSize as number;
+
+const crowd = (n: number, size = materialized()): Paragraphs =>
+  Array.from({ length: n }, (_, i) => para(`•  Bullet ${i + 1}: a reasonably long line of body copy that wraps at least once inside the slot`, size));
 
 describe("live reflow on edit (E16)", () => {
   it("steps the font down the ladder inside the same undo step", () => {
     const st = useEditor.getState();
     const box = contentBox();
+    const base = materialized();
+    // The slot's geometry drives the scale: a two-thirds-of-the-page content
+    // slot is nowhere near the old fixed 20px.
+    expect(base).toBeGreaterThan(30);
     st.setContent(box.id, crowd(48));
-    const size = contentBox().content[0].runs[0].style.fontSize;
-    expect(size).toBeLessThan(20);
+    expect(materialized()).toBeLessThan(base);
     st.undo();
     // One undo reverts content AND size together.
     expect(contentBox().content.length).toBeLessThanOrEqual(1);
@@ -55,31 +63,46 @@ describe("live reflow on edit (E16)", () => {
   it("steps back up when the content shrinks", () => {
     const st = useEditor.getState();
     const box = contentBox();
+    const base = materialized();
     st.setContent(box.id, crowd(48));
-    expect(contentBox().content[0].runs[0].style.fontSize).toBeLessThan(20);
-    st.setContent(box.id, [para("one short point", contentBox().content[0].runs[0].style.fontSize as number)]);
-    expect(contentBox().content[0].runs[0].style.fontSize).toBe(20);
+    expect(materialized()).toBeLessThan(base);
+    st.setContent(box.id, [para("one short point", materialized())]);
+    expect(materialized()).toBe(base);
+  });
+
+  it("never enlarges a legacy deck's own type on edit", () => {
+    // A deck authored before the geometry scale carries small fixed sizes.
+    // They sit off the slot's ladder, so they are the user's ceiling: editing
+    // such a box must absorb overflow, never jump the text up to the new base.
+    const st = useEditor.getState();
+    const box = contentBox();
+    st.setContent(box.id, [para("a legacy line", 20)]);
+    expect(materialized()).toBe(20);
+    st.setContent(box.id, crowd(60, 20));
+    expect(materialized()).toBeLessThan(20);
   });
 
   it("respects the per-page opt-out and the hand-moved guard", () => {
     const st = useEditor.getState();
+    const base = materialized();
     st.setPageAutoflow(0, false);
-    st.setContent(contentBox().id, crowd(24));
-    expect(contentBox().content[0].runs[0].style.fontSize).toBe(20);
+    st.setContent(contentBox().id, crowd(48, base));
+    expect(materialized()).toBe(base);
     st.setPageAutoflow(0, true);
     // Hand-move the box off its slot: the link is broken for that box.
     const box = contentBox();
     (box as unknown as { transform: { x: number } }).transform.x += 40;
-    st.setContent(box.id, crowd(24));
-    expect(contentBox().content[0].runs[0].style.fontSize).toBe(20);
+    st.setContent(box.id, crowd(48, base));
+    expect(materialized()).toBe(base);
   });
 
   it("treats a hand-RESIZED box as link-broken too (width off the slot)", () => {
     const st = useEditor.getState();
     const box = contentBox();
+    const base = materialized();
     (box as unknown as { size: { width: number } }).size.width += 40;
-    st.setContent(box.id, crowd(48));
-    expect(contentBox().content[0].runs[0].style.fontSize).toBe(20);
+    st.setContent(box.id, crowd(48, base));
+    expect(materialized()).toBe(base);
   });
 
   it("leaves mixed run sizes alone (deliberate styling)", () => {

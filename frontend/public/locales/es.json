@@ -7,6 +7,7 @@
   "a11y.very_small_text": "El texto es muy pequeño ({size} px) y cuesta leerlo",
   "app.a_short_subtitle_goes_here": "Aquí va un subtítulo corto",
   "app.accent": "Acento",
+  "app.accent_rule": "Línea de acento",
   "app.align_left_edges": "Alinear bordes izquierdos",
   "app.align_top_edges": "Alinear bordes superiores",
   "app.alt": "Alt",
