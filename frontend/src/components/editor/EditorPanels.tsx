@@ -47,7 +47,7 @@ import {
   type AutoLayoutSuggestion,
   type AnimateStyle,
 } from "@/lib/assist";
-import { ApiError, type AiConfigView, type AiProviderPreset, type AssetFolder, type MiniAppSummary, type StockAssetSummary, type StockCollectionSummary, type StockFacetValue, type StockFiltersSummary, type StorageUsageView, type TemplateSummary, type UploadedAsset } from "@hc/sdk";
+import { ApiError, type AiConfigView, type AiProviderPreset, type AiSessionView, type AssetFolder, type MiniAppSummary, type StockAssetSummary, type StockCollectionSummary, type StockFacetValue, type StockFiltersSummary, type StorageUsageView, type TemplateSummary, type UploadedAsset } from "@hc/sdk";
 import { DesignThumb } from "@/components/dashboard/DesignThumb";
 import { checkAppAction, type AppAction } from "@hc/stock";
 import { oc, resolveAssetUrl, stockProxyUrl, uploadAssetWithProgress } from "@/lib/sdk";
@@ -3580,6 +3580,30 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   const reviewAddSeq = useRef(0);
   // FR-9/FR-27: persisted session id for this design (created lazily).
   const sessionRef = useRef<string | null>(null);
+  const [sessions, setSessions] = useState<AiSessionView[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  /** Open an earlier conversation for this design. Read-only in the sense that
+   *  continuing it simply appends, exactly as the newest one does. */
+  async function openSession(id: string) {
+    if (!designId || busy) return;
+    setHistoryOpen(false);
+    try {
+      const { turns: persisted } = await oc.listAiTurns(designId, id);
+      sessionRef.current = id;
+      setTurns(persisted.map((t) => {
+        const plan = Array.isArray(t.plan) ? (t.plan as { action?: unknown }[]) : null;
+        const steps = plan
+          ?.map((st) => (typeof st?.action === "string" ? { action: st.action, ok: true } : null))
+          .filter((v): v is { action: string; ok: boolean } => !!v);
+        return { role: t.role, text: t.text, ...(steps?.length ? { steps } : {}) };
+      }));
+      setPending(null);
+      clearReview();
+    } catch {
+      toast.error(tr("editor.couldnt_open_that_conversation"));
+    }
+  }
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -3593,6 +3617,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       let restored: ChatTurn[] = [];
       try {
         const { sessions } = await oc.listAiSessions(designId);
+        if (!cancelled) setSessions(sessions);
         if (sessions.length) {
           const latest = sessions[0];
           const { turns: persisted } = await oc.listAiTurns(designId, latest.id);
@@ -4145,9 +4170,40 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
             {hasApplied && (
               <button onClick={() => { undo(); toast.success(tr("editor.reverted_last_turn")); }} disabled={busy} title={tr("editor.undo_the_last_applied_turn")} className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 disabled:opacity-40"><RotateCcw size={12} /> {tr("editor.undo")}</button>
             )}
+            {/* Past conversations for this design. Every turn was already
+                persisted; only the newest was ever reachable, so starting a
+                new chat silently orphaned the previous one. */}
+            {sessions.length > 1 && (
+              <button
+                onClick={() => setHistoryOpen((v) => !v)}
+                disabled={busy}
+                title={tr("editor.past_conversations")}
+                aria-expanded={historyOpen}
+                className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 disabled:opacity-40"
+              >
+                <Clock size={12} /> {tr("editor.history")}
+              </button>
+            )}
             <button onClick={startNewChat} disabled={busy} title={tr("editor.start_a_new_chat")} className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 disabled:opacity-40"><Plus size={12} /> {tr("editor.new")}</button>
           </div>
         </div>
+      )}
+
+      {historyOpen && sessions.length > 0 && (
+        <ul className="mb-1.5 max-h-40 shrink-0 overflow-y-auto rounded-lg border border-neutral-200 bg-neutral-50 p-1 text-[11px]">
+          {sessions.map((sess) => (
+            <li key={sess.id}>
+              <button
+                onClick={() => void openSession(sess.id)}
+                className={`flex w-full items-center gap-2 rounded px-2 py-1 text-start hover:bg-surface ${sess.id === sessionRef.current ? "font-medium text-brand-ink" : "text-neutral-600"}`}
+              >
+                <Clock size={11} className="shrink-0 text-neutral-400" />
+                <span className="truncate">{new Date(sess.createdAt).toLocaleString()}</span>
+                {sess.id === sessionRef.current && <span className="ms-auto shrink-0 text-[10px] text-neutral-400">{tr("editor.current")}</span>}
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
 
       {/* Message thread (the only scrolling region). */}
