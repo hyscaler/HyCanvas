@@ -91,6 +91,7 @@ import { DesignThumb } from "./DesignThumb";
 import { BulkCreateModal } from "./BulkCreateModal";
 import { MembersPanel } from "./MembersPanel";
 import { ApiKeysPanel } from "./ApiKeysPanel";
+import { WorkspaceAiPanel } from "./WorkspaceAiPanel";
 import { TemplateFromPptxDialog } from "./TemplateFromPptxDialog";
 import { VerifyEmailBanner } from "@/components/auth/VerifyEmailBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
@@ -1251,6 +1252,13 @@ export function DashboardApp({ view }: { view: DashboardView }) {
               {activeWorkspaceId && (activeWs?.role === "owner" || activeWs?.role === "admin") && (
                 <ApiKeysPanel workspaceId={activeWorkspaceId} />
               )}
+              {/* The workspace's AI provider and its usage. Every member can
+                  SEE what is connected (they are the ones it generates for);
+                  only an admin can change it, which is the server's rule too. */}
+              <WorkspaceAiPanel
+                workspaceId={activeWorkspaceId}
+                canEdit={activeWs?.role === "owner" || activeWs?.role === "admin"}
+              />
             </section>
           )}
         </div>

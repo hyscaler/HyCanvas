@@ -64,6 +64,7 @@ import { mirrorInRtl } from "@/lib/locale";
 import { tr, trOr } from "@/lib/i18n";
 import { cancelAiImages, enqueueAiImages, retryFailedAiImages, subscribeAiImageQueue } from "@/lib/aiImageQueue";
 import { peekPendingAiRequest, subscribeAiRequests, takeStagedAiSources, type AiRequest } from "@/lib/aiRequests";
+import { AiProviderSettings } from "@/components/ai/AiProviderSettings";
 import { builtinThemes } from "@/lib/themeCatalog";
 import { cancelAiFills, enqueueAiFills, retryFailedAiFills, subscribeAiFillQueue } from "@/lib/aiFillQueue";
 import { stickerLabel, stickerCategoryLabel } from "@/lib/stickers";
@@ -4938,7 +4939,6 @@ const FALLBACK_PRESETS: AiProviderPreset[] = [
 let providerCatalogCache: AiProviderPreset[] | null = null;
 
 export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
-  const toast = useToast();
   // Re-render when the doc changes so the brand-voice indicator stays current.
   useEditor((s) => s.rev);
   // The active design's brand voice, already loaded by EditorApp via
@@ -4968,17 +4968,9 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
   const [ignoreVoice, setIgnoreVoice] = useState(false);
   const voiceClause = !ignoreVoice ? brandVoiceClause(brandVoice) : "";
   const [config, setConfig] = useState<AiConfigView | null>(null);
+  const [canAdminWorkspace, setCanAdminWorkspace] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showConfig, setShowConfig] = useState(false);
-  const [provider, setProvider] = useState("openai");
-  const [model, setModel] = useState("");
-  const [imageModel, setImageModel] = useState("");
-  const [baseUrl, setBaseUrl] = useState("");
-  const [apiKey, setApiKey] = useState("");
-  // T16: the optional web-search provider, saved alongside the AI config.
-  const [searchProvider, setSearchProvider] = useState("");
-  const [searchUrl, setSearchUrl] = useState("");
-  const [searchKey, setSearchKey] = useState("");
   // The server's preset catalog drives the dropdown (11 providers, defaults,
   // capabilities); the hardcoded fallback only covers the never-fetched case.
   // Seeded from the shared cache, revalidated by the load effect below.
@@ -5005,27 +4997,26 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
     if (!workspaceId) return;
     let cancelled = false;
     void (async () => {
-      const [loaded, searchCfg] = await Promise.all([
-        oc.getAiConfig(workspaceId).then(
-          (c) => ({ ok: true as const, c }),
-          () => ({ ok: false as const, c: null }),
-        ),
-        oc.getSearchConfig(workspaceId).catch(() => null),
-      ]);
+      const loaded = await oc.getAiConfig(workspaceId).then(
+        (c) => ({ ok: true as const, c }),
+        () => ({ ok: false as const, c: null }),
+      );
       if (cancelled) return;
       setLoadFailed(!loaded.ok);
       const c = loaded.c;
       setConfig(c);
       setShowConfig(loaded.ok && !c?.hasKey);
-      setProvider(c?.provider ?? "openai");
-      setModel(c?.model ?? "");
-      setImageModel(c?.imageModel ?? "");
-      setBaseUrl(c?.baseUrl ?? "");
-      setApiKey("");
-      setSearchProvider(searchCfg?.provider ?? "");
-      setSearchUrl(searchCfg?.baseUrl ?? "");
-      setSearchKey("");
       setLoading(false);
+      // Saving the provider is admin-only. Best-effort: a failed lookup leaves
+      // the form hidden rather than offering a save that would be refused.
+      void oc.listWorkspaces().then(
+        (ws) => {
+          if (cancelled) return;
+          const role = ws.find((w) => w.id === workspaceId)?.role;
+          setCanAdminWorkspace(role === "owner" || role === "admin");
+        },
+        () => {},
+      );
     })();
     // Revalidate the provider catalog WITHOUT gating panel readiness on it
     // (a hung catalog request must not hold the spinner): the cache/fallback
@@ -5039,76 +5030,6 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
     );
     return () => { cancelled = true; };
   }, [workspaceId, loadNonce]);
-
-  // The selected provider's preset drives the field set and hints. Three
-  // distinct base-URL concerns, deliberately decoupled:
-  // - requiresBaseUrl: the preset demands one (Azure/custom); gates the save.
-  // - showBaseUrl: the field also renders whenever the SAME provider already
-  //   stores a URL (an API-configured proxy on e.g. openai, or a legacy id),
-  //   so a stored URL is always visible, auditable, and clearable. Latched on
-  //   the loaded config, never the live input, so emptying it cannot unmount
-  //   the field. Hidden again the moment another provider is selected - a
-  //   stale URL (or stale field state) must never follow a provider switch.
-  const selPreset = presets.find((p) => p.id === provider);
-  const requiresBaseUrl = !!selPreset?.needsBaseUrl;
-  const sameProvider = provider === config?.provider;
-  // The base URL is ALWAYS editable, not just for endpoint-routed providers.
-  // Several presets front more than one host (Moonshot's international and
-  // mainland platforms issue separate keys, and proxies/gateways are common),
-  // and with the field hidden a key for the other host could only ever 401
-  // with no way to correct it. Empty means "use the preset's default", so the
-  // simple case still needs no input.
-  const showBaseUrl = true;
-  const modelHint = selPreset?.defaultModel ?? "";
-
-  async function saveConfig() {
-    if (!workspaceId) return;
-    const url = baseUrl.trim();
-    // Endpoint-routed providers are unusable without their URL; the server
-    // rejects the save too (ai_base_url_required), but catching it here points
-    // at the field without a round trip.
-    if (requiresBaseUrl && !url) {
-      toast.error(tr("errors.api_ai_base_url_required"));
-      return;
-    }
-    // A provider change must bring the new provider's key (the server rejects
-    // it as ai_key_required_for_provider_change); say so before the round trip.
-    if (!sameProvider && config?.hasKey && !apiKey.trim()) {
-      toast.error(tr("errors.api_ai_key_required_for_provider_change"));
-      return;
-    }
-    try {
-      // baseUrl uses PATCH semantics server-side: omitted (undefined) keeps
-      // the stored URL - and the server itself clears it on a provider change
-      // - while a rendered field sends its exact value, so emptying a visible
-      // field is an explicit clear. Stale client state can no longer leak a
-      // URL across providers or silently wipe one.
-      const c = await oc.setAiConfig(workspaceId, {
-        provider,
-        model: model || undefined,
-        imageModel: imageModel || undefined,
-        baseUrl: showBaseUrl ? url : undefined,
-        apiKey: apiKey || undefined,
-      });
-      setConfig(c);
-      setApiKey("");
-      // The optional web-search provider saves in the same gesture (provider
-      // "" clears it); its coded rejections surface like the AI config's.
-      await oc.setSearchConfig(workspaceId, {
-        provider: searchProvider,
-        ...(searchProvider === "searxng" ? { baseUrl: searchUrl.trim() } : {}),
-        ...(searchKey.trim() ? { apiKey: searchKey.trim() } : {}),
-      });
-      setSearchKey("");
-      setShowConfig(false);
-      toast.success(tr("editor.ai_provider_saved"));
-    } catch (e) {
-      // Show the server's coded reason when it sent one (e.g. a rejected base
-      // URL); the generic save error stays the fallback.
-      const coded = e instanceof ApiError ? apiCodeMessage(e.body) : null;
-      toast.error(coded ?? tr("editor.could_not_save_ai_settings"));
-    }
-  }
 
   // The chat view fills the panel height (input pinned, messages scroll); the
   // setup/connect view scrolls normally.
@@ -5173,67 +5094,14 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
                 <span>{tr("editor.connect_a_provider_to_unlock")} <span className="font-medium">{tr("editor.magic_design")}</span> (text to a finished page) and image generation. The tools below work without AI.</span>
               </p>
             )}
-            <div className="flex flex-col gap-2">
-              <select
-                value={provider}
-                aria-label={tr("editor.provider")}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  setProvider(next);
-                  // Model names belong to a provider: a stale "deepseek-chat"
-                  // must never ride into an OpenAI save (the provider would
-                  // 404 on every call). Switching back to the stored provider
-                  // restores its stored models.
-                  const stored = next === config?.provider;
-                  setModel(stored ? config?.model ?? "" : "");
-                  setImageModel(stored ? config?.imageModel ?? "" : "");
-                  // Same for the host: the server drops a stored URL on a
-                  // provider change, and the visible field must not put the
-                  // previous provider's host back.
-                  setBaseUrl(stored ? config?.baseUrl ?? "" : "");
-                }}
-                className="rounded border border-neutral-300 px-2 py-1.5 text-sm"
-              >
-                {presets.map((p) => (
-                  <option key={p.id} value={p.id}>{p.label}</option>
-                ))}
-                {/* A stored provider missing from the catalog (legacy row) stays selectable. */}
-                {!selPreset && <option value={provider}>{provider}</option>}
-              </select>
-              <input value={model} onChange={(e) => setModel(e.target.value)} placeholder={modelHint ? `Model (optional, default ${modelHint})` : tr("editor.model_optional")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
-              {(selPreset?.capabilities.image ?? true) && (
-                <input value={imageModel} onChange={(e) => setImageModel(e.target.value)} placeholder={selPreset?.defaultImageModel ? `Image model (optional, default ${selPreset.defaultImageModel})` : tr("editor.image_model_optional")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
-              )}
-              {showBaseUrl && (
-                <input
-                  value={baseUrl}
-                  onChange={(e) => setBaseUrl(e.target.value)}
-                  placeholder={!requiresBaseUrl && selPreset?.baseUrl ? tr("editor.base_url_optional_default", { url: selPreset.baseUrl }) : tr("editor.base_url_https_v1")}
-                  aria-label={tr("editor.base_url")}
-                  className="rounded border border-neutral-300 px-2 py-1.5 text-sm"
-                />
-              )}
-              <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={config?.hasKey ? tr("editor.api_key_leave_blank_to_keep") : tr("editor.api_key")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
-              {/* T16: optional web-search grounding provider. */}
-              <label className="mt-1 flex flex-col gap-1 text-[11px] text-neutral-500">
-                {tr("editor.web_search_optional")}
-                <select value={searchProvider} onChange={(e) => setSearchProvider(e.target.value)} className="rounded border border-neutral-300 px-2 py-1.5 text-sm text-neutral-800">
-                  <option value="">{tr("editor.search_off")}</option>
-                  <option value="tavily">{tr("editor.search_provider_hosted")}</option>
-                  <option value="searxng">{tr("editor.search_provider_metasearch")}</option>
-                </select>
-              </label>
-              {searchProvider === "searxng" && (
-                <input value={searchUrl} onChange={(e) => setSearchUrl(e.target.value)} placeholder={tr("editor.base_url_https_v1")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
-              )}
-              {searchProvider === "tavily" && (
-                <input type="password" value={searchKey} onChange={(e) => setSearchKey(e.target.value)} placeholder={tr("editor.api_key")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
-              )}
-              <Button block onClick={() => void saveConfig()} disabled={!workspaceId}>{tr("editor.save_provider")}</Button>
-              {config?.hasKey && (
-                <button onClick={() => setShowConfig(false)} className="text-xs text-neutral-500 hover:underline">{tr("editor.cancel")}</button>
-              )}
-            </div>
+            <AiProviderSettings
+              workspaceId={workspaceId}
+              config={config}
+              presets={presets}
+              canEdit={canAdminWorkspace}
+              onSaved={(c) => { setConfig(c); setShowConfig(false); }}
+              onCancel={config?.hasKey ? () => setShowConfig(false) : undefined}
+            />
           </div>
           {/* Deterministic polish tools that work with no provider connected. */}
           <CollapsibleSection title={tr("editor.assist_no_ai_needed")} icon={Stethoscope}>
