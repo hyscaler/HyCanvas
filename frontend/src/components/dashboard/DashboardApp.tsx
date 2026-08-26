@@ -1249,16 +1249,21 @@ export function DashboardApp({ view }: { view: DashboardView }) {
               />
               {/* F40: API keys live on the workspace administration surface,
                   admin-gated like the mint endpoint itself. */}
-              {activeWorkspaceId && (activeWs?.role === "owner" || activeWs?.role === "admin") && (
-                <ApiKeysPanel workspaceId={activeWorkspaceId} />
-              )}
-              {/* The workspace's AI provider and its usage. Every member can
-                  SEE what is connected (they are the ones it generates for);
-                  only an admin can change it, which is the server's rule too. */}
+              {/* AI first: nearly every workspace connects a provider, while
+                  few mint developer keys. The two are opposite directions -
+                  this one is the key HyCanvas uses to call a model, the one
+                  below is how other systems call HyCanvas - and the headings
+                  say so, because "API keys" and "AI" read alike at a glance.
+                  Every member can SEE what is connected (they are the ones it
+                  generates for); only an admin can change it, matching the
+                  server's own viewer-to-read, admin-to-write split. */}
               <WorkspaceAiPanel
                 workspaceId={activeWorkspaceId}
                 canEdit={activeWs?.role === "owner" || activeWs?.role === "admin"}
               />
+              {activeWorkspaceId && (activeWs?.role === "owner" || activeWs?.role === "admin") && (
+                <ApiKeysPanel workspaceId={activeWorkspaceId} />
+              )}
             </section>
           )}
         </div>
