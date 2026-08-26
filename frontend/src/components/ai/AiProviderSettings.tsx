@@ -46,6 +46,16 @@ export function AiProviderSettings({
   const [searchProvider, setSearchProvider] = useState("");
   const [searchUrl, setSearchUrl] = useState("");
   const [searchKey, setSearchKey] = useState("");
+  // The workspace whose stored web-search record has actually arrived. Derived
+  // rather than a separate flag, so switching workspace invalidates it without
+  // a reset written during render or in an effect body.
+  //
+  // It matters because the fields default to "off": saving before the record
+  // loads (or when its fetch failed) would send provider:"" and silently CLEAR
+  // a configured search provider. The previous version could not hit this,
+  // because one combined fetch gated the whole form.
+  const [searchFor, setSearchFor] = useState<string | null>(null);
+  const searchLoaded = !!workspaceId && searchFor === workspaceId;
   const [saving, setSaving] = useState(false);
 
   // Re-arm when the workspace (or its stored config) changes, the render-time
@@ -73,8 +83,11 @@ export function AiProviderSettings({
         setSearchProvider(cfg?.provider ?? "");
         setSearchUrl(cfg?.baseUrl ?? "");
         setSearchKey("");
+        setSearchFor(workspaceId);
       },
-      () => {},
+      () => {
+        // Leave it untouched and unsaved rather than guess it is off.
+      },
     );
     return () => { cancelled = true; };
   }, [workspaceId]);
@@ -126,13 +139,16 @@ export function AiProviderSettings({
       });
       setApiKey("");
       // The optional web-search provider saves in the same gesture (provider
-      // "" clears it); its coded rejections surface like the AI config's.
-      await oc.setSearchConfig(workspaceId, {
-        provider: searchProvider,
-        ...(searchProvider === "searxng" ? { baseUrl: searchUrl.trim() } : {}),
-        ...(searchKey.trim() ? { apiKey: searchKey.trim() } : {}),
-      });
-      setSearchKey("");
+      // "" clears it), but ONLY once its stored value is known - otherwise an
+      // early save would clear a provider the user never touched.
+      if (searchLoaded) {
+        await oc.setSearchConfig(workspaceId, {
+          provider: searchProvider,
+          ...(searchProvider === "searxng" ? { baseUrl: searchUrl.trim() } : {}),
+          ...(searchKey.trim() ? { apiKey: searchKey.trim() } : {}),
+        });
+        setSearchKey("");
+      }
       toast.success(tr("editor.ai_provider_saved"));
       onSaved(c);
     } catch (e) {
@@ -187,7 +203,10 @@ export function AiProviderSettings({
         className="rounded border border-neutral-300 px-2 py-1.5 text-sm"
       />
       <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={config?.hasKey ? tr("editor.api_key_leave_blank_to_keep") : tr("editor.api_key")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
-      {/* T16: optional web-search grounding provider. */}
+      {/* T16: optional web-search grounding provider. Hidden until its stored
+          value is known, so the controls never show "off" for something that
+          is on. */}
+      {searchLoaded && (
       <label className="mt-1 flex flex-col gap-1 text-[11px] text-neutral-500">
         {tr("editor.web_search_optional")}
         <select value={searchProvider} onChange={(e) => setSearchProvider(e.target.value)} className="rounded border border-neutral-300 px-2 py-1.5 text-sm text-neutral-800">
@@ -196,10 +215,11 @@ export function AiProviderSettings({
           <option value="searxng">{tr("editor.search_provider_metasearch")}</option>
         </select>
       </label>
-      {searchProvider === "searxng" && (
+      )}
+      {searchLoaded && searchProvider === "searxng" && (
         <input value={searchUrl} onChange={(e) => setSearchUrl(e.target.value)} placeholder={tr("editor.base_url_https_v1")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
       )}
-      {searchProvider === "tavily" && (
+      {searchLoaded && searchProvider === "tavily" && (
         <input type="password" value={searchKey} onChange={(e) => setSearchKey(e.target.value)} placeholder={tr("editor.api_key")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
       )}
       <Button block onClick={() => void save()} disabled={!workspaceId || saving}>

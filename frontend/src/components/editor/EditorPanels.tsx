@@ -4997,26 +4997,27 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
     if (!workspaceId) return;
     let cancelled = false;
     void (async () => {
-      const loaded = await oc.getAiConfig(workspaceId).then(
-        (c) => ({ ok: true as const, c }),
-        () => ({ ok: false as const, c: null }),
-      );
+      // Saving the provider is admin-only, so the role resolves WITH the
+      // config: settling it afterwards made an admin see the read-only "ask an
+      // admin" note flash before their form appeared. A failed lookup leaves
+      // the form hidden rather than offering a save that would be refused.
+      const [loaded, role] = await Promise.all([
+        oc.getAiConfig(workspaceId).then(
+          (c) => ({ ok: true as const, c }),
+          () => ({ ok: false as const, c: null }),
+        ),
+        oc.listWorkspaces().then(
+          (ws) => ws.find((w) => w.id === workspaceId)?.role,
+          () => undefined,
+        ),
+      ]);
       if (cancelled) return;
       setLoadFailed(!loaded.ok);
       const c = loaded.c;
       setConfig(c);
+      setCanAdminWorkspace(role === "owner" || role === "admin");
       setShowConfig(loaded.ok && !c?.hasKey);
       setLoading(false);
-      // Saving the provider is admin-only. Best-effort: a failed lookup leaves
-      // the form hidden rather than offering a save that would be refused.
-      void oc.listWorkspaces().then(
-        (ws) => {
-          if (cancelled) return;
-          const role = ws.find((w) => w.id === workspaceId)?.role;
-          setCanAdminWorkspace(role === "owner" || role === "admin");
-        },
-        () => {},
-      );
     })();
     // Revalidate the provider catalog WITHOUT gating panel readiness on it
     // (a hung catalog request must not hold the spinner): the cache/fallback
