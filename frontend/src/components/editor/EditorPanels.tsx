@@ -63,6 +63,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { mirrorInRtl } from "@/lib/locale";
 import { tr, trOr } from "@/lib/i18n";
 import { cancelAiImages, enqueueAiImages, retryFailedAiImages, subscribeAiImageQueue } from "@/lib/aiImageQueue";
+import { subscribeAiRequests } from "@/lib/aiRequests";
 import { builtinThemes } from "@/lib/themeCatalog";
 import { cancelAiFills, enqueueAiFills, retryFailedAiFills, subscribeAiFillQueue } from "@/lib/aiFillQueue";
 import { stickerLabel, stickerCategoryLabel } from "@/lib/stickers";
@@ -3418,6 +3419,62 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   const attachFileRef = useRef<HTMLInputElement | null>(null);
   const attachToggleRef = useRef<HTMLButtonElement | null>(null);
   const reviewAbort = useRef<AbortController | null>(null);
+  const busyRef = useRef(false);
+  busyRef.current = busy;
+  // Generation dials persist per workspace. They used to be created empty for
+  // every plan and to live only inside the confirm card, so setting "concise /
+  // investor" and regenerating silently reset all four to Auto, and there was
+  // no way to choose them BEFORE the first send.
+  const dialsKey = `oc-ai-dials:${workspaceId ?? ""}`;
+  const readDials = (key: string): GenerationDials => {
+    if (typeof window === "undefined") return {};
+    try {
+      const raw = window.localStorage.getItem(key);
+      return raw ? (JSON.parse(raw) as GenerationDials) : {};
+    } catch {
+      return {};
+    }
+  };
+  const [savedDials, setSavedDials] = useState<GenerationDials>(() => readDials(dialsKey));
+  // Render-time state adjustment (the React pattern for prop-driven resets,
+  // used for the panel's workspace re-arm above): a workspace switch loads
+  // that workspace's dials rather than showing the previous one's.
+  const [dialsFor, setDialsFor] = useState(dialsKey);
+  if (dialsFor !== dialsKey) {
+    setDialsFor(dialsKey);
+    setSavedDials(readDials(dialsKey));
+  }
+  const persistDials = (next: GenerationDials) => {
+    setSavedDials(next);
+    try { window.localStorage.setItem(dialsKey, JSON.stringify(next)); } catch { /* private mode: session-only is fine */ }
+  };
+  // Requests from elsewhere in the editor (the per-slide Regenerate button on
+  // a page's toolbar). An `action` request runs the tool DIRECTLY: routing a
+  // canned sentence through the planner is non-deterministic, and this one is
+  // unambiguous. The user still sees it in the thread, and it is one undo.
+  useEffect(() => {
+    return subscribeAiRequests((req) => {
+      if (busyRef.current) {
+        toast.error(tr("editor.the_assistant_is_still_working"));
+        return;
+      }
+      if (req.kind === "prompt") {
+        void send(req.text);
+        return;
+      }
+      const text = tr("editor.regenerate_slide_n_instruction", { n: req.pageIndex + 1, instruction: req.instruction });
+      setTurns((t) => [...demoteProposals(t), { role: "user", text }]);
+      void persistTurn("user", text);
+      void execute(
+        [{ action: "regenerateSlide", args: { pageIndex: req.pageIndex + 1, instruction: req.instruction }, status: "planned" }],
+        tr("editor.regenerating_slide_n", { n: req.pageIndex + 1 }),
+      );
+    }, Date.now());
+    // send/execute are stable for a given design; re-subscribing per keystroke
+    // would drop a queued request.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [designId, workspaceId]);
+
   // Per-slide refinements land silently after the deck does; this makes that
   // phase visible instead of letting text change by itself.
   useEffect(() => {
@@ -3897,7 +3954,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       const heavy = res.plan.some((s) => s.action === "generateDesign");
       if (heavy || (res.plan.length >= 2 && planMutates(res.plan, ASSISTANT_CATALOG))) {
         setPending({ plan: res.plan, reply: res.reply });
-        if (heavy) void startOutlineReview(res.plan, {});
+        if (heavy) void startOutlineReview(res.plan, savedDials);
         setTurns((t) => [...t, { role: "assistant", text: res.reply || tr("editor.heres_my_plan_confirm_to_apply"), steps: res.plan.map((s) => ({ action: s.action, ok: true })), proposed: true }]);
         return;
       }
@@ -4061,6 +4118,45 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                 <button key={t.label} onClick={() => startFromType(t.prompt)} disabled={!aiReady} className="rounded-lg border border-neutral-200 bg-surface px-2 py-2 text-xs font-medium text-neutral-700 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-ink disabled:opacity-50">{t.label}</button>
               ))}
             </div>
+            {/* The generation dials, reachable BEFORE the first send. They used
+                to exist only inside the confirm card, so the only way to
+                discover them was to commit to a generation first. */}
+            {Object.values(savedDials).some((v) => v && v !== "auto") ? (
+              <button
+                onClick={() => persistDials({})}
+                className="text-[11px] text-neutral-500 underline-offset-2 hover:text-brand-ink hover:underline"
+              >
+                {tr("editor.style_dials_set_clear", {
+                  list: (["density", "tone", "audience", "scenario"] as const)
+                    .map((k) => savedDials[k])
+                    .filter((v): v is string => !!v && v !== "auto")
+                    .map((v) => trOr(`editor.dial_${v.replace(/-/g, "_")}`, v.replace(/-/g, " ")))
+                    .join(", "),
+                })}
+              </button>
+            ) : null}
+            <div className="grid w-full max-w-[16rem] grid-cols-2 gap-1.5">
+              {([
+                ["density", dialDensities],
+                ["tone", dialTones],
+                ["audience", dialAudiences],
+                ["scenario", dialScenarios],
+              ] as const).map(([key, options]) => (
+                <label key={key} className="flex flex-col gap-0.5 text-start text-[10px] text-neutral-500">
+                  {trOr(`editor.dial_${key}`, key)}
+                  <select
+                    value={(savedDials[key] as string) ?? "auto"}
+                    onChange={(e) => persistDials({ ...savedDials, [key]: e.target.value } as GenerationDials)}
+                    disabled={!aiReady}
+                    className="rounded border border-neutral-200 bg-surface px-1 py-0.5 text-[11px] text-neutral-700 disabled:opacity-50"
+                  >
+                    {options.map((v) => (
+                      <option key={v} value={v}>{trOr(`editor.dial_${v.replace(/-/g, "_")}`, v.replace(/-/g, " "))}</option>
+                    ))}
+                  </select>
+                </label>
+              ))}
+            </div>
             {/* Secondary: quick edits on the current design. */}
             <div className="flex flex-wrap justify-center gap-1.5">
               {assistantSuggestions().map((s) => (
@@ -4212,7 +4308,11 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                     {trOr(`editor.dial_${key}`, key)}
                     <select
                       value={(review.dials[key] as string | undefined) ?? "auto"}
-                      onChange={(e) => setReview((r) => (r ? { ...r, dials: { ...r.dials, [key]: e.target.value } } : r))}
+                      onChange={(e) => {
+                        const next = { ...(review?.dials ?? {}), [key]: e.target.value } as GenerationDials;
+                        setReview((r) => (r ? { ...r, dials: next } : r));
+                        persistDials(next); // remembered for the next generation too
+                      }}
                       className="rounded border border-neutral-300 px-1 py-0.5 text-[11px] text-neutral-700"
                     >
                       {options.map((v) => (

@@ -3,10 +3,11 @@
 // duplicate, delete), plus an "Add page" button below the last page. Rendered in
 // screen space over the canvas; positions track scroll/zoom via the base viewport.
 
-import { ChevronUp, ChevronDown, Eye, EyeOff, Lock, LockOpen, CopyPlus, Trash2, Plus } from "lucide-react";
+import { ChevronUp, ChevronDown, Eye, EyeOff, Lock, LockOpen, CopyPlus, Trash2, Plus, Sparkles } from "lucide-react";
 import { pageToScreen } from "@hc/engine";
 import { useEditor } from "@/store/editor";
 import { promptText } from "@/lib/promptDialog";
+import { requestAi } from "@/lib/aiRequests";
 import type { CanvasApi } from "@/lib/useEditorCanvas";
 import { pageGap } from "@/lib/pageLayout";
 import { tr } from "@/lib/i18n";
@@ -86,6 +87,27 @@ export function PageOverlays({ api }: { api: CanvasApi }) {
               <HdrBtn icon={ChevronDown} title={tr("editor.move_down")} disabled={i === n - 1} onClick={() => st.movePage(i, i + 1)} />
               <HdrBtn icon={hidden ? EyeOff : Eye} title={hidden ? tr("editor.unhide_while_presenting") : tr("editor.hide_while_presenting")} onClick={() => st.setPageHidden(!hidden, i)} />
               <HdrBtn icon={allLocked ? Lock : LockOpen} title={allLocked ? tr("editor.unlock_all_on_page") : tr("editor.lock_all_on_page")} onClick={() => st.setPageLocked(i, !allLocked)} />
+              {/* Per-slide regeneration is a full tool - it keeps the layout,
+                  the slide's identity and any images whose prompts did not
+                  change - but it had no button anywhere, so it could only be
+                  reached by typing "redo slide 3" and hoping the planner
+                  routed it. The assistant panel performs the request. */}
+              <HdrBtn
+                icon={Sparkles}
+                title={tr("editor.regenerate_this_slide_with_ai")}
+                onClick={async () => {
+                  const instruction = await promptText({
+                    title: tr("editor.regenerate_slide_n", { n: i + 1 }),
+                    label: tr("editor.what_should_change"),
+                    placeholder: tr("editor.eg_more_data_driven_shorter"),
+                    defaultValue: "",
+                    confirmText: tr("editor.regenerate"),
+                  });
+                  if (instruction === null) return;
+                  st.setActivePage(i);
+                  requestAi({ kind: "action", action: "regenerateSlide", pageIndex: i, instruction: instruction.trim() || tr("editor.improve_this_slide") }, Date.now());
+                }}
+              />
               <HdrBtn icon={CopyPlus} title={tr("editor.duplicate_page")} onClick={() => st.duplicatePage(i)} />
               <HdrBtn icon={Trash2} title={tr("editor.delete_page")} danger disabled={n <= 1} onClick={() => st.deletePage(i)} />
             </div>
