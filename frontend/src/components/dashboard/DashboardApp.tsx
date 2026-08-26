@@ -785,11 +785,11 @@ export function DashboardApp({ view }: { view: DashboardView }) {
           {!query.trim() && (
             <section className="relative mb-9 min-h-[8rem]">
               <HeroArt />
-              <div className="relative max-w-xl">
+              <div className="relative max-w-3xl">
                 <h1 className="text-2xl font-bold tracking-tight text-neutral-900 sm:text-3xl">
                   {greetByHour()}, {firstName} <span className="inline-block">👋</span>
                 </h1>
-                <p className="mt-2 text-sm text-neutral-500">
+                <p className="mt-2 max-w-xl text-sm text-neutral-500">
                   {tr("dashboard.let_s_make_something_today_start_from_a_blan")}
                 </p>
                 {/* The headline capability used to require: make a blank
@@ -800,7 +800,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                     the canvas it composes for, and the voice it writes in -
                     rather than decoration. */}
                 <form
-                  className="mt-5 max-w-2xl rounded-2xl border border-neutral-200 bg-surface p-2.5 shadow-sm transition focus-within:border-brand-400"
+                  className="mt-5 rounded-2xl border border-neutral-200 bg-surface p-3 shadow-sm transition focus-within:border-brand-400 focus-within:ring-4 focus-within:ring-brand-50"
                   onSubmit={(e) => {
                     e.preventDefault();
                     submitBrief();
@@ -817,14 +817,19 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                       e.preventDefault();
                       submitBrief();
                     }}
-                    rows={2}
+                    rows={1}
+                    onInput={(e) => {
+                      const el = e.currentTarget;
+                      el.style.height = "auto";
+                      el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+                    }}
                     placeholder={tr("dashboard.describe_a_deck_to_generate")}
                     aria-label={tr("dashboard.describe_a_deck_to_generate")}
                     disabled={busy || !activeWorkspaceId}
-                    className="max-h-40 w-full resize-none bg-transparent px-2 pt-1.5 text-[15px] leading-relaxed outline-none placeholder:text-neutral-400 disabled:opacity-50"
+                    className="w-full resize-none bg-transparent px-1.5 py-1 text-[15px] leading-relaxed outline-none placeholder:text-neutral-400 disabled:opacity-50"
                   />
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <label className="flex items-center gap-1.5 rounded-full border border-neutral-200 py-1 ps-2.5 pe-1 text-xs text-neutral-600 focus-within:border-brand-400">
+                  <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                    <label className="flex items-center gap-1.5 rounded-full border border-neutral-200 py-1.5 ps-3 pe-1.5 text-[13px] text-neutral-700 transition hover:border-neutral-300 focus-within:border-brand-400">
                       <LayoutTemplate size={13} className="shrink-0 text-neutral-400" />
                       <span className="sr-only">{tr("dashboard.output_format")}</span>
                       <select
@@ -838,7 +843,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                         ))}
                       </select>
                     </label>
-                    <label className="flex items-center gap-1.5 rounded-full border border-neutral-200 py-1 ps-2.5 pe-1 text-xs text-neutral-600 focus-within:border-brand-400">
+                    <label className="flex items-center gap-1.5 rounded-full border border-neutral-200 py-1.5 ps-3 pe-1.5 text-[13px] text-neutral-700 transition hover:border-neutral-300 focus-within:border-brand-400">
                       <Wand2 size={13} className="shrink-0 text-neutral-400" />
                       <span className="sr-only">{tr("dashboard.tone")}</span>
                       <select
@@ -856,7 +861,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                     <button
                       type="submit"
                       disabled={busy || !activeWorkspaceId || !aiBrief.trim()}
-                      className="flex items-center gap-1.5 rounded-full bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:opacity-40"
+                      className="flex items-center gap-1.5 rounded-full bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:bg-neutral-200 disabled:text-neutral-400 disabled:hover:bg-neutral-200"
                     >
                       <Sparkles size={15} /> {tr("dashboard.generate")}
                     </button>
