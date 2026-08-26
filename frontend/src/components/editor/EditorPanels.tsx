@@ -3541,6 +3541,15 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
           // best-effort; the applyBrand step will simply report nothing to fix
         }
       }
+      // A plan resolves across tens of seconds of awaits while the editor keeps
+      // the SAME store when the route switches design, so every mutation point
+      // below re-checks that this is still the document the plan was made for.
+      const stillOnDesign = () => !designId || useComments.getState().designId === designId;
+      const wrongDesign = () => {
+        const msg = tr("editor.that_generation_was_for_a_different_design");
+        setTurns((t) => [...t, { role: "assistant", text: msg }]);
+        toast.error(msg);
+      };
       const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sources, reviewedOutline, dials, designId, citations, styleThemeId };
       // F40 E14: a template base contributes its layout system + theme. The
       // adoption happens BEFORE the resolve pass so the layout-grounded path
@@ -3549,6 +3558,9 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
         try {
           const tplFile = migrate(await oc.getTemplateFile(styleTemplateId)) as unknown as { masters?: unknown[]; layouts?: unknown[]; theme?: Theme };
           const hasLayouts = Array.isArray(tplFile.layouts) && tplFile.layouts.length > 0;
+          // Adoption is a document mutation and it follows its own await, so
+          // it needs the identity check as much as the apply pass does.
+          if (!stillOnDesign()) { wrongDesign(); return; }
           if (hasLayouts) {
             useEditor.getState().adoptLayoutSet(tplFile.masters ?? [], tplFile.layouts ?? []);
           }
@@ -3575,9 +3587,8 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       // into whatever document is open, so the identity is checked first -
       // the same guard regenerateSlide, splitSlide and insertComparison
       // already carry at their own apply sites.
-      if (designId && useComments.getState().designId !== designId) {
-        setTurns((t) => [...t, { role: "assistant", text: tr("editor.that_generation_was_for_a_different_design") }]);
-        toast.error(tr("editor.that_generation_was_for_a_different_design"));
+      if (!stillOnDesign()) {
+        wrongDesign();
         return;
       }
       const results: { action: string; ok: boolean }[] = [];
@@ -4018,9 +4029,17 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                   const dials = review?.dials;
                   const themeId = review?.themeId;
                   const templateId = review?.templateId;
+                  // The review fetch already ran any planned webSearch and
+                  // grounded on it: skipping the review must still drop that
+                  // step (no double search, no double spend) and keep the
+                  // citations it produced, exactly as the review path does.
+                  const searched = review?.searchedSources;
+                  const cites = review?.citations;
+                  if (searched) setSources(searched.slice(0, maxSources));
+                  const planToRun = searched ? p.plan.filter((st) => st.action !== "webSearch") : p.plan;
                   setPending(null);
                   clearReview();
-                  void execute(p.plan, p.reply, undefined, dials, undefined, themeId, templateId, { fromProposal: true });
+                  void execute(planToRun, p.reply, undefined, dials, cites, themeId, templateId, { fromProposal: true });
                 }}
                 title={review ? tr("editor.generate_without_reviewing_the_outline") : undefined}
                 className="rounded border border-amber-600 px-2 py-0.5 font-medium text-amber-900 hover:bg-amber-100"
