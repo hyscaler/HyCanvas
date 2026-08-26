@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
 import { useRouter } from "next/router";
-import { isAiBusy, requestAi } from "@/lib/aiRequests";
+import { isAiBusy, requestAi, subscribeOpenProperties } from "@/lib/aiRequests";
 import type { Node as DesignNode } from "@hc/schema";
 import { ChevronLeft, Undo2, Redo2, Download, Play, MonitorPlay, Ruler, Grid3x3, Magnet, LayoutTemplate, History, Eye, Share2, MessageSquare, ShieldCheck, Activity, BarChart3, MoreHorizontal, Send, Globe, Printer, PanelRightClose, PanelRightOpen, Keyboard, Info, X, Accessibility, Maximize2, Minimize2, LayoutGrid, FileDown, Film, Table2 } from "lucide-react";
 import type { AccessMode } from "@hc/sdk";
@@ -709,6 +709,15 @@ export function EditorApp() {
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, []);
+
+  // The assistant can hand the user to the page properties, where the deck
+  // theme editor lives. Opening it here keeps panel visibility owned by the
+  // shell that already manages it for every breakpoint.
+  useEffect(() => subscribeOpenProperties(() => {
+    if (isCompact) setCompactPropsOpen(true);
+    else if (isBoard) setBoardPropsOpen(true);
+    else setPropsOpen(true);
+  }), [isCompact, isBoard]);
 
   // In-app navigation needs its own guard: beforeunload does not fire for a
   // client-side route change, so clicking to the dashboard mid-generation used

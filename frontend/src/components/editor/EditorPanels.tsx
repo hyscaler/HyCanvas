@@ -63,7 +63,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { mirrorInRtl } from "@/lib/locale";
 import { tr, trOr } from "@/lib/i18n";
 import { cancelAiImages, enqueueAiImages, retryFailedAiImages, subscribeAiImageQueue } from "@/lib/aiImageQueue";
-import { peekPendingAiRequest, setAiBusy, subscribeAiRequests, takeStagedAiSources, type AiRequest } from "@/lib/aiRequests";
+import { peekPendingAiRequest, requestOpenProperties, setAiBusy, subscribeAiRequests, takeStagedAiSources, type AiRequest } from "@/lib/aiRequests";
 import { AiProviderSettings } from "@/components/ai/AiProviderSettings";
 import { builtinThemes } from "@/lib/themeCatalog";
 import { cancelAiFills, enqueueAiFills, retryFailedAiFills, subscribeAiFillQueue } from "@/lib/aiFillQueue";
@@ -308,7 +308,7 @@ function afterInsert(toast: ReturnType<typeof useToast>, label: string) {
   toast.success(`Added ${label}`);
 }
 
-export function PanelShell({ title, children, fill }: { title: string; children: React.ReactNode; fill?: boolean }) {
+export function PanelShell({ title, children, fill, roomy }: { title: string; children: React.ReactNode; fill?: boolean; roomy?: boolean }) {
   // Resizable width at lg+ (drag the right edge), clamped and persisted per-user
   // (default 288px, the former fixed w-72). Below lg the panel keeps a responsive
   // narrow width (60vw capped at 16rem) so it never dominates a small viewport or
@@ -345,7 +345,12 @@ export function PanelShell({ title, children, fill }: { title: string; children:
   };
   return (
     <div
-      className="flex h-full w-[min(16rem,60vw)] shrink-0 lg:w-[var(--oc-left-w)]"
+      // `roomy` panels get most of a small screen instead of the 16rem the
+      // icon-and-list panels want. The AI panel is a conversation with an
+      // editable outline in it - per-slide titles, points, reorder controls -
+      // and at 60vw capped to 16rem that was about 234px on a phone, which is
+      // not enough to edit in. Unchanged at lg+, where the panel is resizable.
+      className={`flex h-full shrink-0 lg:w-[var(--oc-left-w)] ${roomy ? "w-[min(24rem,88vw)]" : "w-[min(16rem,60vw)]"}`}
       style={{ ["--oc-left-w"]: `${width}px` } as React.CSSProperties}
     >
       {/* Scroll area. Its right border shows below lg; at lg+ the drag handle to
@@ -1861,7 +1866,11 @@ const assistantSuggestions = () => [
 
 // Contextual follow-ups offered right after a design is generated, so the user
 // can art-direct without retyping the brief.
-const designFollowups = () => [tr("editor.try_another_style"), tr("editor.make_it_bolder"), tr("editor.make_it_more_minimal"), tr("editor.add_a_matching_image")];
+const designFollowups = (): { label: string; action: string; args: Record<string, unknown>; reply: string }[] => [
+  { label: tr("editor.try_another_style"), action: "generateTheme", args: {}, reply: tr("editor.trying_another_style") },
+  { label: tr("editor.make_it_bolder"), action: "generateTheme", args: { description: "bold, high-contrast, confident" }, reply: tr("editor.making_it_bolder") },
+  { label: tr("editor.make_it_more_minimal"), action: "generateTheme", args: { description: "minimal, restrained, lots of white space" }, reply: tr("editor.making_it_more_minimal") },
+];
 
 interface ChatTurn {
   role: "user" | "assistant";
@@ -3589,7 +3598,18 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
           const { turns: persisted } = await oc.listAiTurns(designId, latest.id);
           if (!cancelled) {
             sessionRef.current = latest.id;
-            restored = persisted.map((t) => ({ role: t.role, text: t.text }));
+            // The plan IS persisted with the turn, so the step chips can be
+            // rebuilt. Dropping it made a reloaded deck lose its follow-up
+            // chips and its Undo button, because both key off applied steps.
+            // Restored steps are marked applied: a persisted plan only exists
+            // for a turn that ran.
+            restored = persisted.map((t) => {
+              const plan = Array.isArray(t.plan) ? (t.plan as { action?: unknown }[]) : null;
+              const steps = plan
+                ?.map((st) => (typeof st?.action === "string" ? { action: st.action, ok: true } : null))
+                .filter((v): v is { action: string; ok: boolean } => !!v);
+              return { role: t.role, text: t.text, ...(steps?.length ? { steps } : {}) };
+            });
           }
         }
       } catch {
@@ -4497,12 +4517,31 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
           </button>
         </div>
       )}
-      {/* Art-direction follow-ups, shown right after a design was generated. */}
+      {/* Art-direction follow-ups, shown right after a design was generated.
+          Each runs a FIXED action: sending the chip's own label back through
+          the planner made the outcome a guess, and "try another style" could
+          resolve to a whole second deck appended to the first. */}
       {lastWasDesign && !pending && !busy && (
         <div className="mt-2 flex shrink-0 flex-wrap gap-1.5">
           {designFollowups().map((f) => (
-            <button key={f} onClick={() => void send(f)} className="rounded-full border border-neutral-200 bg-surface px-2.5 py-1 text-[11px] text-neutral-600 hover:border-brand-300 hover:text-brand-ink">{f}</button>
+            <button
+              key={f.label}
+              onClick={() => void execute([{ action: f.action, args: f.args, status: "planned" }], f.reply)}
+              className="rounded-full border border-neutral-200 bg-surface px-2.5 py-1 text-[11px] text-neutral-600 hover:border-brand-300 hover:text-brand-ink"
+            >
+              {f.label}
+            </button>
           ))}
+          {/* The deck theme has a full editor in the page properties (palette
+              rows, from-brand, from-image with a preview). Nothing pointed at
+              it, so the only discoverable way to restyle was to ask the model
+              for a new one. */}
+          <button
+            onClick={() => { useEditor.getState().clearSelection(); requestOpenProperties(); }}
+            className="rounded-full border border-neutral-200 bg-surface px-2.5 py-1 text-[11px] text-neutral-600 hover:border-brand-300 hover:text-brand-ink"
+          >
+            {tr("editor.pick_a_theme")}
+          </button>
         </div>
       )}
       {/* C30 Magic Switch: re-shape the current content into another form
@@ -5095,7 +5134,7 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
   const editImageCapable = !!config?.capabilities?.editImage;
 
   return (
-    <PanelShell title="AI" fill={chatView}>
+    <PanelShell title="AI" fill={chatView} roomy>
       {!workspaceId ? (
         <p className="mt-4 text-center text-xs text-neutral-400">{tr("editor.open_a_saved_design_to_use_ai")}</p>
       ) : loading ? (

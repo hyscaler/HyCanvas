@@ -117,3 +117,24 @@ export function subscribeAiBusy(cb: (busy: boolean) => void): () => void {
   busyListeners.add(cb);
   return () => busyListeners.delete(cb);
 }
+
+// ---------------------------------------------------------------------------
+// Requests from the AI panel back to the editor shell
+// ---------------------------------------------------------------------------
+//
+// The assistant sometimes wants to hand the user to a NON-AI control - the
+// deck theme editor lives in the page properties, and nothing pointed at it,
+// so the only discoverable way to restyle a deck was to ask the model for a
+// whole new theme. The panel sits three components below the shell that owns
+// panel visibility, so it asks rather than being handed a prop chain.
+
+const openPropsListeners = new Set<() => void>();
+
+export function requestOpenProperties(): void {
+  for (const cb of openPropsListeners) cb();
+}
+
+export function subscribeOpenProperties(cb: () => void): () => void {
+  openPropsListeners.add(cb);
+  return () => openPropsListeners.delete(cb);
+}
