@@ -3402,6 +3402,8 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   const [stage, setStage] = useState<string | null>(null);
   const [fillProgress, setFillProgress] = useState<{ done: number; total: number } | null>(null);
   const [failedFills, setFailedFills] = useState(0);
+  const attachFileRef = useRef<HTMLInputElement | null>(null);
+  const attachToggleRef = useRef<HTMLButtonElement | null>(null);
   // Per-slide refinements land silently after the deck does; this makes that
   // phase visible instead of letting text change by itself.
   useEffect(() => {
@@ -4233,9 +4235,9 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                           onChange={(e) => editReviewOutline((pages) => pages.map((p, j) => (j === i ? { ...p, title: e.target.value } : p)))}
                           className="min-w-0 flex-1 rounded border border-neutral-200 px-1 py-0.5 text-[11px] font-medium"
                         />
-                        <button title={tr("editor.move_up")} disabled={i === 0} onClick={() => editReviewOutline((pages) => { const c = [...pages]; [c[i - 1], c[i]] = [c[i], c[i - 1]]; return c; })} className="rounded px-1 text-neutral-400 hover:text-brand-ink disabled:opacity-30">↑</button>
-                        <button title={tr("editor.move_down")} disabled={i === review.outline!.pages.length - 1} onClick={() => editReviewOutline((pages) => { const c = [...pages]; [c[i], c[i + 1]] = [c[i + 1], c[i]]; return c; })} className="rounded px-1 text-neutral-400 hover:text-brand-ink disabled:opacity-30">↓</button>
-                        <button title={tr("editor.remove")} onClick={() => editReviewOutline((pages) => pages.filter((_, j) => j !== i))} className="rounded px-1 text-neutral-400 hover:text-red-600"><X size={11} /></button>
+                        <button title={tr("editor.move_up")} aria-label={tr("editor.move_up")} disabled={i === 0} onClick={() => editReviewOutline((pages) => { const c = [...pages]; [c[i - 1], c[i]] = [c[i], c[i - 1]]; return c; })} className="rounded px-1 text-neutral-400 hover:text-brand-ink disabled:opacity-30">↑</button>
+                        <button title={tr("editor.move_down")} aria-label={tr("editor.move_down")} disabled={i === review.outline!.pages.length - 1} onClick={() => editReviewOutline((pages) => { const c = [...pages]; [c[i], c[i + 1]] = [c[i + 1], c[i]]; return c; })} className="rounded px-1 text-neutral-400 hover:text-brand-ink disabled:opacity-30">↓</button>
+                        <button title={tr("editor.remove")} aria-label={tr("editor.remove")} onClick={() => editReviewOutline((pages) => pages.filter((_, j) => j !== i))} className="rounded px-1 text-neutral-400 hover:text-red-600"><X size={11} /></button>
                       </div>
                       <textarea
                         value={item.points.join("\n")}
@@ -4367,7 +4369,18 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
         </p>
       )}
       {attachOpen && sources.length < maxSources && (
-        <div className="mt-2 flex shrink-0 flex-col gap-1.5 rounded-lg border border-neutral-200 bg-neutral-50 p-2">
+        <div
+          className="mt-2 flex shrink-0 flex-col gap-1.5 rounded-lg border border-neutral-200 bg-neutral-50 p-2"
+          onKeyDown={(e) => {
+            // Escape closes it and returns focus to the control that opened
+            // it, rather than stranding the user inside a panel they cannot
+            // dismiss from the keyboard.
+            if (e.key !== "Escape") return;
+            e.stopPropagation();
+            setAttachOpen(false);
+            attachToggleRef.current?.focus();
+          }}
+        >
           {/* The cap is 8 and sources mix freely, which nothing on screen said:
               users read the panel closing after one add as a limit of one. */}
           <p className="text-[10px] text-neutral-500">
@@ -4409,9 +4422,21 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
             >
               {attachBusy ? tr("editor.fetching") : tr("editor.fetch")}
             </button>
-            <label className="cursor-pointer rounded-md border border-neutral-200 bg-surface px-2.5 py-1.5 text-xs text-neutral-700 hover:bg-neutral-100">
+            {/* A real button, not a label wrapping a display:none input: that
+                combination is focusable by neither, so attaching a local file
+                was mouse-only. Same ref-and-click pattern the uploads panel
+                and the dashboard already use. */}
+            <button
+              type="button"
+              onClick={() => attachFileRef.current?.click()}
+              className="rounded-md border border-neutral-200 bg-surface px-2.5 py-1.5 text-xs text-neutral-700 hover:bg-neutral-100"
+            >
+              {tr("editor.file")}
+            </button>
+            <label className="hidden">
               {tr("editor.file")}
               <input
+                ref={attachFileRef}
                 type="file"
                 multiple
                 accept=".txt,.md,.markdown,.pdf,.docx,.pptx,.xlsx,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -4431,9 +4456,11 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       <div className="mt-2 shrink-0">
         <div className="flex items-end gap-1.5 rounded-2xl border border-neutral-300 bg-surface px-2 py-1.5 focus-within:border-brand-400">
           <button
+            ref={attachToggleRef}
             onClick={() => setAttachOpen((v) => !v)}
             title={tr("editor.attach_content_to_build_from_paste_url_or_fi")}
             aria-label={tr("editor.attach_content")}
+            aria-expanded={attachOpen}
             className={`mb-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg ${attachOpen || sources.length ? "bg-brand-50 text-brand-ink" : "text-neutral-400 hover:bg-neutral-100"}`}
           >
             <Paperclip size={15} />
@@ -4448,7 +4475,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
             disabled={!aiReady}
             className="max-h-[140px] flex-1 resize-none bg-transparent py-1 text-sm outline-none placeholder:text-neutral-400 disabled:opacity-50"
           />
-          <button onClick={() => void send()} disabled={!canSend} title={tr("editor.send_enter")} className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-600 text-white transition hover:bg-brand-700 disabled:opacity-40">
+          <button onClick={() => void send()} disabled={!canSend} title={tr("editor.send_enter")} aria-label={tr("editor.send_enter")} className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-600 text-white transition hover:bg-brand-700 disabled:opacity-40">
             <Send size={15} />
           </button>
         </div>
@@ -4995,6 +5022,7 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
             <div className="flex flex-col gap-2">
               <select
                 value={provider}
+                aria-label={tr("editor.provider")}
                 onChange={(e) => {
                   const next = e.target.value;
                   setProvider(next);
@@ -5066,7 +5094,7 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               {tr("editor.provider")} <span className="font-medium text-neutral-700">{config.provider}</span>
             </span>
-            <button onClick={() => setShowConfig(true)} title={tr("editor.ai_settings")} className="text-neutral-400 hover:text-neutral-700"><Settings2 size={15} /></button>
+            <button onClick={() => setShowConfig(true)} title={tr("editor.ai_settings")} aria-label={tr("editor.ai_settings")} className="grid h-6 w-6 place-items-center rounded text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"><Settings2 size={15} /></button>
           </div>
           {/* Capability nudge: this provider can't generate images, so designs
               come out text + color only. Point the user at an image-capable one. */}
