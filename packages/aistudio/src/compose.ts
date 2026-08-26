@@ -254,6 +254,9 @@ export function composeDeckFile(input: ComposeDeckInput): DesignFile {
             size: { width: bar.width, height: bar.height },
             fills: [{ type: "solid", color: accentColor }],
             cornerRadius: Math.round(bar.height / 2),
+            // Same tag the editor uses, so a layout change in the editor
+            // carries (or drops) a headless-composed deck's rule too.
+            data: { accentRule: true },
           } as never) as never);
         }
       }

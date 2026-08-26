@@ -4182,6 +4182,11 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
           )}
         </div>
       ))}
+      {attachOpen && sources.length >= maxSources && (
+        <p className="mt-2 shrink-0 rounded-lg border border-neutral-200 bg-neutral-50 px-2 py-1.5 text-[10px] text-neutral-500">
+          {tr("editor.attachment_limit_reached", { max: maxSources })}
+        </p>
+      )}
       {attachOpen && sources.length < maxSources && (
         <div className="mt-2 flex shrink-0 flex-col gap-1.5 rounded-lg border border-neutral-200 bg-neutral-50 p-2">
           {/* The cap is 8 and sources mix freely, which nothing on screen said:

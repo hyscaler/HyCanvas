@@ -30486,7 +30486,10 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
                   transform: { x: bar.x, y: bar.y, scaleX: 1, scaleY: 1, rotation: 0 },
                   size: { width: bar.width, height: bar.height },
                   fills: [{ type: "solid", color: accentColor }],
-                  cornerRadius: Math.round(bar.height / 2)
+                  cornerRadius: Math.round(bar.height / 2),
+                  // Same tag the editor uses, so a layout change in the editor
+                  // carries (or drops) a headless-composed deck's rule too.
+                  data: { accentRule: true }
                 }));
               }
             }

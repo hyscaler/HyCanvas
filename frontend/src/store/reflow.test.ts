@@ -182,6 +182,28 @@ describe("variant switching (E17)", () => {
     expect(titleBox.size.width).toBeCloseTo(slot.width * sx, 3);
   });
 
+  it("carries the generated accent rule to the new layout's title slot", () => {
+    const st = useEditor.getState();
+    const page = () => useEditor.getState().doc.pages[0] as unknown as { children: (Node & { data?: { accentRule?: boolean } })[] };
+    expect(st.addAccentRule(0, "layout-title-content", "#0e7490")).toBe(true);
+    const before = page().children.find((n) => n.data?.accentRule)!;
+    expect(before).toBeTruthy();
+    st.setContent(contentBox().id, crowd(120));
+    const hint = useEditor.getState().reflowHint!;
+    st.switchPageLayout(0, hint.toLayoutId);
+    const after = page().children.find((n) => n.data?.accentRule);
+    // It must still exist and sit above the NEW title, not be stranded where
+    // the previous layout's title used to be.
+    expect(after).toBeTruthy();
+    const doc = useEditor.getState().doc as unknown as { layouts: { id: string; placeholders: { id: string; role: string; rect: { y: number } }[] }[] };
+    const toTitle = doc.layouts.find((l) => l.id === hint.toLayoutId)!.placeholders.find((p) => p.role === "title")!;
+    const afterY = (after as unknown as { transform: { y: number } }).transform.y;
+    expect(afterY).toBeLessThan(toTitle.rect.y);
+    // A second call must not stack a duplicate rule.
+    expect(st.addAccentRule(0, hint.toLayoutId, "#0e7490")).toBe(false);
+    expect(page().children.filter((n) => n.data?.accentRule)).toHaveLength(1);
+  });
+
   it("never turns scaffold text into content bullets on a switch", () => {
     const st = useEditor.getState();
     st.setContent(contentBox().id, crowd(120));

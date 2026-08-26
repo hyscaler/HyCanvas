@@ -28,6 +28,12 @@ export function ToolRail({ workspaceId, overlay = false, defaultCollapsed = fals
   // toggles it closed. Boards open with the panel collapsed for a canvas-first
   // start; the icon rail stays so any tool is one click away.
   const [active, setActive] = useState<Tool | null>(defaultCollapsed ? null : "elements");
+  // The AI panel stays mounted once opened (its conversation must survive a
+  // tool switch), but mounting it before that would make every editor load pay
+  // for its provider-config and session-history fetches even when the user
+  // never opens it. So: nothing until first open, then permanent.
+  const [aiUsed, setAiUsed] = useState(false);
+  if (active === "ai" && !aiUsed) setAiUsed(true);
 
   // On narrow screens the slide-out panel floats over the canvas (absolute,
   // positioned just right of the rail) instead of consuming layout width, so the
@@ -93,9 +99,11 @@ export function ToolRail({ workspaceId, overlay = false, defaultCollapsed = fals
           tool is active or the viewport crosses the overlay breakpoint -
           unmounting would silently drop the busy state, the confirm gate, and
           the response of a message already sent. */}
-      <div className={active === "ai" ? (overlay ? "absolute start-full top-0 z-30 h-full shadow-xl" : "contents") : "hidden"}>
-        <AiPanel workspaceId={workspaceId} />
-      </div>
+      {aiUsed && (
+        <div className={active === "ai" ? (overlay ? "absolute start-full top-0 z-30 h-full shadow-xl" : "contents") : "hidden"}>
+          <AiPanel workspaceId={workspaceId} />
+        </div>
+      )}
     </aside>
   );
 }

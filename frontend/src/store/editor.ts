@@ -2530,7 +2530,6 @@ export const useEditor = create<EditorState>((set, get) => {
           if (phId && !slotIds.has(phId)) pruned.push({ snapshot: structuredClone(n), index: i });
         });
       }
-      const prunedIds = new Set(pruned.map((x) => x.snapshot.id));
       // Snap (E17 variant switch): a tagged box the page ALREADY has for a
       // slot of the NEW layout is skipped by materialization above, so it
       // keeps the geometry the OLD layout gave it - layouts reuse slot ids
@@ -2551,6 +2550,32 @@ export const useEditor = create<EditorState>((set, get) => {
           });
         }
       }
+      // The generated accent rule (a reading page's title marker) is tied to
+      // the TITLE slot, not to a placeholder id, so nothing above would move
+      // it: every layout change would otherwise strand a colored bar where
+      // the previous title used to be. It follows the new title slot, and is
+      // removed when the new layout has no title (or no room above it).
+      const accentIdx = (page.children as Node[]).findIndex((n) => (n.data as { accentRule?: boolean } | undefined)?.accentRule);
+      if (accentIdx >= 0) {
+        const accent = (page.children as Node[])[accentIdx] as unknown as Snappable;
+        const titlePh = (layout.placeholders ?? []).find((p) => p.role === "title");
+        const to = titlePh
+          ? accentRuleRect(
+              { x: titlePh.rect.x * scaleX, y: titlePh.rect.y * scaleY, width: titlePh.rect.width * scaleX, height: titlePh.rect.height * scaleY },
+              { width: pageDims.width, height: pageDims.height },
+            )
+          : null;
+        if (to) {
+          snaps.push({
+            id: accent.id,
+            to: { ...to, height: accent.size.height },
+            from: { x: accent.transform.x, y: accent.transform.y, width: accent.size.width, height: accent.size.height },
+          });
+        } else {
+          pruned.push({ snapshot: structuredClone((page.children as Node[])[accentIdx]), index: accentIdx });
+        }
+      }
+      const prunedIds = new Set(pruned.map((x) => x.snapshot.id));
       const placeSnapped = (which: "to" | "from") => {
         const lp = livePage();
         if (!lp) return;
@@ -2616,6 +2641,8 @@ export const useEditor = create<EditorState>((set, get) => {
       const slot = slotRectOnPage(layout, titlePh, page);
       const bar = accentRuleRect(slot, { width: page.width, height: page.height });
       if (!bar) return false;
+      // One rule per page: a re-run must replace, never stack.
+      if ((page.children as Node[]).some((n) => (n.data as { accentRule?: boolean } | undefined)?.accentRule)) return false;
       const node = createNode("shape", {
         name: tr("app.accent_rule"),
         shape: "rect",
@@ -2623,6 +2650,9 @@ export const useEditor = create<EditorState>((set, get) => {
         size: { width: bar.width, height: bar.height },
         fills: [{ type: "solid", color }],
         cornerRadius: Math.round(bar.height / 2),
+        // Tagged so applyLayoutToPage can carry it to the new title slot (or
+        // drop it) instead of stranding it on a layout change.
+        data: { accentRule: true },
       } as Partial<Node>);
       const pageId = page.id;
       const livePage = () => get().doc.pages.find((pg) => pg.id === pageId) as unknown as { children: Node[] } | undefined;

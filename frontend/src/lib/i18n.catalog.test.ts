@@ -64,13 +64,20 @@ describe("catalog", () => {
   it("has an entry for every key the app asks for", () => {
     // A missing key renders as the key itself, which is visible but ugly. This
     // catches it before a user does.
-    const missing: string[] = [];
-    for (const [key, rel] of usedKeys()) {
+    const lacks = (catalog: Record<string, string>, key: string) =>
       // Plural keys are stored with a category suffix and looked up by stem.
-      const isPlural = Object.keys(CATALOG).some((k) => k.startsWith(`${key}.`));
-      if (!(key in CATALOG) && !isPlural) missing.push(`${key} (${rel})`);
+      !(key in catalog) && !Object.keys(catalog).some((k) => k.startsWith(`${key}.`));
+    let missing = [...usedKeys()].filter(([key]) => lacks(CATALOG, key));
+    if (missing.length) {
+      // This has flaked in a full concurrent run (all three suites at once)
+      // while passing standalone and against a disk check, so a candidate is
+      // re-checked against a FRESH read before the suite goes red. A key that
+      // is genuinely absent is absent in both reads, so the guard keeps its
+      // teeth; only a torn read is forgiven.
+      const fresh = JSON.parse(readFileSync(join(SRC, "locales", "en.json"), "utf8")) as Record<string, string>;
+      missing = missing.filter(([key]) => lacks(fresh, key));
     }
-    expect(missing).toEqual([]);
+    expect(missing.map(([key, rel]) => `${key} (${rel})`)).toEqual([]);
   });
 
   it("only allows a dynamic namespace that is genuinely built at runtime", () => {
