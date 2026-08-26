@@ -3967,8 +3967,10 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
 
       {/* FR-8: confirm a large/destructive plan before it mutates the document.
           For generateDesign plans the confirmation carries the T09 outline
-          review: an editable outline plus generation dials; Generate proceeds
-          with the EDITED outline, while tr("editor.generate_now") skips the review. */}
+          review: an editable outline plus generation dials. "Generate with this
+          outline" proceeds with the EDITED outline; "Skip review" forgoes only
+          the outline edits and still carries the chosen theme, template and
+          dials. */}
       {pending && (
         <div className="mt-2 flex max-h-[50%] shrink-0 flex-col gap-2 overflow-y-auto rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-800">
           <div className="flex items-center justify-between gap-2">
@@ -3980,7 +3982,25 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
               })()}
             </span>
             <span className="flex gap-1">
-              <button onClick={() => { const p = pending; setPending(null); clearReview(); void execute(p.plan, p.reply, undefined, undefined, undefined, undefined, undefined, { fromProposal: true }); }} className="rounded bg-amber-600 px-2 py-0.5 font-medium text-white hover:bg-amber-700">{review ? tr("editor.generate_now") : tr("editor.confirm")}</button>
+              <button
+                onClick={() => {
+                  const p = pending;
+                  // Skipping the outline REVIEW must not silently discard the
+                  // style the user picked in the same card: the theme,
+                  // template and dials travel either way. Only the edited
+                  // outline is skipped, which is what this button promises.
+                  const dials = review?.dials;
+                  const themeId = review?.themeId;
+                  const templateId = review?.templateId;
+                  setPending(null);
+                  clearReview();
+                  void execute(p.plan, p.reply, undefined, dials, undefined, themeId, templateId, { fromProposal: true });
+                }}
+                title={review ? tr("editor.generate_without_reviewing_the_outline") : undefined}
+                className="rounded border border-amber-600 px-2 py-0.5 font-medium text-amber-900 hover:bg-amber-100"
+              >
+                {review ? tr("editor.skip_review") : tr("editor.confirm")}
+              </button>
               <button onClick={() => { setPending(null); clearReview(); setTurns((t) => [...demoteProposals(t), { role: "assistant", text: tr("editor.cancelled") }]); }} className="rounded border border-amber-300 px-2 py-0.5 hover:bg-amber-100">{tr("editor.cancel")}</button>
             </span>
           </div>
