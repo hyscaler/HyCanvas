@@ -4709,7 +4709,13 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
   const selPreset = presets.find((p) => p.id === provider);
   const requiresBaseUrl = !!selPreset?.needsBaseUrl;
   const sameProvider = provider === config?.provider;
-  const showBaseUrl = requiresBaseUrl || (sameProvider && !!config?.baseUrl);
+  // The base URL is ALWAYS editable, not just for endpoint-routed providers.
+  // Several presets front more than one host (Moonshot's international and
+  // mainland platforms issue separate keys, and proxies/gateways are common),
+  // and with the field hidden a key for the other host could only ever 401
+  // with no way to correct it. Empty means "use the preset's default", so the
+  // simple case still needs no input.
+  const showBaseUrl = true;
   const modelHint = selPreset?.defaultModel ?? "";
 
   async function saveConfig() {
@@ -4819,6 +4825,10 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
                   const stored = next === config?.provider;
                   setModel(stored ? config?.model ?? "" : "");
                   setImageModel(stored ? config?.imageModel ?? "" : "");
+                  // Same for the host: the server drops a stored URL on a
+                  // provider change, and the visible field must not put the
+                  // previous provider's host back.
+                  setBaseUrl(stored ? config?.baseUrl ?? "" : "");
                 }}
                 className="rounded border border-neutral-300 px-2 py-1.5 text-sm"
               >
@@ -4833,7 +4843,13 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
                 <input value={imageModel} onChange={(e) => setImageModel(e.target.value)} placeholder={selPreset?.defaultImageModel ? `Image model (optional, default ${selPreset.defaultImageModel})` : tr("editor.image_model_optional")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
               )}
               {showBaseUrl && (
-                <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder={tr("editor.base_url_https_v1")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
+                <input
+                  value={baseUrl}
+                  onChange={(e) => setBaseUrl(e.target.value)}
+                  placeholder={!requiresBaseUrl && selPreset?.baseUrl ? tr("editor.base_url_optional_default", { url: selPreset.baseUrl }) : tr("editor.base_url_https_v1")}
+                  aria-label={tr("editor.base_url")}
+                  className="rounded border border-neutral-300 px-2 py-1.5 text-sm"
+                />
               )}
               <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={config?.hasKey ? tr("editor.api_key_leave_blank_to_keep") : tr("editor.api_key")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
               {/* T16: optional web-search grounding provider. */}
