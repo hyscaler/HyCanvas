@@ -1889,7 +1889,19 @@ interface ChatTurn {
   /** Re-runs exactly what failed. A failure used to leave a bare bubble while
    *  the composer had already been cleared, so the only way forward was to
    *  retype the prompt. Session-local, like the critique findings. */
-  retry?: { kind: "send"; text: string } | { kind: "execute"; plan: PlanStep[]; reply: string };
+  retry?:
+    | { kind: "send"; text: string }
+    | {
+        kind: "execute";
+        plan: PlanStep[];
+        reply: string;
+        /** The FULL argument set, not just the plan. A generation carries the
+         *  user's reviewed outline, their dials, the theme and template they
+         *  picked and any citations already gathered; retrying without them
+         *  would re-plan from scratch and quietly discard every edit they made
+         *  in the review card, which the failure had already cleared. */
+        args: [DesignOutline | undefined, GenerationDials | undefined, SourceCitation[] | undefined, string | undefined, string | undefined];
+      };
   /** True while this turn is a PLAN awaiting the user's confirm (the pending
    *  banner / outline review). On confirm the execution report REPLACES this
    *  turn - one bubble per intent, never the same reply printed twice - and
@@ -3898,7 +3910,11 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       // LATER unrelated report can't replace it, and land the failure IN the
       // thread (a toast alone disappears).
       const msg = aiErr(e);
-      setTurns((t) => [...(opts?.fromProposal ? demoteProposals(t) : t), { role: "assistant", text: msg, retry: { kind: "execute", plan, reply } }]);
+      setTurns((t) => [...(opts?.fromProposal ? demoteProposals(t) : t), {
+        role: "assistant",
+        text: msg,
+        retry: { kind: "execute", plan, reply, args: [reviewedOutline, dials, citations, styleThemeId, styleTemplateId] },
+      }]);
       toast.error(msg);
     } finally {
       if (runAbort.current === aborter) runAbort.current = null;
@@ -4316,7 +4332,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                         onClick={() => {
                           const r = t.retry!;
                           if (r.kind === "send") void send(r.text);
-                          else void execute(r.plan, r.reply);
+                          else void execute(r.plan, r.reply, ...r.args);
                         }}
                         className="flex items-center gap-1 rounded-full border border-brand-200 bg-surface px-2.5 py-0.5 text-[11px] font-medium text-brand-ink hover:border-brand-400"
                       >
