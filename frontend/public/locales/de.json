@@ -189,6 +189,7 @@
   "dashboard.api_keys": "API-Schlüssel",
   "dashboard.api_keys_hint": "Schlüssel steuern die Generierungs-API: Präsentationen programmatisch erstellen, Dateien abrufen, PDFs rendern und Freigabelinks erzeugen. Ein Schlüssel gilt nur für diesen Arbeitsbereich und wird nur einmal angezeigt. Doku unter /api/docs.",
   "dashboard.approve": "Genehmigen",
+  "dashboard.attach_documents_to_build_from": "Dokumente als Grundlage anhängen",
   "dashboard.back": "Zurück",
   "dashboard.banner": "Banner",
   "dashboard.blank": "Leer",

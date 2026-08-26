@@ -44,7 +44,7 @@ import {
   List,
   Users,
   Moon,
-  Sun, Sparkles, Wand2 } from "lucide-react";
+  Sun, Sparkles, Wand2, Paperclip, Loader2, X } from "lucide-react";
 import { createBlankDesign, type DesignFile } from "@hc/schema";
 import { hycAccept, downloadHycFile, importedTitle, parseHycFile, readFileText } from "@/lib/hycFile";
 import { odpToDesign, pptxToDesign } from "@hc/export";
@@ -95,6 +95,8 @@ import { TemplateFromPptxDialog } from "./TemplateFromPptxDialog";
 import { VerifyEmailBanner } from "@/components/auth/VerifyEmailBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { HeroArt, EmptyArt, RailArt } from "@/components/ui/CanvasBackdrop";
+import { attachableAccept, extractAiSources, maxAiSources, type AiSource } from "@/lib/aiAttachments";
+import { stageAiSources } from "@/lib/aiRequests";
 import { tr, trOr } from "@/lib/i18n";
 import { apiCodeMessage, userMessage } from "@/lib/errors";
 
@@ -206,6 +208,30 @@ export function DashboardApp({ view }: { view: DashboardView }) {
   const [aiBrief, setAiBrief] = useState("");
   const [aiFormat, setAiFormat] = useState(() => briefFormats()[0].label);
   const [aiTone, setAiTone] = useState("auto");
+  const [briefSources, setBriefSources] = useState<AiSource[]>([]);
+  const [briefBusy, setBriefBusy] = useState(false);
+  const briefFileRef = useRef<HTMLInputElement | null>(null);
+
+  /** Read attached files into grounding text, using the same pipeline the
+   *  editor's assistant uses, so both agree about what can be read and how a
+   *  scanned PDF is refused. */
+  async function attachBriefFiles(picked: File[]) {
+    if (!picked.length) return;
+    const room = maxAiSources - briefSources.length;
+    if (room <= 0) {
+      toast.error(tr("editor.attachment_limit_reached", { max: maxAiSources }));
+      return;
+    }
+    setBriefBusy(true);
+    try {
+      const out = await extractAiSources(picked, room);
+      if (out.rejected) toast.error(tr("editor.only_documents_can_be_attached"));
+      for (const e of out.errors) toast.error(e);
+      if (out.sources.length) setBriefSources((xs) => [...xs, ...out.sources].slice(0, maxAiSources));
+    } finally {
+      setBriefBusy(false);
+    }
+  }
 
   /** Create the design for the chosen canvas and hand the brief to the editor's
    *  assistant. The tone rides the same per-workspace store the editor's dials
@@ -223,6 +249,9 @@ export function DashboardApp({ view }: { view: DashboardView }) {
     } catch {
       /* private mode: the generation simply runs without the tone */
     }
+    // Extracted text travels through the request channel, not the URL: one
+    // document dwarfs any sane query string.
+    stageAiSources(briefSources);
     // Created untitled on purpose: the generation names it from the outline it
     // produces, which reads far better than the raw prompt.
     void createDesign(fmt.w, fmt.h, undefined, fmt.kind, brief);
@@ -828,7 +857,50 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                     disabled={busy || !activeWorkspaceId}
                     className="w-full resize-none bg-transparent px-1.5 py-1 text-[15px] leading-relaxed outline-none placeholder:text-neutral-400 disabled:opacity-50"
                   />
+                  {/* Attached sources: the documents the design should be
+                      built FROM. Extraction runs here so the editor receives
+                      text, not files, and so an unreadable file is reported
+                      before the user has navigated away from it. */}
+                  {briefSources.length > 0 && (
+                    <ul className="mb-1 flex flex-wrap gap-1.5 px-1.5">
+                      {briefSources.map((sc, i) => (
+                        <li key={`${sc.name}-${i}`} className="flex items-center gap-1 rounded-full border border-brand-200 bg-brand-50 px-2 py-0.5 text-[11px] text-brand-ink">
+                          <FileText size={11} className="shrink-0" />
+                          <span className="max-w-[10rem] truncate" title={sc.name}>{sc.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => setBriefSources((xs) => xs.filter((_, j) => j !== i))}
+                            aria-label={tr("editor.remove_attached_content")}
+                            className="rounded-full p-0.5 hover:bg-brand-100"
+                          >
+                            <X size={11} />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                   <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => briefFileRef.current?.click()}
+                      disabled={busy || briefBusy || !activeWorkspaceId || briefSources.length >= maxAiSources}
+                      title={tr("dashboard.attach_documents_to_build_from")}
+                      aria-label={tr("dashboard.attach_documents_to_build_from")}
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-neutral-200 text-neutral-500 transition hover:border-neutral-300 hover:text-neutral-700 disabled:opacity-40"
+                    >
+                      {briefBusy ? <Loader2 size={15} className="animate-spin" /> : <Paperclip size={15} />}
+                    </button>
+                    <input
+                      ref={briefFileRef}
+                      type="file"
+                      multiple
+                      accept={attachableAccept}
+                      hidden
+                      onChange={(e) => {
+                        void attachBriefFiles(Array.from(e.target.files ?? []));
+                        e.target.value = "";
+                      }}
+                    />
                     <label className="flex items-center gap-1.5 rounded-full border border-neutral-200 py-1.5 ps-3 pe-1.5 text-[13px] text-neutral-700 transition hover:border-neutral-300 focus-within:border-brand-400">
                       <LayoutTemplate size={13} className="shrink-0 text-neutral-400" />
                       <span className="sr-only">{tr("dashboard.output_format")}</span>

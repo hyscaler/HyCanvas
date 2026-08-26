@@ -105,7 +105,7 @@ export function PageOverlays({ api }: { api: CanvasApi }) {
                   });
                   if (instruction === null) return;
                   st.setActivePage(i);
-                  requestAi({ kind: "action", action: "regenerateSlide", pageIndex: i, instruction: instruction.trim() || tr("editor.improve_this_slide") }, Date.now());
+                  requestAi({ kind: "action", action: "regenerateSlide", pageIndex: i, instruction: instruction.trim() || tr("editor.improve_this_slide") });
                 }}
               />
               <HdrBtn icon={CopyPlus} title={tr("editor.duplicate_page")} onClick={() => st.duplicatePage(i)} />

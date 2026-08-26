@@ -27,7 +27,7 @@ const listeners = new Set<Listener>();
 let pending: { req: AiRequest; at: number } | null = null;
 const pendingTtlMs = 30_000;
 
-export function subscribeAiRequests(cb: Listener, now = 0): () => void {
+export function subscribeAiRequests(cb: Listener, now = Date.now()): () => void {
   listeners.add(cb);
   if (pending && now - pending.at < pendingTtlMs) {
     const { req } = pending;
@@ -40,7 +40,7 @@ export function subscribeAiRequests(cb: Listener, now = 0): () => void {
 }
 
 /** Ask the assistant to do something. Returns whether a listener took it. */
-export function requestAi(req: AiRequest, now = 0): boolean {
+export function requestAi(req: AiRequest, now = Date.now()): boolean {
   if (!listeners.size) {
     pending = { req, at: now };
     return false;
@@ -52,4 +52,28 @@ export function requestAi(req: AiRequest, now = 0): boolean {
 /** Test seam: drop any queued request. */
 export function clearPendingAiRequest(): void {
   pending = null;
+  stagedSources = null;
+}
+
+// Grounding sources handed over with a request. They cannot ride the URL (a
+// single document dwarfs any sane query string), and navigation from the
+// dashboard to the editor is client-side, so the module survives it. A full
+// reload legitimately drops them, exactly as it drops the brief.
+let stagedSources: { sources: AiSourceLike[]; at: number } | null = null;
+type AiSourceLike = { name: string; text: string };
+
+export function stageAiSources(sources: AiSourceLike[], now = Date.now()): void {
+  stagedSources = sources.length ? { sources, at: now } : null;
+}
+
+/** Take the staged sources, if any are still fresh. Consumed once: a later
+ *  unrelated generation must not silently inherit someone's attachments. */
+export function takeStagedAiSources(now = Date.now()): AiSourceLike[] {
+  if (!stagedSources || now - stagedSources.at >= pendingTtlMs) {
+    stagedSources = null;
+    return [];
+  }
+  const { sources } = stagedSources;
+  stagedSources = null;
+  return sources;
 }

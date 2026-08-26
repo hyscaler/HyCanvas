@@ -189,6 +189,7 @@
   "dashboard.api_keys": "API 密钥",
   "dashboard.api_keys_hint": "密钥用于驱动生成 API：以编程方式创建演示文稿、获取文件、渲染 PDF 并创建共享链接。密钥仅限本工作区，且只在创建时显示一次。文档位于 /api/docs。",
   "dashboard.approve": "批准",
+  "dashboard.attach_documents_to_build_from": "添加作为素材的文档",
   "dashboard.back": "返回",
   "dashboard.banner": "横幅",
   "dashboard.blank": "空白",

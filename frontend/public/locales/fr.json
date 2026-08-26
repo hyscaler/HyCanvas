@@ -189,6 +189,7 @@
   "dashboard.api_keys": "Clés d'API",
   "dashboard.api_keys_hint": "Les clés pilotent l'API de génération : créer des présentations par programme, récupérer des fichiers, produire des PDF et créer des liens de partage. Une clé est limitée à cet espace de travail et ne s'affiche qu'une seule fois. Documentation sur /api/docs.",
   "dashboard.approve": "Approuver",
+  "dashboard.attach_documents_to_build_from": "Joindre des documents comme base",
   "dashboard.back": "Retour",
   "dashboard.banner": "Bannière",
   "dashboard.blank": "Vierge",

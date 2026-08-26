@@ -51,7 +51,7 @@ import { ApiError, type AiConfigView, type AiProviderPreset, type AssetFolder, t
 import { DesignThumb } from "@/components/dashboard/DesignThumb";
 import { checkAppAction, type AppAction } from "@hc/stock";
 import { oc, resolveAssetUrl, stockProxyUrl, uploadAssetWithProgress } from "@/lib/sdk";
-import { pdfFileToTextWithScanCheck } from "@/lib/pdfImport";
+import { attachableAccept, extractAiSources, maxAiSources, type AiSource } from "@/lib/aiAttachments";
 import { mermaidToDiagram, normalizeDiagramSpec, type DiagramSpec } from "@hc/whiteboard";
 import type { BrandVoice, BrandLintViolation } from "@hc/sdk";
 import { useEditor, type BrandFixTarget, type DeckTextEntry } from "@/store/editor";
@@ -63,7 +63,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { mirrorInRtl } from "@/lib/locale";
 import { tr, trOr } from "@/lib/i18n";
 import { cancelAiImages, enqueueAiImages, retryFailedAiImages, subscribeAiImageQueue } from "@/lib/aiImageQueue";
-import { subscribeAiRequests, type AiRequest } from "@/lib/aiRequests";
+import { subscribeAiRequests, takeStagedAiSources, type AiRequest } from "@/lib/aiRequests";
 import { builtinThemes } from "@/lib/themeCatalog";
 import { cancelAiFills, enqueueAiFills, retryFailedAiFills, subscribeAiFillQueue } from "@/lib/aiFillQueue";
 import { stickerLabel, stickerCategoryLabel } from "@/lib/stickers";
@@ -2106,10 +2106,7 @@ async function fetchAssistantOutline(workspaceId: string, dt: DesignType, prompt
 
 /** Combined attachment budget: 8 sources, sharing one character cap split
  *  evenly (per the multi-file ingestion contract). */
-const maxSources = 8;
-/** File types the grounding extractor can read. Kept beside the picker's
- *  accept list so a drop and a pick agree about what can be attached. */
-const ATTACHABLE_FILE = /\.(txt|md|markdown|pdf|docx|pptx|xlsx)$/i;
+const maxSources = maxAiSources;
 const combinedSourceChars = 48000;
 
 /** Concatenate the attached sources into ONE grounding block: a header per
@@ -3477,7 +3474,11 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       return;
     }
     if (req.kind === "prompt") {
-      void send(req.text);
+      // Attachments staged alongside the brief (the dashboard composer lets a
+      // user attach the documents the design should be built from).
+      const staged = takeStagedAiSources();
+      if (staged.length) setSources((xs) => [...xs, ...staged].slice(0, maxSources));
+      void send(req.text, staged);
       return;
     }
     const text = tr("editor.regenerate_slide_n_instruction", { n: req.pageIndex + 1, instruction: req.instruction });
@@ -3496,7 +3497,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     handleAiRequest.current = onAiRequest;
   });
   useEffect(() => {
-    return subscribeAiRequests((req) => handleAiRequest.current(req), Date.now());
+    return subscribeAiRequests((req) => handleAiRequest.current(req));
   }, []);
 
   // Per-slide refinements land silently after the deck does; this makes that
@@ -3837,60 +3838,22 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
    *  names the reason when a file cannot be read, and never throws into the
    *  caller (a bad file must not take the panel down with it). */
   function attachFiles(picked: File[]) {
-    const files = picked.filter((f) => ATTACHABLE_FILE.test(f.name));
-    const rejected = picked.length - files.length;
-    if (rejected) toast.error(tr("editor.only_documents_can_be_attached"));
-    if (!files.length) return;
     const room = maxSources - sources.length;
     if (room <= 0) {
       toast.error(tr("editor.attachment_limit_reached", { max: maxSources }));
       return;
     }
     setAttachBusy(true);
-    const addSource = (name: string, text: string) => {
-      const t = text.trim();
-      if (t) setSources((xs) => (xs.length < maxSources ? [...xs, { name, text: t.slice(0, 60000) }] : xs));
-      else toast.error(tr("editor.no_readable_text_in_that_file"));
-    };
-    const extractOne = async (f: File): Promise<void> => {
-      if (/\.pdf$/i.test(f.name) || f.type === "application/pdf") {
-        // Scanned-PDF detection (first 5 pages under 50 chars): an image-only
-        // PDF has no text layer to ground on, and OCR is out of scope, so say
-        // so instead of attaching an empty source.
-        const { text, scanned } = await pdfFileToTextWithScanCheck(f);
-        if (scanned) { toast.error(tr("editor.pdf_looks_scanned_no_text_layer")); return; }
-        addSource(f.name, text);
-        return;
-      }
-      if (/\.(docx|pptx|xlsx)$/i.test(f.name)) {
-        const buf = await f.arrayBuffer();
-        let binary = "";
-        const bytes = new Uint8Array(buf);
-        const chunk = 0x8000;
-        for (let i = 0; i < bytes.length; i += chunk) binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-        const r = await oc.aiExtractFile({ filename: f.name, mimeType: f.type || undefined, dataBase64: btoa(binary) });
-        addSource(r.name, r.text);
-        return;
-      }
-      addSource(f.name, await f.text());
-    };
     void (async () => {
-      for (const f of files.slice(0, room)) {
-        try {
-          await extractOne(f);
-        } catch (err) {
-          // Server rejections carry a stable code (too large / unsupported /
-          // unreadable); name the reason when known.
-          const coded = err instanceof ApiError ? apiCodeMessage(err.body) : null;
-          toast.error(`${coded ?? tr("editor.couldnt_read_that_file")} (${f.name})`);
-        }
-      }
-      if (files.length > room) toast.error(tr("editor.attachment_limit_reached", { max: maxSources }));
+      const out = await extractAiSources(picked, room);
+      if (out.rejected) toast.error(tr("editor.only_documents_can_be_attached"));
+      for (const e of out.errors) toast.error(e);
+      if (out.sources.length) setSources((xs) => [...xs, ...out.sources].slice(0, maxSources));
       setAttachBusy(false);
     })();
   }
 
-  async function send(textArg?: string) {
+  async function send(textArg?: string, extraSources?: AiSource[]) {
     const userText = (textArg ?? input).trim();
     if (!workspaceId || !userText || !aiReady || busy) return;
     if (!textArg) setInput("");
@@ -3922,8 +3885,11 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       // types via parseAssistantReply before anything executes.
       // With sources attached, tell the planner they exist (the executor does
       // the grounding); the user's words alone often don't mention it.
-      const plannerText = sources.length
-        ? `${userText}\n[Note: the user attached ${sources.length} source${sources.length === 1 ? "" : "s"} (${sources.map((sc) => sc.name).join(", ")}; ${sources.reduce((n, sc) => n + sc.text.length, 0)} chars total). To create a deck/design from them, plan generateDesign - the executor grounds the outline in the attachments automatically.]`
+      // Sources staged by another surface arrive with this call: setSources
+      // has not re-rendered yet, so the state copy alone would miss them.
+      const active = extraSources?.length ? [...sources, ...extraSources].slice(0, maxSources) : sources;
+      const plannerText = active.length
+        ? `${userText}\n[Note: the user attached ${active.length} source${active.length === 1 ? "" : "s"} (${active.map((sc) => sc.name).join(", ")}; ${active.reduce((n, sc) => n + sc.text.length, 0)} chars total). To create a deck/design from them, plan generateDesign - the executor grounds the outline in the attachments automatically.]`
         : userText;
       let res;
       try {
@@ -4609,7 +4575,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                 ref={attachFileRef}
                 type="file"
                 multiple
-                accept=".txt,.md,.markdown,.pdf,.docx,.pptx,.xlsx,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                accept={attachableAccept}
                 className="hidden"
                 onChange={(e) => {
                   const files = Array.from(e.target.files ?? []);

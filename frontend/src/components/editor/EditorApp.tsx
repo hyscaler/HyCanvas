@@ -615,7 +615,7 @@ export function EditorApp() {
   useEffect(() => {
     if (!router.isReady || !aiBrief || briefSent.current || !designId) return;
     briefSent.current = true;
-    requestAi({ kind: "prompt", text: aiBrief }, Date.now());
+    requestAi({ kind: "prompt", text: aiBrief });
     const rest = { ...router.query };
     delete rest.ai;
     void router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });

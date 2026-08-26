@@ -189,6 +189,7 @@
   "dashboard.api_keys": "API keys",
   "dashboard.api_keys_hint": "Keys drive the generation API: create presentations programmatically, fetch files, render PDFs, and mint share links. A key is scoped to this workspace and shown only once at creation. Docs live at /api/docs.",
   "dashboard.approve": "Approve",
+  "dashboard.attach_documents_to_build_from": "Attach documents to build from",
   "dashboard.back": "Back",
   "dashboard.banner": "Banner",
   "dashboard.blank": "Blank",

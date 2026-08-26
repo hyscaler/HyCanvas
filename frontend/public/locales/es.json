@@ -189,6 +189,7 @@
   "dashboard.api_keys": "Claves de API",
   "dashboard.api_keys_hint": "Las claves controlan la API de generación: crear presentaciones por código, obtener archivos, generar PDF y crear enlaces compartidos. Cada clave pertenece a este espacio de trabajo y se muestra solo una vez. Documentación en /api/docs.",
   "dashboard.approve": "Aprobar",
+  "dashboard.attach_documents_to_build_from": "Adjuntar documentos como base",
   "dashboard.back": "Atrás",
   "dashboard.banner": "Banner",
   "dashboard.blank": "En blanco",

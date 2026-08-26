@@ -189,6 +189,7 @@
   "dashboard.api_keys": "API कुंजियाँ",
   "dashboard.api_keys_hint": "कुंजियाँ जनरेशन API चलाती हैं: प्रोग्राम से प्रेज़ेंटेशन बनाएँ, फ़ाइलें प्राप्त करें, PDF रेंडर करें और साझा लिंक बनाएँ। कुंजी इसी वर्कस्पेस तक सीमित है और केवल एक बार दिखाई जाती है। दस्तावेज़ /api/docs पर हैं।",
   "dashboard.approve": "अनुमोदित करें",
+  "dashboard.attach_documents_to_build_from": "आधार बनाने के लिए दस्तावेज़ जोड़ें",
   "dashboard.back": "वापस",
   "dashboard.banner": "बैनर",
   "dashboard.blank": "रिक्त",

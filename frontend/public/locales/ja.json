@@ -189,6 +189,7 @@
   "dashboard.api_keys": "APIキー",
   "dashboard.api_keys_hint": "キーは生成APIを動かします。プレゼンテーションのプログラム生成、ファイル取得、PDFレンダリング、共有リンクの作成が可能です。キーはこのワークスペース専用で、作成時に一度だけ表示されます。ドキュメントは /api/docs にあります。",
   "dashboard.approve": "承認",
+  "dashboard.attach_documents_to_build_from": "素材にするドキュメントを添付",
   "dashboard.back": "戻る",
   "dashboard.banner": "バナー",
   "dashboard.blank": "空白",
