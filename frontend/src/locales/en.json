@@ -598,6 +598,8 @@
   "editor.assistant_start_hint": "Describe what you want and I'll design it, or pick a type to start.",
   "editor.attach_content": "Attach content",
   "editor.attach_content_to_build_from_paste_url_or_fi": "Attach content to build from (paste, URL, or file)",
+  "editor.attach_up_to_max_sources": "Attach up to {max} sources: paste notes, fetch pages, pick files.",
+  "editor.attachments_added_of_max": "{n} of {max} attached. Add more, or close this to generate.",
   "editor.attack_release": "Attack / release",
   "editor.audience": "Audience",
   "editor.audience_display": "Audience display",

@@ -598,6 +598,8 @@
   "editor.assistant_start_hint": "Descreva o que você quer e eu vou criar, ou escolha um tipo para começar.",
   "editor.attach_content": "Anexar conteúdo",
   "editor.attach_content_to_build_from_paste_url_or_fi": "Anexe conteúdo como base (colar, URL ou arquivo)",
+  "editor.attach_up_to_max_sources": "Anexe até {max} fontes: cole notas, importe páginas, escolha arquivos.",
+  "editor.attachments_added_of_max": "{n} de {max} anexados. Adicione mais ou feche para gerar.",
   "editor.attack_release": "Ataque / liberação",
   "editor.audience": "Público",
   "editor.audience_display": "Tela do público",

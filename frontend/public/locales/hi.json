@@ -598,6 +598,8 @@
   "editor.assistant_start_hint": "बताइए आपको क्या चाहिए और मैं उसे डिज़ाइन कर दूँगा, या शुरू करने के लिए कोई प्रकार चुनें।",
   "editor.attach_content": "सामग्री संलग्न करें",
   "editor.attach_content_to_build_from_paste_url_or_fi": "बनाने के लिए सामग्री संलग्न करें (पेस्ट, URL या फ़ाइल)",
+  "editor.attach_up_to_max_sources": "{max} तक स्रोत जोड़ें: नोट्स चिपकाएँ, पेज लाएँ, फ़ाइलें चुनें।",
+  "editor.attachments_added_of_max": "{max} में से {n} संलग्न। और जोड़ें, या जनरेट करने के लिए इसे बंद करें।",
   "editor.attack_release": "अटैक / रिलीज़",
   "editor.audience": "दर्शक",
   "editor.audience_display": "दर्शक डिस्प्ले",

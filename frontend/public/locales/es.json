@@ -598,6 +598,8 @@
   "editor.assistant_start_hint": "Describe lo que quieres y lo diseñaré, o elige un tipo para empezar.",
   "editor.attach_content": "Adjuntar contenido",
   "editor.attach_content_to_build_from_paste_url_or_fi": "Adjunta contenido como base (pegar, URL o archivo)",
+  "editor.attach_up_to_max_sources": "Adjunta hasta {max} fuentes: pega notas, importa páginas, elige archivos.",
+  "editor.attachments_added_of_max": "{n} de {max} adjuntos. Añade más o cierra esto para generar.",
   "editor.attack_release": "Ataque / liberación",
   "editor.audience": "Audiencia",
   "editor.audience_display": "Pantalla para el público",

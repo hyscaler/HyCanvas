@@ -4065,8 +4065,8 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       )}
 
       {/* Source attachments (FR-23/T15): paste text, fetch URLs, or pick files
-          (multiple, cap 8); each is editable before the next generation
-          grounds its outline in ALL of them. */}
+          (multiple, cap 8, mixable in one sitting); each is editable before
+          the next generation grounds its outline in ALL of them. */}
       {sources.map((sc, i) => (
         <div key={`${sc.name}-${i}`} className="mt-2 flex shrink-0 flex-col gap-1 rounded-lg border border-brand-200 bg-brand-50 px-2.5 py-1.5 text-[11px] text-brand-ink">
           <div className="flex items-center gap-2">
@@ -4093,13 +4093,24 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       ))}
       {attachOpen && sources.length < maxSources && (
         <div className="mt-2 flex shrink-0 flex-col gap-1.5 rounded-lg border border-neutral-200 bg-neutral-50 p-2">
+          {/* The cap is 8 and sources mix freely, which nothing on screen said:
+              users read the panel closing after one add as a limit of one. */}
+          <p className="text-[10px] text-neutral-500">
+            {sources.length
+              ? tr("editor.attachments_added_of_max", { n: sources.length, max: maxSources })
+              : tr("editor.attach_up_to_max_sources", { max: maxSources })}
+          </p>
           <textarea
             placeholder={tr("editor.paste_text_or_notes_to_build_from")}
             rows={3}
             className="w-full resize-none rounded-md border border-neutral-200 bg-surface px-2 py-1.5 text-xs outline-none focus:border-brand-400"
             onBlur={(e) => {
               const t = e.target.value.trim();
-              if (t) { setSources((xs) => [...xs, { name: tr("editor.pasted_text"), text: t }]); e.target.value = ""; setAttachOpen(false); }
+              // The panel STAYS open: attaching is usually building a set
+              // (a note, two links, a file), and closing after each one made
+              // the user reopen it every time. The chips above show what has
+              // landed; the paperclip closes it when they are done.
+              if (t) { setSources((xs) => [...xs, { name: tr("editor.pasted_text"), text: t }]); e.target.value = ""; }
             }}
           />
           <div className="flex items-center gap-1.5">
@@ -4115,7 +4126,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                 const url = attachUrl.trim();
                 setAttachBusy(true);
                 void oc.aiExtractUrl({ url })
-                  .then((r) => { setSources((xs) => [...xs, { name: r.title || url, text: r.text }]); setAttachOpen(false); setAttachUrl(""); })
+                  .then((r) => { setSources((xs) => [...xs, { name: r.title || url, text: r.text }]); setAttachUrl(""); })
                   .catch(() => toast.error(tr("editor.couldnt_read_that_page")))
                   .finally(() => setAttachBusy(false));
               }}
@@ -4174,7 +4185,6 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                         toast.error(`${coded ?? tr("editor.couldnt_read_that_file")} (${f.name})`);
                       }
                     }
-                    setAttachOpen(false);
                     setAttachBusy(false);
                   })();
                 }}

@@ -598,6 +598,8 @@
   "editor.assistant_start_hint": "作りたいものを説明してください。デザインします。タイプを選んで始めることもできます。",
   "editor.attach_content": "コンテンツを添付",
   "editor.attach_content_to_build_from_paste_url_or_fi": "元になるコンテンツを添付(貼り付け・URL・ファイル)",
+  "editor.attach_up_to_max_sources": "最大 {max} 件の資料を添付できます: メモの貼り付け、ページの取得、ファイルの選択。",
+  "editor.attachments_added_of_max": "{max} 件中 {n} 件を添付。さらに追加するか、閉じて生成します。",
   "editor.attack_release": "アタック/リリース",
   "editor.audience": "オーディエンス",
   "editor.audience_display": "観客用ディスプレイ",

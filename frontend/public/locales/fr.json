@@ -598,6 +598,8 @@
   "editor.assistant_start_hint": "Décrivez ce que vous voulez et je le concevrai, ou choisissez un type pour commencer.",
   "editor.attach_content": "Joindre du contenu",
   "editor.attach_content_to_build_from_paste_url_or_fi": "Joignez du contenu comme base (coller, URL ou fichier)",
+  "editor.attach_up_to_max_sources": "Joignez jusqu'à {max} sources : collez des notes, importez des pages, choisissez des fichiers.",
+  "editor.attachments_added_of_max": "{n} sur {max} joints. Ajoutez-en d'autres ou fermez pour générer.",
   "editor.attack_release": "Attaque / relâchement",
   "editor.audience": "Public",
   "editor.audience_display": "Écran du public",
