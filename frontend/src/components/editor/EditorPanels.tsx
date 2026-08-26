@@ -3569,6 +3569,17 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
         skips[i] = r.error;
       }
 
+      // A plan resolves across tens of seconds of model calls, and the editor
+      // keeps the SAME store when the route switches to another design
+      // (EditorApp reloads doc in place). Applying now would write this deck
+      // into whatever document is open, so the identity is checked first -
+      // the same guard regenerateSlide, splitSlide and insertComparison
+      // already carry at their own apply sites.
+      if (designId && useComments.getState().designId !== designId) {
+        setTurns((t) => [...t, { role: "assistant", text: tr("editor.that_generation_was_for_a_different_design") }]);
+        toast.error(tr("editor.that_generation_was_for_a_different_design"));
+        return;
+      }
       const results: { action: string; ok: boolean }[] = [];
       runAsTurn(() => {
         plan.forEach((step, i) => {

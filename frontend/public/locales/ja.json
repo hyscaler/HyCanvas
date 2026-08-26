@@ -2483,6 +2483,7 @@
   "editor.text_t": "テキスト（T）",
   "editor.that_block_no_longer_exists": "そのブロックはもう存在しません。",
   "editor.that_file_isnt_a_valid_svg": "そのファイルは有効なSVGではありません。",
+  "editor.that_generation_was_for_a_different_design": "その生成は別のデザインで開始されたため、ここには適用されていません。",
   "editor.that_image_is_too_large_to_import": "その画像は大きすぎてインポートできません。",
   "editor.that_key_combination_isnt_valid": "そのキーの組み合わせは無効です。",
   "editor.the_assistant_returned_nothing_try_again": "アシスタントが何も返しませんでした。もう一度お試しください。",

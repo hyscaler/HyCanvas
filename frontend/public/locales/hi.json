@@ -2483,6 +2483,7 @@
   "editor.text_t": "टेक्स्ट (T)",
   "editor.that_block_no_longer_exists": "वह ब्लॉक अब मौजूद नहीं है।",
   "editor.that_file_isnt_a_valid_svg": "वह फ़ाइल मान्य SVG नहीं है।",
+  "editor.that_generation_was_for_a_different_design": "वह जनरेशन किसी अन्य डिज़ाइन में शुरू हुआ था, इसलिए यहाँ लागू नहीं किया गया।",
   "editor.that_image_is_too_large_to_import": "वह छवि आयात के लिए बहुत बड़ी है।",
   "editor.that_key_combination_isnt_valid": "यह कुंजी संयोजन मान्य नहीं है।",
   "editor.the_assistant_returned_nothing_try_again": "सहायक ने कुछ नहीं दिया। पुनः प्रयास करें।",

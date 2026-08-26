@@ -132,28 +132,43 @@ describe("no hard-coded user-visible strings", () => {
     // The extractor is the single definition of what counts as a translatable
     // string. Running it in dry mode here means the rule cannot drift between
     // the tool that applies it and the test that enforces it.
-    const out = execFileSync(
-      "node",
-      [
-        join(ROOT, "scripts", "i18n-extract.mjs"),
-        "--dry",
-        // lib and store were outside this check at first, which is exactly how
-        // 60 user-visible strings there stayed hard-coded without anyone
-        // noticing. A ratchet only holds what it is pointed at.
-        join(SRC, "components"),
-        join(SRC, "pages"),
-        join(SRC, "lib"),
-        join(SRC, "store"),
-      ],
-      { encoding: "utf8" },
-    );
+    const runExtractor = () =>
+      execFileSync(
+        "node",
+        [
+          join(ROOT, "scripts", "i18n-extract.mjs"),
+          "--dry",
+          // lib and store were outside this check at first, which is exactly how
+          // 60 user-visible strings there stayed hard-coded without anyone
+          // noticing. A ratchet only holds what it is pointed at.
+          join(SRC, "components"),
+          join(SRC, "pages"),
+          join(SRC, "lib"),
+          join(SRC, "store"),
+        ],
+        { encoding: "utf8" },
+      );
+    // This scan has gone red intermittently in a FULL concurrent run (all three
+    // suites at once, usually right after a source edit) while passing on its
+    // own and against an independent disk check. The cause is in the harness,
+    // not the catalog, so a non-zero count is re-scanned once before the suite
+    // fails: a genuinely hard-coded string is found by both scans, and only a
+    // torn read is forgiven.
+    let out = runExtractor();
     // "unseen" counts prose the REWRITE pattern cannot match (its text run
     // excludes ; = " ' and a backtick). Those are reported rather than rewritten
     // and must be counted here, or the ratchet reports clean over strings it
     // never examined, which is exactly how 26 of them survived to August 2026.
-    const m = out.match(/\[dry\] (\d+) text nodes \+ (\d+) attributes \+ (\d+) expressions \+ (\d+) unseen/);
-    expect(m, `unexpected extractor output:\n${out}`).toBeTruthy();
-    const found = Number(m![1]) + Number(m![2]) + Number(m![3]) + Number(m![4]);
+    const count = (text: string) => {
+      const m = text.match(/\[dry\] (\d+) text nodes \+ (\d+) attributes \+ (\d+) expressions \+ (\d+) unseen/);
+      expect(m, `unexpected extractor output:\n${text}`).toBeTruthy();
+      return Number(m![1]) + Number(m![2]) + Number(m![3]) + Number(m![4]);
+    };
+    let found = count(out);
+    if (found > 0) {
+      out = runExtractor();
+      found = count(out);
+    }
     expect(found, `${found} hard-coded strings:\n${out}`).toBe(0);
   });
 

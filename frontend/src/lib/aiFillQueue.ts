@@ -103,7 +103,12 @@ async function refine(task: AiFillTask): Promise<void> {
     if (expectedText === null || liveSlotText(page, slot) === expectedText) keepLists[slot] = v;
   }
   if (!Object.keys(keepTexts).length && !Object.keys(keepLists).length) return;
-  st.fillPlaceholderContent(idx, { texts: keepTexts, lists: keepLists }, { styles: task.styles as never });
+  // Continues the generation turn, so it records no undo entry of its own
+  // (see runWithoutHistory): one undo should revert the deck, not peel off
+  // one late slide refinement.
+  st.runWithoutHistory(() => {
+    st.fillPlaceholderContent(idx, { texts: keepTexts, lists: keepLists }, { styles: task.styles as never });
+  });
   if (task.onImagePrompts && Object.keys(fill.imagePrompts).length) {
     task.onImagePrompts(task.pageId, fill.imagePrompts);
   }

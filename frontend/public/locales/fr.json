@@ -2483,6 +2483,7 @@
   "editor.text_t": "Texte (T)",
   "editor.that_block_no_longer_exists": "Ce bloc n'existe plus.",
   "editor.that_file_isnt_a_valid_svg": "Ce fichier n'est pas un SVG valide.",
+  "editor.that_generation_was_for_a_different_design": "Cette génération a été lancée dans un autre design ; elle n'a pas été appliquée ici.",
   "editor.that_image_is_too_large_to_import": "Cette image est trop volumineuse pour être importée.",
   "editor.that_key_combination_isnt_valid": "Cette combinaison de touches n'est pas valide.",
   "editor.the_assistant_returned_nothing_try_again": "L'assistant n'a rien renvoyé. Réessayez.",

@@ -567,6 +567,15 @@ interface EditorState {
    *  undo entry it pushes into ONE undo turn, so an assistant turn reverts with a
    *  single Cmd+Z (FR-8). Returns the number of entries collapsed. */
   runAsTurn(fn: () => void): number;
+  /** Apply a mutation WITHOUT recording an undo entry.
+   *
+   *  For work that continues a turn the user already performed: the streamed
+   *  slide copy, placeholder images and hero backgrounds that land seconds
+   *  after a generation. Each used to push its own entry, so undo removed one
+   *  stray image instead of the deck the toast promised, and each also
+   *  cleared the redo stack. Undoing the generation removes the pages these
+   *  landed on, so they need no history of their own. */
+  runWithoutHistory(fn: () => void): void;
 
   /** F39 FR-27: record generation provenance (feature, prompt, model, seed) into
    *  doc.meta.aiProvenance for reproducibility/audit. Metadata only - not an undo
@@ -1440,9 +1449,12 @@ export const useEditor = create<EditorState>((set, get) => {
   // mirrored (their closures go stale the moment applyToStore rebuilds the doc
   // tree, and replaying one against a later state re-applies old edits and can
   // clobber peer changes), so the stacks stay empty for the whole session.
+  // Depth counter, not a boolean: the async AI queues can overlap, and the
+  // last one to finish must not re-enable history for the others.
+  let suppressHistory = 0;
   const perform = (redo: () => void, undo: () => void) => {
     redo();
-    if (get().collabUndo) {
+    if (suppressHistory > 0 || get().collabUndo) {
       set((s) => ({ rev: s.rev + 1 }));
       return;
     }
@@ -2104,6 +2116,14 @@ export const useEditor = create<EditorState>((set, get) => {
         },
       );
       return pageIds;
+    },
+    runWithoutHistory: (fn) => {
+      suppressHistory++;
+      try {
+        fn();
+      } finally {
+        suppressHistory--;
+      }
     },
     runAsTurn: (fn) => {
       const start = get().undoStack.length;

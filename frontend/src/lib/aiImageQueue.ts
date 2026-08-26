@@ -182,9 +182,15 @@ async function resolveTask(task: AiImageTask): Promise<boolean> {
   // Slot images are stamped with the RAW subject: regenerateSlide diffs the
   // stamp against the model's next raw slot prompts, so stamping the grounded
   // prompt would make every unchanged image look changed.
-  const applied = task.placeholderId
-    ? st.applyGeneratedImageToPlaceholder(task.pageId, task.placeholderId, url, task.subject?.trim() ? task.subject : task.prompt)
-    : st.applyGeneratedBackground(task.pageId, url, task.prompt);
+  // No undo entry of its own: this continues the generation turn the user
+  // already performed. Pushing one made undo remove a single stray image
+  // instead of the deck, and cleared the user's redo stack as a side effect.
+  let applied = false;
+  st.runWithoutHistory(() => {
+    applied = task.placeholderId
+      ? st.applyGeneratedImageToPlaceholder(task.pageId, task.placeholderId, url, task.subject?.trim() ? task.subject : task.prompt)
+      : st.applyGeneratedBackground(task.pageId, url, task.prompt);
+  });
   if (!applied) return true; // not a failure: the deck this belonged to is gone
   // Alt text in the same resolution step (best-effort; background images are
   // decorative-leaning, but a description beats silence for screen readers).
