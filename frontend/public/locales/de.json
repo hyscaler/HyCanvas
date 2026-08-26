@@ -883,6 +883,7 @@
   "editor.conditional_formatting": "Bedingte Formatierung",
   "editor.confirm": "Bestätigen",
   "editor.confirm_restore": "Wiederherstellung bestätigen",
+  "editor.connect_a_provider_to_build_this": "Verbinde einen Anbieter, um das zu bauen:",
   "editor.connect_a_provider_to_unlock": "Verbinden Sie einen Anbieter zum Freischalten",
   "editor.connect_an_ai_provider": "KI-Anbieter verbinden",
   "editor.connect_from_anchor": "Verbinden von {anchor}",

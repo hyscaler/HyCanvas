@@ -883,6 +883,7 @@
   "editor.conditional_formatting": "条件付き書式",
   "editor.confirm": "確認",
   "editor.confirm_restore": "復元を確認",
+  "editor.connect_a_provider_to_build_this": "これを作成するにはプロバイダーを接続してください:",
   "editor.connect_a_provider_to_unlock": "プロバイダーを接続して利用開始",
   "editor.connect_an_ai_provider": "AIプロバイダーを接続",
   "editor.connect_from_anchor": "{anchor}から接続",

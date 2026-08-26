@@ -25,7 +25,12 @@ const listeners = new Set<Listener>();
  *  panel subscribes, and only while it is fresh: a request the user made and
  *  then wandered away from should not fire minutes later. */
 let pending: { req: AiRequest; at: number } | null = null;
-const pendingTtlMs = 30_000;
+// Generous, because delivery is GATED on the panel becoming ready rather than
+// on the clock: a user who arrives from the dashboard with a brief and has no
+// provider yet must paste a key first, which easily outlasts a few seconds.
+// The request still cannot fire out of nowhere - it lands the moment the chat
+// becomes available, which is exactly when the user asked for it.
+const pendingTtlMs = 10 * 60_000;
 
 export function subscribeAiRequests(cb: Listener, now = Date.now()): () => void {
   listeners.add(cb);
@@ -47,6 +52,14 @@ export function requestAi(req: AiRequest, now = Date.now()): boolean {
   }
   for (const cb of listeners) cb(req);
   return true;
+}
+
+/** The queued request, WITHOUT consuming it, so a surface that cannot serve it
+ *  yet (the provider-setup form) can still tell the user it is waiting rather
+ *  than leaving them wondering where their brief went. */
+export function peekPendingAiRequest(now = Date.now()): AiRequest | null {
+  if (!pending || now - pending.at >= pendingTtlMs) return null;
+  return pending.req;
 }
 
 /** Test seam: drop any queued request. */

@@ -63,7 +63,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { mirrorInRtl } from "@/lib/locale";
 import { tr, trOr } from "@/lib/i18n";
 import { cancelAiImages, enqueueAiImages, retryFailedAiImages, subscribeAiImageQueue } from "@/lib/aiImageQueue";
-import { subscribeAiRequests, takeStagedAiSources, type AiRequest } from "@/lib/aiRequests";
+import { peekPendingAiRequest, subscribeAiRequests, takeStagedAiSources, type AiRequest } from "@/lib/aiRequests";
 import { builtinThemes } from "@/lib/themeCatalog";
 import { cancelAiFills, enqueueAiFills, retryFailedAiFills, subscribeAiFillQueue } from "@/lib/aiFillQueue";
 import { stickerLabel, stickerCategoryLabel } from "@/lib/stickers";
@@ -5113,6 +5113,10 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
   // The chat view fills the panel height (input pinned, messages scroll); the
   // setup/connect view scrolls normally.
   const chatView = !!workspaceId && !loading && !showConfig && !!config?.hasKey;
+  // A brief waiting for a provider. Read on each render of the setup view (it
+  // is not consumed here): the assistant claims it once the chat can serve it.
+  const pendingReq = !chatView ? peekPendingAiRequest() : null;
+  const waitingBrief = pendingReq?.kind === "prompt" ? pendingReq.text : null;
   // Whether the configured provider can generate images (gates AI imagery in
   // generated designs). DeepSeek/Anthropic are text-only; OpenAI/custom can.
   const imageCapable = !!config?.capabilities?.image;
@@ -5151,10 +5155,24 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
               <Settings2 size={14} className="text-brand-500" /> {tr("editor.connect_an_ai_provider")}
             </div>
             <p className="mb-2.5 text-[11px] text-neutral-500">{tr("editor.bring_your_own_key_it_is_stored_encrypted_an")}</p>
-            <p className="mb-2.5 flex items-start gap-1.5 rounded-md bg-brand-50 px-2 py-1.5 text-[11px] text-brand-ink">
-              <Wand2 size={12} className="mt-px shrink-0" />
-              <span>{tr("editor.connect_a_provider_to_unlock")} <span className="font-medium">{tr("editor.magic_design")}</span> (text to a finished page) and image generation. The tools below work without AI.</span>
-            </p>
+            {/* A brief carried in from the dashboard cannot run until a
+                provider exists. Saying so beats dropping it in silence, which
+                is what an arriving user would otherwise experience: a setup
+                form and no sign of what they typed. */}
+            {waitingBrief ? (
+              <p className="mb-2.5 flex items-start gap-1.5 rounded-md border border-brand-200 bg-brand-50 px-2 py-1.5 text-[11px] text-brand-ink">
+                <Wand2 size={12} className="mt-px shrink-0" />
+                <span>
+                  {tr("editor.connect_a_provider_to_build_this")}
+                  <span className="mt-0.5 block font-medium">{waitingBrief}</span>
+                </span>
+              </p>
+            ) : (
+              <p className="mb-2.5 flex items-start gap-1.5 rounded-md bg-brand-50 px-2 py-1.5 text-[11px] text-brand-ink">
+                <Wand2 size={12} className="mt-px shrink-0" />
+                <span>{tr("editor.connect_a_provider_to_unlock")} <span className="font-medium">{tr("editor.magic_design")}</span> (text to a finished page) and image generation. The tools below work without AI.</span>
+              </p>
+            )}
             <div className="flex flex-col gap-2">
               <select
                 value={provider}

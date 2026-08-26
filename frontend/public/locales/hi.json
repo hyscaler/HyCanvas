@@ -883,6 +883,7 @@
   "editor.conditional_formatting": "सशर्त स्वरूपण",
   "editor.confirm": "पुष्टि करें",
   "editor.confirm_restore": "पुनर्स्थापन की पुष्टि करें",
+  "editor.connect_a_provider_to_build_this": "इसे बनाने के लिए प्रोवाइडर कनेक्ट करें:",
   "editor.connect_a_provider_to_unlock": "अनलॉक करने के लिए कोई प्रदाता जोड़ें",
   "editor.connect_an_ai_provider": "AI प्रदाता जोड़ें",
   "editor.connect_from_anchor": "{anchor} से कनेक्ट करें",

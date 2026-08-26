@@ -883,6 +883,7 @@
   "editor.conditional_formatting": "Formatação condicional",
   "editor.confirm": "Confirmar",
   "editor.confirm_restore": "Confirmar restauração",
+  "editor.connect_a_provider_to_build_this": "Conecte um provedor para criar isto:",
   "editor.connect_a_provider_to_unlock": "Conecte um provedor para desbloquear",
   "editor.connect_an_ai_provider": "Conectar um provedor de IA",
   "editor.connect_from_anchor": "Conectar a partir de {anchor}",

@@ -883,6 +883,7 @@
   "editor.conditional_formatting": "条件格式",
   "editor.confirm": "确认",
   "editor.confirm_restore": "确认恢复",
+  "editor.connect_a_provider_to_build_this": "连接服务商即可生成以下内容：",
   "editor.connect_a_provider_to_unlock": "连接提供商以解锁",
   "editor.connect_an_ai_provider": "连接AI提供商",
   "editor.connect_from_anchor": "从{anchor}连接",
