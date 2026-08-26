@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
 import { useRouter } from "next/router";
-import { requestAi } from "@/lib/aiRequests";
+import { isAiBusy, requestAi } from "@/lib/aiRequests";
 import type { Node as DesignNode } from "@hc/schema";
 import { ChevronLeft, Undo2, Redo2, Download, Play, MonitorPlay, Ruler, Grid3x3, Magnet, LayoutTemplate, History, Eye, Share2, MessageSquare, ShieldCheck, Activity, BarChart3, MoreHorizontal, Send, Globe, Printer, PanelRightClose, PanelRightOpen, Keyboard, Info, X, Accessibility, Maximize2, Minimize2, LayoutGrid, FileDown, Film, Table2 } from "lucide-react";
 import type { AccessMode } from "@hc/sdk";
@@ -697,7 +697,11 @@ export function EditorApp() {
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
       const { dirty: d, designId: id } = unloadRef.current;
-      if (d && id) {
+      // A running generation counts as unsaved work: it is minutes of the
+      // user's time and their provider's tokens, and closing the tab drops it.
+      // The old guard only knew about a dirty saved document, so a generation
+      // on a freshly opened design closed with no prompt at all.
+      if ((d && id) || isAiBusy()) {
         e.preventDefault();
         e.returnValue = ""; // required for the native prompt in most browsers
       }
@@ -705,6 +709,22 @@ export function EditorApp() {
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, []);
+
+  // In-app navigation needs its own guard: beforeunload does not fire for a
+  // client-side route change, so clicking to the dashboard mid-generation used
+  // to drop the run with no warning. Throwing is the documented way to cancel
+  // a Pages Router navigation.
+  useEffect(() => {
+    const onRouteChange = (url: string) => {
+      if (!isAiBusy()) return;
+      if (url.startsWith(router.asPath.split("?")[0])) return; // same design
+      if (window.confirm(tr("editor.a_generation_is_still_running_leave_anyway"))) return;
+      router.events.emit("routeChangeError");
+      throw "routeChange aborted by the user (a generation is still running)";
+    };
+    router.events.on("routeChangeStart", onRouteChange);
+    return () => router.events.off("routeChangeStart", onRouteChange);
+  }, [router]);
 
   // Global "?" (Shift+/) opens the keyboard-shortcuts sheet, ignoring keystrokes
   // typed into inputs/textareas/contentEditable (and while crop/present own the

@@ -153,9 +153,25 @@ function pump(): void {
   }
 }
 
+/** Whether the user currently has the text cursor in a box on this page.
+ *
+ *  The committed-text guard below cannot see an edit in progress: the store
+ *  still holds the text the deck landed with while the inline editor holds
+ *  what is being typed. Refining then wins the race, or the editor's commit
+ *  on blur silently discards the refinement - either way someone's work is
+ *  lost. A page being typed into is simply left alone. */
+function pageIsBeingEdited(pageId: string): boolean {
+  const st = useEditor.getState();
+  const editingId = st.editingTextId;
+  if (!editingId) return false;
+  const page = st.doc.pages.find((p) => p.id === pageId) as unknown as { children: { id: string }[] } | undefined;
+  return !!page?.children.some((n) => n.id === editingId);
+}
+
 async function refine(task: AiFillTask): Promise<void> {
   // The page must still exist BEFORE spending a model call on it.
   if (!useEditor.getState().doc.pages.some((p) => p.id === task.pageId)) return;
+  if (pageIsBeingEdited(task.pageId)) return;
   const schema = deriveLayoutContentSchema(task.layout);
   const { text } = await oc.aiTextStructured({
     workspaceId: task.workspaceId,
@@ -168,6 +184,9 @@ async function refine(task: AiFillTask): Promise<void> {
   const st = useEditor.getState();
   const idx = st.doc.pages.findIndex((p) => p.id === task.pageId);
   if (idx < 0) return; // undone or switched away: the late result no-ops
+  // Re-checked after the model call, which is when a user is most likely to
+  // have started typing: the call takes seconds, the decision must be current.
+  if (pageIsBeingEdited(task.pageId)) return;
   // Never overwrite a user edit: a slot whose live text diverged from what the
   // deck landed with was touched by the user while this call ran; drop the
   // refinement for that slot and keep theirs.

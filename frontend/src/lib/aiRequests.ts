@@ -90,3 +90,30 @@ export function takeStagedAiSources(now = Date.now()): AiSourceLike[] {
   stagedSources = null;
   return sources;
 }
+
+// ---------------------------------------------------------------------------
+// Run-in-flight signal
+// ---------------------------------------------------------------------------
+//
+// The assistant owns its own busy state, but two surfaces outside it need to
+// know: the editor, so leaving mid-generation warns instead of silently
+// dropping the run, and the tool rail, so a generation is visible while the
+// panel is hidden behind another tool.
+
+let aiBusy = false;
+const busyListeners = new Set<(busy: boolean) => void>();
+
+export function setAiBusy(busy: boolean): void {
+  if (aiBusy === busy) return;
+  aiBusy = busy;
+  for (const cb of busyListeners) cb(busy);
+}
+
+export function isAiBusy(): boolean {
+  return aiBusy;
+}
+
+export function subscribeAiBusy(cb: (busy: boolean) => void): () => void {
+  busyListeners.add(cb);
+  return () => busyListeners.delete(cb);
+}

@@ -63,7 +63,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { mirrorInRtl } from "@/lib/locale";
 import { tr, trOr } from "@/lib/i18n";
 import { cancelAiImages, enqueueAiImages, retryFailedAiImages, subscribeAiImageQueue } from "@/lib/aiImageQueue";
-import { peekPendingAiRequest, subscribeAiRequests, takeStagedAiSources, type AiRequest } from "@/lib/aiRequests";
+import { peekPendingAiRequest, setAiBusy, subscribeAiRequests, takeStagedAiSources, type AiRequest } from "@/lib/aiRequests";
 import { AiProviderSettings } from "@/components/ai/AiProviderSettings";
 import { builtinThemes } from "@/lib/themeCatalog";
 import { cancelAiFills, enqueueAiFills, retryFailedAiFills, subscribeAiFillQueue } from "@/lib/aiFillQueue";
@@ -1877,6 +1877,10 @@ interface ChatTurn {
   /** The page index the critique analyzed, so the post-fix re-critique checks
    *  the same page even after the user navigates away. */
   critiqueAt?: number;
+  /** Re-runs exactly what failed. A failure used to leave a bare bubble while
+   *  the composer had already been cleared, so the only way forward was to
+   *  retype the prompt. Session-local, like the critique findings. */
+  retry?: { kind: "send"; text: string } | { kind: "execute"; plan: PlanStep[]; reply: string };
   /** True while this turn is a PLAN awaiting the user's confirm (the pending
    *  banner / outline review). On confirm the execution report REPLACES this
    *  turn - one bubble per intent, never the same reply printed twice - and
@@ -1928,6 +1932,11 @@ function parseStringArray(reply: string, n: number): string[] | null {
 
 interface AssistantDeps {
   workspaceId: string;
+  /** Records that a model call inside this step failed and a deterministic
+   *  fallback produced the result instead. The step still succeeded - the
+   *  fallbacks are good - but a green chip alone told the user they got AI
+   *  work they did not get. */
+  onDegraded?: (what: string) => void;
   voiceClause: string;
   brandPalette: string[];
   brandFonts: { heading?: string; body?: string };
@@ -2607,6 +2616,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
         selection = parseModelJson(text);
       } catch {
         selection = null; // deterministic repair inside the builder
+        deps.onDegraded?.(tr("editor.degraded_chart_columns"));
       }
       const chart = buildChartFromSelection(matrix, selection);
       // Inline CSV binding carrying ONLY the plotted columns: Refresh re-maps
@@ -2640,6 +2650,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
         raw = parseModelJson(text);
       } catch {
         raw = null; // the builder derives a full theme from nothing
+        deps.onDegraded?.(tr("editor.degraded_theme"));
       }
       const r = raw as { colors?: Record<string, string>; fontHeading?: string; fontBody?: string } | null;
       const id = themeIdFor("theme-ai", [JSON.stringify(r?.colors ?? {}), String(r?.fontHeading ?? ""), String(r?.fontBody ?? "")]);
@@ -2793,6 +2804,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
             selection = repairLayoutSelection(parsed?.layouts, items, layouts);
           } catch {
             selection = repairLayoutSelection(null, items, layouts); // deterministic role preference
+            deps.onDegraded?.(tr("editor.degraded_layout_choice"));
           }
           const byId = new Map(layouts.map((l) => [l.id, l] as const));
           // Generation dials and the brand voice shape the FILL text too, not
@@ -3497,6 +3509,12 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     busyRef.current = busy;
     handleAiRequest.current = onAiRequest;
   });
+  // Publish the run so the editor can guard navigation and the tool rail can
+  // show that work is happening while this panel is hidden.
+  useEffect(() => {
+    setAiBusy(busy);
+    return () => setAiBusy(false);
+  }, [busy]);
   useEffect(() => {
     return subscribeAiRequests((req) => handleAiRequest.current(req));
   }, []);
@@ -3696,6 +3714,10 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       // the SAME store when the route switches design, so every mutation point
       // below re-checks that this is still the document the plan was made for.
       const stillOnDesign = () => !designId || useComments.getState().designId === designId;
+      // Fallbacks that fired inside otherwise-successful steps. Reported at
+      // the end rather than as toasts, so a deck that came out deterministic
+      // says so instead of showing an unqualified green chip.
+      const degraded: string[] = [];
       const stageFor = (action: string, i: number, total: number) =>
         total > 1 ? tr("editor.stage_step_of", { step: i + 1, total, action: actionLabel(action) }) : actionLabel(action);
       const wrongDesign = () => {
@@ -3703,7 +3725,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
         setTurns((t) => [...t, { role: "assistant", text: msg }]);
         toast.error(msg);
       };
-      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sources, reviewedOutline, dials, designId, citations, styleThemeId, signal: aborter.signal, onStage: setStage };
+      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sources, reviewedOutline, dials, designId, citations, styleThemeId, signal: aborter.signal, onStage: setStage, onDegraded: (w) => { if (!degraded.includes(w)) degraded.push(w); } };
       // F40 E14: a template base contributes its layout system + theme. The
       // adoption happens BEFORE the resolve pass so the layout-grounded path
       // naturally picks up the adopted layouts from the document.
@@ -3734,9 +3756,17 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
         // stop, so no work lands from a run they abandoned.
         if (aborter.signal.aborted) throw abortError();
         setStage(stageFor(plan[i].action, i, plan.length));
-        const r = await resolvePlanStep(plan[i], deps);
-        payloads[i] = r.payload;
-        skips[i] = r.error;
+        try {
+          const r = await resolvePlanStep(plan[i], deps);
+          payloads[i] = r.payload;
+          skips[i] = r.error;
+        } catch (e) {
+          // A throw used to abort the WHOLE plan, discarding the already-paid
+          // results of every step before it. Each step now fails on its own:
+          // the rest still apply, and this one reports why.
+          if (aborter.signal.aborted) throw e; // a stop is not a step failure
+          skips[i] = aiErr(e);
+        }
       }
       if (aborter.signal.aborted) throw abortError();
 
@@ -3793,17 +3823,23 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
         critique = issues.length ? issues : undefined;
         extra = issues.length ? ` ${tr("editor.critique_found_issues", { count: issues.length })}` : ` ${tr("editor.critique_page_clean")}`;
       }
-      const skipNote = skips.find(Boolean);
       const done = results.filter((r) => r.ok).length;
-      const text = (reply || tr("editor.done_2")) + extra + (done === 0 && skipNote ? ` (${skipNote})` : "");
+      // Every reason, not just the first: a five-step plan with three
+      // successes used to show struck-through chips with no explanation at
+      // all, because the note only appeared when NOTHING applied.
+      const notes = results
+        .map((r, i) => (!r.ok && skips[i] ? `${actionLabel(plan[i].action)}: ${skips[i]}` : null))
+        .filter((v): v is string => !!v);
+      const degradedNote = degraded.length ? `\n${tr("editor.without_the_model", { what: degraded.join(", ") })}` : "";
+      const text = (reply || tr("editor.done_2")) + extra + degradedNote + (notes.length ? `\n${notes.join("\n")}` : "");
       const finalTurn: ChatTurn = { role: "assistant", text, steps: results, critique, critiqueAt: critique ? useEditor.getState().activePage : undefined };
       // One bubble per intent: a confirmed proposal's bubble BECOMES the
       // execution report (its chips flip from planned to actual results)
       // instead of the same reply text appearing twice in the thread.
       setTurns((t) => (opts?.fromProposal ? [...t.filter((turn) => !turn.proposed), finalTurn] : [...t, finalTurn]));
       void persistTurn("assistant", text, plan);
-      if (done) toast.success(`Applied ${done} step${done === 1 ? "" : "s"} (one undo reverts the turn).`);
-      else if (!extra) toast.error(skipNote ? `Nothing applied: ${skipNote}.` : tr("editor.nothing_was_applied_try_selecting_an_element"));
+      if (done) toast.success(tr("editor.applied_n_steps", { count: done }));
+      else if (!extra) toast.error(notes[0] ? notes[0] : tr("editor.nothing_was_applied_try_selecting_an_element"));
     } catch (e) {
       if (aborter.signal.aborted) {
         setTurns((t) => [...demoteProposals(t), { role: "assistant", text: tr("editor.stopped") }]);
@@ -3813,7 +3849,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       // LATER unrelated report can't replace it, and land the failure IN the
       // thread (a toast alone disappears).
       const msg = aiErr(e);
-      setTurns((t) => [...(opts?.fromProposal ? demoteProposals(t) : t), { role: "assistant", text: msg }]);
+      setTurns((t) => [...(opts?.fromProposal ? demoteProposals(t) : t), { role: "assistant", text: msg, retry: { kind: "execute", plan, reply } }]);
       toast.error(msg);
     } finally {
       if (runAbort.current === aborter) runAbort.current = null;
@@ -3959,7 +3995,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       // The failure lands IN the thread: a toast alone disappears and leaves
       // the conversation looking ignored (a lone user bubble, no reply).
       const msg = aiErr(e);
-      setTurns((t) => [...t, { role: "assistant", text: msg }]);
+      setTurns((t) => [...t, { role: "assistant", text: msg, retry: { kind: "send", text: userText } }]);
       toast.error(msg);
     } finally {
       if (runAbort.current === aborter) runAbort.current = null;
@@ -4194,6 +4230,20 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                   )}
                   {/* C31: quick replies (the "just generate" interview escape),
                       only on the latest turn so stale chips never resend. */}
+                  {t.retry && i === turns.length - 1 && !busy && (
+                    <div className="mt-1.5">
+                      <button
+                        onClick={() => {
+                          const r = t.retry!;
+                          if (r.kind === "send") void send(r.text);
+                          else void execute(r.plan, r.reply);
+                        }}
+                        className="flex items-center gap-1 rounded-full border border-brand-200 bg-surface px-2.5 py-0.5 text-[11px] font-medium text-brand-ink hover:border-brand-400"
+                      >
+                        <RotateCcw size={11} /> {tr("editor.try_again")}
+                      </button>
+                    </div>
+                  )}
                   {t.quick && t.quick.length > 0 && i === turns.length - 1 && !busy && (
                     <div className="mt-1.5 flex flex-wrap gap-1">
                       {t.quick.map((q, j) => (
