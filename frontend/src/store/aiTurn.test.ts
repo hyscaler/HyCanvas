@@ -17,6 +17,51 @@ function seed() {
 
 beforeEach(seed);
 
+describe("async AI landings fold into the turn they continue", () => {
+  it("merges into the previous turn, so one undo reverts both", () => {
+    const st = useEditor.getState();
+    st.runAsTurn(() => st.addTextBox("the turn"));
+    expect(useEditor.getState().undoStack.length).toBe(1);
+    const turnId = useEditor.getState().currentTurnId();
+    const folded = st.extendTurn(turnId, () => st.addTextBox("landed later"));
+    expect(folded).toBe(true);
+    // Still ONE entry, and undoing it reverts the late landing too - the case
+    // that matters when the work lands on a page the turn did not create.
+    expect(useEditor.getState().undoStack.length).toBe(1);
+    const kids = () => (useEditor.getState().doc.pages[0] as unknown as { children: Node[] }).children.length;
+    expect(kids()).toBe(2);
+    st.undo();
+    expect(kids()).toBe(0);
+    st.redo();
+    expect(kids()).toBe(2);
+  });
+
+  it("does NOT rewrite history the user has moved on from", () => {
+    const st = useEditor.getState();
+    st.runAsTurn(() => st.addTextBox("the turn"));
+    const turnId = useEditor.getState().currentTurnId();
+    st.addTextBox("the user's own next edit");
+    expect(useEditor.getState().undoStack.length).toBe(2);
+    // The late result must NOT fold into an edit it had no part in: its own
+    // turn is no longer on top, so it applies without rewriting that history.
+    const folded = st.extendTurn(turnId, () => st.addTextBox("landed later"));
+    expect(folded).toBe(false);
+    expect(useEditor.getState().undoStack.length).toBe(2);
+  });
+
+  it("preserves the redo stack when folding", () => {
+    const st = useEditor.getState();
+    st.addTextBox("one");
+    st.runAsTurn(() => st.addTextBox("two"));
+    st.undo();
+    expect(useEditor.getState().redoStack.length).toBe(1);
+    st.extendTurn(useEditor.getState().currentTurnId(), () => st.addTextBox("landed later"));
+    // A continuation is not a new user action, so it must not discard the
+    // redo the user still has available.
+    expect(useEditor.getState().redoStack.length).toBe(1);
+  });
+});
+
 describe("async AI landings do not fragment the undo history", () => {
   it("records no undo entry and leaves redo intact", () => {
     const st = useEditor.getState();

@@ -3106,9 +3106,11 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       const regenBg = (st.doc.pages[pageIndex] as unknown as { background?: unknown }).background;
       st.fillPlaceholderContent(pageIndex, { texts: fill.texts, lists: fill.lists },
         { styles: slotStylesFor(regenLayouts.find((l) => l.id === layoutId), ctx?.brandFonts, regenBg) });
+      const regenTurnId = st.currentTurnId();
       enqueueAiImages(imageTasks.map((t) => ({
         workspaceId,
         designId: designId ?? "",
+        turnId: regenTurnId,
         pageId,
         placeholderId: t.placeholderId,
         prompt: t.prompt,
@@ -3233,6 +3235,7 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
         const base = append ? st.doc.pages.length : 0;
         const ids = append ? st.appendDeckPages(deckLike, size) : st.buildDeckFromOutline(deckLike, size);
         if (!ids.length) return false;
+        const turnId = st.currentTurnId();
         const imageTasks: Parameters<typeof enqueueAiImages>[0] = [];
         const availableIds = new Set(installed.map((l) => l.id));
         pages.forEach((p, i) => {
@@ -3250,6 +3253,7 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
             imageTasks.push({
               workspaceId,
               designId: designId ?? "",
+              turnId,
               pageId: ids[i],
               placeholderId,
               prompt: groundImagePrompt(prompt, { palette: brandPalette, aspect }),
@@ -3261,7 +3265,7 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
         });
         // Hero backgrounds for the impact pages (already grounded in resolve).
         for (const h of heroPlans) {
-          if (ids[h.pageIndex]) imageTasks.push({ workspaceId, designId: designId ?? "", pageId: ids[h.pageIndex], prompt: h.prompt, subject: h.subject, size: imageSize, generateAllowed });
+          if (ids[h.pageIndex]) imageTasks.push({ workspaceId, designId: designId ?? "", turnId, pageId: ids[h.pageIndex], prompt: h.prompt, subject: h.subject, size: imageSize, generateAllowed });
         }
         enqueueAiImages(imageTasks);
         // T18: per-slide model refinements stream in behind the instant deck,
@@ -3277,6 +3281,7 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
           return [{
             workspaceId,
             designId: designId ?? "",
+            turnId: st.currentTurnId(),
             pageId: ids[i],
             layout: installed.find((l) => l.id === layoutId)!,
             prompt: p.fillPrompt,
@@ -3915,11 +3920,36 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     }
   }
 
-  // Keep the latest message in view as the thread grows / while thinking.
+  // Keep the latest message in view as the thread grows / while thinking -
+  // unless the user has scrolled UP to read something, in which case yanking
+  // them back to the bottom is the opposite of helpful. A late async message
+  // (an image-failure report) used to do exactly that, minutes later.
   useEffect(() => {
     const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [turns, busy, pending]);
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    if (nearBottom) el.scrollTop = el.scrollHeight;
+  }, [turns, busy, pending, review, fillProgress]);
+
+  // Every control in this panel that acts and then unmounts itself - the quick
+  // replies, the magic-switch and follow-up chips, the retry chips, Confirm,
+  // Cancel, Generate, Regenerate - used to drop the keyboard user at the top of
+  // the document with no announcement. Rather than scatter .focus() calls
+  // through a dozen handlers, this restores focus to the composer whenever it
+  // was genuinely LOST (activeElement fell back to the body). It never steals
+  // focus from somewhere the user moved it to, and never acts while the panel
+  // is hidden behind another tool.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el || el.offsetParent === null) return;
+    const active = document.activeElement;
+    if (active && active !== document.body) return;
+    const id = requestAnimationFrame(() => {
+      const now = document.activeElement;
+      if (!now || now === document.body) inputRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [busy, pending, review, failedImages, failedFills, turns.length]);
 
   // Grow the composer with its content, like a chat app (capped).
   function autosize(el: HTMLTextAreaElement) {

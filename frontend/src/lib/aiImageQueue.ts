@@ -19,6 +19,9 @@ import { oc, resolveAssetUrl } from "@/lib/sdk";
 export interface AiImageTask {
   workspaceId: string;
   designId: string;
+  /** The undo turn this image continues, so it folds into that turn instead of
+   *  becoming its own history entry (or attaching to an unrelated later edit). */
+  turnId?: string | null;
   pageId: string;
   prompt: string;
   /** Short concrete subject ("Mountain lake at sunrise") used for the
@@ -201,7 +204,7 @@ async function resolveTask(task: AiImageTask): Promise<boolean> {
   // already performed. Pushing one made undo remove a single stray image
   // instead of the deck, and cleared the user's redo stack as a side effect.
   let applied = false;
-  st.runWithoutHistory(() => {
+  st.extendTurn(task.turnId ?? null, () => {
     applied = task.placeholderId
       ? st.applyGeneratedImageToPlaceholder(task.pageId, task.placeholderId, url, task.subject?.trim() ? task.subject : task.prompt)
       : st.applyGeneratedBackground(task.pageId, url, task.prompt);

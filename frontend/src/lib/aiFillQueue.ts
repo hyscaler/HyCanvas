@@ -34,6 +34,10 @@ export interface AiFillTask {
   /** The design these refinements belong to, so a Stop can drop the ones that
    *  have not started and progress can be reported per design. */
   designId: string;
+  /** The undo turn this refinement continues, so it folds into that turn
+   *  rather than becoming its own history entry (or attaching itself to an
+   *  unrelated edit the user made while it ran). */
+  turnId: string | null;
 }
 
 /** Queue progress for one design, so the panel can say "refining slide 3 of 9"
@@ -182,7 +186,7 @@ async function refine(task: AiFillTask): Promise<void> {
   // Continues the generation turn, so it records no undo entry of its own
   // (see runWithoutHistory): one undo should revert the deck, not peel off
   // one late slide refinement.
-  st.runWithoutHistory(() => {
+  st.extendTurn(task.turnId, () => {
     st.fillPlaceholderContent(idx, { texts: keepTexts, lists: keepLists }, { styles: task.styles as never });
   });
   if (task.onImagePrompts && Object.keys(fill.imagePrompts).length) {

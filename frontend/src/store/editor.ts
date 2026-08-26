@@ -186,6 +186,10 @@ export interface Viewport2D {
 interface UndoEntry {
   undo: () => void;
   redo: () => void;
+  /** Set on a collapsed turn so async work that CONTINUES that turn can find
+   *  it again (see extendTurn) and fold itself in rather than becoming its own
+   *  history entry - or, if the user has edited since, correctly decline to. */
+  turnId?: string;
 }
 
 type Tool = "select" | "pen" | "pencil" | "ink" | "laser" | "eraser" | "stamp" | "line" | "arrow" | "rect" | "ellipse" | "text" | "comment";
@@ -576,6 +580,22 @@ interface EditorState {
    *  cleared the redo stack. Undoing the generation removes the pages these
    *  landed on, so they need no history of their own. */
   runWithoutHistory(fn: () => void): void;
+  /** Apply work that CONTINUES the last turn, folding it into that turn's undo
+   *  entry when the turn is still the newest thing on the stack.
+   *
+   *  Async AI results (streamed slide copy, generated images) land seconds
+   *  after the turn they belong to. Giving them their own entry made undo peel
+   *  them off one at a time; giving them NO entry left them un-undoable when
+   *  they landed on a page the turn did not create, which is exactly the
+   *  regenerate-one-slide case. Merging fixes both, and falls back to applying
+   *  without history when the user has edited in the meantime, so a late result
+   *  can never rewrite history that has moved on.
+   *
+   *  Returns whether the work was folded into the previous turn. */
+  extendTurn(turnId: string | null, fn: () => void): boolean;
+  /** The id of the newest turn, captured when queueing async work that
+   *  continues it. Null when the newest entry is not a turn. */
+  currentTurnId(): string | null;
 
   /** F39 FR-27: record generation provenance (feature, prompt, model, seed) into
    *  doc.meta.aiProvenance for reproducibility/audit. Metadata only - not an undo
@@ -1452,6 +1472,12 @@ export const useEditor = create<EditorState>((set, get) => {
   // Depth counter, not a boolean: the async AI queues can overlap, and the
   // last one to finish must not re-enable history for the others.
   let suppressHistory = 0;
+  // Monotonic id for collapsed turns, so async continuations can name the turn
+  // they belong to instead of guessing from stack position.
+  let turnSeq = 0;
+  // The turn currently being performed. Async work is queued from INSIDE the
+  // turn, before its undo entry exists, so the id has to be readable during it.
+  let activeTurnId: string | null = null;
   const perform = (redo: () => void, undo: () => void) => {
     redo();
     if (suppressHistory > 0 || get().collabUndo) {
@@ -2125,14 +2151,65 @@ export const useEditor = create<EditorState>((set, get) => {
         suppressHistory--;
       }
     },
+    currentTurnId: () => {
+      if (activeTurnId) return activeTurnId;
+      const stack = get().undoStack;
+      return stack[stack.length - 1]?.turnId ?? null;
+    },
+    extendTurn: (turnId, fn) => {
+      const stack = get().undoStack;
+      const top = stack[stack.length - 1];
+      // Fold ONLY into the turn this work belongs to, and only while that turn
+      // is still the newest thing on the stack. Merging into whatever happens
+      // to be on top would attach a late model result to an unrelated edit the
+      // user made in the meantime.
+      const mergeable = !!turnId && !!top && top.turnId === turnId && !get().collabUndo;
+      if (!mergeable) {
+        // Not ours to extend: apply without recording. The alternative - its
+        // own entry - is what made undo peel off one stray image at a time.
+        get().runWithoutHistory(fn);
+        return false;
+      }
+      const redoBefore = get().redoStack;
+      const start = stack.length;
+      fn();
+      const after = get().undoStack;
+      const added = after.slice(start);
+      if (!added.length) return false;
+      if (after[start - 1] !== top) return false; // moved under us mid-apply
+      const merged: UndoEntry = {
+        turnId,
+        redo: () => { top.redo(); added.forEach((e) => e.redo()); },
+        undo: () => { [...added].reverse().forEach((e) => e.undo()); top.undo(); },
+      };
+      // Folding into the turn also restores the redo stack the nested perform
+      // calls cleared: continuing a turn is not a new user action.
+      set({ undoStack: [...after.slice(0, start - 1), merged], redoStack: redoBefore });
+      return true;
+    },
     runAsTurn: (fn) => {
       const start = get().undoStack.length;
-      fn();
+      turnSeq += 1;
+      const turnId = `turn-${turnSeq}`;
+      const outerTurnId = activeTurnId;
+      activeTurnId = turnId;
+      try {
+        fn();
+      } finally {
+        activeTurnId = outerTurnId;
+      }
       const stack = get().undoStack;
       const added = stack.slice(start);
-      if (added.length <= 1) return added.length;
+      if (added.length === 1) {
+        // A single-entry turn still needs an identity: async work continues it
+        // just as often as it continues a collapsed one.
+        set({ undoStack: [...stack.slice(0, start), { ...added[0], turnId }] });
+        return added.length;
+      }
+      if (added.length === 0) return 0;
       // Collapse: redo replays each entry forward; undo reverses them.
       const composite: UndoEntry = {
+        turnId,
         redo: () => added.forEach((e) => e.redo()),
         undo: () => [...added].reverse().forEach((e) => e.undo()),
       };
