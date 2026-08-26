@@ -1859,7 +1859,17 @@ interface ChatTurn {
   /** The page index the critique analyzed, so the post-fix re-critique checks
    *  the same page even after the user navigates away. */
   critiqueAt?: number;
+  /** True while this turn is a PLAN awaiting the user's confirm (the pending
+   *  banner / outline review). On confirm the execution report REPLACES this
+   *  turn - one bubble per intent, never the same reply printed twice - and
+   *  its chips render in the neutral planned style until then. */
+  proposed?: boolean;
 }
+
+/** A proposal the user moved past without confirming never ran: unflag it and
+ *  strike its chips so a later execution report can't replace the wrong turn. */
+const demoteProposals = (t: ChatTurn[]): ChatTurn[] =>
+  t.map((turn) => (turn.proposed ? { ...turn, proposed: false, steps: turn.steps?.map((s) => ({ ...s, ok: false })) } : turn));
 
 // A generative step's pre-resolved result (text/image/outline), produced by the
 // async resolve pass and consumed by the synchronous apply pass so the whole
@@ -3469,7 +3479,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     setReview(null);
   }
 
-  async function execute(plan: PlanStep[], reply: string, reviewedOutline?: DesignOutline, dials?: GenerationDials, citations?: SourceCitation[], styleThemeId?: string, styleTemplateId?: string) {
+  async function execute(plan: PlanStep[], reply: string, reviewedOutline?: DesignOutline, dials?: GenerationDials, citations?: SourceCitation[], styleThemeId?: string, styleTemplateId?: string, opts?: { fromProposal?: boolean }) {
     if (!workspaceId) return;
     setBusy(true);
     try {
@@ -3562,11 +3572,18 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       const skipNote = skips.find(Boolean);
       const done = results.filter((r) => r.ok).length;
       const text = (reply || tr("editor.done_2")) + extra + (done === 0 && skipNote ? ` (${skipNote})` : "");
-      setTurns((t) => [...t, { role: "assistant", text, steps: results, critique, critiqueAt: critique ? useEditor.getState().activePage : undefined }]);
+      const finalTurn: ChatTurn = { role: "assistant", text, steps: results, critique, critiqueAt: critique ? useEditor.getState().activePage : undefined };
+      // One bubble per intent: a confirmed proposal's bubble BECOMES the
+      // execution report (its chips flip from planned to actual results)
+      // instead of the same reply text appearing twice in the thread.
+      setTurns((t) => (opts?.fromProposal ? [...t.filter((turn) => !turn.proposed), finalTurn] : [...t, finalTurn]));
       void persistTurn("assistant", text, plan);
       if (done) toast.success(`Applied ${done} step${done === 1 ? "" : "s"} (one undo reverts the turn).`);
       else if (!extra) toast.error(skipNote ? `Nothing applied: ${skipNote}.` : tr("editor.nothing_was_applied_try_selecting_an_element"));
     } catch (e) {
+      // A failed confirm leaves no execution report: demote the proposal so a
+      // LATER unrelated report can't replace it.
+      if (opts?.fromProposal) setTurns(demoteProposals);
       toast.error(aiErr(e));
     } finally {
       setBusy(false);
@@ -3579,7 +3596,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     if (!textArg) setInput("");
     setPending(null);
     clearReview();
-    setTurns((t) => [...t, { role: "user", text: userText }]);
+    setTurns((t) => [...demoteProposals(t), { role: "user", text: userText }]);
     void persistTurn("user", userText);
     setBusy(true);
     try {
@@ -3659,7 +3676,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       if (heavy || (res.plan.length >= 2 && planMutates(res.plan, ASSISTANT_CATALOG))) {
         setPending({ plan: res.plan, reply: res.reply });
         if (heavy) void startOutlineReview(res.plan, {});
-        setTurns((t) => [...t, { role: "assistant", text: res.reply || tr("editor.heres_my_plan_confirm_to_apply"), steps: res.plan.map((s) => ({ action: s.action, ok: true })) }]);
+        setTurns((t) => [...t, { role: "assistant", text: res.reply || tr("editor.heres_my_plan_confirm_to_apply"), steps: res.plan.map((s) => ({ action: s.action, ok: true })), proposed: true }]);
         return;
       }
       await execute(res.plan, res.reply);
@@ -3720,10 +3737,12 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     }
   }
   const canSend = !!input.trim() && !busy && aiReady;
-  const hasApplied = turns.some((t) => t.steps?.some((s) => s.ok));
+  // A proposed turn's chips describe a PLAN, not applied work: it must not
+  // enable Undo or trigger the post-generation follow-ups.
+  const hasApplied = turns.some((t) => !t.proposed && t.steps?.some((s) => s.ok));
   // Show art-direction follow-ups right after a design was generated.
   const lastTurn = turns[turns.length - 1];
-  const lastWasDesign = lastTurn?.role === "assistant" && !!lastTurn.steps?.some((s) => (s.action === "generateDesign" || s.action === "magicSwitch") && s.ok);
+  const lastWasDesign = lastTurn?.role === "assistant" && !lastTurn.proposed && !!lastTurn.steps?.some((s) => (s.action === "generateDesign" || s.action === "magicSwitch") && s.ok);
   const AssistantAvatar = (
     <div className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-100 text-brand-ink"><Sparkles size={13} /></div>
   );
@@ -3779,7 +3798,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                   {t.steps && t.steps.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-1">
                       {t.steps.map((s, j) => (
-                        <span key={j} className={`rounded px-1.5 py-0.5 text-[10px] ${s.ok ? "bg-emerald-100 text-emerald-700" : "bg-neutral-200 text-neutral-500 line-through"}`}>{s.action}</span>
+                        <span key={j} className={`rounded px-1.5 py-0.5 text-[10px] ${t.proposed ? "bg-neutral-200 text-neutral-600" : s.ok ? "bg-emerald-100 text-emerald-700" : "bg-neutral-200 text-neutral-500 line-through"}`}>{s.action}</span>
                       ))}
                     </div>
                   )}
@@ -3843,8 +3862,8 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
               })()}
             </span>
             <span className="flex gap-1">
-              <button onClick={() => { const p = pending; setPending(null); clearReview(); void execute(p.plan, p.reply); }} className="rounded bg-amber-600 px-2 py-0.5 font-medium text-white hover:bg-amber-700">{review ? tr("editor.generate_now") : tr("editor.confirm")}</button>
-              <button onClick={() => { setPending(null); clearReview(); setTurns((t) => [...t, { role: "assistant", text: tr("editor.cancelled") }]); }} className="rounded border border-amber-300 px-2 py-0.5 hover:bg-amber-100">{tr("editor.cancel")}</button>
+              <button onClick={() => { const p = pending; setPending(null); clearReview(); void execute(p.plan, p.reply, undefined, undefined, undefined, undefined, undefined, { fromProposal: true }); }} className="rounded bg-amber-600 px-2 py-0.5 font-medium text-white hover:bg-amber-700">{review ? tr("editor.generate_now") : tr("editor.confirm")}</button>
+              <button onClick={() => { setPending(null); clearReview(); setTurns((t) => [...demoteProposals(t), { role: "assistant", text: tr("editor.cancelled") }]); }} className="rounded border border-amber-300 px-2 py-0.5 hover:bg-amber-100">{tr("editor.cancel")}</button>
             </span>
           </div>
           {review && (
@@ -3965,8 +3984,8 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
                         if (searched) setSources(searched.slice(0, maxSources));
                         clearReview();
                         const planToRun = searched ? p?.plan.filter((s) => s.action !== "webSearch") ?? [] : p?.plan ?? [];
-                        if (p && clean.pages.length) void execute(planToRun, p.reply, clean, dials, cites, review.themeId, review.templateId);
-                        else toast.error(tr("editor.the_outline_needs_at_least_one_page"));
+                        if (p && clean.pages.length) void execute(planToRun, p.reply, clean, dials, cites, review.themeId, review.templateId, { fromProposal: true });
+                        else { setTurns(demoteProposals); toast.error(tr("editor.the_outline_needs_at_least_one_page")); }
                       }}
                       className="ms-auto rounded bg-brand-600 px-2.5 py-0.5 font-medium text-white hover:bg-brand-700"
                     >
