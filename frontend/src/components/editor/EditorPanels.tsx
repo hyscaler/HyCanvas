@@ -1801,11 +1801,12 @@ async function imageUrlToPngDataUrl(url: string): Promise<string> {
  *  the API for the length of a slow one. */
 const jobPollBudgetMs = 4 * 60 * 1000;
 
-async function pollJob<R>(jobId: string, budgetMs = jobPollBudgetMs): Promise<R> {
+async function pollJob<R>(jobId: string, budgetMs = jobPollBudgetMs, signal?: AbortSignal): Promise<R> {
   const started = Date.now();
   let waitMs = 400;
   while (Date.now() - started < budgetMs) {
-    const job = await oc.getJob<R>(jobId);
+    if (signal?.aborted) throw abortError();
+    const job = await oc.getJob<R>(jobId, signal);
     if (job.status === "completed") {
       if (job.result === undefined) throw new CodedError("errors.generation_failed", "job completed without a result");
       return job.result;
@@ -2024,7 +2025,7 @@ function normalizeDesignType(v: unknown): DesignType {
 /** Resolve a design outline for generateDesign: prefer the server job (per-page
  *  copy polish), fall back to the sync outline endpoint; real provider/policy
  *  errors surface, a missing endpoint degrades to null. */
-async function fetchAssistantOutline(workspaceId: string, dt: DesignType, prompt: string, brandClause: string, pageCount?: number): Promise<DesignOutline | null> {
+async function fetchAssistantOutline(workspaceId: string, dt: DesignType, prompt: string, brandClause: string, pageCount?: number, run?: { signal?: AbortSignal; onStage?: (s: string) => void }): Promise<DesignOutline | null> {
   // T18: prefer the SSE stream. For deck/doc the outline event alone is enough
   // (the layout-grounded path writes its own per-slide content, so the polish
   // pass adds nothing) - resolving there skips the whole polish wait. Freeform
@@ -2036,6 +2037,12 @@ async function fetchAssistantOutline(workspaceId: string, dt: DesignType, prompt
       const aborter = new AbortController();
       let settled = false;
       let last: DesignOutline | null = null;
+      // The caller's Stop aborts the stream as well as the internal
+      // early-resolve optimization below. An ALREADY-aborted signal has no
+      // event left to fire, so it is honored up front.
+      if (run?.signal?.aborted) { aborter.abort(); reject(abortError()); return; }
+      run?.signal?.addEventListener("abort", () => aborter.abort(), { once: true });
+      run?.onStage?.(tr("editor.stage_writing_outline"));
       oc.aiGenerateDesignStream({ workspaceId, designType: dt, prompt, brandClause, pageCount }, (event, data) => {
         if (settled) return;
         if (event === "outline") {
@@ -2071,15 +2078,15 @@ async function fetchAssistantOutline(workspaceId: string, dt: DesignType, prompt
     // fall through to the job path (transport failures only)
   }
   try {
-    const { jobId } = await oc.aiGenerateDesign({ workspaceId, designType: dt, prompt, brandClause, pageCount });
-    return normalizeOutline(await pollJob<unknown>(jobId));
+    const { jobId } = await oc.aiGenerateDesign({ workspaceId, designType: dt, prompt, brandClause, pageCount }, run?.signal);
+    return normalizeOutline(await pollJob<unknown>(jobId, jobPollBudgetMs, run?.signal));
   } catch (e) {
     // pollJob throws plain Errors on a failed / empty / timed-out job - real
     // failures that must surface, not be silently re-run on the sync path. Only a
     // genuinely missing endpoint degrades to the synchronous outline fallback.
     if (!endpointUnavailable(e)) throw e;
     try {
-      return normalizeOutline(await oc.aiOutline({ workspaceId, designType: dt, prompt, brandClause, pageCount }));
+      return normalizeOutline(await oc.aiOutline({ workspaceId, designType: dt, prompt, brandClause, pageCount }, run?.signal));
     } catch (e2) {
       if (e2 instanceof ApiError && !endpointUnavailable(e2)) throw e2;
       return null;
@@ -2719,7 +2726,7 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
       if (reviewed) deps.reviewedOutline = undefined; // consumed once: later steps fetch their own
       const outline = reviewed
         ? structuredClone(reviewed)
-        : await fetchAssistantOutline(deps.workspaceId, dt, brief, brandClause, pageCount);
+        : await fetchAssistantOutline(deps.workspaceId, dt, brief, brandClause, pageCount, { signal: deps.signal, onStage: deps.onStage });
       if (!outline || !outline.pages.length) return { error: "couldn't plan that design" };
       // Defensive page cap (the server caps too, but the sync-fallback outline
       // and a non-compliant model can still over-produce): a poster is exactly
@@ -2766,13 +2773,14 @@ async function resolvePlanStep(step: PlanStep, deps: AssistantDeps): Promise<{ p
           const items = outline.pages;
           const ids = layouts.map((l) => l.id);
           let selection: string[];
+          deps.onStage?.(tr("editor.stage_choosing_layouts"));
           try {
             const { text } = await oc.aiTextStructured({
               workspaceId: deps.workspaceId,
               system: layoutSelectionSystemPrompt(items.length, layouts),
               prompt: items.map((p, i) => `${i + 1}. [${p.visualRole}] ${p.title}${p.points.length ? ` (${p.points.length} points)` : ""}`).join("\n"),
               schema: layoutSelectionSchema(items.length, ids),
-            });
+            }, deps.signal);
             const parsed = parseModelJson(text) as { layouts?: unknown } | null;
             selection = repairLayoutSelection(parsed?.layouts, items, layouts);
           } catch {
@@ -3404,6 +3412,7 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   const [failedFills, setFailedFills] = useState(0);
   const attachFileRef = useRef<HTMLInputElement | null>(null);
   const attachToggleRef = useRef<HTMLButtonElement | null>(null);
+  const reviewAbort = useRef<AbortController | null>(null);
   // Per-slide refinements land silently after the deck does; this makes that
   // phase visible instead of letting text change by itself.
   useEffect(() => {
@@ -3534,9 +3543,12 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
     const step = plan.find((s) => s.action === "generateDesign");
     if (!step || !workspaceId) return;
     const seq = ++reviewSeq.current;
+    reviewAbort.current?.abort();
+    const aborter = new AbortController();
+    reviewAbort.current = aborter;
     setReview((r) => ({ outline: null, loading: true, dials, themeId: r?.themeId, templateId: r?.templateId }));
     try {
-      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sources, dials, designId };
+      const deps: AssistantDeps = { workspaceId, voiceClause, brandPalette, brandFonts, imageCapable, editImageCapable, sources, dials, designId, signal: aborter.signal };
       // A planned webSearch grounds the OUTLINE, and in the review flow the
       // outline is fetched here (the reviewed outline then bypasses the
       // execute-time fetch entirely) - so the search must run FIRST or its
@@ -3563,6 +3575,10 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
   }
   function clearReview() {
     reviewSeq.current++; // invalidate any in-flight fetch
+    // ...and actually stop it: ignoring the reply still paid for the tokens
+    // and held the provider's rate budget.
+    reviewAbort.current?.abort();
+    reviewAbort.current = null;
     setReview(null);
   }
 
