@@ -259,35 +259,39 @@ export function AiProviderSettings({
           />
         </label>
 
-        {/* T16: optional web-search grounding. Hidden until its stored value
-            is known, so the control never shows "off" for something that is
-            on, and a save cannot clear what it never loaded. */}
-        {searchLoaded && (
-          <label className={labelCls}>
-            {tr("editor.web_search_optional")}
-            <select value={searchProvider} onChange={(e) => setSearchProvider(e.target.value)} className={fieldCls}>
-              <option value="">{tr("editor.search_off")}</option>
-              <option value="tavily">{tr("editor.search_provider_hosted")}</option>
-              <option value="searxng">{tr("editor.search_provider_metasearch")}</option>
-            </select>
-          </label>
-        )}
-
-        {searchLoaded && searchProvider === "searxng" && (
-          <label className={labelCls}>
-            {tr("editor.base_url")}
-            <input value={searchUrl} onChange={(e) => setSearchUrl(e.target.value)} placeholder={tr("editor.base_url_https_v1")} className={fieldCls} />
-          </label>
-        )}
-        {searchLoaded && searchProvider === "tavily" && (
-          <label className={labelCls}>
-            {tr("editor.api_key")}
-            <input type="password" value={searchKey} onChange={(e) => setSearchKey(e.target.value)} placeholder={tr("editor.api_key")} className={fieldCls} />
-          </label>
-        )}
       </div>
 
-      <div className={`flex items-center gap-3 ${wide ? "mt-1 justify-end" : "mt-0.5 flex-col"}`}>
+      {/* Web-search grounding is a SEPARATE provider with its own host and key.
+          Grouped and labelled as such: interleaved with the model fields, its
+          base URL read as a second, unexplained "Base URL" for the model. */}
+      {searchLoaded && (
+        <div className={wide ? "mt-1 border-t border-neutral-200 pt-3.5" : "mt-1 border-t border-neutral-200 pt-2.5"}>
+          <div className={wide ? "grid grid-cols-2 gap-x-4 gap-y-3.5" : "flex flex-col gap-2.5"}>
+            <label className={labelCls}>
+              {tr("editor.web_search_optional")}
+              <select value={searchProvider} onChange={(e) => setSearchProvider(e.target.value)} className={fieldCls}>
+                <option value="">{tr("editor.search_off")}</option>
+                <option value="tavily">{tr("editor.search_provider_hosted")}</option>
+                <option value="searxng">{tr("editor.search_provider_metasearch")}</option>
+              </select>
+            </label>
+            {searchProvider === "searxng" && (
+              <label className={labelCls}>
+                {tr("editor.search_base_url")}
+                <input value={searchUrl} onChange={(e) => setSearchUrl(e.target.value)} placeholder={tr("editor.base_url_https_v1")} className={fieldCls} />
+              </label>
+            )}
+            {searchProvider === "tavily" && (
+              <label className={labelCls}>
+                {tr("editor.search_api_key")}
+                <input type="password" value={searchKey} onChange={(e) => setSearchKey(e.target.value)} placeholder={tr("editor.api_key")} className={fieldCls} />
+              </label>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className={`flex items-center gap-3 ${wide ? "mt-2" : "mt-0.5 flex-col"}`}>
         {onCancel && (
           <button onClick={onCancel} className="text-xs text-neutral-500 hover:underline">{tr("editor.cancel")}</button>
         )}

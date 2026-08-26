@@ -2299,6 +2299,8 @@
   "editor.scrub_edit_history": "संपादन इतिहास स्क्रब करें",
   "editor.scrub_video": "वीडियो स्क्रब करें",
   "editor.scrubbing_history_read_only": "इतिहास स्क्रब हो रहा है (केवल पढ़ने योग्य)",
+  "editor.search_api_key": "सर्च API कुंजी",
+  "editor.search_base_url": "सर्च बेस URL",
   "editor.search_fonts": "फ़ॉन्ट खोजें",
   "editor.search_free_stock_photos": "निःशुल्क स्टॉक फ़ोटो खोजें",
   "editor.search_graphics": "ग्राफ़िक्स खोजें",

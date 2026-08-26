@@ -2299,6 +2299,8 @@
   "editor.scrub_edit_history": "Recorrer el historial de ediciones",
   "editor.scrub_video": "Desplazar el video",
   "editor.scrubbing_history_read_only": "Recorriendo el historial (solo lectura)",
+  "editor.search_api_key": "Clave de API de búsqueda",
+  "editor.search_base_url": "URL base de búsqueda",
   "editor.search_fonts": "Buscar fuentes",
   "editor.search_free_stock_photos": "Buscar fotos de stock gratis",
   "editor.search_graphics": "Buscar gráficos",

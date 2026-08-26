@@ -2299,6 +2299,8 @@
   "editor.scrub_edit_history": "Scrub edit history",
   "editor.scrub_video": "Scrub video",
   "editor.scrubbing_history_read_only": "Scrubbing history (read-only)",
+  "editor.search_api_key": "Search API key",
+  "editor.search_base_url": "Search base URL",
   "editor.search_fonts": "Search fonts",
   "editor.search_free_stock_photos": "Search free stock photos",
   "editor.search_graphics": "Search graphics",

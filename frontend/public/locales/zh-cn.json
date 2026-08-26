@@ -2299,6 +2299,8 @@
   "editor.scrub_edit_history": "拖动浏览编辑历史",
   "editor.scrub_video": "拖动视频进度",
   "editor.scrubbing_history_read_only": "浏览历史中(只读)",
+  "editor.search_api_key": "搜索 API 密钥",
+  "editor.search_base_url": "搜索基础 URL",
   "editor.search_fonts": "搜索字体",
   "editor.search_free_stock_photos": "搜索免费素材照片",
   "editor.search_graphics": "搜索图形",

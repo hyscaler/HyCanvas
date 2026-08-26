@@ -2299,6 +2299,8 @@
   "editor.scrub_edit_history": "Bearbeitungsverlauf durchsuchen",
   "editor.scrub_video": "Video durchsuchen",
   "editor.scrubbing_history_read_only": "Verlauf wird durchsucht (schreibgeschützt)",
+  "editor.search_api_key": "Such-API-Schlüssel",
+  "editor.search_base_url": "Such-Basis-URL",
   "editor.search_fonts": "Schriften suchen",
   "editor.search_free_stock_photos": "Kostenlose Stock-Fotos suchen",
   "editor.search_graphics": "Grafiken suchen",

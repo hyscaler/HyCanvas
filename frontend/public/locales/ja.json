@@ -2299,6 +2299,8 @@
   "editor.scrub_edit_history": "編集履歴をスクラブ",
   "editor.scrub_video": "動画をスクラブ",
   "editor.scrubbing_history_read_only": "履歴をスクラブ中(読み取り専用)",
+  "editor.search_api_key": "検索の API キー",
+  "editor.search_base_url": "検索のベース URL",
   "editor.search_fonts": "フォントを検索",
   "editor.search_free_stock_photos": "無料ストック写真を検索",
   "editor.search_graphics": "グラフィックを検索",
