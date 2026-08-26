@@ -85,7 +85,26 @@ func aiProblem(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, ai.ErrBadRequest):
 		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid AI request or no provider configured", "ai_not_configured")
 	case errors.Is(err, ai.ErrBadGateway):
-		problemWithCode(w, r, http.StatusBadGateway, "Bad Gateway", "the AI provider request failed", "ai_provider_failed")
+		// The upstream status (attached by the ai package, body never echoed)
+		// separates the self-fixable failures: a rejected key, an exhausted
+		// account, a mistyped model, a rate limit.
+		var up *ai.UpstreamError
+		status := 0
+		if errors.As(err, &up) {
+			status = up.Status
+		}
+		switch status {
+		case http.StatusUnauthorized, http.StatusForbidden:
+			problemWithCode(w, r, http.StatusBadGateway, "Bad Gateway", "the AI provider rejected the workspace API key; check the key in AI settings", "ai_provider_auth_failed")
+		case http.StatusPaymentRequired:
+			problemWithCode(w, r, http.StatusBadGateway, "Bad Gateway", "the AI provider account is out of credit; top up or switch providers in AI settings", "ai_provider_quota_exhausted")
+		case http.StatusNotFound:
+			problemWithCode(w, r, http.StatusBadGateway, "Bad Gateway", "the AI provider does not recognize the configured model or endpoint; check the model name and base URL in AI settings", "ai_provider_model_not_found")
+		case http.StatusTooManyRequests:
+			problemWithCode(w, r, http.StatusBadGateway, "Bad Gateway", "the AI provider rate-limited the request; wait a moment and try again", "ai_provider_rate_limited")
+		default:
+			problemWithCode(w, r, http.StatusBadGateway, "Bad Gateway", "the AI provider request failed", "ai_provider_failed")
+		}
 	default:
 		problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "request failed", "ai_failed")
 	}

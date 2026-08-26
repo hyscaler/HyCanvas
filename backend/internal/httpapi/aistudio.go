@@ -62,6 +62,19 @@ func jobFailMessage(err error) string {
 	case errors.Is(err, aistudio.ErrInvalidOutput):
 		return "the model did not return a valid result"
 	case errors.Is(err, ai.ErrBadGateway):
+		var up *ai.UpstreamError
+		if errors.As(err, &up) {
+			switch up.Status {
+			case http.StatusUnauthorized, http.StatusForbidden:
+				return "the AI provider rejected the workspace API key"
+			case http.StatusPaymentRequired:
+				return "the AI provider account is out of credit"
+			case http.StatusNotFound:
+				return "the AI provider does not recognize the configured model or endpoint"
+			case http.StatusTooManyRequests:
+				return "the AI provider rate-limited the request"
+			}
+		}
 		return "the AI provider returned an error"
 	case errors.Is(err, ai.ErrBadRequest):
 		return "the AI request was rejected"

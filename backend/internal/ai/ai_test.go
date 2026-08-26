@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -456,5 +457,28 @@ func TestCleanResultsCapsAndDropsEmpties(t *testing.T) {
 	}
 	if got := cleanResults([]SearchResult{{URL: "https://x"}}, 5); len(got) != 0 {
 		t.Fatalf("empty hit kept: %+v", got)
+	}
+}
+
+// badGateway must keep ErrBadGateway identity (every existing errors.Is gate
+// still fires) while attaching the upstream status for the API layer, and a
+// transport error (no HTTP status) must stay the bare sentinel.
+func TestBadGatewayCarriesUpstreamStatus(t *testing.T) {
+	cfg := CallConfig{Provider: "openai"}
+	wrapped := badGateway(cfg, &httpStatusError{status: 402})
+	if !errors.Is(wrapped, ErrBadGateway) {
+		t.Fatal("wrapped error must remain ErrBadGateway")
+	}
+	var up *UpstreamError
+	if !errors.As(wrapped, &up) || up.Status != 402 || up.Provider != "openai" {
+		t.Fatalf("upstream status must travel, got %+v", up)
+	}
+	plain := badGateway(cfg, io.ErrUnexpectedEOF)
+	if !errors.Is(plain, ErrBadGateway) {
+		t.Fatal("transport error must remain ErrBadGateway")
+	}
+	var none *UpstreamError
+	if errors.As(plain, &none) {
+		t.Fatal("transport error must not carry an upstream status")
 	}
 }

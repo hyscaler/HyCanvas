@@ -9,6 +9,8 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"regexp"
 	"strings"
@@ -28,6 +30,35 @@ const altTextInstruction = "Describe this image in a single concise sentence sui
 var (
 	ErrBadRequest = errors.New("bad request")
 	ErrBadGateway = errors.New("provider request failed")
+)
+
+// UpstreamError rides alongside ErrBadGateway (errors.Join) and carries the
+// provider's HTTP status, so the API layer can tell a rejected key (401/403)
+// from an exhausted account (402), an unknown model (404), or a rate limit
+// (429) - without ever echoing the provider's response body to the client.
+type UpstreamError struct {
+	Provider string
+	Status   int
+}
+
+func (e *UpstreamError) Error() string {
+	return fmt.Sprintf("%s upstream status %d", e.Provider, e.Status)
+}
+
+// badGateway classifies a failed provider call: the upstream status (never the
+// body) is logged and attached for the API layer's mapping. A transport error
+// (DNS, TLS, timeout) has no status and stays the bare ErrBadGateway.
+func badGateway(cfg CallConfig, err error) error {
+	var se *httpStatusError
+	if errors.As(err, &se) {
+		slog.Warn("ai provider call failed", "provider", cfg.Provider, "upstream_status", se.status)
+		return errors.Join(ErrBadGateway, &UpstreamError{Provider: string(cfg.Provider), Status: se.status})
+	}
+	slog.Warn("ai provider call failed", "provider", cfg.Provider, "err", err)
+	return ErrBadGateway
+}
+
+var (
 	// ErrImageUnsupported is returned when an image op is attempted on a provider
 	// the registry marks as text-only (DeepSeek, Anthropic, Google, Mistral,
 	// Groq, OpenRouter). Distinct from ErrBadRequest so the API can tell the user
@@ -295,7 +326,7 @@ func (s *Service) Text(ctx context.Context, workspaceID, prompt, system string) 
 	}
 	out, err := s.generateText(cfg, prompt, system)
 	if err != nil {
-		return "", ErrBadGateway
+		return "", badGateway(cfg, err)
 	}
 	s.meter(ctx, workspaceID, countTokens(prompt)+countTokens(system)+countTokens(out))
 	return out, nil
@@ -319,7 +350,7 @@ func (s *Service) TextStructured(ctx context.Context, workspaceID, prompt, syste
 	}
 	out, err := s.generateStructuredText(cfg, prompt, system, schemaJSON)
 	if err != nil {
-		return "", ErrBadGateway
+		return "", badGateway(cfg, err)
 	}
 	s.meter(ctx, workspaceID, countTokens(prompt)+countTokens(system)+countTokens(out))
 	return out, nil
@@ -361,7 +392,7 @@ func (s *Service) Image(ctx context.Context, workspaceID, prompt, size string) (
 	}
 	out, err := s.generateImage(cfg, prompt, size)
 	if err != nil {
-		return "", ErrBadGateway
+		return "", badGateway(cfg, err)
 	}
 	s.meter(ctx, workspaceID, countTokens(prompt)+imageTokenCost)
 	return out, nil
@@ -396,7 +427,7 @@ func (s *Service) DescribeImage(ctx context.Context, workspaceID, imageBase64, i
 	}
 	out, err := s.describeImageCall(cfg, DescribeImageInput{ImageBase64: payload, MimeType: mime, Instruction: instr})
 	if err != nil {
-		return "", ErrBadGateway
+		return "", badGateway(cfg, err)
 	}
 	s.meter(ctx, workspaceID, countTokens(instr)+countTokens(out))
 	return out, nil
@@ -421,7 +452,7 @@ func (s *Service) EditImage(ctx context.Context, workspaceID, imageBase64, promp
 	}
 	out, err := s.editImageCall(cfg, EditImageInput{ImageBase64: strip(imageBase64), Prompt: prompt, MaskBase64: mask, Size: size})
 	if err != nil {
-		return "", ErrBadGateway
+		return "", badGateway(cfg, err)
 	}
 	s.meter(ctx, workspaceID, countTokens(prompt)+imageTokenCost)
 	return out, nil

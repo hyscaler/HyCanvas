@@ -4722,7 +4722,21 @@ export function AiPanel({ workspaceId }: { workspaceId: string | null }) {
               <span>{tr("editor.connect_a_provider_to_unlock")} <span className="font-medium">{tr("editor.magic_design")}</span> (text to a finished page) and image generation. The tools below work without AI.</span>
             </p>
             <div className="flex flex-col gap-2">
-              <select value={provider} onChange={(e) => setProvider(e.target.value)} className="rounded border border-neutral-300 px-2 py-1.5 text-sm">
+              <select
+                value={provider}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setProvider(next);
+                  // Model names belong to a provider: a stale "deepseek-chat"
+                  // must never ride into an OpenAI save (the provider would
+                  // 404 on every call). Switching back to the stored provider
+                  // restores its stored models.
+                  const stored = next === config?.provider;
+                  setModel(stored ? config?.model ?? "" : "");
+                  setImageModel(stored ? config?.imageModel ?? "" : "");
+                }}
+                className="rounded border border-neutral-300 px-2 py-1.5 text-sm"
+              >
                 {presets.map((p) => (
                   <option key={p.id} value={p.id}>{p.label}</option>
                 ))}
