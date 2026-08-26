@@ -291,7 +291,10 @@ export function AiProviderSettings({
         </div>
       )}
 
-      <div className={`flex items-center gap-3 ${wide ? "mt-2" : "mt-0.5 flex-col"}`}>
+      {/* End-aligned: the form now spans the section, so the action sits at
+          the page's end edge, level with the last column. justify-end follows
+          the writing direction, so it mirrors correctly in RTL. */}
+      <div className={`flex items-center gap-3 ${wide ? "mt-2 justify-end" : "mt-0.5 flex-col"}`}>
         {onCancel && (
           <button onClick={onCancel} className="text-xs text-neutral-500 hover:underline">{tr("editor.cancel")}</button>
         )}
