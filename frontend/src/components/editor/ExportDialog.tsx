@@ -18,7 +18,6 @@ import {
   poseDesignAt,
   pageAnimationDuration,
   planDeckFrames,
-  renderTransition,
   renderTransitionPair,
   measureFnFor,
   morphPlan,

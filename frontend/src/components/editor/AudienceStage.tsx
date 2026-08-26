@@ -12,7 +12,6 @@ import {
   createScene,
   renderScene,
   poseDesignAt,
-  renderTransition,
   renderTransitionPair,
   transitionPairDurationMs,
   pairEnterTransition,

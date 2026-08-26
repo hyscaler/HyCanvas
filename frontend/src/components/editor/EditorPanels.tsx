@@ -3352,7 +3352,6 @@ function AssistantPanel({ workspaceId, aiReady, voiceClause, brandPalette, brand
       }
     });
     // setTurns is stable (useState setter); re-subscribe only per design.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [designId]);
   const [busy, setBusy] = useState(false);
   // Attached source content for create-from-document/URL/file (FR-23).

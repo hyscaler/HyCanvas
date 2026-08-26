@@ -1111,7 +1111,6 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
 
   // Build the slide clone for the current page; rebuilt on page/edit change. The
   // store mutates `doc` in place, so `rev` (not `doc`'s identity) signals edits.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const slide = useMemo(() => takePrefetchedSlide(doc, `${rev}:${idx}`) ?? buildSlide(doc, idx), [doc, idx, rev]);
   useEffect(() => {
     const nextIdx = nextVisibleIndex(pages as SlideLike[], idx);
@@ -1478,7 +1477,7 @@ export function PresentMode({ onClose }: { onClose: () => void }) {
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
-  }, [slide, layout, drawSlide, reducedMotion]);
+  }, [slide, layout, drawSlide, reducedMotion, idx, pages]);
 
   // Presenter overlay paint loop (FR-8). A SEPARATE rAF + canvas above the slide,
   // so laser/spotlight/pen never touch or stall the slide animation loop. Each
