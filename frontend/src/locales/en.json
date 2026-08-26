@@ -689,7 +689,6 @@
   "editor.bar_stacked": "Bar (stacked)",
   "editor.base_url": "Base URL",
   "editor.base_url_https_v1": "Base URL (https://…/v1)",
-  "editor.base_url_optional_default": "Base URL (optional, default {url})",
   "editor.become_facilitator_run_the_session": "Become facilitator (run the session)",
   "editor.before": "Before",
   "editor.best_for_documents_and_printing": "Best for documents and printing",

@@ -26,6 +26,7 @@ export function AiProviderSettings({
   canEdit,
   onSaved,
   onCancel,
+  layout = "stack",
 }: {
   workspaceId: string | null;
   config: AiConfigView | null;
@@ -36,6 +37,10 @@ export function AiProviderSettings({
   onSaved: (config: AiConfigView) => void;
   /** Shown as a Cancel affordance when there is something to go back to. */
   onCancel?: () => void;
+  /** "stack" for the editor's narrow tool panel, "wide" for a settings page.
+   *  A viewport breakpoint cannot tell those apart: the panel is about 288px
+   *  wide even on a large screen. */
+  layout?: "stack" | "wide";
 }) {
   const toast = useToast();
   const [provider, setProvider] = useState(config?.provider ?? "openai");
@@ -161,73 +166,136 @@ export function AiProviderSettings({
     }
   }
 
+  const wide = layout === "wide";
+  const fieldCls = "w-full rounded border border-neutral-300 bg-surface px-2 py-1.5 text-sm text-neutral-800 outline-none transition focus:border-brand-400";
+
   return (
-    <div className="flex flex-col gap-2">
-      <select
-        value={provider}
-        aria-label={tr("editor.provider")}
-        onChange={(e) => {
-          const next = e.target.value;
-          setProvider(next);
-          // Model names belong to a provider: a stale "deepseek-chat" must
-          // never ride into an OpenAI save (the provider would 404 on every
-          // call). Switching back to the stored provider restores its models.
-          const stored = next === config?.provider;
-          setModel(stored ? config?.model ?? "" : "");
-          setImageModel(stored ? config?.imageModel ?? "" : "");
-          // Same for the host: the server drops a stored URL on a provider
-          // change, and the visible field must not put the old host back.
-          setBaseUrl(stored ? config?.baseUrl ?? "" : "");
-        }}
-        className="rounded border border-neutral-300 px-2 py-1.5 text-sm"
-      >
-        {presets.map((p) => (
-          <option key={p.id} value={p.id}>{p.label}</option>
-        ))}
-        {/* A stored provider missing from the catalog (legacy row) stays selectable. */}
-        {!selPreset && <option value={provider}>{provider}</option>}
-      </select>
-      <input value={model} onChange={(e) => setModel(e.target.value)} placeholder={modelHint ? `Model (optional, default ${modelHint})` : tr("editor.model_optional")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
-      {(selPreset?.capabilities.image ?? true) && (
-        <input value={imageModel} onChange={(e) => setImageModel(e.target.value)} placeholder={selPreset?.defaultImageModel ? `Image model (optional, default ${selPreset.defaultImageModel})` : tr("editor.image_model_optional")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
-      )}
-      {/* Always editable: several presets front more than one host (Moonshot's
-          international and mainland platforms issue separate keys, and
-          proxies are common), and a hidden field meant a key for the other
-          host could only ever 401 with no way to correct it. */}
-      <input
-        value={baseUrl}
-        onChange={(e) => setBaseUrl(e.target.value)}
-        placeholder={!requiresBaseUrl && selPreset?.baseUrl ? tr("editor.base_url_optional_default", { url: selPreset.baseUrl }) : tr("editor.base_url_https_v1")}
-        aria-label={tr("editor.base_url")}
-        className="rounded border border-neutral-300 px-2 py-1.5 text-sm"
-      />
-      <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={config?.hasKey ? tr("editor.api_key_leave_blank_to_keep") : tr("editor.api_key")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
-      {/* T16: optional web-search grounding provider. Hidden until its stored
-          value is known, so the controls never show "off" for something that
-          is on. */}
-      {searchLoaded && (
-      <label className="mt-1 flex flex-col gap-1 text-[11px] text-neutral-500">
-        {tr("editor.web_search_optional")}
-        <select value={searchProvider} onChange={(e) => setSearchProvider(e.target.value)} className="rounded border border-neutral-300 px-2 py-1.5 text-sm text-neutral-800">
-          <option value="">{tr("editor.search_off")}</option>
-          <option value="tavily">{tr("editor.search_provider_hosted")}</option>
-          <option value="searxng">{tr("editor.search_provider_metasearch")}</option>
-        </select>
-      </label>
-      )}
-      {searchLoaded && searchProvider === "searxng" && (
-        <input value={searchUrl} onChange={(e) => setSearchUrl(e.target.value)} placeholder={tr("editor.base_url_https_v1")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
-      )}
-      {searchLoaded && searchProvider === "tavily" && (
-        <input type="password" value={searchKey} onChange={(e) => setSearchKey(e.target.value)} placeholder={tr("editor.api_key")} className="rounded border border-neutral-300 px-2 py-1.5 text-sm" />
-      )}
-      <Button block onClick={() => void save()} disabled={!workspaceId || saving}>
-        {saving ? tr("editor.saving") : tr("editor.save_provider")}
-      </Button>
-      {onCancel && (
-        <button onClick={onCancel} className="text-xs text-neutral-500 hover:underline">{tr("editor.cancel")}</button>
-      )}
+    <div className="flex flex-col gap-2.5">
+      {/* Every field carries a VISIBLE label, not just a placeholder: a
+          placeholder vanishes as soon as the field has a value, which left a
+          saved model name sitting in an unnamed box - confusing to read and a
+          3.3.2 failure. */}
+      <div className={wide ? "grid grid-cols-2 gap-2.5" : "flex flex-col gap-2.5"}>
+        <label className="flex min-w-0 flex-col gap-1 text-[11px] font-medium text-neutral-500">
+          {tr("editor.provider")}
+          <select
+            value={provider}
+            onChange={(e) => {
+              const next = e.target.value;
+              setProvider(next);
+              // Model names belong to a provider: a stale "deepseek-chat" must
+              // never ride into an OpenAI save (the provider would 404 on
+              // every call). Switching back restores that provider's models.
+              const stored = next === config?.provider;
+              setModel(stored ? config?.model ?? "" : "");
+              setImageModel(stored ? config?.imageModel ?? "" : "");
+              // Same for the host: the server drops a stored URL on a provider
+              // change, and the visible field must not put the old host back.
+              setBaseUrl(stored ? config?.baseUrl ?? "" : "");
+            }}
+            className={fieldCls}
+          >
+            {presets.map((p) => (
+              <option key={p.id} value={p.id}>{p.label}</option>
+            ))}
+            {/* A stored provider missing from the catalog (legacy row) stays selectable. */}
+            {!selPreset && <option value={provider}>{provider}</option>}
+          </select>
+        </label>
+
+        <label className="flex min-w-0 flex-col gap-1 text-[11px] font-medium text-neutral-500">
+          {tr("editor.model_optional")}
+          <input
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            placeholder={modelHint || tr("editor.model_optional")}
+            className={fieldCls}
+          />
+        </label>
+
+        {(selPreset?.capabilities.image ?? true) && (
+          <label className="flex min-w-0 flex-col gap-1 text-[11px] font-medium text-neutral-500">
+            {tr("editor.image_model_optional")}
+            <input
+              value={imageModel}
+              onChange={(e) => setImageModel(e.target.value)}
+              placeholder={selPreset?.defaultImageModel || tr("editor.image_model_optional")}
+              className={fieldCls}
+            />
+          </label>
+        )}
+
+        {/* Always editable: several presets front more than one host
+            (Moonshot's international and mainland platforms issue separate
+            keys, and proxies are common), and a hidden field meant a key for
+            the other host could only ever 401 with no way to correct it. */}
+        <label className="flex min-w-0 flex-col gap-1 text-[11px] font-medium text-neutral-500">
+          {tr("editor.base_url")}
+          <input
+            value={baseUrl}
+            onChange={(e) => setBaseUrl(e.target.value)}
+            placeholder={selPreset?.baseUrl || tr("editor.base_url_https_v1")}
+            className={fieldCls}
+          />
+        </label>
+
+        <label className="flex min-w-0 flex-col gap-1 text-[11px] font-medium text-neutral-500">
+          {tr("editor.api_key")}
+          <input
+            type="password"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder={config?.hasKey ? tr("editor.api_key_leave_blank_to_keep") : tr("editor.api_key")}
+            className={fieldCls}
+          />
+        </label>
+
+        {/* T16: optional web-search grounding. Hidden until its stored value
+            is known, so the control never shows "off" for something that is
+            on, and a save cannot clear what it never loaded. */}
+        {searchLoaded && (
+          <label className="flex min-w-0 flex-col gap-1 text-[11px] font-medium text-neutral-500">
+            {tr("editor.web_search_optional")}
+            <select value={searchProvider} onChange={(e) => setSearchProvider(e.target.value)} className={fieldCls}>
+              <option value="">{tr("editor.search_off")}</option>
+              <option value="tavily">{tr("editor.search_provider_hosted")}</option>
+              <option value="searxng">{tr("editor.search_provider_metasearch")}</option>
+            </select>
+          </label>
+        )}
+
+        {searchLoaded && searchProvider === "searxng" && (
+          <label className="flex min-w-0 flex-col gap-1 text-[11px] font-medium text-neutral-500">
+            {tr("editor.base_url")}
+            <input value={searchUrl} onChange={(e) => setSearchUrl(e.target.value)} placeholder={tr("editor.base_url_https_v1")} className={fieldCls} />
+          </label>
+        )}
+        {searchLoaded && searchProvider === "tavily" && (
+          <label className="flex min-w-0 flex-col gap-1 text-[11px] font-medium text-neutral-500">
+            {tr("editor.api_key")}
+            <input type="password" value={searchKey} onChange={(e) => setSearchKey(e.target.value)} placeholder={tr("editor.api_key")} className={fieldCls} />
+          </label>
+        )}
+      </div>
+
+      <div className={`flex items-center gap-3 ${wide ? "justify-end" : "flex-col"}`}>
+        {onCancel && (
+          <button onClick={onCancel} className="text-xs text-neutral-500 hover:underline">{tr("editor.cancel")}</button>
+        )}
+        {wide ? (
+          <button
+            onClick={() => void save()}
+            disabled={!workspaceId || saving}
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:opacity-40"
+          >
+            {saving ? tr("editor.saving") : tr("editor.save_provider")}
+          </button>
+        ) : (
+          <Button block onClick={() => void save()} disabled={!workspaceId || saving}>
+            {saving ? tr("editor.saving") : tr("editor.save_provider")}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

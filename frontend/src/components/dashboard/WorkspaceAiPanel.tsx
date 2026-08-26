@@ -66,7 +66,7 @@ export function WorkspaceAiPanel({ workspaceId, canEdit }: { workspaceId: string
       </h2>
       <p className="mb-3 max-w-xl text-xs text-neutral-500">{tr("dashboard.ai_workspace_hint")}</p>
 
-      <div className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-surface p-3 sm:max-w-md">
+      <div className="flex max-w-3xl flex-col gap-3 rounded-xl border border-neutral-200 bg-surface p-4">
         <div className="flex items-center gap-2 text-xs">
           <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${connected ? "bg-emerald-500" : "bg-neutral-300"}`} />
           <span className="text-neutral-600">
@@ -92,6 +92,7 @@ export function WorkspaceAiPanel({ workspaceId, canEdit }: { workspaceId: string
             config={config}
             presets={presets}
             canEdit={canEdit}
+            layout="wide"
             onSaved={(c) => { setConfig(c); loadUsage(); }}
           />
         )}

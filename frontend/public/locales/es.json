@@ -689,7 +689,6 @@
   "editor.bar_stacked": "Barras (apiladas)",
   "editor.base_url": "URL base",
   "editor.base_url_https_v1": "URL base (https://…/v1)",
-  "editor.base_url_optional_default": "URL base (opcional, por defecto {url})",
   "editor.become_facilitator_run_the_session": "Convertirse en facilitador (dirigir la sesión)",
   "editor.before": "Antes",
   "editor.best_for_documents_and_printing": "Ideal para documentos e impresión",
