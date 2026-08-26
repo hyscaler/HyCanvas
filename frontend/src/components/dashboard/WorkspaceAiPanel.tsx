@@ -92,7 +92,7 @@ export function WorkspaceAiPanel({ workspaceId, canEdit }: { workspaceId: string
       </div>
 
       {!loading && (
-        <div className="max-w-3xl">
+        <div>
           <AiProviderSettings
             workspaceId={workspaceId}
             config={config}

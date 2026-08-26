@@ -184,7 +184,7 @@ export function AiProviderSettings({
           placeholder vanishes as soon as the field has a value, which left a
           saved model name sitting in an unnamed box - confusing to read and a
           3.3.2 failure. */}
-      <div className={wide ? "grid grid-cols-2 gap-x-4 gap-y-3.5" : "flex flex-col gap-2.5"}>
+      <div className={wide ? "grid grid-cols-1 gap-x-5 gap-y-3.5 sm:grid-cols-2 xl:grid-cols-3" : "flex flex-col gap-2.5"}>
         <label className={labelCls}>
           {tr("editor.provider")}
           <select
@@ -266,7 +266,7 @@ export function AiProviderSettings({
           base URL read as a second, unexplained "Base URL" for the model. */}
       {searchLoaded && (
         <div className={wide ? "mt-1 border-t border-neutral-200 pt-3.5" : "mt-1 border-t border-neutral-200 pt-2.5"}>
-          <div className={wide ? "grid grid-cols-2 gap-x-4 gap-y-3.5" : "flex flex-col gap-2.5"}>
+          <div className={wide ? "grid grid-cols-1 gap-x-5 gap-y-3.5 sm:grid-cols-2 xl:grid-cols-3" : "flex flex-col gap-2.5"}>
             <label className={labelCls}>
               {tr("editor.web_search_optional")}
               <select value={searchProvider} onChange={(e) => setSearchProvider(e.target.value)} className={fieldCls}>
