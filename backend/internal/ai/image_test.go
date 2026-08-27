@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -150,6 +151,135 @@ func TestAIImageProvider_DB(t *testing.T) {
 	}
 	if textHits != textBefore+1 || imageHits != imageBefore {
 		t.Fatalf("cleared image config should fall back to the main provider (text %d->%d, image %d->%d)", textBefore, textHits, imageBefore, imageHits)
+	}
+}
+
+// The credentials probe has three outcomes and only one of them is a failure.
+// Getting that wrong in either direction is expensive: calling an unverifiable
+// provider broken sends an admin to replace a good key, and calling a rejected
+// key "unverified" defeats the point of the check.
+func TestVerifyImageConfig_DB(t *testing.T) {
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		t.Skip("DATABASE_URL not set; skipping DB integration test")
+	}
+	ctx := context.Background()
+	conn, err := pgx.Connect(ctx, stripSchema(dsn))
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	defer conn.Close(ctx)
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin: %v", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	acct := accounts.NewService(tx, "test-jwt-secret")
+	_, ws, _, err := acct.Signup(ctx, "ai-verify+"+uuid.NewString()+"@example.com", "a-strong-password", "Owner")
+	if err != nil {
+		t.Fatalf("signup: %v", err)
+	}
+
+	// The stub answers /models with whatever status the test is exercising.
+	status := http.StatusOK
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasSuffix(r.URL.Path, "/models") {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		if status != http.StatusOK {
+			w.WriteHeader(status)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": []any{}})
+	}))
+	defer srv.Close()
+
+	svc := NewService(tx, "test-ai-secret", true)
+
+	// Nothing configured: there is nothing of its own to check.
+	if _, err := svc.VerifyImageConfig(ctx, ws.ID); err != ErrBadRequest {
+		t.Fatalf("verify without an image provider should be BadRequest, got %v", err)
+	}
+
+	if _, err := svc.SetImageConfig(ctx, ws.ID, ImageConfigInput{
+		Provider: "custom", BaseURL: strp(srv.URL), APIKey: "sk-image",
+	}); err != nil {
+		t.Fatalf("SetImageConfig: %v", err)
+	}
+
+	// Accepted.
+	check, err := svc.VerifyImageConfig(ctx, ws.ID)
+	if err != nil || !check.Verified {
+		t.Fatalf("expected verified, got %+v err=%v", check, err)
+	}
+
+	// Rejected: definitive, and it must surface as a provider auth failure so
+	// the admin is told to check the key rather than shrugged at.
+	status = http.StatusUnauthorized
+	if _, err := svc.VerifyImageConfig(ctx, ws.ID); !errors.Is(err, ErrBadGateway) {
+		t.Fatalf("a rejected key should be ErrBadGateway, got %v", err)
+	} else {
+		var up *UpstreamError
+		if !errors.As(err, &up) || up.Status != http.StatusUnauthorized {
+			t.Fatalf("expected upstream 401 attached, got %v", err)
+		}
+	}
+
+	// Inconclusive: an endpoint with no models route is NOT broken.
+	status = http.StatusNotFound
+	check, err = svc.VerifyImageConfig(ctx, ws.ID)
+	if err != nil {
+		t.Fatalf("an endpoint without a models route must not error: %v", err)
+	}
+	if check.Verified {
+		t.Fatal("a 404 proves nothing and must not report verified")
+	}
+
+	// The probe must never spend the workspace's tokens: it is not a generation.
+	if usage, err := svc.GetUsage(ctx, ws.ID); err != nil || usage.TokensThisMonth != 0 {
+		t.Fatalf("the credentials probe must not meter usage: %+v err=%v", usage, err)
+	}
+}
+
+// The SSRF gate judges the URL an admin configured; it must also judge where
+// that URL redirects, or the gate is one hop deep.
+//
+// The redirect target here is a LOCAL server that answers 200. That matters:
+// an unreachable target (a link-local metadata address, say) makes this pass
+// whether or not the gate exists, because the request merely times out. The
+// only honest test of a gate is a hop that would otherwise succeed.
+func TestRedirectsAreGatedToo(t *testing.T) {
+	var landed bool
+	internal := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		landed = true
+		_ = json.NewEncoder(w).Encode(map[string]any{"secret": "metadata"})
+	}))
+	defer internal.Close()
+
+	var redirected bool
+	hop := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		redirected = true
+		http.Redirect(w, r, internal.URL, http.StatusFound)
+	}))
+	defer hop.Close()
+
+	// allowLocalHTTP=false, so http://127.0.0.1 fails the gate on the way in and
+	// must fail it again on the way through.
+	svc := NewService(nil, "test-ai-secret", false)
+	req, err := http.NewRequest(http.MethodGet, hop.URL, nil)
+	if err != nil {
+		t.Fatalf("request: %v", err)
+	}
+	if _, err := svc.do(req); err == nil {
+		t.Fatal("a redirect to a gate-failing host must not be followed")
+	}
+	if !redirected {
+		t.Fatal("the test did not exercise the redirect at all")
+	}
+	if landed {
+		t.Fatal("the redirect was followed to a host the gate rejects")
 	}
 }
 

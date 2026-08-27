@@ -377,7 +377,31 @@ func isNegotiable4xx(err error) bool {
 	return se.status >= 400 && se.status < 500
 }
 
-func newHTTPClient() *http.Client { return &http.Client{Timeout: 60 * time.Second} }
+// newHTTPClient builds the outbound client for every provider call.
+//
+// CheckRedirect re-applies the SSRF gate to each hop. isSafeBaseURL judges the
+// URL an admin CONFIGURED, and nothing was judging where that URL sent us next:
+// an endpoint answering 302 to http://169.254.169.254/ was followed, which is
+// precisely the request the gate exists to prevent. Go already strips the
+// Authorization header across hosts, so the key did not travel, but the request
+// still left the box and its body still came back to be parsed.
+//
+// A workspace admin is not necessarily the person who runs the instance, so
+// this is a privilege boundary and not merely a footgun.
+func newHTTPClient(allowLocalHTTP bool) *http.Client {
+	return &http.Client{
+		Timeout: 60 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 5 {
+				return errors.New("too many redirects")
+			}
+			if !isSafeBaseURL(req.URL.String(), allowLocalHTTP) {
+				return errors.New("redirect to a disallowed host")
+			}
+			return nil
+		},
+	}
+}
 
 func (s *Service) postJSON(req httpRequest) ([]byte, error) {
 	raw, _ := json.Marshal(req.body)

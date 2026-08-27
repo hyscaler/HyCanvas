@@ -99,7 +99,7 @@ type Service struct {
 // NewService wires the AI service. secret is the AES key material; allowLocalHTTP
 // permits localhost http base URLs (dev).
 func NewService(db DBTX, secret string, allowLocalHTTP bool) *Service {
-	return &Service{db: db, secret: secret, allowLocal: allowLocalHTTP, client: newHTTPClient()}
+	return &Service{db: db, secret: secret, allowLocal: allowLocalHTTP, client: newHTTPClient(allowLocalHTTP)}
 }
 
 // ConfigInput is the set-config payload. BaseURL is a pointer for PATCH

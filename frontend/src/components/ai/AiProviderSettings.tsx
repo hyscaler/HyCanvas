@@ -162,6 +162,7 @@ export function AiProviderSettings({
         setReplacingImgKey(false);
         setImgFor(workspaceId);
         setImgFailed(false);
+        setImgCheck("idle"); // a verdict belongs to the values it was made about
       },
       () => {
         // Leave it untouched and unsaved rather than guess it is unset, but
@@ -258,6 +259,7 @@ export function AiProviderSettings({
           baseUrl: imgBaseUrl.trim(),
           ...(imgKey.trim() ? { apiKey: imgKey.trim() } : {}),
         });
+        setImgCheck("idle"); // the key that passed may be the key just replaced
         setImgStoredProvider(img?.provider ?? "");
         setImgStoredModel(img?.model ?? "");
         setImgStoredBaseUrl(img?.baseUrl ?? "");
@@ -291,12 +293,17 @@ export function AiProviderSettings({
 
   async function checkImageProvider() {
     if (!workspaceId) return;
+    // The workspace this verdict is about. A check is a live third-party call,
+    // and landing one workspace's answer on another's form is how a working
+    // provider gets reported as broken.
+    const ws = workspaceId;
     setImgCheck("checking");
     setImgCheckDetail("");
     try {
-      const r = await oc.testAiImageConfig(workspaceId);
-      setImgCheck(r.verified ? "ok" : "unverified");
+      const r = await oc.testAiImageConfig(ws);
+      if (imgFor === ws) setImgCheck(r.verified ? "ok" : "unverified");
     } catch (e) {
+      if (imgFor !== ws) return;
       const coded = e instanceof ApiError ? apiCodeMessage(e.body) : null;
       setImgCheck("failed");
       setImgCheckDetail(coded ?? tr("editor.the_image_provider_did_not_answer"));
