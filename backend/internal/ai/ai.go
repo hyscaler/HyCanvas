@@ -277,6 +277,21 @@ func (s *Service) SetConfig(ctx context.Context, workspaceID string, in ConfigIn
 	return s.GetConfig(ctx, workspaceID)
 }
 
+// DeleteConfig disconnects the workspace's AI provider: the row, and with it
+// the encrypted key, is removed outright rather than blanked, so nothing
+// half-configured is left behind for a later save to resurrect.
+//
+// Deliberately a DELETE of the whole row and not "clear the key": a config
+// with a provider but no key is exactly the state callConfig rejects, and
+// leaving one would make the UI show a provider that cannot be used.
+//
+// The AI policy and the recorded usage are separate rows and survive: a
+// workspace that swaps providers keeps its governance and its billing history.
+func (s *Service) DeleteConfig(ctx context.Context, workspaceID string) error {
+	_, err := s.db.Exec(ctx, `DELETE FROM "ai_configs" WHERE "workspace_id" = $1`, workspaceID)
+	return err
+}
+
 // callConfig resolves + decrypts the provider config for an outbound call.
 func (s *Service) callConfig(ctx context.Context, workspaceID string) (CallConfig, error) {
 	r, err := s.getRow(ctx, workspaceID)

@@ -482,3 +482,58 @@ func TestBadGatewayCarriesUpstreamStatus(t *testing.T) {
 		t.Fatal("transport error must not carry an upstream status")
 	}
 }
+
+// Disconnecting removes the config outright rather than blanking it: a row
+// with a provider but no key is the exact state callConfig rejects, and
+// leaving one would show a provider in the UI that cannot be used.
+func TestDeleteConfigDisconnects(t *testing.T) {
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		t.Skip("DATABASE_URL not set; skipping DB integration test")
+	}
+	ctx := context.Background()
+	conn, err := pgx.Connect(ctx, stripSchema(dsn))
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	defer conn.Close(ctx)
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin: %v", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	acct := accounts.NewService(tx, "test-jwt-secret")
+	_, ws, _, err := acct.Signup(ctx, "ai-del+"+uuid.NewString()+"@example.com", "a-strong-password", "Owner")
+	if err != nil {
+		t.Fatalf("signup: %v", err)
+	}
+	svc := NewService(tx, "test-ai-secret", true)
+
+	if _, err := svc.SetConfig(ctx, ws.ID, ConfigInput{Provider: "openai", APIKey: "sk-test"}); err != nil {
+		t.Fatalf("set config: %v", err)
+	}
+	if cfg, err := svc.GetConfig(ctx, ws.ID); err != nil || cfg == nil || !cfg.HasKey {
+		t.Fatalf("expected a connected config, got %+v (%v)", cfg, err)
+	}
+
+	if err := svc.DeleteConfig(ctx, ws.ID); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	cfg, err := svc.GetConfig(ctx, ws.ID)
+	if err != nil {
+		t.Fatalf("get after delete: %v", err)
+	}
+	if cfg != nil {
+		t.Fatalf("config should be gone, got %+v", cfg)
+	}
+	// An outbound call is now refused rather than half-configured.
+	if _, err := svc.Text(ctx, ws.ID, "hi", ""); !errors.Is(err, ErrBadRequest) {
+		t.Fatalf("expected ErrBadRequest after disconnect, got %v", err)
+	}
+	// Deleting again is a no-op: the UI may retry, and the end state is what
+	// matters.
+	if err := svc.DeleteConfig(ctx, ws.ID); err != nil {
+		t.Fatalf("second delete should be a no-op: %v", err)
+	}
+}

@@ -57,6 +57,7 @@ func mountAI(api chi.Router, svc *ai.Service, acct *accounts.Service, up *upload
 		})
 		r.Get("/workspaces/{id}/ai-config", aiGetConfigHandler(svc, acct))
 		r.Put("/workspaces/{id}/ai-config", aiSetConfigHandler(svc, acct))
+		r.Delete("/workspaces/{id}/ai-config", aiDeleteConfigHandler(svc, acct))
 		r.Get("/workspaces/{id}/ai-policy", aiGetPolicyHandler(svc, acct))
 		r.Put("/workspaces/{id}/ai-policy", aiSetPolicyHandler(svc, acct))
 		r.Get("/workspaces/{id}/ai-usage", aiGetUsageHandler(svc, acct))
@@ -199,6 +200,23 @@ func aiSetConfigHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFun
 			return
 		}
 		writeJSON(w, http.StatusOK, cfg)
+	}
+}
+
+// aiDeleteConfigHandler disconnects the workspace's provider. Admin-only, like
+// setting one: removing the key stops AI for everyone in the workspace.
+func aiDeleteConfigHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		if !aiAssert(r, acct, id, "admin") {
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "admin access required", "admin_access_required")
+			return
+		}
+		if err := svc.DeleteConfig(r.Context(), id); err != nil {
+			aiProblem(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 	}
 }
 

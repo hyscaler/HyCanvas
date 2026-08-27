@@ -25,6 +25,7 @@ export function AiProviderSettings({
   presets,
   canEdit,
   onSaved,
+  onDisconnected,
   onCancel,
   layout = "stack",
 }: {
@@ -35,6 +36,8 @@ export function AiProviderSettings({
    *  sees what is connected instead of a form that would 403. */
   canEdit: boolean;
   onSaved: (config: AiConfigView) => void;
+  /** Called after the provider is disconnected, with no config left. */
+  onDisconnected?: () => void;
   /** Shown as a Cancel affordance when there is something to go back to. */
   onCancel?: () => void;
   /** "stack" for the editor's narrow tool panel, "wide" for a settings page.
@@ -183,6 +186,25 @@ export function AiProviderSettings({
     ? "flex min-w-0 flex-col gap-1.5 text-sm font-medium text-neutral-700"
     : "flex min-w-0 flex-col gap-1 text-[11px] font-medium text-neutral-500";
 
+  async function disconnect() {
+    if (!workspaceId || saving) return;
+    // Confirmed because it stops AI for everyone in the workspace, and the key
+    // cannot be recovered afterwards - the server never gave it back to us.
+    if (!window.confirm(tr("editor.disconnect_provider_confirm"))) return;
+    setSaving(true);
+    try {
+      await oc.deleteAiConfig(workspaceId);
+      setApiKey("");
+      setReplacingKey(false);
+      toast.success(tr("editor.ai_provider_disconnected"));
+      onDisconnected?.();
+    } catch {
+      toast.error(tr("editor.could_not_disconnect_the_provider"));
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-2.5">
       {/* Every field carries a VISIBLE label, not just a placeholder: a
@@ -317,6 +339,17 @@ export function AiProviderSettings({
           the writing direction, so it mirrors correctly in RTL. */}
       {wide ? (
         <div className="mt-2 flex items-center justify-end gap-3">
+          {config?.hasKey && onDisconnected && (
+            // Start-aligned and quiet: destructive, rarely wanted, and it must
+            // not sit where the eye expects Save.
+            <button
+              onClick={() => void disconnect()}
+              disabled={saving}
+              className="me-auto text-xs text-neutral-500 transition hover:text-red-600 disabled:opacity-40"
+            >
+              {tr("editor.disconnect")}
+            </button>
+          )}
           {onCancel && (
             <button onClick={onCancel} className="text-xs text-neutral-500 hover:underline">{tr("editor.cancel")}</button>
           )}

@@ -1821,6 +1821,13 @@ export class HyCanvasClient {
   setAiPolicy(workspaceId: string, input: AiPolicy): Promise<AiPolicy> {
     return this.request("PUT", `/v1/workspaces/${workspaceId}/ai-policy`, input);
   }
+  /** Disconnect the workspace's AI provider: the stored config and its
+   *  encrypted key are removed. The AI policy and recorded usage are separate
+   *  records and survive, so governance and billing history are not lost when
+   *  a workspace swaps providers. */
+  deleteAiConfig(workspaceId: string): Promise<void> {
+    return this.request("DELETE", `/v1/workspaces/${workspaceId}/ai-config`);
+  }
   getAiUsage(workspaceId: string): Promise<{ tokensThisMonth: number }> {
     return this.request("GET", `/v1/workspaces/${workspaceId}/ai-usage`);
   }
