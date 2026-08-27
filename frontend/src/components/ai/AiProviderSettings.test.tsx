@@ -224,6 +224,36 @@ describe("saving", () => {
     expect(oc.setAiImageConfig).not.toHaveBeenCalled();
   });
 
+  it("writes nothing for an image provider that neither exists nor was chosen", async () => {
+    oc.getAiImageConfig.mockResolvedValue(null);
+    oc.setAiConfig.mockResolvedValue(storedConfig);
+    renderForm();
+    await screen.findByRole("group", { name: "Image provider" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save provider" }));
+
+    await waitFor(() => expect(oc.setAiConfig).toHaveBeenCalledTimes(1));
+    // An empty provider over an absent row is a DELETE for something that was
+    // never there, once per save.
+    expect(oc.setAiImageConfig).not.toHaveBeenCalled();
+  });
+
+  it("still sends the empty provider when one is being cleared", async () => {
+    oc.getAiImageConfig.mockResolvedValue({ provider: "openai", model: null, baseUrl: null, hasKey: true, capabilities: caps(true) });
+    oc.setAiConfig.mockResolvedValue(storedConfig);
+    oc.setAiImageConfig.mockResolvedValue(null);
+    renderForm();
+    const section = within(await screen.findByRole("group", { name: "Image provider" }));
+
+    fireEvent.change(section.getByLabelText("Provider"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save provider" }));
+
+    // Here the empty provider is a real instruction, not an absence.
+    await waitFor(() =>
+      expect(oc.setAiImageConfig).toHaveBeenCalledWith("ws-1", expect.objectContaining({ provider: "" })),
+    );
+  });
+
   it("checks the image provider as soon as its key is saved", async () => {
     oc.getAiImageConfig.mockResolvedValue(null);
     oc.setAiConfig.mockResolvedValue(storedConfig);

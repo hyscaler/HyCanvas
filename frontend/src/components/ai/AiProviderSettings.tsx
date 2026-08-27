@@ -253,7 +253,11 @@ export function AiProviderSettings({
       // The dedicated image provider saves in the same gesture (provider ""
       // clears it and returns images to the main provider), and only once its
       // stored value is known, for the same reason as the search record.
-      if (imageLoaded) {
+      // Skipped when there is nothing to say: with no image provider selected
+      // and none stored, this was a DELETE for a row that never existed, on
+      // every save. Clearing a stored one still goes through, because then the
+      // empty provider is a real instruction.
+      if (imageLoaded && (imgProvider || imgStoredProvider)) {
         const img = await oc.setAiImageConfig(workspaceId, {
           provider: imgProvider,
           model: imgModel || undefined,
@@ -350,6 +354,7 @@ export function AiProviderSettings({
       setImgKey("");
       setImgHasKey(false);
       setReplacingImgKey(false);
+      setImgCheck("idle");
       toast.success(tr("editor.ai_provider_reset"));
       onReset?.();
     } catch {
