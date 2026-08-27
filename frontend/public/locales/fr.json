@@ -184,6 +184,7 @@
   "dashboard.ai": "Fournisseur d'IA",
   "dashboard.ai_key_saved_provider": "Clé enregistrée : {provider}",
   "dashboard.ai_provider_not_working": "{provider} ne fonctionne pas",
+  "dashboard.ai_stopped_by_usage_limits": "Arrêté par vos limites d'utilisation",
   "dashboard.ai_working_provider": "Fonctionne : {provider}",
   "dashboard.ai_workspace_hint": "Le fournisseur de modèles que HyCanvas appelle quand quelqu'un génère ici. Apportez votre clé : elle est chiffrée pour cet espace, et le fournisseur vous en facture l'usage.",
   "dashboard.all": "Tout",
@@ -3828,6 +3829,7 @@
   "ui.hycanvas": "HyCanvas",
   "ui.loading": "Chargement…",
   "ui.notice": "Avis",
+  "ui.ok": "OK",
   "ui.page_not_found": "Page introuvable",
   "ui.the_page_you_are_looking_for_does_not_exist": "La page que vous recherchez n'existe pas ou a peut-être été déplacée."
 }

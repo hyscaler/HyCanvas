@@ -184,6 +184,7 @@
   "dashboard.ai": "KI-Anbieter",
   "dashboard.ai_key_saved_provider": "Schlüssel gespeichert: {provider}",
   "dashboard.ai_provider_not_working": "{provider} funktioniert nicht",
+  "dashboard.ai_stopped_by_usage_limits": "Durch deine Nutzungslimits gestoppt",
   "dashboard.ai_working_provider": "Funktioniert: {provider}",
   "dashboard.ai_workspace_hint": "Der Modellanbieter, den HyCanvas aufruft, wenn hier jemand generiert. Eigener Schlüssel: verschlüsselt für diesen Workspace gespeichert, die Nutzung rechnet der Anbieter dir ab.",
   "dashboard.all": "Alle",
@@ -3828,6 +3829,7 @@
   "ui.hycanvas": "HyCanvas",
   "ui.loading": "Wird geladen…",
   "ui.notice": "Hinweis",
+  "ui.ok": "OK",
   "ui.page_not_found": "Seite nicht gefunden",
   "ui.the_page_you_are_looking_for_does_not_exist": "Die gesuchte Seite existiert nicht oder wurde verschoben."
 }

@@ -184,6 +184,7 @@
   "dashboard.ai": "AI provider",
   "dashboard.ai_key_saved_provider": "Key saved: {provider}",
   "dashboard.ai_provider_not_working": "{provider} is not working",
+  "dashboard.ai_stopped_by_usage_limits": "Stopped by your usage limits",
   "dashboard.ai_working_provider": "Working: {provider}",
   "dashboard.ai_workspace_hint": "The model provider HyCanvas calls when anyone here generates. Bring your own key: it is stored encrypted for this workspace, and its usage is billed to you by the provider.",
   "dashboard.all": "All",
@@ -3828,6 +3829,7 @@
   "ui.hycanvas": "HyCanvas",
   "ui.loading": "Loading…",
   "ui.notice": "Notice",
+  "ui.ok": "OK",
   "ui.page_not_found": "Page not found",
   "ui.the_page_you_are_looking_for_does_not_exist": "The page you are looking for does not exist or may have moved."
 }

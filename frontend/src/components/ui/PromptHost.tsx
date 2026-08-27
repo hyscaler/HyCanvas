@@ -50,7 +50,7 @@ export function PromptHost() {
                 safe choice should be the one a stray Enter picks. */}
             <Button type="button" variant="secondary" size="sm" onClick={cancel} autoFocus>{tr("ui.cancel")}</Button>
             <Button size="sm" variant={req.danger ? "danger" : "primary"} onClick={confirm}>
-              {req.confirmText ?? "OK"}
+              {req.confirmText ?? tr("ui.ok")}
             </Button>
           </div>
         </div>
@@ -72,14 +72,14 @@ export function PromptHost() {
           />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="secondary" size="sm" onClick={cancel}>{tr("ui.cancel")}</Button>
-            <Button type="submit" size="sm">{req.confirmText ?? "OK"}</Button>
+            <Button type="submit" size="sm">{req.confirmText ?? tr("ui.ok")}</Button>
           </div>
         </form>
       ) : (
         <div className="flex flex-col gap-4">
           <p className="text-sm text-neutral-700">{req.message}</p>
           <div className="flex justify-end">
-            <Button size="sm" onClick={confirm}>OK</Button>
+            <Button size="sm" onClick={confirm}>{tr("ui.ok")}</Button>
           </div>
         </div>
       )}

@@ -9,7 +9,7 @@
 //
 // The form itself is the shared component, so the two doors cannot drift.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Sparkles, Activity } from "lucide-react";
 import type { AiConfigView, AiProviderPreset } from "@hc/sdk";
 import { ApiError } from "@hc/sdk";
@@ -17,7 +17,7 @@ import { oc } from "@/lib/sdk";
 import { apiCodeMessage } from "@/lib/errors";
 import { AiProviderSettings } from "@/components/ai/AiProviderSettings";
 import { WorkspaceAiPolicy } from "./WorkspaceAiPolicy";
-import { tr } from "@/lib/i18n";
+import { localeTag, tr } from "@/lib/i18n";
 
 export function WorkspaceAiPanel({ workspaceId, canEdit }: { workspaceId: string | null; canEdit: boolean }) {
   const [config, setConfig] = useState<AiConfigView | null>(null);
@@ -26,32 +26,47 @@ export function WorkspaceAiPanel({ workspaceId, canEdit }: { workspaceId: string
   // Whether the stored config has been proven to WORK, as opposed to merely
   // existing. A saved key said "Connected" even when it was a typo, because
   // nothing had ever asked the provider.
-  const [health, setHealth] = useState<{ ok: boolean; detail?: string } | null>(null);
+  // `blocked` is a third outcome, not a failure: the call was stopped by this
+  // workspace's OWN policy (monthly cap reached, or the provider blocked in
+  // Usage limits). Reporting that as a broken provider sends an admin off to
+  // re-enter a key that was never the problem.
+  const [health, setHealth] = useState<{ ok: boolean; blocked?: boolean; detail?: string } | null>(null);
   const [testing, setTesting] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
 
+  // The workspace on screen right now. A provider check is a live call to a
+  // third party and can take seconds; switching workspace in the meantime used
+  // to land the old workspace's verdict (and its token count) on the new one's
+  // panel, which is how a healthy provider gets reported as broken.
+  const shown = useRef(workspaceId);
+  useEffect(() => { shown.current = workspaceId; });
+
   const loadUsage = useCallback(() => {
     if (!workspaceId) return;
-    void oc.getAiUsage(workspaceId).then(
-      (u) => setUsage(u.tokensThisMonth),
-      () => setUsage(null), // metering is best-effort; absence is not an error
+    const ws = workspaceId;
+    void oc.getAiUsage(ws).then(
+      (u) => { if (shown.current === ws) setUsage(u.tokensThisMonth); },
+      () => { if (shown.current === ws) setUsage(null); }, // metering is best-effort; absence is not an error
     );
   }, [workspaceId]);
 
   const runTest = useCallback(async () => {
     if (!workspaceId) return;
+    const ws = workspaceId;
     setTesting(true);
     try {
-      await oc.testAiConfig(workspaceId);
-      setHealth({ ok: true });
+      await oc.testAiConfig(ws);
+      if (shown.current === ws) setHealth({ ok: true });
     } catch (e) {
       // The server classifies the reason; show that rather than "failed".
+      const body = e instanceof ApiError ? (e.body as { code?: string } | null) : null;
       const coded = e instanceof ApiError ? apiCodeMessage(e.body) : null;
-      setHealth({ ok: false, detail: coded ?? tr("dashboard.the_provider_did_not_answer") });
+      const blocked = body?.code === "ai_policy_blocked";
+      if (shown.current === ws) setHealth({ ok: false, blocked, detail: coded ?? tr("dashboard.the_provider_did_not_answer") });
     } finally {
-      setTesting(false);
+      setTesting(false); // unconditional: a flag left set disables the button forever
       loadUsage(); // the check itself spends a few tokens
     }
   }, [workspaceId, loadUsage]);
@@ -78,6 +93,11 @@ export function WorkspaceAiPanel({ workspaceId, canEdit }: { workspaceId: string
   if (workspaceId && loadedFor && loadedFor !== workspaceId && !loading) {
     setLoading(true);
     setConfig(null);
+    // Everything on this row describes the workspace being left. Clearing it
+    // here rather than when the new fetch resolves means the previous
+    // workspace's verdict and token count never sit under the new one's name.
+    setUsage(null);
+    setHealth(null);
   }
 
   if (!workspaceId) return null;
@@ -101,19 +121,31 @@ export function WorkspaceAiPanel({ workspaceId, canEdit }: { workspaceId: string
           <span className="flex items-center gap-2">
             <span
               className={`h-2 w-2 shrink-0 rounded-full ${
-                !connected ? "bg-neutral-300" : health?.ok ? "bg-emerald-500" : health && !health.ok ? "bg-red-500" : "bg-amber-400"
+                !connected
+                  ? "bg-neutral-300"
+                  : health?.ok
+                    ? "bg-emerald-500"
+                    : health?.blocked
+                      ? "bg-amber-500"
+                      : health && !health.ok
+                        ? "bg-red-500"
+                        : "bg-amber-400"
               }`}
             />
-            <span className="text-neutral-700">
+            {/* Announced: the verdict arrives seconds after the button was
+                pressed, so a screen reader user gets no result otherwise. */}
+            <span className="text-neutral-700" aria-live="polite">
               {loading
                 ? tr("dashboard.loading")
                 : !connected
                   ? tr("dashboard.no_ai_provider_connected")
                   : health?.ok
                     ? tr("dashboard.ai_working_provider", { provider: providerLabel })
-                    : health && !health.ok
-                      ? tr("dashboard.ai_provider_not_working", { provider: providerLabel })
-                      : tr("dashboard.ai_key_saved_provider", { provider: providerLabel })}
+                    : health?.blocked
+                      ? tr("dashboard.ai_stopped_by_usage_limits")
+                      : health && !health.ok
+                        ? tr("dashboard.ai_provider_not_working", { provider: providerLabel })
+                        : tr("dashboard.ai_key_saved_provider", { provider: providerLabel })}
             </span>
           </span>
           {connected && canEdit && (
@@ -134,14 +166,21 @@ export function WorkspaceAiPanel({ workspaceId, canEdit }: { workspaceId: string
           {usage !== null && (
             <span className="flex items-center gap-1 text-xs text-neutral-500" title={tr("dashboard.tokens_estimate_hint")}>
               <Activity size={12} />
-              {tr("dashboard.n_tokens_this_month", { count: usage, formatted: usage.toLocaleString() })}
+              {tr("dashboard.n_tokens_this_month", { count: usage, formatted: usage.toLocaleString(localeTag()) })}
             </span>
           )}
         </div>
       </div>
 
       {health && !health.ok && health.detail && (
-        <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+        <p
+          role="status"
+          className={`mb-3 rounded-lg border px-3 py-2 text-xs ${
+            health.blocked
+              ? "border-amber-200 bg-amber-50 text-amber-800"
+              : "border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
           {health.detail}
         </p>
       )}

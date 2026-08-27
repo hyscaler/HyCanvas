@@ -184,6 +184,7 @@
   "dashboard.ai": "AI प्रोवाइडर",
   "dashboard.ai_key_saved_provider": "कुंजी सहेजी गई: {provider}",
   "dashboard.ai_provider_not_working": "{provider} काम नहीं कर रहा",
+  "dashboard.ai_stopped_by_usage_limits": "आपकी उपयोग सीमाओं के कारण रोका गया",
   "dashboard.ai_working_provider": "काम कर रहा है: {provider}",
   "dashboard.ai_workspace_hint": "जब यहाँ कोई जनरेट करता है तो HyCanvas जिस मॉडल प्रोवाइडर को कॉल करता है। अपनी कुंजी लाएँ: यह इस वर्कस्पेस के लिए एन्क्रिप्टेड सहेजी जाती है, और इसके उपयोग का बिल प्रोवाइडर आपसे लेता है।",
   "dashboard.all": "सभी",
@@ -3828,6 +3829,7 @@
   "ui.hycanvas": "HyCanvas",
   "ui.loading": "लोड हो रहा है…",
   "ui.notice": "सूचना",
+  "ui.ok": "ठीक है",
   "ui.page_not_found": "पृष्ठ नहीं मिला",
   "ui.the_page_you_are_looking_for_does_not_exist": "आप जिस पृष्ठ को खोज रहे हैं वह मौजूद नहीं है या स्थानांतरित हो गया है।"
 }

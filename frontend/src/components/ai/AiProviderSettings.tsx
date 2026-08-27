@@ -285,7 +285,12 @@ export function AiProviderSettings({
 
         <label className={labelCls}>
           {tr("editor.api_key")}
-          {config?.hasKey && !replacingKey ? (
+          {/* Only the STORED provider has a stored key. Showing the masked
+              stand-in after switching the select claimed a key existed for the
+              new provider, and the only hint otherwise was the save being
+              refused; an empty field asks for what the save is about to
+              require. */}
+          {sameProvider && config?.hasKey && !replacingKey ? (
             <span className={`${fieldCls} flex items-center justify-between gap-2`}>
               <span className="truncate tracking-[0.2em] text-neutral-500" aria-label={tr("editor.a_key_is_stored")}>
                 {"\u2022".repeat(16)}
@@ -303,7 +308,9 @@ export function AiProviderSettings({
               type="password"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              placeholder={config?.hasKey ? tr("editor.api_key_leave_blank_to_keep") : tr("editor.api_key")}
+              // "Leave blank to keep" is only true for the provider the key
+              // belongs to; on a switched provider a key is required.
+              placeholder={sameProvider && config?.hasKey ? tr("editor.api_key_leave_blank_to_keep") : tr("editor.api_key")}
               autoFocus={replacingKey}
               className={fieldCls}
             />

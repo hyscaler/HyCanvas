@@ -228,6 +228,17 @@ export function trOr(key: string, fallback: string, params?: Record<string, unkn
  */
 export const tr = translate;
 
+/** The active BCP-47 tag, for Intl formatters (numbers, dates, lists).
+ *
+ *  Without it, callers reach for `toLocaleString()` with no argument, which
+ *  follows the BROWSER's locale: an app set to German on an en-US browser
+ *  grouped its numbers as 37,556 rather than 37.556, inside an otherwise
+ *  German sentence. Falls back to the resolved locale before a catalog has
+ *  finished loading. */
+export function localeTag(): string {
+  return activeTag || resolvedLocale();
+}
+
 /** Changes whenever the catalog or the pseudo flag changes. Key the app root on
  *  this so a language switch re-reads every string. */
 export function useI18nVersion(): number {

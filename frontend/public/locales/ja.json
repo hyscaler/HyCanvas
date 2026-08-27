@@ -184,6 +184,7 @@
   "dashboard.ai": "AI プロバイダー",
   "dashboard.ai_key_saved_provider": "キー保存済み: {provider}",
   "dashboard.ai_provider_not_working": "{provider} は動作していません",
+  "dashboard.ai_stopped_by_usage_limits": "使用量の上限により停止しました",
   "dashboard.ai_working_provider": "動作中: {provider}",
   "dashboard.ai_workspace_hint": "ここで誰かが生成するときに HyCanvas が呼び出すモデルプロバイダーです。自分のキーを使用します: このワークスペース用に暗号化して保存され、利用料はプロバイダーからあなたに請求されます。",
   "dashboard.all": "すべて",
@@ -3828,6 +3829,7 @@
   "ui.hycanvas": "HyCanvas",
   "ui.loading": "読み込み中…",
   "ui.notice": "お知らせ",
+  "ui.ok": "OK",
   "ui.page_not_found": "ページが見つかりません",
   "ui.the_page_you_are_looking_for_does_not_exist": "お探しのページは存在しないか、移動した可能性があります。"
 }

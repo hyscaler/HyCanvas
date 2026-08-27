@@ -184,6 +184,7 @@
   "dashboard.ai": "AI 服务商",
   "dashboard.ai_key_saved_provider": "已保存密钥：{provider}",
   "dashboard.ai_provider_not_working": "{provider} 无法使用",
+  "dashboard.ai_stopped_by_usage_limits": "已被你的用量限制拦截",
   "dashboard.ai_working_provider": "运行正常：{provider}",
   "dashboard.ai_workspace_hint": "当有人在此生成时，HyCanvas 会调用的模型服务商。使用你自己的密钥：它会为此工作区加密保存，用量由服务商向你计费。",
   "dashboard.all": "全部",
@@ -3828,6 +3829,7 @@
   "ui.hycanvas": "HyCanvas",
   "ui.loading": "加载中…",
   "ui.notice": "通知",
+  "ui.ok": "确定",
   "ui.page_not_found": "页面未找到",
   "ui.the_page_you_are_looking_for_does_not_exist": "您查找的页面不存在或可能已移动。"
 }
