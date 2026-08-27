@@ -1503,7 +1503,6 @@
   "editor.image_provider_base_url_required": "El proveedor de imágenes necesita la URL de su endpoint.",
   "editor.image_provider_could_not_verify": "No se pudo verificar; se comprobará en el primer uso",
   "editor.image_provider_hint": "Opcional. Usa otro proveedor para las imágenes generadas, por ejemplo un modelo de imagen más barato o de mejor calidad.",
-  "editor.image_provider_key_accepted": "Clave aceptada",
   "editor.image_provider_key_required": "El proveedor de imágenes necesita su propia clave de API.",
   "editor.image_provider_needed_hint": "{provider} no puede generar imágenes. Añade aquí un proveedor y tus diseños tendrán imágenes generadas; si lo dejas sin definir, se quedarán solo con texto y formas.",
   "editor.image_provider_none": "Ninguno, sin imágenes generadas",

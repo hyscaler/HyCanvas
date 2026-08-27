@@ -1503,7 +1503,6 @@
   "editor.image_provider_base_url_required": "The image provider needs its endpoint URL.",
   "editor.image_provider_could_not_verify": "Could not verify; it will be checked on first use",
   "editor.image_provider_hint": "Optional. Use a different provider for generated images, for example a cheaper or higher quality image model.",
-  "editor.image_provider_key_accepted": "Key accepted",
   "editor.image_provider_key_required": "The image provider needs its own API key.",
   "editor.image_provider_needed_hint": "{provider} cannot generate images. Add a provider here and your designs get generated imagery; leave it unset and they stay text and shapes only.",
   "editor.image_provider_none": "None, no generated images",

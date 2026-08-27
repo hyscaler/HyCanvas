@@ -1503,7 +1503,6 @@
   "editor.image_provider_base_url_required": "图像服务商需要它的接口地址。",
   "editor.image_provider_could_not_verify": "无法验证，将在首次使用时检查",
   "editor.image_provider_hint": "可选。为生成的图像使用另一家服务商，例如更便宜或质量更好的图像模型。",
-  "editor.image_provider_key_accepted": "密钥有效",
   "editor.image_provider_key_required": "图像服务商需要它自己的 API 密钥。",
   "editor.image_provider_needed_hint": "{provider} 无法生成图像。在此添加一个服务商，你的设计就能获得生成的图像；不设置则只有文字和图形。",
   "editor.image_provider_none": "无，不使用生成的图像",

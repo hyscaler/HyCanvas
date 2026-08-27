@@ -1503,7 +1503,6 @@
   "editor.image_provider_base_url_required": "इमेज प्रोवाइडर के लिए उसका एंडपॉइंट URL चाहिए।",
   "editor.image_provider_could_not_verify": "जाँच नहीं हो सकी; पहली बार उपयोग पर जाँचा जाएगा",
   "editor.image_provider_hint": "वैकल्पिक। जनरेट की गई इमेज के लिए अलग प्रोवाइडर चुनें, जैसे कोई सस्ता या बेहतर इमेज मॉडल।",
-  "editor.image_provider_key_accepted": "कुंजी स्वीकार की गई",
   "editor.image_provider_key_required": "इमेज प्रोवाइडर के लिए उसकी अपनी API कुंजी चाहिए।",
   "editor.image_provider_needed_hint": "{provider} इमेज जनरेट नहीं कर सकता। यहाँ प्रोवाइडर जोड़ें तो आपके डिज़ाइन में जनरेट की गई इमेज आएँगी; न जोड़ने पर सिर्फ़ टेक्स्ट और आकार ही रहेंगे।",
   "editor.image_provider_none": "कोई नहीं, कोई जनरेटेड इमेज नहीं",

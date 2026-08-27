@@ -1503,7 +1503,6 @@
   "editor.image_provider_base_url_required": "画像プロバイダーにはエンドポイント URL が必要です。",
   "editor.image_provider_could_not_verify": "確認できませんでした。初回利用時に検証されます",
   "editor.image_provider_hint": "任意。生成画像に別のプロバイダーを使えます。より安い、または高品質な画像モデルなど。",
-  "editor.image_provider_key_accepted": "キーは有効です",
   "editor.image_provider_key_required": "画像プロバイダーには専用の API キーが必要です。",
   "editor.image_provider_needed_hint": "{provider} は画像を生成できません。ここにプロバイダーを追加するとデザインに生成画像が入ります。未設定ならテキストと図形のみになります。",
   "editor.image_provider_none": "なし（生成画像を使わない）",

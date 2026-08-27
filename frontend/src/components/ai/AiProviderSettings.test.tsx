@@ -169,6 +169,20 @@ describe("the image provider", () => {
     expect(await section.findByText(/Could not verify/)).toBeTruthy();
   });
 
+  it("reports a rejected key as not working, with the provider's reason", async () => {
+    oc.getAiImageConfig.mockResolvedValue({ provider: "openai", model: null, baseUrl: null, hasKey: true, capabilities: caps(true) });
+    oc.testAiImageConfig.mockRejectedValue(new Error("nope"));
+    renderForm();
+    const section = within(await screen.findByRole("group", { name: "Image provider" }));
+
+    // Untested but saved reads as neither working nor broken.
+    expect(section.getByText("Key saved: OpenAI")).toBeTruthy();
+
+    fireEvent.click(section.getByRole("button", { name: "Test" }));
+    expect(await section.findByText("OpenAI is not working")).toBeTruthy();
+    expect(section.getByText("The image provider did not answer.")).toBeTruthy();
+  });
+
   it("confirms a key the provider accepts, and forgets it when the provider changes", async () => {
     oc.getAiImageConfig.mockResolvedValue({ provider: "openai", model: null, baseUrl: null, hasKey: true, capabilities: caps(true) });
     oc.testAiImageConfig.mockResolvedValue({ verified: true });
@@ -176,11 +190,11 @@ describe("the image provider", () => {
     const section = within(await screen.findByRole("group", { name: "Image provider" }));
 
     fireEvent.click(section.getByRole("button", { name: "Test" }));
-    expect(await section.findByText("Key accepted")).toBeTruthy();
+    expect(await section.findByText("Working: OpenAI")).toBeTruthy();
 
     // The verdict was about the provider that was selected when it was made.
     fireEvent.change(section.getByLabelText("Provider"), { target: { value: "together" } });
-    expect(screen.queryByText("Key accepted")).toBeNull();
+    expect(screen.queryByText("Working: OpenAI")).toBeNull();
   });
 
   it("says so when its record could not be read, instead of vanishing", async () => {
@@ -208,6 +222,22 @@ describe("saving", () => {
     // search or image provider the user never touched.
     expect(oc.setSearchConfig).not.toHaveBeenCalled();
     expect(oc.setAiImageConfig).not.toHaveBeenCalled();
+  });
+
+  it("checks the image provider as soon as its key is saved", async () => {
+    oc.getAiImageConfig.mockResolvedValue(null);
+    oc.setAiConfig.mockResolvedValue(storedConfig);
+    oc.setAiImageConfig.mockResolvedValue({ provider: "openai", model: null, baseUrl: null, hasKey: true, capabilities: caps(true) });
+    oc.testAiImageConfig.mockResolvedValue({ verified: true });
+    renderForm();
+    const section = within(await screen.findByRole("group", { name: "Image provider" }));
+
+    fireEvent.change(section.getByLabelText("Provider"), { target: { value: "openai" } });
+    fireEvent.change(section.getByLabelText("API key"), { target: { value: "sk-new" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save provider" }));
+
+    // A typo is cheapest to find while the person still has the real key.
+    await waitFor(() => expect(oc.testAiImageConfig).toHaveBeenCalledWith("ws-1"));
   });
 
   it("refuses a provider change that arrives without the new provider's key", async () => {

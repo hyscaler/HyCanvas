@@ -1503,7 +1503,6 @@
   "editor.image_provider_base_url_required": "Der Bildanbieter braucht seine Endpunkt-URL.",
   "editor.image_provider_could_not_verify": "Nicht überprüfbar; wird bei der ersten Nutzung geprüft",
   "editor.image_provider_hint": "Optional. Nutze für generierte Bilder einen anderen Anbieter, etwa ein günstigeres oder besseres Bildmodell.",
-  "editor.image_provider_key_accepted": "Schlüssel akzeptiert",
   "editor.image_provider_key_required": "Der Bildanbieter braucht einen eigenen API-Schlüssel.",
   "editor.image_provider_needed_hint": "{provider} kann keine Bilder erzeugen. Füge hier einen Anbieter hinzu, damit deine Designs generierte Bilder erhalten; ohne ihn bleiben sie auf Text und Formen beschränkt.",
   "editor.image_provider_none": "Keiner, keine generierten Bilder",

@@ -1503,7 +1503,6 @@
   "editor.image_provider_base_url_required": "Le fournisseur d'images a besoin de l'URL de son point de terminaison.",
   "editor.image_provider_could_not_verify": "Impossible de vérifier ; ce sera contrôlé à la première utilisation",
   "editor.image_provider_hint": "Facultatif. Utilisez un autre fournisseur pour les images générées, par exemple un modèle d'image moins cher ou de meilleure qualité.",
-  "editor.image_provider_key_accepted": "Clé acceptée",
   "editor.image_provider_key_required": "Le fournisseur d'images a besoin de sa propre clé API.",
   "editor.image_provider_needed_hint": "{provider} ne peut pas générer d'images. Ajoutez un fournisseur ici pour que vos designs aient des images générées ; sans cela, ils resteront limités au texte et aux formes.",
   "editor.image_provider_none": "Aucun, pas d'images générées",

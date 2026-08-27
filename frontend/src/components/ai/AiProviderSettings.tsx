@@ -185,6 +185,7 @@ export function AiProviderSettings({
   const imgPreset = presets.find((p) => p.id === imgProvider);
   const imgSameProvider = imgProvider === imgStoredProvider;
   const imgShowsStoredKey = imgSameProvider && imgHasKey && !replacingImgKey;
+  const imgLabel = imgPreset?.label ?? imgProvider;
 
   if (!canEdit) {
     return (
@@ -266,6 +267,10 @@ export function AiProviderSettings({
         setImgHasKey(!!img?.hasKey);
         setImgKey("");
         setReplacingImgKey(false);
+        // Check it immediately, as the main provider does on save: the moment a
+        // key is entered is when a typo is cheapest to find and the person
+        // still has the real value to hand.
+        if (img?.hasKey) void checkImageProvider();
       }
       toast.success(tr("editor.ai_provider_saved"));
       onSaved(c);
@@ -488,16 +493,67 @@ export function AiProviderSettings({
         // context the sighted heading was already giving.
         <fieldset className={wide ? "mt-1 border-t border-neutral-200 pt-3.5" : "mt-1 border-t border-neutral-200 pt-2.5"}>
           <legend className="sr-only">{tr("editor.image_provider")}</legend>
-          <div className="mb-2.5 flex flex-col gap-0.5">
-            <span aria-hidden className={wide ? "text-sm font-medium text-neutral-700" : "text-[11px] font-medium text-neutral-500"}>
-              {tr("editor.image_provider")}
-            </span>
-            <span className="text-[11px] text-neutral-500">
-              {mainCanImage
-                ? tr("editor.image_provider_hint")
-                : tr("editor.image_provider_needed_hint", { provider: selPreset?.label ?? provider })}
-            </span>
+          {/* The same shape as the main provider's status: a dot, the state in
+              words, and the check beside it. This provider is billed separately
+              and fails separately, so it needs its own answer to "is this
+              working?" rather than being covered by the section above. */}
+          <div className="mb-2.5 flex flex-wrap items-start justify-between gap-x-4 gap-y-1.5">
+            <div className="flex flex-col gap-0.5">
+              <span aria-hidden className={wide ? "text-sm font-medium text-neutral-700" : "text-[11px] font-medium text-neutral-500"}>
+                {tr("editor.image_provider")}
+              </span>
+              <span className="text-[11px] text-neutral-500">
+                {mainCanImage
+                  ? tr("editor.image_provider_hint")
+                  : tr("editor.image_provider_needed_hint", { provider: selPreset?.label ?? provider })}
+              </span>
+            </div>
+            {/* Only once a key is stored, and not while one is being replaced:
+                the check reports on the SAVED key, which is not the key in the
+                box during a replacement. */}
+            {imgShowsStoredKey && (
+              <div className="flex shrink-0 flex-wrap items-center gap-x-2.5 gap-y-1">
+                <span className="flex items-center gap-2">
+                  <span
+                    className={`h-2 w-2 shrink-0 rounded-full ${
+                      imgCheck === "ok"
+                        ? "bg-emerald-500"
+                        : imgCheck === "failed"
+                          ? "bg-red-500"
+                          : imgCheck === "unverified"
+                            ? "bg-neutral-300"
+                            : "bg-amber-400"
+                    }`}
+                  />
+                  <span aria-live="polite" className="text-xs text-neutral-700">
+                    {imgCheck === "ok"
+                      ? tr("dashboard.ai_working_provider", { provider: imgLabel })
+                      : imgCheck === "failed"
+                        ? tr("dashboard.ai_provider_not_working", { provider: imgLabel })
+                        : imgCheck === "unverified"
+                          ? tr("editor.image_provider_could_not_verify")
+                          : tr("dashboard.ai_key_saved_provider", { provider: imgLabel })}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void checkImageProvider()}
+                  disabled={imgCheck === "checking"}
+                  className="rounded-full border border-neutral-200 px-2.5 py-0.5 text-[11px] text-neutral-600 transition hover:border-neutral-300 disabled:opacity-40"
+                >
+                  {imgCheck === "checking" ? tr("dashboard.testing") : tr("dashboard.test_connection")}
+                </button>
+              </div>
+            )}
           </div>
+
+          {/* The reason, in the provider's own words, where the main provider
+              puts its own. */}
+          {imgCheck === "failed" && imgCheckDetail && (
+            <p role="status" className="mb-2.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+              {imgCheckDetail}
+            </p>
+          )}
           <div className={wide ? "grid grid-cols-1 gap-x-5 gap-y-3.5 sm:grid-cols-2 xl:grid-cols-3" : "flex flex-col gap-2.5"}>
             <label className={labelCls}>
               {tr("editor.provider")}
@@ -564,32 +620,6 @@ export function AiProviderSettings({
                       >
                         {tr("editor.replace")}
                       </button>
-                    </span>
-                    {/* Beside the key it checks, and only once one is stored:
-                        before that there is nothing to check. */}
-                    <span className="flex items-center gap-2 text-[11px]">
-                      <button
-                        type="button"
-                        onClick={() => void checkImageProvider()}
-                        disabled={imgCheck === "checking"}
-                        className="font-medium text-brand-ink hover:underline disabled:opacity-50"
-                      >
-                        {imgCheck === "checking" ? tr("dashboard.testing") : tr("dashboard.test_connection")}
-                      </button>
-                      <span
-                        aria-live="polite"
-                        className={
-                          imgCheck === "ok" ? "text-emerald-600" : imgCheck === "failed" ? "text-red-600" : "text-neutral-500"
-                        }
-                      >
-                        {imgCheck === "ok"
-                          ? tr("editor.image_provider_key_accepted")
-                          : imgCheck === "unverified"
-                            ? tr("editor.image_provider_could_not_verify")
-                            : imgCheck === "failed"
-                              ? imgCheckDetail
-                              : ""}
-                      </span>
                     </span>
                   </div>
                 ) : (
