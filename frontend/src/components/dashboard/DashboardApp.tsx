@@ -73,7 +73,7 @@ function mdOutlineToDesign(md: string, fallbackTitle: string): DesignFile {
   })) as DesignFile["pages"];
   return file;
 }
-import { ApiError, type DesignRecord, type HomeItem, type MyTask, type StorageUsageView, type TaskStatus, type TemplateCollectionSummary, type TemplateSummary, type WorkspaceRole } from "@hc/sdk";
+import { ApiError, type AiProviderPreset, type DesignRecord, type HomeItem, type MyTask, type StorageUsageView, type TaskStatus, type TemplateCollectionSummary, type TemplateSummary, type WorkspaceRole } from "@hc/sdk";
 import { formatBytes } from "@/lib/format";
 import { useDateFormat } from "@/lib/datetime";
 import { resolvedTheme, setThemePreference } from "@/lib/theme";
@@ -120,6 +120,10 @@ const DASH_BACKDROP: React.CSSProperties = {
   backgroundSize: "24px 24px, auto, auto",
   backgroundRepeat: "repeat, no-repeat, no-repeat",
 };
+
+/** The server's provider catalog, fetched once per page load: it is static per
+ *  deployment, so switching workspace should not ask for it again. */
+let aiPresetCache: AiProviderPreset[] | null = null;
 
 type Format = { label: string; icon: typeof Plus; w: number; h: number; kind?: string };
 
@@ -212,6 +216,30 @@ export function DashboardApp({ view }: { view: DashboardView }) {
   const [briefSources, setBriefSources] = useState<AiSource[]>([]);
   const [briefBusy, setBriefBusy] = useState(false);
   const [briefDrop, setBriefDrop] = useState(false);
+  // Stamped with the workspace it describes, so a switch invalidates it by
+  // derivation rather than a reset written during render or in an effect body.
+  const [aiState, setAiState] = useState<{ ws: string; connected: boolean; label: string } | null>(null);
+  const aiReady = aiState && aiState.ws === activeWorkspaceId ? aiState : null;
+
+  // Best-effort and non-blocking: nothing on this page waits for it, and a
+  // failed lookup shows no hint rather than claiming AI is missing.
+  useEffect(() => {
+    if (!activeWorkspaceId) return;
+    const ws = activeWorkspaceId;
+    let cancelled = false;
+    void Promise.all([
+      oc.getAiConfig(ws).catch(() => null),
+      aiPresetCache ? Promise.resolve(aiPresetCache) : oc.aiProviders().then((l) => { aiPresetCache = l ?? []; return aiPresetCache; }).catch(() => [] as AiProviderPreset[]),
+    ]).then(([cfg, presets]) => {
+      if (cancelled) return;
+      setAiState({
+        ws,
+        connected: !!cfg?.hasKey,
+        label: presets.find((pr) => pr.id === cfg?.provider)?.label ?? cfg?.provider ?? "",
+      });
+    });
+    return () => { cancelled = true; };
+  }, [activeWorkspaceId]);
   const briefFileRef = useRef<HTMLInputElement | null>(null);
 
   /** Read attached files into grounding text, using the same pipeline the
@@ -961,6 +989,24 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                       </select>
                     </label>
                     <span className="flex-1" />
+                    {aiReady && (aiReady.connected ? (
+                      <span className="hidden items-center gap-1.5 text-[11px] text-neutral-500 sm:flex" title={tr("dashboard.this_workspace_generates_with_provider", { provider: aiReady.label })}>
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        {aiReady.label}
+                      </span>
+                    ) : (
+                      // Not a blocker: the brief is held through provider setup
+                      // and generation resumes once a key exists. Saying so here
+                      // just saves the detour of finding that out in the editor.
+                      <button
+                        type="button"
+                        onClick={() => gotoView("members")}
+                        className="flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-[11px] text-amber-800 transition hover:border-amber-400"
+                      >
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                        {tr("dashboard.connect_an_ai_provider_first")}
+                      </button>
+                    ))}
                     <button
                       type="submit"
                       disabled={busy || !activeWorkspaceId || !aiBrief.trim()}
