@@ -62,6 +62,10 @@ export function AiProviderSettings({
   const [searchFor, setSearchFor] = useState<string | null>(null);
   const searchLoaded = !!workspaceId && searchFor === workspaceId;
   const [saving, setSaving] = useState(false);
+  // A stored key is write-only: the server returns hasKey and never the key
+  // itself. An empty box said nothing about whether one existed, so it shows a
+  // masked stand-in until the user asks to replace it.
+  const [replacingKey, setReplacingKey] = useState(false);
 
   // Re-arm when the workspace (or its stored config) changes, the render-time
   // adjustment pattern: never show one workspace's provider while another's is
@@ -75,6 +79,7 @@ export function AiProviderSettings({
     setImageModel(config?.imageModel ?? "");
     setBaseUrl(config?.baseUrl ?? "");
     setApiKey("");
+    setReplacingKey(false);
   }
 
   // The optional web-search grounding provider is a separate record; it is
@@ -250,13 +255,29 @@ export function AiProviderSettings({
 
         <label className={labelCls}>
           {tr("editor.api_key")}
-          <input
-            type="password"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder={config?.hasKey ? tr("editor.api_key_leave_blank_to_keep") : tr("editor.api_key")}
-            className={fieldCls}
-          />
+          {config?.hasKey && !replacingKey ? (
+            <span className={`${fieldCls} flex items-center justify-between gap-2`}>
+              <span className="truncate tracking-[0.2em] text-neutral-500" aria-label={tr("editor.a_key_is_stored")}>
+                {"\u2022".repeat(16)}
+              </span>
+              <button
+                type="button"
+                onClick={() => { setReplacingKey(true); setApiKey(""); }}
+                className="shrink-0 text-xs font-medium text-brand-ink hover:underline"
+              >
+                {tr("editor.replace")}
+              </button>
+            </span>
+          ) : (
+            <input
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder={config?.hasKey ? tr("editor.api_key_leave_blank_to_keep") : tr("editor.api_key")}
+              autoFocus={replacingKey}
+              className={fieldCls}
+            />
+          )}
         </label>
 
       </div>

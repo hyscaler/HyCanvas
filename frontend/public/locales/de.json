@@ -444,6 +444,7 @@
   "editor.a4_portrait": "A4 Hochformat",
   "editor.a_brand_admin_can_apply_or_pin_this_update": "Ein Marken-Admin kann dieses Update anwenden oder anheften.",
   "editor.a_generation_is_still_running_leave_anyway": "Ein Design wird noch generiert. Wenn du jetzt gehst, geht es verloren. Trotzdem verlassen?",
+  "editor.a_key_is_stored": "Für diesen Workspace ist ein API-Schlüssel gespeichert",
   "editor.a_poll_takes_at_most_6_options": "Eine Umfrage hat höchstens 6 Optionen.",
   "editor.a_single_track_exports_pre_master_no_ducking": "Eine einzelne Spur exportiert vor dem Master (kein Ducking, kein Master-Gain)",
   "editor.aa": "Aa",

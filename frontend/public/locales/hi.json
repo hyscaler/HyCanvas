@@ -444,6 +444,7 @@
   "editor.a4_portrait": "A4 पोर्ट्रेट",
   "editor.a_brand_admin_can_apply_or_pin_this_update": "ब्रांड व्यवस्थापक इस अपडेट को लागू या पिन कर सकते हैं।",
   "editor.a_generation_is_still_running_leave_anyway": "एक डिज़ाइन अभी भी जनरेट हो रहा है। अभी जाने पर वह खो जाएगा। फिर भी जाएँ?",
+  "editor.a_key_is_stored": "इस वर्कस्पेस के लिए एक API कुंजी सहेजी गई है",
   "editor.a_poll_takes_at_most_6_options": "पोल में अधिकतम 6 विकल्प हो सकते हैं।",
   "editor.a_single_track_exports_pre_master_no_ducking": "एकल ट्रैक प्री-मास्टर निर्यात होता है (न डकिंग, न मास्टर गेन)",
   "editor.aa": "Aa",

@@ -444,6 +444,7 @@
   "editor.a4_portrait": "A4 portrait",
   "editor.a_brand_admin_can_apply_or_pin_this_update": "Un admin de marque peut appliquer ou épingler cette mise à jour.",
   "editor.a_generation_is_still_running_leave_anyway": "Un design est encore en cours de génération. Partir maintenant l'abandonne. Quitter quand même ?",
+  "editor.a_key_is_stored": "Une clé d'API est enregistrée pour cet espace",
   "editor.a_poll_takes_at_most_6_options": "Un sondage accepte au plus 6 options.",
   "editor.a_single_track_exports_pre_master_no_ducking": "Une piste seule s'exporte pré-master (sans ducking ni gain master)",
   "editor.aa": "Aa",

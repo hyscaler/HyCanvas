@@ -444,6 +444,7 @@
   "editor.a4_portrait": "A4 retrato",
   "editor.a_brand_admin_can_apply_or_pin_this_update": "Um administrador de marca pode aplicar ou fixar esta atualização.",
   "editor.a_generation_is_still_running_leave_anyway": "Um design ainda está sendo gerado. Sair agora descarta o trabalho. Sair mesmo assim?",
+  "editor.a_key_is_stored": "Há uma chave de API salva neste workspace",
   "editor.a_poll_takes_at_most_6_options": "Uma enquete aceita no máximo 6 opções.",
   "editor.a_single_track_exports_pre_master_no_ducking": "Uma única faixa exporta pré-master (sem ducking, sem ganho master)",
   "editor.aa": "Aa",

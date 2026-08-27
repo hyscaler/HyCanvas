@@ -444,6 +444,7 @@
   "editor.a4_portrait": "A4 vertical",
   "editor.a_brand_admin_can_apply_or_pin_this_update": "Un administrador de marca puede aplicar o fijar esta actualización.",
   "editor.a_generation_is_still_running_leave_anyway": "Todavía se está generando un diseño. Si sales ahora, se perderá. ¿Salir de todos modos?",
+  "editor.a_key_is_stored": "Hay una clave de API guardada para este espacio",
   "editor.a_poll_takes_at_most_6_options": "Una encuesta admite como máximo 6 opciones.",
   "editor.a_single_track_exports_pre_master_no_ducking": "Una sola pista se exporta pre-máster (sin ducking ni ganancia máster)",
   "editor.aa": "Aa",

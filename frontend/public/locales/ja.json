@@ -444,6 +444,7 @@
   "editor.a4_portrait": "A4 縦",
   "editor.a_brand_admin_can_apply_or_pin_this_update": "ブランド管理者がこの更新を適用または固定できます。",
   "editor.a_generation_is_still_running_leave_anyway": "デザインをまだ生成中です。今離れると破棄されます。移動しますか？",
+  "editor.a_key_is_stored": "このワークスペースには API キーが保存されています",
   "editor.a_poll_takes_at_most_6_options": "投票の選択肢は最大6つです。",
   "editor.a_single_track_exports_pre_master_no_ducking": "単一トラックはプリマスターで書き出されます(ダッキング・マスターゲインなし)",
   "editor.aa": "Aa",

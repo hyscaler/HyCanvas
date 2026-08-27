@@ -444,6 +444,7 @@
   "editor.a4_portrait": "A4 纵向",
   "editor.a_brand_admin_can_apply_or_pin_this_update": "品牌管理员可以应用或固定此更新。",
   "editor.a_generation_is_still_running_leave_anyway": "仍在生成设计。现在离开将丢弃该任务。仍要离开吗？",
+  "editor.a_key_is_stored": "此工作区已保存 API 密钥",
   "editor.a_poll_takes_at_most_6_options": "投票最多6个选项。",
   "editor.a_single_track_exports_pre_master_no_ducking": "单轨导出为预混母带(无闪避,无母带增益)",
   "editor.aa": "Aa",
