@@ -224,14 +224,24 @@ const maxSearchResults = 10
 // a request body and the guard lived in a different function: any future caller
 // would have preallocated whatever a client asked for.
 func cleanResults(in []SearchResult, max int) []SearchResult {
-	if max < 1 {
-		max = 1
+	// The low guard is against a NEGATIVE cap, which would panic make. It
+	// deliberately does not raise 0 to 1: "cap the list at zero" is a coherent
+	// request, and quietly returning one result would be a different function.
+	if max < 0 {
+		max = 0
 	}
 	if max > maxSearchResults {
 		max = maxSearchResults
 	}
 	out := make([]SearchResult, 0, max)
 	for _, r := range in {
+		// Checked BEFORE appending. The check used to sit after, so a cap of
+		// zero still yielded one result: the break only fired once the list had
+		// already grown past it. No caller passes zero, but "at most n" should
+		// not have an exception at n=0.
+		if len(out) >= max {
+			break
+		}
 		r.Title = strings.TrimSpace(r.Title)
 		r.URL = strings.TrimSpace(r.URL)
 		r.Content = strings.TrimSpace(r.Content)
@@ -247,9 +257,6 @@ func cleanResults(in []SearchResult, max int) []SearchResult {
 			r.Content = r.Content[:cut]
 		}
 		out = append(out, r)
-		if len(out) >= max {
-			break
-		}
 	}
 	return out
 }
