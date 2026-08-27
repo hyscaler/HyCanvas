@@ -2888,6 +2888,7 @@
   "errors.api_account_storage_full": "アカウントのストレージがいっぱいです。",
   "errors.api_admin_access_required": "この操作には管理者権限が必要です。",
   "errors.api_ai_base_url_required": "このプロバイダーにはベースURLが必要です。保存するにはエンドポイントのURLを入力してください。",
+  "errors.api_ai_describe_image_unsupported": "設定済みのどのプロバイダーも画像を読み取れません。ビジョン対応の画像プロバイダーを追加するか、対応するプロバイダーに切り替えてください。",
   "errors.api_ai_failed": "サーバーでAIリクエストに失敗しました。",
   "errors.api_ai_image_edit_unsupported": "ご利用のAIプロバイダーは画像編集に対応していません。AI設定で画像編集に対応したプロバイダー（例：OpenAI）に切り替えてください。",
   "errors.api_ai_image_unsupported": "お使いの AI プロバイダーは画像を生成できません。AI 設定で画像プロバイダーを追加するか、画像対応のプロバイダーに切り替えてください。",

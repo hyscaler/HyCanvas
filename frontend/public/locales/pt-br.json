@@ -2888,6 +2888,7 @@
   "errors.api_account_storage_full": "O armazenamento da sua conta está cheio.",
   "errors.api_admin_access_required": "Esta ação exige acesso de administrador.",
   "errors.api_ai_base_url_required": "Este provedor precisa de uma URL base. Insira a URL do seu endpoint para salvar.",
+  "errors.api_ai_describe_image_unsupported": "Nenhum dos provedores configurados consegue ler imagens. Adicione um provedor de imagens com visão ou troque para um que tenha.",
   "errors.api_ai_failed": "A solicitação de IA falhou no servidor.",
   "errors.api_ai_image_edit_unsupported": "Seu provedor de IA não oferece suporte à edição de imagens. Mude para um provedor com edição de imagens (por exemplo, OpenAI) nas configurações de IA.",
   "errors.api_ai_image_unsupported": "Seu provedor de IA não gera imagens. Adicione um provedor de imagens nas configurações de IA ou troque para um provedor com suporte a imagens.",

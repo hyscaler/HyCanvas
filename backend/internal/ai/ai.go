@@ -76,6 +76,12 @@ var (
 	// ErrSearchKeyRequired is returned when the hosted search provider is
 	// configured without an API key (distinct so the UI points at the field).
 	ErrSearchKeyRequired = errors.New("the search provider requires an API key")
+	// ErrDescribeImageUnsupported is the vision-specific capability rejection.
+	// It was ErrBadRequest, which the API renders as "no provider configured" -
+	// told to a workspace that has one, sometimes two, and whose only real
+	// problem is that neither can read an image. The remedy is a different
+	// provider, not a configuration the admin has already done.
+	ErrDescribeImageUnsupported = errors.New("provider does not support reading images")
 	// ErrEditImageUnsupported is the edit-specific capability rejection:
 	// several providers generate images but cannot edit them (azure-openai,
 	// zhipu), so the generation-worded message would be wrong.
@@ -434,7 +440,7 @@ func (s *Service) DescribeImage(ctx context.Context, workspaceID, imageBase64, i
 	// Vision describe is unsupported on text-only providers (e.g. DeepSeek); fail
 	// fast with a 400 instead of POSTing an image payload that will be rejected.
 	if !ResolveRoute(string(cfg.Provider), cfg.Model, cfg.ImageModel, FeatureDescribeImage).Supported {
-		return "", ErrBadRequest
+		return "", ErrDescribeImageUnsupported
 	}
 	mime := "image/png"
 	if m := dataURLMime.FindStringSubmatch(imageBase64); m != nil {

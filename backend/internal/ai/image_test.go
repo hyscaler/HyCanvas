@@ -310,3 +310,49 @@ func TestVisionRoutingPrefersACapableProvider(t *testing.T) {
 		})
 	}
 }
+
+// A workspace with providers configured that simply cannot read images used to
+// be told "no provider configured", which is both untrue and unactionable: it
+// sends an admin to check settings they have already done correctly.
+func TestDescribeImageNamesTheRealReason_DB(t *testing.T) {
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		t.Skip("DATABASE_URL not set; skipping DB integration test")
+	}
+	ctx := context.Background()
+	conn, err := pgx.Connect(ctx, stripSchema(dsn))
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	defer conn.Close(ctx)
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin: %v", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	acct := accounts.NewService(tx, "test-jwt-secret")
+	_, ws, _, err := acct.Signup(ctx, "ai-describe+"+uuid.NewString()+"@example.com", "a-strong-password", "Owner")
+	if err != nil {
+		t.Fatalf("signup: %v", err)
+	}
+	svc := NewService(tx, "test-ai-secret", true)
+
+	// DeepSeek cannot see, and Zhipu generates images without reading them, so
+	// neither slot can serve vision. The capability check runs before any
+	// outbound call, so this needs no network.
+	if _, err := svc.SetConfig(ctx, ws.ID, ConfigInput{Provider: "deepseek", APIKey: "sk-text"}); err != nil {
+		t.Fatalf("SetConfig: %v", err)
+	}
+	if _, err := svc.SetImageConfig(ctx, ws.ID, ImageConfigInput{Provider: "zhipu", APIKey: "sk-image"}); err != nil {
+		t.Fatalf("SetImageConfig: %v", err)
+	}
+	if _, err := svc.DescribeImage(ctx, ws.ID, "aGk=", ""); !errors.Is(err, ErrDescribeImageUnsupported) {
+		t.Fatalf("expected the vision-specific rejection, got %v", err)
+	}
+	// It must stay distinct from "nothing is configured", which is what the
+	// generic bad request renders as.
+	if errors.Is(ErrDescribeImageUnsupported, ErrBadRequest) {
+		t.Fatal("the vision rejection must not collapse back into ErrBadRequest")
+	}
+}

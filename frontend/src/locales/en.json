@@ -2888,6 +2888,7 @@
   "errors.api_account_storage_full": "Your account storage is full.",
   "errors.api_admin_access_required": "This action needs admin access.",
   "errors.api_ai_base_url_required": "This provider needs a base URL. Enter your endpoint URL to save.",
+  "errors.api_ai_describe_image_unsupported": "None of your configured providers can read images. Add an image provider that supports vision, or switch to a provider that does.",
   "errors.api_ai_failed": "The AI request failed on the server.",
   "errors.api_ai_image_edit_unsupported": "Your AI provider does not support image editing. Switch to a provider with image editing (e.g. OpenAI) in AI settings.",
   "errors.api_ai_image_unsupported": "Your AI provider cannot generate images. Add an image provider in AI settings, or switch to an image-capable provider.",

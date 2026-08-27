@@ -2888,6 +2888,7 @@
   "errors.api_account_storage_full": "Der Speicher deines Kontos ist voll.",
   "errors.api_admin_access_required": "Für diese Aktion sind Administratorrechte nötig.",
   "errors.api_ai_base_url_required": "Dieser Anbieter benötigt eine Basis-URL. Gib deine Endpunkt-URL ein, um zu speichern.",
+  "errors.api_ai_describe_image_unsupported": "Keiner deiner konfigurierten Anbieter kann Bilder lesen. Füge einen Bildanbieter mit Bilderkennung hinzu oder wechsle zu einem Anbieter, der das kann.",
   "errors.api_ai_failed": "Die KI-Anfrage ist auf dem Server fehlgeschlagen.",
   "errors.api_ai_image_edit_unsupported": "Dein KI-Anbieter unterstützt keine Bildbearbeitung. Wechsle in den KI-Einstellungen zu einem Anbieter mit Bildbearbeitung (z. B. OpenAI).",
   "errors.api_ai_image_unsupported": "Dein KI-Anbieter kann keine Bilder erzeugen. Füge in den KI-Einstellungen einen Bildanbieter hinzu oder wechsle zu einem bildfähigen Anbieter.",

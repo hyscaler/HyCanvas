@@ -2888,6 +2888,7 @@
   "errors.api_account_storage_full": "Le stockage de votre compte est plein.",
   "errors.api_admin_access_required": "Cette action nécessite un accès administrateur.",
   "errors.api_ai_base_url_required": "Ce fournisseur nécessite une URL de base. Saisissez l’URL de votre point de terminaison pour enregistrer.",
+  "errors.api_ai_describe_image_unsupported": "Aucun de vos fournisseurs configurés ne peut lire les images. Ajoutez un fournisseur d'images capable de vision, ou passez à un fournisseur qui l'est.",
   "errors.api_ai_failed": "La requête IA a échoué sur le serveur.",
   "errors.api_ai_image_edit_unsupported": "Votre fournisseur d'IA ne prend pas en charge la retouche d'images. Passez à un fournisseur qui la propose (p. ex. OpenAI) dans les paramètres d'IA.",
   "errors.api_ai_image_unsupported": "Votre fournisseur d'IA ne peut pas générer d'images. Ajoutez un fournisseur d'images dans les paramètres d'IA, ou passez à un fournisseur capable de générer des images.",

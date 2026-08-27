@@ -89,6 +89,8 @@ func aiFailure(err error) (status int, title, detail, code string) {
 		return http.StatusForbidden, "Forbidden", err.Error(), "ai_policy_blocked"
 	case errors.Is(err, ai.ErrImageUnsupported):
 		return http.StatusBadRequest, "Bad Request", "your AI provider cannot generate images; add a dedicated image provider in AI settings, or switch to an image-capable provider", "ai_image_unsupported"
+	case errors.Is(err, ai.ErrDescribeImageUnsupported):
+		return http.StatusBadRequest, "Bad Request", "no configured provider can read images; add an image provider that supports vision, or switch to a provider that does", "ai_describe_image_unsupported"
 	case errors.Is(err, ai.ErrEditImageUnsupported):
 		return http.StatusBadRequest, "Bad Request", "your AI provider does not support image editing; switch to a provider with image editing (e.g. OpenAI) in AI settings", "ai_image_edit_unsupported"
 	case errors.Is(err, ai.ErrBaseURLRequired):
@@ -132,6 +134,8 @@ func aiProblem(w http.ResponseWriter, r *http.Request, err error) {
 		problemWithCode(w, r, status, title, detail, "ai_policy_blocked")
 	case "ai_image_unsupported":
 		problemWithCode(w, r, status, title, detail, "ai_image_unsupported")
+	case "ai_describe_image_unsupported":
+		problemWithCode(w, r, status, title, detail, "ai_describe_image_unsupported")
 	case "ai_image_edit_unsupported":
 		problemWithCode(w, r, status, title, detail, "ai_image_edit_unsupported")
 	case "ai_base_url_required":
