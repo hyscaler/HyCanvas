@@ -480,3 +480,41 @@ func TestWriteSearchQuery(t *testing.T) {
 		t.Fatalf("fallback not truncated: %q", got)
 	}
 }
+
+// An assistant turn that says nothing and plans nothing used to validate, so
+// the request succeeded with a 200 and the user got an empty bubble: no answer,
+// no action, and no error to explain either. It must be rejected so the repair
+// pass gets a chance and a persistent failure is reported as one.
+func TestAssistantTurnMustSayOrDoSomething(t *testing.T) {
+	catalog := map[string]bool{"writeText": true}
+	validate := validateAssistant(catalog)
+
+	cases := []struct {
+		name    string
+		reply   AssistantReply
+		wantErr bool
+	}{
+		{"says nothing and plans nothing", AssistantReply{}, true},
+		{"blank reply with only whitespace", AssistantReply{Reply: "   "}, true},
+		{"answers without acting", AssistantReply{Reply: "The title is already bold."}, false},
+		{"acts without narrating", AssistantReply{Plan: []PlanStep{{Action: "writeText"}}}, false},
+		{"asks for clarification", AssistantReply{Clarify: "Which page?"}, false},
+		{"every action unknown", AssistantReply{Reply: "ok", Plan: []PlanStep{{Action: "nope"}}}, true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			r := c.reply
+			err := validate(&r)
+			if (err != nil) != c.wantErr {
+				t.Fatalf("validate(%+v) error = %v, wantErr %v", c.reply, err, c.wantErr)
+			}
+		})
+	}
+
+	// A clarification with no reply text still reaches the user: it is promoted
+	// into the reply rather than left as an empty bubble.
+	r := AssistantReply{Clarify: "Which page?"}
+	if err := validate(&r); err != nil || r.Reply != "Which page?" {
+		t.Fatalf("clarify should become the reply, got %+v err=%v", r, err)
+	}
+}

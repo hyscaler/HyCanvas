@@ -192,7 +192,16 @@ func validateAssistant(catalog map[string]bool) func(*AssistantReply) error {
 		if original > 0 && len(kept) == 0 {
 			return errors.New("every planned action was an unknown tool")
 		}
-		// A genuinely empty plan (the model proposed nothing) is allowed.
+		// An empty plan is fine on its own: the assistant is allowed to just
+		// answer. Saying NOTHING and planning nothing is not, and it validated
+		// happily because each field is individually optional. The turn then
+		// succeeded with a 200 and an empty bubble: no answer, no action, no
+		// error to explain either. Rejecting it here spends a repair pass with
+		// the reason fed back, and a model that still says nothing twice
+		// surfaces as a real failure the caller can report.
+		if len(a.Plan) == 0 && strings.TrimSpace(a.Reply) == "" {
+			return errors.New("the reply said nothing and planned nothing")
+		}
 		return nil
 	}
 }
