@@ -85,6 +85,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Input } from "@/components/ui/Input";
 import { Logo, LogoMark } from "@/components/ui/Logo";
 import { Modal } from "@/components/ui/Modal";
+import { PromptHost } from "@/components/ui/PromptHost";
 import { Spinner } from "@/components/ui/Spinner";
 import { dashboardPath, type DashboardView } from "./views";
 import { DesignThumb } from "./DesignThumb";
@@ -1327,6 +1328,10 @@ export function DashboardApp({ view }: { view: DashboardView }) {
 
       {/* Modals */}
 
+      {/* The imperative dialog host: mounted in the editor from the start but
+          never here, so a confirm raised from a dashboard panel had nothing to
+          render it and would have waited forever. */}
+      <PromptHost />
       <Modal open={sizeOpen} onClose={() => setSizeOpen(false)} title={tr("dashboard.create_a_design")} width="w-[34rem]">
         <div className="grid grid-cols-2 gap-2">
           {sizePresets().map((p) => {

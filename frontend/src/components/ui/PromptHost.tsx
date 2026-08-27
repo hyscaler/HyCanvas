@@ -27,6 +27,7 @@ export function PromptHost() {
   const cancel = () => {
     setReq(null);
     if (req.kind === "prompt") req.resolve(null);
+    else if (req.kind === "confirm") req.resolve(false);
     else req.resolve();
   };
   const confirm = () => {
@@ -35,12 +36,25 @@ export function PromptHost() {
     const value = inputRef.current?.value.trim() ?? "";
     setReq(null);
     if (req.kind === "prompt") req.resolve(value);
+    else if (req.kind === "confirm") req.resolve(true);
     else req.resolve();
   };
 
   return (
     <Modal open onClose={cancel} title={req.kind === "alert" ? req.title ?? tr("ui.notice") : req.title}>
-      {req.kind === "prompt" ? (
+      {req.kind === "confirm" ? (
+        <div className="flex flex-col gap-4">
+          <p className="text-sm leading-relaxed text-neutral-700">{req.message}</p>
+          <div className="flex justify-end gap-2">
+            {/* Cancel first and autofocused: for something irreversible, the
+                safe choice should be the one a stray Enter picks. */}
+            <Button type="button" variant="secondary" size="sm" onClick={cancel} autoFocus>{tr("ui.cancel")}</Button>
+            <Button size="sm" variant={req.danger ? "danger" : "primary"} onClick={confirm}>
+              {req.confirmText ?? "OK"}
+            </Button>
+          </div>
+        </div>
+      ) : req.kind === "prompt" ? (
         <form
           onSubmit={(e) => {
             e.preventDefault();

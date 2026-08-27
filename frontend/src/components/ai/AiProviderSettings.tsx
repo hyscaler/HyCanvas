@@ -17,6 +17,7 @@ import { oc } from "@/lib/sdk";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { apiCodeMessage } from "@/lib/errors";
+import { confirmAction } from "@/lib/promptDialog";
 import { tr } from "@/lib/i18n";
 
 export function AiProviderSettings({
@@ -191,7 +192,13 @@ export function AiProviderSettings({
     // Confirmed because it stops AI for everyone in the workspace, and the key
     // cannot be recovered afterwards - the server never gave it back to us.
     // It also sits next to Save, so a misclick has to be cheap to undo.
-    if (!window.confirm(tr("editor.reset_provider_confirm"))) return;
+    const ok = await confirmAction({
+      title: tr("editor.reset_provider"),
+      message: tr("editor.reset_provider_confirm"),
+      confirmText: tr("editor.reset_provider"),
+      danger: true,
+    });
+    if (!ok) return;
     setSaving(true);
     try {
       await oc.deleteAiConfig(workspaceId);
