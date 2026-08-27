@@ -78,3 +78,30 @@ describe("pickAgendaLayout", () => {
     expect(pickAgendaLayout([L("t", "Title", ["title", "body"])])).toBeNull();
   });
 });
+
+describe("extractTitleFromText is linear on hostile input", () => {
+  it("handles a heading line of 200k spaces without backtracking", () => {
+    // The old `^#{1,6}\s+(.+)$` let both halves claim the same run of spaces,
+    // so every space was another way to split the match. The text comes from a
+    // model reply, so it is not input we control. The budget is deliberately
+    // loose: it measures the complexity class, not the machine.
+    const hostile = "#" + " ".repeat(200_000) + "\nA real line";
+    const started = Date.now();
+    expect(extractTitleFromText(hostile)).toBe("A real line");
+    expect(Date.now() - started).toBeLessThan(1000);
+  });
+
+  it("still reads a real heading", () => {
+    expect(extractTitleFromText("## Coastal Restoration\nbody")).toBe("Coastal Restoration");
+    expect(extractTitleFromText("###   Spaced   Out  ")).toBe("Spaced   Out");
+    expect(extractTitleFromText("#" + " ".repeat(2000) + "Title")).toBe("Title");
+  });
+
+  it("does not hand back a bare heading marker as the title", () => {
+    // The stricter pattern no longer crosses a newline to borrow the next
+    // line's text, so an empty heading falls through - and "#" is not a title.
+    expect(extractTitleFromText("#   \nA real line")).toBe("A real line");
+    expect(extractTitleFromText("#")).toBe("Slide");
+    expect(extractTitleFromText("###\n\n")).toBe("Slide");
+  });
+});

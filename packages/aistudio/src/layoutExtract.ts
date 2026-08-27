@@ -236,7 +236,13 @@ export function layoutReviewInstruction(
 /** Parse the model's reply tolerantly: fences stripped, non-JSON rejected,
  *  unknown ids and roles dropped. A garbage reply yields no corrections. */
 export function parseLayoutReview(text: string, validIds: string[]): LayoutReviewCorrection[] {
-  const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  // The closing fence is stripped WITHOUT a leading `\s*`, then trimmed. That
+  // reads the same and behaves the same on an already-trimmed string, but
+  // `\s*```$` had no anchor on its left, so on a reply full of spaces and no
+  // closing fence the engine restarted the whitespace run at every offset:
+  // quadratic work on model output, which is exactly the input we do not
+  // control.
+  const cleaned = text.trim().replace(/^```(?:json)?[ \t]*\n?/i, "").replace(/```$/, "").trim();
   const start = cleaned.indexOf("{");
   const end = cleaned.lastIndexOf("}");
   if (start < 0 || end <= start) return [];

@@ -39,12 +39,23 @@ export function splitEvenly<T>(items: T[], n: number): T[][] {
  *  "Slide" (the reference fallback chain). */
 export function extractTitleFromText(text: string): string {
   const t = (text ?? "").trim();
-  const heading = /^#{1,6}\s+(.+)$/m.exec(t);
+  // `[ \t]+` then a group that must START non-space: the two parts cannot both
+  // claim the same run of spaces, so there is exactly one way to split. The
+  // previous `\s+(.+)` was ambiguous at every space, which made a heading line
+  // of N spaces cost O(N^2) to REJECT - reachable here because the text comes
+  // from a model reply. Refusing to cross a newline is also more correct: a
+  // heading's text is on the heading's own line.
+  const heading = /^#{1,6}[ \t]+(\S[^\n]*)$/m.exec(t);
   if (heading) return heading[1].trim();
   const sentence = /^(.+?[.!?])(\s|$)/.exec(t);
   if (sentence) return sentence[1].trim();
   for (const line of t.split("\n")) {
-    if (line.trim()) return line.trim();
+    const trimmed = line.trim();
+    // A bare heading marker is punctuation, not a title. It reaches here when
+    // the heading had no text of its own, and returning "#" as a slide title
+    // is worse than falling through to the next line (or to "Slide").
+    if (!trimmed || /^#+$/.test(trimmed)) continue;
+    return trimmed;
   }
   return "Slide";
 }

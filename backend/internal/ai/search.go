@@ -182,8 +182,8 @@ func (s *Service) Search(ctx context.Context, workspaceID, query string, maxResu
 	if maxResults < 1 {
 		maxResults = 5
 	}
-	if maxResults > 10 {
-		maxResults = 10
+	if maxResults > maxSearchResults {
+		maxResults = maxSearchResults
 	}
 	r, err := s.getSearchRow(ctx, workspaceID)
 	if err != nil {
@@ -212,8 +212,24 @@ func (s *Service) Search(ctx context.Context, workspaceID, query string, maxResu
 	return nil, ErrSearchNotConfigured
 }
 
+// maxSearchResults bounds a single search, and with it the slice cleanResults
+// preallocates. One constant so the caller's clamp and the allocation cannot
+// drift apart.
+const maxSearchResults = 10
+
 // cleanResults trims, drops empty hits, and caps the list.
+//
+// It clamps `max` itself rather than trusting the caller. Search already
+// clamps, so nothing reaches here unbounded today, but the value originates in
+// a request body and the guard lived in a different function: any future caller
+// would have preallocated whatever a client asked for.
 func cleanResults(in []SearchResult, max int) []SearchResult {
+	if max < 1 {
+		max = 1
+	}
+	if max > maxSearchResults {
+		max = maxSearchResults
+	}
 	out := make([]SearchResult, 0, max)
 	for _, r := range in {
 		r.Title = strings.TrimSpace(r.Title)

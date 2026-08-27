@@ -215,3 +215,30 @@ describe("T20 stage 3: capacity verification", () => {
     expect(verifyLayoutCapacities(once, PAGE_SIZE)).toEqual(once);
   });
 });
+
+describe("parseLayoutReview is linear on hostile input", () => {
+  it("handles a long reply of interior spaces without backtracking", () => {
+    // Measured before the fix: 30 seconds. `\s*```$` had no anchor to its
+    // left, so with no closing fence the engine restarted the whitespace run
+    // at every one of N offsets. The spaces must be INTERIOR - a trailing run
+    // is removed by the .trim() that runs first, which is why an earlier
+    // version of this test passed against the broken pattern.
+    const hostile = "{" + " ".repeat(120_000) + "}";
+    const started = Date.now();
+    expect(parseLayoutReview(hostile, ["a"])).toEqual([]);
+    expect(Date.now() - started).toBeLessThan(1000);
+  });
+
+  it("still strips fences exactly as before", () => {
+    const body = '{"corrections":[{"id":"a","role":"title"}]}';
+    for (const wrapped of [
+      "```json\n" + body + "\n```",
+      "```\n" + body + "\n```",
+      "```json   \n" + body + "   \n```",
+      "```JSON\n" + body + "\n```",
+      body,
+    ]) {
+      expect(parseLayoutReview(wrapped, ["a"])).toEqual([{ id: "a", role: "title" }]);
+    }
+  });
+});
