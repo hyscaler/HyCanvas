@@ -65,6 +65,12 @@ export function AiProviderSettings({
   // because one combined fetch gated the whole form.
   const [searchFor, setSearchFor] = useState<string | null>(null);
   const searchLoaded = !!workspaceId && searchFor === workspaceId;
+  // Failing to LOAD is not the same as not having loaded yet. Both hide the
+  // fields, because rendering them would offer to save a value we never read,
+  // but only one of them should be silent. A section that simply is not there
+  // reads as a feature that does not exist, which is exactly how a stale
+  // backend (404 on a route the frontend already knows) presents itself.
+  const [searchFailed, setSearchFailed] = useState(false);
   // The optional SECOND provider, for image work. Seven of the eleven presets
   // cannot generate an image at all, so without this, choosing Claude or Kimi
   // to write with meant giving up generated imagery entirely.
@@ -87,6 +93,7 @@ export function AiProviderSettings({
   const [replacingImgKey, setReplacingImgKey] = useState(false);
   const [imgFor, setImgFor] = useState<string | null>(null);
   const imageLoaded = !!workspaceId && imgFor === workspaceId;
+  const [imgFailed, setImgFailed] = useState(false);
   const [saving, setSaving] = useState(false);
   // A stored key is write-only: the server returns hasKey and never the key
   // itself. An empty box said nothing about whether one existed, so it shows a
@@ -120,9 +127,12 @@ export function AiProviderSettings({
         setSearchUrl(cfg?.baseUrl ?? "");
         setSearchKey("");
         setSearchFor(workspaceId);
+        setSearchFailed(false);
       },
       () => {
-        // Leave it untouched and unsaved rather than guess it is off.
+        // Leave it untouched and unsaved rather than guess it is off, but say
+        // so: silence here is indistinguishable from the feature being absent.
+        if (!cancelled) setSearchFailed(true);
       },
     );
     return () => { cancelled = true; };
@@ -146,9 +156,12 @@ export function AiProviderSettings({
         setImgKey("");
         setReplacingImgKey(false);
         setImgFor(workspaceId);
+        setImgFailed(false);
       },
       () => {
-        // Leave it untouched and unsaved rather than guess it is unset.
+        // Leave it untouched and unsaved rather than guess it is unset, but
+        // say so, for the same reason as the search record above.
+        if (!cancelled) setImgFailed(true);
       },
     );
     return () => { cancelled = true; };
@@ -428,6 +441,12 @@ export function AiProviderSettings({
           Presented as a choice rather than buried: for the seven text-only
           presets it is the only way to get generated imagery at all, and the
           hint says so in place of the main form's absent image-model field. */}
+      {!imageLoaded && imgFailed && (
+        <div className={wide ? "mt-1 border-t border-neutral-200 pt-3.5" : "mt-1 border-t border-neutral-200 pt-2.5"}>
+          <p className="text-[11px] text-neutral-500">{tr("editor.image_provider_unavailable")}</p>
+        </div>
+      )}
+
       {imageLoaded && (
         <div className={wide ? "mt-1 border-t border-neutral-200 pt-3.5" : "mt-1 border-t border-neutral-200 pt-2.5"}>
           <div className="mb-2.5 flex flex-col gap-0.5">
@@ -525,6 +544,12 @@ export function AiProviderSettings({
       {/* Web-search grounding is a SEPARATE provider with its own host and key.
           Grouped and labelled as such: interleaved with the model fields, its
           base URL read as a second, unexplained "Base URL" for the model. */}
+      {!searchLoaded && searchFailed && (
+        <div className={wide ? "mt-1 border-t border-neutral-200 pt-3.5" : "mt-1 border-t border-neutral-200 pt-2.5"}>
+          <p className="text-[11px] text-neutral-500">{tr("editor.web_search_unavailable")}</p>
+        </div>
+      )}
+
       {searchLoaded && (
         <div className={wide ? "mt-1 border-t border-neutral-200 pt-3.5" : "mt-1 border-t border-neutral-200 pt-2.5"}>
           <div className={wide ? "grid grid-cols-1 gap-x-5 gap-y-3.5 sm:grid-cols-2 xl:grid-cols-3" : "flex flex-col gap-2.5"}>
