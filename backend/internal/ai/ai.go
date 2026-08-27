@@ -287,6 +287,11 @@ func (s *Service) SetConfig(ctx context.Context, workspaceID string, in ConfigIn
 //
 // The AI policy and the recorded usage are separate rows and survive: a
 // workspace that swaps providers keeps its governance and its billing history.
+// So does the dedicated image provider, which is its own record with its own
+// vendor and key: swapping the text provider is not a reason to tear down the
+// image one. The settings form deletes both, because its button says "Reset
+// provider" and a second key surviving that would be a surprise; an API client
+// removing one and keeping the other is a legitimate thing to want.
 func (s *Service) DeleteConfig(ctx context.Context, workspaceID string) error {
 	_, err := s.db.Exec(ctx, `DELETE FROM "ai_configs" WHERE "workspace_id" = $1`, workspaceID)
 	return err

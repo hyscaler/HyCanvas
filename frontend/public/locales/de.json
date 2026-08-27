@@ -2886,7 +2886,7 @@
   "errors.api_ai_base_url_required": "Dieser Anbieter benötigt eine Basis-URL. Gib deine Endpunkt-URL ein, um zu speichern.",
   "errors.api_ai_failed": "Die KI-Anfrage ist auf dem Server fehlgeschlagen.",
   "errors.api_ai_image_edit_unsupported": "Dein KI-Anbieter unterstützt keine Bildbearbeitung. Wechsle in den KI-Einstellungen zu einem Anbieter mit Bildbearbeitung (z. B. OpenAI).",
-  "errors.api_ai_image_unsupported": "Dein KI-Anbieter unterstützt keine Bilderzeugung; wechsle in den KI-Einstellungen zu einem bildfähigen Anbieter.",
+  "errors.api_ai_image_unsupported": "Dein KI-Anbieter kann keine Bilder erzeugen. Füge in den KI-Einstellungen einen Bildanbieter hinzu oder wechsle zu einem bildfähigen Anbieter.",
   "errors.api_ai_key_required_for_provider_change": "Der Anbieterwechsel benötigt den API-Schlüssel des neuen Anbieters. Gib ihn ein, um zu speichern.",
   "errors.api_ai_not_configured": "Ungültige KI-Anfrage oder kein KI-Anbieter konfiguriert.",
   "errors.api_ai_policy_blocked": "Durch die Markenrichtlinie deines Arbeitsbereichs blockiert.",

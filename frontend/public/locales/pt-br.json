@@ -2886,7 +2886,7 @@
   "errors.api_ai_base_url_required": "Este provedor precisa de uma URL base. Insira a URL do seu endpoint para salvar.",
   "errors.api_ai_failed": "A solicitação de IA falhou no servidor.",
   "errors.api_ai_image_edit_unsupported": "Seu provedor de IA não oferece suporte à edição de imagens. Mude para um provedor com edição de imagens (por exemplo, OpenAI) nas configurações de IA.",
-  "errors.api_ai_image_unsupported": "Seu provedor de IA não suporta geração de imagens; troque para um provedor com imagens nas configurações de IA.",
+  "errors.api_ai_image_unsupported": "Seu provedor de IA não gera imagens. Adicione um provedor de imagens nas configurações de IA ou troque para um provedor com suporte a imagens.",
   "errors.api_ai_key_required_for_provider_change": "Trocar de provedor requer a chave de API do novo provedor. Insira-a para salvar.",
   "errors.api_ai_not_configured": "Solicitação de IA inválida ou nenhum provedor de IA configurado.",
   "errors.api_ai_policy_blocked": "Bloqueado pela política de marca do seu espaço de trabalho.",

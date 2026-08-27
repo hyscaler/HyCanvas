@@ -2886,7 +2886,7 @@
   "errors.api_ai_base_url_required": "Ce fournisseur nécessite une URL de base. Saisissez l’URL de votre point de terminaison pour enregistrer.",
   "errors.api_ai_failed": "La requête IA a échoué sur le serveur.",
   "errors.api_ai_image_edit_unsupported": "Votre fournisseur d'IA ne prend pas en charge la retouche d'images. Passez à un fournisseur qui la propose (p. ex. OpenAI) dans les paramètres d'IA.",
-  "errors.api_ai_image_unsupported": "Votre fournisseur d'IA ne prend pas en charge la génération d'images ; choisissez un fournisseur compatible dans les réglages IA.",
+  "errors.api_ai_image_unsupported": "Votre fournisseur d'IA ne peut pas générer d'images. Ajoutez un fournisseur d'images dans les paramètres d'IA, ou passez à un fournisseur capable de générer des images.",
   "errors.api_ai_key_required_for_provider_change": "Le changement de fournisseur nécessite la clé d'API du nouveau fournisseur. Saisissez-la pour enregistrer.",
   "errors.api_ai_not_configured": "Requête IA non valide ou aucun fournisseur d'IA configuré.",
   "errors.api_ai_policy_blocked": "Bloqué par la charte de marque de votre espace de travail.",

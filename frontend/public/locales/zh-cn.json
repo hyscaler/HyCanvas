@@ -2886,7 +2886,7 @@
   "errors.api_ai_base_url_required": "此提供商需要基础 URL。请输入您的端点 URL 后再保存。",
   "errors.api_ai_failed": "服务器上的AI请求失败。",
   "errors.api_ai_image_edit_unsupported": "您的 AI 提供商不支持图像编辑。请在 AI 设置中切换到支持图像编辑的提供商（例如 OpenAI）。",
-  "errors.api_ai_image_unsupported": "您的AI服务商不支持图片生成；请在AI设置中切换到支持图片的服务商。",
+  "errors.api_ai_image_unsupported": "你的 AI 服务商无法生成图像。请在 AI 设置中添加图像服务商，或改用支持图像的服务商。",
   "errors.api_ai_key_required_for_provider_change": "更换提供商需要新提供商的 API 密钥。请输入后保存。",
   "errors.api_ai_not_configured": "AI请求无效，或未配置AI服务商。",
   "errors.api_ai_policy_blocked": "已被工作区品牌规范阻止。",

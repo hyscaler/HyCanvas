@@ -2886,7 +2886,7 @@
   "errors.api_ai_base_url_required": "このプロバイダーにはベースURLが必要です。保存するにはエンドポイントのURLを入力してください。",
   "errors.api_ai_failed": "サーバーでAIリクエストに失敗しました。",
   "errors.api_ai_image_edit_unsupported": "ご利用のAIプロバイダーは画像編集に対応していません。AI設定で画像編集に対応したプロバイダー（例：OpenAI）に切り替えてください。",
-  "errors.api_ai_image_unsupported": "ご利用のAIプロバイダーは画像生成に対応していません。AI設定で画像対応のプロバイダーに切り替えてください。",
+  "errors.api_ai_image_unsupported": "お使いの AI プロバイダーは画像を生成できません。AI 設定で画像プロバイダーを追加するか、画像対応のプロバイダーに切り替えてください。",
   "errors.api_ai_key_required_for_provider_change": "プロバイダーを変更するには、新しいプロバイダーのAPIキーが必要です。入力して保存してください。",
   "errors.api_ai_not_configured": "無効なAIリクエストか、AIプロバイダーが設定されていません。",
   "errors.api_ai_policy_blocked": "ワークスペースのブランドポリシーによりブロックされました。",

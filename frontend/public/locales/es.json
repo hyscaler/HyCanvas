@@ -2886,7 +2886,7 @@
   "errors.api_ai_base_url_required": "Este proveedor necesita una URL base. Introduce la URL de tu endpoint para guardar.",
   "errors.api_ai_failed": "La solicitud de IA falló en el servidor.",
   "errors.api_ai_image_edit_unsupported": "Tu proveedor de IA no admite la edición de imágenes. Cambia a un proveedor con edición de imágenes (p. ej., OpenAI) en la configuración de IA.",
-  "errors.api_ai_image_unsupported": "Tu proveedor de IA no admite la generación de imágenes; cambia a un proveedor con imágenes en los ajustes de IA.",
+  "errors.api_ai_image_unsupported": "Tu proveedor de IA no puede generar imágenes. Añade un proveedor de imágenes en los ajustes de IA o cambia a un proveedor con capacidad de imagen.",
   "errors.api_ai_key_required_for_provider_change": "Cambiar de proveedor requiere la clave de API del nuevo proveedor. Introdúcela para guardar.",
   "errors.api_ai_not_configured": "Solicitud de IA no válida o ningún proveedor de IA configurado.",
   "errors.api_ai_policy_blocked": "Bloqueado por la política de marca de tu espacio de trabajo.",

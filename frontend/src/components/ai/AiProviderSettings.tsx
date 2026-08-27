@@ -78,6 +78,12 @@ export function AiProviderSettings({
   const [imgKey, setImgKey] = useState("");
   const [imgHasKey, setImgHasKey] = useState(false);
   const [imgStoredProvider, setImgStoredProvider] = useState("");
+  // The stored model and host, kept apart from the editable fields. Restoring
+  // from the live values instead would restore what switching away had already
+  // blanked: a round trip through another provider and back silently dropped a
+  // configured model, and dropped a required custom host into a failing save.
+  const [imgStoredModel, setImgStoredModel] = useState("");
+  const [imgStoredBaseUrl, setImgStoredBaseUrl] = useState("");
   const [replacingImgKey, setReplacingImgKey] = useState(false);
   const [imgFor, setImgFor] = useState<string | null>(null);
   const imageLoaded = !!workspaceId && imgFor === workspaceId;
@@ -128,9 +134,17 @@ export function AiProviderSettings({
     if (!workspaceId) return;
     let cancelled = false;
     void oc.getAiImageConfig(workspaceId).then(
-      (cfg) => {
+      (cfg: AiImageConfigView | null) => {
         if (cancelled) return;
-        applyImageConfig(cfg);
+        setImgProvider(cfg?.provider ?? "");
+        setImgStoredProvider(cfg?.provider ?? "");
+        setImgModel(cfg?.model ?? "");
+        setImgStoredModel(cfg?.model ?? "");
+        setImgBaseUrl(cfg?.baseUrl ?? "");
+        setImgStoredBaseUrl(cfg?.baseUrl ?? "");
+        setImgHasKey(!!cfg?.hasKey);
+        setImgKey("");
+        setReplacingImgKey(false);
         setImgFor(workspaceId);
       },
       () => {
@@ -138,15 +152,6 @@ export function AiProviderSettings({
       },
     );
     return () => { cancelled = true; };
-    function applyImageConfig(cfg: AiImageConfigView | null) {
-      setImgProvider(cfg?.provider ?? "");
-      setImgStoredProvider(cfg?.provider ?? "");
-      setImgModel(cfg?.model ?? "");
-      setImgBaseUrl(cfg?.baseUrl ?? "");
-      setImgHasKey(!!cfg?.hasKey);
-      setImgKey("");
-      setReplacingImgKey(false);
-    }
   }, [workspaceId]);
 
   const selPreset = presets.find((p) => p.id === provider);
@@ -236,6 +241,8 @@ export function AiProviderSettings({
           ...(imgKey.trim() ? { apiKey: imgKey.trim() } : {}),
         });
         setImgStoredProvider(img?.provider ?? "");
+        setImgStoredModel(img?.model ?? "");
+        setImgStoredBaseUrl(img?.baseUrl ?? "");
         setImgHasKey(!!img?.hasKey);
         setImgKey("");
         setReplacingImgKey(false);
@@ -278,17 +285,24 @@ export function AiProviderSettings({
     if (!ok) return;
     setSaving(true);
     try {
-      await oc.deleteAiConfig(workspaceId);
       // The image provider is part of "the provider" as far as anyone reading
       // this button is concerned, and leaving a second vendor's key behind
       // after being told the provider was reset would be a nasty surprise.
-      await oc.deleteAiImageConfig(workspaceId).catch(() => {});
+      //
+      // It goes FIRST, and its failure is not swallowed: if this cannot be
+      // removed, nothing has been removed yet, so the error leaves a coherent
+      // configuration rather than a cleared main provider beside a surviving
+      // second key that the user believes is gone.
+      await oc.deleteAiImageConfig(workspaceId);
+      await oc.deleteAiConfig(workspaceId);
       setApiKey("");
       setReplacingKey(false);
       setImgProvider("");
       setImgStoredProvider("");
       setImgModel("");
+      setImgStoredModel("");
       setImgBaseUrl("");
+      setImgStoredBaseUrl("");
       setImgKey("");
       setImgHasKey(false);
       setReplacingImgKey(false);
@@ -438,8 +452,8 @@ export function AiProviderSettings({
                   // restore the stored ones only when switching back to the
                   // stored provider, blank them otherwise.
                   const stored = next === imgStoredProvider;
-                  setImgModel(stored ? imgModel : "");
-                  setImgBaseUrl(stored ? imgBaseUrl : "");
+                  setImgModel(stored ? imgStoredModel : "");
+                  setImgBaseUrl(stored ? imgStoredBaseUrl : "");
                   setImgKey("");
                   setReplacingImgKey(false);
                 }}
