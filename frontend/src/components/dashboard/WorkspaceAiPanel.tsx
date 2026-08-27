@@ -103,7 +103,7 @@ export function WorkspaceAiPanel({ workspaceId, canEdit }: { workspaceId: string
             canEdit={canEdit}
             layout="wide"
             onSaved={(c) => { setConfig(c); loadUsage(); }}
-            onDisconnected={() => { setConfig(null); loadUsage(); }}
+            onReset={() => { setConfig(null); loadUsage(); }}
           />
         </div>
       )}
