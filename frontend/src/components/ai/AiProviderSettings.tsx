@@ -94,6 +94,11 @@ export function AiProviderSettings({
   const [imgFor, setImgFor] = useState<string | null>(null);
   const imageLoaded = !!workspaceId && imgFor === workspaceId;
   const [imgFailed, setImgFailed] = useState(false);
+  // The image provider's credentials, checked on demand. "unverified" is a real
+  // third answer, not a softened failure: the probe lists models, and a provider
+  // without that route cannot be judged either way.
+  const [imgCheck, setImgCheck] = useState<"idle" | "checking" | "ok" | "unverified" | "failed">("idle");
+  const [imgCheckDetail, setImgCheckDetail] = useState("");
   const [saving, setSaving] = useState(false);
   // A stored key is write-only: the server returns hasKey and never the key
   // itself. An empty box said nothing about whether one existed, so it shows a
@@ -284,6 +289,20 @@ export function AiProviderSettings({
     ? "flex min-w-0 flex-col gap-1.5 text-sm font-medium text-neutral-700"
     : "flex min-w-0 flex-col gap-1 text-[11px] font-medium text-neutral-500";
 
+  async function checkImageProvider() {
+    if (!workspaceId) return;
+    setImgCheck("checking");
+    setImgCheckDetail("");
+    try {
+      const r = await oc.testAiImageConfig(workspaceId);
+      setImgCheck(r.verified ? "ok" : "unverified");
+    } catch (e) {
+      const coded = e instanceof ApiError ? apiCodeMessage(e.body) : null;
+      setImgCheck("failed");
+      setImgCheckDetail(coded ?? tr("editor.the_image_provider_did_not_answer"));
+    }
+  }
+
   async function reset() {
     if (!workspaceId || saving) return;
     // Confirmed because it stops AI for everyone in the workspace, and the key
@@ -401,14 +420,19 @@ export function AiProviderSettings({
           />
         </label>
 
-        <label className={labelCls}>
-          {tr("editor.api_key")}
-          {/* Only the STORED provider has a stored key. Showing the masked
-              stand-in after switching the select claimed a key existed for the
-              new provider, and the only hint otherwise was the save being
-              refused; an empty field asks for what the save is about to
-              require. */}
-          {sameProvider && config?.hasKey && !replacingKey ? (
+        {/* Only the STORED provider has a stored key. Showing the masked
+            stand-in after switching the select claimed a key existed for the
+            new provider, and the only hint otherwise was the save being
+            refused; an empty field asks for what the save is about to
+            require.
+
+            The masked branch is a <div>, not a <label>: a button is a
+            labelable element, so a label wrapping one names THE BUTTON. "API
+            key" became the accessible name of Replace, and the masked value
+            itself had no label at all. */}
+        {sameProvider && config?.hasKey && !replacingKey ? (
+          <div className={labelCls}>
+            <span>{tr("editor.api_key")}</span>
             <span className={`${fieldCls} flex items-center justify-between gap-2`}>
               <span className="truncate tracking-[0.2em] text-neutral-500" aria-label={tr("editor.a_key_is_stored")}>
                 {"\u2022".repeat(16)}
@@ -421,7 +445,10 @@ export function AiProviderSettings({
                 {tr("editor.replace")}
               </button>
             </span>
-          ) : (
+          </div>
+        ) : (
+          <label className={labelCls}>
+            {tr("editor.api_key")}
             <input
               type="password"
               value={apiKey}
@@ -432,8 +459,8 @@ export function AiProviderSettings({
               autoFocus={replacingKey}
               className={fieldCls}
             />
-          )}
-        </label>
+          </label>
+        )}
 
       </div>
 
@@ -448,9 +475,14 @@ export function AiProviderSettings({
       )}
 
       {imageLoaded && (
-        <div className={wide ? "mt-1 border-t border-neutral-200 pt-3.5" : "mt-1 border-t border-neutral-200 pt-2.5"}>
+        // A fieldset, not a div: this section has its own "Provider" select, so
+        // without the grouping a screen reader announces two controls called
+        // "Provider" with nothing to tell them apart. The legend supplies the
+        // context the sighted heading was already giving.
+        <fieldset className={wide ? "mt-1 border-t border-neutral-200 pt-3.5" : "mt-1 border-t border-neutral-200 pt-2.5"}>
+          <legend className="sr-only">{tr("editor.image_provider")}</legend>
           <div className="mb-2.5 flex flex-col gap-0.5">
-            <span className={wide ? "text-sm font-medium text-neutral-700" : "text-[11px] font-medium text-neutral-500"}>
+            <span aria-hidden className={wide ? "text-sm font-medium text-neutral-700" : "text-[11px] font-medium text-neutral-500"}>
               {tr("editor.image_provider")}
             </span>
             <span className="text-[11px] text-neutral-500">
@@ -475,6 +507,7 @@ export function AiProviderSettings({
                   setImgBaseUrl(stored ? imgStoredBaseUrl : "");
                   setImgKey("");
                   setReplacingImgKey(false);
+                  setImgCheck("idle"); // the verdict was about the old provider
                 }}
                 className={fieldCls}
               >
@@ -509,9 +542,10 @@ export function AiProviderSettings({
                   />
                 </label>
 
-                <label className={labelCls}>
-                  {tr("editor.api_key")}
-                  {imgShowsStoredKey ? (
+                {/* A <div> for the same reason as the main key above. */}
+                {imgShowsStoredKey ? (
+                  <div className={labelCls}>
+                    <span>{tr("editor.api_key")}</span>
                     <span className={`${fieldCls} flex items-center justify-between gap-2`}>
                       <span className="truncate tracking-[0.2em] text-neutral-500" aria-label={tr("editor.a_key_is_stored")}>
                         {"\u2022".repeat(16)}
@@ -524,7 +558,36 @@ export function AiProviderSettings({
                         {tr("editor.replace")}
                       </button>
                     </span>
-                  ) : (
+                    {/* Beside the key it checks, and only once one is stored:
+                        before that there is nothing to check. */}
+                    <span className="flex items-center gap-2 text-[11px]">
+                      <button
+                        type="button"
+                        onClick={() => void checkImageProvider()}
+                        disabled={imgCheck === "checking"}
+                        className="font-medium text-brand-ink hover:underline disabled:opacity-50"
+                      >
+                        {imgCheck === "checking" ? tr("dashboard.testing") : tr("dashboard.test_connection")}
+                      </button>
+                      <span
+                        aria-live="polite"
+                        className={
+                          imgCheck === "ok" ? "text-emerald-600" : imgCheck === "failed" ? "text-red-600" : "text-neutral-500"
+                        }
+                      >
+                        {imgCheck === "ok"
+                          ? tr("editor.image_provider_key_accepted")
+                          : imgCheck === "unverified"
+                            ? tr("editor.image_provider_could_not_verify")
+                            : imgCheck === "failed"
+                              ? imgCheckDetail
+                              : ""}
+                      </span>
+                    </span>
+                  </div>
+                ) : (
+                  <label className={labelCls}>
+                    {tr("editor.api_key")}
                     <input
                       type="password"
                       value={imgKey}
@@ -533,12 +596,12 @@ export function AiProviderSettings({
                       autoFocus={replacingImgKey}
                       className={fieldCls}
                     />
-                  )}
-                </label>
+                  </label>
+                )}
               </>
             )}
           </div>
-        </div>
+        </fieldset>
       )}
 
       {/* Web-search grounding is a SEPARATE provider with its own host and key.

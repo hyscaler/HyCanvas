@@ -62,6 +62,7 @@ func mountAI(api chi.Router, svc *ai.Service, acct *accounts.Service, up *upload
 		r.Get("/workspaces/{id}/ai-image-config", aiGetImageConfigHandler(svc, acct))
 		r.Put("/workspaces/{id}/ai-image-config", aiSetImageConfigHandler(svc, acct))
 		r.Delete("/workspaces/{id}/ai-image-config", aiDeleteImageConfigHandler(svc, acct))
+		r.Post("/workspaces/{id}/ai-image-config/test", aiTestImageConfigHandler(svc, acct))
 		r.Get("/workspaces/{id}/ai-policy", aiGetPolicyHandler(svc, acct))
 		r.Put("/workspaces/{id}/ai-policy", aiSetPolicyHandler(svc, acct))
 		r.Get("/workspaces/{id}/ai-usage", aiGetUsageHandler(svc, acct))
@@ -321,6 +322,24 @@ func aiDeleteImageConfigHandler(svc *ai.Service, acct *accounts.Service) http.Ha
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+// Checks the image provider's credentials without generating an image. Returns
+// {"verified":false} when the probe cannot conclude, which is not a failure.
+func aiTestImageConfigHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		if !aiAssert(r, acct, id, "admin") {
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "admin access required", "admin_access_required")
+			return
+		}
+		check, err := svc.VerifyImageConfig(r.Context(), id)
+		if err != nil {
+			aiProblem(w, r, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, check)
 	}
 }
 

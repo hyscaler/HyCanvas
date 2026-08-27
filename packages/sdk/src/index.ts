@@ -1842,6 +1842,15 @@ export class HyCanvasClient {
   ): Promise<AiImageConfigView | null> {
     return this.request("PUT", `/v1/workspaces/${workspaceId}/ai-image-config`, input);
   }
+  /** Check the image provider's key and endpoint WITHOUT generating an image,
+   *  which on a bring-your-own-key product would spend the workspace's money on
+   *  every press. Resolves `{verified:true}` when the credential was accepted,
+   *  `{verified:false}` when the probe could not conclude (a provider with no
+   *  model listing, or Azure), and rejects when the key was refused. A wrong
+   *  model name is not covered and still surfaces on first generation. */
+  testAiImageConfig(workspaceId: string): Promise<{ verified: boolean }> {
+    return this.request("POST", `/v1/workspaces/${workspaceId}/ai-image-config/test`);
+  }
   /** Remove the dedicated image provider; images return to the main one. */
   deleteAiImageConfig(workspaceId: string): Promise<void> {
     return this.request("DELETE", `/v1/workspaces/${workspaceId}/ai-image-config`);

@@ -22,7 +22,11 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["src/**/*.test.ts"],
+    // .tsx files are component tests. They opt into jsdom per file with a
+    // `@vitest-environment jsdom` docblock rather than switching the default,
+    // so the much larger body of pure-node lib tests keeps running without a
+    // DOM it does not need.
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
     environment: "node",
     server: {
       deps: {

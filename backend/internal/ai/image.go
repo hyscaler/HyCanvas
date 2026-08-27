@@ -22,6 +22,7 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
+	"net/http"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -188,6 +189,64 @@ func (s *Service) SetImageConfig(ctx context.Context, workspaceID string, in Ima
 func (s *Service) DeleteImageConfig(ctx context.Context, workspaceID string) error {
 	_, err := s.db.Exec(ctx, `DELETE FROM "ai_image_configs" WHERE "workspace_id" = $1`, workspaceID)
 	return err
+}
+
+// ImageCheck is the outcome of probing the image provider's credentials.
+//
+// Verified false is NOT a failure: it means the probe could not conclude, which
+// is the honest answer for a provider that exposes no model listing. Only a
+// rejected key comes back as an error.
+type ImageCheck struct {
+	Verified bool `json:"verified"`
+}
+
+// VerifyImageConfig checks that the image provider's key and endpoint are
+// accepted, WITHOUT generating an image.
+//
+// The obvious implementation is to generate one, the way the text check
+// generates a word. It is the wrong trade here: on a bring-your-own-key
+// product an image costs the workspace real money per press, some providers
+// bill cents per call, and a Test button that quietly spends is a button people
+// learn not to touch. Listing models exercises the same host and the same
+// credential and costs nothing, which catches the two failures that actually
+// happen: a wrong key and a wrong endpoint.
+//
+// What it does not catch is a mistyped MODEL name; that still surfaces on first
+// generation. Saying "could not verify" would be the alternative, and claiming
+// less than we checked is worse than checking less than everything.
+func (s *Service) VerifyImageConfig(ctx context.Context, workspaceID string) (ImageCheck, error) {
+	r, err := s.getImageRow(ctx, workspaceID)
+	if err != nil {
+		return ImageCheck{}, err
+	}
+	if r == nil {
+		return ImageCheck{}, ErrBadRequest // nothing of its own to check
+	}
+	cfg, err := s.imageCallConfig(ctx, workspaceID)
+	if err != nil {
+		return ImageCheck{}, err
+	}
+	// Azure scopes every operation to a deployment and lists models on a
+	// different route than the one this transport builds, so it goes
+	// unverified rather than being reported as broken.
+	if cfg.Provider == ProviderAzureOpenAI {
+		return ImageCheck{}, nil
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, orDefault(cfg.BaseURL, "https://api.openai.com/v1")+"/models", nil)
+	if err != nil {
+		return ImageCheck{}, ErrBadRequest
+	}
+	req.Header.Set("authorization", "Bearer "+cfg.APIKey)
+	if _, err := s.do(req); err != nil {
+		var se *httpStatusError
+		if errors.As(err, &se) && (se.status == http.StatusUnauthorized || se.status == http.StatusForbidden) {
+			return ImageCheck{}, badGateway(cfg, err) // definitive: the key was rejected
+		}
+		// Anything else is inconclusive. An endpoint without a models route
+		// must not be called broken on the strength of its 404.
+		return ImageCheck{}, nil
+	}
+	return ImageCheck{Verified: true}, nil
 }
 
 // imageCallConfig resolves the config for an outbound IMAGE call: the dedicated
