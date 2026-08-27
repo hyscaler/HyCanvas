@@ -12,7 +12,7 @@
 // fetch for the same data would be waste.
 
 import { useEffect, useState } from "react";
-import { ApiError, type AiProviderPreset, type AiConfigView } from "@hc/sdk";
+import { ApiError, type AiProviderPreset, type AiConfigView, type AiImageConfigView } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
@@ -65,6 +65,22 @@ export function AiProviderSettings({
   // because one combined fetch gated the whole form.
   const [searchFor, setSearchFor] = useState<string | null>(null);
   const searchLoaded = !!workspaceId && searchFor === workspaceId;
+  // The optional SECOND provider, for image work. Seven of the eleven presets
+  // cannot generate an image at all, so without this, choosing Claude or Kimi
+  // to write with meant giving up generated imagery entirely.
+  //
+  // Loaded on the same terms as the search record, and for the same reason: the
+  // select defaults to "" (meaning "use the main provider"), so saving before
+  // the stored value arrives would clear a configured image provider.
+  const [imgProvider, setImgProvider] = useState("");
+  const [imgModel, setImgModel] = useState("");
+  const [imgBaseUrl, setImgBaseUrl] = useState("");
+  const [imgKey, setImgKey] = useState("");
+  const [imgHasKey, setImgHasKey] = useState(false);
+  const [imgStoredProvider, setImgStoredProvider] = useState("");
+  const [replacingImgKey, setReplacingImgKey] = useState(false);
+  const [imgFor, setImgFor] = useState<string | null>(null);
+  const imageLoaded = !!workspaceId && imgFor === workspaceId;
   const [saving, setSaving] = useState(false);
   // A stored key is write-only: the server returns hasKey and never the key
   // itself. An empty box said nothing about whether one existed, so it shows a
@@ -106,10 +122,45 @@ export function AiProviderSettings({
     return () => { cancelled = true; };
   }, [workspaceId]);
 
+  // The dedicated image provider is its own record, fetched here because only
+  // this form edits it.
+  useEffect(() => {
+    if (!workspaceId) return;
+    let cancelled = false;
+    void oc.getAiImageConfig(workspaceId).then(
+      (cfg) => {
+        if (cancelled) return;
+        applyImageConfig(cfg);
+        setImgFor(workspaceId);
+      },
+      () => {
+        // Leave it untouched and unsaved rather than guess it is unset.
+      },
+    );
+    return () => { cancelled = true; };
+    function applyImageConfig(cfg: AiImageConfigView | null) {
+      setImgProvider(cfg?.provider ?? "");
+      setImgStoredProvider(cfg?.provider ?? "");
+      setImgModel(cfg?.model ?? "");
+      setImgBaseUrl(cfg?.baseUrl ?? "");
+      setImgHasKey(!!cfg?.hasKey);
+      setImgKey("");
+      setReplacingImgKey(false);
+    }
+  }, [workspaceId]);
+
   const selPreset = presets.find((p) => p.id === provider);
   const requiresBaseUrl = !!selPreset?.needsBaseUrl;
   const sameProvider = provider === config?.provider;
   const modelHint = selPreset?.defaultModel ?? "";
+  // Only image-capable providers may serve as the image provider; offering a
+  // text-only one would store a configuration that can only ever fail (the
+  // server refuses it too, with ai_image_unsupported).
+  const imageCapable = presets.filter((p) => p.capabilities.image);
+  const mainCanImage = selPreset?.capabilities.image ?? true;
+  const imgPreset = presets.find((p) => p.id === imgProvider);
+  const imgSameProvider = imgProvider === imgStoredProvider;
+  const imgShowsStoredKey = imgSameProvider && imgHasKey && !replacingImgKey;
 
   if (!canEdit) {
     return (
@@ -139,6 +190,17 @@ export function AiProviderSettings({
       toast.error(tr("errors.api_ai_key_required_for_provider_change"));
       return;
     }
+    // The image provider is a separate vendor with a separate key. The server
+    // rejects a keyless one too, but its generic reason would not name which of
+    // the two providers is short a key.
+    if (imageLoaded && imgProvider && !imgKey.trim() && !(imgSameProvider && imgHasKey)) {
+      toast.error(tr("editor.image_provider_key_required"));
+      return;
+    }
+    if (imageLoaded && imgProvider && !!imgPreset?.needsBaseUrl && !imgBaseUrl.trim()) {
+      toast.error(tr("editor.image_provider_base_url_required"));
+      return;
+    }
     setSaving(true);
     try {
       // baseUrl uses PATCH semantics server-side: a rendered field sends its
@@ -162,6 +224,21 @@ export function AiProviderSettings({
           ...(searchKey.trim() ? { apiKey: searchKey.trim() } : {}),
         });
         setSearchKey("");
+      }
+      // The dedicated image provider saves in the same gesture (provider ""
+      // clears it and returns images to the main provider), and only once its
+      // stored value is known, for the same reason as the search record.
+      if (imageLoaded) {
+        const img = await oc.setAiImageConfig(workspaceId, {
+          provider: imgProvider,
+          model: imgModel || undefined,
+          baseUrl: imgBaseUrl.trim(),
+          ...(imgKey.trim() ? { apiKey: imgKey.trim() } : {}),
+        });
+        setImgStoredProvider(img?.provider ?? "");
+        setImgHasKey(!!img?.hasKey);
+        setImgKey("");
+        setReplacingImgKey(false);
       }
       toast.success(tr("editor.ai_provider_saved"));
       onSaved(c);
@@ -202,8 +279,19 @@ export function AiProviderSettings({
     setSaving(true);
     try {
       await oc.deleteAiConfig(workspaceId);
+      // The image provider is part of "the provider" as far as anyone reading
+      // this button is concerned, and leaving a second vendor's key behind
+      // after being told the provider was reset would be a nasty surprise.
+      await oc.deleteAiImageConfig(workspaceId).catch(() => {});
       setApiKey("");
       setReplacingKey(false);
+      setImgProvider("");
+      setImgStoredProvider("");
+      setImgModel("");
+      setImgBaseUrl("");
+      setImgKey("");
+      setImgHasKey(false);
+      setReplacingImgKey(false);
       toast.success(tr("editor.ai_provider_reset"));
       onReset?.();
     } catch {
@@ -257,7 +345,10 @@ export function AiProviderSettings({
           />
         </label>
 
-        {(selPreset?.capabilities.image ?? true) && (
+        {/* Hidden once a dedicated image provider is chosen: that provider's
+            own model field takes over, and two image-model boxes on one form
+            is a guessing game about which one is in effect. */}
+        {mainCanImage && !imgProvider && (
           <label className={labelCls}>
             {tr("editor.image_model_optional")}
             <input
@@ -318,6 +409,104 @@ export function AiProviderSettings({
         </label>
 
       </div>
+
+      {/* The image provider, a SECOND vendor with its own host and key.
+          Presented as a choice rather than buried: for the seven text-only
+          presets it is the only way to get generated imagery at all, and the
+          hint says so in place of the main form's absent image-model field. */}
+      {imageLoaded && (
+        <div className={wide ? "mt-1 border-t border-neutral-200 pt-3.5" : "mt-1 border-t border-neutral-200 pt-2.5"}>
+          <div className="mb-2.5 flex flex-col gap-0.5">
+            <span className={wide ? "text-sm font-medium text-neutral-700" : "text-[11px] font-medium text-neutral-500"}>
+              {tr("editor.image_provider")}
+            </span>
+            <span className="text-[11px] text-neutral-500">
+              {mainCanImage
+                ? tr("editor.image_provider_hint")
+                : tr("editor.image_provider_needed_hint", { provider: selPreset?.label ?? provider })}
+            </span>
+          </div>
+          <div className={wide ? "grid grid-cols-1 gap-x-5 gap-y-3.5 sm:grid-cols-2 xl:grid-cols-3" : "flex flex-col gap-2.5"}>
+            <label className={labelCls}>
+              {tr("editor.provider")}
+              <select
+                value={imgProvider}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setImgProvider(next);
+                  // A model name belongs to its provider, and so does a host:
+                  // restore the stored ones only when switching back to the
+                  // stored provider, blank them otherwise.
+                  const stored = next === imgStoredProvider;
+                  setImgModel(stored ? imgModel : "");
+                  setImgBaseUrl(stored ? imgBaseUrl : "");
+                  setImgKey("");
+                  setReplacingImgKey(false);
+                }}
+                className={fieldCls}
+              >
+                <option value="">
+                  {mainCanImage ? tr("editor.image_provider_same_as_text") : tr("editor.image_provider_none")}
+                </option>
+                {imageCapable.map((p) => (
+                  <option key={p.id} value={p.id}>{p.label}</option>
+                ))}
+              </select>
+            </label>
+
+            {imgProvider && (
+              <>
+                <label className={labelCls}>
+                  {tr("editor.image_model_optional")}
+                  <input
+                    value={imgModel}
+                    onChange={(e) => setImgModel(e.target.value)}
+                    placeholder={imgPreset?.defaultImageModel || tr("editor.image_model_optional")}
+                    className={fieldCls}
+                  />
+                </label>
+
+                <label className={labelCls}>
+                  {tr("editor.base_url")}
+                  <input
+                    value={imgBaseUrl}
+                    onChange={(e) => setImgBaseUrl(e.target.value)}
+                    placeholder={imgPreset?.baseUrl || tr("editor.base_url_https_v1")}
+                    className={fieldCls}
+                  />
+                </label>
+
+                <label className={labelCls}>
+                  {tr("editor.api_key")}
+                  {imgShowsStoredKey ? (
+                    <span className={`${fieldCls} flex items-center justify-between gap-2`}>
+                      <span className="truncate tracking-[0.2em] text-neutral-500" aria-label={tr("editor.a_key_is_stored")}>
+                        {"\u2022".repeat(16)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => { setReplacingImgKey(true); setImgKey(""); }}
+                        className="shrink-0 text-xs font-medium text-brand-ink hover:underline"
+                      >
+                        {tr("editor.replace")}
+                      </button>
+                    </span>
+                  ) : (
+                    <input
+                      type="password"
+                      value={imgKey}
+                      onChange={(e) => setImgKey(e.target.value)}
+                      placeholder={imgSameProvider && imgHasKey ? tr("editor.api_key_leave_blank_to_keep") : tr("editor.api_key")}
+                      autoFocus={replacingImgKey}
+                      className={fieldCls}
+                    />
+                  )}
+                </label>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Web-search grounding is a SEPARATE provider with its own host and key.
           Grouped and labelled as such: interleaved with the model fields, its

@@ -59,6 +59,9 @@ func mountAI(api chi.Router, svc *ai.Service, acct *accounts.Service, up *upload
 		r.Put("/workspaces/{id}/ai-config", aiSetConfigHandler(svc, acct))
 		r.Delete("/workspaces/{id}/ai-config", aiDeleteConfigHandler(svc, acct))
 		r.Post("/workspaces/{id}/ai-config/test", aiTestConfigHandler(svc, acct))
+		r.Get("/workspaces/{id}/ai-image-config", aiGetImageConfigHandler(svc, acct))
+		r.Put("/workspaces/{id}/ai-image-config", aiSetImageConfigHandler(svc, acct))
+		r.Delete("/workspaces/{id}/ai-image-config", aiDeleteImageConfigHandler(svc, acct))
 		r.Get("/workspaces/{id}/ai-policy", aiGetPolicyHandler(svc, acct))
 		r.Put("/workspaces/{id}/ai-policy", aiSetPolicyHandler(svc, acct))
 		r.Get("/workspaces/{id}/ai-usage", aiGetUsageHandler(svc, acct))
@@ -239,6 +242,69 @@ func aiDeleteConfigHandler(svc *ai.Service, acct *accounts.Service) http.Handler
 			return
 		}
 		if err := svc.DeleteConfig(r.Context(), id); err != nil {
+			aiProblem(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+// The optional second provider, dedicated to image generation and editing.
+// Read by any member (the editor needs to know whether imagery is available at
+// all), written only by an admin, like the main provider it sits beside.
+func aiGetImageConfigHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		if !aiAssert(r, acct, id, "viewer") {
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "not a member of this workspace", "not_workspace_member")
+			return
+		}
+		cfg, err := svc.GetImageConfig(r.Context(), id)
+		if err != nil {
+			aiProblem(w, r, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, cfg) // null when images run on the main provider
+	}
+}
+
+func aiSetImageConfigHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		if !aiAssert(r, acct, id, "admin") {
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "admin access required", "admin_access_required")
+			return
+		}
+		var body struct {
+			Provider string `json:"provider"`
+			Model    string `json:"model"`
+			// Pointer for PATCH semantics, as on the main config.
+			BaseURL *string `json:"baseUrl"`
+			APIKey  string  `json:"apiKey"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
+			return
+		}
+		cfg, err := svc.SetImageConfig(r.Context(), id, ai.ImageConfigInput{
+			Provider: body.Provider, Model: body.Model, BaseURL: body.BaseURL, APIKey: body.APIKey,
+		})
+		if err != nil {
+			aiProblem(w, r, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, cfg) // null when the provider was cleared
+	}
+}
+
+func aiDeleteImageConfigHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		if !aiAssert(r, acct, id, "admin") {
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "admin access required", "admin_access_required")
+			return
+		}
+		if err := svc.DeleteImageConfig(r.Context(), id); err != nil {
 			aiProblem(w, r, err)
 			return
 		}

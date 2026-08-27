@@ -437,6 +437,18 @@ export interface AiConfigView {
   capabilities: AiCapabilities;
 }
 
+/** The optional SECOND provider, dedicated to image generation and editing.
+ *  Null when a workspace has none, in which case images run on the main
+ *  provider exactly as they always did. Its `model` is the image model: this
+ *  provider exists only to serve image calls. */
+export interface AiImageConfigView {
+  provider: string;
+  model: string | null;
+  baseUrl: string | null;
+  hasKey: boolean;
+  capabilities: AiCapabilities;
+}
+
 /** One entry of the server's provider preset catalog (GET /ai/providers). */
 export interface AiProviderPreset {
   id: string;
@@ -1814,6 +1826,25 @@ export class HyCanvasClient {
    *  (400 `ai_key_required_for_provider_change` otherwise). */
   setAiConfig(workspaceId: string, input: { provider: string; model?: string; imageModel?: string; baseUrl?: string; apiKey?: string }): Promise<AiConfigView> {
     return this.request("PUT", `/v1/workspaces/${workspaceId}/ai-config`, input);
+  }
+  /** The workspace's dedicated image provider, or null when images run on the
+   *  main provider. */
+  getAiImageConfig(workspaceId: string): Promise<AiImageConfigView | null> {
+    return this.request("GET", `/v1/workspaces/${workspaceId}/ai-image-config`);
+  }
+  /** Set (or clear, with provider "") a dedicated image provider, for the many
+   *  text providers that cannot generate images at all. The server refuses a
+   *  provider without image capability. baseUrl uses PATCH semantics like
+   *  setAiConfig; resolves to null when cleared. */
+  setAiImageConfig(
+    workspaceId: string,
+    input: { provider: string; model?: string; baseUrl?: string; apiKey?: string },
+  ): Promise<AiImageConfigView | null> {
+    return this.request("PUT", `/v1/workspaces/${workspaceId}/ai-image-config`, input);
+  }
+  /** Remove the dedicated image provider; images return to the main one. */
+  deleteAiImageConfig(workspaceId: string): Promise<void> {
+    return this.request("DELETE", `/v1/workspaces/${workspaceId}/ai-image-config`);
   }
   getAiPolicy(workspaceId: string): Promise<AiPolicy> {
     return this.request("GET", `/v1/workspaces/${workspaceId}/ai-policy`);

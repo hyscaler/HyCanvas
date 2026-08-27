@@ -393,9 +393,10 @@ func assertEditImageCapable(cfg CallConfig) error {
 	return nil
 }
 
-// Image runs an image-generation call.
+// Image runs an image-generation call, on the workspace's dedicated image
+// provider when it has one and on its main provider otherwise.
 func (s *Service) Image(ctx context.Context, workspaceID, prompt, size string) (string, error) {
-	cfg, err := s.callConfig(ctx, workspaceID)
+	cfg, err := s.imageCallConfig(ctx, workspaceID)
 	if err != nil {
 		return "", err
 	}
@@ -419,7 +420,9 @@ var dataURLPrefix = regexp.MustCompile(`^data:[^,]*,`)
 // DescribeImage generates alt text for an image (F22 FR-12). A data: prefix is
 // stripped and its mime type reused.
 func (s *Service) DescribeImage(ctx context.Context, workspaceID, imageBase64, instruction string) (string, error) {
-	cfg, err := s.callConfig(ctx, workspaceID)
+	// Whichever configured provider can see: the main one by preference, the
+	// image provider when the main one is text-only.
+	cfg, err := s.visionCallConfig(ctx, workspaceID)
 	if err != nil {
 		return "", err
 	}
@@ -448,9 +451,10 @@ func (s *Service) DescribeImage(ctx context.Context, workspaceID, imageBase64, i
 	return out, nil
 }
 
-// EditImage edits/outpaints an image by prompt (+ optional mask).
+// EditImage edits/outpaints an image by prompt (+ optional mask). Follows the
+// dedicated image provider too: editing is image work, not text work.
 func (s *Service) EditImage(ctx context.Context, workspaceID, imageBase64, prompt, maskBase64, size string) (string, error) {
-	cfg, err := s.callConfig(ctx, workspaceID)
+	cfg, err := s.imageCallConfig(ctx, workspaceID)
 	if err != nil {
 		return "", err
 	}
