@@ -125,12 +125,16 @@ export function WorkspaceAiPanel({ workspaceId, canEdit }: { workspaceId: string
               {testing ? tr("dashboard.testing") : tr("dashboard.test_connection")}
             </button>
           )}
+          {/* An estimate, and labelled as one: the server meters roughly four
+              characters per token over what it sent and received, so it will
+              not match the provider's own billing, and it is further off for
+              scripts where a character is closer to a token. The period is
+              real: usage is keyed by calendar month (UTC) and starts again at
+              the turn of each one. */}
           {usage !== null && (
-            <span className="flex items-center gap-1 text-xs text-neutral-500" title={tr("dashboard.tokens_used_this_month")}>
+            <span className="flex items-center gap-1 text-xs text-neutral-500" title={tr("dashboard.tokens_estimate_hint")}>
               <Activity size={12} />
-              {/* Thousands separators come from the user's locale, so a large
-                  number stays readable wherever they are. */}
-              {tr("dashboard.n_tokens_this_month", { count: usage })}
+              {tr("dashboard.n_tokens_this_month", { count: usage, formatted: usage.toLocaleString() })}
             </span>
           )}
         </div>
