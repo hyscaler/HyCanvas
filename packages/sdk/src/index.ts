@@ -1828,6 +1828,13 @@ export class HyCanvasClient {
   deleteAiConfig(workspaceId: string): Promise<void> {
     return this.request("DELETE", `/v1/workspaces/${workspaceId}/ai-config`);
   }
+  /** Prove the stored provider config actually works, with the smallest real
+   *  call the provider will accept. Resolves on success; rejects with the
+   *  classified problem (rejected key, out of credit, unknown model, rate
+   *  limited) otherwise. Costs the workspace a handful of its own tokens. */
+  testAiConfig(workspaceId: string): Promise<void> {
+    return this.request("POST", `/v1/workspaces/${workspaceId}/ai-config/test`);
+  }
   getAiUsage(workspaceId: string): Promise<{ tokensThisMonth: number }> {
     return this.request("GET", `/v1/workspaces/${workspaceId}/ai-usage`);
   }

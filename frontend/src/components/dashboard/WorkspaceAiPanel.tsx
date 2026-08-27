@@ -12,7 +12,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { Sparkles, Activity } from "lucide-react";
 import type { AiConfigView, AiProviderPreset } from "@hc/sdk";
+import { ApiError } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
+import { apiCodeMessage } from "@/lib/errors";
 import { AiProviderSettings } from "@/components/ai/AiProviderSettings";
 import { WorkspaceAiPolicy } from "./WorkspaceAiPolicy";
 import { tr } from "@/lib/i18n";
@@ -21,6 +23,12 @@ export function WorkspaceAiPanel({ workspaceId, canEdit }: { workspaceId: string
   const [config, setConfig] = useState<AiConfigView | null>(null);
   const [presets, setPresets] = useState<AiProviderPreset[]>([]);
   const [usage, setUsage] = useState<number | null>(null);
+  // Whether the stored config has been proven to WORK, as opposed to merely
+  // existing. A saved key said "Connected" even when it was a typo, because
+  // nothing had ever asked the provider.
+  const [health, setHealth] = useState<{ ok: boolean; detail?: string } | null>(null);
+  const [testing, setTesting] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
 
@@ -31,6 +39,22 @@ export function WorkspaceAiPanel({ workspaceId, canEdit }: { workspaceId: string
       () => setUsage(null), // metering is best-effort; absence is not an error
     );
   }, [workspaceId]);
+
+  const runTest = useCallback(async () => {
+    if (!workspaceId) return;
+    setTesting(true);
+    try {
+      await oc.testAiConfig(workspaceId);
+      setHealth({ ok: true });
+    } catch (e) {
+      // The server classifies the reason; show that rather than "failed".
+      const coded = e instanceof ApiError ? apiCodeMessage(e.body) : null;
+      setHealth({ ok: false, detail: coded ?? tr("dashboard.the_provider_did_not_answer") });
+    } finally {
+      setTesting(false);
+      loadUsage(); // the check itself spends a few tokens
+    }
+  }, [workspaceId, loadUsage]);
 
   useEffect(() => {
     if (!workspaceId) return;
@@ -44,6 +68,7 @@ export function WorkspaceAiPanel({ workspaceId, canEdit }: { workspaceId: string
       setConfig(cfg);
       setPresets(list ?? []);
       setLoadedFor(workspaceId);
+      setHealth(null);
       setLoading(false);
     })();
     loadUsage();
@@ -74,15 +99,32 @@ export function WorkspaceAiPanel({ workspaceId, canEdit }: { workspaceId: string
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           <span className="flex items-center gap-2">
-            <span className={`h-2 w-2 shrink-0 rounded-full ${connected ? "bg-emerald-500" : "bg-neutral-300"}`} />
+            <span
+              className={`h-2 w-2 shrink-0 rounded-full ${
+                !connected ? "bg-neutral-300" : health?.ok ? "bg-emerald-500" : health && !health.ok ? "bg-red-500" : "bg-amber-400"
+              }`}
+            />
             <span className="text-neutral-700">
               {loading
                 ? tr("dashboard.loading")
-                : connected
-                  ? tr("dashboard.ai_connected_provider", { provider: providerLabel })
-                  : tr("dashboard.no_ai_provider_connected")}
+                : !connected
+                  ? tr("dashboard.no_ai_provider_connected")
+                  : health?.ok
+                    ? tr("dashboard.ai_working_provider", { provider: providerLabel })
+                    : health && !health.ok
+                      ? tr("dashboard.ai_provider_not_working", { provider: providerLabel })
+                      : tr("dashboard.ai_key_saved_provider", { provider: providerLabel })}
             </span>
           </span>
+          {connected && canEdit && (
+            <button
+              onClick={() => void runTest()}
+              disabled={testing}
+              className="rounded-full border border-neutral-200 px-2.5 py-0.5 text-[11px] text-neutral-600 transition hover:border-neutral-300 disabled:opacity-40"
+            >
+              {testing ? tr("dashboard.testing") : tr("dashboard.test_connection")}
+            </button>
+          )}
           {usage !== null && (
             <span className="flex items-center gap-1 text-xs text-neutral-500" title={tr("dashboard.tokens_used_this_month")}>
               <Activity size={12} />
@@ -94,6 +136,12 @@ export function WorkspaceAiPanel({ workspaceId, canEdit }: { workspaceId: string
         </div>
       </div>
 
+      {health && !health.ok && health.detail && (
+        <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+          {health.detail}
+        </p>
+      )}
+
       {!loading && (
         <div>
           <AiProviderSettings
@@ -102,8 +150,11 @@ export function WorkspaceAiPanel({ workspaceId, canEdit }: { workspaceId: string
             presets={presets}
             canEdit={canEdit}
             layout="wide"
-            onSaved={(c) => { setConfig(c); loadUsage(); }}
-            onReset={() => { setConfig(null); loadUsage(); }}
+            // Verify immediately on save: the moment a key is entered is when
+            // a typo is cheapest to find and the user still has the value to
+            // hand.
+            onSaved={(c) => { setConfig(c); loadUsage(); void runTest(); }}
+            onReset={() => { setConfig(null); setHealth(null); loadUsage(); }}
           />
         </div>
       )}

@@ -58,6 +58,7 @@ func mountAI(api chi.Router, svc *ai.Service, acct *accounts.Service, up *upload
 		r.Get("/workspaces/{id}/ai-config", aiGetConfigHandler(svc, acct))
 		r.Put("/workspaces/{id}/ai-config", aiSetConfigHandler(svc, acct))
 		r.Delete("/workspaces/{id}/ai-config", aiDeleteConfigHandler(svc, acct))
+		r.Post("/workspaces/{id}/ai-config/test", aiTestConfigHandler(svc, acct))
 		r.Get("/workspaces/{id}/ai-policy", aiGetPolicyHandler(svc, acct))
 		r.Put("/workspaces/{id}/ai-policy", aiSetPolicyHandler(svc, acct))
 		r.Get("/workspaces/{id}/ai-usage", aiGetUsageHandler(svc, acct))
@@ -200,6 +201,31 @@ func aiSetConfigHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFun
 			return
 		}
 		writeJSON(w, http.StatusOK, cfg)
+	}
+}
+
+// aiTestConfigHandler proves the stored config actually works, by making the
+// smallest possible real call to the provider.
+//
+// Saving a key only ever meant "a string is stored": a typo in the key, a
+// mistyped model or an exhausted account all looked identical to a working
+// setup, because nothing had asked the provider. Failures come back through
+// the shared classifier, so the reason is the specific one (rejected key, out
+// of credit, unknown model, rate limited) rather than a generic failure.
+func aiTestConfigHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		if !aiAssert(r, acct, id, "admin") {
+			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "admin access required", "admin_access_required")
+			return
+		}
+		// Deliberately tiny: this costs the workspace's own tokens, so it asks
+		// for the shortest useful reply rather than a real generation.
+		if _, err := svc.Text(r.Context(), id, "Reply with the single word: ok", ""); err != nil {
+			aiProblem(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 	}
 }
 
