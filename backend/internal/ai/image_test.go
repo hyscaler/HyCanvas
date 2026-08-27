@@ -87,7 +87,7 @@ func TestAIImageProvider_DB(t *testing.T) {
 		t.Fatalf("text-only image provider should be refused, got %v", err)
 	}
 	// A first save must bring a key.
-	if _, err := svc.SetImageConfig(ctx, ws.ID, ImageConfigInput{Provider: "openai"}); err != ErrBadRequest {
+	if _, err := svc.SetImageConfig(ctx, ws.ID, ImageConfigInput{Provider: "openai"}); err != ErrImageKeyRequired {
 		t.Fatalf("keyless image provider should be refused, got %v", err)
 	}
 

@@ -2959,6 +2959,8 @@
   "errors.api_fps_out_of_range": "La velocidad de fotogramas debe estar entre 1 y 120.",
   "errors.api_generation_failed": "Algo salió mal. Inténtalo de nuevo.",
   "errors.api_generation_rate_limited": "Se superó el presupuesto de generación; espera un momento e inténtalo de nuevo.",
+  "errors.api_image_provider_incapable": "Ese proveedor no puede generar imágenes. Elige uno que sí pueda, como OpenAI o Together AI.",
+  "errors.api_image_provider_key_required": "El proveedor de imágenes necesita su propia clave de API. Introdúcela y guarda de nuevo.",
   "errors.api_import_too_large": "Este archivo es demasiado grande para importarlo.",
   "errors.api_invalid_api_key": "Esta clave de API no es válida o fue revocada.",
   "errors.api_invalid_authentication_code": "Ese código de autenticación no es válido.",

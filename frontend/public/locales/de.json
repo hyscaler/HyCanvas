@@ -2959,6 +2959,8 @@
   "errors.api_fps_out_of_range": "Die Bildrate muss zwischen 1 und 120 liegen.",
   "errors.api_generation_failed": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
   "errors.api_generation_rate_limited": "Generierungsbudget überschritten; kurz warten und erneut versuchen.",
+  "errors.api_image_provider_incapable": "Dieser Anbieter kann keine Bilder erzeugen. Wähle einen, der das kann, etwa OpenAI oder Together AI.",
+  "errors.api_image_provider_key_required": "Der Bildanbieter braucht einen eigenen API-Schlüssel. Gib ihn ein und speichere erneut.",
   "errors.api_import_too_large": "Diese Datei ist zum Importieren zu groß.",
   "errors.api_invalid_api_key": "Dieser API-Schlüssel ist ungültig oder wurde widerrufen.",
   "errors.api_invalid_authentication_code": "Dieser Authentifizierungscode ist ungültig.",

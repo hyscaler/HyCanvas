@@ -290,7 +290,19 @@ func aiSetImageConfigHandler(svc *ai.Service, acct *accounts.Service) http.Handl
 			Provider: body.Provider, Model: body.Model, BaseURL: body.BaseURL, APIKey: body.APIKey,
 		})
 		if err != nil {
-			aiProblem(w, r, err)
+			// Config-specific codes, for the same reason the search config has
+			// its own: the generation-time messages describe a FAILED CALL and
+			// read as nonsense when the call was a save. "Add a dedicated image
+			// provider in AI settings" is circular advice for someone who is
+			// doing exactly that, and "invalid AI request" names no field.
+			switch {
+			case errors.Is(err, ai.ErrImageUnsupported):
+				problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "that provider cannot generate images; choose one that can, such as OpenAI or Together AI", "image_provider_incapable")
+			case errors.Is(err, ai.ErrImageKeyRequired):
+				problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "the image provider needs its own API key; enter it and save again", "image_provider_key_required")
+			default:
+				aiProblem(w, r, err)
+			}
 			return
 		}
 		writeJSON(w, http.StatusOK, cfg) // null when the provider was cleared

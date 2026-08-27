@@ -29,6 +29,11 @@ import (
 	"hycanvas/backend/internal/auth/secrets"
 )
 
+// ErrImageKeyRequired is returned when a first save of the image provider
+// arrives without a key. Distinct from ErrBadRequest so the handler can say
+// which field is missing instead of "invalid AI request".
+var ErrImageKeyRequired = errors.New("the image provider requires an API key")
+
 // ImageConfigInput is the set payload. Provider "" clears the config, which
 // returns the workspace to using its main provider for images.
 type ImageConfigInput struct {
@@ -129,7 +134,7 @@ func (s *Service) SetImageConfig(ctx context.Context, workspaceID string, in Ima
 	// with and every generation would 401.
 	hasStoredKey := existing != nil && !providerChanged && existing.keyCipher != nil
 	if in.APIKey == "" && !hasStoredKey {
-		return nil, ErrBadRequest
+		return nil, ErrImageKeyRequired
 	}
 
 	// PATCH semantics for the base URL, as in SetConfig: nil preserves, "" clears,

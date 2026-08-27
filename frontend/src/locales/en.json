@@ -2959,6 +2959,8 @@
   "errors.api_fps_out_of_range": "Frame rate must be between 1 and 120.",
   "errors.api_generation_failed": "Something went wrong. Please try again.",
   "errors.api_generation_rate_limited": "Generation budget exceeded; wait a moment and try again.",
+  "errors.api_image_provider_incapable": "That provider cannot generate images. Choose one that can, such as OpenAI or Together AI.",
+  "errors.api_image_provider_key_required": "The image provider needs its own API key. Enter it and save again.",
   "errors.api_import_too_large": "This file is too large to import.",
   "errors.api_invalid_api_key": "This API key is invalid or has been revoked.",
   "errors.api_invalid_authentication_code": "That authentication code is not valid.",
