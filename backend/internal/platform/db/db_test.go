@@ -2,6 +2,8 @@ package db
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"testing"
 	"time"
 )
@@ -9,6 +11,35 @@ import (
 // A refused local port fails each connect attempt fast, so the retry loop can be
 // exercised without a real database.
 const refusedDSN = "postgres://u:p@127.0.0.1:1/db"
+
+// A connect failure must name the address that was tried so an operator can act
+// on it, and must never expose the credentials from the DSN.
+func TestPingErr_NamesAddressWithoutCredentials(t *testing.T) {
+	cfg, err := buildConfig("postgres://myuser:SuperSecret123@db.internal:5432/hycanvas")
+	if err != nil {
+		t.Fatalf("buildConfig: %v", err)
+	}
+
+	// A dropped-packet timeout is reported by pgx as a bare "context deadline
+	// exceeded"; it must be turned into something that says what was unreachable.
+	timeout := pingErr(cfg, context.DeadlineExceeded).Error()
+	for _, want := range []string{"db.internal:5432", "timed out", "firewall"} {
+		if !strings.Contains(timeout, want) {
+			t.Errorf("timeout error missing %q: %s", want, timeout)
+		}
+	}
+
+	generic := pingErr(cfg, errors.New("boom")).Error()
+	if !strings.Contains(generic, "db.internal:5432") {
+		t.Errorf("generic error missing address: %s", generic)
+	}
+
+	for _, msg := range []string{timeout, generic} {
+		if strings.Contains(msg, "SuperSecret123") {
+			t.Errorf("error leaked the DSN password: %s", msg)
+		}
+	}
+}
 
 // ConnectWithRetry retries attempts-1 times (waiting between tries) before it
 // gives up, and reports progress through onRetry.
