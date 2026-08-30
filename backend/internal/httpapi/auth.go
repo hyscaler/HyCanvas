@@ -199,6 +199,13 @@ func loginHandler(svc *accounts.Service, secure bool) http.HandlerFunc {
 				writeJSON(w, http.StatusOK, map[string]any{"mfaRequired": true, "mfaToken": mfaToken})
 				return
 			}
+			if !errors.Is(err, accounts.ErrInvalidCredentials) {
+				// The credentials were never the problem (e.g. the database is
+				// unreachable). Answering 401 here tells the user their password
+				// is wrong and hides an outage from anything watching 5xx.
+				problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "sign-in is temporarily unavailable", "internal_error")
+				return
+			}
 			problemWithCode(w, r, http.StatusUnauthorized, "Unauthorized", "invalid email or password", "invalid_email_or_password")
 			return
 		}

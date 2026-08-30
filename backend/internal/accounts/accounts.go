@@ -461,6 +461,14 @@ func (s *Service) UpdateProfile(ctx context.Context, userID string, in UpdatePro
 // client redeems via VerifyMfaLogin; no session is issued in that case.
 func (s *Service) Login(ctx context.Context, email, password, device, ip string) (*AuthUser, *Tokens, string, error) {
 	u, err := s.findUserByEmail(ctx, email)
+	// An unknown email and a wrong password must stay indistinguishable, so both
+	// answer ErrInvalidCredentials. An infrastructure failure is a different
+	// thing entirely: reporting an unreachable database as "invalid credentials"
+	// sends the operator hunting for a bad password while the real fault stays
+	// invisible to monitoring (a 401 pages nobody).
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil, "", err
+	}
 	if err != nil || u == nil || u.PasswordHash == nil {
 		return nil, nil, "", ErrInvalidCredentials
 	}
