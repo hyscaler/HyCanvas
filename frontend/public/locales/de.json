@@ -2965,6 +2965,7 @@
   "errors.api_image_provider_incapable": "Dieser Anbieter kann keine Bilder erzeugen. Wähle einen, der das kann, etwa OpenAI oder Together AI.",
   "errors.api_image_provider_key_required": "Der Bildanbieter braucht einen eigenen API-Schlüssel. Gib ihn ein und speichere erneut.",
   "errors.api_import_too_large": "Diese Datei ist zum Importieren zu groß.",
+  "errors.api_internal_error": "Auf unserer Seite ist etwas schiefgelaufen. Bitte versuche es gleich noch einmal.",
   "errors.api_invalid_api_key": "Dieser API-Schlüssel ist ungültig oder wurde widerrufen.",
   "errors.api_invalid_authentication_code": "Dieser Authentifizierungscode ist ungültig.",
   "errors.api_invalid_body": "Diese Anfrage konnte nicht verarbeitet werden. Bitte versuche es erneut.",

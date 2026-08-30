@@ -2965,6 +2965,7 @@
   "errors.api_image_provider_incapable": "Ce fournisseur ne peut pas générer d'images. Choisissez-en un qui le peut, comme OpenAI ou Together AI.",
   "errors.api_image_provider_key_required": "Le fournisseur d'images a besoin de sa propre clé API. Saisissez-la et enregistrez à nouveau.",
   "errors.api_import_too_large": "Ce fichier est trop volumineux pour être importé.",
+  "errors.api_internal_error": "Un problème est survenu de notre côté. Veuillez réessayer dans un instant.",
   "errors.api_invalid_api_key": "Cette clé d'API est invalide ou a été révoquée.",
   "errors.api_invalid_authentication_code": "Ce code d'authentification n'est pas valide.",
   "errors.api_invalid_body": "Cette requête n'a pas pu être traitée. Veuillez réessayer.",

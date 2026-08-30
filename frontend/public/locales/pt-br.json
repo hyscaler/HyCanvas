@@ -2965,6 +2965,7 @@
   "errors.api_image_provider_incapable": "Esse provedor não gera imagens. Escolha um que gere, como OpenAI ou Together AI.",
   "errors.api_image_provider_key_required": "O provedor de imagens precisa da própria chave de API. Informe-a e salve de novo.",
   "errors.api_import_too_large": "Este arquivo é grande demais para importar.",
+  "errors.api_internal_error": "Algo deu errado do nosso lado. Tente novamente em instantes.",
   "errors.api_invalid_api_key": "Esta chave de API é inválida ou foi revogada.",
   "errors.api_invalid_authentication_code": "Esse código de autenticação não é válido.",
   "errors.api_invalid_body": "Não foi possível processar a solicitação. Tente novamente.",
