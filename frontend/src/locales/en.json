@@ -2965,6 +2965,7 @@
   "errors.api_image_provider_incapable": "That provider cannot generate images. Choose one that can, such as OpenAI or Together AI.",
   "errors.api_image_provider_key_required": "The image provider needs its own API key. Enter it and save again.",
   "errors.api_import_too_large": "This file is too large to import.",
+  "errors.api_internal_error": "Something went wrong on our end. Please try again in a moment.",
   "errors.api_invalid_api_key": "This API key is invalid or has been revoked.",
   "errors.api_invalid_authentication_code": "That authentication code is not valid.",
   "errors.api_invalid_body": "That request could not be processed. Please try again.",
