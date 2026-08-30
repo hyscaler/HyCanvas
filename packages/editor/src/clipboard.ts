@@ -19,8 +19,8 @@ import {
 import { locate, unionAABB } from "./tree";
 import type { ParentRef, SceneOp } from "./commands";
 
-export const CLIPBOARD_SCHEMA_VERSION = 1;
-export const DEFAULT_PASTE_OFFSET = 16; // px, down-right cascade (FR-3)
+export const clipboardSchemaVersion = 1;
+export const defaultPasteOffset = 16; // px, down-right cascade (FR-3)
 
 export interface ClipboardPayload {
   format: "hycanvas.clipboard";
@@ -127,7 +127,7 @@ export function serializeSelection(
   const b = unionAABB(file, roots) ?? { x: 0, y: 0, width: 0, height: 0 };
   return {
     format: "hycanvas.clipboard",
-    schemaVersion: CLIPBOARD_SCHEMA_VERSION,
+    schemaVersion: clipboardSchemaVersion,
     source,
     nodes,
     assetIds: collectAssetIds(nodes),
@@ -159,9 +159,10 @@ export function remapIds(
       n.id = fresh;
     });
   }
-  // Rewrite intra-fragment id references: connector endpoint attachments, and
-  // a photo grid's cell -> frame links (stale childIds would make a later
-  // grid re-layout treat every cell as missing and rebuild them empty).
+  // Rewrite intra-fragment id references: connector endpoint attachments, a
+  // photo grid's cell -> frame links (stale childIds would make a later grid
+  // re-layout treat every cell as missing and rebuild them empty), an
+  // animation's media trigger (v23), and an interaction's v24 target.
   for (const root of cloned) {
     visitTree(root, (n) => {
       if (n.type === "connector") {
@@ -179,6 +180,13 @@ export function remapIds(
           if (old && idMap.has(old)) c.childId = idMap.get(old);
         }
       }
+      const rec = n as unknown as AnyRec;
+      const trigger = (rec.animation as AnyRec | undefined)?.trigger as AnyRec | undefined;
+      const mediaId = trigger?.mediaNodeId as string | undefined;
+      if (mediaId && idMap.has(mediaId)) trigger!.mediaNodeId = idMap.get(mediaId);
+      const actionV2 = (rec.interaction as AnyRec | undefined)?.actionV2 as AnyRec | undefined;
+      const targetId = actionV2?.targetNodeId as string | undefined;
+      if (targetId && idMap.has(targetId)) actionV2!.targetNodeId = idMap.get(targetId);
     });
   }
   return { nodes: cloned, idMap };
@@ -217,7 +225,7 @@ export interface PasteResult {
 export function pasteOps(file: DesignFile, payload: ClipboardPayload, opts: PasteOptions): PasteResult {
   const { nodes } = remapIds(payload.nodes, opts.idGen);
   if (opts.mode === "normal") {
-    const cascade = (opts.cascadeIndex ?? 0) * DEFAULT_PASTE_OFFSET;
+    const cascade = (opts.cascadeIndex ?? 0) * defaultPasteOffset;
     // Center the fragment's bounding box on `at`, then cascade down-right.
     const center = {
       x: payload.bounds.x + payload.bounds.width / 2,
@@ -253,7 +261,7 @@ export interface DuplicateResult {
 export function duplicateOps(
   file: DesignFile,
   selection: string[],
-  offset: { x: number; y: number } = { x: DEFAULT_PASTE_OFFSET, y: DEFAULT_PASTE_OFFSET },
+  offset: { x: number; y: number } = { x: defaultPasteOffset, y: defaultPasteOffset },
   idGen: () => string = defaultIdGen,
 ): DuplicateResult {
   const ops: SceneOp[] = [];

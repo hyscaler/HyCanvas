@@ -40,6 +40,9 @@ export { benchmarkRender, createNullContext, type BenchResult, type BenchOptions
 export { poseDesignAt, pageAnimationDuration, sequenceStarts, revealEntranceText } from "./pose";
 export {
   renderTransition,
+  renderTransitionPair,
+  transitionPairDurationMs,
+  pairEnterTransition,
   morphPlan,
   morphDesignAt,
   morphHiddenIds,
@@ -48,6 +51,16 @@ export {
   type TransitionSurface,
   type MorphPlan,
 } from "./transition";
+export {
+  measureFnFor,
+  wordBoxes,
+  planWordMorph,
+  wordMorphEligible,
+  wordMorphNodes,
+  maxMorphWords,
+  type WordBox,
+  type WordMorphPlan,
+} from "./textmorph";
 export {
   planBuildOrder,
   childIndexForBuildOrder,
@@ -60,7 +73,7 @@ export {
   planDurationMs,
   slideDurationMs,
   visibleSlideIndices,
-  DEFAULT_SLIDE_HOLD_MS,
+  defaultSlideHoldMs,
   type DeckFrame,
   type DeckPlanOptions,
   type SlideFrame,

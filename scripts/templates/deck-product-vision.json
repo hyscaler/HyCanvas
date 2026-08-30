@@ -1,0 +1,74 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-product-vision",
+ "title": "Product Vision",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "vision",
+  "product",
+  "strategy",
+  "future"
+ ],
+ "styleTags": [
+  "dark",
+  "bold"
+ ],
+ "themeId": "theme-indigo",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 90,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Product Vision",
+  "theme": "inspiring but grounded",
+  "pages": [
+   {
+    "title": "The future we see",
+    "points": [
+     "The world when this product wins"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "Why us, why now",
+    "points": [
+     "The shifts that make it possible"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "The product in three years",
+    "points": [
+     "What it does that nothing does today"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "The path",
+    "points": [
+     "The stepping stones from here to there"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "What we must believe",
+    "points": [
+     "The bets under the vision"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "The invitation",
+    "points": [
+     "What we build together next"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

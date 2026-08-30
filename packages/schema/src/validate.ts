@@ -9,9 +9,9 @@ import {
   GroupNodeSchema,
   FrameNodeSchema,
   GridNodeSchema,
-  KNOWN_NODE_SCHEMAS,
+  knownNodeSchemas,
   NodeBaseSchema,
-  MAX_NESTING_DEPTH,
+  maxNestingDepth,
   type DesignFile,
   type Node,
   type NodeType,
@@ -99,7 +99,7 @@ function embedSrcError(src: unknown): string | null {
 // validates each child individually so error pointers stay precise (a malformed
 // nested node would otherwise surface as an opaque union error).
 const SHALLOW_NODE_SCHEMAS: Partial<Record<NodeType, z.ZodType>> = {
-  ...KNOWN_NODE_SCHEMAS,
+  ...knownNodeSchemas,
   group: GroupNodeSchema.extend({ children: z.array(z.unknown()) }),
   frame: FrameNodeSchema.extend({ children: z.array(z.unknown()) }),
   grid: GridNodeSchema.extend({ children: z.array(z.unknown()) }),
@@ -136,11 +136,11 @@ export function validate(file: unknown): ValidationResult {
       (node: Node, info) => {
         if (failure) return;
 
-        if (info.depth >= MAX_NESTING_DEPTH) {
+        if (info.depth >= maxNestingDepth) {
           failure = {
             ok: false,
             pointer: pathToPointer(info.path),
-            message: `nesting depth exceeds limit of ${MAX_NESTING_DEPTH}`,
+            message: `nesting depth exceeds limit of ${maxNestingDepth}`,
           };
           return;
         }

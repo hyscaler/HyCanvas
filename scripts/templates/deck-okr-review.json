@@ -1,0 +1,73 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-okr-review",
+ "title": "OKR Review",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "okr",
+  "goals",
+  "review",
+  "metrics"
+ ],
+ "styleTags": [
+  "professional"
+ ],
+ "themeId": "theme-denim",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 52,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "OKR Review",
+  "theme": "scored, honest",
+  "pages": [
+   {
+    "title": "The quarter's objectives",
+    "points": [
+     "Three objectives, one line each"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "Objective one",
+    "points": [
+     "Key results and final scores"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "Objective two",
+    "points": [
+     "Key results and final scores"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "Objective three",
+    "points": [
+     "Key results and final scores"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "Lessons",
+    "points": [
+     "Which targets were wrong, which execution was"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Next quarter",
+    "points": [
+     "The draft objectives for debate"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

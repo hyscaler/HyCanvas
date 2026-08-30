@@ -3,7 +3,7 @@ import type { Sticker } from "../stickers";
 
 const svg = (inner: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${inner}</svg>`;
 
-export const MUSIC_SPORT_STICKERS: Sticker[] = [
+export const musicSportStickers: Sticker[] = [
   { id: "ms-double-note", label: "Double Note", category: "Music & sport", keywords: ["music", "song", "melody", "audio"], svg: svg('<polygon points="34 18 70 12 70 24 34 30" fill="#6366f1"/><rect x="34" y="18" width="6" height="48" fill="#6366f1"/><rect x="64" y="12" width="6" height="48" fill="#6366f1"/><ellipse cx="30" cy="68" rx="10" ry="7" fill="#6366f1"/><ellipse cx="60" cy="62" rx="10" ry="7" fill="#6366f1"/>') },
   { id: "ms-vinyl", label: "Vinyl Record", category: "Music & sport", keywords: ["music", "retro", "dj", "album"], svg: svg('<circle cx="50" cy="50" r="42" fill="#1f2937"/><circle cx="50" cy="50" r="34" fill="#475569"/><circle cx="50" cy="50" r="30" fill="#1f2937"/><circle cx="50" cy="50" r="24" fill="#475569"/><circle cx="50" cy="50" r="20" fill="#1f2937"/><circle cx="50" cy="50" r="14" fill="#f59e0b"/><circle cx="50" cy="50" r="4" fill="#ffffff"/>') },
   { id: "ms-microphone", label: "Microphone", category: "Music & sport", keywords: ["sing", "karaoke", "audio", "voice"], svg: svg('<circle cx="50" cy="30" r="20" fill="#9ca3af"/><rect x="34" y="22" width="32" height="2" fill="#ffffff"/><rect x="32" y="30" width="36" height="2" fill="#ffffff"/><rect x="34" y="38" width="32" height="2" fill="#ffffff"/><polygon points="40 46 60 46 55 88 45 88" fill="#475569"/><rect x="38" y="44" width="24" height="6" rx="3" fill="#1f2937"/>') },

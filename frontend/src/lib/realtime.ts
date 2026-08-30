@@ -36,7 +36,7 @@ type ServerFrame =
   | { t: "locks"; locks: Record<string, LockHolder> } // authoritative collab locks (slice C)
   | { t: "comment"; op: "changed"; designId: string } // comment mutation signal
   | { t: "vote"; op: "changed"; designId: string } // server-authoritative vote signal (FR-19)
-  | { t: "audience"; kind: AudienceEvent["kind"]; emoji?: string } // live audience event (doc 28)
+  | { t: "audience"; kind: AudienceEvent["kind"]; emoji?: string; action?: string; code?: string } // live audience event (doc 28) + remote relay (C21)
   | { t: "moderated"; action: "kick" | "ban" | "unban"; designId: string } // you were removed (FR-32)
   | { t: "notify"; designId: string } // new in-app notification for the caller
   | { t: "role"; role: RealtimeRole; reason?: RoleChangeReason } // live role change
@@ -76,9 +76,13 @@ export interface AudienceEvent {
   // heartbeat). It is listed here so subscribers can ignore it: treating it as
   // an unknown kind makes the presenter refetch the whole audience state on
   // every one of its own heartbeats.
-  kind: "question" | "qa-changed" | "poll" | "poll-changed" | "reaction" | "cleared" | "live";
+  kind: "question" | "qa-changed" | "poll" | "poll-changed" | "reaction" | "cleared" | "live" | "remote";
   emoji?: string;
   slide?: number;
+  /** Phone-remote relay (C21): the action and the pairing code the PRESENTER
+   *  verifies locally (a mismatch is ignored). */
+  action?: string;
+  code?: string;
 }
 const audienceListeners = new Set<(e: AudienceEvent) => void>();
 export function onAudienceEvent(fn: (e: AudienceEvent) => void): () => void {
@@ -324,7 +328,7 @@ export class RealtimeClient {
         for (const fn of commentListeners) fn(frame.designId);
         break;
       case "audience":
-        for (const fn of audienceListeners) fn({ kind: frame.kind, emoji: frame.emoji });
+        for (const fn of audienceListeners) fn({ kind: frame.kind, emoji: frame.emoji, action: frame.action, code: frame.code });
         break;
       case "vote":
         for (const fn of voteListeners) fn(frame.designId);

@@ -65,11 +65,32 @@ import { z } from "zod";
  *      Removal previously overwrote `source` with the flattened cutout, which
  *      discarded the original pixels; keeping both makes the cutout a view
  *      rather than a replacement, and therefore undoable and refinable.
- *      Additive: a v19 file has no mask and renders exactly as before. */
-export const CURRENT_SCHEMA_VERSION = 20;
+ *      Additive: a v19 file has no mask and renders exactly as before.
+ *  v21: placeholder capacities. `Placeholder` gains optional `maxChars`,
+ *      `minChars`, `minItems`, `maxItems` - hints telling layout-grounded
+ *      generation how much text a slot comfortably holds (F28 T11). Rendering
+ *      never reads them, so a v20 file (no capacities) and a v21 file render
+ *      identically; older clients preserve the unknown keys end to end.
+ *  v22: transition polish. `PageTransition` gains optional `easing` (a plain
+ *      string clamped by the engine, so unknown future values keep validating
+ *      everywhere) and `Page` gains optional `transitionOut`, an exit
+ *      transition composited with the arriving page's own (F28 completion
+ *      C02+C03). Both additive: a v21 file renders exactly as before.
+ *  v23: animation depth. `Keyframe` gains optional `color`/`width`/`height`
+ *      channels, `KeyframeTrack` gains optional `path`/`orient` (motion
+ *      paths), `AnimationClip` gains optional `spring` parameters, and
+ *      `NodeAnimation` gains an optional media `trigger` (F28 completion
+ *      C11/C12/C13/C15). All additive: a v22 file animates exactly as
+ *      before, and older clients preserve the unknown keys end to end.
+ *  v24: interaction actions. `Interaction` gains optional `actionV2` (a
+ *      plain-string kind + optional target node), carrying play/pause/toggle
+ *      media and run-animation without widening the legacy action enum, so
+ *      older clients keep validating and fall back to the legacy `action`
+ *      (F28 completion C16). Additive. */
+export const currentSchemaVersion = 24;
 
 /** Maximum container nesting depth; guards traversal against stack overflow (FR-4). */
-export const MAX_NESTING_DEPTH = 32;
+export const maxNestingDepth = 32;
 
 // ---------------------------------------------------------------------------
 // Section 6.2: shared value types
@@ -429,6 +450,10 @@ export interface AnimationClip<P extends string = AnimationPreset> {
   /** Optional custom cubic-bezier timing [x1,y1,x2,y2] (CSS-style). When present
    *  it overrides `easing`, enabling a freeform curve editor. */
   bezier?: [number, number, number, number];
+  /** Spring parameters (v23) when `easing` is "spring": stiffness maps to the
+   *  oscillation frequency and damping to the settle character. Plain numbers
+   *  the ENGINE clamps into its stable range, so any stored value renders. */
+  spring?: { stiffness?: number; damping?: number };
 }
 function animationClipSchema<P extends string>(preset: z.ZodType<P>) {
   return z.object({
@@ -438,6 +463,7 @@ function animationClipSchema<P extends string>(preset: z.ZodType<P>) {
     easing: EasingSchema,
     startMode: z.enum(["delay", "with-previous", "after-previous"]).optional(),
     bezier: z.tuple([z.number(), z.number(), z.number(), z.number()]).optional(),
+    spring: z.object({ stiffness: z.number().optional(), damping: z.number().optional() }).optional(),
   });
 }
 
@@ -454,6 +480,14 @@ export interface Keyframe {
   rotate?: number;
   opacity?: number;
   easing?: Easing;
+  /** v23 channels: an absolute fill-color override, and absolute width/height
+   *  in px (the pose keeps the node's center fixed while resizing). Each
+   *  channel interpolates between the keyframes that DEFINE it, independent
+   *  of the others, holding at both boundaries like the transform channels;
+   *  omitted everywhere means no override. */
+  color?: Color;
+  width?: number;
+  height?: number;
 }
 export const KeyframeSchema = z.object({
   t: z.number().nonnegative(),
@@ -463,6 +497,9 @@ export const KeyframeSchema = z.object({
   rotate: z.number().optional(),
   opacity: z.number().optional(),
   easing: EasingSchema.optional(),
+  color: ColorSchema.optional(),
+  width: z.number().positive().optional(),
+  height: z.number().positive().optional(),
 });
 
 /** A per-element keyframe timeline (F25 FR-1/3): an ordered set of keyframes
@@ -471,11 +508,19 @@ export interface KeyframeTrack {
   durationMs: number;
   loop?: boolean;
   keyframes: Keyframe[];
+  /** Motion path (v23): node-relative offsets sampled over the track. When
+   *  present (2+ points) it drives dx/dy INSTEAD of the keyframes' dx/dy
+   *  channels; the other channels keep evaluating from the keyframes. */
+  path?: { x: number; y: number }[];
+  /** Rotate the node along the path's tangent (v23, orient-to-path). */
+  orient?: boolean;
 }
 export const KeyframeTrackSchema = z.object({
   durationMs: z.number().positive(),
   loop: z.boolean().optional(),
   keyframes: z.array(KeyframeSchema),
+  path: z.array(z.object({ x: z.number(), y: z.number() })).optional(),
+  orient: z.boolean().optional(),
 });
 
 /** Per-node animation set: an entrance (slide-enter), an exit (slide-leave),
@@ -486,12 +531,18 @@ export interface NodeAnimation {
   exit?: AnimationClip<ExitPreset>;
   emphasis?: AnimationClip<EmphasisPreset>;
   custom?: KeyframeTrack;
+  /** Media trigger (v23): hold the ENTRANCE until the referenced video/audio
+   *  node's playback reaches `atMs`, then play it (F25 media bookmarks). A
+   *  dangling id or a surface with no live media simply never fires - the
+   *  node then behaves as if it had no entrance hold. */
+  trigger?: { mediaNodeId: string; atMs: number };
 }
 export const NodeAnimationSchema = z.object({
   entrance: animationClipSchema(EntrancePresetSchema).optional(),
   exit: animationClipSchema(ExitPresetSchema).optional(),
   emphasis: animationClipSchema(EmphasisPresetSchema).optional(),
   custom: KeyframeTrackSchema.optional(),
+  trigger: z.object({ mediaNodeId: z.string(), atMs: z.number().nonnegative() }).optional(),
 });
 
 /** What an interaction trigger does. `openLink` reuses the node's ElementLink
@@ -514,10 +565,18 @@ export const InteractionActionSchema = z.discriminatedUnion("kind", [
 export interface Interaction {
   trigger: "click" | "hover";
   action: InteractionAction;
+  /** Newer interaction actions (v24). A SEPARATE optional field, never a
+   *  widening of the `action` enum: widening looks additive but breaks every
+   *  older client's whole-file validation (CLAUDE.md). `kind` is a PLAIN
+   *  string ("play-media" | "pause-media" | "toggle-media" | "run-animation"
+   *  today); a runtime that does not recognize it simply falls back to the
+   *  legacy `action`. When set, a capable runtime prefers it. */
+  actionV2?: { kind: string; targetNodeId?: string };
 }
 export const InteractionSchema = z.object({
   trigger: z.enum(["click", "hover"]),
   action: InteractionActionSchema,
+  actionV2: z.object({ kind: z.string(), targetNodeId: z.string().optional() }).optional(),
 });
 
 /** Per-page slide transition, applied when advancing to this page (FR-6). */
@@ -525,11 +584,16 @@ export interface PageTransition {
   type: "none" | "fade" | "slide" | "push" | "dissolve" | "morph-lite" | "wipe" | "flip" | "zoom" | "morph";
   direction?: "left" | "right" | "up" | "down";
   durationMs: number;
+  /** Easing curve name (v22). A PLAIN string, never an enum: an unknown value
+   *  must keep validating on every client (the engine clamps unknowns to its
+   *  default), so future easings can ship without a schema change. */
+  easing?: string;
 }
 export const PageTransitionSchema = z.object({
   type: z.enum(["none", "fade", "slide", "push", "dissolve", "morph-lite", "wipe", "flip", "zoom", "morph"]),
   direction: z.enum(["left", "right", "up", "down"]).optional(),
   durationMs: z.number().nonnegative(),
+  easing: z.string().optional(),
 });
 
 /** Photo motion on an ImageNode: a slow zoom/pan during present-mode display. */
@@ -668,14 +732,14 @@ export type NodeType =
 // Node types with a concrete schema today. `model3d` is reserved/deferred
 // (Section 2), so it is intentionally absent here and is validated by its base
 // alone, like any newer/unknown type.
-export const KNOWN_NODE_TYPES: readonly NodeType[] = [
+export const knownNodeTypes: readonly NodeType[] = [
   "text", "image", "shape", "line", "path", "icon", "sticker",
   "group", "frame", "grid", "video", "audio", "table", "chart",
   "embed", "qr", "connector", "mask", "boolean", "sticky",
   "ink", "mindmap", "boardview", "diagramcode", "stamp",
 ] as const;
 
-const KNOWN_NODE_TYPE_SET = new Set<string>(KNOWN_NODE_TYPES);
+const KNOWN_NODE_TYPE_SET = new Set<string>(knownNodeTypes);
 export function isKnownNodeType(type: string): type is NodeType {
   return KNOWN_NODE_TYPE_SET.has(type);
 }
@@ -1800,7 +1864,7 @@ export type KnownNode =
 export type Node = KnownNode | UnknownNode;
 
 /** Per-type schemas for every known node type, keyed by discriminator. */
-export const KNOWN_NODE_SCHEMAS = {
+export const knownNodeSchemas = {
   text: TextNodeSchema,
   image: ImageNodeSchema,
   shape: ShapeNodeSchema,
@@ -1857,11 +1921,24 @@ export interface Placeholder {
   id: string;
   role: PlaceholderRole;
   rect: { x: number; y: number; width: number; height: number };
+  /** Capacity hints for layout-grounded generation (v21, all optional): how
+   *  much text this slot comfortably holds. maxChars is the hard fit ceiling,
+   *  minChars (about half of max) the floor below which the slot looks empty;
+   *  minItems/maxItems bound list-capable roles (content). Rendering ignores
+   *  them entirely - they only shape generated content. */
+  maxChars?: number;
+  minChars?: number;
+  minItems?: number;
+  maxItems?: number;
 }
 export const PlaceholderSchema = z.object({
   id: z.string(),
   role: PlaceholderRoleSchema,
   rect: z.object({ x: z.number(), y: z.number(), width: unit, height: unit }),
+  maxChars: z.number().int().positive().optional(),
+  minChars: z.number().int().nonnegative().optional(),
+  minItems: z.number().int().nonnegative().optional(),
+  maxItems: z.number().int().positive().optional(),
 });
 
 /** A slide master: the root of a style cascade (background + shared
@@ -1957,6 +2034,10 @@ export interface Page {
   guides?: Guide[];
   notes?: string;
   transition?: PageTransition; // applied when advancing to this page
+  /** Exit transition (v22): how THIS page leaves when advancing away from it.
+   *  Composited simultaneously with the arriving page's own transition; absent
+   *  means today's behavior (only the arriving page's transition plays). */
+  transitionOut?: PageTransition;
   // presentations (additive, optional; older files still validate):
   layoutId?: string; // slide layout this page inherits from (doc 28 FR-3)
   sectionId?: string; // the section this slide belongs to (doc 28 FR-5)
@@ -1982,6 +2063,7 @@ export const PageSchema = z.object({
   guides: z.array(GuideSchema).optional(),
   notes: z.string().optional(),
   transition: PageTransitionSchema.optional(),
+  transitionOut: PageTransitionSchema.optional(),
   layoutId: z.string().optional(),
   sectionId: z.string().optional(),
   readingOrder: z.array(z.string()).optional(),

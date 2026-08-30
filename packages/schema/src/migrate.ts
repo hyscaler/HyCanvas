@@ -3,7 +3,7 @@
 // from, plus a golden fixture (see __tests__). Opening an older file always
 // succeeds by composing steps from the file's version up to the target.
 
-import { CURRENT_SCHEMA_VERSION, type DesignFile } from "./schema";
+import { currentSchemaVersion, type DesignFile } from "./schema";
 
 /** A pure, idempotent step upgrading a file from version `v` to `v + 1`. */
 export type Migration = (file: any) => any;
@@ -357,6 +357,22 @@ export const migrations: Record<number, Migration> = {
   // exactly as it did. The Go mirror reaches the same result through its
   // generic additive branch, which is why there is no matching `case 19`.
   19: (file: AnyObj) => ({ ...file, schemaVersion: 20 }),
+  // v20 -> v21: placeholder capacity hints (Placeholder.maxChars/minChars/
+  // minItems/maxItems). Purely additive, with no transform: a v20 file's
+  // placeholders omit them all, generation just gets no sizing hints, and
+  // rendering never reads them. The Go mirror reaches the same result through
+  // its generic additive branch, which is why there is no matching `case 20`.
+  20: (file: AnyObj) => ({ ...file, schemaVersion: 21 }),
+  // v21 -> v22: PageTransition.easing + Page.transitionOut. Purely additive
+  // and optional; the spread preserves every key, known or not.
+  21: (file: AnyObj) => ({ ...file, schemaVersion: 22 }),
+  // v22 -> v23: animation depth channels (Keyframe color/width/height,
+  // KeyframeTrack path/orient, AnimationClip.spring, NodeAnimation.trigger).
+  // Purely additive and optional.
+  22: (file: AnyObj) => ({ ...file, schemaVersion: 23 }),
+  // v23 -> v24: Interaction.actionV2 (play/pause/toggle media, run-animation).
+  // Purely additive and optional.
+  23: (file: AnyObj) => ({ ...file, schemaVersion: 24 }),
 };
 
 export class MigrationError extends Error {
@@ -378,7 +394,7 @@ export class MigrationError extends Error {
  */
 export function migrate(
   file: DesignFile,
-  toVersion: number = CURRENT_SCHEMA_VERSION,
+  toVersion: number = currentSchemaVersion,
 ): DesignFile {
   const from = file.schemaVersion;
 
@@ -415,7 +431,7 @@ export function migrate(
 /** True when the file needs a forward migration before it can be hydrated. */
 export function needsMigration(
   file: Pick<DesignFile, "schemaVersion">,
-  toVersion: number = CURRENT_SCHEMA_VERSION,
+  toVersion: number = currentSchemaVersion,
 ): boolean {
   return file.schemaVersion < toVersion;
 }

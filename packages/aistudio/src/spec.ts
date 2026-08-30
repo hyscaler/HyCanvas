@@ -6,11 +6,11 @@
 
 /** A layout intent the engine arranges blocks into. */
 export type DesignLayout = "centered" | "left" | "title-top" | "split";
-export const DESIGN_LAYOUTS: DesignLayout[] = ["centered", "left", "title-top", "split"];
+export const designLayouts: DesignLayout[] = ["centered", "left", "title-top", "split"];
 
 /** The role of a content block; drives the type scale and styling. */
 export type BlockRole = "eyebrow" | "heading" | "subheading" | "body" | "accent";
-export const BLOCK_ROLES: BlockRole[] = ["eyebrow", "heading", "subheading", "body", "accent"];
+export const blockRoles: BlockRole[] = ["eyebrow", "heading", "subheading", "body", "accent"];
 
 export interface DesignBlock {
   role: BlockRole;
@@ -57,7 +57,7 @@ export function normalizeDesignSpec(parsed: unknown): AiDesignSpec {
     throw new DesignSpecError("The AI response wasn't in the expected format.");
   }
   const root = parsed as Record<string, unknown>;
-  const layout = DESIGN_LAYOUTS.includes(root.layout as DesignLayout) ? (root.layout as DesignLayout) : "centered";
+  const layout = designLayouts.includes(root.layout as DesignLayout) ? (root.layout as DesignLayout) : "centered";
 
   const bgRaw = (root.background && typeof root.background === "object" ? root.background : {}) as Record<string, unknown>;
   const background: DesignBackground = {
@@ -72,7 +72,7 @@ export function normalizeDesignSpec(parsed: unknown): AiDesignSpec {
   for (const item of rawBlocks) {
     if (!item || typeof item !== "object") continue;
     const b = item as Record<string, unknown>;
-    const role = BLOCK_ROLES.includes(b.role as BlockRole) ? (b.role as BlockRole) : "body";
+    const role = blockRoles.includes(b.role as BlockRole) ? (b.role as BlockRole) : "body";
     const text = typeof b.text === "string" ? b.text.trim() : "";
     if (role !== "accent" && !text) continue; // text roles need content
     blocks.push({ role, text: role === "accent" ? undefined : text, color: hex(b.color) });
@@ -91,7 +91,7 @@ export const designSpecJsonSchema = {
   additionalProperties: false,
   required: ["layout", "background", "blocks"],
   properties: {
-    layout: { type: "string", enum: DESIGN_LAYOUTS },
+    layout: { type: "string", enum: designLayouts },
     background: {
       type: "object",
       additionalProperties: false,
@@ -111,7 +111,7 @@ export const designSpecJsonSchema = {
         additionalProperties: false,
         required: ["role"],
         properties: {
-          role: { type: "string", enum: BLOCK_ROLES },
+          role: { type: "string", enum: blockRoles },
           text: { type: "string" },
           color: { type: "string", description: "hex" },
         },

@@ -11,7 +11,7 @@
 // then CAPPED by the approval-lock state (FR-11): a locked design downgrades
 // every editor to read-only (view or comment, per policy) until reopened.
 
-import { ROLE_RANK } from "./roles";
+import { roleRank } from "./roles";
 import type { WorkspaceRole } from "./types";
 
 /** The three sharing access levels. */
@@ -30,7 +30,7 @@ export type Capability =
   | "delete";
 
 /** Higher rank = more access. Used to take the highest of competing sources. */
-export const MODE_RANK: Record<AccessMode, number> = {
+export const modeRank: Record<AccessMode, number> = {
   view: 1,
   comment: 2,
   edit: 3,
@@ -47,7 +47,7 @@ const MODE_CAPABILITIES: Record<AccessMode, Capability[]> = {
 /** Built-in workspace roles mapped to their full capability set (FR-8). Owner
  *  and admin can manage roles and delete; members edit and share; viewers only
  *  view and comment. These seed every workspace and are immutable. */
-export const BUILTIN_ROLE_CAPABILITIES: Record<WorkspaceRole, Capability[]> = {
+export const builtinRoleCapabilities: Record<WorkspaceRole, Capability[]> = {
   owner: ["view", "comment", "edit", "share", "approve", "manage-roles", "manage-brand", "delete"],
   admin: ["view", "comment", "edit", "share", "approve", "manage-roles", "manage-brand", "delete"],
   member: ["view", "comment", "edit", "share"],
@@ -56,7 +56,7 @@ export const BUILTIN_ROLE_CAPABILITIES: Record<WorkspaceRole, Capability[]> = {
 
 /** The base AccessMode a workspace role confers on a design before grants/links
  *  (FR-7). A viewer's floor is view; members and up can edit. */
-export const ROLE_BASE_MODE: Record<WorkspaceRole, AccessMode> = {
+export const roleBaseMode: Record<WorkspaceRole, AccessMode> = {
   owner: "edit",
   admin: "edit",
   member: "edit",
@@ -64,7 +64,7 @@ export const ROLE_BASE_MODE: Record<WorkspaceRole, AccessMode> = {
 };
 
 /** A named, editable capability set assignable at workspace or design scope
- *  (FR-8). Built-in roles are modeled by BUILTIN_ROLE_CAPABILITIES; this is the
+ *  (FR-8). Built-in roles are modeled by builtinRoleCapabilities; this is the
  *  custom-role shape the backend stores and passes in. */
 export interface CustomRole {
   id: string;
@@ -104,12 +104,12 @@ export interface ResolveDesignAccessInput {
 
 /** The higher of two modes. */
 function maxMode(a: AccessMode, b: AccessMode): AccessMode {
-  return MODE_RANK[a] >= MODE_RANK[b] ? a : b;
+  return modeRank[a] >= modeRank[b] ? a : b;
 }
 
 /** Cap a mode so it never exceeds `ceiling`. */
 function capMode(mode: AccessMode, ceiling: AccessMode): AccessMode {
-  return MODE_RANK[mode] <= MODE_RANK[ceiling] ? mode : ceiling;
+  return modeRank[mode] <= modeRank[ceiling] ? mode : ceiling;
 }
 
 /**
@@ -125,7 +125,7 @@ function capMode(mode: AccessMode, ceiling: AccessMode): AccessMode {
  */
 export function resolveDesignAccess(input: ResolveDesignAccessInput): DesignAccess {
   const sources: AccessMode[] = [];
-  if (input.workspaceRole) sources.push(ROLE_BASE_MODE[input.workspaceRole]);
+  if (input.workspaceRole) sources.push(roleBaseMode[input.workspaceRole]);
   if (input.grants) sources.push(...input.grants);
   if (input.link) sources.push(input.link);
 
@@ -147,7 +147,7 @@ export function resolveDesignAccess(input: ResolveDesignAccessInput): DesignAcce
       // A member/admin/owner keeps their management capabilities even when the
       // mode is bounded (e.g. a viewer floor), EXCEPT edit, which the resolved
       // mode governs (an approval lock must remove edit from an admin too).
-      for (const c of BUILTIN_ROLE_CAPABILITIES[input.workspaceRole]) {
+      for (const c of builtinRoleCapabilities[input.workspaceRole]) {
         if (c === "edit" && !MODE_CAPABILITIES[mode].includes("edit")) continue;
         caps.add(c);
       }
@@ -178,5 +178,5 @@ export function modeCanEdit(mode: AccessMode): boolean {
 
 /** True when `role` is one of the four built-in workspace roles. */
 export function isBuiltinRole(name: string): name is WorkspaceRole {
-  return name in ROLE_RANK;
+  return name in roleRank;
 }

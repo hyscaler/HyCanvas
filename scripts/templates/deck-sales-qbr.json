@@ -1,0 +1,78 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-sales-qbr",
+ "title": "Sales QBR",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "qbr",
+  "sales",
+  "review",
+  "quarterly"
+ ],
+ "styleTags": [
+  "professional"
+ ],
+ "themeId": "theme-royal",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 32,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Quarterly Business Review",
+  "theme": "direct, numbers-first",
+  "pages": [
+   {
+    "title": "Quarter in review",
+    "points": [
+     "Pipeline, wins, and what changed"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "Headline numbers",
+    "points": [
+     "Bookings against plan",
+     "Pipeline coverage entering next quarter",
+     "Win rate movement"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "What worked",
+    "points": [
+     "The plays that closed deals",
+     "Segments that outperformed"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "What did not",
+    "points": [
+     "Where deals stalled and why",
+     "Losses we should have won"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Competitive picture",
+    "points": [
+     "Who we met most often",
+     "How we positioned and what stuck"
+    ],
+    "visualRole": "comparison"
+   },
+   {
+    "title": "Next quarter plan",
+    "points": [
+     "Three bets with owners and dates"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

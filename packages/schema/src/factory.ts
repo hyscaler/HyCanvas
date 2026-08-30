@@ -2,7 +2,7 @@
 // here so every default lives in one place and `validate` accepts each one.
 
 import {
-  CURRENT_SCHEMA_VERSION,
+  currentSchemaVersion,
   type Color,
   type DesignFile,
   type Fill,
@@ -18,7 +18,7 @@ export function newId(): string {
   return globalThis.crypto.randomUUID();
 }
 
-const BLACK: Color = { srgb: { r: 0, g: 0, b: 0, a: 1 } };
+const black: Color = { srgb: { r: 0, g: 0, b: 0, a: 1 } };
 const WHITE: Color = { srgb: { r: 1, g: 1, b: 1, a: 1 } };
 
 function identityTransform(): Transform {
@@ -35,7 +35,7 @@ function baseDefaults(): Omit<NodeBase, "type"> {
   };
 }
 
-const solidBlack: Fill = { type: "solid", color: BLACK };
+const solidBlack: Fill = { type: "solid", color: black };
 function defaultStroke(): Stroke {
   return { fill: solidBlack, width: 1, align: "center", cap: "butt", join: "miter" };
 }
@@ -75,7 +75,7 @@ const NODE_DEFAULTS: { [K in Exclude<NodeType, "model3d">]: () => object } = {
   table: () => ({ rows: 0, cols: 0, colWidths: [], rowHeights: [], cells: [] }),
   chart: () => ({ chartType: "bar", series: [], categories: [], options: {} }),
   embed: () => ({ provider: "iframe", src: "" }),
-  qr: () => ({ value: "", ecLevel: "M", foreground: BLACK, background: WHITE }),
+  qr: () => ({ value: "", ecLevel: "M", foreground: black, background: WHITE }),
   connector: () => ({
     route: "straight",
     start: { point: { x: 0, y: 0 } },
@@ -88,7 +88,7 @@ const NODE_DEFAULTS: { [K in Exclude<NodeType, "model3d">]: () => object } = {
     text: "",
     // Classic yellow card with dark text.
     fill: { type: "solid", color: { srgb: { r: 1, g: 0.898, b: 0.4, a: 1 } } },
-    textColor: BLACK,
+    textColor: black,
     align: "left",
     fontScale: 1,
     autoSize: true,
@@ -97,7 +97,7 @@ const NODE_DEFAULTS: { [K in Exclude<NodeType, "model3d">]: () => object } = {
   ink: () => ({
     points: [],
     smoothing: 0.5,
-    brush: { width: 4, opacity: 1, color: BLACK, mode: "pen" },
+    brush: { width: 4, opacity: 1, color: black, mode: "pen" },
   }),
   mindmap: () => ({ rootId: "", branches: [], direction: "radial" }),
   boardview: () => ({ view: "kanban", columns: [], cards: [] }),
@@ -136,7 +136,7 @@ export function createBlankDesign(
 ): DesignFile {
   return {
     format: "hycanvas.design",
-    schemaVersion: CURRENT_SCHEMA_VERSION,
+    schemaVersion: currentSchemaVersion,
     id: init?.id ?? newId(),
     title: init?.title ?? "Untitled design",
     unit: init?.unit ?? "px",

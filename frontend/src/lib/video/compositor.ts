@@ -300,7 +300,7 @@ export function clipGainAt(
 
 /** Named filter presets: applying one copies these values onto the clip so the
  *  sliders always show (and can further tweak) the real numbers. */
-export const COLOR_PRESETS: { name: string; label: string; color: ColorAdjust }[] = [
+export const colorPresets: { name: string; label: string; color: ColorAdjust }[] = [
   { name: "vivid", label: "Vivid", color: { saturation: 1.35, contrast: 1.08 } },
   { name: "warm", label: "Warm", color: { temperature: 0.5, saturation: 1.05 } },
   { name: "cool", label: "Cool", color: { temperature: -0.5 } },
@@ -439,7 +439,7 @@ export function upsertPoseKeyframe(
 
 export type MotionPreset = "fade-in" | "fade-out" | "pop-in" | "slide-in" | "slide-out";
 
-export const MOTION_PRESETS: { name: MotionPreset; label: string }[] = [
+export const motionPresets: { name: MotionPreset; label: string }[] = [
   { name: "fade-in", label: "Fade in" },
   { name: "pop-in", label: "Pop in" },
   { name: "slide-in", label: "Slide in" },

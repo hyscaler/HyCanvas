@@ -21,6 +21,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SPEC_DIR = process.env.TEMPLATE_SPECS || join(ROOT, "scripts", "templates");
 const SEED = process.env.TEMPLATE_SEED || join(ROOT, "backend", "internal", "templates", "seed.json");
 const { validate, createNode } = await import(join(ROOT, "packages", "schema", "dist", "index.js"));
+const { composeDeckFile } = await import(join(ROOT, "packages", "aistudio", "dist", "index.js"));
 const { svgToNodes } = await import(join(ROOT, "packages", "stock", "dist", "index.js"));
 
 // Bundled illustration packs (for "illustrations" page entries): asset id ->
@@ -307,6 +308,79 @@ function compile(spec) {
   return { entry: { template, file }, errors };
 }
 
+// --- deck-outline dialect (F40 E11) ------------------------------------------
+// A presentation template authored THROUGH the product: a hand-written outline
+// plus a catalog themeId, composed into a full design by the exact pipeline
+// the generation API runs (composeDeckFile). Deterministic: node ids come from
+// a counter shim installed around the compose (the same contract as the goja
+// composer), so regenerating the seed never churns ids.
+
+function compileDeckOutline(spec) {
+  const errors = [];
+  if (!spec.outline?.pages?.length) errors.push(`${spec.id}: outline.pages is required`);
+  if (!spec.themeId) errors.push(`${spec.id}: themeId is required`);
+  const prevCrypto = Object.getOwnPropertyDescriptor(globalThis, "crypto");
+  let uuidSeq = 0;
+  Object.defineProperty(globalThis, "crypto", {
+    configurable: true,
+    value: { randomUUID: () => `n-${++uuidSeq}` },
+  });
+  let file;
+  try {
+    file = composeDeckFile({
+      outline: spec.outline,
+      width: spec.size?.[0] ?? 1920,
+      height: spec.size?.[1] ?? 1080,
+      themeId: spec.themeId,
+    });
+  } catch (e) {
+    errors.push(`${spec.id}: compose failed: ${e.message}`);
+    return { entry: null, errors };
+  } finally {
+    if (prevCrypto) Object.defineProperty(globalThis, "crypto", prevCrypto);
+  }
+  file.id = `tpl-${spec.id}`;
+  file.title = spec.title;
+  file.meta = file.meta ?? {}; // the seed validator requires the record
+  // Palette metadata from the catalog theme record (already stamped on file).
+  const palette = (file.theme?.colors ?? [])
+    .map((c) => {
+      const s = c.color?.srgb;
+      if (!s) return null;
+      const h = (v) => Math.round(v * 255).toString(16).padStart(2, "0");
+      return `#${h(s.r)}${h(s.g)}${h(s.b)}`;
+    })
+    .filter(Boolean)
+    .slice(0, 6);
+  const template = {
+    id: spec.id,
+    title: spec.title,
+    ownerId: "hycanvas",
+    workspaceId: null,
+    visibility: "public",
+    categories: spec.categories,
+    tags: spec.tags,
+    style: {
+      palette,
+      typography: [
+        { role: "heading", family: file.theme?.fontHeading ?? "Inter", weight: 700 },
+        { role: "body", family: file.theme?.fontBody ?? "Inter", weight: 400 },
+      ],
+      styleTags: spec.styleTags ?? [],
+    },
+    format: { width: spec.size?.[0] ?? 1920, height: spec.size?.[1] ?? 1080, unit: "px" },
+    pageCount: file.pages.length,
+    previewUrls: [],
+    fillableFields: [],
+    attributions: [],
+    version: spec.version ?? 1,
+    createdAt: spec.created ?? "2026-08-28T00:00:00.000Z",
+    updatedAt: spec.updated ?? spec.created ?? "2026-08-28T00:00:00.000Z",
+    designFileKey: `seed:${spec.id}`,
+  };
+  return { entry: { template, file }, errors };
+}
+
 // --- run ---------------------------------------------------------------------
 
 const specs = readdirSync(SPEC_DIR).filter((f) => f.endsWith(".json")).sort();
@@ -318,8 +392,9 @@ for (const f of specs) {
   if (ids.has(spec.id)) allErrors.push(`duplicate template id: ${spec.id}`);
   ids.add(spec.id);
   if (!spec.categories?.length || !spec.tags?.length) allErrors.push(`${spec.id}: categories and tags are required`);
-  const { entry, errors } = compile(spec);
+  const { entry, errors } = spec.kind === "deck-outline" ? compileDeckOutline(spec) : compile(spec);
   allErrors.push(...errors);
+  if (!entry) continue;
   const v = validate(entry.file);
   if (!v.ok) allErrors.push(`${spec.id}: schema invalid at ${v.pointer}: ${v.message}`);
   entries.push({ entry, rank: spec.rank ?? 100, id: spec.id });

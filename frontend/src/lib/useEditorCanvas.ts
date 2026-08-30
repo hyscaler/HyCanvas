@@ -18,7 +18,7 @@ import { locate } from "@hc/editor";
 import { useEditor } from "@/store/editor";
 import { imageAssets } from "@/lib/assetProvider";
 import { fonts } from "@/lib/fontProvider";
-import { PAGE_GAP, pageOffsets } from "@/lib/pageLayout";
+import { pageGap, pageOffsets } from "@/lib/pageLayout";
 
 export interface CanvasApi {
   scene: () => Scene | null;
@@ -233,7 +233,7 @@ export function useEditorCanvas(canvasRef: RefObject<HTMLCanvasElement | null>):
       const gy = screenToPage(buildViewport(), screen).y; // global stacked Y
       for (let i = 0; i < doc.pages.length; i++) {
         const top = offs[i];
-        const bottom = top + doc.pages[i].height + PAGE_GAP / 2;
+        const bottom = top + doc.pages[i].height + pageGap / 2;
         if (gy < bottom) return i;
       }
       return doc.pages.length - 1;

@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 )
 
@@ -23,9 +24,14 @@ import (
 var ErrInvalidOutput = errors.New("model did not return valid structured output")
 
 // TextGenerator is the slice of the AI proxy this package needs. *ai.Service
-// satisfies it; tests stub it.
+// satisfies it; tests stub it. TextStructured asks the provider for natively
+// schema-constrained output (with the proxy falling back to plain text when
+// the provider rejects the parameter); the schema stays restated in the prompt
+// and the reply stays validated here, so structured mode raises JSON validity,
+// never replaces validation.
 type TextGenerator interface {
 	Text(ctx context.Context, workspaceID, prompt, system string) (string, error)
+	TextStructured(ctx context.Context, workspaceID, prompt, system, schemaJSON string) (string, error)
 }
 
 // Service orchestrates studio generation on top of the AI proxy + a DB for
@@ -45,34 +51,109 @@ func NewService(db DBTX, ai TextGenerator) *Service {
 	return &Service{ai: ai, store: st}
 }
 
-const maxRetries = 3
+// The validation-repair loop's budgets: up to maxValidationPasses model calls,
+// each corrective message carrying at most maxRepairErrors concrete validation
+// errors and at most maxRepairJSONChars of the previous invalid output.
+const (
+	maxValidationPasses = 4
+	maxRepairErrors     = 10
+	maxRepairJSONChars  = 6000
+)
 
-// generateValidated runs the model with a schema-constrained prompt and retries
-// (with a corrective hint) until the reply unmarshals into T and passes
-// validate, or the retry budget is spent (FR-12 retry-on-mismatch).
-func generateValidated[T any](ctx context.Context, s *Service, workspaceID, system, user string, validate func(*T) error) (*T, error) {
+// validationErrorList flattens a validator error into its concrete messages.
+// Validators may aggregate with errors.Join; a plain error is one message.
+func validationErrorList(err error) []string {
+	if joined, ok := err.(interface{ Unwrap() []error }); ok {
+		var out []string
+		for _, e := range joined.Unwrap() {
+			out = append(out, e.Error())
+		}
+		if len(out) > 0 {
+			return out
+		}
+	}
+	return []string{err.Error()}
+}
+
+// repairMessage rebuilds the user message for a repair pass: the original
+// request, the CONCRETE validation errors (capped), and the previous invalid
+// output (truncated) so the model can correct rather than regenerate blind.
+func repairMessage(user, prev string, verrs []string) string {
+	if len(verrs) > maxRepairErrors {
+		rest := len(verrs) - maxRepairErrors
+		// Copy before appending: append(verrs[:n], ...) would write into the
+		// caller's backing array, corrupting the slice it logs afterwards.
+		capped := make([]string, maxRepairErrors, maxRepairErrors+1)
+		copy(capped, verrs[:maxRepairErrors])
+		verrs = append(capped, fmt.Sprintf("...and %d more validation errors.", rest))
+	}
+	if len(prev) > maxRepairJSONChars {
+		prev = prev[:maxRepairJSONChars] + "\n... (truncated)"
+	}
+	return user +
+		"\n\nThe previous JSON response did not match the required response schema.\nValidation errors:\n- " +
+		strings.Join(verrs, "\n- ") +
+		"\n\nPrevious invalid JSON:\n```json\n" + prev + "\n```\n\n" +
+		"Return corrected JSON only. Make sure it fully matches the required schema."
+}
+
+// generateValidated runs the model until the reply unmarshals into T and
+// passes validate, or the pass budget is spent (FR-12 retry-on-mismatch).
+// A non-empty schemaJSON additionally requests NATIVE schema-constrained
+// output from the provider (the proxy falls back to plain text when a
+// provider rejects the parameter); the schema stays embedded in the prompt
+// and every reply still passes through extractJSON + validate.
+//
+// Repair shape: a parse failure re-asks with a corrective hint; a VALIDATION
+// failure feeds the concrete errors plus the previous invalid output back so
+// the model corrects rather than regenerates blind. When tolerateInvalid is
+// set, the final pass accepts a parseable-but-invalid value with a warning
+// instead of failing hard (an imperfect outline beats no outline; an invalid
+// assistant plan stays fail-closed). One structured log line per repair pass.
+func generateValidated[T any](ctx context.Context, s *Service, workspaceID, system, user, schemaJSON string, tolerateInvalid bool, validate func(*T) error) (*T, error) {
 	msg := user
 	var lastErr error
-	for attempt := 0; attempt < maxRetries; attempt++ {
-		out, err := s.ai.Text(ctx, workspaceID, msg, system)
+	for pass := 0; pass < maxValidationPasses; pass++ {
+		var out string
+		var err error
+		if schemaJSON != "" {
+			out, err = s.ai.TextStructured(ctx, workspaceID, msg, system, schemaJSON)
+		} else {
+			out, err = s.ai.Text(ctx, workspaceID, msg, system)
+		}
 		if err != nil {
 			return nil, err // provider/policy errors propagate unchanged
 		}
 		raw := extractJSON(out)
 		if raw == nil {
 			lastErr = errors.New("no JSON object found in the reply")
-		} else {
-			var v T
-			if jerr := json.Unmarshal(raw, &v); jerr != nil {
-				lastErr = fmt.Errorf("invalid JSON: %v", jerr)
-			} else if verr := validate(&v); verr != nil {
-				lastErr = verr
-			} else {
-				return &v, nil
-			}
+			msg = user + "\n\nYour previous reply was rejected: " + lastErr.Error() +
+				". Return ONLY a single JSON object that exactly matches the schema, with no prose or code fences."
+			slog.Warn("aistudio repair pass", "reason", "no_json", "pass", pass+1, "of", maxValidationPasses)
+			continue
 		}
-		msg = user + "\n\nYour previous reply was rejected: " + lastErr.Error() +
-			". Return ONLY a single JSON object that exactly matches the schema, with no prose or code fences."
+		var v T
+		if jerr := json.Unmarshal(raw, &v); jerr != nil {
+			lastErr = fmt.Errorf("invalid JSON: %v", jerr)
+			msg = user + "\n\nYour previous reply was rejected: " + lastErr.Error() +
+				". Return ONLY a single JSON object that exactly matches the schema, with no prose or code fences."
+			slog.Warn("aistudio repair pass", "reason", "unparseable", "pass", pass+1, "of", maxValidationPasses)
+			continue
+		}
+		verr := validate(&v)
+		if verr == nil {
+			return &v, nil
+		}
+		lastErr = verr
+		verrs := validationErrorList(verr)
+		if pass == maxValidationPasses-1 && tolerateInvalid {
+			slog.Warn("aistudio accepting invalid output after max repair passes",
+				"errors", strings.Join(verrs, " | "), "passes", maxValidationPasses)
+			return &v, nil
+		}
+		msg = repairMessage(user, string(raw), verrs)
+		slog.Warn("aistudio repair pass", "reason", "validation", "pass", pass+1, "of", maxValidationPasses,
+			"errors", strings.Join(verrs, " | "))
 	}
 	return nil, fmt.Errorf("%w: %v", ErrInvalidOutput, lastErr)
 }

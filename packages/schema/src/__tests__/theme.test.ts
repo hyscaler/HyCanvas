@@ -3,7 +3,7 @@ import { createBlankDesign } from "../factory";
 import { migrate } from "../migrate";
 import { validate } from "../validate";
 import { fromDesignFile, toDesignFile } from "../yjs";
-import { CURRENT_SCHEMA_VERSION, type DesignFile, type Theme } from "../schema";
+import { currentSchemaVersion, type DesignFile, type Theme } from "../schema";
 import {
   applyTheme,
   builtinMasterAndLayouts,
@@ -37,7 +37,7 @@ describe("schema version", () => {
   it("migrates a v10 file to the current version purely additively", () => {
     const v10 = { ...createBlankDesign({ title: "Old", width: 800, height: 600 }), schemaVersion: 10 };
     const migrated = migrate(v10 as unknown as DesignFile);
-    expect(migrated.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(migrated.schemaVersion).toBe(currentSchemaVersion);
     // Nothing added, nothing lost: only the version changed.
     expect({ ...migrated, schemaVersion: 10 }).toEqual(v10);
   });
@@ -180,7 +180,7 @@ describe("themes", () => {
 });
 
 describe("builtinMasterAndLayouts", () => {
-  it("ships the five expected layouts", () => {
+  it("ships the sixteen expected layouts (originals first, F40 E09 additions after)", () => {
     const { layouts } = builtinMasterAndLayouts({ width: 1920, height: 1080 });
     expect(layouts.map((l) => l.name)).toEqual([
       "Title",
@@ -188,6 +188,17 @@ describe("builtinMasterAndLayouts", () => {
       "Two content",
       "Comparison",
       "Picture with caption",
+      "Section header",
+      "Agenda",
+      "Quote",
+      "Stat row",
+      "Timeline",
+      "Team grid",
+      "Picture left",
+      "Big picture",
+      "Content with picture",
+      "Headline stat",
+      "Closing",
     ]);
   });
 

@@ -74,10 +74,10 @@ function rsEncode(data: number[], ecLen: number): number[] {
 // Each entry: [ecCodewordsPerBlock, numBlocksGroup1, dataCwGroup1, numBlocksGroup2, dataCwGroup2]
 const EC_LEVEL_INDEX: Record<QrEcLevel, number> = { L: 0, M: 1, Q: 2, H: 3 };
 
-import { BLOCK_TABLE, ALIGN_POS } from "./qr-tables";
+import { blockTable, alignPos } from "./qr-tables";
 
 function dataCapacityCodewords(version: number, ec: QrEcLevel): number {
-  const entry = BLOCK_TABLE[version - 1][EC_LEVEL_INDEX[ec]];
+  const entry = blockTable[version - 1][EC_LEVEL_INDEX[ec]];
   const g1d = entry[2];
   const b1 = entry[1];
   const b2 = entry[3];
@@ -174,7 +174,7 @@ function pickVersion(text: string, ec: QrEcLevel): number {
 
 // Interleave data + EC codewords across blocks per spec.
 function buildFinalCodewords(dataCw: number[], version: number, ec: QrEcLevel): number[] {
-  const entry = BLOCK_TABLE[version - 1][EC_LEVEL_INDEX[ec]];
+  const entry = blockTable[version - 1][EC_LEVEL_INDEX[ec]];
   const ecPerBlock = entry[0];
   const numB1 = entry[1];
   const dataB1 = entry[2];
@@ -239,7 +239,7 @@ function placeFinder(m: Cell[][], r: number, c: number): void {
 }
 
 function placeAlignment(m: Cell[][], version: number): void {
-  const positions = ALIGN_POS[version - 1];
+  const positions = alignPos[version - 1];
   if (!positions || positions.length === 0) return;
   for (const r of positions) {
     for (const c of positions) {

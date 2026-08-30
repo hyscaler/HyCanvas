@@ -3,7 +3,7 @@ import type { Sticker } from "../stickers";
 
 const svg = (inner: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${inner}</svg>`;
 
-export const TECH_STICKERS: Sticker[] = [
+export const techStickers: Sticker[] = [
   { id: "tc-smartphone", label: "Smartphone", category: "Technology", keywords: ["phone", "mobile", "device", "cell", "call"], svg: svg('<rect x="30" y="8" width="40" height="84" rx="8" fill="#1f2937"/><rect x="34" y="16" width="32" height="62" fill="#38bdf8"/><rect x="43" y="11" width="14" height="3" rx="1.5" fill="#64748b"/><circle cx="50" cy="85" r="4" fill="#64748b"/>') },
   { id: "tc-laptop", label: "Laptop", category: "Technology", keywords: ["computer", "notebook", "work", "device", "pc"], svg: svg('<rect x="22" y="16" width="56" height="44" rx="4" fill="#1f2937"/><rect x="27" y="21" width="46" height="34" fill="#38bdf8"/><path d="M14 60 H86 L94 74 Q94 78 90 78 H10 Q6 78 6 74 Z" fill="#64748b"/><rect x="41" y="60" width="18" height="5" rx="2.5" fill="#1f2937"/>') },
   { id: "tc-monitor", label: "Monitor", category: "Technology", keywords: ["desktop", "screen", "display", "computer", "pc"], svg: svg('<rect x="10" y="14" width="80" height="52" rx="6" fill="#1f2937"/><rect x="16" y="20" width="68" height="40" fill="#38bdf8"/><rect x="45" y="66" width="10" height="14" fill="#64748b"/><rect x="30" y="80" width="40" height="8" rx="4" fill="#64748b"/>') },

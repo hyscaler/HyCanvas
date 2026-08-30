@@ -1,0 +1,74 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-book-summary",
+ "title": "Book Club Summary",
+ "categories": [
+  "presentations",
+  "education"
+ ],
+ "tags": [
+  "book",
+  "summary",
+  "education",
+  "discussion"
+ ],
+ "styleTags": [
+  "editorial",
+  "warm"
+ ],
+ "themeId": "theme-copper",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 78,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Book Discussion",
+  "theme": "thoughtful, discussable",
+  "pages": [
+   {
+    "title": "The book",
+    "points": [
+     "Title, author, and the one-line thesis"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "The argument",
+    "points": [
+     "The three claims the book stands on"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "The best chapter",
+    "points": [
+     "Where the book earns its reputation"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "The weak spots",
+    "points": [
+     "Where the argument thins"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "The quote",
+    "points": [
+     "The passage worth reading aloud"
+    ],
+    "visualRole": "quote"
+   },
+   {
+    "title": "Discussion questions",
+    "points": [
+     "Three questions to argue about"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

@@ -19,6 +19,7 @@ import (
 	"hycanvas/backend/internal/accounts"
 	"hycanvas/backend/internal/ai"
 	"hycanvas/backend/internal/aistudio"
+	"hycanvas/backend/internal/apikeys"
 	"hycanvas/backend/internal/approvals"
 	"hycanvas/backend/internal/audience"
 	"hycanvas/backend/internal/brand"
@@ -49,6 +50,7 @@ type Deps struct {
 	Logger        *slog.Logger
 	Version       string // build version stamped via -ldflags; "dev" when un-stamped
 	Accounts      *accounts.Service
+	APIKeys       *apikeys.Service
 	Persistence   *persistence.Service
 	Home          *home.Service
 	Sharing       *sharing.Service
@@ -113,6 +115,15 @@ func NewRouter(d Deps) http.Handler {
 		mountRealtime(r, d.Realtime, d.Accounts, d.Sharing, d.Persistence, d.Secure)
 	}
 
+	// F40 E06: the embedded API reference (no auth; describes, never exposes).
+	mountAPIDocs(r)
+
+	// F40 E07: the MCP endpoint (API-key auth only), at the root like
+	// /realtime - it is a protocol surface, not an /api/v1 REST route.
+	if d.APIKeys != nil && d.Accounts != nil && d.AIStudio != nil && d.Persistence != nil && d.Jobs != nil && d.Sharing != nil && d.Templates != nil {
+		mountMCP(r, d.APIKeys, d.Accounts, d.AIStudio, d.Persistence, d.Jobs, d.Sharing, d.Templates)
+	}
+
 	// The /api/v1 surface. Ported modules register their routes here; until a
 	// route exists in Go, the reverse proxy keeps sending it to the Node API.
 	r.Route("/api/v1", func(api chi.Router) {
@@ -125,6 +136,16 @@ func NewRouter(d Deps) http.Handler {
 			mountAuth(api, d.Accounts, d.Secure, d.Auth, d.Captcha)
 			mountWorkspaces(api, d.Accounts)
 			mountMembers(api, d.Accounts)
+		}
+		// F40: API keys. The auth middleware's key branch activates only when
+		// the service is wired; the tenancy guard needs the design->workspace
+		// lookup from persistence.
+		if d.Accounts != nil && d.APIKeys != nil {
+			apiKeyAuth = d.APIKeys
+			if d.Persistence != nil {
+				apiKeyDesignWS = d.Persistence.GetWorkspaceID
+			}
+			mountAPIKeys(api, d.APIKeys, d.Accounts)
 		}
 		if d.Accounts != nil && d.AccountData != nil {
 			mountAccount(api, d.AccountData, d.Accounts, d.Secure)
@@ -177,12 +198,20 @@ func NewRouter(d Deps) http.Handler {
 		}
 		if d.Accounts != nil && d.AIStudio != nil && d.Persistence != nil && d.Jobs != nil {
 			mountAIStudio(api, d.AIStudio, d.Accounts, d.Persistence, d.Jobs)
+			mountAIStream(api, d.AIStudio, d.Accounts)
+			// F40 E04: the public generation API (session or generate-scoped key).
+			mountGenerate(api, d.AIStudio, d.Accounts, d.Persistence, d.Jobs, d.Templates)
 		}
 		if d.Accounts != nil && d.AI != nil {
-			mountAI(api, d.AI, d.Accounts)
+			mountAI(api, d.AI, d.Accounts, d.Uploads)
+			if d.AIStudio != nil {
+				mountSearch(api, d.AI, d.AIStudio, d.Accounts)
+			}
 		}
 		if d.Accounts != nil {
 			mountExtractURL(api, d.Accounts)
+			mountExtractFile(api, d.Accounts)
+			mountBrandFromURL(api, d.AIStudio, d.Accounts)
 		}
 		if d.Accounts != nil && d.Audience != nil && d.Sharing != nil && d.Persistence != nil {
 			mountAudience(api, d.Audience, d.Sharing, d.Persistence, d.Accounts)

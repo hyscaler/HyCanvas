@@ -11,7 +11,7 @@
 import type { DesignFile } from "@hc/schema";
 
 /** The design-meta key holding the instantiated locked-region node ids. */
-export const BRAND_LOCKED_REGIONS_META = "brandLockedRegions";
+export const brandLockedRegionsMeta = "brandLockedRegions";
 
 /** Remap a brand template's locked-region node ids through a deep-copy id map
  *  (template id -> new design id). Ids with no mapping are dropped (the node was
@@ -33,13 +33,13 @@ export function remapLockedRegions(
  *  the key so a non-brand template never leaves a stray marker. */
 export function withLockedRegions(file: DesignFile, lockedRegions: readonly string[]): DesignFile {
   const meta = { ...(file.meta ?? {}) } as Record<string, unknown>;
-  if (lockedRegions.length > 0) meta[BRAND_LOCKED_REGIONS_META] = [...lockedRegions];
-  else delete meta[BRAND_LOCKED_REGIONS_META];
+  if (lockedRegions.length > 0) meta[brandLockedRegionsMeta] = [...lockedRegions];
+  else delete meta[brandLockedRegionsMeta];
   return { ...file, meta };
 }
 
 /** Read the locked-region node ids a design carries (FR-6), or `[]`. */
 export function readLockedRegions(file: DesignFile): string[] {
-  const v = (file.meta as Record<string, unknown> | undefined)?.[BRAND_LOCKED_REGIONS_META];
+  const v = (file.meta as Record<string, unknown> | undefined)?.[brandLockedRegionsMeta];
   return Array.isArray(v) ? (v.filter((x) => typeof x === "string") as string[]) : [];
 }

@@ -163,6 +163,7 @@ type LinkRow struct {
 	ExpiresAt     *time.Time
 	Disabled      bool
 	RequireSignin bool
+	Label         *string
 	CreatedByID   *string
 	CreatedAt     time.Time
 }
@@ -208,6 +209,7 @@ type ShareLinkView struct {
 	ExpiresAt     *string          `json:"expiresAt"`
 	Disabled      bool             `json:"disabled"`
 	RequireSignin bool             `json:"requireSignin"`
+	Label         string           `json:"label,omitempty"`
 	CreatedAt     string           `json:"createdAt"`
 }
 
@@ -238,10 +240,13 @@ type DesignSharingView struct {
 	CustomRoles []CustomRoleView `json:"customRoles"`
 }
 
-// ResolvedLink is the public link-resolution result.
+// ResolvedLink is the public link-resolution result. LinkID identifies the
+// link (not a secret; the caller already holds the token) so view beats can
+// attribute engagement per link (C36).
 type ResolvedLink struct {
 	DesignID string           `json:"designId"`
 	Mode     authz.AccessMode `json:"mode"`
+	LinkID   string           `json:"linkId"`
 }
 
 // --- validation ----------------------------------------------------------
@@ -477,10 +482,14 @@ func linkView(l LinkRow) ShareLinkView {
 		s := l.ExpiresAt.UTC().Format(time.RFC3339Nano)
 		exp = &s
 	}
+	label := ""
+	if l.Label != nil {
+		label = *l.Label
+	}
 	return ShareLinkView{
 		ID: l.ID, DesignID: l.DesignID, Token: l.Token, Mode: l.Mode,
 		HasPassword: l.PasswordHash != nil, ExpiresAt: exp, Disabled: l.Disabled,
-		RequireSignin: l.RequireSignin, CreatedAt: l.CreatedAt.UTC().Format(time.RFC3339Nano),
+		RequireSignin: l.RequireSignin, Label: label, CreatedAt: l.CreatedAt.UTC().Format(time.RFC3339Nano),
 	}
 }
 
@@ -764,6 +773,24 @@ type CreateLinkInput struct {
 	Password      string
 	ExpiresAt     string
 	RequireSignin bool
+	// Label names the link's audience ("Investors", "All-hands") so per-link
+	// analytics read as people, not tokens (C36). Optional, trimmed, capped.
+	Label string
+}
+
+// linkLabelMax bounds a link label; longer input is a mistake, not a name.
+const linkLabelMax = 80
+
+// normalizeLabel trims and caps a link label; empty means "no label" (NULL).
+func normalizeLabel(label string) *string {
+	l := strings.TrimSpace(label)
+	if l == "" {
+		return nil
+	}
+	if r := []rune(l); len(r) > linkLabelMax {
+		l = string(r[:linkLabelMax]) // rune-safe cap, never a split UTF-8 sequence
+	}
+	return &l
 }
 
 func (s *Service) CreateLink(ctx context.Context, designID, userID string, in CreateLinkInput) (ShareLinkView, error) {
@@ -796,7 +823,7 @@ func (s *Service) CreateLink(ctx context.Context, designID, userID string, in Cr
 	}
 	row, err := s.createLink(ctx, LinkRow{
 		DesignID: designID, Token: token, Mode: mode, PasswordHash: pwHash,
-		ExpiresAt: expiresAt, RequireSignin: in.RequireSignin, CreatedByID: &userID,
+		ExpiresAt: expiresAt, RequireSignin: in.RequireSignin, Label: normalizeLabel(in.Label), CreatedByID: &userID,
 	})
 	if err != nil {
 		return ShareLinkView{}, err
@@ -806,13 +833,14 @@ func (s *Service) CreateLink(ctx context.Context, designID, userID string, in Cr
 }
 
 // UpdateLinkInput patches a link. expiresSet distinguishes "clear" (Expires nil
-// + set) from "leave unchanged".
+// + set) from "leave unchanged". A non-nil empty Label clears the label.
 type UpdateLinkInput struct {
 	Mode          *string
 	Disabled      *bool
 	ExpiresAt     *string
 	ExpiresSet    bool
 	RequireSignin *bool
+	Label         *string
 }
 
 func (s *Service) UpdateLink(ctx context.Context, linkID, userID string, in UpdateLinkInput) (ShareLinkView, error) {
@@ -840,7 +868,12 @@ func (s *Service) UpdateLink(ctx context.Context, linkID, userID string, in Upda
 		}
 		expiresAt = &t
 	}
-	row, err := s.updateLink(ctx, linkID, linkPatch{mode: newMode, disabled: in.Disabled, expiresAt: expiresAt, expiresSet: expiresSet, requireSignin: in.RequireSignin})
+	patch := linkPatch{mode: newMode, disabled: in.Disabled, expiresAt: expiresAt, expiresSet: expiresSet, requireSignin: in.RequireSignin}
+	if in.Label != nil {
+		patch.labelSet = true
+		patch.label = normalizeLabel(*in.Label) // nil (from "") clears to NULL
+	}
+	row, err := s.updateLink(ctx, linkID, patch)
 	if err != nil {
 		return ShareLinkView{}, err
 	}
@@ -922,7 +955,7 @@ func (s *Service) ResolveLink(ctx context.Context, token string, opts ResolveLin
 			_, _ = s.createGrant(ctx, GrantRow{DesignID: link.DesignID, UserID: &uid, Mode: link.Mode, InvitedBy: link.CreatedByID})
 		}
 	}
-	return ResolvedLink{DesignID: link.DesignID, Mode: link.Mode}, nil
+	return ResolvedLink{DesignID: link.DesignID, Mode: link.Mode, LinkID: link.ID}, nil
 }
 
 // --- custom roles (FR-8) -------------------------------------------------

@@ -1,0 +1,92 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-startup-pitch",
+ "title": "Startup Pitch Deck",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "pitch deck",
+  "startup",
+  "fundraising",
+  "investors"
+ ],
+ "styleTags": [
+  "professional",
+  "modern"
+ ],
+ "themeId": "theme-slate",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 30,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Startup Pitch",
+  "theme": "confident, investor-ready",
+  "pages": [
+   {
+    "title": "The one-line pitch",
+    "points": [
+     "We make X for Y, 10x faster",
+     "Founded by operators from the industry"
+    ],
+    "visualRole": "cover",
+    "note": "Open with the one-liner; pause before the details."
+   },
+   {
+    "title": "The problem",
+    "points": [
+     "Teams lose hours every week to manual work",
+     "Existing tools were built for a different era",
+     "The cost compounds as companies grow"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Our solution",
+    "points": [
+     "One workflow that replaces five tools",
+     "Set up in minutes, not months"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Market size",
+    "points": [
+     "A large and growing addressable market",
+     "Bottom-up: seats times realistic pricing",
+     "Early segments already pulling us in"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "Traction",
+    "points": [
+     "Consistent month-over-month growth",
+     "Retention that beats the category benchmark",
+     "Customers expanding on their own"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "The team",
+    "points": [
+     "Founders who lived this problem",
+     "Early hires from category leaders"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "The ask",
+    "points": [
+     "Raising to accelerate what already works"
+    ],
+    "visualRole": "closing",
+    "note": "End on the ask; keep the number crisp."
+   }
+  ]
+ }
+}

@@ -36,6 +36,7 @@ func mountAudience(api chi.Router, aud *audience.Service, sh *sharing.Service, p
 	api.Post("/links/{token}/audience/questions/{qid}/vote", audienceWriteLimit(audienceVoteQuestionHandler(aud, sh, acct)))
 	api.Post("/links/{token}/audience/polls/{pid}/vote", audienceWriteLimit(audienceVotePollHandler(aud, sh, acct)))
 	api.Post("/links/{token}/audience/react", audienceWriteLimit(audienceReactHandler(aud, sh, acct)))
+	api.Post("/links/{token}/audience/remote", audienceWriteLimit(audienceRemoteHandler(aud, sh, acct)))
 	// The state POST is a READ (viewers poll it for slide-follow and the board),
 	// so it gets the read budget.
 	api.Post("/links/{token}/audience/state", audienceReadLimit(audienceStateHandler(aud, sh, acct)))
@@ -151,6 +152,33 @@ func audienceVotePollHandler(aud *audience.Service, sh *sharing.Service, acct *a
 			return
 		}
 		if err := aud.VotePoll(r.Context(), designID, chi.URLParam(r, "pid"), body.VoterKey, body.Option); err != nil {
+			audienceProblem(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+// audienceRemoteHandler relays a phone-remote action (C21): same guard and
+// budget as a reaction; the presenter's local pairing-code check is the gate
+// that decides whether the action does anything.
+func audienceRemoteHandler(aud *audience.Service, sh *sharing.Service, acct *accounts.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Password string `json:"password"`
+			Code     string `json:"code"`
+			Action   string `json:"action"`
+		}
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&body); err != nil {
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
+			return
+		}
+		designID, err := resolveAudienceDesign(r, sh, acct, body.Password)
+		if err != nil {
+			sharingProblem(w, r, err)
+			return
+		}
+		if err := aud.Remote(designID, body.Code, body.Action); err != nil {
 			audienceProblem(w, r, err)
 			return
 		}

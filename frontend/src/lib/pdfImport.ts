@@ -48,6 +48,37 @@ function textNode(str: string, x: number, top: number, fontSize: number, width: 
 /** Extract a PDF's plain text (doc 28 FR-23 file-to-deck ingestion): all
  *  pages' text items joined with line/page breaks, for grounding an outline.
  *  Caps at maxPages so a giant PDF can't hang the tab. */
+/** Extract a PDF's text AND report whether it looks scanned: fewer than 50
+ *  chars of text across the FIRST FIVE PAGES means an image-only (scanned)
+ *  PDF with no text layer, where extraction returns noise-or-nothing (the
+ *  reference heuristic). OCR is deliberately out of scope here. */
+export async function pdfFileToTextWithScanCheck(file: File, maxPages = 60): Promise<{ text: string; scanned: boolean }> {
+  const pdfjs = (await import("pdfjs-dist")) as unknown as PdfjsModule;
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
+  const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
+  const parts: string[] = [];
+  let probeChars = 0;
+  try {
+    const pages = Math.min(doc.numPages, maxPages);
+    for (let i = 1; i <= pages; i++) {
+      const page = await doc.getPage(i);
+      const content = await page.getTextContent();
+      const line = content.items.map((it) => (it.str ?? "").trim()).filter(Boolean).join(" ");
+      if (i <= 5) probeChars += line.replace(/\s+/g, "").length;
+      if (line) parts.push(line);
+      page.cleanup?.();
+    }
+  } finally {
+    await doc.destroy?.();
+  }
+  const total = parts.join("\n\n");
+  // Scanned = the probe pages AND the document as a whole are text-poor: a
+  // report whose first pages are a full-bleed image section but which carries
+  // real text later must still attach.
+  const totalChars = total.replace(/\s+/g, "").length;
+  return { text: total, scanned: probeChars < 50 && totalChars < 200 };
+}
+
 export async function pdfFileToText(file: File, maxPages = 60): Promise<string> {
   const pdfjs = (await import("pdfjs-dist")) as unknown as PdfjsModule;
   pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();

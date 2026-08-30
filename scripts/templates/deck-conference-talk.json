@@ -1,0 +1,75 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-conference-talk",
+ "title": "Conference Talk",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "conference",
+  "talk",
+  "keynote",
+  "tech"
+ ],
+ "styleTags": [
+  "dark",
+  "tech"
+ ],
+ "themeId": "theme-neon",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 84,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Conference Talk",
+  "theme": "punchy, story-driven",
+  "pages": [
+   {
+    "title": "The claim",
+    "points": [
+     "The one idea this talk defends"
+    ],
+    "visualRole": "cover",
+    "note": "State the claim, then make them doubt it before you prove it."
+   },
+   {
+    "title": "The problem everyone has",
+    "points": [
+     "The pain the room recognizes"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "What we tried",
+    "points": [
+     "The failures that taught us"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "What worked",
+    "points": [
+     "The approach, step by step"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "The evidence",
+    "points": [
+     "The numbers from production"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "What you should do Monday",
+    "points": [
+     "Three things to try this week"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

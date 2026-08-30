@@ -9,7 +9,7 @@ import * as Y from "yjs";
 import type { DesignFile } from "./schema";
 
 /** Root Y.Map key holding the serialized design inside a Y.Doc. */
-export const DESIGN_ROOT_KEY = "design";
+export const designRootKey = "design";
 
 type Json = unknown;
 
@@ -57,7 +57,7 @@ export function fromY(value: unknown): Json {
 /** Build a Yjs document from a `DesignFile` (the inverse of `toDesignFile`). */
 export function fromDesignFile(file: DesignFile): Y.Doc {
   const doc = new Y.Doc();
-  const root = doc.getMap(DESIGN_ROOT_KEY);
+  const root = doc.getMap(designRootKey);
   for (const [k, v] of Object.entries(file)) {
     if (v !== undefined) root.set(k, toY(v));
   }
@@ -66,7 +66,7 @@ export function fromDesignFile(file: DesignFile): Y.Doc {
 
 /** Project a Yjs document back to a plain `DesignFile`. Pure and lossless. */
 export function toDesignFile(doc: Y.Doc): DesignFile {
-  const root = doc.getMap(DESIGN_ROOT_KEY);
+  const root = doc.getMap(designRootKey);
   const obj: Record<string, Json> = {};
   for (const [k, v] of root.entries()) {
     obj[k] = fromY(v);

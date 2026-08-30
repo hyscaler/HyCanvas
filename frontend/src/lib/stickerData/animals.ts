@@ -3,7 +3,7 @@ import type { Sticker } from "../stickers";
 
 const svg = (inner: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${inner}</svg>`;
 
-export const ANIMAL_STICKERS: Sticker[] = [
+export const animalStickers: Sticker[] = [
   { id: "an-cat", label: "Cat", category: "Animals", keywords: ["cat", "kitten", "pet", "feline", "meow"], svg: svg('<path d="M18 40 22 8 44 20Z M82 40 78 8 56 20Z" fill="#f97316"/><circle cx="50" cy="55" r="36" fill="#f97316"/><path d="M30 50a6 6 0 1 0 12 0 6 6 0 1 0-12 0Z M58 50a6 6 0 1 0 12 0 6 6 0 1 0-12 0Z" fill="#1f2937"/><polygon points="44,64 56,64 50,72" fill="#f472b6"/><path d="M24 63a3 3 0 1 0 6 0 3 3 0 1 0-6 0Z M21 71a3 3 0 1 0 6 0 3 3 0 1 0-6 0Z M70 63a3 3 0 1 0 6 0 3 3 0 1 0-6 0Z M73 71a3 3 0 1 0 6 0 3 3 0 1 0-6 0Z" fill="#1f2937"/>') },
   { id: "an-dog", label: "Dog", category: "Animals", keywords: ["dog", "puppy", "pet", "canine", "woof"], svg: svg('<ellipse cx="17" cy="50" rx="11" ry="26" fill="#92400e"/><ellipse cx="83" cy="50" rx="11" ry="26" fill="#92400e"/><circle cx="50" cy="52" r="34" fill="#f59e0b"/><path d="M33 44a5 5 0 1 0 10 0 5 5 0 1 0-10 0Z M57 44a5 5 0 1 0 10 0 5 5 0 1 0-10 0Z" fill="#1f2937"/><ellipse cx="50" cy="68" rx="17" ry="13" fill="#ffffff"/><circle cx="50" cy="63" r="6" fill="#1f2937"/>') },
   { id: "an-bear", label: "Bear", category: "Animals", keywords: ["bear", "teddy", "wildlife", "forest", "grizzly"], svg: svg('<circle cx="26" cy="22" r="12" fill="#92400e"/><circle cx="74" cy="22" r="12" fill="#92400e"/><circle cx="50" cy="56" r="36" fill="#92400e"/><path d="M32 48a5 5 0 1 0 10 0 5 5 0 1 0-10 0Z M58 48a5 5 0 1 0 10 0 5 5 0 1 0-10 0Z" fill="#1f2937"/><ellipse cx="50" cy="68" rx="16" ry="12" fill="#fcd34d"/><circle cx="50" cy="64" r="6" fill="#1f2937"/>') },

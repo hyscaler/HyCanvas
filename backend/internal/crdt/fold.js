@@ -25358,13 +25358,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "packages/schema/dist/schema.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
-      exports.TextFlowSchema = exports.TextBoxSchema = exports.ParagraphSchema = exports.ParagraphStyleSchema = exports.RunSchema = exports.CharStyleSchema = exports.TextRunSchema = exports.NodeBaseSchema = exports.KNOWN_NODE_TYPES = exports.ColorSwatchSchema = exports.FontRefSchema = exports.AssetRefSchema = exports.GuideSchema = exports.VectorPathSchema = exports.SubPathSchema = exports.VectorAnchorSchema = exports.ImageMotionSchema = exports.PageTransitionSchema = exports.InteractionSchema = exports.InteractionActionSchema = exports.NodeAnimationSchema = exports.KeyframeTrackSchema = exports.KeyframeSchema = exports.EmphasisPresetSchema = exports.ExitPresetSchema = exports.EntrancePresetSchema = exports.EasingSchema = exports.ElementLinkSchema = exports.CornerRadiusSchema = exports.EffectSchema = exports.AdjustmentOpSchema = exports.StrokeSchema = exports.FillSchema = exports.PatternFillSchema = exports.GradientFillSchema = exports.SolidFillSchema = exports.MeshPointSchema = exports.GradientStopSchema = exports.BlendModeSchema = exports.ConstraintsSchema = exports.SizeSchema = exports.TransformSchema = exports.ImageFillSchema = exports.ImageSourceSchema = exports.ClipPathSchema = exports.CropRectSchema = exports.ColorSchema = exports.UnitSchema = exports.MAX_NESTING_DEPTH = exports.CURRENT_SCHEMA_VERSION = void 0;
-      exports.PageSchema = exports.SlideSectionSchema = exports.ThemeSchema = exports.SlideLayoutSchema = exports.SlideMasterSchema = exports.PlaceholderSchema = exports.PlaceholderRoleSchema = exports.NodeSchema = exports.KnownNodeSchema = exports.KNOWN_NODE_SCHEMAS = exports.UnknownNodeSchema = exports.StampNodeSchema = exports.DiagramCodeNodeSchema = exports.BoardViewNodeSchema = exports.MindMapNodeSchema = exports.InkNodeSchema = exports.StickyNodeSchema = exports.BooleanNodeSchema = exports.MaskNodeSchema = exports.ConnectorNodeSchema = exports.QRNodeSchema = exports.EmbedNodeSchema = exports.ChartNodeSchema = exports.ChartStyleSchema = exports.ChartTypeSchema = exports.ChartSeriesSchema = exports.TableNodeSchema = exports.TableConditionalRuleSchema = exports.DataBindingSchema = exports.TableBorderStyleSchema = exports.TableHeaderStyleSchema = exports.TableCellSchema = exports.AudioNodeSchema = exports.VideoNodeSchema = exports.GridNodeSchema = exports.GridCellSchema = exports.FrameNodeSchema = exports.FrameHeaderSchema = exports.AutoLayoutSchema = exports.GroupNodeSchema = exports.StickerNodeSchema = exports.IconNodeSchema = exports.PathNodeSchema = exports.PathContourSchema = exports.PathSegmentSchema = exports.LineNodeSchema = exports.ShapeNodeSchema = exports.ImageNodeSchema = exports.TextNodeSchema = exports.TextEffectSchema = void 0;
-      exports.DesignFileSchema = void 0;
+      exports.TextFlowSchema = exports.TextBoxSchema = exports.ParagraphSchema = exports.ParagraphStyleSchema = exports.RunSchema = exports.CharStyleSchema = exports.TextRunSchema = exports.NodeBaseSchema = exports.knownNodeTypes = exports.ColorSwatchSchema = exports.FontRefSchema = exports.AssetRefSchema = exports.GuideSchema = exports.VectorPathSchema = exports.SubPathSchema = exports.VectorAnchorSchema = exports.ImageMotionSchema = exports.PageTransitionSchema = exports.InteractionSchema = exports.InteractionActionSchema = exports.NodeAnimationSchema = exports.KeyframeTrackSchema = exports.KeyframeSchema = exports.EmphasisPresetSchema = exports.ExitPresetSchema = exports.EntrancePresetSchema = exports.EasingSchema = exports.ElementLinkSchema = exports.CornerRadiusSchema = exports.EffectSchema = exports.AdjustmentOpSchema = exports.StrokeSchema = exports.FillSchema = exports.PatternFillSchema = exports.GradientFillSchema = exports.SolidFillSchema = exports.MeshPointSchema = exports.GradientStopSchema = exports.BlendModeSchema = exports.ConstraintsSchema = exports.SizeSchema = exports.TransformSchema = exports.ImageFillSchema = exports.ImageSourceSchema = exports.ClipPathSchema = exports.CropRectSchema = exports.ColorSchema = exports.UnitSchema = exports.maxNestingDepth = exports.currentSchemaVersion = void 0;
+      exports.SlideSectionSchema = exports.ThemeSchema = exports.SlideLayoutSchema = exports.SlideMasterSchema = exports.PlaceholderSchema = exports.PlaceholderRoleSchema = exports.NodeSchema = exports.KnownNodeSchema = exports.knownNodeSchemas = exports.UnknownNodeSchema = exports.StampNodeSchema = exports.DiagramCodeNodeSchema = exports.BoardViewNodeSchema = exports.MindMapNodeSchema = exports.InkNodeSchema = exports.StickyNodeSchema = exports.BooleanNodeSchema = exports.MaskNodeSchema = exports.ConnectorNodeSchema = exports.QRNodeSchema = exports.EmbedNodeSchema = exports.ChartNodeSchema = exports.ChartStyleSchema = exports.ChartTypeSchema = exports.ChartSeriesSchema = exports.TableNodeSchema = exports.TableConditionalRuleSchema = exports.DataBindingSchema = exports.TableBorderStyleSchema = exports.TableHeaderStyleSchema = exports.TableCellSchema = exports.AudioNodeSchema = exports.VideoNodeSchema = exports.GridNodeSchema = exports.GridCellSchema = exports.FrameNodeSchema = exports.FrameHeaderSchema = exports.AutoLayoutSchema = exports.GroupNodeSchema = exports.StickerNodeSchema = exports.IconNodeSchema = exports.PathNodeSchema = exports.PathContourSchema = exports.PathSegmentSchema = exports.LineNodeSchema = exports.ShapeNodeSchema = exports.ImageNodeSchema = exports.ImageAlphaMaskSchema = exports.TextNodeSchema = exports.TextEffectSchema = void 0;
+      exports.DesignFileSchema = exports.PageSchema = void 0;
+      exports.enabledEffects = enabledEffects;
+      exports.enabledTextEffects = enabledTextEffects;
       exports.isKnownNodeType = isKnownNodeType;
       var zod_1 = (init_zod(), __toCommonJS(zod_exports));
-      exports.CURRENT_SCHEMA_VERSION = 17;
-      exports.MAX_NESTING_DEPTH = 32;
+      exports.currentSchemaVersion = 20;
+      exports.maxNestingDepth = 32;
       exports.UnitSchema = zod_1.z.enum(["px", "mm", "in", "pt"]);
       var unit = zod_1.z.number();
       var channel = zod_1.z.number().min(0).max(1);
@@ -25482,14 +25484,21 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         highlights: exports.ColorSchema,
         intensity: zod_1.z.number()
       };
+      var effectEnabled = { enabled: zod_1.z.boolean().optional() };
       exports.EffectSchema = zod_1.z.discriminatedUnion("kind", [
-        zod_1.z.object(__spreadValues({ kind: zod_1.z.literal("shadow") }, shadowFields)),
-        zod_1.z.object({ kind: zod_1.z.literal("blur"), radius: zod_1.z.number() }),
-        zod_1.z.object({ kind: zod_1.z.literal("glow"), color: exports.ColorSchema, radius: zod_1.z.number() }),
-        zod_1.z.object({ kind: zod_1.z.literal("outline"), color: exports.ColorSchema, width: zod_1.z.number() }),
-        zod_1.z.object({ kind: zod_1.z.literal("adjustment"), ops: zod_1.z.array(exports.AdjustmentOpSchema) }),
-        zod_1.z.object(__spreadValues({ kind: zod_1.z.literal("duotone") }, duotoneFields))
+        zod_1.z.object(__spreadValues(__spreadValues({ kind: zod_1.z.literal("shadow") }, shadowFields), effectEnabled)),
+        zod_1.z.object(__spreadValues({ kind: zod_1.z.literal("blur"), radius: zod_1.z.number() }, effectEnabled)),
+        zod_1.z.object(__spreadValues({ kind: zod_1.z.literal("glow"), color: exports.ColorSchema, radius: zod_1.z.number() }, effectEnabled)),
+        zod_1.z.object(__spreadValues({ kind: zod_1.z.literal("outline"), color: exports.ColorSchema, width: zod_1.z.number() }, effectEnabled)),
+        zod_1.z.object(__spreadValues({ kind: zod_1.z.literal("adjustment"), ops: zod_1.z.array(exports.AdjustmentOpSchema) }, effectEnabled)),
+        zod_1.z.object(__spreadValues(__spreadValues({ kind: zod_1.z.literal("duotone") }, duotoneFields), effectEnabled))
       ]);
+      function enabledEffects(effects) {
+        return (effects != null ? effects : []).filter((e) => e.enabled !== false);
+      }
+      function enabledTextEffects(effects) {
+        return (effects != null ? effects : []).filter((e) => e.enabled !== false);
+      }
       exports.CornerRadiusSchema = zod_1.z.object({
         topLeft: zod_1.z.number(),
         topRight: zod_1.z.number(),
@@ -25602,7 +25611,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         name: zod_1.z.string().optional(),
         color: exports.ColorSchema
       });
-      exports.KNOWN_NODE_TYPES = [
+      exports.knownNodeTypes = [
         "text",
         "image",
         "shape",
@@ -25629,7 +25638,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         "diagramcode",
         "stamp"
       ];
-      var KNOWN_NODE_TYPE_SET = new Set(exports.KNOWN_NODE_TYPES);
+      var KNOWN_NODE_TYPE_SET = new Set(exports.knownNodeTypes);
       function isKnownNodeType(type) {
         return KNOWN_NODE_TYPE_SET.has(type);
       }
@@ -25730,15 +25739,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         zod_1.z.object({ kind: zod_1.z.literal("arc"), curvature: zod_1.z.number() })
       ]);
       exports.TextEffectSchema = zod_1.z.discriminatedUnion("kind", [
-        zod_1.z.object({ kind: zod_1.z.literal("shadow"), dx: zod_1.z.number(), dy: zod_1.z.number(), blur: zod_1.z.number(), color: exports.FillSchema, opacity: channel }),
-        zod_1.z.object({ kind: zod_1.z.literal("outline"), width: zod_1.z.number(), color: exports.FillSchema, join: zod_1.z.enum(["miter", "round", "bevel"]) }),
-        zod_1.z.object({ kind: zod_1.z.literal("glow"), radius: zod_1.z.number(), color: exports.FillSchema, intensity: zod_1.z.number() }),
-        zod_1.z.object({ kind: zod_1.z.literal("echo"), offset: zod_1.z.number(), count: zod_1.z.number().int(), color: exports.FillSchema }),
-        zod_1.z.object({ kind: zod_1.z.literal("neon"), color: exports.FillSchema, intensity: zod_1.z.number() }),
-        zod_1.z.object({ kind: zod_1.z.literal("splice"), thickness: zod_1.z.number(), offset: zod_1.z.number(), color: exports.FillSchema }),
-        zod_1.z.object({ kind: zod_1.z.literal("highlight"), color: exports.FillSchema, padding: zod_1.z.number(), radius: zod_1.z.number() }),
-        zod_1.z.object({ kind: zod_1.z.literal("lift"), intensity: zod_1.z.number() }),
-        zod_1.z.object({ kind: zod_1.z.literal("hollow"), thickness: zod_1.z.number() })
+        zod_1.z.object(__spreadValues({ kind: zod_1.z.literal("shadow"), dx: zod_1.z.number(), dy: zod_1.z.number(), blur: zod_1.z.number(), color: exports.FillSchema, opacity: channel }, effectEnabled)),
+        zod_1.z.object(__spreadValues({ kind: zod_1.z.literal("outline"), width: zod_1.z.number(), color: exports.FillSchema, join: zod_1.z.enum(["miter", "round", "bevel"]) }, effectEnabled)),
+        zod_1.z.object(__spreadValues({ kind: zod_1.z.literal("glow"), radius: zod_1.z.number(), color: exports.FillSchema, intensity: zod_1.z.number() }, effectEnabled)),
+        zod_1.z.object(__spreadValues({ kind: zod_1.z.literal("echo"), offset: zod_1.z.number(), count: zod_1.z.number().int(), color: exports.FillSchema }, effectEnabled)),
+        zod_1.z.object(__spreadValues({ kind: zod_1.z.literal("neon"), color: exports.FillSchema, intensity: zod_1.z.number() }, effectEnabled)),
+        zod_1.z.object(__spreadValues({ kind: zod_1.z.literal("splice"), thickness: zod_1.z.number(), offset: zod_1.z.number(), color: exports.FillSchema }, effectEnabled)),
+        zod_1.z.object(__spreadValues({ kind: zod_1.z.literal("highlight"), color: exports.FillSchema, padding: zod_1.z.number(), radius: zod_1.z.number() }, effectEnabled)),
+        zod_1.z.object(__spreadValues({ kind: zod_1.z.literal("lift"), intensity: zod_1.z.number() }, effectEnabled)),
+        zod_1.z.object(__spreadValues({ kind: zod_1.z.literal("hollow"), thickness: zod_1.z.number() }, effectEnabled))
       ]);
       exports.TextNodeSchema = zod_1.z.object(__spreadProps(__spreadValues({}, nodeBaseFields), {
         type: zod_1.z.literal("text"),
@@ -25749,6 +25758,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         styleRefs: zod_1.z.object({ defaultParagraph: zod_1.z.string().optional() }).optional()
       }));
       var cropSchema = zod_1.z.object({ x: unit, y: unit, width: unit, height: unit });
+      exports.ImageAlphaMaskSchema = zod_1.z.object({
+        assetId: zod_1.z.string(),
+        width: zod_1.z.number(),
+        height: zod_1.z.number()
+      });
       exports.ImageNodeSchema = zod_1.z.object(__spreadProps(__spreadValues({}, nodeBaseFields), {
         type: zod_1.z.literal("image"),
         source: exports.ImageSourceSchema,
@@ -25760,6 +25774,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         flipY: zod_1.z.boolean().optional(),
         effectivePpi: zod_1.z.number().optional(),
         motion: exports.ImageMotionSchema.optional(),
+        alphaMask: exports.ImageAlphaMaskSchema.optional(),
         alt: zod_1.z.string().optional()
       }));
       exports.ShapeNodeSchema = zod_1.z.object(__spreadProps(__spreadValues({}, nodeBaseFields), {
@@ -26102,7 +26117,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         }),
         raw: zod_1.z.record(zod_1.z.string(), zod_1.z.unknown())
       }));
-      exports.KNOWN_NODE_SCHEMAS = {
+      exports.knownNodeSchemas = {
         text: exports.TextNodeSchema,
         image: exports.ImageNodeSchema,
         shape: exports.ShapeNodeSchema,
@@ -26224,6 +26239,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         layouts: zod_1.z.array(exports.SlideLayoutSchema).optional(),
         theme: exports.ThemeSchema.optional(),
         sections: zod_1.z.array(exports.SlideSectionSchema).optional(),
+        language: zod_1.z.string().optional(),
         assets: zod_1.z.array(exports.AssetRefSchema),
         fonts: zod_1.z.array(exports.FontRefSchema),
         palette: zod_1.z.array(exports.ColorSwatchSchema).optional(),
@@ -26239,6 +26255,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       Object.defineProperty(exports, "__esModule", { value: true });
       exports.isContainer = isContainer;
       exports.childrenOf = childrenOf;
+      exports.nestedSlotsOf = nestedSlotsOf;
+      exports.childNodesOf = childNodesOf;
       exports.walkNodes = walkNodes2;
       exports.collectIds = collectIds;
       exports.maxDepth = maxDepth;
@@ -26248,17 +26266,43 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       function childrenOf(node) {
         return isContainer(node) ? node.children : [];
       }
+      function nestedSlotsOf(node) {
+        var _a5;
+        const slots = [];
+        if (isContainer(node)) {
+          slots.push({ key: "children", nodes: (_a5 = node.children) != null ? _a5 : [], indexed: true });
+        }
+        if (node.type === "mask") {
+          const child = node.child;
+          if (child)
+            slots.push({ key: "child", nodes: [child], indexed: false });
+        }
+        if (node.type === "boolean") {
+          const operands = node.operands;
+          if (operands && operands.length > 0)
+            slots.push({ key: "operands", nodes: operands, indexed: true });
+        }
+        return slots;
+      }
+      function childNodesOf(node) {
+        const out = [];
+        for (const slot of nestedSlotsOf(node))
+          out.push(...slot.nodes);
+        return out;
+      }
       function walkNodes2(nodes, visit, basePath = []) {
-        const recurse = (list, pathPrefix, depth, parent) => {
-          list.forEach((node, index) => {
-            const path = [...pathPrefix, index];
-            visit(node, { path, depth, parent });
-            if (isContainer(node)) {
-              recurse(childrenOf(node), [...path, "children"], depth + 1, node);
+        const visitNode = (node, path, depth, parent) => {
+          visit(node, { path, depth, parent });
+          for (const slot of nestedSlotsOf(node)) {
+            const slotPath = [...path, slot.key];
+            if (slot.indexed) {
+              slot.nodes.forEach((child, i) => visitNode(child, [...slotPath, i], depth + 1, node));
+            } else {
+              visitNode(slot.nodes[0], slotPath, depth + 1, node);
             }
-          });
+          }
         };
-        recurse(nodes, basePath, 0, null);
+        nodes.forEach((node, index) => visitNode(node, [...basePath, index], 0, null));
       }
       function collectIds(nodes) {
         const ids = [];
@@ -26331,7 +26375,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         const scheme = schemeOf(src);
         return scheme === null || scheme === "https" ? null : "embed src must use the https scheme";
       }
-      var SHALLOW_NODE_SCHEMAS = __spreadProps(__spreadValues({}, schema_1.KNOWN_NODE_SCHEMAS), {
+      var SHALLOW_NODE_SCHEMAS = __spreadProps(__spreadValues({}, schema_1.knownNodeSchemas), {
         group: schema_1.GroupNodeSchema.extend({ children: zod_1.z.array(zod_1.z.unknown()) }),
         frame: schema_1.FrameNodeSchema.extend({ children: zod_1.z.array(zod_1.z.unknown()) }),
         grid: schema_1.GridNodeSchema.extend({ children: zod_1.z.array(zod_1.z.unknown()) })
@@ -26354,11 +26398,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
             var _a5, _b;
             if (failure)
               return;
-            if (info.depth >= schema_1.MAX_NESTING_DEPTH) {
+            if (info.depth >= schema_1.maxNestingDepth) {
               failure = {
                 ok: false,
                 pointer: pathToPointer(info.path),
-                message: `nesting depth exceeds limit of ${schema_1.MAX_NESTING_DEPTH}`
+                message: `nesting depth exceeds limit of ${schema_1.maxNestingDepth}`
               };
               return;
             }
@@ -26773,7 +26817,26 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         15: (file2) => __spreadProps(__spreadValues({}, file2), { schemaVersion: 16 }),
         // v16 -> v17: QR center logo size (QRNode.logoScale). Purely additive: a v16
         // file carries no logoScale and its QR logo renders at the default size.
-        16: (file2) => __spreadProps(__spreadValues({}, file2), { schemaVersion: 17 })
+        16: (file2) => __spreadProps(__spreadValues({}, file2), { schemaVersion: 17 }),
+        // v17 -> v18: document language (DesignFile.language). Additive; the legacy
+        // `meta.language` (written by importers for the tagged-PDF /Lang) is COPIED
+        // up, never removed, so older readers keep finding it where they look.
+        17: (file2) => {
+          var _a5, _b;
+          const legacy = (_a5 = file2.meta) == null ? void 0 : _a5.language;
+          const language = (_b = file2.language) != null ? _b : typeof legacy === "string" && legacy ? legacy : void 0;
+          return language !== void 0 ? __spreadProps(__spreadValues({}, file2), { language, schemaVersion: 18 }) : __spreadProps(__spreadValues({}, file2), { schemaVersion: 18 });
+        },
+        // v18 -> v19: per-effect enable. Purely additive, with no transform: a v18
+        // file's effects all omit `enabled`, which means enabled, so every one keeps
+        // rendering exactly as before. The Go mirror reaches the same result through
+        // its generic additive branch, which is why there is no matching `case 18`.
+        18: (file2) => __spreadProps(__spreadValues({}, file2), { schemaVersion: 19 }),
+        // v19 -> v20: ImageNode.alphaMask. Purely additive, with no transform: a v19
+        // file has no mask, and absence means fully opaque, so every image renders
+        // exactly as it did. The Go mirror reaches the same result through its
+        // generic additive branch, which is why there is no matching `case 19`.
+        19: (file2) => __spreadProps(__spreadValues({}, file2), { schemaVersion: 20 })
       };
       var MigrationError = class extends Error {
         constructor(message, from2, to) {
@@ -26784,7 +26847,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         }
       };
       exports.MigrationError = MigrationError;
-      function migrate(file2, toVersion = schema_1.CURRENT_SCHEMA_VERSION) {
+      function migrate(file2, toVersion = schema_1.currentSchemaVersion) {
         const from2 = file2.schemaVersion;
         if (from2 > toVersion) {
           throw new MigrationError(`cannot downgrade a v${from2} file to v${toVersion}; migration is forward-only`, from2, toVersion);
@@ -26805,7 +26868,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         }
         return current;
       }
-      function needsMigration(file2, toVersion = schema_1.CURRENT_SCHEMA_VERSION) {
+      function needsMigration(file2, toVersion = schema_1.currentSchemaVersion) {
         return file2.schemaVersion < toVersion;
       }
     }
@@ -26823,7 +26886,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       function newId() {
         return globalThis.crypto.randomUUID();
       }
-      var BLACK = { srgb: { r: 0, g: 0, b: 0, a: 1 } };
+      var black = { srgb: { r: 0, g: 0, b: 0, a: 1 } };
       var WHITE = { srgb: { r: 1, g: 1, b: 1, a: 1 } };
       function identityTransform() {
         return { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 };
@@ -26837,7 +26900,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
           blendMode: "normal"
         };
       }
-      var solidBlack = { type: "solid", color: BLACK };
+      var solidBlack = { type: "solid", color: black };
       function defaultStroke() {
         return { fill: solidBlack, width: 1, align: "center", cap: "butt", join: "miter" };
       }
@@ -26875,7 +26938,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         table: () => ({ rows: 0, cols: 0, colWidths: [], rowHeights: [], cells: [] }),
         chart: () => ({ chartType: "bar", series: [], categories: [], options: {} }),
         embed: () => ({ provider: "iframe", src: "" }),
-        qr: () => ({ value: "", ecLevel: "M", foreground: BLACK, background: WHITE }),
+        qr: () => ({ value: "", ecLevel: "M", foreground: black, background: WHITE }),
         connector: () => ({
           route: "straight",
           start: { point: { x: 0, y: 0 } },
@@ -26888,7 +26951,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
           text: "",
           // Classic yellow card with dark text.
           fill: { type: "solid", color: { srgb: { r: 1, g: 0.898, b: 0.4, a: 1 } } },
-          textColor: BLACK,
+          textColor: black,
           align: "left",
           fontScale: 1,
           autoSize: true
@@ -26897,7 +26960,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         ink: () => ({
           points: [],
           smoothing: 0.5,
-          brush: { width: 4, opacity: 1, color: BLACK, mode: "pen" }
+          brush: { width: 4, opacity: 1, color: black, mode: "pen" }
         }),
         mindmap: () => ({ rootId: "", branches: [], direction: "radial" }),
         boardview: () => ({ view: "kanban", columns: [], cards: [] }),
@@ -26918,7 +26981,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         var _a5, _b, _c, _d, _e, _f;
         return {
           format: "hycanvas.design",
-          schemaVersion: schema_1.CURRENT_SCHEMA_VERSION,
+          schemaVersion: schema_1.currentSchemaVersion,
           id: (_a5 = init == null ? void 0 : init.id) != null ? _a5 : newId(),
           title: (_b = init == null ? void 0 : init.title) != null ? _b : "Untitled design",
           unit: (_c = init == null ? void 0 : init.unit) != null ? _c : "px",
@@ -26993,19 +27056,27 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "packages/schema/dist/json-schema.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
-      exports.DESIGN_SCHEMA_ID = exports.DESIGN_MEDIA_TYPE = void 0;
+      exports.designSchemaId = exports.designMediaType = void 0;
       exports.getJsonSchema = getJsonSchema;
       var zod_1 = (init_zod(), __toCommonJS(zod_exports));
       var schema_1 = require_schema();
-      exports.DESIGN_MEDIA_TYPE = "application/vnd.hycanvas.design+json";
-      exports.DESIGN_SCHEMA_ID = "https://hycanvas.dev/schema/design.schema.json";
+      exports.designMediaType = "application/vnd.hycanvas.design+json";
+      exports.designSchemaId = "https://hycanvas.dev/schema/design.schema.json";
       function getJsonSchema() {
         const schema = zod_1.z.toJSONSchema(schema_1.DesignFileSchema, {
           target: "draft-2020-12",
-          unrepresentable: "any"
+          unrepresentable: "any",
+          // Emit a subschema used by more than one parent ONCE, under $defs, and
+          // reference it. The default inlines every reuse, and `nodeBaseFields` is
+          // spread into all ~54 node types, so every shared structure was duplicated
+          // 54 times: the published schema was 640 KB with five $refs in it, and the
+          // resulting validator was deep enough that Ajv overflowed its stack on an
+          // ordinary fixture. The duplication is a property of `nodeBaseFields` being
+          // spread everywhere, so it is worth fixing on its own account.
+          reused: "ref"
         });
         return __spreadValues({
-          $id: exports.DESIGN_SCHEMA_ID,
+          $id: exports.designSchemaId,
           title: "HyCanvas Design File"
         }, schema);
       }
@@ -27054,13 +27125,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         };
       })();
       Object.defineProperty(exports, "__esModule", { value: true });
-      exports.DESIGN_ROOT_KEY = void 0;
+      exports.designRootKey = void 0;
       exports.toY = toY;
       exports.fromY = fromY;
       exports.fromDesignFile = fromDesignFile;
       exports.toDesignFile = toDesignFile;
       var Y = __importStar((init_yjs(), __toCommonJS(yjs_exports)));
-      exports.DESIGN_ROOT_KEY = "design";
+      exports.designRootKey = "design";
       function toY(value) {
         if (Array.isArray(value)) {
           const arr = new Y.Array();
@@ -27092,7 +27163,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       }
       function fromDesignFile(file2) {
         const doc2 = new Y.Doc();
-        const root = doc2.getMap(exports.DESIGN_ROOT_KEY);
+        const root = doc2.getMap(exports.designRootKey);
         for (const [k, v] of Object.entries(file2)) {
           if (v !== void 0)
             root.set(k, toY(v));
@@ -27100,7 +27171,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return doc2;
       }
       function toDesignFile(doc2) {
-        const root = doc2.getMap(exports.DESIGN_ROOT_KEY);
+        const root = doc2.getMap(exports.designRootKey);
         const obj = {};
         for (const [k, v] of root.entries()) {
           obj[k] = fromY(v);
@@ -27115,7 +27186,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "packages/schema/dist/theme.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
-      exports.BUILTIN_MASTER_ID = void 0;
+      exports.builtinMasterId = void 0;
       exports.layoutForPage = layoutForPage;
       exports.masterForLayout = masterForLayout;
       exports.themeForPage = themeForPage;
@@ -27200,10 +27271,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       function rect(page, x, y, w, h) {
         return { x: page.width * x, y: page.height * y, width: page.width * w, height: page.height * h };
       }
-      exports.BUILTIN_MASTER_ID = "master-default";
+      exports.builtinMasterId = "master-default";
       function builtinMasterAndLayouts(page) {
         const master = {
-          id: exports.BUILTIN_MASTER_ID,
+          id: exports.builtinMasterId,
           name: "Default",
           placeholders: [{ id: "ph-footer", role: "footer", rect: rect(page, 0.06, 0.9, 0.88, 0.06) }]
         };
@@ -27427,7 +27498,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       __exportStar(require_sections(), exports);
       var schema_1 = require_schema();
       Object.defineProperty(exports, "SCHEMA_VERSION", { enumerable: true, get: function() {
-        return schema_1.CURRENT_SCHEMA_VERSION;
+        return schema_1.currentSchemaVersion;
       } });
     }
   });
@@ -27565,7 +27636,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     return runs;
   }
   function fromDoc(ydoc) {
-    return yToJson(ydoc.getMap(import_schema.DESIGN_ROOT_KEY));
+    return yToJson(ydoc.getMap(import_schema.designRootKey));
   }
 
   // packages/realtime/dist/seed.js

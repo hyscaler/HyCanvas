@@ -125,3 +125,55 @@ func TestZhipuPreset(t *testing.T) {
 		t.Fatalf("zhipu image model wrong: %v", body["model"])
 	}
 }
+
+// TestProviderSetMatchesPresets guards against the config allow-list drifting
+// from the advertised catalog: every preset shown in the config UI must be
+// accepted by SetConfig (regression: zhipu/google/together/... were rejected
+// because providerSet was a stale hand-maintained list).
+func TestProviderSetMatchesPresets(t *testing.T) {
+	for i := range PRESETS {
+		id := PRESETS[i].ID
+		if !providerSet[id] {
+			t.Fatalf("preset %q is advertised but not configurable (missing from providerSet)", id)
+		}
+	}
+	if len(providerSet) != len(PRESETS) {
+		t.Fatalf("providerSet (%d) and PRESETS (%d) out of sync", len(providerSet), len(PRESETS))
+	}
+}
+
+// Moonshot (Kimi) rides the OpenAI-compatible dialect: only Anthropic has its
+// own request shape, so the preset must build a plain chat/completions call
+// against Moonshot's host with the configured model, and must not advertise
+// image generation the API does not offer.
+func TestMoonshotPreset(t *testing.T) {
+	p := PresetFor("moonshot")
+	if p == nil {
+		t.Fatal("moonshot preset must exist")
+	}
+	if p.Capabilities.Image || p.Capabilities.EditImage {
+		t.Fatal("moonshot has no image generation; advertising it would fail every call")
+	}
+	if !p.Capabilities.Text {
+		t.Fatal("moonshot must support text")
+	}
+	req := buildTextRequest(CallConfig{Provider: "moonshot", APIKey: "k", BaseURL: p.BaseURL, Model: p.DefaultModel}, "hi", "sys")
+	if req.url != "https://api.moonshot.ai/v1/chat/completions" {
+		t.Fatalf("unexpected endpoint: %s", req.url)
+	}
+	if req.headers["authorization"] != "Bearer k" {
+		t.Fatalf("expected bearer auth, got %v", req.headers["authorization"])
+	}
+	body, _ := req.body.(map[string]any)
+	if body["model"] != p.DefaultModel {
+		t.Fatalf("model not carried: %v", body["model"])
+	}
+	// The text route resolves to the text model, and the image route is
+	// unsupported rather than silently routed to some default.
+	if r := ResolveRoute("moonshot", "", "", FeatureText); !r.Supported || r.Model != p.DefaultModel {
+		t.Fatalf("text route wrong: %+v", r)
+	}
+	if r := ResolveRoute("moonshot", "", "", FeatureImage); r.Supported {
+		t.Fatal("image route must be unsupported for moonshot")
+	}
+}

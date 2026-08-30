@@ -1,0 +1,74 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-portfolio",
+ "title": "Personal Portfolio",
+ "categories": [
+  "presentations",
+  "personal"
+ ],
+ "tags": [
+  "portfolio",
+  "personal",
+  "showcase",
+  "work"
+ ],
+ "styleTags": [
+  "dark",
+  "minimal"
+ ],
+ "themeId": "theme-midnight",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 76,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Portfolio",
+  "theme": "confident, curated",
+  "pages": [
+   {
+    "title": "Hello",
+    "points": [
+     "Who I am and what I make"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "Selected work one",
+    "points": [
+     "The problem, my role, the outcome"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Selected work two",
+    "points": [
+     "The constraint that shaped the solution"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Selected work three",
+    "points": [
+     "The result in numbers"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "How I work",
+    "points": [
+     "Process, tools, and collaboration style"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Let's talk",
+    "points": [
+     "Where to reach me"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

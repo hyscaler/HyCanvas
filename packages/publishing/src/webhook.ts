@@ -5,14 +5,14 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 /** Lifecycle event names delivered to webhook subscribers. */
-export const WEBHOOK_EVENTS = {
+export const webhookEvents = {
   postPublished: "post.published",
   postFailed: "post.failed",
   postScheduled: "post.scheduled",
   insightsUpdated: "insights.updated",
 } as const;
 
-export type WebhookEvent = (typeof WEBHOOK_EVENTS)[keyof typeof WEBHOOK_EVENTS];
+export type WebhookEvent = (typeof webhookEvents)[keyof typeof webhookEvents];
 
 /**
  * Compute the hex HMAC-SHA256 signature over `${timestamp}.${bodyString}` using

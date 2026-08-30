@@ -3,13 +3,17 @@
 // text). Clicking an issue jumps to its page and selects the node so the user can
 // fix it. Recomputed whenever the document changes (rev) or the dialog reopens.
 
-import { useMemo } from "react";
-import { AlertTriangle, AlertCircle, CheckCircle2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { AlertTriangle, AlertCircle, CheckCircle2, Wand2 } from "lucide-react";
 import type { DesignFile } from "@hc/schema";
 import { checkAccessibility, type A11yIssue } from "@hc/a11y";
 import { Modal } from "@/components/ui/Modal";
 import { useEditor } from "@/store/editor";
 import { usePresence } from "@/store/presence";
+import { useBrand } from "@/store/brand";
+import { generateAltText } from "@/lib/altText";
+import { useToast } from "@/components/ui/Toast";
+import { userMessage } from "@/lib/errors";
 import { tr, trOr } from "@/lib/i18n";
 
 // The list mirrors the shipped catalogs plus the RTL scripts the export path
@@ -40,8 +44,63 @@ const kindLabel = (): Record<A11yIssue["kind"], string> => ({
 /** Issues that point at a PAGE, not an element on it. */
 const pageLevel = (kind: A11yIssue["kind"]) => kind === "slide-title" || kind === "reading-order";
 
+/** One-click fixes (F28 completion C27), each a single undo step. Kinds with
+ *  no safe automatic fix (touch targets are a design decision) offer none. */
+function fixFor(i: A11yIssue): { label: string; run: (workspaceId: string | null) => Promise<boolean> } | null {
+  const st = () => useEditor.getState();
+  switch (i.kind) {
+    case "contrast":
+      return { label: tr("editor.fix_to_aa"), run: async () => st().fixTextContrast(i.nodeId) > 0 };
+    case "small-text":
+      return { label: tr("editor.raise_to_12px"), run: async () => st().raiseMinFontSize(i.nodeId) > 0 };
+    case "reading-order":
+      return { label: tr("editor.adopt_visual_order"), run: async () => { st().resetReadingOrder(i.pageIndex); return true; } };
+    case "alt-text":
+      return {
+        label: tr("editor.describe_with_ai"),
+        run: async (workspaceId) => {
+          if (!workspaceId) return false;
+          st().select([i.nodeId]);
+          return generateAltText(workspaceId);
+        },
+      };
+    case "slide-title": {
+      // Adopt the title placeholder's text as the slide name when one exists;
+      // otherwise there is nothing safe to invent - jump instead.
+      return {
+        label: tr("editor.use_title_text"),
+        run: async () => {
+          const doc = st().doc as unknown as {
+            pages: { name?: string; layoutId?: string; children: { type: string; data?: { placeholderId?: string }; content?: { runs: { text: string }[] }[] }[] }[];
+            layouts?: { id: string; masterId: string; placeholders: { id: string; role: string }[] }[];
+            masters?: { id: string; placeholders?: { id: string; role: string }[] }[];
+          };
+          const pg = doc.pages[i.pageIndex];
+          const layout = doc.layouts?.find((l) => l.id === pg?.layoutId);
+          if (!pg || !layout) return false;
+          const master = doc.masters?.find((m) => m.id === layout.masterId);
+          const titleIds = new Set(
+            [...layout.placeholders, ...(master?.placeholders ?? [])].filter((ph) => ph.role === "title").map((ph) => ph.id),
+          );
+          const titleNode = pg.children.find((n) => n.type === "text" && n.data?.placeholderId && titleIds.has(n.data.placeholderId));
+          const text = titleNode?.content?.[0]?.runs.map((r) => r.text).join("").split("\n")[0].trim().slice(0, 80);
+          if (!text) return false;
+          st().setPageName(i.pageIndex, text);
+          return true;
+        },
+      };
+    }
+    default:
+      return null; // touch-target: resizing is a design decision
+  }
+}
+
 export function AccessibilityDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const rev = useEditor((s) => s.rev);
+  const toast = useToast();
+  const workspaceId = useBrand((s) => s.workspaceId);
+  const [fixing, setFixing] = useState<string | null>(null);
+  const canEdit = usePresence.getState().canEdit() && !useEditor.getState().readonlyPreview();
   const issues = useMemo(
     () => checkAccessibility(useEditor.getState().doc as unknown as DesignFile),
     // Recompute on edits and each open; `open` keeps it fresh after fixes.
@@ -102,10 +161,10 @@ export function AccessibilityDialog({ open, onClose }: { open: boolean; onClose:
           </p>
           <ul className="oc-scroll flex max-h-[60vh] flex-col gap-1.5 overflow-y-auto">
             {issues.map((i, idx) => (
-              <li key={`${i.nodeId}-${i.kind}-${idx}`}>
+              <li key={`${i.nodeId}-${i.kind}-${idx}`} className="flex items-start gap-1.5">
                 <button
                   onClick={() => jump(i)}
-                  className="flex w-full items-start gap-2.5 rounded-lg border border-neutral-200 bg-surface px-3 py-2 text-start transition hover:border-brand-300 hover:bg-brand-50/40"
+                  className="flex min-w-0 flex-1 items-start gap-2.5 rounded-lg border border-neutral-200 bg-surface px-3 py-2 text-start transition hover:border-brand-300 hover:bg-brand-50/40"
                 >
                   {i.severity === "error" ? (
                     <AlertTriangle size={16} className="mt-0.5 shrink-0 text-red-500" />
@@ -122,6 +181,33 @@ export function AccessibilityDialog({ open, onClose }: { open: boolean; onClose:
                     </span>
                   </span>
                 </button>
+                {/* One-click fix (C27): a real sibling button (never an
+                    interactive element nested inside the jump button), one
+                    undo step; the list recomputes on the store revision so
+                    the row clears. */}
+                {canEdit && (() => {
+                  const fix = fixFor(i);
+                  if (!fix) return null;
+                  const key = `${i.nodeId}-${i.kind}`;
+                  return (
+                    <button
+                      type="button"
+                      disabled={!!fixing}
+                      onClick={() => {
+                        if (fixing) return;
+                        setFixing(key);
+                        void fix.run(workspaceId)
+                          .then((ok) => { if (!ok) toast.error(tr("editor.nothing_to_fix_automatically_here")); })
+                          .catch((err) => toast.error(userMessage(err, tr("editor.couldnt_apply_that_fix"))))
+                          .finally(() => setFixing(null));
+                      }}
+                      className="mt-1 flex shrink-0 items-center gap-1 rounded-md border border-brand-200 bg-brand-50 px-2 py-1 text-xs font-medium text-brand-ink transition hover:bg-brand-100 disabled:opacity-50"
+                      data-testid={`fix-${i.kind}`}
+                    >
+                      <Wand2 size={12} /> {fixing === key ? tr("editor.fixing") : fix.label}
+                    </button>
+                  );
+                })()}
               </li>
             ))}
           </ul>

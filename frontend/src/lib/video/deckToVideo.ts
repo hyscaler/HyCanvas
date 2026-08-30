@@ -11,7 +11,7 @@
 // timing is only fully posed in the browser (a documented limit, like custom
 // keyframe tracks); most deck elements are top-level, so this is rare.
 
-import { CURRENT_SCHEMA_VERSION, type DesignFile, type Node, type Page, type PageTransition } from "@hc/schema";
+import { currentSchemaVersion, type DesignFile, type Node, type Page, type PageTransition } from "@hc/schema";
 import { pageAnimationDuration } from "@hc/engine";
 import { newProject, newTrack, type Clip, type Track, type VideoProject, type ClipTransition } from "@hc/timeline";
 import { tr } from "@/lib/i18n";
@@ -122,7 +122,7 @@ export function deckToVideoFile(doc: DesignFile, opts: DeckToVideoOpts = {}): De
   const project = deckToVideoProject(doc, opts);
   return {
     format: "hycanvas.design",
-    schemaVersion: CURRENT_SCHEMA_VERSION,
+    schemaVersion: currentSchemaVersion,
     id: `video_${doc.id}`,
     title: `${doc.title || tr("app.design")} (video)`,
     unit: doc.unit ?? "px",

@@ -50,6 +50,44 @@ function problemCode(body: unknown): string | undefined {
   return undefined;
 }
 
+/** Phone remote control (F28 C21): pairing-code entry + big controls. Every
+ *  press posts to the audience relay; only the presenter holding the matching
+ *  code reacts. Fully anonymous-capable, same trust boundary as reactions. */
+function RemoteControlScreen({ token, password, title }: { token: string; password?: string; title: string }) {
+  const [code, setCode] = useState("");
+  const [sending, setSending] = useState(false);
+  const send = async (action: "next" | "prev" | "blank") => {
+    if (code.trim().length < 4 || sending) return;
+    setSending(true);
+    try {
+      await oc.audienceRemote(token, { code: code.trim().toUpperCase(), action, password });
+    } catch {
+      /* over-budget or offline: the next press retries */
+    } finally {
+      setSending(false);
+    }
+  };
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-neutral-900 p-6 text-white">
+      <div className="text-sm text-white/60">{title}</div>
+      <input
+        value={code}
+        onChange={(e) => setCode(e.target.value.toUpperCase())}
+        placeholder={tr("page.pairing_code")}
+        aria-label={tr("page.pairing_code")}
+        maxLength={8}
+        className="w-48 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-center text-2xl font-bold tracking-widest text-white outline-none placeholder:text-white/30"
+      />
+      <div className="grid w-full max-w-sm grid-cols-2 gap-3">
+        <button onClick={() => void send("prev")} disabled={code.trim().length < 4} className="rounded-2xl bg-white/10 py-10 text-lg font-semibold active:bg-white/20 disabled:opacity-30">{tr("page.previous")}</button>
+        <button onClick={() => void send("next")} disabled={code.trim().length < 4} className="rounded-2xl bg-brand-600 py-10 text-lg font-semibold active:bg-brand-700 disabled:opacity-30">{tr("page.next")}</button>
+      </div>
+      <button onClick={() => void send("blank")} disabled={code.trim().length < 4} className="w-full max-w-sm rounded-2xl bg-white/10 py-4 text-sm font-semibold active:bg-white/20 disabled:opacity-30">{tr("page.blank_screen")}</button>
+      <div className="text-center text-xs text-white/40">{tr("page.enter_the_code_shown_on_the_presenters_screen")}</div>
+    </div>
+  );
+}
+
 /** The link token, path-style (/shared/<token>, the canonical form the Go
  *  server rewrites) or legacy query (?token=). */
 function tokenFromLocation(query: unknown): string {
@@ -57,6 +95,13 @@ function tokenFromLocation(query: unknown): string {
   if (typeof window === "undefined") return "";
   const m = /^\/shared\/([^/?#]+)\/?$/.exec(window.location.pathname);
   return m ? decodeURIComponent(m[1]) : "";
+}
+
+/** Embed mode (F28 C37): ?embed=1 renders the chrome-less iframe player. Read
+ *  straight from the location (like ?remote=1): the param is not a Next route
+ *  segment in the static export. */
+function isEmbedMode(): boolean {
+  return typeof window !== "undefined" && new URLSearchParams(window.location.search).get("embed") === "1";
 }
 
 export default function SharedLinkPage() {
@@ -83,8 +128,10 @@ export default function SharedLinkPage() {
         }
         // First resolve access. A signed-in visitor is routed to the editor so
         // they get the live (collaborative) surface; an anonymous visitor gets a
-        // read-only render of the snapshot.
-        if (authStatus === "authed") {
+        // read-only render of the snapshot. An EMBED (C37) always takes the
+        // read-only render: redirecting an iframe into the editor would trap
+        // the full app inside someone's blog post.
+        if (authStatus === "authed" && !isEmbedMode()) {
           const resolved = await oc.resolveShareLink(token, pwd);
           await router.replace(`/editor?id=${encodeURIComponent(resolved.designId)}`);
           return;
@@ -127,6 +174,20 @@ export default function SharedLinkPage() {
     [authStatus, router],
   );
 
+  // C37: an embedded player announces itself and its natural page size to the
+  // host page, so the embedding site can size the iframe to the deck's aspect
+  // without guessing. Nothing sensitive crosses the boundary (dimensions and a
+  // page count), so the target origin can stay open.
+  useEffect(() => {
+    if (state.kind !== "viewing" || !isEmbedMode()) return;
+    if (typeof window === "undefined" || window.parent === window) return;
+    const pg = state.file.pages[0];
+    window.parent.postMessage(
+      { type: "hycanvas:embed:ready", pageCount: state.file.pages.length, width: pg?.width ?? 0, height: pg?.height ?? 0 },
+      "*",
+    );
+  }, [state]);
+
   useEffect(() => {
     // Wait for both the route and the auth bootstrap before resolving, so a
     // signed-in visitor is routed to the editor rather than the anonymous path.
@@ -150,6 +211,38 @@ export default function SharedLinkPage() {
 
   if (state.kind === "viewing") {
     const designTitle = state.file.title?.trim() || tr("page.shared_design");
+    // Phone remote (F28 C21): ?remote=1 turns this share link into a remote
+    // control - big prev/next/blank buttons posting through the rate-limited
+    // audience relay; the PRESENTER verifies the pairing code, so a wrong
+    // code does nothing.
+    const remoteMode = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("remote") === "1";
+    if (remoteMode) {
+      const token = tokenFromLocation(router.query.token);
+      return (
+        <>
+          <Head>
+            <title>{designTitle} · HyCanvas</title>
+          </Head>
+          <RemoteControlScreen token={token} password={password || undefined} title={designTitle} />
+        </>
+      );
+    }
+    // C37: the embed player is the same read-only viewer with no chrome at
+    // all - the host page provides the frame. Link modes, passcodes, and
+    // expiry were already enforced by the resolve above.
+    if (isEmbedMode()) {
+      const embedToken = tokenFromLocation(router.query.token);
+      return (
+        <>
+          <Head>
+            <title>{designTitle}</title>
+          </Head>
+          <div className="flex h-screen flex-col bg-neutral-100">
+            <SharedViewer doc={state.file} token={embedToken || undefined} password={password || undefined} />
+          </div>
+        </>
+      );
+    }
     // An anonymous visitor only ever gets a read-only render here, even on a
     // comment/edit link (commenting/editing need an account). Show "View only"
     // honestly and offer a sign-in CTA that unlocks what the link grants.

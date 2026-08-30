@@ -14,7 +14,7 @@ export type HarmonyScheme =
   | "split-complementary"
   | "monochromatic";
 
-export const HARMONY_SCHEMES: HarmonyScheme[] = [
+export const harmonySchemes: HarmonyScheme[] = [
   "complementary",
   "analogous",
   "triadic",

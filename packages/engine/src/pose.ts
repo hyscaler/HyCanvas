@@ -7,7 +7,7 @@
 import type { DesignFile, Node, NodeAnimation, ImageMotion } from "@hc/schema";
 import { childrenOf } from "@hc/schema";
 import {
-  type AnimPatch, IDENTITY_PATCH, appliedOpacity, clipEnd,
+  type AnimPatch, identityPatch, appliedOpacity, clipEnd,
   entrancePatch, emphasisPatch, customPatch, imageMotionPatch, entranceProgress,
 } from "./animation";
 
@@ -82,28 +82,64 @@ function revealTextWords(node: Node, keepWords: number): void {
 }
 
 function compose(a: AnimPatch | null, b: AnimPatch): AnimPatch {
-  const base = a ?? IDENTITY_PATCH;
+  const base = a ?? identityPatch;
   return {
     dx: base.dx + b.dx,
     dy: base.dy + b.dy,
     scale: base.scale * b.scale,
     rotate: base.rotate + b.rotate,
     opacityMul: base.opacityMul * b.opacityMul,
+    // v23 absolute channels: the later patch wins where defined (the custom
+    // track composes over the entrance, so its overrides take precedence).
+    ...(b.color !== undefined ? { color: b.color } : a?.color !== undefined ? { color: a.color } : {}),
+    ...(b.width !== undefined ? { width: b.width } : a?.width !== undefined ? { width: a.width } : {}),
+    ...(b.height !== undefined ? { height: b.height } : a?.height !== undefined ? { height: a.height } : {}),
   };
 }
 
 function applyPatch(node: Node, patch: AnimPatch): void {
-  const n = node as unknown as { transform: { x: number; y: number; scaleX: number; scaleY: number; rotation: number }; opacity: number };
+  const n = node as unknown as {
+    transform: { x: number; y: number; scaleX: number; scaleY: number; rotation: number };
+    opacity: number;
+    size: { width: number; height: number };
+    fills?: { type?: string; color?: unknown }[];
+    content?: { runs: { style: { fill?: { type?: string; color?: unknown } } }[] }[];
+  };
   const t = n.transform;
   n.opacity = appliedOpacity(n.opacity, patch.opacityMul);
+  // v23 size channels: absolute px, keeping the node's CENTER fixed (the
+  // half-delta shifts x/y in scaled page units), matching how scale reads.
+  let cx = 0;
+  let cy = 0;
+  if (patch.width !== undefined && n.size) {
+    cx = ((n.size.width - patch.width) / 2) * t.scaleX;
+    n.size = { ...n.size, width: patch.width };
+  }
+  if (patch.height !== undefined && n.size) {
+    cy = ((n.size.height - patch.height) / 2) * t.scaleY;
+    n.size = { ...n.size, height: patch.height };
+  }
   n.transform = {
     ...t,
-    x: t.x + patch.dx,
-    y: t.y + patch.dy,
+    x: t.x + patch.dx + cx,
+    y: t.y + patch.dy + cy,
     scaleX: t.scaleX * patch.scale,
     scaleY: t.scaleY * patch.scale,
     rotation: t.rotation + patch.rotate,
   };
+  // v23 color channel: an absolute override on the node's solid fills and, for
+  // text, on every run's solid fill. Poses mutate CLONES, so this never
+  // touches the document.
+  if (patch.color !== undefined) {
+    if (Array.isArray(n.fills)) {
+      n.fills = n.fills.map((f) => (f && f.type === "solid" ? { ...f, color: patch.color } : f));
+    }
+    for (const para of n.content ?? []) {
+      for (const run of para.runs) {
+        if (run.style.fill && run.style.fill.type === "solid") run.style.fill = { ...run.style.fill, color: patch.color };
+      }
+    }
+  }
 }
 
 /** Reveal a text node's content for a typewriter/word-wipe entrance at local time

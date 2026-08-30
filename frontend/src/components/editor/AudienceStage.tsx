@@ -12,7 +12,10 @@ import {
   createScene,
   renderScene,
   poseDesignAt,
-  renderTransition,
+  renderTransitionPair,
+  transitionPairDurationMs,
+  pairEnterTransition,
+  measureFnFor,
   transitionProgress,
   morphPlan,
   morphDesignAt,
@@ -23,7 +26,7 @@ import { imageAssets } from "@/lib/assetProvider";
 import { fonts } from "@/lib/fontProvider";
 import { oc } from "@/lib/sdk";
 import { subscribeAudience, type AudienceState } from "@/lib/audienceWindow";
-import { DESIGN_SURFACE_DIR } from "@/lib/locale";
+import { designSurfaceDir } from "@/lib/locale";
 import { tr } from "@/lib/i18n";
 
 type Blend = { fromIndex: number; startedAt: number };
@@ -33,6 +36,7 @@ export function AudienceStage({ designId, initialSlide }: { designId: string; in
   const [error, setError] = useState<string | null>(null);
   const [index, setIndex] = useState(initialSlide);
   const [blank, setBlank] = useState<"black" | "white" | null>(null);
+  const [caption, setCaption] = useState("");
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const bufA = useRef<HTMLCanvasElement | null>(null);
@@ -72,6 +76,7 @@ export function AudienceStage({ designId, initialSlide }: { designId: string; in
         return;
       }
       setBlank(s.blank ?? null);
+      setCaption(s.caption ?? "");
       setIndex((cur) => {
         if (s.index === cur) return cur;
         blend.current = s.index > cur ? { fromIndex: cur, startedAt: performance.now() } : null;
@@ -126,15 +131,21 @@ export function AudienceStage({ designId, initialSlide }: { designId: string; in
       const now = performance.now();
       const b = blend.current;
       const arriving = page.transition;
-      const dur = arriving?.durationMs ?? 0;
+      // v22: the leaving page's exit transition opens/extends the window too.
+      const exitT = b ? (doc.pages[b.fromIndex] as { transitionOut?: import("@hc/schema").PageTransition } | undefined)?.transitionOut : undefined;
+      const dur = transitionPairDurationMs(arriving, exitT);
       const elapsed = b ? now - b.startedAt : 0;
 
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, cw, ch);
 
-      if (b && arriving && elapsed < dur) {
-        const p = transitionProgress(elapsed, dur);
+      if (b && dur > 0 && elapsed < dur) {
+        const enterT = pairEnterTransition(arriving);
+        const enterDur = enterT.type === "none" ? dur : enterT.durationMs;
+        const p = transitionProgress(elapsed, enterDur, enterT.easing);
+        const pExit = exitT ? transitionProgress(elapsed, exitT.durationMs, exitT.easing) : p;
+        const pLinear = enterDur > 0 ? Math.min(1, Math.max(0, elapsed / enterDur)) : 1;
         const A = bufA.current!;
         const B = bufB.current!;
         for (const buf of [A, B]) {
@@ -150,7 +161,7 @@ export function AudienceStage({ designId, initialSlide }: { designId: string; in
             c.fillStyle = "#ffffff";
             c.fillRect(0, 0, cw, ch);
           }
-          const morph = arriving.type === "morph" ? morphPlan(doc, b.fromIndex, doc, index) : null;
+          const morph = enterT.type === "morph" ? morphPlan(doc, b.fromIndex, doc, index) : null;
           const restore: { n: { hidden?: boolean }; prev: boolean | undefined }[] = [];
           if (morph) {
             for (const n of morph.fromNodes.values()) { restore.push({ n, prev: n.hidden }); (n as { hidden?: boolean }).hidden = true; }
@@ -160,10 +171,10 @@ export function AudienceStage({ designId, initialSlide }: { designId: string; in
           drawPosed(cb, index, elapsed, vp);
           for (const r of restore) r.n.hidden = r.prev;
 
-          renderTransition(ctx as unknown as CanvasLike, arriving, { from: A, to: B, width: cw, height: ch, progress: p });
+          renderTransitionPair(ctx as unknown as CanvasLike, enterT, exitT, { from: A, to: B, width: cw, height: ch, progress: p, exitProgress: pExit });
 
           if (morph && morph.ids.length) {
-            const posed = morphDesignAt(morph, doc, index, p);
+            const posed = morphDesignAt(morph, doc, index, p, { linearProgress: pLinear, measure: measureFnFor(ctx as unknown as CanvasLike) ?? undefined });
             try {
               renderScene(createScene(posed, index), ctx as unknown as CanvasLike, vp, { assets: imageAssets });
             } catch {
@@ -191,12 +202,19 @@ export function AudienceStage({ designId, initialSlide }: { designId: string; in
     // The audience display IS the page's main content: one landmark holding
     // the projected slide, with an offscreen heading so the window announces
     // what it is rather than reading as an unlabelled canvas.
-    <main className="relative h-screen w-screen overflow-hidden bg-black" dir={DESIGN_SURFACE_DIR} data-testid="audience-stage">
+    <main className="relative h-screen w-screen overflow-hidden bg-black" dir={designSurfaceDir} data-testid="audience-stage">
       <h1 className="sr-only">{tr("editor.audience_display")}</h1>
       <div ref={stageRef} className="grid h-full w-full place-items-center">
         <canvas ref={canvasRef} data-testid="audience-canvas" aria-label={tr("editor.presented_slide")} role="img" />
       </div>
       {/* Blanking covers the projection without disturbing the presenter. */}
+      {caption && !blank && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-8 z-[60] flex justify-center px-8">
+          <div className="max-w-4xl rounded-lg bg-black/75 px-4 py-2 text-center text-2xl leading-snug text-white">
+            {caption}
+          </div>
+        </div>
+      )}
       {blank && (
         <div
           className={`absolute inset-0 ${blank === "black" ? "bg-black" : "bg-white"}`}

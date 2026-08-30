@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createBlankDesign } from "../factory";
-import { CURRENT_SCHEMA_VERSION, type DesignFile } from "../schema";
+import { currentSchemaVersion, type DesignFile } from "../schema";
 import { migrate } from "../migrate";
 import { validate } from "../validate";
 import { fromDesignFile, toDesignFile } from "../yjs";
@@ -29,9 +29,9 @@ function deck(n: number, assign: Record<number, string> = {}, sections: { id: st
 
 describe("schema v13", () => {
   it("the v12 -> v13 migration step is purely additive", () => {
-    // Target v13 explicitly rather than CURRENT_SCHEMA_VERSION: this test is
+    // Target v13 explicitly rather than currentSchemaVersion: this test is
     // about THIS step, and must not break every time a later version lands.
-    expect(CURRENT_SCHEMA_VERSION).toBeGreaterThanOrEqual(13);
+    expect(currentSchemaVersion).toBeGreaterThanOrEqual(13);
     const v12 = { ...createBlankDesign({ title: "Old", width: 800, height: 600 }), schemaVersion: 12 };
     const migrated = migrate(v12 as unknown as DesignFile, 13);
     expect(migrated.schemaVersion).toBe(13);

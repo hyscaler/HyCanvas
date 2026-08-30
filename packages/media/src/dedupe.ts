@@ -3,7 +3,7 @@
 // drives the user's resolution choices ("use existing" / "keep both" /
 // "replace as new version").
 
-import { hammingDistance, NEAR_DUPLICATE_MAX_DISTANCE } from "./phash";
+import { hammingDistance, nearDuplicateMaxDistance } from "./phash";
 import type { Asset } from "./types";
 
 export type DuplicateKind = "exact" | "near" | "none";
@@ -31,7 +31,7 @@ export interface IncomingFingerprint {
 export function classifyDuplicate(
   incoming: IncomingFingerprint,
   candidates: Asset[],
-  maxDistance = NEAR_DUPLICATE_MAX_DISTANCE,
+  maxDistance = nearDuplicateMaxDistance,
 ): DuplicateResult {
   const live = candidates.filter((c) => c.status !== "trashed");
 

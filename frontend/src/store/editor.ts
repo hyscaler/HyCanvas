@@ -96,9 +96,9 @@ import {
 import { booleanOp, fitCubicBeziers, pathToPolylines, recognizeShape, shapeNodeToParametric, shapeToPath, simplifyPolyline, strokeToOutline, type BooleanOp } from "@hc/geometry";
 import { imageAssets } from "@/lib/assetProvider";
 import { measuredTextHeight } from "@/lib/textFit";
-import { PAGE_GAP, pageOffsets, pageTop } from "@/lib/pageLayout";
+import { pageGap, pageOffsets, pageTop } from "@/lib/pageLayout";
 import type { MagicDesignSpec } from "@/lib/magicDesign";
-import { layoutDesign, type AiDesignSpec, type DeckResult } from "@hc/aistudio";
+import { accentRuleRect, extractLayoutSet, fallbackLayoutFill, layoutDesign, reflowPage, slotTypeScale, variantCandidate, verifyLayoutCapacities, type AiDesignSpec, type DeckResult, type ExtractedLayoutSet, type ExtractPageLike } from "@hc/aistudio";
 import { qrModules } from "@/lib/qr";
 import { frameMaskFor } from "@/lib/maskPath";
 import { flattenSvgToNodes } from "@/lib/svgFlatten";
@@ -186,6 +186,10 @@ export interface Viewport2D {
 interface UndoEntry {
   undo: () => void;
   redo: () => void;
+  /** Set on a collapsed turn so async work that CONTINUES that turn can find
+   *  it again (see extendTurn) and fold itself in rather than becoming its own
+   *  history entry - or, if the user has edited since, correctly decline to. */
+  turnId?: string;
 }
 
 type Tool = "select" | "pen" | "pencil" | "ink" | "laser" | "eraser" | "stamp" | "line" | "arrow" | "rect" | "ellipse" | "text" | "comment";
@@ -306,7 +310,7 @@ let styleClip: unknown = null;
 // Prefix that marks design-node JSON written to the OS clipboard, so a paste can
 // tell our own copied elements from arbitrary external text. Keeps copy/paste
 // working across refresh and browser tabs (last copy wins, as editors conventionally do).
-export const OC_CLIP_PREFIX = "oc-clipboard-v1::";
+export const ocClipPrefix = "oc-clipboard-v1::";
 
 /** Assign fresh ids to a node subtree (used when duplicating a page). */
 function regenIds(nodes: Node[]): void {
@@ -445,6 +449,24 @@ interface EditorState {
   duplicatePage(index?: number): void;
   /** Rename a page (its title in the page list / continuous-scroll header). */
   setPageName(index: number, name: string): void;
+  /** Per-slide workflow status (F28 completion C35), stored in the page's open
+   *  data record. Null clears it. Plain string on purpose: never an enum. */
+  setPageWorkStatus(index: number, status: string | null): void;
+  /** Adaptive reflow (F40 E16/E17). reflowHint is transient UI state: the
+   *  latest over/underflow variant proposal for a page, cleared on apply,
+   *  dismiss, undo/redo, or when an edit resolves the pressure. Keyed by page
+   *  ID, not index: adding, deleting, or reordering pages must never make the
+   *  hint (or its one-click apply) land on a different slide. */
+  reflowHint: { pageId: string; toLayoutId: string; toName: string; direction: "denser" | "sparser" } | null;
+  dismissReflowHint(): void;
+  /** Per-page reflow opt-out (rides the open Page.data record; absent = on). */
+  setPageAutoflow(index: number, on: boolean): void;
+  /** Switch a layout-linked page to a variant layout and redistribute its
+   *  text content into the new slots, as ONE undo turn (F40 E17). */
+  switchPageLayout(pageIndex: number, toLayoutId: string): boolean;
+  /** Per-slide assignee (C35): a workspace member's id + display name, stored
+   *  in the page's open data record. Null clears it. */
+  setPageAssignee(index: number, assignee: { id: string; name: string } | null): void;
   /** Lock or unlock every element on a page in one undo step (page header lock). */
   setPageLocked(index: number, locked: boolean): void;
   /** Delete a page (keeps at least one), undoable. */
@@ -457,10 +479,34 @@ interface EditorState {
    *  ACTIVE page as a named reusable layout (background + text placeholders).
    *  Ensures a default master exists. Returns the new layout id. */
   savePageAsLayout(name: string): string | null;
+  /** F28 T20 stage 1: extract a reusable layout set from EVERY page of the
+   *  deck, heuristics only (largest text = title, other text = body/content
+   *  with capacity hints, images/charts/media = slots, decoration ignored);
+   *  near-identical pages collapse into one layout. Installs the set and
+   *  links each source page that has no layout yet, as ONE undo step.
+   *  Returns the counts, or null when the deck yields no layouts. Stage 2
+   *  passes a precomputed set (vision-corrected off-store); without one the
+   *  heuristics run right here. */
+  extractLayoutsFromDeck(precomputed?: ExtractedLayoutSet): { created: number; linked: number } | null;
   /** Link a page to a layout (null unlinks) and materialize it: the layout's
    *  background applies and missing placeholders land as editable text boxes
    *  (tagged via data.placeholderId). One undo step. */
-  applyLayoutToPage(layoutId: string | null, pageIndex?: number): boolean;
+  applyLayoutToPage(layoutId: string | null, pageIndex?: number, opts?: { pruneObsolete?: boolean; snapExisting?: boolean }): boolean;
+  /** Draw the generated deck's accent rule above a page's title slot (the
+   *  reading-page treatment). One undo step, joins the caller's turn. */
+  addAccentRule(pageIndex: number, layoutId: string, accentHex: string): boolean;
+  /** T12: write generated content into a page's materialized placeholder boxes
+   *  (matched by data.placeholderId): plain text for title/body slots, one
+   *  bulleted paragraph per item for content lists. One undo step; boxes not
+   *  named in the fill keep their current content. */
+  fillPlaceholderContent(pageIndex: number, fill: { texts: Record<string, string>; lists: Record<string, string[]> }, opts?: { styles?: Record<string, { fontFamily?: string; fill?: Fill }> }): boolean;
+  /** T12/T10: place a resolved image into a picture placeholder, addressed by
+   *  page id + placeholder id (late async results must not depend on the
+   *  active page). Replaces the placeholder's materialized box (or a previous
+   *  generated image for the slot) with an image node at the slot's rect,
+   *  stamped with data.placeholderId + data.aiImagePrompt. Returns false when
+   *  the page or slot no longer exists. */
+  applyGeneratedImageToPlaceholder(pageId: string, placeholderId: string, url: string, prompt: string): boolean;
   /** Re-capture the layout's background + placeholders from the active page. */
   updateLayoutFromPage(layoutId: string): boolean;
   /** Re-apply a layout to EVERY page linked to it (background + missing
@@ -504,6 +550,13 @@ interface EditorState {
    *  page size + background and creates the nodes as ONE undo step. Returns ids. */
   buildAiDesign(spec: AiDesignSpec, target: { width: number; height: number }): string[];
 
+  /** F39: apply an AI-generated design supplied as a complete SVG document onto
+   *  the active page, fully editable. The SVG (from a text model such as DeepSeek)
+   *  is drawn at the target size, so its flattened nodes land in page space with
+   *  no scaling. Sets the page size and replaces its nodes as ONE undo step.
+   *  Returns the new node ids (empty when the SVG yields no nodes). */
+  buildSvgDesign(svg: string, target: { width: number; height: number }): string[];
+
   /** F39 Phase 2: replace the whole document with a generated multi-page design
    *  (deck/doc/social set). Each DeckResult page becomes a page sized to target,
    *  with the engine-laid-out background + nodes. Applied as ONE undo step.
@@ -518,6 +571,31 @@ interface EditorState {
    *  undo entry it pushes into ONE undo turn, so an assistant turn reverts with a
    *  single Cmd+Z (FR-8). Returns the number of entries collapsed. */
   runAsTurn(fn: () => void): number;
+  /** Apply a mutation WITHOUT recording an undo entry.
+   *
+   *  For work that continues a turn the user already performed: the streamed
+   *  slide copy, placeholder images and hero backgrounds that land seconds
+   *  after a generation. Each used to push its own entry, so undo removed one
+   *  stray image instead of the deck the toast promised, and each also
+   *  cleared the redo stack. Undoing the generation removes the pages these
+   *  landed on, so they need no history of their own. */
+  runWithoutHistory(fn: () => void): void;
+  /** Apply work that CONTINUES the last turn, folding it into that turn's undo
+   *  entry when the turn is still the newest thing on the stack.
+   *
+   *  Async AI results (streamed slide copy, generated images) land seconds
+   *  after the turn they belong to. Giving them their own entry made undo peel
+   *  them off one at a time; giving them NO entry left them un-undoable when
+   *  they landed on a page the turn did not create, which is exactly the
+   *  regenerate-one-slide case. Merging fixes both, and falls back to applying
+   *  without history when the user has edited in the meantime, so a late result
+   *  can never rewrite history that has moved on.
+   *
+   *  Returns whether the work was folded into the previous turn. */
+  extendTurn(turnId: string | null, fn: () => void): boolean;
+  /** The id of the newest turn, captured when queueing async work that
+   *  continues it. Null when the newest entry is not a turn. */
+  currentTurnId(): string | null;
 
   /** F39 FR-27: record generation provenance (feature, prompt, model, seed) into
    *  doc.meta.aiProvenance for reproducibility/audit. Metadata only - not an undo
@@ -682,11 +760,22 @@ interface EditorState {
    *  Pass undefined to clear all animation. Clears the legacy `animations`/`link`
    *  slots so the typed model is the single source of truth. */
   setNodeAnimation(id: string, anim: NodeAnimation | undefined): void;
+  /** The animation set held by the animation painter (C14), or null. */
+  copiedAnimation: NodeAnimation | null;
+  /** Copy a node's whole animation set into the painter clipboard. */
+  copyAnimation(id: string): void;
+  /** Paste the copied animation set onto every given node (one undo step);
+   *  returns how many nodes changed. Locked/brand-locked nodes are skipped. */
+  pasteAnimation(ids: string[]): number;
   /** Apply the active page's transition to every page, one undo step (FR-10). */
   applyTransitionToAllPages(): void;
   /** Magic Animate: apply tasteful, staggered entrance animations to every
    *  top-level element on the active page in one undoable step (or clear them). */
   magicAnimatePage(clear?: boolean): void;
+  /** Magic-animate EVERY slide in one undo turn (C05). Slides that already
+   *  carry any node animation are skipped unless `replaceExisting`; returns
+   *  how many slides were animated. */
+  magicAnimateAllPages(replaceExisting?: boolean): number;
   /** Set/clear a node's custom keyframe timeline (F25), preserving presets. */
   setNodeKeyframes(id: string, track: KeyframeTrack | undefined): void;
   /** Set/clear a node's interaction (trigger + action), undoable. Mirrors the
@@ -697,14 +786,25 @@ interface EditorState {
   setImageMotion(id: string, motion: ImageMotion | undefined): void;
   /** Set/clear the active (or given) page's slide transition, undoable. */
   setPageTransition(transition: PageTransition | undefined, pageIndex?: number): void;
+  /** Set/clear how this page LEAVES when advancing away (v22 exit transition). */
+  setPageTransitionOut(transition: PageTransition | undefined, pageIndex?: number): void;
   /** Set the active (or given) page's speaker notes, undoable. */
   setPageNotes(notes: string, pageIndex?: number): void;
   /** Assign (or clear) the slide layout this page inherits (doc 28 FR-3). */
   setPageLayout(layoutId: string | undefined, pageIndex?: number): void;
   /** Install the built-in master + layouts on a deck that has none (FR-3). */
-  ensureSlideLayouts(): void;
-  /** Adopt a theme for the whole deck in one undoable action (FR-4). */
-  setDeckTheme(theme: Theme | undefined): void;
+  ensureSlideLayouts(size?: { width: number; height: number }): void;
+  /** Adopt a template's layout system (F40 E14): masters and layouts merge
+   *  into the document BY ID (existing ids keep their local definitions, so
+   *  re-adopting or overlapping with builtins never duplicates or clobbers).
+   *  One undo step. Returns how many layouts were added. */
+  adoptLayoutSet(masters: unknown[], layouts: unknown[]): number;
+  /** Adopt a theme for the whole deck in one undoable action (FR-4). By
+   *  default content painted with the previous theme's exact slot colors and
+   *  fonts follows the swap (T19); `restyle: false` swaps only the record -
+   *  for stamping a theme onto pages ALREADY painted with its colors, where a
+   *  remap from the outgoing theme would misfire. */
+  setDeckTheme(theme: Theme | undefined, opts?: { restyle?: boolean }): void;
   /** Set/clear the active (or given) page's autopilot dwell in ms;
    *  pass null to clear (fall back to the global default). Undoable. */
   setPageAutoAdvance(ms: number | null, pageIndex?: number): void;
@@ -773,6 +873,13 @@ interface EditorState {
   /** F39 FR-24: place a generated/selected image as a full-page background -
    *  sized to the active page, at the back of the z-order, as ONE undo step. */
   addPageBackgroundImage(url: string): void;
+  /** T10: apply a resolved AI/stock image as a page's full-bleed background,
+   *  addressed BY PAGE ID (late async resolutions must not depend on the
+   *  active page), stamped with the generation prompt (node.data.aiImagePrompt)
+   *  so identical prompts can be diffed/reused later. Replaces a previous
+   *  generated background instead of stacking. Returns false when the page no
+   *  longer exists (the design changed - the guard against late results). */
+  applyGeneratedBackground(pageId: string, url: string, prompt: string): boolean;
   /** Insert an SVG icon as an editable, scaled vector group, viewport-centered.
    *  `provenance` (e.g. stock asset id + license) is stamped on the group's data
    *  in the same undo step, so attribution can be compiled from the design. */
@@ -799,6 +906,11 @@ interface EditorState {
    *  false when nothing was applied (read-only session, history preview, or an
    *  empty template). */
   applyTemplateFile(file: DesignFile, title: string): boolean;
+  /** Reuse slides from another deck (F28 completion C38): append copies of the
+   *  chosen pages after the active page's run, ids regenerated, assets carried
+   *  (colliding ids reminted), and optionally restyled to this document's
+   *  theme via the exact slot-by-slot remap. Returns the inserted count. */
+  importPagesFrom(file: DesignFile, pageIndices: number[], opts?: { matchTheme?: boolean }): number;
   /** Import a full SVG file (e.g. an SVG export from another design tool) as editable elements:
    *  shapes/paths/text/images, registered assets, scaled to fit the page and
    *  grouped (ungroup to edit each element). Undoable. */
@@ -892,6 +1004,12 @@ interface EditorState {
   setImageAlt(id: string, alt: string | undefined): void;
   /** Set/clear any node's accessibility description (doc 28 FR-29), undoable. */
   setNodeAltText(id: string, altText: string | undefined): void;
+  /** One-click a11y fix (C27): nudge every failing solid run fill on a text
+   *  node to WCAG AA against the page background. Returns changed-run count. */
+  fixTextContrast(id: string): number;
+  /** One-click a11y fix (C27): raise runs below `min` px to `min`, leaving
+   *  larger runs untouched. Returns changed-run count. */
+  raiseMinFontSize(id: string, min?: number): number;
   /** Mark a node presentational, so checkers and accessible exports skip it. */
   setNodeDecorative(id: string, decorative: boolean): void;
   /** Reorder a page's reading order by moving index `from` to `to` (FR-29). */
@@ -1351,9 +1469,18 @@ export const useEditor = create<EditorState>((set, get) => {
   // mirrored (their closures go stale the moment applyToStore rebuilds the doc
   // tree, and replaying one against a later state re-applies old edits and can
   // clobber peer changes), so the stacks stay empty for the whole session.
+  // Depth counter, not a boolean: the async AI queues can overlap, and the
+  // last one to finish must not re-enable history for the others.
+  let suppressHistory = 0;
+  // Monotonic id for collapsed turns, so async continuations can name the turn
+  // they belong to instead of guessing from stack position.
+  let turnSeq = 0;
+  // The turn currently being performed. Async work is queued from INSIDE the
+  // turn, before its undo entry exists, so the id has to be readable during it.
+  let activeTurnId: string | null = null;
   const perform = (redo: () => void, undo: () => void) => {
     redo();
-    if (get().collabUndo) {
+    if (suppressHistory > 0 || get().collabUndo) {
       set((s) => ({ rev: s.rev + 1 }));
       return;
     }
@@ -1368,6 +1495,41 @@ export const useEditor = create<EditorState>((set, get) => {
     redo: () => applyCommand(get().doc, cmd),
     undo: () => applyCommand(get().doc, invertCommand(cmd)),
   });
+
+  // Restore a page snapshot INTO the existing page object (found by id), so
+  // identity survives undo/redo and other closures' captured references stay
+  // live - at the NODE level too: children are matched by node id and each
+  // surviving node's fields restore into the existing node object (recursively
+  // through groups), because most neighboring undo closures capture NODE
+  // references (page resize, sticky text, find/replace), not just pages.
+  // Unknown keys ride along in the snapshots. Shared by the whole-deck
+  // restyle actions (setDeckTheme, reskinToBrand).
+  const restoreNodeInPlace = (live: Record<string, unknown>, snap: Record<string, unknown>): void => {
+    for (const k of Object.keys(live)) if (!(k in snap) && k !== "children") delete live[k];
+    for (const [k, v] of Object.entries(snap)) {
+      if (k === "children") continue;
+      live[k] = structuredClone(v);
+    }
+    const snapKids = snap.children as Record<string, unknown>[] | undefined;
+    if (!snapKids) {
+      if ("children" in live && !("children" in snap)) delete live.children;
+      return;
+    }
+    const byId = new Map(((live.children as Record<string, unknown>[] | undefined) ?? []).map((n) => [n.id, n]));
+    live.children = snapKids.map((sk) => {
+      const ln = byId.get(sk.id);
+      if (ln) {
+        restoreNodeInPlace(ln, sk);
+        return ln;
+      }
+      return structuredClone(sk); // node deleted since: the clone is all there is
+    });
+  };
+  const restorePageSnapshot = (id: string, snap: Page) => {
+    const livePage = get().doc.pages.find((p) => p.id === id) as unknown as Record<string, unknown> | undefined;
+    if (!livePage) return; // page deleted since: nothing to restore
+    restoreNodeInPlace(livePage, snap as unknown as Record<string, unknown>);
+  };
 
   // Re-fit a text box to its content, with the same measurer the inline editor
   // and the resize gizmo use, after anything that changes how the text wraps
@@ -1389,6 +1551,25 @@ export const useEditor = create<EditorState>((set, get) => {
     if (Math.abs(n.size.height - h) < 0.5) return;
     n.size.height = h;
     n.box!.height = h;
+  };
+
+  // The slot rect AS MATERIALIZED on a page: applyLayoutToPage shrinks a
+  // layout authored for a larger page proportionally, so any comparison with
+  // a node's actual transform must use the same scale (F40 E16).
+  const slotRectOnPage = (
+    layout: { placeholders: { rect: { x: number; y: number; width: number; height: number } }[] },
+    ph: { rect: { x: number; y: number; width: number; height: number } },
+    page: { width: number; height: number },
+  ) => {
+    let extentW = 0;
+    let extentH = 0;
+    for (const p of layout.placeholders ?? []) {
+      extentW = Math.max(extentW, p.rect.x + p.rect.width);
+      extentH = Math.max(extentH, p.rect.y + p.rect.height);
+    }
+    const sx = extentW > page.width && extentW > 0 ? page.width / extentW : 1;
+    const sy = extentH > page.height && extentH > 0 ? page.height / extentH : 1;
+    return { x: ph.rect.x * sx, y: ph.rect.y * sy, width: ph.rect.width * sx, height: ph.rect.height * sy };
   };
 
   // Index of the page being edited, clamped to the document's page count.
@@ -1425,7 +1606,7 @@ export const useEditor = create<EditorState>((set, get) => {
     const wy = vp.panY + vs.height / 2 / vp.zoom;
     const offs = pageOffsets(doc);
     for (let i = 0; i < doc.pages.length; i++) {
-      if (wy < offs[i] + doc.pages[i].height + PAGE_GAP / 2) return i;
+      if (wy < offs[i] + doc.pages[i].height + pageGap / 2) return i;
     }
     return doc.pages.length - 1;
   };
@@ -1505,6 +1686,7 @@ export const useEditor = create<EditorState>((set, get) => {
     redoStack: [],
     collabUndo: null,
     preview: null,
+    reflowHint: null,
 
     select: (ids) => {
       const doc = get().doc;
@@ -1851,6 +2033,48 @@ export const useEditor = create<EditorState>((set, get) => {
       );
       return ids;
     },
+    buildSvgDesign: (svg, target) => {
+      const doc = get().doc;
+      const idx = curPageIndex();
+      const page = doc.pages[idx];
+      if (!page) return [];
+      const w = Math.max(1, Math.round(target.width));
+      const h = Math.max(1, Math.round(target.height));
+
+      // The SVG is generated at exactly w x h, so its flattened nodes are already
+      // in page coordinates (no group wrapper, no scaling): every element stays
+      // individually selectable and editable. A full-bleed background <rect> in
+      // the SVG becomes the bottom node, so the page background is left as-is.
+      const { nodes, assets } = flattenSvgToNodes(svg);
+      if (!nodes.length) return [];
+      ensureDocArrays(doc);
+      const refs: AssetRef[] = assets.map((a) => ({ id: a.assetId, kind: "image", url: a.url, mime: "image/*", checksum: "" }));
+
+      // Snapshot page size + nodes so the whole design lands as ONE undo step
+      // (mirrors buildAiDesign). Assets are added/removed in the same step.
+      const before = structuredClone({ width: page.width, height: page.height, children: page.children });
+      const after = structuredClone({ width: w, height: h, children: nodes });
+      const apply = (snap: { width: number; height: number; children: Node[] }) => {
+        const p = get().doc.pages[curPageIndex()] as unknown as { width: number; height: number; children: Node[] };
+        if (!p) return;
+        p.width = snap.width;
+        p.height = snap.height;
+        p.children = structuredClone(snap.children);
+      };
+      const ids = nodes.map((n) => n.id);
+      perform(
+        () => { get().doc.assets.push(...refs); apply(structuredClone(after)); set({ selection: [] }); },
+        () => {
+          apply(before);
+          const live = get().doc.assets;
+          for (const r of refs) { const ai = live.findIndex((a) => a.id === r.id); if (ai >= 0) live.splice(ai, 1); }
+          set({ selection: get().selection.filter((s) => !ids.includes(s)) });
+        },
+      );
+      // Load any referenced image assets so they render (data URLs or remote urls).
+      if (typeof window !== "undefined") for (const a of assets) imageAssets.register(a.assetId, a.url);
+      return ids;
+    },
     buildDeckFromOutline: (deck, target) => {
       const doc = get().doc;
       if (!deck.pages.length) return [];
@@ -1866,6 +2090,7 @@ export const useEditor = create<EditorState>((set, get) => {
         height: h,
         background: p.background,
         children: structuredClone(p.nodes),
+        ...(p.note ? { notes: p.note } : {}), // speaker notes from the outline
       }));
       const pageIds = newPages.map((p) => p.id);
       const before = structuredClone(doc.pages);
@@ -1896,6 +2121,7 @@ export const useEditor = create<EditorState>((set, get) => {
         height: h,
         background: p.background,
         children: structuredClone(p.nodes),
+        ...(p.note ? { notes: p.note } : {}), // speaker notes from the outline
       }));
       const pageIds = newPages.map((p) => p.id);
       const snapshot = structuredClone(newPages);
@@ -1917,14 +2143,73 @@ export const useEditor = create<EditorState>((set, get) => {
       );
       return pageIds;
     },
+    runWithoutHistory: (fn) => {
+      suppressHistory++;
+      try {
+        fn();
+      } finally {
+        suppressHistory--;
+      }
+    },
+    currentTurnId: () => {
+      if (activeTurnId) return activeTurnId;
+      const stack = get().undoStack;
+      return stack[stack.length - 1]?.turnId ?? null;
+    },
+    extendTurn: (turnId, fn) => {
+      const stack = get().undoStack;
+      const top = stack[stack.length - 1];
+      // Fold ONLY into the turn this work belongs to, and only while that turn
+      // is still the newest thing on the stack. Merging into whatever happens
+      // to be on top would attach a late model result to an unrelated edit the
+      // user made in the meantime.
+      const mergeable = !!turnId && !!top && top.turnId === turnId && !get().collabUndo;
+      if (!mergeable) {
+        // Not ours to extend: apply without recording. The alternative - its
+        // own entry - is what made undo peel off one stray image at a time.
+        get().runWithoutHistory(fn);
+        return false;
+      }
+      const redoBefore = get().redoStack;
+      const start = stack.length;
+      fn();
+      const after = get().undoStack;
+      const added = after.slice(start);
+      if (!added.length) return false;
+      if (after[start - 1] !== top) return false; // moved under us mid-apply
+      const merged: UndoEntry = {
+        turnId,
+        redo: () => { top.redo(); added.forEach((e) => e.redo()); },
+        undo: () => { [...added].reverse().forEach((e) => e.undo()); top.undo(); },
+      };
+      // Folding into the turn also restores the redo stack the nested perform
+      // calls cleared: continuing a turn is not a new user action.
+      set({ undoStack: [...after.slice(0, start - 1), merged], redoStack: redoBefore });
+      return true;
+    },
     runAsTurn: (fn) => {
       const start = get().undoStack.length;
-      fn();
+      turnSeq += 1;
+      const turnId = `turn-${turnSeq}`;
+      const outerTurnId = activeTurnId;
+      activeTurnId = turnId;
+      try {
+        fn();
+      } finally {
+        activeTurnId = outerTurnId;
+      }
       const stack = get().undoStack;
       const added = stack.slice(start);
-      if (added.length <= 1) return added.length;
+      if (added.length === 1) {
+        // A single-entry turn still needs an identity: async work continues it
+        // just as often as it continues a collapsed one.
+        set({ undoStack: [...stack.slice(0, start), { ...added[0], turnId }] });
+        return added.length;
+      }
+      if (added.length === 0) return 0;
       // Collapse: redo replays each entry forward; undo reverses them.
       const composite: UndoEntry = {
+        turnId,
         redo: () => added.forEach((e) => e.redo()),
         undo: () => [...added].reverse().forEach((e) => e.undo()),
       };
@@ -2028,21 +2313,257 @@ export const useEditor = create<EditorState>((set, get) => {
       return layoutId;
     },
 
-    applyLayoutToPage: (layoutId, pageIndex) => {
+    extractLayoutsFromDeck: (precomputed) => {
+      // Never mutate a version-history preview: the undo entry would capture
+      // the HISTORICAL doc's layouts/masters and a later undo on the live doc
+      // would overwrite current state with them.
+      if (get().preview) return null;
+      const doc = get().doc as unknown as {
+        masters?: { id: string; name?: string; placeholders: unknown[] }[];
+        layouts?: { id: string; masterId: string; name: string; background?: Fill; placeholders: unknown[] }[];
+        pages: Page[];
+      };
+      // Named to avoid shadowing zustand's `set` parameter.
+      const extracted = precomputed ?? extractLayoutSet(doc.pages as unknown as ExtractPageLike[]);
+      if (!extracted.layouts.length) return null;
+      const masterId = (doc.masters ?? [])[0]?.id ?? "master-default";
+      const run = crypto.randomUUID().slice(0, 6);
+      const records = extracted.layouts.map((l, i) => {
+        // T20 stage 3: capacities are verified against the size the layout was
+        // EXTRACTED at (stamped on the layout, so a document mutated since
+        // extraction cannot mislead the math) - a hint that overflows at max
+        // fill shrinks to what fits (or is dropped), whether the set came from
+        // the heuristics here or from the vision-corrected path.
+        const verified = verifyLayoutCapacities(l, l.sourcePageSize);
+        return {
+          id: `layout-ext-${run}-${i + 1}`,
+          masterId,
+          name: verified.name,
+          ...(verified.background ? { background: structuredClone(verified.background) } : {}),
+          placeholders: structuredClone(verified.placeholders) as unknown[],
+        };
+      });
+      const prevMasters = doc.masters;
+      const prevLayouts = doc.layouts;
+      // Only pages that are not already linked adopt their extracted layout,
+      // so re-running extraction never severs an existing cascade.
+      const prevAssign = doc.pages.map((p) => (p as unknown as { layoutId?: string }).layoutId);
+      let linked = 0;
+      for (let i = 0; i < extracted.assignments.length; i++) {
+        if (extracted.assignments[i] !== null && !prevAssign[i]) linked++;
+      }
+      perform(
+        () => {
+          // Re-check the DOC on every run (redo included), like savePageAsLayout:
+          // the default master may need re-adding after other undo traffic.
+          const live = get().doc as unknown as typeof doc;
+          if (!(live.masters ?? []).some((m) => m.id === masterId)) {
+            live.masters = [...(live.masters ?? []), { id: masterId, name: tr("app.default_master"), placeholders: [] }];
+          }
+          live.layouts = [...(live.layouts ?? []), ...structuredClone(records)];
+          extracted.assignments.forEach((a, i) => {
+            const pg = live.pages[i] as unknown as { layoutId?: string } | undefined;
+            if (a !== null && !prevAssign[i] && pg) pg.layoutId = records[a].id;
+          });
+        },
+        () => {
+          const live = get().doc as unknown as typeof doc;
+          live.masters = prevMasters;
+          live.layouts = prevLayouts;
+          live.pages.forEach((p, i) => {
+            const pg = p as unknown as { layoutId?: string };
+            // Restore exactly: a page that never had a link must not keep an
+            // explicit undefined-valued key.
+            if (prevAssign[i] === undefined) delete pg.layoutId;
+            else pg.layoutId = prevAssign[i];
+          });
+        },
+      );
+      return { created: records.length, linked };
+    },
+
+    fillPlaceholderContent: (pageIndex, fill, opts) => {
+      const doc = get().doc;
+      const page = doc.pages[pageIndex] as unknown as { id: string; children: Node[]; layoutId?: string; data?: Record<string, unknown> };
+      if (!page) return false;
+      const pageId = page.id;
+      // F40 E16: generation fills reflow too - the model's real copy can run
+      // past the capacity hints, and the same ladder absorbs it here.
+      const reflowLayout = page.layoutId && page.data?.autoflow !== false
+        ? (doc as unknown as { layouts?: { id: string; placeholders: { id: string; role: string; rect: { x: number; y: number; width: number; height: number } }[] }[] }).layouts?.find((l) => l.id === page.layoutId)
+        : undefined;
+      type Paragraph = { runs: { text: string; style: Record<string, unknown> }[]; style: Record<string, unknown> };
+      type Textish = { id: string; type: string; data?: { placeholderId?: string }; content?: Paragraph[] };
+      const targets: { nodeId: string; before: Paragraph[]; after: Paragraph[] }[] = [];
+      for (const child of page.children as unknown as Textish[]) {
+        const phId = child.data?.placeholderId;
+        if (!phId || child.type !== "text" || !child.content?.length) continue;
+        const text = fill.texts[phId];
+        const list = fill.lists[phId];
+        const override = opts?.styles?.[phId];
+        if (text === undefined && list === undefined) {
+          // Style-only pass: a slot the fill leaves alone still needs the
+          // override (readable ink on a dark background, brand font) applied
+          // to its EXISTING content, or its placeholder text stays unreadable.
+          if (!override) continue;
+          const restyled = structuredClone(child.content).map((par) => ({
+            ...par,
+            runs: par.runs.map((r) => ({
+              ...r,
+              style: {
+                ...r.style,
+                ...(override.fontFamily ? { fontFamily: override.fontFamily } : {}),
+                ...(override.fill ? { fill: structuredClone(override.fill) } : {}),
+              },
+            })),
+          }));
+          targets.push({ nodeId: child.id, before: structuredClone(child.content), after: restyled });
+          continue;
+        }
+        // Reuse the materialized box's own run/paragraph style so the fill
+        // inherits the layout's typography, then apply any explicit override
+        // (brand fonts, a readable ink for the theme background).
+        const proto = child.content[0];
+        const runStyle: Record<string, unknown> = {
+          ...(proto.runs[0]?.style ?? {}),
+          ...(override?.fontFamily ? { fontFamily: override.fontFamily } : {}),
+          ...(override?.fill ? { fill: structuredClone(override.fill) } : {}),
+        };
+        const paraStyle = proto.style ?? {};
+        const paragraphs: Paragraph[] = list !== undefined
+          ? list.map((item) => ({ runs: [{ text: `\u2022  ${item}`, style: structuredClone(runStyle) }], style: structuredClone(paraStyle) }))
+          : [{ runs: [{ text: text!, style: structuredClone(runStyle) }], style: structuredClone(paraStyle) }];
+        const ph = reflowLayout?.placeholders.find((pp) => pp.id === phId);
+        if (ph && typeof runStyle.fontSize === "number") {
+          const pageDims = doc.pages[pageIndex] as unknown as { width: number; height: number };
+          const slot = slotRectOnPage(reflowLayout!, ph, pageDims);
+          const res = reflowPage(reflowLayout as never, [{
+            nodeId: child.id,
+            placeholderId: phId,
+            rect: { width: slot.width, height: slot.height },
+            fontSize: runStyle.fontSize,
+            paragraphs: paragraphs.map((par) => par.runs.map((r) => r.text).join("")),
+          }], pageDims);
+          if (res.changed) {
+            const size = res.adjustments[0].fontSize;
+            for (const par of paragraphs) for (const run of par.runs) (run.style as { fontSize?: number }).fontSize = size;
+          }
+        }
+        targets.push({ nodeId: child.id, before: structuredClone(child.content), after: paragraphs });
+      }
+      if (!targets.length) return false;
+      // Resolve page and nodes BY ID inside the closures: when this op shares a
+      // one-undo turn with a page-replacing op, redo re-clones the pages, so a
+      // captured object reference would mutate a detached copy and the redo
+      // would silently drop the generated content.
+      const applyContent = (which: "before" | "after") => {
+        const live = get().doc.pages.find((pg) => pg.id === pageId) as unknown as { children: Textish[] } | undefined;
+        if (!live) return;
+        for (const t of targets) {
+          const node = live.children.find((n) => n.id === t.nodeId);
+          if (node) {
+            node.content = structuredClone(which === "after" ? t.after : t.before);
+            // Every content-mutation path clamps a fixed box to its content
+            // (the render never clips text); the fill honors the same rule.
+            refitTextHeight(node as unknown as Node);
+          }
+        }
+        get().tick();
+      };
+      perform(
+        () => applyContent("after"),
+        () => applyContent("before"),
+      );
+      return true;
+    },
+    applyGeneratedImageToPlaceholder: (pageId, placeholderId, url, prompt) => {
+      const doc = get().doc;
+      ensureDocArrays(doc);
+      const page = doc.pages.find((p) => p.id === pageId);
+      if (!page) return false; // design changed: a late resolution never lands elsewhere
+      type Tagged = { id: string; type: string; data?: { placeholderId?: string }; transform?: { x: number; y: number }; size?: { width: number; height: number } };
+      const slot = (page.children as unknown as Tagged[]).find((n) => n.data?.placeholderId === placeholderId);
+      if (!slot) return false; // slot gone (user deleted it): nothing to fill
+      const rect = {
+        x: slot.transform?.x ?? 0,
+        y: slot.transform?.y ?? 0,
+        width: slot.size?.width ?? page.width,
+        height: slot.size?.height ?? page.height,
+      };
+      const assetId = `asset-${crypto.randomUUID()}`;
+      const node = createNode("image", {
+        name: tr("app.image"),
+        source: { assetId, naturalWidth: 0, naturalHeight: 0 },
+        fit: "cover",
+        transform: { x: rect.x, y: rect.y, scaleX: 1, scaleY: 1, rotation: 0 },
+        size: { width: rect.width, height: rect.height },
+      } as Partial<Node>);
+      node.data = { placeholderId, aiImagePrompt: prompt };
+      const ref: AssetRef = { id: assetId, kind: "image", url, mime: "image/*", checksum: "" };
+      const replacedId = slot.id;
+      const replacedSnapshot = structuredClone(slot);
+      perform(
+        () => {
+          const live = get().doc.pages.find((p) => p.id === pageId);
+          if (!live) return;
+          const i = live.children.findIndex((n) => n.id === replacedId);
+          get().doc.assets.push(ref);
+          if (i >= 0) live.children.splice(i, 1, node as never);
+          else live.children.push(node as never);
+        },
+        () => {
+          const live = get().doc.pages.find((p) => p.id === pageId);
+          if (live) {
+            const i = live.children.findIndex((n) => n.id === node.id);
+            if (i >= 0) live.children.splice(i, 1, structuredClone(replacedSnapshot) as never);
+          }
+          const assets = get().doc.assets;
+          const ai = assets.findIndex((a) => a.id === assetId);
+          if (ai >= 0) assets.splice(ai, 1);
+        },
+      );
+      // Patch the real natural dimensions once loaded (same idiom as the
+      // background variants).
+      if (typeof window !== "undefined") {
+        imageAssets.register(assetId, url);
+        const off = imageAssets.onChange((changed) => {
+          if (changed !== assetId) return;
+          if (imageAssets.status(assetId) === "ready") {
+            const img = imageAssets.image(assetId) as { naturalWidth?: number; naturalHeight?: number } | null;
+            const loc = locate(get().doc, node.id);
+            const n = loc?.node.type === "image" ? (loc.node as unknown as { source: { naturalWidth: number; naturalHeight: number } }) : undefined;
+            if (img?.naturalWidth && n) {
+              n.source.naturalWidth = img.naturalWidth;
+              n.source.naturalHeight = img.naturalHeight ?? rect.height;
+              get().tick();
+            }
+          }
+          off();
+        });
+      }
+      return true;
+    },
+    applyLayoutToPage: (layoutId, pageIndex, opts) => {
       const doc = get().doc as unknown as {
         masters?: { id: string; background?: Fill }[];
         layouts?: { id: string; masterId: string; background?: Fill; placeholders: { id: string; role: string; rect: { x: number; y: number; width: number; height: number } }[] }[];
         pages: Page[];
       };
       const idx = pageIndex ?? curPageIndex();
-      const page = doc.pages[idx] as unknown as { background?: Fill; children: Node[]; layoutId?: string };
+      const page = doc.pages[idx] as unknown as { id: string; background?: Fill; children: Node[]; layoutId?: string };
       if (!page) return false;
+      // Resolve the page BY ID inside every closure: when this op shares a
+      // one-undo turn with a page-replacing op, redo re-clones the pages, so a
+      // captured object reference would mutate a detached copy (the redo would
+      // silently drop the link and the materialized boxes).
+      const pageId = page.id;
+      const livePage = () => get().doc.pages.find((pg) => pg.id === pageId) as unknown as typeof page | undefined;
       const prevLayoutId = page.layoutId;
       if (layoutId === null) {
         // Unlink only: the materialized content stays (nothing is destroyed).
         perform(
-          () => { delete page.layoutId; },
-          () => { if (prevLayoutId) page.layoutId = prevLayoutId; },
+          () => { const lp = livePage(); if (lp) delete lp.layoutId; },
+          () => { const lp = livePage(); if (lp && prevLayoutId) lp.layoutId = prevLayoutId; },
         );
         return true;
       }
@@ -2058,34 +2579,206 @@ export const useEditor = create<EditorState>((set, get) => {
           .map((n) => (n.data as { placeholderId?: string } | undefined)?.placeholderId)
           .filter((v): v is string => !!v),
       );
+      // Layout rects are absolute, authored for some page size; on a page of a
+      // DIFFERENT size (mixed-size documents) materializing them verbatim
+      // overflows, so scale the rects down proportionally when the layout's
+      // extent exceeds this page. A same-size page scales by exactly 1.
+      const pageDims = doc.pages[idx] as unknown as { width: number; height: number };
+      let extentW = 0;
+      let extentH = 0;
+      for (const ph of layout.placeholders ?? []) {
+        extentW = Math.max(extentW, ph.rect.x + ph.rect.width);
+        extentH = Math.max(extentH, ph.rect.y + ph.rect.height);
+      }
+      const scaleX = extentW > pageDims.width && extentW > 0 ? pageDims.width / extentW : 1;
+      const scaleY = extentH > pageDims.height && extentH > 0 ? pageDims.height / extentH : 1;
       const made: Node[] = [];
       for (const ph of layout.placeholders ?? []) {
         if (have.has(ph.id)) continue;
+        // A picture/media slot is not a text slot. Materializing every role as
+        // a text box left image slots reading the literal word "Text" until an
+        // image arrived - permanently, on a provider that cannot make images -
+        // and the headless composer never did this. It gets a neutral tinted
+        // frame instead, which reads as "an image belongs here" and is
+        // replaced wholesale when one lands.
+        if (ph.role === "picture" || ph.role === "media" || ph.role === "chart") {
+          const r0 = { x: ph.rect.x * scaleX, y: ph.rect.y * scaleY, width: ph.rect.width * scaleX, height: ph.rect.height * scaleY };
+          made.push(createNode("shape", {
+            name: tr("app.image_placeholder"),
+            shape: "rect",
+            transform: { x: r0.x, y: r0.y, scaleX: 1, scaleY: 1, rotation: 0 },
+            size: { width: r0.width, height: r0.height },
+            fills: [{ type: "solid", color: { srgb: { r: 0.898, g: 0.906, b: 0.922, a: 1 } } }],
+            cornerRadius: Math.round(Math.min(r0.width, r0.height) * 0.02),
+            data: { placeholderId: ph.id },
+          } as Partial<Node>));
+          continue;
+        }
+        const r = { x: ph.rect.x * scaleX, y: ph.rect.y * scaleY, width: ph.rect.width * scaleX, height: ph.rect.height * scaleY };
+        const isTitle = ph.role === "title";
+        // The slot's own geometry decides the type size (@hc/aistudio owns the
+        // scale, so a materialized box, a generated deck, and adaptive reflow
+        // can never disagree). Fixed 44/20 made every box fine print on a
+        // 1920x1080 slide and oversized type on a small canvas.
+        const typeRole = isTitle ? "title" : ph.role === "body" ? "body" : "content";
+        const fontSize = slotTypeScale(typeRole, r, pageDims).base;
         made.push(createNode("text", {
-          name: ph.role === "title" ? tr("app.title") : tr("app.text"),
-          transform: { x: ph.rect.x, y: ph.rect.y, scaleX: 1, scaleY: 1, rotation: 0 },
-          size: { width: ph.rect.width, height: ph.rect.height },
-          box: { mode: "fixed", width: ph.rect.width, height: ph.rect.height, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "top" },
+          name: isTitle ? tr("app.title") : tr("app.text"),
+          transform: { x: r.x, y: r.y, scaleX: 1, scaleY: 1, rotation: 0 },
+          size: { width: r.width, height: r.height },
+          box: { mode: "fixed", width: r.width, height: r.height, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: isTitle ? "middle" : "top" },
           data: { placeholderId: ph.id },
           content: [{
-            runs: [{ text: ph.role === "title" ? tr("app.title") : tr("app.text"), style: { fontFamily: "system", fontStyle: ph.role === "title" ? boldFontStyle : regularFontStyle, fontSize: ph.role === "title" ? 44 : 20, fill: { type: "solid", color: { srgb: { r: 0.12, g: 0.14, b: 0.18, a: 1 } } } } }],
+            runs: [{ text: isTitle ? tr("app.title") : tr("app.text"), style: { fontFamily: "system", fontStyle: isTitle ? boldFontStyle : regularFontStyle, fontSize, fill: { type: "solid", color: { srgb: { r: 0.12, g: 0.14, b: 0.18, a: 1 } } } } }],
             style: { align: "left", direction: "auto" },
           }],
         } as Partial<Node>));
       }
+      // Prune (T14 relayout): placeholder-tagged nodes whose slot is absent
+      // from the NEW layout are removed, so a layout switch does not leave the
+      // old layout's boxes overlapping the new ones. Untagged nodes are never
+      // touched. Snapshots + indexes captured now for a faithful undo.
+      const slotIds = new Set((layout.placeholders ?? []).map((ph) => ph.id));
+      const pruned: { snapshot: Node; index: number }[] = [];
+      if (opts?.pruneObsolete) {
+        (page.children as Node[]).forEach((n, i) => {
+          const phId = (n.data as { placeholderId?: string } | undefined)?.placeholderId;
+          if (phId && !slotIds.has(phId)) pruned.push({ snapshot: structuredClone(n), index: i });
+        });
+      }
+      // Snap (E17 variant switch): a tagged box the page ALREADY has for a
+      // slot of the NEW layout is skipped by materialization above, so it
+      // keeps the geometry the OLD layout gave it - layouts reuse slot ids
+      // ("ph-title") with different rects. A variant switch snaps survivors
+      // onto the new layout's rects; the manual layout picker deliberately
+      // does not (T14: re-applying respects the user's arrangement).
+      type Snappable = { id: string; transform: { x: number; y: number }; size: { width: number; height: number }; box?: { width: number; height: number } };
+      const snaps: { id: string; to: { x: number; y: number; width: number; height: number }; from: { x: number; y: number; width: number; height: number } }[] = [];
+      if (opts?.snapExisting) {
+        for (const ph of layout.placeholders ?? []) {
+          if (!have.has(ph.id)) continue;
+          const n = (page.children as Node[]).find((c) => (c.data as { placeholderId?: string } | undefined)?.placeholderId === ph.id) as unknown as Snappable | undefined;
+          if (!n) continue;
+          snaps.push({
+            id: n.id,
+            to: { x: ph.rect.x * scaleX, y: ph.rect.y * scaleY, width: ph.rect.width * scaleX, height: ph.rect.height * scaleY },
+            from: { x: n.transform.x, y: n.transform.y, width: n.size.width, height: n.size.height },
+          });
+        }
+      }
+      // The generated accent rule (a reading page's title marker) is tied to
+      // the TITLE slot, not to a placeholder id, so nothing above would move
+      // it: every layout change would otherwise strand a colored bar where
+      // the previous title used to be. It follows the new title slot, and is
+      // removed when the new layout has no title (or no room above it).
+      const accentIdx = (page.children as Node[]).findIndex((n) => (n.data as { accentRule?: boolean } | undefined)?.accentRule);
+      if (accentIdx >= 0) {
+        const accent = (page.children as Node[])[accentIdx] as unknown as Snappable;
+        const titlePh = (layout.placeholders ?? []).find((p) => p.role === "title");
+        const to = titlePh
+          ? accentRuleRect(
+              { x: titlePh.rect.x * scaleX, y: titlePh.rect.y * scaleY, width: titlePh.rect.width * scaleX, height: titlePh.rect.height * scaleY },
+              { width: pageDims.width, height: pageDims.height },
+            )
+          : null;
+        if (to) {
+          snaps.push({
+            id: accent.id,
+            to: { ...to, height: accent.size.height },
+            from: { x: accent.transform.x, y: accent.transform.y, width: accent.size.width, height: accent.size.height },
+          });
+        } else {
+          pruned.push({ snapshot: structuredClone((page.children as Node[])[accentIdx]), index: accentIdx });
+        }
+      }
+      const prunedIds = new Set(pruned.map((x) => x.snapshot.id));
+      const placeSnapped = (which: "to" | "from") => {
+        const lp = livePage();
+        if (!lp) return;
+        for (const s of snaps) {
+          const n = (lp.children as Node[]).find((c) => c.id === s.id) as unknown as Snappable | undefined;
+          if (!n) continue;
+          const r = s[which];
+          n.transform.x = r.x;
+          n.transform.y = r.y;
+          n.size.width = r.width;
+          n.size.height = r.height;
+          if (n.box) {
+            n.box.width = r.width;
+            n.box.height = r.height;
+          }
+          // A text box may never lie about containing its text (the render
+          // does not clip): re-clamp after the geometry change.
+          if ((n as unknown as Node).type === "text") refitTextHeight(n as unknown as Node);
+        }
+      };
       perform(
         () => {
-          page.layoutId = layoutId;
-          if (bg) page.background = structuredClone(bg);
-          page.children.push(...(made as never[]));
+          const lp = livePage();
+          if (!lp) return;
+          lp.layoutId = layoutId;
+          if (bg) lp.background = structuredClone(bg);
+          if (prunedIds.size) {
+            for (let i = lp.children.length - 1; i >= 0; i--) {
+              if (prunedIds.has((lp.children[i] as Node).id)) lp.children.splice(i, 1);
+            }
+          }
+          placeSnapped("to");
+          lp.children.push(...(structuredClone(made) as never[]));
         },
         () => {
-          if (prevLayoutId) page.layoutId = prevLayoutId; else delete page.layoutId;
-          page.background = prevBg;
+          const lp = livePage();
+          if (!lp) return;
+          if (prevLayoutId) lp.layoutId = prevLayoutId; else delete lp.layoutId;
+          lp.background = prevBg;
           for (const n of made) {
-            const i = page.children.findIndex((c) => c.id === n.id);
-            if (i >= 0) page.children.splice(i, 1);
+            const i = lp.children.findIndex((c) => c.id === n.id);
+            if (i >= 0) lp.children.splice(i, 1);
           }
+          placeSnapped("from");
+          for (const x of pruned) {
+            lp.children.splice(Math.min(x.index, lp.children.length), 0, structuredClone(x.snapshot) as never);
+          }
+        },
+      );
+      return true;
+    },
+
+    addAccentRule: (pageIndex, layoutId, accentHex) => {
+      const doc = get().doc as unknown as {
+        pages: Page[];
+        layouts?: { id: string; placeholders: { id: string; role: string; rect: { x: number; y: number; width: number; height: number } }[] }[];
+      };
+      const page = doc.pages[pageIndex] as unknown as { id: string; children: Node[]; width: number; height: number } | undefined;
+      const layout = doc.layouts?.find((l) => l.id === layoutId);
+      const titlePh = layout?.placeholders.find((p) => p.role === "title");
+      const color = fromHex(accentHex);
+      if (!page || !layout || !titlePh || !color) return false;
+      const slot = slotRectOnPage(layout, titlePh, page);
+      const bar = accentRuleRect(slot, { width: page.width, height: page.height });
+      if (!bar) return false;
+      // One rule per page: a re-run must replace, never stack.
+      if ((page.children as Node[]).some((n) => (n.data as { accentRule?: boolean } | undefined)?.accentRule)) return false;
+      const node = createNode("shape", {
+        name: tr("app.accent_rule"),
+        shape: "rect",
+        transform: { x: bar.x, y: bar.y, scaleX: 1, scaleY: 1, rotation: 0 },
+        size: { width: bar.width, height: bar.height },
+        fills: [{ type: "solid", color }],
+        cornerRadius: Math.round(bar.height / 2),
+        // Tagged so applyLayoutToPage can carry it to the new title slot (or
+        // drop it) instead of stranding it on a layout change.
+        data: { accentRule: true },
+      } as Partial<Node>);
+      const pageId = page.id;
+      const livePage = () => get().doc.pages.find((pg) => pg.id === pageId) as unknown as { children: Node[] } | undefined;
+      perform(
+        () => { const lp = livePage(); if (lp) lp.children.unshift(structuredClone(node) as never); },
+        () => {
+          const lp = livePage();
+          if (!lp) return;
+          const i = lp.children.findIndex((c) => c.id === node.id);
+          if (i >= 0) lp.children.splice(i, 1);
         },
       );
       return true;
@@ -3446,6 +4139,39 @@ export const useEditor = create<EditorState>((set, get) => {
         () => { pages.forEach((p, i) => { p.transition = before[i]; }); },
       );
     },
+    copiedAnimation: null,
+    copyAnimation: (id) => {
+      const loc = locate(get().doc, id);
+      const anim = loc ? (loc.node as unknown as { animation?: NodeAnimation }).animation : undefined;
+      if (anim) set({ copiedAnimation: structuredClone(anim) });
+    },
+    pasteAnimation: (ids) => {
+      const copied = get().copiedAnimation;
+      if (!copied) return 0;
+      const targets: { id: string; before: NodeAnimation | undefined }[] = [];
+      for (const id of ids) {
+        const loc = locate(get().doc, id);
+        if (!loc || loc.node.locked || editBlocked(id)) continue;
+        targets.push({ id, before: structuredClone((loc.node as unknown as { animation?: NodeAnimation }).animation) });
+      }
+      if (!targets.length) return 0;
+      const next = structuredClone(copied);
+      perform(
+        () => {
+          for (const t of targets) {
+            const loc = locate(get().doc, t.id);
+            if (loc) (loc.node as unknown as { animation?: NodeAnimation }).animation = structuredClone(next);
+          }
+        },
+        () => {
+          for (const t of targets) {
+            const loc = locate(get().doc, t.id);
+            if (loc) (loc.node as unknown as { animation?: NodeAnimation }).animation = t.before ? structuredClone(t.before) : undefined;
+          }
+        },
+      );
+      return targets.length;
+    },
     setNodeAnimation: (id, anim) => {
       const loc = locate(get().doc, id);
       if (!loc || editBlocked(id)) return;
@@ -3479,6 +4205,33 @@ export const useEditor = create<EditorState>((set, get) => {
         },
         () => { nodes.forEach((n, i) => { (n as unknown as { animation?: NodeAnimation }).animation = before[i]; }); },
       );
+    },
+    magicAnimateAllPages: (replaceExisting) => {
+      const doc = get().doc;
+      const presetFor = (n: Node): EntrancePreset =>
+        n.type === "text" ? "rise" : n.type === "image" || n.type === "frame" || n.type === "grid" ? "pop" : "fade";
+      let animated = 0;
+      get().runAsTurn(() => {
+        for (const page of doc.pages) {
+          const nodes = page.children as Node[];
+          if (!nodes.length) continue;
+          const hasAny = nodes.some((n) => !!(n as unknown as { animation?: NodeAnimation }).animation);
+          if (hasAny && !replaceExisting) continue; // hand-authored builds win by default
+          const before = nodes.map((n) => (n as unknown as { animation?: NodeAnimation }).animation);
+          perform(
+            () => {
+              nodes.forEach((n, i) => {
+                const rec = n as unknown as { animation?: NodeAnimation; animations?: unknown[] };
+                rec.animation = { entrance: { preset: presetFor(n), durationMs: 500, delayMs: Math.min(i * 120, 1500), easing: "ease-out" } };
+                delete rec.animations;
+              });
+            },
+            () => { nodes.forEach((n, i) => { (n as unknown as { animation?: NodeAnimation }).animation = before[i]; }); },
+          );
+          animated++;
+        }
+      });
+      return animated;
     },
     setNodeKeyframes: (id, track) => {
       const loc = locate(get().doc, id);
@@ -3526,6 +4279,16 @@ export const useEditor = create<EditorState>((set, get) => {
         () => { page.transition = before; },
       );
     },
+    setPageTransitionOut: (transition, pageIndex) => {
+      const idx = pageIndex ?? curPageIndex();
+      const page = get().doc.pages[idx] as unknown as { transitionOut?: PageTransition };
+      if (!page) return;
+      const before = page.transitionOut;
+      perform(
+        () => { page.transitionOut = transition; },
+        () => { page.transitionOut = before; },
+      );
+    },
     setPageLayout: (layoutId, pageIndex) => {
       const idx = pageIndex ?? curPageIndex();
       const page = get().doc.pages[idx] as unknown as { layoutId?: string };
@@ -3537,10 +4300,37 @@ export const useEditor = create<EditorState>((set, get) => {
         () => { page.layoutId = before; },
       );
     },
-    ensureSlideLayouts: () => {
+    adoptLayoutSet: (masters, layouts) => {
+      if (!usePresence.getState().canEdit() || get().readonlyPreview()) return 0;
+      const doc = get().doc as unknown as { masters?: { id: string }[]; layouts?: { id: string }[] };
+      const haveM = new Set((doc.masters ?? []).map((m) => m.id));
+      const haveL = new Set((doc.layouts ?? []).map((l) => l.id));
+      const newMasters = structuredClone((masters as { id: string }[]).filter((m) => m?.id && !haveM.has(m.id)));
+      const newLayouts = structuredClone((layouts as { id: string }[]).filter((l) => l?.id && !haveL.has(l.id)));
+      if (!newMasters.length && !newLayouts.length) return 0;
+      const beforeM = doc.masters;
+      const beforeL = doc.layouts;
+      perform(
+        () => {
+          const live = get().doc as unknown as typeof doc;
+          live.masters = [...(live.masters ?? []), ...structuredClone(newMasters)];
+          live.layouts = [...(live.layouts ?? []), ...structuredClone(newLayouts)];
+        },
+        () => {
+          const live = get().doc as unknown as typeof doc;
+          live.masters = beforeM;
+          live.layouts = beforeL;
+        },
+      );
+      return newLayouts.length;
+    },
+    ensureSlideLayouts: (size) => {
       const doc = get().doc as unknown as { masters?: unknown[]; layouts?: unknown[]; pages: { width: number; height: number }[] };
       if (doc.layouts?.length) return; // already installed
-      const { master, layouts } = builtinMasterAndLayouts(doc.pages[0] ?? { width: 1920, height: 1080 });
+      // Size the built-ins to the caller's target page (generation runs at the
+      // ACTIVE page size, which in a mixed-size document may differ from
+      // pages[0]); rects and capacities are derived from this size.
+      const { master, layouts } = builtinMasterAndLayouts(size ?? doc.pages[0] ?? { width: 1920, height: 1080 });
       const beforeM = doc.masters;
       const beforeL = doc.layouts;
       perform(
@@ -3548,23 +4338,165 @@ export const useEditor = create<EditorState>((set, get) => {
         () => { doc.masters = beforeM; doc.layouts = beforeL; },
       );
     },
-    setDeckTheme: (theme) => {
-      const doc = get().doc as unknown as { theme?: Theme; masters?: { theme?: string }[] };
+    setDeckTheme: (theme, opts) => {
+      const doc = get().doc as unknown as {
+        theme?: Theme;
+        masters?: { theme?: string; placeholders?: { id: string; role: string }[] }[];
+        layouts?: { id: string; placeholders: { id: string; role: string }[] }[];
+      };
       const before = doc.theme;
       const beforeMasters = doc.masters?.map((m) => m.theme);
       if (before?.id === theme?.id) return;
+      const restyle = opts?.restyle !== false;
+
+      // T19: adopting a theme also restyles what the OLD theme painted - an
+      // exact slot-by-slot color remap (alpha preserved) plus the font-pair
+      // swap - and master-linked text (placeholder-materialized nodes) adopts
+      // the new fonts by role. Exact matches only: a user's own colors and
+      // fonts never match a theme slot and never move. Clearing the theme
+      // leaves content untouched.
+      //
+      // Everything mutates IN PLACE, preserving page/node/fill identity: many
+      // other undo closures capture page or node references, and replacing
+      // doc.pages with clones would detach them (their undo/redo would then
+      // mutate dead objects). Undo/redo of THIS action restores per-page
+      // snapshots by page id, field-by-field into the existing page object.
+      const pages = get().doc.pages;
+      const pageDiffs: { id: string; before: Page; after: Page }[] = [];
+      let pagesChanged = false; // per-page flag, reset per page below
+      if (theme && restyle) {
+        const rgbKey = (c: Color) => toHex({ srgb: { ...c.srgb, a: 1 } });
+        const colorMap = new Map<string, Color>();
+        const slots = Math.min(before?.colors.length ?? 0, theme.colors.length);
+        for (let i = 0; i < slots; i++) {
+          const from = before?.colors[i]?.color;
+          const to = theme.colors[i]?.color;
+          if (!from || !to) continue;
+          const key = rgbKey(from);
+          // First slot wins when two slots share a color (a generated theme's
+          // primary and paper are both the page background).
+          if (key !== rgbKey(to) && !colorMap.has(key)) colorMap.set(key, to);
+        }
+        const fontMap = new Map<string, string>();
+        if (before?.fontHeading && theme.fontHeading && before.fontHeading !== theme.fontHeading)
+          fontMap.set(before.fontHeading.toLowerCase(), theme.fontHeading);
+        if (before?.fontBody && theme.fontBody && before.fontBody !== theme.fontBody)
+          fontMap.set(before.fontBody.toLowerCase(), theme.fontBody);
+
+        // Returns the replacement color, or null when the color maps to
+        // nothing (leave it untouched - identity preserved).
+        const mapColor = (c: Color | undefined): Color | null => {
+          if (!c) return null;
+          const to = colorMap.get(rgbKey(c));
+          if (!to) return null;
+          pagesChanged = true;
+          return { srgb: { ...to.srgb, a: c.srgb.a } }; // keep the painted alpha
+        };
+        // Remap a fill's colors IN PLACE (object identity preserved).
+        const mapFillInPlace = (fill: Fill | undefined): void => {
+          if (!fill) return;
+          const f = fill as unknown as { type?: string; color?: Color; stops?: { color: Color }[] };
+          if (f.type === "solid" && f.color) {
+            const to = mapColor(f.color);
+            if (to) f.color = to;
+          } else if (Array.isArray(f.stops)) {
+            for (const st of f.stops) {
+              const to = mapColor(st.color);
+              if (to) st.color = to;
+            }
+          }
+        };
+
+        // Placeholder roles per page (ids repeat across layouts, so resolve
+        // against each page's OWN layout, master placeholders included).
+        const layoutById = new Map((doc.layouts ?? []).map((l) => [l.id, l]));
+        for (const page of pages) {
+          const beforeSnap = structuredClone(page);
+          pagesChanged = false;
+          const layout = layoutById.get((page as unknown as { layoutId?: string }).layoutId ?? "");
+          const roleById = new Map<string, string>();
+          if (layout) {
+            const master = doc.masters?.find((m) => (m as { id?: string }).id === (layout as unknown as { masterId?: string }).masterId);
+            for (const ph of master?.placeholders ?? []) roleById.set(ph.id, ph.role);
+            for (const ph of layout.placeholders) roleById.set(ph.id, ph.role);
+          }
+          const pg = page as unknown as { background?: Fill };
+          mapFillInPlace(pg.background);
+          const applyNode = (n: Node) => {
+            if (n.locked || editBlocked(n.id)) return;
+            const rec = n as unknown as {
+              fills?: Fill[];
+              stroke?: { fill?: Fill; color?: Color };
+              data?: { placeholderId?: string };
+              content?: { runs: { style: { fill?: Fill; color?: Color; fontFamily?: string } }[] }[];
+              children?: Node[];
+            };
+            for (const f of rec.fills ?? []) mapFillInPlace(f);
+            if (rec.stroke) {
+              mapFillInPlace(rec.stroke.fill);
+              if (rec.stroke.color) {
+                const to = mapColor(rec.stroke.color);
+                if (to) rec.stroke.color = to;
+              }
+            }
+            // Master-linked text adopts the new pair by role - but only where
+            // the run still wears the OLD theme's font for that role (or none
+            // at all). A font the user picked by hand matches neither and
+            // stays. Non-placeholder text only follows an exact pair match.
+            const role = rec.data?.placeholderId ? roleById.get(rec.data.placeholderId) : undefined;
+            const roleFont = role ? (role === "title" ? theme.fontHeading : theme.fontBody) : undefined;
+            const oldRoleFont = role ? (role === "title" ? before?.fontHeading : before?.fontBody) : undefined;
+            let fontChanged = false;
+            for (const para of rec.content ?? [])
+              for (const run of para.runs) {
+                mapFillInPlace(run.style.fill);
+                if (run.style.color) {
+                  const to = mapColor(run.style.color);
+                  if (to) run.style.color = to;
+                }
+                const wearsOldRole = !run.style.fontFamily ||
+                  (!!oldRoleFont && run.style.fontFamily.toLowerCase() === oldRoleFont.toLowerCase());
+                const target = (roleFont && wearsOldRole ? roleFont : undefined) ??
+                  (run.style.fontFamily ? fontMap.get(run.style.fontFamily.toLowerCase()) : undefined);
+                if (target && run.style.fontFamily !== target) {
+                  run.style.fontFamily = target;
+                  fontChanged = true;
+                  pagesChanged = true;
+                }
+              }
+            if (fontChanged) refitTextHeight(n);
+            for (const kid of rec.children ?? []) applyNode(kid);
+          };
+          for (const n of page.children) applyNode(n);
+          if (pagesChanged) {
+            pageDiffs.push({ id: (page as unknown as { id: string }).id, before: beforeSnap, after: structuredClone(page) });
+          }
+        }
+      }
+
+      // The pages are ALREADY in their after state (mutated in place above);
+      // the first forward run must not re-clone them, only redo does.
+      let firstRun = true;
       perform(
         () => {
           // Reuse the pure helper so the file-level swap (and master repointing)
           // stays in one place; then mirror it onto the live mutable doc.
-          if (!theme) { doc.theme = undefined; return; }
-          const next = applyTheme(get().doc, theme);
-          doc.theme = next.theme;
-          if (next.masters && doc.masters) next.masters.forEach((m, i) => { if (doc.masters![i]) doc.masters![i].theme = m.theme; });
+          const live = get().doc as unknown as { theme?: Theme; masters?: { theme?: string }[] };
+          if (theme) {
+            const next = applyTheme(get().doc, theme);
+            live.theme = next.theme;
+            if (next.masters && live.masters) next.masters.forEach((m, i) => { if (live.masters![i]) live.masters![i].theme = m.theme; });
+          } else {
+            live.theme = undefined;
+          }
+          if (!firstRun) for (const d of pageDiffs) restorePageSnapshot(d.id, d.after);
+          firstRun = false;
         },
         () => {
-          doc.theme = before;
-          if (beforeMasters && doc.masters) doc.masters.forEach((m, i) => { m.theme = beforeMasters[i]; });
+          const live = get().doc as unknown as { theme?: Theme; masters?: { theme?: string }[] };
+          live.theme = before;
+          if (beforeMasters && live.masters) live.masters.forEach((m, i) => { m.theme = beforeMasters[i]; });
+          for (const d of pageDiffs) restorePageSnapshot(d.id, d.before);
         },
       );
     },
@@ -3614,6 +4546,94 @@ export const useEditor = create<EditorState>((set, get) => {
         () => { page.name = next; },
         () => { page.name = before; },
       );
+    },
+    dismissReflowHint: () => set({ reflowHint: null }),
+    setPageAutoflow: (index, on) => {
+      const page = get().doc.pages[index] as unknown as { data?: Record<string, unknown> };
+      if (!page) return;
+      const before = page.data?.autoflow as boolean | undefined;
+      const next = on ? undefined : false; // absent = on (the default)
+      if (before === next) return;
+      const write = (v: boolean | undefined) => {
+        if (v === undefined) { if (page.data) delete page.data.autoflow; }
+        else (page.data ??= {}).autoflow = v;
+      };
+      perform(() => write(next), () => write(before));
+      if (!on) set({ reflowHint: null });
+    },
+    switchPageLayout: (pageIndex, toLayoutId) => {
+      const doc = get().doc as unknown as { pages: Page[]; layouts?: { id: string; name: string; placeholders: { id: string; role: string }[] }[] };
+      const page = doc.pages[pageIndex] as unknown as { children: Node[] };
+      const to = doc.layouts?.find((l) => l.id === toLayoutId);
+      if (!page || !to) return false;
+      // Capture the page's placeholder text BY ROLE before the switch: slot
+      // ids differ between layouts, so applyLayoutToPage's prune would
+      // otherwise drop the content with the old boxes. Only text-carrying
+      // roles feed the redistribution - a footer travels to the new layout's
+      // footer slot (never becomes a bullet), other roles (picture, chart,
+      // media) hold scaffold text that must not either. Untouched scaffold
+      // strings are skipped: the new layout materializes its own.
+      const fromLayout = doc.layouts?.find((l) => l.id === (doc.pages[pageIndex] as unknown as { layoutId?: string }).layoutId);
+      const roleById = new Map((fromLayout?.placeholders ?? []).map((ph) => [ph.id, ph.role] as const));
+      const scaffold = new Set([tr("app.title"), tr("app.text")]);
+      let title = "";
+      let footer = "";
+      const points: string[] = [];
+      type Textish = { type: string; data?: { placeholderId?: string }; content?: { runs: { text: string }[] }[] };
+      for (const n of page.children as unknown as Textish[]) {
+        const phId = n.data?.placeholderId;
+        if (!phId || n.type !== "text" || !n.content?.length) continue;
+        const role = roleById.get(phId);
+        const lines = n.content
+          .map((par) => par.runs.map((r) => r.text).join("").replace(/^•\s*/, "").trim())
+          .filter((l) => l && !scaffold.has(l));
+        if (role === "title") { if (!title) title = lines.join(" "); }
+        else if (role === "footer") { if (!footer) footer = lines.join(" "); }
+        else if (role === "body" || role === "content") points.push(...lines);
+      }
+      let ok = false;
+      get().runAsTurn(() => {
+        ok = get().applyLayoutToPage(toLayoutId, pageIndex, { pruneObsolete: true, snapExisting: true });
+        if (!ok) return;
+        const fill = fallbackLayoutFill(to as never, { id: "reflow", title, points, visualRole: "content" });
+        const footerSlot = (to.placeholders as { id: string; role: string }[]).find((p) => p.role === "footer");
+        if (footer && footerSlot) fill.texts[footerSlot.id] = footer;
+        // An empty capture must not blank the new layout's scaffold text.
+        for (const k of Object.keys(fill.texts)) if (!fill.texts[k].trim()) delete fill.texts[k];
+        get().fillPlaceholderContent(pageIndex, { texts: fill.texts, lists: fill.lists });
+      });
+      set({ reflowHint: null });
+      return ok;
+    },
+    setPageWorkStatus: (index, status) => {
+      const page = get().doc.pages[index] as unknown as { data?: Record<string, unknown> };
+      if (!page) return;
+      const before = page.data?.status as string | undefined;
+      const next = status?.trim() || undefined;
+      if (before === next) return;
+      // Write into the page's open data record, and DELETE cleared keys (an
+      // explicit undefined would propagate through the key-driven CRDT).
+      const write = (v: string | undefined) => {
+        if (v === undefined) { if (page.data) delete page.data.status; }
+        else (page.data ??= {}).status = v;
+      };
+      perform(() => write(next), () => write(before));
+    },
+    setPageAssignee: (index, assignee) => {
+      const page = get().doc.pages[index] as unknown as { data?: Record<string, unknown> };
+      if (!page) return;
+      const before = { id: page.data?.assigneeId as string | undefined, name: page.data?.assigneeName as string | undefined };
+      const next = assignee ? { id: assignee.id, name: assignee.name } : { id: undefined, name: undefined };
+      if (before.id === next.id && before.name === next.name) return;
+      // Per-key delete-or-set (never an explicit undefined, which would
+      // propagate through the key-driven CRDT reconcile).
+      const write = (v: { id: string | undefined; name: string | undefined }) => {
+        if (!page.data && v.id === undefined && v.name === undefined) return;
+        const d = (page.data ??= {});
+        if (v.id === undefined) delete d.assigneeId; else d.assigneeId = v.id;
+        if (v.name === undefined) delete d.assigneeName; else d.assigneeName = v.name;
+      };
+      perform(() => write(next), () => write(before));
     },
     setPageLocked: (index, locked) => {
       const doc = get().doc;
@@ -4022,7 +5042,7 @@ export const useEditor = create<EditorState>((set, get) => {
       // Mirror to the OS clipboard so paste survives refresh/other tabs and so
       // the native paste handler treats the freshest copy as the source.
       if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-        navigator.clipboard.writeText(OC_CLIP_PREFIX + JSON.stringify(nodes)).catch(() => {});
+        navigator.clipboard.writeText(ocClipPrefix + JSON.stringify(nodes)).catch(() => {});
       }
     },
     cutSelection: () => {
@@ -4513,6 +5533,200 @@ export const useEditor = create<EditorState>((set, get) => {
       );
       return true;
     },
+    importPagesFrom: (file, pageIndices, opts) => {
+      if (!usePresence.getState().canEdit() || get().readonlyPreview()) return 0;
+      const doc = get().doc;
+      ensureDocArrays(doc);
+      const srcPages = pageIndices
+        .map((i) => (file.pages ?? [])[i])
+        .filter((p): p is Page => !!p);
+      if (!srcPages.length) return 0;
+      const idGen = () => `n_${crypto.randomUUID().slice(0, 12)}`;
+
+      // Assets the chosen pages actually reference (any nested `assetId`
+      // string, so image/video sources, image FILLS - including a page
+      // background image - and future carriers all count). Walk the whole
+      // page, not just children.
+      const usedAssetIds = new Set<string>();
+      const collectAssetIds = (v: unknown): void => {
+        if (!v || typeof v !== "object") return;
+        if (Array.isArray(v)) { v.forEach(collectAssetIds); return; }
+        const rec = v as Record<string, unknown>;
+        if (typeof rec.assetId === "string") usedAssetIds.add(rec.assetId);
+        for (const k of Object.keys(rec)) collectAssetIds(rec[k]);
+      };
+      srcPages.forEach((p) => collectAssetIds(p));
+      // Carry each used asset ref. A colliding id pointing at a DIFFERENT url
+      // is reminted and the imported pages' references rewritten, or the
+      // inserted slide would silently render this document's other image.
+      const byId = new Map(doc.assets.map((a) => [a.id, a] as const));
+      const newAssets: AssetRef[] = [];
+      const assetIdRewrite = new Map<string, string>();
+      for (const id of usedAssetIds) {
+        const src = (file.assets ?? []).find((a) => a.id === id);
+        if (!src) continue; // an unresolvable ref stays as-is (renders missing, same as in the source)
+        const existing = byId.get(id);
+        if (existing && existing.url === src.url) continue; // the same asset: reuse
+        if (!existing) { newAssets.push(structuredClone(src) as AssetRef); continue; }
+        const fresh = `asset_${crypto.randomUUID().slice(0, 12)}`;
+        assetIdRewrite.set(id, fresh);
+        const clone = structuredClone(src) as AssetRef;
+        (clone as { id: string }).id = fresh;
+        newAssets.push(clone);
+      }
+      const rewriteAssetIds = (v: unknown): void => {
+        if (!v || typeof v !== "object") return;
+        if (Array.isArray(v)) { v.forEach(rewriteAssetIds); return; }
+        const rec = v as Record<string, unknown>;
+        if (typeof rec.assetId === "string" && assetIdRewrite.has(rec.assetId)) {
+          rec.assetId = assetIdRewrite.get(rec.assetId);
+        }
+        for (const k of Object.keys(rec)) rewriteAssetIds(rec[k]);
+      };
+
+      // Theme match (T19 semantics, page-scoped): the source theme's slot i
+      // color maps to this document's slot i color where the paint matches
+      // EXACTLY (alpha preserved); the font pair swaps the same way. A hand-
+      // picked color or font matches neither theme and never moves.
+      const destTheme = (doc as unknown as { theme?: Theme }).theme;
+      const srcTheme = (file as unknown as { theme?: Theme }).theme;
+      const wantMatch = opts?.matchTheme !== false && !!destTheme && !!srcTheme && destTheme.id !== srcTheme.id;
+      const rgbKey = (c: Color) => toHex({ srgb: { ...c.srgb, a: 1 } });
+      const colorMap = new Map<string, Color>();
+      const fontMap = new Map<string, string>();
+      if (wantMatch && srcTheme && destTheme) {
+        const slots = Math.min(srcTheme.colors.length, destTheme.colors.length);
+        for (let i = 0; i < slots; i++) {
+          const from = srcTheme.colors[i]?.color;
+          const to = destTheme.colors[i]?.color;
+          if (!from || !to) continue;
+          const key = rgbKey(from);
+          if (key !== rgbKey(to) && !colorMap.has(key)) colorMap.set(key, to);
+        }
+        if (srcTheme.fontHeading && destTheme.fontHeading && srcTheme.fontHeading !== destTheme.fontHeading)
+          fontMap.set(srcTheme.fontHeading.toLowerCase(), destTheme.fontHeading);
+        if (srcTheme.fontBody && destTheme.fontBody && srcTheme.fontBody !== destTheme.fontBody)
+          fontMap.set(srcTheme.fontBody.toLowerCase(), destTheme.fontBody);
+      }
+      const mapColor = (c: Color | undefined): Color | null => {
+        if (!c) return null;
+        const to = colorMap.get(rgbKey(c));
+        return to ? { srgb: { ...to.srgb, a: c.srgb.a } } : null;
+      };
+      const mapFill = (fill: unknown): void => {
+        const f = fill as { type?: string; color?: Color; stops?: { color: Color }[] } | undefined;
+        if (!f) return;
+        if (f.type === "solid" && f.color) {
+          const to = mapColor(f.color);
+          if (to) f.color = to;
+        } else if (Array.isArray(f.stops)) {
+          for (const stp of f.stops) {
+            const to = mapColor(stp.color);
+            if (to) stp.color = to;
+          }
+        }
+      };
+      const restyleNode = (n: Node): void => {
+        const rec = n as unknown as {
+          fills?: unknown[];
+          stroke?: { fill?: unknown; color?: Color };
+          content?: { runs: { style: { fill?: unknown; color?: Color; fontFamily?: string } }[] }[];
+          children?: Node[];
+        };
+        for (const f of rec.fills ?? []) mapFill(f);
+        if (rec.stroke) {
+          mapFill(rec.stroke.fill);
+          if (rec.stroke.color) {
+            const to = mapColor(rec.stroke.color);
+            if (to) rec.stroke.color = to;
+          }
+        }
+        let fontChanged = false;
+        for (const para of rec.content ?? [])
+          for (const run of para.runs) {
+            mapFill(run.style.fill);
+            if (run.style.color) {
+              const to = mapColor(run.style.color);
+              if (to) run.style.color = to;
+            }
+            const target = run.style.fontFamily ? fontMap.get(run.style.fontFamily.toLowerCase()) : undefined;
+            if (target && run.style.fontFamily !== target) {
+              run.style.fontFamily = target;
+              fontChanged = true;
+            }
+          }
+        if (fontChanged) refitTextHeight(n);
+        for (const kid of rec.children ?? []) restyleNode(kid);
+      };
+
+      const cur = doc.pages[Math.min(get().activePage, Math.max(0, doc.pages.length - 1))];
+      const target = cur && cur.width > 0 && cur.height > 0 ? { width: cur.width, height: cur.height } : null;
+      const made = srcPages.map((p, i) => {
+        let page = structuredClone(p) as Page & { name?: string; readingOrder?: string[]; layoutId?: string; sectionId?: string };
+        page.id = `page_${crypto.randomUUID().slice(0, 12)}`;
+        page.name = page.name || `Slide ${i + 1}`;
+        // Source-document references that cannot resolve here are dropped: a
+        // dangling layout link would break the title sync and restyle role
+        // lookups, and a dangling section id belongs to the other deck.
+        delete page.layoutId;
+        delete page.sectionId;
+        const remapped = remapIds(structuredClone(p.children ?? []) as Node[], idGen);
+        page.children = remapped.nodes as never[];
+        if (Array.isArray(page.readingOrder)) {
+          const ro = page.readingOrder
+            .map((id) => remapped.idMap.get(id))
+            .filter((id): id is string => !!id);
+          if (ro.length) page.readingOrder = ro;
+          else delete page.readingOrder;
+        }
+        rewriteAssetIds(page); // whole page: an image-fill background carries an assetId too
+        if (wantMatch) {
+          mapFill((page as unknown as { background?: unknown }).background);
+          for (const n of page.children) restyleNode(n as Node);
+        }
+        if (
+          target &&
+          page.width > 0 &&
+          page.height > 0 &&
+          (Math.round(page.width) !== Math.round(target.width) || Math.round(page.height) !== Math.round(target.height))
+        ) {
+          page = resizePage(page, target) as typeof page;
+        }
+        return page;
+      });
+
+      // Custom fonts ride along (family-deduped), same as the template path.
+      const docFonts = (doc as unknown as { fonts: FontRef[] }).fonts;
+      const haveFamily = new Set(docFonts.map((f) => f.family.toLowerCase()));
+      const newFonts = structuredClone(
+        ((file.fonts ?? []) as FontRef[]).filter((f) => f?.family && !haveFamily.has(f.family.toLowerCase())),
+      );
+
+      const at = Math.min(get().activePage + 1, doc.pages.length);
+      const prevPage = get().activePage;
+      const prevSel = get().selection;
+      perform(
+        () => {
+          doc.assets.push(...(structuredClone(newAssets) as never[]));
+          docFonts.push(...structuredClone(newFonts));
+          doc.pages.splice(at, 0, ...(made.map((m) => structuredClone(m)) as never[]));
+          set({ activePage: at, selection: [] });
+        },
+        () => {
+          doc.pages.splice(at, made.length);
+          for (const a of newAssets) {
+            const i = doc.assets.findIndex((x) => x.id === a.id);
+            if (i >= 0) doc.assets.splice(i, 1);
+          }
+          for (const f of newFonts) {
+            const i = docFonts.findIndex((x) => x.id === f.id && x.family === f.family);
+            if (i >= 0) docFonts.splice(i, 1);
+          }
+          set({ activePage: Math.min(prevPage, doc.pages.length - 1), selection: prevSel });
+        },
+      );
+      return made.length;
+    },
     importSvg: (svg) => {
       // Flatten group transforms first so positions/scales/rotations are correct.
       const { nodes, assets } = flattenSvgToNodes(svg);
@@ -4624,6 +5838,75 @@ export const useEditor = create<EditorState>((set, get) => {
       }
     },
 
+    applyGeneratedBackground: (pageId, url, prompt) => {
+      const doc = get().doc;
+      ensureDocArrays(doc);
+      const page = doc.pages.find((p) => p.id === pageId);
+      if (!page) return false; // design changed: a late resolution never lands elsewhere
+      const assetId = `asset-${crypto.randomUUID()}`;
+      const node = createNode("image", {
+        name: tr("app.background"),
+        source: { assetId, naturalWidth: 0, naturalHeight: 0 },
+        fit: "cover",
+        transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+        size: { width: page.width, height: page.height },
+      } as Partial<Node>);
+      node.data = { aiImagePrompt: prompt };
+      const ref: AssetRef = { id: assetId, kind: "image", url, mime: "image/*", checksum: "" };
+      // A retry or regeneration replaces the previous generated background
+      // rather than stacking: remove any existing prompt-stamped background.
+      const prevNode = page.children.find((n) => {
+        const d = n.data as { aiImagePrompt?: string; placeholderId?: string } | undefined;
+        // Only a previous generated BACKGROUND qualifies: a picture-slot image
+        // also carries aiImagePrompt but belongs to its placeholder.
+        return n.type === "image" && !!d?.aiImagePrompt && !d?.placeholderId;
+      });
+      const prevId = prevNode?.id;
+      const prevSnapshot = prevNode ? structuredClone(prevNode) : null;
+      perform(
+        () => {
+          const live = get().doc.pages.find((p) => p.id === pageId);
+          if (!live) return;
+          if (prevId) {
+            const i = live.children.findIndex((n) => n.id === prevId);
+            if (i >= 0) live.children.splice(i, 1);
+          }
+          get().doc.assets.push(ref);
+          live.children.unshift(node); // back of the z-order, full bleed
+        },
+        () => {
+          const live = get().doc.pages.find((p) => p.id === pageId);
+          if (live) {
+            const i = live.children.findIndex((n) => n.id === node.id);
+            if (i >= 0) live.children.splice(i, 1);
+            if (prevSnapshot) live.children.unshift(structuredClone(prevSnapshot));
+          }
+          const assets = get().doc.assets;
+          const ai = assets.findIndex((a) => a.id === assetId);
+          if (ai >= 0) assets.splice(ai, 1);
+        },
+      );
+      // Patch the real natural dimensions once loaded so PPI/fit math is exact
+      // (same idiom as addPageBackgroundImage: resolve via the LIVE doc).
+      if (typeof window !== "undefined") {
+        imageAssets.register(assetId, url);
+        const off = imageAssets.onChange((changed) => {
+          if (changed !== assetId) return;
+          if (imageAssets.status(assetId) === "ready") {
+            const img = imageAssets.image(assetId) as { naturalWidth?: number; naturalHeight?: number } | null;
+            const loc = locate(get().doc, node.id);
+            const n = loc?.node.type === "image" ? (loc.node as unknown as { source: { naturalWidth: number; naturalHeight: number } }) : undefined;
+            if (img?.naturalWidth && n) {
+              n.source.naturalWidth = img.naturalWidth;
+              n.source.naturalHeight = img.naturalHeight ?? page.height;
+              get().tick();
+            }
+          }
+          off();
+        });
+      }
+      return true;
+    },
     addPageBackgroundImage: (url) => {
       const doc = get().doc;
       ensureDocArrays(doc);
@@ -5497,37 +6780,48 @@ export const useEditor = create<EditorState>((set, get) => {
 
       // Map one color to its target: an explicit override (a chosen brand hex, or
       // "keep" to leave it) when present, else its nearest brand color. Records
-      // the mapping once per distinct source color.
-      const mapColor = (c: Color | undefined): Color | undefined => {
-        if (!c || brand.palette.length === 0) return c;
+      // the mapping once per distinct source color. Returns the replacement, or
+      // null when the color stays - the caller mutates IN PLACE only on a real
+      // change, so page/node/fill identity survives (other undo entries hold
+      // references into these objects).
+      let pageChanged = false; // per page, reset in the page loop below
+      const mapColor = (c: Color | undefined): Color | null => {
+        if (!c || brand.palette.length === 0) return null;
         const from = toHex(c);
         const override = ov[from.toLowerCase()];
         let to: string;
         if (override !== undefined) {
-          if (override === "keep") return c; // user chose to keep the original
+          if (override === "keep") return null; // user chose to keep the original
           to = override;
         } else {
           const m = nearestPaletteColor(c, brand.palette);
-          if (!m) return c;
+          if (!m) return null;
           to = toHex(m.color);
         }
         if (from !== to && !colorSeen.has(from)) {
           colorSeen.add(from);
           colors.push({ from, to });
         }
-        if (from === to) return c;
+        if (from === to) return null;
         const toColor = fromHex(to);
-        if (!toColor) return c; // malformed override hex: leave the color untouched
+        if (!toColor) return null; // malformed override hex: leave the color untouched
+        pageChanged = true;
         // Preserve the original alpha so a re-skin never makes a color opaque.
         return { srgb: { ...toColor.srgb, a: c.srgb.a } };
       };
-      const mapFill = (fill: Fill | undefined): Fill | undefined => {
-        if (!fill) return fill;
+      // Remap a fill's colors IN PLACE (object identity preserved).
+      const mapFillInPlace = (fill: Fill | undefined): void => {
+        if (!fill) return;
         const f = fill as unknown as { type?: string; color?: Color; stops?: { color: Color }[] };
-        if (f.type === "solid" && f.color) return { ...fill, color: mapColor(f.color) } as Fill;
-        if (Array.isArray(f.stops))
-          return { ...fill, stops: f.stops.map((s) => ({ ...s, color: mapColor(s.color)! })) } as Fill;
-        return fill;
+        if (f.type === "solid" && f.color) {
+          const to = mapColor(f.color);
+          if (to) f.color = to;
+        } else if (Array.isArray(f.stops)) {
+          for (const stop of f.stops) {
+            const to = mapColor(stop.color);
+            if (to) stop.color = to;
+          }
+        }
       };
       // Map a font family to the kit's first font (heading/body convention).
       const mapFont = (fam: string | undefined): string | undefined => {
@@ -5550,19 +6844,28 @@ export const useEditor = create<EditorState>((set, get) => {
           content?: { runs: { style: { fill?: Fill; color?: Color; fontFamily?: string } }[] }[];
           children?: Node[];
         };
-        if (rec.fills) rec.fills = rec.fills.map((f) => mapFill(f)!) as Fill[];
+        for (const f of rec.fills ?? []) mapFillInPlace(f);
         if (rec.stroke) {
-          if (rec.stroke.fill) rec.stroke.fill = mapFill(rec.stroke.fill);
-          if (rec.stroke.color) rec.stroke.color = mapColor(rec.stroke.color);
+          mapFillInPlace(rec.stroke.fill);
+          if (rec.stroke.color) {
+            const to = mapColor(rec.stroke.color);
+            if (to) rec.stroke.color = to;
+          }
         }
         let fontChanged = false;
         for (const para of rec.content ?? [])
           for (const run of para.runs) {
-            if (run.style.fill) run.style.fill = mapFill(run.style.fill);
-            if (run.style.color) run.style.color = mapColor(run.style.color);
+            mapFillInPlace(run.style.fill);
+            if (run.style.color) {
+              const to = mapColor(run.style.color);
+              if (to) run.style.color = to;
+            }
             const swapped = mapFont(run.style.fontFamily);
-            if (swapped !== run.style.fontFamily) fontChanged = true;
-            run.style.fontFamily = swapped;
+            if (swapped !== run.style.fontFamily) {
+              fontChanged = true;
+              pageChanged = true;
+              run.style.fontFamily = swapped;
+            }
           }
         // A swapped family wraps differently; keep the box on the text. Only
         // when a font actually changed, so a color-only re-skin can't fold
@@ -5571,24 +6874,38 @@ export const useEditor = create<EditorState>((set, get) => {
         for (const kid of rec.children ?? []) applyNode(kid);
       };
 
-      // One undo step over the whole pages array (before/after deep clones), so
-      // re-skin + every individual remap is a single reversible operation.
-      const before = structuredClone(doc.pages);
+      // One undo step built from per-page diffs. Mutation is strictly in place
+      // (nothing changed = nothing touched, no identity churn to revert), and
+      // undo/redo restore snapshots BY PAGE ID into the existing page objects,
+      // never replacing them with clones - the old whole-array clone swap
+      // detached every page reference other undo entries had captured, so a
+      // neighboring entry's undo/redo mutated dead objects.
+      const pageDiffs: { id: string; before: Page; after: Page }[] = [];
       for (const page of doc.pages) {
+        const beforeSnap = structuredClone(page);
+        pageChanged = false;
         const pg = page as unknown as { background?: Fill };
-        if (pg.background) pg.background = mapFill(pg.background);
+        mapFillInPlace(pg.background);
         for (const n of page.children) applyNode(n);
+        if (pageChanged) pageDiffs.push({ id: page.id, before: beforeSnap, after: structuredClone(page) });
       }
-      if (colors.length === 0 && fonts.length === 0) {
-        // Nothing changed; revert any structural identity churn and skip the
-        // undo entry so the history stays clean.
-        doc.pages = structuredClone(before) as never;
+      if (pageDiffs.length === 0) {
+        // Nothing was actually mutated (either nothing mapped, or the only
+        // recorded mapping was a malformed override that could not apply);
+        // skip the undo entry so the history holds no dead step.
         return { colors, fonts };
       }
-      const after = structuredClone(doc.pages);
+      // The pages are ALREADY in their after state; the first forward run must
+      // not re-clone them, only redo does.
+      let firstRun = true;
       perform(
-        () => { get().doc.pages = structuredClone(after) as never; },
-        () => { get().doc.pages = structuredClone(before) as never; },
+        () => {
+          if (!firstRun) for (const d of pageDiffs) restorePageSnapshot(d.id, d.after);
+          firstRun = false;
+        },
+        () => {
+          for (const d of pageDiffs) restorePageSnapshot(d.id, d.before);
+        },
       );
       // Preload any brand fonts now in use so the canvas reflows to them.
       return { colors, fonts };
@@ -5679,6 +6996,28 @@ export const useEditor = create<EditorState>((set, get) => {
     setContent: (id, content, boxHeight, boxHeightBefore) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return;
+      // C28: a slide's name follows its TITLE placeholder while the user has
+      // not renamed the page by hand (name empty, or still equal to the old
+      // derived title); an explicit rename breaks the link for that page.
+      const titleSync = (() => {
+        const rec = loc.node as unknown as { data?: { placeholderId?: string } };
+        const phId = rec.data?.placeholderId;
+        if (!phId) return null;
+        const docx = get().doc as unknown as { pages: Page[]; layouts?: { id: string; masterId: string; placeholders: { id: string; role: string }[] }[]; masters?: { id: string; placeholders?: { id: string; role: string }[] }[] };
+        const pg = docx.pages.find((pp) => pp.children.some((n) => n.id === id)) as (Page & { name?: string; layoutId?: string }) | undefined;
+        if (!pg) return null;
+        const layout = docx.layouts?.find((l) => l.id === pg.layoutId);
+        if (!layout) return null;
+        const master = docx.masters?.find((m) => m.id === layout.masterId);
+        const role = layout.placeholders.find((ph) => ph.id === phId)?.role ?? master?.placeholders?.find((ph) => ph.id === phId)?.role;
+        if (role !== "title") return null;
+        const firstLine = (c: Paragraph[]) => (c[0]?.runs ?? []).map((r) => (r as { text: string }).text).join("").split("\n")[0].trim().slice(0, 80);
+        const oldTitle = firstLine((loc.node as unknown as { content: Paragraph[] }).content);
+        const newTitle = firstLine(content);
+        if (!newTitle || newTitle === oldTitle) return null;
+        if (pg.name && pg.name !== oldTitle) return null; // hand-renamed: the link is broken
+        return { pg, beforeName: pg.name, afterName: newTitle };
+      })();
       const node = loc.node as unknown as { content: Paragraph[]; size: { width: number; height: number }; box: { height: number; mode?: string } };
       if (!content.length) return; // never leave a text node with zero paragraphs
       const before = structuredClone(node.content);
@@ -5699,10 +7038,77 @@ export const useEditor = create<EditorState>((set, get) => {
         else if (box.mode === "fixed" && !box.autoFit?.enabled) hNext = Math.max(hBefore, boxHeight);
       }
       if (Math.abs(hNext - hBefore) <= 0.5) hNext = hBefore;
+      // F40 E16 adaptive reflow: a placeholder-tagged box on a layout-linked,
+      // autoflow-on page steps its font along the role ladder as the content
+      // changes, INSIDE this same undo step. Guards: the box must still sit on
+      // its slot (a hand-moved box broke the link, the C28 rule), and its runs
+      // must share ONE size (mixed sizes read as deliberate styling).
+      const reflow = (() => {
+        const rec = loc.node as unknown as { data?: { placeholderId?: string }; transform: { x: number; y: number }; size: { width: number } };
+        const phId = rec.data?.placeholderId;
+        if (!phId) return null;
+        const docx = get().doc as unknown as { pages: Page[]; layouts?: { id: string; name: string; placeholders: { id: string; role: string; rect: { x: number; y: number; width: number; height: number } }[] }[] };
+        const pageIdx = docx.pages.findIndex((pp) => pp.children.some((n) => (n as Node).id === id));
+        const pg = docx.pages[pageIdx] as unknown as { id: string; layoutId?: string; data?: Record<string, unknown> } | undefined;
+        if (!pg?.layoutId || pg.data?.autoflow === false) return null;
+        const layout = docx.layouts?.find((l) => l.id === pg.layoutId);
+        const ph = layout?.placeholders.find((p) => p.id === phId);
+        if (!layout || !ph) return null;
+        const pageDims = docx.pages[pageIdx] as unknown as { width: number; height: number };
+        const slot = slotRectOnPage(layout, ph, pageDims);
+        // Hand-MOVING or hand-RESIZING the box off its slot breaks the link
+        // for that box (the C28 rule). Height is exempt: the refit rule grows
+        // it legitimately as content needs the room.
+        if (Math.abs(rec.transform.x - slot.x) > 2 || Math.abs(rec.transform.y - slot.y) > 2) return null;
+        if (Math.abs(rec.size.width - slot.width) > 2) return null;
+        const sizes = new Set(after.flatMap((par) => par.runs.map((r) => (r as { style: { fontSize: number } }).style.fontSize)));
+        if (sizes.size !== 1) return null;
+        const res = reflowPage(layout as never, [{
+          nodeId: id,
+          placeholderId: phId,
+          rect: { width: slot.width, height: slot.height },
+          fontSize: [...sizes][0],
+          paragraphs: after.map((par) => par.runs.map((r) => (r as { text: string }).text).join("")),
+        }], pageDims);
+        return { res, phId, pageId: pg.id, layoutId: pg.layoutId };
+      })();
+      if (reflow?.res.changed) {
+        const size = reflow.res.adjustments[0].fontSize;
+        for (const par of after) for (const run of par.runs) (run as { style: { fontSize: number } }).style.fontSize = size;
+      }
       perform(
-        () => { node.content = structuredClone(after); node.size.height = hNext; node.box.height = hNext; },
-        () => { node.content = structuredClone(before); node.size.height = hBefore; node.box.height = hBefore; },
+        () => {
+          node.content = structuredClone(after);
+          node.size.height = hNext;
+          node.box.height = hNext;
+          if (reflow?.res.changed) refitTextHeight(loc.node);
+          if (titleSync) titleSync.pg.name = titleSync.afterName;
+        },
+        () => {
+          node.content = structuredClone(before);
+          node.size.height = hBefore;
+          node.box.height = hBefore;
+          // Never write an explicit `name: undefined` own key: the CRDT
+          // reconcile is key-driven and would propagate it (same hazard as
+          // the interactions actionV2 fix).
+          if (titleSync) {
+            if (titleSync.beforeName === undefined) delete (titleSync.pg as { name?: string }).name;
+            else titleSync.pg.name = titleSync.beforeName;
+          }
+        },
       );
+      // E17: past what the ladder absorbs, propose the nearest layout variant
+      // (never applied automatically). A fitting edit clears any stale hint.
+      if (reflow) {
+        const v = reflow.res.verdicts[reflow.phId];
+        if (v === "overfull" || v === "underfull") {
+          const layouts = (get().doc as unknown as { layouts?: { id: string; name: string; placeholders: unknown[] }[] }).layouts ?? [];
+          const cand = variantCandidate(layouts as never, reflow.layoutId, v === "overfull" ? "denser" : "sparser");
+          set({ reflowHint: cand ? { pageId: reflow.pageId, toLayoutId: cand.id, toName: cand.name, direction: v === "overfull" ? "denser" : "sparser" } : null });
+        } else if (get().reflowHint?.pageId === reflow.pageId) {
+          set({ reflowHint: null });
+        }
+      }
     },
     growTextBoxLive: (id, height, fixedBase) => {
       const loc = locate(get().doc, id);
@@ -6028,6 +7434,56 @@ export const useEditor = create<EditorState>((set, get) => {
           rec.fit = before;
         },
       );
+    },
+    fixTextContrast: (id) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return 0;
+      // locate() already carries the page, and works for text NESTED in a
+      // frame/group too (a direct-children scan would miss it and judge
+      // contrast against white instead of the real page background).
+      const bgFill = (loc.page as unknown as { background?: { type?: string; color?: Color; stops?: { color: Color }[] } }).background;
+      const bg: Color = bgFill?.type === "solid" && bgFill.color ? bgFill.color : bgFill?.stops?.[0]?.color ?? { srgb: { r: 1, g: 1, b: 1, a: 1 } };
+      const node = loc.node as unknown as { content: { runs: { style: { fill?: { type?: string; color?: Color } } }[] }[] };
+      const before = structuredClone(node.content);
+      let changed = 0;
+      const after = structuredClone(node.content);
+      for (const para of after) {
+        for (const run of para.runs) {
+          const f = run.style.fill;
+          if (f?.type === "solid" && f.color && contrastRatio(f.color, bg) < 4.5) {
+            f.color = fixToAA(f.color, bg, 4.5);
+            changed++;
+          }
+        }
+      }
+      if (!changed) return 0;
+      perform(
+        () => { node.content = structuredClone(after); },
+        () => { node.content = structuredClone(before); },
+      );
+      return changed;
+    },
+    raiseMinFontSize: (id, min = 12) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "text" || loc.node.locked || editBlocked(id)) return 0;
+      const node = loc.node as unknown as { content: { runs: { style: { fontSize: number } }[] }[] };
+      const before = structuredClone(node.content);
+      let changed = 0;
+      const after = structuredClone(node.content);
+      for (const para of after) {
+        for (const run of para.runs) {
+          if (run.style.fontSize < min) {
+            run.style.fontSize = min;
+            changed++;
+          }
+        }
+      }
+      if (!changed) return 0;
+      perform(
+        () => { node.content = structuredClone(after); refitTextHeight(loc.node); },
+        () => { node.content = structuredClone(before); refitTextHeight(loc.node); },
+      );
+      return changed;
     },
     setNodeAltText: (id, altText) => {
       const loc = locate(get().doc, id);
@@ -6777,7 +8233,9 @@ export const useEditor = create<EditorState>((set, get) => {
       // undo revert the undo. perform() keeps the stacks empty while bound.
       const cu = get().collabUndo;
       if (cu) {
-        if (cu.canUndo()) cu.undo();
+        // A reflow hint describes the state AFTER the last edit; reverting
+        // that edit invalidates it (same below and in redo).
+        if (cu.canUndo()) { cu.undo(); set({ reflowHint: null }); }
         return;
       }
       const { undoStack } = get();
@@ -6786,6 +8244,7 @@ export const useEditor = create<EditorState>((set, get) => {
       entry.undo();
       set((s) => ({
         rev: s.rev + 1,
+        reflowHint: null,
         undoStack: s.undoStack.slice(0, -1),
         redoStack: [...s.redoStack, entry],
       }));
@@ -6793,7 +8252,7 @@ export const useEditor = create<EditorState>((set, get) => {
     redo: () => {
       const cu = get().collabUndo;
       if (cu) {
-        if (cu.canRedo()) cu.redo();
+        if (cu.canRedo()) { cu.redo(); set({ reflowHint: null }); }
         return;
       }
       const { redoStack } = get();
@@ -6802,6 +8261,7 @@ export const useEditor = create<EditorState>((set, get) => {
       entry.redo();
       set((s) => ({
         rev: s.rev + 1,
+        reflowHint: null,
         redoStack: s.redoStack.slice(0, -1),
         undoStack: [...s.undoStack, entry],
       }));

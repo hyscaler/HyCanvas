@@ -1,7 +1,7 @@
 import { Html, Head, Main, NextScript } from "next/document";
 import { brand } from "@/lib/theme.generated";
-import { THEME_BOOT_SCRIPT } from "@/lib/theme";
-import { LOCALE_BOOT_SCRIPT } from "@/lib/locale";
+import { themeBootScript } from "@/lib/theme";
+import { localeBootScript } from "@/lib/locale";
 import { tr } from "@/lib/i18n";
 
 export default function Document() {
@@ -14,10 +14,10 @@ export default function Document() {
     <Html lang="en" dir="ltr">
       <Head>
         {/* Apply the stored dark-mode preference before first paint (no flash). */}
-        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
         {/* Set lang and dir before first paint: a mirrored layout arriving a
             frame late moves every element on the page. */}
-        <script dangerouslySetInnerHTML={{ __html: LOCALE_BOOT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: localeBootScript }} />
         <meta name="theme-color" content={brand["600"]} />
         {/* Social share card (Open Graph + Twitter): the banner shown when a
             HyCanvas link is unfurled in chat, social, and previews. The image is

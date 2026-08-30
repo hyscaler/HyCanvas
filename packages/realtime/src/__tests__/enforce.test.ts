@@ -13,7 +13,7 @@ import {
   findNodeMap,
   snapshotNodes,
   restoreNodes,
-  SERVER_ORIGIN,
+  serverOrigin,
 } from "../index";
 
 /** A two-page file with a nested group, so findNodeMap's recursion is exercised. */
@@ -245,6 +245,6 @@ describe("restoreNodes (snapshot-and-correct)", () => {
     const origins: unknown[] = [];
     doc.on("update", (_u: Uint8Array, origin: unknown) => origins.push(origin));
     restoreNodes(doc, snap);
-    expect(origins).toContain(SERVER_ORIGIN);
+    expect(origins).toContain(serverOrigin);
   });
 });

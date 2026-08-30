@@ -75,6 +75,33 @@ export function switchOutline(outline: DesignOutline, to: DesignType): DesignOut
   return { title: outline.title, theme: outline.theme, pages: outline.pages.map((p) => ({ ...p, id: sid() })) };
 }
 
+// --- Citations (doc 28 completion C33) ---------------------------------------
+
+/** A structured web-research citation, carried from the search step to the deck. */
+export interface SourceCitation {
+  name: string;
+  url: string;
+}
+
+/** How many citations the appended Sources page lists (a slide stays readable). */
+export const maxSourceCitations = 8;
+
+/** Build the "Sources" outline page appended to a research-grounded deck: one
+ *  point per citation (source name, then URL), plus a speaker note carrying the
+ *  full numbered list so the references survive later slide-text edits. */
+export function sourcesOutlineItem(citations: SourceCitation[], title = "Sources"): OutlineItem {
+  const cites = citations
+    .filter((c) => c.name.trim() && c.url.trim())
+    .slice(0, maxSourceCitations);
+  return {
+    id: sid(),
+    title,
+    points: cites.map((c) => `${c.name.trim()} (${c.url.trim()})`),
+    visualRole: "content",
+    note: `${title}:\n${cites.map((c, i) => `${i + 1}. ${c.name.trim()} - ${c.url.trim()}`).join("\n")}`,
+  };
+}
+
 /** AI Magic Resize re-layout: recompose a spec at a new size (layoutDesign is
  *  size-aware, so this re-flows margins/type-scale/stack rather than scaling). */
 export function recomposeSpec(spec: AiDesignSpec, size: Size): LayoutResult {

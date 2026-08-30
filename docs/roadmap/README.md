@@ -13,6 +13,7 @@ For the product-wide north star (the goals and differentiators we hold ourselves
 | Realtime collaboration | [16-realtime-collaboration.md](16-realtime-collaboration.md) | Core, multi-instance, server-side CRDT fold + last-leave snapshot, in-CRDT branches, and the measured scale story all shipped; only on-wire per-node enforcement remains (deferred on per-frame decode cost) |
 | AI media | [23-ai-media.md](23-ai-media.md) | Not started (blocked on the video media pipeline and audio/video model endpoints) |
 | Presentations | [28-presentations.md](28-presentations.md) | Core + a long interop/AI/live tail shipped (PPTX export, deck-to-video MP4, present-and-record, live audience Q&A/polls/reactions, whole-deck translation, AI speaker notes, doc/URL/file ingestion, tagged PDF); PPTX import now ships too (full round-trip); masters/layouts UI and live-data charts/bulk merge remain |
+| AI platform (generation API, MCP, catalog, template-from-PPTX, reflow) | [40-ai-platform-tasks.md](40-ai-platform-tasks.md) | Not started (execution board written 2026-08-26; five phases, E01-E17, no design-file schema bumps planned) |
 | Whiteboard | [30-whiteboard.md](30-whiteboard.md) | Core, infinite canvas, ink, the full facilitation suite, and the Phase 3 AI canvas (diagram-from-prompt, clustering, summarize, Mermaid round-trip) shipped; agent deep-end and guest rate limiting remain |
 | Accessibility, i18n, security, compliance, self-host, NFR | [38-accessibility-i18n-security-compliance-selfhost-nfr.md](38-accessibility-i18n-security-compliance-selfhost-nfr.md) | **In progress.** Accessibility, i18n (seven full catalogs, 3232 keys each), export fidelity and RTL shipped, with a zero-violation axe pass recorded in `docs/audits/`. The FR-13 ratchet blind spot is closed, and API errors now localize (every problem+json response carries a stable code, enforced on both sides). Remaining: a manual screen-reader pass, passkeys (deferred), and the workspace-scoped half of the audit trail (FR-16/AC-7), deferred as useful but not pressing since the design-scoped half already ships. Enterprise governance (SAML, SCIM, DLP, CMEK, hash-chained audit) was dropped from scope, not deferred |
 
@@ -25,6 +26,11 @@ A version is a single global counter mirrored in Go (`backend/internal/persisten
 | 17 | shipped | |
 | 18 | shipped | `DesignFile.language` (F38, August 2026) |
 | 19 | Effect stack | `Effect.enabled` and `TextEffect.enabled`, the per-effect enable |
+| 20 | shipped | `ImageNode.alphaMask`, non-destructive background removal (August 2026; landed without claiming here - backfilled) |
+| 21 | F28 T11 | `Placeholder.maxChars/minChars/minItems/maxItems`, optional capacity hints for layout-grounded generation |
+| 22 | F28 completion C02+C03 | `PageTransition.easing` (plain string, engine-clamped) and `Page.transitionOut`, per-transition easing + exit transitions |
+| 23 | F28 completion C11+C12+C13+C15 | `Keyframe.color/width/height`, `KeyframeTrack.path/orient`, `AnimationClip.spring`, `NodeAnimation.trigger` - animation depth channels |
+| 24 | F28 completion C16 | `Interaction.actionV2` (plain-string kind + optional target), the play-media / run-animation interaction actions |
 
 This table was already wrong once, which is the case for keeping it. F38
 shipped `DesignFile.language` as v18 in August 2026 without reclaiming the
@@ -33,7 +39,7 @@ bumped to a version already in use, and the Go write boundary would have
 started rejecting files. Claim the number HERE first, then edit the spec.
 
 Two rules that follow from the counter being global. A bump must raise
-`CURRENT_SCHEMA_VERSION` and the Go mirror in the SAME change, or the write
+`currentSchemaVersion` and the Go mirror in the SAME change, or the write
 boundary answers 422 and nothing persists. And a version is permanent once it
 reaches a real instance: under the zero-data-loss rule every later binary has
 to open, migrate, and preserve it forever, so the moment before a schema

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   createBlankDesign,
   createNode,
-  KNOWN_NODE_TYPES,
+  knownNodeTypes,
   type DesignFile,
   type Node,
   type NodeType,
@@ -49,7 +49,7 @@ import {
 } from "../index";
 import type { ImageNode } from "@hc/schema";
 
-const constructable = KNOWN_NODE_TYPES.filter(
+const constructable = knownNodeTypes.filter(
   (t) => t !== "model3d",
 ) as Exclude<NodeType, "model3d">[];
 

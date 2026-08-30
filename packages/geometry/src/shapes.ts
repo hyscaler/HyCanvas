@@ -2,7 +2,7 @@
 // editable path used for rendering, hit-testing, masking, and booleans.
 
 import type { ShapeNode, SubPath, VectorAnchor, VectorPath } from "@hc/schema";
-import { KAPPA, type ParametricShape } from "./types";
+import { kappa, type ParametricShape } from "./types";
 
 const DEG = Math.PI / 180;
 
@@ -26,7 +26,7 @@ function roundedRect(w: number, h: number, radii: [number, number, number, numbe
       { x: 0, y: h, corner: true },
     ]);
   }
-  const c = (r: number) => r * KAPPA;
+  const c = (r: number) => r * kappa;
   const anchors: VectorAnchor[] = [
     { x: tl, y: 0, inHandle: { x: -c(tl), y: 0 } }, // P1 (after TL arc)
     { x: w - tr, y: 0, outHandle: { x: c(tr), y: 0 } }, // P2
@@ -43,8 +43,8 @@ function roundedRect(w: number, h: number, radii: [number, number, number, numbe
 function ellipsePath(w: number, h: number): VectorPath {
   const rx = w / 2;
   const ry = h / 2;
-  const kx = rx * KAPPA;
-  const ky = ry * KAPPA;
+  const kx = rx * kappa;
+  const ky = ry * kappa;
   return closed([
     { x: w, y: ry, inHandle: { x: 0, y: -ky }, outHandle: { x: 0, y: ky } }, // right
     { x: rx, y: h, inHandle: { x: kx, y: 0 }, outHandle: { x: -kx, y: 0 } }, // bottom

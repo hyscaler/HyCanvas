@@ -8,7 +8,7 @@ import type { AiDesignSpec, BlockRole, DesignBackground, DesignLayout } from "./
 
 /** What kind of multi-page artifact we are generating. Drives length + arc. */
 export type DesignType = "deck" | "doc" | "social-set" | "poster";
-export const DESIGN_TYPES: DesignType[] = ["deck", "doc", "social-set", "poster"];
+export const designTypes: DesignType[] = ["deck", "doc", "social-set", "poster"];
 
 /** The narrative/visual role of a page; maps to a layout + emphasis. */
 export type VisualRole =
@@ -19,14 +19,22 @@ export type VisualRole =
   | "quote"
   | "data"
   | "closing";
-export const VISUAL_ROLES: VisualRole[] = ["cover", "agenda", "content", "comparison", "quote", "data", "closing"];
+export const visualRoles: VisualRole[] = ["cover", "agenda", "content", "comparison", "quote", "data", "closing"];
 
 export interface OutlineItem {
   id: string;
   title: string;
   points: string[];
   visualRole: VisualRole;
+  /** Speaker note for the page: 1-3 spoken-style sentences, plain text (no
+   *  markup), adding presenter context and delivery cues - never a restatement
+   *  of the slide text. Optional so older replies still normalize. */
+  note?: string;
 }
+
+/** Hard cap on a speaker note; the prompt asks for 100..500 chars and the
+ *  normalizer truncates defensively rather than failing the outline. */
+export const maxNoteChars = 500;
 
 export interface DesignOutline {
   title: string;
@@ -70,6 +78,28 @@ function str(v: unknown): string {
   return typeof v === "string" ? v.trim() : "";
 }
 
+/** Normalize a speaker note to plain single-paragraph text: collapse whitespace
+ *  runs (the note is spoken, not formatted) and cap the length at a sentence
+ *  boundary where one exists, mid-word truncation only as a last resort. */
+export function normalizeNote(v: unknown): string {
+  // Whitespace class: JS \s plus U+0085 NEL, i.e. the union of JS \s and Go's
+  // unicode.IsSpace - the Go mirror collapses the same union (IsSpace plus
+  // U+FEFF), so both sides flatten identically.
+  const flat = str(v).replace(/[\s\u0085]+/g, " ").trim(); // trim AFTER collapsing: an edge NEL leaves an ASCII space str() could not see
+  // Fast path: UTF-16 length is >= the code-point count, so an under-cap
+  // UTF-16 length can never hide an over-cap note.
+  if (flat.length <= maxNoteChars) return flat;
+  // Measure and cut in CODE POINTS (never splitting a surrogate pair), exactly
+  // like the Go mirror's rune handling, so server- and client-normalized notes
+  // agree on multibyte text. Slicing at sentenceEnd+1 is still safe because the
+  // sentence separators are ASCII.
+  const chars = Array.from(flat);
+  if (chars.length <= maxNoteChars) return flat;
+  const cut = chars.slice(0, maxNoteChars).join("");
+  const sentenceEnd = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
+  return sentenceEnd >= 0 && Array.from(cut.slice(0, sentenceEnd)).length > maxNoteChars / 2 ? cut.slice(0, sentenceEnd + 1) : cut;
+}
+
 /** Validate + normalize a parsed model value into a DesignOutline. Drops empty
  *  pages, defaults roles, and throws when nothing usable remains. */
 export function normalizeOutline(parsed: unknown): DesignOutline {
@@ -87,8 +117,9 @@ export function normalizeOutline(parsed: unknown): DesignOutline {
     const pTitle = str(p.title);
     const points = Array.isArray(p.points) ? p.points.map(str).filter(Boolean).slice(0, 8) : [];
     if (!pTitle && !points.length) continue;
-    const visualRole = VISUAL_ROLES.includes(p.visualRole as VisualRole) ? (p.visualRole as VisualRole) : "content";
-    pages.push({ id: nextId(), title: pTitle || "Untitled", points, visualRole });
+    const visualRole = visualRoles.includes(p.visualRole as VisualRole) ? (p.visualRole as VisualRole) : "content";
+    const note = normalizeNote(p.note);
+    pages.push({ id: nextId(), title: pTitle || "Untitled", points, visualRole, ...(note ? { note } : {}) });
   }
   if (!pages.length) {
     throw new OutlineError("The AI didn't return any pages. Try a more specific prompt.");
@@ -110,11 +141,18 @@ export const outlineJsonSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["title", "visualRole"],
+        required: ["title", "visualRole", "note"],
         properties: {
           title: { type: "string" },
           points: { type: "array", items: { type: "string" } },
-          visualRole: { type: "string", enum: VISUAL_ROLES },
+          visualRole: { type: "string", enum: visualRoles },
+          note: {
+            type: "string",
+            minLength: 100,
+            maxLength: maxNoteChars,
+            description:
+              "speaker note: 1-3 spoken-style sentences of plain text (no markdown) that add presenter context and delivery cues; never restate the slide's visible text",
+          },
         },
       },
     },

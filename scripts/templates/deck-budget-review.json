@@ -1,0 +1,67 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-budget-review",
+ "title": "Budget Review",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "budget",
+  "finance",
+  "review",
+  "planning"
+ ],
+ "styleTags": [
+  "warm",
+  "professional"
+ ],
+ "themeId": "theme-cocoa",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 88,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Budget Review",
+  "theme": "transparent, decision-ready",
+  "pages": [
+   {
+    "title": "The picture",
+    "points": [
+     "Spend against plan, year to date"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "Where the money went",
+    "points": [
+     "Actuals by department"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "Variances",
+    "points": [
+     "The overs, the unders, and the why"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "Reallocation proposal",
+    "points": [
+     "What we move and what it buys"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "The decision",
+    "points": [
+     "Approve, adjust, or defer"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

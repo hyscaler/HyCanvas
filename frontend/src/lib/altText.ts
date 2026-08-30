@@ -6,6 +6,7 @@
 // lives there) by the caller.
 
 import { walkNodes, type ImageNode } from "@hc/schema";
+import { locate } from "@hc/editor";
 import { useEditor } from "@/store/editor";
 import { oc } from "@/lib/sdk";
 import { resolveAssetUrl } from "@/lib/sdk";
@@ -109,4 +110,32 @@ function collectImages(nodes: Parameters<typeof walkNodes>[0]): ImageNode[] {
     if (node.type === "image") out.push(node as ImageNode);
   });
   return out;
+}
+
+/**
+ * Describe a CHART from its DATA (F28 completion C29): categories and series
+ * values go through the plain text model (no vision needed), and the result
+ * lands in the node's altText as one undo step. Returns false when the node
+ * is not a chart; throws provider errors for the caller to surface.
+ */
+export async function generateChartAltText(workspaceId: string, nodeId: string): Promise<boolean> {
+  type ChartLike = { id: string; type: string; chartType?: string; categories?: string[]; series?: { name: string; values: number[] }[] };
+  const st = useEditor.getState();
+  // locate() finds a chart nested in a frame/group too, not just direct
+  // page children.
+  const loc = locate(st.doc, nodeId);
+  const chart = loc && loc.node.type === "chart" ? (loc.node as unknown as ChartLike) : null;
+  if (!chart) return false;
+  const cats = (chart.categories ?? []).slice(0, 24);
+  const rows = (chart.series ?? []).slice(0, 8).map((s2) => `${s2.name}: ${s2.values.slice(0, 24).join(", ")}`);
+  const { text } = await oc.aiText({
+    workspaceId,
+    prompt: `Chart type: ${chart.chartType ?? "bar"}\nCategories: ${cats.join(", ")}\n${rows.join("\n")}`,
+    // i18n-ignore: model system prompt, never translated.
+    system: "Write ONE sentence of alt text describing this chart's key takeaway for a screen-reader user: what is measured, the standout value or trend, plain words. Return only the sentence.",
+  });
+  const clean = text.trim();
+  if (!clean) return false;
+  useEditor.getState().setNodeAltText(nodeId, clean.slice(0, 300));
+  return true;
 }

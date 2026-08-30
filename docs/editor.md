@@ -24,7 +24,7 @@ Add a text box or a preset heading, subheading, or body block. Below that: curat
 
 ### AI
 
-HyCanvas is bring-your-own-key: connect OpenAI (or any compatible endpoint), Anthropic, DeepSeek, or a custom endpoint, per workspace. Keys are stored encrypted on the server and never in the browser. With a provider connected you get the conversational design assistant (it plans, then applies changes as undoable edits), Magic Design (text to a finished page), image generation, restyling, chart generation, and critique. Without a key, the **Assist (no AI needed)** section still offers Critique, Harmonize, Auto-layout, and Auto-animate.
+HyCanvas is bring-your-own-key: connect OpenAI, Anthropic, DeepSeek, Moonshot (Kimi), Zhipu, Google, Mistral, Groq, Together, OpenRouter, Azure OpenAI, or any OpenAI-compatible endpoint, per workspace. Keys are stored encrypted on the server and never in the browser. With a provider connected you get the conversational design assistant (it plans, then applies changes as undoable edits), Magic Design (text to a finished page), image generation, restyling, chart generation, and critique. Without a key, the **Assist (no AI needed)** section still offers Critique, Harmonize, Auto-layout, and Auto-animate.
 
 ![The AI panel with a provider form and no-key assist tools](images/editor-ai.png)
 

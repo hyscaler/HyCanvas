@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   normalizeOutline,
+  normalizeNote,
+  maxNoteChars,
   OutlineError,
   outlineItemToSpec,
   outlineJsonSchema,
@@ -9,7 +11,7 @@ import {
   qualityCheck,
   outlineSystemPrompt,
   groundImagePrompt,
-  VISUAL_ROLES,
+  visualRoles,
   type DesignOutline,
 } from "../index";
 
@@ -56,7 +58,7 @@ describe("normalizeOutline", () => {
   });
 
   it("schema enumerates the visual roles", () => {
-    expect(outlineJsonSchema.properties.pages.items.properties.visualRole.enum).toEqual(VISUAL_ROLES);
+    expect(outlineJsonSchema.properties.pages.items.properties.visualRole.enum).toEqual(visualRoles);
   });
 });
 
@@ -148,5 +150,68 @@ describe("groundImagePrompt", () => {
   });
   it("works with no context", () => {
     expect(groundImagePrompt("a fox", {})).toContain("a fox");
+  });
+});
+
+describe("speaker notes on outline items", () => {
+  it("keeps, trims, and flattens a note; omits the key when absent", () => {
+    const o = normalizeOutline({
+      title: "T",
+      pages: [
+        { title: "With note", visualRole: "content", note: "  Open with the customer story.\n\nPause  before the numbers. " },
+        { title: "Without note", visualRole: "content", points: ["a"] },
+      ],
+    });
+    expect(o.pages[0].note).toBe("Open with the customer story. Pause before the numbers.");
+    expect("note" in o.pages[1]).toBe(false);
+  });
+
+  it("caps an overlong note at a sentence boundary", () => {
+    const sentence = "This sentence pads the speaker note out well past the cap. ";
+    const o = normalizeOutline({
+      title: "T",
+      pages: [{ title: "P", visualRole: "content", note: sentence.repeat(20) }],
+    });
+    const note = o.pages[0].note!;
+    expect(note.length).toBeLessThanOrEqual(maxNoteChars);
+    expect(note.endsWith(".")).toBe(true); // never clipped mid-sentence
+  });
+
+  it("collapses NEL and FEFF whitespace identically to the Go mirror", () => {
+    expect(normalizeNote("A\u0085B\uFEFFC  D")).toBe("A B C D");
+    // Edge NEL/FEFF must vanish, not become a kept space (Go drops them).
+    expect(normalizeNote("\u0085Hello\uFEFF")).toBe("Hello");
+    expect(normalizeNote("\u0085")).toBe("");
+  });
+
+  it("normalizeNote truncates hard when no sentence boundary exists", () => {
+    const note = normalizeNote("x".repeat(900));
+    expect(note.length).toBe(maxNoteChars);
+  });
+
+  it("ignores non-string notes", () => {
+    const o = normalizeOutline({ title: "T", pages: [{ title: "P", visualRole: "content", note: 42 }] });
+    expect("note" in o.pages[0]).toBe(false);
+  });
+
+  it("the embedded schema requires the note", () => {
+    const item = outlineJsonSchema.properties.pages.items;
+    expect(item.required).toContain("note");
+    expect(item.properties.note.maxLength).toBe(maxNoteChars);
+  });
+
+  it("layoutDeck threads the note onto the DeckPage", () => {
+    const o = normalizeOutline({
+      title: "T",
+      pages: [{ title: "P", visualRole: "content", points: ["a"], note: "Mention the pilot results here and slow down for the ask." }],
+    });
+    const deck = layoutDeck(o, deckThemes({ count: 1 })[0], SIZE);
+    expect(deck.pages[0].note).toBe("Mention the pilot results here and slow down for the ask.");
+  });
+
+  it("the outline system prompt asks for speaker notes", () => {
+    const p = outlineSystemPrompt("deck", "");
+    expect(p).toContain("speaker note");
+    expect(p).toContain("never restate");
   });
 });

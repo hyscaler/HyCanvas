@@ -10,7 +10,12 @@ import type { DeckTheme } from "./outline";
 
 // Curated base hues used when the user has no brand palette. Picked for broad
 // appeal and strong contrast with white/near-black text.
-const DEFAULT_HUES = ["#1f3a93", "#0f766e", "#7c3aed", "#b91c1c", "#c2410c", "#0e7490", "#4d7c0f", "#9d174d"];
+// Widened with the E10 catalog expansion so auto-picked decks draw from a
+// broader curated range (the title seed indexes into this ladder).
+const DEFAULT_HUES = [
+  "#1f3a93", "#0f766e", "#7c3aed", "#b91c1c", "#c2410c", "#0e7490", "#4d7c0f", "#9d174d",
+  "#92400e", "#1e40af", "#374151", "#86198f", "#9f1239", "#78350f", "#155e75", "#3f6212",
+];
 
 function rotateHue(c: Color, deg: number): Color {
   // Rotate hue in HSL space, preserving rough lightness/saturation.

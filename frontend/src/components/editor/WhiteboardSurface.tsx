@@ -66,7 +66,7 @@ import {
   stepSavedView,
   tallyVotes,
   timerRemainingMs,
-  WHITEBOARD_TEMPLATES,
+  whiteboardTemplates,
   type Graph,
   type SavedView,
   type SearchMatch,
@@ -1508,7 +1508,7 @@ export function WhiteboardSurface(props: {
               {tr("editor.templates")}
             </p>
             <div className="grid">
-              {WHITEBOARD_TEMPLATES.map((t) => (
+              {whiteboardTemplates.map((t) => (
                 <button
                   key={t.id}
                   type="button"

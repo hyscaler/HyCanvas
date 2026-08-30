@@ -86,8 +86,8 @@ describe("design surfaces are pinned left-to-right", () => {
   for (const rel of PINNED) {
     it(`${rel} pins its surface`, () => {
       const src = readFileSync(join(SRC, rel), "utf8");
-      expect(src, `${rel} must carry dir={DESIGN_SURFACE_DIR} on its design surface`).toContain(
-        "dir={DESIGN_SURFACE_DIR}",
+      expect(src, `${rel} must carry dir={designSurfaceDir} on its design surface`).toContain(
+        "dir={designSurfaceDir}",
       );
     });
   }

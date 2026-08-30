@@ -10,14 +10,14 @@
 // they are stored: data-URL assets are fully self-contained, workspace-hosted
 // assets keep their URLs (which resolve only on the origin instance).
 
-import { CURRENT_SCHEMA_VERSION, migrate, validate, type DesignFile } from "@hc/schema";
+import { currentSchemaVersion, migrate, validate, type DesignFile } from "@hc/schema";
 import { tr } from "@/lib/i18n";
 import { CodedError } from "./errors";
 
-export const HYC_EXTENSION = ".hyc";
+export const hycExtension = ".hyc";
 /** What the import file pickers accept: .hyc first, plain .json as a fallback
  *  (content is validated, so the name never decides). */
-export const HYC_ACCEPT = ".hyc,.json,application/json";
+export const hycAccept = ".hyc,.json,application/json";
 
 /** Serialize a design file and hand it to the browser as `<baseName>.hyc`. */
 export function downloadHycFile(file: DesignFile, baseName: string): void {
@@ -26,7 +26,7 @@ export function downloadHycFile(file: DesignFile, baseName: string): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${safe}${HYC_EXTENSION}`;
+  a.download = `${safe}${hycExtension}`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -49,7 +49,7 @@ export function parseHycFile(text: string): DesignFile {
   if (typeof file.schemaVersion !== "number" || !Array.isArray(file.pages) || file.pages.length === 0) {
     throw new CodedError("errors.hyc_missing_fields", "This file is not a HyCanvas design file (missing pages or schema version).");
   }
-  if (file.schemaVersion > CURRENT_SCHEMA_VERSION) {
+  if (file.schemaVersion > currentSchemaVersion) {
     throw new CodedError("errors.hyc_newer_version", "This file was made by a newer version of HyCanvas. Update this instance to open it.");
   }
   // Older files forward-migrate (forward-only and idempotent); a current file

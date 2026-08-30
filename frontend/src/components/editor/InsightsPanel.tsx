@@ -77,6 +77,25 @@ function PerPageBars({ data }: { data: { pageId: string; engagementMs: number }[
   );
 }
 
+// Per-link engagement rows (C36): each share link's audience, most-viewed
+// first. A deleted or unnamed link shows a neutral placeholder name.
+function PerLinkRows({ data }: { data: NonNullable<DesignInsights["links"]> }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      {data.map((l) => (
+        <div key={l.linkId} className="flex items-center gap-2 rounded-lg border border-neutral-100 bg-neutral-50/60 px-2 py-1.5 text-xs">
+          <span className="min-w-0 flex-1 truncate font-medium text-neutral-700">{l.label || tr("editor.unnamed_link")}</span>
+          <span className="shrink-0 text-neutral-500">{tr("editor.views_count", { count: l.views })}</span>
+          <span className="shrink-0 text-neutral-400">·</span>
+          <span className="shrink-0 text-neutral-500">{tr("editor.viewers_count", { count: l.viewers })}</span>
+          <span className="shrink-0 text-neutral-400">·</span>
+          <span className="shrink-0 text-neutral-500">{fmtDuration(l.totalMs)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function InsightsPanel({ designId, onClose }: { designId: string; onClose: () => void }) {
   const [data, setData] = useState<DesignInsights | null>(null);
   const [status, setStatus] = useState<"loading" | "ok" | "forbidden" | "error">("loading");
@@ -141,6 +160,13 @@ export function InsightsPanel({ designId, onClose }: { designId: string; onClose
                   <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-neutral-400">{tr("editor.per_page_engagement")}</h3>
                   <PerPageBars data={data.perPage} />
                 </div>
+
+                {(data.links?.length ?? 0) > 0 && (
+                  <div>
+                    <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-neutral-400">{tr("editor.by_share_link")}</h3>
+                    <PerLinkRows data={data.links!} />
+                  </div>
+                )}
               </>
             )}
           </>

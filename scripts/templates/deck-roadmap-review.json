@@ -1,0 +1,66 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-roadmap-review",
+ "title": "Roadmap Review",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "roadmap",
+  "product",
+  "planning",
+  "review"
+ ],
+ "styleTags": [
+  "tech"
+ ],
+ "themeId": "theme-cobalt",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 50,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Roadmap Review",
+  "theme": "strategic, decisive",
+  "pages": [
+   {
+    "title": "Where we are",
+    "points": [
+     "The quarter's themes at a glance"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "Shipped",
+    "points": [
+     "What landed and early signals"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "In flight",
+    "points": [
+     "What is moving and what is blocked"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "The trade-off",
+    "points": [
+     "Two candidate bets we cannot both fund"
+    ],
+    "visualRole": "comparison"
+   },
+   {
+    "title": "Decision",
+    "points": [
+     "The call, the reasoning, the revisit date"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

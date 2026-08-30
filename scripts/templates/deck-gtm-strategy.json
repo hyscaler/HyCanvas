@@ -1,0 +1,74 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-gtm-strategy",
+ "title": "Go-to-Market Strategy",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "gtm",
+  "strategy",
+  "sales",
+  "marketing"
+ ],
+ "styleTags": [
+  "dark",
+  "bold"
+ ],
+ "themeId": "theme-ember",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 58,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Go-to-Market",
+  "theme": "decisive, staged",
+  "pages": [
+   {
+    "title": "The motion",
+    "points": [
+     "How this product reaches its buyer"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "The buyer",
+    "points": [
+     "Who signs, who uses, who blocks"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "The message",
+    "points": [
+     "The promise and the proof, per persona"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "The channels",
+    "points": [
+     "Where the motion runs and what each costs"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "The first 90 days",
+    "points": [
+     "Week-by-week from soft launch to scale"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "What kills us",
+    "points": [
+     "The failure modes we will watch"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

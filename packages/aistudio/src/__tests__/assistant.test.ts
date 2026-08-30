@@ -107,3 +107,24 @@ describe("assistantSystemPrompt", () => {
     expect(p).toContain("Pages: 1");
   });
 });
+
+// --- Server catalog parity -------------------------------------------------
+// The Go backend derives its assistant tool catalog (allowed actions + the
+// system-prompt tool list) from backend/internal/aistudio/assistant_tools.json.
+// That manifest must stay deep-equal to toolCatalog() here, or a tool added on
+// one side is silently unreachable on the other (validateAssistant drops
+// unknown actions). If this test fails after you changed toolCatalog(),
+// regenerate the manifest from the TS catalog:
+//   npm run gen:ai-tools
+describe("server tool-catalog parity", () => {
+  it("assistant_tools.json matches toolCatalog() exactly", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { fileURLToPath } = await import("node:url");
+    const manifestPath = fileURLToPath(
+      new URL("../../../../backend/internal/aistudio/assistant_tools.json", import.meta.url),
+    );
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    // JSON round-trip normalizes undefined optional fields on the TS side.
+    expect(manifest).toEqual(JSON.parse(JSON.stringify(toolCatalog())));
+  });
+});

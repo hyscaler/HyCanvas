@@ -190,3 +190,179 @@ describe("deckToPptx", () => {
     await expect(deckToPptx(file)).rejects.toThrow(/no pages/);
   });
 });
+
+// --- Fidelity golden set (F28 T22 part 1) ------------------------------------
+// Pins the export rules that keep real-world decks faithful: gradient fills,
+// the weight-600 bold threshold, decorated runs, group flattening vs the
+// rotated-group raster fallback, explicit crops, and z-order. These are
+// regression fixtures: a change that shifts any assertion is a fidelity change
+// and must be deliberate.
+describe("deckToPptx fidelity goldens", () => {
+  const solid = (r: number, g: number, b: number, a = 1) => ({ type: "solid", color: { srgb: { r, g, b, a } } });
+
+  it("gradient fills export natively with every stop and the angle", async () => {
+    const file = createBlankDesign({ title: "grad", width: 1000, height: 1000 });
+    (file.pages[0] as { background?: unknown }).background = {
+      type: "gradient", gradient: "linear", angle: 90,
+      stops: [
+        { position: 0, color: { srgb: { r: 1, g: 0, b: 0, a: 1 } } },
+        { position: 1, color: { srgb: { r: 0, g: 0, b: 1, a: 1 } } },
+      ],
+    };
+    file.pages[0].children = [
+      createNode("shape", {
+        id: "g1", shape: "rect",
+        transform: { x: 10, y: 10, scaleX: 1, scaleY: 1, rotation: 0 },
+        size: { width: 100, height: 100 },
+        fills: [{
+          type: "gradient", gradient: "linear", angle: 135,
+          stops: [
+            { position: 0, color: { srgb: { r: 0, g: 1, b: 0, a: 1 } } },
+            { position: 0.5, color: { srgb: { r: 1, g: 1, b: 0, a: 1 } } },
+            { position: 1, color: { srgb: { r: 0, g: 0, b: 0, a: 1 } } },
+          ],
+        }],
+      } as Partial<Node>),
+    ];
+    const s1 = textOf(readZip(await deckToPptx(file)), "ppt/slides/slide1.xml");
+    // Shape: three stops at 0/50/100% (per-thousand-percent positions).
+    expect(s1).toContain('<a:gs pos="0">');
+    expect(s1).toContain('<a:gs pos="50000">');
+    expect(s1).toContain('<a:gs pos="100000">');
+    expect(s1).toContain('<a:gs pos="0"><a:srgbClr val="00FF00"/>'); // full-alpha stops self-close
+    // The ANGLE is the identity mapping: the engine and DrawingML both measure
+    // clockwise from 3 o'clock, so design 135deg = ang 8100000 (1/60000 deg).
+    expect(s1).toContain('<a:lin ang="8100000"');
+    // Background is a gradient too (inside <p:bg>), angle 90 = top-to-bottom.
+    const bg = s1.slice(s1.indexOf("<p:bg>"), s1.indexOf("</p:bg>"));
+    expect(bg).toContain("<a:gradFill>");
+    expect(bg).toContain('val="FF0000"');
+    expect(bg).toContain('<a:lin ang="5400000"');
+  });
+
+  it("a radial gradient exports as a centered circular path; conic degrades to linear", async () => {
+    const stops = [
+      { position: 0, color: { srgb: { r: 1, g: 1, b: 1, a: 1 } } },
+      { position: 1, color: { srgb: { r: 0, g: 0, b: 0, a: 1 } } },
+    ];
+    const file = createBlankDesign({ title: "radial", width: 1000, height: 1000 });
+    file.pages[0].children = [
+      createNode("shape", { id: "rad", shape: "rect", transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: 100, height: 100 }, fills: [{ type: "gradient", gradient: "radial", stops }] } as Partial<Node>),
+      createNode("shape", { id: "con", shape: "rect", transform: { x: 200, y: 0, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: 100, height: 100 }, fills: [{ type: "gradient", gradient: "conic", angle: 45, stops }] } as Partial<Node>),
+    ];
+    const s1 = textOf(readZip(await deckToPptx(file)), "ppt/slides/slide1.xml");
+    expect(s1).toContain('<a:path path="circle">'); // radial is native
+    // Conic has no DrawingML equivalent: the linear degrade is DELIBERATE.
+    expect((s1.match(/<a:lin /g) ?? []).length).toBe(1);
+  });
+
+  it("bold threshold: named weights and variable wght >= 600 export b=1, below stays regular", async () => {
+    const file = createBlankDesign({ title: "bold", width: 1000, height: 1000 });
+    const run = (text: string, style: Record<string, unknown>) => ({ text, style: { fontFamily: "Inter", fontSize: 20, ...style } });
+    file.pages[0].children = [
+      createNode("text", {
+        id: "t1",
+        transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+        size: { width: 900, height: 200 },
+        content: [{
+          runs: [
+            run("semibold-name ", { fontStyle: "SemiBold" }),
+            run("wght600 ", { fontStyle: "Regular", axes: { wght: 600 } }),
+            run("wght400 ", { fontStyle: "Regular", axes: { wght: 400 } }),
+            run("decorated ", { fontStyle: "Italic", decoration: ["underline", "strikethrough"] }),
+            run("black-name ", { fontStyle: "Black" }),
+            run("bold-forced-regular", { fontStyle: "Bold", axes: { wght: 400 } }),
+          ],
+          style: { align: "left" },
+        }],
+      } as Partial<Node>),
+    ];
+    const s1 = textOf(readZip(await deckToPptx(file)), "ppt/slides/slide1.xml");
+    const runs = [...s1.matchAll(/<a:rPr ([^>]*)>/g)].map((m) => m[1]);
+    expect(runs).toHaveLength(6);
+    expect(runs[0]).toContain('b="1"'); // "SemiBold" name >= 600
+    expect(runs[1]).toContain('b="1"'); // variable axis 600
+    expect(runs[2]).not.toContain('b="1"'); // 400 stays regular
+    expect(runs[3]).toContain('i="1"');
+    expect(runs[3]).toContain('u="sng"');
+    expect(runs[3]).toContain('strike="sngStrike"');
+    expect(runs[4]).toContain('b="1"'); // "Black" (900) bolds, not just names containing "bold"
+    expect(runs[5]).not.toContain('b="1"'); // the wght axis OVERRIDES the name, as the engine renders
+  });
+
+  it("an unrotated group flattens natively; a rotated group rasterizes in place as one unit", async () => {
+    const kid = (id: string) =>
+      createNode("shape", {
+        id, shape: "rect",
+        transform: { x: 10, y: 20, scaleX: 1, scaleY: 1, rotation: 0 },
+        size: { width: 50, height: 40 },
+        fills: [solid(1, 0, 0)],
+      } as Partial<Node>);
+    const group = (id: string, rotation: number, child: Node) =>
+      createNode("group", {
+        id,
+        transform: { x: 100, y: 200, scaleX: 2, scaleY: 1, rotation },
+        size: { width: 100, height: 100 },
+        children: [child],
+      } as Partial<Node>);
+    const file = createBlankDesign({ title: "groups", width: 1000, height: 1000 });
+    file.pages[0].children = [group("gFlat", 0, kid("k1"))];
+    const p2 = structuredClone(file.pages[0]);
+    p2.id = "p2";
+    p2.children = [group("gRot", 30, kid("k2")) as never];
+    file.pages.push(p2);
+
+    const rasterized: string[] = [];
+    const zip = readZip(await deckToPptx(file, {
+      rasterizeNode: async (_pi, id) => {
+        rasterized.push(id);
+        return { png: PNG_STUB, x: 100, y: 200, width: 200, height: 100 };
+      },
+    }));
+    // Flat group: the child lands as a native shape at the ACCUMULATED
+    // transform (x: 100 + 10*2 = 120, y: 200 + 20 = 220, w: 50*2 = 100).
+    const s1 = textOf(zip, "ppt/slides/slide1.xml");
+    expect(s1).toContain(`<a:off x="${120 * 9525}" y="${220 * 9525}"/>`);
+    expect(s1).toContain(`<a:ext cx="${100 * 9525}" cy="${40 * 9525}"/>`);
+    expect(s1).not.toContain("<p:pic>");
+    // Rotated group: ONE raster at the group's bounds, no flattened child.
+    const s2 = textOf(zip, "ppt/slides/slide2.xml");
+    expect(rasterized).toEqual(["gRot"]);
+    expect(s2).toContain("<p:pic>");
+    expect(s2).not.toContain('<a:srgbClr val="FF0000">');
+  });
+
+  it("an explicit normalized crop maps 1:1 onto a:srcRect", async () => {
+    const file = createBlankDesign({ title: "crop", width: 1000, height: 1000 });
+    file.pages[0].children = [
+      createNode("image", {
+        id: "im1",
+        transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+        size: { width: 400, height: 300 },
+        source: { assetId: "a1", naturalWidth: 800, naturalHeight: 600 },
+        fit: "cover",
+        crop: { x: 0.1, y: 0.2, width: 0.5, height: 0.6 },
+      } as Partial<Node>),
+    ];
+    const zip = readZip(await deckToPptx(file, { resolveImage: async () => ({ data: PNG_STUB, mime: "image/png" }) }));
+    const s1 = textOf(zip, "ppt/slides/slide1.xml");
+    // l=10% t=20% r=1-0.1-0.5=40% b=1-0.2-0.6=20%, in 1/1000 percent.
+    expect(s1).toContain('<a:srcRect l="10000" t="20000" r="40000" b="20000"/>');
+  });
+
+  it("z-order: shapes serialize in children order, bottom first", async () => {
+    const file = createBlankDesign({ title: "z", width: 1000, height: 1000 });
+    file.pages[0].children = [
+      createNode("shape", { id: "bottom", shape: "rect", transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: 10, height: 10 }, fills: [solid(1, 0, 0)] } as Partial<Node>),
+      createNode("text", { id: "mid", transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: 100, height: 20 }, content: [{ runs: [{ text: "MidRun", style: { fontFamily: "Inter", fontStyle: "Regular", fontSize: 12 } }], style: { align: "left" } }] } as Partial<Node>),
+      createNode("shape", { id: "top", shape: "ellipse", transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: 10, height: 10 }, fills: [solid(0, 0, 1)] } as Partial<Node>),
+    ];
+    const s1 = textOf(readZip(await deckToPptx(file)), "ppt/slides/slide1.xml");
+    const iBottom = s1.indexOf('val="FF0000"');
+    const iMid = s1.indexOf("MidRun");
+    const iTop = s1.indexOf('prst="ellipse"');
+    expect(iBottom).toBeGreaterThan(-1);
+    expect(iMid).toBeGreaterThan(iBottom);
+    expect(iTop).toBeGreaterThan(iMid);
+  });
+});

@@ -1,7 +1,7 @@
 // UI string localization (F38 FR-9, FR-11).
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import {
-  BASE,
+  baseCatalog,
   catalogChain,
   interpolate,
   loadCatalog,
@@ -63,8 +63,8 @@ describe("translate", () => {
       expect(translate("settings.settings")).toBe("Réglages");
       // Not in the "xx" catalog, so the bundled English shows through: a
       // half-translated locale is a normal, shippable state.
-      const anyBaseKey = Object.keys(BASE)[0];
-      expect(translate(anyBaseKey)).toBe(BASE[anyBaseKey]);
+      const anyBaseKey = Object.keys(baseCatalog)[0];
+      expect(translate(anyBaseKey)).toBe(baseCatalog[anyBaseKey]);
     });
   });
 
@@ -182,8 +182,8 @@ describe("loadCatalog", () => {
       throw new Error("offline");
     }));
     await loadCatalog("de-DE");
-    const anyBaseKey = Object.keys(BASE)[0];
-    expect(translate(anyBaseKey)).toBe(BASE[anyBaseKey]);
+    const anyBaseKey = Object.keys(baseCatalog)[0];
+    expect(translate(anyBaseKey)).toBe(baseCatalog[anyBaseKey]);
   });
 
   it("does not let a slow earlier request clobber the locale in effect now", async () => {
@@ -212,7 +212,7 @@ describe("pseudo mode", () => {
     // Translated: already proof the string was externalized, so it is untouched.
     expect(translate("settings.settings")).toBe("Réglages");
     // Untranslated: mangled, so a hard-coded string stands out beside it.
-    const baseOnly = Object.keys(BASE).find((k) => k !== "settings.settings")!;
+    const baseOnly = Object.keys(baseCatalog).find((k) => k !== "settings.settings")!;
     expect(translate(baseOnly)).toContain("«");
   });
 });

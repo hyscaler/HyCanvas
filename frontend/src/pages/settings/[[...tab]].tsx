@@ -3,8 +3,8 @@ import dynamic from "next/dynamic";
 import type { GetStaticPaths, GetStaticProps } from "next";
 import { RequireAuth } from "@/components/RequireAuth";
 import {
-  SETTINGS_TAB_TITLES,
-  SETTINGS_TABS,
+  settingsTabTitles,
+  settingsTabs,
   type SettingsTab,
 } from "@/components/settings/tabs";
 import { tr } from "@/lib/i18n";
@@ -25,7 +25,7 @@ interface SettingsPageProps {
 // deep-linkable, refresh-safe, and back/forward-friendly. All of them render
 // this same page component, so switching tabs keeps SettingsApp mounted.
 export const getStaticPaths: GetStaticPaths = async () => ({
-  paths: SETTINGS_TABS.map((t) => ({ params: { tab: t === "account" ? [] : [t] } })),
+  paths: settingsTabs.map((t) => ({ params: { tab: t === "account" ? [] : [t] } })),
   fallback: false,
 });
 
@@ -38,7 +38,7 @@ export default function SettingsPage({ tab }: SettingsPageProps) {
   return (
     <>
       <Head>
-        <title>{`${SETTINGS_TAB_TITLES[tab ?? "account"]} · HyCanvas`}</title>
+        <title>{`${settingsTabTitles[tab ?? "account"]} · HyCanvas`}</title>
       </Head>
       <RequireAuth>
         <SettingsApp tab={tab} />

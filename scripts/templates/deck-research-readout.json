@@ -1,0 +1,75 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-research-readout",
+ "title": "Research Readout",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "research",
+  "ux",
+  "findings",
+  "readout"
+ ],
+ "styleTags": [
+  "minimal"
+ ],
+ "themeId": "theme-graphite",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 40,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Research Readout",
+  "theme": "evidence-first, calm",
+  "pages": [
+   {
+    "title": "What we studied",
+    "points": [
+     "The question, the method, the participants"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "Key finding one",
+    "points": [
+     "What we observed",
+     "What it means for the product"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Key finding two",
+    "points": [
+     "The surprise in the data",
+     "Where it contradicts our assumptions"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Key finding three",
+    "points": [
+     "The pattern across segments"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "What the numbers say",
+    "points": [
+     "The quantitative backdrop for the findings"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "Recommendations",
+    "points": [
+     "Three changes ranked by confidence and effort"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

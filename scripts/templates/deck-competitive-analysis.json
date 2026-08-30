@@ -1,0 +1,74 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-competitive-analysis",
+ "title": "Competitive Analysis",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "competitive",
+  "analysis",
+  "strategy",
+  "market"
+ ],
+ "styleTags": [
+  "dark",
+  "professional"
+ ],
+ "themeId": "theme-noir",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 56,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Competitive Landscape",
+  "theme": "sharp, unsentimental",
+  "pages": [
+   {
+    "title": "The landscape",
+    "points": [
+     "Who plays and where the lines are"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "Head to head",
+    "points": [
+     "Us versus the primary rival"
+    ],
+    "visualRole": "comparison"
+   },
+   {
+    "title": "Their momentum",
+    "points": [
+     "What they shipped and what it signals"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Our edge",
+    "points": [
+     "Where we win when buyers compare"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Threats",
+    "points": [
+     "The move that would hurt us most"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Response plan",
+    "points": [
+     "Three moves, sequenced"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

@@ -8,12 +8,19 @@ import type {
   BlendMode, CharStyle, ChartNode, ChartStyle, Color, DataBinding, DesignFile, Easing, Effect, ElementLink, EmphasisPreset,
   EntrancePreset, ExitPreset, Fill, GradientFill, GradientStop, ImageFit, ImageMotion, ImageNode,
   Interaction, InteractionAction, Keyframe, KeyframeTrack, Node, NodeAnimation, Page, ParagraphStyle,
-  TableConditionalRule, TableNode, TextEffect,
+  TableConditionalRule, TableNode, TextEffect, Theme,
 } from "@hc/schema";
-import { colorHarmony, HARMONY_SCHEMES, type HarmonyScheme, extractPalette, toHex } from "@hc/color";
+import { themeFromPalette } from "@hc/schema";
+import { deriveThemeSlots, extractLayoutSet, repairThemeSlots, themeIdFor, themeSlotNames, type ExtractedLayoutSet, type ExtractPageLike } from "@hc/aistudio";
+import { refineExtractedLayoutSet } from "@/lib/layoutVision";
+import { generateAltText, generateChartAltText } from "@/lib/altText";
+import { builtinThemes, themeStyleLabel, themeStyleOrder } from "@/lib/themeCatalog";
+import { colorHarmony, harmonySchemes, type HarmonyScheme, extractPalette, toHex } from "@hc/color";
 import { evalExpression, locate, rotateAboutPoint } from "@hc/editor";
-import { isLowResolution, computeEffectivePpi } from "@hc/engine";
-import { FONT_CATALOG, type FontCategory } from "@hc/text";
+import { isLowResolution, computeEffectivePpi, renderTransition } from "@hc/engine";
+import type { CanvasLike as CanvasLikeCtx } from "@hc/engine";
+import { prefersReducedMotion } from "@/lib/theme";
+import { fontCatalog, type FontCategory } from "@hc/text";
 import {
   AlignStartVertical, AlignCenterVertical, AlignEndVertical,
   AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal,
@@ -24,7 +31,7 @@ import {
 } from "lucide-react";
 import { fonts } from "@/lib/fontProvider";
 import { promptText, alertText } from "@/lib/promptDialog";
-import { FILTER_PRESETS, resolvePresetOps, autoEnhanceOps, alphaMaskFromCutout, removeBackground, rasterizeToPng, type AdjOp } from "@/lib/imageFilters";
+import { filterPresets, resolvePresetOps, autoEnhanceOps, alphaMaskFromCutout, removeBackground, rasterizeToPng, type AdjOp } from "@/lib/imageFilters";
 import { AddEffectRow, EffectStack } from "./EffectStack";
 import { useEditor } from "@/store/editor";
 import { BuildOrderSection } from "./BuildOrderSection";
@@ -61,7 +68,7 @@ const FONT_CATEGORIES: FontCategory[] = ["sans-serif", "serif", "display", "hand
 // a text node is selected), which otherwise janked text editing.
 const FONT_FAMILY_OPTIONS = FONT_CATEGORIES.map((cat) => (
   <optgroup key={cat} label={cat} className="capitalize">
-    {FONT_CATALOG.filter((f) => f.category === cat && !f.system).map((f) => (
+    {fontCatalog.filter((f) => f.category === cat && !f.system).map((f) => (
       <option key={f.family} value={f.family}>{f.family}</option>
     ))}
   </optgroup>
@@ -145,7 +152,7 @@ function ColorHarmony({ baseHex, onPick }: { baseHex: string; onPick: (hex: stri
   return (
     <div className="flex flex-col gap-1">
       <select aria-label={tr("editor.color_harmony")} value={scheme} onChange={(e) => setScheme(e.target.value as HarmonyScheme)} className="self-start rounded-md border border-neutral-200 bg-surface px-1.5 py-0.5 text-[11px] text-neutral-500 outline-none">
-        {HARMONY_SCHEMES.map((s) => <option key={s} value={s}>{s.replace("-", " ")}</option>)}
+        {harmonySchemes.map((s) => <option key={s} value={s}>{s.replace("-", " ")}</option>)}
       </select>
       <div className="flex flex-wrap gap-1.5">
         {swatches.map((c, i) => <Swatch key={`${c}-${i}`} color={c} title={`Apply ${c}`} onClick={() => onPick(c)} />)}
@@ -735,7 +742,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
             </Section>
           );
         })()}
-        <PageLayoutSection page={page} />
+        <PageLayoutSection page={page} workspaceId={workspaceId ?? null} />
         <DeckThemeSection />
         <PageTransitionSection page={page} />
         <Section title={tr("editor.build_order")} defaultOpen={false}>
@@ -2141,10 +2148,55 @@ function KeyframeEditor({ node }: { node: Node }) {
         <Field key={`sc${curIdx}-${cur.scale}`} label={tr("editor.scale")} value={cur.scale ?? 1} onCommit={(n) => upd({ scale: n })} />
         <Field key={`rot${curIdx}-${cur.rotate}`} label={tr("editor.rotate")} value={cur.rotate ?? 0} onCommit={(n) => upd({ rotate: n })} />
         <Field key={`op${curIdx}-${cur.opacity}`} label={tr("editor.opacity_2")} value={cur.opacity ?? 1} onCommit={(n) => upd({ opacity: Math.max(0, Math.min(1, n)) })} />
+        {/* v23 size channels: absolute px, 0 clears the override. */}
+        <Field key={`w${curIdx}-${cur.width}`} label={tr("editor.w")} value={cur.width ?? 0} onCommit={(n) => upd({ width: n > 0 ? n : undefined })} />
+        <Field key={`h${curIdx}-${cur.height}`} label={tr("editor.h")} value={cur.height ?? 0} onCommit={(n) => upd({ height: n > 0 ? n : undefined })} />
+      </div>
+      {/* v23 color channel: an absolute fill override at this keyframe. */}
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={cur.color ? colorHex(cur.color) : "#000000"}
+          onChange={(e) => upd({ color: colorFromHex(e.target.value) })}
+          className="oc-color h-6 w-8 shrink-0"
+          title={tr("editor.keyframe_color")}
+          aria-label={tr("editor.keyframe_color")}
+        />
+        <span className="flex-1 text-[10px] text-neutral-500">{tr("editor.keyframe_color")}</span>
+        {cur.color && (
+          <button onClick={() => upd({ color: undefined })} className="text-[10px] text-neutral-400 hover:underline">{tr("editor.clear")}</button>
+        )}
       </div>
       <select aria-label={tr("editor.easing")} value={cur.easing ?? "linear"} onChange={(e) => upd({ easing: e.target.value as Easing })} className={selectCls}>
         {easings().map((es) => <option key={es.v} value={es.v}>{es.label}</option>)}
       </select>
+      {/* Motion path (v23): built from the keyframes' dx/dy offsets; while set
+          it DRIVES the position instead of them. Drawn as a canvas overlay
+          when this node is selected. */}
+      <div className="flex flex-col gap-1 rounded-md border border-neutral-100 bg-neutral-50 p-1.5">
+        {track.path && track.path.length >= 2 ? (
+          <>
+            <div className="flex items-center justify-between text-[10px] text-neutral-600">
+              <span>{tr("editor.motion_path_n_points", { count: track.path.length })}</span>
+              <button onClick={() => set({ ...track, path: undefined, orient: undefined })} className="text-rose-600 hover:underline">{tr("editor.clear")}</button>
+            </div>
+            <label className="flex items-center gap-1 text-[10px] text-neutral-500">
+              <input type="checkbox" checked={!!track.orient} onChange={(e) => set({ ...track, orient: e.target.checked || undefined })} className="h-3 w-3 accent-brand-600" />
+              {tr("editor.orient_to_path")}
+            </label>
+          </>
+        ) : (
+          <button
+            onClick={() => {
+              const pts = [...kfs].sort((a, b) => a.t - b.t).map((k) => ({ x: k.dx ?? 0, y: k.dy ?? 0 }));
+              if (pts.length < 2) pts.push({ x: (pts[0]?.x ?? 0) + 120, y: pts[0]?.y ?? 0 });
+              set({ ...track, path: pts });
+            }}
+            className="rounded-md border border-neutral-200 px-2 py-1 text-[11px] hover:bg-neutral-50"
+            data-testid="path-from-keyframes"
+          >{tr("editor.set_motion_path_from_keyframes")}</button>
+        )}
+      </div>
     </div>
   );
 }
@@ -2155,6 +2207,8 @@ function KeyframeEditor({ node }: { node: Node }) {
 function AnimateSection({ node }: { node: Node }) {
   const [tab, setTab] = useState<AnimTab>("entrance");
   const st = useEditor.getState();
+  const toast = useToast();
+  const hasCopiedAnimation = useEditor((s2) => !!s2.copiedAnimation);
   const id = node.id;
   const anim = (node as { animation?: NodeAnimation }).animation ?? {};
   // Typewriter reveal only makes sense for text, so offer it only there.
@@ -2230,6 +2284,25 @@ function AnimateSection({ node }: { node: Node }) {
           <select aria-label={tr("editor.easing")} value={clip.easing} disabled={!!(clip as { bezier?: unknown }).bezier} onChange={(e) => set({ ...clip, easing: e.target.value as Easing, bezier: undefined })} className={`${selectCls} disabled:opacity-40`}>
             {easings().map((es) => <option key={es.v} value={es.v}>{es.label}</option>)}
           </select>
+          {/* Spring physics (v23): stiffness maps to frequency, damping to the
+              settle character; the engine clamps into its stable range. */}
+          {clip.easing === "spring" && !(clip as { bezier?: unknown }).bezier && (() => {
+            const sp = (clip as { spring?: { stiffness?: number; damping?: number } }).spring;
+            return (
+              <div className="grid grid-cols-2 gap-2">
+                <label className="flex flex-col gap-0.5 text-[10px] text-neutral-500">
+                  {tr("editor.stiffness")} ({sp?.stiffness ?? 8})
+                  <input type="range" min={1} max={40} step={1} value={sp?.stiffness ?? 8}
+                    onChange={(e) => set({ ...clip, spring: { ...sp, stiffness: Number(e.target.value) } })} className="accent-brand-600" />
+                </label>
+                <label className="flex flex-col gap-0.5 text-[10px] text-neutral-500">
+                  {tr("editor.damping")} ({(sp?.damping ?? 0.32).toFixed(2)})
+                  <input type="range" min={0.05} max={1} step={0.01} value={sp?.damping ?? 0.32}
+                    onChange={(e) => set({ ...clip, spring: { ...sp, damping: Number(e.target.value) } })} className="accent-brand-600" />
+                </label>
+              </div>
+            );
+          })()}
           {/* Entrance sequencing across siblings: start with/after the previous
               animated element ("with/after previous" timing). */}
           {tab === "entrance" && (
@@ -2244,6 +2317,54 @@ function AnimateSection({ node }: { node: Node }) {
           {tab === "emphasis" && <p className="text-[11px] text-neutral-400">{tr("editor.loops_while_the_slide_is_shown")}</p>}
         </>
       )}
+      {/* Animation painter (C14): copy this element's whole animation set,
+          paste onto the selection. */}
+      <div className="flex gap-1.5">
+        <button
+          onClick={() => { st.copyAnimation(id); toast.success(tr("editor.animation_copied")); }}
+          disabled={!anim.entrance && !anim.exit && !anim.emphasis && !anim.custom}
+          className="flex-1 rounded-md border border-neutral-200 px-2 py-1 text-[11px] hover:bg-neutral-50 disabled:opacity-40"
+          data-testid="copy-animation"
+        >{tr("editor.copy_animation")}</button>
+        <button
+          onClick={() => {
+            const n = st.pasteAnimation(useEditor.getState().selection);
+            toast.success(tr("editor.animation_pasted_count", { count: n }));
+          }}
+          disabled={!hasCopiedAnimation}
+          className="flex-1 rounded-md border border-neutral-200 px-2 py-1 text-[11px] hover:bg-neutral-50 disabled:opacity-40"
+          data-testid="paste-animation"
+        >{tr("editor.paste_animation")}</button>
+      </div>
+      {/* Media trigger (v23, C15): hold the entrance until a video on this page
+          reaches a timestamp; fires in present mode. */}
+      {(() => {
+        const pageIdx = useEditor.getState().activePage;
+        const mediaNodes = (useEditor.getState().doc.pages[pageIdx]?.children ?? []).filter((n) => n.type === "video");
+        if (!mediaNodes.length || !anim.entrance) return null;
+        const trig = anim.trigger;
+        return (
+          <label className="flex flex-col gap-1 text-[11px] text-neutral-400">{tr("editor.start_entrance_at_media_time")}
+            <div className="grid grid-cols-2 gap-1.5">
+              <select
+                value={trig?.mediaNodeId ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  st.setNodeAnimation(id, { ...anim, trigger: v ? { mediaNodeId: v, atMs: trig?.atMs ?? 0 } : undefined } as NodeAnimation);
+                }}
+                className={selectCls}
+                aria-label={tr("editor.start_entrance_at_media_time")}
+              >
+                <option value="">{tr("editor.none")}</option>
+                {mediaNodes.map((m, i) => <option key={m.id} value={m.id}>{m.name ?? `${tr("editor.video")} ${i + 1}`}</option>)}
+              </select>
+              {trig && (
+                <Field key={`trg${trig.atMs}`} label={tr("editor.t_ms")} value={trig.atMs} onCommit={(n) => st.setNodeAnimation(id, { ...anim, trigger: { ...trig, atMs: Math.max(0, n) } } as NodeAnimation)} />
+              )}
+            </div>
+          </label>
+        );
+      })()}
       <KeyframeEditor node={node} />
     </Section>
   );
@@ -2290,10 +2411,33 @@ function InteractionSection({ node, doc }: { node: Node; doc: DesignFile }) {
   const id = node.id;
   const interaction = (node as { interaction?: Interaction }).interaction;
   const action = interaction?.action ?? { kind: "none" as const };
+  const actionV2 = (interaction as { actionV2?: { kind: string; targetNodeId?: string } } | undefined)?.actionV2;
+  // Spread the EXISTING interaction first (unknown keys survive); choosing a
+  // legacy action CLEARS actionV2, because a capable runtime prefers v2 and a
+  // stale one would shadow the new choice.
   const setAction = (next: InteractionAction) => {
     if (next.kind === "none") { st.setInteraction(id, undefined); return; }
-    st.setInteraction(id, { trigger: interaction?.trigger ?? "click", action: next });
+    // Rebuild WITHOUT the actionV2 key (an explicit undefined-valued own key
+    // would flow into the CRDT via Object.keys); unknown keys still ride the
+    // spread first.
+    const rebuilt = { ...interaction, trigger: interaction?.trigger ?? "click", action: next } as Interaction & { actionV2?: unknown };
+    delete rebuilt.actionV2;
+    st.setInteraction(id, rebuilt);
   };
+  // v24 actions (C16): stored on actionV2 with a benign legacy action, so an
+  // older client validates the file and simply does nothing on click.
+  const setActionV2 = (kind: string, targetNodeId?: string) => {
+    st.setInteraction(id, {
+      ...interaction,
+      trigger: interaction?.trigger ?? "click",
+      action: { kind: "none" },
+      actionV2: { kind, ...(targetNodeId ? { targetNodeId } : {}) },
+    } as Interaction);
+  };
+  const pageIdx = useEditor.getState().activePage;
+  const pageNodes = (doc.pages[pageIdx]?.children ?? []) as Node[];
+  const mediaNodes = pageNodes.filter((n) => n.type === "video");
+  const animatedNodes = pageNodes.filter((n) => !!(n as { animation?: { entrance?: unknown } }).animation?.entrance && n.id !== id);
   return (
     <Section title={tr("editor.interaction")} order={ORDER.interactivity} defaultOpen={false}>
       <div className="grid grid-cols-2 gap-2">
@@ -2307,20 +2451,43 @@ function InteractionSection({ node, doc }: { node: Node; doc: DesignFile }) {
           <option value="hover">{tr("editor.on_hover")}</option>
         </select>
         <select aria-label={tr("editor.on_hover")}
-          value={action.kind}
+          value={actionV2 ? actionV2.kind : action.kind}
           onChange={(e) => {
             const k = e.target.value;
             if (k === "none") setAction({ kind: "none" });
             else if (k === "navigate") setAction({ kind: "navigate", to: "next" });
-            else setAction({ kind: "open-link", link: { kind: "url", target: "" } });
+            else if (k === "open-link") setAction({ kind: "open-link", link: { kind: "url", target: "" } });
+            else if (k === "toggle-media" || k === "play-media" || k === "pause-media") setActionV2(k, mediaNodes[0]?.id);
+            else if (k === "run-animation") setActionV2(k, animatedNodes[0]?.id);
           }}
           className={selectCls}
         >
           <option value="none">{tr("editor.none")}</option>
           <option value="navigate">{tr("editor.go_to_page")}</option>
           <option value="open-link">{tr("editor.open_link")}</option>
+          {mediaNodes.length > 0 && <option value="toggle-media">{tr("editor.play_pause_media")}</option>}
+          {animatedNodes.length > 0 && <option value="run-animation">{tr("editor.run_animation")}</option>}
         </select>
       </div>
+      {/* v24 target pickers: which media/element the action drives. */}
+      {actionV2 && (actionV2.kind === "toggle-media" || actionV2.kind === "play-media" || actionV2.kind === "pause-media") && (
+        <select aria-label={tr("editor.play_pause_media")}
+          value={actionV2.targetNodeId ?? ""}
+          onChange={(e) => setActionV2(actionV2.kind, e.target.value || undefined)}
+          className={selectCls}
+        >
+          {mediaNodes.map((m, i) => <option key={m.id} value={m.id}>{m.name ?? `${tr("editor.video")} ${i + 1}`}</option>)}
+        </select>
+      )}
+      {actionV2?.kind === "run-animation" && (
+        <select aria-label={tr("editor.run_animation")}
+          value={actionV2.targetNodeId ?? ""}
+          onChange={(e) => setActionV2("run-animation", e.target.value || undefined)}
+          className={selectCls}
+        >
+          {animatedNodes.map((m, i) => <option key={m.id} value={m.id}>{m.name ?? `${tr("editor.element")} ${i + 1}`}</option>)}
+        </select>
+      )}
       {action.kind === "navigate" && (
         <select aria-label={tr("editor.go_to_page")}
           value={action.to === "page" ? `page:${action.pageId ?? ""}` : action.to}
@@ -2359,17 +2526,79 @@ function InteractionSection({ node, doc }: { node: Node; doc: DesignFile }) {
  *  placeholder cascade, including the title placeholder that makes its name a
  *  real, screen-reader-navigable slide title. Installing the built-in layouts
  *  is itself one undoable action, so a deck opts in explicitly. */
-function PageLayoutSection({ page }: { page: Page }) {
+function PageLayoutSection({ page, workspaceId }: { page: Page; workspaceId: string | null }) {
   const st = useEditor.getState();
   const rev = useEditor((s) => s.rev);
+  const toast = useToast();
+  const [extracting, setExtracting] = useState(false);
   const doc = useEditor.getState().doc as unknown as {
     layouts?: { id: string; name: string }[];
+    pages: unknown[];
   };
   const layouts = doc.layouts ?? [];
   const current = (page as { layoutId?: string }).layoutId;
   // Resolve against the live doc so a deleted layout shows as "None".
   const known = layouts.some((l) => l.id === current);
+  const autoflowOn = (page as { data?: Record<string, unknown> }).data?.autoflow !== false;
   void rev; // re-render when the deck's layouts change
+
+  // T20: turn an imported or hand-built deck into a reusable layout set - one
+  // undoable action; near-identical slides collapse to one layout. Stage 2:
+  // when the provider can see, each unique layout gets a vision correction
+  // pass over the rendered page before installing; any failure keeps the
+  // heuristic result, so the pass can only improve the set.
+  const extract = async () => {
+    const live = useEditor.getState().doc;
+    const docId = live.id;
+    const set = extractLayoutSet(live.pages as unknown as ExtractPageLike[]);
+    if (!set.layouts.length) {
+      toast.toast(tr("editor.no_layouts_could_be_extracted"), "info");
+      return;
+    }
+    let install: ExtractedLayoutSet = set;
+    if (workspaceId) {
+      setExtracting(true);
+      try {
+        // The vision pass renders against a FROZEN snapshot: the live doc
+        // mutates in place while the model calls run, and a reordered or
+        // deleted slide must not be judged as some layout's source page.
+        const frozen = structuredClone(live);
+        const idsAt = live.pages.map((p) => p.id);
+        const { layouts: corrected } = await refineExtractedLayoutSet(workspaceId, frozen, set);
+        // Pages may have been added, removed, or moved while the vision pass
+        // ran: re-anchor the page links by page id before installing.
+        const now = useEditor.getState().doc;
+        install = {
+          layouts: corrected,
+          assignments: now.pages.map((p) => {
+            const i = idsAt.indexOf(p.id);
+            return i >= 0 ? set.assignments[i] : null;
+          }),
+        };
+      } finally {
+        setExtracting(false);
+      }
+    }
+    // The awaits above may have outlived this document: never install layouts
+    // extracted from design A into design B, and never into a version-history
+    // preview (the store also refuses previews).
+    const st2 = useEditor.getState();
+    if (st2.doc.id !== docId || st2.preview) {
+      toast.toast(tr("editor.no_layouts_could_be_extracted"), "info");
+      return;
+    }
+    const result = st2.extractLayoutsFromDeck(install);
+    if (!result) {
+      toast.toast(tr("editor.no_layouts_could_be_extracted"), "info");
+      return;
+    }
+    toast.success(tr("editor.extracted_layouts_count", { count: result.created }));
+  };
+  const extractButton = doc.pages.length > 1 && (
+    <button type="button" onClick={() => void extract()} disabled={extracting} className={`${actionBtnCls} mt-1.5 disabled:opacity-50`} data-testid="extract-layouts">
+      {extracting ? tr("editor.analyzing_slides") : tr("editor.extract_layouts_from_this_deck")}
+    </button>
+  );
 
   if (!layouts.length) {
     return (
@@ -2381,6 +2610,7 @@ function PageLayoutSection({ page }: { page: Page }) {
         <button type="button" onClick={() => st.ensureSlideLayouts()} className={actionBtnCls} data-testid="add-layouts">
           {tr("editor.add_slide_layouts")}
         </button>
+        {extractButton}
       </Section>
     );
   }
@@ -2403,59 +2633,269 @@ function PageLayoutSection({ page }: { page: Page }) {
       <p className="mt-1.5 text-[11px] text-neutral-500">
         {tr("editor.layout_supplies_regions")}
       </p>
+      {/* F40 E16: per-page adaptive-reflow opt-out (absent = on). Shown only
+          while the page is layout-linked, where reflow can act. */}
+      {known && (
+        <label className="mt-1.5 flex cursor-pointer items-center gap-2 text-xs text-neutral-600">
+          <input
+            type="checkbox"
+            data-testid="autoflow-toggle"
+            checked={autoflowOn}
+            onChange={(e) => st.setPageAutoflow(useEditor.getState().activePage, e.target.checked)}
+            className="h-3.5 w-3.5 rounded border-neutral-300 accent-brand-600"
+          />
+          {tr("editor.auto_fit_slide_content")}
+        </label>
+      )}
+      {extractButton}
     </Section>
   );
 }
 
-/** Deck theme swap (doc 28 FR-4). Adopting a theme restyles the deck's palette
- *  and font pair in one undoable action; it never rewrites page content, which
- *  is what keeps it reversible (recoloring nodes is the Brand panel's re-skin). */
-const builtinThemes = (): { id: string; name: string; colors: string[]; fontHeading: string; fontBody: string }[] => [
-  { id: "theme-plum", name: tr("editor.plum"), colors: ["#9B2C72", "#C84B9A", "#3E1030", "#FBEFF7", "#18181b", "#ffffff"], fontHeading: "Plus Jakarta Sans", fontBody: "Plus Jakarta Sans" },
-  { id: "theme-slate", name: tr("editor.slate"), colors: ["#0f172a", "#334155", "#64748b", "#e2e8f0", "#020617", "#ffffff"], fontHeading: "Inter", fontBody: "Inter" },
-  { id: "theme-forest", name: tr("editor.forest"), colors: ["#14532d", "#16a34a", "#4ade80", "#dcfce7", "#052e16", "#ffffff"], fontHeading: "Inter", fontBody: "Inter" },
-];
+/** Deck theme swap (doc 28 FR-4, F28 T19). Adopting a theme swaps the deck's
+ *  palette and font pair in one undoable action; content painted with the
+ *  PREVIOUS theme's slot colors and fonts follows the swap (exact matches
+ *  only), so a themed deck restyles while a user's own choices never move.
+ *  The seed palettes adapt an MIT-licensed catalog (see THIRD_PARTY.md) into
+ *  the 6-slot convention: primary, accent, deep, tint, ink, paper. */
+// F40 E10: the theme seeds moved to the shared catalog (@hc/aistudio via
+// frontend/src/lib/themeCatalog), one source of truth for the picker,
+// headless generation, and the Go manifest.
+
+/** One selectable theme row: four palette chips + the name. */
+function ThemeRow({ active, colors, name, testId, onClick }: { active: boolean; colors: string[]; name: string; testId: string; onClick?: () => void }) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={active}
+      data-testid={testId}
+      onClick={onClick}
+      className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-start text-sm transition ${
+        active ? "border-brand-500 bg-brand-50 text-brand-ink" : "border-neutral-200 hover:bg-neutral-50"
+      }`}
+    >
+      <span className="flex shrink-0 gap-0.5">
+        {colors.slice(0, 4).map((c, i) => (
+          <span key={`${c}-${i}`} style={{ background: c }} className="h-4 w-2.5 rounded-sm ring-1 ring-black/10" />
+        ))}
+      </span>
+      <span className="min-w-0 flex-1 truncate">{name}</span>
+    </button>
+  );
+}
 
 function DeckThemeSection() {
   const st = useEditor.getState();
   const rev = useEditor((s) => s.rev);
-  const doc = useEditor.getState().doc as unknown as { theme?: { id: string } };
+  const brandKit = useBrand((s) => s.kit);
+  const doc = useEditor.getState().doc as unknown as { theme?: Theme };
   const current = doc.theme?.id;
   void rev;
+  const seeds = builtinThemes();
+  // A theme this list doesn't know (AI-generated, brand-derived, or stamped by
+  // deck generation) still shows as the active choice instead of vanishing.
+  const custom = doc.theme && !seeds.some((t) => t.id === current) ? doc.theme : null;
+
+  // C34: reference-image style transfer state. The proposal is a full T19
+  // Theme record shown behind a confirm; nothing applies until Apply.
+  const panelWorkspaceId = useBrand((s) => s.workspaceId);
+  const imgFileRef = useRef<HTMLInputElement>(null);
+  const [imgProposal, setImgProposal] = useState<Theme | null>(null);
+  const [imgBusy, setImgBusy] = useState(false);
+  const [imgError, setImgError] = useState<string | null>(null);
+
+  async function proposeThemeFromImage(file: File) {
+    setImgBusy(true);
+    setImgError(null);
+    setImgProposal(null);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result));
+        r.onerror = () => reject(new Error("read failed"));
+        r.readAsDataURL(file);
+      });
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const el = new Image();
+        el.onload = () => resolve(el);
+        el.onerror = () => reject(new Error("decode failed"));
+        el.src = dataUrl;
+      });
+      // Downscaled sample, exactly like the photo-palette flow: dominant hues,
+      // not per-pixel precision.
+      const SAMPLE = 128;
+      const scale = Math.min(1, SAMPLE / Math.max(img.naturalWidth, img.naturalHeight));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+      const cx = canvas.getContext("2d");
+      if (!cx) throw new Error("no canvas");
+      cx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const palette = [...new Set(extractPalette(cx.getImageData(0, 0, canvas.width, canvas.height), 6).map(toHex))];
+      if (!palette.length) throw new Error("no colors");
+      // The vision call gets a bounded PNG (<=512px on the long edge), never
+      // the raw file bytes: a full-resolution photo as base64 would blow the
+      // request budget for no gain in style judgment.
+      const V = 512;
+      const vScale = Math.min(1, V / Math.max(img.naturalWidth, img.naturalHeight));
+      const vCanvas = document.createElement("canvas");
+      vCanvas.width = Math.max(1, Math.round(img.naturalWidth * vScale));
+      vCanvas.height = Math.max(1, Math.round(img.naturalHeight * vScale));
+      vCanvas.getContext("2d")?.drawImage(img, 0, 0, vCanvas.width, vCanvas.height);
+      const visionUrl = vCanvas.toDataURL("image/png");
+      const lumOf = (hex: string) => { const c = colorFromHex(hex); return 0.2126 * c.srgb.r + 0.7152 * c.srgb.g + 0.0722 * c.srgb.b; };
+      const mode = lumOf(palette[0]) < 0.35 ? ("dark" as const) : ("light" as const);
+      const deep = [...palette].sort((a, b) => lumOf(a) - lumOf(b))[0];
+      const slots = repairThemeSlots(deriveThemeSlots({ primary: palette[0], accent: palette[1], deep }, mode), mode);
+      // One vision call decides the type feel, mapped onto the loadable theme
+      // font pairings; a text-only provider degrades to the theme's default
+      // fonts instead of failing the flow.
+      let fontHeading: string | undefined;
+      let fontBody: string | undefined;
+      if (panelWorkspaceId) {
+        try {
+          const { text } = await oc.aiDescribeImage({
+            workspaceId: panelWorkspaceId,
+            imageBase64: visionUrl,
+            instruction: "Which typography feel matches this image's visual style? Answer with exactly one word: serif, sans, or display.",
+          });
+          const feel = /\bserif\b/i.test(text) && !/sans/i.test(text) ? "serif" : /display/i.test(text) ? "display" : "sans";
+          [fontHeading, fontBody] = feel === "serif"
+            ? ["Playfair Display", "Source Sans 3"] // i18n-ignore: font family names
+            : feel === "display"
+              ? ["Space Grotesk", "Work Sans"] // i18n-ignore: font family names
+              : ["Montserrat", "Inter"]; // i18n-ignore: font family names
+        } catch { /* no vision capability: palette-only theme */ }
+      }
+      const id = themeIdFor("theme-image", [...themeSlotNames.map((slot) => slots[slot]), fontHeading ?? "", fontBody ?? ""]);
+      setImgProposal(themeFromPalette(id, themeSlotNames.map((slot) => ({ id: `${id}-${slot}`, name: slot, color: colorFromHex(slots[slot]) })), {
+        name: tr("editor.from_image"),
+        fontHeading,
+        fontBody,
+      }));
+    } catch {
+      setImgError(tr("editor.couldnt_read_that_image"));
+    } finally {
+      setImgBusy(false);
+    }
+  }
+
+  // T19 (b): the brand kit -> theme bridge. The kit's leading colors seed the
+  // 6-slot palette (missing slots derived, contrast repaired) and the kit's
+  // fonts become the pair; applying is the same undoable swap as any theme.
+  const brandColors = brandHexColors(brandKit);
+  const applyBrandTheme = () => {
+    if (!brandKit || !brandColors.length) return;
+    const mode = (() => {
+      const c = colorFromHex(brandColors[0]);
+      return 0.2126 * c.srgb.r + 0.7152 * c.srgb.g + 0.0722 * c.srgb.b < 0.35 ? "dark" : "light";
+    })();
+    const slots = repairThemeSlots(
+      deriveThemeSlots({ primary: brandColors[0], accent: brandColors[1], deep: brandColors[2] }, mode),
+      mode,
+    );
+    const fonts = brandFontFamilies(brandKit);
+    // The id hashes the DERIVED content, not just the kit: setDeckTheme
+    // no-ops on an unchanged id, and a kit whose colors changed since the
+    // last click must re-apply, while re-clicking an unchanged kit stays a
+    // clean no-op.
+    const id = themeIdFor(`theme-brand-${brandKit.id}`, [...themeSlotNames.map((slot) => slots[slot]), ...fonts]);
+    st.setDeckTheme(
+      themeFromPalette(id, themeSlotNames.map((slot) => ({ id: `${id}-${slot}`, name: slot, color: colorFromHex(slots[slot]) })), {
+        name: brandKit.name,
+        fontHeading: fonts[0],
+        fontBody: fonts[1] ?? fonts[0],
+      }),
+    );
+  };
+
   return (
     <Section title={tr("editor.deck_theme")}>
       <div className="flex flex-col gap-1.5" role="radiogroup" aria-label={tr("editor.deck_theme")}>
-        {builtinThemes().map((t) => {
-          const active = current === t.id;
+        {custom && (
+          <ThemeRow
+            active
+            testId="theme-current-custom"
+            name={custom.name ?? tr("editor.custom_theme")}
+            colors={custom.colors.map((c) => colorHex(c.color))}
+          />
+        )}
+        {themeStyleOrder.map((style) => {
+          const group = seeds.filter((t) => t.style === style);
+          if (!group.length) return null;
           return (
-            <button
-              key={t.id}
-              type="button"
-              role="radio"
-              aria-checked={active}
-              data-testid={`theme-${t.id}`}
-              onClick={() =>
-                st.setDeckTheme({
-                  id: t.id,
-                  name: t.name,
-                  colors: t.colors.map((hex, i) => ({ id: `${t.id}-${i}`, color: colorFromHex(hex) })),
-                  fontHeading: t.fontHeading,
-                  fontBody: t.fontBody,
-                })
-              }
-              className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-start text-sm transition ${
-                active ? "border-brand-500 bg-brand-50 text-brand-ink" : "border-neutral-200 hover:bg-neutral-50"
-              }`}
-            >
-              <span className="flex shrink-0 gap-0.5">
-                {t.colors.slice(0, 4).map((c) => (
-                  <span key={c} style={{ background: c }} className="h-4 w-2.5 rounded-sm ring-1 ring-black/10" />
-                ))}
-              </span>
-              <span className="min-w-0 flex-1 truncate">{t.name}</span>
-            </button>
+            <div key={style} className="flex flex-col gap-1.5">
+              <span className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">{themeStyleLabel(style)}</span>
+              {group.map((t) => (
+                <ThemeRow
+                  key={t.id}
+                  active={current === t.id}
+                  testId={`theme-${t.id}`}
+                  name={t.displayName}
+                  colors={[...t.colors]}
+                  onClick={() =>
+                    st.setDeckTheme({
+                      id: t.id,
+                      name: t.displayName,
+                      colors: t.colors.map((hex, i) => ({ id: `${t.id}-${i}`, name: themeSlotNames[i], color: colorFromHex(hex) })),
+                      fontHeading: t.fontHeading,
+                      fontBody: t.fontBody,
+                    })
+                  }
+                />
+              ))}
+            </div>
           );
         })}
+        {brandKit && brandColors.length > 0 && (
+          <button type="button" onClick={applyBrandTheme} className={actionBtnCls} data-testid="theme-from-brand">
+            {tr("editor.create_theme_from_brand_kit")}
+          </button>
+        )}
+        {/* C34 reference-image style transfer: a picked (or dropped) reference
+            image proposes a theme - palette via extractPalette, type feel via
+            one vision call - applied only after an explicit confirm. */}
+        <input
+          ref={imgFileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void proposeThemeFromImage(f); }}
+        />
+        <button
+          type="button"
+          onClick={() => imgFileRef.current?.click()}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f && f.type.startsWith("image/")) void proposeThemeFromImage(f); }}
+          disabled={imgBusy}
+          className={`${actionBtnCls} disabled:opacity-50`}
+          data-testid="theme-from-image"
+        >
+          {imgBusy ? tr("editor.reading_image") : tr("editor.create_theme_from_image")}
+        </button>
+        {imgError && <span className="text-[11px] text-red-500">{imgError}</span>}
+        {imgProposal && (
+          <div className="flex flex-col gap-1.5 rounded-lg border border-neutral-200 bg-surface p-1.5" data-testid="image-theme-proposal">
+            <ThemeRow active={false} testId="theme-image-proposal-row" name={imgProposal.name ?? tr("editor.from_image")} colors={imgProposal.colors.map((c) => colorHex(c.color))} />
+            {(imgProposal.fontHeading || imgProposal.fontBody) && (
+              <span className="px-1 text-[11px] text-neutral-500">{[imgProposal.fontHeading, imgProposal.fontBody].filter(Boolean).join(" + ")}</span>
+            )}
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                onClick={() => { const p = imgProposal; setImgProposal(null); st.setDeckTheme(p); }}
+                className="rounded-md bg-brand-600 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-brand-700"
+                data-testid="apply-image-theme"
+              >
+                {tr("editor.apply_theme")}
+              </button>
+              <button type="button" onClick={() => setImgProposal(null)} className="rounded-md border border-neutral-200 px-2.5 py-1 text-[11px] text-neutral-600 hover:bg-neutral-50">
+                {tr("editor.cancel")}
+              </button>
+            </div>
+          </div>
+        )}
         {current && (
           <button type="button" onClick={() => st.setDeckTheme(undefined)} className="mt-0.5 text-start text-[11px] text-neutral-500 hover:underline" data-testid="clear-theme">
             {tr("editor.clear_theme")}
@@ -2476,6 +2916,9 @@ function NodeAccessibilitySection({ node }: { node: Node }) {
   const st = useEditor.getState();
   const rev = useEditor((s) => s.rev);
   void rev;
+  const toast = useToast();
+  const [altBusy, setAltBusy] = useState(false);
+  const panelWorkspaceId = useBrand((s) => s.workspaceId);
   const rec = node as unknown as { altText?: string; alt?: string; decorative?: boolean };
   const decorative = rec.decorative === true;
   // The generic field wins; the legacy image-only `alt` still shows so an older
@@ -2506,37 +2949,164 @@ function NodeAccessibilitySection({ node }: { node: Node }) {
         />
         {tr("editor.decorative_skip_for_screen_readers")}
       </label>
+      {/* AI description (F22 images; C29 charts from their DATA). */}
+      {(node.type === "image" || node.type === "chart") && !decorative && (
+        <button
+          type="button"
+          data-testid="generate-alt"
+          disabled={altBusy || !panelWorkspaceId}
+          onClick={() => {
+            if (!panelWorkspaceId) return;
+            setAltBusy(true);
+            const run = node.type === "chart"
+              ? generateChartAltText(panelWorkspaceId, node.id)
+              : (useEditor.getState().select([node.id]), generateAltText(panelWorkspaceId));
+            void Promise.resolve(run)
+              .then((ok) => { if (!ok) toast.error(tr("editor.couldnt_describe_this_element")); })
+              .catch((e) => toast.error(userMessage(e, tr("editor.couldnt_describe_this_element"))))
+              .finally(() => setAltBusy(false));
+          }}
+          className={`mt-2 w-full rounded-lg border border-brand-200 bg-brand-50 px-2 py-1.5 text-sm font-medium text-brand-ink hover:bg-brand-100 disabled:opacity-50`}
+        >
+          {altBusy ? tr("editor.describing") : tr("editor.generate_description_with_ai")}
+        </button>
+      )}
     </Section>
   );
 }
 
 /** Per-page transition control shown in the empty-selection page panel. */
+/** One transition-gallery tile: a miniature two-slide preview rendered by the
+ *  SAME engine compositor present mode uses, so the swatch cannot lie. Static
+ *  at a characteristic mid-frame; animates on hover/focus unless the user
+ *  prefers reduced motion. */
+function TransitionSwatch({ type, label, active, onPick }: {
+  type: import("@hc/schema").PageTransition["type"] | "none";
+  label: string;
+  active: boolean;
+  onPick: () => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rafRef = useRef(0);
+  const W = 64;
+  const H = 36;
+
+  // Built once and cached: the hover animation calls drawAt every rAF frame,
+  // and allocating two canvases per frame is pointless churn.
+  const buffersRef = useRef<{ a: HTMLCanvasElement; b: HTMLCanvasElement } | null>(null);
+  const buffers = useCallback(() => {
+    if (buffersRef.current) return buffersRef.current;
+    const mk = (bg: string, bar: string, barY: number) => {
+      const c = document.createElement("canvas");
+      c.width = W;
+      c.height = H;
+      const g = c.getContext("2d")!;
+      g.fillStyle = bg;
+      g.fillRect(0, 0, W, H);
+      g.fillStyle = bar;
+      g.fillRect(8, barY, W - 16, 6);
+      g.fillRect(8, barY + 10, (W - 16) * 0.6, 4);
+      return c;
+    };
+    buffersRef.current = { a: mk("#e2e8f0", "#475569", 8), b: mk("#334155", "#e2e8f0", 12) };
+    return buffersRef.current;
+  }, []);
+
+  const drawAt = useCallback((p: number) => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+    const { a, b } = buffers();
+    if (type === "none") {
+      ctx.drawImage(p < 0.5 ? a : b, 0, 0);
+      return;
+    }
+    renderTransition(ctx as unknown as CanvasLikeCtx, { type, durationMs: 300 } as import("@hc/schema").PageTransition, {
+      from: a, to: b, width: W, height: H, progress: p,
+    });
+  }, [type, buffers]);
+
+  useEffect(() => {
+    drawAt(0.4); // characteristic mid-frame as the resting state
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [drawAt]);
+
+  const animate = useCallback(() => {
+    if (prefersReducedMotion()) return; // static swatches under reduced motion
+    cancelAnimationFrame(rafRef.current);
+    const started = performance.now();
+    const loop = (now: number) => {
+      const p = ((now - started) % 1100) / 900; // 900ms sweep + a 200ms hold
+      drawAt(Math.min(1, p));
+      rafRef.current = requestAnimationFrame(loop);
+    };
+    rafRef.current = requestAnimationFrame(loop);
+  }, [drawAt]);
+
+  const settle = useCallback(() => {
+    cancelAnimationFrame(rafRef.current);
+    drawAt(0.4);
+  }, [drawAt]);
+
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={active}
+      title={label}
+      data-testid={`transition-${type}`}
+      onClick={onPick}
+      onMouseEnter={animate}
+      onMouseLeave={settle}
+      onFocus={animate}
+      onBlur={settle}
+      className={`flex flex-col items-center gap-0.5 rounded-lg border p-1 transition ${
+        active ? "border-brand-500 bg-brand-50" : "border-neutral-200 hover:bg-neutral-50"
+      }`}
+    >
+      <canvas ref={canvasRef} width={W} height={H} className="rounded" aria-hidden="true" />
+      <span className="max-w-full truncate text-[10px] leading-tight text-neutral-600">{label}</span>
+    </button>
+  );
+}
+
 function PageTransitionSection({ page }: { page: Page }) {
   const st = useEditor.getState();
+  const toast = useToast();
   const t = (page as { transition?: import("@hc/schema").PageTransition }).transition;
+  const tOut = (page as { transitionOut?: import("@hc/schema").PageTransition }).transitionOut;
   type TransitionType = import("@hc/schema").PageTransition["type"];
   return (
     <Section title={tr("editor.transition")}>
-      <select aria-label={tr("editor.transition")}
-        value={t?.type ?? "none"}
-        onChange={(e) => {
-          const v = e.target.value as TransitionType;
-          if (v === "none") st.setPageTransition(undefined);
-          else st.setPageTransition({ type: v, direction: t?.direction ?? "left", durationMs: t?.durationMs ?? 400 });
-        }}
-        className={selectCls}
-      >
-        <option value="none">{tr("editor.none")}</option>
-        <option value="fade">{tr("editor.fade")}</option>
-        <option value="slide">{tr("editor.slide")}</option>
-        <option value="push">{tr("editor.push")}</option>
-        <option value="dissolve">{tr("editor.dissolve")}</option>
-        <option value="morph-lite">{tr("editor.morph_lite")}</option>
-        <option value="morph">{tr("editor.morph_magic_move")}</option>
-        <option value="wipe">{tr("editor.wipe")}</option>
-        <option value="flip">{tr("editor.flip")}</option>
-        <option value="zoom">{tr("editor.zoom")}</option>
-      </select>
+      {/* Gallery picker (C04): every tile previews through the real engine
+          compositor on hover/focus, so what you see is what plays. */}
+      <div role="radiogroup" aria-label={tr("editor.transition")} className="grid grid-cols-3 gap-1">
+        {([
+          ["none", tr("editor.none")],
+          ["fade", tr("editor.fade")],
+          ["slide", tr("editor.slide")],
+          ["push", tr("editor.push")],
+          ["dissolve", tr("editor.dissolve")],
+          ["morph-lite", tr("editor.morph_lite")],
+          ["morph", tr("editor.morph_magic_move")],
+          ["wipe", tr("editor.wipe")],
+          ["flip", tr("editor.flip")],
+          ["zoom", tr("editor.zoom")],
+        ] as [TransitionType | "none", string][]).map(([v, label]) => (
+          <TransitionSwatch
+            key={v}
+            type={v}
+            label={label}
+            active={(t?.type ?? "none") === v}
+            onPick={() => {
+              // Spread the EXISTING transition first: a newer client's unknown
+              // keys must survive this rebuild (zero-data-loss).
+              if (v === "none") st.setPageTransition(undefined);
+              else st.setPageTransition({ ...t, type: v, direction: t?.direction ?? "left", durationMs: t?.durationMs ?? 400 });
+            }}
+          />
+        ))}
+      </div>
       {t && t.type !== "none" && (
         <div className="grid grid-cols-2 gap-2">
           {(t.type === "slide" || t.type === "push" || t.type === "wipe") && (
@@ -2552,6 +3122,57 @@ function PageTransitionSection({ page }: { page: Page }) {
             </select>
           )}
           <Field key={`pt${t.durationMs}`} label={tr("editor.dur")} value={t.durationMs} onCommit={(n) => st.setPageTransition({ ...t, durationMs: Math.max(0, n) })} />
+          {/* v22 per-transition easing: the engine clamps unknown names, so the
+              set here can grow without a schema change. */}
+          <select aria-label={tr("editor.easing")}
+            value={t.easing ?? "default"}
+            onChange={(e) => st.setPageTransition({ ...t, easing: e.target.value === "default" ? undefined : e.target.value })}
+            className={selectCls}
+          >
+            <option value="default">{tr("editor.easing_default")}</option>
+            <option value="linear">{tr("editor.linear")}</option>
+            <option value="ease-in">{tr("editor.ease_in")}</option>
+            <option value="ease-out">{tr("editor.ease_out")}</option>
+            <option value="ease-in-out">{tr("editor.ease_in_out")}</option>
+            <option value="spring">{tr("editor.spring")}</option>
+          </select>
+        </div>
+      )}
+      {/* v22 exit transition: how THIS page leaves, composited with the next
+          page's own transition. */}
+      <label className="mt-2 block text-[11px] font-medium text-neutral-500">{tr("editor.exit_transition")}</label>
+      <select aria-label={tr("editor.exit_transition")}
+        value={tOut?.type ?? "none"}
+        onChange={(e) => {
+          const v = e.target.value as TransitionType;
+          if (v === "none") st.setPageTransitionOut(undefined);
+          else st.setPageTransitionOut({ ...tOut, type: v, direction: tOut?.direction ?? "left", durationMs: tOut?.durationMs ?? 400 });
+        }}
+        className={selectCls}
+      >
+        <option value="none">{tr("editor.none")}</option>
+        <option value="fade">{tr("editor.fade")}</option>
+        <option value="slide">{tr("editor.slide")}</option>
+        <option value="push">{tr("editor.push")}</option>
+        <option value="wipe">{tr("editor.wipe")}</option>
+        <option value="zoom">{tr("editor.zoom")}</option>
+        <option value="flip">{tr("editor.flip")}</option>
+      </select>
+      {tOut && (
+        <div className="mt-1 grid grid-cols-2 gap-2">
+          {(tOut.type === "slide" || tOut.type === "push" || tOut.type === "wipe") && (
+            <select aria-label={tr("editor.direction")}
+              value={tOut.direction ?? "left"}
+              onChange={(e) => st.setPageTransitionOut({ ...tOut, direction: e.target.value as NonNullable<typeof tOut.direction> })}
+              className={selectCls}
+            >
+              <option value="left">{tr("editor.left")}</option>
+              <option value="right">{tr("editor.right")}</option>
+              <option value="up">{tr("editor.up")}</option>
+              <option value="down">{tr("editor.down")}</option>
+            </select>
+          )}
+          <Field key={`pto${tOut.durationMs}`} label={tr("editor.dur")} value={tOut.durationMs} onCommit={(n) => st.setPageTransitionOut({ ...tOut, durationMs: Math.max(0, n) })} />
         </div>
       )}
       <p className="text-[11px] text-neutral-400">{tr("editor.plays_when_advancing_to_this_page_in_present")}</p>
@@ -2563,6 +3184,19 @@ function PageTransitionSection({ page }: { page: Page }) {
         className="mt-2 w-full rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
       >
         {tr("editor.apply_to_all_slides")}
+      </button>
+      {/* C05: bulk magic-animate, one undo turn; hand-authored builds are
+          skipped so the button is always safe to press. */}
+      <button
+        type="button"
+        data-testid="animate-all-slides"
+        onClick={() => {
+          const n = useEditor.getState().magicAnimateAllPages();
+          toast.success(tr("editor.animated_slides_count", { count: n }));
+        }}
+        className="mt-1 w-full rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
+      >
+        {tr("editor.animate_all_slides")}
       </button>
     </Section>
   );
@@ -2707,7 +3341,7 @@ function ImageEffectsSection({ id, node, workspaceId }: { id: string; node: Node
     useEditor.getState().setEffects(id, (next.length ? next : undefined) as never);
   };
   const applyPreset = (presetId: string, k: number) => {
-    const preset = FILTER_PRESETS.find((p) => p.id === presetId);
+    const preset = filterPresets.find((p) => p.id === presetId);
     if (!preset) return;
     setActivePreset(presetId);
     applyAdjustments(resolvePresetOps(preset, k));
@@ -2808,7 +3442,7 @@ function ImageEffectsSection({ id, node, workspaceId }: { id: string; node: Node
       {tab === "filters" && (
         <div className="flex flex-col gap-2.5">
           <div className="grid grid-cols-3 gap-1.5">
-            {FILTER_PRESETS.map((p) => (
+            {filterPresets.map((p) => (
               <button
                 key={p.id}
                 onClick={() => applyPreset(p.id, intensity)}

@@ -46,7 +46,7 @@ function neutralOf(name: string): number {
 }
 
 /** Curated presets. Values are conservative so they read as "a look", not a smash. */
-export const FILTER_PRESETS: FilterPreset[] = [
+export const filterPresets: FilterPreset[] = [
   { id: "original", name: "Original", ops: [] },
   { id: "clarendon", name: "Clarendon", ops: [
     { name: "contrast", value: 1.2 }, { name: "saturate", value: 1.35 }, { name: "brightness", value: 1.05 }, { name: "warmth", value: -0.15 },

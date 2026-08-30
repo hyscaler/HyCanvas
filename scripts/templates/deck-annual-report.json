@@ -1,0 +1,74 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-annual-report",
+ "title": "Annual Report",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "annual",
+  "report",
+  "year",
+  "review"
+ ],
+ "styleTags": [
+  "dark",
+  "editorial"
+ ],
+ "themeId": "theme-gilded",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 64,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Year in Review",
+  "theme": "reflective, celebratory",
+  "pages": [
+   {
+    "title": "The year",
+    "points": [
+     "Twelve months in one line"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "By the numbers",
+    "points": [
+     "Growth, customers, and the team"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "The big moments",
+    "points": [
+     "Quarter by quarter highlights"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "The hard parts",
+    "points": [
+     "What tested us and what we learned"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Thank you",
+    "points": [
+     "To the people who made it"
+    ],
+    "visualRole": "quote"
+   },
+   {
+    "title": "The year ahead",
+    "points": [
+     "Where we go next"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

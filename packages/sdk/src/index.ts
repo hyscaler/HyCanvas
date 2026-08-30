@@ -106,6 +106,20 @@ export interface WorkspaceMemberView {
   joinedAt?: string;
 }
 
+/** A workspace API key as the management UI sees it (F40): label, display
+ *  prefix, scopes, and usage; never the hash and never the raw secret. */
+export interface ApiKeyView {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  label: string;
+  prefix: string;
+  scopes: string[];
+  lastUsedAt?: string | null;
+  createdAt: string;
+  revoked: boolean;
+}
+
 /** A pending or accepted workspace invitation. `workspaceName` is populated for
  *  the invitee's own view (the in-app accept/decline surface). */
 export interface WorkspaceInvitation {
@@ -405,6 +419,14 @@ export interface MiniAppSummary {
   entry: string;
 }
 
+/** What an AI provider can do (mirrors the Go ai.Capabilities record). */
+export interface AiCapabilities {
+  text: boolean;
+  image: boolean;
+  describeImage: boolean;
+  editImage: boolean;
+}
+
 export interface AiConfigView {
   provider: string;
   model: string | null;
@@ -412,7 +434,31 @@ export interface AiConfigView {
   baseUrl: string | null;
   hasKey: boolean;
   /** What the configured provider can do (gates image-dependent features). */
-  capabilities: { text: boolean; image: boolean; describeImage: boolean; editImage: boolean };
+  capabilities: AiCapabilities;
+}
+
+/** The optional SECOND provider, dedicated to image generation and editing.
+ *  Null when a workspace has none, in which case images run on the main
+ *  provider exactly as they always did. Its `model` is the image model: this
+ *  provider exists only to serve image calls. */
+export interface AiImageConfigView {
+  provider: string;
+  model: string | null;
+  baseUrl: string | null;
+  hasKey: boolean;
+  capabilities: AiCapabilities;
+}
+
+/** One entry of the server's provider preset catalog (GET /ai/providers). */
+export interface AiProviderPreset {
+  id: string;
+  label: string;
+  baseUrl: string;
+  defaultModel: string;
+  defaultImageModel?: string;
+  capabilities: AiCapabilities;
+  /** True when the user must supply the base URL (Azure/custom). */
+  needsBaseUrl?: boolean;
 }
 
 // --- AI Creative Studio (F39) views, returned by the orchestration endpoints.
@@ -421,6 +467,8 @@ export interface AiOutlineItem {
   title: string;
   points: string[];
   visualRole: string;
+  /** Speaker note: 1-3 spoken-style plain-text sentences (100-500 chars). */
+  note?: string;
 }
 export interface AiDesignOutline {
   title: string;
@@ -511,6 +559,9 @@ export interface ShareLinkView {
   expiresAt?: string | null;
   disabled: boolean;
   requireSignin: boolean;
+  /** Audience name for the link ("Investors", "All-hands"); labels per-link
+   *  analytics (C36). Empty when unnamed. */
+  label?: string;
   createdAt: string;
 }
 
@@ -761,6 +812,9 @@ export interface DesignInsights {
   views: { date: string; count: number }[];
   avgTimeMs: number;
   perPage: { pageId: string; engagementMs: number }[];
+  /** Per share link (C36): sessions attributed to the link they arrived
+   *  through. Absent/empty when no share-link views were recorded. */
+  links?: { linkId: string; label?: string; views: number; viewers: number; totalMs: number }[];
 }
 
 export interface UploadedAsset {
@@ -980,7 +1034,7 @@ export class HyCanvasClient {
     method: string,
     path: string,
     body?: unknown,
-    opts?: { headers?: Record<string, string> },
+    opts?: { headers?: Record<string, string>; signal?: AbortSignal },
     retried = false,
   ): Promise<T> {
     const headers: Record<string, string> = {};
@@ -992,6 +1046,9 @@ export class HyCanvasClient {
       headers,
       credentials: this.credentials,
       body: body === undefined ? undefined : JSON.stringify(body),
+      // Callers that can run for minutes (AI generation) pass a signal so the
+      // user can stop the work instead of waiting it out and paying for it.
+      signal: opts?.signal,
     });
     // Cookie-auth sessions: the short-lived access token expires well before the
     // refresh token. On a 401, transparently refresh once (using the refresh
@@ -1188,6 +1245,36 @@ export class HyCanvasClient {
   workspaceMembers(workspaceId: string): Promise<WorkspaceMemberView[]> {
     return this.request("GET", `/v1/workspaces/${workspaceId}/members`);
   }
+  // --- API keys (F40) ----------------------------------------------
+  /** List the workspace's API keys (admin only; never includes secrets). */
+  apiKeys(workspaceId: string): Promise<ApiKeyView[]> {
+    return this.request("GET", `/v1/workspaces/${workspaceId}/api-keys`);
+  }
+  /** Mint an API key. `key` in the response is the raw secret, shown exactly
+   *  once; store it now or lose it. Scopes: "generate" | "read" | "export". */
+  createApiKey(workspaceId: string, input: { label: string; scopes: string[] }): Promise<{ key: string; view: ApiKeyView }> {
+    return this.request("POST", `/v1/workspaces/${workspaceId}/api-keys`, input);
+  }
+  /** Revoke an API key in place; its bearer token stops authenticating. */
+  revokeApiKey(workspaceId: string, keyId: string): Promise<void> {
+    return this.request("DELETE", `/v1/workspaces/${workspaceId}/api-keys/${keyId}`);
+  }
+  /** Recent API-key activity (admin only): one entry per meaningful key
+   *  action on the HTTP or MCP surface, newest first, 90-day retention. */
+  apiKeyAudit(workspaceId: string): Promise<{ id: string; keyId: string; workspaceId: string; userId: string; surface: string; designId?: string | null; at: string }[]> {
+    return this.request("GET", `/v1/workspaces/${workspaceId}/api-keys/audit`);
+  }
+  /** Kick off a headless prompt-to-deck generation (F40): returns a job to
+   *  poll via getJob. Works with a session or a generate-scoped API key.
+   *  `themeId` names a built-in catalog theme (see themes()). */
+  generatePresentation(input: { workspaceId: string; prompt: string; designType?: "deck" | "doc" | "poster" | "social"; pageCount?: number; language?: string; brandPalette?: string[]; themeId?: string; templateId?: string; sources?: { name: string; text: string }[] }): Promise<{ jobId: string; poll: string }> {
+    return this.request("POST", "/v1/generate/presentation", input);
+  }
+  /** The built-in theme catalog (F40 E12): id, name, style group, six palette
+   *  slots, and the font pair; ids are valid generatePresentation themeIds. */
+  themes(): Promise<{ id: string; name: string; style: string; colors: string[]; fontHeading: string; fontBody: string }[]> {
+    return this.request("GET", "/v1/themes");
+  }
   invite(workspaceId: string, input: { email: string; role?: WorkspaceRole }): Promise<{ invitation: WorkspaceInvitation; token: string }> {
     return this.request("POST", `/v1/workspaces/${workspaceId}/invitations`, input);
   }
@@ -1341,10 +1428,10 @@ export class HyCanvasClient {
   }
   /** Create a share link at an access mode, optionally password-protected and/or
    *  expiring (FR-5, FR-6). */
-  createShareLink(designId: string, input: { mode: AccessMode; password?: string; expiresAt?: string; requireSignin?: boolean }): Promise<ShareLinkView> {
+  createShareLink(designId: string, input: { mode: AccessMode; password?: string; expiresAt?: string; requireSignin?: boolean; label?: string }): Promise<ShareLinkView> {
     return this.request("POST", `/v1/designs/${designId}/links`, input);
   }
-  updateShareLink(linkId: string, patch: { mode?: AccessMode; disabled?: boolean; expiresAt?: string | null; requireSignin?: boolean }): Promise<ShareLinkView> {
+  updateShareLink(linkId: string, patch: { mode?: AccessMode; disabled?: boolean; expiresAt?: string | null; requireSignin?: boolean; label?: string }): Promise<ShareLinkView> {
     return this.request("PATCH", `/v1/links/${linkId}`, patch);
   }
   /** Rotate a link's token: the old URL stops working (FR-6). */
@@ -1598,8 +1685,8 @@ export class HyCanvasClient {
   }
   /** Poll a background job (export, video render, bulk create, ...) by id. Only
    *  visible to the user that enqueued it (job-status contract). */
-  getJob<R = unknown>(jobId: string): Promise<JobStatusView<R>> {
-    return this.request("GET", `/v1/jobs/${jobId}`);
+  getJob<R = unknown>(jobId: string, signal?: AbortSignal): Promise<JobStatusView<R>> {
+    return this.request("GET", `/v1/jobs/${jobId}`, undefined, { signal });
   }
   /** Enqueue an MP4 render of a design's video timeline. Poll the
    *  returned jobId via getJob, then download from videoExportDownloadUrl. */
@@ -1724,17 +1811,69 @@ export class HyCanvasClient {
   }
 
   // --- AI (bring-your-own key) -------------------------------------
+  /** The server's provider preset catalog (ids, labels, defaults,
+   *  capabilities); drives the config UI so the client never hardcodes it. */
+  aiProviders(): Promise<AiProviderPreset[]> {
+    return this.request("GET", "/v1/ai/providers");
+  }
   getAiConfig(workspaceId: string): Promise<AiConfigView | null> {
     return this.request("GET", `/v1/workspaces/${workspaceId}/ai-config`);
   }
+  /** Upsert the workspace AI provider config. `baseUrl` uses PATCH semantics:
+   *  omitted preserves the stored URL (the server clears it itself on a
+   *  provider change), an empty string clears it explicitly. Changing the
+   *  provider while a key is stored requires `apiKey` for the new provider
+   *  (400 `ai_key_required_for_provider_change` otherwise). */
   setAiConfig(workspaceId: string, input: { provider: string; model?: string; imageModel?: string; baseUrl?: string; apiKey?: string }): Promise<AiConfigView> {
     return this.request("PUT", `/v1/workspaces/${workspaceId}/ai-config`, input);
+  }
+  /** The workspace's dedicated image provider, or null when images run on the
+   *  main provider. */
+  getAiImageConfig(workspaceId: string): Promise<AiImageConfigView | null> {
+    return this.request("GET", `/v1/workspaces/${workspaceId}/ai-image-config`);
+  }
+  /** Set (or clear, with provider "") a dedicated image provider, for the many
+   *  text providers that cannot generate images at all. The server refuses a
+   *  provider without image capability. baseUrl uses PATCH semantics like
+   *  setAiConfig; resolves to null when cleared. */
+  setAiImageConfig(
+    workspaceId: string,
+    input: { provider: string; model?: string; baseUrl?: string; apiKey?: string },
+  ): Promise<AiImageConfigView | null> {
+    return this.request("PUT", `/v1/workspaces/${workspaceId}/ai-image-config`, input);
+  }
+  /** Check the image provider's key and endpoint WITHOUT generating an image,
+   *  which on a bring-your-own-key product would spend the workspace's money on
+   *  every press. Resolves `{verified:true}` when the credential was accepted,
+   *  `{verified:false}` when the probe could not conclude (a provider with no
+   *  model listing, or Azure), and rejects when the key was refused. A wrong
+   *  model name is not covered and still surfaces on first generation. */
+  testAiImageConfig(workspaceId: string): Promise<{ verified: boolean }> {
+    return this.request("POST", `/v1/workspaces/${workspaceId}/ai-image-config/test`);
+  }
+  /** Remove the dedicated image provider; images return to the main one. */
+  deleteAiImageConfig(workspaceId: string): Promise<void> {
+    return this.request("DELETE", `/v1/workspaces/${workspaceId}/ai-image-config`);
   }
   getAiPolicy(workspaceId: string): Promise<AiPolicy> {
     return this.request("GET", `/v1/workspaces/${workspaceId}/ai-policy`);
   }
   setAiPolicy(workspaceId: string, input: AiPolicy): Promise<AiPolicy> {
     return this.request("PUT", `/v1/workspaces/${workspaceId}/ai-policy`, input);
+  }
+  /** Disconnect the workspace's AI provider: the stored config and its
+   *  encrypted key are removed. The AI policy and recorded usage are separate
+   *  records and survive, so governance and billing history are not lost when
+   *  a workspace swaps providers. */
+  deleteAiConfig(workspaceId: string): Promise<void> {
+    return this.request("DELETE", `/v1/workspaces/${workspaceId}/ai-config`);
+  }
+  /** Prove the stored provider config actually works, with the smallest real
+   *  call the provider will accept. Resolves on success; rejects with the
+   *  classified problem (rejected key, out of credit, unknown model, rate
+   *  limited) otherwise. Costs the workspace a handful of its own tokens. */
+  testAiConfig(workspaceId: string): Promise<void> {
+    return this.request("POST", `/v1/workspaces/${workspaceId}/ai-config/test`);
   }
   getAiUsage(workspaceId: string): Promise<{ tokensThisMonth: number }> {
     return this.request("GET", `/v1/workspaces/${workspaceId}/ai-usage`);
@@ -1756,6 +1895,11 @@ export class HyCanvasClient {
   }
   audienceReact(token: string, input: { emoji: string; password?: string }): Promise<void> {
     return this.request("POST", `/v1/links/${encodeURIComponent(token)}/audience/react`, input);
+  }
+  /** Phone remote (F28 C21): relay a control action to the presenter, tagged
+   *  with the pairing code the presenter verifies locally. */
+  audienceRemote(token: string, input: { code: string; action: "next" | "prev" | "blank"; password?: string }): Promise<void> {
+    return this.request("POST", `/v1/links/${encodeURIComponent(token)}/audience/remote`, input);
   }
   /** Presenter: full audience state incl. dismissed questions. */
   presenterAudienceState(designId: string): Promise<AudienceState> {
@@ -1787,8 +1931,95 @@ export class HyCanvasClient {
   aiExtractUrl(input: { url: string }): Promise<{ title: string; text: string }> {
     return this.request("POST", "/v1/ai/extract-url", input);
   }
-  aiText(input: { workspaceId: string; prompt: string; system?: string }): Promise<{ text: string }> {
-    return this.request("POST", "/v1/ai/text", input);
+  /** Extract text from an office document (.docx/.pptx/.xlsx) for generation
+   *  grounding: paragraphs, slide texts in deck order, or tab-separated sheet
+   *  rows. Nothing is stored server-side. */
+  aiExtractFile(input: { filename: string; mimeType?: string; dataBase64: string }): Promise<{ name: string; text: string }> {
+    return this.request("POST", "/v1/ai/extract-file", input);
+  }
+  /** Draft a brand kit from a company web page (F28 T21): candidate logo URLs,
+   *  3..6 palette colors, and font guesses, scanned behind the SSRF gate. A
+   *  DRAFT only - the caller confirms before anything is saved. */
+  aiBrandFromUrl(input: { workspaceId: string; url: string }): Promise<{ name: string; logoUrls: string[]; colors: string[]; fonts: string[] }> {
+    return this.request("POST", "/v1/ai/brand-from-url", input);
+  }
+  /** The workspace's web-search provider config, or null when unset. */
+  getSearchConfig(workspaceId: string): Promise<{ provider: string; baseUrl: string | null; hasKey: boolean } | null> {
+    return this.request("GET", `/v1/workspaces/${workspaceId}/search-config`);
+  }
+  /** Set (or clear, with provider "") the workspace's web-search provider.
+   *  baseUrl uses PATCH semantics like setAiConfig. */
+  setSearchConfig(workspaceId: string, input: { provider: string; baseUrl?: string; apiKey?: string }): Promise<{ provider: string; baseUrl: string | null; hasKey: boolean } | null> {
+    return this.request("PUT", `/v1/workspaces/${workspaceId}/search-config`, input);
+  }
+  /** Streaming design generation (SSE): onEvent receives ("outline", outline)
+   *  as soon as the outline validates, ("page", {index, points}) per polished
+   *  page, ("done", outline) at the end, and ("error", {code,message}) on a
+   *  provider failure. Resolves when the stream closes; rejects on transport
+   *  failure (callers fall back to the job-based endpoint). */
+  async aiGenerateDesignStream(
+    input: { workspaceId: string; designType: string; prompt: string; brandClause?: string; pageCount?: number },
+    onEvent: (event: string, data: unknown) => void,
+    opts?: { signal?: AbortSignal },
+    retried = false,
+  ): Promise<void> {
+    const headers: Record<string, string> = { "content-type": "application/json" };
+    if (this.token) headers.authorization = `Bearer ${this.token}`;
+    const res = await this.fetchImpl(`${this.baseUrl}/v1/ai/generate-design/stream`, {
+      method: "POST",
+      headers,
+      credentials: this.credentials,
+      body: JSON.stringify(input),
+      // Aborting cancels the server run too: the request context propagates
+      // into every model call, so an early-resolved caller stops paying for
+      // polish passes it will discard.
+      signal: opts?.signal,
+    });
+    // Same transparent one-shot refresh as request(): an expired access token
+    // mid-session must not fail a generation the JSON path would survive.
+    if (res.status === 401 && !retried) {
+      if (await this.tryRefresh()) return this.aiGenerateDesignStream(input, onEvent, opts, true);
+    }
+    if (!res.ok || !res.body) throw new ApiError(res.status, "/v1/ai/generate-design/stream", await res.json().catch(() => null));
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      // SSE frames are separated by a blank line; parse complete frames only.
+      for (let sep = buf.indexOf("\n\n"); sep >= 0; sep = buf.indexOf("\n\n")) {
+        const frame = buf.slice(0, sep);
+        buf = buf.slice(sep + 2);
+        let event = "message";
+        let data = "";
+        for (const line of frame.split("\n")) {
+          if (line.startsWith("event: ")) event = line.slice(7).trim();
+          else if (line.startsWith("data: ")) data += line.slice(6);
+        }
+        if (!data) continue;
+        try {
+          onEvent(event, JSON.parse(data));
+        } catch {
+          // a malformed frame is skipped; the stream continues
+        }
+      }
+    }
+  }
+  /** Web search for generation grounding: the server writes ONE query from the
+   *  brief and executes it. Results are UNTRUSTED reference material. */
+  aiSearch(input: { workspaceId: string; prompt: string; maxResults?: number }): Promise<{ query: string; results: { title: string; url: string; content: string }[] }> {
+    return this.request("POST", "/v1/ai/search", input);
+  }
+  aiText(input: { workspaceId: string; prompt: string; system?: string }, signal?: AbortSignal): Promise<{ text: string }> {
+    return this.request("POST", "/v1/ai/text", input, { signal });
+  }
+  /** Schema-constrained text generation: the provider is asked for natively
+   *  schema-valid output (falling back to plain text where unsupported). The
+   *  reply is still free text - callers keep validating. */
+  aiTextStructured(input: { workspaceId: string; prompt: string; system?: string; schema: Record<string, unknown> }, signal?: AbortSignal): Promise<{ text: string }> {
+    return this.request("POST", "/v1/ai/text-structured", input, { signal });
   }
   aiImage(input: { workspaceId: string; prompt: string; size?: string }): Promise<{ image: string }> {
     return this.request("POST", "/v1/ai/image", input);
@@ -1812,13 +2043,13 @@ export class HyCanvasClient {
   // happens client-side from the returned outline/specs.
 
   /** Generate + validate a multi-page design outline (FR-2). */
-  aiOutline(input: { workspaceId: string; designType: AiStudioDesignType; prompt: string; brandClause?: string; pageCount?: number }): Promise<AiDesignOutline> {
-    return this.request("POST", "/v1/ai/outline", input);
+  aiOutline(input: { workspaceId: string; designType: AiStudioDesignType; prompt: string; brandClause?: string; pageCount?: number }, signal?: AbortSignal): Promise<AiDesignOutline> {
+    return this.request("POST", "/v1/ai/outline", input, { signal });
   }
   /** Generate a polished design as a job (outline + per-page copy). Poll getJob;
    *  the result is an AiDesignOutline to lay out (FR-1/FR-25). */
-  aiGenerateDesign(input: { workspaceId: string; designType: AiStudioDesignType; prompt: string; brandClause?: string; pageCount?: number }): Promise<{ jobId: string }> {
-    return this.request("POST", "/v1/ai/generate-design", input);
+  aiGenerateDesign(input: { workspaceId: string; designType: AiStudioDesignType; prompt: string; brandClause?: string; pageCount?: number }, signal?: AbortSignal): Promise<{ jobId: string }> {
+    return this.request("POST", "/v1/ai/generate-design", input, { signal });
   }
   /** Generate N distinct outline options as a job (FR-4). Result: {variations}. */
   aiVariations(input: { workspaceId: string; designType: AiStudioDesignType; prompt: string; brandClause?: string; count?: number }): Promise<{ jobId: string }> {
@@ -1830,8 +2061,8 @@ export class HyCanvasClient {
   }
   /** Run one agentic assistant turn: a validated plan or a clarifying question
    *  (FR-6/7/10). The client executes the plan and re-validates arg types. */
-  aiAssistant(input: { workspaceId: string; designSummary: string; history?: string; message: string }): Promise<AiAssistantReply> {
-    return this.request("POST", "/v1/ai/assistant", input);
+  aiAssistant(input: { workspaceId: string; designSummary: string; history?: string; message: string }, signal?: AbortSignal): Promise<AiAssistantReply> {
+    return this.request("POST", "/v1/ai/assistant", input, { signal });
   }
   /** Extract a style profile from a reference for style transfer (FR-18). */
   aiStyleProfile(input: { workspaceId: string; referenceText?: string; seedPalette?: string[] }): Promise<AiStyleProfile> {
@@ -1840,6 +2071,13 @@ export class HyCanvasClient {
   /** AI design-critique suggestions for a posted design summary (FR-15). */
   aiCritique(input: { workspaceId: string; designSummary: string }): Promise<{ suggestions: string }> {
     return this.request("POST", "/v1/ai/critique", input);
+  }
+  /** Generate a complete design as a single editable SVG document at the target
+   *  size. Works with text-only providers (e.g. DeepSeek): the model draws the
+   *  design with vector primitives, and the client flattens the SVG to scene
+   *  nodes so the result stays fully editable (no rasterization). */
+  aiDesignSvg(input: { workspaceId: string; designType: string; prompt: string; width?: number; height?: number }): Promise<{ title: string; width: number; height: number; svg: string }> {
+    return this.request("POST", "/v1/ai/design-svg", input);
   }
   // Session history (FR-9 / FR-27).
   listAiSessions(designId: string): Promise<{ sessions: AiSessionView[] }> {

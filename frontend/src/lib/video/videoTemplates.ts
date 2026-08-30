@@ -78,7 +78,7 @@ const ACCENT: SRGB = { r: 0.23, g: 0.51, b: 0.96, a: 1 };
 const DEEP: SRGB = { r: 0.09, g: 0.11, b: 0.2, a: 1 };
 const WARM: SRGB = { r: 0.99, g: 0.62, b: 0.2, a: 1 };
 
-export const VIDEO_TEMPLATES: VideoTemplate[] = [
+export const videoTemplates: VideoTemplate[] = [
   {
     id: "title-intro",
     name: "Title intro",

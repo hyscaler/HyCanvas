@@ -13,7 +13,7 @@ import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/Button";
 import { tr } from "@/lib/i18n";
 
-const ROLE_RANK: Record<WorkspaceRole, number> = { viewer: 1, member: 2, admin: 3, owner: 4 };
+const roleRank: Record<WorkspaceRole, number> = { viewer: 1, member: 2, admin: 3, owner: 4 };
 const ROLES: WorkspaceRole[] = ["viewer", "member", "admin", "owner"];
 const roleLabel = (): Record<WorkspaceRole, string> => ({ viewer: tr("dashboard.viewer"), member: tr("dashboard.member"), admin: tr("dashboard.admin"), owner: tr("dashboard.owner") });
 
@@ -176,7 +176,7 @@ export function MembersPanel({
 
   const isPersonal = workspaceKind === "personal";
   const canManage = myRole === "admin" || myRole === "owner";
-  const myRank = ROLE_RANK[myRole];
+  const myRank = roleRank[myRole];
 
   async function deleteWorkspace() {
     if (!workspaceId || deleteConfirm !== workspaceName) return;
@@ -287,16 +287,16 @@ export function MembersPanel({
   const canManageTarget = (m: WorkspaceMemberView) => {
     if (!canManage) return false;
     if (m.userId === myUserId) return false; // self handled by "Leave"
-    if (ROLE_RANK[m.role] > myRank) return false; // cannot manage someone higher
+    if (roleRank[m.role] > myRank) return false; // cannot manage someone higher
     if (m.role === "owner" && myRole !== "owner") return false;
     return true;
   };
   // The roles this caller may assign (never above their own; owner only by owner).
   const assignableRoles = (m: WorkspaceMemberView) =>
-    ROLES.filter((r) => ROLE_RANK[r] <= myRank && (r !== "owner" || myRole === "owner")).concat(
-      ROLES.includes(m.role) && !(ROLE_RANK[m.role] <= myRank) ? [m.role] : [],
+    ROLES.filter((r) => roleRank[r] <= myRank && (r !== "owner" || myRole === "owner")).concat(
+      ROLES.includes(m.role) && !(roleRank[m.role] <= myRank) ? [m.role] : [],
     );
-  const invitableRoles = ROLES.filter((r) => ROLE_RANK[r] <= myRank);
+  const invitableRoles = ROLES.filter((r) => roleRank[r] <= myRank);
   const alone = members.length <= 1;
 
   return (

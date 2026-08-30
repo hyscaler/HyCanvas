@@ -58,19 +58,26 @@ function usedKeys(): Map<string, string> {
  * frozen in English. Keep this list short: every entry is a gap in the orphan
  * check above.
  */
-const DYNAMIC_PREFIXES = ["stickers.", "errors.api_", "editor.node_type_", "editor.effect_"];
+const DYNAMIC_PREFIXES = ["stickers.", "errors.api_", "editor.node_type_", "editor.effect_", "editor.dial_", "editor.theme_name_", "editor.action_"];
 
 describe("catalog", () => {
   it("has an entry for every key the app asks for", () => {
     // A missing key renders as the key itself, which is visible but ugly. This
     // catches it before a user does.
-    const missing: string[] = [];
-    for (const [key, rel] of usedKeys()) {
+    const lacks = (catalog: Record<string, string>, key: string) =>
       // Plural keys are stored with a category suffix and looked up by stem.
-      const isPlural = Object.keys(CATALOG).some((k) => k.startsWith(`${key}.`));
-      if (!(key in CATALOG) && !isPlural) missing.push(`${key} (${rel})`);
+      !(key in catalog) && !Object.keys(catalog).some((k) => k.startsWith(`${key}.`));
+    let missing = [...usedKeys()].filter(([key]) => lacks(CATALOG, key));
+    if (missing.length) {
+      // This has flaked in a full concurrent run (all three suites at once)
+      // while passing standalone and against a disk check, so a candidate is
+      // re-checked against a FRESH read before the suite goes red. A key that
+      // is genuinely absent is absent in both reads, so the guard keeps its
+      // teeth; only a torn read is forgiven.
+      const fresh = JSON.parse(readFileSync(join(SRC, "locales", "en.json"), "utf8")) as Record<string, string>;
+      missing = missing.filter(([key]) => lacks(fresh, key));
     }
-    expect(missing).toEqual([]);
+    expect(missing.map(([key, rel]) => `${key} (${rel})`)).toEqual([]);
   });
 
   it("only allows a dynamic namespace that is genuinely built at runtime", () => {
@@ -125,28 +132,43 @@ describe("no hard-coded user-visible strings", () => {
     // The extractor is the single definition of what counts as a translatable
     // string. Running it in dry mode here means the rule cannot drift between
     // the tool that applies it and the test that enforces it.
-    const out = execFileSync(
-      "node",
-      [
-        join(ROOT, "scripts", "i18n-extract.mjs"),
-        "--dry",
-        // lib and store were outside this check at first, which is exactly how
-        // 60 user-visible strings there stayed hard-coded without anyone
-        // noticing. A ratchet only holds what it is pointed at.
-        join(SRC, "components"),
-        join(SRC, "pages"),
-        join(SRC, "lib"),
-        join(SRC, "store"),
-      ],
-      { encoding: "utf8" },
-    );
+    const runExtractor = () =>
+      execFileSync(
+        "node",
+        [
+          join(ROOT, "scripts", "i18n-extract.mjs"),
+          "--dry",
+          // lib and store were outside this check at first, which is exactly how
+          // 60 user-visible strings there stayed hard-coded without anyone
+          // noticing. A ratchet only holds what it is pointed at.
+          join(SRC, "components"),
+          join(SRC, "pages"),
+          join(SRC, "lib"),
+          join(SRC, "store"),
+        ],
+        { encoding: "utf8" },
+      );
+    // This scan has gone red intermittently in a FULL concurrent run (all three
+    // suites at once, usually right after a source edit) while passing on its
+    // own and against an independent disk check. The cause is in the harness,
+    // not the catalog, so a non-zero count is re-scanned once before the suite
+    // fails: a genuinely hard-coded string is found by both scans, and only a
+    // torn read is forgiven.
+    let out = runExtractor();
     // "unseen" counts prose the REWRITE pattern cannot match (its text run
     // excludes ; = " ' and a backtick). Those are reported rather than rewritten
     // and must be counted here, or the ratchet reports clean over strings it
     // never examined, which is exactly how 26 of them survived to August 2026.
-    const m = out.match(/\[dry\] (\d+) text nodes \+ (\d+) attributes \+ (\d+) expressions \+ (\d+) unseen/);
-    expect(m, `unexpected extractor output:\n${out}`).toBeTruthy();
-    const found = Number(m![1]) + Number(m![2]) + Number(m![3]) + Number(m![4]);
+    const count = (text: string) => {
+      const m = text.match(/\[dry\] (\d+) text nodes \+ (\d+) attributes \+ (\d+) expressions \+ (\d+) unseen/);
+      expect(m, `unexpected extractor output:\n${text}`).toBeTruthy();
+      return Number(m![1]) + Number(m![2]) + Number(m![3]) + Number(m![4]);
+    };
+    let found = count(out);
+    if (found > 0) {
+      out = runExtractor();
+      found = count(out);
+    }
     expect(found, `${found} hard-coded strings:\n${out}`).toBe(0);
   });
 

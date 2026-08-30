@@ -26,6 +26,7 @@ import (
 	"hycanvas/backend/internal/accounts"
 	"hycanvas/backend/internal/ai"
 	"hycanvas/backend/internal/aistudio"
+	"hycanvas/backend/internal/apikeys"
 	"hycanvas/backend/internal/approvals"
 	"hycanvas/backend/internal/audience"
 	"hycanvas/backend/internal/brand"
@@ -133,9 +134,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	pool, err := db.Connect(context.Background(), cfg.DatabaseURL)
+	// Tolerate a database that is still starting up (e.g. right after a host
+	// reboot, when this process races Postgres): retry the initial connect on a
+	// fixed interval before giving up, instead of exiting on the first refusal.
+	pool, err := db.ConnectWithRetry(context.Background(), cfg.DatabaseURL, cfg.DBConnectAttempts, cfg.DBConnectRetryDelay,
+		func(attempt, remaining int, err error) {
+			logger.Warn("database not ready; will retry",
+				"attempt", attempt, "remaining", remaining, "retry_in", cfg.DBConnectRetryDelay.String(), "err", err)
+		})
 	if err != nil {
-		logger.Error("database connect failed", "err", err)
+		logger.Error("database connect failed", "attempts", cfg.DBConnectAttempts, "err", err)
 		os.Exit(1)
 	}
 	defer pool.Close()
@@ -364,6 +372,7 @@ func main() {
 			Logger:        logger,
 			Version:       version,
 			Accounts:      acct,
+			APIKeys:       apikeys.NewService(pool),
 			Persistence:   persist,
 			Home:          homeSvc,
 			Sharing:       sharingSvc,

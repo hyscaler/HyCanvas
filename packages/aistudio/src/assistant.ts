@@ -5,6 +5,8 @@
 // validates the model's reply against the catalog so the executor (the store)
 // only ever runs known, well-typed actions - never raw scene JSON (FR-6/7/10).
 
+import { assetLanguageRule, composeRules, contentOnlyRule, scopedInstructionRule } from "./promptRules";
+
 export type ToolParamType = "string" | "number" | "color" | "stringArray" | "series";
 
 export interface ToolParam {
@@ -74,11 +76,33 @@ export function toolCatalog(): ToolDef[] {
     { name: "editSelectedImage", description: "Edit the currently selected image by instruction (e.g. 'remove the background', 'make it night-time').", params: [
       { name: "instruction", type: "string", required: true },
     ], mutates: true },
-    { name: "generateDesign", description: "Create a complete, finished design from scratch - a single poster, flyer, or social post, or a multi-page document or deck - with text, images, shapes, and layout composed for you (it replaces the current page(s) unless mode is 'append'). Use this whenever the user asks to create/make/design/build/generate something with content or a 'fresh layout'.", params: [
+    { name: "generateDesign", description: "Create a complete, finished design from scratch - a single poster, flyer, or social post, or a multi-page document or deck - with text, images, shapes, and layout composed for you. On a document that already has content the generated pages are APPENDED; replacement is destructive and never the default. Use this whenever the user asks to create/make/design/build/generate something with content or a 'fresh layout'.", params: [
       { name: "prompt", type: "string", required: true, description: "the brief, e.g. 'a 5-slide pitch deck for an eco water bottle'" },
       { name: "designType", type: "string", required: false, description: "deck|doc|social|poster (inferred if omitted)" },
       { name: "pageCount", type: "number", required: false },
-      { name: "mode", type: "string", required: false, description: "'append' to add the generated pages to the current design instead of replacing it" },
+      { name: "mode", type: "string", required: false, description: "'append' adds the generated pages (already the default when the document has content); 'replace' DESTROYS and replaces every existing page - pass it ONLY when the user explicitly asks to replace/wipe/start over (they are asked to confirm)" },
+    ], mutates: true },
+    { name: "webSearch", description: "Search the web for current facts and figures and attach the results as grounding for the NEXT generation step in the same plan (plan it BEFORE generateDesign when the user asks for recent/current/latest information). Results are reference material only.", params: [
+      { name: "prompt", type: "string", required: true, description: "what to research, e.g. 'current EV market share numbers'" },
+    ], mutates: false },
+    { name: "magicSwitch", description: "Re-shape the CURRENT design's content into a different design type - a summary document, a set of social posts, or a single poster - re-laid-out for the new form. The re-shaped pages are APPENDED after the existing ones; nothing is replaced. Use for 'turn this deck into a doc / social posts / a one-page poster'.", params: [
+      { name: "designType", type: "string", required: true, description: "doc|social|poster" },
+    ], mutates: true },
+    { name: "insertAgenda", description: "Insert an agenda (table of contents) after the title slide: every page listed with its final page number, split across agenda pages when the deck is long. Use for 'add an agenda / table of contents'.", params: [], mutates: true },
+    { name: "splitSlide", description: "Split one overloaded slide into two coherent slides that replace it, keeping the deck's layout system. Use for 'split slide N' or 'this slide is too dense'.", params: [
+      { name: "pageIndex", type: "number", required: true, description: "the 1-based page number to split" },
+    ], mutates: true },
+    { name: "insertComparison", description: "Insert a side-by-side comparison slide of two topics using the comparison layout. Use for 'compare X and Y' / 'add a comparison slide'.", params: [
+      { name: "topicA", type: "string", required: true },
+      { name: "topicB", type: "string", required: true },
+      { name: "afterPageIndex", type: "number", required: false, description: "1-based page to insert after (default: the current page)" },
+    ], mutates: true },
+    { name: "regenerateSlide", description: "Regenerate ONE slide's content per an instruction, keeping the deck's layout system, the slide's identity, and any images whose prompts are unchanged. Use for 'redo/rewrite/improve slide N' or 'make slide N more data-driven'.", params: [
+      { name: "pageIndex", type: "number", required: true, description: "the 1-based page number to regenerate" },
+      { name: "instruction", type: "string", required: true, description: "how to change it, e.g. 'more data-driven' or 'shorter, punchier'" },
+    ], mutates: true },
+    { name: "generateTheme", description: "Create and apply a cohesive deck theme - a color palette plus a heading/body font pair - from an optional style description, validated for readable contrast. Use for 'make/apply a <mood> theme', 'theme this deck', 'give this a warm editorial look'.", params: [
+      { name: "description", type: "string", required: false, description: "the requested mood or style, e.g. 'warm editorial' or 'dark, techy product launch'" },
     ], mutates: true },
     { name: "generateDiagram", description: "Create a flowchart or mind map ON THE BOARD from a description - native sticky notes + connectors, auto-laid-out. Also accepts pasted Mermaid source verbatim. Use for 'draw/make a flowchart/diagram/mind map of X'.", params: [
       { name: "prompt", type: "string", required: true, description: "what to diagram (a plain description, or Mermaid flowchart source pasted verbatim)" },
@@ -228,10 +252,13 @@ export function assistantSystemPrompt(catalog: ToolDef[], designSummary: string)
   return [
     "You are an agentic design assistant inside a design editor. Decompose the user's request into an ordered plan of tool calls, choosing ONLY from the catalog below. Never invent tools or edit raw document JSON.",
     'Output ONLY a single JSON object, no prose/markdown/fences: {"reply": string, "plan": [{"action": string, "args": object}], "clarify"?: string}.',
-    "You CAN create finished designs and add content - never reply that you cannot add text, shapes, images, or layouts. For any request to create/make/design/build something with content from scratch (a poster, flyer, social post, document, presentation, or 'fresh layout/content'), use generateDesign with an appropriate designType; it composes the whole page and replaces the current page(s).",
-    "Strongly prefer producing a plan over asking. Do NOT ask about page size, theme, or whether to add content - just generate it. Use \"clarify\" ONLY when the request is truly ambiguous or would destroy specific existing work in more than one plausible way.",
+    "You CAN create finished designs and add content - never reply that you cannot add text, shapes, images, or layouts. For any request to create/make/design/build/generate something with content from scratch (a poster, flyer, social post, document, presentation, or any 'fresh layout/content'), use generateDesign with an appropriate designType; it composes whole pages (text, shapes, images, layout), appending to a document that already has content. Pass mode:'replace' only when the user explicitly asks to replace or start over.",
+    "For writeText/generateImage/generateBackgroundImage/editSelectedImage/rewriteSelectedText/generateDesign pass the user's INTENT as the prompt/instruction arg (never the finished text). writeText adds a new text box; generateImage adds an image. So you CAN add text, shapes, images, and full layouts.",
+    "Strongly prefer producing a plan over asking. Do NOT ask the user about page size, theme, or whether to add content - just generate it. Use \"clarify\" ONLY when the request is truly ambiguous (you cannot tell what to make) or would destroy specific existing work in more than one plausible way; otherwise return an empty clarify and a real plan.",
+    "One exception - a short creation interview for thin briefs: when the user asks for a complete multi-page design (generateDesign for a deck or doc) with a thin brief (about 10 words or fewer), no attached sources, and no earlier clarifying answers in the history, FIRST return one \"clarify\" message asking up to 3 short questions (audience, goal, tone or must-include content) and note they can reply 'just generate' to skip. Once the history contains answers, or the user says 'just generate' in any language, return the plan and fold every answer from the history into the generateDesign prompt.",
     'Example - user: "professional marketing poster, fresh content and fresh layout" -> {"reply":"Creating a professional marketing poster.","plan":[{"action":"generateDesign","args":{"prompt":"professional marketing poster","designType":"poster"}}]}.',
     "Use action names verbatim from the catalog and provide every required arg with the correct type. Keep the plan minimal: only the steps needed. Prefer existing-selection actions (setSelectedText, recolorSelection) when the user refers to 'this' or 'the selected'.",
+    composeRules(contentOnlyRule(), scopedInstructionRule(), assetLanguageRule()),
     "",
     "Tool catalog:",
     tools,

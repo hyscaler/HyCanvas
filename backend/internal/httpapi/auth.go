@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"hycanvas/backend/internal/accounts"
+	"hycanvas/backend/internal/apikeys"
 	"hycanvas/backend/internal/captcha"
 	"hycanvas/backend/internal/platform/config"
 )
@@ -196,6 +197,13 @@ func loginHandler(svc *accounts.Service, secure bool) http.HandlerFunc {
 				// MFA-gated account: return the challenge, set no cookies. The
 				// client redeems it via /auth/mfa/verify.
 				writeJSON(w, http.StatusOK, map[string]any{"mfaRequired": true, "mfaToken": mfaToken})
+				return
+			}
+			if !errors.Is(err, accounts.ErrInvalidCredentials) {
+				// The credentials were never the problem (e.g. the database is
+				// unreachable). Answering 401 here tells the user their password
+				// is wrong and hides an outage from anything watching 5xx.
+				problemWithCode(w, r, http.StatusInternalServerError, "Internal Server Error", "sign-in is temporarily unavailable", "internal_error")
 				return
 			}
 			problemWithCode(w, r, http.StatusUnauthorized, "Unauthorized", "invalid email or password", "invalid_email_or_password")
@@ -467,6 +475,18 @@ func mfaProblem(w http.ResponseWriter, r *http.Request, err error) {
 func requireAuth(svc *accounts.Service) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// F40: an API key ("hyk_" prefix) authenticates as its minting
+			// user on the allowlisted API surface only (scope + tenancy +
+			// rate budget enforced inside). HEADER-ONLY on purpose: a key in
+			// a cookie would be an ambient credential a cross-site request
+			// could ride; read the Authorization header directly so a
+			// cookie-borne key never authenticates.
+			if h := r.Header.Get("Authorization"); strings.HasPrefix(h, "Bearer "+apikeys.Prefix) {
+				if r2 := authenticateAPIKey(w, r, strings.TrimPrefix(h, "Bearer ")); r2 != nil {
+					next.ServeHTTP(w, r2)
+				}
+				return
+			}
 			token := bearerOrCookie(r)
 			if token == "" {
 				problemWithCode(w, r, http.StatusUnauthorized, "Unauthorized", "missing access token", "missing_access_token")

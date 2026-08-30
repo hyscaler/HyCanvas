@@ -57,9 +57,9 @@ Every instance is someone's production instance, and self-hosters upgrade by swa
 
 Rules for every change:
 - **Never break existing data.** Opening, rendering, and saving a design created by any earlier version must keep working. If a change cannot preserve existing data, it does not ship in that form.
-- **Every schema change is additive-first.** Add optional fields and new node types; do not repurpose, rename, or narrow an existing field's meaning. Additive changes need only a `CURRENT_SCHEMA_VERSION` bump, because older files omit the field and `UnknownNode.raw` preserves a newer client's nodes losslessly.
+- **Every schema change is additive-first.** Add optional fields and new node types; do not repurpose, rename, or narrow an existing field's meaning. Additive changes need only a `currentSchemaVersion` bump, because older files omit the field and `UnknownNode.raw` preserves a newer client's nodes losslessly.
 - **Never widen an enum on an existing node type.** It looks additive and is not: `UnknownNodeSchema` refuses any KNOWN node type, so a file carrying a new enum member fails both its own schema branch and the unknown-node fallback, and `validate()` rejects the WHOLE FILE on an older client. The Go write boundary is structural only, so the newer client saves it happily and the previous binary can then never open it. Put the new behavior on a new node type instead, and give that type a baked fallback (see below) so older clients still render something correct.
-- **A bump touches two files or the write boundary rejects the file.** Raise `CURRENT_SCHEMA_VERSION` in `packages/schema/src/schema.ts` AND the Go mirror `currentSchemaVersion` in `backend/internal/persistence/file.go` in the same change, or `persistence/validate.go` returns 422 and nothing persists. Append the version-history line in `schema.ts`.
+- **A bump touches two files or the write boundary rejects the file.** Raise `currentSchemaVersion` in `packages/schema/src/schema.ts` AND the Go mirror `currentSchemaVersion` in `backend/internal/persistence/file.go` in the same change, or `persistence/validate.go` returns 422 and nothing persists. Append the version-history line in `schema.ts`.
 - **Provide the forward migration.** Register the migration step in `migrate.ts` keyed on the source version. Migrations are forward-only, idempotent, and never drop unrecognized data.
 - **Destructive SQL is forbidden by default.** No `DROP COLUMN`, `DROP TABLE`, destructive `ALTER`, or backfill that overwrites user content. Additive columns are nullable or defaulted. If a genuinely destructive migration is unavoidable, it needs an explicit expand/migrate/contract plan, a verified backup, and the user's explicit approval before it is written.
 - **An optional field survives an older client, but a rebuilt node does not.** Unknown keys are preserved end to end (`validate()` only judges and never replaces, a loaded file is the raw parse, migrations spread, and the CRDT is key-driven: `reconcileMap` iterates `Object.keys`), so adding an optional field is safe by default. The exception that actually loses data: `reconcileMap` deletes keys the source no longer has, so any store action that REBUILDS a node object from its known fields drops an unknown key and the reconcile removes it for every collaborator. Mutate nodes in place, or keep a large new payload on its own node that no older action rebuilds.
@@ -101,7 +101,7 @@ Run from the repo root. After cloning, copy `.env.example` to `.env`, then `npm 
 - `npm run dev` - run the Go backend (:8005) and the frontend (:3000) with hot reload.
 - `npm run build` - build packages, the Go binary, and the frontend.
 - `npm run db:migrate` - apply SQL migrations (Go migrator); the server also migrates on boot.
-- `npm run test` - run package and Go backend tests.
+- `npm run test` - run package, frontend, and Go backend tests.
 - `npm run lint` - vet the Go backend and lint the frontend.
 - `npm run build:dist` then `npm run deploy` - build the single binary and restart it via the built-in service daemon (`hycanvas service restart`).
 

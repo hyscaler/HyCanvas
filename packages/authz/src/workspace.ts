@@ -2,7 +2,7 @@
 // workspace is auto-provisioned per user and can never be deleted while the
 // account exists; a workspace must always retain at least one owner.
 
-import { ROLE_RANK } from "./roles";
+import { roleRank } from "./roles";
 import type { Membership, User, Workspace, WorkspaceRole } from "./types";
 
 function slugify(s: string): string {
@@ -52,7 +52,7 @@ export function canChangeRole(
 ): boolean {
   const target = memberships.find((m) => m.workspaceId === workspaceId && m.userId === targetUserId);
   if (!target) return false;
-  if (target.role === "owner" && ROLE_RANK[newRole] < ROLE_RANK.owner) {
+  if (target.role === "owner" && roleRank[newRole] < roleRank.owner) {
     return owners(memberships, workspaceId).length > 1; // can't demote the last owner
   }
   return true;

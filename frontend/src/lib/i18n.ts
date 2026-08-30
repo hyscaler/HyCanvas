@@ -29,7 +29,7 @@ import { resolvedLocale } from "./locale";
 export type Catalog = Record<string, string>;
 
 /** The bundled base catalog. Every key the product uses must exist here. */
-export const BASE: Catalog = base as Catalog;
+export const baseCatalog: Catalog = base as Catalog;
 
 const PSEUDO_KEY = "hc-pseudo";
 
@@ -162,9 +162,9 @@ function pluralKey(key: string, count: number, tag: string, from: Catalog): stri
     category = count === 1 ? "one" : "other";
   }
   const exact = `${key}.=${count}`; // an explicit override, e.g. "zero items"
-  if (exact in from || exact in BASE) return exact;
+  if (exact in from || exact in baseCatalog) return exact;
   const wanted = `${key}.${category}`;
-  if (wanted in from || wanted in BASE) return wanted;
+  if (wanted in from || wanted in baseCatalog) return wanted;
   return `${key}.other`;
 }
 
@@ -181,10 +181,10 @@ export function translate(key: string, params?: Record<string, unknown>): string
   if (params && typeof params.count === "number") {
     k = pluralKey(key, params.count, activeTag || resolvedLocale(), active);
   }
-  const raw = active[k] ?? BASE[k];
+  const raw = active[k] ?? baseCatalog[k];
   if (raw === undefined) return key;
   const filled = interpolate(raw, params);
-  // Pseudo applies to the BASE text only: a real translation is already proof
+  // Pseudo applies to the baseCatalog text only: a real translation is already proof
   // that the string was externalized, so mangling it would only hide it.
   return pseudo && active[k] === undefined ? pseudoLocalize(filled) : filled;
 }
@@ -227,6 +227,17 @@ export function trOr(key: string, fallback: string, params?: Record<string, unkn
  * remount for it is a much better trade than a hook at 1400 call sites.
  */
 export const tr = translate;
+
+/** The active BCP-47 tag, for Intl formatters (numbers, dates, lists).
+ *
+ *  Without it, callers reach for `toLocaleString()` with no argument, which
+ *  follows the BROWSER's locale: an app set to German on an en-US browser
+ *  grouped its numbers as 37,556 rather than 37.556, inside an otherwise
+ *  German sentence. Falls back to the resolved locale before a catalog has
+ *  finished loading. */
+export function localeTag(): string {
+  return activeTag || resolvedLocale();
+}
 
 /** Changes whenever the catalog or the pseudo flag changes. Key the app root on
  *  this so a language switch re-reads every string. */

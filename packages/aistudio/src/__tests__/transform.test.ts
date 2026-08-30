@@ -8,6 +8,8 @@ import {
   chartSpecJsonSchema,
   chartSystemPrompt,
   paletteTheme,
+  sourcesOutlineItem,
+  maxSourceCitations,
   layoutDeck,
   deckThemes,
   qualityCheck,
@@ -56,6 +58,31 @@ describe("deriveOutline + switchOutline", () => {
       const bad = qualityCheck({ background: page.background, nodes: page.nodes, size: { width: 1080, height: 1080 } }).issues.filter((i) => i.kind !== "contrast");
       expect(bad).toHaveLength(0);
     }
+  });
+});
+
+describe("sourcesOutlineItem", () => {
+  it("lists each citation as a point and keeps the numbered list in the note", () => {
+    const item = sourcesOutlineItem([
+      { name: "IEA EV Outlook", url: "https://iea.org/ev" },
+      { name: "Reuters", url: "https://reuters.com/x" },
+    ]);
+    expect(item.title).toBe("Sources");
+    expect(item.visualRole).toBe("content");
+    expect(item.points).toEqual([
+      "IEA EV Outlook (https://iea.org/ev)",
+      "Reuters (https://reuters.com/x)",
+    ]);
+    expect(item.note).toContain("1. IEA EV Outlook - https://iea.org/ev");
+    expect(item.note).toContain("2. Reuters - https://reuters.com/x");
+  });
+
+  it("caps the list and drops blank citations", () => {
+    const many = Array.from({ length: 12 }, (_, i) => ({ name: `Source ${i + 1}`, url: `https://s${i + 1}.example` }));
+    const item = sourcesOutlineItem([{ name: " ", url: "https://blank.example" }, ...many], "References");
+    expect(item.title).toBe("References");
+    expect(item.points).toHaveLength(maxSourceCitations);
+    expect(item.points[0]).toContain("Source 1");
   });
 });
 

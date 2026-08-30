@@ -17,7 +17,10 @@ import {
   createScene,
   renderScene,
   poseDesignAt,
-  renderTransition,
+  renderTransitionPair,
+  transitionPairDurationMs,
+  pairEnterTransition,
+  measureFnFor,
   transitionProgress,
   morphPlan,
   morphDesignAt,
@@ -28,8 +31,8 @@ import { imageAssets } from "@/lib/assetProvider";
 import { useViewBeat } from "@/lib/useViewBeat";
 import { AudiencePanel } from "@/components/AudiencePanel";
 import { oc } from "@/lib/sdk";
-import { nextVisibleIndex, prevVisibleIndex, firstVisibleIndex, visiblePosition, LIVE_STALE_MS } from "@/lib/present";
-import { DESIGN_SURFACE_DIR } from "@/lib/locale";
+import { nextVisibleIndex, prevVisibleIndex, firstVisibleIndex, visiblePosition, liveStaleMs } from "@/lib/present";
+import { designSurfaceDir } from "@/lib/locale";
 import { tr } from "@/lib/i18n";
 
 type Transition = NonNullable<DesignFile["pages"][number]["transition"]>;
@@ -53,7 +56,7 @@ export function DeckPlayer({ doc, token, password }: { doc: DesignFile; token?: 
 
   // Slide-follow (doc 28): while the presenter is live, offer to follow. The
   // player polls the audience state (viewers hold no socket); a fresh live row
-  // (< LIVE_STALE_MS) shows the banner, and following mirrors the presenter's slide.
+  // (< liveStaleMs) shows the banner, and following mirrors the presenter's slide.
   const [live, setLive] = useState<{ slide: number; at: number } | null>(null);
   const [following, setFollowing] = useState(false);
   const followingRef = useRef(false);
@@ -69,7 +72,7 @@ export function DeckPlayer({ doc, token, password }: { doc: DesignFile; token?: 
       try {
         const st = await oc.audienceState(token, { voterKey: "follow-probe", password });
         if (cancelled) return;
-        const fresh = st.live && Date.now() - new Date(st.live.updatedAt).getTime() < LIVE_STALE_MS ? st.live : null;
+        const fresh = st.live && Date.now() - new Date(st.live.updatedAt).getTime() < liveStaleMs ? st.live : null;
         setLive(fresh ? { slide: fresh.slide, at: Date.now() } : null);
         if (fresh && followingRef.current) {
           const target = Math.max(0, Math.min(fresh.slide, doc.pages.length - 1));
@@ -200,15 +203,21 @@ export function DeckPlayer({ doc, token, password }: { doc: DesignFile; token?: 
       const now = performance.now();
       const b = blend.current;
       const arriving = page.transition as Transition | undefined;
-      const dur = arriving?.durationMs ?? 0;
+      // v22: the leaving page's exit transition opens/extends the window too.
+      const exitT = b ? (doc.pages[b.fromIndex] as { transitionOut?: Transition } | undefined)?.transitionOut : undefined;
+      const dur = transitionPairDurationMs(arriving, exitT);
       const elapsed = b ? now - b.startedAt : 0;
 
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, cw, ch);
 
-      if (b && arriving && elapsed < dur) {
-        const p = transitionProgress(elapsed, dur);
+      if (b && dur > 0 && elapsed < dur) {
+        const enterT = pairEnterTransition(arriving);
+        const enterDur = enterT.type === "none" ? dur : enterT.durationMs;
+        const p = transitionProgress(elapsed, enterDur, enterT.easing);
+        const pExit = exitT ? transitionProgress(elapsed, exitT.durationMs, exitT.easing) : p;
+        const pLinear = enterDur > 0 ? Math.min(1, Math.max(0, elapsed / enterDur)) : 1;
         const A = bufA.current!;
         const B = bufB.current!;
         for (const buf of [A, B]) {
@@ -227,7 +236,7 @@ export function DeckPlayer({ doc, token, password }: { doc: DesignFile; token?: 
           // Magic Move: hide the shared elements in both buffers so the pure
           // compositor cross-fades only the non-shared content; the tweened
           // layer is drawn on top afterwards (same split as present mode).
-          const morph = arriving.type === "morph" ? morphPlan(doc, b.fromIndex, doc, index) : null;
+          const morph = enterT.type === "morph" ? morphPlan(doc, b.fromIndex, doc, index) : null;
           const restore: { n: { hidden?: boolean }; prev: boolean | undefined }[] = [];
           if (morph) {
             for (const n of morph.fromNodes.values()) { restore.push({ n, prev: n.hidden }); (n as { hidden?: boolean }).hidden = true; }
@@ -237,16 +246,17 @@ export function DeckPlayer({ doc, token, password }: { doc: DesignFile; token?: 
           drawPosed(cb, index, elapsed, vp); // arriving slide begins its entrance
           for (const r of restore) r.n.hidden = r.prev;
 
-          renderTransition(ctx as unknown as CanvasLike, arriving, {
+          renderTransitionPair(ctx as unknown as CanvasLike, enterT, exitT, {
             from: A,
             to: B,
             width: cw,
             height: ch,
             progress: p,
+            exitProgress: pExit,
           });
 
           if (morph && morph.ids.length) {
-            const posed = morphDesignAt(morph, doc, index, p);
+            const posed = morphDesignAt(morph, doc, index, p, { linearProgress: pLinear, measure: measureFnFor(ctx as unknown as CanvasLike) ?? undefined });
             try {
               renderScene(createScene(posed, index), ctx as unknown as CanvasLike, vp, { assets: imageAssets });
             } catch {
@@ -272,7 +282,7 @@ export function DeckPlayer({ doc, token, password }: { doc: DesignFile; token?: 
     <div
       ref={wrapRef}
       className="relative flex min-h-0 w-full flex-1 flex-col bg-neutral-900"
-      dir={DESIGN_SURFACE_DIR}
+      dir={designSurfaceDir}
       data-testid="deck-player"
     >
       <div ref={stageRef} className="grid min-h-0 flex-1 place-items-center overflow-hidden p-2">

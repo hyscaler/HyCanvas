@@ -6,7 +6,7 @@ import {
   color,
   colorHarmony,
   contrastRatio,
-  CVD_MATRICES,
+  cvdMatrices,
   extractPalette,
   fixToAA,
   fromHex,
@@ -14,18 +14,20 @@ import {
   hslToRgb,
   nearestPaletteColor,
   deltaE,
+  oklchToRgb,
   rgbToCmyk,
   rgbToHsl,
+  rgbToOklch,
   seriesColorAt,
   seriesPalette,
-  SERIES_PALETTE_HEX,
+  seriesPaletteHex,
   simulateCvd,
   toHex,
   wcag,
   type Bitmap,
 } from "../index";
 
-const BLACK: Color = { srgb: { r: 0, g: 0, b: 0, a: 1 } };
+const black: Color = { srgb: { r: 0, g: 0, b: 0, a: 1 } };
 const WHITE: Color = { srgb: { r: 1, g: 1, b: 1, a: 1 } };
 
 describe("color harmony", () => {
@@ -100,7 +102,7 @@ describe("AC-2: HSL conversions", () => {
 describe("AC-2: CMYK conversions", () => {
   it("converts pure colors to reference CMYK", () => {
     expect(rgbToCmyk(color(1, 0, 0))).toMatchObject({ c: 0, m: 1, y: 1, k: 0 });
-    expect(rgbToCmyk(BLACK)).toMatchObject({ c: 0, m: 0, y: 0, k: 1 });
+    expect(rgbToCmyk(black)).toMatchObject({ c: 0, m: 0, y: 0, k: 1 });
     expect(rgbToCmyk(WHITE)).toMatchObject({ c: 0, m: 0, y: 0, k: 0 });
   });
 
@@ -114,7 +116,7 @@ describe("AC-2: CMYK conversions", () => {
 
 describe("AC-6: WCAG contrast and Fix to AA", () => {
   it("black on white is the maximum 21:1", () => {
-    expect(contrastRatio(BLACK, WHITE)).toBeCloseTo(21, 4);
+    expect(contrastRatio(black, WHITE)).toBeCloseTo(21, 4);
   });
 
   it("reports correct AA/AAA pass-fail for a known pair", () => {
@@ -127,7 +129,7 @@ describe("AC-6: WCAG contrast and Fix to AA", () => {
 
   it("accounts for translucent foregrounds by compositing", () => {
     const halfBlack: Color = { srgb: { r: 0, g: 0, b: 0, a: 0.5 } };
-    const opaque = contrastRatio(BLACK, WHITE);
+    const opaque = contrastRatio(black, WHITE);
     const translucent = contrastRatio(halfBlack, WHITE);
     expect(translucent).toBeLessThan(opaque);
   });
@@ -140,7 +142,7 @@ describe("AC-6: WCAG contrast and Fix to AA", () => {
   });
 
   it("Fix to AA leaves an already-passing color unchanged", () => {
-    expect(fixToAA(BLACK, WHITE)).toBe(BLACK);
+    expect(fixToAA(black, WHITE)).toBe(black);
   });
 });
 
@@ -210,8 +212,8 @@ describe("AC-8: CVD simulation", () => {
   });
 
   it("exposes a matrix per type", () => {
-    expect(Object.keys(CVD_MATRICES)).toHaveLength(4);
-    CVD_MATRICES.protanopia.forEach((n) => expect(typeof n).toBe("number"));
+    expect(Object.keys(cvdMatrices)).toHaveLength(4);
+    cvdMatrices.protanopia.forEach((n) => expect(typeof n).toBe("number"));
   });
 });
 
@@ -231,7 +233,7 @@ describe("AC-7: gamut check", () => {
 
   it("reports neutral colors as in gamut (round-trip is lossless)", () => {
     expect(gamutCheck(color(0.5, 0.5, 0.5)).inGamut).toBe(true);
-    expect(gamutCheck(BLACK).inGamut).toBe(true);
+    expect(gamutCheck(black).inGamut).toBe(true);
     expect(gamutCheck(WHITE).inGamut).toBe(true);
   });
 });
@@ -240,11 +242,11 @@ describe("F27: default chart series palette", () => {
   it("returns the requested number of colors", () => {
     expect(seriesPalette(0)).toEqual([]);
     expect(seriesPalette(3)).toHaveLength(3);
-    expect(seriesPalette(SERIES_PALETTE_HEX.length + 2)).toHaveLength(SERIES_PALETTE_HEX.length + 2);
+    expect(seriesPalette(seriesPaletteHex.length + 2)).toHaveLength(seriesPaletteHex.length + 2);
   });
   it("matches fromHex of the base scheme and cycles past its length", () => {
-    expect(seriesColorAt(0)).toEqual(fromHex(SERIES_PALETTE_HEX[0]));
-    expect(seriesColorAt(SERIES_PALETTE_HEX.length)).toEqual(seriesColorAt(0));
+    expect(seriesColorAt(0)).toEqual(fromHex(seriesPaletteHex[0]));
+    expect(seriesColorAt(seriesPaletteHex.length)).toEqual(seriesColorAt(0));
   });
   it("seriesColorAt is stable for the same index (deterministic)", () => {
     expect(seriesColorAt(2)).toEqual(seriesColorAt(2));
@@ -285,5 +287,39 @@ describe("F18 AC-2: nearest brand color (CIELAB deltaE)", () => {
 
   it("returns null for an empty palette (keep the original color)", () => {
     expect(nearestPaletteColor(RED, [])).toBeNull();
+  });
+});
+
+describe("OKLCH conversions (F28 T19)", () => {
+  it("white and black hit the lightness extremes with no chroma", () => {
+    const w = rgbToOklch({ srgb: { r: 1, g: 1, b: 1, a: 1 } });
+    expect(w.l).toBeCloseTo(1, 3);
+    expect(w.c).toBeCloseTo(0, 3);
+    const k = rgbToOklch({ srgb: { r: 0, g: 0, b: 0, a: 1 } });
+    expect(k.l).toBeCloseTo(0, 3);
+    expect(k.c).toBeCloseTo(0, 3);
+  });
+
+  it("round-trips in-gamut colors", () => {
+    for (const hex of ["#1f3a93", "#b91c1c", "#0f766e", "#f4e883", "#334155"]) {
+      const c = fromHex(hex)!;
+      const back = oklchToRgb(rgbToOklch(c));
+      expect(back.srgb.r).toBeCloseTo(c.srgb.r, 2);
+      expect(back.srgb.g).toBeCloseTo(c.srgb.g, 2);
+      expect(back.srgb.b).toBeCloseTo(c.srgb.b, 2);
+    }
+  });
+
+  it("stepping lightness preserves hue and clamps out-of-gamut results", () => {
+    const base = rgbToOklch(fromHex("#1f3a93")!);
+    // A light tint keeps the hue when chroma is eased into gamut (a saturated
+    // blue at l=0.93 is out of sRGB, so full chroma would clamp hue away).
+    const lighter = oklchToRgb({ ...base, l: 0.93, c: Math.min(base.c, 0.06) });
+    const hue = rgbToOklch(lighter).h;
+    expect(Math.abs(hue - base.h)).toBeLessThan(15);
+    for (const ch of [lighter.srgb.r, lighter.srgb.g, lighter.srgb.b]) {
+      expect(ch).toBeGreaterThanOrEqual(0);
+      expect(ch).toBeLessThanOrEqual(1);
+    }
   });
 });

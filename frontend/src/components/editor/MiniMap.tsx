@@ -22,7 +22,7 @@ import { createScene, renderScene, type CanvasLike, type Viewport } from "@hc/en
 import { useEditor } from "@/store/editor";
 import { imageAssets } from "@/lib/assetProvider";
 import { fonts } from "@/lib/fontProvider";
-import { PAGE_GAP, pageOffsets } from "@/lib/pageLayout";
+import { pageGap, pageOffsets } from "@/lib/pageLayout";
 
 const MAP_W = 150;
 const MAP_MAX_H = 110;
@@ -47,7 +47,7 @@ export function MiniMap() {
   const worldCY = viewport.panY + visY / 2;
   let viewed = doc.pages.length - 1;
   for (let i = 0; i < doc.pages.length; i++) {
-    if (worldCY < offs[i] + doc.pages[i].height + PAGE_GAP / 2) { viewed = i; break; }
+    if (worldCY < offs[i] + doc.pages[i].height + pageGap / 2) { viewed = i; break; }
   }
   const page = doc.pages[viewed];
   const pageOffY = offs[viewed] ?? 0;

@@ -3,21 +3,21 @@
 // turns it into fully editable vector nodes on insert. Kept fill-only (no
 // stroke-dependent strokes) so every sticker round-trips cleanly.
 
-import { ARROW_STICKERS } from "./stickerData/arrows";
-import { ABSTRACT_STICKERS } from "./stickerData/abstract";
-import { BANNER_STICKERS } from "./stickerData/banners";
-import { CALLOUT_STICKERS } from "./stickerData/callouts";
-import { BUSINESS_STICKERS } from "./stickerData/business";
-import { TECH_STICKERS } from "./stickerData/tech";
-import { FOOD_STICKERS } from "./stickerData/food";
-import { ANIMAL_STICKERS } from "./stickerData/animals";
-import { TRAVEL_STICKERS } from "./stickerData/travel";
-import { SOCIAL_STICKERS } from "./stickerData/social";
-import { NATURE_STICKERS } from "./stickerData/nature";
-import { CELEBRATION_STICKERS } from "./stickerData/celebration";
-import { SCHOOL_STICKERS } from "./stickerData/school";
-import { MUSIC_SPORT_STICKERS } from "./stickerData/musicsport";
-import { INFOGRAPHIC_STICKERS } from "./stickerData/infographic";
+import { arrowStickers } from "./stickerData/arrows";
+import { abstractStickers } from "./stickerData/abstract";
+import { bannerStickers } from "./stickerData/banners";
+import { calloutStickers } from "./stickerData/callouts";
+import { businessStickers } from "./stickerData/business";
+import { techStickers } from "./stickerData/tech";
+import { foodStickers } from "./stickerData/food";
+import { animalStickers } from "./stickerData/animals";
+import { travelStickers } from "./stickerData/travel";
+import { socialStickers } from "./stickerData/social";
+import { natureStickers } from "./stickerData/nature";
+import { celebrationStickers } from "./stickerData/celebration";
+import { schoolStickers } from "./stickerData/school";
+import { musicSportStickers } from "./stickerData/musicsport";
+import { infographicStickers } from "./stickerData/infographic";
 
 import { trOr } from "@/lib/i18n";
 
@@ -58,7 +58,7 @@ export function stickerCategoryLabel(category: string): string {
 
 const svg = (inner: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${inner}</svg>`;
 
-export const STICKERS: Sticker[] = [
+export const stickers: Sticker[] = [
   // --- Shapes ---
   { id: "star", label: "Star", category: "Shapes", svg: svg('<path d="M50 6 61 38 95 38 67 58 78 92 50 72 22 92 33 58 5 38 39 38Z" fill="#f59e0b"/>') },
   { id: "heart", label: "Heart", category: "Shapes", svg: svg('<path d="M50 86C20 64 8 44 8 28 8 16 18 8 30 8 40 8 47 14 50 22 53 14 60 8 70 8 82 8 92 16 92 28 92 44 80 64 50 86Z" fill="#ef4444"/>') },
@@ -120,21 +120,21 @@ export const STICKERS: Sticker[] = [
   { id: "award", label: "Award", category: "Symbols", svg: svg('<circle cx="50" cy="36" r="26" fill="#f59e0b"/><circle cx="50" cy="36" r="14" fill="#fcd34d"/><path d="M38 58 30 92l20-12 20 12-8-34Z" fill="#ef4444"/>') },
 
   // --- Bundled category packs (frontend/src/lib/stickerData/*) ---
-  ...ARROW_STICKERS,
-  ...ABSTRACT_STICKERS,
-  ...BANNER_STICKERS,
-  ...CALLOUT_STICKERS,
-  ...BUSINESS_STICKERS,
-  ...TECH_STICKERS,
-  ...SOCIAL_STICKERS,
-  ...FOOD_STICKERS,
-  ...NATURE_STICKERS,
-  ...ANIMAL_STICKERS,
-  ...TRAVEL_STICKERS,
-  ...CELEBRATION_STICKERS,
-  ...SCHOOL_STICKERS,
-  ...MUSIC_SPORT_STICKERS,
-  ...INFOGRAPHIC_STICKERS,
+  ...arrowStickers,
+  ...abstractStickers,
+  ...bannerStickers,
+  ...calloutStickers,
+  ...businessStickers,
+  ...techStickers,
+  ...socialStickers,
+  ...foodStickers,
+  ...natureStickers,
+  ...animalStickers,
+  ...travelStickers,
+  ...celebrationStickers,
+  ...schoolStickers,
+  ...musicSportStickers,
+  ...infographicStickers,
 ];
 
-export const STICKER_CATEGORIES = Array.from(new Set(STICKERS.map((s) => s.category)));
+export const stickerCategories = Array.from(new Set(stickers.map((s) => s.category)));

@@ -1,0 +1,73 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-event-proposal",
+ "title": "Event Proposal",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "event",
+  "proposal",
+  "planning",
+  "budget"
+ ],
+ "styleTags": [
+  "editorial"
+ ],
+ "themeId": "theme-blush",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 72,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Event Proposal",
+  "theme": "persuasive, concrete",
+  "pages": [
+   {
+    "title": "The event",
+    "points": [
+     "What it is and who it is for"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "Why now",
+    "points": [
+     "The moment this event captures"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "The experience",
+    "points": [
+     "The arc of the day, from doors to encore"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Budget",
+    "points": [
+     "Costs, sponsorships, and the break-even line"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "The team",
+    "points": [
+     "Who runs what"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "The decision",
+    "points": [
+     "What we need approved today"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

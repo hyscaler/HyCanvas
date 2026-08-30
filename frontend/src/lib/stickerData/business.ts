@@ -3,7 +3,7 @@ import type { Sticker } from "../stickers";
 
 const svg = (inner: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${inner}</svg>`;
 
-export const BUSINESS_STICKERS: Sticker[] = [
+export const businessStickers: Sticker[] = [
   { id: "bz-briefcase", label: "Briefcase", category: "Business", keywords: ["work", "job", "office", "career", "bag"], svg: svg('<path d="M36 32 V26 A14 10 0 0 1 64 26 V32 H56 V27 A6 6 0 0 0 44 27 V32 Z" fill="#92400e"/><rect x="10" y="32" width="80" height="52" rx="8" fill="#d97706"/><rect x="10" y="54" width="80" height="5" fill="#92400e"/><rect x="43" y="50" width="14" height="13" rx="3" fill="#facc15"/>') },
   { id: "bz-bar-chart", label: "Bar Chart", category: "Business", keywords: ["chart", "growth", "analytics", "stats", "graph"], svg: svg('<rect x="21" y="64" width="14" height="26" rx="2" fill="#93c5fd"/><rect x="45" y="50" width="14" height="40" rx="2" fill="#3b82f6"/><rect x="69" y="36" width="14" height="54" rx="2" fill="#1d4ed8"/><polygon points="15.5 47 71.5 19 69.5 15 84.5 16 76.5 29 74.5 25 18.5 53" fill="#f59e0b"/>') },
   { id: "bz-line-chart", label: "Line Chart", category: "Business", keywords: ["graph", "trend", "growth", "profit", "analytics"], svg: svg('<path d="M12 8 H20 V80 H90 V88 H12 Z" fill="#475569"/><polygon points="26 68 42 48 54 58 70 38 70 45 54 65 42 55 26 75" fill="#22c55e"/><polygon points="64 37 80 29 76 46" fill="#22c55e"/>') },

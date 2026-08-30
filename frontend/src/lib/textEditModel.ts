@@ -81,7 +81,7 @@ export function charCss(style: CharStyle, zoom: number): string {
 
 // A soft (engine-computed) line break inside a paragraph. Marked so htmlToContent
 // strips it back out (it is layout, not a real paragraph break like "\n"/<br>).
-export const SOFT_BR = '<br data-soft="1">';
+export const softBr = '<br data-soft="1">';
 
 export const runSpan = (text: string, style: CharStyle, zoom: number) =>
   // The CSS contains double quotes (font-family stacks quote names like
@@ -110,7 +110,7 @@ export function computeBreaks(lines: { paragraph: number; segments: { text: stri
 
 // Render the model to editor HTML with the engine's soft breaks injected at the
 // computed offsets. Paragraphs are joined by "\n" (hard breaks); within a
-// paragraph, runs are split at break offsets with a SOFT_BR between pieces.
+// paragraph, runs are split at break offsets with a softBr between pieces.
 export function layoutToHtml(content: EditPara[], breaks: Map<number, number[]>, zoom: number): string {
   const parts = content.map((p, pi) => {
     const cuts = (breaks.get(pi) ?? []).slice().sort((a, b) => a - b);
@@ -124,7 +124,7 @@ export function layoutToHtml(content: EditPara[], breaks: Map<number, number[]>,
         if (cut >= local) {
           const piece = r.text.slice(local, cut);
           if (piece) out += runSpan(piece, r.style, zoom);
-          out += SOFT_BR;
+          out += softBr;
           local = cut;
         }
         bi++;
@@ -155,8 +155,8 @@ export function layoutToHtml(content: EditPara[], breaks: Map<number, number[]>,
   const last = content[content.length - 1];
   if (last && last.runs.reduce((n, r) => n + r.text.length, 0) === 0) {
     joined = joined.endsWith("></span>")
-      ? `${joined.slice(0, -"</span>".length)}${SOFT_BR}</span>`
-      : joined + SOFT_BR;
+      ? `${joined.slice(0, -"</span>".length)}${softBr}</span>`
+      : joined + softBr;
   }
   return joined;
 }

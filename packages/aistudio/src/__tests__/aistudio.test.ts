@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  DESIGN_LAYOUTS,
+  designLayouts,
   DesignSpecError,
   normalizeDesignSpec,
   designSpecJsonSchema,
@@ -55,7 +55,7 @@ describe("normalizeDesignSpec", () => {
   });
 
   it("exposes a JSON schema with the layout + role enums", () => {
-    expect(designSpecJsonSchema.properties.layout.enum).toEqual(DESIGN_LAYOUTS);
+    expect(designSpecJsonSchema.properties.layout.enum).toEqual(designLayouts);
   });
 });
 
@@ -135,7 +135,7 @@ describe("layoutDesign", () => {
   });
 
   it("handles every layout intent without overflow or overlap", () => {
-    for (const layout of DESIGN_LAYOUTS) {
+    for (const layout of designLayouts) {
       const { background, nodes } = layoutDesign(specOf({ layout }), SIZE);
       const report = qualityCheck({ background, nodes, size: SIZE });
       const bad = report.issues.filter((i) => i.kind !== "contrast");

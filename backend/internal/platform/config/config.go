@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -32,6 +33,14 @@ type Config struct {
 	PublicDir string
 	// AutoMigrate applies pending SQL migrations on boot (default true).
 	AutoMigrate bool
+	// DBConnectAttempts and DBConnectRetryDelay tolerate a database that is still
+	// starting up when the API boots, which is common right after a host reboot
+	// when the process races Postgres. The initial connect is retried up to
+	// DBConnectAttempts times, waiting DBConnectRetryDelay between tries, before
+	// the API gives up. Defaults (12 x 5s) cover a typical cold start; raise
+	// DB_CONNECT_ATTEMPTS for a database that replays a large WAL after a reboot.
+	DBConnectAttempts   int           // DB_CONNECT_ATTEMPTS (default 12)
+	DBConnectRetryDelay time.Duration // DB_CONNECT_RETRY_DELAY (default 5s)
 	// Auth gates which sign-in methods and account-creation paths are available.
 	Auth AuthPolicy
 	// Captcha optionally protects the human-facing auth forms.
@@ -84,6 +93,9 @@ func Load() (Config, error) {
 		AISecret:    os.Getenv("AI_SECRET"),
 		PublicDir:   getenv("PUBLIC_DIR", "./public"),
 		AutoMigrate: os.Getenv("DB_AUTO_MIGRATE") != "false",
+
+		DBConnectAttempts:   envInt("DB_CONNECT_ATTEMPTS", 12),
+		DBConnectRetryDelay: envDuration("DB_CONNECT_RETRY_DELAY", 5*time.Second),
 		Auth: AuthPolicy{
 			PasswordLogin:   envBool("AUTH_PASSWORD_LOGIN_ENABLED", true),
 			PasswordSignup:  envBool("AUTH_PASSWORD_SIGNUP_ENABLED", true),
@@ -112,6 +124,28 @@ func envFloat(key string, def float64) float64 {
 	if v := os.Getenv(key); v != "" {
 		if f, err := strconv.ParseFloat(v, 64); err == nil {
 			return f
+		}
+	}
+	return def
+}
+
+// envInt reads an integer env var, keeping the default on empty or unparseable
+// input so a typo never silently changes the value.
+func envInt(key string, def int) int {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(strings.TrimSpace(v)); err == nil {
+			return n
+		}
+	}
+	return def
+}
+
+// envDuration reads a Go duration env var (e.g. "5s", "500ms", "2m"), keeping the
+// default on empty or unparseable input.
+func envDuration(key string, def time.Duration) time.Duration {
+	if v := os.Getenv(key); v != "" {
+		if d, err := time.ParseDuration(strings.TrimSpace(v)); err == nil {
+			return d
 		}
 	}
 	return def

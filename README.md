@@ -35,6 +35,10 @@ The frontend and shared packages are an npm-workspaces monorepo (orchestrated wi
 - `docs/roadmap/` - forward-looking specs for work not yet built (realtime collaboration, AI media, accessibility/i18n/enterprise).
 - `CLAUDE.md` - working guidance for this repository.
 
+### Generation API
+
+Generate complete, editable presentations programmatically: a workspace admin mints a scoped API key (Dashboard > Members > API keys), then `POST /api/v1/generate/presentation` with a prompt (plus optional grounding sources, language, brand palette) returns a job whose result is a real design in the workspace, ready to open, render to PDF/PNG, or share by link. The full reference is served by every instance at `/api/docs` (OpenAPI at `/api/docs/openapi.json`), and `scripts/api-demo.sh` walks prompt to PDF to share URL with plain curl. AI agents get the same capabilities over the Model Context Protocol: every instance serves an MCP endpoint at `/mcp` (streamable HTTP, same keys, scopes, and budgets) with generate/fetch/export/share tools, plus a 90-day audit trail of key activity for workspace admins.
+
 ## Prerequisites
 
 - Node 24 (see `.nvmrc`) for the frontend and shared packages.
@@ -240,6 +244,8 @@ All configuration is read from the root `.env` (copy `.env.example`). The most i
 | `PORT` | both | Backend port (default `8005`). |
 | `NODE_ENV` | both | `development` or `production`. |
 | `DB_AUTO_MIGRATE` | both | When `true`, the server applies migrations on boot. |
+| `DB_CONNECT_ATTEMPTS` | both | Times to retry the initial DB connect before giving up (default `12`). Tolerates Postgres still starting after a host reboot. |
+| `DB_CONNECT_RETRY_DELAY` | both | Wait between initial-connect retries, as a Go duration (default `5s`). |
 | `NEXT_PUBLIC_BACKEND_URL` | dev | Frontend API base in dev (`http://localhost:8005/api`). Unused in the dist build (it calls same-origin `/api`). |
 | `FRONTEND_URL` | both | Allowed CORS origin for the API (dev: `http://localhost:3000`). |
 | `APP_URL` | prod | Public base URL used in generated links (verify-email, magic-link, share). |

@@ -8,7 +8,7 @@
 // Nothing here mutates the design. `applyTheme` returns a new file, because
 // swapping a deck's theme must be one undoable action (FR-4).
 
-import type { Color, ColorSwatch, DesignFile, Fill, Page, Placeholder, SlideLayout, SlideMaster, Theme } from "./schema";
+import type { Color, ColorSwatch, DesignFile, Fill, Page, Placeholder, PlaceholderRole, SlideLayout, SlideMaster, Theme } from "./schema";
 
 /** The layout a page inherits from, or undefined when it stands alone (no
  *  `layoutId`, or one that dangles because the layout was deleted). */
@@ -115,17 +115,50 @@ function rect(page: { width: number; height: number }, x: number, y: number, w: 
   return { x: page.width * x, y: page.height * y, width: page.width * w, height: page.height * h };
 }
 
-export const BUILTIN_MASTER_ID = "master-default";
+export const builtinMasterId = "master-default";
 
 /** The default master + the five built-in layouts PowerPoint users expect
  *  (title, title+content, two-content, comparison, picture). Sized to `page`,
  *  so a 16:9 deck and an A4 deck both get sane placeholder rects. */
+/** Derive capacity hints for a placeholder from its rect (as page fractions)
+ *  and role, per the chars-per-area heuristic layout-grounded generation uses:
+ *  titles cap at a headline length, bodies scale with area up to a few hundred
+ *  characters, content slots also bound their list length; the floor is about
+ *  half the ceiling so a slot is neither overflowed nor left looking empty
+ *  (F28 T11). Picture/chart/media/footer roles carry no text capacity. */
+export function capacityForPlaceholder(
+  role: PlaceholderRole,
+  rect: { width: number; height: number },
+  page: { width: number; height: number },
+): Pick<Placeholder, "maxChars" | "minChars" | "minItems" | "maxItems"> {
+  const wFrac = rect.width / page.width;
+  const hFrac = rect.height / page.height;
+  const area = wFrac * hFrac;
+  const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.round(v)));
+  switch (role) {
+    case "title": {
+      const max = clamp(45 * wFrac + 120 * area, 20, 60);
+      return { maxChars: max, minChars: Math.round(max / 2) };
+    }
+    case "body": {
+      const max = clamp(1800 * area, 40, 300);
+      return { maxChars: max, minChars: Math.round(max / 2) };
+    }
+    case "content": {
+      const max = clamp(1500 * area, 100, 500);
+      return { maxChars: max, minChars: Math.round(max / 2), minItems: 2, maxItems: clamp(12 * hFrac, 3, 6) };
+    }
+    default:
+      return {};
+  }
+}
+
 export function builtinMasterAndLayouts(page: { width: number; height: number }): {
   master: SlideMaster;
   layouts: SlideLayout[];
 } {
   const master: SlideMaster = {
-    id: BUILTIN_MASTER_ID,
+    id: builtinMasterId,
     name: "Default",
     placeholders: [{ id: "ph-footer", role: "footer", rect: rect(page, 0.06, 0.9, 0.88, 0.06) }],
   };
@@ -133,7 +166,10 @@ export function builtinMasterAndLayouts(page: { width: number; height: number })
     id,
     masterId: master.id,
     name,
-    placeholders,
+    // Built-ins carry capacity hints derived from their rects (v21) so
+    // layout-grounded generation can size content; user-captured layouts may
+    // leave them unset.
+    placeholders: placeholders.map((ph) => ({ ...ph, ...capacityForPlaceholder(ph.role, ph.rect, page) })),
   });
   return {
     master,
@@ -162,6 +198,64 @@ export function builtinMasterAndLayouts(page: { width: number; height: number })
         { id: "ph-title", role: "title", rect: rect(page, 0.06, 0.08, 0.88, 0.12) },
         { id: "ph-pic", role: "picture", rect: rect(page, 0.06, 0.24, 0.56, 0.62) },
         { id: "ph-cap", role: "body", rect: rect(page, 0.66, 0.24, 0.28, 0.62) },
+      ]),
+      // --- F40 E09 additions. Additive only: the five layouts above keep
+      // their ids and rects (linked pages must not shift), and every new
+      // placeholder carries derived capacity hints like the originals. ---
+      L("layout-section", "Section header", [
+        { id: "ph-title", role: "title", rect: rect(page, 0.08, 0.38, 0.84, 0.18) },
+        { id: "ph-sub", role: "body", rect: rect(page, 0.08, 0.6, 0.7, 0.1) },
+      ]),
+      L("layout-agenda", "Agenda", [
+        { id: "ph-title", role: "title", rect: rect(page, 0.06, 0.1, 0.44, 0.14) },
+        { id: "ph-content", role: "content", rect: rect(page, 0.55, 0.12, 0.39, 0.76) },
+      ]),
+      L("layout-quote", "Quote", [
+        { id: "ph-title", role: "title", rect: rect(page, 0.12, 0.3, 0.76, 0.28) },
+        { id: "ph-attr", role: "body", rect: rect(page, 0.12, 0.62, 0.5, 0.08) },
+      ]),
+      L("layout-stats", "Stat row", [
+        { id: "ph-title", role: "title", rect: rect(page, 0.06, 0.08, 0.88, 0.13) },
+        { id: "ph-stat-1", role: "content", rect: rect(page, 0.06, 0.3, 0.27, 0.5) },
+        { id: "ph-stat-2", role: "content", rect: rect(page, 0.365, 0.3, 0.27, 0.5) },
+        { id: "ph-stat-3", role: "content", rect: rect(page, 0.67, 0.3, 0.27, 0.5) },
+      ]),
+      L("layout-timeline", "Timeline", [
+        { id: "ph-title", role: "title", rect: rect(page, 0.06, 0.08, 0.88, 0.13) },
+        { id: "ph-step-1", role: "content", rect: rect(page, 0.06, 0.32, 0.2, 0.48) },
+        { id: "ph-step-2", role: "content", rect: rect(page, 0.285, 0.32, 0.2, 0.48) },
+        { id: "ph-step-3", role: "content", rect: rect(page, 0.51, 0.32, 0.2, 0.48) },
+        { id: "ph-step-4", role: "content", rect: rect(page, 0.735, 0.32, 0.2, 0.48) },
+      ]),
+      L("layout-team", "Team grid", [
+        { id: "ph-title", role: "title", rect: rect(page, 0.06, 0.07, 0.88, 0.12) },
+        { id: "ph-cell-1", role: "content", rect: rect(page, 0.06, 0.24, 0.42, 0.3) },
+        { id: "ph-cell-2", role: "content", rect: rect(page, 0.52, 0.24, 0.42, 0.3) },
+        { id: "ph-cell-3", role: "content", rect: rect(page, 0.06, 0.58, 0.42, 0.3) },
+        { id: "ph-cell-4", role: "content", rect: rect(page, 0.52, 0.58, 0.42, 0.3) },
+      ]),
+      L("layout-picture-left", "Picture left", [
+        { id: "ph-title", role: "title", rect: rect(page, 0.5, 0.1, 0.44, 0.14) },
+        { id: "ph-pic", role: "picture", rect: rect(page, 0.06, 0.1, 0.4, 0.8) },
+        { id: "ph-body", role: "body", rect: rect(page, 0.5, 0.28, 0.44, 0.56) },
+      ]),
+      L("layout-big-picture", "Big picture", [
+        { id: "ph-pic", role: "picture", rect: rect(page, 0.06, 0.08, 0.88, 0.64) },
+        { id: "ph-title", role: "title", rect: rect(page, 0.06, 0.75, 0.6, 0.1) },
+        { id: "ph-cap", role: "body", rect: rect(page, 0.06, 0.86, 0.88, 0.08) },
+      ]),
+      L("layout-content-picture", "Content with picture", [
+        { id: "ph-title", role: "title", rect: rect(page, 0.06, 0.08, 0.88, 0.13) },
+        { id: "ph-content", role: "content", rect: rect(page, 0.06, 0.26, 0.5, 0.6) },
+        { id: "ph-pic", role: "picture", rect: rect(page, 0.6, 0.26, 0.34, 0.6) },
+      ]),
+      L("layout-headline-stat", "Headline stat", [
+        { id: "ph-stat", role: "title", rect: rect(page, 0.1, 0.28, 0.8, 0.24) },
+        { id: "ph-context", role: "body", rect: rect(page, 0.16, 0.58, 0.68, 0.14) },
+      ]),
+      L("layout-closing", "Closing", [
+        { id: "ph-title", role: "title", rect: rect(page, 0.1, 0.32, 0.8, 0.18) },
+        { id: "ph-cta", role: "body", rect: rect(page, 0.2, 0.56, 0.6, 0.12) },
       ]),
     ],
   };

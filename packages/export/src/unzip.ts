@@ -4,24 +4,72 @@
 // inflating via the platform-native DecompressionStream ("deflate-raw"),
 // available in every modern browser and Node 18+. No zip64 (a .pptx is far
 // below 4GB); encrypted entries are rejected.
+//
+// Archive-bomb guards (F28 completion C01): the archives come from untrusted
+// files the user picked, so entry count, per-entry decompressed size, and
+// TOTAL decompressed size are all capped, and the caps are enforced DURING
+// inflation (a declared size in the directory can lie, and measuring after
+// the fact means the bomb already detonated in this tab's memory). Over-limit
+// archives are rejected with a clear error, never silently truncated. Stored
+// entries are zero-copy views into the picked file and cannot expand, so only
+// inflated bytes count toward the total.
 
 export interface UnzippedFile {
   name: string;
   data: Uint8Array;
 }
 
-async function inflateRaw(data: Uint8Array): Promise<Uint8Array> {
+/** Decompression limits. The defaults are far above any real deck this
+ *  client-side importer could handle anyway, so they only ever stop bombs. */
+export interface UnzipLimits {
+  /** Maximum central-directory entries (default 10000). */
+  maxEntries?: number;
+  /** Maximum decompressed bytes for ONE entry (default 512 MiB). */
+  maxEntryBytes?: number;
+  /** Maximum decompressed bytes across the whole archive (default 1 GiB). */
+  maxTotalBytes?: number;
+}
+
+const defaultLimits: Required<UnzipLimits> = {
+  maxEntries: 10_000,
+  maxEntryBytes: 512 << 20,
+  maxTotalBytes: 1 << 30,
+};
+
+/** Inflate raw-deflate data, aborting as soon as the output exceeds `cap`;
+ *  `capMessage` names WHICH limit was crossed (entry vs total). */
+async function inflateRawCapped(data: Uint8Array, cap: number, capMessage: string): Promise<Uint8Array> {
   // slice() re-buffers so .buffer is exactly this entry's bytes (a subarray's
   // buffer would leak the whole archive into the body).
   const body = data.slice().buffer as ArrayBuffer;
   const stream = new Response(body).body;
   if (!stream) throw new Error("streams unavailable");
-  const inflated = stream.pipeThrough(new DecompressionStream("deflate-raw"));
-  return new Uint8Array(await new Response(inflated).arrayBuffer());
+  const reader = stream.pipeThrough(new DecompressionStream("deflate-raw")).getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > cap) {
+      await reader.cancel().catch(() => {});
+      throw new Error(capMessage);
+    }
+    chunks.push(value);
+  }
+  const out = new Uint8Array(total);
+  let off = 0;
+  for (const c of chunks) {
+    out.set(c, off);
+    off += c.byteLength;
+  }
+  return out;
 }
 
-/** Read a ZIP archive into name -> bytes. Throws on a malformed archive. */
-export async function unzip(bytes: Uint8Array): Promise<Map<string, Uint8Array>> {
+/** Read a ZIP archive into name -> bytes. Throws on a malformed archive or
+ *  one that exceeds the decompression limits (see UnzipLimits). */
+export async function unzip(bytes: Uint8Array, limits?: UnzipLimits): Promise<Map<string, Uint8Array>> {
+  const lim = { ...defaultLimits, ...limits };
   const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   // Find the end-of-central-directory record (scan back past any comment).
   let eocd = -1;
@@ -33,9 +81,11 @@ export async function unzip(bytes: Uint8Array): Promise<Map<string, Uint8Array>>
   }
   if (eocd < 0) throw new Error("not a zip archive");
   const count = dv.getUint16(eocd + 10, true);
+  if (count > lim.maxEntries) throw new Error(`zip archive has too many entries (${count})`);
   let p = dv.getUint32(eocd + 16, true); // central directory offset
 
   const out = new Map<string, Uint8Array>();
+  let totalInflated = 0;
   for (let i = 0; i < count; i++) {
     if (dv.getUint32(p, true) !== 0x02014b50) throw new Error("bad central directory");
     const flags = dv.getUint16(p + 8, true);
@@ -59,7 +109,17 @@ export async function unzip(bytes: Uint8Array): Promise<Map<string, Uint8Array>>
     if (method === 0) {
       out.set(name, raw);
     } else if (method === 8) {
-      out.set(name, await inflateRaw(raw));
+      // The per-entry cap is also bounded by the remaining total budget, so a
+      // set of entries each under the entry cap cannot blow the total.
+      const remaining = lim.maxTotalBytes - totalInflated;
+      const entryCap = Math.min(lim.maxEntryBytes, remaining);
+      if (entryCap <= 0) throw new Error("zip archive expands past the total decompression limit");
+      const capMessage = remaining < lim.maxEntryBytes
+        ? "zip archive expands past the total decompression limit"
+        : `zip entry expands past the ${Math.round(lim.maxEntryBytes / (1 << 20))} MiB limit: ${name}`;
+      const inflated = await inflateRawCapped(raw, entryCap, capMessage);
+      totalInflated += inflated.byteLength;
+      out.set(name, inflated);
     } else {
       throw new Error(`unsupported zip method ${method} for ${name}`);
     }

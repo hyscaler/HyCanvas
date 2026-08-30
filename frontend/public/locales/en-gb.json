@@ -52,6 +52,7 @@
   "editor.remove_from_favorites": "Remove from favourites",
   "editor.reset_to_center": "Reset to centre",
   "editor.series_colors": "Series colours",
+  "editor.skip_no_stickies": "there are no sticky notes to summarise",
   "editor.stop_color": "Stop colour",
   "editor.stroke_color": "Stroke colour",
   "editor.text_color": "Text colour",

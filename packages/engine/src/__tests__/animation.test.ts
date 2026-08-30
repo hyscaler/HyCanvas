@@ -10,7 +10,11 @@ import {
   clipEnd,
   transitionProgress,
   appliedOpacity,
-  IDENTITY_PATCH,
+  identityPatch,
+  customPatch,
+  samplePath,
+  springEase,
+  clipEase,
 } from "../animation";
 
 const clip = <P extends string>(preset: P, durationMs = 500, delayMs = 0): AnimationClip<P> => ({
@@ -145,9 +149,9 @@ describe("transitionProgress", () => {
   });
 });
 
-describe("IDENTITY_PATCH", () => {
+describe("identityPatch", () => {
   it("is a no-op patch", () => {
-    expect(IDENTITY_PATCH).toEqual({ dx: 0, dy: 0, scale: 1, rotate: 0, opacityMul: 1 });
+    expect(identityPatch).toEqual({ dx: 0, dy: 0, scale: 1, rotate: 0, opacityMul: 1 });
   });
 });
 
@@ -172,5 +176,86 @@ describe("appliedOpacity", () => {
 
   it("clamps below zero to zero", () => {
     expect(appliedOpacity(0.7, -0.2)).toBe(0);
+  });
+});
+
+// --- Phase 3: animation depth (C11-C13) ----------------------------------------
+describe("v23 keyframe channels (C12)", () => {
+  it("width/height/color interpolate between the keyframes that define them", () => {
+    const track = {
+      durationMs: 1000,
+      keyframes: [
+        { t: 0, width: 100, color: { srgb: { r: 1, g: 0, b: 0, a: 1 } }, easing: "linear" as const },
+        { t: 1000, width: 300, color: { srgb: { r: 0, g: 0, b: 1, a: 1 } } },
+      ],
+    };
+    const mid = customPatch(track as never, 500);
+    expect(mid.width).toBeCloseTo(200, 5);
+    expect(mid.color!.srgb.r).toBeCloseTo(0.5, 5);
+    expect(mid.color!.srgb.b).toBeCloseTo(0.5, 5);
+    expect(mid.height).toBeUndefined(); // never defined: no override
+  });
+
+  it("a channel defined on ONE keyframe holds at both boundaries; sparse channels sample independently", () => {
+    const track = {
+      durationMs: 1000,
+      keyframes: [
+        { t: 0, dx: 0, easing: "linear" as const },
+        { t: 500, width: 200, easing: "linear" as const },
+        { t: 1000, dx: 100 },
+      ],
+    };
+    expect(customPatch(track as never, 250).width).toBe(200); // held BEFORE the first defined too (no mid-track snap)
+    expect(customPatch(track as never, 750).width).toBe(200); // held past the last defined
+    expect(customPatch(track as never, 750).dx).toBeCloseTo(50, 5); // transform segments unaffected
+  });
+
+  it("legacy tracks without new channels evaluate bit-for-bit as before", () => {
+    const track = { durationMs: 1000, keyframes: [{ t: 0, dx: 0, easing: "linear" as const }, { t: 1000, dx: 100 }] };
+    const p = customPatch(track as never, 400);
+    expect(p.dx).toBeCloseTo(40, 5);
+    expect(p.width).toBeUndefined();
+    expect(p.color).toBeUndefined();
+  });
+});
+
+describe("motion paths (C11)", () => {
+  it("samplePath walks the polyline by arc length with the tangent angle", () => {
+    const path = [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }];
+    expect(samplePath(path, 0)).toEqual({ x: 0, y: 0, angleDeg: 0 });
+    const quarter = samplePath(path, 0.25);
+    expect(quarter.x).toBeCloseTo(50, 5);
+    expect(quarter.y).toBeCloseTo(0, 5);
+    const threeQ = samplePath(path, 0.75);
+    expect(threeQ.x).toBeCloseTo(100, 5);
+    expect(threeQ.y).toBeCloseTo(50, 5);
+    expect(threeQ.angleDeg).toBeCloseTo(90, 5); // heading down
+    expect(samplePath(path, 1).y).toBeCloseTo(100, 5);
+  });
+
+  it("a track path drives dx/dy instead of the keyframes and orients when asked", () => {
+    const track = {
+      durationMs: 1000,
+      path: [{ x: 0, y: 0 }, { x: 0, y: 200 }],
+      orient: true,
+      keyframes: [{ t: 0, dx: 999, easing: "linear" as const }, { t: 1000, dx: 999, scale: 2 }],
+    };
+    const mid = customPatch(track as never, 500);
+    expect(mid.dx).toBeCloseTo(0, 5); // path wins over the keyframe dx
+    expect(mid.dy).toBeCloseTo(100, 5);
+    expect(mid.rotate).toBeCloseTo(90, 5); // tangent straight down
+    expect(mid.scale).toBeCloseTo(1.5, 5); // other channels keep evaluating
+  });
+});
+
+describe("spring parameters (C13)", () => {
+  it("clipEase honors clip.spring; defaults match the classic curve; params clamp", () => {
+    const classic = { easing: "spring" as const };
+    const parameterized = { easing: "spring" as const, spring: { stiffness: 20, damping: 0.8 } };
+    expect(clipEase(classic, 0.3)).toBeCloseTo(evalEasing("spring", 0.3), 10);
+    expect(clipEase(parameterized, 0.3)).not.toBeCloseTo(clipEase(classic, 0.3), 3);
+    expect(springEase(1, 20, 0.8)).toBe(1); // settles exactly
+    expect(springEase(0.5, -100, 99)).toBeGreaterThan(0); // hostile params clamp, stay finite
+    expect(Number.isFinite(springEase(0.5, -100, 99))).toBe(true);
   });
 });

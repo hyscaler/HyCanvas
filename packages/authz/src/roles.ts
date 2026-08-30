@@ -6,7 +6,7 @@
 import type { Membership, WorkspaceRole } from "./types";
 
 /** Higher rank = more authority. */
-export const ROLE_RANK: Record<WorkspaceRole, number> = {
+export const roleRank: Record<WorkspaceRole, number> = {
   viewer: 1,
   member: 2,
   admin: 3,
@@ -25,7 +25,7 @@ export class AuthzError extends Error {
 
 /** True when `role` meets or exceeds `min`. */
 export function roleAtLeast(role: WorkspaceRole, min: WorkspaceRole): boolean {
-  return ROLE_RANK[role] >= ROLE_RANK[min];
+  return roleRank[role] >= roleRank[min];
 }
 
 /** The user's active membership in a workspace, or undefined. */

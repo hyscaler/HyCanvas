@@ -2,11 +2,14 @@
 // add, duplicate, and delete.
 
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Plus, Copy, Trash2, Eye, EyeOff, ChevronDown, ChevronRight, Bookmark } from "lucide-react";
+import { Plus, Copy, Trash2, Eye, EyeOff, ChevronDown, ChevronRight, Bookmark, Layers } from "lucide-react";
 import { groupPagesBySection, type SectionGroup, type SlideSection } from "@hc/schema";
 import { useEditor } from "@/store/editor";
+import { useComments } from "@/store/comments";
 import { SlideThumb } from "./SlideThumb";
-import { MIRROR_IN_RTL } from "@/lib/locale";
+import { ReuseSlidesDialog } from "./ReuseSlidesDialog";
+import { pageAssigneeOf, pageStatusColor, pageStatusLabel, pageStatusOf } from "@/lib/pageStatus";
+import { mirrorInRtl } from "@/lib/locale";
 import { tr } from "@/lib/i18n";
 
 const THUMB_W = 80;
@@ -33,6 +36,7 @@ export function PagesBar() {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [renaming, setRenaming] = useState<number | null>(null);
   const [sizeMenu, setSizeMenu] = useState(false);
+  const [reuseOpen, setReuseOpen] = useState(false);
 
   // The size-preset menu is fixed-positioned and clamped to the viewport: an
   // absolute popover anchored inside the bar is clipped by the bar's
@@ -144,6 +148,19 @@ export function PagesBar() {
                 <EyeOff size={9} /> {tr("editor.hidden")}
               </span>
             )}
+            {/* Slide status dot (C35): workflow state at a glance; details and
+                changes live in the overview's board view. */}
+            {(() => {
+              const status = pageStatusOf(p);
+              if (!status) return null;
+              const assignee = pageAssigneeOf(p);
+              return (
+                <span
+                  title={`${pageStatusLabel(status)}${assignee ? ` · ${assignee.name}` : ""}`}
+                  className={`absolute end-1 bottom-1 h-2 w-2 rounded-full ring-1 ring-white ${pageStatusColor(status).dot}`}
+                />
+              );
+            })()}
           </button>
           {renaming === i ? (
             <input
@@ -204,6 +221,16 @@ export function PagesBar() {
       >
         <Copy size={16} />
       </button>
+      <button
+        onClick={() => setReuseOpen(true)}
+        title={tr("editor.reuse_slides_from_another_design")}
+        data-testid="reuse-slides"
+        className="grid shrink-0 place-items-center rounded-md border border-neutral-200 text-neutral-500 hover:border-brand-300 hover:text-brand-ink"
+        style={{ width: 40, height: THUMB_H }}
+      >
+        <Layers size={16} />
+      </button>
+      {reuseOpen && <ReuseSlidesDialog open={reuseOpen} onClose={() => setReuseOpen(false)} currentDesignId={useComments.getState().designId} />}
       <div ref={addWrapRef} className="relative flex shrink-0 items-stretch">
         <button
           onClick={() => st().addPage()}
@@ -265,7 +292,7 @@ function SectionChip({ section, count }: { section: SlideSection; count: number 
         data-testid={`section-toggle-${section.id}`}
         className="grid h-5 w-5 place-items-center rounded text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700"
       >
-        {section.collapsed ? <ChevronRight size={13} className={MIRROR_IN_RTL} /> : <ChevronDown size={13} />}
+        {section.collapsed ? <ChevronRight size={13} className={mirrorInRtl} /> : <ChevronDown size={13} />}
       </button>
       {renaming ? (
         <input

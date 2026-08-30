@@ -34,7 +34,7 @@ import { effectsFilter, outlineSpecs, duotoneEffect } from "./effects";
 import { duotoneCanvas } from "./duotone";
 import { resolveFill } from "./fills";
 import { groupedBarLayout, radarPoint, seriesMax, stackedBase, stackedMax, categoryCount, tickCount } from "./chart";
-import { SERIES_PALETTE_HEX } from "@hc/color";
+import { seriesPaletteHex } from "@hc/color";
 import { fromTransform } from "./math";
 import type { AssetProvider, CanvasGradientLike, CanvasLike, Scene, SceneNode, Viewport } from "./types";
 
@@ -1560,7 +1560,7 @@ function drawTable(ctx: CanvasLike, node: TableNode, w: number, h: number): void
 }
 
 function seriesColor(s: { color?: { srgb: { r: number; g: number; b: number; a: number } } }, i: number): string {
-  return s.color ? colorToCss(s.color) : SERIES_PALETTE_HEX[i % SERIES_PALETTE_HEX.length];
+  return s.color ? colorToCss(s.color) : seriesPaletteHex[i % seriesPaletteHex.length];
 }
 
 /** Text scale for a chart's labels: the style's base font size relative to the
@@ -1752,7 +1752,7 @@ function drawChart(ctx: CanvasLike, node: ChartNode, w: number, h: number): void
     let a0 = -Math.PI / 2;
     for (let i = 0; i < vals.length; i++) {
       const a1 = a0 + (Math.max(0, vals[i]) / total) * Math.PI * 2;
-      const col = SERIES_PALETTE_HEX[i % SERIES_PALETTE_HEX.length];
+      const col = seriesPaletteHex[i % seriesPaletteHex.length];
       if (type === "donut") {
         ctx.beginPath();
         ctx.ellipse(cx, cy, r * 0.78, r * 0.78, 0, a0, a1);

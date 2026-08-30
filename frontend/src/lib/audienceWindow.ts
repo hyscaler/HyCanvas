@@ -23,6 +23,9 @@ export interface AudienceState {
   blank?: "black" | "white" | null;
   /** The presenter closed present mode; the audience window should close too. */
   closed?: boolean;
+  /** Live caption text mirrored onto the audience display (C17); empty/absent
+   *  hides the band. */
+  caption?: string;
 }
 
 export type AudienceMessage =

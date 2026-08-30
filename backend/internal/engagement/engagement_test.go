@@ -83,6 +83,44 @@ func TestAggregateInsights(t *testing.T) {
 	}
 }
 
+func TestAggregateInsights_PerLink(t *testing.T) {
+	link := func(anon, linkID, label string, ms int) DesignViewRow {
+		r := DesignViewRow{DurationMs: ms, OpenedAt: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
+		if anon != "" {
+			r.AnonID = &anon
+		}
+		if linkID != "" {
+			r.LinkID = &linkID
+		}
+		if label != "" {
+			r.LinkLabel = &label
+		}
+		return r
+	}
+	u := "u1"
+	member := DesignViewRow{ViewerID: &u, DurationMs: 9000, OpenedAt: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
+	ins := aggregateInsights([]DesignViewRow{
+		link("a1", "l1", "Investors", 1000),
+		link("a2", "l1", "Investors", 3000),
+		link("a2", "l1", "Investors", 500), // same viewer twice: 3 views, 2 viewers
+		link("a3", "l2", "", 200),          // unlabeled link still attributes
+		member,                             // member session: never in Links
+	})
+	if len(ins.Links) != 2 {
+		t.Fatalf("want 2 links, got %+v", ins.Links)
+	}
+	top := ins.Links[0]
+	if top.LinkID != "l1" || top.Label != "Investors" || top.Views != 3 || top.Viewers != 2 || top.TotalMs != 4500 {
+		t.Fatalf("l1 wrong: %+v", top)
+	}
+	if ins.Links[1].LinkID != "l2" || ins.Links[1].Label != "" || ins.Links[1].Views != 1 {
+		t.Fatalf("l2 wrong: %+v", ins.Links[1])
+	}
+	if ins.TotalViews != 5 {
+		t.Fatalf("total views wrong: %d", ins.TotalViews)
+	}
+}
+
 func TestEngagement_DB(t *testing.T) {
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {

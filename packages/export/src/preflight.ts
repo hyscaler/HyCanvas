@@ -8,7 +8,7 @@ import { childrenOf, type Color, type DesignFile, type ImageNode, type Node } fr
 import { computeEffectivePpi } from "@hc/engine";
 import { gamutCheck } from "@hc/color";
 import { resolvePages } from "./pages";
-import { PRINT_FORMATS, type ExportRequest, type PreflightReport } from "./types";
+import { printFormats, type ExportRequest, type PreflightReport } from "./types";
 
 type AnyRec = Record<string, unknown>;
 
@@ -61,7 +61,7 @@ function colorsOfNode(node: Node): Color[] {
  */
 export function preflight(file: DesignFile, request: ExportRequest): PreflightReport {
   const pages = resolvePages(file, request.pages);
-  const isPrint = PRINT_FORMATS.has(request.format);
+  const isPrint = printFormats.has(request.format);
   const isPdf = request.format === "pdf" || request.format === "pdfx";
   const minPpi = isPdf ? PRINT_MIN_PPI : SCREEN_MIN_PPI;
   const cmyk = request.pdf?.intent === "cmyk";

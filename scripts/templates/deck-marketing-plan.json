@@ -1,0 +1,73 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-marketing-plan",
+ "title": "Marketing Plan",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "marketing",
+  "plan",
+  "campaign",
+  "strategy"
+ ],
+ "styleTags": [
+  "bold"
+ ],
+ "themeId": "theme-plum",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 80,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Marketing Plan",
+  "theme": "creative with a spine",
+  "pages": [
+   {
+    "title": "The objective",
+    "points": [
+     "What marketing owes the business this year"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "The audience",
+    "points": [
+     "Segments, moments, and messages"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "The big idea",
+    "points": [
+     "The campaign concept in one line"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "The calendar",
+    "points": [
+     "Campaigns across the year"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "The budget",
+    "points": [
+     "Spend by channel with expected return"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "How we will know",
+    "points": [
+     "The dashboard we check weekly"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

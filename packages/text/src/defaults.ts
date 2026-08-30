@@ -2,23 +2,23 @@
 
 import type { CharStyle, Color, Fill, Paragraph, ParagraphStyle, Run } from "@hc/schema";
 
-export const BLACK: Color = { srgb: { r: 0, g: 0, b: 0, a: 1 } };
-export const SOLID_BLACK: Fill = { type: "solid", color: BLACK };
+export const black: Color = { srgb: { r: 0, g: 0, b: 0, a: 1 } };
+export const solidBlack: Fill = { type: "solid", color: black };
 
-export const DEFAULT_CHAR_STYLE: CharStyle = {
+export const defaultCharStyle: CharStyle = {
   fontFamily: "system",
   fontStyle: "Regular",
   fontSize: 16,
-  fill: SOLID_BLACK,
+  fill: solidBlack,
 };
 
-export const DEFAULT_PARAGRAPH_STYLE: ParagraphStyle = {
+export const defaultParagraphStyle: ParagraphStyle = {
   align: "left",
   direction: "auto",
 };
 
 export function createRun(text: string, style: Partial<CharStyle> = {}): Run {
-  return { text, style: { ...DEFAULT_CHAR_STYLE, ...style } };
+  return { text, style: { ...defaultCharStyle, ...style } };
 }
 
 export function createParagraph(
@@ -28,7 +28,7 @@ export function createParagraph(
 ): Paragraph {
   return {
     runs: text ? [createRun(text, charStyle)] : [],
-    style: { ...DEFAULT_PARAGRAPH_STYLE, ...paraStyle },
+    style: { ...defaultParagraphStyle, ...paraStyle },
   };
 }
 

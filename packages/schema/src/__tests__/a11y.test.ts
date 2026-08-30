@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createBlankDesign, createNode } from "../factory";
-import { CURRENT_SCHEMA_VERSION, type DesignFile, type Node, type Page } from "../schema";
+import { currentSchemaVersion, type DesignFile, type Node, type Page } from "../schema";
 import { migrate } from "../migrate";
 import { validate } from "../validate";
 import { fromDesignFile, toDesignFile } from "../yjs";
@@ -41,9 +41,9 @@ function pageWith(children: Node[], readingOrder?: string[]): Page {
 
 describe("schema v12", () => {
   it("the v11 -> v12 migration step is purely additive", () => {
-    // Target v12 explicitly rather than CURRENT_SCHEMA_VERSION: this test is
+    // Target v12 explicitly rather than currentSchemaVersion: this test is
     // about THIS step, and must not break every time a later version lands.
-    expect(CURRENT_SCHEMA_VERSION).toBeGreaterThanOrEqual(12);
+    expect(currentSchemaVersion).toBeGreaterThanOrEqual(12);
     const v11 = { ...createBlankDesign({ title: "Old", width: 800, height: 600 }), schemaVersion: 11 };
     const migrated = migrate(v11 as unknown as DesignFile, 12);
     expect(migrated.schemaVersion).toBe(12);

@@ -19,3 +19,4 @@ export * from "./zipstore";
 export * from "./unzip";
 export * from "./xml";
 export * from "./pptximport";
+export * from "./odpimport";

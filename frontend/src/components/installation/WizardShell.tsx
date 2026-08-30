@@ -24,7 +24,7 @@ export function useSecretGate(): boolean {
   return ready;
 }
 
-export const STEPS = [
+export const steps = [
   { n: 1, label: "Welcome" },
   { n: 2, label: "Database" },
   { n: 3, label: "Storage" },
@@ -66,7 +66,7 @@ export function WizardShell({
     };
   }, [stage, router]);
 
-  const progress = ((step - 1) / (STEPS.length - 1)) * 100;
+  const progress = ((step - 1) / (steps.length - 1)) * 100;
 
   return (
     <div className="relative grid min-h-screen place-items-center overflow-hidden p-6">
@@ -75,13 +75,13 @@ export function WizardShell({
         <div className="mb-6 flex items-center justify-between">
           <Logo size={28} />
           <span className="text-xs font-medium text-neutral-400">
-            Step {step} of {STEPS.length}
+            Step {step} of {steps.length}
           </span>
         </div>
 
         {/* Progress header */}
         <div aria-hidden className="mb-2 flex items-center justify-between">
-          {STEPS.map((s) => (
+          {steps.map((s) => (
             <div key={s.n} className="flex flex-col items-center gap-1">
               <span
                 className={cn(

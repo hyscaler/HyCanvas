@@ -16,7 +16,18 @@ export type DialogReq =
       confirmText?: string;
       resolve: (value: string | null) => void;
     }
-  | { kind: "alert"; id: number; title?: string; message: string; resolve: () => void };
+  | { kind: "alert"; id: number; title?: string; message: string; resolve: () => void }
+  | {
+      kind: "confirm";
+      id: number;
+      title: string;
+      message: string;
+      confirmText?: string;
+      /** Styles the confirm button as destructive and makes Cancel the
+       *  default focus, for actions that cannot be undone. */
+      danger?: boolean;
+      resolve: (ok: boolean) => void;
+    };
 
 let seq = 0;
 
@@ -40,6 +51,22 @@ export function promptText(opts: {
 }): Promise<string | null> {
   return new Promise((resolve) => {
     useDialog.getState().setReq({ kind: "prompt", id: ++seq, ...opts, resolve });
+  });
+}
+
+/** Ask the user to confirm an action. Resolves true only if they accept.
+ *
+ *  Replaces window.confirm, which renders as a browser chrome dialog naming
+ *  the host, cannot be styled or translated, and looks nothing like the rest
+ *  of the product at the moment it is asking about something irreversible. */
+export function confirmAction(opts: {
+  title: string;
+  message: string;
+  confirmText?: string;
+  danger?: boolean;
+}): Promise<boolean> {
+  return new Promise((resolve) => {
+    useDialog.getState().setReq({ kind: "confirm", id: ++seq, ...opts, resolve });
   });
 }
 

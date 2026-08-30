@@ -7,10 +7,11 @@
 // a read-only summary. Matches the app's modal + button + input language.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Copy, Link2, RotateCw, Trash2, Ban, Check, Eye, EyeOff, Lock, Crown, X, UserCheck, ChevronRight, Plus } from "lucide-react";
+import { Copy, Link2, RotateCw, Trash2, Ban, Check, Code, Eye, EyeOff, Lock, Crown, X, UserCheck, ChevronRight, Plus } from "lucide-react";
 import { ApiError } from "@hc/sdk";
 import type { AccessMode, AccessRequestView, DesignSharingView, ShareGrant, ShareLinkView } from "@hc/sdk";
 import { oc } from "@/lib/sdk";
+import { useEditor } from "@/store/editor";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -52,6 +53,40 @@ function linkUrl(token: string): string {
   const path = `/shared/${encodeURIComponent(token)}/`;
   if (typeof window === "undefined") return path;
   return `${window.location.origin}${path}`;
+}
+
+/** Inline audience-name editor for an existing link (C36): looks like text,
+ *  edits in place, commits on blur/Enter when the value actually changed.
+ *  Callers key this component on the label so an external rename (reload after
+ *  save) resets the draft without a sync setState-in-effect. */
+function LinkLabelInline({ label, disabled, onSave }: { label: string; disabled: boolean; onSave: (label: string) => void }) {
+  const [value, setValue] = useState(label);
+  const commit = () => {
+    const v = value.trim();
+    if (v !== label) onSave(v);
+  };
+  return (
+    <input
+      value={value}
+      disabled={disabled}
+      placeholder={tr("editor.name_this_link")}
+      aria-label={tr("editor.link_name")}
+      maxLength={80}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+      className="h-7 w-28 min-w-0 shrink rounded border border-transparent bg-transparent px-1.5 text-xs font-semibold text-neutral-700 outline-none transition placeholder:font-normal placeholder:text-neutral-400 hover:border-neutral-200 focus:border-brand-400 focus:bg-surface disabled:opacity-50"
+    />
+  );
+}
+
+/** The iframe embed snippet for a share link (C37): the chrome-less
+ *  ?embed=1 player, sized to the design's first-page aspect. */
+function embedSnippet(token: string, page: { width: number; height: number } | undefined, title: string): string {
+  const w = 960;
+  const h = page && page.width > 0 ? Math.max(120, Math.round((w * page.height) / page.width)) : 540;
+  const safeTitle = (title.trim() || "HyCanvas").replace(/"/g, "&quot;"); // i18n-ignore: brand name
+  return `<iframe src="${linkUrl(token)}?embed=1" width="${w}" height="${h}" style="border:0;border-radius:12px;max-width:100%" allowfullscreen loading="lazy" title="${safeTitle}"></iframe>`;
 }
 
 /** Pull a human message out of a problem+json error, else the fallback. */
@@ -133,6 +168,7 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
 
   // New-link form.
   const [linkMode, setLinkMode] = useState<AccessMode>("view");
+  const [linkLabel, setLinkLabel] = useState("");
   const [linkPassword, setLinkPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [linkExpiry, setLinkExpiry] = useState("");
@@ -328,7 +364,9 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
         password: linkPassword.trim() || undefined,
         expiresAt: linkExpiry ? new Date(linkExpiry).toISOString() : undefined,
         requireSignin: linkRequireSignin || undefined,
+        label: linkLabel.trim() || undefined,
       });
+      setLinkLabel("");
       setLinkPassword("");
       setLinkExpiry("");
       setLinkRequireSignin(false);
@@ -346,6 +384,14 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
   async function copyLink(link: ShareLinkView) {
     const ok = await copyText(linkUrl(link.token));
     if (ok) toast.success(tr("editor.link_copied"));
+    else toast.error(tr("editor.could_not_copy_select_the_link_and_copy_it_m"));
+  }
+
+  // C37: the public iframe snippet for this link (chrome-less ?embed=1 player).
+  async function copyEmbed(link: ShareLinkView) {
+    const doc = useEditor.getState().doc;
+    const ok = await copyText(embedSnippet(link.token, doc.pages[0], doc.title));
+    if (ok) toast.success(tr("editor.embed_code_copied"));
     else toast.error(tr("editor.could_not_copy_select_the_link_and_copy_it_m"));
   }
 
@@ -542,7 +588,17 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
               <div className="flex items-center gap-2">
                 <span className="hidden text-sm text-neutral-600 sm:inline">{tr("editor.anyone_with_the_link")}</span>
                 <ModeSelect value={linkMode} onChange={setLinkMode} disabled={creatingLink} ariaLabel={tr("editor.access_level_for_the_new_link")} />
-                <Button size="sm" className="ms-auto gap-1" onClick={() => void createLink()} disabled={creatingLink}>
+                {/* C36: naming the audience up front makes the insights panel
+                    read as people (tr("editor.dial_investor")), not tokens. */}
+                <Input
+                  placeholder={tr("editor.name_this_link_optional")}
+                  aria-label={tr("editor.link_name")}
+                  value={linkLabel}
+                  maxLength={80}
+                  onChange={(e) => setLinkLabel(e.target.value)}
+                  className="h-9 min-w-0 flex-1"
+                />
+                <Button size="sm" className="ms-auto shrink-0 gap-1" onClick={() => void createLink()} disabled={creatingLink}>
                   <Plus size={15} /> {creatingLink ? tr("editor.creating") : tr("editor.create_link")}
                 </Button>
               </div>
@@ -604,6 +660,7 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
                   return (
                     <li key={l.id} className={`flex flex-col gap-2 rounded-xl border px-3 py-2.5 ${l.disabled ? "border-neutral-100 bg-neutral-50 opacity-70" : "border-neutral-200 bg-surface"}`}>
                       <div className="flex items-center gap-2">
+                        <LinkLabelInline key={l.label ?? ""} label={l.label ?? ""} disabled={busy} onSave={(label) => void patchLink(l, { label }, label ? tr("editor.link_name_saved") : tr("editor.link_name_removed"))} />
                         <ModeSelect value={l.mode} onChange={(m) => void patchLink(l, { mode: m }, tr("editor.link_access_updated"))} disabled={busy} ariaLabel={tr("editor.access_level_for_this_link")} />
                         <span className="flex flex-wrap items-center gap-1.5 text-xs font-medium text-neutral-500">
                           {l.hasPassword && <span className="inline-flex items-center gap-0.5 rounded bg-neutral-100 px-1.5 py-0.5"><Lock size={11} /> {tr("editor.password_2")}</span>}
@@ -633,6 +690,9 @@ export function ShareDialog({ open, onClose, designId, focusRequests }: { open: 
                         />
                         <button aria-label={tr("editor.copy_link")} title={tr("editor.copy_link")} disabled={l.disabled} className="grid h-8 w-8 place-items-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 disabled:opacity-40" onClick={() => void copyLink(l)}>
                           <Copy size={15} />
+                        </button>
+                        <button aria-label={tr("editor.copy_embed_code")} title={tr("editor.copy_embed_code")} disabled={l.disabled} className="grid h-8 w-8 place-items-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 disabled:opacity-40" onClick={() => void copyEmbed(l)}>
+                          <Code size={15} />
                         </button>
                       </div>
                       <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500">

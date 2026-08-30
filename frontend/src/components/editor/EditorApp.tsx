@@ -4,6 +4,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
 import { useRouter } from "next/router";
+import { isAiBusy, requestAi, subscribeOpenProperties } from "@/lib/aiRequests";
 import type { Node as DesignNode } from "@hc/schema";
 import { ChevronLeft, Undo2, Redo2, Download, Play, MonitorPlay, Ruler, Grid3x3, Magnet, LayoutTemplate, History, Eye, Share2, MessageSquare, ShieldCheck, Activity, BarChart3, MoreHorizontal, Send, Globe, Printer, PanelRightClose, PanelRightOpen, Keyboard, Info, X, Accessibility, Maximize2, Minimize2, LayoutGrid, FileDown, Film, Table2 } from "lucide-react";
 import type { AccessMode } from "@hc/sdk";
@@ -46,14 +47,14 @@ import { ApprovalBanner } from "./ApprovalBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { PromptHost } from "@/components/ui/PromptHost";
 import { useRealtime, getDesignDoc, resyncFromLiveDoc } from "@/lib/useRealtime";
-import { useAutoSnapshot, CHECKPOINT_MAX_BYTES } from "@/lib/useAutoSnapshot";
+import { useAutoSnapshot, checkpointMaxBytes } from "@/lib/useAutoSnapshot";
 import { onCommentChanged, onRoleChanged } from "@/lib/realtime";
 import { useViewBeat } from "@/lib/useViewBeat";
 import { useComments } from "@/store/comments";
 import { useBrand } from "@/store/brand";
 import { usePresence } from "@/store/presence";
 import { useBoardFocus, enterBoardFocus, exitBoardFocus } from "@/store/boardFocus";
-import { DESIGN_SURFACE_DIR, MIRROR_IN_RTL, documentDirection } from "@/lib/locale";
+import { designSurfaceDir, mirrorInRtl, documentDirection } from "@/lib/locale";
 import { tr } from "@/lib/i18n";
 
 type Status = "loading" | "ready" | "error" | "forbidden" | "notfound";
@@ -229,6 +230,45 @@ function AccessBanner({ mode, suppressed }: { mode: AccessMode; suppressed?: boo
   );
 }
 
+// Adaptive-reflow variant proposal (F40 E17): when an edit over- or
+// underfills a layout-linked slide past what the font ladder absorbs, this
+// chip offers the nearest denser/sparser layout - applied as ONE undo turn,
+// never automatically. Bottom-center so it reads as a canvas affordance, not
+// an alert.
+function ReflowHintChip() {
+  const hint = useEditor((s) => s.reflowHint);
+  const activePage = useEditor((s) => s.activePage);
+  // Hints are keyed by page ID so page adds/deletes/reorders can never make
+  // the chip (or its one-click switch) land on a different slide.
+  const activePageId = useEditor((s) => (s.doc.pages[s.activePage] as { id?: string } | undefined)?.id);
+  if (!hint || hint.pageId !== activePageId) return null;
+  return (
+    <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center">
+      <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-brand-200 bg-surface px-3 py-1.5 shadow-md">
+        <span className="text-xs text-neutral-600">
+          {hint.direction === "denser" ? tr("editor.this_slide_is_getting_crowded") : tr("editor.this_slide_has_room_to_spare")}
+        </span>
+        <button
+          onClick={() => {
+            const ok = useEditor.getState().switchPageLayout(activePage, hint.toLayoutId);
+            if (!ok) useEditor.getState().dismissReflowHint();
+          }}
+          className="rounded-full bg-brand-600 px-2.5 py-0.5 text-xs font-medium text-white hover:bg-brand-700"
+        >
+          {tr("editor.try_layout_name", { name: hint.toName })}
+        </button>
+        <button
+          onClick={() => useEditor.getState().dismissReflowHint()}
+          aria-label={tr("editor.dismiss_layout_suggestion")}
+          className="grid h-5 w-5 place-items-center rounded-full text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
+        >
+          <X size={12} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function EditorApp() {
   const router = useRouter();
   const toast = useToast();
@@ -302,6 +342,10 @@ export function EditorApp() {
   // instead of taking layout width so the canvas keeps usable space; below the
   // very-narrow width we show a one-time advisory banner.
   const isCompact = useMediaQuery("(max-width: 1023px)"); // below Tailwind `lg`
+  // A brief carried from the dashboard: the AI panel opens on it and starts
+  // generating, so "describe a deck" is one step rather than seven. Read once
+  // and stripped from the URL below, so a reload does not regenerate.
+  const aiBrief = typeof router.query.ai === "string" ? router.query.ai : "";
   const isVeryNarrow = useMediaQuery("(max-width: 639px)"); // below Tailwind `sm`
   // One-time, dismissible "optimized for larger screens" notice (non-blocking).
   const [narrowNoticeDismissed, setNarrowNoticeDismissed] = useState(false);
@@ -564,6 +608,19 @@ export function EditorApp() {
     };
   }, [router.isReady, router.query.id, loadDoc]);
 
+  // Hand the brief to the assistant once the design is open, then strip it
+  // from the URL: it is a one-shot intent, not part of the design's address,
+  // and leaving it would regenerate on every reload or share of that link.
+  const briefSent = useRef(false);
+  useEffect(() => {
+    if (!router.isReady || !aiBrief || briefSent.current || !designId) return;
+    briefSent.current = true;
+    requestAi({ kind: "prompt", text: aiBrief });
+    const rest = { ...router.query };
+    delete rest.ai;
+    void router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
+  }, [router, aiBrief, designId]);
+
   // Deep link: an access-request notification routes to
   // /editor?id=...&share=requests. Once the design is loaded, open the Share
   // dialog on its pending-requests inbox so the owner can act in one click
@@ -640,7 +697,11 @@ export function EditorApp() {
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
       const { dirty: d, designId: id } = unloadRef.current;
-      if (d && id) {
+      // A running generation counts as unsaved work: it is minutes of the
+      // user's time and their provider's tokens, and closing the tab drops it.
+      // The old guard only knew about a dirty saved document, so a generation
+      // on a freshly opened design closed with no prompt at all.
+      if ((d && id) || isAiBusy()) {
         e.preventDefault();
         e.returnValue = ""; // required for the native prompt in most browsers
       }
@@ -648,6 +709,31 @@ export function EditorApp() {
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, []);
+
+  // The assistant can hand the user to the page properties, where the deck
+  // theme editor lives. Opening it here keeps panel visibility owned by the
+  // shell that already manages it for every breakpoint.
+  useEffect(() => subscribeOpenProperties(() => {
+    if (isCompact) setCompactPropsOpen(true);
+    else if (isBoard) setBoardPropsOpen(true);
+    else setPropsOpen(true);
+  }), [isCompact, isBoard]);
+
+  // In-app navigation needs its own guard: beforeunload does not fire for a
+  // client-side route change, so clicking to the dashboard mid-generation used
+  // to drop the run with no warning. Throwing is the documented way to cancel
+  // a Pages Router navigation.
+  useEffect(() => {
+    const onRouteChange = (url: string) => {
+      if (!isAiBusy()) return;
+      if (url.startsWith(router.asPath.split("?")[0])) return; // same design
+      if (window.confirm(tr("editor.a_generation_is_still_running_leave_anyway"))) return;
+      router.events.emit("routeChangeError");
+      throw "routeChange aborted by the user (a generation is still running)";
+    };
+    router.events.on("routeChangeStart", onRouteChange);
+    return () => router.events.off("routeChangeStart", onRouteChange);
+  }, [router]);
 
   // Global "?" (Shift+/) opens the keyboard-shortcuts sheet, ignoring keystrokes
   // typed into inputs/textareas/contentEditable (and while crop/present own the
@@ -776,7 +862,7 @@ export function EditorApp() {
         // when alone (same rule the auto-snapshot follows); with company the
         // journal is already durable and the log simply stays longer.
         const solo = Object.keys(usePresence.getState().peers).length === 0;
-        const cpFrame = solo ? doc.checkpointFrame(CHECKPOINT_MAX_BYTES) : null;
+        const cpFrame = solo ? doc.checkpointFrame(checkpointMaxBytes) : null;
         if (cpFrame) await oc.checkpointDesign(designId, cpFrame, branch);
         if (!mounted.current) return;
         // Durability on a branch is the journal, and the journal only has the
@@ -887,7 +973,7 @@ export function EditorApp() {
             visible title is the editable field beside it. */}
         <h1 className="sr-only">{title || tr("editor.untitled_design_2")}</h1>
         <IconButton className="shrink-0" aria-label={tr("editor.back_to_dashboard")} onClick={() => void router.push("/dashboard")}>
-          <ChevronLeft size={20} className={MIRROR_IN_RTL} />
+          <ChevronLeft size={20} className={mirrorInRtl} />
         </IconButton>
         <LogoMark size={28} />
         <input
@@ -1097,14 +1183,15 @@ export function EditorApp() {
         {(docKind === "design" || docKind === "whiteboard") && !inFocus && (
           // key by kind so switching surface re-applies its default; boards open
           // with the slide-out panel collapsed (canvas-first).
-          <ToolRail key={docKind} workspaceId={workspaceId} overlay={isCompact} defaultCollapsed={isBoard} kind={docKind === "whiteboard" ? "whiteboard" : "design"} />
+          <ToolRail key={docKind} workspaceId={workspaceId} overlay={isCompact} defaultCollapsed={isBoard} kind={docKind === "whiteboard" ? "whiteboard" : "design"} openTool={aiBrief ? "ai" : undefined} />
         )}
         {docKind !== "design" ? (
           // Same relative wrapper as the design canvas so overlays (the
           // read-only history preview banner) cover every document surface.
-          <main className="relative flex min-w-0 flex-1" dir={DESIGN_SURFACE_DIR}>
+          <main className="relative flex min-w-0 flex-1" dir={designSurfaceDir}>
             <DocumentSurface kind={docKind} workspaceId={workspaceId ?? undefined} designId={designId ?? undefined} />
             <PreviewBanner />
+            <ReflowHintChip />
           </main>
         ) : (
         <>
@@ -1196,7 +1283,7 @@ export function EditorApp() {
                   aria-label={tr("editor.collapse_properties_panel")}
                   className="grid h-7 w-7 place-items-center rounded-md text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
                 >
-                  <PanelRightClose size={16} className={MIRROR_IN_RTL} />
+                  <PanelRightClose size={16} className={mirrorInRtl} />
                 </button>
               </div>
               <div className="oc-scroll min-h-0 flex-1 overflow-y-auto">
@@ -1210,7 +1297,7 @@ export function EditorApp() {
               aria-label={tr("editor.show_properties_panel")}
               className="grid w-9 shrink-0 cursor-pointer place-items-start justify-center border-s border-neutral-200 bg-surface pt-2.5 text-neutral-400 hover:bg-neutral-50 hover:text-neutral-700"
             >
-              <PanelRightOpen size={18} className={MIRROR_IN_RTL} />
+              <PanelRightOpen size={18} className={mirrorInRtl} />
             </button>
           )
         ) : null}

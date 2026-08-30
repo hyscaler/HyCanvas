@@ -59,7 +59,7 @@ export type CritiqueFix =
   | { kind: "move_into_bounds"; nodeId: string; dx: number; dy: number } // offcanvas/overflow
   | { kind: "align_nudge"; nodeId: string; dx: number; dy: number }; // alignment
 
-export const CATEGORY_LABEL: Record<CritiqueCategory, string> = {
+export const categoryLabel: Record<CritiqueCategory, string> = {
   contrast: "Contrast",
   overflow: "Overflow",
   offcanvas: "Off canvas",
@@ -607,7 +607,7 @@ export function autoLayoutSuggestions(
 
 export type AnimateStyle = "fade" | "rise" | "pop";
 
-export const ANIMATE_STYLES: { id: AnimateStyle; label: string }[] = [
+export const animateStyles: { id: AnimateStyle; label: string }[] = [
   { id: "fade", label: "Fade" },
   { id: "rise", label: "Rise" },
   { id: "pop", label: "Pop" },

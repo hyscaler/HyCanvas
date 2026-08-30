@@ -26,7 +26,7 @@ import {
 import { useCallbackRef } from "@/lib/useCallbackRef";
 import { overlay } from "@/lib/theme.generated";
 import { useEditorCanvas, type CanvasApi } from "@/lib/useEditorCanvas";
-import { useEditor, OC_CLIP_PREFIX } from "@/store/editor";
+import { useEditor, ocClipPrefix } from "@/store/editor";
 import { commandForEvent } from "@/lib/shortcuts";
 import { Gizmo } from "./Gizmo";
 import { SelectionToolbar } from "./SelectionToolbar";
@@ -43,7 +43,7 @@ import { serverNow } from "@/lib/realtime";
 import { usePresence } from "@/store/presence";
 import { useBrand } from "@/store/brand";
 import { useComments } from "@/store/comments";
-import { DESIGN_SURFACE_DIR } from "@/lib/locale";
+import { designSurfaceDir } from "@/lib/locale";
 import { tr } from "@/lib/i18n";
 
 
@@ -2533,10 +2533,10 @@ export function Canvas() {
       }
       // 2) Text: our own copied elements (marker) -> nodes; else a text box.
       const text = dt.getData("text/plain");
-      if (text && text.startsWith(OC_CLIP_PREFIX)) {
+      if (text && text.startsWith(ocClipPrefix)) {
         e.preventDefault();
         try {
-          const nodes = JSON.parse(text.slice(OC_CLIP_PREFIX.length));
+          const nodes = JSON.parse(text.slice(ocClipPrefix.length));
           if (Array.isArray(nodes) && nodes.length) store.pasteNodes(nodes);
         } catch { /* ignore malformed clipboard JSON */ }
         return;
@@ -2648,7 +2648,7 @@ export function Canvas() {
       className="relative h-full w-full overflow-hidden bg-neutral-200 outline-none"
       // The design and every overlay positioned over it live in the design's own
       // coordinate space, so the shell's direction must not reach them.
-      dir={DESIGN_SURFACE_DIR}
+      dir={designSurfaceDir}
       // onFocus/onBlur bubble from children, so only treat focus as "on the
       // canvas" when the wrapper itself is the target. Focusing a child control
       // (a toolbar button, a text-edit overlay) reports a different target and
@@ -2950,6 +2950,33 @@ export function Canvas() {
         }
         if (!els.length) return null;
         return <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">{els}</svg>;
+      })()}
+      {/* Motion path overlay (v23, C11): when ONE node with a keyframe path is
+          selected, draw the path anchored at the node's center - the offsets
+          are node-relative, so the polyline shows where the node will travel. */}
+      {selection.length === 1 && (() => {
+        const loc = locate(useEditor.getState().doc, selection[0]);
+        const track = loc ? (loc.node as unknown as { animation?: { custom?: { path?: { x: number; y: number }[] } } }).animation?.custom : undefined;
+        const path = track?.path;
+        if (!loc || !path || path.length < 2) return null;
+        const n = loc.node;
+        const cx = n.transform.x + (n.size.width * n.transform.scaleX) / 2;
+        const cy = n.transform.y + (n.size.height * n.transform.scaleY) / 2;
+        const pts = path.map((pt) => api.toScreen({ x: cx + pt.x, y: cy + pt.y }));
+        return (
+          <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" data-testid="motion-path-overlay">
+            <polyline
+              points={pts.map((q) => `${q.x},${q.y}`).join(" ")}
+              fill="none"
+              stroke={overlay.guideConflict}
+              strokeWidth={1.5}
+              strokeDasharray="4 3"
+            />
+            {pts.map((q, i) => (
+              <circle key={i} cx={q.x} cy={q.y} r={i === 0 ? 4 : 3} fill={i === 0 ? overlay.guideConflict : "white"} stroke={overlay.guideConflict} strokeWidth={1} />
+            ))}
+          </svg>
+        );
       })()}
       {(guides ?? snapGuides) && (() => {
         const live = guides ?? snapGuides!;

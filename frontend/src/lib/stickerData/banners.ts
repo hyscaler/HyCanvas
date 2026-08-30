@@ -3,7 +3,7 @@ import type { Sticker } from "../stickers";
 
 const svg = (inner: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${inner}</svg>`;
 
-export const BANNER_STICKERS: Sticker[] = [
+export const bannerStickers: Sticker[] = [
   { id: "bn-ribbon-banner", label: "Ribbon Banner", category: "Banners & badges", keywords: ["ribbon", "banner", "title", "header", "award"], svg: svg('<polygon points="4,40 28,40 28,68 4,68 13,54" fill="#b91c1c"/><polygon points="96,40 72,40 72,68 96,68 87,54" fill="#b91c1c"/><rect x="18" y="32" width="64" height="28" rx="3" fill="#ef4444"/><rect x="30" y="41" width="40" height="10" rx="5" fill="#ffffff"/>') },
   { id: "bn-ribbon-curved", label: "Curved Ribbon", category: "Banners & badges", keywords: ["ribbon", "banner", "scroll", "curved", "title"], svg: svg('<polygon points="4,44 18,44 18,70 4,70 11,57" fill="#1d4ed8"/><polygon points="96,44 82,44 82,70 96,70 89,57" fill="#1d4ed8"/><path d="M12 38 Q50 24 88 38 L88 62 Q50 48 12 62 Z" fill="#3b82f6"/>') },
   { id: "bn-bookmark-ribbon", label: "Bookmark Ribbon", category: "Banners & badges", keywords: ["bookmark", "ribbon", "save", "tab", "marker"], svg: svg('<path d="M30 6 H70 V90 L50 72 L30 90 Z" fill="#a855f7"/><circle cx="50" cy="30" r="9" fill="#ffffff"/>') },

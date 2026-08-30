@@ -31,6 +31,13 @@ A living checklist of what ships today versus what is planned. Shipped items are
 - [x] Slide master/layout/placeholder model + swappable deck Theme, schema v11 (F28 FR-3, FR-4)
 - [x] Accessibility model: per-node alt text + decorative, page reading order, schema v12 (F28 FR-29)
 - [x] Reading Order pane; keyboard Tab navigation follows reading order and skips decorative nodes (F28 FR-29)
+- [x] PPTX round-trip: export (editable text/shapes/images/notes, raster fallback) + import (incl. real tables; charts/SmartArt as placed placeholders; animations and master inheritance flatten)
+- [x] Deck-to-video: one-click server MP4 of the full playthrough (animations + transitions)
+- [x] Present-and-record: slides + ink + mic narration to a local .webm (camera bubble pending)
+- [x] Grid/outline overview editing view (`SlideOverview`: grid + outline, sections, drag reorder)
+- [x] Live audience over share links: Q&A with upvotes, presenter polls, emoji reactions (captions pending)
+- [x] Live data-linked charts/tables (inline CSV or URL via the SSRF-guarded proxy) + bulk data-merge (one slide per CSV row)
+- [x] Tagged, selectable-text PDF export
 - [x] Whiteboards (sticky/frame/ink/connectors, 8 templates, facilitation, synced timer, dot voting, convert-to-deck)
 - [x] Sheets (~48-function formula engine, formatting, borders, sort)
 - [x] Docs (block editor, callouts, embeds, AI writing tools, DOCX/PDF export)
@@ -47,9 +54,23 @@ A living checklist of what ships today versus what is planned. Shipped items are
 - [x] My tasks
 
 ### AI
-- [x] Bring-your-own-key providers (OpenAI/Anthropic/DeepSeek/custom), encrypted per workspace
-- [x] Magic Design, design assistant chat, image generation, restyle, chart, critique
-- [x] AI Creative Studio (outline-first multi-page generation), no-key Assist tools
+- [x] Bring-your-own-key providers (12 presets incl. OpenAI/Anthropic/DeepSeek/Moonshot (Kimi)/Azure OpenAI + custom), encrypted per workspace
+- [x] Design assistant chat: one agentic surface over the validated tool catalog (generate deck/doc/poster, images, restyle, charts, diagrams, whole-deck translation, speaker notes, critique); the earlier dedicated AI panels were consolidated into it
+- [x] Multi-page generation from server-validated outlines with speaker notes; doc/URL/file-to-deck ingestion (.txt/.md/.pdf text layer); no-key Assist tools
+- [x] Outline review before generation: editable outline (edit/reorder/add/remove) + generation dials (density/tone/audience/scenario) in the confirmation gate, with regenerate and skip
+- [x] Streaming generation: SSE endpoint (outline/page/done/error, disconnect-aware), and decks paint instantly with outline content while per-slide model fills and imagery stream in behind
+- [x] Computed chart values: with tabular data attached, insertChart parses the data (header detection, numeric coercion) and the model picks only chart type and columns; values come from the source, with an inline binding so Refresh re-parses
+- [x] Web search grounding: per-workspace search provider (hosted API key or self-hosted metasearch URL, encrypted like AI keys), AI-written 12-word queries, webSearch assistant tool attaching untrusted-framed results as generation sources
+- [x] Ingestion depth: up to 8 grounding attachments per generation (paste/URL/files), office-format extraction (.docx paragraphs, .pptx slides in deck order, .xlsx tab-separated rows), scanned-PDF detection with a friendly message, per-attachment editable extracted text
+- [x] Per-slide AI regeneration: regenerateSlide rewrites one slide per instruction, optionally re-selecting the layout, preserving node ids (Magic Move) and any images whose prompts are unchanged
+- [x] Narrative assistant ops: insertAgenda (algorithmic TOC with accurate final page numbers), splitSlide (one slide into two coherent halves), insertComparison (side-by-side layout fill)
+- [x] Layout-grounded generation: decks target the master/layout/placeholder model (per-layout derived content schemas with v21 capacities, deterministic layout selection repair with variety, placeholder fills, picture slots through the image queue; freeform engine remains the no-layout fallback)
+- [x] Placeholder-first generation imagery: decks land instantly and hero images stream in behind (prompt-keyed asset reuse, license-free stock routing, AI generation fallback, per-design guard, alt text, chat retry on failure)
+- [x] Deck themes end to end: 13 curated seed themes, create-theme-from-brand-kit, AI generateTheme (strict hex/font validation, deterministic OKLCH contrast repair), generation stamps its visual system as the file theme, and a theme swap restyles exactly what the previous theme painted in one undo step
+- [x] Extract layouts from a deck: heuristic slot decomposition with capacity hints, near-identical page dedupe, optional vision role correction (one self-review pass, heuristic fallback), capacity verification against simulated max fill (qualityCheck-gated)
+- [x] Brand kit draft from a company domain: SSRF-gated page scan (logo candidates, frequency-ranked palette with an observed-colors-only model re-rank, webfont-first font guesses) behind an explicit confirm step; the chosen logo imports as a workspace asset
+- [x] PPTX fidelity golden set: regression fixtures pinning gradient fills with stops, the weight-600 bold threshold, decorated runs, group flattening vs rotated-group rasterization, explicit crops via srcRect, multi-paragraph notes, z-order, chOff/chExt group scaling, and the no-silent-drop placeholder rule
+- [x] Present-and-record camera bubble: optional webcam (declining keeps slides+ink+narration), draggable preview whose position drives the composite, cover-cropped rounded-rect bubble drawn over slide + ink, fully client-side
 
 ### Export and publishing
 - [x] Export: PNG/JPG/PDF/SVG/APNG/GIF/Lottie, size multipliers, page selection, zip
@@ -77,15 +98,13 @@ A living checklist of what ships today versus what is planned. Shipped items are
 ### AI media ([spec 23](roadmap/23-ai-media.md)), not started
 - [ ] Captions, TTS, music generation, AI avatars, lip-sync, image-to-video (blocked on the video pipeline + audio/video model endpoints)
 
-### Presentations ([spec 28](roadmap/28-presentations.md))
-- [ ] Deck-to-video (server MP4 with animations, transitions, narration); per-transition easing
+### Presentations ([spec 28](roadmap/28-presentations.md); the AI/generation remainder is broken down in [28-presentations-leverage-tasks.md](roadmap/28-presentations-leverage-tasks.md))
+- [ ] Narration in the exported deck video; per-transition easing
 - [ ] Tracked per-audience player links with passcodes and per-slide dwell analytics; iframe embed
-- [ ] Grid/outline overview editing view
-- [ ] PPTX import/export round-trip
-- [ ] Present-and-record; full-deck video
-- [ ] Live audience Q&A, polls, reactions, captions
-- [ ] AI design autopilot, whole-deck translation, speaker-note generation, doc/URL ingestion
-- [ ] Live data-linked charts, bulk merge; 60fps present at scale
+- [ ] Camera bubble in present-and-record
+- [ ] Live captions (blocked on the AI media pipeline, spec 23)
+- [ ] PPTX fidelity: native chart/SmartArt import, animation and master-inheritance preservation
+- [ ] 60fps present at scale (unverified)
 
 ### Whiteboard ([spec 30](roadmap/30-whiteboard.md))
 - [ ] True infinite canvas; board-native ink and free-draw connectors

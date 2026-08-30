@@ -11,10 +11,15 @@
 // slide can never be hidden by a section it does not belong to.
 
 import { useEffect, useRef, useState } from "react";
-import { LayoutGrid, List, X } from "lucide-react";
+import { Kanban, LayoutGrid, List, X } from "lucide-react";
 import { groupPagesBySection, sectionTitle, slideTitle } from "@hc/schema";
+import type { WorkspaceMemberView } from "@hc/sdk";
+import { oc } from "@/lib/sdk";
 import { useEditor } from "@/store/editor";
+import { useBrand } from "@/store/brand";
+import { usePresence } from "@/store/presence";
 import { SlideThumb } from "./SlideThumb";
+import { pageAssigneeOf, pageStatusColor, pageStatusLabel, pageStatusOf, pageStatusValues } from "@/lib/pageStatus";
 import { tr } from "@/lib/i18n";
 
 const GRID_W = 200;
@@ -24,7 +29,7 @@ export function SlideOverview({ open, onClose }: { open: boolean; onClose: () =>
   useEditor((s) => s.rev);
   const activePage = useEditor((s) => s.activePage);
   const doc = useEditor.getState().doc;
-  const [view, setView] = useState<"grid" | "outline">("grid");
+  const [view, setView] = useState<"grid" | "outline" | "board">("grid");
   // The dragged slide lives in a ref as well as state: `drop` must read it
   // synchronously in the same event turn, and React has not necessarily
   // re-rendered with the `dragstart` state update yet. State only drives the
@@ -76,6 +81,7 @@ export function SlideOverview({ open, onClose }: { open: boolean; onClose: () =>
         <div className="ms-4 flex items-center gap-1 rounded-lg bg-white/10 p-0.5">
           <ViewTab active={view === "grid"} onClick={() => setView("grid")} icon={LayoutGrid} label={tr("editor.grid")} testId="overview-tab-grid" />
           <ViewTab active={view === "outline"} onClick={() => setView("outline")} icon={List} label={tr("editor.outline")} testId="overview-tab-outline" />
+          <ViewTab active={view === "board"} onClick={() => setView("board")} icon={Kanban} label={tr("editor.board")} testId="overview-tab-board" />
         </div>
         <button
           onClick={onClose}
@@ -88,7 +94,10 @@ export function SlideOverview({ open, onClose }: { open: boolean; onClose: () =>
       </header>
 
       <div className="oc-scroll min-h-0 flex-1 overflow-y-auto px-6 py-5">
-        {groups.map((group, gi) => (
+        {view === "board" ? (
+          <StatusBoard onOpen={openSlide} />
+        ) : (
+        groups.map((group, gi) => (
           <section key={group.section?.id ?? `unsectioned-${gi}`} className="mb-6">
             {/* An unsectioned run needs no header unless the deck has sections
                 at all; otherwise every deck would grow a meaningless label. */}
@@ -171,8 +180,146 @@ export function SlideOverview({ open, onClose }: { open: boolean; onClose: () =>
               </ol>
             )}
           </section>
-        ))}
+        ))
+        )}
       </div>
+    </div>
+  );
+}
+
+/** Board view (F28 completion C35): slides grouped into status columns, with a
+ *  status select and an assignee select per card. Drag a card onto a column to
+ *  restatus it - the same store action the selects use, one undo step each. */
+function StatusBoard({ onOpen }: { onOpen: (i: number) => void }) {
+  useEditor((s) => s.rev);
+  const doc = useEditor.getState().doc;
+  const canEdit = usePresence((s) => s.canEdit()) && !useEditor.getState().readonlyPreview();
+  const workspaceId = useBrand((s) => s.workspaceId);
+  // Workspace members for the assignee picker; a viewer without the member
+  // API (or a personal workspace) degrades to showing existing assignees only.
+  const [members, setMembers] = useState<WorkspaceMemberView[]>([]);
+  useEffect(() => {
+    if (!workspaceId) return;
+    let cancelled = false;
+    oc.workspaceMembers(workspaceId)
+      .then((m) => { if (!cancelled) setMembers(m.filter((mm) => mm.status === "active")); })
+      .catch(() => { /* picker degrades to existing assignees */ });
+    return () => { cancelled = true; };
+  }, [workspaceId]);
+
+  // The dragged card index lives in a ref as well as state: drop reads it
+  // synchronously in the same event turn (same contract as the grid view's
+  // dragFrom); state only drives the highlight.
+  const dragRef = useRef<number | null>(null);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [overCol, setOverCol] = useState<string | null>(null);
+
+  // "No status" first, then the offered pipeline; any UNKNOWN status a newer
+  // client wrote gets its own column at the end, so no slide ever vanishes.
+  const known = new Set<string>(pageStatusValues);
+  const extra = [...new Set(doc.pages.map((p) => pageStatusOf(p)).filter((s): s is string => !!s && !known.has(s)))];
+  const columns: { key: string | null; title: string }[] = [
+    { key: null, title: tr("editor.no_status") },
+    ...pageStatusValues.map((s) => ({ key: s as string, title: pageStatusLabel(s) })),
+    ...extra.map((s) => ({ key: s, title: s })),
+  ];
+
+  const dropOn = (col: string | null) => {
+    const from = dragRef.current;
+    dragRef.current = null;
+    setDragIdx(null);
+    setOverCol(null);
+    if (from === null || !canEdit) return;
+    useEditor.getState().setPageWorkStatus(from, col);
+  };
+
+  return (
+    <div className="flex items-start gap-4 overflow-x-auto pb-4">
+      {columns.map((col) => {
+        const indices = doc.pages.map((_, i) => i).filter((i) => (pageStatusOf(doc.pages[i]) ?? null) === col.key);
+        const colorFor = col.key ? pageStatusColor(col.key) : { dot: "bg-white/30", pill: "" };
+        const over = overCol === (col.key ?? "");
+        return (
+          <div
+            key={col.key ?? "none"}
+            data-testid={`board-col-${col.key ?? "none"}`}
+            onDragOver={(e) => { e.preventDefault(); if (!over) setOverCol(col.key ?? ""); }}
+            onDragLeave={() => { if (over) setOverCol(null); }}
+            onDrop={() => dropOn(col.key)}
+            className={`w-60 shrink-0 rounded-xl border p-2 transition ${over && dragIdx !== null ? "border-brand-400 bg-white/10" : "border-white/10 bg-white/5"}`}
+          >
+            <div className="mb-2 flex items-center gap-1.5 px-1">
+              <span className={`h-2 w-2 rounded-full ${colorFor.dot}`} />
+              <span className="text-xs font-semibold text-white/80">{col.title}</span>
+              <span className="ms-auto rounded bg-white/10 px-1.5 py-0.5 text-[10px] tabular-nums text-white/40">{indices.length}</span>
+            </div>
+            <div className="flex min-h-10 flex-col gap-2">
+              {indices.map((i) => {
+                const page = doc.pages[i];
+                const assignee = pageAssigneeOf(page);
+                return (
+                  <div key={page.id} data-testid={`board-card-${i}`} className="rounded-lg bg-white/10 p-1.5">
+                    {/* Only the thumbnail is the drag handle: a draggable
+                        wrapper would steal mousedown from the selects below
+                        on some browsers. */}
+                    <button
+                      draggable={canEdit}
+                      onDragStart={() => { dragRef.current = i; setDragIdx(i); }}
+                      onDragEnd={() => { dragRef.current = null; setDragIdx(null); setOverCol(null); }}
+                      onClick={() => onOpen(i)}
+                      className="block w-full overflow-hidden rounded bg-white"
+                      title={slideTitle(page, i)}
+                    >
+                      <SlideThumb index={i} width={216} height={122} />
+                    </button>
+                    <div className="mt-1 flex items-center gap-1 px-0.5">
+                      <span className="text-[10px] tabular-nums text-white/40">{i + 1}</span>
+                      <span className="min-w-0 flex-1 truncate text-[11px] text-white/80">{slideTitle(page, i)}</span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-1">
+                      <select
+                        value={pageStatusOf(page) ?? ""}
+                        disabled={!canEdit}
+                        aria-label={tr("editor.slide_status")}
+                        onChange={(e) => useEditor.getState().setPageWorkStatus(i, e.target.value || null)}
+                        className="h-6 min-w-0 flex-1 rounded border-0 bg-white/10 px-1 text-[10px] text-white/80 outline-none disabled:opacity-50"
+                      >
+                        <option value="" className="text-neutral-900">{tr("editor.no_status")}</option>
+                        {pageStatusValues.map((s) => (
+                          <option key={s} value={s} className="text-neutral-900">{pageStatusLabel(s)}</option>
+                        ))}
+                        {extra.includes(pageStatusOf(page) ?? "") && (
+                          <option value={pageStatusOf(page)} className="text-neutral-900">{pageStatusOf(page)}</option>
+                        )}
+                      </select>
+                      <select
+                        value={assignee?.id ?? ""}
+                        disabled={!canEdit}
+                        aria-label={tr("editor.assignee")}
+                        onChange={(e) => {
+                          const m = members.find((mm) => mm.userId === e.target.value);
+                          useEditor.getState().setPageAssignee(i, m ? { id: m.userId, name: m.name || m.email } : null);
+                        }}
+                        className="h-6 min-w-0 flex-1 rounded border-0 bg-white/10 px-1 text-[10px] text-white/80 outline-none disabled:opacity-50"
+                      >
+                        <option value="" className="text-neutral-900">{tr("editor.unassigned")}</option>
+                        {/* An assignee not in the member list (left the workspace,
+                            or members failed to load) still shows by name. */}
+                        {assignee && !members.some((m) => m.userId === assignee.id) && (
+                          <option value={assignee.id ?? ""} className="text-neutral-900">{assignee.name}</option>
+                        )}
+                        {members.map((m) => (
+                          <option key={m.userId} value={m.userId} className="text-neutral-900">{m.name || m.email}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

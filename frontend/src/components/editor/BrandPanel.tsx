@@ -22,7 +22,7 @@ import { fonts } from "@/lib/fontProvider";
 import { oc, resolveAssetUrl } from "@/lib/sdk";
 import { useToast } from "@/components/ui/Toast";
 import { tr } from "@/lib/i18n";
-import { CodedError } from "@/lib/errors";
+import { CodedError, userMessage } from "@/lib/errors";
 
 /** Map a lint violation's typed fix to the store's BrandFixTarget, or null when
  *  there is no safe auto-fix (restore_logo / missing fix). */
@@ -284,6 +284,10 @@ export function BrandPanel({ workspaceId }: { workspaceId: string | null }) {
             <Plus size={15} /> {tr("editor.create_brand_kit")}
           </button>
           <GenerateFromLogo
+            workspaceId={workspaceId}
+            onCreated={(k) => { useBrand.getState().setKit(k); setKits([k]); }}
+          />
+          <BrandFromWebsite
             workspaceId={workspaceId}
             onCreated={(k) => { useBrand.getState().setKit(k); setKits([k]); }}
           />
@@ -1165,6 +1169,184 @@ function GenerateFromLogo({
         <Sparkles size={15} /> {busy ? tr("editor.generating") : tr("editor.generate_from_logo")}
       </button>
     </>
+  );
+}
+
+/** F28 T21: draft a brand kit from a company web page. The server scans the
+ *  page behind its SSRF gate (logo candidates, palette, font guesses) and the
+ *  result is a DRAFT shown here for review - nothing is created or saved
+ *  until the user confirms, and the chosen logo is imported server-side as a
+ *  workspace asset (never hotlinked). */
+function BrandFromWebsite({
+  workspaceId,
+  onCreated,
+}: {
+  workspaceId: string;
+  onCreated: (kit: BrandKit) => void;
+}) {
+  const toast = useToast();
+  const [url, setUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [draft, setDraft] = useState<{ name: string; logoUrls: string[]; colors: string[]; fonts: string[] } | null>(null);
+  const [logoChoice, setLogoChoice] = useState<string | null>(null);
+
+  const fetchDraft = async () => {
+    const target = url.trim();
+    if (!target || busy) return; // Enter fires this too; never stack scans
+    setBusy(true);
+    try {
+      const d = await oc.aiBrandFromUrl({ workspaceId, url: /^https?:\/\//i.test(target) ? target : `https://${target}` });
+      // Normalize defensively: a missing bucket must be an array, or every
+      // .length/.map below throws mid-render.
+      const clean = {
+        name: d.name ?? "",
+        logoUrls: Array.isArray(d.logoUrls) ? d.logoUrls : [],
+        colors: Array.isArray(d.colors) ? d.colors : [],
+        fonts: Array.isArray(d.fonts) ? d.fonts : [],
+      };
+      setDraft(clean);
+      setLogoChoice(clean.logoUrls[0] ?? null);
+    } catch (e) {
+      toast.error(userMessage(e, tr("editor.couldnt_draft_a_brand_from_that_site")));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirm = async () => {
+    if (!draft) return;
+    setCreating(true);
+    const defaultFam = "Inter"; // i18n-ignore: a font family name, not UI text
+    const headingFam = draft.fonts[0] ?? defaultFam;
+    const bodyFam = draft.fonts[1] ?? draft.fonts[0] ?? defaultFam;
+    let created: BrandKit | null = null;
+    try {
+      // The logo imports through the server (asset pipeline + its own SSRF
+      // gate); an inline data-URI candidate (a data favicon) uploads its bytes
+      // directly instead, since the URL importer is http(s)-only. A failed
+      // import just means a kit without a logo.
+      let logoAssetId: string | null = null;
+      if (logoChoice?.startsWith("data:image/")) {
+        const b64 = logoChoice.split(",")[1] ?? "";
+        logoAssetId = b64
+          ? await oc.uploadAsset(workspaceId, { filename: "logo", dataBase64: b64 }).then((a) => a.id, () => null)
+          : null;
+      } else if (logoChoice) {
+        logoAssetId = await oc.importAssetFromUrl(workspaceId, logoChoice).then((a) => a.id, () => null);
+      }
+      created = await oc.createBrandKit(workspaceId, { name: draft.name.slice(0, 80) || tr("editor.brand_from_website") });
+      const filled = await oc.updateBrandKit(created.id, {
+        palettes: draft.colors.length
+          ? [{
+              id: `p-${crypto.randomUUID()}`,
+              name: tr("editor.website_palette"),
+              colors: draft.colors.map((hex, i) => ({
+                id: `s-${crypto.randomUUID()}`,
+                role: i === 0 ? "primary" : i === 1 ? "secondary" : "accent",
+                value: srgbFromHexFull(hex),
+              })),
+            }]
+          : [],
+        // Font FAMILIES are data, never localized; the site's guesses win,
+        // with the default family as the fallback.
+        fonts: [
+          { id: `f-${crypto.randomUUID()}`, role: "heading", fontFamily: headingFam },
+          { id: `f-${crypto.randomUUID()}`, role: "body", fontFamily: bodyFam },
+        ],
+        ...(logoAssetId ? { logos: [{ id: `l-${crypto.randomUUID()}`, label: draft.name.slice(0, 80) || tr("editor.logo"), assetId: logoAssetId }] } : {}),
+      });
+      onCreated(filled);
+      await useBrand.getState().assign(filled.id);
+      setDraft(null);
+      setUrl("");
+      toast.success(tr("editor.brand_kit_created_from_website"));
+    } catch (e) {
+      // Roll back a half-made kit: without this, a failed fill leaves an
+      // empty kit that also hides this whole flow (it only shows when the
+      // workspace has no kits), so a retry would be impossible.
+      if (created) await oc.deleteBrandKit(created.id).catch(() => {});
+      toast.error(userMessage(e, tr("editor.couldnt_create_that_brand_kit")));
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex gap-1.5">
+        <input
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") void fetchDraft(); }}
+          placeholder={tr("editor.acme_com")}
+          aria-label={tr("editor.company_website")}
+          className="min-w-0 flex-1 rounded-lg border border-neutral-200 bg-surface px-2 py-1.5 text-sm outline-none focus:border-brand-400"
+        />
+        <button
+          onClick={() => void fetchDraft()}
+          disabled={busy || !url.trim()}
+          className="shrink-0 rounded-lg border border-brand-200 bg-brand-50 px-3 py-1.5 text-sm font-medium text-brand-ink hover:bg-brand-100 disabled:opacity-60"
+          data-testid="brand-from-url"
+        >
+          {busy ? tr("editor.scanning") : tr("editor.draft_from_website")}
+        </button>
+      </div>
+      {draft && (
+        <div className="flex flex-col gap-2 rounded-lg border border-neutral-200 bg-surface p-2" data-testid="brand-draft">
+          <div className="text-sm font-medium text-neutral-800">{draft.name}</div>
+          {draft.colors.length > 0 && (
+            <div className="flex items-center gap-1">
+              {draft.colors.map((c) => (
+                <span key={c} title={c} style={{ background: c }} className="h-5 w-5 rounded ring-1 ring-black/10" />
+              ))}
+            </div>
+          )}
+          {draft.fonts.length > 0 && <div className="text-[11px] text-neutral-500">{draft.fonts.join(" · ")}</div>}
+          {draft.logoUrls.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {draft.logoUrls.slice(0, 4).map((u) => (
+                <button
+                  key={u}
+                  type="button"
+                  onClick={() => setLogoChoice(logoChoice === u ? null : u)}
+                  aria-pressed={logoChoice === u}
+                  title={tr("editor.use_as_the_kit_logo")}
+                  className={`rounded border p-0.5 ${logoChoice === u ? "border-brand-500 ring-2 ring-brand-100" : "border-neutral-200"}`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={u}
+                    alt=""
+                    className="h-8 w-8 rounded object-contain"
+                    onError={(e) => {
+                      // A broken candidate (404, mixed content) is useless:
+                      // hide its button and drop it as the selection.
+                      const btn = e.currentTarget.closest("button");
+                      if (btn) btn.style.display = "none";
+                      setLogoChoice((cur) => (cur === u ? null : cur));
+                    }}
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-1.5">
+            <button
+              onClick={() => void confirm()}
+              disabled={creating}
+              className="flex-1 rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+              data-testid="brand-draft-confirm"
+            >
+              {creating ? tr("editor.creating") : tr("editor.create_brand_kit")}
+            </button>
+            <button onClick={() => setDraft(null)} className="rounded-lg border border-neutral-200 px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-50">
+              {tr("editor.discard")}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

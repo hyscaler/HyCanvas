@@ -6,7 +6,7 @@
 // be undone and later refined by hand.
 
 import { describe, expect, it } from "vitest";
-import { CURRENT_SCHEMA_VERSION, ImageNodeSchema } from "../schema";
+import { currentSchemaVersion, ImageNodeSchema } from "../schema";
 import { migrate } from "../migrate";
 import { validate } from "../validate";
 import { createBlankDesign } from "../factory";
@@ -64,8 +64,9 @@ describe("migration to v20", () => {
 });
 
 describe("the version bump is coherent", () => {
-  it("declares v20 and validates a document at that version", () => {
-    expect(CURRENT_SCHEMA_VERSION).toBe(20);
+  it("declares at least v20 and validates a masked document at the current version", () => {
+    // v20 introduced the mask; later bumps raise the ceiling without touching it.
+    expect(currentSchemaVersion).toBeGreaterThanOrEqual(20);
     const d = createBlankDesign() as unknown as { pages: { children: unknown[] }[] };
     d.pages[0].children = [image({ alphaMask: { assetId: "m1", width: 100, height: 80 } })];
     expect(validate(d).ok).toBe(true);

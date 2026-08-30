@@ -4,7 +4,7 @@
 // Kept free of the (client-only) DashboardApp so the page can import it for
 // getStaticPaths without pulling the whole dashboard into the page bundle.
 
-export const DASHBOARD_VIEWS = [
+export const dashboardViews = [
   "home",
   "favorites",
   "tasks",
@@ -13,9 +13,9 @@ export const DASHBOARD_VIEWS = [
   "trash",
 ] as const;
 
-export type DashboardView = (typeof DASHBOARD_VIEWS)[number];
+export type DashboardView = (typeof dashboardViews)[number];
 
-export const DASHBOARD_TITLES: Record<DashboardView, string> = {
+export const dashboardTitles: Record<DashboardView, string> = {
   home: "Your designs",
   favorites: "Favorites",
   tasks: "My tasks",

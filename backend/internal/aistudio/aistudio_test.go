@@ -3,6 +3,7 @@ package aistudio
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -106,11 +107,22 @@ func TestValidateStyleProfile(t *testing.T) {
 
 // stubGen returns a scripted sequence of replies to exercise retry-on-mismatch.
 type stubGen struct {
-	replies []string
-	calls   int
+	lastSchema string
+	prompts    []string
+	replies    []string
+	calls      int
 }
 
-func (s *stubGen) Text(_ context.Context, _, _, _ string) (string, error) {
+// TextStructured delegates to Text: the orchestrator must treat structured
+// mode as a quality upgrade, not a different contract. lastSchema records the
+// schema so tests can assert structured mode was requested.
+func (s *stubGen) TextStructured(ctx context.Context, ws, prompt, system, schemaJSON string) (string, error) {
+	s.lastSchema = schemaJSON
+	return s.Text(ctx, ws, prompt, system)
+}
+
+func (s *stubGen) Text(_ context.Context, _, prompt, _ string) (string, error) {
+	s.prompts = append(s.prompts, prompt)
 	if s.calls >= len(s.replies) {
 		return "", errors.New("no more replies")
 	}
@@ -130,6 +142,11 @@ func TestGenerateValidated_RetriesOnMismatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected success after retries, got %v", err)
 	}
+	// T06: the orchestrator requests NATIVE structured output, passing the
+	// chart schema through to the provider layer.
+	if gen.lastSchema != chartSchemaStr {
+		t.Errorf("structured schema not passed to the provider: %q", gen.lastSchema)
+	}
 	if gen.calls != 3 {
 		t.Errorf("expected 3 attempts, got %d", gen.calls)
 	}
@@ -139,7 +156,7 @@ func TestGenerateValidated_RetriesOnMismatch(t *testing.T) {
 }
 
 func TestGenerateValidated_GivesUp(t *testing.T) {
-	gen := &stubGen{replies: []string{"junk", "junk", "junk"}}
+	gen := &stubGen{replies: []string{"junk", "junk", "junk", "junk"}} // one per validation pass
 	svc := NewService(nil, gen)
 	if _, err := svc.Chart(context.Background(), "ws", "x"); !errors.Is(err, ErrInvalidOutput) {
 		t.Errorf("expected ErrInvalidOutput, got %v", err)
@@ -251,5 +268,253 @@ func TestAIStudio_DB(t *testing.T) {
 	sessions, err := svc.ListSessions(ctx, ws, designID)
 	if err != nil || len(sessions) != 1 {
 		t.Fatalf("list sessions: %v (n=%d)", err, len(sessions))
+	}
+}
+
+func TestNormalizeNote(t *testing.T) {
+	if got := normalizeNote("A\u0085B\uFEFFC  D"); got != "A B C D" {
+		t.Errorf("NEL/FEFF not collapsed like the TS mirror: %q", got)
+	}
+	if got := normalizeNote("\u0085Hello\uFEFF"); got != "Hello" {
+		t.Errorf("edge NEL/FEFF must vanish like the TS mirror: %q", got)
+	}
+	if got := normalizeNote("\u0085"); got != "" {
+		t.Errorf("whitespace-only note must normalize empty: %q", got)
+	}
+	if got := normalizeNote("  Open with the story.\n\nPause  here. "); got != "Open with the story. Pause here." {
+		t.Errorf("whitespace not flattened: %q", got)
+	}
+	long := strings.Repeat("This sentence pads the speaker note out well past the cap. ", 20)
+	capped := normalizeNote(long)
+	if len([]rune(capped)) > maxNoteChars {
+		t.Errorf("note not capped: %d runes", len([]rune(capped)))
+	}
+	if !strings.HasSuffix(capped, ".") {
+		t.Errorf("note clipped mid-sentence: %q", capped)
+	}
+	hard := normalizeNote(strings.Repeat("x", 900))
+	if len([]rune(hard)) != maxNoteChars {
+		t.Errorf("hard truncation wrong length: %d", len([]rune(hard)))
+	}
+	// Rune safety: a multi-byte note must not be split inside a UTF-8 sequence.
+	multi := normalizeNote(strings.Repeat("ü", 900))
+	if len([]rune(multi)) != maxNoteChars {
+		t.Errorf("multi-byte truncation wrong rune length: %d", len([]rune(multi)))
+	}
+}
+
+func TestValidateOutlineNormalizesNotes(t *testing.T) {
+	o := &DesignOutline{Pages: []OutlineItem{
+		{Title: "A", Note: "  Keep it  spoken. "},
+		{Title: "B"},
+	}}
+	if err := validateOutline(o); err != nil {
+		t.Fatal(err)
+	}
+	if o.Pages[0].Note != "Keep it spoken." {
+		t.Errorf("note not normalized: %q", o.Pages[0].Note)
+	}
+	if o.Pages[1].Note != "" {
+		t.Errorf("absent note should stay empty, got %q", o.Pages[1].Note)
+	}
+}
+
+// T07: a validation failure's repair message carries the CONCRETE validation
+// errors and the previous invalid output, not a generic hint.
+func TestRepairLoopFeedsBackConcreteErrors(t *testing.T) {
+	gen := &stubGen{replies: []string{
+		`{"chartType":"bar","categories":[],"series":[]}`, // invalid: no categories
+		`{"chartType":"bar","categories":["a"],"series":[]}`, // invalid: no series
+		`{"chartType":"bar","categories":["a"],"series":[{"name":"s","values":[1]}]}`,
+	}}
+	svc := NewService(nil, gen)
+	if _, err := svc.Chart(context.Background(), "ws", "data"); err != nil {
+		t.Fatalf("expected success on pass 3, got %v", err)
+	}
+	if len(gen.prompts) != 3 {
+		t.Fatalf("want 3 passes, got %d", len(gen.prompts))
+	}
+	// Pass 2's message names pass 1's actual validation error and echoes the output.
+	if !strings.Contains(gen.prompts[1], "chart has no categories") {
+		t.Errorf("repair message lacks the concrete error: %q", gen.prompts[1])
+	}
+	if !strings.Contains(gen.prompts[1], `"chartType":"bar"`) || !strings.Contains(gen.prompts[1], "Previous invalid JSON") {
+		t.Errorf("repair message lacks the previous output: %q", gen.prompts[1])
+	}
+	// Pass 3's message names pass 2's DIFFERENT error (fresh, not accumulated).
+	if !strings.Contains(gen.prompts[2], "chart has no series") || strings.Contains(gen.prompts[2], "chart has no categories") {
+		t.Errorf("repair message not rebuilt per pass: %q", gen.prompts[2])
+	}
+}
+
+// T07: the tolerant final pass accepts a parseable-but-invalid value with a
+// warning (tested directly: the wired callers are all fail-closed today, since
+// their validators self-repair everything short of unusability), while the
+// outline and assistant plan endpoints stay fail-closed.
+func TestRepairLoopToleranceByCaller(t *testing.T) {
+	// Direct tolerant call: a validator that always rejects still yields the
+	// parsed value on the final pass instead of an error.
+	reply := `{"title":"x"}`
+	gen0 := &stubGen{replies: []string{reply, reply, reply, reply}}
+	svc0 := NewService(nil, gen0)
+	type titled struct {
+		Title string `json:"title"`
+	}
+	v, err := generateValidated(context.Background(), svc0, "ws", "sys", "user", "", true, func(*titled) error {
+		return errors.New("always invalid")
+	})
+	if err != nil || v == nil || v.Title != "x" {
+		t.Fatalf("tolerant accept failed: v=%+v err=%v", v, err)
+	}
+	if gen0.calls != maxValidationPasses {
+		t.Fatalf("pass cap not respected: %d calls", gen0.calls)
+	}
+
+	// Outline: zero-page replies FAIL CLOSED (an empty outline is unusable and
+	// the client normalizer rejects it too; tolerance would only mask that).
+	empty := `{"title":"x","theme":"","pages":[]}`
+	gen := &stubGen{replies: []string{empty, empty, empty, empty}}
+	svc := NewService(nil, gen)
+	if _, err := svc.Outline(context.Background(), "ws", "deck", "brief", "", 0); !errors.Is(err, ErrInvalidOutput) {
+		t.Fatalf("empty outline must fail closed, got %v", err)
+	}
+	if gen.calls != maxValidationPasses {
+		t.Fatalf("outline pass cap not respected: %d calls", gen.calls)
+	}
+
+	// Assistant: 4 parseable replies whose every action is unknown -> fail closed.
+	bad := `{"reply":"ok","plan":[{"action":"notATool","args":{}}]}`
+	gen2 := &stubGen{replies: []string{bad, bad, bad, bad}}
+	svc2 := NewService(nil, gen2)
+	if _, err := svc2.Assistant(context.Background(), "ws", "Pages: 1", "", "do the thing"); !errors.Is(err, ErrInvalidOutput) {
+		t.Fatalf("assistant must fail closed, got %v", err)
+	}
+	if gen2.calls != maxValidationPasses {
+		t.Fatalf("pass cap not respected: %d calls", gen2.calls)
+	}
+}
+
+// T07: the repair message caps the error list and truncates the previous output.
+func TestRepairMessageBudgets(t *testing.T) {
+	errs := make([]string, 15)
+	for i := range errs {
+		errs[i] = fmt.Sprintf("error %d", i)
+	}
+	msg := repairMessage("ask", strings.Repeat("x", 7000), errs)
+	if !strings.Contains(msg, "...and 5 more validation errors.") {
+		t.Errorf("error list not capped: %q", msg[:200])
+	}
+	if !strings.Contains(msg, "... (truncated)") {
+		t.Error("previous output not truncated")
+	}
+	if strings.Contains(msg, "error 12") {
+		t.Error("overflow errors must be dropped, not listed")
+	}
+	// The cap must not write into the caller's backing array (append aliasing).
+	if errs[maxRepairErrors] != fmt.Sprintf("error %d", maxRepairErrors) {
+		t.Errorf("caller's slice corrupted by the cap: %q", errs[maxRepairErrors])
+	}
+}
+
+// T08: the outline and assistant prompts carry the rule corpus (mirrored
+// word-for-word from packages/aistudio/src/promptRules.ts).
+func TestPromptRuleCorpusWired(t *testing.T) {
+	outline := outlineSystem("deck", "", 0)
+	for name, rule := range map[string]string{
+		"settings authority": ruleSettingsAuthority,
+		"content only":       ruleContentOnly,
+		"verbosity":          ruleVerbosity(""),
+		"length limit":       ruleLengthLimit,
+		"scoped instruction": ruleScopedInstruction,
+	} {
+		if !strings.Contains(outline, rule) {
+			t.Errorf("outline prompt missing the %s rule", name)
+		}
+	}
+	if ruleVerbosity("concise") == ruleVerbosity("detailed") || !strings.Contains(ruleVerbosity("concise"), "20 words") {
+		t.Errorf("verbosity levels wrong: %q", ruleVerbosity("concise"))
+	}
+	gen := &capturingGen{reply: `{"reply":"ok","plan":[]}`}
+	svc := NewService(nil, gen)
+	if _, err := svc.Assistant(context.Background(), "ws", "Pages: 1", "", "hello"); err != nil {
+		t.Fatal(err)
+	}
+	for name, rule := range map[string]string{
+		"content only":       ruleContentOnly,
+		"scoped instruction": ruleScopedInstruction,
+		"asset language":     ruleAssetLanguage,
+	} {
+		if !strings.Contains(gen.system, rule) {
+			t.Errorf("assistant prompt missing the %s rule", name)
+		}
+	}
+}
+
+// T16: the query writer enforces 12 words / 200 chars on the model reply AND
+// falls back to the truncated raw prompt on model failure.
+func TestWriteSearchQuery(t *testing.T) {
+	// Model returns a valid query -> used (and truncated to the word cap).
+	gen := &stubGen{replies: []string{`{"query":"latest renewable energy adoption statistics 2026 europe"}`}}
+	svc := NewService(nil, gen)
+	q := svc.WriteSearchQuery(context.Background(), "ws", "a deck about renewable energy in europe with recent numbers")
+	if q != "latest renewable energy adoption statistics 2026 europe" {
+		t.Fatalf("query = %q", q)
+	}
+	if gen.lastSchema != searchQuerySchema {
+		t.Errorf("structured schema not passed: %q", gen.lastSchema)
+	}
+
+	// Model over-produces -> truncated to 12 words.
+	long := strings.Repeat("word ", 30)
+	gen2 := &stubGen{replies: []string{`{"query":"` + strings.TrimSpace(long) + `"}`}}
+	svc2 := NewService(nil, gen2)
+	if got := svc2.WriteSearchQuery(context.Background(), "ws", "brief"); len(strings.Fields(got)) != 12 {
+		t.Fatalf("word cap not enforced: %q", got)
+	}
+
+	// Every pass fails -> the truncated raw prompt, never an error.
+	bad := &stubGen{replies: []string{"junk", "junk", "junk", "junk"}}
+	svc3 := NewService(nil, bad)
+	raw := "one two three four five six seven eight nine ten eleven twelve thirteen fourteen"
+	if got := svc3.WriteSearchQuery(context.Background(), "ws", raw); len(strings.Fields(got)) != 12 {
+		t.Fatalf("fallback not truncated: %q", got)
+	}
+}
+
+// An assistant turn that says nothing and plans nothing used to validate, so
+// the request succeeded with a 200 and the user got an empty bubble: no answer,
+// no action, and no error to explain either. It must be rejected so the repair
+// pass gets a chance and a persistent failure is reported as one.
+func TestAssistantTurnMustSayOrDoSomething(t *testing.T) {
+	catalog := map[string]bool{"writeText": true}
+	validate := validateAssistant(catalog)
+
+	cases := []struct {
+		name    string
+		reply   AssistantReply
+		wantErr bool
+	}{
+		{"says nothing and plans nothing", AssistantReply{}, true},
+		{"blank reply with only whitespace", AssistantReply{Reply: "   "}, true},
+		{"answers without acting", AssistantReply{Reply: "The title is already bold."}, false},
+		{"acts without narrating", AssistantReply{Plan: []PlanStep{{Action: "writeText"}}}, false},
+		{"asks for clarification", AssistantReply{Clarify: "Which page?"}, false},
+		{"every action unknown", AssistantReply{Reply: "ok", Plan: []PlanStep{{Action: "nope"}}}, true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			r := c.reply
+			err := validate(&r)
+			if (err != nil) != c.wantErr {
+				t.Fatalf("validate(%+v) error = %v, wantErr %v", c.reply, err, c.wantErr)
+			}
+		})
+	}
+
+	// A clarification with no reply text still reaches the user: it is promoted
+	// into the reply rather than left as an empty bubble.
+	r := AssistantReply{Clarify: "Which page?"}
+	if err := validate(&r); err != nil || r.Reply != "Which page?" {
+		t.Fatalf("clarify should become the reply, got %+v err=%v", r, err)
 	}
 }

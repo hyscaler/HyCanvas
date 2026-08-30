@@ -55,7 +55,7 @@ const out = `// GENERATED FILE - do not edit by hand.
 // ${entries.length} families. Metadata only; font files load on demand from Bunny.
 import type { FontCatalogEntry } from "./fonts";
 
-export const GENERATED_FONTS: FontCatalogEntry[] = [
+export const generatedFonts: FontCatalogEntry[] = [
 ${lines.join("\n")}
 ];
 `;

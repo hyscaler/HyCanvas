@@ -1,0 +1,73 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-customer-success",
+ "title": "Customer Success Review",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "customer success",
+  "review",
+  "retention",
+  "accounts"
+ ],
+ "styleTags": [
+  "professional"
+ ],
+ "themeId": "theme-ocean",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 70,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Customer Success Review",
+  "theme": "account-first",
+  "pages": [
+   {
+    "title": "The book of business",
+    "points": [
+     "Accounts, health, and momentum"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "Health overview",
+    "points": [
+     "Green, yellow, red, and the movement"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "Saves and wins",
+    "points": [
+     "Accounts we turned around"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "At risk",
+    "points": [
+     "Where we need help and by when"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Expansion plays",
+    "points": [
+     "The upsell motions that are landing"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Next quarter",
+    "points": [
+     "Coverage changes and focus accounts"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

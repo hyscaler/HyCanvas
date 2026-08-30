@@ -98,4 +98,4 @@ export interface StockQuery {
 }
 
 /** The data key under which NodeProvenance is serialized on a node. */
-export const PROVENANCE_KEY = "provenance";
+export const provenanceKey = "provenance";

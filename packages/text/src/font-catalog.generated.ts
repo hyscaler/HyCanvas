@@ -4,7 +4,7 @@
 // 1959 families. Metadata only; font files load on demand from Bunny.
 import type { FontCatalogEntry } from "./fonts";
 
-export const GENERATED_FONTS: FontCatalogEntry[] = [
+export const generatedFonts: FontCatalogEntry[] = [
   { family: "42dot Sans", category: "sans-serif", weights: [300, 400, 500, 600, 700, 800], variable: true },
   { family: "ABeeZee", category: "sans-serif", weights: [400], italics: true },
   { family: "Abel", category: "sans-serif", weights: [400] },

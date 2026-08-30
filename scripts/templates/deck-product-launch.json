@@ -1,0 +1,83 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-product-launch",
+ "title": "Product Launch Plan",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "launch",
+  "product",
+  "marketing",
+  "gtm"
+ ],
+ "styleTags": [
+  "bold"
+ ],
+ "themeId": "theme-crimson",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 36,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Product Launch",
+  "theme": "bold, urgent, focused",
+  "pages": [
+   {
+    "title": "What we are launching",
+    "points": [
+     "The product in one sentence"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "Who it is for",
+    "points": [
+     "The primary audience and the moment of need",
+     "The insight competitors missed"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Positioning",
+    "points": [
+     "The category we claim",
+     "The promise we make",
+     "The proof we bring"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Launch timeline",
+    "points": [
+     "Teaser, launch day, and the follow-through weeks"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "Channels and owners",
+    "points": [
+     "Owned, earned, and paid, each with an owner"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Success metrics",
+    "points": [
+     "The numbers we check on day 1, 7, and 30"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "Launch day",
+    "points": [
+     "One page everyone can screenshot"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

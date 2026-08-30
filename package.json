@@ -14,6 +14,8 @@
     "i18n:coverage": "node scripts/i18n-coverage.mjs",
     "gen:theme:check": "node scripts/gen-theme.mjs --check",
     "gen:crdt-fold": "node scripts/build-crdt-fold.mjs",
+    "gen:composer": "node scripts/build-composer.mjs",
+    "gen:theme-catalog": "node scripts/gen-theme-catalog.mjs",
     "lint:theme": "node scripts/check-theme-tokens.mjs",
     "dev": "dotenv -e .env -- concurrently -n backend,frontend -c blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "dotenv -e .env -- sh -c 'cd backend && PUBLIC_DIR= PORT=8005 go run ./cmd/api'",
@@ -25,7 +27,7 @@
     "lint": "concurrently \"npm run lint:backend\" \"npm run lint:frontend\" \"npm run gen:theme:check\" \"npm run lint:theme\"",
     "lint:backend": "sh -c 'cd backend && go vet ./...'",
     "lint:frontend": "npm run lint -w frontend",
-    "test": "concurrently \"npm run test:packages\" \"npm run test:backend\"",
+    "test": "concurrently \"npm run test:packages\" \"npm run test:frontend\" \"npm run test:backend\"",
     "test:backend": "dotenv -e .env -- sh -c 'cd backend && go test ./...'",
     "smoke:e2e": "node scripts/smoke-e2e.mjs",
     "test:packages": "npm run test --workspaces --if-present --workspace=packages/schema --workspace=packages/text --workspace=packages/color --workspace=packages/aistudio --workspace=packages/a11y --workspace=packages/geometry --workspace=packages/engine --workspace=packages/editor --workspace=packages/realtime --workspace=packages/brandkit --workspace=packages/shortcuts --workspace=packages/commandmenu --workspace=packages/export --workspace=packages/media --workspace=packages/stock --workspace=packages/templates --workspace=packages/authz --workspace=packages/formula --workspace=packages/sheets --workspace=packages/timeline --workspace=packages/audio --workspace=packages/whiteboard --workspace=packages/docs --workspace=packages/publishing --workspace=packages/website --workspace=packages/print --workspace=packages/sdk --workspace=packages/config --workspace=packages/ui",
@@ -37,7 +39,9 @@
     "start:dist": "npm run build:dist && npm run start:dist:only",
     "start:dist:only": "./dist/hycanvas",
     "deploy": "npm run build:dist && ./dist/hycanvas service restart",
-    "bench:paint": "node scripts/bench-paint.mjs"
+    "bench:paint": "node scripts/bench-paint.mjs",
+    "gen:ai-tools": "node scripts/gen-ai-tools.mjs",
+    "test:frontend": "npm run test -w frontend"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",

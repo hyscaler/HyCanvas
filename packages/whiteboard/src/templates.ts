@@ -14,7 +14,7 @@ export interface WhiteboardTemplate {
   name: string;
 }
 
-export const WHITEBOARD_TEMPLATES: WhiteboardTemplate[] = [
+export const whiteboardTemplates: WhiteboardTemplate[] = [
   { id: "brainstorm", name: "Brainstorm" },
   { id: "retro", name: "Retrospective" },
   { id: "flowchart", name: "Flowchart" },

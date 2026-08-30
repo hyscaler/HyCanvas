@@ -1,0 +1,74 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-case-study",
+ "title": "Customer Case Study",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "case study",
+  "customer",
+  "proof",
+  "sales"
+ ],
+ "styleTags": [
+  "professional"
+ ],
+ "themeId": "theme-forest",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 42,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Customer Case Study",
+  "theme": "credible, specific",
+  "pages": [
+   {
+    "title": "The customer",
+    "points": [
+     "Who they are and what they do"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "The challenge",
+    "points": [
+     "The situation before",
+     "What it cost them"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "The solution",
+    "points": [
+     "What we deployed and how fast"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "The results",
+    "points": [
+     "The before-and-after numbers"
+    ],
+    "visualRole": "data"
+   },
+   {
+    "title": "In their words",
+    "points": [
+     "The quote that says it all"
+    ],
+    "visualRole": "quote"
+   },
+   {
+    "title": "What this means for you",
+    "points": [
+     "The pattern that repeats across customers"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

@@ -18,13 +18,15 @@ import {
   poseDesignAt,
   pageAnimationDuration,
   planDeckFrames,
-  renderTransition,
+  renderTransitionPair,
+  measureFnFor,
   morphPlan,
   morphDesignAt,
   type CanvasLike,
   type Viewport,
   type DeckFrame,
 } from "@hc/engine";
+import { serializeOutlineMarkdown, type OutlinePageLike } from "@hc/aistudio";
 import { useEditor } from "@/store/editor";
 import { prefersReducedMotion } from "@/lib/theme";
 import { useBrand } from "@/store/brand";
@@ -34,7 +36,7 @@ import { oc } from "@/lib/sdk";
 import { useToast } from "@/components/ui/Toast";
 import { tr } from "@/lib/i18n";
 
-type Format = "png" | "jpg" | "pdf" | "svg" | "apng" | "gif" | "lottie" | "mp4" | "pptx";
+type Format = "png" | "jpg" | "pdf" | "svg" | "apng" | "gif" | "lottie" | "mp4" | "pptx" | "md";
 
 // `acronym` is the chip label: a file-format name, never translated. `label`
 // stays the full human name used in toasts and the selected-format line.
@@ -48,6 +50,7 @@ const formats = (): { value: Format; label: string; acronym: string; group: Form
   { value: "svg", label: "SVG", acronym: "SVG", group: "image", suffix: "svg", desc: tr("editor.editable_vector_graphic"), icon: Shapes },
   { value: "pdf", label: "PDF", acronym: "PDF", group: "document", suffix: "pdf", desc: tr("editor.best_for_documents_and_printing"), icon: FileText },
   { value: "pptx", label: tr("editor.powerpoint_pptx"), acronym: "PPTX", group: "document", suffix: "pptx", desc: tr("editor.editable_slides_for_powerpoint_keynote_google"), icon: FileText },
+  { value: "md", label: tr("editor.markdown_outline"), acronym: "MD", group: "document", suffix: "md", desc: tr("editor.slide_structure_and_text_as_a_markdown_outline"), icon: FileText },
   { value: "apng", label: tr("editor.animated_png"), acronym: "APNG", group: "motion", suffix: "apng", desc: tr("editor.plays_the_deck_or_page_with_transitions_loss"), icon: ImageIcon },
   { value: "gif", label: tr("editor.animated_gif"), acronym: "GIF", group: "motion", suffix: "gif", desc: tr("editor.plays_the_deck_or_page_with_transitions_wide"), icon: ImageIcon },
   { value: "lottie", label: tr("editor.lottie"), acronym: "Lottie", group: "motion", suffix: "json", desc: tr("editor.vector_animation_json_lottie_web_after_effec"), icon: Shapes },
@@ -178,6 +181,7 @@ function renderDeckFrame(
   }
   // A transition composite: pose both slides, then blend them.
   const { fromIndex, toIndex, transition, progress, toTMs } = frame;
+  const exitProgress = (frame as { exitProgress?: number }).exitProgress;
   const pg = doc.pages[toIndex];
   if (!pg) return null;
   const w = Math.max(1, Math.round(pg.width * scale));
@@ -201,19 +205,25 @@ function renderDeckFrame(
   const bufB = renderPageCanvas(toPosed, toIndex, scale, opaque);
   if (!bufA || !bufB) return null;
 
-  renderTransition(ctx as unknown as CanvasLike, transition, {
+  // v22: honor the leaving page's exit transition in the exported playthrough
+  // exactly as present mode composites it.
+  const exitT = (doc.pages[fromIndex] as { transitionOut?: import("@hc/schema").PageTransition } | undefined)?.transitionOut;
+  renderTransitionPair(ctx as unknown as CanvasLike, transition, exitT, {
     from: bufA,
     to: bufB,
     width: w,
     height: h,
     progress,
+    ...(exitProgress !== undefined ? { exitProgress } : {}),
     background: opaque ? "#ffffff" : "transparent",
   });
 
   if (morph && morph.ids.length) {
     // `morphDesignAt` reads the (hidden) shared nodes it planned, so unhiding
     // first would not change the tween; render the tweened layer as planned.
-    const tweened = morphDesignAt(morph, toPosed, toIndex, progress);
+    const enterDur = transition.type !== "none" && transition.durationMs > 0 ? transition.durationMs : 0;
+    const linearProgress = enterDur > 0 ? Math.min(1, Math.max(0, toTMs / enterDur)) : 1;
+    const tweened = morphDesignAt(morph, toPosed, toIndex, progress, { linearProgress, measure: measureFnFor(ctx as unknown as CanvasLike) ?? undefined });
     for (const n of tweened.pages[toIndex].children) (n as { hidden?: boolean }).hidden = false;
     const vp: Viewport = { zoom: scale, panX: 0, panY: 0, dpr: 1, width: w, height: h };
     try {
@@ -355,14 +365,14 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
   const isRaster = format === "png" || format === "jpg";
   // Animated/vector-anim formats export a single file of the active page only.
   const isSingleAnimated = format === "apng" || format === "gif" || format === "lottie";
-  const sizable = format !== "svg" && format !== "lottie" && format !== "mp4" && format !== "pptx" && !(format === "pdf" && taggedPdf); // resolution-independent
+  const sizable = format !== "svg" && format !== "lottie" && format !== "mp4" && format !== "pptx" && format !== "md" && !(format === "pdf" && taggedPdf); // resolution-independent
   // The page(s) that will actually be exported, sorted; PDF always uses all
   // selected, raster/svg emit one file per selected page.
   const pages = selected.length ? [...selected].sort((a, b) => a - b) : [Math.min(activePage, pageCount - 1)];
   // Live pixel dimensions for the first exported page (design tools commonly show this).
   const refPage = doc.pages[pages[0]] ?? doc.pages[0];
   const dim = rasterDimensions(refPage, { scale }, doc.dpi ?? 96);
-  const fileCount = format === "pdf" || format === "mp4" || format === "pptx" || isSingleAnimated ? 1 : pages.length;
+  const fileCount = format === "pdf" || format === "mp4" || format === "pptx" || format === "md" || isSingleAnimated ? 1 : pages.length;
 
   function togglePage(i: number) {
     setSelected((prev) => (prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]));
@@ -423,6 +433,12 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
         });
         download(new Blob([bytes as unknown as BlobPart], { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" }), `${safeBase}.pptx`);
         toast.success(tr("editor.downloaded_file", { file: `${safeBase}.pptx` }));
+      } else if (format === "md") {
+        // Markdown outline (F28 C26): deterministic structure-and-text
+        // serialization, entirely client-side.
+        const md = serializeOutlineMarkdown(doc.title, doc.pages as unknown as OutlinePageLike[]);
+        download(new Blob([md], { type: "text/markdown" }), `${safeBase}.md`);
+        toast.success(tr("editor.downloaded_file", { file: `${safeBase}.md` }));
       } else if (format === "mp4") {
         // Whole-deck video export (doc 28 FR-19): convert the deck to a video
         // project client-side (each slide a scene with its timing, animations,

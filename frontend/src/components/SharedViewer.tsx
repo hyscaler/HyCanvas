@@ -12,7 +12,7 @@ import { imageAssets } from "@/lib/assetProvider";
 import { useViewBeat } from "@/lib/useViewBeat";
 import { DeckPlayer } from "@/components/DeckPlayer";
 import { VideoWatch } from "@/components/VideoWatch";
-import { DESIGN_SURFACE_DIR } from "@/lib/locale";
+import { designSurfaceDir } from "@/lib/locale";
 
 function PageCanvas({ doc, index, onVisible }: { doc: DesignFile; index: number; onVisible?: (index: number) => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -95,7 +95,7 @@ function ScrollViewer({
     getPageId: () => doc.pages[visiblePage]?.id ?? null,
   });
   return (
-    <div className="flex flex-1 flex-col items-center gap-6 overflow-auto py-8" dir={DESIGN_SURFACE_DIR}>
+    <div className="flex flex-1 flex-col items-center gap-6 overflow-auto py-8" dir={designSurfaceDir}>
       {doc.pages.map((_, i) => (
         <PageCanvas key={i} doc={doc} index={i} onVisible={setVisiblePage} />
       ))}

@@ -38,6 +38,7 @@ import {
   serializeSelection,
   pasteOps,
   duplicateOps,
+  remapIds,
   removeSelectionOps,
   cut,
   captureStyle,
@@ -694,5 +695,35 @@ describe("copy-style / paste-style (F10 FR-6, AC-4)", () => {
     expect((d.pages[0].children[2] as unknown as { fills: unknown[] }).fills).toHaveLength(1);
     // text target does not receive a node-level fill (handled per run, deferred)
     expect(res.applied["txt"] ?? []).not.toContain("fill");
+  });
+});
+
+describe("remapIds reference rewriting (F28 completion C38)", () => {
+  it("rewrites animation media triggers and interaction v2 targets inside the fragment", () => {
+    const video = createNode("image", { id: "vid" } as Partial<Node>);
+    const box = createNode("shape", { id: "box" } as Partial<Node>);
+    (box as unknown as { animation: unknown }).animation = {
+      entrance: { preset: "fade", durationMs: 300 },
+      trigger: { mediaNodeId: "vid", atMs: 1000 },
+    };
+    (box as unknown as { interaction: unknown }).interaction = {
+      trigger: "click",
+      action: { kind: "none" },
+      actionV2: { kind: "play-media", targetNodeId: "vid" },
+    };
+    const outside = createNode("shape", { id: "keep" } as Partial<Node>);
+    (outside as unknown as { interaction: unknown }).interaction = {
+      trigger: "click",
+      action: { kind: "none" },
+      actionV2: { kind: "run-animation", targetNodeId: "not-in-fragment" },
+    };
+    const { nodes, idMap } = remapIds([video, box, outside]);
+    const newVid = idMap.get("vid")!;
+    const b = nodes[1] as unknown as { animation: { trigger: { mediaNodeId: string } }; interaction: { actionV2: { targetNodeId: string } } };
+    expect(b.animation.trigger.mediaNodeId).toBe(newVid);
+    expect(b.interaction.actionV2.targetNodeId).toBe(newVid);
+    // A reference to a node OUTSIDE the fragment is left alone.
+    const o = nodes[2] as unknown as { interaction: { actionV2: { targetNodeId: string } } };
+    expect(o.interaction.actionV2.targetNodeId).toBe("not-in-fragment");
   });
 });

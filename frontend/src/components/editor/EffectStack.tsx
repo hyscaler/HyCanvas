@@ -113,13 +113,13 @@ export function EffectStack({ id, effects, renderParams }: Props) {
 }
 
 /** The kinds the add menu offers, in the order they are most often reached for. */
-export const ADDABLE_EFFECTS: Effect["kind"][] = ["shadow", "blur", "glow", "outline", "adjustment"];
+export const addableEffects: Effect["kind"][] = ["shadow", "blur", "glow", "outline", "adjustment"];
 
 export function AddEffectRow({ id }: { id: string }) {
   const st = useEditor.getState();
   return (
     <div className="flex flex-wrap gap-1">
-      {ADDABLE_EFFECTS.map((kind) => (
+      {addableEffects.map((kind) => (
         <button
           key={kind}
           type="button"

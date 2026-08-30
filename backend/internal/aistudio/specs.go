@@ -3,6 +3,8 @@ package aistudio
 import (
 	"errors"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 // These mirror the @hc/aistudio TypeScript types. Only validation lives here
@@ -22,6 +24,10 @@ type OutlineItem struct {
 	Title      string   `json:"title"`
 	Points     []string `json:"points"`
 	VisualRole string   `json:"visualRole"`
+	// Note is the page's speaker note: 1-3 spoken-style plain-text sentences
+	// adding presenter context and delivery cues, never a restatement of the
+	// slide text. Optional so older clients and replies keep validating.
+	Note string `json:"note,omitempty"`
 }
 
 // DesignOutline is the editable plan returned by the outline endpoint.
@@ -47,6 +53,7 @@ func validateOutline(o *DesignOutline) error {
 			}
 		}
 		p.Points = pts
+		p.Note = normalizeNote(p.Note)
 		if strings.TrimSpace(p.Title) == "" && len(p.Points) == 0 {
 			continue
 		}
@@ -60,6 +67,47 @@ func validateOutline(o *DesignOutline) error {
 		return errors.New("outline has no usable pages")
 	}
 	return nil
+}
+
+// maxNoteChars mirrors maxNoteChars in packages/aistudio/src/outline.ts: the
+// prompt asks for 100..500 chars and validation truncates defensively rather
+// than failing the outline.
+const maxNoteChars = 500
+
+// normalizeNote flattens a speaker note to plain single-paragraph text
+// (collapsing whitespace runs) and caps its length at a sentence boundary where
+// one exists, mid-word truncation only as a last resort. Mirrors normalizeNote
+// in packages/aistudio/src/outline.ts.
+func normalizeNote(s string) string {
+	// Whitespace class: unicode.IsSpace plus U+FEFF, i.e. the union of Go
+	// IsSpace and JS \s - the TS mirror collapses the same union (JS \s plus
+	// U+0085), so both sides flatten identically.
+	flat := strings.Join(strings.FieldsFunc(s, func(r rune) bool {
+		return unicode.IsSpace(r) || r == '\uFEFF'
+	}), " ")
+	// Fast path: byte length is >= the rune count, so an under-cap byte length
+	// can never hide an over-cap note.
+	if len(flat) <= maxNoteChars {
+		return flat
+	}
+	runes := []rune(flat)
+	if len(runes) <= maxNoteChars {
+		return flat
+	}
+	cut := string(runes[:maxNoteChars]) // rune-safe: never split a UTF-8 sequence
+	end := -1
+	for _, sep := range []string{". ", "! ", "? "} {
+		if i := strings.LastIndex(cut, sep); i > end {
+			end = i
+		}
+	}
+	// Compare in RUNES to match the TS side (LastIndex returns a byte offset,
+	// which overstates the position in multi-byte text). Slicing at end+1 is
+	// still byte-safe because the separator is ASCII.
+	if end >= 0 && utf8.RuneCountInString(cut[:end]) > maxNoteChars/2 {
+		return cut[:end+1]
+	}
+	return cut
 }
 
 // ChartSeries is one named numeric series.
@@ -144,7 +192,16 @@ func validateAssistant(catalog map[string]bool) func(*AssistantReply) error {
 		if original > 0 && len(kept) == 0 {
 			return errors.New("every planned action was an unknown tool")
 		}
-		// A genuinely empty plan (the model proposed nothing) is allowed.
+		// An empty plan is fine on its own: the assistant is allowed to just
+		// answer. Saying NOTHING and planning nothing is not, and it validated
+		// happily because each field is individually optional. The turn then
+		// succeeded with a 200 and an empty bubble: no answer, no action, no
+		// error to explain either. Rejecting it here spends a repair pass with
+		// the reason fed back, and a model that still says nothing twice
+		// surfaces as a real failure the caller can report.
+		if len(a.Plan) == 0 && strings.TrimSpace(a.Reply) == "" {
+			return errors.New("the reply said nothing and planned nothing")
+		}
 		return nil
 	}
 }

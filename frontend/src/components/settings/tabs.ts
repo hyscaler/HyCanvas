@@ -3,11 +3,11 @@
 // of the (client-only) SettingsApp so the page can import it for
 // getStaticPaths without pulling the whole settings UI into the page bundle.
 
-export const SETTINGS_TABS = ["account", "security", "notifications"] as const;
+export const settingsTabs = ["account", "security", "notifications"] as const;
 
-export type SettingsTab = (typeof SETTINGS_TABS)[number];
+export type SettingsTab = (typeof settingsTabs)[number];
 
-export const SETTINGS_TAB_TITLES: Record<SettingsTab, string> = {
+export const settingsTabTitles: Record<SettingsTab, string> = {
   account: "Settings",
   security: "Security settings",
   notifications: "Notification settings",

@@ -12,7 +12,7 @@ export interface SessionState {
   revoked: boolean;
 }
 
-export const DEFAULT_GRACE_MS = 10_000;
+export const defaultGraceMs = 10_000;
 
 export type RefreshOutcome =
   | { action: "rotate"; state: SessionState } // normal: issue newTokenId, advance the family
@@ -34,7 +34,7 @@ export function rotateRefresh(
   presentedTokenId: string,
   newTokenId: string,
   now: number,
-  graceMs = DEFAULT_GRACE_MS,
+  graceMs = defaultGraceMs,
 ): RefreshOutcome {
   if (state.revoked) return { action: "reject", state };
 

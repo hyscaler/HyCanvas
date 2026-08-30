@@ -9,6 +9,8 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"regexp"
 	"strings"
@@ -28,11 +30,62 @@ const altTextInstruction = "Describe this image in a single concise sentence sui
 var (
 	ErrBadRequest = errors.New("bad request")
 	ErrBadGateway = errors.New("provider request failed")
+)
+
+// UpstreamError rides alongside ErrBadGateway (errors.Join) and carries the
+// provider's HTTP status, so the API layer can tell a rejected key (401/403)
+// from an exhausted account (402), an unknown model (404), or a rate limit
+// (429) - without ever echoing the provider's response body to the client.
+type UpstreamError struct {
+	Provider string
+	Status   int
+}
+
+func (e *UpstreamError) Error() string {
+	return fmt.Sprintf("%s upstream status %d", e.Provider, e.Status)
+}
+
+// badGateway classifies a failed provider call: the upstream status (never the
+// body) is logged and attached for the API layer's mapping. A transport error
+// (DNS, TLS, timeout) has no status and stays the bare ErrBadGateway.
+func badGateway(cfg CallConfig, err error) error {
+	var se *httpStatusError
+	if errors.As(err, &se) {
+		slog.Warn("ai provider call failed", "provider", cfg.Provider, "upstream_status", se.status)
+		return errors.Join(ErrBadGateway, &UpstreamError{Provider: string(cfg.Provider), Status: se.status})
+	}
+	slog.Warn("ai provider call failed", "provider", cfg.Provider, "err", err)
+	return ErrBadGateway
+}
+
+var (
 	// ErrImageUnsupported is returned when an image op is attempted on a provider
 	// the registry marks as text-only (DeepSeek, Anthropic, Google, Mistral,
 	// Groq, OpenRouter). Distinct from ErrBadRequest so the API can tell the user
 	// their provider can't do images, not that their request/config is malformed.
 	ErrImageUnsupported = errors.New("provider does not support image generation")
+	// ErrBaseURLRequired is returned when a config for an endpoint-routed
+	// provider (Azure/custom) is saved without a base URL. Distinct from
+	// ErrBadRequest so the UI can point the user at the missing field.
+	ErrBaseURLRequired = errors.New("provider requires a base URL")
+	// ErrKeyRequiredForProviderChange is returned when a provider change
+	// arrives without a new API key while one is stored: silently clearing
+	// the credential (data loss) and silently carrying it to another vendor
+	// (leak) are both unacceptable, so the change must bring its own key.
+	ErrKeyRequiredForProviderChange = errors.New("changing the provider requires its API key")
+	// ErrSearchKeyRequired is returned when the hosted search provider is
+	// configured without an API key (distinct so the UI points at the field).
+	ErrSearchKeyRequired = errors.New("the search provider requires an API key")
+	// ErrDescribeImageUnsupported is the vision-specific capability rejection.
+	// It was ErrBadRequest, which the API renders as "no provider configured" -
+	// told to a workspace that has one, sometimes two, and whose only real
+	// problem is that neither can read an image. The remedy is a different
+	// provider, not a configuration the admin has already done.
+	ErrDescribeImageUnsupported = errors.New("provider does not support reading images")
+	// ErrEditImageUnsupported is the edit-specific capability rejection:
+	// several providers generate images but cannot edit them (azure-openai,
+	// zhipu), so the generation-worded message would be wrong.
+	ErrEditImageUnsupported = errors.New("provider does not support image editing")
 )
 
 // DBTX is the query surface (satisfied by *pgxpool.Pool and pgx.Tx).
@@ -52,15 +105,18 @@ type Service struct {
 // NewService wires the AI service. secret is the AES key material; allowLocalHTTP
 // permits localhost http base URLs (dev).
 func NewService(db DBTX, secret string, allowLocalHTTP bool) *Service {
-	return &Service{db: db, secret: secret, allowLocal: allowLocalHTTP, client: newHTTPClient()}
+	return &Service{db: db, secret: secret, allowLocal: allowLocalHTTP, client: newHTTPClient(allowLocalHTTP)}
 }
 
-// ConfigInput is the set-config payload.
+// ConfigInput is the set-config payload. BaseURL is a pointer for PATCH
+// semantics: nil preserves the stored URL, an empty string clears it. (Model
+// and ImageModel keep plain overwrite semantics: an omitted model means "use
+// the preset default", which is a reset, not data loss.)
 type ConfigInput struct {
 	Provider   string
 	Model      string
 	ImageModel string
-	BaseURL    string
+	BaseURL    *string
 	APIKey     string
 }
 
@@ -122,7 +178,18 @@ func (s *Service) GetConfig(ctx context.Context, workspaceID string) (*ConfigVie
 	return toConfigView(r), nil
 }
 
-var providerSet = map[string]bool{"openai": true, "anthropic": true, "deepseek": true, "custom": true}
+// providerSet is the set of configurable provider ids, derived from the registry
+// so every advertised preset (openai, anthropic, deepseek, zhipu, google,
+// mistral, groq, together, openrouter, azure-openai, custom) is accepted by
+// SetConfig. Deriving it from PRESETS keeps this in lockstep with the catalog
+// the config UI is shown, instead of a hand-maintained list that drifts.
+var providerSet = func() map[string]bool {
+	m := make(map[string]bool, len(PRESETS))
+	for i := range PRESETS {
+		m[PRESETS[i].ID] = true
+	}
+	return m
+}()
 
 // SetConfig upserts the workspace's provider config. A new apiKey is encrypted;
 // changing the provider without a new key clears the stored key (so an old
@@ -131,19 +198,59 @@ func (s *Service) SetConfig(ctx context.Context, workspaceID string, in ConfigIn
 	if !providerSet[in.Provider] {
 		return nil, ErrBadRequest
 	}
-	if in.BaseURL != "" && !isSafeBaseURL(in.BaseURL, s.allowLocal) {
-		return nil, ErrBadRequest
+	// Statically decidable URL rejections run before any DB access: an
+	// explicitly supplied URL is trimmed (pasted whitespace must not persist;
+	// url.Parse accepts spaces), SSRF-checked, and - for endpoint-routed
+	// providers - required to be non-empty.
+	if in.BaseURL != nil {
+		trimmed := strings.TrimSpace(*in.BaseURL)
+		in.BaseURL = &trimmed
+		if trimmed != "" && !isSafeBaseURL(trimmed, s.allowLocal) {
+			return nil, ErrBadRequest
+		}
+		if p := PresetFor(in.Provider); p != nil && p.NeedsBaseURL && trimmed == "" {
+			return nil, ErrBaseURLRequired
+		}
 	}
 	existing, err := s.getRow(ctx, workspaceID)
 	if err != nil {
 		return nil, err
 	}
-	model := nilIfEmpty(in.Model)
-	imageModel := nilIfEmpty(in.ImageModel)
-	baseURL := nilIfEmpty(in.BaseURL)
+	providerChanged := existing != nil && existing.provider != in.Provider
+
+	// A provider change may never silently carry or destroy the stored key:
+	// it must arrive with the NEW provider's key (rejected here), and the old
+	// key never survives onto a different vendor (a fresh one is written).
+	// With no stored key there is nothing to protect, so the change is free.
+	in.APIKey = strings.TrimSpace(in.APIKey)
+	if providerChanged && in.APIKey == "" && existing.keyCipher != nil {
+		return nil, ErrKeyRequiredForProviderChange
+	}
+
+	// Resolve the base URL under PATCH semantics: nil preserves the stored
+	// URL, an empty string clears it (validated above), and a provider change
+	// drops it (a stale URL must never follow the new provider). The preserved
+	// value passed validation when it was stored, but the required-URL check
+	// runs again on the RESOLVED value so an endpoint-routed provider can
+	// never end up saved host-less (a 400 here beats an opaque 502 per call).
+	resolvedBase := ""
+	switch {
+	case in.BaseURL != nil:
+		resolvedBase = *in.BaseURL // already trimmed + validated above
+	case providerChanged || existing == nil:
+		resolvedBase = ""
+	default:
+		resolvedBase = deref(existing.baseURL)
+	}
+	if p := PresetFor(in.Provider); p != nil && p.NeedsBaseURL && resolvedBase == "" {
+		return nil, ErrBaseURLRequired
+	}
+
+	model := nilIfEmpty(strings.TrimSpace(in.Model))
+	imageModel := nilIfEmpty(strings.TrimSpace(in.ImageModel))
+	baseURL := nilIfEmpty(resolvedBase)
 
 	var cipher, iv, tag *string
-	clearKey := false
 	if in.APIKey != "" {
 		nonce := make([]byte, 12)
 		if _, err := rand.Read(nonce); err != nil {
@@ -154,12 +261,11 @@ func (s *Service) SetConfig(ctx context.Context, workspaceID string, in ConfigIn
 			return nil, err
 		}
 		cipher, iv, tag = &enc.Cipher, &enc.IV, &enc.Tag
-	} else if existing != nil && existing.provider != in.Provider {
-		clearKey = true
 	}
 
-	// Upsert. When a new key is supplied, write it; when clearing, null it; when
-	// neither, COALESCE keeps the existing key columns.
+	// Upsert. When a new key is supplied, write it; otherwise keep the stored
+	// one (a keyless provider change was rejected above, so a stale key can
+	// never survive onto a different provider).
 	const q = `INSERT INTO "ai_configs" ("workspace_id",provider,model,"image_model","base_url","key_cipher","key_iv","key_tag","updated_at")
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,now())
 		ON CONFLICT ("workspace_id") DO UPDATE SET
@@ -167,14 +273,34 @@ func (s *Service) SetConfig(ctx context.Context, workspaceID string, in ConfigIn
 			model = EXCLUDED.model,
 			"image_model" = EXCLUDED."image_model",
 			"base_url" = EXCLUDED."base_url",
-			"key_cipher" = CASE WHEN $9 THEN NULL WHEN $6 IS NOT NULL THEN $6 ELSE "ai_configs"."key_cipher" END,
-			"key_iv"     = CASE WHEN $9 THEN NULL WHEN $7 IS NOT NULL THEN $7 ELSE "ai_configs"."key_iv" END,
-			"key_tag"    = CASE WHEN $9 THEN NULL WHEN $8 IS NOT NULL THEN $8 ELSE "ai_configs"."key_tag" END,
+			"key_cipher" = CASE WHEN $6 IS NOT NULL THEN $6 ELSE "ai_configs"."key_cipher" END,
+			"key_iv"     = CASE WHEN $7 IS NOT NULL THEN $7 ELSE "ai_configs"."key_iv" END,
+			"key_tag"    = CASE WHEN $8 IS NOT NULL THEN $8 ELSE "ai_configs"."key_tag" END,
 			"updated_at" = now()`
-	if _, err := s.db.Exec(ctx, q, workspaceID, in.Provider, model, imageModel, baseURL, cipher, iv, tag, clearKey); err != nil {
+	if _, err := s.db.Exec(ctx, q, workspaceID, in.Provider, model, imageModel, baseURL, cipher, iv, tag); err != nil {
 		return nil, err
 	}
 	return s.GetConfig(ctx, workspaceID)
+}
+
+// DeleteConfig disconnects the workspace's AI provider: the row, and with it
+// the encrypted key, is removed outright rather than blanked, so nothing
+// half-configured is left behind for a later save to resurrect.
+//
+// Deliberately a DELETE of the whole row and not "clear the key": a config
+// with a provider but no key is exactly the state callConfig rejects, and
+// leaving one would make the UI show a provider that cannot be used.
+//
+// The AI policy and the recorded usage are separate rows and survive: a
+// workspace that swaps providers keeps its governance and its billing history.
+// So does the dedicated image provider, which is its own record with its own
+// vendor and key: swapping the text provider is not a reason to tear down the
+// image one. The settings form deletes both, because its button says "Reset
+// provider" and a second key surviving that would be a surprise; an API client
+// removing one and keeping the other is a legitimate thing to want.
+func (s *Service) DeleteConfig(ctx context.Context, workspaceID string) error {
+	_, err := s.db.Exec(ctx, `DELETE FROM "ai_configs" WHERE "workspace_id" = $1`, workspaceID)
+	return err
 }
 
 // callConfig resolves + decrypts the provider config for an outbound call.
@@ -197,7 +323,7 @@ func (s *Service) callConfig(ctx context.Context, workspaceID string) (CallConfi
 	// base URL or model is empty, fall back to the provider's preset so a built-in
 	// provider (e.g. DeepSeek) routes to its own endpoint/model instead of the
 	// OpenAI-compatible defaults baked into the transport.
-	baseURL, model := deref(r.baseURL), deref(r.model)
+	baseURL, model, imageModel := deref(r.baseURL), deref(r.model), deref(r.imageModel)
 	if p := PresetFor(r.provider); p != nil {
 		if baseURL == "" {
 			baseURL = p.BaseURL
@@ -205,10 +331,13 @@ func (s *Service) callConfig(ctx context.Context, workspaceID string) (CallConfi
 		if model == "" {
 			model = p.DefaultModel
 		}
+		if imageModel == "" {
+			imageModel = p.DefaultImageModel
+		}
 	}
 	return CallConfig{
 		Provider: Provider(r.provider), APIKey: key,
-		BaseURL: baseURL, Model: model, ImageModel: deref(r.imageModel),
+		BaseURL: baseURL, Model: model, ImageModel: imageModel,
 	}, nil
 }
 
@@ -223,7 +352,31 @@ func (s *Service) Text(ctx context.Context, workspaceID, prompt, system string) 
 	}
 	out, err := s.generateText(cfg, prompt, system)
 	if err != nil {
-		return "", ErrBadGateway
+		return "", badGateway(cfg, err)
+	}
+	s.meter(ctx, workspaceID, countTokens(prompt)+countTokens(system)+countTokens(out))
+	return out, nil
+}
+
+// TextStructured runs a text call constrained by a JSON Schema, natively where
+// the provider supports it (response_format on the OpenAI-compatible dialect,
+// a forced tool on Anthropic) with one automatic retry as plain text when the
+// provider rejects the parameter. Callers keep the schema restated in the
+// prompt and keep validating the reply: this primitive raises the odds of
+// schema-valid output, it does not guarantee them.
+func (s *Service) TextStructured(ctx context.Context, workspaceID, prompt, system, schemaJSON string) (string, error) {
+	cfg, err := s.callConfig(ctx, workspaceID)
+	if err != nil {
+		return "", err
+	}
+	// Structured payloads carry a 4096-token output allowance (see the
+	// Anthropic dialect), so the policy estimate uses the same figure.
+	if err := s.enforce(ctx, workspaceID, string(cfg.Provider), estimateTokens(prompt+system, 4096)); err != nil {
+		return "", err
+	}
+	out, err := s.generateStructuredText(cfg, prompt, system, schemaJSON)
+	if err != nil {
+		return "", badGateway(cfg, err)
 	}
 	s.meter(ctx, workspaceID, countTokens(prompt)+countTokens(system)+countTokens(out))
 	return out, nil
@@ -240,9 +393,21 @@ func assertImageCapable(cfg CallConfig) error {
 	return nil
 }
 
-// Image runs an image-generation call.
+// assertEditImageCapable gates on the EDIT capability specifically: a provider
+// can generate but not edit (azure-openai's pinned api-version has no edits
+// operation; zhipu's CogView has no OpenAI-style edit route), and gating on
+// FeatureImage alone would let those calls through to an opaque 502.
+func assertEditImageCapable(cfg CallConfig) error {
+	if !ResolveRoute(string(cfg.Provider), cfg.Model, cfg.ImageModel, FeatureEditImage).Supported {
+		return ErrEditImageUnsupported
+	}
+	return nil
+}
+
+// Image runs an image-generation call, on the workspace's dedicated image
+// provider when it has one and on its main provider otherwise.
 func (s *Service) Image(ctx context.Context, workspaceID, prompt, size string) (string, error) {
-	cfg, err := s.callConfig(ctx, workspaceID)
+	cfg, err := s.imageCallConfig(ctx, workspaceID)
 	if err != nil {
 		return "", err
 	}
@@ -254,7 +419,7 @@ func (s *Service) Image(ctx context.Context, workspaceID, prompt, size string) (
 	}
 	out, err := s.generateImage(cfg, prompt, size)
 	if err != nil {
-		return "", ErrBadGateway
+		return "", badGateway(cfg, err)
 	}
 	s.meter(ctx, workspaceID, countTokens(prompt)+imageTokenCost)
 	return out, nil
@@ -266,14 +431,16 @@ var dataURLPrefix = regexp.MustCompile(`^data:[^,]*,`)
 // DescribeImage generates alt text for an image (F22 FR-12). A data: prefix is
 // stripped and its mime type reused.
 func (s *Service) DescribeImage(ctx context.Context, workspaceID, imageBase64, instruction string) (string, error) {
-	cfg, err := s.callConfig(ctx, workspaceID)
+	// Whichever configured provider can see: the main one by preference, the
+	// image provider when the main one is text-only.
+	cfg, err := s.visionCallConfig(ctx, workspaceID)
 	if err != nil {
 		return "", err
 	}
 	// Vision describe is unsupported on text-only providers (e.g. DeepSeek); fail
 	// fast with a 400 instead of POSTing an image payload that will be rejected.
 	if !ResolveRoute(string(cfg.Provider), cfg.Model, cfg.ImageModel, FeatureDescribeImage).Supported {
-		return "", ErrBadRequest
+		return "", ErrDescribeImageUnsupported
 	}
 	mime := "image/png"
 	if m := dataURLMime.FindStringSubmatch(imageBase64); m != nil {
@@ -289,19 +456,20 @@ func (s *Service) DescribeImage(ctx context.Context, workspaceID, imageBase64, i
 	}
 	out, err := s.describeImageCall(cfg, DescribeImageInput{ImageBase64: payload, MimeType: mime, Instruction: instr})
 	if err != nil {
-		return "", ErrBadGateway
+		return "", badGateway(cfg, err)
 	}
 	s.meter(ctx, workspaceID, countTokens(instr)+countTokens(out))
 	return out, nil
 }
 
-// EditImage edits/outpaints an image by prompt (+ optional mask).
+// EditImage edits/outpaints an image by prompt (+ optional mask). Follows the
+// dedicated image provider too: editing is image work, not text work.
 func (s *Service) EditImage(ctx context.Context, workspaceID, imageBase64, prompt, maskBase64, size string) (string, error) {
-	cfg, err := s.callConfig(ctx, workspaceID)
+	cfg, err := s.imageCallConfig(ctx, workspaceID)
 	if err != nil {
 		return "", err
 	}
-	if err := assertImageCapable(cfg); err != nil {
+	if err := assertEditImageCapable(cfg); err != nil {
 		return "", err
 	}
 	if err := s.enforce(ctx, workspaceID, string(cfg.Provider), countTokens(prompt)+imageTokenCost); err != nil {
@@ -314,7 +482,7 @@ func (s *Service) EditImage(ctx context.Context, workspaceID, imageBase64, promp
 	}
 	out, err := s.editImageCall(cfg, EditImageInput{ImageBase64: strip(imageBase64), Prompt: prompt, MaskBase64: mask, Size: size})
 	if err != nil {
-		return "", ErrBadGateway
+		return "", badGateway(cfg, err)
 	}
 	s.meter(ctx, workspaceID, countTokens(prompt)+imageTokenCost)
 	return out, nil

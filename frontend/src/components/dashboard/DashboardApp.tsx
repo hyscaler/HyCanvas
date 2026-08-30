@@ -44,12 +44,36 @@ import {
   List,
   Users,
   Moon,
-  Sun,
-} from "lucide-react";
-import { createBlankDesign } from "@hc/schema";
-import { HYC_ACCEPT, downloadHycFile, importedTitle, parseHycFile, readFileText } from "@/lib/hycFile";
-import { pptxToDesign } from "@hc/export";
-import { ApiError, type DesignRecord, type HomeItem, type MyTask, type StorageUsageView, type TaskStatus, type TemplateCollectionSummary, type TemplateSummary, type WorkspaceRole } from "@hc/sdk";
+  Sun, Sparkles, Wand2, Paperclip, Loader2, X } from "lucide-react";
+import { createBlankDesign, type DesignFile } from "@hc/schema";
+import { hycAccept, downloadHycFile, importedTitle, parseHycFile, readFileText } from "@/lib/hycFile";
+import { odpToDesign, pptxToDesign } from "@hc/export";
+import { deckThemes, dialTones, layoutDeck, parseMarkdownOutline } from "@hc/aistudio";
+
+// Markdown outline import (F28 C26): DETERMINISTIC, no AI - headings become
+// slides, list items become points, laid out through the same pure deck
+// builder generation uses (theme seeded from the title, no model calls).
+function mdOutlineToDesign(md: string, fallbackTitle: string): DesignFile {
+  const outline = parseMarkdownOutline(md, { fallbackTitle });
+  if (!outline) throw new Error("no outline structure in the markdown (add headings or list items)");
+  const size = { width: 1920, height: 1080 };
+  const seed = Array.from(outline.title).reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) | 0, 7);
+  const theme = deckThemes({ count: 1, kicker: outline.title, seed })[0];
+  const deck = layoutDeck(outline, theme, size);
+  const file = createBlankDesign({ title: outline.title, width: size.width, height: size.height });
+  let pageSeq = 0;
+  file.pages = deck.pages.map((p, i) => ({
+    id: `md-page-${++pageSeq}`,
+    name: p.name || `Page ${i + 1}`,
+    width: size.width,
+    height: size.height,
+    background: p.background,
+    children: p.nodes,
+    ...(p.note ? { notes: p.note } : {}),
+  })) as DesignFile["pages"];
+  return file;
+}
+import { ApiError, type AiProviderPreset, type DesignRecord, type HomeItem, type MyTask, type StorageUsageView, type TaskStatus, type TemplateCollectionSummary, type TemplateSummary, type WorkspaceRole } from "@hc/sdk";
 import { formatBytes } from "@/lib/format";
 import { useDateFormat } from "@/lib/datetime";
 import { resolvedTheme, setThemePreference } from "@/lib/theme";
@@ -61,15 +85,21 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Input } from "@/components/ui/Input";
 import { Logo, LogoMark } from "@/components/ui/Logo";
 import { Modal } from "@/components/ui/Modal";
+import { PromptHost } from "@/components/ui/PromptHost";
 import { Spinner } from "@/components/ui/Spinner";
 import { dashboardPath, type DashboardView } from "./views";
 import { DesignThumb } from "./DesignThumb";
 import { BulkCreateModal } from "./BulkCreateModal";
 import { MembersPanel } from "./MembersPanel";
+import { ApiKeysPanel } from "./ApiKeysPanel";
+import { WorkspaceAiPanel } from "./WorkspaceAiPanel";
+import { TemplateFromPptxDialog } from "./TemplateFromPptxDialog";
 import { VerifyEmailBanner } from "@/components/auth/VerifyEmailBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { HeroArt, EmptyArt, RailArt } from "@/components/ui/CanvasBackdrop";
-import { tr } from "@/lib/i18n";
+import { attachableAccept, extractAiSources, maxAiSources, type AiSource } from "@/lib/aiAttachments";
+import { stageAiSources } from "@/lib/aiRequests";
+import { tr, trOr } from "@/lib/i18n";
 import { apiCodeMessage, userMessage } from "@/lib/errors";
 
 // Time-aware greeting for the dashboard hero band.
@@ -92,7 +122,23 @@ const DASH_BACKDROP: React.CSSProperties = {
   backgroundRepeat: "repeat, no-repeat, no-repeat",
 };
 
+/** The server's provider catalog, fetched once per page load: it is static per
+ *  deployment, so switching workspace should not ask for it again. */
+let aiPresetCache: AiProviderPreset[] | null = null;
+
 type Format = { label: string; icon: typeof Plus; w: number; h: number; kind?: string };
+
+/** Canvases the brief composer can generate for. Short on purpose: these are
+ *  the shapes AI generation actually composes well for, and the full format
+ *  shelf sits directly below for everything else. */
+const briefFormats = (): Format[] => [
+  { label: tr("dashboard.presentation_16_9"), icon: Plus, w: 1920, h: 1080 },
+  { label: tr("dashboard.instagram_post_2"), icon: Plus, w: 1080, h: 1080 },
+  { label: tr("dashboard.instagram_story_2"), icon: Plus, w: 1080, h: 1920 },
+  { label: tr("dashboard.linkedin_post_2"), icon: Plus, w: 1200, h: 627 },
+  { label: tr("dashboard.poster"), icon: Plus, w: 1080, h: 1350 },
+  { label: tr("dashboard.a4_document"), icon: Plus, w: 1240, h: 1754 },
+];
 
 const formatGroups = (): { title: string; items: Format[] }[] => [
   {
@@ -165,6 +211,82 @@ export function DashboardApp({ view }: { view: DashboardView }) {
   const [deleteTarget, setDeleteTarget] = useState<HomeItem | null>(null);
   const [wsModal, setWsModal] = useState(false);
   const [sizeOpen, setSizeOpen] = useState(false);
+  const [aiBrief, setAiBrief] = useState("");
+  const [aiFormat, setAiFormat] = useState(() => briefFormats()[0].label);
+  const [aiTone, setAiTone] = useState("auto");
+  const [briefSources, setBriefSources] = useState<AiSource[]>([]);
+  const [briefBusy, setBriefBusy] = useState(false);
+  const [briefDrop, setBriefDrop] = useState(false);
+  // Stamped with the workspace it describes, so a switch invalidates it by
+  // derivation rather than a reset written during render or in an effect body.
+  const [aiState, setAiState] = useState<{ ws: string; connected: boolean; label: string } | null>(null);
+  const aiReady = aiState && aiState.ws === activeWorkspaceId ? aiState : null;
+
+  // Best-effort and non-blocking: nothing on this page waits for it, and a
+  // failed lookup shows no hint rather than claiming AI is missing.
+  useEffect(() => {
+    if (!activeWorkspaceId) return;
+    const ws = activeWorkspaceId;
+    let cancelled = false;
+    void Promise.all([
+      oc.getAiConfig(ws).catch(() => null),
+      aiPresetCache ? Promise.resolve(aiPresetCache) : oc.aiProviders().then((l) => { aiPresetCache = l ?? []; return aiPresetCache; }).catch(() => [] as AiProviderPreset[]),
+    ]).then(([cfg, presets]) => {
+      if (cancelled) return;
+      setAiState({
+        ws,
+        connected: !!cfg?.hasKey,
+        label: presets.find((pr) => pr.id === cfg?.provider)?.label ?? cfg?.provider ?? "",
+      });
+    });
+    return () => { cancelled = true; };
+  }, [activeWorkspaceId]);
+  const briefFileRef = useRef<HTMLInputElement | null>(null);
+
+  /** Read attached files into grounding text, using the same pipeline the
+   *  editor's assistant uses, so both agree about what can be read and how a
+   *  scanned PDF is refused. */
+  async function attachBriefFiles(picked: File[]) {
+    if (!picked.length) return;
+    const room = maxAiSources - briefSources.length;
+    if (room <= 0) {
+      toast.error(tr("editor.attachment_limit_reached", { max: maxAiSources }));
+      return;
+    }
+    setBriefBusy(true);
+    try {
+      const out = await extractAiSources(picked, room);
+      if (out.rejected) toast.error(tr("editor.only_documents_can_be_attached"));
+      for (const e of out.errors) toast.error(e);
+      if (out.sources.length) setBriefSources((xs) => [...xs, ...out.sources].slice(0, maxAiSources));
+    } finally {
+      setBriefBusy(false);
+    }
+  }
+
+  /** Create the design for the chosen canvas and hand the brief to the editor's
+   *  assistant. The tone rides the same per-workspace store the editor's dials
+   *  use, so a choice made here is the choice the generation runs with. */
+  function submitBrief() {
+    const brief = aiBrief.trim();
+    if (!brief || busy || !activeWorkspaceId) return;
+    const fmt = briefFormats().find((f) => f.label === aiFormat) ?? briefFormats()[0];
+    try {
+      const key = `oc-ai-dials:${activeWorkspaceId}`;
+      const saved = JSON.parse(window.localStorage.getItem(key) ?? "{}") as Record<string, string>;
+      if (aiTone === "auto") delete saved.tone;
+      else saved.tone = aiTone;
+      window.localStorage.setItem(key, JSON.stringify(saved));
+    } catch {
+      /* private mode: the generation simply runs without the tone */
+    }
+    // Extracted text travels through the request channel, not the URL: one
+    // document dwarfs any sane query string.
+    stageAiSources(briefSources);
+    // Created untitled on purpose: the generation names it from the outline it
+    // produces, which reads far better than the raw prompt.
+    void createDesign(fmt.w, fmt.h, undefined, fmt.kind, brief);
+  }
   const [bulkOpen, setBulkOpen] = useState(false);
   const [customW, setCustomW] = useState(1080);
   const [customH, setCustomH] = useState(1080);
@@ -206,6 +328,8 @@ export function DashboardApp({ view }: { view: DashboardView }) {
   // Template gallery filters.
   const [tplCategory, setTplCategory] = useState<string | null>(null);
   const [tplCollection, setTplCollection] = useState<string | null>(null);
+  const [pptxTemplateOpen, setPptxTemplateOpen] = useState(false); // F40 E13
+  const [tplRefresh, setTplRefresh] = useState(0); // bump to re-fetch the template shelf
   const [collections, setCollections] = useState<TemplateCollectionSummary[]>([]);
 
   const load = useCallback(async (q: string) => {
@@ -300,7 +424,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
     return () => {
       cancelled = true;
     };
-  }, [view, activeWorkspaceId, tplCollection]);
+  }, [view, activeWorkspaceId, tplCollection, tplRefresh]);
 
   // Categories present across the loaded templates, for the filter chips.
   const templateCategories = Array.from(
@@ -336,7 +460,8 @@ export function DashboardApp({ view }: { view: DashboardView }) {
   const activeWs = workspaces.find((w) => w.id === activeWorkspaceId);
   const firstName = user?.name?.trim().split(/\s+/)[0] || user?.email?.split("@")[0] || "there";
 
-  const open = (id: string) => router.push({ pathname: "/editor", query: { id } });
+  const open = (id: string, brief?: string) =>
+    router.push({ pathname: "/editor", query: brief ? { id, ai: brief } : { id } });
 
   // Star/unstar a design; optimistically flip the flag in the open lists, then
   // reconcile from the server response (and drop it from Favorites when unstarred).
@@ -401,9 +526,15 @@ export function DashboardApp({ view }: { view: DashboardView }) {
       // URLs the server ingests like any pasted image. Everything else is the
       // open .hyc format.
       const isPptx = /\.pptx$/i.test(f.name) || f.type === "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+      const isOdp = /\.odp$/i.test(f.name) || f.type === "application/vnd.oasis.opendocument.presentation";
+      const isMd = /\.(md|markdown)$/i.test(f.name);
       const file = isPptx
         ? await pptxToDesign(new Uint8Array(await f.arrayBuffer()), { title: f.name.replace(/\.pptx$/i, "") })
-        : parseHycFile(await readFileText(f));
+        : isOdp
+          ? await odpToDesign(new Uint8Array(await f.arrayBuffer()), { title: f.name.replace(/\.odp$/i, "") })
+          : isMd
+            ? mdOutlineToDesign(await readFileText(f), f.name.replace(/\.(md|markdown)$/i, ""))
+            : parseHycFile(await readFileText(f));
       const title = importedTitle(file, f.name);
       const rec = await oc.createDesign({ workspaceId: activeWorkspaceId, title, from: { ...file, title } });
       toast.success(`Imported "${title}".`);
@@ -450,7 +581,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
     }
   }
 
-  async function createDesign(width = 1080, height = 1080, label = tr("dashboard.untitled_design"), kind?: string) {
+  async function createDesign(width = 1080, height = 1080, label = tr("dashboard.untitled_design"), kind?: string, brief?: string) {
     if (!activeWorkspaceId) return;
     setSizeOpen(false);
     setBusy(true);
@@ -460,7 +591,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
       // plain design leaves it unset (treated as "design").
       if (kind) from.meta.kind = kind;
       const rec = await oc.createDesign({ workspaceId: activeWorkspaceId, title: label, from });
-      await open(rec.id);
+      await open(rec.id, brief);
     } catch {
       toast.error(tr("dashboard.could_not_create_design"));
       setBusy(false);
@@ -714,28 +845,195 @@ export function DashboardApp({ view }: { view: DashboardView }) {
           {!query.trim() && (
             <section className="relative mb-9 min-h-[8rem]">
               <HeroArt />
-              <div className="relative max-w-xl">
+              <div className="relative mx-auto max-w-3xl text-center">
                 <h1 className="text-2xl font-bold tracking-tight text-neutral-900 sm:text-3xl">
                   {greetByHour()}, {firstName} <span className="inline-block">👋</span>
                 </h1>
-                <p className="mt-2 text-sm text-neutral-500">
+                <p className="mx-auto mt-2 max-w-xl text-sm text-neutral-500">
                   {tr("dashboard.let_s_make_something_today_start_from_a_blan")}
                 </p>
-                <div className="mt-5 flex flex-wrap gap-2.5">
-                  <Button onClick={() => setSizeOpen(true)} disabled={busy || !activeWorkspaceId}>
-                    <Plus size={16} /> {tr("dashboard.start_a_design")}
-                  </Button>
-                  <Button variant="secondary" onClick={() => gotoView("templates")}>
-                    <LayoutTemplate size={16} /> {tr("dashboard.browse_templates")}
-                  </Button>
-                </div>
+                {/* The headline capability used to require: make a blank
+                    deck, open the editor, notice the fourth of nine rail
+                    icons, then connect a provider. Describing it here creates
+                    the design and starts the generation. The controls under
+                    the brief are the two that actually change the output -
+                    the canvas it composes for, and the voice it writes in -
+                    rather than decoration. */}
+                <form
+                  className={`relative mt-6 rounded-2xl border bg-surface p-3 text-start shadow-sm transition focus-within:ring-4 focus-within:ring-brand-50 ${
+                    briefDrop ? "border-brand-400 ring-4 ring-brand-50" : "border-neutral-200 focus-within:border-brand-400"
+                  }`}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    submitBrief();
+                  }}
+                  onDragOver={(e) => {
+                    // Dragging a document onto the brief is the same gesture the
+                    // editor's assistant accepts; the dashboard had no drop
+                    // target at all, so nothing else competes for it here.
+                    if (!e.dataTransfer.types.includes("Files") || briefBusy) return;
+                    e.preventDefault();
+                    setBriefDrop(true);
+                  }}
+                  onDragLeave={(e) => {
+                    // Ignore the dragleave fired by crossing this form's own
+                    // children, or the hint flickers over every nested control.
+                    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+                    setBriefDrop(false);
+                  }}
+                  onDrop={(e) => {
+                    if (!e.dataTransfer.types.includes("Files")) return;
+                    e.preventDefault();
+                    setBriefDrop(false);
+                    void attachBriefFiles(Array.from(e.dataTransfer.files ?? []));
+                  }}
+                >
+                  {briefDrop && (
+                    <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center rounded-2xl border-2 border-dashed border-brand-400 bg-brand-50/90">
+                      <span className="flex items-center gap-1.5 text-xs font-medium text-brand-ink">
+                        <Paperclip size={13} /> {tr("dashboard.drop_documents_to_build_from")}
+                      </span>
+                    </div>
+                  )}
+                  <textarea
+                    value={aiBrief}
+                    onChange={(e) => setAiBrief(e.target.value)}
+                    onKeyDown={(e) => {
+                      // Enter sends, Shift+Enter breaks the line - the same
+                      // contract as the editor's composer. IME composition is
+                      // excluded, or the first Enter of a conversion submits.
+                      if (e.key !== "Enter" || e.shiftKey || e.nativeEvent.isComposing) return;
+                      e.preventDefault();
+                      submitBrief();
+                    }}
+                    rows={1}
+                    onInput={(e) => {
+                      const el = e.currentTarget;
+                      el.style.height = "auto";
+                      el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+                    }}
+                    placeholder={tr("dashboard.describe_a_deck_to_generate")}
+                    aria-label={tr("dashboard.describe_a_deck_to_generate")}
+                    disabled={busy || !activeWorkspaceId}
+                    className="w-full resize-none bg-transparent px-1.5 py-1 text-[15px] leading-relaxed outline-none placeholder:text-neutral-400 disabled:opacity-50"
+                  />
+                  {/* Attached sources: the documents the design should be
+                      built FROM. Extraction runs here so the editor receives
+                      text, not files, and so an unreadable file is reported
+                      before the user has navigated away from it. */}
+                  {briefSources.length > 0 && (
+                    <ul className="mb-1 flex flex-wrap gap-1.5 px-1.5">
+                      {briefSources.map((sc, i) => (
+                        <li key={`${sc.name}-${i}`} className="flex items-center gap-1 rounded-full border border-brand-200 bg-brand-50 px-2 py-0.5 text-[11px] text-brand-ink">
+                          <FileText size={11} className="shrink-0" />
+                          <span className="max-w-[10rem] truncate" title={sc.name}>{sc.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => setBriefSources((xs) => xs.filter((_, j) => j !== i))}
+                            aria-label={tr("editor.remove_attached_content")}
+                            className="rounded-full p-0.5 hover:bg-brand-100"
+                          >
+                            <X size={11} />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => briefFileRef.current?.click()}
+                      disabled={busy || briefBusy || !activeWorkspaceId || briefSources.length >= maxAiSources}
+                      title={tr("dashboard.attach_documents_to_build_from")}
+                      aria-label={tr("dashboard.attach_documents_to_build_from")}
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-neutral-200 text-neutral-500 transition hover:border-neutral-300 hover:text-neutral-700 disabled:opacity-40"
+                    >
+                      {briefBusy ? <Loader2 size={15} className="animate-spin" /> : <Paperclip size={15} />}
+                    </button>
+                    <input
+                      ref={briefFileRef}
+                      type="file"
+                      multiple
+                      accept={attachableAccept}
+                      hidden
+                      onChange={(e) => {
+                        void attachBriefFiles(Array.from(e.target.files ?? []));
+                        e.target.value = "";
+                      }}
+                    />
+                    <label className="flex items-center gap-1.5 rounded-full border border-neutral-200 py-1.5 ps-3 pe-1.5 text-[13px] text-neutral-700 transition hover:border-neutral-300 focus-within:border-brand-400">
+                      <LayoutTemplate size={13} className="shrink-0 text-neutral-400" />
+                      <span className="sr-only">{tr("dashboard.output_format")}</span>
+                      <select
+                        value={aiFormat}
+                        onChange={(e) => setAiFormat(e.target.value)}
+                        disabled={busy || !activeWorkspaceId}
+                        className="max-w-[9rem] cursor-pointer truncate bg-transparent pe-1 outline-none"
+                      >
+                        {briefFormats().map((f) => (
+                          <option key={f.label} value={f.label}>{f.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="flex items-center gap-1.5 rounded-full border border-neutral-200 py-1.5 ps-3 pe-1.5 text-[13px] text-neutral-700 transition hover:border-neutral-300 focus-within:border-brand-400">
+                      <Wand2 size={13} className="shrink-0 text-neutral-400" />
+                      <span className="sr-only">{tr("dashboard.tone")}</span>
+                      <select
+                        value={aiTone}
+                        onChange={(e) => setAiTone(e.target.value)}
+                        disabled={busy || !activeWorkspaceId}
+                        className="max-w-[8rem] cursor-pointer truncate bg-transparent pe-1 outline-none"
+                      >
+                        {dialTones.map((t) => (
+                          <option key={t} value={t}>{trOr(`editor.dial_${t}`, t)}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <span className="flex-1" />
+                    {aiReady && (aiReady.connected ? (
+                      <span className="hidden items-center gap-1.5 text-[11px] text-neutral-500 sm:flex" title={tr("dashboard.this_workspace_generates_with_provider", { provider: aiReady.label })}>
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        {aiReady.label}
+                      </span>
+                    ) : (
+                      // Not a blocker: the brief is held through provider setup
+                      // and generation resumes once a key exists. Saying so here
+                      // just saves the detour of finding that out in the editor.
+                      <button
+                        type="button"
+                        onClick={() => gotoView("members")}
+                        className="flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-[11px] text-amber-800 transition hover:border-amber-400"
+                      >
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                        {tr("dashboard.connect_an_ai_provider_first")}
+                      </button>
+                    ))}
+                    <button
+                      type="submit"
+                      disabled={busy || !activeWorkspaceId || !aiBrief.trim()}
+                      className="flex items-center gap-1.5 rounded-full bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:bg-neutral-200 disabled:text-neutral-400 disabled:hover:bg-neutral-200"
+                    >
+                      <Sparkles size={15} /> {tr("dashboard.generate")}
+                    </button>
+                  </div>
+                </form>
               </div>
             </section>
           )}
 
           {/* Create row: every format together in one wrap. */}
           <section className="mb-10">
-            <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-neutral-400">{tr("dashboard.start_a_design")}</h2>
+            <div className="mb-3 flex items-center gap-3">
+              <h2 className="text-sm font-bold uppercase tracking-wide text-neutral-400">{tr("dashboard.start_a_design")}</h2>
+              <span className="flex-1" />
+              <button
+                onClick={() => setSizeOpen(true)}
+                disabled={busy || !activeWorkspaceId}
+                className="flex items-center gap-1.5 rounded-full border border-neutral-200 bg-surface px-3 py-1.5 text-xs font-medium text-neutral-600 transition hover:border-neutral-300 hover:text-neutral-800 disabled:opacity-40"
+              >
+                <Plus size={14} /> {tr("dashboard.blank_custom_size")}
+              </button>
+            </div>
             <div className="flex flex-wrap gap-3">
               {[{ label: tr("dashboard.blank"), icon: Plus, w: 1080, h: 1080 } as Format, ...formatGroups().flatMap((g) => g.items)].map((f) => (
                 <FormatTile key={f.label} f={f} disabled={busy} onClick={() => startFormat(f)} />
@@ -748,7 +1046,7 @@ export function DashboardApp({ view }: { view: DashboardView }) {
               <input
                 ref={importDesignRef}
                 type="file"
-                accept={`${HYC_ACCEPT},.pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation`}
+                accept={`${hycAccept},.pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation,.odp,application/vnd.oasis.opendocument.presentation,.md,.markdown,text/markdown`}
                 hidden
                 onChange={(e) => {
                   void importHycDesign(e.target.files);
@@ -843,10 +1141,13 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                 <Button variant="secondary" size="sm" disabled={busy} onClick={() => importTemplateRef.current?.click()} title={tr("dashboard.import_a_template_from_a_hyc_file")}>
                   <FileUp size={15} /> {tr("dashboard.import_template")}
                 </Button>
+                <Button variant="secondary" size="sm" onClick={() => setPptxTemplateOpen(true)} title={tr("dashboard.build_a_template_from_a_powerpoint_file")}>
+                  <FileUp size={15} /> {tr("dashboard.template_from_powerpoint")}
+                </Button>
                 <input
                   ref={importTemplateRef}
                   type="file"
-                  accept={HYC_ACCEPT}
+                  accept={hycAccept}
                   hidden
                   onChange={(e) => {
                     void importHycTemplate(e.target.files);
@@ -993,13 +1294,44 @@ export function DashboardApp({ view }: { view: DashboardView }) {
                 myUserId={user?.id ?? ""}
                 onExit={() => { gotoView("home"); void refreshWorkspaces(); }}
               />
+              {/* F40: API keys live on the workspace administration surface,
+                  admin-gated like the mint endpoint itself. */}
+              {/* AI first: nearly every workspace connects a provider, while
+                  few mint developer keys. The two are opposite directions -
+                  this one is the key HyCanvas uses to call a model, the one
+                  below is how other systems call HyCanvas - and the headings
+                  say so, because "API keys" and "AI" read alike at a glance.
+                  Every member can SEE what is connected (they are the ones it
+                  generates for); only an admin can change it, matching the
+                  server's own viewer-to-read, admin-to-write split. */}
+              <WorkspaceAiPanel
+                workspaceId={activeWorkspaceId}
+                canEdit={activeWs?.role === "owner" || activeWs?.role === "admin"}
+              />
+              {activeWorkspaceId && (activeWs?.role === "owner" || activeWs?.role === "admin") && (
+                <ApiKeysPanel workspaceId={activeWorkspaceId} />
+              )}
             </section>
           )}
         </div>
       </main>
+      {/* F40 E13: the PPTX-to-template builder. onSaved re-fetches the shelf
+          by nudging the collection filter effect. */}
+      {pptxTemplateOpen && (
+        <TemplateFromPptxDialog
+          open={pptxTemplateOpen}
+          onClose={() => setPptxTemplateOpen(false)}
+          workspaceId={activeWorkspaceId}
+          onSaved={() => setTplRefresh((n) => n + 1)}
+        />
+      )}
 
       {/* Modals */}
 
+      {/* The imperative dialog host: mounted in the editor from the start but
+          never here, so a confirm raised from a dashboard panel had nothing to
+          render it and would have waited forever. */}
+      <PromptHost />
       <Modal open={sizeOpen} onClose={() => setSizeOpen(false)} title={tr("dashboard.create_a_design")} width="w-[34rem]">
         <div className="grid grid-cols-2 gap-2">
           {sizePresets().map((p) => {

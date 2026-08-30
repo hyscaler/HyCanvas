@@ -1,0 +1,77 @@
+{
+ "kind": "deck-outline",
+ "id": "deck-project-kickoff",
+ "title": "Project Kickoff",
+ "categories": [
+  "presentations",
+  "business"
+ ],
+ "tags": [
+  "kickoff",
+  "project",
+  "planning",
+  "team"
+ ],
+ "styleTags": [
+  "professional",
+  "clean"
+ ],
+ "themeId": "theme-teal",
+ "size": [
+  1920,
+  1080
+ ],
+ "rank": 34,
+ "created": "2026-08-28T00:00:00.000Z",
+ "outline": {
+  "title": "Project Kickoff",
+  "theme": "clear, aligned, energizing",
+  "pages": [
+   {
+    "title": "Why this project",
+    "points": [
+     "The outcome we are hired to deliver"
+    ],
+    "visualRole": "cover"
+   },
+   {
+    "title": "Goals and non-goals",
+    "points": [
+     "What done looks like",
+     "What we are explicitly not doing"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Scope and milestones",
+    "points": [
+     "Phase one: foundations",
+     "Phase two: the visible wins",
+     "Phase three: polish and launch"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Who does what",
+    "points": [
+     "Roles, owners, and decision rights"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Risks we already see",
+    "points": [
+     "Top three risks and their mitigations"
+    ],
+    "visualRole": "content"
+   },
+   {
+    "title": "Working agreements",
+    "points": [
+     "Rituals, channels, and response times"
+    ],
+    "visualRole": "closing"
+   }
+  ]
+ }
+}

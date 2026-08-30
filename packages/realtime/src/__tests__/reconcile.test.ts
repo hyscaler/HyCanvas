@@ -6,8 +6,8 @@
 
 import { describe, it, expect } from "vitest";
 import * as Y from "yjs";
-import { DESIGN_ROOT_KEY, type DesignFile } from "@hc/schema";
-import { reconcile, fromDoc, LOCAL_ORIGIN, seedDocFromFile, docToFile, canApplyUpdates, isEmptyDoc } from "../index";
+import { designRootKey, type DesignFile } from "@hc/schema";
+import { reconcile, fromDoc, localOrigin, seedDocFromFile, docToFile, canApplyUpdates, isEmptyDoc } from "../index";
 
 /**
  * A rich multi-page design exercising every structural shape the reconciler
@@ -163,7 +163,7 @@ describe("reconcile minimal ops", () => {
 
     // Observe which Y.Maps emit changes during the next reconcile.
     const changedMaps = new Set<unknown>();
-    const root = ydoc.getMap(DESIGN_ROOT_KEY);
+    const root = ydoc.getMap(designRootKey);
     root.observeDeep((events) => {
       for (const e of events) changedMaps.add(e.target);
     });
@@ -197,8 +197,8 @@ describe("reconcile concurrent merge (AC-2 / AC-3)", () => {
     // Capture each doc's local update stream after the common point.
     const aUpdates: Uint8Array[] = [];
     const bUpdates: Uint8Array[] = [];
-    A.on("update", (u: Uint8Array, origin: unknown) => { if (origin === LOCAL_ORIGIN) aUpdates.push(u); });
-    B.on("update", (u: Uint8Array, origin: unknown) => { if (origin === LOCAL_ORIGIN) bUpdates.push(u); });
+    A.on("update", (u: Uint8Array, origin: unknown) => { if (origin === localOrigin) aUpdates.push(u); });
+    B.on("update", (u: Uint8Array, origin: unknown) => { if (origin === localOrigin) bUpdates.push(u); });
 
     // A moves node-1; B recolors a text run on node-2 (different nodes). Each
     // edits an independent JS copy of the same content, then reconciles.
@@ -230,8 +230,8 @@ describe("reconcile concurrent merge (AC-2 / AC-3)", () => {
 
     const aUpdates: Uint8Array[] = [];
     const bUpdates: Uint8Array[] = [];
-    A.on("update", (u: Uint8Array, origin: unknown) => { if (origin === LOCAL_ORIGIN) aUpdates.push(u); });
-    B.on("update", (u: Uint8Array, origin: unknown) => { if (origin === LOCAL_ORIGIN) bUpdates.push(u); });
+    A.on("update", (u: Uint8Array, origin: unknown) => { if (origin === localOrigin) aUpdates.push(u); });
+    B.on("update", (u: Uint8Array, origin: unknown) => { if (origin === localOrigin) bUpdates.push(u); });
 
     // A changes node-1.transform.x; B changes node-1.transform.y (same map,
     // different keys) and node-1.opacity.
@@ -260,8 +260,8 @@ describe("reconcile concurrent merge (AC-2 / AC-3)", () => {
     const B = forkDoc(A);
     const aUpdates: Uint8Array[] = [];
     const bUpdates: Uint8Array[] = [];
-    A.on("update", (u: Uint8Array, origin: unknown) => { if (origin === LOCAL_ORIGIN) aUpdates.push(u); });
-    B.on("update", (u: Uint8Array, origin: unknown) => { if (origin === LOCAL_ORIGIN) bUpdates.push(u); });
+    A.on("update", (u: Uint8Array, origin: unknown) => { if (origin === localOrigin) aUpdates.push(u); });
+    B.on("update", (u: Uint8Array, origin: unknown) => { if (origin === localOrigin) bUpdates.push(u); });
 
     const fileA = richDesign();
     fileA.pages[0].children.push({ id: "new-A", type: "shape", transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 }, size: { width: 1, height: 1 }, opacity: 1 } as never);
@@ -314,8 +314,8 @@ describe("reorder", () => {
     const B = forkDoc(A);
     const aUpdates: Uint8Array[] = [];
     const bUpdates: Uint8Array[] = [];
-    A.on("update", (u: Uint8Array, origin: unknown) => { if (origin === LOCAL_ORIGIN) aUpdates.push(u); });
-    B.on("update", (u: Uint8Array, origin: unknown) => { if (origin === LOCAL_ORIGIN) bUpdates.push(u); });
+    A.on("update", (u: Uint8Array, origin: unknown) => { if (origin === localOrigin) aUpdates.push(u); });
+    B.on("update", (u: Uint8Array, origin: unknown) => { if (origin === localOrigin) bUpdates.push(u); });
 
     // A reorders so node-1 moves to the end: [group-1, node-4, node-1].
     const fileA = richDesign();
