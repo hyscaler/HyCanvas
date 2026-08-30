@@ -2965,6 +2965,7 @@
   "errors.api_image_provider_incapable": "该服务商无法生成图像。请选择可以生成的，例如 OpenAI 或 Together AI。",
   "errors.api_image_provider_key_required": "图像服务商需要它自己的 API 密钥。请填写后重新保存。",
   "errors.api_import_too_large": "此文件过大，无法导入。",
+  "errors.api_internal_error": "我们这边出了点问题，请稍后重试。",
   "errors.api_invalid_api_key": "此 API 密钥无效或已被吊销。",
   "errors.api_invalid_authentication_code": "该验证码无效。",
   "errors.api_invalid_body": "无法处理该请求，请重试。",

@@ -2965,6 +2965,7 @@
   "errors.api_image_provider_incapable": "वह प्रोवाइडर इमेज जनरेट नहीं कर सकता। ऐसा प्रोवाइडर चुनें जो कर सके, जैसे OpenAI या Together AI।",
   "errors.api_image_provider_key_required": "इमेज प्रोवाइडर के लिए उसकी अपनी API कुंजी चाहिए। इसे दर्ज करें और दोबारा सेव करें।",
   "errors.api_import_too_large": "यह फ़ाइल आयात के लिए बहुत बड़ी है।",
+  "errors.api_internal_error": "हमारी ओर से कुछ गलत हो गया। कृपया कुछ देर बाद पुनः प्रयास करें।",
   "errors.api_invalid_api_key": "यह API कुंजी अमान्य है या रद्द कर दी गई है।",
   "errors.api_invalid_authentication_code": "वह प्रमाणीकरण कोड मान्य नहीं है।",
   "errors.api_invalid_body": "यह अनुरोध संसाधित नहीं हो सका। कृपया पुनः प्रयास करें।",

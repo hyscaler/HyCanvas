@@ -2965,6 +2965,7 @@
   "errors.api_image_provider_incapable": "そのプロバイダーは画像を生成できません。OpenAI や Together AI など、生成できるものを選んでください。",
   "errors.api_image_provider_key_required": "画像プロバイダーには専用の API キーが必要です。入力してもう一度保存してください。",
   "errors.api_import_too_large": "このファイルは大きすぎてインポートできません。",
+  "errors.api_internal_error": "サーバー側で問題が発生しました。しばらくしてからもう一度お試しください。",
   "errors.api_invalid_api_key": "このAPIキーは無効か失効しています。",
   "errors.api_invalid_authentication_code": "その認証コードは無効です。",
   "errors.api_invalid_body": "このリクエストを処理できませんでした。もう一度お試しください。",
