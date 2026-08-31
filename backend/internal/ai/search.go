@@ -233,7 +233,12 @@ func cleanResults(in []SearchResult, max int) []SearchResult {
 	if max > maxSearchResults {
 		max = maxSearchResults
 	}
-	out := make([]SearchResult, 0, max)
+	// Capacity is the CONSTANT bound rather than `max`. The clamps above already
+	// hold max in [0, maxSearchResults], so this reserves the same order of
+	// memory, but it keeps a request-derived value out of make() altogether:
+	// the allocation is bounded by construction, not by reasoning about the
+	// guards above it. `max` still caps the result count, in the loop below.
+	out := make([]SearchResult, 0, maxSearchResults)
 	for _, r := range in {
 		// Checked BEFORE appending. The check used to sit after, so a cap of
 		// zero still yielded one result: the break only fired once the list had
