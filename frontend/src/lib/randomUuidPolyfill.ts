@@ -19,12 +19,12 @@ function uuidV4FromRandomValues(getRandomValues: (a: Uint8Array) => Uint8Array):
   const b = getRandomValues(new Uint8Array(16));
   b[6] = (b[6] & 0x0f) | 0x40; // version 4
   b[8] = (b[8] & 0x3f) | 0x80; // variant 10xx
-  const hex: string[] = [];
-  for (let i = 0; i < 256; i++) hex.push((i + 0x100).toString(16).slice(1));
-  const s = (i: number) => hex[b[i]];
+  // Format each byte directly. Every byte keeps its own value, so no arithmetic
+  // touches the random data and the distribution is exactly what the CSPRNG gave.
+  const h = (i: number) => b[i].toString(16).padStart(2, "0");
   return (
-    s(0) + s(1) + s(2) + s(3) + "-" + s(4) + s(5) + "-" + s(6) + s(7) + "-" +
-    s(8) + s(9) + "-" + s(10) + s(11) + s(12) + s(13) + s(14) + s(15)
+    h(0) + h(1) + h(2) + h(3) + "-" + h(4) + h(5) + "-" + h(6) + h(7) + "-" +
+    h(8) + h(9) + "-" + h(10) + h(11) + h(12) + h(13) + h(14) + h(15)
   );
 }
 
