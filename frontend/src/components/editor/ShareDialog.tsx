@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Copy, Link2, RotateCw, Trash2, Ban, Check, Code, Eye, EyeOff, Lock, Crown, X, UserCheck, ChevronRight, Plus } from "lucide-react";
 import { ApiError } from "@hc/sdk";
 import type { AccessMode, AccessRequestView, DesignSharingView, ShareGrant, ShareLinkView } from "@hc/sdk";
+import { copyText } from "@/lib/clipboard";
 import { oc } from "@/lib/sdk";
 import { useEditor } from "@/store/editor";
 import { Modal } from "@/components/ui/Modal";
@@ -100,34 +101,6 @@ function errMessage(e: unknown, fallback: string): string {
     if (body?.title) return body.title;
   }
   return fallback;
-}
-
-/** Copy text to the clipboard, falling back to a hidden textarea + execCommand
- *  for insecure-context self-hosts where navigator.clipboard is unavailable.
- *  Returns whether the copy succeeded. */
-async function copyText(text: string): Promise<boolean> {
-  try {
-    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch {
-    // fall through to the legacy path
-  }
-  try {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.focus();
-    ta.select();
-    const ok = document.execCommand("copy");
-    document.body.removeChild(ta);
-    return ok;
-  } catch {
-    return false;
-  }
 }
 
 /** ISO timestamp -> the value a <input type="datetime-local"> expects (local). */
