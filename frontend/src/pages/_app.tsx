@@ -1,4 +1,5 @@
 import "@/styles/globals.css";
+import { installRandomUuidPolyfill } from "@/lib/randomUuidPolyfill";
 import { useEffect } from "react";
 import type { AppProps } from "next/app";
 import { Plus_Jakarta_Sans } from "next/font/google";
@@ -7,6 +8,11 @@ import { watchSystemTheme } from "@/lib/theme";
 import { applyLocale, getLocalePreference, setLocalePreference } from "@/lib/locale";
 import { initI18n, loadCatalog, useI18nVersion } from "@/lib/i18n";
 import { useAuth } from "@/store/auth";
+
+// Runs at import, before any handler can mint an id: an instance served over
+// plain HTTP at a LAN address gets no crypto.randomUUID from the browser, and
+// without this every "create design" style action throws.
+installRandomUuidPolyfill();
 
 // Friendly geometric brand sans, exposed as --font-brand for the design tokens.
 const brand = Plus_Jakarta_Sans({
