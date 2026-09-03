@@ -95,6 +95,7 @@ import { getRealtimeClient } from "@/lib/useRealtime";
 import { Canvas } from "./Canvas";
 import { ZoomControl } from "./ZoomControl";
 import { tr } from "@/lib/i18n";
+import { copyText } from "@/lib/clipboard";
 
 // Ephemeral reaction palette: a fixed set of one-shot pings.
 const REACTION_EMOJIS = ["👍", "❤️", "😂", "🎉", "👀", "✅"] as const;
@@ -537,9 +538,13 @@ export function WhiteboardSurface(props: {
       toast.toast(tr("editor.nothing_diagram_shaped_here_yet_add_stickies"), "info");
       return;
     }
-    void navigator.clipboard.writeText(diagramToMermaid(spec)).then(
-      () => toast.success(`Copied ${spec.nodes.length} nodes / ${spec.edges.length} edges as Mermaid.`),
-      () => toast.error(tr("editor.clipboard_unavailable")),
+    // Via copyText: on an insecure origin navigator.clipboard is undefined, so
+    // reading .writeText off it throws before any promise exists and the
+    // rejection handler below would never run.
+    void copyText(diagramToMermaid(spec)).then((ok) =>
+      ok
+        ? toast.success(`Copied ${spec.nodes.length} nodes / ${spec.edges.length} edges as Mermaid.`)
+        : toast.error(tr("editor.clipboard_unavailable")),
     );
   }, [toast]);
 

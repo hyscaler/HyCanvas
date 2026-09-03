@@ -35,6 +35,7 @@ import { imageAssets } from "@/lib/assetProvider";
 import { oc } from "@/lib/sdk";
 import { useToast } from "@/components/ui/Toast";
 import { tr } from "@/lib/i18n";
+import { copyText } from "@/lib/clipboard";
 
 type Format = "png" | "jpg" | "pdf" | "svg" | "apng" | "gif" | "lottie" | "mp4" | "pptx" | "md";
 
@@ -835,7 +836,14 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
             <div className="mb-1 flex items-center justify-between">
               <span className="font-semibold">{tr("editor.credits")}</span>
               <button
-                onClick={() => { void navigator.clipboard.writeText(attributionText(credits)); toast.success(tr("editor.credits_copied")); }}
+                onClick={() => {
+                  // Awaited via copyText so the toast reports what actually
+                  // happened: the old call announced success without waiting,
+                  // and threw outright on an insecure origin.
+                  void copyText(attributionText(credits)).then((ok) =>
+                    ok ? toast.success(tr("editor.credits_copied")) : toast.error(tr("editor.clipboard_unavailable")),
+                  );
+                }}
                 className="text-[11px] font-medium text-brand-ink hover:underline"
               >
                 {tr("editor.copy")}
