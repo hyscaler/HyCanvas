@@ -30,6 +30,7 @@ const (
 	ProviderDeepSeek    Provider = "deepseek"
 	ProviderZhipu       Provider = "zhipu"
 	ProviderAzureOpenAI Provider = "azure-openai"
+	ProviderOpenRouter  Provider = "openrouter"
 	ProviderCustom      Provider = "custom"
 )
 
@@ -282,7 +283,11 @@ func parseTextResponse(provider Provider, raw []byte) string {
 
 func buildImageRequest(cfg CallConfig, prompt, size string) httpRequest {
 	model := orDefault(cfg.ImageModel, "gpt-image-1")
-	u, headers := openAICompatEndpoint(cfg, model, "images/generations")
+	op := "images/generations"
+	if cfg.Provider == ProviderOpenRouter {
+		op = "images"
+	}
+	u, headers := openAICompatEndpoint(cfg, model, op)
 	return httpRequest{
 		url:     u,
 		headers: headers,
@@ -390,7 +395,7 @@ func isNegotiable4xx(err error) bool {
 // this is a privilege boundary and not merely a footgun.
 func newHTTPClient(allowLocalHTTP bool) *http.Client {
 	return &http.Client{
-		Timeout: 60 * time.Second,
+		Timeout: 120 * time.Second,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 5 {
 				return errors.New("too many redirects")
