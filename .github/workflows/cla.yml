@@ -22,7 +22,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: CLA Assistant
-        if: (github.event.comment.body == 'recheck' || github.event.comment.body == 'I have read the CLA Document and I hereby sign the CLA') || github.event_name == 'pull_request_target'
+        # Run whenever a comment MENTIONS the signature, not only when it equals
+        # the phrase exactly. Contributors routinely use GitHub's "Quote reply",
+        # which prefixes the quoted instruction, and an exact-equality gate
+        # skipped this step silently: the run went green, the check stayed red,
+        # and nobody was told why (see #19). Letting the step run means the
+        # assistant re-scans the thread and answers, either recording the
+        # signature or re-posting the instructions.
+        # Bot comments are excluded because the instruction comment quotes the
+        # phrase verbatim and would otherwise re-trigger this job.
+        if: >-
+          github.event_name == 'pull_request_target' ||
+          (github.event.comment.user.type != 'Bot' &&
+            (github.event.comment.body == 'recheck' ||
+             contains(github.event.comment.body, 'I have read the CLA Document and I hereby sign the CLA')))
         uses: contributor-assistant/github-action@v2.6.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -39,5 +52,10 @@ jobs:
             Thank you for the contribution. Before we can merge, we need you to
             sign the [HyCanvas Contributor License Agreement](https://github.com/hyscaler/HyCanvas/blob/development/CLA.md).
             Please read it and post the comment below on this pull request.
-          custom-pr-sign-comment: "I have read the CLA Document and I hereby sign the CLA"
+          # custom-pr-sign-comment is deliberately NOT set. Supplying it makes the
+          # assistant compare the whole comment for exact equality, so a trailing
+          # period or a "thanks!" on the same line silently fails to sign. Left
+          # unset, it falls back to its built-in pattern for this same sentence
+          # (use-dco-flag defaults to "false", which selects the CLA wording), and
+          # the instruction comment still shows the identical phrase.
           custom-allsigned-prcomment: "All contributors have signed the CLA."
