@@ -356,3 +356,76 @@ func TestDescribeImageNamesTheRealReason_DB(t *testing.T) {
 		t.Fatal("the vision rejection must not collapse back into ErrBadRequest")
 	}
 }
+
+// OpenRouter serves its model catalog publicly: /models answers 200 for a
+// missing key and an invalid one alike. Probing it there would report every
+// typo'd key as verified and send the admin off to debug a generation instead.
+// The probe uses OpenRouter's authenticated /key route, so a bad key is still
+// reported as a rejected credential.
+func TestVerifyImageConfigProbesAnAuthenticatedRouteOnOpenRouter_DB(t *testing.T) {
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		t.Skip("DATABASE_URL not set; skipping DB integration test")
+	}
+	ctx := context.Background()
+	conn, err := pgx.Connect(ctx, stripSchema(dsn))
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	defer conn.Close(ctx)
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin: %v", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	acct := accounts.NewService(tx, "test-jwt-secret")
+	_, ws, _, err := acct.Signup(ctx, "ai-or+"+uuid.NewString()+"@example.com", "a-strong-password", "Owner")
+	if err != nil {
+		t.Fatalf("signup: %v", err)
+	}
+
+	// A stub shaped like OpenRouter: /models is public, /key authenticates.
+	var probed []string
+	keyStatus := http.StatusUnauthorized
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		probed = append(probed, r.URL.Path)
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/models"):
+			_ = json.NewEncoder(w).Encode(map[string]any{"data": []any{}}) // 200 regardless of the key
+		case strings.HasSuffix(r.URL.Path, "/key"):
+			if keyStatus != http.StatusOK {
+				w.WriteHeader(keyStatus)
+				return
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"label": "test"}})
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	svc := NewService(tx, "test-ai-secret", true)
+	if _, err := svc.SetImageConfig(ctx, ws.ID, ImageConfigInput{
+		Provider: "openrouter", BaseURL: strp(srv.URL), APIKey: "sk-or-bogus",
+	}); err != nil {
+		t.Fatalf("SetImageConfig: %v", err)
+	}
+
+	// A bad key must be reported as rejected, not verified off the public list.
+	if _, err := svc.VerifyImageConfig(ctx, ws.ID); !errors.Is(err, ErrBadGateway) {
+		t.Fatalf("a rejected OpenRouter key should be ErrBadGateway, got %v", err)
+	}
+	for _, p := range probed {
+		if strings.HasSuffix(p, "/models") {
+			t.Fatal("probed the public /models list, which cannot detect a bad key on OpenRouter")
+		}
+	}
+
+	// A good key verifies.
+	keyStatus = http.StatusOK
+	check, err := svc.VerifyImageConfig(ctx, ws.ID)
+	if err != nil || !check.Verified {
+		t.Fatalf("expected verified, got %+v err=%v", check, err)
+	}
+}
