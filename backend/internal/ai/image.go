@@ -237,7 +237,7 @@ func (s *Service) VerifyImageConfig(ctx context.Context, workspaceID string) (Im
 		return ImageCheck{}, ErrBadRequest
 	}
 	req.Header.Set("authorization", "Bearer "+cfg.APIKey)
-	if _, err := s.do(req); err != nil {
+	if _, err := s.do(req, providerTimeout); err != nil {
 		var se *httpStatusError
 		if errors.As(err, &se) && (se.status == http.StatusUnauthorized || se.status == http.StatusForbidden) {
 			return ImageCheck{}, badGateway(cfg, err) // definitive: the key was rejected

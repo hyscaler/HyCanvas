@@ -1,6 +1,9 @@
 package ai
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestPresetRegistry(t *testing.T) {
 	if PresetFor("openai") == nil || PresetFor("anthropic") == nil {
@@ -175,5 +178,114 @@ func TestMoonshotPreset(t *testing.T) {
 	}
 	if r := ResolveRoute("moonshot", "", "", FeatureImage); r.Supported {
 		t.Fatal("image route must be unsupported for moonshot")
+	}
+}
+
+// OpenRouter serves image generation on its unified /images route rather than
+// the /images/generations path every other OpenAI-compatible preset uses, so
+// the preset is not a capability flag flip: the transport has to branch. These
+// assertions pin the branch, the models the preset advertises, and the fact
+// that turning it on did not move any other provider's endpoint.
+func TestOpenRouterPreset(t *testing.T) {
+	p := PresetFor("openrouter")
+	if p == nil {
+		t.Fatal("openrouter preset must exist")
+	}
+	if p.BaseURL != "https://openrouter.ai/api/v1" || p.DefaultModel != "openai/gpt-4o-mini" {
+		t.Fatalf("openrouter text defaults wrong: %+v", p)
+	}
+	// The shipped default is the model that was exercised against OpenRouter.
+	// openai/dall-e-3 is absent from OpenRouter's catalog, so defaulting to it
+	// would fail every user's first generation.
+	if p.DefaultImageModel != "qwen/qwen-image-3-pro" {
+		t.Fatalf("openrouter image default wrong: %q", p.DefaultImageModel)
+	}
+	if !p.Capabilities.Text || !p.Capabilities.Image {
+		t.Fatalf("openrouter should support text and image: %+v", p.Capabilities)
+	}
+	// Neither is verified against the API, and ResolveRoute gates on the flag
+	// alone, so advertising either would turn a clean rejection into a
+	// confusing provider error.
+	if p.Capabilities.EditImage || p.Capabilities.DescribeImage {
+		t.Fatalf("openrouter must not advertise unverified capabilities: %+v", p.Capabilities)
+	}
+
+	// The image feature routes to the image model, not the text one.
+	if r := ResolveRoute("openrouter", "", "", FeatureImage); !r.Supported || r.Model != "qwen/qwen-image-3-pro" {
+		t.Fatalf("openrouter image route: %+v", r)
+	}
+	if r := ResolveRoute("openrouter", "", "", FeatureText); !r.Supported || r.Model != "openai/gpt-4o-mini" {
+		t.Fatalf("openrouter text route: %+v", r)
+	}
+	if ResolveRoute("openrouter", "", "", FeatureEditImage).Supported {
+		t.Fatal("openrouter edit must stay unsupported")
+	}
+
+	cfg := CallConfig{Provider: ProviderOpenRouter, APIKey: "k", BaseURL: p.BaseURL, Model: p.DefaultModel, ImageModel: p.DefaultImageModel}
+
+	// Image generation goes to /images. /images/generations does not exist on
+	// OpenRouter, so this is the whole reason the preset needed a code change.
+	ireq := buildImageRequest(cfg, "a red panda", "1024x1024")
+	if ireq.url != "https://openrouter.ai/api/v1/images" {
+		t.Fatalf("openrouter image url wrong: %q", ireq.url)
+	}
+	if ireq.headers["authorization"] != "Bearer k" {
+		t.Fatalf("openrouter image auth wrong: %v", ireq.headers["authorization"])
+	}
+	body, _ := ireq.body.(map[string]any)
+	if m, _ := body["model"].(string); m != "qwen/qwen-image-3-pro" {
+		t.Fatalf("openrouter image model wrong: %v", body["model"])
+	}
+	if body["prompt"] != "a red panda" {
+		t.Fatalf("openrouter prompt not carried: %v", body["prompt"])
+	}
+
+	// Text is unchanged: the ordinary OpenAI-compatible chat route.
+	treq := buildTextRequest(cfg, "hi", "")
+	if treq.url != "https://openrouter.ai/api/v1/chat/completions" {
+		t.Fatalf("openrouter text url wrong: %q", treq.url)
+	}
+
+	// The branch is scoped to OpenRouter: every other OpenAI-compatible preset
+	// keeps the /images/generations path.
+	for _, id := range []string{"openai", "zhipu", "together", "custom"} {
+		q := PresetFor(id)
+		if q == nil || !q.Capabilities.Image {
+			continue
+		}
+		r := buildImageRequest(CallConfig{Provider: Provider(id), APIKey: "k", BaseURL: q.BaseURL, ImageModel: q.DefaultImageModel}, "x", "")
+		if !strings.HasSuffix(r.url, "/images/generations") {
+			t.Fatalf("%s image url moved: %q", id, r.url)
+		}
+	}
+}
+
+// The longer image deadline must not leak onto text and vision calls: those are
+// the ones a user is waiting on interactively.
+func TestImageDeadlineIsScopedToImageRequests(t *testing.T) {
+	if imageTimeout <= providerTimeout {
+		t.Fatalf("image timeout (%s) should exceed the default (%s)", imageTimeout, providerTimeout)
+	}
+	cfg := CallConfig{Provider: ProviderOpenRouter, APIKey: "k", BaseURL: "https://openrouter.ai/api/v1"}
+	if got := buildImageRequest(cfg, "a cat", "").timeout; got != imageTimeout {
+		t.Fatalf("image request timeout = %s, want %s", got, imageTimeout)
+	}
+	// Zero means the default deadline, applied in do().
+	if got := buildTextRequest(cfg, "hi", "").timeout; got != 0 {
+		t.Fatalf("text request should not carry the image deadline, got %s", got)
+	}
+	if got := buildDescribeImageRequest(cfg, DescribeImageInput{ImageBase64: "QUJD"}).timeout; got != 0 {
+		t.Fatalf("vision request should not carry the image deadline, got %s", got)
+	}
+}
+
+// OpenRouter reports the encoding per image and its models do not all emit PNG.
+func TestImageResponseHonoursMediaType(t *testing.T) {
+	if got := parseImageResponse([]byte(`{"data":[{"b64_json":"QUJD","media_type":"image/webp"}]}`)); got != "data:image/webp;base64,QUJD" {
+		t.Fatalf("media_type ignored: %q", got)
+	}
+	// Providers that omit it keep the historical PNG assumption.
+	if got := parseImageResponse([]byte(`{"data":[{"b64_json":"QUJD"}]}`)); got != "data:image/png;base64,QUJD" {
+		t.Fatalf("png default lost: %q", got)
 	}
 }

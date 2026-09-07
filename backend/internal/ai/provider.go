@@ -7,6 +7,7 @@ package ai
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -29,6 +30,7 @@ const (
 	ProviderAnthropic   Provider = "anthropic"
 	ProviderDeepSeek    Provider = "deepseek"
 	ProviderZhipu       Provider = "zhipu"
+	ProviderOpenRouter  Provider = "openrouter"
 	ProviderAzureOpenAI Provider = "azure-openai"
 	ProviderCustom      Provider = "custom"
 )
@@ -69,11 +71,13 @@ type CallConfig struct {
 
 const maxResponseBytes = 25 * 1024 * 1024 // cap inline image/base64 responses
 
-// httpRequest is a built JSON request.
+// httpRequest is a built JSON request. timeout is the per-operation deadline;
+// zero means providerTimeout.
 type httpRequest struct {
 	url     string
 	headers map[string]string
 	body    any
+	timeout time.Duration
 }
 
 func orDefault(v, def string) string {
@@ -280,13 +284,28 @@ func parseTextResponse(provider Provider, raw []byte) string {
 	return ""
 }
 
+// imageGenerationOp is the path segment for text-to-image on this provider.
+//
+// OpenRouter is the odd one out: its unified image API is served at /images,
+// and it has no /images/generations route at all, so the OpenAI-shaped path
+// every other preset uses 404s there. The body is the same shape either way
+// (model + prompt, with "size" accepted as a shorthand for the resolution), so
+// only the path needs to branch.
+func imageGenerationOp(cfg CallConfig) string {
+	if cfg.Provider == ProviderOpenRouter {
+		return "images"
+	}
+	return "images/generations"
+}
+
 func buildImageRequest(cfg CallConfig, prompt, size string) httpRequest {
 	model := orDefault(cfg.ImageModel, "gpt-image-1")
-	u, headers := openAICompatEndpoint(cfg, model, "images/generations")
+	u, headers := openAICompatEndpoint(cfg, model, imageGenerationOp(cfg))
 	return httpRequest{
 		url:     u,
 		headers: headers,
 		body:    map[string]any{"model": model, "prompt": prompt, "size": orDefault(size, "1024x1024"), "n": 1},
+		timeout: imageTimeout,
 	}
 }
 
@@ -301,8 +320,9 @@ type EditImageInput struct {
 func parseImageResponse(raw []byte) string {
 	var j struct {
 		Data []struct {
-			B64JSON string `json:"b64_json"`
-			URL     string `json:"url"`
+			B64JSON   string `json:"b64_json"`
+			URL       string `json:"url"`
+			MediaType string `json:"media_type"`
 		} `json:"data"`
 	}
 	_ = json.Unmarshal(raw, &j)
@@ -310,7 +330,12 @@ func parseImageResponse(raw []byte) string {
 		return ""
 	}
 	if j.Data[0].B64JSON != "" {
-		return "data:image/png;base64," + j.Data[0].B64JSON
+		// OpenRouter reports the encoding per image and its models do not all
+		// emit PNG (webp and image/svg+xml both occur). Labelling a webp as
+		// image/png yields a data URL the browser will not decode, so the
+		// declared type wins when the provider sends one. Providers that omit
+		// it keep the historical PNG assumption.
+		return "data:" + orDefault(j.Data[0].MediaType, "image/png") + ";base64," + j.Data[0].B64JSON
 	}
 	return j.Data[0].URL
 }
@@ -377,6 +402,19 @@ func isNegotiable4xx(err error) bool {
 	return se.status >= 400 && se.status < 500
 }
 
+// Outbound deadlines are per operation, not per client.
+//
+// Image generation is genuinely slower than a chat completion: a diffusion
+// model is doing real work, and a large model can sit well past a minute before
+// the first byte. Raising the shared client ceiling to cover that would apply
+// the same tolerance to text and vision calls, doubling the worst case a user
+// waits on a request that should have failed fast. So the client carries only a
+// backstop and each request states its own deadline.
+const (
+	providerTimeout = 60 * time.Second
+	imageTimeout    = 180 * time.Second
+)
+
 // newHTTPClient builds the outbound client for every provider call.
 //
 // CheckRedirect re-applies the SSRF gate to each hop. isSafeBaseURL judges the
@@ -390,7 +428,9 @@ func isNegotiable4xx(err error) bool {
 // this is a privilege boundary and not merely a footgun.
 func newHTTPClient(allowLocalHTTP bool) *http.Client {
 	return &http.Client{
-		Timeout: 60 * time.Second,
+		// A backstop only: the real deadline travels with each request's
+		// context, so a caller that omits one still cannot hang forever.
+		Timeout: imageTimeout,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 5 {
 				return errors.New("too many redirects")
@@ -412,11 +452,18 @@ func (s *Service) postJSON(req httpRequest) ([]byte, error) {
 	for k, v := range req.headers {
 		httpReq.Header.Set(k, v)
 	}
-	return s.do(httpReq)
+	return s.do(httpReq, req.timeout)
 }
 
-func (s *Service) do(httpReq *http.Request) ([]byte, error) {
-	res, err := s.client.Do(httpReq)
+// do sends the request under a per-operation deadline. A zero timeout means the
+// default; callers that need longer (image generation) say so explicitly.
+func (s *Service) do(httpReq *http.Request, timeout time.Duration) ([]byte, error) {
+	if timeout <= 0 {
+		timeout = providerTimeout
+	}
+	ctx, cancel := context.WithTimeout(httpReq.Context(), timeout)
+	defer cancel()
+	res, err := s.client.Do(httpReq.WithContext(ctx))
 	if err != nil {
 		return nil, errProviderFailed
 	}
@@ -533,7 +580,7 @@ func (s *Service) editImageCall(cfg CallConfig, in EditImageInput) (string, erro
 		httpReq.Header.Set(k, v)
 	}
 	httpReq.Header.Set("content-type", mw.FormDataContentType()) // multipart, not JSON
-	raw, err := s.do(httpReq)
+	raw, err := s.do(httpReq, imageTimeout)
 	if err != nil {
 		return "", err
 	}
