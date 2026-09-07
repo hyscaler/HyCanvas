@@ -5106,7 +5106,7 @@ const FALLBACK_PRESETS: AiProviderPreset[] = [
   { id: "mistral", label: "Mistral", baseUrl: "", defaultModel: "mistral-large-latest", capabilities: { text: true, image: false, describeImage: false, editImage: false } },
   { id: "groq", label: "Groq", baseUrl: "", defaultModel: "llama-3.3-70b-versatile", capabilities: { text: true, image: false, describeImage: false, editImage: false } },
   { id: "together", label: "Together AI", baseUrl: "", defaultModel: "meta-llama/Llama-3.3-70B-Instruct-Turbo", defaultImageModel: "black-forest-labs/FLUX.1-schnell", capabilities: { text: true, image: true, describeImage: false, editImage: false } },
-  { id: "openrouter", label: "OpenRouter", baseUrl: "", defaultModel: "openai/gpt-4o-mini", capabilities: { text: true, image: false, describeImage: false, editImage: false } },
+  { id: "openrouter", label: "OpenRouter", baseUrl: "", defaultModel: "openai/gpt-4o-mini", defaultImageModel: "qwen/qwen-image-3-pro", capabilities: { text: true, image: true, describeImage: false, editImage: false } },
   { id: "azure-openai", label: "Azure OpenAI", baseUrl: "", defaultModel: "gpt-4o-mini", defaultImageModel: "dall-e-3", capabilities: { text: true, image: true, describeImage: true, editImage: false }, needsBaseUrl: true },
   { id: "custom", label: "Custom (OpenAI-compatible)", baseUrl: "", defaultModel: "", capabilities: { text: true, image: true, describeImage: true, editImage: true }, needsBaseUrl: true },
 ];
