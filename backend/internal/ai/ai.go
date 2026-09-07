@@ -385,7 +385,7 @@ func (s *Service) TextStructured(ctx context.Context, workspaceID, prompt, syste
 // assertImageCapable rejects image ops on Anthropic (no image endpoint), so an
 // Anthropic key is never POSTed to api.openai.com.
 // assertImageCapable rejects image generation on a provider the registry marks
-// as text-only (anthropic, google, mistral, groq, openrouter), not just one.
+// as text-only (anthropic, google, mistral, groq), not just one.
 func assertImageCapable(cfg CallConfig) error {
 	if !ResolveRoute(string(cfg.Provider), cfg.Model, cfg.ImageModel, FeatureImage).Supported {
 		return ErrImageUnsupported

@@ -52,7 +52,24 @@ var PRESETS = []ProviderPreset{
 	{ID: "mistral", Label: "Mistral", BaseURL: "https://api.mistral.ai/v1", DefaultModel: "mistral-large-latest", Capabilities: Capabilities{Text: true}},
 	{ID: "groq", Label: "Groq", BaseURL: "https://api.groq.com/openai/v1", DefaultModel: "llama-3.3-70b-versatile", Capabilities: Capabilities{Text: true}},
 	{ID: "together", Label: "Together AI", BaseURL: "https://api.together.xyz/v1", DefaultModel: "meta-llama/Llama-3.3-70B-Instruct-Turbo", DefaultImageModel: "black-forest-labs/FLUX.1-schnell", Capabilities: Capabilities{Text: true, Image: true}},
-	{ID: "openrouter", Label: "OpenRouter", BaseURL: "https://openrouter.ai/api/v1", DefaultModel: "openai/gpt-4o-mini", Capabilities: Capabilities{Text: true}},
+	// OpenRouter proxies many upstream vendors behind one key. Text rides the
+	// OpenAI-compatible chat/completions shape; image generation goes to its
+	// unified /images route (see imageGenerationOp), which is NOT the
+	// /images/generations path the other OpenAI-compatible presets use.
+	//
+	// The default image model is the one that has actually produced an image
+	// here. It matters more than usual on this provider: OpenRouter serves a
+	// curated catalog rather than every model name in circulation, so a
+	// plausible-looking default that it does not carry (openai/dall-e-3, for
+	// instance, which OpenRouter does not list) fails on a user's very first
+	// generation with a provider error and looks like our bug.
+	//
+	// EditImage stays off: there is no /images/edits route; image-to-image is
+	// expressed as input_references on /images, which is a different request
+	// shape than the multipart one editImageCall builds. DescribeImage is off
+	// pending a verified vision call, since ResolveRoute gates on the flag
+	// alone and a wrong flag turns a clean 400 into a confusing provider error.
+	{ID: "openrouter", Label: "OpenRouter", BaseURL: "https://openrouter.ai/api/v1", DefaultModel: "openai/gpt-4o-mini", DefaultImageModel: "qwen/qwen-image-3-pro", Capabilities: Capabilities{Text: true, Image: true}},
 	// EditImage is off: images/edits does not exist at the GA api-version the
 	// transport pins (2024-06-01), and the default dall-e-3 deployment cannot
 	// edit; advertising it would fail every call.

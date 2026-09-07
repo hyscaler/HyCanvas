@@ -296,7 +296,7 @@ func (s *Service) searchSearx(base, query string, max int) ([]SearchResult, erro
 	if err != nil {
 		return nil, ErrBadGateway
 	}
-	raw, err := s.do(req)
+	raw, err := s.do(req, providerTimeout)
 	if err != nil {
 		return nil, ErrBadGateway
 	}

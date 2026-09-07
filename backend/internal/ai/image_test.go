@@ -272,7 +272,7 @@ func TestRedirectsAreGatedToo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("request: %v", err)
 	}
-	if _, err := svc.do(req); err == nil {
+	if _, err := svc.do(req, providerTimeout); err == nil {
 		t.Fatal("a redirect to a gate-failing host must not be followed")
 	}
 	if !redirected {
