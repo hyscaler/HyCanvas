@@ -289,3 +289,20 @@ func TestImageResponseHonoursMediaType(t *testing.T) {
 		t.Fatalf("png default lost: %q", got)
 	}
 }
+
+// VerifyImageConfig proves a key by GETting the provider's model list and
+// reading a 401 as "the key was rejected". That reasoning holds only where the
+// listing is authenticated. OpenRouter serves its catalog publicly (200 for no
+// key and for a bad one alike), so probing /models there would call every
+// typo'd key verified. It probes the authenticated /key route instead.
+func TestCredentialProbeIsAuthenticatedPerProvider(t *testing.T) {
+	if got := credentialProbeOp(CallConfig{Provider: ProviderOpenRouter}); got != "key" {
+		t.Fatalf("openrouter probe = %q, want \"key\": /models is public there, so it cannot detect a bad key", got)
+	}
+	// Everyone else keeps the OpenAI-compatible listing, which does authenticate.
+	for _, p := range []Provider{ProviderOpenAI, ProviderZhipu, ProviderDeepSeek, ProviderCustom, ProviderAzureOpenAI} {
+		if got := credentialProbeOp(CallConfig{Provider: p}); got != "models" {
+			t.Fatalf("%s probe = %q, want \"models\"", p, got)
+		}
+	}
+}

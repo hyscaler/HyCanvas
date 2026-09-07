@@ -232,7 +232,7 @@ func (s *Service) VerifyImageConfig(ctx context.Context, workspaceID string) (Im
 	if cfg.Provider == ProviderAzureOpenAI {
 		return ImageCheck{}, nil
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, orDefault(cfg.BaseURL, "https://api.openai.com/v1")+"/models", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, orDefault(cfg.BaseURL, "https://api.openai.com/v1")+"/"+credentialProbeOp(cfg), nil)
 	if err != nil {
 		return ImageCheck{}, ErrBadRequest
 	}
