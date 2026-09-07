@@ -298,6 +298,23 @@ func imageGenerationOp(cfg CallConfig) string {
 	return "images/generations"
 }
 
+// credentialProbeOp is the cheapest authenticated GET that proves a key and a
+// base URL are good without generating anything (see VerifyImageConfig).
+//
+// "models" is the OpenAI-compatible convention and is authenticated on every
+// other preset, so a bad key comes back 401 and the probe can say so. OpenRouter
+// is the exception: it serves its model catalog PUBLICLY, answering 200 for a
+// missing key and an invalid one alike, so probing /models there would report
+// any typo as verified and send the user off to debug a generation instead. Its
+// /key route does authenticate (401 without a valid credential), so that is
+// what OpenRouter probes.
+func credentialProbeOp(cfg CallConfig) string {
+	if cfg.Provider == ProviderOpenRouter {
+		return "key"
+	}
+	return "models"
+}
+
 func buildImageRequest(cfg CallConfig, prompt, size string) httpRequest {
 	model := orDefault(cfg.ImageModel, "gpt-image-1")
 	u, headers := openAICompatEndpoint(cfg, model, imageGenerationOp(cfg))
