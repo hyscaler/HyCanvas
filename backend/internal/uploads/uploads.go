@@ -145,8 +145,12 @@ type FolderView struct {
 // UsageView is the workspace storage usage + cap, plus the caller's global
 // account usage (userQuotaBytes 0 = unlimited).
 type UsageView struct {
-	UsedBytes      int64 `json:"usedBytes"`
-	QuotaBytes     int64 `json:"quotaBytes"`
+	UsedBytes  int64 `json:"usedBytes"`
+	QuotaBytes int64 `json:"quotaBytes"`
+	// MaxUploadBytes is the per-FILE ceiling (quota caps the total). Served so
+	// the client can refuse an oversized file up front and name the limit,
+	// instead of the user discovering it from a failed upload.
+	MaxUploadBytes int64 `json:"maxUploadBytes"`
 	UserUsedBytes  int64 `json:"userUsedBytes"`
 	UserQuotaBytes int64 `json:"userQuotaBytes"`
 }
@@ -474,7 +478,7 @@ func (s *Service) UsageView(ctx context.Context, userID, workspaceID string) (Us
 		return UsageView{}, err
 	}
 	return UsageView{
-		UsedBytes: used, QuotaBytes: quotaBytes(),
+		UsedBytes: used, QuotaBytes: quotaBytes(), MaxUploadBytes: maxDirectUploadBytes,
 		UserUsedBytes: userUsed, UserQuotaBytes: userQuotaBytes(),
 	}, nil
 }

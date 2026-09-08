@@ -859,6 +859,10 @@ export interface StorageUsageView {
   userUsedBytes: number;
   /** Global per-user cap; 0 = unlimited. */
   userQuotaBytes: number;
+  /** Largest a SINGLE file may be, in bytes (quota caps the total instead).
+   *  Served by the API so the client can refuse an oversized file up front and
+   *  name the limit, rather than the user discovering it from a failed upload. */
+  maxUploadBytes: number;
 }
 
 /** Filters for {@link HyCanvasClient.listAssets}. `folderId: null` = root. */

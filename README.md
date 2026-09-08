@@ -107,13 +107,15 @@ When writing `.env` by hand for production, set at minimum `NODE_ENV=production`
 
 HyCanvas serves plain HTTP; put nginx, Caddy, or Traefik in front for TLS. Three settings matter: `APP_URL` is the external domain the proxy serves (used in generated links and the OIDC redirect), `PORT` is the internal port the proxy forwards to, and `BIND_HOST=127.0.0.1` keeps the app reachable only through the proxy. The setup wizard configures all three when you answer "Running HyCanvas behind a proxy?" in step 1. The proxy must forward the `Host` header and (for realtime collaboration) WebSocket upgrades on `/realtime`. With an https `APP_URL`, session cookies stay `Secure` automatically.
 
-Also raise the proxy's request-body limit for uploads: nginx's default `client_max_body_size` of 1 MB rejects anything bigger with a 413 before HyCanvas ever sees it. Set it to comfortably above the largest upload you expect, for example `client_max_body_size 2g;` (uploads stream raw bytes through `PUT /api/v1/uploads/direct/…`, so the limit is the file size itself, no base64 overhead). Caddy and Traefik impose no body limit by default. On S3/MinIO deployments you can skip this entirely by enabling direct-to-bucket uploads; see "Uploads and object storage" below.
+Also raise the proxy's request-body limit for uploads: nginx's default `client_max_body_size` of 1 MB rejects anything bigger with a 413 before HyCanvas ever sees it. Uploads arrive as 8 MiB chunks, so `client_max_body_size 16m;` is enough however large the files are. Caddy and Traefik impose no body limit by default.
+
+Chunking is also what makes HyCanvas work behind a CDN. Cloudflare caps a request body at 100 MB on its Free, Pro and Business plans, and that limit is enforced at the edge: no origin setting can raise it, so a single large upload is rejected before it reaches your proxy at all. Because no chunk approaches that cap, uploads of any size pass through unchanged. On S3/MinIO deployments you can take the bytes out of the path entirely by enabling direct-to-bucket uploads; see "Uploads and object storage" below.
 
 ### Uploads and object storage
 
 Uploads use a direct-upload handshake: the API grants an upload target, the browser sends the raw bytes there, and the API then validates the stored object (true size, magic-byte type sniff, quota) before recording the asset. File bytes are never base64-encoded and never buffered whole in API memory.
 
-- **Local storage (default):** bytes stream through the API to disk. The only knob is the reverse proxy's body-size limit above.
+- **Local storage (default):** bytes stream through the API to disk, as a sequence of 8 MiB chunks reassembled server-side. An interrupted upload resumes from the last chunk the server acknowledged rather than starting over. Partial uploads spool under the OS temp directory; set `UPLOAD_SPOOL_DIR` to put them on a disk with room for the largest upload you allow. The only proxy knob is the body-size limit above.
 - **S3/MinIO with `S3_DIRECT_UPLOADS="true"`:** browsers upload straight to the bucket with presigned POSTs; upload traffic never touches the API or its proxy. Two prerequisites: the bucket must allow cross-origin POSTs from your app origin, and browsers must be able to reach the bucket endpoint (set `S3_PUBLIC_URL` if `S3_ENDPOINT` is internal-only, such as a compose-network MinIO). Example MinIO CORS setup:
 
 ```

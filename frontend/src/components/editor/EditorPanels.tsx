@@ -50,7 +50,7 @@ import {
 import { ApiError, type AiConfigView, type AiProviderPreset, type AiSessionView, type AssetFolder, type MiniAppSummary, type StockAssetSummary, type StockCollectionSummary, type StockFacetValue, type StockFiltersSummary, type StorageUsageView, type TemplateSummary, type UploadedAsset } from "@hc/sdk";
 import { DesignThumb } from "@/components/dashboard/DesignThumb";
 import { checkAppAction, type AppAction } from "@hc/stock";
-import { directUploadWithProgress, oc, resolveAssetUrl, stockProxyUrl, uploadAssetWithProgress } from "@/lib/sdk";
+import { directUploadWithProgress, oc, resolveAssetUrl, stockProxyUrl } from "@/lib/sdk";
 import { attachableAccept, extractAiSources, maxAiSources, type AiSource } from "@/lib/aiAttachments";
 import { mermaidToDiagram, normalizeDiagramSpec, type DiagramSpec } from "@hc/whiteboard";
 import type { BrandVoice, BrandLintViolation } from "@hc/sdk";
@@ -1102,8 +1102,20 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
     if (!workspaceId) return;
     const imgs = files.filter((f) => f.type.startsWith("image/"));
     if (!imgs.length) { if (files.length) toast.error(tr("editor.only_image_files_can_be_uploaded")); return; }
+    // Refuse an oversized file here, before a byte is sent, and say what the
+    // limit actually is. The server enforces the same number (it is where this
+    // one came from), so the two cannot drift apart.
+    const maxBytes = usage?.maxUploadBytes ?? 0;
+    if (maxBytes > 0) {
+      const over = imgs.filter((f) => f.size > maxBytes);
+      if (over.length) {
+        toast.error(tr("editor.file_larger_than_upload_limit", { name: over[0].name, max: formatBytes(maxBytes) }));
+        if (over.length === imgs.length) return;
+      }
+    }
     // Show a placeholder tile per file immediately, with a live progress %.
-    const items = imgs.map((file) => ({ id: `up-${crypto.randomUUID()}`, name: file.name, preview: URL.createObjectURL(file), progress: 0, error: false, file }));
+    const sendable = maxBytes > 0 ? imgs.filter((f) => f.size <= maxBytes) : imgs;
+    const items = sendable.map((file) => ({ id: `up-${crypto.randomUUID()}`, name: file.name, preview: URL.createObjectURL(file), progress: 0, error: false, file }));
     setUploading((cur) => [...items.map((it) => ({ id: it.id, name: it.name, preview: it.preview, progress: it.progress, error: it.error })), ...cur]);
     const setPct = (id: string, progress: number) => setUploading((cur) => cur.map((u) => (u.id === id ? { ...u, progress } : u)));
     const remove = (id: string) => setUploading((cur) => {
@@ -1142,8 +1154,8 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
     if (limit === "account") toast.error(tr("editor.your_account_storage_limit_is_reached_delete"));
     else if (limit === "workspace") toast.error(tr("editor.storage_quota_reached_delete_some_uploads_to"));
     else if (limit === "size") toast.error(tr("editor.file_too_large_the_server_or_its_reverse_pro"));
-    else if (ok < imgs.length) toast.error(tr("editor.n_uploads_failed_unsupported", { count: imgs.length - ok }));
-  }, [workspaceId, folderId, refresh, toast]);
+    else if (ok < sendable.length) toast.error(tr("editor.n_uploads_failed_unsupported", { count: sendable.length - ok }));
+  }, [workspaceId, folderId, refresh, toast, usage?.maxUploadBytes]);
 
   // Upload an arbitrary recorded Blob (audio/video) as an asset. Recordings
   // are the largest uploads, so they benefit most from the direct path.
