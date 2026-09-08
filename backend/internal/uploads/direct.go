@@ -51,6 +51,10 @@ const (
 // ErrUploadIncomplete distinguishes "no object arrived yet" from a bad request.
 var ErrUploadIncomplete = errors.New("no uploaded file found for this upload")
 
+// ErrFileTooLarge means one file exceeds the per-file ceiling, as opposed to
+// the workspace or account running out of quota.
+var ErrFileTooLarge = errors.New("the file exceeds the maximum upload size")
+
 // MaxDirectUploadBytes is the absolute per-file ceiling, exported so the HTTP
 // layer can bound the streaming body reader with the same number.
 func MaxDirectUploadBytes() int64 { return maxDirectUploadBytes }
@@ -90,8 +94,14 @@ func (s *Service) InitDirectUpload(ctx context.Context, userID, workspaceID, fil
 	if err := s.access.AssertMember(ctx, userID, workspaceID, "member"); err != nil {
 		return DirectUploadGrant{}, ErrForbidden
 	}
-	if declaredBytes <= 0 || declaredBytes > maxDirectUploadBytes {
+	if declaredBytes <= 0 {
 		return DirectUploadGrant{}, ErrBadRequest
+	}
+	// A file over the ceiling is not a malformed request, and saying "invalid
+	// upload request" is what left the reporter of #28 with no idea what to do.
+	// Its own error lets the client name the actual limit.
+	if declaredBytes > maxDirectUploadBytes {
+		return DirectUploadGrant{}, ErrFileTooLarge
 	}
 	// Quota gates on the declared size now; complete() re-checks with the
 	// actual stored size, so lying here only wastes the uploader's bandwidth.
@@ -173,20 +183,31 @@ func (s *Service) getDirectUpload(ctx context.Context, id string) (directUploadR
 // against the stored hash), so it works without a session cookie, like a
 // presigned URL. The size cap is enforced by the bounded reader the handler
 // wraps around the body AND re-checked at complete.
-func (s *Service) ReceiveDirectUpload(ctx context.Context, id, token string, body io.Reader) error {
+// authorizeDirectUpload resolves a live api-put grant from its id and one-time
+// token. Shared by every byte-carrying leg (single PUT, chunk append, offset
+// probe) so they cannot drift apart on who is allowed to write.
+func (s *Service) authorizeDirectUpload(ctx context.Context, id, token string) (directUploadRow, error) {
 	row, err := s.getDirectUpload(ctx, id)
 	if err != nil {
-		return err
+		return directUploadRow{}, err
 	}
 	if time.Now().UTC().After(row.ExpiresAt) {
-		return ErrNotFound
+		return directUploadRow{}, ErrNotFound
 	}
 	if row.TokenHash == "" {
-		return ErrForbidden // an s3-post grant never uploads through the API
+		return directUploadRow{}, ErrForbidden // an s3-post grant never uploads through the API
 	}
 	sum := sha256.Sum256([]byte(token))
 	if subtle.ConstantTimeCompare([]byte(hex.EncodeToString(sum[:])), []byte(row.TokenHash)) != 1 {
-		return ErrForbidden
+		return directUploadRow{}, ErrForbidden
+	}
+	return row, nil
+}
+
+func (s *Service) ReceiveDirectUpload(ctx context.Context, id, token string, body io.Reader) error {
+	row, err := s.authorizeDirectUpload(ctx, id, token)
+	if err != nil {
+		return err
 	}
 	// Stream to storage: size -1 (read to EOF) because clients may not send
 	// Content-Length. The read is bounded to the grant's DECLARED size (the
@@ -214,6 +235,10 @@ func (s *Service) CompleteDirectUpload(ctx context.Context, userID, id, thumbnai
 	if err != nil {
 		return UploadedAsset{}, err
 	}
+	// A completed chunked upload has already been flushed into storage, so any
+	// spool still on disk is a leftover from an abandoned attempt on the same
+	// grant. Drop it here rather than waiting for the janitor.
+	defer discardSpool(id)
 	// Only the initiating member may complete; membership may have been revoked
 	// mid-upload, so re-assert rather than trusting the row.
 	if row.UserID != userID {
@@ -326,6 +351,10 @@ func (s *Service) SweepExpiredDirectUploads(ctx context.Context) (int, error) {
 	}
 	n := 0
 	for _, e := range expired {
+		// A partial chunked upload leaves a spool file and no object at all, so
+		// it has to be reclaimed here too or an abandoned 300 MB upload would
+		// sit on the spool disk until someone noticed.
+		discardSpool(e.id)
 		// Storage first: if the delete fails the row stays and the next sweep
 		// retries, so an object can never outlive its row unnoticed.
 		if err := s.storage.Delete(e.key); err != nil {
