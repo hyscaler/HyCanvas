@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -38,6 +39,12 @@ func mountUploads(api chi.Router, up *uploads.Service, acct *accounts.Service) {
 	// The api-put leg of a direct upload: raw bytes, authenticated by the
 	// grant's one-time token (presigned semantics: no session cookie needed).
 	api.Put("/uploads/direct/{id}", directReceiveHandler(up))
+	// The chunked form of the same leg. A CDN in front of the instance caps a
+	// single request body (Cloudflare: 100 MB), so a large file arrives as a
+	// sequence of appends instead. GET reports how much the server holds, which
+	// is what lets an interrupted upload resume rather than start over.
+	api.Patch("/uploads/direct/{id}", directChunkHandler(up))
+	api.Get("/uploads/direct/{id}/offset", directOffsetHandler(up))
 	// Public content delivery (local/mock); the bytes are served to any caller.
 	// HEAD is mounted alongside GET (chi routes methods separately) so clients
 	// can probe existence/size without downloading; ServeContent handles both.
@@ -64,6 +71,8 @@ func uploadsProblem(w http.ResponseWriter, r *http.Request, err error) {
 		problemWithCode(w, r, http.StatusRequestEntityTooLarge, "Payload Too Large", err.Error(), "workspace_storage_full")
 	case errors.Is(err, uploads.ErrUserQuota):
 		problemWithCode(w, r, http.StatusRequestEntityTooLarge, "Payload Too Large", err.Error(), "account_storage_full")
+	case errors.Is(err, uploads.ErrFileTooLarge):
+		problemWithCode(w, r, http.StatusRequestEntityTooLarge, "Payload Too Large", "the file exceeds the maximum upload size", "upload_file_too_large")
 	case errors.Is(err, uploads.ErrImportSize):
 		problemWithCode(w, r, http.StatusRequestEntityTooLarge, "Payload Too Large", err.Error(), "import_too_large")
 	case errors.Is(err, uploads.ErrUploadIncomplete):
@@ -294,7 +303,7 @@ func directInitHandler(up *uploads.Service) http.HandlerFunc {
 			FolderID *string `json:"folderId"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.ByteSize <= 0 {
-			Problem(w, r, http.StatusBadRequest, "Bad Request", "missing or invalid byteSize")
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "missing or invalid byteSize", "upload_bad_size")
 			return
 		}
 		u := userFrom(r.Context())
@@ -318,7 +327,7 @@ func directReceiveHandler(up *uploads.Service) http.HandlerFunc {
 		if err != nil {
 			var tooLarge *http.MaxBytesError
 			if errors.As(err, &tooLarge) {
-				Problem(w, r, http.StatusRequestEntityTooLarge, "Payload Too Large", "upload exceeds the maximum file size")
+				problemWithCode(w, r, http.StatusRequestEntityTooLarge, "Payload Too Large", "upload exceeds the maximum file size", "upload_too_large")
 				return
 			}
 			uploadsProblem(w, r, err)
@@ -344,5 +353,56 @@ func directCompleteHandler(up *uploads.Service) http.HandlerFunc {
 			return
 		}
 		writeJSON(w, http.StatusOK, asset)
+	}
+}
+
+// directChunkHandler appends one chunk of a direct upload at the offset the
+// client claims, and answers with the offset the server now holds.
+//
+// An offset mismatch is a 409 carrying the server's real offset, not a failure:
+// a client whose connection dropped mid-chunk re-reads the offset and continues
+// from there, so a 300 MB upload never restarts from zero.
+func directChunkHandler(up *uploads.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		offset, err := strconv.ParseInt(r.Header.Get("Upload-Offset"), 10, 64)
+		if err != nil || offset < 0 {
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "missing or invalid Upload-Offset", "upload_bad_offset")
+			return
+		}
+		// Bound one chunk well below any CDN body cap; the whole-file ceiling is
+		// enforced separately against the grant's declared size.
+		body := http.MaxBytesReader(w, r.Body, uploads.MaxChunkBytes())
+		received, err := up.ReceiveDirectUploadChunk(r.Context(), chi.URLParam(r, "id"), r.URL.Query().Get("token"), offset, body)
+		if err != nil {
+			var mismatch *uploads.ErrChunkOffset
+			if errors.As(err, &mismatch) {
+				w.Header().Set("Upload-Offset", strconv.FormatInt(mismatch.Expected, 10))
+				problemWithCode(w, r, http.StatusConflict, "Conflict", mismatch.Error(), "upload_offset_mismatch")
+				return
+			}
+			var tooLarge *http.MaxBytesError
+			if errors.As(err, &tooLarge) {
+				problemWithCode(w, r, http.StatusRequestEntityTooLarge, "Payload Too Large", "chunk exceeds the maximum chunk size", "upload_chunk_too_large")
+				return
+			}
+			uploadsProblem(w, r, err)
+			return
+		}
+		w.Header().Set("Upload-Offset", strconv.FormatInt(received, 10))
+		writeJSON(w, http.StatusOK, map[string]int64{"receivedBytes": received})
+	}
+}
+
+// directOffsetHandler reports how many bytes of an upload the server holds, so
+// a client can resume after an interruption.
+func directOffsetHandler(up *uploads.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		received, err := up.DirectUploadOffset(r.Context(), chi.URLParam(r, "id"), r.URL.Query().Get("token"))
+		if err != nil {
+			uploadsProblem(w, r, err)
+			return
+		}
+		w.Header().Set("Upload-Offset", strconv.FormatInt(received, 10))
+		writeJSON(w, http.StatusOK, map[string]int64{"receivedBytes": received})
 	}
 }
