@@ -8,6 +8,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/uuid"
@@ -417,4 +418,38 @@ func TestDirectToBucketUploadToS3_Integration(t *testing.T) {
 		t.Fatalf("object differs from the source (%d vs %d bytes)", len(stored), len(file))
 	}
 	t.Logf("browser->bucket POST accepted; %d bytes promoted to %s", len(file), key)
+}
+
+// The upload id reaches the spool from the request path. Rebuilding the
+// filename from a PARSED uuid is what stops it naming a file outside the spool
+// directory; this pins that, because "the ids we mint are UUIDs" is a habit and
+// not an enforcement.
+func TestSpoolPathRefusesAnythingButAUuid(t *testing.T) {
+	t.Setenv("UPLOAD_SPOOL_DIR", t.TempDir())
+	for _, bad := range []string{
+		"../../etc/passwd",
+		"..",
+		"/etc/passwd",
+		"a/b",
+		`..\..\windows`,
+		"",
+		"not-a-uuid",
+		"11111111-2222-3333-4444-555555555555/../escape",
+	} {
+		if _, err := spoolPath(bad); !errors.Is(err, ErrBadRequest) {
+			t.Fatalf("spoolPath(%q) should be refused, got err=%v", bad, err)
+		}
+	}
+	// A real id resolves, and stays inside the spool directory.
+	id := uuid.NewString()
+	got, err := spoolPath(id)
+	if err != nil {
+		t.Fatalf("spoolPath(%q): %v", id, err)
+	}
+	if filepath.Dir(got) != spoolDir() {
+		t.Fatalf("spool path escaped its directory: %s", got)
+	}
+	if filepath.Base(got) != id+".part" {
+		t.Fatalf("unexpected spool filename: %s", filepath.Base(got))
+	}
 }
