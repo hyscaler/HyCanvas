@@ -30,6 +30,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -78,14 +80,36 @@ func spoolDir() string {
 	return filepath.Join(os.TempDir(), spoolDirName)
 }
 
-// spoolPath is the spool file for one upload id. The id is a server-minted
-// UUID, never client text, so it cannot escape the directory.
-func spoolPath(id string) string { return filepath.Join(spoolDir(), id+".part") }
+// spoolPath is the spool file for one upload id.
+//
+// The id reaches here from the request PATH, so it is parsed as a UUID and the
+// filename is rebuilt from the PARSED value rather than the caller's text. Any
+// id that is not a UUID is refused outright, which is what makes traversal
+// impossible: the name can only ever be 36 hex-and-dash characters. Being
+// confident the ids we mint are UUIDs is not the same as enforcing it, and only
+// the second one is a guarantee.
+func spoolPath(id string) (string, error) {
+	u, err := uuid.Parse(id)
+	if err != nil {
+		return "", ErrBadRequest
+	}
+	name := u.String()
+	// Belt and braces: uuid.String() cannot produce a separator, so this can
+	// only fire if that ever changed under us.
+	if name != filepath.Base(name) {
+		return "", ErrBadRequest
+	}
+	return filepath.Join(spoolDir(), name+".part"), nil
+}
 
 // spoolSize reports how many bytes of this upload have been received. A missing
 // spool means none have.
 func spoolSize(id string) (int64, error) {
-	fi, err := os.Stat(spoolPath(id))
+	path, err := spoolPath(id)
+	if err != nil {
+		return 0, err
+	}
+	fi, err := os.Stat(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return 0, nil
 	}
@@ -97,7 +121,11 @@ func spoolSize(id string) (int64, error) {
 
 // discardSpool removes a partial upload. Safe to call when none exists.
 func discardSpool(id string) {
-	if err := os.Remove(spoolPath(id)); err != nil && !errors.Is(err, os.ErrNotExist) {
+	path, err := spoolPath(id)
+	if err != nil {
+		return // not an id we could have written under
+	}
+	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
 		slog.Warn("direct-upload spool cleanup failed", "id", id, "err", err)
 	}
 }
@@ -133,10 +161,13 @@ func (s *Service) ReceiveDirectUploadChunk(ctx context.Context, id, token string
 	unlock := lockSpool(id)
 	defer unlock()
 
+	path, err := spoolPath(id)
+	if err != nil {
+		return 0, err
+	}
 	if err := os.MkdirAll(spoolDir(), 0o700); err != nil {
 		return 0, err
 	}
-	path := spoolPath(id)
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		return 0, err
@@ -182,7 +213,11 @@ func (s *Service) ReceiveDirectUploadChunk(ctx context.Context, id, token string
 // and removes it. The bytes never pass through memory in bulk: PutStream reads
 // the file, and on S3 the driver's client parts large objects itself.
 func (s *Service) flushSpool(id string, row directUploadRow, size int64) error {
-	rf, err := os.Open(spoolPath(id))
+	path, err := spoolPath(id)
+	if err != nil {
+		return err
+	}
+	rf, err := os.Open(path)
 	if err != nil {
 		return err
 	}
