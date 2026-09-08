@@ -47,7 +47,7 @@ jobs:
           # work authored by its own people, so the CLA (which exists to secure
           # relicensing rights over OUTSIDE contributions) does not apply to
           # them. Every other contributor must still sign. Add new staff here.
-          allowlist: "devadattas,dependabot[bot],github-actions[bot]"
+          allowlist: "devadattas,MdMotahir,dependabot[bot],github-actions[bot]"
           custom-notsigned-prcomment: >
             Thank you for the contribution. Before we can merge, we need you to
             sign the [HyCanvas Contributor License Agreement](https://github.com/hyscaler/HyCanvas/blob/development/CLA.md).
