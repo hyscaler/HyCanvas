@@ -279,17 +279,23 @@ func assetProxyHandler(up *uploads.Service) http.HandlerFunc {
 
 func assetContentHandler(up *uploads.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data, mime, err := up.Content(r.Context(), chi.URLParam(r, "id"))
+		// Streamed, not buffered: a <video> element issues many Range requests
+		// while loading and seeking, and reading the whole object per request
+		// meant a 300 MB video re-downloaded 300 MB every time. On S3 that
+		// exceeded the per-operation timeout, so large videos failed to play at
+		// all while small ones were fine.
+		rc, _, mime, err := up.OpenContent(r.Context(), chi.URLParam(r, "id"))
 		if err != nil {
 			uploadsProblem(w, r, err)
 			return
 		}
+		defer func() { _ = rc.Close() }()
 		w.Header().Set("Content-Type", mime)
 		// ServeContent adds Accept-Ranges/206 partial responses. Browsers treat
 		// media without Range support as UNSEEKABLE (currentTime snaps to 0),
 		// which broke video scrubbing, filmstrips, and scene detection; it also
 		// lets <video> fetch only the parts it needs of large files.
-		http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(data))
+		http.ServeContent(w, r, "", time.Time{}, rc)
 	}
 }
 

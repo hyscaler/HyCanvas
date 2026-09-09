@@ -282,6 +282,36 @@ func (s *S3) GetRange(key string, n int64) ([]byte, error) {
 
 // Rename moves an object via a server-side copy + delete: the bytes never
 // leave the S3 store.
+// Open returns a lazily-ranged reader over the object. minio's Object already
+// implements io.ReadSeekCloser and fetches only the bytes that are read, so a
+// seek to the middle of a 300 MB video costs one ranged GET rather than a full
+// download.
+//
+// Deliberately NOT bound to s3OpTimeout: that context would govern the whole
+// read lifetime, not a single operation, so a large or slow download would be
+// cancelled mid-stream. The HTTP server's own timeouts and client disconnects
+// bound this instead.
+func (s *S3) Open(key string) (io.ReadSeekCloser, int64, error) {
+	key, err := normalizeKey(key)
+	if err != nil {
+		return nil, 0, err
+	}
+	obj, err := s.client.GetObject(context.Background(), s.bucket, key, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, 0, err
+	}
+	// GetObject is lazy, so a missing key only surfaces on the first Stat/Read.
+	info, err := obj.Stat()
+	if err != nil {
+		_ = obj.Close()
+		if minio.ToErrorResponse(err).Code == "NoSuchKey" {
+			return nil, 0, nil
+		}
+		return nil, 0, err
+	}
+	return obj, info.Size, nil
+}
+
 func (s *S3) Rename(from, to string) error {
 	from, err := normalizeKey(from)
 	if err != nil {
