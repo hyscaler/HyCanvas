@@ -1024,7 +1024,18 @@ async function makeThumbnail(file: File): Promise<string | undefined> {
   }
 }
 
-export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
+export function UploadsPanel({
+  workspaceId,
+  droppedFiles,
+  onDroppedFilesConsumed,
+}: {
+  workspaceId: string | null;
+  /** Files dropped somewhere else in the editor, handed over by the tool rail
+   *  so they upload here with the same progress and error reporting as a file
+   *  picked in this panel. */
+  droppedFiles?: File[] | null;
+  onDroppedFilesConsumed?: () => void;
+}) {
   const toast = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const svgRef = useRef<HTMLInputElement>(null);
@@ -1156,6 +1167,17 @@ export function UploadsPanel({ workspaceId }: { workspaceId: string | null }) {
     else if (limit === "size") toast.error(tr("editor.file_too_large_the_server_or_its_reverse_pro"));
     else if (ok < sendable.length) toast.error(tr("editor.n_uploads_failed_unsupported", { count: sendable.length - ok }));
   }, [workspaceId, folderId, refresh, toast, usage?.maxUploadBytes]);
+
+  // Take delivery of files dropped elsewhere in the editor. Cleared through the
+  // callback as soon as they are handed to uploadFiles, so a re-render cannot
+  // upload the same drop twice.
+  useEffect(() => {
+    if (!droppedFiles?.length) return;
+    onDroppedFilesConsumed?.();
+    // Deferred to a microtask so the effect body itself never sets state
+    // (uploadFiles puts a placeholder tile up immediately).
+    queueMicrotask(() => void uploadFiles(droppedFiles));
+  }, [droppedFiles, onDroppedFilesConsumed, uploadFiles]);
 
   // Upload an arbitrary recorded Blob (audio/video) as an asset. Recordings
   // are the largest uploads, so they benefit most from the direct path.
