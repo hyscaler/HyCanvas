@@ -1221,6 +1221,7 @@
   "editor.drift": "漂移",
   "editor.drift_out": "漂移退出",
   "editor.drop_files_here_or_click_to_upload": "将文件拖放到此处,或点击上传",
+  "editor.drop_files_to_add_them": "将文件拖放到此处以添加",
   "editor.drop_shadow": "投影",
   "editor.drop_to_attach_as_source": "松开即可添加为素材",
   "editor.drop_to_upload": "放开以上传",

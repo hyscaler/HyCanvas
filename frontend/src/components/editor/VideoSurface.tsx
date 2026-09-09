@@ -126,6 +126,7 @@ import type { UploadedAsset, StockAssetSummary } from "@hc/sdk";
 import { useEditor } from "@/store/editor";
 import { fonts } from "@/lib/fontProvider";
 import { directUploadWithProgress, oc, resolveAssetUrl } from "@/lib/sdk";
+import { useEditorFileDropTarget } from "./EditorFileDrop";
 import { promptText } from "@/lib/promptDialog";
 import {
   drawTimelineFrame,
@@ -587,6 +588,11 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
     },
     [workspaceId, loadAssets, showPanelError],
   );
+
+  // A file dropped anywhere in the video editor, not just on the media panel,
+  // uploads exactly as a panel drop does. This surface is mounted for the whole
+  // session, so it can own the editor-wide drop directly.
+  useEditorFileDropTarget(onUploadFiles);
 
   // Drop-to-upload: the whole media panel accepts OS file drags. A depth
   // counter keeps the highlight stable while the drag crosses child elements,
