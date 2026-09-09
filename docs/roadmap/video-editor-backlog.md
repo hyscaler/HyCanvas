@@ -55,7 +55,7 @@ the bottom. Check items off as they land.
 - [x] **C4. Timeline follows the playhead** during playback/stepping + edge auto-pan while dragging clips.
 - [x] **C5. On-stage title editing** - click a title on the preview to select/edit/reposition it.
 - [x] **C6. Media panel search/sort** (and see C7 for scale).
-- [ ] **C7. Uploads are base64 JSON with the whole file in memory** - BLOCKED on the unmerged feat/direct-uploads branch (kept unmerged on request); wire the video panel to the direct/chunked pipeline once that branch lands.
+- [x] **C7. Uploads are base64 JSON with the whole file in memory** - done. The direct-upload branch landed in v0.3.11 and the video panel now uses the chunked pipeline (`directUploadWithProgress`). Note the order of events: the pipeline shipped first with only the uploads panel wired to it, which left #28 open because that panel accepts images only, so a large video still took the base64 route. `frontend/src/lib/uploadPaths.test.ts` now fails if any component reaches for the base64 helper again.
 
 ## D. Medium gaps
 Track management
