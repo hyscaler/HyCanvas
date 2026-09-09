@@ -10,6 +10,8 @@ package uploads
 
 import (
 	"context"
+	"errors"
+	"io"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -32,53 +34,101 @@ func proxyMinBytes() int64 {
 
 func proxyKey(assetID string) string { return "proxies/" + assetID + ".mp4" }
 
+// proxyWorthwhile reports whether an asset earns a 540p proxy: a video whose
+// original is big enough that scrubbing it directly is painful.
+func proxyWorthwhile(mime string, size int64) bool {
+	return strings.HasPrefix(mime, "video/") && size >= proxyMinBytes()
+}
+
 // maybeGenerateProxy kicks a background proxy encode for a just-uploaded
-// video when it is large enough and ffmpeg is available.
+// video when it is large enough and ffmpeg is available. The bytes are already
+// in memory on this path (the base64 upload), so they are written straight out.
 func (s *Service) maybeGenerateProxy(assetID string, data []byte, mime string) {
-	if !strings.HasPrefix(mime, "video/") || int64(len(data)) < proxyMinBytes() {
+	if !proxyWorthwhile(mime, int64(len(data))) {
 		return
 	}
 	bin, err := exec.LookPath("ffmpeg")
 	if err != nil {
 		return
 	}
-	go func() {
-		dir, err := os.MkdirTemp("", "oc-proxy-*")
+	go s.encodeProxy(assetID, bin, func(dst string) error {
+		return os.WriteFile(dst, data, 0o600)
+	})
+}
+
+// maybeGenerateProxyFromKey is the same job for uploads whose bytes never pass
+// through memory: the direct/chunked pipeline streams the stored object out to
+// a temp file rather than holding a multi-hundred-MB video in RAM.
+//
+// Without this the streaming upload path produced NO proxy at all, so exactly
+// the large videos that most need a lightweight preview were the ones that
+// never got one, and the editor fell back to scrubbing the full original.
+func (s *Service) maybeGenerateProxyFromKey(assetID, storageKey, mime string, size int64) {
+	if !proxyWorthwhile(mime, size) {
+		return
+	}
+	bin, err := exec.LookPath("ffmpeg")
+	if err != nil {
+		return
+	}
+	go s.encodeProxy(assetID, bin, func(dst string) error {
+		rc, _, err := s.storage.Open(storageKey)
 		if err != nil {
-			return
+			return err
 		}
-		defer func() { _ = os.RemoveAll(dir) }()
-		in := filepath.Join(dir, "in")
-		out := filepath.Join(dir, "out.mp4")
-		if err := os.WriteFile(in, data, 0o600); err != nil {
-			return
+		if rc == nil {
+			return errors.New("source object is missing")
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-		defer cancel()
-		// 540p (even width), fast+small; audio kept so scrubbing has sound.
-		cmd := exec.CommandContext(ctx, bin,
-			"-y", "-loglevel", "error", "-i", in,
-			"-vf", "scale=-2:540",
-			"-c:v", "libx264", "-crf", "28", "-preset", "veryfast",
-			"-c:a", "aac", "-b:a", "96k",
-			"-movflags", "+faststart", out,
-		)
-		var stderr strings.Builder
-		cmd.Stderr = &stderr
-		if err := cmd.Run(); err != nil {
-			slog.Warn("proxy encode failed", "asset", assetID, "err", err, "detail", tailStr(stderr.String(), 300))
-			return
+		defer func() { _ = rc.Close() }()
+		f, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+		if err != nil {
+			return err
 		}
-		proxy, err := os.ReadFile(out)
-		if err != nil || len(proxy) == 0 {
-			return
-		}
-		if _, err := s.storage.Put(proxyKey(assetID), proxy); err != nil {
-			slog.Warn("proxy store failed", "asset", assetID, "err", err)
-			return
-		}
-		slog.Info("proxy ready", "asset", assetID, "bytes", len(proxy))
-	}()
+		defer func() { _ = f.Close() }()
+		_, err = io.Copy(f, rc)
+		return err
+	})
+}
+
+// encodeProxy renders the 540p proxy and stores it. stage puts the source into
+// the temp dir; everything after it is identical for both entry points.
+func (s *Service) encodeProxy(assetID, bin string, stage func(dst string) error) {
+	dir, err := os.MkdirTemp("", "oc-proxy-*")
+	if err != nil {
+		return
+	}
+	defer func() { _ = os.RemoveAll(dir) }()
+	in := filepath.Join(dir, "in")
+	out := filepath.Join(dir, "out.mp4")
+	if err := stage(in); err != nil {
+		slog.Warn("proxy source staging failed", "asset", assetID, "err", err)
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	// 540p (even width), fast+small; audio kept so scrubbing has sound.
+	cmd := exec.CommandContext(ctx, bin,
+		"-y", "-loglevel", "error", "-i", in,
+		"-vf", "scale=-2:540",
+		"-c:v", "libx264", "-crf", "28", "-preset", "veryfast",
+		"-c:a", "aac", "-b:a", "96k",
+		"-movflags", "+faststart", out,
+	)
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		slog.Warn("proxy encode failed", "asset", assetID, "err", err, "detail", tailStr(stderr.String(), 300))
+		return
+	}
+	proxy, err := os.ReadFile(out)
+	if err != nil || len(proxy) == 0 {
+		return
+	}
+	if _, err := s.storage.Put(proxyKey(assetID), proxy); err != nil {
+		slog.Warn("proxy store failed", "asset", assetID, "err", err)
+		return
+	}
+	slog.Info("proxy ready", "asset", assetID, "bytes", len(proxy))
 }
 
 // ProxyContent returns the proxy bytes for an asset, or ok=false when none

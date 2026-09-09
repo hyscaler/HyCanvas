@@ -13,6 +13,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -696,7 +697,14 @@ func (s *Service) contentOf(ctx context.Context, workspaceID, id string) ([]byte
 		return nil, "", ErrNotFound
 	}
 	bytes, err := s.storage.Get(rec.StorageKey)
-	if err != nil || bytes == nil {
+	if err != nil {
+		// A storage FAILURE (timeout, unreachable endpoint, throttling) is not
+		// the same as a missing object. Collapsing both into ErrNotFound made a
+		// timed-out S3 read surface as a flat 404, which reads as "this asset
+		// does not exist" and sent debugging down entirely the wrong path.
+		return nil, "", fmt.Errorf("read asset %s: %w", id, err)
+	}
+	if bytes == nil {
 		return nil, "", ErrNotFound
 	}
 	mime := "application/octet-stream"
@@ -704,6 +712,30 @@ func (s *Service) contentOf(ctx context.Context, workspaceID, id string) ([]byte
 		mime = *rec.MimeType
 	}
 	return bytes, mime, nil
+}
+
+// OpenContent returns a seekable reader over an asset's bytes, its size, and its
+// mime type. Used by the content route so byte ranges are served straight from
+// storage; contentOf buffers the whole object and is kept for the export and
+// embedding paths, which genuinely need every byte at once. The caller closes
+// the reader.
+func (s *Service) OpenContent(ctx context.Context, id string) (io.ReadSeekCloser, int64, string, error) {
+	rec, err := s.getAsset(ctx, id)
+	if err != nil {
+		return nil, 0, "", err
+	}
+	rc, size, err := s.storage.Open(rec.StorageKey)
+	if err != nil {
+		return nil, 0, "", fmt.Errorf("open asset %s: %w", id, err)
+	}
+	if rc == nil {
+		return nil, 0, "", ErrNotFound
+	}
+	mime := "application/octet-stream"
+	if rec.MimeType != nil {
+		mime = *rec.MimeType
+	}
+	return rc, size, mime, nil
 }
 
 func toFolderView(f folderRow) FolderView {

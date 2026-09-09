@@ -42,6 +42,13 @@ type Driver interface {
 	// GetRange returns up to n leading bytes of the object (type sniffing after
 	// a direct upload); (nil, nil) on a missing key.
 	GetRange(key string, n int64) ([]byte, error)
+	// Open returns a seekable reader over the object plus its size, so a caller
+	// can serve HTTP byte ranges without holding the whole object in memory.
+	// Get buffers everything, which for a multi-hundred-MB video means every
+	// Range request a <video> element makes re-downloads the entire object; on
+	// S3 that also blows the per-operation timeout and the download fails
+	// outright. Returns (nil, 0, nil) on a missing key. The caller closes it.
+	Open(key string) (io.ReadSeekCloser, int64, error)
 	// Rename moves an object to a new key without the bytes passing through
 	// the caller (os.Rename locally; server-side copy + delete on S3).
 	Rename(from, to string) error
@@ -142,6 +149,28 @@ func (l *Local) Get(key string) ([]byte, error) {
 		return nil, nil
 	}
 	return b, err
+}
+
+// Open hands back the file itself: *os.File is already an io.ReadSeekCloser,
+// so http.ServeContent reads only the bytes a Range asks for.
+func (l *Local) Open(key string) (io.ReadSeekCloser, int64, error) {
+	full, err := l.pathFor(key)
+	if err != nil {
+		return nil, 0, err
+	}
+	f, err := os.Open(full)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, 0, nil
+	}
+	if err != nil {
+		return nil, 0, err
+	}
+	info, err := f.Stat()
+	if err != nil {
+		_ = f.Close()
+		return nil, 0, err
+	}
+	return f, info.Size(), nil
 }
 
 func (l *Local) Delete(key string) error {

@@ -325,6 +325,9 @@ func (s *Service) CompleteDirectUpload(ctx context.Context, userID, id, thumbnai
 		return UploadedAsset{}, err
 	}
 	_, _ = s.db.Exec(ctx, `DELETE FROM "direct_uploads" WHERE id = $1`, row.ID)
+	// Same preview proxy the in-band upload path gets. Streamed from storage by
+	// key, because the bytes deliberately never passed through memory here.
+	s.maybeGenerateProxyFromKey(asset.ID, finalKey, sniff.Mime, size)
 	return s.toUploaded(asset), nil
 }
 

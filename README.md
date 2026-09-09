@@ -44,7 +44,7 @@ Generate complete, editable presentations programmatically: a workspace admin mi
 - Node 24 (see `.nvmrc`) for the frontend and shared packages.
 - Go 1.25 for the backend (`backend`).
 - PostgreSQL. Object storage is optional (S3-compatible / MinIO); the backend falls back to local-file storage.
-- ffmpeg only if you want server-side video export (already bundled in the Docker image).
+- ffmpeg for server-side video export AND for the 540p preview proxies that keep large videos smooth to scrub in the editor (already bundled in the Docker image; install it yourself when running the bare binary).
 
 ## Development
 
@@ -198,7 +198,7 @@ The S3 target (AWS, MinIO, R2, ...) is taken from `S3_*` in the environment when
 
 ## Install a prebuilt binary
 
-Releases on the [GitHub releases page](https://github.com/hyscaler/HyCanvas/releases) ship the same self-contained binary prebuilt for Linux (amd64, arm64), macOS (Intel, Apple Silicon), and Windows (amd64). Each archive contains just the `hycanvas` binary (the first-run wizard generates the configuration), and a `SHA256SUMS.txt` accompanies the archives for verification. You still need PostgreSQL; ffmpeg is only required for server-side video export.
+Releases on the [GitHub releases page](https://github.com/hyscaler/HyCanvas/releases) ship the same self-contained binary prebuilt for Linux (amd64, arm64), macOS (Intel, Apple Silicon), and Windows (amd64). Each archive contains just the `hycanvas` binary (the first-run wizard generates the configuration), and a `SHA256SUMS.txt` accompanies the archives for verification. You still need PostgreSQL. Install ffmpeg too: without it server-side video export is unavailable and large videos get no preview proxy, so the editor scrubs the full original instead.
 
 ```bash
 tar -xzf hycanvas_<version>_<os>_<arch>.tar.gz && cd <unpacked dir>
