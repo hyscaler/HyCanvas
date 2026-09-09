@@ -60,6 +60,18 @@ func (f *fakeDriver) GetRange(key string, n int64) ([]byte, error) {
 	}
 	return b, nil
 }
+// nopSeekCloser gives a bytes.Reader the Close the Driver contract expects.
+type nopSeekCloser struct{ *bytes.Reader }
+
+func (nopSeekCloser) Close() error { return nil }
+
+func (f *fakeDriver) Open(key string) (io.ReadSeekCloser, int64, error) {
+	b, ok := f.objects[key]
+	if !ok {
+		return nil, 0, nil
+	}
+	return nopSeekCloser{bytes.NewReader(b)}, int64(len(b)), nil
+}
 func (f *fakeDriver) Rename(from, to string) error {
 	b, ok := f.objects[from]
 	if !ok {
