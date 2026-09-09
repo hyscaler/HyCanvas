@@ -12,6 +12,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -102,5 +104,53 @@ func TestOpenServesHTTPByteRange(t *testing.T) {
 	}
 	if cr := rec.Header().Get("Content-Range"); cr != "bytes 10-14/20" {
 		t.Fatalf("Content-Range = %q, want %q", cr, "bytes 10-14/20")
+	}
+}
+
+// CodeQL flags os.ReadFile/os.Open in this driver as path injection because it
+// cannot see pathFor as a sanitizer: the decisive check is a string comparison
+// on the RESOLVED path, which its dataflow does not model. pathFor is covered
+// directly by TestLocalPathFor; this exercises the same hostile keys through
+// the public methods, so the guarantee is pinned at the boundary an attacker
+// would actually reach rather than at an unexported helper.
+func TestLocalReadMethodsRefuseTraversal(t *testing.T) {
+	base := t.TempDir()
+	l, err := NewLocal(base)
+	if err != nil {
+		t.Fatalf("NewLocal: %v", err)
+	}
+	// A file that exists OUTSIDE the base, i.e. what a traversal would target.
+	outside := filepath.Join(filepath.Dir(base), "outside-the-base.txt")
+	if err := os.WriteFile(outside, []byte("secret"), 0o600); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	defer func() { _ = os.Remove(outside) }()
+
+	hostile := []string{
+		"",
+		"..",
+		"../x",
+		"../" + filepath.Base(outside),
+		"a/../../etc/passwd",
+		"x/../../../y",
+		"/etc/passwd",
+		"/absolute",
+	}
+	for _, key := range hostile {
+		t.Run("Get "+key, func(t *testing.T) {
+			b, err := l.Get(key)
+			if err == nil {
+				t.Fatalf("Get(%q) returned no error (read %d bytes); a traversal key must be refused", key, len(b))
+			}
+		})
+		t.Run("Open "+key, func(t *testing.T) {
+			rc, _, err := l.Open(key)
+			if err == nil {
+				if rc != nil {
+					_ = rc.Close()
+				}
+				t.Fatalf("Open(%q) returned no error; a traversal key must be refused", key)
+			}
+		})
 	}
 }
