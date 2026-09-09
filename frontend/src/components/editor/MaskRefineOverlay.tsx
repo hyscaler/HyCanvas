@@ -32,7 +32,7 @@ import {
 import { useEditor } from "@/store/editor";
 import { useBrand } from "@/store/brand";
 import { imageAssets } from "@/lib/assetProvider";
-import { resolveAssetUrl, uploadAssetWithProgress } from "@/lib/sdk";
+import { directUploadWithProgress, resolveAssetUrl } from "@/lib/sdk";
 import { useCallbackRef } from "@/lib/useCallbackRef";
 import type { CanvasApi } from "@/lib/useEditorCanvas";
 import { tr } from "@/lib/i18n";
@@ -335,9 +335,9 @@ export function MaskRefineOverlay({ api, id }: { api: CanvasApi; id: string }) {
       let url = dataUrl;
       if (workspaceId) {
         try {
-          const asset = await uploadAssetWithProgress(workspaceId, {
+          const blob = await (await fetch(dataUrl)).blob();
+          const asset = await directUploadWithProgress(workspaceId, blob, {
             filename: `mask-${Date.now()}.png`,
-            dataBase64: dataUrl.split(",")[1] ?? "",
           });
           // Resolve the server-relative upload url, or the mask 404s against
           // the frontend origin in dev and the stroke never shows.

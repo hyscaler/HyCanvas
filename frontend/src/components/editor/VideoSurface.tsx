@@ -125,7 +125,7 @@ import { imageAssets } from "@/lib/assetProvider";
 import type { UploadedAsset, StockAssetSummary } from "@hc/sdk";
 import { useEditor } from "@/store/editor";
 import { fonts } from "@/lib/fontProvider";
-import { oc, resolveAssetUrl, uploadAssetWithProgress } from "@/lib/sdk";
+import { directUploadWithProgress, oc, resolveAssetUrl } from "@/lib/sdk";
 import { promptText } from "@/lib/promptDialog";
 import {
   drawTimelineFrame,
@@ -565,17 +565,15 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
       setUploadPct(0);
       try {
         for (const file of Array.from(files)) {
-          // Base64 JSON upload (the direct-upload pipeline lands with the
-          // feat/direct-uploads branch; switch to it once merged).
-          const dataUrl = await new Promise<string>((resolve, reject) => {
-            const fr = new FileReader();
-            fr.onload = () => resolve(String(fr.result));
-            fr.onerror = () => reject(new CodedError("errors.file_read_failed", "Could not read the file."));
-            fr.readAsDataURL(file);
-          });
-          await uploadAssetWithProgress(
+          // Chunked direct upload. This is the path a large video actually
+          // takes, and it is why #28 stayed broken after the first fix: the
+          // uploads panel was converted, but the panel only accepts images, so
+          // a 300 MB video still went out as one base64 body and was rejected
+          // by the CDN before it reached us.
+          await directUploadWithProgress(
             workspaceId,
-            { filename: file.name, dataBase64: dataUrl.split(",")[1] ?? "" },
+            file,
+            { filename: file.name },
             (pct: number) => setUploadPct(pct),
           );
         }
@@ -1865,13 +1863,9 @@ export function VideoSurface(props: { workspaceId?: string; designId?: string })
   const uploadBlobAsset = useCallback(
     async (blob: Blob, filename: string): Promise<UploadedAsset | null> => {
       if (!workspaceId) return null;
-      const dataUrl = await new Promise<string>((res, rej) => {
-        const fr = new FileReader();
-        fr.onload = () => res(String(fr.result));
-        fr.onerror = () => rej(new CodedError("errors.file_read_failed", "Could not read the file."));
-        fr.readAsDataURL(blob);
-      });
-      return uploadAssetWithProgress(workspaceId, { filename, dataBase64: dataUrl.split(",")[1] ?? "" }, (pct) => setUploadPct(pct));
+      // A long recording is as big as any imported file, so it takes the same
+      // chunked path rather than one base64 body.
+      return directUploadWithProgress(workspaceId, blob, { filename }, (pct) => setUploadPct(pct));
     },
     [workspaceId],
   );
