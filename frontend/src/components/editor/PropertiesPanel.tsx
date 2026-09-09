@@ -41,7 +41,7 @@ import { lockSelection, unlockSelection } from "@/lib/useRealtime";
 import { CollapsibleSection } from "./EditorPanels";
 import { ColorField } from "./ColorField";
 import { imageAssets } from "@/lib/assetProvider";
-import { oc, resolveAssetUrl, uploadAssetWithProgress } from "@/lib/sdk";
+import { directUploadWithProgress, oc, resolveAssetUrl } from "@/lib/sdk";
 import { MagicResizeButton } from "./MagicResizeDialog";
 import { useToast } from "@/components/ui/Toast";
 import { tr } from "@/lib/i18n";
@@ -544,13 +544,7 @@ function QrLogoControl({ id, logoAssetId, logoScale, workspaceId }: { id: string
     if (!file || !workspaceId) return;
     setBusy(true);
     try {
-      const dataUrl = await new Promise<string>((res, rej) => {
-        const r = new FileReader();
-        r.onload = () => res(String(r.result));
-        r.onerror = () => rej(new CodedError("errors.file_read_failed", "Could not read the file."));
-        r.readAsDataURL(file);
-      });
-      const asset = await uploadAssetWithProgress(workspaceId, { filename: file.name, dataBase64: dataUrl.split(",")[1] ?? "" });
+      const asset = await directUploadWithProgress(workspaceId, file, { filename: file.name });
       pick(asset.id, asset.url);
     } catch { /* upload failed; leave the QR unchanged */ } finally { setBusy(false); }
   };
@@ -3406,9 +3400,11 @@ function ImageEffectsSection({ id, node, workspaceId }: { id: string; node: Node
       let maskUrl = mask.dataUrl;
       if (workspaceId) {
         try {
-          const asset = await uploadAssetWithProgress(workspaceId, {
+          // A mask is canvas output, so at a high page resolution it is a
+          // large PNG; it takes the same chunked path as any other upload.
+          const blob = await (await fetch(mask.dataUrl)).blob();
+          const asset = await directUploadWithProgress(workspaceId, blob, {
             filename: `mask-${Date.now()}.png`,
-            dataBase64: mask.dataUrl.split(",")[1] ?? "",
           });
           // The upload response's url is server-RELATIVE (the backend prefixes
           // publicURL only when configured). Stored raw, the mask would load

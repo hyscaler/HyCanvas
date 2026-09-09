@@ -19,7 +19,7 @@ import { PanelShell, CollapsibleSection } from "./EditorPanels";
 import { useEditor, type ReskinResult, type ReskinOverrides, type BrandFixTarget } from "@/store/editor";
 import { useBrand, brandHexColors, brandFontFamilies } from "@/store/brand";
 import { fonts } from "@/lib/fontProvider";
-import { oc, resolveAssetUrl } from "@/lib/sdk";
+import { directUploadWithProgress, oc, resolveAssetUrl } from "@/lib/sdk";
 import { useToast } from "@/components/ui/Toast";
 import { tr } from "@/lib/i18n";
 import { CodedError, userMessage } from "@/lib/errors";
@@ -1111,10 +1111,7 @@ function GenerateFromLogo({
       palette = [...new Set(palette)];
 
       // Upload the logo as a workspace asset so it round-trips as a brand logo.
-      const asset = await oc.uploadAsset(workspaceId, {
-        filename: file.name,
-        dataBase64: dataUrl.split(",")[1] ?? "",
-      });
+      const asset = await directUploadWithProgress(workspaceId, file, { filename: file.name });
 
       // Create the kit, then fill it with the extracted palette + logo + default
       // heading/body fonts (the text engine's registry resolves these family names).
@@ -1230,7 +1227,7 @@ function BrandFromWebsite({
       if (logoChoice?.startsWith("data:image/")) {
         const b64 = logoChoice.split(",")[1] ?? "";
         logoAssetId = b64
-          ? await oc.uploadAsset(workspaceId, { filename: "logo", dataBase64: b64 }).then((a) => a.id, () => null)
+          ? await directUploadWithProgress(workspaceId, await (await fetch(`data:image/png;base64,${b64}`)).blob(), { filename: "logo" }).then((a) => a.id, () => null)
           : null;
       } else if (logoChoice) {
         logoAssetId = await oc.importAssetFromUrl(workspaceId, logoChoice).then((a) => a.id, () => null);
