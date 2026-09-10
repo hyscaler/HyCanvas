@@ -373,6 +373,11 @@ export const migrations: Record<number, Migration> = {
   // v23 -> v24: Interaction.actionV2 (play/pause/toggle media, run-animation).
   // Purely additive and optional.
   23: (file: AnyObj) => ({ ...file, schemaVersion: 24 }),
+  // v24 -> v25: photo-grid track sizes. `colWidths`/`rowHeights` are optional
+  // weights on GridNode; omitting them means equal tracks, which is how every
+  // existing grid already lays out. No node needs transforming, so this only
+  // stamps the version so newer readers know the keys may be present.
+  24: (file: AnyObj) => ({ ...file, schemaVersion: 25 }),
 };
 
 export class MigrationError extends Error {

@@ -894,6 +894,10 @@ interface EditorState {
    *  A gap-only change keeps the existing cell list (including spans); changing
    *  rows or cols rebuilds a uniform layout. */
   setGridLayout(id: string, patch: { rows?: number; cols?: number; gap?: number }): void;
+  /** Set a photo grid's relative track sizes, one weight per column/row. Pass
+   *  `undefined` for an axis to clear it back to equal tracks. An array whose
+   *  length disagrees with that axis is rejected rather than partly applied. */
+  setGridTracks(id: string, patch: { colWidths?: number[]; rowHeights?: number[] }): void;
   /** Append imported pages (e.g. from a PDF), each sized to the source page with
    *  its editable nodes, and switch to the first new page. Undoable. */
   importPdfPages(pages: { width: number; height: number; nodes: Node[] }[]): void;
@@ -1174,14 +1178,53 @@ function hexToColor(hex: string): { srgb: { r: number; g: number; b: number; a: 
 export type GridSpan = { row: number; col: number; rowSpan: number; colSpan: number };
 
 // The local-space box of a grid cell within a grid node's box.
-export function gridCellBox(size: { width: number; height: number }, rows: number, cols: number, gap: number, s: GridSpan) {
-  const cellW = (size.width - gap * (cols - 1)) / cols;
-  const cellH = (size.height - gap * (rows - 1)) / rows;
+/** Track sizes for one axis, in pixels, from optional relative weights.
+ *
+ *  Weights rather than pixels because a grid is resized freely on the canvas:
+ *  stored pixel widths would overflow it or leave a gap the moment it changed
+ *  size, while ratios survive any resize. A weights array that disagrees with
+ *  the track count is ignored outright, so a stale one cannot lay out half a
+ *  grid at the wrong proportions. */
+function trackSizes(total: number, count: number, gap: number, weights?: number[]): number[] {
+  const free = total - gap * (count - 1);
+  if (!weights || weights.length !== count) return Array.from({ length: count }, () => free / count);
+  let sum = 0;
+  for (const w of weights) {
+    // A non-finite or non-positive weight would collapse or invert a track, and
+    // this data can come from a file someone else's client wrote.
+    if (!Number.isFinite(w) || w <= 0) return Array.from({ length: count }, () => free / count);
+    sum += w;
+  }
+  return weights.map((w) => (free * w) / sum);
+}
+
+/** The box of one cell (or a span of them) inside a grid.
+ *
+ *  `tracks` is optional: without it every track is equal, which is how every
+ *  grid laid out before track sizes existed and how one authored by an older
+ *  client still does. */
+export function gridCellBox(
+  size: { width: number; height: number },
+  rows: number,
+  cols: number,
+  gap: number,
+  s: GridSpan,
+  tracks?: { colWidths?: number[]; rowHeights?: number[] },
+) {
+  const ws = trackSizes(size.width, cols, gap, tracks?.colWidths);
+  const hs = trackSizes(size.height, rows, gap, tracks?.rowHeights);
+  // Offset is the sum of preceding tracks plus their gaps; span width is the
+  // covered tracks plus the gaps swallowed between them.
+  const sum = (arr: number[], from: number, count: number) => {
+    let n = 0;
+    for (let i = from; i < from + count && i < arr.length; i++) n += arr[i];
+    return n;
+  };
   return {
-    x: s.col * (cellW + gap),
-    y: s.row * (cellH + gap),
-    width: cellW * s.colSpan + gap * (s.colSpan - 1),
-    height: cellH * s.rowSpan + gap * (s.rowSpan - 1),
+    x: sum(ws, 0, s.col) + gap * s.col,
+    y: sum(hs, 0, s.row) + gap * s.row,
+    width: sum(ws, s.col, s.colSpan) + gap * (s.colSpan - 1),
+    height: sum(hs, s.row, s.rowSpan) + gap * (s.rowSpan - 1),
   };
 }
 
@@ -1189,7 +1232,7 @@ export function gridCellBox(size: { width: number; height: number }, rows: numbe
  *  span from `cells` and a filled cell's image child is resized to keep
  *  covering it. Pure mutation of the given node (callers own undo). */
 export function relayGridCells(
-  g: { rows: number; cols: number; gap: number; cells: { row: number; col: number; rowSpan: number; colSpan: number; childId?: string }[]; children: Node[] },
+  g: { rows: number; cols: number; gap: number; cells: { row: number; col: number; rowSpan: number; colSpan: number; childId?: string }[]; children: Node[]; colWidths?: number[]; rowHeights?: number[] },
   size: { width: number; height: number },
 ): void {
   const byId = new Map(g.children.map((n) => [n.id, n]));
@@ -1198,7 +1241,7 @@ export function relayGridCells(
       | { transform: Transform; size: { width: number; height: number }; children?: Node[] }
       | undefined;
     if (!frame) continue;
-    const box = gridCellBox(size, g.rows, g.cols, g.gap, cell);
+    const box = gridCellBox(size, g.rows, g.cols, g.gap, cell, { colWidths: g.colWidths, rowHeights: g.rowHeights });
     // Floor at 1px: a grid dragged smaller than its gaps would otherwise
     // compute negative cell sizes.
     const bw = Math.max(1, box.width);
@@ -5371,15 +5414,15 @@ export const useEditor = create<EditorState>((set, get) => {
     setGridLayout: (id, patch) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "grid" || loc.node.locked || editBlocked(id)) return;
-      const g = loc.node as unknown as { rows: number; cols: number; gap: number; size: { width: number; height: number }; cells: { row: number; col: number; rowSpan: number; colSpan: number; childId?: string }[]; children: Node[] };
-      const before = structuredClone({ rows: g.rows, cols: g.cols, gap: g.gap, cells: g.cells, children: g.children });
+      const g = loc.node as unknown as { rows: number; cols: number; gap: number; size: { width: number; height: number }; cells: { row: number; col: number; rowSpan: number; colSpan: number; childId?: string }[]; children: Node[]; colWidths?: number[]; rowHeights?: number[] };
+      const before = structuredClone({ rows: g.rows, cols: g.cols, gap: g.gap, cells: g.cells, children: g.children, colWidths: g.colWidths, rowHeights: g.rowHeights });
       const r = Math.max(1, Math.min(6, Math.round(patch.rows ?? g.rows)));
       const c = Math.max(1, Math.min(6, Math.round(patch.cols ?? g.cols)));
       const gap = Math.max(0, patch.gap ?? g.gap);
       // Lay a frame into its cell box, and keep a filled cell's image covering
       // the whole cell (the image child is sized to the frame at fill time).
       const layout = (frame: { transform: Transform; size: { width: number; height: number }; children?: Node[] }, s: GridSpan, rr: number, cc: number) => {
-        const box = gridCellBox(g.size, rr, cc, gap, s);
+        const box = gridCellBox(g.size, rr, cc, gap, s, { colWidths: g.colWidths, rowHeights: g.rowHeights });
         frame.transform = { x: box.x, y: box.y, scaleX: 1, scaleY: 1, rotation: 0 };
         frame.size = { width: box.width, height: box.height };
         const img = frame.children?.length === 1 && frame.children[0].type === "image" ? (frame.children[0] as unknown as { transform: Transform; size: { width: number; height: number } }) : null;
@@ -5427,9 +5470,44 @@ export const useEditor = create<EditorState>((set, get) => {
           nextCells.push({ row, col, rowSpan: 1, colSpan: 1, childId: frame.id });
         }
       }
+      // Track weights are per-axis and sized to that axis's track count, so a
+      // changed axis drops its weights while an unchanged one keeps them:
+      // adding a column should not also discard hand-tuned row proportions.
+      const nextColWidths = c === before.cols ? before.colWidths : undefined;
+      const nextRowHeights = r === before.rows ? before.rowHeights : undefined;
       perform(
-        () => { g.rows = r; g.cols = c; g.gap = gap; g.cells = nextCells; g.children = nextChildren; },
-        () => { g.rows = before.rows; g.cols = before.cols; g.gap = before.gap; g.cells = before.cells as never; g.children = before.children as never; },
+        () => { g.rows = r; g.cols = c; g.gap = gap; g.cells = nextCells; g.children = nextChildren; g.colWidths = nextColWidths; g.rowHeights = nextRowHeights; },
+        () => { g.rows = before.rows; g.cols = before.cols; g.gap = before.gap; g.cells = before.cells as never; g.children = before.children as never; g.colWidths = before.colWidths; g.rowHeights = before.rowHeights; },
+      );
+    },
+    setGridTracks: (id, patch) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "grid" || loc.node.locked || editBlocked(id)) return;
+      const g = loc.node as unknown as {
+        rows: number; cols: number; gap: number; size: { width: number; height: number };
+        cells: { row: number; col: number; rowSpan: number; colSpan: number; childId?: string }[];
+        children: Node[]; colWidths?: number[]; rowHeights?: number[];
+      };
+      // Undefined clears an axis back to equal tracks. Anything else must match
+      // that axis exactly and be usable as a weight; a half-valid array would
+      // lay the grid out at proportions nobody asked for, so reject outright.
+      const usable = (arr: number[] | undefined, count: number) =>
+        arr === undefined || (arr.length === count && arr.every((n) => Number.isFinite(n) && n > 0));
+      const nextCols = "colWidths" in patch ? patch.colWidths : g.colWidths;
+      const nextRows = "rowHeights" in patch ? patch.rowHeights : g.rowHeights;
+      if (!usable(nextCols, g.cols) || !usable(nextRows, g.rows)) return;
+
+      const before = structuredClone({ colWidths: g.colWidths, rowHeights: g.rowHeights, children: g.children });
+      // Apply, then re-lay every cell frame against the new tracks. Frames are
+      // mutated once here; the undo closure swaps the cloned children back, the
+      // same shape setGridLayout's gap path uses.
+      g.colWidths = nextCols;
+      g.rowHeights = nextRows;
+      relayGridCells(g, g.size);
+      const afterChildren = g.children;
+      perform(
+        () => { g.colWidths = nextCols; g.rowHeights = nextRows; g.children = afterChildren; },
+        () => { g.colWidths = before.colWidths; g.rowHeights = before.rowHeights; g.children = before.children as never; },
       );
     },
     importPdfPages: (imported) => {

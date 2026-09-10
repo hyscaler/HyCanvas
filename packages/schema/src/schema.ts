@@ -86,8 +86,14 @@ import { z } from "zod";
  *      plain-string kind + optional target node), carrying play/pause/toggle
  *      media and run-animation without widening the legacy action enum, so
  *      older clients keep validating and fall back to the legacy `action`
- *      (F28 completion C16). Additive. */
-export const currentSchemaVersion = 24;
+ *      (F28 completion C16). Additive.
+ *  v25: photo-grid track sizes. `GridNode` gains optional `colWidths` and
+ *      `rowHeights`, relative weights that let one cell take more of the grid
+ *      than its neighbours instead of every cell splitting the space evenly.
+ *      Omitted means equal tracks, which is exactly how every existing grid
+ *      already lays out, so an older file needs no conversion and an older
+ *      client keeps laying the grid out the way it always did. Additive. */
+export const currentSchemaVersion = 25;
 
 /** Maximum container nesting depth; guards traversal against stack overflow (FR-4). */
 export const maxNestingDepth = 32;
@@ -1292,6 +1298,18 @@ export interface GridNode extends NodeBase {
   gap: number;
   cells: GridCell[];
   children: Node[];
+  /** Relative track sizes, one weight per column/row. Omitted means every track
+   *  is equal, which is what every grid was before these existed, so an older
+   *  file needs no conversion.
+   *
+   *  WEIGHTS, not pixels: a grid is resized freely on the canvas, and absolute
+   *  widths would either overflow it or leave a gap the moment it changed size.
+   *  Only the ratios between entries matter; the layout normalizes them against
+   *  the grid's current size. A length that disagrees with `cols`/`rows` is
+   *  ignored rather than honored in part, so a stale array cannot silently
+   *  lay out half a grid. */
+  colWidths?: number[];
+  rowHeights?: number[];
 }
 export const GridNodeSchema = z.object({
   ...nodeBaseFields,
@@ -1303,6 +1321,10 @@ export const GridNodeSchema = z.object({
   get children() {
     return z.array(NodeSchema);
   },
+  // Positive: a zero or negative weight would collapse a track to nothing or
+  // invert it, and neither is reachable from the UI.
+  colWidths: z.array(z.number().positive()).optional(),
+  rowHeights: z.array(z.number().positive()).optional(),
 });
 
 export interface VideoNode extends NodeBase {
