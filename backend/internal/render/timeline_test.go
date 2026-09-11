@@ -740,3 +740,49 @@ func TestBuildTimelineArgs_Crop(t *testing.T) {
 		t.Fatalf("source crop missing: %s", strings.Join(args, " "))
 	}
 }
+
+// A clip whose asset fails to stage is DROPPED from the graph rather than
+// failing the build: every media clip is skipped with `continue`, so the render
+// still succeeds and produces a correctly encoded video of an empty stage.
+//
+// That is the mechanism behind #37, where an export ran to completion and
+// returned a ~6.7 MB file containing nothing. This test pins the behavior so it
+// stays visible, because the fix is NOT here: a renderer that refused to build
+// would also refuse a timeline whose single missing asset is genuinely optional.
+// The caller has to notice the staging failure and fail the job, which is what
+// the export handler now does.
+func TestBuildTimelineArgs_DropsClipsWhoseAssetsFailedToStage(t *testing.T) {
+	p := timelineFixture()
+	// Nothing stages: the shape of a storage read that timed out.
+	nothingStages := func(string) (StagedAsset, bool) { return StagedAsset{}, false }
+
+	args, err := BuildTimelineArgs(p, nothingStages, TimelineOptions{}, "/tmp/out.mp4")
+	if err != nil {
+		t.Fatalf("build returned an error, so this no longer silently drops clips (good, but the export handler's guard and this test need revisiting): %v", err)
+	}
+
+	// No media reached ffmpeg at all.
+	for i, a := range args {
+		if a == "-i" {
+			t.Fatalf("expected no media inputs when nothing staged, got -i %q", args[i+1])
+		}
+	}
+
+	// And what it WOULD have encoded is just the base canvas: a blank stage for
+	// the full duration, which is exactly what the reporter received.
+	var fc string
+	for i, a := range args {
+		if a == "-filter_complex" {
+			fc = args[i+1]
+		}
+	}
+	if fc == "" {
+		t.Fatal("no filter_complex")
+	}
+	if !strings.Contains(fc, "color=c=") {
+		t.Fatalf("expected the base colour canvas in:\n%s", fc)
+	}
+	if strings.Contains(fc, "overlay=") {
+		t.Fatalf("nothing staged, so nothing should composite over the base:\n%s", fc)
+	}
+}

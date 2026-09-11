@@ -255,6 +255,17 @@ func videoExportHandler(p *persistence.Service, store storage.Driver, reg *jobs.
 				}
 				defer func() { _ = os.RemoveAll(dir) }()
 				stagedFiles := map[string]render.StagedAsset{}
+				// A clip whose asset will not stage is DROPPED from the ffmpeg
+				// graph, so a failure here does not fail the render: it silently
+				// produces a correctly encoded video of an empty stage. That is
+				// the worst available outcome, and it is what #37 reported. Record
+				// the first failure so the job can fail with a real reason instead.
+				var stageErr error
+				noteStageErr := func(assetID string, err error) {
+					if stageErr == nil {
+						stageErr = fmt.Errorf("could not stage asset %s for export: %w", assetID, err)
+					}
+				}
 				assetFile := func(assetID string) (render.StagedAsset, bool) {
 					if sa, ok := stagedFiles[assetID]; ok {
 						return sa, true
@@ -264,14 +275,39 @@ func videoExportHandler(p *persistence.Service, store storage.Driver, reg *jobs.
 					// lookup already rejects anything that is not a real asset id;
 					// this keeps the filesystem name safe regardless.
 					if assetID == "" || strings.ContainsAny(assetID, `/\`) || strings.Contains(assetID, "..") {
+						noteStageErr(assetID, errors.New("unusable asset id"))
 						return render.StagedAsset{}, false
 					}
-					data, _, cerr := up.ContentInWorkspace(ctx, ws, assetID)
-					if cerr != nil || len(data) == 0 {
+					// Streamed, not buffered: a timeline can reference a video of
+					// several hundred MB, and reading it all into memory only to
+					// write it straight back out ran past the storage driver's
+					// per-operation timeout and failed the stage outright.
+					rc, _, _, cerr := up.OpenContentInWorkspace(ctx, ws, assetID)
+					if cerr != nil {
+						noteStageErr(assetID, cerr)
 						return render.StagedAsset{}, false
 					}
+					defer func() { _ = rc.Close() }()
 					f := filepath.Join(dir, assetID)
-					if werr := os.WriteFile(f, data, 0o644); werr != nil {
+					out, werr := os.OpenFile(f, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
+					if werr != nil {
+						noteStageErr(assetID, werr)
+						return render.StagedAsset{}, false
+					}
+					n, cperr := io.Copy(out, rc)
+					// Close before judging the copy: a buffered write can only
+					// surface its failure on close, and a half-written file here
+					// would be handed to ffmpeg as if it were the whole asset.
+					closeErr := out.Close()
+					if cperr == nil {
+						cperr = closeErr
+					}
+					if cperr != nil {
+						noteStageErr(assetID, cperr)
+						return render.StagedAsset{}, false
+					}
+					if n == 0 {
+						noteStageErr(assetID, errors.New("asset is empty"))
 						return render.StagedAsset{}, false
 					}
 					hasV, hasA := render.ProbeStreams(f)
@@ -405,6 +441,14 @@ func videoExportHandler(p *persistence.Service, store storage.Driver, reg *jobs.
 				})
 				if rerr != nil {
 					reg.Fail(job.ID, "encode failed: "+rerr.Error())
+					return
+				}
+				// An asset that failed to stage was dropped from the graph, so the
+				// encode "succeeded" while rendering an empty stage. Fail with the
+				// real reason rather than handing back a blank video that looks
+				// like a finished export (#37).
+				if stageErr != nil {
+					reg.Fail(job.ID, stageErr.Error())
 					return
 				}
 				if _, serr := store.Put(storeKey, encoded); serr != nil {
