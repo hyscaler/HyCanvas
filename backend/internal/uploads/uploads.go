@@ -716,13 +716,30 @@ func (s *Service) contentOf(ctx context.Context, workspaceID, id string) ([]byte
 
 // OpenContent returns a seekable reader over an asset's bytes, its size, and its
 // mime type. Used by the content route so byte ranges are served straight from
-// storage; contentOf buffers the whole object and is kept for the export and
-// embedding paths, which genuinely need every byte at once. The caller closes
-// the reader.
+// storage rather than buffering the whole object. The caller closes the reader.
 func (s *Service) OpenContent(ctx context.Context, id string) (io.ReadSeekCloser, int64, string, error) {
+	return s.openContentOf(ctx, "", id)
+}
+
+// OpenContentInWorkspace is OpenContent scoped to a workspace (else ErrNotFound),
+// mirroring ContentInWorkspace. Export staging uses it: a timeline can reference
+// a multi-hundred-MB video, and reading that whole object into memory to write
+// it straight back out to a temp file both wasted the memory and ran past the
+// storage driver's per-operation timeout, which failed the staging entirely.
+func (s *Service) OpenContentInWorkspace(ctx context.Context, workspaceID, id string) (io.ReadSeekCloser, int64, string, error) {
+	return s.openContentOf(ctx, workspaceID, id)
+}
+
+// openContentOf opens an asset's bytes for streaming; a non-empty workspaceID
+// scopes the lookup. The buffered contentOf is kept for the embedding paths,
+// which genuinely need every byte in memory at once.
+func (s *Service) openContentOf(ctx context.Context, workspaceID, id string) (io.ReadSeekCloser, int64, string, error) {
 	rec, err := s.getAsset(ctx, id)
 	if err != nil {
 		return nil, 0, "", err
+	}
+	if workspaceID != "" && rec.WorkspaceID != workspaceID {
+		return nil, 0, "", ErrNotFound
 	}
 	rc, size, err := s.storage.Open(rec.StorageKey)
 	if err != nil {
