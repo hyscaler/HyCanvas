@@ -29,7 +29,7 @@ import { fallbackLayoutFill, repairLayoutSelection } from "./layoutSchema";
 import { accentRuleRect, pageTreatment, slotTypeScale } from "./deckStyle";
 import { reflowPage } from "./reflow";
 import { themeSlotNames } from "./themeGen";
-import { catalogEntryForSeed, designSystemSlots } from "./designSystem";
+import { catalogEntryForMood, designSystemSlots } from "./designSystem";
 import { measureDeck, type DeckReport } from "./measure";
 import { themeCatalogEntry, type ThemeCatalogEntry } from "./themeCatalog";
 import type { DeckTheme } from "./outline";
@@ -180,7 +180,7 @@ export function composeDeckFileWithReport(input: ComposeDeckInput): { file: Desi
     catalog = entry;
   } else {
     theme = deckThemes({ brandPalette: input.brandPalette ?? [], kicker: outline.title, count: 1, seed })[0];
-    if (!(input.brandPalette ?? []).length) catalog = catalogEntryForSeed(seed);
+    if (!(input.brandPalette ?? []).length) catalog = catalogEntryForMood(outline.theme, seed);
   }
 
   let pages: Page[];

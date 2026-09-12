@@ -30291,6 +30291,7 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
       exports.catalogEntryForSeed = catalogEntryForSeed;
+      exports.catalogEntryForMood = catalogEntryForMood;
       exports.deriveDesignSystem = deriveDesignSystem;
       exports.designSystemSlots = designSystemSlots;
       var color_1 = require_dist2();
@@ -30341,6 +30342,33 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
         const n = themeCatalog_1.themeCatalog.length;
         const i = (Math.floor(seed) % n + n) % n;
         return themeCatalog_1.themeCatalog[i];
+      }
+      var MOOD_WORDS = [
+        ["dark", ["dark", "night", "luxury", "premium", "black", "noir", "midnight", "moody", "cinematic"]],
+        ["tech", ["tech", "technology", "software", "data", "digital", "ai", "cloud", "startup", "engineering", "cyber", "platform", "saas"]],
+        ["bold", ["bold", "energy", "energetic", "launch", "vibrant", "loud", "punchy", "dynamic", "optimistic", "sport", "youth"]],
+        ["warm", ["warm", "friendly", "community", "human", "cozy", "hospitality", "food", "family", "care", "wellness", "school", "celebration", "joy", "festive"]],
+        ["editorial", ["editorial", "story", "magazine", "narrative", "culture", "literary", "heritage", "craft", "history", "art"]],
+        ["minimal", ["minimal", "minimalist", "clean", "quiet", "calm", "simple", "restrained", "understated", "serene", "elegant"]]
+      ];
+      function catalogEntryForMood(mood, seed) {
+        const words = new Set(mood.toLowerCase().split(/[^a-z]+/).filter(Boolean));
+        let best = null;
+        let bestHits = 0;
+        for (const [group, keys2] of MOOD_WORDS) {
+          const hits = keys2.reduce((n, k) => n + (words.has(k) ? 1 : 0), 0);
+          if (hits > bestHits) {
+            best = group;
+            bestHits = hits;
+          }
+        }
+        if (!best)
+          return catalogEntryForSeed(seed);
+        const pool = themeCatalog_1.themeCatalog.filter((e) => e.style === best);
+        if (!pool.length)
+          return catalogEntryForSeed(seed);
+        const i = (Math.floor(seed) % pool.length + pool.length) % pool.length;
+        return pool[i];
       }
       function deriveDesignSystem(theme, size2, opts = {}) {
         var _a5, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
@@ -31476,7 +31504,7 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
         } else {
           theme = (0, theme_1.deckThemes)({ brandPalette: (_a5 = input.brandPalette) != null ? _a5 : [], kicker: outline.title, count: 1, seed })[0];
           if (!((_b = input.brandPalette) != null ? _b : []).length)
-            catalog = (0, designSystem_1.catalogEntryForSeed)(seed);
+            catalog = (0, designSystem_1.catalogEntryForMood)(outline.theme, seed);
         }
         let pages;
         let masters;

@@ -122,6 +122,49 @@ export function catalogEntryForSeed(seed: number): ThemeCatalogEntry {
   return themeCatalog[i];
 }
 
+/** Words that point at a catalog style group. Scored by hits; the first group
+ *  in this order wins a tie, so a phrase like "clean, energetic" lands on
+ *  bold rather than minimal: the stronger descriptor decides. */
+const MOOD_WORDS: Array<[ThemeCatalogEntry["style"], string[]]> = [
+  ["dark", ["dark", "night", "luxury", "premium", "black", "noir", "midnight", "moody", "cinematic"]],
+  ["tech", ["tech", "technology", "software", "data", "digital", "ai", "cloud", "startup", "engineering", "cyber", "platform", "saas"]],
+  ["bold", ["bold", "energy", "energetic", "launch", "vibrant", "loud", "punchy", "dynamic", "optimistic", "sport", "youth"]],
+  ["warm", ["warm", "friendly", "community", "human", "cozy", "hospitality", "food", "family", "care", "wellness", "school", "celebration", "joy", "festive"]],
+  ["editorial", ["editorial", "story", "magazine", "narrative", "culture", "literary", "heritage", "craft", "history", "art"]],
+  ["minimal", ["minimal", "minimalist", "clean", "quiet", "calm", "simple", "restrained", "understated", "serene", "elegant"]],
+];
+
+/** Choose a catalog entry from the outline's own mood phrase, deterministically.
+ *
+ *  The model already returns a short mood for every deck ("clean, optimistic,
+ *  energy") and until now nothing read it. Matching it to a style group and
+ *  picking within the group by seed turns that phrase into the palette and
+ *  pairing, which is the cheapest design decision in the pipeline: no model
+ *  call, and a school function stops coming out in a boardroom slate. A
+ *  phrase with no recognizable words falls back to the seed alone. */
+export function catalogEntryForMood(mood: string, seed: number): ThemeCatalogEntry {
+  const words = new Set(
+    mood
+      .toLowerCase()
+      .split(/[^a-z]+/)
+      .filter(Boolean),
+  );
+  let best: ThemeCatalogEntry["style"] | null = null;
+  let bestHits = 0;
+  for (const [group, keys] of MOOD_WORDS) {
+    const hits = keys.reduce((n, k) => n + (words.has(k) ? 1 : 0), 0);
+    if (hits > bestHits) {
+      best = group;
+      bestHits = hits;
+    }
+  }
+  if (!best) return catalogEntryForSeed(seed);
+  const pool = themeCatalog.filter((e) => e.style === best);
+  if (!pool.length) return catalogEntryForSeed(seed);
+  const i = ((Math.floor(seed) % pool.length) + pool.length) % pool.length;
+  return pool[i];
+}
+
 export interface DeriveOptions {
   /** A catalog theme: its six slots are used as-is. */
   catalog?: ThemeCatalogEntry | null;

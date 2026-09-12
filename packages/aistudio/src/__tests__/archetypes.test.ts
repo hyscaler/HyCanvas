@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { archetypes, normalizeOutline, type Archetype } from "../outline";
-import { deriveDesignSystem, catalogEntryForSeed, designSystemSlots } from "../designSystem";
+import { deriveDesignSystem, catalogEntryForSeed, catalogEntryForMood, designSystemSlots } from "../designSystem";
 import { archetypeIsImpact, composeArchetypePage } from "../archetypes";
 import { layoutDeck } from "../deck";
 import { deckThemes } from "../theme";
@@ -59,6 +59,19 @@ describe("the design system", () => {
     const a = deriveDesignSystem(theme, size, { seed: 4 });
     const b = deriveDesignSystem(theme, size, { seed: 4 });
     expect(a).toEqual(b);
+  });
+
+  it("reads the outline's mood into a catalog style group", () => {
+    expect(catalogEntryForMood("warm, community celebration", 3).style).toBe("warm");
+    expect(catalogEntryForMood("dark, premium, luxury", 3).style).toBe("dark");
+    expect(catalogEntryForMood("software platform, data", 3).style).toBe("tech");
+    expect(catalogEntryForMood("clean, quiet", 3).style).toBe("minimal");
+    // A tie goes to the stronger descriptor.
+    expect(catalogEntryForMood("clean, energetic", 3).style).toBe("bold");
+    // No recognizable words: the seed alone decides, exactly as before.
+    expect(catalogEntryForMood("xyzzy", 5)).toEqual(catalogEntryForSeed(5));
+    // Deterministic, and the seed still varies the pick within the group.
+    expect(catalogEntryForMood("warm", 1)).toEqual(catalogEntryForMood("warm", 1));
   });
 });
 

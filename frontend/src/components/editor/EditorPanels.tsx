@@ -23,7 +23,7 @@ import {
   type DesignOutline, type DesignType, type GenerationDials, type OutlineItem,
   toolCatalog, assistantSystemPrompt, parseAssistantReply, planMutates, summarizeDesign, type PlanStep,
   deriveOutline, switchOutline, sourcesOutlineItem, type PageText, type SourceCitation,
-  themeCatalogEntry, deckThemeFromCatalog, themeRecordFromCatalog, deckThemeFromRecord, pageTreatment, catalogEntryForSeed, themeRecordFromDesignSystem } from "@hc/aistudio";
+  themeCatalogEntry, deckThemeFromCatalog, themeRecordFromCatalog, deckThemeFromRecord, pageTreatment, catalogEntryForMood, themeRecordFromDesignSystem } from "@hc/aistudio";
 import { builtinMasterAndLayouts, type SlideLayout } from "@hc/schema";
 import { promptText } from "@/lib/promptDialog";
 import { downloadHycFile } from "@/lib/hycFile";
@@ -3413,7 +3413,7 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       // The same design system the API composes from: a catalog entry's six
       // slots and pairing when one is chosen or when nothing else names a
       // palette, so an unbranded brief still gets a designed deck.
-      const catalog = chosenEntry ?? (!themeRecord && !brandPalette.length ? catalogEntryForSeed(seed) : null);
+      const catalog = chosenEntry ?? (!themeRecord && !brandPalette.length ? catalogEntryForMood(clean.theme, seed) : null);
       const deck = layoutDeck(clean, themes[0], size, { catalog, brandPalette, seed });
       const base = append ? st.doc.pages.length : 0;
       const ids = append ? st.appendDeckPages(deck, size) : st.buildDeckFromOutline(deck, size);
