@@ -86,7 +86,9 @@ export function AiProviderSettings({
   const [imgModel, setImgModel] = useState("");
   const [imgBaseUrl, setImgBaseUrl] = useState("");
   const [imgKey, setImgKey] = useState("");
+  const [imgSecret, setImgSecret] = useState("");
   const [imgHasKey, setImgHasKey] = useState(false);
+  const [imgHasSecret, setImgHasSecret] = useState(false);
   const [imgStoredProvider, setImgStoredProvider] = useState("");
   // The stored model and host, kept apart from the editable fields. Restoring
   // from the live values instead would restore what switching away had already
@@ -163,7 +165,9 @@ export function AiProviderSettings({
         setImgBaseUrl(cfg?.baseUrl ?? "");
         setImgStoredBaseUrl(cfg?.baseUrl ?? "");
         setImgHasKey(!!cfg?.hasKey);
+        setImgHasSecret(!!cfg?.hasSecret);
         setImgKey("");
+        setImgSecret("");
         setReplacingImgKey(false);
         setImgFor(workspaceId);
         setImgFailed(false);
@@ -235,6 +239,11 @@ export function AiProviderSettings({
       toast.error(tr("editor.image_provider_key_required"));
       return;
     }
+    if (imageLoaded && imgProvider && !!imgPreset?.needsSecret &&
+        (imgKey.trim() || !(imgSameProvider && imgHasKey)) && !imgSecret.trim()) {
+      toast.error(tr("errors.api_ai_secret_required"));
+      return;
+    }
     if (imageLoaded && imgProvider && !!imgPreset?.needsBaseUrl && !imgBaseUrl.trim()) {
       toast.error(tr("editor.image_provider_base_url_required"));
       return;
@@ -278,13 +287,16 @@ export function AiProviderSettings({
           model: imgModel || undefined,
           baseUrl: imgBaseUrl.trim(),
           ...(imgKey.trim() ? { apiKey: imgKey.trim() } : {}),
+          ...(imgSecret.trim() ? { apiSecret: imgSecret.trim() } : {}),
         });
         setImgCheck("idle"); // the key that passed may be the key just replaced
         setImgStoredProvider(img?.provider ?? "");
         setImgStoredModel(img?.model ?? "");
         setImgStoredBaseUrl(img?.baseUrl ?? "");
         setImgHasKey(!!img?.hasKey);
+        setImgHasSecret(!!img?.hasSecret);
         setImgKey("");
+        setImgSecret("");
         setReplacingImgKey(false);
         // Check it immediately, as the main provider does on save: the moment a
         // key is entered is when a typo is cheapest to find and the person
@@ -367,7 +379,9 @@ export function AiProviderSettings({
       setImgBaseUrl("");
       setImgStoredBaseUrl("");
       setImgKey("");
+      setImgSecret("");
       setImgHasKey(false);
+      setImgHasSecret(false);
       setReplacingImgKey(false);
       setImgCheck("idle");
       toast.success(tr("editor.ai_provider_reset"));
@@ -462,7 +476,7 @@ export function AiProviderSettings({
               value={apiSecret}
               onChange={(e) => setApiSecret(e.target.value)}
               placeholder={
-                sameProvider && config?.hasKey && !apiKey.trim()
+                sameProvider && config?.hasSecret && !apiKey.trim()
                   ? tr("editor.api_key_leave_blank_to_keep")
                   : tr("editor.secret_access_key")
               }
@@ -608,6 +622,7 @@ export function AiProviderSettings({
                   setImgModel(stored ? imgStoredModel : "");
                   setImgBaseUrl(stored ? imgStoredBaseUrl : "");
                   setImgKey("");
+                  setImgSecret(""); // a secret belongs to one vendor
                   setReplacingImgKey(false);
                   setImgCheck("idle"); // the verdict was about the old provider
                 }}
@@ -633,6 +648,23 @@ export function AiProviderSettings({
                     className={fieldCls}
                   />
                 </label>
+
+                {!!imgPreset?.needsSecret && (
+                  <label className={labelCls}>
+                    {tr("editor.secret_access_key")}
+                    <input
+                      type="password"
+                      value={imgSecret}
+                      onChange={(e) => setImgSecret(e.target.value)}
+                      placeholder={
+                        imgSameProvider && imgHasSecret && !imgKey.trim()
+                          ? tr("editor.api_key_leave_blank_to_keep")
+                          : tr("editor.secret_access_key")
+                      }
+                      className={fieldCls}
+                    />
+                  </label>
+                )}
 
                 <label className={labelCls}>
                   {tr("editor.base_url")}

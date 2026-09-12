@@ -48,10 +48,14 @@ type ImageConfigInput struct {
 
 // ImageConfigView is the public config (never includes the key).
 type ImageConfigView struct {
-	Provider     string       `json:"provider"`
-	Model        *string      `json:"model"`
-	BaseURL      *string      `json:"baseUrl"`
-	HasKey       bool         `json:"hasKey"`
+	Provider string  `json:"provider"`
+	Model    *string `json:"model"`
+	BaseURL  *string `json:"baseUrl"`
+	HasKey   bool    `json:"hasKey"`
+	// HasSecret reports whether the second credential is stored, so the form can
+	// show a stored secret the way it shows a stored key instead of an empty box
+	// that says nothing about whether one exists.
+	HasSecret    bool         `json:"hasSecret"`
 	Capabilities Capabilities `json:"capabilities"`
 }
 
@@ -97,6 +101,7 @@ func (s *Service) GetImageConfig(ctx context.Context, workspaceID string) (*Imag
 	return &ImageConfigView{
 		Provider: r.provider, Model: r.model, BaseURL: r.baseURL,
 		HasKey:       r.keyCipher != nil && *r.keyCipher != "",
+		HasSecret:    r.secretCipher != nil && *r.secretCipher != "",
 		Capabilities: caps,
 	}, nil
 }
@@ -189,17 +194,20 @@ func (s *Service) SetImageConfig(ctx context.Context, workspaceID string, in Ima
 			return nil, err
 		}
 		cipher, iv, tag = &enc.Cipher, &enc.IV, &enc.Tag
-		if in.APISecret != "" {
-			snonce := make([]byte, 12)
-			if _, err := rand.Read(snonce); err != nil {
-				return nil, err
-			}
-			senc, err := secrets.EncryptAISecret(in.APISecret, s.secret, snonce)
-			if err != nil {
-				return nil, err
-			}
-			sCipher, sIV, sTag = &senc.Cipher, &senc.IV, &senc.Tag
+	}
+	// Encrypted whenever one is supplied, so a secret can be ROTATED on its own
+	// (same access key ID, new secret). Writing it only alongside a new key
+	// meant such a save reported success and changed nothing.
+	if in.APISecret != "" {
+		snonce := make([]byte, 12)
+		if _, err := rand.Read(snonce); err != nil {
+			return nil, err
 		}
+		senc, err := secrets.EncryptAISecret(in.APISecret, s.secret, snonce)
+		if err != nil {
+			return nil, err
+		}
+		sCipher, sIV, sTag = &senc.Cipher, &senc.IV, &senc.Tag
 	}
 	const q = `INSERT INTO "ai_image_configs" ("workspace_id",provider,model,"base_url","key_cipher","key_iv","key_tag","secret_cipher","secret_iv","secret_tag","updated_at")
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,now())
@@ -210,11 +218,11 @@ func (s *Service) SetImageConfig(ctx context.Context, workspaceID string, in Ima
 			"key_cipher" = CASE WHEN $5 IS NOT NULL THEN $5 ELSE "ai_image_configs"."key_cipher" END,
 			"key_iv"     = CASE WHEN $6 IS NOT NULL THEN $6 ELSE "ai_image_configs"."key_iv" END,
 			"key_tag"    = CASE WHEN $7 IS NOT NULL THEN $7 ELSE "ai_image_configs"."key_tag" END,
-			"secret_cipher" = CASE WHEN $5 IS NOT NULL THEN $8  ELSE "ai_image_configs"."secret_cipher" END,
-			"secret_iv"     = CASE WHEN $5 IS NOT NULL THEN $9  ELSE "ai_image_configs"."secret_iv" END,
-			"secret_tag"    = CASE WHEN $5 IS NOT NULL THEN $10 ELSE "ai_image_configs"."secret_tag" END,
+			"secret_cipher" = CASE WHEN $5 IS NOT NULL OR $11 THEN $8  ELSE "ai_image_configs"."secret_cipher" END,
+			"secret_iv"     = CASE WHEN $5 IS NOT NULL OR $11 THEN $9  ELSE "ai_image_configs"."secret_iv" END,
+			"secret_tag"    = CASE WHEN $5 IS NOT NULL OR $11 THEN $10 ELSE "ai_image_configs"."secret_tag" END,
 			"updated_at" = now()`
-	if _, err := s.db.Exec(ctx, q, workspaceID, in.Provider, model, baseURL, cipher, iv, tag, sCipher, sIV, sTag); err != nil {
+	if _, err := s.db.Exec(ctx, q, workspaceID, in.Provider, model, baseURL, cipher, iv, tag, sCipher, sIV, sTag, in.APISecret != ""); err != nil {
 		return nil, err
 	}
 	return s.GetImageConfig(ctx, workspaceID)

@@ -303,6 +303,32 @@ func TestBedrockEndToEnd_DB(t *testing.T) {
 		t.Fatal("both credentials must be encrypted at rest")
 	}
 
+	// A secret can be rotated on its own: same access key ID, new secret. Saving
+	// it only alongside a new key meant this reported success and changed
+	// nothing, which is the worst shape a credential update can take.
+	before := *secretCipher
+	if _, err := svc.SetConfig(ctx, ws.ID, ConfigInput{
+		Provider: "bedrock", BaseURL: strp(regional), APISecret: "a-rotated-secret",
+	}); err != nil {
+		t.Fatalf("rotate the secret: %v", err)
+	}
+	if err := tx.QueryRow(ctx, `SELECT "secret_cipher","key_cipher" FROM "ai_configs" WHERE "workspace_id" = $1`, ws.ID).
+		Scan(&secretCipher, &keyCipher); err != nil {
+		t.Fatalf("re-read after rotation: %v", err)
+	}
+	if secretCipher == nil || *secretCipher == before {
+		t.Fatal("rotating the secret alone must actually change it")
+	}
+	if keyCipher == nil {
+		t.Fatal("rotating the secret must leave the key in place")
+	}
+	// The view says a secret is stored, so the form can show that instead of an
+	// empty box that reveals nothing.
+	view, err := svc.GetConfig(ctx, ws.ID)
+	if err != nil || view == nil || !view.HasSecret || !view.HasKey {
+		t.Fatalf("view should report both credentials stored: %+v err=%v", view, err)
+	}
+
 	// Switching to a provider with no secret must not leave the AWS one behind.
 	if _, err := svc.SetConfig(ctx, ws.ID, ConfigInput{Provider: "openai", APIKey: "sk-openai"}); err != nil {
 		t.Fatalf("switch away: %v", err)

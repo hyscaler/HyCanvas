@@ -161,6 +161,44 @@ describe("a provider that signs its requests", () => {
     );
   });
 
+  it("can be chosen as the IMAGE provider, secret and all", async () => {
+    oc.getAiImageConfig.mockResolvedValue(null);
+    oc.setAiConfig.mockResolvedValue(storedConfig);
+    oc.setAiImageConfig.mockResolvedValue({ provider: "bedrock", model: null, baseUrl: null, hasKey: true, hasSecret: true, capabilities: caps(true) });
+    renderForm();
+    const section = within(await screen.findByRole("group", { name: "Image provider" }));
+
+    // Bedrock generates images, so it is offered here; before the fix it was
+    // offered with nowhere to put the second half of its credential, and every
+    // save was refused with no way to satisfy it.
+    fireEvent.change(section.getByLabelText("Provider"), { target: { value: "bedrock" } });
+    fireEvent.change(section.getByLabelText("API key"), { target: { value: "AKIDEXAMPLE" } });
+    fireEvent.change(section.getByLabelText("Secret access key"), { target: { value: "secret" } });
+    fireEvent.change(section.getByLabelText("Base URL"), { target: { value: "https://bedrock-runtime.us-east-1.amazonaws.com" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save provider" }));
+
+    await waitFor(() =>
+      expect(oc.setAiImageConfig).toHaveBeenCalledWith("ws-1", expect.objectContaining({
+        provider: "bedrock", apiKey: "AKIDEXAMPLE", apiSecret: "secret",
+      })),
+    );
+  });
+
+  it("refuses an image provider missing half its credential", async () => {
+    oc.getAiImageConfig.mockResolvedValue(null);
+    renderForm();
+    const section = within(await screen.findByRole("group", { name: "Image provider" }));
+    fireEvent.change(section.getByLabelText("Provider"), { target: { value: "bedrock" } });
+    fireEvent.change(section.getByLabelText("API key"), { target: { value: "AKIDEXAMPLE" } });
+    fireEvent.change(section.getByLabelText("Base URL"), { target: { value: "https://bedrock-runtime.us-east-1.amazonaws.com" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save provider" }));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    expect(oc.setAiImageConfig).not.toHaveBeenCalled();
+  });
+
   it("never carries a secret across a provider switch", async () => {
     oc.setAiConfig.mockResolvedValue(storedConfig);
     renderForm();

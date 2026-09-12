@@ -132,11 +132,15 @@ type ConfigInput struct {
 
 // ConfigView is the public config (never includes the key).
 type ConfigView struct {
-	Provider     string       `json:"provider"`
-	Model        *string      `json:"model"`
-	ImageModel   *string      `json:"imageModel"`
-	BaseURL      *string      `json:"baseUrl"`
-	HasKey       bool         `json:"hasKey"`
+	Provider   string  `json:"provider"`
+	Model      *string `json:"model"`
+	ImageModel *string `json:"imageModel"`
+	BaseURL    *string `json:"baseUrl"`
+	HasKey     bool    `json:"hasKey"`
+	// HasSecret reports whether the second credential is stored, so the form can
+	// show a stored secret the way it shows a stored key instead of an empty box
+	// that says nothing about whether one exists.
+	HasSecret    bool         `json:"hasSecret"`
 	Capabilities Capabilities `json:"capabilities"`
 }
 
@@ -180,6 +184,7 @@ func toConfigView(r *configRow) *ConfigView {
 	return &ConfigView{
 		Provider: r.provider, Model: r.model, ImageModel: r.imageModel, BaseURL: r.baseURL,
 		HasKey:       r.keyCipher != nil && *r.keyCipher != "",
+		HasSecret:    r.secretCipher != nil && *r.secretCipher != "",
 		Capabilities: caps,
 	}
 }
@@ -293,28 +298,29 @@ func (s *Service) SetConfig(ctx context.Context, workspaceID string, in ConfigIn
 			return nil, err
 		}
 		cipher, iv, tag = &enc.Cipher, &enc.IV, &enc.Tag
-		// The secret is written in the same breath as the key, so it is either
-		// the new one or NULL. That is what stops an AWS secret surviving a
-		// switch to a provider that has no use for it.
-		if in.APISecret != "" {
-			snonce := make([]byte, 12)
-			if _, err := rand.Read(snonce); err != nil {
-				return nil, err
-			}
-			senc, err := secrets.EncryptAISecret(in.APISecret, s.secret, snonce)
-			if err != nil {
-				return nil, err
-			}
-			sCipher, sIV, sTag = &senc.Cipher, &senc.IV, &senc.Tag
+	}
+	// Encrypted whenever one is supplied, so a secret can be ROTATED on its own
+	// (same access key ID, new secret). Writing it only alongside a new key
+	// meant such a save reported success and changed nothing.
+	if in.APISecret != "" {
+		snonce := make([]byte, 12)
+		if _, err := rand.Read(snonce); err != nil {
+			return nil, err
 		}
+		senc, err := secrets.EncryptAISecret(in.APISecret, s.secret, snonce)
+		if err != nil {
+			return nil, err
+		}
+		sCipher, sIV, sTag = &senc.Cipher, &senc.IV, &senc.Tag
 	}
 
 	// Upsert. When a new key is supplied, write it; otherwise keep the stored
 	// one (a keyless provider change was rejected above, so a stale key can
 	// never survive onto a different provider).
-	// The secret columns are keyed off $6 (the KEY cipher), not off their own
-	// value: a new key rewrites the secret to whatever came with it, including
-	// NULL, while leaving the key alone leaves the pair untouched.
+	// The secret columns fire on a new KEY ($6) or a new SECRET ($12). A new key
+	// rewrites the secret to whatever came with it, including NULL, so a
+	// previous vendor's secret cannot outlive its key; a secret on its own is a
+	// rotation and leaves the key alone. Neither means keep both.
 	const q = `INSERT INTO "ai_configs" ("workspace_id",provider,model,"image_model","base_url","key_cipher","key_iv","key_tag","secret_cipher","secret_iv","secret_tag","updated_at")
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,now())
 		ON CONFLICT ("workspace_id") DO UPDATE SET
@@ -325,11 +331,11 @@ func (s *Service) SetConfig(ctx context.Context, workspaceID string, in ConfigIn
 			"key_cipher" = CASE WHEN $6 IS NOT NULL THEN $6 ELSE "ai_configs"."key_cipher" END,
 			"key_iv"     = CASE WHEN $7 IS NOT NULL THEN $7 ELSE "ai_configs"."key_iv" END,
 			"key_tag"    = CASE WHEN $8 IS NOT NULL THEN $8 ELSE "ai_configs"."key_tag" END,
-			"secret_cipher" = CASE WHEN $6 IS NOT NULL THEN $9  ELSE "ai_configs"."secret_cipher" END,
-			"secret_iv"     = CASE WHEN $6 IS NOT NULL THEN $10 ELSE "ai_configs"."secret_iv" END,
-			"secret_tag"    = CASE WHEN $6 IS NOT NULL THEN $11 ELSE "ai_configs"."secret_tag" END,
+			"secret_cipher" = CASE WHEN $6 IS NOT NULL OR $12 THEN $9  ELSE "ai_configs"."secret_cipher" END,
+			"secret_iv"     = CASE WHEN $6 IS NOT NULL OR $12 THEN $10 ELSE "ai_configs"."secret_iv" END,
+			"secret_tag"    = CASE WHEN $6 IS NOT NULL OR $12 THEN $11 ELSE "ai_configs"."secret_tag" END,
 			"updated_at" = now()`
-	if _, err := s.db.Exec(ctx, q, workspaceID, in.Provider, model, imageModel, baseURL, cipher, iv, tag, sCipher, sIV, sTag); err != nil {
+	if _, err := s.db.Exec(ctx, q, workspaceID, in.Provider, model, imageModel, baseURL, cipher, iv, tag, sCipher, sIV, sTag, in.APISecret != ""); err != nil {
 		return nil, err
 	}
 	return s.GetConfig(ctx, workspaceID)

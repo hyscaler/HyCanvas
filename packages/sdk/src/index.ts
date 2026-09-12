@@ -433,6 +433,8 @@ export interface AiConfigView {
   imageModel: string | null;
   baseUrl: string | null;
   hasKey: boolean;
+  /** Whether the second credential is stored (signing providers only). */
+  hasSecret?: boolean;
   /** What the configured provider can do (gates image-dependent features). */
   capabilities: AiCapabilities;
 }
@@ -446,6 +448,8 @@ export interface AiImageConfigView {
   model: string | null;
   baseUrl: string | null;
   hasKey: boolean;
+  /** Whether the second credential is stored (signing providers only). */
+  hasSecret?: boolean;
   capabilities: AiCapabilities;
 }
 
