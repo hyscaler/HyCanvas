@@ -34,8 +34,22 @@ export interface WrapChunk {
 export function wrapChunks(text: string, locale?: string): WrapChunk[] {
   const seg = new Intl.Segmenter(locale, { granularity: "word" });
   const out: WrapChunk[] = [];
+  // A no-break space glues its neighbors: it is never a break opportunity
+  // and the word before it and the word after it wrap as one chunk. That is
+  // how a heading keeps its last word off a line of its own, and how the
+  // server exporter already breaks (it treats these as letters).
+  let glue = false;
   for (const s of seg.segment(text)) {
-    out.push({ text: s.segment, whitespace: /^\s+$/.test(s.segment) });
+    const t = s.segment;
+    const noBreak = NO_BREAK.test(t);
+    const last = out[out.length - 1];
+    if (last && !last.whitespace && (glue || noBreak)) last.text += t;
+    else out.push({ text: t, whitespace: !noBreak && /^\s+$/.test(t) });
+    glue = noBreak;
   }
   return out;
 }
+
+/** Spaces that keep the words around them together: no-break space, figure
+ *  space, narrow no-break space, word joiner, zero-width no-break space. */
+const NO_BREAK = /^[\u00A0\u2007\u202F\u2060\uFEFF]+$/;

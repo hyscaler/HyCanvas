@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { archetypes, normalizeOutline, type Archetype } from "../outline";
 import { deriveDesignSystem, catalogEntryForSeed, catalogEntryForMood, designSystemSlots } from "../designSystem";
-import { archetypeIsImpact, composeArchetypePage } from "../archetypes";
+import { archetypeIsImpact, composeArchetypePage, keepLastWordCompany } from "../archetypes";
 import { layoutDeck } from "../deck";
 import { deckThemes } from "../theme";
 import { qualityCheck } from "../quality";
@@ -155,5 +155,58 @@ describe("layoutDeck", () => {
     // that quotes them; everything else must be identical.
     const strip = (d: ReturnType<typeof layoutDeck>) => JSON.stringify(d.pages.map((p) => ({ ...p, quality: undefined, nodes: p.nodes.map((n) => ({ ...n, id: "x" })) })));
     expect(strip(layoutDeck(outline, theme, size, { seed: 7 }))).toBe(strip(layoutDeck(outline, theme, size, { seed: 7 })));
+  });
+});
+
+describe("lists and widows", () => {
+  const ds = deriveDesignSystem(theme, size, { seed: 1, catalog: catalogEntryForSeed(1) });
+  type Para = { runs: { text: string }[]; style?: { list?: { type: string; level: number } } };
+  const paragraphsOf = (nodes: { name?: string; content?: Para[] }[], name: string): Para[] =>
+    nodes.filter((n) => n.name === name).flatMap((n) => n.content ?? []);
+
+  it("sets points as real bullet list items, not a bullet character in the copy", () => {
+    const item = normalizeOutline({ title: "T", pages: [pageFor("bullets")] }).pages[0];
+    const page = composeArchetypePage(item, ds, { index: 1, total: 4 });
+    const points = paragraphsOf(page.nodes as never, "Points");
+    expect(points.length).toBe(3);
+    for (const p of points) {
+      expect(p.style?.list).toEqual({ type: "bullet", level: 0 });
+      expect(p.runs[0].text.startsWith("•")).toBe(false);
+    }
+  });
+
+  it("numbers an agenda and a long process through the list style", () => {
+    const agenda = normalizeOutline({ title: "T", pages: [pageFor("agenda")] }).pages[0];
+    const a = composeArchetypePage(agenda, ds, { index: 1, total: 4 });
+    for (const p of paragraphsOf(a.nodes as never, "Agenda")) {
+      expect(p.style?.list?.type).toBe("number");
+      expect(/^\d/.test(p.runs[0].text)).toBe(false);
+    }
+    const five = { ...pageFor("process"), steps: ["Survey", "Plant", "Fence", "Monitor", "Report"].map((label) => ({ label })) };
+    const process = normalizeOutline({ title: "T", pages: [five] }).pages[0];
+    const pr = composeArchetypePage(process, ds, { index: 2, total: 4 });
+    const steps = paragraphsOf(pr.nodes as never, "Steps");
+    expect(steps.length).toBe(5);
+    expect(steps.every((p) => p.style?.list?.type === "number")).toBe(true);
+  });
+
+  it("column points are list items too", () => {
+    const item = normalizeOutline({ title: "T", pages: [pageFor("twoColumn")] }).pages[0];
+    const page = composeArchetypePage(item, ds, { index: 1, total: 4 });
+    const points = paragraphsOf(page.nodes as never, "Points");
+    expect(points.length).toBe(6);
+    expect(points.every((p) => p.style?.list?.type === "bullet")).toBe(true);
+  });
+
+  it("keeps a heading's last word company with a no-break space", () => {
+    expect(keepLastWordCompany("Why the shoreline is retreating")).toBe("Why the shoreline is retreating");
+    expect(keepLastWordCompany("Two words")).toBe("Two words");
+    expect(keepLastWordCompany("One")).toBe("One");
+    const item = normalizeOutline({ title: "T", pages: [pageFor("bullets")] }).pages[0];
+    const page = composeArchetypePage(item, ds, { index: 1, total: 4 });
+    const title = paragraphsOf(page.nodes as never, "Title")[0];
+    expect(title.runs[0].text).toBe("Why the shoreline is retreating");
+    // Body copy is left alone.
+    for (const p of paragraphsOf(page.nodes as never, "Points")) expect(p.runs[0].text).not.toContain(" ");
   });
 });

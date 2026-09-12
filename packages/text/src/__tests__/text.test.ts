@@ -19,6 +19,7 @@ import {
   resolveCharStyle,
   resolveParagraphStyle,
   words,
+  wrapChunks,
   fontCatalog,
   searchFonts,
   getFontEntry,
@@ -299,5 +300,28 @@ describe("layout + auto-fit (FR-11, FR-12)", () => {
     // Padded result exceeds unpadded by exactly the padding (not double).
     expect(fit.height - noPad.height).toBeCloseTo(20, 6);
     expect(fit.width - noPad.width).toBeCloseTo(10, 6);
+  });
+});
+
+describe("no-break spaces", () => {
+  it("wrapChunks keeps a no-break space and its neighbours in one chunk", () => {
+    expect(wrapChunks("a b c").map((c) => c.text)).toEqual(["a", " ", "b c"]);
+    expect(wrapChunks("a b c").map((c) => c.whitespace)).toEqual([false, true, false]);
+    // The narrow and figure spaces and the word joiner glue too.
+    expect(wrapChunks("x y").map((c) => c.text)).toEqual(["x y"]);
+    expect(wrapChunks("x⁠y").map((c) => c.text)).toEqual(["x⁠y"]);
+    // Ordinary spaces are unchanged.
+    expect(wrapChunks("a b").map((c) => c.text)).toEqual(["a", " ", "b"]);
+  });
+
+  it("layout never breaks at a no-break space, so a heading keeps its last word company", () => {
+    const texts = (t: string) =>
+      layoutText(textNode([createParagraph(t, { fontSize: 20 })], { width: 100 })).lines.map((l) => l.segments.map((s) => s.text).join(""));
+    const plain = texts("one two three");
+    // The width is binding: set with ordinary spaces the last word wraps alone.
+    expect(plain.some((t) => t.trim() === "three")).toBe(true);
+    const glued = texts("one two three");
+    expect(glued.some((t) => t.includes("two three"))).toBe(true);
+    expect(glued.some((t) => t.trim() === "three")).toBe(false);
   });
 });

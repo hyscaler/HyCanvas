@@ -834,13 +834,21 @@ func (rc *rctx) rasterText(m mat, node map[string]any) {
 		height float64
 		align  string
 		dir    string
+		// x is the line's offset from the content edge (paragraph indent and
+		// list gutter); a list item's first line also carries its marker,
+		// drawn in the gutter in the first run's style.
+		x           float64
+		marker      string
+		markerX     float64
+		markerStyle map[string]any
 	}
 	var lines []vline
+	var counters listCounters
 
 	// Layout pass: build visual lines per paragraph, wrapping between words.
 	for _, para := range asArr(node["content"]) {
 		po := asObj(para)
-		pstyle := asObj(po["style"])
+		pstyle := paragraphStyleOf(po)
 		align := asStr(pstyle["align"])
 		// Base direction (F38 FR-10), resolved exactly as @hc/text does so the
 		// export matches the canvas.
@@ -854,7 +862,33 @@ func (rc *rctx) rasterText(m mat, node map[string]any) {
 		if dir == "rtl" && align == "" {
 			align = "right"
 		}
-		cur := vline{align: align, dir: dir}
+		// List marker and indents, as the canvas lays them out: a gutter for
+		// the marker, a hanging indent for wrapped lines, and the wrap width
+		// narrowed by both.
+		runs := asArr(po["runs"])
+		var firstStyle map[string]any
+		if len(runs) > 0 {
+			firstStyle = asObj(asObj(runs[0])["style"])
+		}
+		em := asNum(firstStyle["fontSize"])
+		if em == 0 {
+			em = 16
+		}
+		ll := counters.next(pstyle, em)
+		lineW := contentW - ll.indent - asNum(pstyle["indentEnd"])
+		if lineW < 0 {
+			lineW = 0
+		}
+		firstLine := true
+		newLine := func() vline {
+			ln := vline{align: align, dir: dir, x: ll.indent}
+			if firstLine {
+				ln.x += asNum(pstyle["firstLineIndent"])
+				ln.marker, ln.markerX, ln.markerStyle = ll.marker, ll.markerX, firstStyle
+			}
+			return ln
+		}
+		cur := newLine()
 		firstSize := 0.0
 		flush := func() {
 			if cur.height == 0 {
@@ -865,10 +899,11 @@ func (rc *rctx) rasterText(m mat, node map[string]any) {
 				}
 			}
 			lines = append(lines, cur)
+			firstLine = false
 			// Carry the paragraph's base direction onto continuation lines:
 			// dropping it made every wrapped RTL line resolve bidi with an
 			// LTR base, putting trailing punctuation on the wrong side.
-			cur = vline{align: align, dir: dir}
+			cur = newLine()
 		}
 		for _, run := range asArr(po["runs"]) {
 			ro := asObj(run)
@@ -885,7 +920,7 @@ func (rc *rctx) rasterText(m mat, node map[string]any) {
 			ls := asNum(style["letterSpacing"])
 			for _, chunk := range wrapChunks(runText(ro, style)) {
 				w := measure(face, style, chunk.text, ls)
-				if wrap && cur.width > 0 && cur.width+w > contentW && !chunk.ws {
+				if wrap && cur.width > 0 && cur.width+w > lineW && !chunk.ws {
 					flush()
 				}
 				cur.segs = append(cur.segs, seg{text: chunk.text, style: style})
@@ -928,27 +963,33 @@ func (rc *rctx) rasterText(m mat, node map[string]any) {
 			ln.segs = ordered
 		}
 		y += ln.height
-		x := padL
-		switch ln.align {
-		case "center":
+		// Start x honors alignment and the line's indent. A list item's first
+		// line always starts after its marker gutter (text is not centered
+		// away from its bullet), as on the canvas.
+		x := padL + ln.x
+		switch {
+		case ln.marker != "":
+		case ln.align == "center":
 			x = padL + (contentW-ln.width)/2
-		case "right":
+		case ln.align == "right":
 			x = padL + (contentW - ln.width)
 		}
-		for _, sg := range ln.segs {
-			face, _ := runFace(sg.style)
+		// drawText draws one styled string from x0 and returns the x after it.
+		drawText := func(text string, style map[string]any, x0 float64) float64 {
+			x := x0
+			face, _ := runFace(style)
 			if face == nil {
-				continue
+				return x
 			}
-			col := pdfPaint(asObj(sg.style["fill"]))
+			col := pdfPaint(asObj(style["fill"]))
 			if !col.ok {
 				col = pdfColor{ok: true}
 			}
 			src := image.NewUniform(rasterColor(col, rc.alpha))
-			ls := asNum(sg.style["letterSpacing"])
-			fam := asStr(sg.style["fontFamily"])
-			wght := int(asNum(asObj(sg.style["axes"])["wght"]))
-			size := asNum(sg.style["fontSize"])
+			ls := asNum(style["letterSpacing"])
+			fam := asStr(style["fontFamily"])
+			wght := int(asNum(asObj(style["axes"])["wght"]))
+			size := asNum(style["fontSize"])
 			if size == 0 {
 				size = 16
 			}
@@ -975,7 +1016,7 @@ func (rc *rctx) rasterText(m mat, node map[string]any) {
 				}
 				return true
 			}
-			for _, r := range sg.text {
+			for _, r := range text {
 				if drawRune(r) {
 					continue
 				}
@@ -995,6 +1036,13 @@ func (rc *rctx) rasterText(m mat, node map[string]any) {
 				}
 			}
 			_ = face.Close()
+			return x
+		}
+		if ln.marker != "" {
+			drawText(ln.marker, ln.markerStyle, padL+ln.markerX)
+		}
+		for _, sg := range ln.segs {
+			x = drawText(sg.text, sg.style, x)
 		}
 	}
 }

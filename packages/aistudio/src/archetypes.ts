@@ -88,6 +88,17 @@ const T = {
 // in a display face and wider; body in a text face.
 const ADVANCE = { heading: 0.55, body: 0.5 } as const;
 
+/** The list marker gutter the text engine reserves, in ems (layoutText). */
+const LIST_GUTTER_EM = 1.6;
+
+/** Join a heading's last two words with a no-break space so the final word
+ *  never sits alone on the last line. Only when there are enough words that
+ *  the join cannot force one overlong line: a two-word title is left as is. */
+export function keepLastWordCompany(text: string): string {
+  if (text.trim().split(/\s+/).length < 3) return text;
+  return text.replace(/ +(\S+)\s*$/, "\u00A0$1");
+}
+
 class Composer {
   private readonly W: number;
   private readonly H: number;
@@ -146,19 +157,20 @@ class Composer {
     return n;
   }
 
-  /** The largest ladder size at which the paragraphs fit the region. */
-  private fit(paragraphs: string[], width: number, height: number, base: number, lineHeight: number, role: "heading" | "body", paraGap: number): number {
+  /** The largest ladder size at which the paragraphs fit the region.
+   *  gutterEm is the list marker gutter, in ems, taken off the wrap width. */
+  private fit(paragraphs: string[], width: number, height: number, base: number, lineHeight: number, role: "heading" | "body", paraGap: number, gutterEm = 0): number {
     for (const size of ladderFrom(base, this.ds.size)) {
-      if (this.measure(paragraphs, width, size, lineHeight, role, paraGap) <= height) return size;
+      if (this.measure(paragraphs, width, size, lineHeight, role, paraGap, gutterEm) <= height) return size;
     }
     const ladder = ladderFrom(base, this.ds.size);
     return ladder[ladder.length - 1];
   }
 
-  private measure(paragraphs: string[], width: number, size: number, lineHeight: number, role: "heading" | "body", paraGap: number): number {
+  private measure(paragraphs: string[], width: number, size: number, lineHeight: number, role: "heading" | "body", paraGap: number, gutterEm = 0): number {
     let h = 0;
     paragraphs.forEach((p, i) => {
-      h += this.lines(p, size, width, role) * size * lineHeight;
+      h += this.lines(p, size, Math.max(1, width - gutterEm * size), role) * size * lineHeight;
       if (i < paragraphs.length - 1) h += paraGap * size;
     });
     return Math.ceil(h);
@@ -181,12 +193,18 @@ class Composer {
     paraGap?: number;
     /** Fit the type to the rect (default) or force this exact size. */
     exactSize?: number;
+    /** Set every paragraph as a list item: a real marker in a gutter with a
+     *  hanging indent, laid out by the text engine and the exporters alike,
+     *  instead of a bullet character baked into the copy. */
+    list?: "bullet" | "number";
   }): { node: Node; height: number; size: number } {
     const lineHeight = opts.lineHeight ?? (opts.role === "heading" ? 1.1 : 1.4);
     const paraGap = opts.paraGap ?? (opts.role === "heading" ? 0.2 : 0.45);
-    const paragraphs = opts.paragraphs.length ? opts.paragraphs : [""];
-    const size = opts.exactSize ?? this.fit(paragraphs, opts.rect.width, opts.rect.height, opts.base, lineHeight, opts.role, paraGap);
-    const needed = this.measure(paragraphs, opts.rect.width, size, lineHeight, opts.role, paraGap);
+    // A heading never leaves its last word alone on the final line.
+    const paragraphs = (opts.paragraphs.length ? opts.paragraphs : [""]).map((p) => (opts.role === "heading" ? keepLastWordCompany(p) : p));
+    const gutterEm = opts.list ? LIST_GUTTER_EM : 0;
+    const size = opts.exactSize ?? this.fit(paragraphs, opts.rect.width, opts.rect.height, opts.base, lineHeight, opts.role, paraGap, gutterEm);
+    const needed = this.measure(paragraphs, opts.rect.width, size, lineHeight, opts.role, paraGap, gutterEm);
     // At the floor and still over: the ladder is exhausted. Recorded for the
     // report rather than hidden by a clip, because only shorter copy fixes it.
     if (!opts.exactSize && needed > opts.rect.height) this.overfull.push(opts.name);
@@ -214,7 +232,7 @@ class Composer {
       box: { mode: "fixed", width: r.width, height: r.height, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: opts.valign ?? "top" },
       content: paragraphs.map((p) => ({
         runs: [{ text: p, style: structuredClone(style) }],
-        style: { align, direction: "auto" },
+        style: { align, direction: "auto", ...(opts.list ? { list: { type: opts.list, level: 0 } } : {}) },
       })),
     } as never) as Node;
     return { node, height, size };
@@ -471,7 +489,7 @@ class Composer {
       const s = imageLeading ? this.span(0, 4) : this.span(8, 4);
       this.nodes.push(this.imageSlot({ x: s.x, y: content.y, width: s.width, height: content.height }, this.imagePrompt(), this.ds.radius * 2));
     }
-    const points = this.item.points.map((p) => `•  ${p}`);
+    const points = this.item.points;
     const variant = this.ctx.variant;
     if (variant === "twoUp" && points.length >= 4 && !hasImage) {
       // A long list set as two unnamed columns under one title: the remedy
@@ -482,7 +500,7 @@ class Composer {
       const title = this.text({ name: "Title", rect: { ...this.span(0, 12), y: content.y, height: this.H * 0.2 }, paragraphs: [this.item.title], role: "heading", base: this.H * T.title, bold: true, lineHeight: 1.08 });
       const bodyTop = content.y + title.height + u2 * 4;
       const avail = this.H - this.m - bodyTop;
-      const make = (span: Rect, pts: string[], y0: number) => this.text({ name: "Points", rect: { x: span.x, y: y0, width: span.width - this.ds.gutter, height: avail }, paragraphs: pts, role: "body", base: this.H * T.point, lineHeight: 1.35, paraGap: 0.55 });
+      const make = (span: Rect, pts: string[], y0: number) => this.text({ name: "Points", rect: { x: span.x, y: y0, width: span.width - this.ds.gutter, height: avail }, paragraphs: pts, role: "body", base: this.H * T.point, lineHeight: 1.35, paraGap: 0.55, list: "bullet" });
       const tallest = Math.max(make(l, points.slice(0, half), 0).height, make(r, points.slice(half), 0).height);
       const y0 = bodyTop + Math.max(0, Math.round((avail - tallest) / 2));
       // Re-anchor the title so the whole cluster is centered, as cluster() does.
@@ -497,7 +515,7 @@ class Composer {
     const pointBase = variant === "large" ? this.H * T.agendaItem : this.H * T.point;
     this.cluster(content, [
       this.titleBlock(this.H * T.title),
-      { kind: "text", maxFrac: 0.7, make: (r) => this.text({ name: "Points", rect: r, paragraphs: points, role: "body", base: pointBase, lineHeight: 1.35, paraGap: 0.55 }) },
+      { kind: "text", maxFrac: 0.7, make: (r) => this.text({ name: "Points", rect: r, paragraphs: points, role: "body", base: pointBase, lineHeight: 1.35, paraGap: 0.55, list: "bullet" }) },
     ], 3, true);
     this.furniture();
   }
@@ -510,8 +528,7 @@ class Composer {
     const left = { ...this.span(0, 4), ...content };
     const right = { ...this.span(5, 7), ...content };
     this.cluster(left, [{ kind: "rule" }, this.titleBlock(this.H * T.title)], 3);
-    const items = this.item.points.map((p, i) => `${i + 1}   ${p}`);
-    this.cluster(right, [{ kind: "text", maxFrac: 1, make: (r) => this.text({ name: "Agenda", rect: r, paragraphs: items, role: "body", base: this.H * T.agendaItem, lineHeight: 1.35, paraGap: 0.7 }) }], 0);
+    this.cluster(right, [{ kind: "text", maxFrac: 1, make: (r) => this.text({ name: "Agenda", rect: r, paragraphs: this.item.points, role: "body", base: this.H * T.agendaItem, lineHeight: 1.35, paraGap: 0.7, list: "number" }) }], 0);
     this.furniture();
   }
 
@@ -534,10 +551,10 @@ class Composer {
       const head = this.text({ name: "Heading", rect: { x: inner.x, y: y0 + u * 2.5, width: inner.width, height: u * 10 }, paragraphs: [c.heading], role: "heading", base: this.H * T.colHead, bold: true, lineHeight: 1.15 });
       out.push(head.node);
       let bottom = y0 + u * 2.5 + head.height;
-      const pts = c.points.map((p) => `•  ${p}`);
+      const pts = c.points;
       if (pts.length) {
         const py = bottom + u * 2;
-        const body = this.text({ name: "Points", rect: { x: inner.x, y: py, width: inner.width, height: Math.max(u * 4, this.H - this.m - py) }, paragraphs: pts, role: "body", base: this.H * T.point * (n === 3 ? 0.92 : 1), lineHeight: 1.35, paraGap: 0.5 });
+        const body = this.text({ name: "Points", rect: { x: inner.x, y: py, width: inner.width, height: Math.max(u * 4, this.H - this.m - py) }, paragraphs: pts, role: "body", base: this.H * T.point * (n === 3 ? 0.92 : 1), lineHeight: 1.35, paraGap: 0.5, list: "bullet" });
         out.push(body.node);
         bottom = py + body.height;
       }
@@ -604,9 +621,9 @@ class Composer {
       const avail = this.H - this.m - bodyTop;
       this.nodes.push(...build(bodyTop + Math.max(0, Math.round((avail - rowH) / 2))).nodes);
     } else {
-      // Five steps: a numbered list down the page, number in the accent.
-      const items = steps.map((st, i) => `${i + 1}   ${st.label}${st.detail ? `: ${st.detail}` : ""}`);
-      this.nodes.push(this.text({ name: "Steps", rect: { ...this.span(0, 10), y: bodyTop, height: this.H - this.m - bodyTop }, paragraphs: items, role: "body", base: this.H * T.point, lineHeight: 1.35, paraGap: 0.7 }).node);
+      // Five steps: a numbered list down the page.
+      const items = steps.map((st) => `${st.label}${st.detail ? `: ${st.detail}` : ""}`);
+      this.nodes.push(this.text({ name: "Steps", rect: { ...this.span(0, 10), y: bodyTop, height: this.H - this.m - bodyTop }, paragraphs: items, role: "body", base: this.H * T.point, lineHeight: 1.35, paraGap: 0.7, list: "number" }).node);
     }
     this.furniture();
   }

@@ -87,7 +87,7 @@
             {
               "runs": [
                 {
-                  "text": "Solar for Small Business",
+                  "text": "Solar for Small Business",
                   "style": {
                     "fontFamily": "Lora",
                     "fontStyle": "Bold",
@@ -223,7 +223,7 @@
             {
               "runs": [
                 {
-                  "text": "The Cost Problem",
+                  "text": "The Cost Problem",
                   "style": {
                     "fontFamily": "Lora",
                     "fontStyle": "Bold",
@@ -281,7 +281,7 @@
             {
               "runs": [
                 {
-                  "text": "•  Commercial rates rose 24% in five years",
+                  "text": "Commercial rates rose 24% in five years",
                   "style": {
                     "fontFamily": "Nunito",
                     "fontStyle": "Regular",
@@ -302,13 +302,17 @@
               ],
               "style": {
                 "align": "left",
-                "direction": "auto"
+                "direction": "auto",
+                "list": {
+                  "type": "bullet",
+                  "level": 0
+                }
               }
             },
             {
               "runs": [
                 {
-                  "text": "•  Peak-hour pricing punishes daytime businesses",
+                  "text": "Peak-hour pricing punishes daytime businesses",
                   "style": {
                     "fontFamily": "Nunito",
                     "fontStyle": "Regular",
@@ -329,13 +333,17 @@
               ],
               "style": {
                 "align": "left",
-                "direction": "auto"
+                "direction": "auto",
+                "list": {
+                  "type": "bullet",
+                  "level": 0
+                }
               }
             },
             {
               "runs": [
                 {
-                  "text": "•  Diesel backup is loud, dirty, expensive",
+                  "text": "Diesel backup is loud, dirty, expensive",
                   "style": {
                     "fontFamily": "Nunito",
                     "fontStyle": "Regular",
@@ -356,7 +364,11 @@
               ],
               "style": {
                 "align": "left",
-                "direction": "auto"
+                "direction": "auto",
+                "list": {
+                  "type": "bullet",
+                  "level": 0
+                }
               }
             }
           ],
@@ -586,7 +598,7 @@
             {
               "runs": [
                 {
-                  "text": "•  Year 0-1: installation and incentives",
+                  "text": "Year 0-1: installation and incentives",
                   "style": {
                     "fontFamily": "Nunito",
                     "fontStyle": "Regular",
@@ -607,13 +619,17 @@
               ],
               "style": {
                 "align": "left",
-                "direction": "auto"
+                "direction": "auto",
+                "list": {
+                  "type": "bullet",
+                  "level": 0
+                }
               }
             },
             {
               "runs": [
                 {
-                  "text": "•  Year 2-5: net savings begin",
+                  "text": "Year 2-5: net savings begin",
                   "style": {
                     "fontFamily": "Nunito",
                     "fontStyle": "Regular",
@@ -634,13 +650,17 @@
               ],
               "style": {
                 "align": "left",
-                "direction": "auto"
+                "direction": "auto",
+                "list": {
+                  "type": "bullet",
+                  "level": 0
+                }
               }
             },
             {
               "runs": [
                 {
-                  "text": "•  Year 6+: pure margin",
+                  "text": "Year 6+: pure margin",
                   "style": {
                     "fontFamily": "Nunito",
                     "fontStyle": "Regular",
@@ -661,7 +681,11 @@
               ],
               "style": {
                 "align": "left",
-                "direction": "auto"
+                "direction": "auto",
+                "list": {
+                  "type": "bullet",
+                  "level": 0
+                }
               }
             }
           ],
@@ -867,7 +891,7 @@
             {
               "runs": [
                 {
-                  "text": "Start This Quarter",
+                  "text": "Start This Quarter",
                   "style": {
                     "fontFamily": "Lora",
                     "fontStyle": "Bold",

@@ -30561,6 +30561,7 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
       exports.archetypeIsImpact = archetypeIsImpact;
+      exports.keepLastWordCompany = keepLastWordCompany;
       exports.composeArchetypePage = composeArchetypePage;
       var schema_1 = require_dist();
       var deckStyle_1 = require_deckStyle();
@@ -30591,6 +30592,12 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
         caption: 0.03
       };
       var ADVANCE = { heading: 0.55, body: 0.5 };
+      var LIST_GUTTER_EM = 1.6;
+      function keepLastWordCompany(text2) {
+        if (text2.trim().split(/\s+/).length < 3)
+          return text2;
+        return text2.replace(/ +(\S+)\s*$/, "\xA0$1");
+      }
       var Composer = class {
         constructor(ds, item, ctx, impact) {
           this.ds = ds;
@@ -30641,19 +30648,20 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
             n += Math.max(1, Math.ceil(Array.from(seg).length / perLine));
           return n;
         }
-        /** The largest ladder size at which the paragraphs fit the region. */
-        fit(paragraphs, width, height, base, lineHeight, role, paraGap) {
+        /** The largest ladder size at which the paragraphs fit the region.
+         *  gutterEm is the list marker gutter, in ems, taken off the wrap width. */
+        fit(paragraphs, width, height, base, lineHeight, role, paraGap, gutterEm = 0) {
           for (const size2 of (0, deckStyle_1.ladderFrom)(base, this.ds.size)) {
-            if (this.measure(paragraphs, width, size2, lineHeight, role, paraGap) <= height)
+            if (this.measure(paragraphs, width, size2, lineHeight, role, paraGap, gutterEm) <= height)
               return size2;
           }
           const ladder = (0, deckStyle_1.ladderFrom)(base, this.ds.size);
           return ladder[ladder.length - 1];
         }
-        measure(paragraphs, width, size2, lineHeight, role, paraGap) {
+        measure(paragraphs, width, size2, lineHeight, role, paraGap, gutterEm = 0) {
           let h = 0;
           paragraphs.forEach((p, i) => {
-            h += this.lines(p, size2, width, role) * size2 * lineHeight;
+            h += this.lines(p, size2, Math.max(1, width - gutterEm * size2), role) * size2 * lineHeight;
             if (i < paragraphs.length - 1)
               h += paraGap * size2;
           });
@@ -30664,9 +30672,10 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
           var _a5, _b, _c, _d, _e, _f, _g;
           const lineHeight = (_a5 = opts.lineHeight) != null ? _a5 : opts.role === "heading" ? 1.1 : 1.4;
           const paraGap = (_b = opts.paraGap) != null ? _b : opts.role === "heading" ? 0.2 : 0.45;
-          const paragraphs = opts.paragraphs.length ? opts.paragraphs : [""];
-          const size2 = (_c = opts.exactSize) != null ? _c : this.fit(paragraphs, opts.rect.width, opts.rect.height, opts.base, lineHeight, opts.role, paraGap);
-          const needed = this.measure(paragraphs, opts.rect.width, size2, lineHeight, opts.role, paraGap);
+          const paragraphs = (opts.paragraphs.length ? opts.paragraphs : [""]).map((p) => opts.role === "heading" ? keepLastWordCompany(p) : p);
+          const gutterEm = opts.list ? LIST_GUTTER_EM : 0;
+          const size2 = (_c = opts.exactSize) != null ? _c : this.fit(paragraphs, opts.rect.width, opts.rect.height, opts.base, lineHeight, opts.role, paraGap, gutterEm);
+          const needed = this.measure(paragraphs, opts.rect.width, size2, lineHeight, opts.role, paraGap, gutterEm);
           if (!opts.exactSize && needed > opts.rect.height)
             this.overfull.push(opts.name);
           const height = Math.min(opts.rect.height, needed);
@@ -30688,7 +30697,7 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
             box: { mode: "fixed", width: r.width, height: r.height, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: (_g = opts.valign) != null ? _g : "top" },
             content: paragraphs.map((p) => ({
               runs: [{ text: p, style: structuredClone(style) }],
-              style: { align, direction: "auto" }
+              style: __spreadValues({ align, direction: "auto" }, opts.list ? { list: { type: opts.list, level: 0 } } : {})
             }))
           });
           return { node, height, size: size2 };
@@ -30955,7 +30964,7 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
             const s = imageLeading ? this.span(0, 4) : this.span(8, 4);
             this.nodes.push(this.imageSlot({ x: s.x, y: content.y, width: s.width, height: content.height }, this.imagePrompt(), this.ds.radius * 2));
           }
-          const points = this.item.points.map((p) => `\u2022  ${p}`);
+          const points = this.item.points;
           const variant = this.ctx.variant;
           if (variant === "twoUp" && points.length >= 4 && !hasImage) {
             const half = Math.ceil(points.length / 2);
@@ -30964,7 +30973,7 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
             const title = this.text({ name: "Title", rect: __spreadProps(__spreadValues({}, this.span(0, 12)), { y: content.y, height: this.H * 0.2 }), paragraphs: [this.item.title], role: "heading", base: this.H * T.title, bold: true, lineHeight: 1.08 });
             const bodyTop = content.y + title.height + u2 * 4;
             const avail = this.H - this.m - bodyTop;
-            const make = (span, pts, y02) => this.text({ name: "Points", rect: { x: span.x, y: y02, width: span.width - this.ds.gutter, height: avail }, paragraphs: pts, role: "body", base: this.H * T.point, lineHeight: 1.35, paraGap: 0.55 });
+            const make = (span, pts, y02) => this.text({ name: "Points", rect: { x: span.x, y: y02, width: span.width - this.ds.gutter, height: avail }, paragraphs: pts, role: "body", base: this.H * T.point, lineHeight: 1.35, paraGap: 0.55, list: "bullet" });
             const tallest = Math.max(make(l, points.slice(0, half), 0).height, make(r, points.slice(half), 0).height);
             const y0 = bodyTop + Math.max(0, Math.round((avail - tallest) / 2));
             const total = title.height + u2 * 4 + tallest;
@@ -30978,7 +30987,7 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
           const pointBase = variant === "large" ? this.H * T.agendaItem : this.H * T.point;
           this.cluster(content, [
             this.titleBlock(this.H * T.title),
-            { kind: "text", maxFrac: 0.7, make: (r) => this.text({ name: "Points", rect: r, paragraphs: points, role: "body", base: pointBase, lineHeight: 1.35, paraGap: 0.55 }) }
+            { kind: "text", maxFrac: 0.7, make: (r) => this.text({ name: "Points", rect: r, paragraphs: points, role: "body", base: pointBase, lineHeight: 1.35, paraGap: 0.55, list: "bullet" }) }
           ], 3, true);
           this.furniture();
         }
@@ -30988,8 +30997,7 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
           const left = __spreadValues(__spreadValues({}, this.span(0, 4)), content);
           const right = __spreadValues(__spreadValues({}, this.span(5, 7)), content);
           this.cluster(left, [{ kind: "rule" }, this.titleBlock(this.H * T.title)], 3);
-          const items = this.item.points.map((p, i) => `${i + 1}   ${p}`);
-          this.cluster(right, [{ kind: "text", maxFrac: 1, make: (r) => this.text({ name: "Agenda", rect: r, paragraphs: items, role: "body", base: this.H * T.agendaItem, lineHeight: 1.35, paraGap: 0.7 }) }], 0);
+          this.cluster(right, [{ kind: "text", maxFrac: 1, make: (r) => this.text({ name: "Agenda", rect: r, paragraphs: this.item.points, role: "body", base: this.H * T.agendaItem, lineHeight: 1.35, paraGap: 0.7, list: "number" }) }], 0);
           this.furniture();
         }
         columns(n) {
@@ -31009,10 +31017,10 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
             const head = this.text({ name: "Heading", rect: { x: inner.x, y: y02 + u * 2.5, width: inner.width, height: u * 10 }, paragraphs: [c.heading], role: "heading", base: this.H * T.colHead, bold: true, lineHeight: 1.15 });
             out.push(head.node);
             let bottom = y02 + u * 2.5 + head.height;
-            const pts = c.points.map((p) => `\u2022  ${p}`);
+            const pts = c.points;
             if (pts.length) {
               const py = bottom + u * 2;
-              const body = this.text({ name: "Points", rect: { x: inner.x, y: py, width: inner.width, height: Math.max(u * 4, this.H - this.m - py) }, paragraphs: pts, role: "body", base: this.H * T.point * (n === 3 ? 0.92 : 1), lineHeight: 1.35, paraGap: 0.5 });
+              const body = this.text({ name: "Points", rect: { x: inner.x, y: py, width: inner.width, height: Math.max(u * 4, this.H - this.m - py) }, paragraphs: pts, role: "body", base: this.H * T.point * (n === 3 ? 0.92 : 1), lineHeight: 1.35, paraGap: 0.5, list: "bullet" });
               out.push(body.node);
               bottom = py + body.height;
             }
@@ -31075,8 +31083,8 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
             const avail = this.H - this.m - bodyTop;
             this.nodes.push(...build(bodyTop + Math.max(0, Math.round((avail - rowH) / 2))).nodes);
           } else {
-            const items = steps.map((st, i) => `${i + 1}   ${st.label}${st.detail ? `: ${st.detail}` : ""}`);
-            this.nodes.push(this.text({ name: "Steps", rect: __spreadProps(__spreadValues({}, this.span(0, 10)), { y: bodyTop, height: this.H - this.m - bodyTop }), paragraphs: items, role: "body", base: this.H * T.point, lineHeight: 1.35, paraGap: 0.7 }).node);
+            const items = steps.map((st) => `${st.label}${st.detail ? `: ${st.detail}` : ""}`);
+            this.nodes.push(this.text({ name: "Steps", rect: __spreadProps(__spreadValues({}, this.span(0, 10)), { y: bodyTop, height: this.H - this.m - bodyTop }), paragraphs: items, role: "body", base: this.H * T.point, lineHeight: 1.35, paraGap: 0.7, list: "number" }).node);
           }
           this.furniture();
         }
