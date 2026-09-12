@@ -28,7 +28,115 @@ type OutlineItem struct {
 	// adding presenter context and delivery cues, never a restatement of the
 	// slide text. Optional so older clients and replies keep validating.
 	Note string `json:"note,omitempty"`
+
+	// Archetype is the slide's compositional form, chosen by the model as part
+	// of planning the story rather than inferred from bullets afterwards. Every
+	// field below is optional and additive: an older client ignores them and
+	// still validates, and a reply that omits them normalizes to the archetype
+	// its visualRole implies. Budgets are enforced in validateOutline so the
+	// composer can trust the lengths it receives.
+	Archetype string       `json:"archetype,omitempty"`
+	Subhead   string       `json:"subhead,omitempty"`
+	Stat      *Stat        `json:"stat,omitempty"`
+	Quote     *Quote       `json:"quote,omitempty"`
+	Steps     []Step       `json:"steps,omitempty"`
+	Columns   []Column     `json:"columns,omitempty"`
+	Image     *ImageIntent `json:"image,omitempty"`
+	Chart     *ChartData   `json:"chart,omitempty"`
 }
+
+// Stat is the content of a big-number slide: one figure at display scale, its
+// unit, and the line that says what it means.
+type Stat struct {
+	Value string `json:"value"`
+	Unit  string `json:"unit,omitempty"`
+	Label string `json:"label"`
+}
+
+// Quote is a pull quote with its source.
+type Quote struct {
+	Text        string `json:"text"`
+	Attribution string `json:"attribution,omitempty"`
+}
+
+// Step is one stage of a process slide. Steps are the one place numbering is
+// information rather than decoration: the content IS a sequence.
+type Step struct {
+	Label  string `json:"label"`
+	Detail string `json:"detail,omitempty"`
+}
+
+// Column is one side of a comparison or one cell of a three-up.
+type Column struct {
+	Heading string   `json:"heading"`
+	Points  []string `json:"points"`
+}
+
+// ImageIntent is what the picture on a slide should show and how it should be
+// treated. Subject is written in English regardless of the deck's language, so
+// the image pipeline can route it to stock or generation.
+type ImageIntent struct {
+	Subject   string `json:"subject"`
+	Treatment string `json:"treatment,omitempty"` // photo | illustration | abstract
+}
+
+// ChartData is a small dataset for a chart slide, in the shape the chart node
+// takes: categories along one axis, one or more named series of values
+// (ChartSeries is shared with the chart tool below).
+type ChartData struct {
+	Kind       string        `json:"kind"` // bar | line | pie | donut
+	Categories []string      `json:"categories"`
+	Series     []ChartSeries `json:"series"`
+}
+
+// archetypes is the set the model may choose from. Mirrors `archetypes` in
+// packages/aistudio/src/outline.ts; change them together.
+var archetypes = map[string]bool{
+	"cover": true, "agenda": true, "section": true, "statement": true, "bigNumber": true,
+	"bullets": true, "twoColumn": true, "threeUp": true, "process": true, "quote": true,
+	"imageCaption": true, "chart": true, "closing": true,
+}
+
+// archetypeForRole is the default form for a page that named only a visual
+// role, which is every page from a client or model predating archetypes.
+var archetypeForRole = map[string]string{
+	"cover": "cover", "agenda": "agenda", "content": "bullets", "comparison": "twoColumn",
+	"quote": "quote", "data": "bigNumber", "closing": "closing",
+}
+
+// roleForArchetype keeps visualRole populated for readers that still key on
+// it (page treatment, older layout preference tables).
+var roleForArchetype = map[string]string{
+	"cover": "cover", "agenda": "agenda", "section": "content", "statement": "content",
+	"bigNumber": "data", "bullets": "content", "twoColumn": "comparison", "threeUp": "content",
+	"process": "content", "quote": "quote", "imageCaption": "content", "chart": "data", "closing": "closing",
+}
+
+// Content budgets, in characters. The composer sizes type from slot geometry
+// and steps down a ladder when copy runs long; these caps are where "runs long"
+// stops being the composer's problem and becomes the writer's. Mirrored in
+// outline.ts as archetypeBudgets.
+const (
+	maxTitleChars     = 60
+	maxSubheadChars   = 120
+	maxStatementChars = 90
+	maxPointChars     = 90
+	maxPoints         = 5
+	maxStatValueChars = 12
+	maxStatUnitChars  = 8
+	maxStatLabelChars = 60
+	maxQuoteChars     = 200
+	maxAttribChars    = 60
+	maxSteps          = 5
+	maxStepLabelChars = 30
+	maxStepDetail     = 90
+	maxColumns        = 3
+	maxColHeadChars   = 40
+	maxColPoints      = 4
+	maxImageSubject   = 140
+	maxChartCats      = 8
+	maxChartSeries    = 3
+)
 
 // DesignOutline is the editable plan returned by the outline endpoint.
 type DesignOutline struct {
@@ -43,17 +151,33 @@ func validateOutline(o *DesignOutline) error {
 	}
 	clean := o.Pages[:0]
 	for _, p := range o.Pages {
+		// Archetype and role are two views of one decision. A reply that names
+		// only one gets the other derived, so every downstream reader sees both
+		// filled in whichever generation of client or model produced the page.
+		if !archetypes[p.Archetype] {
+			p.Archetype = ""
+		}
 		if !visualRoles[p.VisualRole] {
-			p.VisualRole = "content"
+			p.VisualRole = ""
+		}
+		if p.Archetype == "" && p.VisualRole != "" {
+			p.Archetype = archetypeForRole[p.VisualRole]
+		}
+		if p.Archetype == "" {
+			p.Archetype = "bullets"
 		}
 		pts := p.Points[:0]
 		for _, pt := range p.Points {
-			if t := strings.TrimSpace(pt); t != "" {
+			if t := clipRunes(strings.TrimSpace(pt), maxPointChars); t != "" {
 				pts = append(pts, t)
 			}
 		}
+		if len(pts) > maxPoints {
+			pts = pts[:maxPoints]
+		}
 		p.Points = pts
 		p.Note = normalizeNote(p.Note)
+		normalizeArchetypeFields(&p)
 		if strings.TrimSpace(p.Title) == "" && len(p.Points) == 0 {
 			continue
 		}
@@ -67,6 +191,160 @@ func validateOutline(o *DesignOutline) error {
 		return errors.New("outline has no usable pages")
 	}
 	return nil
+}
+
+// clipRunes cuts s to at most n code points on a word boundary where one is
+// available in the back 40%, so a long field shortens to a phrase rather than
+// to a syllable.
+func clipRunes(s string, n int) string {
+	r := []rune(s)
+	if len(r) <= n {
+		return s
+	}
+	cut := string(r[:n])
+	if i := strings.LastIndex(cut, " "); i > n*6/10 {
+		cut = cut[:i]
+	}
+	return strings.TrimRight(cut, " ,;:-")
+}
+
+// normalizeArchetypeFields clips every typed field to its budget and drops a
+// typed payload that is empty or malformed, so the composer never has to
+// second-guess a half-filled stat or a one-column comparison. A page whose
+// archetype needs a payload it does not have falls back to the plain form its
+// content can support: no stat means no big number.
+func normalizeArchetypeFields(p *OutlineItem) {
+	p.Title = clipRunes(strings.TrimSpace(p.Title), maxTitleChars)
+	p.Subhead = clipRunes(strings.TrimSpace(p.Subhead), maxSubheadChars)
+	if p.Archetype == "statement" {
+		p.Title = clipRunes(p.Title, maxStatementChars)
+	}
+	if p.Stat != nil {
+		p.Stat.Value = clipRunes(strings.TrimSpace(p.Stat.Value), maxStatValueChars)
+		p.Stat.Unit = clipRunes(strings.TrimSpace(p.Stat.Unit), maxStatUnitChars)
+		p.Stat.Label = clipRunes(strings.TrimSpace(p.Stat.Label), maxStatLabelChars)
+		if p.Stat.Value == "" {
+			p.Stat = nil
+		}
+	}
+	if p.Quote != nil {
+		p.Quote.Text = clipRunes(strings.TrimSpace(p.Quote.Text), maxQuoteChars)
+		p.Quote.Attribution = clipRunes(strings.TrimSpace(p.Quote.Attribution), maxAttribChars)
+		if p.Quote.Text == "" {
+			p.Quote = nil
+		}
+	}
+	steps := p.Steps[:0]
+	for _, st := range p.Steps {
+		st.Label = clipRunes(strings.TrimSpace(st.Label), maxStepLabelChars)
+		st.Detail = clipRunes(strings.TrimSpace(st.Detail), maxStepDetail)
+		if st.Label != "" {
+			steps = append(steps, st)
+		}
+	}
+	if len(steps) > maxSteps {
+		steps = steps[:maxSteps]
+	}
+	p.Steps = steps
+	cols := p.Columns[:0]
+	for _, c := range p.Columns {
+		c.Heading = clipRunes(strings.TrimSpace(c.Heading), maxColHeadChars)
+		cp := c.Points[:0]
+		for _, pt := range c.Points {
+			if t := clipRunes(strings.TrimSpace(pt), maxPointChars); t != "" {
+				cp = append(cp, t)
+			}
+		}
+		if len(cp) > maxColPoints {
+			cp = cp[:maxColPoints]
+		}
+		c.Points = cp
+		if c.Heading != "" || len(c.Points) > 0 {
+			cols = append(cols, c)
+		}
+	}
+	if len(cols) > maxColumns {
+		cols = cols[:maxColumns]
+	}
+	p.Columns = cols
+	if p.Image != nil {
+		p.Image.Subject = clipRunes(strings.TrimSpace(p.Image.Subject), maxImageSubject)
+		switch p.Image.Treatment {
+		case "photo", "illustration", "abstract":
+		default:
+			p.Image.Treatment = "photo"
+		}
+		if p.Image.Subject == "" {
+			p.Image = nil
+		}
+	}
+	if p.Chart != nil {
+		switch p.Chart.Kind {
+		case "bar", "line", "pie", "donut":
+		default:
+			p.Chart.Kind = "bar"
+		}
+		if len(p.Chart.Categories) > maxChartCats {
+			p.Chart.Categories = p.Chart.Categories[:maxChartCats]
+		}
+		series := p.Chart.Series[:0]
+		for _, sr := range p.Chart.Series {
+			if len(sr.Values) > len(p.Chart.Categories) {
+				sr.Values = sr.Values[:len(p.Chart.Categories)]
+			}
+			if len(sr.Values) > 0 {
+				series = append(series, sr)
+			}
+		}
+		if len(series) > maxChartSeries {
+			series = series[:maxChartSeries]
+		}
+		p.Chart.Series = series
+		if len(p.Chart.Categories) == 0 || len(p.Chart.Series) == 0 {
+			p.Chart = nil
+		}
+	}
+	// Downgrade an archetype whose payload did not survive.
+	switch p.Archetype {
+	case "bigNumber":
+		if p.Stat == nil {
+			p.Archetype = "bullets"
+		}
+	case "quote":
+		if p.Quote == nil {
+			if len(p.Points) > 0 {
+				p.Quote = &Quote{Text: clipRunes(p.Points[0], maxQuoteChars)}
+			} else {
+				p.Archetype = "statement"
+			}
+		}
+	case "process":
+		if len(p.Steps) < 2 {
+			p.Archetype = "bullets"
+		}
+	case "twoColumn":
+		if len(p.Columns) < 2 {
+			p.Archetype = "bullets"
+		}
+	case "threeUp":
+		if len(p.Columns) < 2 {
+			p.Archetype = "bullets"
+		}
+	case "imageCaption":
+		if p.Image == nil {
+			p.Archetype = "statement"
+		}
+	case "chart":
+		if p.Chart == nil {
+			p.Archetype = "bullets"
+		}
+	}
+	// A downgrade changes the FORM, never a role the reply named: an old-style
+	// comparison page (role only, points only) keeps its role and the layout
+	// that role has always had, and merely gains archetype "bullets".
+	if p.VisualRole == "" {
+		p.VisualRole = roleForArchetype[p.Archetype]
+	}
 }
 
 // maxNoteChars mirrors maxNoteChars in packages/aistudio/src/outline.ts: the
