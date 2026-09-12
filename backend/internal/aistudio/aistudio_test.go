@@ -323,7 +323,7 @@ func TestValidateOutlineNormalizesNotes(t *testing.T) {
 // errors and the previous invalid output, not a generic hint.
 func TestRepairLoopFeedsBackConcreteErrors(t *testing.T) {
 	gen := &stubGen{replies: []string{
-		`{"chartType":"bar","categories":[],"series":[]}`, // invalid: no categories
+		`{"chartType":"bar","categories":[],"series":[]}`,    // invalid: no categories
 		`{"chartType":"bar","categories":["a"],"series":[]}`, // invalid: no series
 		`{"chartType":"bar","categories":["a"],"series":[{"name":"s","values":[1]}]}`,
 	}}

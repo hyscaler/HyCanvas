@@ -9,10 +9,10 @@ import (
 
 func TestExtractSVG(t *testing.T) {
 	cases := map[string]string{
-		"<svg a=\"1\"><rect/></svg>":                          "<svg a=\"1\"><rect/></svg>",
-		"sure! ```svg\n<svg><rect/></svg>\n``` done":          "<svg><rect/></svg>",
-		"prose before <svg><text>x</text></svg> and after":   "<svg><text>x</text></svg>",
-		"no svg here":                                         "",
+		"<svg a=\"1\"><rect/></svg>":                       "<svg a=\"1\"><rect/></svg>",
+		"sure! ```svg\n<svg><rect/></svg>\n``` done":       "<svg><rect/></svg>",
+		"prose before <svg><text>x</text></svg> and after": "<svg><text>x</text></svg>",
+		"no svg here": "",
 	}
 	for in, want := range cases {
 		if got := extractSVG(in); got != want {
@@ -26,10 +26,10 @@ func TestValidateSVG(t *testing.T) {
 		t.Fatalf("valid svg rejected: %v", err)
 	}
 	bad := []string{
-		"",                                  // empty
-		"<div>not svg</div>",                // wrong root
-		"<svg><rect></svg>",                 // malformed (unclosed rect)
-		"<svg><g><rect/></svg>",             // malformed (unclosed g)
+		"",                      // empty
+		"<div>not svg</div>",    // wrong root
+		"<svg><rect></svg>",     // malformed (unclosed rect)
+		"<svg><g><rect/></svg>", // malformed (unclosed g)
 	}
 	for _, b := range bad {
 		if err := validateSVG(b); err == nil {
