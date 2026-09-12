@@ -48,7 +48,7 @@ import {
 import { createBlankDesign, type DesignFile } from "@hc/schema";
 import { hycAccept, downloadHycFile, importedTitle, parseHycFile, readFileText } from "@/lib/hycFile";
 import { odpToDesign, pptxToDesign } from "@hc/export";
-import { deckThemes, dialTones, layoutDeck, parseMarkdownOutline } from "@hc/aistudio";
+import { catalogEntryForSeed, deckThemes, dialTones, layoutDeck, parseMarkdownOutline } from "@hc/aistudio";
 
 // Markdown outline import (F28 C26): DETERMINISTIC, no AI - headings become
 // slides, list items become points, laid out through the same pure deck
@@ -59,7 +59,7 @@ function mdOutlineToDesign(md: string, fallbackTitle: string): DesignFile {
   const size = { width: 1920, height: 1080 };
   const seed = Array.from(outline.title).reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) | 0, 7);
   const theme = deckThemes({ count: 1, kicker: outline.title, seed })[0];
-  const deck = layoutDeck(outline, theme, size);
+  const deck = layoutDeck(outline, theme, size, { catalog: catalogEntryForSeed(seed), seed });
   const file = createBlankDesign({ title: outline.title, width: size.width, height: size.height });
   let pageSeq = 0;
   file.pages = deck.pages.map((p, i) => ({

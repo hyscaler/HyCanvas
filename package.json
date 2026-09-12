@@ -41,7 +41,8 @@
     "deploy": "npm run build:dist && ./dist/hycanvas service restart",
     "bench:paint": "node scripts/bench-paint.mjs",
     "gen:ai-tools": "node scripts/gen-ai-tools.mjs",
-    "test:frontend": "npm run test -w frontend"
+    "test:frontend": "npm run test -w frontend",
+    "gen:compose-fixture": "node scripts/gen-compose-fixture.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",

@@ -23,8 +23,7 @@ import {
   type DesignOutline, type DesignType, type GenerationDials, type OutlineItem,
   toolCatalog, assistantSystemPrompt, parseAssistantReply, planMutates, summarizeDesign, type PlanStep,
   deriveOutline, switchOutline, sourcesOutlineItem, type PageText, type SourceCitation,
-  themeCatalogEntry, deckThemeFromCatalog, themeRecordFromCatalog, deckThemeFromRecord, pageTreatment,
-} from "@hc/aistudio";
+  themeCatalogEntry, deckThemeFromCatalog, themeRecordFromCatalog, deckThemeFromRecord, pageTreatment, catalogEntryForSeed, themeRecordFromDesignSystem } from "@hc/aistudio";
 import { builtinMasterAndLayouts, type SlideLayout } from "@hc/schema";
 import { promptText } from "@/lib/promptDialog";
 import { downloadHycFile } from "@/lib/hycFile";
@@ -3411,7 +3410,11 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
         : chosenEntry
           ? [deckThemeFromCatalog(chosenEntry, clean.title)]
           : deckThemes({ brandPalette, kicker: clean.title, count: 1, fontHeading: brandFonts.heading, fontBody: brandFonts.body, seed });
-      const deck = layoutDeck(clean, themes[0], size);
+      // The same design system the API composes from: a catalog entry's six
+      // slots and pairing when one is chosen or when nothing else names a
+      // palette, so an unbranded brief still gets a designed deck.
+      const catalog = chosenEntry ?? (!themeRecord && !brandPalette.length ? catalogEntryForSeed(seed) : null);
+      const deck = layoutDeck(clean, themes[0], size, { catalog, brandPalette, seed });
       const base = append ? st.doc.pages.length : 0;
       const ids = append ? st.appendDeckPages(deck, size) : st.buildDeckFromOutline(deck, size);
       if (!ids.length) return false;
@@ -3419,21 +3422,42 @@ function runPlanStep(step: PlanStep, ctx?: { brandTargets?: BrandFixTarget[]; pa
       // only - these pages already wear its colors; a remap from any outgoing
       // theme would misfire). Appending never overrides an existing theme.
       if (!append || !(st.doc as unknown as { theme?: unknown }).theme) {
-        st.setDeckTheme(themeRecord ?? (chosenEntry ? themeRecordFromCatalog(chosenEntry) : themeRecordFromDeckTheme(themes[0], { name: clean.theme ? clean.theme.slice(0, 40) : undefined })), { restyle: false });
+        st.setDeckTheme(themeRecord ?? (chosenEntry ? themeRecordFromCatalog(chosenEntry) : themeRecordFromDesignSystem(deck.system, themes[0], clean.theme)), { restyle: false });
       }
-      // T10 placeholder-first: the deck is fully laid out NOW; hero images for
-      // the impact pages resolve in the background (reuse -> stock -> generate)
-      // and land by page id, so a failure or a design switch never breaks the
-      // deck. Enqueueing only schedules async work - the one-undo turn stays
-      // synchronous, and each resolution is its own small undoable mutation.
-      enqueueAiImages(heroPlans.map((h) => ({
-        workspaceId,
-        designId: designId ?? "",
-        pageId: ids[h.pageIndex],
-        prompt: h.prompt,
-        subject: h.subject,
-        size: h.size,
-      })).filter((t) => !!t.pageId));
+      // Placeholder-first: the deck is fully laid out NOW, with a tagged
+      // stand-in in every picture region. Each region resolves in the
+      // background (reuse -> stock -> generate) and lands by placeholder id,
+      // so a failure or a design switch never breaks the deck. Pages the
+      // composer gave a region skip the older full-page hero treatment, which
+      // would otherwise paint a second picture behind the first.
+      const slotTasks = deck.pages.flatMap((p, i) =>
+        Object.entries(p.imagePrompts).map(([placeholderId, prompt]) => {
+          const slot = p.nodes.find((n) => (n as { data?: { placeholderId?: string } }).data?.placeholderId === placeholderId) as { size?: { width: number; height: number } } | undefined;
+          const w = slot?.size?.width ?? 1;
+          const h = slot?.size?.height ?? 1;
+          return {
+            workspaceId,
+            designId: designId ?? "",
+            pageId: ids[i],
+            placeholderId,
+            prompt,
+            subject: clean.pages[i]?.image?.subject ?? clean.pages[i]?.title ?? "",
+            size: w > h * 1.3 ? "1792x1024" : h > w * 1.3 ? "1024x1792" : "1024x1024",
+          };
+        }),
+      );
+      const withSlots = new Set(deck.pages.map((p, i) => (Object.keys(p.imagePrompts).length ? i : -1)));
+      enqueueAiImages([
+        ...slotTasks,
+        ...heroPlans.filter((h) => !withSlots.has(h.pageIndex)).map((h) => ({
+          workspaceId,
+          designId: designId ?? "",
+          pageId: ids[h.pageIndex],
+          prompt: h.prompt,
+          subject: h.subject,
+          size: h.size,
+        })),
+      ].filter((t) => !!t.pageId));
       st.goToPage(base); // land on the first new page (and scroll it into view)
       return true;
     }

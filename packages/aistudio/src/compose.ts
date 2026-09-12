@@ -24,10 +24,12 @@ import { normalizeOutline } from "./outline";
 import { deckThemes } from "./theme";
 import { layoutDeck } from "./deck";
 import { layoutDesign, readableTextColor } from "./layout";
+import type { DesignSystem } from "./designSystem";
 import { fallbackLayoutFill, repairLayoutSelection } from "./layoutSchema";
 import { accentRuleRect, pageTreatment, slotTypeScale } from "./deckStyle";
 import { reflowPage } from "./reflow";
-import { themeRecordFromDeckTheme, themeSlotNames } from "./themeGen";
+import { themeSlotNames } from "./themeGen";
+import { catalogEntryForSeed, designSystemSlots } from "./designSystem";
 import { themeCatalogEntry, type ThemeCatalogEntry } from "./themeCatalog";
 import type { DeckTheme } from "./outline";
 import type { Color } from "@hc/schema";
@@ -116,6 +118,29 @@ function hexToColor(hex: string): { srgb: { r: number; g: number; b: number; a: 
   return { srgb: { r: ((n >> 16) & 255) / 255, g: ((n >> 8) & 255) / 255, b: (n & 255) / 255, a: 1 } };
 }
 
+/** The file theme record for a deck composed from a design system: the very
+ *  six slots the pages were painted with. Used by the API and the editor so
+ *  the theme picker shows the same palette whichever door made the deck. */
+export function themeRecordFromDesignSystem(system: DesignSystem, theme: DeckTheme, mood: string): Theme {
+  // The record carries the pairing the pages were SET in, which for an
+  // unbranded deck is the system's seeded pairing, not the theme's empty fonts.
+  return themeRecordFromSlots(designSystemSlots(system), { ...theme, fontHeading: system.fonts.heading, fontBody: system.fonts.body }, mood);
+}
+
+function themeRecordFromSlots(slots: [string, string, string, string, string, string] | null, theme: DeckTheme, mood: string): Theme {
+  const name = mood ? mood.slice(0, 40) : undefined;
+  if (!slots) {
+    // No system (template path stamps its own record earlier): fall back to
+    // the background-derived record.
+    return themeFromPalette("generated", [{ id: "generated-0", name: "primary", color: hexToColor(theme.background.color ?? "#1f2937") }], { name, fontHeading: theme.fontHeading, fontBody: theme.fontBody });
+  }
+  return themeFromPalette(
+    "generated",
+    slots.map((hex, i) => ({ id: `generated-${i}`, name: themeSlotNames[i], color: hexToColor(hex) })),
+    { name, fontHeading: theme.fontHeading, fontBody: theme.fontBody },
+  );
+}
+
 /** Compose a full design file from an outline. Pages are fully laid out
  *  (background + nodes + speaker notes); the theme record is stamped so the
  *  theme picker reflects the generated visual system (T19). The file id is a
@@ -130,6 +155,12 @@ export function composeDeckFile(input: ComposeDeckInput): DesignFile {
   // same brief.
   let theme: DeckTheme;
   let record: Theme | null = null;
+  // The catalog entry the design system draws its six slots and type pairing
+  // from. Named themes use their own; a deck with neither theme nor brand
+  // takes one by title seed, so an unbranded brief still gets a designed
+  // palette and a real pairing rather than a lone hue and the system font.
+  let catalog: ThemeCatalogEntry | null = null;
+  const seed = Array.from(outline.title).reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) | 0, 7);
   if (input.themeRecord) {
     record = input.themeRecord;
     theme = deckThemeFromRecord(record, outline.title);
@@ -138,14 +169,16 @@ export function composeDeckFile(input: ComposeDeckInput): DesignFile {
     if (!entry) throw new Error(`unknown themeId: ${input.themeId}`);
     theme = deckThemeFromCatalog(entry, outline.title);
     record = themeRecordFromCatalog(entry);
+    catalog = entry;
   } else {
-    const seed = Array.from(outline.title).reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) | 0, 7);
     theme = deckThemes({ brandPalette: input.brandPalette ?? [], kicker: outline.title, count: 1, seed })[0];
+    if (!(input.brandPalette ?? []).length) catalog = catalogEntryForSeed(seed);
   }
 
   let pages: Page[];
   let masters: SlideMaster[] | undefined;
   let layoutsOut: SlideLayout[] | undefined;
+  let system: DesignSystem | null = null;
   if (input.layoutSet?.layouts?.length) {
     // Layout-grounded composition (E14): the template's own layout system,
     // materialized the way the editor's apply pass does it - deterministic
@@ -223,7 +256,10 @@ export function composeDeckFile(input: ComposeDeckInput): DesignFile {
             // Middle-anchored: a slot is usually far taller than its text, and
             // top-anchoring left every page's copy clinging to the ceiling
             // above a field of empty background.
-            box: { mode: "fixed", width: r.width, height: r.height, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: isTitle ? "middle" : "top" },
+            // Both anchored to the middle of their slot. A middle title over a
+            // top-anchored body put them on different baselines and left the
+            // lower half of every reading page empty.
+            box: { mode: "fixed", width: r.width, height: r.height, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "middle" },
             data: { placeholderId: ph.id },
             content,
           } as never);
@@ -272,7 +308,8 @@ export function composeDeckFile(input: ComposeDeckInput): DesignFile {
       } as unknown as Page;
     });
   } else {
-    const deck = layoutDeck(outline, theme, { width, height }, { dir: input.dir });
+    const deck = layoutDeck(outline, theme, { width, height }, { dir: input.dir, catalog, brandPalette: input.brandPalette, seed });
+    system = deck.system;
     pages = deck.pages.map((p, i) => ({
       id: `api-page-${i + 1}`,
       name: p.name || `Page ${i + 1}`,
@@ -296,7 +333,10 @@ export function composeDeckFile(input: ComposeDeckInput): DesignFile {
     fonts: [],
     ...(masters ? { masters } : {}),
     ...(layoutsOut ? { layouts: layoutsOut } : {}),
-    theme: record ?? themeRecordFromDeckTheme(theme, { name: outline.theme ? outline.theme.slice(0, 40) : undefined }),
+    // The file's theme record carries the very slots the pages were painted
+    // with, so the theme picker shows the deck's palette and a later swap can
+    // remap it precisely.
+    theme: record ?? themeRecordFromSlots(system ? designSystemSlots(system) : null, theme, outline.theme),
   } as unknown as DesignFile;
   return file;
 }
