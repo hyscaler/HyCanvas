@@ -34,6 +34,7 @@ const { AiProviderSettings } = await import("./AiProviderSettings");
 
 const caps = (image: boolean) => ({ text: true, image, describeImage: false, editImage: false });
 const PRESETS: AiProviderPreset[] = [
+  { id: "bedrock", label: "Amazon Bedrock", baseUrl: "", defaultModel: "anthropic.claude-sonnet-4-5-20250929-v1:0", defaultImageModel: "amazon.nova-canvas-v1:0", capabilities: caps(true), needsBaseUrl: true, needsSecret: true },
   { id: "openai", label: "OpenAI", baseUrl: "https://api.openai.com/v1", defaultModel: "gpt-4o-mini", defaultImageModel: "dall-e-3", capabilities: caps(true) },
   { id: "deepseek", label: "DeepSeek", baseUrl: "https://api.deepseek.com/v1", defaultModel: "deepseek-chat", capabilities: caps(false) },
   { id: "together", label: "Together AI", baseUrl: "https://api.together.xyz/v1", defaultModel: "llama", defaultImageModel: "flux", capabilities: caps(true) },
@@ -113,6 +114,63 @@ describe("the stored API key", () => {
     fireEvent.change(mainField("Provider"), { target: { value: "deepseek" } });
     fireEvent.change(mainField("Provider"), { target: { value: "openai" } });
     expect(screen.getByRole("button", { name: "Replace" })).toBeTruthy();
+  });
+});
+
+describe("a provider that signs its requests", () => {
+  it("asks for a secret access key, and only for the provider that needs one", async () => {
+    renderForm();
+    await screen.findByRole("group", { name: "Image provider" });
+    // OpenAI is selected: no second credential exists for it.
+    expect(screen.queryByLabelText("Secret access key")).toBeNull();
+
+    fireEvent.change(mainField("Provider"), { target: { value: "bedrock" } });
+    expect(mainField("Secret access key")).toBeTruthy();
+  });
+
+  it("refuses to save a signing provider with only half its credential", async () => {
+    renderForm();
+    await screen.findByRole("group", { name: "Image provider" });
+    fireEvent.change(mainField("Provider"), { target: { value: "bedrock" } });
+    fireEvent.change(mainField("API key"), { target: { value: "AKIDEXAMPLE" } });
+    fireEvent.change(mainField("Base URL"), { target: { value: "https://bedrock-runtime.us-east-1.amazonaws.com" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save provider" }));
+
+    // An access key ID alone cannot produce a signature, so this never reaches
+    // the server.
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    expect(oc.setAiConfig).not.toHaveBeenCalled();
+  });
+
+  it("sends both halves when both are given", async () => {
+    oc.setAiConfig.mockResolvedValue(storedConfig);
+    renderForm();
+    await screen.findByRole("group", { name: "Image provider" });
+    fireEvent.change(mainField("Provider"), { target: { value: "bedrock" } });
+    fireEvent.change(mainField("API key"), { target: { value: "AKIDEXAMPLE" } });
+    fireEvent.change(mainField("Secret access key"), { target: { value: "secret" } });
+    fireEvent.change(mainField("Base URL"), { target: { value: "https://bedrock-runtime.us-east-1.amazonaws.com" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save provider" }));
+
+    await waitFor(() =>
+      expect(oc.setAiConfig).toHaveBeenCalledWith("ws-1", expect.objectContaining({
+        provider: "bedrock", apiKey: "AKIDEXAMPLE", apiSecret: "secret",
+      })),
+    );
+  });
+
+  it("never carries a secret across a provider switch", async () => {
+    oc.setAiConfig.mockResolvedValue(storedConfig);
+    renderForm();
+    await screen.findByRole("group", { name: "Image provider" });
+    fireEvent.change(mainField("Provider"), { target: { value: "bedrock" } });
+    fireEvent.change(mainField("Secret access key"), { target: { value: "aws-secret" } });
+    // Away to a provider with no secret, and back.
+    fireEvent.change(mainField("Provider"), { target: { value: "deepseek" } });
+    fireEvent.change(mainField("Provider"), { target: { value: "bedrock" } });
+    expect((mainField("Secret access key") as HTMLInputElement).value).toBe("");
   });
 });
 

@@ -457,6 +457,9 @@ export interface AiProviderPreset {
   defaultModel: string;
   defaultImageModel?: string;
   capabilities: AiCapabilities;
+  /** True when the provider needs a second credential beside the key (an AWS
+   *  secret access key, for Bedrock's request signing). */
+  needsSecret?: boolean;
   /** True when the user must supply the base URL (Azure/custom). */
   needsBaseUrl?: boolean;
 }
@@ -1840,7 +1843,7 @@ export class HyCanvasClient {
    *  provider change), an empty string clears it explicitly. Changing the
    *  provider while a key is stored requires `apiKey` for the new provider
    *  (400 `ai_key_required_for_provider_change` otherwise). */
-  setAiConfig(workspaceId: string, input: { provider: string; model?: string; imageModel?: string; baseUrl?: string; apiKey?: string }): Promise<AiConfigView> {
+  setAiConfig(workspaceId: string, input: { provider: string; model?: string; imageModel?: string; baseUrl?: string; apiKey?: string; apiSecret?: string }): Promise<AiConfigView> {
     return this.request("PUT", `/v1/workspaces/${workspaceId}/ai-config`, input);
   }
   /** The workspace's dedicated image provider, or null when images run on the
@@ -1854,7 +1857,7 @@ export class HyCanvasClient {
    *  setAiConfig; resolves to null when cleared. */
   setAiImageConfig(
     workspaceId: string,
-    input: { provider: string; model?: string; baseUrl?: string; apiKey?: string },
+    input: { provider: string; model?: string; baseUrl?: string; apiKey?: string; apiSecret?: string },
   ): Promise<AiImageConfigView | null> {
     return this.request("PUT", `/v1/workspaces/${workspaceId}/ai-image-config`, input);
   }

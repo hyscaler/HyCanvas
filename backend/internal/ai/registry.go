@@ -23,8 +23,12 @@ type ProviderPreset struct {
 	DefaultModel      string       `json:"defaultModel"`
 	DefaultImageModel string       `json:"defaultImageModel,omitempty"`
 	Capabilities      Capabilities `json:"capabilities"`
-	/** True when the user must supply the base URL (Azure/custom). */
+	/** True when the user must supply the base URL (Azure/custom/Bedrock). */
 	NeedsBaseURL bool `json:"needsBaseUrl,omitempty"`
+	/** True when the provider needs a SECOND credential beside the key, which
+	 *  today means an AWS secret access key for Bedrock's request signing. The
+	 *  UI shows the extra field only for these. */
+	NeedsSecret bool `json:"needsSecret,omitempty"`
 }
 
 // PRESETS is the built-in provider catalog (BYO key per workspace). OpenAI-
@@ -74,6 +78,15 @@ var PRESETS = []ProviderPreset{
 	// transport pins (2024-06-01), and the default dall-e-3 deployment cannot
 	// edit; advertising it would fail every call.
 	{ID: "azure-openai", Label: "Azure OpenAI", BaseURL: "", DefaultModel: "gpt-4o-mini", DefaultImageModel: "dall-e-3", Capabilities: Capabilities{Text: true, Image: true, DescribeImage: true}, NeedsBaseURL: true},
+	// Amazon Bedrock. Not OpenAI-compatible in any respect: requests are signed
+	// with AWS SigV4 rather than carrying a token, text and vision go through
+	// the Converse API (one shape across every hosted model family), and image
+	// generation goes through InvokeModel with the model's own payload. The
+	// base URL is required because it carries the region the signature is
+	// scoped to, which is why it is not stored as a separate field that could
+	// disagree with the host. Editing is off: Nova Canvas can inpaint, but
+	// through task types this transport does not send.
+	{ID: "bedrock", Label: "Amazon Bedrock", BaseURL: "https://bedrock-runtime.us-east-1.amazonaws.com", DefaultModel: "anthropic.claude-sonnet-4-5-20250929-v1:0", DefaultImageModel: "amazon.nova-canvas-v1:0", Capabilities: Capabilities{Text: true, Image: true, DescribeImage: true}, NeedsBaseURL: true, NeedsSecret: true},
 	{ID: "custom", Label: "Custom (OpenAI-compatible)", BaseURL: "", DefaultModel: "", Capabilities: Capabilities{Text: true, Image: true, DescribeImage: true, EditImage: true}, NeedsBaseURL: true},
 }
 

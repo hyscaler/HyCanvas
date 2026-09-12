@@ -32,6 +32,7 @@ const (
 	ProviderZhipu       Provider = "zhipu"
 	ProviderOpenRouter  Provider = "openrouter"
 	ProviderAzureOpenAI Provider = "azure-openai"
+	ProviderBedrock     Provider = "bedrock"
 	ProviderCustom      Provider = "custom"
 )
 
@@ -62,8 +63,12 @@ func openAICompatEndpoint(cfg CallConfig, deployment, op string) (string, map[st
 
 // CallConfig is the resolved per-call provider config (key already decrypted).
 type CallConfig struct {
-	Provider   Provider
-	APIKey     string
+	Provider Provider
+	APIKey   string
+	// APISecret is the second credential, set only for providers that need one.
+	// For Bedrock it is the AWS secret access key, and APIKey is the access key
+	// ID; the pair signs each request rather than riding in a header.
+	APISecret  string
 	BaseURL    string
 	Model      string
 	ImageModel string
@@ -78,6 +83,10 @@ type httpRequest struct {
 	headers map[string]string
 	body    any
 	timeout time.Duration
+	// sign, when set, signs the request after the body is marshalled. Bedrock's
+	// signature covers the exact bytes, so it cannot be precomputed into a
+	// header the way every other provider's auth is.
+	sign *awsCreds
 }
 
 func orDefault(v, def string) string {
@@ -88,7 +97,43 @@ func orDefault(v, def string) string {
 }
 
 // buildTextRequest builds the text-completion request for the provider.
+// bedrockCreds resolves the signing material for a Bedrock call. An endpoint
+// whose host carries no region cannot be signed, and the empty Region makes the
+// signature fail loudly at the provider rather than silently signing for the
+// wrong scope.
+func bedrockCreds(cfg CallConfig) *awsCreds {
+	return &awsCreds{
+		AccessKeyID: cfg.APIKey,
+		SecretKey:   cfg.APISecret,
+		Region:      bedrockRegionFrom(cfg.BaseURL),
+		Service:     "bedrock",
+	}
+}
+
+// bedrockConverse builds a Converse request. Converse is the reason this stays
+// small: one request and response shape across every model family Bedrock
+// hosts, so Claude, Llama and Nova all read the same here.
+func bedrockConverse(cfg CallConfig, model string, content []any, system string, maxTokens int) httpRequest {
+	body := map[string]any{
+		"messages":        []any{map[string]any{"role": "user", "content": content}},
+		"inferenceConfig": map[string]any{"maxTokens": maxTokens},
+	}
+	if system != "" {
+		body["system"] = []any{map[string]any{"text": system}}
+	}
+	return httpRequest{
+		url:     strings.TrimRight(cfg.BaseURL, "/") + "/model/" + url.PathEscape(model) + "/converse",
+		headers: map[string]string{"content-type": "application/json"},
+		body:    body,
+		sign:    bedrockCreds(cfg),
+	}
+}
+
 func buildTextRequest(cfg CallConfig, prompt, system string) httpRequest {
+	if cfg.Provider == ProviderBedrock {
+		return bedrockConverse(cfg, orDefault(cfg.Model, "anthropic.claude-sonnet-4-5-20250929-v1:0"),
+			[]any{map[string]any{"text": prompt}}, system, 1024)
+	}
 	if cfg.Provider == ProviderAnthropic {
 		body := map[string]any{
 			"model":      orDefault(cfg.Model, "claude-opus-4-8"),
@@ -135,6 +180,13 @@ const structuredToolName = "emit_result"
 // unparseable schemaJSON falls back to the plain request - the prompt
 // embedding is then the only constraint, never a hard failure.
 func buildStructuredTextRequest(cfg CallConfig, prompt, system, schemaJSON string) httpRequest {
+	// Bedrock's Converse API has no response_format parameter, and its tool
+	// shape differs per model family. The caller always restates the schema in
+	// the prompt and validates with repair passes, so the plain request is the
+	// honest fallback rather than sending a parameter that would 400.
+	if cfg.Provider == ProviderBedrock {
+		return buildTextRequest(cfg, prompt, system)
+	}
 	var schema any
 	if err := json.Unmarshal([]byte(schemaJSON), &schema); err != nil || schema == nil {
 		return buildTextRequest(cfg, prompt, system)
@@ -227,6 +279,18 @@ type DescribeImageInput struct {
 
 func buildDescribeImageRequest(cfg CallConfig, in DescribeImageInput) httpRequest {
 	mime := orDefault(in.MimeType, "image/png")
+	if cfg.Provider == ProviderBedrock {
+		// Converse names the format by extension ("png", "jpeg"), not by mime
+		// type, and carries the bytes base64 in source.bytes.
+		format := strings.TrimPrefix(mime, "image/")
+		if format == "jpg" {
+			format = "jpeg"
+		}
+		return bedrockConverse(cfg, orDefault(cfg.Model, "anthropic.claude-sonnet-4-5-20250929-v1:0"), []any{
+			map[string]any{"image": map[string]any{"format": format, "source": map[string]any{"bytes": in.ImageBase64}}},
+			map[string]any{"text": in.Instruction},
+		}, "", 300)
+	}
 	if cfg.Provider == ProviderAnthropic {
 		return httpRequest{
 			url: orDefault(cfg.BaseURL, "https://api.anthropic.com") + "/v1/messages",
@@ -258,6 +322,22 @@ func buildDescribeImageRequest(cfg CallConfig, in DescribeImageInput) httpReques
 }
 
 func parseTextResponse(provider Provider, raw []byte) string {
+	if provider == ProviderBedrock {
+		var j struct {
+			Output struct {
+				Message struct {
+					Content []struct {
+						Text string `json:"text"`
+					} `json:"content"`
+				} `json:"message"`
+			} `json:"output"`
+		}
+		_ = json.Unmarshal(raw, &j)
+		if c := j.Output.Message.Content; len(c) > 0 {
+			return strings.TrimSpace(c[0].Text)
+		}
+		return ""
+	}
 	if provider == ProviderAnthropic {
 		var j struct {
 			Content []struct {
@@ -315,7 +395,41 @@ func credentialProbeOp(cfg CallConfig) string {
 	return "models"
 }
 
+// bedrockImageSize splits "1024x1024" into the width and height Nova Canvas
+// and Titan Image take as separate numbers. Both require multiples of 64, so an
+// unparseable or odd size falls back to a square the models accept rather than
+// being passed through to a 400.
+func bedrockImageSize(size string) (int, int) {
+	w, h := 1024, 1024
+	if parts := strings.SplitN(strings.ToLower(strings.TrimSpace(size)), "x", 2); len(parts) == 2 {
+		pw, errW := strconv.Atoi(parts[0])
+		ph, errH := strconv.Atoi(parts[1])
+		if errW == nil && errH == nil && pw >= 320 && ph >= 320 && pw <= 4096 && ph <= 4096 && pw%64 == 0 && ph%64 == 0 {
+			w, h = pw, ph
+		}
+	}
+	return w, h
+}
+
 func buildImageRequest(cfg CallConfig, prompt, size string) httpRequest {
+	if cfg.Provider == ProviderBedrock {
+		model := orDefault(cfg.ImageModel, "amazon.nova-canvas-v1:0")
+		w, h := bedrockImageSize(size)
+		// InvokeModel, not Converse: Converse is a conversation API and has no
+		// image-generation shape. The body is the MODEL's own, which is why
+		// this one is not portable the way the text path is.
+		return httpRequest{
+			url:     strings.TrimRight(cfg.BaseURL, "/") + "/model/" + url.PathEscape(model) + "/invoke",
+			headers: map[string]string{"content-type": "application/json"},
+			body: map[string]any{
+				"taskType":              "TEXT_IMAGE",
+				"textToImageParams":     map[string]any{"text": prompt},
+				"imageGenerationConfig": map[string]any{"numberOfImages": 1, "width": w, "height": h},
+			},
+			timeout: imageTimeout,
+			sign:    bedrockCreds(cfg),
+		}
+	}
 	model := orDefault(cfg.ImageModel, "gpt-image-1")
 	u, headers := openAICompatEndpoint(cfg, model, imageGenerationOp(cfg))
 	return httpRequest{
@@ -335,6 +449,15 @@ type EditImageInput struct {
 }
 
 func parseImageResponse(raw []byte) string {
+	// Bedrock's image models answer {"images":["<base64>"]}, with no envelope
+	// and no mime type. Checked first because the OpenAI shape below would
+	// silently return "" for it.
+	var bedrock struct {
+		Images []string `json:"images"`
+	}
+	if err := json.Unmarshal(raw, &bedrock); err == nil && len(bedrock.Images) > 0 && bedrock.Images[0] != "" {
+		return "data:image/png;base64," + bedrock.Images[0]
+	}
 	var j struct {
 		Data []struct {
 			B64JSON   string `json:"b64_json"`
@@ -401,7 +524,9 @@ var errProviderFailed = errors.New("provider request failed")
 // errProviderFailed for every existing errors.Is check.
 type httpStatusError struct{ status int }
 
-func (e *httpStatusError) Error() string { return fmt.Sprintf("provider request failed (%d)", e.status) }
+func (e *httpStatusError) Error() string {
+	return fmt.Sprintf("provider request failed (%d)", e.status)
+}
 func (e *httpStatusError) Is(target error) bool { return target == errProviderFailed }
 
 // isNegotiable4xx reports whether a provider rejection plausibly means "this
@@ -468,6 +593,11 @@ func (s *Service) postJSON(req httpRequest) ([]byte, error) {
 	}
 	for k, v := range req.headers {
 		httpReq.Header.Set(k, v)
+	}
+	// Signed last: the signature covers the headers set above and the body
+	// bytes marshalled here, so nothing may change after this point.
+	if req.sign != nil {
+		signAWSv4(httpReq, raw, *req.sign, time.Now())
 	}
 	return s.do(httpReq, req.timeout)
 }

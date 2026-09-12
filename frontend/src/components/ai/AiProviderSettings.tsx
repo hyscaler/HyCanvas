@@ -52,6 +52,10 @@ export function AiProviderSettings({
   const [imageModel, setImageModel] = useState(config?.imageModel ?? "");
   const [baseUrl, setBaseUrl] = useState(config?.baseUrl ?? "");
   const [apiKey, setApiKey] = useState("");
+  // The second credential, for a provider that signs its requests rather than
+  // sending a token. Never round-tripped: like the key, the server returns only
+  // whether one is stored.
+  const [apiSecret, setApiSecret] = useState("");
   const [searchProvider, setSearchProvider] = useState("");
   const [searchUrl, setSearchUrl] = useState("");
   const [searchKey, setSearchKey] = useState("");
@@ -117,6 +121,7 @@ export function AiProviderSettings({
     setImageModel(config?.imageModel ?? "");
     setBaseUrl(config?.baseUrl ?? "");
     setApiKey("");
+    setApiSecret("");
     setReplacingKey(false);
   }
 
@@ -175,6 +180,7 @@ export function AiProviderSettings({
 
   const selPreset = presets.find((p) => p.id === provider);
   const requiresBaseUrl = !!selPreset?.needsBaseUrl;
+  const requiresSecret = !!selPreset?.needsSecret;
   const sameProvider = provider === config?.provider;
   const modelHint = selPreset?.defaultModel ?? "";
   // Only image-capable providers may serve as the image provider; offering a
@@ -209,6 +215,13 @@ export function AiProviderSettings({
       toast.error(tr("errors.api_ai_base_url_required"));
       return;
     }
+    // A signing provider needs both halves of its credential. The secret is
+    // only required when the key is being set: leaving both untouched keeps the
+    // stored pair.
+    if (requiresSecret && (apiKey.trim() || !(sameProvider && config?.hasKey)) && !apiSecret.trim()) {
+      toast.error(tr("errors.api_ai_secret_required"));
+      return;
+    }
     // A provider change must bring the new provider's key (the server rejects
     // it as ai_key_required_for_provider_change); say so before the round trip.
     if (!sameProvider && config?.hasKey && !apiKey.trim()) {
@@ -237,8 +250,10 @@ export function AiProviderSettings({
         imageModel: imageModel || undefined,
         baseUrl: url,
         apiKey: apiKey || undefined,
+        apiSecret: apiSecret || undefined,
       });
       setApiKey("");
+      setApiSecret("");
       // The optional web-search provider saves in the same gesture (provider
       // "" clears it), but ONLY once its stored value is known - otherwise an
       // early save would clear a provider the user never touched.
@@ -387,6 +402,8 @@ export function AiProviderSettings({
               // Same for the host: the server drops a stored URL on a provider
               // change, and the visible field must not put the old host back.
               setBaseUrl(stored ? config?.baseUrl ?? "" : "");
+              // A secret belongs to one vendor; never let it follow a switch.
+              setApiSecret("");
             }}
             className={fieldCls}
           >
@@ -436,6 +453,23 @@ export function AiProviderSettings({
             className={fieldCls}
           />
         </label>
+
+        {requiresSecret && (
+          <label className={labelCls}>
+            {tr("editor.secret_access_key")}
+            <input
+              type="password"
+              value={apiSecret}
+              onChange={(e) => setApiSecret(e.target.value)}
+              placeholder={
+                sameProvider && config?.hasKey && !apiKey.trim()
+                  ? tr("editor.api_key_leave_blank_to_keep")
+                  : tr("editor.secret_access_key")
+              }
+              className={fieldCls}
+            />
+          </label>
+        )}
 
         {/* Only the STORED provider has a stored key. Showing the masked
             stand-in after switching the select claimed a key existed for the

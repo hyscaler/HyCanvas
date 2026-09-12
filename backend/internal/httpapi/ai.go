@@ -93,6 +93,8 @@ func aiFailure(err error) (status int, title, detail, code string) {
 		return http.StatusBadRequest, "Bad Request", "no configured provider can read images; add an image provider that supports vision, or switch to a provider that does", "ai_describe_image_unsupported"
 	case errors.Is(err, ai.ErrEditImageUnsupported):
 		return http.StatusBadRequest, "Bad Request", "your AI provider does not support image editing; switch to a provider with image editing (e.g. OpenAI) in AI settings", "ai_image_edit_unsupported"
+	case errors.Is(err, ai.ErrSecretRequired):
+		return http.StatusBadRequest, "Bad Request", "this provider signs its requests and needs a secret access key as well as the access key ID", "ai_secret_required"
 	case errors.Is(err, ai.ErrBaseURLRequired):
 		return http.StatusBadRequest, "Bad Request", "this provider needs a base URL; enter your endpoint URL in AI settings", "ai_base_url_required"
 	case errors.Is(err, ai.ErrKeyRequiredForProviderChange):
@@ -138,6 +140,8 @@ func aiProblem(w http.ResponseWriter, r *http.Request, err error) {
 		problemWithCode(w, r, status, title, detail, "ai_describe_image_unsupported")
 	case "ai_image_edit_unsupported":
 		problemWithCode(w, r, status, title, detail, "ai_image_edit_unsupported")
+	case "ai_secret_required":
+		problemWithCode(w, r, status, title, detail, "ai_secret_required")
 	case "ai_base_url_required":
 		problemWithCode(w, r, status, title, detail, "ai_base_url_required")
 	case "ai_key_required_for_provider_change":
@@ -196,13 +200,16 @@ func aiSetConfigHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFun
 			// an empty string clears it (see ai.ConfigInput).
 			BaseURL *string `json:"baseUrl"`
 			APIKey  string  `json:"apiKey"`
+			// The second credential, for providers that sign their requests.
+			APISecret string `json:"apiSecret"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		cfg, err := svc.SetConfig(r.Context(), id, ai.ConfigInput{
-			Provider: body.Provider, Model: body.Model, ImageModel: body.ImageModel, BaseURL: body.BaseURL, APIKey: body.APIKey,
+			Provider: body.Provider, Model: body.Model, ImageModel: body.ImageModel, BaseURL: body.BaseURL,
+			APIKey: body.APIKey, APISecret: body.APISecret,
 		})
 		if err != nil {
 			aiProblem(w, r, err)
@@ -284,15 +291,17 @@ func aiSetImageConfigHandler(svc *ai.Service, acct *accounts.Service) http.Handl
 			Provider string `json:"provider"`
 			Model    string `json:"model"`
 			// Pointer for PATCH semantics, as on the main config.
-			BaseURL *string `json:"baseUrl"`
-			APIKey  string  `json:"apiKey"`
+			BaseURL   *string `json:"baseUrl"`
+			APIKey    string  `json:"apiKey"`
+			APISecret string  `json:"apiSecret"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
 		cfg, err := svc.SetImageConfig(r.Context(), id, ai.ImageConfigInput{
-			Provider: body.Provider, Model: body.Model, BaseURL: body.BaseURL, APIKey: body.APIKey,
+			Provider: body.Provider, Model: body.Model, BaseURL: body.BaseURL,
+			APIKey: body.APIKey, APISecret: body.APISecret,
 		})
 		if err != nil {
 			// Config-specific codes, for the same reason the search config has
