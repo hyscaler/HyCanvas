@@ -1,6 +1,7 @@
 package aistudio
 
 import (
+	"context"
 	"strings"
 	"testing"
 )
@@ -131,5 +132,42 @@ func TestOutlineSchemaNamesEveryArchetype(t *testing.T) {
 	}
 	if !strings.Contains(outlineSchema, `"required":["title","archetype","note"]`) {
 		t.Fatal("archetype should be required per page")
+	}
+}
+
+// ShortenPage is the one second pass the reviewer's report can request. It
+// must keep the slide's form and every typed payload, and it must never fail
+// a generation: a bad reply returns the page unchanged.
+func TestShortenPageKeepsTheFormAndSurvivesBadReplies(t *testing.T) {
+	page := OutlineItem{
+		Title: "Why the shoreline is retreating faster than anyone planned for", Archetype: "bullets", VisualRole: "content",
+		Points: []string{"Erosion is accelerating on the north shore every winter", "Two villages have already relocated inland"},
+		Note:   "Say this slowly.", Image: &ImageIntent{Subject: "cliff", Treatment: "photo"},
+	}
+	// A good reply: shorter copy, same form.
+	gen := &stubGen{replies: []string{`{"title":"Why the shoreline is retreating","archetype":"bullets","points":["Erosion accelerating on the north shore","Two villages already relocated"]}`}}
+	svc := NewService(nil, gen)
+	out := svc.ShortenPage(context.Background(), "ws", page, "")
+	if out.Archetype != "bullets" || len(out.Points) != 2 || out.Title == page.Title {
+		t.Fatalf("shortened page wrong: %+v", out)
+	}
+	if out.Note != page.Note || out.Image == nil {
+		t.Fatal("shortening must carry the note and the image intent through")
+	}
+
+	// A reply that drops the payload the form needs would downgrade it; the
+	// original is kept instead.
+	stat := OutlineItem{Title: "Erosion", Archetype: "bigNumber", VisualRole: "data", Stat: &Stat{Value: "40%", Label: "more erosion since 2019"}}
+	gen = &stubGen{replies: []string{`{"title":"Erosion","archetype":"bigNumber","points":["forty percent more"]}`}}
+	svc = NewService(nil, gen)
+	if got := svc.ShortenPage(context.Background(), "ws", stat, ""); got.Stat == nil || got.Archetype != "bigNumber" {
+		t.Fatalf("a reply that loses the stat must be rejected, got %+v", got)
+	}
+
+	// Junk, every pass: the page comes back untouched, no error.
+	gen = &stubGen{replies: []string{"junk", "junk", "junk", "junk", "junk"}}
+	svc = NewService(nil, gen)
+	if got := svc.ShortenPage(context.Background(), "ws", page, ""); got.Title != page.Title {
+		t.Fatalf("junk replies must leave the page unchanged, got %+v", got)
 	}
 }

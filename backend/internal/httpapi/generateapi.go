@@ -249,13 +249,30 @@ func startGenerationJob(svc *aistudio.Service, p *persistence.Service, reg *jobs
 			reg.Fail(job.ID, userMessageForAI(err))
 			return
 		}
-		fileJSON, err := composer.Compose(ctx, composer.Input{
-			Outline: outline, Width: plan.Size.w, Height: plan.Size.h, BrandPalette: plan.Palette,
-			ThemeID: plan.ThemeID, LayoutSet: plan.LayoutSet, ThemeRecord: plan.ThemeRecord,
-		})
+		compose := func() ([]byte, composer.Report, error) {
+			return composer.ComposeWithReport(ctx, composer.Input{
+				Outline: outline, Width: plan.Size.w, Height: plan.Size.h, BrandPalette: plan.Palette,
+				ThemeID: plan.ThemeID, LayoutSet: plan.LayoutSet, ThemeRecord: plan.ThemeRecord,
+			})
+		}
+		fileJSON, report, err := compose()
 		if err != nil {
 			reg.Fail(job.ID, "composition failed")
 			return
+		}
+		// One bounded second pass: pages whose copy the composer could not fit
+		// go back to the model to be shortened, then the deck is composed
+		// again. Once, not until perfect: a slide that is still long after a
+		// shortening is better shipped a little long than looped on.
+		if len(report.Shorten) > 0 {
+			for _, i := range report.Shorten {
+				if i >= 0 && i < len(outline.Pages) {
+					outline.Pages[i] = svc.ShortenPage(ctx, plan.Workspace, outline.Pages[i], "")
+				}
+			}
+			if again, againReport, err2 := compose(); err2 == nil {
+				fileJSON, report = again, againReport
+			}
 		}
 		var file persistence.DesignFile
 		if err := json.Unmarshal(fileJSON, &file); err != nil {
@@ -272,6 +289,14 @@ func startGenerationJob(svc *aistudio.Service, p *persistence.Service, reg *jobs
 			"title":     rec.Title,
 			"pageCount": len(outline.Pages),
 			"editorUrl": "/editor?id=" + rec.ID,
+			// The reviewer's verdict on what was saved: whether any copy is
+			// still long after the shortening pass, and how varied the forms
+			// are, so an API consumer can judge the deck without opening it.
+			"quality": map[string]any{
+				"ok":          report.OK,
+				"stillLong":   len(report.Shorten),
+				"bulletShare": report.BulletShare,
+			},
 			// Honest scope: the API composes text, layout, theme, and
 			// speaker notes; per-slide images are an editor-side queue.
 			"images": "none (generate images in the editor, or via a future API phase)",

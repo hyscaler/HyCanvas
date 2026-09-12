@@ -8,6 +8,9 @@
 // the DesignFile JSON back; errors throw and surface as goja errors.
 
 import "./composer-polyfill.mjs"; // MUST stay the first import (host shims)
-import { composeDeckFile } from "../packages/aistudio/dist/index.js";
+import { composeDeckFile, composeDeckFileWithReport } from "../packages/aistudio/dist/index.js";
 
 globalThis.__composeDeckFile = (inputJson) => JSON.stringify(composeDeckFile(JSON.parse(inputJson)));
+// The same composition plus the reviewer's report, so the server can hand
+// overfull copy back to the model once before persisting.
+globalThis.__composeDeckFileWithReport = (inputJson) => JSON.stringify(composeDeckFileWithReport(JSON.parse(inputJson)));

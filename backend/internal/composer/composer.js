@@ -30571,6 +30571,7 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
           this.impact = impact;
           this.nodes = [];
           this.prompts = {};
+          this.overfull = [];
           this.slotSeq = 0;
           this.W = ds.size.width;
           this.H = ds.size.height;
@@ -30637,7 +30638,10 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
           const paraGap = (_b = opts.paraGap) != null ? _b : opts.role === "heading" ? 0.2 : 0.45;
           const paragraphs = opts.paragraphs.length ? opts.paragraphs : [""];
           const size2 = (_c = opts.exactSize) != null ? _c : this.fit(paragraphs, opts.rect.width, opts.rect.height, opts.base, lineHeight, opts.role, paraGap);
-          const height = Math.min(opts.rect.height, this.measure(paragraphs, opts.rect.width, size2, lineHeight, opts.role, paraGap));
+          const needed = this.measure(paragraphs, opts.rect.width, size2, lineHeight, opts.role, paraGap);
+          if (!opts.exactSize && needed > opts.rect.height)
+            this.overfull.push(opts.name);
+          const height = Math.min(opts.rect.height, needed);
           const valign = (_d = opts.valign) != null ? _d : "top";
           const boxHeight = valign === "top" ? height : opts.rect.height;
           const r = this.mirror(__spreadProps(__spreadValues({}, opts.rect), { height: boxHeight }));
@@ -30830,7 +30834,8 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
             nodes: this.nodes,
             imagePrompts: this.prompts,
             impact: this.impact,
-            archetype: a
+            archetype: a,
+            overfull: Array.from(new Set(this.overfull))
           };
         }
         titleBlock(base, bold = true) {
@@ -30923,9 +30928,29 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
             this.nodes.push(this.imageSlot({ x: s.x, y: content.y, width: s.width, height: content.height }, this.imagePrompt(), this.ds.radius * 2));
           }
           const points = this.item.points.map((p) => `\u2022  ${p}`);
+          const variant = this.ctx.variant;
+          if (variant === "twoUp" && points.length >= 4 && !hasImage) {
+            const half = Math.ceil(points.length / 2);
+            const [l, r] = [this.span(0, 6), this.span(6, 6)];
+            const u2 = this.ds.unit;
+            const title = this.text({ name: "Title", rect: __spreadProps(__spreadValues({}, this.span(0, 12)), { y: content.y, height: this.H * 0.2 }), paragraphs: [this.item.title], role: "heading", base: this.H * T.title, bold: true, lineHeight: 1.08 });
+            const bodyTop = content.y + title.height + u2 * 4;
+            const avail = this.H - this.m - bodyTop;
+            const make = (span, pts, y02) => this.text({ name: "Points", rect: { x: span.x, y: y02, width: span.width - this.ds.gutter, height: avail }, paragraphs: pts, role: "body", base: this.H * T.point, lineHeight: 1.35, paraGap: 0.55 });
+            const tallest = Math.max(make(l, points.slice(0, half), 0).height, make(r, points.slice(half), 0).height);
+            const y0 = bodyTop + Math.max(0, Math.round((avail - tallest) / 2));
+            const total = title.height + u2 * 4 + tallest;
+            const shift = Math.max(0, Math.round((content.height - total) / 2));
+            this.nodes.push(this.text({ name: "Title", rect: __spreadProps(__spreadValues({}, this.span(0, 12)), { y: content.y + shift, height: this.H * 0.2 }), paragraphs: [this.item.title], role: "heading", base: this.H * T.title, bold: true, lineHeight: 1.08 }).node);
+            this.nodes.push(make(l, points.slice(0, half), y0 - (bodyTop - (content.y + shift + title.height + u2 * 4))).node);
+            this.nodes.push(make(r, points.slice(half), y0 - (bodyTop - (content.y + shift + title.height + u2 * 4))).node);
+            this.furniture();
+            return;
+          }
+          const pointBase = variant === "large" ? this.H * T.agendaItem : this.H * T.point;
           this.cluster(content, [
             this.titleBlock(this.H * T.title),
-            { kind: "text", maxFrac: 0.7, make: (r) => this.text({ name: "Points", rect: r, paragraphs: points, role: "body", base: this.H * T.point, lineHeight: 1.35, paraGap: 0.55 }) }
+            { kind: "text", maxFrac: 0.7, make: (r) => this.text({ name: "Points", rect: r, paragraphs: points, role: "body", base: pointBase, lineHeight: 1.35, paraGap: 0.55 }) }
           ], 3, true);
           this.furniture();
         }
@@ -31111,6 +31136,100 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
     }
   });
 
+  // packages/aistudio/dist/measure.js
+  var require_measure = __commonJS({
+    "packages/aistudio/dist/measure.js"(exports) {
+      "use strict";
+      Object.defineProperty(exports, "__esModule", { value: true });
+      exports.sparseThreshold = void 0;
+      exports.measureDeck = measureDeck;
+      exports.planVariants = planVariants;
+      exports.toMeasurable = toMeasurable;
+      function boxOf(n) {
+        var _a5, _b, _c, _d;
+        const t = n.transform;
+        const s = n.size;
+        if (!t || !s)
+          return null;
+        return { x: (_a5 = t.x) != null ? _a5 : 0, y: (_b = t.y) != null ? _b : 0, w: (_c = s.width) != null ? _c : 0, h: (_d = s.height) != null ? _d : 0 };
+      }
+      function whitespaceShare(boxes, area) {
+        const cols = 48;
+        const rows = 27;
+        let empty = 0;
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const px = area.x + (c + 0.5) * (area.w / cols);
+            const py = area.y + (r + 0.5) * (area.h / rows);
+            let covered = false;
+            for (const b of boxes) {
+              if (px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h) {
+                covered = true;
+                break;
+              }
+            }
+            if (!covered)
+              empty++;
+          }
+        }
+        return empty / (cols * rows);
+      }
+      exports.sparseThreshold = 0.68;
+      function measureDeck(pages, size2, margin) {
+        const area = { x: margin, y: margin, w: size2.width - 2 * margin, h: size2.height - 2 * margin };
+        const reports = pages.map((p, i) => {
+          const boxes = p.nodes.filter((n) => n.name !== "Kicker" && n.name !== "Page number").map(boxOf).filter((b) => !!b);
+          return {
+            index: i,
+            archetype: p.archetype,
+            impact: p.impact,
+            overfull: [...p.overfull],
+            whitespace: Math.round(whitespaceShare(boxes, area) * 1e3) / 1e3,
+            issues: p.issues
+          };
+        });
+        const bulletShare = pages.length ? pages.filter((p) => p.archetype === "bullets").length / pages.length : 0;
+        const repetition = [];
+        for (let i = 0; i < pages.length; i++) {
+          const a = pages[i].archetype;
+          if (i >= 2 && pages[i - 1].archetype === a && pages[i - 2].archetype === a) {
+            repetition.push(i);
+          }
+        }
+        const shorten = reports.filter((r) => r.overfull.length > 0).map((r) => r.index);
+        return {
+          pages: reports,
+          bulletShare: Math.round(bulletShare * 100) / 100,
+          repetition,
+          shorten,
+          // Repetition and sparseness are the fixer's business and are remedied by
+          // variants before a caller sees this; what remains for a second pass is
+          // copy that did not fit, and any hard quality issue.
+          ok: shorten.length === 0 && reports.every((r) => r.issues.length === 0)
+        };
+      }
+      function planVariants(report, outline) {
+        var _a5, _b;
+        const out = {};
+        for (const r of report.pages) {
+          if (r.archetype !== "bullets")
+            continue;
+          const points = (_b = (_a5 = outline.pages[r.index]) == null ? void 0 : _a5.points.length) != null ? _b : 0;
+          if (report.repetition.includes(r.index) && points >= 4)
+            out[r.index] = "twoUp";
+          else if (points >= 5)
+            out[r.index] = "twoUp";
+          else if (!r.impact && r.whitespace > exports.sparseThreshold && points <= 3)
+            out[r.index] = "large";
+        }
+        return out;
+      }
+      function toMeasurable(page, issues) {
+        return { archetype: page.archetype, impact: page.impact, nodes: page.nodes, overfull: page.overfull, issues };
+      }
+    }
+  });
+
   // packages/aistudio/dist/deck.js
   var require_deck = __commonJS({
     "packages/aistudio/dist/deck.js"(exports) {
@@ -31120,23 +31239,30 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
       var quality_1 = require_quality();
       var designSystem_1 = require_designSystem();
       var archetypes_1 = require_archetypes();
+      var measure_1 = require_measure();
       function layoutDeck(outline, theme, size2, opts) {
         var _a5;
         const themed = __spreadProps(__spreadValues({}, theme), { kicker: (_a5 = theme.kicker) != null ? _a5 : outline.title });
         const system = (0, designSystem_1.deriveDesignSystem)(themed, size2, opts);
         const total = outline.pages.length;
-        const pages = outline.pages.map((item, i) => {
-          const composed = (0, archetypes_1.composeArchetypePage)(item, system, { index: i, total });
-          return __spreadValues({
-            background: composed.background,
-            nodes: composed.nodes,
-            name: item.title || `Page ${i + 1}`,
-            quality: (0, quality_1.qualityCheck)({ background: composed.background, nodes: composed.nodes, size: system.size }),
-            archetype: composed.archetype,
-            imagePrompts: composed.imagePrompts
-          }, item.note ? { note: item.note } : {});
-        });
-        return { title: outline.title, pages, system };
+        const composeAll = (variants2) => outline.pages.map((item, i) => (0, archetypes_1.composeArchetypePage)(item, system, { index: i, total, variant: variants2[i] }));
+        const measure = (composed2) => (0, measure_1.measureDeck)(composed2.map((c) => (0, measure_1.toMeasurable)(c, (0, quality_1.qualityCheck)({ background: c.background, nodes: c.nodes, size: system.size }).issues)), system.size, system.margin);
+        let composed = composeAll({});
+        let report = measure(composed);
+        const variants = (0, measure_1.planVariants)(report, outline);
+        if (Object.keys(variants).length) {
+          composed = composeAll(variants);
+          report = measure(composed);
+        }
+        const pages = composed.map((c, i) => __spreadValues({
+          background: c.background,
+          nodes: c.nodes,
+          name: outline.pages[i].title || `Page ${i + 1}`,
+          quality: { ok: report.pages[i].issues.length === 0, issues: report.pages[i].issues },
+          archetype: c.archetype,
+          imagePrompts: c.imagePrompts
+        }, outline.pages[i].note ? { note: outline.pages[i].note } : {}));
+        return { title: outline.title, pages, system, report };
       }
     }
   });
@@ -31249,6 +31375,7 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
       exports.themeRecordFromCatalog = themeRecordFromCatalog;
       exports.themeRecordFromDesignSystem = themeRecordFromDesignSystem;
       exports.composeDeckFile = composeDeckFile2;
+      exports.composeDeckFileWithReport = composeDeckFileWithReport2;
       var schema_1 = require_dist();
       var color_1 = require_dist2();
       var outline_1 = require_outline();
@@ -31260,6 +31387,7 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
       var reflow_1 = require_reflow();
       var themeGen_1 = require_themeGen();
       var designSystem_1 = require_designSystem();
+      var measure_1 = require_measure();
       var themeCatalog_1 = require_themeCatalog();
       function deckThemeFromRecord(rec, kicker) {
         var _a5, _b, _c, _d;
@@ -31324,6 +31452,9 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
         return (0, schema_1.themeFromPalette)("generated", slots.map((hex3, i) => ({ id: `generated-${i}`, name: themeGen_1.themeSlotNames[i], color: hexToColor(hex3) })), { name, fontHeading: theme.fontHeading, fontBody: theme.fontBody });
       }
       function composeDeckFile2(input) {
+        return composeDeckFileWithReport2(input).file;
+      }
+      function composeDeckFileWithReport2(input) {
         var _a5, _b, _c, _d, _e, _f;
         const outline = (0, outline_1.normalizeOutline)(input.outline);
         const width = Math.max(1, Math.round(input.width));
@@ -31351,6 +31482,7 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
         let masters;
         let layoutsOut;
         let system = null;
+        let report = null;
         if ((_d = (_c = input.layoutSet) == null ? void 0 : _c.layouts) == null ? void 0 : _d.length) {
           masters = structuredClone((_e = input.layoutSet.masters) != null ? _e : []);
           layoutsOut = structuredClone(input.layoutSet.layouts);
@@ -31359,8 +31491,11 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
           const masterById = new Map((masters != null ? masters : []).map((m) => [m.id, m]));
           const selection = (0, layoutSchema_1.repairLayoutSelection)(null, outline.pages, layouts);
           const themedBg = (0, layout_1.layoutDesign)({ layout: "centered", background: theme.background, blocks: [], dir: (_f = input.dir) != null ? _f : "ltr" }, { width, height }).background;
+          const overfullByPage = [];
           pages = outline.pages.map((item, i) => {
             var _a6, _b2, _c2, _d2, _e2, _f2, _g, _h;
+            const overfull = [];
+            overfullByPage.push(overfull);
             const layout = (_a6 = byId.get(selection[i])) != null ? _a6 : layouts[0];
             const master = masterById.get(layout.masterId);
             const treatment = (0, deckStyle_1.pageTreatment)(item.visualRole, theme.background);
@@ -31392,6 +31527,8 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
                 paragraphs
               }], { width, height });
               const fontSize = (_b3 = (_a7 = fitted.adjustments[0]) == null ? void 0 : _a7.fontSize) != null ? _b3 : scale.base;
+              if (fitted.verdicts[ph.id] === "overfull")
+                overfull.push(ph.id);
               const runStyle = {
                 fontFamily: (_c3 = isTitle ? theme.fontHeading : theme.fontBody) != null ? _c3 : "system",
                 fontStyle: isTitle ? "Bold" : "Regular",
@@ -31450,9 +31587,20 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
               children
             }, item.note ? { notes: item.note } : {});
           });
+          report = (0, measure_1.measureDeck)(pages.map((pg, i) => {
+            var _a6;
+            return {
+              archetype: (_a6 = outline.pages[i].archetype) != null ? _a6 : "bullets",
+              impact: (0, deckStyle_1.pageTreatment)(outline.pages[i].visualRole, theme.background).impact,
+              nodes: pg.children,
+              overfull: overfullByPage[i],
+              issues: []
+            };
+          }), { width, height }, Math.round(Math.min(width, height) * 0.012) * 6);
         } else {
           const deck = (0, deck_1.layoutDeck)(outline, theme, { width, height }, { dir: input.dir, catalog, brandPalette: input.brandPalette, seed });
           system = deck.system;
+          report = deck.report;
           pages = deck.pages.map((p, i) => __spreadValues({
             id: `api-page-${i + 1}`,
             name: p.name || `Page ${i + 1}`,
@@ -31478,7 +31626,7 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
           // remap it precisely.
           theme: record2 != null ? record2 : themeRecordFromSlots(system ? (0, designSystem_1.designSystemSlots)(system) : null, theme, outline.theme)
         });
-        return file2;
+        return { file: file2, report: report != null ? report : { pages: [], bulletShare: 0, repetition: [], shorten: [], ok: true } };
       }
     }
   });
@@ -31948,6 +32096,7 @@ ${cites.map((c, i) => `${i + 1}. ${c.name.trim()} - ${c.url.trim()}`).join("\n")
       __exportStar(require_deck(), exports);
       __exportStar(require_designSystem(), exports);
       __exportStar(require_archetypes(), exports);
+      __exportStar(require_measure(), exports);
       __exportStar(require_prompts(), exports);
       __exportStar(require_assistant(), exports);
       __exportStar(require_transform(), exports);
@@ -31989,4 +32138,5 @@ ${cites.map((c, i) => `${i + 1}. ${c.name.trim()} - ${c.url.trim()}`).join("\n")
   // scripts/composer-entry.mjs
   var import_dist = __toESM(require_dist3(), 1);
   globalThis.__composeDeckFile = (inputJson) => JSON.stringify((0, import_dist.composeDeckFile)(JSON.parse(inputJson)));
+  globalThis.__composeDeckFileWithReport = (inputJson) => JSON.stringify((0, import_dist.composeDeckFileWithReport)(JSON.parse(inputJson)));
 })();

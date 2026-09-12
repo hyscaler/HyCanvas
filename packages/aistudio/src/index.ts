@@ -24,6 +24,7 @@ export * from "./reflow";
 export * from "./deck";
 export * from "./designSystem";
 export * from "./archetypes";
+export * from "./measure";
 export * from "./prompts";
 export * from "./assistant";
 export * from "./transform";

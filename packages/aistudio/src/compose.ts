@@ -30,6 +30,7 @@ import { accentRuleRect, pageTreatment, slotTypeScale } from "./deckStyle";
 import { reflowPage } from "./reflow";
 import { themeSlotNames } from "./themeGen";
 import { catalogEntryForSeed, designSystemSlots } from "./designSystem";
+import { measureDeck, type DeckReport } from "./measure";
 import { themeCatalogEntry, type ThemeCatalogEntry } from "./themeCatalog";
 import type { DeckTheme } from "./outline";
 import type { Color } from "@hc/schema";
@@ -146,6 +147,13 @@ function themeRecordFromSlots(slots: [string, string, string, string, string, st
  *  theme picker reflects the generated visual system (T19). The file id is a
  *  placeholder: persistence.Create assigns the real id at the write boundary. */
 export function composeDeckFile(input: ComposeDeckInput): DesignFile {
+  return composeDeckFileWithReport(input).file;
+}
+
+/** composeDeckFile plus the reviewer's report: which pages carry copy the
+ *  composer could not fit, how sparse each is, whether a form repeats. The
+ *  API uses it to hand overfull copy back to the model once. */
+export function composeDeckFileWithReport(input: ComposeDeckInput): { file: DesignFile; report: DeckReport } {
   const outline = normalizeOutline(input.outline);
   const width = Math.max(1, Math.round(input.width));
   const height = Math.max(1, Math.round(input.height));
@@ -179,6 +187,7 @@ export function composeDeckFile(input: ComposeDeckInput): DesignFile {
   let masters: SlideMaster[] | undefined;
   let layoutsOut: SlideLayout[] | undefined;
   let system: DesignSystem | null = null;
+  let report: DeckReport | null = null;
   if (input.layoutSet?.layouts?.length) {
     // Layout-grounded composition (E14): the template's own layout system,
     // materialized the way the editor's apply pass does it - deterministic
@@ -192,7 +201,10 @@ export function composeDeckFile(input: ComposeDeckInput): DesignFile {
     const masterById = new Map((masters ?? []).map((m) => [m.id, m] as const));
     const selection = repairLayoutSelection(null, outline.pages, layouts);
     const themedBg = layoutDesign({ layout: "centered", background: theme.background, blocks: [], dir: input.dir ?? "ltr" }, { width, height }).background;
+    const overfullByPage: string[][] = [];
     pages = outline.pages.map((item, i) => {
+      const overfull: string[] = [];
+      overfullByPage.push(overfull);
       const layout = byId.get(selection[i]) ?? layouts[0];
       const master = masterById.get(layout.masterId);
       // Per-role treatment: impact pages (cover, section, quote, closing) keep
@@ -238,6 +250,7 @@ export function composeDeckFile(input: ComposeDeckInput): DesignFile {
             paragraphs,
           }], { width, height });
           const fontSize = fitted.adjustments[0]?.fontSize ?? scale.base;
+          if (fitted.verdicts[ph.id] === "overfull") overfull.push(ph.id);
           const runStyle = {
             fontFamily: (isTitle ? theme.fontHeading : theme.fontBody) ?? "system",
             fontStyle: isTitle ? "Bold" : "Regular",
@@ -307,9 +320,21 @@ export function composeDeckFile(input: ComposeDeckInput): DesignFile {
         ...(item.note ? { notes: item.note } : {}),
       } as unknown as Page;
     });
+    report = measureDeck(
+      pages.map((pg, i) => ({
+        archetype: (outline.pages[i].archetype ?? "bullets"),
+        impact: pageTreatment(outline.pages[i].visualRole, theme.background).impact,
+        nodes: pg.children,
+        overfull: overfullByPage[i],
+        issues: [],
+      })),
+      { width, height },
+      Math.round(Math.min(width, height) * 0.012) * 6,
+    );
   } else {
     const deck = layoutDeck(outline, theme, { width, height }, { dir: input.dir, catalog, brandPalette: input.brandPalette, seed });
     system = deck.system;
+    report = deck.report;
     pages = deck.pages.map((p, i) => ({
       id: `api-page-${i + 1}`,
       name: p.name || `Page ${i + 1}`,
@@ -338,5 +363,5 @@ export function composeDeckFile(input: ComposeDeckInput): DesignFile {
     // remap it precisely.
     theme: record ?? themeRecordFromSlots(system ? designSystemSlots(system) : null, theme, outline.theme),
   } as unknown as DesignFile;
-  return file;
+  return { file, report: report ?? { pages: [], bulletShare: 0, repetition: [], shorten: [], ok: true } };
 }

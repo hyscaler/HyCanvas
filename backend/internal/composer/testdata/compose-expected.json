@@ -24,7 +24,7 @@
       },
       "children": [
         {
-          "id": "n-3",
+          "id": "n-26",
           "transform": {
             "x": 78,
             "y": 355,
@@ -57,7 +57,7 @@
           "cornerRadius": 3
         },
         {
-          "id": "n-4",
+          "id": "n-27",
           "transform": {
             "x": 78,
             "y": 399,
@@ -115,7 +115,7 @@
           "name": "Title"
         },
         {
-          "id": "n-5",
+          "id": "n-28",
           "transform": {
             "x": 78,
             "y": 672,
@@ -193,10 +193,10 @@
       },
       "children": [
         {
-          "id": "n-8",
+          "id": "n-31",
           "transform": {
             "x": 78,
-            "y": 417,
+            "y": 401,
             "scaleX": 1,
             "scaleY": 1,
             "rotation": 0
@@ -251,17 +251,17 @@
           "name": "Title"
         },
         {
-          "id": "n-9",
+          "id": "n-32",
           "transform": {
             "x": 78,
-            "y": 525,
+            "y": 509,
             "scaleX": 1,
             "scaleY": 1,
             "rotation": 0
           },
           "size": {
             "width": 1167.3333333333335,
-            "height": 191
+            "height": 222
           },
           "opacity": 1,
           "blendMode": "normal",
@@ -269,7 +269,7 @@
           "box": {
             "mode": "fixed",
             "width": 1167.3333333333335,
-            "height": 191,
+            "height": 222,
             "autoFit": {
               "enabled": false,
               "min": 8,
@@ -285,7 +285,7 @@
                   "style": {
                     "fontFamily": "Nunito",
                     "fontStyle": "Regular",
-                    "fontSize": 37,
+                    "fontSize": 43,
                     "fill": {
                       "type": "solid",
                       "color": {
@@ -312,7 +312,7 @@
                   "style": {
                     "fontFamily": "Nunito",
                     "fontStyle": "Regular",
-                    "fontSize": 37,
+                    "fontSize": 43,
                     "fill": {
                       "type": "solid",
                       "color": {
@@ -339,7 +339,7 @@
                   "style": {
                     "fontFamily": "Nunito",
                     "fontStyle": "Regular",
-                    "fontSize": 37,
+                    "fontSize": 43,
                     "fill": {
                       "type": "solid",
                       "color": {
@@ -363,7 +363,7 @@
           "name": "Points"
         },
         {
-          "id": "n-10",
+          "id": "n-33",
           "transform": {
             "x": 78,
             "y": 32.5,
@@ -421,7 +421,7 @@
           "name": "Kicker"
         },
         {
-          "id": "n-11",
+          "id": "n-34",
           "transform": {
             "x": 1738,
             "y": 1021.5,
@@ -498,10 +498,10 @@
       },
       "children": [
         {
-          "id": "n-14",
+          "id": "n-37",
           "transform": {
             "x": 78,
-            "y": 417,
+            "y": 401,
             "scaleX": 1,
             "scaleY": 1,
             "rotation": 0
@@ -556,17 +556,17 @@
           "name": "Title"
         },
         {
-          "id": "n-15",
+          "id": "n-38",
           "transform": {
             "x": 78,
-            "y": 525,
+            "y": 509,
             "scaleX": 1,
             "scaleY": 1,
             "rotation": 0
           },
           "size": {
             "width": 1167.3333333333335,
-            "height": 191
+            "height": 222
           },
           "opacity": 1,
           "blendMode": "normal",
@@ -574,7 +574,7 @@
           "box": {
             "mode": "fixed",
             "width": 1167.3333333333335,
-            "height": 191,
+            "height": 222,
             "autoFit": {
               "enabled": false,
               "min": 8,
@@ -590,7 +590,7 @@
                   "style": {
                     "fontFamily": "Nunito",
                     "fontStyle": "Regular",
-                    "fontSize": 37,
+                    "fontSize": 43,
                     "fill": {
                       "type": "solid",
                       "color": {
@@ -617,7 +617,7 @@
                   "style": {
                     "fontFamily": "Nunito",
                     "fontStyle": "Regular",
-                    "fontSize": 37,
+                    "fontSize": 43,
                     "fill": {
                       "type": "solid",
                       "color": {
@@ -644,7 +644,7 @@
                   "style": {
                     "fontFamily": "Nunito",
                     "fontStyle": "Regular",
-                    "fontSize": 37,
+                    "fontSize": 43,
                     "fill": {
                       "type": "solid",
                       "color": {
@@ -668,7 +668,7 @@
           "name": "Points"
         },
         {
-          "id": "n-16",
+          "id": "n-39",
           "transform": {
             "x": 78,
             "y": 32.5,
@@ -726,7 +726,7 @@
           "name": "Kicker"
         },
         {
-          "id": "n-17",
+          "id": "n-40",
           "transform": {
             "x": 1738,
             "y": 1021.5,
@@ -804,7 +804,7 @@
       },
       "children": [
         {
-          "id": "n-20",
+          "id": "n-43",
           "transform": {
             "x": 78,
             "y": 428,
@@ -837,7 +837,7 @@
           "cornerRadius": 3
         },
         {
-          "id": "n-21",
+          "id": "n-44",
           "transform": {
             "x": 78,
             "y": 472,
@@ -895,7 +895,7 @@
           "name": "Title"
         },
         {
-          "id": "n-22",
+          "id": "n-45",
           "transform": {
             "x": 78,
             "y": 599,
@@ -953,7 +953,7 @@
           "name": "Subhead"
         },
         {
-          "id": "n-23",
+          "id": "n-46",
           "transform": {
             "x": 1738,
             "y": 1021.5,

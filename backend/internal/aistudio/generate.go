@@ -239,6 +239,61 @@ func (s *Service) Variations(ctx context.Context, workspaceID, designType, promp
 	return out, nil
 }
 
+// ShortenPage asks the model for shorter copy for ONE page whose text the
+// composer could not fit, and returns the page with that copy in place. This
+// is the second pass the reviewer's report can request, and the only one:
+// the budgets and the ladder guarantee an archetype page always fits, so this
+// fires for authored template slots that are smaller than the budgets assume.
+//
+// The reply is normalized like any outline page, so the shortened copy is
+// clipped to the budgets and a typed payload that did not survive downgrades
+// the form. The archetype itself is kept: shortening changes words, not the
+// slide. A failed or useless reply returns the page unchanged, never an error
+// that would fail the whole generation over one slide.
+func (s *Service) ShortenPage(ctx context.Context, workspaceID string, page OutlineItem, brandClause string) OutlineItem {
+	system := "You shorten the copy of ONE presentation slide so it fits its layout. Keep every idea and every number; cut words, not meaning. " +
+		"Return the same JSON shape you are given with the same archetype, with roughly 30 percent fewer characters in every text field: title, subhead, points, columns, steps, quote. " +
+		"Output ONLY a single JSON object, no prose or fences. " + ruleContentOnly + " " + ruleLengthLimit
+	if strings.TrimSpace(brandClause) != "" {
+		system += " " + brandClause
+	}
+	current, err := json.Marshal(page)
+	if err != nil {
+		return page
+	}
+	res, err := generateValidated(ctx, s, workspaceID, system, "Slide JSON:\n"+string(current), shortenSchema, false, func(v *OutlineItem) error {
+		if strings.TrimSpace(v.Title) == "" && len(v.Points) == 0 && v.Stat == nil && v.Quote == nil && len(v.Columns) == 0 && len(v.Steps) == 0 {
+			return errors.New("the shortened slide has no content")
+		}
+		return nil
+	})
+	if err != nil || res == nil {
+		return page
+	}
+	out := *res
+	out.Archetype = page.Archetype
+	out.VisualRole = page.VisualRole
+	if out.Note == "" {
+		out.Note = page.Note
+	}
+	if out.Image == nil {
+		out.Image = page.Image
+	}
+	if out.Chart == nil {
+		out.Chart = page.Chart
+	}
+	normalizeArchetypeFields(&out)
+	// A downgrade would mean the shortened reply dropped a payload the form
+	// needs; that is a worse slide than a slightly long one.
+	if out.Archetype != page.Archetype {
+		return page
+	}
+	return out
+}
+
+// shortenSchema is the outline page shape, reused for a single-slide rewrite.
+var shortenSchema = `{"type":"object","required":["title","archetype"],"properties":{"title":{"type":"string"},"archetype":{"type":"string"},"subhead":{"type":"string"},"points":{"type":"array","items":{"type":"string"}},"stat":{"type":"object"},"quote":{"type":"object"},"steps":{"type":"array"},"columns":{"type":"array"},"note":{"type":"string"}}}`
+
 // polishSchema constrains the per-page copy-polish reply.
 const polishSchema = `{"type":"object","required":["points"],"properties":{"points":{"type":"array","items":{"type":"string"}}}}`
 

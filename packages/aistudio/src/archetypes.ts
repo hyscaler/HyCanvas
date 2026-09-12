@@ -21,6 +21,7 @@
 import { createNode, type Color, type Fill, type Node } from "@hc/schema";
 import type { Archetype, OutlineItem } from "./outline";
 import type { DesignSystem } from "./designSystem";
+import type { PageVariant } from "./measure";
 import { ladderFrom } from "./deckStyle";
 
 export interface ComposedPage {
@@ -31,12 +32,18 @@ export interface ComposedPage {
   imagePrompts: Record<string, string>;
   impact: boolean;
   archetype: Archetype;
+  /** Names of text nodes whose copy reached the floor of the ladder and still
+   *  did not fit. Geometry has done what it can; only shorter copy fixes it. */
+  overfull: string[];
 }
 
 export interface ComposeContext {
   /** Zero-based page index and the deck length, for rhythm and numbering. */
   index: number;
   total: number;
+  /** A compose-time variation chosen by the fixer (measure.ts), never by the
+   *  model: two-up bullets for a long list, larger bullets for a sparse page. */
+  variant?: PageVariant;
 }
 
 interface Rect {
@@ -88,6 +95,7 @@ class Composer {
   private readonly col: number;
   private nodes: Node[] = [];
   private prompts: Record<string, string> = {};
+  private overfull: string[] = [];
   private slotSeq = 0;
 
   constructor(private readonly ds: DesignSystem, private readonly item: OutlineItem, private readonly ctx: ComposeContext, private readonly impact: boolean) {
@@ -178,7 +186,11 @@ class Composer {
     const paraGap = opts.paraGap ?? (opts.role === "heading" ? 0.2 : 0.45);
     const paragraphs = opts.paragraphs.length ? opts.paragraphs : [""];
     const size = opts.exactSize ?? this.fit(paragraphs, opts.rect.width, opts.rect.height, opts.base, lineHeight, opts.role, paraGap);
-    const height = Math.min(opts.rect.height, this.measure(paragraphs, opts.rect.width, size, lineHeight, opts.role, paraGap));
+    const needed = this.measure(paragraphs, opts.rect.width, size, lineHeight, opts.role, paraGap);
+    // At the floor and still over: the ladder is exhausted. Recorded for the
+    // report rather than hidden by a clip, because only shorter copy fixes it.
+    if (!opts.exactSize && needed > opts.rect.height) this.overfull.push(opts.name);
+    const height = Math.min(opts.rect.height, needed);
     // The node is as tall as its text, not as tall as the region it was
     // offered. A title offered a fifth of the page and set on one line would
     // otherwise leave a transparent box over everything placed beneath it,
@@ -351,6 +363,7 @@ class Composer {
       imagePrompts: this.prompts,
       impact: this.impact,
       archetype: a,
+      overfull: Array.from(new Set(this.overfull)),
     };
   }
 
@@ -459,9 +472,32 @@ class Composer {
       this.nodes.push(this.imageSlot({ x: s.x, y: content.y, width: s.width, height: content.height }, this.imagePrompt(), this.ds.radius * 2));
     }
     const points = this.item.points.map((p) => `•  ${p}`);
+    const variant = this.ctx.variant;
+    if (variant === "twoUp" && points.length >= 4 && !hasImage) {
+      // A long list set as two unnamed columns under one title: the remedy
+      // for a run of bullet pages or a list that would otherwise shrink.
+      const half = Math.ceil(points.length / 2);
+      const [l, r] = [this.span(0, 6), this.span(6, 6)];
+      const u2 = this.ds.unit;
+      const title = this.text({ name: "Title", rect: { ...this.span(0, 12), y: content.y, height: this.H * 0.2 }, paragraphs: [this.item.title], role: "heading", base: this.H * T.title, bold: true, lineHeight: 1.08 });
+      const bodyTop = content.y + title.height + u2 * 4;
+      const avail = this.H - this.m - bodyTop;
+      const make = (span: Rect, pts: string[], y0: number) => this.text({ name: "Points", rect: { x: span.x, y: y0, width: span.width - this.ds.gutter, height: avail }, paragraphs: pts, role: "body", base: this.H * T.point, lineHeight: 1.35, paraGap: 0.55 });
+      const tallest = Math.max(make(l, points.slice(0, half), 0).height, make(r, points.slice(half), 0).height);
+      const y0 = bodyTop + Math.max(0, Math.round((avail - tallest) / 2));
+      // Re-anchor the title so the whole cluster is centered, as cluster() does.
+      const total = title.height + u2 * 4 + tallest;
+      const shift = Math.max(0, Math.round((content.height - total) / 2));
+      this.nodes.push(this.text({ name: "Title", rect: { ...this.span(0, 12), y: content.y + shift, height: this.H * 0.2 }, paragraphs: [this.item.title], role: "heading", base: this.H * T.title, bold: true, lineHeight: 1.08 }).node);
+      this.nodes.push(make(l, points.slice(0, half), y0 - (bodyTop - (content.y + shift + title.height + u2 * 4))).node);
+      this.nodes.push(make(r, points.slice(half), y0 - (bodyTop - (content.y + shift + title.height + u2 * 4))).node);
+      this.furniture();
+      return;
+    }
+    const pointBase = variant === "large" ? this.H * T.agendaItem : this.H * T.point;
     this.cluster(content, [
       this.titleBlock(this.H * T.title),
-      { kind: "text", maxFrac: 0.7, make: (r) => this.text({ name: "Points", rect: r, paragraphs: points, role: "body", base: this.H * T.point, lineHeight: 1.35, paraGap: 0.55 }) },
+      { kind: "text", maxFrac: 0.7, make: (r) => this.text({ name: "Points", rect: r, paragraphs: points, role: "body", base: pointBase, lineHeight: 1.35, paraGap: 0.55 }) },
     ], 3, true);
     this.furniture();
   }

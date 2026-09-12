@@ -205,3 +205,42 @@ func TestCompose_LayoutGroundedVisualSystem(t *testing.T) {
 		t.Fatalf("title type did not scale with the slot: max font size %v on a 1080-tall page", maxSize)
 	}
 }
+
+// ComposeWithReport returns the same file Compose does, plus the reviewer's
+// report; the two entry points must never disagree about the bytes.
+func TestComposeWithReportMatchesComposeAndCarriesTheReport(t *testing.T) {
+	raw, err := os.ReadFile("testdata/compose-input.json")
+	if err != nil {
+		t.Fatalf("read input: %v", err)
+	}
+	var in Input
+	if err := json.Unmarshal(raw, &in); err != nil {
+		t.Fatalf("parse input: %v", err)
+	}
+	plain, err := Compose(context.Background(), in)
+	if err != nil {
+		t.Fatalf("Compose: %v", err)
+	}
+	withReport, report, err := ComposeWithReport(context.Background(), in)
+	if err != nil {
+		t.Fatalf("ComposeWithReport: %v", err)
+	}
+	var a, b any
+	_ = json.Unmarshal(plain, &a)
+	_ = json.Unmarshal(withReport, &b)
+	if !reflect.DeepEqual(a, b) {
+		t.Fatal("ComposeWithReport composed different bytes from Compose")
+	}
+	if len(report.Pages) == 0 {
+		t.Fatal("report carries no pages")
+	}
+	for i, p := range report.Pages {
+		if p.Index != i || p.Archetype == "" {
+			t.Fatalf("page report %d malformed: %+v", i, p)
+		}
+	}
+	// The fixture's pages all fit; nothing is due for a shortening pass.
+	if len(report.Shorten) != 0 || !report.OK {
+		t.Fatalf("fixture should compose clean, got shorten=%v ok=%v", report.Shorten, report.OK)
+	}
+}

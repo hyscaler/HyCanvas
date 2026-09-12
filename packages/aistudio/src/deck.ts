@@ -11,7 +11,8 @@ import type { Size } from "./layout";
 import { qualityCheck, type QualityReport } from "./quality";
 import type { Archetype, DeckTheme, DesignOutline } from "./outline";
 import { deriveDesignSystem, type DesignSystem, type DeriveOptions } from "./designSystem";
-import { composeArchetypePage } from "./archetypes";
+import { composeArchetypePage, type ComposedPage } from "./archetypes";
+import { measureDeck, planVariants, toMeasurable, type DeckReport, type PageVariant } from "./measure";
 
 export interface DeckPage {
   background: Fill;
@@ -32,6 +33,8 @@ export interface DeckResult {
   pages: DeckPage[];
   /** The system the deck was composed from, for stamping the file's theme. */
   system: DesignSystem;
+  /** The reviewer's report on the deck as returned, after the fix pass. */
+  report: DeckReport;
 }
 
 export type LayoutDeckOptions = DeriveOptions;
@@ -48,17 +51,32 @@ export function layoutDeck(
   const themed: DeckTheme = { ...theme, kicker: theme.kicker ?? outline.title };
   const system = deriveDesignSystem(themed, size, opts);
   const total = outline.pages.length;
-  const pages: DeckPage[] = outline.pages.map((item, i) => {
-    const composed = composeArchetypePage(item, system, { index: i, total });
-    return {
-      background: composed.background,
-      nodes: composed.nodes,
-      name: item.title || `Page ${i + 1}`,
-      quality: qualityCheck({ background: composed.background, nodes: composed.nodes, size: system.size }),
-      archetype: composed.archetype,
-      imagePrompts: composed.imagePrompts,
-      ...(item.note ? { note: item.note } : {}),
-    };
-  });
-  return { title: outline.title, pages, system };
+  const composeAll = (variants: Record<number, PageVariant>) =>
+    outline.pages.map((item, i) => composeArchetypePage(item, system, { index: i, total, variant: variants[i] }));
+  const measure = (composed: ComposedPage[]) =>
+    measureDeck(
+      composed.map((c) => toMeasurable(c, qualityCheck({ background: c.background, nodes: c.nodes, size: system.size }).issues)),
+      system.size,
+      system.margin,
+    );
+  // Compose, look, fix once, look again. The fix pass is deterministic
+  // (variants for monotony and sparseness); what it cannot fix, overfull
+  // copy, stays in the report for the caller.
+  let composed = composeAll({});
+  let report = measure(composed);
+  const variants = planVariants(report, outline);
+  if (Object.keys(variants).length) {
+    composed = composeAll(variants);
+    report = measure(composed);
+  }
+  const pages: DeckPage[] = composed.map((c, i) => ({
+    background: c.background,
+    nodes: c.nodes,
+    name: outline.pages[i].title || `Page ${i + 1}`,
+    quality: { ok: report.pages[i].issues.length === 0, issues: report.pages[i].issues },
+    archetype: c.archetype,
+    imagePrompts: c.imagePrompts,
+    ...(outline.pages[i].note ? { note: outline.pages[i].note } : {}),
+  }));
+  return { title: outline.title, pages, system, report };
 }
