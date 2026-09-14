@@ -898,6 +898,8 @@ interface EditorState {
    *  `undefined` for an axis to clear it back to equal tracks. An array whose
    *  length disagrees with that axis is rejected rather than partly applied. */
   setGridTracks(id: string, patch: { colWidths?: number[]; rowHeights?: number[] }): void;
+  /** Turn a photo grid's masonry packing on or off (#39). */
+  setGridMasonry(id: string, on: boolean): void;
   /** Append imported pages (e.g. from a PDF), each sized to the source page with
    *  its editable nodes, and switch to the first new page. Undoable. */
   importPdfPages(pages: { width: number; height: number; nodes: Node[] }[]): void;
@@ -1228,14 +1230,106 @@ export function gridCellBox(
   };
 }
 
+/** Lay a grid's filled cells out as a masonry collage.
+ *
+ *  Cells keep their document order, so the arrangement is stable and an older
+ *  client reading the same `cells` still gets a sensible lattice.
+ *
+ *  Columns span the grid's WIDTH and the grid's HEIGHT follows the packing.
+ *  That is the whole contract of a masonry collage: every image keeps its own
+ *  aspect ratio, so the height cannot also be dictated without either cropping
+ *  or stretching, which is exactly what the layout exists to avoid. */
+function relayMasonryCells(
+  g: { cols: number; gap: number; cells: { childId?: string }[]; children: Node[]; size?: { width: number; height: number } },
+  size: { width: number; height: number },
+  byId: Map<string, Node>,
+): void {
+  type Frame = { transform: Transform; size: { width: number; height: number }; children?: Node[] };
+  const filled: Frame[] = [];
+  const aspects: number[] = [];
+  for (const cell of g.cells) {
+    const frame = (cell.childId ? byId.get(cell.childId) : undefined) as unknown as Frame | undefined;
+    if (!frame) continue;
+    filled.push(frame);
+    // The frame's IMAGE child carries the natural shape; fall back to the
+    // frame's own box when a cell holds something else.
+    const img = frame.children?.length === 1 && frame.children[0].type === "image"
+      ? (frame.children[0] as unknown as { size: { width: number; height: number } })
+      : null;
+    const s = img?.size ?? frame.size;
+    aspects.push(s.height > 0 ? s.width / s.height : 1);
+  }
+  if (!filled.length) return;
+  const boxes = masonryBoxes(size.width, g.cols, g.gap, aspects);
+  let packed = 0;
+  for (const b of boxes) packed = Math.max(packed, b.y + b.height);
+  for (let i = 0; i < filled.length; i++) {
+    const b = boxes[i];
+    const bw = Math.max(1, b.width);
+    const bh = Math.max(1, b.height);
+    filled[i].transform = { x: Math.max(0, b.x), y: Math.max(0, b.y), scaleX: 1, scaleY: 1, rotation: 0 };
+    filled[i].size = { width: bw, height: bh };
+    const img = filled[i].children?.length === 1 && filled[i].children![0].type === "image"
+      ? (filled[i].children![0] as unknown as { transform: Transform; size: { width: number; height: number } })
+      : null;
+    if (img) {
+      img.transform = { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 };
+      img.size = { width: bw, height: bh };
+    }
+  }
+  // The grid owns the frame the cells sit in, so it has to grow (or shrink) to
+  // the packing or the last row would be clipped by the node's own bounds.
+  if (g.size && packed > 0) g.size = { width: size.width, height: packed };
+}
+
+/** Masonry boxes for a set of items, packed into `cols` columns.
+ *
+ *  Each item keeps its own aspect ratio, so nothing is cropped to fit a shared
+ *  row height, and each column advances independently. Items go to the
+ *  currently shortest column, which is what keeps the columns finishing at
+ *  roughly the same depth instead of trailing off.
+ *
+ *  `aspect` is width/height. A non-finite or non-positive one (a child that
+ *  has not measured yet, or bad data from another client's file) falls back to
+ *  square rather than producing a zero-height or inverted box.
+ *
+ *  Returned boxes are in the grid's local space, like `gridCellBox`. The total
+ *  height is whatever the packing needs, so a caller that wants the grid to
+ *  end exactly at its own height scales the result (see relayGridCells). */
+export function masonryBoxes(
+  width: number,
+  cols: number,
+  gap: number,
+  aspects: number[],
+): { x: number; y: number; width: number; height: number }[] {
+  const n = Math.max(1, Math.floor(cols));
+  const colW = Math.max(1, (width - gap * (n - 1)) / n);
+  const heights = Array.from({ length: n }, () => 0);
+  return aspects.map((a) => {
+    const ar = Number.isFinite(a) && a > 0 ? a : 1;
+    // Shortest column wins; ties go left, so a fresh grid fills in reading
+    // order rather than jumping around.
+    let c = 0;
+    for (let i = 1; i < n; i++) if (heights[i] < heights[c] - 1e-6) c = i;
+    const h = Math.max(1, colW / ar);
+    const box = { x: c * (colW + gap), y: heights[c], width: colW, height: h };
+    heights[c] += h + gap;
+    return box;
+  });
+}
+
 /** Re-lay a photo grid's cell frames to a new grid size: each cell keeps its
  *  span from `cells` and a filled cell's image child is resized to keep
  *  covering it. Pure mutation of the given node (callers own undo). */
 export function relayGridCells(
-  g: { rows: number; cols: number; gap: number; cells: { row: number; col: number; rowSpan: number; colSpan: number; childId?: string }[]; children: Node[]; colWidths?: number[]; rowHeights?: number[] },
+  g: { rows: number; cols: number; gap: number; cells: { row: number; col: number; rowSpan: number; colSpan: number; childId?: string }[]; children: Node[]; colWidths?: number[]; rowHeights?: number[]; masonry?: boolean },
   size: { width: number; height: number },
 ): void {
   const byId = new Map(g.children.map((n) => [n.id, n]));
+  if (g.masonry) {
+    relayMasonryCells(g, size, byId);
+    return;
+  }
   for (const cell of g.cells) {
     const frame = (cell.childId ? byId.get(cell.childId) : undefined) as unknown as
       | { transform: Transform; size: { width: number; height: number }; children?: Node[] }
@@ -5508,6 +5602,32 @@ export const useEditor = create<EditorState>((set, get) => {
       perform(
         () => { g.colWidths = nextCols; g.rowHeights = nextRows; g.children = afterChildren; },
         () => { g.colWidths = before.colWidths; g.rowHeights = before.rowHeights; g.children = before.children as never; },
+      );
+    },
+    setGridMasonry: (id, on) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "grid" || loc.node.locked || editBlocked(id)) return;
+      const g = loc.node as unknown as { rows: number; cols: number; gap: number; size: { width: number; height: number }; cells: { row: number; col: number; rowSpan: number; colSpan: number; childId?: string }[]; children: Node[]; colWidths?: number[]; rowHeights?: number[]; masonry?: boolean };
+      if (!!g.masonry === on) return;
+      // The grid's own height is derived while masonry is on, so the size goes
+      // into the undo record alongside the frames: turning the layout off has
+      // to put the frame back the way the author drew it, not leave it at
+      // whatever depth the packing happened to need.
+      const before = structuredClone({ masonry: g.masonry, size: g.size, children: g.children });
+      if (on) g.masonry = true;
+      else delete g.masonry;
+      relayGridCells(g, g.size);
+      const afterChildren = g.children;
+      const afterSize = g.size;
+      perform(
+        () => {
+          if (on) g.masonry = true; else delete g.masonry;
+          g.size = afterSize; g.children = afterChildren;
+        },
+        () => {
+          if (before.masonry) g.masonry = true; else delete g.masonry;
+          g.size = before.size; g.children = before.children as never;
+        },
       );
     },
     importPdfPages: (imported) => {

@@ -92,8 +92,22 @@ import { z } from "zod";
  *      than its neighbours instead of every cell splitting the space evenly.
  *      Omitted means equal tracks, which is exactly how every existing grid
  *      already lays out, so an older file needs no conversion and an older
- *      client keeps laying the grid out the way it always did. Additive. */
-export const currentSchemaVersion = 25;
+ *      client keeps laying the grid out the way it always did. Additive.
+ *  v26: masonry collages. `GridNode` gains optional `masonry`, which packs the
+ *      grid's images into `cols` columns sized to each image's own aspect
+ *      ratio instead of a fixed row/column lattice, so a collage of mixed
+ *      shapes packs without cropping or gaps.
+ *
+ *      A FLAG on the existing node, deliberately, not a new node type and not
+ *      a new member of an existing enum. A new enum member would fail both the
+ *      grid's own schema branch and the unknown-node fallback on an older
+ *      client, taking the whole file down with it; a new node type would need
+ *      a baked raster fallback to avoid leaving a hole. An optional flag makes
+ *      an older client lay the very same cells out on its regular lattice: a
+ *      different arrangement of the same images, never a loss, and `cells`
+ *      stays authoritative for both so nothing has to be recomputed to open
+ *      the file either way. Additive. */
+export const currentSchemaVersion = 26;
 
 /** Maximum container nesting depth; guards traversal against stack overflow (FR-4). */
 export const maxNestingDepth = 32;
@@ -1310,6 +1324,15 @@ export interface GridNode extends NodeBase {
    *  lay out half a grid. */
   colWidths?: number[];
   rowHeights?: number[];
+  /** Pack the grid's images into `cols` columns sized to each image's own
+   *  aspect ratio, rather than onto the fixed row/column lattice (#39).
+   *
+   *  The column COUNT is the grid's existing `cols`, so the author controls it
+   *  with the control that already exists and no second one contradicts it.
+   *  `rows` and the track weights are ignored while this is on: rows have no
+   *  meaning once each column advances independently. They are kept rather
+   *  than cleared so turning masonry off returns the grid exactly as it was. */
+  masonry?: boolean;
 }
 export const GridNodeSchema = z.object({
   ...nodeBaseFields,
@@ -1325,6 +1348,7 @@ export const GridNodeSchema = z.object({
   // invert it, and neither is reachable from the UI.
   colWidths: z.array(z.number().positive()).optional(),
   rowHeights: z.array(z.number().positive()).optional(),
+  masonry: z.boolean().optional(),
 });
 
 export interface VideoNode extends NodeBase {

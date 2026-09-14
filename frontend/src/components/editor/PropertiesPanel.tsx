@@ -1818,7 +1818,7 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
       {single && single.node.type === "video" && <VideoSection node={single.node} />}
       {single && single.node.type === "grid" && (() => {
         const id = single.node.id;
-        const g = single.node as unknown as { rows: number; cols: number; gap: number; colWidths?: number[]; rowHeights?: number[] };
+        const g = single.node as unknown as { rows: number; cols: number; gap: number; colWidths?: number[]; rowHeights?: number[]; masonry?: boolean };
         const set = (patch: { rows?: number; cols?: number; gap?: number }) => useEditor.getState().setGridLayout(id, patch);
         // Weights are relative. A grid with none stored splits evenly, which is
         // the same as every track weighing 1, so editing can start from there
@@ -1851,14 +1851,25 @@ export function PropertiesPanel({ workspaceId }: { workspaceId?: string | null }
           ) : null;
         return (
           <Section title={tr("editor.photo_grid")} order={ORDER.type}>
+            <label className="flex items-center gap-2 text-[11px] text-neutral-500">
+              <input
+                type="checkbox"
+                checked={!!g.masonry}
+                onChange={(e) => useEditor.getState().setGridMasonry(id, e.target.checked)}
+              />
+              {tr("editor.masonry")}
+            </label>
             <div className="grid grid-cols-3 gap-2">
-              <Field key={`gr-${g.rows}`} label={tr("editor.rows")} value={g.rows} onCommit={(n) => set({ rows: Math.max(1, Math.min(6, Math.round(n))) })} />
-              <Field key={`gc-${g.cols}`} label={tr("editor.cols")} value={g.cols} onCommit={(n) => set({ cols: Math.max(1, Math.min(6, Math.round(n))) })} />
+              {/* Rows have no meaning once each column advances on its own, so
+                  masonry hides the control rather than leaving a dead one. */}
+              {!g.masonry && <Field key={`gr-${g.rows}`} label={tr("editor.rows")} value={g.rows} onCommit={(n) => set({ rows: Math.max(1, Math.min(6, Math.round(n))) })} />}
+              <Field key={`gc-${g.cols}`} label={g.masonry ? tr("editor.columns") : tr("editor.cols")} value={g.cols} onCommit={(n) => set({ cols: Math.max(1, Math.min(6, Math.round(n))) })} />
               <Field key={`gg-${g.gap}`} label={tr("editor.gap")} value={g.gap} onCommit={(n) => set({ gap: Math.max(0, n) })} />
             </div>
-            {axis(tr("editor.column_sizes"), "colWidths", g.cols)}
-            {axis(tr("editor.row_sizes"), "rowHeights", g.rows)}
-            {(g.cols > 1 || g.rows > 1) && (
+            {g.masonry && <p className="text-[11px] text-neutral-400">{tr("editor.masonry_hint")}</p>}
+            {!g.masonry && axis(tr("editor.column_sizes"), "colWidths", g.cols)}
+            {!g.masonry && axis(tr("editor.row_sizes"), "rowHeights", g.rows)}
+            {!g.masonry && (g.cols > 1 || g.rows > 1) && (
               <button
                 type="button"
                 disabled={isEven}

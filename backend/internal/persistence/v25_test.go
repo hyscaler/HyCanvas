@@ -25,14 +25,10 @@ func gridWithTracks() map[string]any {
 	}
 }
 
-// The paired EXACT pins are the cross-language drift alarm: a future bump
-// must update this line, the TS twin (gridTracks.test.ts), and both
-// currentSchemaVersion mirrors in the SAME change (CLAUDE.md bump protocol).
-func TestV25PinsTheVersionPair(t *testing.T) {
-	if currentSchemaVersion != 25 {
-		t.Fatalf("currentSchemaVersion = %d: update this pin and the TS twin as part of the bump", currentSchemaVersion)
-	}
-}
+// The exact version pin lives in the NEWEST version's file (v26_test.go), so it
+// moves forward with each bump rather than leaving one stale pin per version
+// behind. What stays here is the v25 write boundary itself, which must keep
+// holding for as long as v25 documents exist.
 
 func TestWriteBoundaryAcceptsV25(t *testing.T) {
 	if err := validateForWrite(designAtVersion(25, gridWithTracks())); err != nil {

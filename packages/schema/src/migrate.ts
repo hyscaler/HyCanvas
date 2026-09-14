@@ -378,6 +378,11 @@ export const migrations: Record<number, Migration> = {
   // existing grid already lays out. No node needs transforming, so this only
   // stamps the version so newer readers know the keys may be present.
   24: (file: AnyObj) => ({ ...file, schemaVersion: 25 }),
+  // v25 -> v26: masonry collages. `masonry` is an optional flag on GridNode;
+  // omitting it means the regular row/column lattice, which is how every
+  // existing grid already lays out. No node needs transforming, so this only
+  // stamps the version so newer readers know the key may be present.
+  25: (file: AnyObj) => ({ ...file, schemaVersion: 26 }),
 };
 
 export class MigrationError extends Error {
