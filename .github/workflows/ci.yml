@@ -19,11 +19,10 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      # Fresh install rather than `npm ci`: npm's optional-dependency lockfile bug
-      # (npm/cli#4828) makes `npm ci` skip platform-native packages such as
-      # @rollup/rollup-linux-x64-gnu on Linux, breaking vitest. This mirrors the
-      # Dockerfile, which installs the same way.
-      - run: rm -f package-lock.json && npm install --no-audit --no-fund
+      # The lockfile records every platform's native packages (cpu/os metadata),
+      # so `npm ci` installs the right ones for this runner and stays exactly
+      # reproducible. This mirrors the Dockerfile, which installs the same way.
+      - run: npm ci --no-audit --no-fund
       - run: npm run build:packages
       - run: npm run test:packages
       - run: npm run test:frontend
@@ -42,7 +41,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v6
         with:
-          go-version: "1.25"
+          go-version: "1.26"
           cache-dependency-path: backend/go.sum
       - run: go vet ./...
       - run: go build ./...

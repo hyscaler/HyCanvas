@@ -2,6 +2,8 @@ module hycanvas/backend
 
 go 1.25.0
 
+toolchain go1.26.6
+
 require (
 	github.com/SherClockHolmes/webpush-go v1.4.0
 	github.com/coder/websocket v1.8.15
@@ -42,6 +44,6 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/sync v0.21.0 // indirect
-	golang.org/x/text v0.38.0 // indirect
+	golang.org/x/text v0.39.0 // indirect
 	gopkg.in/ini.v1 v1.67.2 // indirect
 )

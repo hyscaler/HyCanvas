@@ -9,16 +9,17 @@
 FROM node:24-bookworm AS frontend
 WORKDIR /app
 COPY . .
-# Resolve fresh so the build platform's native deps (lightningcss, swc) install
-# correctly rather than reusing a cross-platform lockfile.
-RUN rm -f package-lock.json && npm install --no-audit --no-fund
+# The lockfile records every platform's native deps (lightningcss, swc, rollup)
+# with cpu/os metadata, so `npm ci` installs the right ones for this build
+# platform and the image stays exactly reproducible.
+RUN npm ci --no-audit --no-fund
 # build:dist -w frontend bakes NEXT_PUBLIC_BACKEND_URL=/api into the export.
 RUN npm run build:packages && npm run build:dist -w frontend
 
 # ---------------------------------------------------------------------------
 # Stage 2: build the Go backend binary
 # ---------------------------------------------------------------------------
-FROM golang:1.25-bookworm AS backend
+FROM golang:1.26-bookworm AS backend
 WORKDIR /src
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download

@@ -6,7 +6,7 @@
 # concurrently. This is NOT a production image - prod is the embedded
 # single-binary build in `Dockerfile`.
 
-FROM golang:1.25-bookworm
+FROM golang:1.26-bookworm
 
 # Node 24 (frontend dev server + npm-workspace tooling), ffmpeg (video export),
 # and db client tools used by the entrypoint's readiness wait + migrations.
