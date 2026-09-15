@@ -225,3 +225,26 @@ describe("variant switching (E17)", () => {
     expect(texts.some((t) => /^(Title|Text)$/.test(t))).toBe(false);
   });
 });
+
+describe("placeholder fill and list styles", () => {
+  it("writes points as list items, keeps the user's own marker, and never hands a marker to a plain paragraph", () => {
+    const st = useEditor.getState();
+    const box = () => contentBox();
+    type P = { runs: { text: string }[]; style: { list?: { type: string; level: number; marker?: string } } };
+    st.fillPlaceholderContent(0, { texts: {}, lists: { "ph-content": ["First", "Second"] } });
+    let paras = box().content as unknown as P[];
+    expect(paras.map((p) => p.runs[0].text)).toEqual(["First", "Second"]);
+    expect(paras.every((p) => p.style.list?.type === "bullet")).toBe(true);
+    // The user picks their own marker on the slot; a refill keeps it.
+    paras[0].style.list = { type: "bullet", level: 0, marker: "\u2713" };
+    st.fillPlaceholderContent(0, { texts: {}, lists: { "ph-content": ["Third"] } });
+    paras = box().content as unknown as P[];
+    expect(paras[0].style.list?.marker).toBe("\u2713");
+    // A plain paragraph into the same slot carries no list at all.
+    st.fillPlaceholderContent(0, { texts: { "ph-content": "One paragraph of prose" }, lists: {} });
+    paras = box().content as unknown as P[];
+    expect(paras).toHaveLength(1);
+    expect(paras[0].style.list).toBeUndefined();
+    expect(paras[0].runs[0].text).toBe("One paragraph of prose");
+  });
+});

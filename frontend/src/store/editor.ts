@@ -2566,11 +2566,15 @@ export const useEditor = create<EditorState>((set, get) => {
           ...(override?.fontFamily ? { fontFamily: override.fontFamily } : {}),
           ...(override?.fill ? { fill: structuredClone(override.fill) } : {}),
         };
-        const paraStyle = proto.style ?? {};
+        // The box's current paragraph style, less any list: a slot that held
+        // list items last time must not hand its marker to a plain paragraph.
+        const { list: protoList, ...paraStyle } = (proto.style ?? {}) as Record<string, unknown> & { list?: unknown };
         // Points are real list items (style.list), never a bullet character
         // pasted into the copy: the canvas and every exporter draw the marker
         // in a gutter, and the reflow estimate takes that gutter off the width.
-        const listStyle = { ...paraStyle, list: { type: "bullet", level: 0 } };
+        // A list style the user already gave the slot (their own marker) is
+        // kept; otherwise a plain bullet.
+        const listStyle = { ...paraStyle, list: protoList ?? { type: "bullet", level: 0 } };
         const paragraphs: Paragraph[] = list !== undefined
           ? list.map((item) => ({ runs: [{ text: item, style: structuredClone(runStyle) }], style: structuredClone(listStyle) }))
           : [{ runs: [{ text: text!, style: structuredClone(runStyle) }], style: structuredClone(paraStyle) }];

@@ -55,9 +55,9 @@ func TestGenerationJobPlacesImages_DB(t *testing.T) {
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	// The provider: every chat call gets the same one-page outline (the
-	// page polish parses it as points, finds none, and keeps the outline's),
-	// every image call gets a small real PNG.
+	// The provider: a chat call asking for a deck gets the one-page outline,
+	// a chat call asking for polished points gets three, every image call
+	// gets a small real PNG.
 	outline, _ := json.Marshal(map[string]any{
 		"title": "Coastal restoration",
 		"theme": "calm, coastal, restrained",
@@ -85,7 +85,13 @@ func TestGenerationJobPlacesImages_DB(t *testing.T) {
 		switch {
 		case strings.HasSuffix(r.URL.Path, "/chat/completions"):
 			atomic.AddInt32(&textCalls, 1)
-			_ = json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": map[string]any{"content": string(outline)}}}})
+			var body bytes.Buffer
+			_, _ = body.ReadFrom(r.Body)
+			content := string(outline)
+			if !strings.Contains(body.String(), `\"pages\"`) && !strings.Contains(body.String(), `"pages"`) {
+				content = `{"points":["Erosion is accelerating on the north shore","Two villages have already relocated","Insurance cover is being withdrawn"]}`
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": map[string]any{"content": content}}}})
 		case strings.HasSuffix(r.URL.Path, "/images/generations"):
 			atomic.AddInt32(&imageCalls, 1)
 			_ = json.NewEncoder(w).Encode(map[string]any{"data": []any{map[string]any{"b64_json": base64.StdEncoding.EncodeToString(pngBuf.Bytes())}}})
