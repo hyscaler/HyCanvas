@@ -31313,6 +31313,7 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
       var deckStyle_1 = require_deckStyle();
       var AVG_GLYPH_EM = 0.52;
       var LINE_HEIGHT = 1.3;
+      var LIST_GUTTER_EM = 1.6;
       function neededLines(paragraphs, fontSize, boxWidth) {
         const charsPerLine = Math.max(4, Math.floor(boxWidth / (AVG_GLYPH_EM * fontSize)));
         let lines = 0;
@@ -31325,8 +31326,11 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
       function availableLines(fontSize, boxHeight) {
         return Math.max(1, Math.floor(boxHeight / (LINE_HEIGHT * fontSize)));
       }
+      function wrapWidth(slot, fontSize) {
+        return Math.max(1, slot.rect.width - (slot.list ? LIST_GUTTER_EM * fontSize : 0));
+      }
       function fitsAt(slot, fontSize) {
-        return neededLines(slot.paragraphs, fontSize, slot.rect.width) <= availableLines(fontSize, slot.rect.height);
+        return neededLines(slot.paragraphs, fontSize, wrapWidth(slot, fontSize)) <= availableLines(fontSize, slot.rect.height);
       }
       function reflowPage(layout, slots, page) {
         var _a5;
@@ -31360,7 +31364,7 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
           }
           if (chosen === null) {
             verdicts[slot.placeholderId] = "overfull";
-          } else if (role === "content" && chosen === ladder[0] && neededLines(slot.paragraphs, chosen, slot.rect.width) * 3 < availableLines(chosen, slot.rect.height)) {
+          } else if (role === "content" && chosen === ladder[0] && neededLines(slot.paragraphs, chosen, wrapWidth(slot, chosen)) * 3 < availableLines(chosen, slot.rect.height)) {
             verdicts[slot.placeholderId] = "underfull";
           } else {
             verdicts[slot.placeholderId] = "fits";
@@ -31554,13 +31558,15 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
               const scale = (0, deckStyle_1.slotTypeScale)(ph.role, r, { width, height });
               const list = fill.lists[ph.id];
               const text2 = fill.texts[ph.id];
-              const paragraphs = list !== void 0 && list.length ? list.map((li) => `\u2022  ${li}`) : [text2 != null ? text2 : ""];
+              const isList = list !== void 0 && list.length > 0;
+              const paragraphs = isList ? list : [text2 != null ? text2 : ""];
               const fitted = (0, reflow_1.reflowPage)(layout, [{
                 nodeId: `probe-${ph.id}`,
                 placeholderId: ph.id,
                 rect: { width: r.width, height: r.height },
                 fontSize: scale.base,
-                paragraphs
+                paragraphs,
+                list: isList
               }], { width, height });
               const fontSize = (_b3 = (_a7 = fitted.adjustments[0]) == null ? void 0 : _a7.fontSize) != null ? _b3 : scale.base;
               if (fitted.verdicts[ph.id] === "overfull")
@@ -31571,7 +31577,7 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
                 fontSize,
                 fill: { type: "solid", color: structuredClone(ink) }
               };
-              const paraStyle = { align: "left", direction: "auto" };
+              const paraStyle = __spreadValues({ align: "left", direction: "auto" }, isList ? { list: { type: "bullet", level: 0 } } : {});
               const content = paragraphs.map((line) => ({
                 runs: [{ text: line, style: structuredClone(runStyle) }],
                 style: structuredClone(paraStyle)

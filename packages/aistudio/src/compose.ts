@@ -241,13 +241,18 @@ export function composeDeckFileWithReport(input: ComposeDeckInput): { file: Desi
           const scale = slotTypeScale(ph.role as "title" | "body" | "content", r, { width, height });
           const list = fill.lists[ph.id];
           const text = fill.texts[ph.id];
-          const paragraphs = list !== undefined && list.length ? list.map((li) => `•  ${li}`) : [text ?? ""];
+          // Points are real list items: the text engine and every exporter
+          // draw the marker in a gutter, so the copy carries no bullet
+          // character and the estimate below takes the gutter off the width.
+          const isList = list !== undefined && list.length > 0;
+          const paragraphs = isList ? list : [text ?? ""];
           const fitted = reflowPage(layout, [{
             nodeId: `probe-${ph.id}`,
             placeholderId: ph.id,
             rect: { width: r.width, height: r.height },
             fontSize: scale.base,
             paragraphs,
+            list: isList,
           }], { width, height });
           const fontSize = fitted.adjustments[0]?.fontSize ?? scale.base;
           if (fitted.verdicts[ph.id] === "overfull") overfull.push(ph.id);
@@ -257,7 +262,7 @@ export function composeDeckFileWithReport(input: ComposeDeckInput): { file: Desi
             fontSize,
             fill: { type: "solid", color: structuredClone(ink) },
           };
-          const paraStyle = { align: "left", direction: "auto" };
+          const paraStyle = { align: "left", direction: "auto", ...(isList ? { list: { type: "bullet", level: 0 } } : {}) };
           const content = paragraphs.map((line) => ({
             runs: [{ text: line, style: structuredClone(runStyle) }],
             style: structuredClone(paraStyle),
