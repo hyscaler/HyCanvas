@@ -366,3 +366,31 @@ describe("deckToPptx fidelity goldens", () => {
     expect(iTop).toBeGreaterThan(iMid);
   });
 });
+
+describe("list paragraphs", () => {
+  it("exports list items as real bullets with a hanging indent, never as copy", async () => {
+    const file = createBlankDesign({ title: "Lists", width: 1280, height: 720 });
+    const para = (text: string, list: { type: string; level: number; marker?: string }) => ({
+      runs: [{ text, style: { fontFamily: "Inter", fontStyle: "Regular", fontSize: 20, fill: { type: "solid", color: { srgb: { r: 0, g: 0, b: 0, a: 1 } } } } }],
+      style: { align: "left", direction: "auto", list },
+    });
+    file.pages[0].children = [
+      createNode("text", {
+        id: "list",
+        transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+        size: { width: 600, height: 200 },
+        content: [para("First point", { type: "bullet", level: 0 }), para("Nested", { type: "bullet", level: 1 }), para("Step one", { type: "number", level: 0 }), para("Done", { type: "checklist", level: 0, marker: "✓" })],
+      } as Partial<Node>),
+    ];
+    const s1 = textOf(readZip(await deckToPptx(file)), "ppt/slides/slide1.xml");
+    expect(s1).toContain('<a:buChar char="•"/>');
+    expect(s1).toContain('<a:buAutoNum type="arabicPeriod"/>');
+    expect(s1).toContain('<a:buChar char="✓"/>');
+    // 20px type: a 32px gutter hangs the text (marL 32px, indent -32px); the
+    // nested item sits one level (24px) further in.
+    expect(s1).toContain(`marL="${Math.round(32 * 9525)}" indent="-${Math.round(32 * 9525)}"`);
+    expect(s1).toContain(`marL="${Math.round(56 * 9525)}" indent="-${Math.round(32 * 9525)}" lvl="1"`);
+    // The marker is not pasted into the run text.
+    expect(s1).not.toContain("<a:t>•");
+  });
+});

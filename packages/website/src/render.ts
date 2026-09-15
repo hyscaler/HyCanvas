@@ -194,9 +194,34 @@ function renderText(node: TextNode): string {
           ? "flex-end"
           : "flex-start",
   });
+  // Numbered-list ordinals per level, as the canvas counts them.
+  const counters: number[] = [];
   const body = paras
     .map((p) => {
       const align = clampAlign(p.style?.align);
+      const ps = { ...(p.style ?? {}), ...(p.overrides ?? {}) };
+      // A list item keeps its marker as a marker: drawn in a gutter of 1.6 em
+      // with a hanging indent, sized from the first run as the canvas does,
+      // rather than pasted into the copy.
+      let listStyle: Record<string, string | undefined> = {};
+      let marker = "";
+      if (ps.list) {
+        const em = p.runs?.[0]?.style?.fontSize ?? 16;
+        const level = Math.max(0, Math.floor(ps.list.level ?? 0));
+        if (ps.list.type === "number") {
+          counters[level] = (counters[level] ?? 0) + 1;
+          counters.length = level + 1;
+        }
+        const text = ps.list.marker || (ps.list.type === "number" ? `${counters[level] ?? 1}.` : ps.list.type === "checklist" ? "\u2610" : "\u2022");
+        const px = (v: number) => `${Math.round(v * 100) / 100}px`;
+        const gutter = em * 1.6;
+        const indent = (ps.indentStart ?? 0) + level * em * 1.2;
+        listStyle = { "padding-left": px(indent + gutter), position: "relative" };
+        const markerCss = style({ position: "absolute", left: px(indent), top: "0", "font-family": p.runs?.[0]?.style?.fontFamily ? cssFontFamily(p.runs[0].style.fontFamily) : undefined, "font-size": px(em) });
+        marker = `<span aria-hidden="true" style="${markerCss}">${escapeHtml(text)}</span>`;
+      } else {
+        counters.length = 0;
+      }
       const runs = (p.runs ?? [])
         .map((r) => {
           const s = r.style;
@@ -212,7 +237,7 @@ function renderText(node: TextNode): string {
           return `<span style="${css}">${escapeHtml(r.text)}</span>`;
         })
         .join("");
-      return `<p style="${style({ margin: 0, "text-align": align })}">${runs}</p>`;
+      return `<p style="${style({ margin: 0, "text-align": align, ...listStyle })}">${marker}${runs}</p>`;
     })
     .join("");
   return `<div class="oc-text-wrap" style="${wrapStyle}">${body}</div>`;

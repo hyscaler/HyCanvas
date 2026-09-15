@@ -67,8 +67,15 @@ function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/** No-break spaces read as spaces: a heading whose last two words are glued
+ *  (so the final word never wraps alone) must still be found by typing the
+ *  phrase with an ordinary space. Same length, so match offsets hold. */
+function foldSpaces(s: string): string {
+  return s.replace(/\u00A0/g, " ");
+}
+
 function buildRegExp(q: FindQuery): RegExp {
-  let src = q.regex ? q.text : escapeRegExp(q.text);
+  let src = q.regex ? q.text : escapeRegExp(foldSpaces(q.text));
   if (q.wholeWord) src = `\\b(?:${src})\\b`;
   return new RegExp(src, q.caseSensitive ? "g" : "gi");
 }
@@ -78,7 +85,7 @@ export function findMatches(node: TextNode, q: FindQuery): Match[] {
   if (q.text === "") return [];
   const out: Match[] = [];
   node.content.forEach((p, pi) => {
-    const text = getParagraphText(p);
+    const text = foldSpaces(getParagraphText(p));
     const re = buildRegExp(q);
     let m: RegExpExecArray | null;
     while ((m = re.exec(text)) !== null) {

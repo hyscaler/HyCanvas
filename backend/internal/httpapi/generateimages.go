@@ -17,6 +17,7 @@ package httpapi
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"sync"
 	"time"
@@ -170,7 +171,7 @@ func becomeImageNode(n map[string]any, assetID string) {
 // isImageUnsupported reports the capability rejection, which means "leave all
 // regions alone" rather than "this one failed".
 func isImageUnsupported(err error) bool {
-	return err != nil && strings.Contains(err.Error(), ai.ErrImageUnsupported.Error())
+	return errors.Is(err, ai.ErrImageUnsupported)
 }
 
 // uploadAdapter stores a generated image through the uploads service and

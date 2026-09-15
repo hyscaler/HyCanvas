@@ -325,3 +325,17 @@ describe("no-break spaces", () => {
     expect(glued.some((t) => t.trim() === "three")).toBe(false);
   });
 });
+
+describe("find across no-break spaces", () => {
+  it("matches a phrase typed with a space against a heading glued with U+00A0", () => {
+    const node = textNode([createParagraph("Why the shoreline is retreating", { fontSize: 20 })]);
+    const hits = findMatches(node, { text: "is retreating" });
+    expect(hits).toHaveLength(1);
+    expect(hits[0].start).toBe("Why the shoreline ".length);
+    expect(hits[0].end).toBe("Why the shoreline is\u00A0retreating".length);
+    // The other direction too, and replace keeps working on the offsets.
+    expect(findMatches(node, { text: "is retreating" })).toHaveLength(1);
+    expect(replaceAll(node, { text: "is retreating" }, "is advancing")).toBe(1);
+    expect(getPlainText(node)).toBe("Why the shoreline is advancing");
+  });
+});

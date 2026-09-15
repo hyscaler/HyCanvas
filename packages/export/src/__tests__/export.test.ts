@@ -193,3 +193,27 @@ describe("toSvg (FR-4, AC-3)", () => {
     expect(() => toSvg(d, 9)).toThrow(/out of range/);
   });
 });
+
+describe("toSvg list paragraphs", () => {
+  it("draws the marker in the gutter and starts the text after it, as the canvas does", () => {
+    const d = createBlankDesign({ width: 400, height: 200 });
+    const run = (text: string) => [{ text, style: { fontFamily: "Inter", fontStyle: "Regular", fontSize: 16, fill: { type: "solid", color: { srgb: { r: 0, g: 0, b: 0, a: 1 } } } } }];
+    const txt = createNode("text", {
+      id: "t",
+      content: [
+        { runs: run("First"), style: { align: "left", direction: "auto", list: { type: "number", level: 0 } } },
+        { runs: run("Second"), style: { align: "left", direction: "auto", list: { type: "number", level: 0 } } },
+        { runs: run("Plain"), style: { align: "left", direction: "auto" } },
+        { runs: run("Again"), style: { align: "left", direction: "auto", list: { type: "bullet", level: 0 } } },
+      ],
+    } as Partial<Node>);
+    d.pages[0].children = [txt];
+    const svg = toSvg(d, 0);
+    expect(svg).toContain(">1.</tspan>");
+    expect(svg).toContain(">2.</tspan>");
+    expect(svg).toContain(">•</tspan>");
+    // 16px type: markers at x=0, list text at the 25.6px gutter, plain text at 0.
+    expect(svg.match(/<text x="25.6"/g)!.length).toBe(3);
+    expect(svg.match(/<text x="0"/g)!.length).toBe(4);
+  });
+});
