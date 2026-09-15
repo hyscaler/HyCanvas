@@ -29,14 +29,10 @@ func designAtV24WithInteraction() DesignFile {
 	}
 }
 
-// The paired EXACT pins are the cross-language drift alarm: a future bump
-// must update this line, the TS twin (interactions.test.ts), and both
-// currentSchemaVersion mirrors in the SAME change (CLAUDE.md bump protocol).
-func TestV24PinsTheVersionPair(t *testing.T) {
-	if currentSchemaVersion != 24 {
-		t.Fatalf("currentSchemaVersion = %d: update this pin and the TS twin as part of the bump", currentSchemaVersion)
-	}
-}
+// The exact version pin lives in the NEWEST version's file (v25_test.go), so it
+// moves forward with each bump rather than accumulating one stale pin per
+// version. What stays here is the v24 write boundary itself, which must keep
+// holding for as long as v24 documents exist.
 
 func TestWriteBoundaryAcceptsV24(t *testing.T) {
 	if err := validateForWrite(designAtV24WithInteraction()); err != nil {

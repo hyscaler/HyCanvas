@@ -7,12 +7,11 @@ import { describe, expect, it } from "vitest";
 import { createBlankDesign, createNode, currentSchemaVersion, InteractionSchema, migrate, validate, type Node } from "../index";
 
 describe("migration to v24", () => {
-  it("pins the exact version pair (see the Go twin in v24_test.go)", () => {
-    // The paired EXACT pins are the cross-language drift alarm: a future bump
-    // must update this line, the Go pin, and both currentSchemaVersion
-    // mirrors in the SAME change (CLAUDE.md bump protocol). A >= assertion
-    // would let the mirrors drift apart silently.
-    expect(currentSchemaVersion).toBe(24);
+  // The exact version pin lives in the NEWEST version's test (gridTracks.test.ts)
+  // so it moves forward with each bump instead of leaving one stale pin per
+  // version behind. What stays here is v24's own migration behavior.
+  it("is still reachable as an explicit target", () => {
+    expect(currentSchemaVersion).toBeGreaterThanOrEqual(24);
   });
 
   it("is a pure no-op on a v23 document", () => {

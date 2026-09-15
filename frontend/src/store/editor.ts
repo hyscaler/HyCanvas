@@ -894,6 +894,12 @@ interface EditorState {
    *  A gap-only change keeps the existing cell list (including spans); changing
    *  rows or cols rebuilds a uniform layout. */
   setGridLayout(id: string, patch: { rows?: number; cols?: number; gap?: number }): void;
+  /** Set a photo grid's relative track sizes, one weight per column/row. Pass
+   *  `undefined` for an axis to clear it back to equal tracks. An array whose
+   *  length disagrees with that axis is rejected rather than partly applied. */
+  setGridTracks(id: string, patch: { colWidths?: number[]; rowHeights?: number[] }): void;
+  /** Turn a photo grid's masonry packing on or off (#39). */
+  setGridMasonry(id: string, on: boolean): void;
   /** Append imported pages (e.g. from a PDF), each sized to the source page with
    *  its editable nodes, and switch to the first new page. Undoable. */
   importPdfPages(pages: { width: number; height: number; nodes: Node[] }[]): void;
@@ -1174,31 +1180,162 @@ function hexToColor(hex: string): { srgb: { r: number; g: number; b: number; a: 
 export type GridSpan = { row: number; col: number; rowSpan: number; colSpan: number };
 
 // The local-space box of a grid cell within a grid node's box.
-export function gridCellBox(size: { width: number; height: number }, rows: number, cols: number, gap: number, s: GridSpan) {
-  const cellW = (size.width - gap * (cols - 1)) / cols;
-  const cellH = (size.height - gap * (rows - 1)) / rows;
-  return {
-    x: s.col * (cellW + gap),
-    y: s.row * (cellH + gap),
-    width: cellW * s.colSpan + gap * (s.colSpan - 1),
-    height: cellH * s.rowSpan + gap * (s.rowSpan - 1),
+/** Track sizes for one axis, in pixels, from optional relative weights.
+ *
+ *  Weights rather than pixels because a grid is resized freely on the canvas:
+ *  stored pixel widths would overflow it or leave a gap the moment it changed
+ *  size, while ratios survive any resize. A weights array that disagrees with
+ *  the track count is ignored outright, so a stale one cannot lay out half a
+ *  grid at the wrong proportions. */
+function trackSizes(total: number, count: number, gap: number, weights?: number[]): number[] {
+  const free = total - gap * (count - 1);
+  if (!weights || weights.length !== count) return Array.from({ length: count }, () => free / count);
+  let sum = 0;
+  for (const w of weights) {
+    // A non-finite or non-positive weight would collapse or invert a track, and
+    // this data can come from a file someone else's client wrote.
+    if (!Number.isFinite(w) || w <= 0) return Array.from({ length: count }, () => free / count);
+    sum += w;
+  }
+  return weights.map((w) => (free * w) / sum);
+}
+
+/** The box of one cell (or a span of them) inside a grid.
+ *
+ *  `tracks` is optional: without it every track is equal, which is how every
+ *  grid laid out before track sizes existed and how one authored by an older
+ *  client still does. */
+export function gridCellBox(
+  size: { width: number; height: number },
+  rows: number,
+  cols: number,
+  gap: number,
+  s: GridSpan,
+  tracks?: { colWidths?: number[]; rowHeights?: number[] },
+) {
+  const ws = trackSizes(size.width, cols, gap, tracks?.colWidths);
+  const hs = trackSizes(size.height, rows, gap, tracks?.rowHeights);
+  // Offset is the sum of preceding tracks plus their gaps; span width is the
+  // covered tracks plus the gaps swallowed between them.
+  const sum = (arr: number[], from: number, count: number) => {
+    let n = 0;
+    for (let i = from; i < from + count && i < arr.length; i++) n += arr[i];
+    return n;
   };
+  return {
+    x: sum(ws, 0, s.col) + gap * s.col,
+    y: sum(hs, 0, s.row) + gap * s.row,
+    width: sum(ws, s.col, s.colSpan) + gap * (s.colSpan - 1),
+    height: sum(hs, s.row, s.rowSpan) + gap * (s.rowSpan - 1),
+  };
+}
+
+/** Lay a grid's filled cells out as a masonry collage.
+ *
+ *  Cells keep their document order, so the arrangement is stable and an older
+ *  client reading the same `cells` still gets a sensible lattice.
+ *
+ *  Columns span the grid's WIDTH and the grid's HEIGHT follows the packing.
+ *  That is the whole contract of a masonry collage: every image keeps its own
+ *  aspect ratio, so the height cannot also be dictated without either cropping
+ *  or stretching, which is exactly what the layout exists to avoid. */
+function relayMasonryCells(
+  g: { cols: number; gap: number; cells: { childId?: string }[]; children: Node[]; size?: { width: number; height: number } },
+  size: { width: number; height: number },
+  byId: Map<string, Node>,
+): void {
+  type Frame = { transform: Transform; size: { width: number; height: number }; children?: Node[] };
+  const filled: Frame[] = [];
+  const aspects: number[] = [];
+  for (const cell of g.cells) {
+    const frame = (cell.childId ? byId.get(cell.childId) : undefined) as unknown as Frame | undefined;
+    if (!frame) continue;
+    filled.push(frame);
+    // The frame's IMAGE child carries the natural shape; fall back to the
+    // frame's own box when a cell holds something else.
+    const img = frame.children?.length === 1 && frame.children[0].type === "image"
+      ? (frame.children[0] as unknown as { size: { width: number; height: number } })
+      : null;
+    const s = img?.size ?? frame.size;
+    aspects.push(s.height > 0 ? s.width / s.height : 1);
+  }
+  if (!filled.length) return;
+  const boxes = masonryBoxes(size.width, g.cols, g.gap, aspects);
+  let packed = 0;
+  for (const b of boxes) packed = Math.max(packed, b.y + b.height);
+  for (let i = 0; i < filled.length; i++) {
+    const b = boxes[i];
+    const bw = Math.max(1, b.width);
+    const bh = Math.max(1, b.height);
+    filled[i].transform = { x: Math.max(0, b.x), y: Math.max(0, b.y), scaleX: 1, scaleY: 1, rotation: 0 };
+    filled[i].size = { width: bw, height: bh };
+    const img = filled[i].children?.length === 1 && filled[i].children![0].type === "image"
+      ? (filled[i].children![0] as unknown as { transform: Transform; size: { width: number; height: number } })
+      : null;
+    if (img) {
+      img.transform = { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 };
+      img.size = { width: bw, height: bh };
+    }
+  }
+  // The grid owns the frame the cells sit in, so it has to grow (or shrink) to
+  // the packing or the last row would be clipped by the node's own bounds.
+  if (g.size && packed > 0) g.size = { width: size.width, height: packed };
+}
+
+/** Masonry boxes for a set of items, packed into `cols` columns.
+ *
+ *  Each item keeps its own aspect ratio, so nothing is cropped to fit a shared
+ *  row height, and each column advances independently. Items go to the
+ *  currently shortest column, which is what keeps the columns finishing at
+ *  roughly the same depth instead of trailing off.
+ *
+ *  `aspect` is width/height. A non-finite or non-positive one (a child that
+ *  has not measured yet, or bad data from another client's file) falls back to
+ *  square rather than producing a zero-height or inverted box.
+ *
+ *  Returned boxes are in the grid's local space, like `gridCellBox`. The total
+ *  height is whatever the packing needs, so a caller that wants the grid to
+ *  end exactly at its own height scales the result (see relayGridCells). */
+export function masonryBoxes(
+  width: number,
+  cols: number,
+  gap: number,
+  aspects: number[],
+): { x: number; y: number; width: number; height: number }[] {
+  const n = Math.max(1, Math.floor(cols));
+  const colW = Math.max(1, (width - gap * (n - 1)) / n);
+  const heights = Array.from({ length: n }, () => 0);
+  return aspects.map((a) => {
+    const ar = Number.isFinite(a) && a > 0 ? a : 1;
+    // Shortest column wins; ties go left, so a fresh grid fills in reading
+    // order rather than jumping around.
+    let c = 0;
+    for (let i = 1; i < n; i++) if (heights[i] < heights[c] - 1e-6) c = i;
+    const h = Math.max(1, colW / ar);
+    const box = { x: c * (colW + gap), y: heights[c], width: colW, height: h };
+    heights[c] += h + gap;
+    return box;
+  });
 }
 
 /** Re-lay a photo grid's cell frames to a new grid size: each cell keeps its
  *  span from `cells` and a filled cell's image child is resized to keep
  *  covering it. Pure mutation of the given node (callers own undo). */
 export function relayGridCells(
-  g: { rows: number; cols: number; gap: number; cells: { row: number; col: number; rowSpan: number; colSpan: number; childId?: string }[]; children: Node[] },
+  g: { rows: number; cols: number; gap: number; cells: { row: number; col: number; rowSpan: number; colSpan: number; childId?: string }[]; children: Node[]; colWidths?: number[]; rowHeights?: number[]; masonry?: boolean },
   size: { width: number; height: number },
 ): void {
   const byId = new Map(g.children.map((n) => [n.id, n]));
+  if (g.masonry) {
+    relayMasonryCells(g, size, byId);
+    return;
+  }
   for (const cell of g.cells) {
     const frame = (cell.childId ? byId.get(cell.childId) : undefined) as unknown as
       | { transform: Transform; size: { width: number; height: number }; children?: Node[] }
       | undefined;
     if (!frame) continue;
-    const box = gridCellBox(size, g.rows, g.cols, g.gap, cell);
+    const box = gridCellBox(size, g.rows, g.cols, g.gap, cell, { colWidths: g.colWidths, rowHeights: g.rowHeights });
     // Floor at 1px: a grid dragged smaller than its gaps would otherwise
     // compute negative cell sizes.
     const bw = Math.max(1, box.width);
@@ -5371,15 +5508,15 @@ export const useEditor = create<EditorState>((set, get) => {
     setGridLayout: (id, patch) => {
       const loc = locate(get().doc, id);
       if (!loc || loc.node.type !== "grid" || loc.node.locked || editBlocked(id)) return;
-      const g = loc.node as unknown as { rows: number; cols: number; gap: number; size: { width: number; height: number }; cells: { row: number; col: number; rowSpan: number; colSpan: number; childId?: string }[]; children: Node[] };
-      const before = structuredClone({ rows: g.rows, cols: g.cols, gap: g.gap, cells: g.cells, children: g.children });
+      const g = loc.node as unknown as { rows: number; cols: number; gap: number; size: { width: number; height: number }; cells: { row: number; col: number; rowSpan: number; colSpan: number; childId?: string }[]; children: Node[]; colWidths?: number[]; rowHeights?: number[] };
+      const before = structuredClone({ rows: g.rows, cols: g.cols, gap: g.gap, cells: g.cells, children: g.children, colWidths: g.colWidths, rowHeights: g.rowHeights });
       const r = Math.max(1, Math.min(6, Math.round(patch.rows ?? g.rows)));
       const c = Math.max(1, Math.min(6, Math.round(patch.cols ?? g.cols)));
       const gap = Math.max(0, patch.gap ?? g.gap);
       // Lay a frame into its cell box, and keep a filled cell's image covering
       // the whole cell (the image child is sized to the frame at fill time).
       const layout = (frame: { transform: Transform; size: { width: number; height: number }; children?: Node[] }, s: GridSpan, rr: number, cc: number) => {
-        const box = gridCellBox(g.size, rr, cc, gap, s);
+        const box = gridCellBox(g.size, rr, cc, gap, s, { colWidths: g.colWidths, rowHeights: g.rowHeights });
         frame.transform = { x: box.x, y: box.y, scaleX: 1, scaleY: 1, rotation: 0 };
         frame.size = { width: box.width, height: box.height };
         const img = frame.children?.length === 1 && frame.children[0].type === "image" ? (frame.children[0] as unknown as { transform: Transform; size: { width: number; height: number } }) : null;
@@ -5427,9 +5564,70 @@ export const useEditor = create<EditorState>((set, get) => {
           nextCells.push({ row, col, rowSpan: 1, colSpan: 1, childId: frame.id });
         }
       }
+      // Track weights are per-axis and sized to that axis's track count, so a
+      // changed axis drops its weights while an unchanged one keeps them:
+      // adding a column should not also discard hand-tuned row proportions.
+      const nextColWidths = c === before.cols ? before.colWidths : undefined;
+      const nextRowHeights = r === before.rows ? before.rowHeights : undefined;
       perform(
-        () => { g.rows = r; g.cols = c; g.gap = gap; g.cells = nextCells; g.children = nextChildren; },
-        () => { g.rows = before.rows; g.cols = before.cols; g.gap = before.gap; g.cells = before.cells as never; g.children = before.children as never; },
+        () => { g.rows = r; g.cols = c; g.gap = gap; g.cells = nextCells; g.children = nextChildren; g.colWidths = nextColWidths; g.rowHeights = nextRowHeights; },
+        () => { g.rows = before.rows; g.cols = before.cols; g.gap = before.gap; g.cells = before.cells as never; g.children = before.children as never; g.colWidths = before.colWidths; g.rowHeights = before.rowHeights; },
+      );
+    },
+    setGridTracks: (id, patch) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "grid" || loc.node.locked || editBlocked(id)) return;
+      const g = loc.node as unknown as {
+        rows: number; cols: number; gap: number; size: { width: number; height: number };
+        cells: { row: number; col: number; rowSpan: number; colSpan: number; childId?: string }[];
+        children: Node[]; colWidths?: number[]; rowHeights?: number[];
+      };
+      // Undefined clears an axis back to equal tracks. Anything else must match
+      // that axis exactly and be usable as a weight; a half-valid array would
+      // lay the grid out at proportions nobody asked for, so reject outright.
+      const usable = (arr: number[] | undefined, count: number) =>
+        arr === undefined || (arr.length === count && arr.every((n) => Number.isFinite(n) && n > 0));
+      const nextCols = "colWidths" in patch ? patch.colWidths : g.colWidths;
+      const nextRows = "rowHeights" in patch ? patch.rowHeights : g.rowHeights;
+      if (!usable(nextCols, g.cols) || !usable(nextRows, g.rows)) return;
+
+      const before = structuredClone({ colWidths: g.colWidths, rowHeights: g.rowHeights, children: g.children });
+      // Apply, then re-lay every cell frame against the new tracks. Frames are
+      // mutated once here; the undo closure swaps the cloned children back, the
+      // same shape setGridLayout's gap path uses.
+      g.colWidths = nextCols;
+      g.rowHeights = nextRows;
+      relayGridCells(g, g.size);
+      const afterChildren = g.children;
+      perform(
+        () => { g.colWidths = nextCols; g.rowHeights = nextRows; g.children = afterChildren; },
+        () => { g.colWidths = before.colWidths; g.rowHeights = before.rowHeights; g.children = before.children as never; },
+      );
+    },
+    setGridMasonry: (id, on) => {
+      const loc = locate(get().doc, id);
+      if (!loc || loc.node.type !== "grid" || loc.node.locked || editBlocked(id)) return;
+      const g = loc.node as unknown as { rows: number; cols: number; gap: number; size: { width: number; height: number }; cells: { row: number; col: number; rowSpan: number; colSpan: number; childId?: string }[]; children: Node[]; colWidths?: number[]; rowHeights?: number[]; masonry?: boolean };
+      if (!!g.masonry === on) return;
+      // The grid's own height is derived while masonry is on, so the size goes
+      // into the undo record alongside the frames: turning the layout off has
+      // to put the frame back the way the author drew it, not leave it at
+      // whatever depth the packing happened to need.
+      const before = structuredClone({ masonry: g.masonry, size: g.size, children: g.children });
+      if (on) g.masonry = true;
+      else delete g.masonry;
+      relayGridCells(g, g.size);
+      const afterChildren = g.children;
+      const afterSize = g.size;
+      perform(
+        () => {
+          if (on) g.masonry = true; else delete g.masonry;
+          g.size = afterSize; g.children = afterChildren;
+        },
+        () => {
+          if (before.masonry) g.masonry = true; else delete g.masonry;
+          g.size = before.size; g.children = before.children as never;
+        },
       );
     },
     importPdfPages: (imported) => {

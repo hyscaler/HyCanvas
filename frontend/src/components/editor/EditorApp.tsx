@@ -20,6 +20,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Spinner } from "@/components/ui/Spinner";
 import { LogoMark } from "@/components/ui/Logo";
 import { Canvas } from "./Canvas";
+import { EditorFileDropProvider } from "./EditorFileDrop";
 import { ZoomControl } from "./ZoomControl";
 import { CommandMenu } from "./CommandMenu";
 import { ShortcutsHelp } from "./ShortcutsHelp";
@@ -959,7 +960,9 @@ export function EditorApp() {
   }
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-neutral-100 text-neutral-900">
+    // relative so the whole-editor drop overlay positions against the editor
+    // rather than the viewport.
+    <EditorFileDropProvider className="relative flex h-screen w-screen flex-col overflow-hidden bg-neutral-100 text-neutral-900">
       {/* Top bar. flex-nowrap keeps the bar single-line down to ~768px; the
           title input shrinks/truncates and secondary actions live in the
           OverflowMenu so groups overflow gracefully instead of wrapping. In
@@ -1337,6 +1340,6 @@ export function EditorApp() {
           <kbd className="ms-0.5 rounded border border-neutral-300 bg-neutral-50 px-1 text-[10px] font-semibold text-neutral-500">{tr("editor.esc")}</kbd>
         </button>
       )}
-    </div>
+    </EditorFileDropProvider>
   );
 }

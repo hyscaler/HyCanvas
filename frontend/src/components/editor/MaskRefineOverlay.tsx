@@ -62,11 +62,31 @@ export function MaskRefineOverlay({ api, id }: { api: CanvasApi; id: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [mode, setMode] = useState<"restore" | "erase">("erase");
   const [brushSize, setBrushSize] = useState(24); // screen px radius
+  // Fraction of the radius that stays at full strength before the edge falls
+  // away: 1 is a hard cut, 0 fades from the centre. The default reproduces the
+  // fixed falloff this brush had before hardness was adjustable.
+  const [hardness, setHardness] = useState(0.5);
+  // Strength of one pass, applied per STROKE rather than per stamp (see
+  // strokeBufRef). 1 is the previous behaviour: a single pass goes all the way.
+  const [opacity, setOpacity] = useState(1);
   // The working mask as WHITE + alpha (alpha = keep fraction). Painting is then
   // two composite ops (source-over to restore, destination-out to erase) and the
   // preview is a plain destination-in, with no per-pixel pass anywhere in the
   // stroke path. The grayscale PNG the document stores is baked at commit time.
   const bufRef = useRef<HTMLCanvasElement | null>(null);
+  // The CURRENT stroke's coverage, painted at full strength and kept separate
+  // from the working buffer until pointerup. Opacity then applies once, to the
+  // whole stroke. Stamping straight into the buffer at a fractional alpha would
+  // compound instead: stamps sit a third of a radius apart, so even a light
+  // brush would saturate to a full erase within a few pixels of travel, which
+  // makes the control read as broken. Overlapping stamps inside this layer do
+  // saturate, but they saturate at full coverage, which is what one pass of a
+  // brush should be.
+  const strokeBufRef = useRef<HTMLCanvasElement | null>(null);
+  // Screen-resolution scratch for the preview's combined mask (buffer plus the
+  // live stroke). Overlay-sized, so it stays bounded by the viewport rather
+  // than the mask's own resolution, which can be 2048 square.
+  const scratchRef = useRef<HTMLCanvasElement | null>(null);
   const strokeRef = useRef<{ pointerId: number; rMask: number; last: Point; mode: "restore" | "erase" } | null>(null);
   const cursorRef = useRef<Point | null>(null); // overlay-local screen px
   // Uploads are serialized: each commit's PNG already contains every stroke so
@@ -129,19 +149,46 @@ export function MaskRefineOverlay({ api, id }: { api: CanvasApi; id: string }) {
     return Math.max(1, rLocal * ((mp.msk.width / mp.dest.width) + (mp.msk.height / mp.dest.height)) / 2);
   };
 
-  // One soft brush stamp: a radial alpha falloff, white over the buffer to
-  // restore, punched out of it to erase.
-  const stamp = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number, m: "restore" | "erase") => {
-    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    g.addColorStop(0, "rgba(255,255,255,1)");
-    g.addColorStop(0.65, "rgba(255,255,255,0.7)");
-    g.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.globalCompositeOperation = m === "restore" ? "source-over" : "destination-out";
-    ctx.fillStyle = g;
+  // One brush stamp into the STROKE layer, always at full strength and always
+  // additive: the layer accumulates where the brush went, and the mode and the
+  // opacity are applied once when the layer is composited (see applyStroke).
+  //
+  // Hardness is the fraction of the radius held at full strength before the
+  // edge falls away, so h=1 is a hard disc and h=0 fades from the centre. A
+  // gradient cannot express h=1 (two stops would share offset 1), so that case
+  // fills a plain arc instead.
+  const stamp = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number, h: number) => {
+    ctx.globalCompositeOperation = "source-over";
+    if (h >= 1) {
+      ctx.fillStyle = "rgba(255,255,255,1)";
+    } else {
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, "rgba(255,255,255,1)");
+      g.addColorStop(Math.max(0, Math.min(0.999, h)), "rgba(255,255,255,1)");
+      g.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = g;
+    }
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalCompositeOperation = "source-over";
+  };
+
+  /** Composite the finished stroke layer onto a mask-coverage context: restore
+   *  adds coverage, erase takes it away, both scaled by the brush opacity.
+   *  Used for the screen preview and, once, for the real commit. */
+  const applyStroke = (
+    ctx: CanvasRenderingContext2D,
+    m: "restore" | "erase",
+    alpha: number,
+    drawLayer: (c: CanvasRenderingContext2D) => void,
+  ) => {
+    const prevOp = ctx.globalCompositeOperation;
+    const prevAlpha = ctx.globalAlpha;
+    ctx.globalCompositeOperation = m === "restore" ? "source-over" : "destination-out";
+    ctx.globalAlpha = alpha;
+    drawLayer(ctx);
+    ctx.globalAlpha = prevAlpha;
+    ctx.globalCompositeOperation = prevOp;
   };
 
   // Live preview: the image drawn through the node's full world transform with
@@ -177,7 +224,32 @@ export function MaskRefineOverlay({ api, id }: { api: CanvasApi; id: string }) {
           // destination-in is safe on the whole overlay canvas: the image is the
           // only thing drawn so far, and it and the mask cover the same dest rect.
           ctx.globalCompositeOperation = "destination-in";
-          ctx.drawImage(buf, mp.msk.x, mp.msk.y, mp.msk.width, mp.msk.height, mp.dest.x, mp.dest.y, mp.dest.width, mp.dest.height);
+          // While a stroke is in flight the mask to show is the buffer WITH
+          // that stroke applied, and the stroke lives in its own layer until
+          // pointerup. Compose the two into an overlay-sized scratch so the
+          // cost tracks the viewport rather than the mask, which can be 2048
+          // square, then stamp that scratch on one-to-one.
+          const st = strokeRef.current;
+          const layer = strokeBufRef.current;
+          if (st && layer) {
+            let sc = scratchRef.current;
+            if (!sc) { sc = document.createElement("canvas"); scratchRef.current = sc; }
+            if (sc.width !== bw) sc.width = bw;
+            if (sc.height !== bh) sc.height = bh;
+            const sctx = sc.getContext("2d");
+            if (sctx) {
+              sctx.setTransform(1, 0, 0, 1, 0, 0);
+              sctx.clearRect(0, 0, bw, bh);
+              sctx.setTransform(dpr * z * mp.world.a, dpr * z * mp.world.b, dpr * z * mp.world.c, dpr * z * mp.world.d, dpr * t.x, dpr * t.y);
+              sctx.drawImage(buf, mp.msk.x, mp.msk.y, mp.msk.width, mp.msk.height, mp.dest.x, mp.dest.y, mp.dest.width, mp.dest.height);
+              applyStroke(sctx, st.mode, opacity, (c) =>
+                c.drawImage(layer, mp.msk.x, mp.msk.y, mp.msk.width, mp.msk.height, mp.dest.x, mp.dest.y, mp.dest.width, mp.dest.height));
+              ctx.setTransform(1, 0, 0, 1, 0, 0);
+              ctx.drawImage(sc, 0, 0);
+            }
+          } else {
+            ctx.drawImage(buf, mp.msk.x, mp.msk.y, mp.msk.width, mp.msk.height, mp.dest.x, mp.dest.y, mp.dest.width, mp.dest.height);
+          }
         } catch {
           // A mid-load decode error just skips one preview frame.
         }
@@ -290,17 +362,31 @@ export function MaskRefineOverlay({ api, id }: { api: CanvasApi; id: string }) {
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   };
 
+  /** The stroke layer for the current buffer, cleared and ready. */
+  const strokeLayer = (): HTMLCanvasElement | null => {
+    const buf = bufRef.current;
+    if (!buf) return null;
+    let l = strokeBufRef.current;
+    if (!l || l.width !== buf.width || l.height !== buf.height) {
+      l = document.createElement("canvas");
+      l.width = buf.width;
+      l.height = buf.height;
+      strokeBufRef.current = l;
+    }
+    return l;
+  };
+
   const paintSegment = (page: Point) => {
     const mp = mapping();
     const st = strokeRef.current;
-    const ctx = bufRef.current?.getContext("2d");
+    const ctx = strokeBufRef.current?.getContext("2d");
     if (!mp || !st || !ctx) return;
     const p = toMask(page, mp);
     const dx = p.x - st.last.x;
     const dy = p.y - st.last.y;
     // Stamps spaced a third of the radius apart read as one continuous stroke.
     const n = Math.max(1, Math.ceil(Math.hypot(dx, dy) / Math.max(1, st.rMask / 3)));
-    for (let i = 1; i <= n; i++) stamp(ctx, st.last.x + (dx * i) / n, st.last.y + (dy * i) / n, st.rMask, st.mode);
+    for (let i = 1; i <= n; i++) stamp(ctx, st.last.x + (dx * i) / n, st.last.y + (dy * i) / n, st.rMask, hardness);
     st.last = p;
   };
 
@@ -361,9 +447,16 @@ export function MaskRefineOverlay({ api, id }: { api: CanvasApi; id: string }) {
     e.preventDefault();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     const p = toMask(api.toPage(localPoint(e)), mp);
+    const layer = strokeLayer();
+    if (!layer) return;
+    const ctx = layer.getContext("2d");
+    if (!ctx) return;
+    // A fresh layer per stroke, so the previous stroke's coverage cannot be
+    // re-applied at this stroke's opacity.
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, layer.width, layer.height);
     strokeRef.current = { pointerId: e.pointerId, rMask: maskRadius(mp), last: p, mode };
-    const ctx = bufRef.current?.getContext("2d");
-    if (ctx) stamp(ctx, p.x, p.y, strokeRef.current.rMask, mode);
+    stamp(ctx, p.x, p.y, strokeRef.current.rMask, hardness);
     cursorRef.current = localPoint(e);
     draw();
   };
@@ -373,8 +466,22 @@ export function MaskRefineOverlay({ api, id }: { api: CanvasApi; id: string }) {
     draw();
   };
   const endStroke = (e: React.PointerEvent) => {
-    if (strokeRef.current?.pointerId !== e.pointerId) return;
+    const st = strokeRef.current;
+    if (st?.pointerId !== e.pointerId) return;
     strokeRef.current = null;
+    // Bake the stroke into the working buffer ONCE, at the chosen opacity, then
+    // clear the layer so the next preview frame does not draw it twice.
+    const buf = bufRef.current;
+    const layer = strokeBufRef.current;
+    const ctx = buf?.getContext("2d");
+    if (buf && layer && ctx) {
+      applyStroke(ctx, st.mode, opacity, (c) => c.drawImage(layer, 0, 0));
+      const lctx = layer.getContext("2d");
+      if (lctx) {
+        lctx.setTransform(1, 0, 0, 1, 0, 0);
+        lctx.clearRect(0, 0, layer.width, layer.height);
+      }
+    }
     commitStroke();
   };
 
@@ -445,6 +552,28 @@ export function MaskRefineOverlay({ api, id }: { api: CanvasApi; id: string }) {
           onChange={(e) => setBrushSize(Number(e.target.value))}
           className="w-28"
           aria-label={tr("editor.brush_size")}
+        />
+        <span className="text-xs text-neutral-500">{tr("editor.brush_hardness")}</span>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          step={1}
+          value={Math.round(hardness * 100)}
+          onChange={(e) => setHardness(Number(e.target.value) / 100)}
+          className="w-20"
+          aria-label={tr("editor.brush_hardness")}
+        />
+        <span className="text-xs text-neutral-500">{tr("editor.brush_opacity")}</span>
+        <input
+          type="range"
+          min={5}
+          max={100}
+          step={1}
+          value={Math.round(opacity * 100)}
+          onChange={(e) => setOpacity(Number(e.target.value) / 100)}
+          className="w-20"
+          aria-label={tr("editor.brush_opacity")}
         />
         <button
           onClick={() => setMaskRefining(null)}

@@ -86,8 +86,28 @@ import { z } from "zod";
  *      plain-string kind + optional target node), carrying play/pause/toggle
  *      media and run-animation without widening the legacy action enum, so
  *      older clients keep validating and fall back to the legacy `action`
- *      (F28 completion C16). Additive. */
-export const currentSchemaVersion = 24;
+ *      (F28 completion C16). Additive.
+ *  v25: photo-grid track sizes. `GridNode` gains optional `colWidths` and
+ *      `rowHeights`, relative weights that let one cell take more of the grid
+ *      than its neighbours instead of every cell splitting the space evenly.
+ *      Omitted means equal tracks, which is exactly how every existing grid
+ *      already lays out, so an older file needs no conversion and an older
+ *      client keeps laying the grid out the way it always did. Additive.
+ *  v26: masonry collages. `GridNode` gains optional `masonry`, which packs the
+ *      grid's images into `cols` columns sized to each image's own aspect
+ *      ratio instead of a fixed row/column lattice, so a collage of mixed
+ *      shapes packs without cropping or gaps.
+ *
+ *      A FLAG on the existing node, deliberately, not a new node type and not
+ *      a new member of an existing enum. A new enum member would fail both the
+ *      grid's own schema branch and the unknown-node fallback on an older
+ *      client, taking the whole file down with it; a new node type would need
+ *      a baked raster fallback to avoid leaving a hole. An optional flag makes
+ *      an older client lay the very same cells out on its regular lattice: a
+ *      different arrangement of the same images, never a loss, and `cells`
+ *      stays authoritative for both so nothing has to be recomputed to open
+ *      the file either way. Additive. */
+export const currentSchemaVersion = 26;
 
 /** Maximum container nesting depth; guards traversal against stack overflow (FR-4). */
 export const maxNestingDepth = 32;
@@ -1292,6 +1312,27 @@ export interface GridNode extends NodeBase {
   gap: number;
   cells: GridCell[];
   children: Node[];
+  /** Relative track sizes, one weight per column/row. Omitted means every track
+   *  is equal, which is what every grid was before these existed, so an older
+   *  file needs no conversion.
+   *
+   *  WEIGHTS, not pixels: a grid is resized freely on the canvas, and absolute
+   *  widths would either overflow it or leave a gap the moment it changed size.
+   *  Only the ratios between entries matter; the layout normalizes them against
+   *  the grid's current size. A length that disagrees with `cols`/`rows` is
+   *  ignored rather than honored in part, so a stale array cannot silently
+   *  lay out half a grid. */
+  colWidths?: number[];
+  rowHeights?: number[];
+  /** Pack the grid's images into `cols` columns sized to each image's own
+   *  aspect ratio, rather than onto the fixed row/column lattice (#39).
+   *
+   *  The column COUNT is the grid's existing `cols`, so the author controls it
+   *  with the control that already exists and no second one contradicts it.
+   *  `rows` and the track weights are ignored while this is on: rows have no
+   *  meaning once each column advances independently. They are kept rather
+   *  than cleared so turning masonry off returns the grid exactly as it was. */
+  masonry?: boolean;
 }
 export const GridNodeSchema = z.object({
   ...nodeBaseFields,
@@ -1303,6 +1344,11 @@ export const GridNodeSchema = z.object({
   get children() {
     return z.array(NodeSchema);
   },
+  // Positive: a zero or negative weight would collapse a track to nothing or
+  // invert it, and neither is reachable from the UI.
+  colWidths: z.array(z.number().positive()).optional(),
+  rowHeights: z.array(z.number().positive()).optional(),
+  masonry: z.boolean().optional(),
 });
 
 export interface VideoNode extends NodeBase {

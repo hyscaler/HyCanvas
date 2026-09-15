@@ -1,12 +1,13 @@
 // Vertical tool rail + the active slide-out panel. Switches
 // between Elements, Text, Uploads, Stock, and Layers.
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Shapes, Type, Upload, ImagePlus, Layers, Sparkles, LayoutGrid, LayoutTemplate, Palette } from "lucide-react";
 import { LayerPanel } from "./LayerPanel";
 import { ReadingOrderPane } from "./ReadingOrderPane";
 import { ElementsPanel, TextPanel, UploadsPanel, StockPanel, AppsPanel, AiPanel, TemplatesPanel, PanelShell } from "./EditorPanels";
 import { BrandPanel } from "./BrandPanel";
+import { useEditorFileDropTarget } from "./EditorFileDrop";
 import { subscribeAiBusy } from "@/lib/aiRequests";
 import { tr } from "@/lib/i18n";
 
@@ -41,6 +42,24 @@ export function ToolRail({ workspaceId, overlay = false, defaultCollapsed = fals
   const [aiBusy, setAiBusyState] = useState(false);
   useEffect(() => subscribeAiBusy(setAiBusyState), []);
 
+  // Files dropped anywhere in the editor land here rather than only on the
+  // Uploads panel's own drop zone. The rail claims them because it is mounted
+  // for the whole session, while UploadsPanel exists only while its tool is
+  // open, so registering there would make an editor-wide drop work only when
+  // the panel already happened to be showing.
+  //
+  // Opening the panel is part of the behavior, not a side effect: it is the
+  // only place the upload's progress, per-file errors, and quota messages are
+  // reported, and a file that vanished silently into the library would leave
+  // the user with nothing to look at.
+  const [droppedFiles, setDroppedFiles] = useState<File[] | null>(null);
+  useEditorFileDropTarget(
+    useCallback((files: File[]) => {
+      setActive("uploads");
+      setDroppedFiles(files);
+    }, []),
+  );
+
   // On narrow screens the slide-out panel floats over the canvas (absolute,
   // positioned just right of the rail) instead of consuming layout width, so the
   // canvas keeps usable space. At lg+ it sits inline and pushes the canvas. The
@@ -52,7 +71,7 @@ export function ToolRail({ workspaceId, overlay = false, defaultCollapsed = fals
       case "templates": return <TemplatesPanel />;
       case "elements": return <ElementsPanel />;
       case "text": return <TextPanel />;
-      case "uploads": return <UploadsPanel workspaceId={workspaceId} />;
+      case "uploads": return <UploadsPanel workspaceId={workspaceId} droppedFiles={droppedFiles} onDroppedFilesConsumed={() => setDroppedFiles(null)} />;
       case "stock": return <StockPanel workspaceId={workspaceId} />;
       case "apps": return <AppsPanel />;
       case "brand": return <BrandPanel workspaceId={workspaceId} />;
