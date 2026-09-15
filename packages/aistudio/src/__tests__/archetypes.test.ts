@@ -202,6 +202,22 @@ describe("lists and widows", () => {
     expect(keepLastWordCompany("Why the shoreline is retreating")).toBe("Why the shoreline is retreating");
     expect(keepLastWordCompany("Two words")).toBe("Two words");
     expect(keepLastWordCompany("One")).toBe("One");
+    // Whitespace around the join: the run of spaces before the last word
+    // collapses into the single no-break space, and trailing whitespace goes.
+    expect(keepLastWordCompany("a b   c")).toBe("a b c");
+    expect(keepLastWordCompany("a b c   ")).toBe("a b c");
+    // A tab before the last word is not a space, so there is nothing to join.
+    expect(keepLastWordCompany("a b\tc")).toBe("a b\tc");
+    // The previous pattern backtracked quadratically here: the words are
+    // TAB-separated, so the literal-space part of / +(\S+)\s*$/ can only
+    // start inside the trailing space run, where \S+ always fails, and the
+    // engine retries from every position in it. Tabs matter - with a space
+    // before the run the match succeeds immediately and hides the problem.
+    // Measured on the old pattern: 38ms at 10k, 139ms at 20k, 491ms at 40k.
+    const adversarial = "one\ttwo\t" + "a".repeat(40000) + " ".repeat(40000);
+    const t0 = Date.now();
+    keepLastWordCompany(adversarial);
+    expect(Date.now() - t0).toBeLessThan(250);
     const item = normalizeOutline({ title: "T", pages: [pageFor("bullets")] }).pages[0];
     const page = composeArchetypePage(item, ds, { index: 1, total: 4 });
     const title = paragraphsOf(page.nodes as never, "Title")[0];

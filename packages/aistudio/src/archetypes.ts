@@ -96,7 +96,24 @@ const LIST_GUTTER_EM = 1.6;
  *  the join cannot force one overlong line: a two-word title is left as is. */
 export function keepLastWordCompany(text: string): string {
   if (text.trim().split(/\s+/).length < 3) return text;
-  return text.replace(/ +(\S+)\s*$/, "\u00A0$1");
+  // Walked backwards rather than matched. The pattern this replaces,
+  // / +(\S+)\s*$/, backtracks quadratically when a long unbroken run of
+  // non-spaces is followed by a long run of spaces: `\S+` cannot reach the end,
+  // so the engine retries from every position in the run. At 80k characters
+  // that measured 1.8s, and headings here can carry model output.
+  //
+  // The shape the pattern accepted: trailing whitespace, before it the final
+  // run of non-whitespace (the last word), before that at least one space.
+  // Each scan below is one backward pass, so the whole thing is linear.
+  let end = text.length;
+  while (end > 0 && /\s/.test(text[end - 1])) end--;
+  let word = end;
+  while (word > 0 && !/\s/.test(text[word - 1])) word--;
+  if (word === end) return text; // no last word
+  let gap = word;
+  while (gap > 0 && text[gap - 1] === " ") gap--;
+  if (gap === word) return text; // the word is not preceded by a space
+  return text.slice(0, gap) + "\u00A0" + text.slice(word, end);
 }
 
 class Composer {
