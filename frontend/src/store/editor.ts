@@ -2566,9 +2566,17 @@ export const useEditor = create<EditorState>((set, get) => {
           ...(override?.fontFamily ? { fontFamily: override.fontFamily } : {}),
           ...(override?.fill ? { fill: structuredClone(override.fill) } : {}),
         };
-        const paraStyle = proto.style ?? {};
+        // The box's current paragraph style, less any list: a slot that held
+        // list items last time must not hand its marker to a plain paragraph.
+        const { list: protoList, ...paraStyle } = (proto.style ?? {}) as Record<string, unknown> & { list?: unknown };
+        // Points are real list items (style.list), never a bullet character
+        // pasted into the copy: the canvas and every exporter draw the marker
+        // in a gutter, and the reflow estimate takes that gutter off the width.
+        // A list style the user already gave the slot (their own marker) is
+        // kept; otherwise a plain bullet.
+        const listStyle = { ...paraStyle, list: protoList ?? { type: "bullet", level: 0 } };
         const paragraphs: Paragraph[] = list !== undefined
-          ? list.map((item) => ({ runs: [{ text: `\u2022  ${item}`, style: structuredClone(runStyle) }], style: structuredClone(paraStyle) }))
+          ? list.map((item) => ({ runs: [{ text: item, style: structuredClone(runStyle) }], style: structuredClone(listStyle) }))
           : [{ runs: [{ text: text!, style: structuredClone(runStyle) }], style: structuredClone(paraStyle) }];
         const ph = reflowLayout?.placeholders.find((pp) => pp.id === phId);
         if (ph && typeof runStyle.fontSize === "number") {
@@ -2580,6 +2588,7 @@ export const useEditor = create<EditorState>((set, get) => {
             rect: { width: slot.width, height: slot.height },
             fontSize: runStyle.fontSize,
             paragraphs: paragraphs.map((par) => par.runs.map((r) => r.text).join("")),
+            list: list !== undefined,
           }], pageDims);
           if (res.changed) {
             const size = res.adjustments[0].fontSize;
@@ -4721,6 +4730,9 @@ export const useEditor = create<EditorState>((set, get) => {
         const phId = n.data?.placeholderId;
         if (!phId || n.type !== "text" || !n.content?.length) continue;
         const role = roleById.get(phId);
+        // A list item's text is plain (the marker lives in style.list); the
+        // strip only serves decks written when a bullet character was pasted
+        // into the copy.
         const lines = n.content
           .map((par) => par.runs.map((r) => r.text).join("").replace(/^•\s*/, "").trim())
           .filter((l) => l && !scaffold.has(l));
@@ -7267,6 +7279,8 @@ export const useEditor = create<EditorState>((set, get) => {
           rect: { width: slot.width, height: slot.height },
           fontSize: [...sizes][0],
           paragraphs: after.map((par) => par.runs.map((r) => (r as { text: string }).text).join("")),
+          // List items wrap in the width left after the marker gutter.
+          list: after.some((par) => !!(par as { style?: { list?: unknown } }).style?.list),
         }], pageDims);
         return { res, phId, pageId: pg.id, layoutId: pg.layoutId };
       })();

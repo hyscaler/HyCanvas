@@ -204,18 +204,47 @@ describe("variant switching (E17)", () => {
     expect(page().children.filter((n) => n.data?.accentRule)).toHaveLength(1);
   });
 
-  it("never turns scaffold text into content bullets on a switch", () => {
+  it("redistributes points as real list items and never sweeps scaffold text into them", () => {
     const st = useEditor.getState();
     st.setContent(contentBox().id, crowd(120));
     const hint = useEditor.getState().reflowHint!;
     st.switchPageLayout(0, hint.toLayoutId);
     const page = useEditor.getState().doc.pages[0] as unknown as { children: (Node & { data?: { placeholderId?: string }; content?: Paragraphs })[] };
-    const bullets = page.children
+    const items = page.children
       .filter((n) => n.data?.placeholderId && n.content?.length)
-      .flatMap((n) => n.content!.map((p) => p.runs.map((r) => r.text).join("")))
-      .filter((t) => t.startsWith("•"));
+      .flatMap((n) => n.content!)
+      .filter((p) => !!(p.style as { list?: unknown }).list);
+    expect(items.length).toBeGreaterThan(0);
+    const texts = items.map((p) => p.runs.map((r) => r.text).join(""));
+    // The marker lives in style.list: the copy carries no bullet character,
+    // and the bullet the fixtures typed into their own text is gone too.
+    expect(texts.every((t) => !t.startsWith("•"))).toBe(true);
+    expect(items.every((p) => (p.style as { list: { type: string } }).list.type === "bullet")).toBe(true);
     // The untouched title scaffold ("Title") and any body scaffold ("Text")
     // must not be swept into the redistributed points.
-    expect(bullets.some((t) => /^•\s*(Title|Text)$/.test(t))).toBe(false);
+    expect(texts.some((t) => /^(Title|Text)$/.test(t))).toBe(false);
+  });
+});
+
+describe("placeholder fill and list styles", () => {
+  it("writes points as list items, keeps the user's own marker, and never hands a marker to a plain paragraph", () => {
+    const st = useEditor.getState();
+    const box = () => contentBox();
+    type P = { runs: { text: string }[]; style: { list?: { type: string; level: number; marker?: string } } };
+    st.fillPlaceholderContent(0, { texts: {}, lists: { "ph-content": ["First", "Second"] } });
+    let paras = box().content as unknown as P[];
+    expect(paras.map((p) => p.runs[0].text)).toEqual(["First", "Second"]);
+    expect(paras.every((p) => p.style.list?.type === "bullet")).toBe(true);
+    // The user picks their own marker on the slot; a refill keeps it.
+    paras[0].style.list = { type: "bullet", level: 0, marker: "\u2713" };
+    st.fillPlaceholderContent(0, { texts: {}, lists: { "ph-content": ["Third"] } });
+    paras = box().content as unknown as P[];
+    expect(paras[0].style.list?.marker).toBe("\u2713");
+    // A plain paragraph into the same slot carries no list at all.
+    st.fillPlaceholderContent(0, { texts: { "ph-content": "One paragraph of prose" }, lists: {} });
+    paras = box().content as unknown as P[];
+    expect(paras).toHaveLength(1);
+    expect(paras[0].style.list).toBeUndefined();
+    expect(paras[0].runs[0].text).toBe("One paragraph of prose");
   });
 });

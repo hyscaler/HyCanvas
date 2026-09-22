@@ -209,29 +209,65 @@ function lineBody(node: Node, ctx: Ctx): string {
   return `<polyline points="${points}" fill="none"${strokeAttrs(rec.stroke as Stroke | undefined, ctx)}/>`;
 }
 
+/** The canvas's list geometry, in ems of the first run (@hc/text layoutText). */
+const LIST_GUTTER_EM = 1.6;
+const LIST_LEVEL_EM = 1.2;
+
+/** The marker the canvas draws for a list paragraph. */
+function listMarkerText(list: AnyRec, ordinal: number): string {
+  if (typeof list.marker === "string" && list.marker) return list.marker;
+  if (list.type === "number") return `${ordinal}.`;
+  if (list.type === "checklist") return "\u2610";
+  return "\u2022";
+}
+
 function textBody(node: Node, ctx: Ctx): string {
   const rec = node as unknown as AnyRec;
   const paras = (rec.content as AnyRec[]) ?? [];
   let y = 0;
   const lines: string[] = [];
+  // Numbered-list ordinals per level, as the canvas counts them: deeper
+  // levels restart, a paragraph that is not a list item resets.
+  const counters: number[] = [];
+  const tspan = (text: string, style: AnyRec): string => {
+    const size = Number(style.fontSize) || 16;
+    const family = esc(String(style.fontFamily ?? "sans-serif"));
+    const paint = paintOf(style.fill as Fill | undefined, ctx);
+    const fo = paint.opacity < 1 ? ` fill-opacity="${num(paint.opacity)}"` : "";
+    return `<tspan font-family="${family}" font-size="${num(size)}" fill="${paint.ref}"${fo}>${esc(text)}</tspan>`;
+  };
   for (const para of paras) {
     const runs = (para.runs as AnyRec[]) ?? [];
+    const ps = { ...((para.style as AnyRec) ?? {}), ...((para.overrides as AnyRec) ?? {}) };
     let lineHeight = 0;
     const tspans: string[] = [];
     for (const run of runs) {
       const style = (run.style as AnyRec) ?? {};
       const size = Number(style.fontSize) || 16;
       lineHeight = Math.max(lineHeight, size * 1.2);
-      const family = esc(String(style.fontFamily ?? "sans-serif"));
-      const paint = paintOf(style.fill as Fill | undefined, ctx);
-      const fo = paint.opacity < 1 ? ` fill-opacity="${num(paint.opacity)}"` : "";
-      tspans.push(
-        `<tspan font-family="${family}" font-size="${num(size)}" fill="${paint.ref}"${fo}>${esc(String(run.text ?? ""))}</tspan>`,
-      );
+      tspans.push(tspan(String(run.text ?? ""), style));
     }
     if (lineHeight === 0) lineHeight = 16 * 1.2;
     y += lineHeight;
-    lines.push(`<text x="0" y="${num(y)}">${tspans.join("")}</text>`);
+    // A list item's marker sits in the gutter in the first run's style and
+    // the text starts after it, as the canvas lays it out.
+    let x = Number(ps.indentStart) || 0;
+    const list = ps.list as AnyRec | undefined;
+    if (list && runs.length) {
+      const firstStyle = (runs[0].style as AnyRec) ?? {};
+      const em = Number(firstStyle.fontSize) || 16;
+      const level = Math.max(0, Math.floor(Number(list.level) || 0));
+      if (list.type === "number") {
+        counters[level] = (counters[level] ?? 0) + 1;
+        counters.length = level + 1;
+      }
+      const markerX = x + level * em * LIST_LEVEL_EM;
+      lines.push(`<text x="${num(markerX)}" y="${num(y)}">${tspan(listMarkerText(list, counters[level] ?? 1), firstStyle)}</text>`);
+      x = markerX + em * LIST_GUTTER_EM;
+    } else {
+      counters.length = 0;
+    }
+    lines.push(`<text x="${num(x)}" y="${num(y)}">${tspans.join("")}</text>`);
   }
   return lines.join("");
 }

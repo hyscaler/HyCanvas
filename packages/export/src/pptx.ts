@@ -160,7 +160,9 @@ function presetFor(node: Record<string, unknown>): string | null {
 // text
 
 type Run = { text?: string; style?: { fontFamily?: string; fontStyle?: string; fontSize?: number; fill?: unknown; axes?: Record<string, number>; decoration?: string[] } };
-type Paragraph = { runs?: Run[]; style?: { align?: string } };
+type ListStyle = { type?: string; level?: number; marker?: string };
+type ParaStyle = { align?: string; list?: ListStyle; indentStart?: number };
+type Paragraph = { runs?: Run[]; style?: ParaStyle; overrides?: ParaStyle };
 
 function runXml(r: Run): string {
   if (!r.text) return "";
@@ -183,10 +185,32 @@ function runXml(r: Run): string {
   return `<a:r><a:rPr ${attrs}>${fill}${latin}</a:rPr><a:t>${esc(r.text)}</a:t></a:r>`;
 }
 
+/** The canvas's list geometry, in ems of the first run: marker gutter and
+ *  per-level indent (@hc/text layoutText). */
+const LIST_GUTTER_EM = 1.6;
+const LIST_LEVEL_EM = 1.2;
+
 function paragraphXml(p: Paragraph): string {
-  const align = { left: "l", center: "ctr", right: "r", justify: "just" }[p.style?.align ?? "left"] ?? "l";
+  const ps = { ...(p.style ?? {}), ...(p.overrides ?? {}) };
+  const align = { left: "l", center: "ctr", right: "r", justify: "just" }[ps.align ?? "left"] ?? "l";
   const runs = (p.runs ?? []).map(runXml).join("");
-  return `<a:p><a:pPr algn="${align}"/>${runs || "<a:endParaRPr/>"}</a:p>`;
+  // A list item carries its marker as a real bullet with a hanging indent,
+  // sized as the canvas draws it, so the deck reads the same in a slide
+  // editor as on the canvas and the marker stays a marker, not copy.
+  let pPr = `algn="${align}"`;
+  let bullet = "";
+  if (ps.list) {
+    const em = p.runs?.[0]?.style?.fontSize ?? 16;
+    const level = Math.max(0, Math.floor(ps.list.level ?? 0));
+    const gutter = em * LIST_GUTTER_EM;
+    const indent = (ps.indentStart ?? 0) + level * em * LIST_LEVEL_EM + gutter;
+    pPr += ` marL="${emu(indent)}" indent="${-emu(gutter)}"${level ? ` lvl="${Math.min(level, 8)}"` : ""}`;
+    if (ps.list.marker) bullet = `<a:buChar char="${esc(ps.list.marker)}"/>`;
+    else if (ps.list.type === "number") bullet = `<a:buAutoNum type="arabicPeriod"/>`;
+    else if (ps.list.type === "checklist") bullet = `<a:buChar char="\u2610"/>`;
+    else bullet = `<a:buChar char="\u2022"/>`;
+  }
+  return `<a:p><a:pPr ${pPr}>${bullet}</a:pPr>${runs || "<a:endParaRPr/>"}</a:p>`;
 }
 
 // ---------------------------------------------------------------------------

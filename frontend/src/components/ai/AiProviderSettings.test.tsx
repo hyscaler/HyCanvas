@@ -11,7 +11,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { AiConfigView, AiProviderPreset } from "@hc/sdk";
+import { ApiError, type AiConfigView, type AiProviderPreset } from "@hc/sdk";
 
 const oc = {
   getSearchConfig: vi.fn(),
@@ -22,18 +22,21 @@ const oc = {
   deleteAiConfig: vi.fn(),
   deleteAiImageConfig: vi.fn(),
   testAiImageConfig: vi.fn(),
+  testAiConfig: vi.fn(),
 };
 vi.mock("@/lib/sdk", () => ({ oc }));
 
 const toast = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
 vi.mock("@/components/ui/Toast", () => ({ useToast: () => toast }));
 
-vi.mock("@/lib/promptDialog", () => ({ confirmAction: vi.fn(async () => true) }));
+const confirmAction = vi.fn<(opts: { title: string; message: string }) => Promise<boolean>>(async () => true);
+vi.mock("@/lib/promptDialog", () => ({ confirmAction }));
 
 const { AiProviderSettings } = await import("./AiProviderSettings");
 
 const caps = (image: boolean) => ({ text: true, image, describeImage: false, editImage: false });
 const PRESETS: AiProviderPreset[] = [
+  { id: "bedrock", label: "Amazon Bedrock", baseUrl: "", defaultModel: "anthropic.claude-sonnet-4-5-20250929-v1:0", defaultImageModel: "amazon.nova-canvas-v1:0", capabilities: caps(true), needsBaseUrl: true, needsSecret: true },
   { id: "openai", label: "OpenAI", baseUrl: "https://api.openai.com/v1", defaultModel: "gpt-4o-mini", defaultImageModel: "dall-e-3", capabilities: caps(true) },
   { id: "deepseek", label: "DeepSeek", baseUrl: "https://api.deepseek.com/v1", defaultModel: "deepseek-chat", capabilities: caps(false) },
   { id: "together", label: "Together AI", baseUrl: "https://api.together.xyz/v1", defaultModel: "llama", defaultImageModel: "flux", capabilities: caps(true) },
@@ -82,6 +85,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   oc.getSearchConfig.mockResolvedValue(null);
   oc.getAiImageConfig.mockResolvedValue(null);
+  oc.testAiConfig.mockResolvedValue(undefined);
+  oc.testAiImageConfig.mockResolvedValue({ verified: true });
+  confirmAction.mockResolvedValue(true);
 });
 
 describe("the stored API key", () => {
@@ -113,6 +119,101 @@ describe("the stored API key", () => {
     fireEvent.change(mainField("Provider"), { target: { value: "deepseek" } });
     fireEvent.change(mainField("Provider"), { target: { value: "openai" } });
     expect(screen.getByRole("button", { name: "Replace" })).toBeTruthy();
+  });
+});
+
+describe("a provider that signs its requests", () => {
+  it("asks for a secret access key, and only for the provider that needs one", async () => {
+    renderForm();
+    await screen.findByRole("group", { name: "Image provider" });
+    // OpenAI is selected: no second credential exists for it.
+    expect(screen.queryByLabelText("Secret access key")).toBeNull();
+
+    fireEvent.change(mainField("Provider"), { target: { value: "bedrock" } });
+    expect(mainField("Secret access key")).toBeTruthy();
+  });
+
+  it("refuses to save a signing provider with only half its credential", async () => {
+    renderForm();
+    await screen.findByRole("group", { name: "Image provider" });
+    fireEvent.change(mainField("Provider"), { target: { value: "bedrock" } });
+    fireEvent.change(mainField("API key"), { target: { value: "AKIDEXAMPLE" } });
+    fireEvent.change(mainField("Base URL"), { target: { value: "https://bedrock-runtime.us-east-1.amazonaws.com" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save provider" }));
+
+    // An access key ID alone cannot produce a signature, so this never reaches
+    // the server.
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    expect(oc.setAiConfig).not.toHaveBeenCalled();
+  });
+
+  it("sends both halves when both are given", async () => {
+    oc.setAiConfig.mockResolvedValue(storedConfig);
+    renderForm();
+    await screen.findByRole("group", { name: "Image provider" });
+    fireEvent.change(mainField("Provider"), { target: { value: "bedrock" } });
+    fireEvent.change(mainField("API key"), { target: { value: "AKIDEXAMPLE" } });
+    fireEvent.change(mainField("Secret access key"), { target: { value: "secret" } });
+    fireEvent.change(mainField("Base URL"), { target: { value: "https://bedrock-runtime.us-east-1.amazonaws.com" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save provider" }));
+
+    await waitFor(() =>
+      expect(oc.setAiConfig).toHaveBeenCalledWith("ws-1", expect.objectContaining({
+        provider: "bedrock", apiKey: "AKIDEXAMPLE", apiSecret: "secret",
+      })),
+    );
+  });
+
+  it("can be chosen as the IMAGE provider, secret and all", async () => {
+    oc.getAiImageConfig.mockResolvedValue(null);
+    oc.setAiConfig.mockResolvedValue(storedConfig);
+    oc.setAiImageConfig.mockResolvedValue({ provider: "bedrock", model: null, baseUrl: null, hasKey: true, hasSecret: true, capabilities: caps(true) });
+    renderForm();
+    const section = within(await screen.findByRole("group", { name: "Image provider" }));
+
+    // Bedrock generates images, so it is offered here; before the fix it was
+    // offered with nowhere to put the second half of its credential, and every
+    // save was refused with no way to satisfy it.
+    fireEvent.change(section.getByLabelText("Provider"), { target: { value: "bedrock" } });
+    fireEvent.change(section.getByLabelText("API key"), { target: { value: "AKIDEXAMPLE" } });
+    fireEvent.change(section.getByLabelText("Secret access key"), { target: { value: "secret" } });
+    fireEvent.change(section.getByLabelText("Base URL"), { target: { value: "https://bedrock-runtime.us-east-1.amazonaws.com" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save provider" }));
+
+    await waitFor(() =>
+      expect(oc.setAiImageConfig).toHaveBeenCalledWith("ws-1", expect.objectContaining({
+        provider: "bedrock", apiKey: "AKIDEXAMPLE", apiSecret: "secret",
+      })),
+    );
+  });
+
+  it("refuses an image provider missing half its credential", async () => {
+    oc.getAiImageConfig.mockResolvedValue(null);
+    renderForm();
+    const section = within(await screen.findByRole("group", { name: "Image provider" }));
+    fireEvent.change(section.getByLabelText("Provider"), { target: { value: "bedrock" } });
+    fireEvent.change(section.getByLabelText("API key"), { target: { value: "AKIDEXAMPLE" } });
+    fireEvent.change(section.getByLabelText("Base URL"), { target: { value: "https://bedrock-runtime.us-east-1.amazonaws.com" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save provider" }));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    expect(oc.setAiImageConfig).not.toHaveBeenCalled();
+  });
+
+  it("never carries a secret across a provider switch", async () => {
+    oc.setAiConfig.mockResolvedValue(storedConfig);
+    renderForm();
+    await screen.findByRole("group", { name: "Image provider" });
+    fireEvent.change(mainField("Provider"), { target: { value: "bedrock" } });
+    fireEvent.change(mainField("Secret access key"), { target: { value: "aws-secret" } });
+    // Away to a provider with no secret, and back.
+    fireEvent.change(mainField("Provider"), { target: { value: "deepseek" } });
+    fireEvent.change(mainField("Provider"), { target: { value: "bedrock" } });
+    expect((mainField("Secret access key") as HTMLInputElement).value).toBe("");
   });
 });
 
@@ -254,7 +355,7 @@ describe("saving", () => {
     );
   });
 
-  it("checks the image provider as soon as its key is saved", async () => {
+  it("checks a new image provider key before it is saved", async () => {
     oc.getAiImageConfig.mockResolvedValue(null);
     oc.setAiConfig.mockResolvedValue(storedConfig);
     oc.setAiImageConfig.mockResolvedValue({ provider: "openai", model: null, baseUrl: null, hasKey: true, capabilities: caps(true) });
@@ -266,8 +367,12 @@ describe("saving", () => {
     fireEvent.change(section.getByLabelText("API key"), { target: { value: "sk-new" } });
     fireEvent.click(screen.getByRole("button", { name: "Save provider" }));
 
-    // A typo is cheapest to find while the person still has the real key.
-    await waitFor(() => expect(oc.testAiImageConfig).toHaveBeenCalledWith("ws-1"));
+    // A typo is cheapest to find while the person still has the real key, and
+    // before it has replaced anything (#46): the unsaved values are probed
+    // first, and the save follows only once they pass.
+    await waitFor(() => expect(oc.setAiImageConfig).toHaveBeenCalledTimes(1));
+    expect(oc.testAiImageConfig).toHaveBeenCalledWith("ws-1", expect.objectContaining({ provider: "openai", apiKey: "sk-new" }));
+    expect(oc.testAiImageConfig.mock.invocationCallOrder[0]).toBeLessThan(oc.setAiImageConfig.mock.invocationCallOrder[0]);
   });
 
   it("refuses a provider change that arrives without the new provider's key", async () => {
@@ -278,5 +383,136 @@ describe("saving", () => {
 
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
     expect(oc.setAiConfig).not.toHaveBeenCalled();
+  });
+});
+
+// #46: the settings are tested as typed, before they can replace settings that
+// work. A save that skipped this is how a typo in a key, a wrong host or a
+// model the provider does not serve used to reach every member of the
+// workspace as a failed generation.
+describe("testing before saving", () => {
+  const rejected = (code: string) => new ApiError(502, "/v1/workspaces/ws-1/ai-config/test", { code });
+
+  it("tests the typed settings first, and saves only once they pass", async () => {
+    oc.setAiConfig.mockResolvedValue(storedConfig);
+    renderForm();
+    await screen.findByRole("group", { name: "Image provider" });
+    fireEvent.change(mainField("Model (optional)"), { target: { value: "gpt-4.1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save provider" }));
+
+    await waitFor(() => expect(oc.setAiConfig).toHaveBeenCalledTimes(1));
+    // The test carried the SAME values the save then sent.
+    expect(oc.testAiConfig).toHaveBeenCalledWith("ws-1", expect.objectContaining({ provider: "openai", model: "gpt-4.1" }));
+    expect(oc.testAiConfig.mock.calls[0][1]).toEqual(oc.setAiConfig.mock.calls[0][1]);
+    expect(oc.testAiConfig.mock.invocationCallOrder[0]).toBeLessThan(oc.setAiConfig.mock.invocationCallOrder[0]);
+  });
+
+  it("saves nothing when the test fails, and says why", async () => {
+    oc.testAiConfig.mockRejectedValue(rejected("ai_provider_model_not_found"));
+    renderForm();
+    await screen.findByRole("group", { name: "Image provider" });
+    fireEvent.click(screen.getByRole("button", { name: "Save provider" }));
+
+    expect(await screen.findByText(/Not saved: the connection test failed/)).toBeTruthy();
+    expect(screen.getByText(/does not recognize the configured model or endpoint|doesn't recognize the configured model/)).toBeTruthy();
+    expect(oc.setAiConfig).not.toHaveBeenCalled();
+    expect(oc.setSearchConfig).not.toHaveBeenCalled();
+    // The field the reason points at is marked, for assistive tech as well.
+    expect(mainField("Model (optional)").getAttribute("aria-invalid")).toBe("true");
+  });
+
+  it("offers Save anyway, which saves without testing again", async () => {
+    oc.testAiConfig.mockRejectedValue(rejected("ai_provider_unreachable"));
+    oc.setAiConfig.mockResolvedValue(storedConfig);
+    renderForm();
+    await screen.findByRole("group", { name: "Image provider" });
+    fireEvent.click(screen.getByRole("button", { name: "Save provider" }));
+    const anyway = await screen.findByRole("button", { name: "Save anyway" });
+    // An unreachable host points at the base URL.
+    expect(mainField("Base URL").getAttribute("aria-invalid")).toBe("true");
+    fireEvent.click(anyway);
+
+    await waitFor(() => expect(oc.setAiConfig).toHaveBeenCalledTimes(1));
+    expect(oc.testAiConfig).toHaveBeenCalledTimes(1);
+    // The confirmation says plainly that it went in untested.
+    expect(toast.success).toHaveBeenCalledWith(expect.stringMatching(/without a passing connection test/));
+    // And the "Not saved" verdict goes: it stopped being true when the save landed.
+    await waitFor(() => expect(screen.queryByText(/Not saved: the connection test failed/)).toBeNull());
+  });
+
+  it("retires a verdict as soon as a field changes", async () => {
+    oc.testAiConfig.mockRejectedValue(rejected("ai_provider_auth_failed"));
+    renderForm();
+    await screen.findByRole("group", { name: "Image provider" });
+    fireEvent.click(screen.getByRole("button", { name: "Test connection" }));
+    expect(await screen.findByText(/Not saved: the connection test failed/)).toBeTruthy();
+
+    // The verdict was about the values it tested, not these ones.
+    fireEvent.change(mainField("Model (optional)"), { target: { value: "gpt-4.1" } });
+    expect(screen.queryByText(/Not saved: the connection test failed/)).toBeNull();
+  });
+
+  it("can test without saving", async () => {
+    renderForm();
+    await screen.findByRole("group", { name: "Image provider" });
+    fireEvent.click(screen.getByRole("button", { name: "Test connection" }));
+
+    expect(await screen.findByText(/Connection works: OpenAI answered/)).toBeTruthy();
+    expect(oc.setAiConfig).not.toHaveBeenCalled();
+  });
+
+  it("does not save when the new image provider fails its check", async () => {
+    oc.testAiImageConfig.mockRejectedValue(new ApiError(502, "/x", { code: "ai_provider_auth_failed" }));
+    renderForm();
+    const section = within(await screen.findByRole("group", { name: "Image provider" }));
+    fireEvent.change(section.getByLabelText("Provider"), { target: { value: "together" } });
+    fireEvent.change(section.getByLabelText("API key"), { target: { value: "sk-typo" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save provider" }));
+
+    expect(await screen.findByText(/The image provider did not pass its check/)).toBeTruthy();
+    expect(oc.setAiConfig).not.toHaveBeenCalled();
+    expect(oc.setAiImageConfig).not.toHaveBeenCalled();
+  });
+});
+
+describe("capability warnings", () => {
+  it("lists what a text-only setup leaves out, beside the save", async () => {
+    renderForm();
+    await screen.findByRole("group", { name: "Image provider" });
+    fireEvent.change(mainField("Provider"), { target: { value: "deepseek" } });
+    expect(screen.getByText(/Image generation: no configured provider can generate images/)).toBeTruthy();
+  });
+
+  it("asks before saving settings that lose image generation, and saves nothing on no", async () => {
+    confirmAction.mockResolvedValue(false);
+    renderForm();
+    await screen.findByRole("group", { name: "Image provider" });
+    fireEvent.change(mainField("Provider"), { target: { value: "deepseek" } });
+    fireEvent.change(mainField("API key"), { target: { value: "sk-deepseek" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save provider" }));
+
+    await waitFor(() => expect(confirmAction).toHaveBeenCalledTimes(1));
+    expect(confirmAction.mock.calls[0][0].message).toMatch(/Image generation/);
+    expect(oc.testAiConfig).not.toHaveBeenCalled();
+    expect(oc.setAiConfig).not.toHaveBeenCalled();
+  });
+
+  it("does not ask again about a gap the stored setup already had", async () => {
+    oc.setAiConfig.mockResolvedValue(storedConfig);
+    renderForm();
+    await screen.findByRole("group", { name: "Image provider" });
+    // The fixture's OpenAI cannot read or edit images, and never could: saving
+    // it unchanged is not news, so no confirmation.
+    fireEvent.click(screen.getByRole("button", { name: "Save provider" }));
+    await waitFor(() => expect(oc.setAiConfig).toHaveBeenCalledTimes(1));
+    expect(confirmAction).not.toHaveBeenCalled();
+  });
+
+  it("clears the image warning once an image provider fills the gap", async () => {
+    renderForm();
+    const section = within(await screen.findByRole("group", { name: "Image provider" }));
+    fireEvent.change(mainField("Provider"), { target: { value: "deepseek" } });
+    fireEvent.change(section.getByLabelText("Provider"), { target: { value: "together" } });
+    expect(screen.queryByText(/Image generation: no configured provider can generate images/)).toBeNull();
   });
 });

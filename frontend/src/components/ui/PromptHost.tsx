@@ -44,7 +44,8 @@ export function PromptHost() {
     <Modal open onClose={cancel} title={req.kind === "alert" ? req.title ?? tr("ui.notice") : req.title}>
       {req.kind === "confirm" ? (
         <div className="flex flex-col gap-4">
-          <p className="text-sm leading-relaxed text-neutral-700">{req.message}</p>
+          {/* pre-line: a confirmation may list several consequences, one per line. */}
+          <p className="whitespace-pre-line text-sm leading-relaxed text-neutral-700">{req.message}</p>
           <div className="flex justify-end gap-2">
             {/* Cancel first and autofocused: for something irreversible, the
                 safe choice should be the one a stray Enter picks. */}

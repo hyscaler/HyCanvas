@@ -201,3 +201,26 @@ describe("renderSite", () => {
     expect(rt).toContain("scrollIntoView");
   });
 });
+
+describe("list paragraphs", () => {
+  it("renders a list item's marker in a gutter with a hanging indent, not as copy", () => {
+    const base = textNode("l1", "Point");
+    const node: Node = {
+      ...base,
+      content: [
+        { ...base.content[0], style: { align: "left", direction: "ltr", list: { type: "number", level: 0 } } },
+        { ...base.content[0], style: { align: "left", direction: "ltr", list: { type: "number", level: 0 } } },
+        { ...base.content[0], style: { align: "left", direction: "ltr", list: { type: "bullet", level: 1 } } },
+      ],
+    };
+    const html = renderNode(node, ctx);
+    expect(html).toContain(">1.</span>");
+    expect(html).toContain(">2.</span>");
+    expect(html).toContain(">•</span>");
+    // 24px type: a 38.4px gutter; the nested bullet sits 28.8px further in.
+    expect(html).toContain("padding-left:38.4px");
+    expect(html).toContain("padding-left:67.2px");
+    expect(html).toContain("left:28.8px");
+    expect(html).not.toContain(">• Point");
+  });
+});

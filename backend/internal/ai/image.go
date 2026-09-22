@@ -42,31 +42,42 @@ type ImageConfigInput struct {
 	Model    string
 	BaseURL  *string
 	APIKey   string
+	// APISecret travels with the key, as on the main config.
+	APISecret string
 }
 
 // ImageConfigView is the public config (never includes the key).
 type ImageConfigView struct {
-	Provider     string       `json:"provider"`
-	Model        *string      `json:"model"`
-	BaseURL      *string      `json:"baseUrl"`
-	HasKey       bool         `json:"hasKey"`
+	Provider string  `json:"provider"`
+	Model    *string `json:"model"`
+	BaseURL  *string `json:"baseUrl"`
+	HasKey   bool    `json:"hasKey"`
+	// HasSecret reports whether the second credential is stored, so the form can
+	// show a stored secret the way it shows a stored key instead of an empty box
+	// that says nothing about whether one exists.
+	HasSecret    bool         `json:"hasSecret"`
 	Capabilities Capabilities `json:"capabilities"`
 }
 
 type imageRow struct {
-	provider  string
-	model     *string
-	baseURL   *string
-	keyCipher *string
-	keyIV     *string
-	keyTag    *string
+	provider     string
+	model        *string
+	baseURL      *string
+	keyCipher    *string
+	keyIV        *string
+	keyTag       *string
+	secretCipher *string
+	secretIV     *string
+	secretTag    *string
 }
 
 func (s *Service) getImageRow(ctx context.Context, workspaceID string) (*imageRow, error) {
-	const q = `SELECT provider, model, "base_url", "key_cipher", "key_iv", "key_tag"
+	const q = `SELECT provider, model, "base_url", "key_cipher", "key_iv", "key_tag",
+		"secret_cipher", "secret_iv", "secret_tag"
 		FROM "ai_image_configs" WHERE "workspace_id" = $1`
 	var r imageRow
-	err := s.db.QueryRow(ctx, q, workspaceID).Scan(&r.provider, &r.model, &r.baseURL, &r.keyCipher, &r.keyIV, &r.keyTag)
+	err := s.db.QueryRow(ctx, q, workspaceID).Scan(&r.provider, &r.model, &r.baseURL,
+		&r.keyCipher, &r.keyIV, &r.keyTag, &r.secretCipher, &r.secretIV, &r.secretTag)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -90,52 +101,54 @@ func (s *Service) GetImageConfig(ctx context.Context, workspaceID string) (*Imag
 	return &ImageConfigView{
 		Provider: r.provider, Model: r.model, BaseURL: r.baseURL,
 		HasKey:       r.keyCipher != nil && *r.keyCipher != "",
+		HasSecret:    r.secretCipher != nil && *r.secretCipher != "",
 		Capabilities: caps,
 	}, nil
 }
 
-// SetImageConfig upserts (or clears, with provider "") the dedicated image
-// provider. The rules match SetConfig, plus one of its own: the provider must
-// actually be able to generate images. Accepting a text-only provider here
-// would store a configuration whose only possible outcome is a failed call.
-func (s *Service) SetImageConfig(ctx context.Context, workspaceID string, in ImageConfigInput) (*ImageConfigView, error) {
-	if in.Provider == "" {
-		const del = `DELETE FROM "ai_image_configs" WHERE "workspace_id" = $1`
-		if _, err := s.db.Exec(ctx, del, workspaceID); err != nil {
-			return nil, err
-		}
-		return nil, nil
-	}
+// resolvedImageConfig is an ImageConfigInput checked the way SetImageConfig
+// checks it, before anything is written; VerifyImageCandidate shares it so the
+// test and the save can never disagree about what a candidate means.
+type resolvedImageConfig struct {
+	in              ImageConfigInput
+	existing        *imageRow
+	providerChanged bool
+	baseURL         string
+}
+
+// resolveImageConfig applies SetImageConfig's validation and PATCH semantics to
+// a non-empty candidate without writing it.
+func (s *Service) resolveImageConfig(ctx context.Context, workspaceID string, in ImageConfigInput) (resolvedImageConfig, error) {
 	if !providerSet[in.Provider] {
-		return nil, ErrBadRequest
+		return resolvedImageConfig{}, ErrBadRequest
 	}
 	if !ResolveRoute(in.Provider, "", in.Model, FeatureImage).Supported {
-		return nil, ErrImageUnsupported
+		return resolvedImageConfig{}, ErrImageUnsupported
 	}
 	if in.BaseURL != nil {
 		trimmed := strings.TrimSpace(*in.BaseURL)
 		in.BaseURL = &trimmed
 		if trimmed != "" && !isSafeBaseURL(trimmed, s.allowLocal) {
-			return nil, ErrBadRequest
+			return resolvedImageConfig{}, ErrBadRequest
 		}
 	}
 	existing, err := s.getImageRow(ctx, workspaceID)
 	if err != nil {
-		return nil, err
+		return resolvedImageConfig{}, err
 	}
 	providerChanged := existing != nil && existing.provider != in.Provider
 
 	// A provider change may never silently carry the old vendor's key.
 	in.APIKey = strings.TrimSpace(in.APIKey)
 	if providerChanged && in.APIKey == "" && existing.keyCipher != nil {
-		return nil, ErrKeyRequiredForProviderChange
+		return resolvedImageConfig{}, ErrKeyRequiredForProviderChange
 	}
 	// Unlike the search config there is no keyless image provider, so a first
 	// save must bring one; there would otherwise be nothing to authenticate
 	// with and every generation would 401.
 	hasStoredKey := existing != nil && !providerChanged && existing.keyCipher != nil
 	if in.APIKey == "" && !hasStoredKey {
-		return nil, ErrImageKeyRequired
+		return resolvedImageConfig{}, ErrImageKeyRequired
 	}
 
 	// PATCH semantics for the base URL, as in SetConfig: nil preserves, "" clears,
@@ -150,13 +163,47 @@ func (s *Service) SetImageConfig(ctx context.Context, workspaceID string, in Ima
 		resolvedBase = deref(existing.baseURL)
 	}
 	if p := PresetFor(in.Provider); p != nil && p.NeedsBaseURL && resolvedBase == "" {
-		return nil, ErrBaseURLRequired
+		return resolvedImageConfig{}, ErrBaseURLRequired
+	}
+	// A signing provider's endpoint carries the region its signature is scoped
+	// to. A host without one cannot be signed, and the failure would arrive as
+	// a rejected-credential error pointing at a key that is perfectly fine.
+	if in.Provider == string(ProviderBedrock) && bedrockRegionFrom(resolvedBase) == "" {
+		return resolvedImageConfig{}, ErrBaseURLRequired
 	}
 
+	in.APISecret = strings.TrimSpace(in.APISecret)
+	if p := PresetFor(in.Provider); p != nil && p.NeedsSecret {
+		hasStoredSecret := existing != nil && !providerChanged && in.APIKey == "" && existing.secretCipher != nil
+		if in.APISecret == "" && !hasStoredSecret {
+			return resolvedImageConfig{}, ErrSecretRequired
+		}
+	}
+	return resolvedImageConfig{in: in, existing: existing, providerChanged: providerChanged, baseURL: resolvedBase}, nil
+}
+
+// SetImageConfig upserts (or clears, with provider "") the dedicated image
+// provider. The rules match SetConfig, plus one of its own: the provider must
+// actually be able to generate images. Accepting a text-only provider here
+// would store a configuration whose only possible outcome is a failed call.
+func (s *Service) SetImageConfig(ctx context.Context, workspaceID string, in ImageConfigInput) (*ImageConfigView, error) {
+	if in.Provider == "" {
+		const del = `DELETE FROM "ai_image_configs" WHERE "workspace_id" = $1`
+		if _, err := s.db.Exec(ctx, del, workspaceID); err != nil {
+			return nil, err
+		}
+		return nil, nil
+	}
+	rc, err := s.resolveImageConfig(ctx, workspaceID, in)
+	if err != nil {
+		return nil, err
+	}
+	in = rc.in
 	model := nilIfEmpty(strings.TrimSpace(in.Model))
-	baseURL := nilIfEmpty(resolvedBase)
+	baseURL := nilIfEmpty(rc.baseURL)
 
 	var cipher, iv, tag *string
+	var sCipher, sIV, sTag *string
 	if in.APIKey != "" {
 		nonce := make([]byte, 12)
 		if _, err := rand.Read(nonce); err != nil {
@@ -168,8 +215,22 @@ func (s *Service) SetImageConfig(ctx context.Context, workspaceID string, in Ima
 		}
 		cipher, iv, tag = &enc.Cipher, &enc.IV, &enc.Tag
 	}
-	const q = `INSERT INTO "ai_image_configs" ("workspace_id",provider,model,"base_url","key_cipher","key_iv","key_tag","updated_at")
-		VALUES ($1,$2,$3,$4,$5,$6,$7,now())
+	// Encrypted whenever one is supplied, so a secret can be ROTATED on its own
+	// (same access key ID, new secret). Writing it only alongside a new key
+	// meant such a save reported success and changed nothing.
+	if in.APISecret != "" {
+		snonce := make([]byte, 12)
+		if _, err := rand.Read(snonce); err != nil {
+			return nil, err
+		}
+		senc, err := secrets.EncryptAISecret(in.APISecret, s.secret, snonce)
+		if err != nil {
+			return nil, err
+		}
+		sCipher, sIV, sTag = &senc.Cipher, &senc.IV, &senc.Tag
+	}
+	const q = `INSERT INTO "ai_image_configs" ("workspace_id",provider,model,"base_url","key_cipher","key_iv","key_tag","secret_cipher","secret_iv","secret_tag","updated_at")
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,now())
 		ON CONFLICT ("workspace_id") DO UPDATE SET
 			provider = EXCLUDED.provider,
 			model = EXCLUDED.model,
@@ -177,8 +238,11 @@ func (s *Service) SetImageConfig(ctx context.Context, workspaceID string, in Ima
 			"key_cipher" = CASE WHEN $5 IS NOT NULL THEN $5 ELSE "ai_image_configs"."key_cipher" END,
 			"key_iv"     = CASE WHEN $6 IS NOT NULL THEN $6 ELSE "ai_image_configs"."key_iv" END,
 			"key_tag"    = CASE WHEN $7 IS NOT NULL THEN $7 ELSE "ai_image_configs"."key_tag" END,
+			"secret_cipher" = CASE WHEN $5 IS NOT NULL OR $11 THEN $8  ELSE "ai_image_configs"."secret_cipher" END,
+			"secret_iv"     = CASE WHEN $5 IS NOT NULL OR $11 THEN $9  ELSE "ai_image_configs"."secret_iv" END,
+			"secret_tag"    = CASE WHEN $5 IS NOT NULL OR $11 THEN $10 ELSE "ai_image_configs"."secret_tag" END,
 			"updated_at" = now()`
-	if _, err := s.db.Exec(ctx, q, workspaceID, in.Provider, model, baseURL, cipher, iv, tag); err != nil {
+	if _, err := s.db.Exec(ctx, q, workspaceID, in.Provider, model, baseURL, cipher, iv, tag, sCipher, sIV, sTag, in.APISecret != ""); err != nil {
 		return nil, err
 	}
 	return s.GetImageConfig(ctx, workspaceID)
@@ -226,10 +290,65 @@ func (s *Service) VerifyImageConfig(ctx context.Context, workspaceID string) (Im
 	if err != nil {
 		return ImageCheck{}, err
 	}
+	return s.probeImageCredentials(ctx, cfg)
+}
+
+// VerifyImageCandidate probes a CANDIDATE image provider without saving it
+// (#46), so a wrong key or host is caught before it replaces a working one.
+// An untouched key or secret is the stored one, as on a save.
+func (s *Service) VerifyImageCandidate(ctx context.Context, workspaceID string, in ImageConfigInput) (ImageCheck, error) {
+	if in.Provider == "" {
+		return ImageCheck{}, ErrBadRequest // clearing it has nothing to test
+	}
+	rc, err := s.resolveImageConfig(ctx, workspaceID, in)
+	if err != nil {
+		return ImageCheck{}, err
+	}
+	in, ex := rc.in, rc.existing
+	keepStored := ex != nil && !rc.providerChanged
+	key := in.APIKey
+	if key == "" && keepStored && ex.keyCipher != nil && ex.keyIV != nil && ex.keyTag != nil {
+		v, err := secrets.DecryptAISecret(secrets.Encrypted{Cipher: *ex.keyCipher, IV: *ex.keyIV, Tag: *ex.keyTag}, s.secret)
+		if err != nil {
+			return ImageCheck{}, ErrBadRequest
+		}
+		key = v
+	}
+	if key == "" {
+		return ImageCheck{}, ErrImageKeyRequired // resolveImageConfig already refuses this; kept as a guard
+	}
+	secret := in.APISecret
+	if secret == "" && in.APIKey == "" && keepStored && ex.secretCipher != nil && ex.secretIV != nil && ex.secretTag != nil {
+		v, err := secrets.DecryptAISecret(secrets.Encrypted{Cipher: *ex.secretCipher, IV: *ex.secretIV, Tag: *ex.secretTag}, s.secret)
+		if err != nil {
+			return ImageCheck{}, ErrBadRequest
+		}
+		secret = v
+	}
+	baseURL, model := rc.baseURL, strings.TrimSpace(in.Model)
+	if p := PresetFor(in.Provider); p != nil {
+		if baseURL == "" {
+			baseURL = p.BaseURL
+		}
+		if model == "" {
+			model = p.DefaultImageModel
+		}
+	}
+	return s.probeImageCredentials(ctx, CallConfig{
+		Provider: Provider(in.Provider), APIKey: key, APISecret: secret,
+		BaseURL: baseURL, Model: model, ImageModel: model,
+	})
+}
+
+// probeImageCredentials lists models on the provider's host with its key: the
+// same host and credential an image call uses, at no cost.
+func (s *Service) probeImageCredentials(ctx context.Context, cfg CallConfig) (ImageCheck, error) {
 	// Azure scopes every operation to a deployment and lists models on a
 	// different route than the one this transport builds, so it goes
-	// unverified rather than being reported as broken.
-	if cfg.Provider == ProviderAzureOpenAI {
+	// unverified rather than being reported as broken. Bedrock is the same
+	// story for a different reason: its model catalog lives on the control
+	// plane host (bedrock.<region>), not the runtime one being configured here.
+	if cfg.Provider == ProviderAzureOpenAI || cfg.Provider == ProviderBedrock {
 		return ImageCheck{}, nil
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, orDefault(cfg.BaseURL, "https://api.openai.com/v1")+"/"+credentialProbeOp(cfg), nil)
@@ -282,8 +401,16 @@ func (s *Service) imageCallConfig(ctx context.Context, workspaceID string) (Call
 			model = p.DefaultImageModel
 		}
 	}
+	secret := ""
+	if r.secretCipher != nil && r.secretIV != nil && r.secretTag != nil {
+		v, err := secrets.DecryptAISecret(secrets.Encrypted{Cipher: *r.secretCipher, IV: *r.secretIV, Tag: *r.secretTag}, s.secret)
+		if err != nil {
+			return CallConfig{}, ErrBadRequest
+		}
+		secret = v
+	}
 	return CallConfig{
-		Provider: Provider(r.provider), APIKey: key,
+		Provider: Provider(r.provider), APIKey: key, APISecret: secret,
 		BaseURL: baseURL, Model: model, ImageModel: model,
 	}, nil
 }

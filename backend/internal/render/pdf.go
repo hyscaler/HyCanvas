@@ -622,8 +622,10 @@ func textContentOf(node map[string]any) string {
 // upright (Tm with negative d).
 func (c *pdfCtx) textBody(node map[string]any) {
 	y := 0.0
+	var counters listCounters
 	for _, para := range asArr(node["content"]) {
 		po := asObj(para)
+		pstyle := paragraphStyleOf(po)
 		lineHeight := 0.0
 		runs := asArr(po["runs"])
 		for _, run := range runs {
@@ -639,10 +641,10 @@ func (c *pdfCtx) textBody(node map[string]any) {
 			lineHeight = 16 * 1.2
 		}
 		y += lineHeight
-		x := 0.0
-		for _, run := range runs {
-			ro := asObj(run)
-			style := asObj(ro["style"])
+
+		// show emits one styled string with its baseline at (x, y) and
+		// returns its advance.
+		show := func(text string, style map[string]any, x float64) float64 {
 			size := asNum(style["fontSize"])
 			if size == 0 {
 				size = 16
@@ -651,7 +653,6 @@ func (c *pdfCtx) textBody(node map[string]any) {
 			if !fc.ok {
 				fc = pdfColor{r: 0, g: 0, b: 0, ok: true}
 			}
-			text := asStr(ro["text"])
 			ls := asNum(style["letterSpacing"])
 			family := asStr(style["fontFamily"])
 
@@ -670,19 +671,19 @@ func (c *pdfCtx) textBody(node map[string]any) {
 
 			var (
 				fontKey string
-				show    string
+				op      string
 				advance float64
 			)
 			if emb != nil {
 				// Identity-H addresses glyphs by id, so the string is raw glyph ids.
 				fontKey = emb.key
-				show = "<" + emb.hexGlyphs(text) + ">"
+				op = "<" + emb.hexGlyphs(text) + ">"
 				advance = emb.textWidth(text, size, ls)
 			} else {
 				bold := asNum(style["weight"]) >= 600
 				font := selectFont(family, asStr(style["fontStyle"]), bold, asBool(style["italic"]))
 				fontKey = font.key
-				show = "(" + pdfEscapeText(text) + ")"
+				op = "(" + pdfEscapeText(text) + ")"
 				advance = textAdvance(font, text, size, ls)
 			}
 
@@ -694,9 +695,35 @@ func (c *pdfCtx) textBody(node map[string]any) {
 			}
 			// Tm: counter-flip the y axis (1 0 0 -1) and place the baseline at (x,y).
 			c.op("1 0 0 -1 " + pn(x) + " " + pn(y) + " Tm")
-			c.op(show + " Tj")
+			c.op(op + " Tj")
 			c.op("ET")
-			x += advance
+			return advance
+		}
+
+		// A list item's marker sits in the gutter and its text starts after
+		// it, as the canvas lays it out. The marker is set in the first run's
+		// style; when that lands on a base-14 font it is re-encoded for
+		// WinAnsi, since those fonts cannot show a UTF-8 bullet.
+		var firstStyle map[string]any
+		if len(runs) > 0 {
+			firstStyle = asObj(asObj(runs[0])["style"])
+		}
+		em := asNum(firstStyle["fontSize"])
+		if em == 0 {
+			em = 16
+		}
+		ll := counters.next(pstyle, em)
+		if ll.marker != "" && firstStyle != nil {
+			marker := ll.marker
+			if emb := findEmbedded(c.fonts, asStr(firstStyle["fontFamily"])); emb == nil || !emb.covers(marker) {
+				marker = winAnsiMarker(marker)
+			}
+			show(marker, firstStyle, ll.markerX)
+		}
+		x := ll.indent + asNum(pstyle["firstLineIndent"])
+		for _, run := range runs {
+			ro := asObj(run)
+			x += show(asStr(ro["text"]), asObj(ro["style"]), x)
 		}
 	}
 }

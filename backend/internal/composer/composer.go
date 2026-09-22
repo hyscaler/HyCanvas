@@ -60,11 +60,57 @@ type Input struct {
 	Dir         string `json:"dir,omitempty"`
 }
 
+// PageReport is the reviewer's verdict on one composed page. Mirrors
+// PageReport in packages/aistudio/src/measure.ts.
+type PageReport struct {
+	Index     int    `json:"index"`
+	Archetype string `json:"archetype"`
+	Impact    bool   `json:"impact"`
+	// Overfull names the text regions whose copy reached the readability floor
+	// and still did not fit. Geometry has done what it can; only shorter copy
+	// fixes it, which is what the generation API hands back to the model once.
+	Overfull   []string `json:"overfull"`
+	Whitespace float64  `json:"whitespace"`
+}
+
+// Report is the reviewer's verdict on a composed deck. Mirrors DeckReport in
+// packages/aistudio/src/measure.ts.
+type Report struct {
+	Pages       []PageReport `json:"pages"`
+	BulletShare float64      `json:"bulletShare"`
+	Repetition  []int        `json:"repetition"`
+	Shorten     []int        `json:"shorten"`
+	OK          bool         `json:"ok"`
+}
+
 // Compose runs the embedded composer on one outline and returns the
 // DesignFile JSON. The result is a complete open-format file (pages laid out,
 // theme stamped, placeholder id) ready for persistence.Create, which
 // validates it at the write boundary and assigns the real id.
 func Compose(ctx context.Context, in Input) ([]byte, error) {
+	return run(ctx, in, "__composeDeckFile")
+}
+
+// ComposeWithReport is Compose plus the reviewer's report on the result, so a
+// caller can act on overfull copy before persisting. The file bytes are the
+// same bytes Compose would return for the same input.
+func ComposeWithReport(ctx context.Context, in Input) ([]byte, Report, error) {
+	raw, err := run(ctx, in, "__composeDeckFileWithReport")
+	if err != nil {
+		return nil, Report{}, err
+	}
+	var out struct {
+		File   json.RawMessage `json:"file"`
+		Report Report          `json:"report"`
+	}
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return nil, Report{}, fmt.Errorf("composer: report unreadable: %w", err)
+	}
+	return []byte(out.File), out.Report, nil
+}
+
+// run evaluates the bundle and calls one of its entry points with the input.
+func run(ctx context.Context, in Input, entry string) ([]byte, error) {
 	if in.Width <= 0 || in.Height <= 0 {
 		return nil, errors.New("composer: width and height must be positive")
 	}
@@ -93,10 +139,10 @@ func Compose(ctx context.Context, in Input) ([]byte, error) {
 	if _, err := vm.RunProgram(p); err != nil {
 		return nil, fmt.Errorf("composer: bundle eval: %w", err)
 	}
-	fnVal := vm.Get("__composeDeckFile")
+	fnVal := vm.Get(entry)
 	fn, ok := goja.AssertFunction(fnVal)
 	if !ok {
-		return nil, errors.New("composer: bundle exposes no __composeDeckFile")
+		return nil, fmt.Errorf("composer: bundle exposes no %s", entry)
 	}
 	res, err := fn(goja.Undefined(), vm.ToValue(string(inputJSON)))
 	if err != nil {

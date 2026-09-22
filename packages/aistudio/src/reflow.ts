@@ -29,7 +29,14 @@ export interface ReflowSlotInput {
   fontSize: number;
   /** Plain text per paragraph (a bullet item is one paragraph). */
   paragraphs: string[];
+  /** The paragraphs are list items: the text engine reserves a marker gutter
+   *  of 1.6 em, so each line holds fewer characters than the slot's width
+   *  alone suggests. */
+  list?: boolean;
 }
+
+/** The list marker gutter the text engine reserves, in ems (layoutText). */
+const LIST_GUTTER_EM = 1.6;
 
 export interface ReflowAdjustment {
   nodeId: string;
@@ -61,8 +68,13 @@ function availableLines(fontSize: number, boxHeight: number): number {
   return Math.max(1, Math.floor(boxHeight / (LINE_HEIGHT * fontSize)));
 }
 
+/** The width a slot's lines wrap in: the box less the list gutter. */
+function wrapWidth(slot: ReflowSlotInput, fontSize: number): number {
+  return Math.max(1, slot.rect.width - (slot.list ? LIST_GUTTER_EM * fontSize : 0));
+}
+
 function fitsAt(slot: ReflowSlotInput, fontSize: number): boolean {
-  return neededLines(slot.paragraphs, fontSize, slot.rect.width) <= availableLines(fontSize, slot.rect.height);
+  return neededLines(slot.paragraphs, fontSize, wrapWidth(slot, fontSize)) <= availableLines(fontSize, slot.rect.height);
 }
 
 /** Reflow one layout-linked page. Slots whose role has no ladder (picture,
@@ -120,7 +132,7 @@ export function reflowPage(
     } else if (
       role === "content" &&
       chosen === ladder[0] &&
-      neededLines(slot.paragraphs, chosen, slot.rect.width) * 3 < availableLines(chosen, slot.rect.height)
+      neededLines(slot.paragraphs, chosen, wrapWidth(slot, chosen)) * 3 < availableLines(chosen, slot.rect.height)
     ) {
       // A content slot using under a third of its room at full size reads as
       // sparse; the variant proposal (E17) may offer a lighter layout.

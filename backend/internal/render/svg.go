@@ -418,13 +418,32 @@ func (c *svgCtx) textBody(node map[string]any) string {
 	w, _ := sizeOf(node)
 	var out strings.Builder
 	y := 0.0
+	var counters listCounters
+	// tspan is one styled piece of a line.
+	tspan := func(text string, style map[string]any) string {
+		size := asNum(style["fontSize"])
+		if size == 0 {
+			size = 16
+		}
+		family := "sans-serif"
+		if f := asStr(style["fontFamily"]); f != "" {
+			family = f
+		}
+		p := c.paintOf(asObj(style["fill"]), 0, 0)
+		fo := ""
+		if p.opacity < 1 {
+			fo = ` fill-opacity="` + num(p.opacity) + `"`
+		}
+		return `<tspan font-family="` + esc(family) + `" font-size="` + num(size) + `" fill="` + p.ref + `"` + fo + `>` + esc(text) + `</tspan>`
+	}
 	for _, para := range asArr(node["content"]) {
 		po := asObj(para)
-		pstyle := asObj(po["style"])
+		pstyle := paragraphStyleOf(po)
 		lineHeight := 0.0
 		var tspans strings.Builder
 		var paraText strings.Builder
-		for _, run := range asArr(po["runs"]) {
+		runs := asArr(po["runs"])
+		for _, run := range runs {
 			ro := asObj(run)
 			style := asObj(ro["style"])
 			size := asNum(style["fontSize"])
@@ -432,22 +451,28 @@ func (c *svgCtx) textBody(node map[string]any) string {
 				size = 16
 			}
 			lineHeight = math.Max(lineHeight, size*1.2)
-			family := "sans-serif"
-			if f := asStr(style["fontFamily"]); f != "" {
-				family = f
-			}
-			p := c.paintOf(asObj(style["fill"]), 0, 0)
-			fo := ""
-			if p.opacity < 1 {
-				fo = ` fill-opacity="` + num(p.opacity) + `"`
-			}
 			paraText.WriteString(asStr(ro["text"]))
-			tspans.WriteString(`<tspan font-family="` + esc(family) + `" font-size="` + num(size) + `" fill="` + p.ref + `"` + fo + `>` + esc(asStr(ro["text"])) + `</tspan>`)
+			tspans.WriteString(tspan(asStr(ro["text"]), style))
 		}
 		if lineHeight == 0 {
 			lineHeight = 16 * 1.2
 		}
 		y += lineHeight
+		// A list item's marker sits in the gutter, in the first run's style,
+		// and the text starts after it, as the canvas lays it out.
+		var firstStyle map[string]any
+		if len(runs) > 0 {
+			firstStyle = asObj(asObj(runs[0])["style"])
+		}
+		em := asNum(firstStyle["fontSize"])
+		if em == 0 {
+			em = 16
+		}
+		ll := counters.next(pstyle, em)
+		if ll.marker != "" && firstStyle != nil {
+			out.WriteString(`<text x="` + num(ll.markerX) + `" y="` + num(y) + `">` + tspan(ll.marker, firstStyle) + `</text>`)
+		}
+		indent := ll.indent + asNum(pstyle["firstLineIndent"])
 		// Base direction and alignment, mirroring the raster layout: the SVG
 		// carries LOGICAL text and the consumer runs its own bidi, so an RTL
 		// paragraph must SAY it is RTL (an LTR-base renderer would put
@@ -462,8 +487,13 @@ func (c *svgCtx) textBody(node map[string]any) string {
 		// "start" is the line's RIGHT edge, so a right-aligned RTL paragraph
 		// anchors its start at x=w (anchor "end" there would hang the whole
 		// line off the box's right side).
-		x, anchor := 0.0, ""
+		// A list item always starts after its marker gutter, whatever its
+		// alignment, as on the canvas.
+		x, anchor := indent, ""
 		switch {
+		case ll.marker != "" && dir == "rtl":
+			anchor = ` text-anchor="end"`
+		case ll.marker != "":
 		case align == "center":
 			x, anchor = w/2, ` text-anchor="middle"`
 		case align == "right" && dir == "rtl":
@@ -471,7 +501,7 @@ func (c *svgCtx) textBody(node map[string]any) string {
 		case align == "right":
 			x, anchor = w, ` text-anchor="end"`
 		case dir == "rtl": // explicit left alignment of an RTL paragraph
-			x, anchor = 0, ` text-anchor="end"`
+			x, anchor = indent, ` text-anchor="end"`
 		}
 		dirAttr := ""
 		if dir == "rtl" {

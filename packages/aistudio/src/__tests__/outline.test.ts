@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  archetypes,
+  archetypeBudgets,
   normalizeOutline,
   normalizeNote,
   maxNoteChars,
@@ -213,5 +215,68 @@ describe("speaker notes on outline items", () => {
     const p = outlineSystemPrompt("deck", "");
     expect(p).toContain("speaker note");
     expect(p).toContain("never restate");
+  });
+});
+
+describe("archetype-aware outlines", () => {
+  const page = (extra: Record<string, unknown>) => normalizeOutline({ title: "T", pages: [{ title: "t", ...extra }] }).pages[0];
+
+  it("derives archetype and role from each other, whichever the reply named", () => {
+    expect(page({ visualRole: "quote", points: ["Less, but better."] })).toMatchObject({ archetype: "quote", visualRole: "quote", quote: { text: "Less, but better." } });
+    expect(page({ archetype: "bigNumber", stat: { value: "42%", label: "of teams" } })).toMatchObject({ archetype: "bigNumber", visualRole: "data" });
+    expect(page({ points: ["a"] })).toMatchObject({ archetype: "bullets", visualRole: "content" });
+    expect(page({ archetype: "hologram", visualRole: "sparkle", points: ["a"] })).toMatchObject({ archetype: "bullets", visualRole: "content" });
+  });
+
+  it("keeps a comparison that arrives with columns, and downgrades one that does not", () => {
+    const cols = [{ heading: "Before", points: ["slow"] }, { heading: "After", points: ["fast"] }];
+    expect(page({ visualRole: "comparison", columns: cols })).toMatchObject({ archetype: "twoColumn", visualRole: "comparison" });
+    // No columns, so not a twoColumn; the named role is kept so the layout it
+    // always had is unchanged.
+    expect(page({ visualRole: "comparison", points: ["a", "b"] })).toMatchObject({ archetype: "bullets", visualRole: "comparison" });
+  });
+
+  it("clips every field to its budget on a word boundary", () => {
+    const long = "word ".repeat(60);
+    const p = page({
+      archetype: "process", subhead: long,
+      steps: [{ label: long, detail: long }, { label: "two" }, { label: "3" }, { label: "4" }, { label: "5" }, { label: "6" }],
+      points: [long, "a", "b", "c", "d", "e", "f"],
+      image: { subject: long, treatment: "hologram" },
+    });
+    expect(Array.from(p.title).length).toBeLessThanOrEqual(archetypeBudgets.title);
+    expect(Array.from(p.subhead!).length).toBeLessThanOrEqual(archetypeBudgets.subhead);
+    expect(p.subhead!.endsWith("wor")).toBe(false);
+    expect(p.steps!.length).toBe(archetypeBudgets.steps);
+    expect(Array.from(p.steps![0].label).length).toBeLessThanOrEqual(archetypeBudgets.stepLabel);
+    expect(p.points.length).toBe(archetypeBudgets.points);
+    expect(p.image).toMatchObject({ treatment: "photo" });
+  });
+
+  it("downgrades an archetype whose payload did not survive", () => {
+    expect(page({ archetype: "bigNumber" }).archetype).toBe("bullets");
+    expect(page({ archetype: "process", steps: [{ label: "one" }] }).archetype).toBe("bullets");
+    expect(page({ archetype: "twoColumn", columns: [{ heading: "one", points: [] }] }).archetype).toBe("bullets");
+    expect(page({ archetype: "chart" }).archetype).toBe("bullets");
+    expect(page({ archetype: "imageCaption" }).archetype).toBe("statement");
+    expect(page({ archetype: "quote" }).archetype).toBe("statement");
+    // A chart keeps its form, and its values are trimmed to the categories.
+    const c = page({ archetype: "chart", chart: { kind: "bar", categories: ["Q1"], series: [{ name: "s", values: [1, 2, 3] }] } });
+    expect(c.archetype).toBe("chart");
+    expect(c.chart!.series[0].values).toEqual([1]);
+  });
+
+  it("keeps a page that has a typed payload but no title or points", () => {
+    const o = normalizeOutline({ title: "T", pages: [{ archetype: "bigNumber", stat: { value: "3.2M", label: "riders a day" }, note: "" }] });
+    expect(o.pages).toHaveLength(1);
+    expect(o.pages[0].stat).toEqual({ value: "3.2M", label: "riders a day" });
+  });
+
+  it("puts the archetype catalog and the story rules in the prompt, matching the schema", () => {
+    const prompt = outlineSystemPrompt("deck", "");
+    for (const a of archetypes) expect(prompt).toContain(`'${a}'`);
+    expect(prompt).toContain("no more than 40 percent");
+    expect(prompt).toContain("Never write 'Slide 1'");
+    expect(outlineJsonSchema.properties.pages.items.required).toContain("archetype");
   });
 });

@@ -33907,12 +33907,73 @@ ${err.toString()}`);
     "packages/aistudio/dist/outline.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
-      exports.outlineJsonSchema = exports.OutlineError = exports.maxNoteChars = exports.visualRoles = exports.designTypes = void 0;
+      exports.outlineJsonSchema = exports.OutlineError = exports.maxNoteChars = exports.archetypeBudgets = exports.roleForArchetype = exports.archetypeForRole = exports.archetypes = exports.visualRoles = exports.designTypes = void 0;
       exports.normalizeNote = normalizeNote;
+      exports.clipToBudget = clipToBudget;
       exports.normalizeOutline = normalizeOutline;
       exports.outlineItemToSpec = outlineItemToSpec;
       exports.designTypes = ["deck", "doc", "social-set", "poster"];
       exports.visualRoles = ["cover", "agenda", "content", "comparison", "quote", "data", "closing"];
+      exports.archetypes = [
+        "cover",
+        "agenda",
+        "section",
+        "statement",
+        "bigNumber",
+        "bullets",
+        "twoColumn",
+        "threeUp",
+        "process",
+        "quote",
+        "imageCaption",
+        "chart",
+        "closing"
+      ];
+      exports.archetypeForRole = {
+        cover: "cover",
+        agenda: "agenda",
+        content: "bullets",
+        comparison: "twoColumn",
+        quote: "quote",
+        data: "bigNumber",
+        closing: "closing"
+      };
+      exports.roleForArchetype = {
+        cover: "cover",
+        agenda: "agenda",
+        section: "content",
+        statement: "content",
+        bigNumber: "data",
+        bullets: "content",
+        twoColumn: "comparison",
+        threeUp: "content",
+        process: "content",
+        quote: "quote",
+        imageCaption: "content",
+        chart: "data",
+        closing: "closing"
+      };
+      exports.archetypeBudgets = {
+        title: 60,
+        subhead: 120,
+        statement: 90,
+        point: 90,
+        points: 5,
+        statValue: 12,
+        statUnit: 8,
+        statLabel: 60,
+        quote: 200,
+        attribution: 60,
+        steps: 5,
+        stepLabel: 30,
+        stepDetail: 90,
+        columns: 3,
+        columnHeading: 40,
+        columnPoints: 4,
+        imageSubject: 140,
+        chartCategories: 8,
+        chartSeries: 3
+      };
       exports.maxNoteChars = 500;
       var OutlineError = class extends Error {
       };
@@ -33936,6 +33997,113 @@ ${err.toString()}`);
         const sentenceEnd = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
         return sentenceEnd >= 0 && Array.from(cut.slice(0, sentenceEnd)).length > exports.maxNoteChars / 2 ? cut.slice(0, sentenceEnd + 1) : cut;
       }
+      function clipToBudget(v, max2) {
+        const t = str(v);
+        const chars = Array.from(t);
+        if (chars.length <= max2)
+          return t;
+        let cut = chars.slice(0, max2).join("");
+        const space = cut.lastIndexOf(" ");
+        if (space > max2 * 0.6)
+          cut = cut.slice(0, space);
+        return cut.replace(/[\s,;:-]+$/u, "");
+      }
+      function strList(v, maxItems, maxChars) {
+        return (Array.isArray(v) ? v : []).map((x) => clipToBudget(x, maxChars)).filter(Boolean).slice(0, maxItems);
+      }
+      function normalizeArchetypeFields(p, archetype, points) {
+        var _a5, _b, _c, _d;
+        const b = exports.archetypeBudgets;
+        const out = { archetype };
+        const subhead = clipToBudget(p.subhead, b.subhead);
+        if (subhead)
+          out.subhead = subhead;
+        const st = p.stat;
+        if (st && typeof st === "object") {
+          const value = clipToBudget(st.value, b.statValue);
+          if (value) {
+            const unit = clipToBudget(st.unit, b.statUnit);
+            out.stat = __spreadValues({ value, label: clipToBudget(st.label, b.statLabel) }, unit ? { unit } : {});
+          }
+        }
+        const q = p.quote;
+        if (q && typeof q === "object") {
+          const text2 = clipToBudget(q.text, b.quote);
+          if (text2) {
+            const attribution = clipToBudget(q.attribution, b.attribution);
+            out.quote = __spreadValues({ text: text2 }, attribution ? { attribution } : {});
+          }
+        }
+        const steps = (Array.isArray(p.steps) ? p.steps : []).map((x) => {
+          const r = x != null ? x : {};
+          const label = clipToBudget(r.label, b.stepLabel);
+          const detail = clipToBudget(r.detail, b.stepDetail);
+          return label ? __spreadValues({ label }, detail ? { detail } : {}) : null;
+        }).filter((x) => !!x).slice(0, b.steps);
+        if (steps.length)
+          out.steps = steps;
+        const columns = (Array.isArray(p.columns) ? p.columns : []).map((x) => {
+          const r = x != null ? x : {};
+          const heading = clipToBudget(r.heading, b.columnHeading);
+          const pts = strList(r.points, b.columnPoints, b.point);
+          return heading || pts.length ? { heading, points: pts } : null;
+        }).filter((x) => !!x).slice(0, b.columns);
+        if (columns.length)
+          out.columns = columns;
+        const im = p.image;
+        if (im && typeof im === "object") {
+          const subject = clipToBudget(im.subject, b.imageSubject);
+          if (subject) {
+            const t = im.treatment;
+            out.image = { subject, treatment: t === "illustration" || t === "abstract" ? t : "photo" };
+          }
+        }
+        const ch = p.chart;
+        if (ch && typeof ch === "object") {
+          const categories = strList(ch.categories, b.chartCategories, 40);
+          const k = ch.kind;
+          const kind = k === "line" || k === "pie" || k === "donut" ? k : "bar";
+          const series = (Array.isArray(ch.series) ? ch.series : []).map((x) => {
+            const r = x != null ? x : {};
+            const values = (Array.isArray(r.values) ? r.values : []).filter((n) => typeof n === "number" && Number.isFinite(n)).slice(0, categories.length);
+            return values.length ? { name: str(r.name), values } : null;
+          }).filter((x) => !!x).slice(0, b.chartSeries);
+          if (categories.length && series.length)
+            out.chart = { kind, categories, series };
+        }
+        switch (archetype) {
+          case "bigNumber":
+            if (!out.stat)
+              out.archetype = "bullets";
+            break;
+          case "quote":
+            if (!out.quote) {
+              if (points[0])
+                out.quote = { text: clipToBudget(points[0], b.quote) };
+              else
+                out.archetype = "statement";
+            }
+            break;
+          case "process":
+            if (((_b = (_a5 = out.steps) == null ? void 0 : _a5.length) != null ? _b : 0) < 2)
+              out.archetype = "bullets";
+            break;
+          case "twoColumn":
+          case "threeUp":
+            if (((_d = (_c = out.columns) == null ? void 0 : _c.length) != null ? _d : 0) < 2)
+              out.archetype = "bullets";
+            break;
+          case "imageCaption":
+            if (!out.image)
+              out.archetype = "statement";
+            break;
+          case "chart":
+            if (!out.chart)
+              out.archetype = "bullets";
+            break;
+        }
+        return out;
+      }
       function normalizeOutline(parsed) {
         if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
           throw new OutlineError("The AI response wasn't a valid outline.");
@@ -33950,12 +34118,23 @@ ${err.toString()}`);
             continue;
           const p = item;
           const pTitle = str(p.title);
-          const points = Array.isArray(p.points) ? p.points.map(str).filter(Boolean).slice(0, 8) : [];
-          if (!pTitle && !points.length)
+          const points = strList(p.points, exports.archetypeBudgets.points, exports.archetypeBudgets.point);
+          const hasPayload = !!(p.stat || p.quote || p.steps || p.columns || p.image || p.chart);
+          if (!pTitle && !points.length && !hasPayload)
             continue;
-          const visualRole = exports.visualRoles.includes(p.visualRole) ? p.visualRole : "content";
+          const namedArch = exports.archetypes.includes(p.archetype) ? p.archetype : void 0;
+          const namedRole = exports.visualRoles.includes(p.visualRole) ? p.visualRole : void 0;
+          const archetype0 = namedArch != null ? namedArch : namedRole ? exports.archetypeForRole[namedRole] : "bullets";
+          const typed = normalizeArchetypeFields(p, archetype0, points);
+          const visualRole = namedRole != null ? namedRole : exports.roleForArchetype[typed.archetype];
           const note = normalizeNote(p.note);
-          pages.push(__spreadValues({ id: nextId(), title: pTitle || "Untitled", points, visualRole }, note ? { note } : {}));
+          const titleMax = typed.archetype === "statement" ? exports.archetypeBudgets.statement : exports.archetypeBudgets.title;
+          pages.push(__spreadValues(__spreadValues({
+            id: nextId(),
+            title: clipToBudget(pTitle, titleMax) || "Untitled",
+            points,
+            visualRole
+          }, note ? { note } : {}), typed));
         }
         if (!pages.length) {
           throw new OutlineError("The AI didn't return any pages. Try a more specific prompt.");
@@ -33975,11 +34154,19 @@ ${err.toString()}`);
             items: {
               type: "object",
               additionalProperties: false,
-              required: ["title", "visualRole", "note"],
+              required: ["title", "archetype", "note"],
               properties: {
-                title: { type: "string" },
-                points: { type: "array", items: { type: "string" } },
+                title: { type: "string", maxLength: exports.archetypeBudgets.title, description: "the slide heading; for a statement slide, the whole statement (max 14 words)" },
+                archetype: { type: "string", enum: exports.archetypes, description: "the slide's compositional form" },
                 visualRole: { type: "string", enum: exports.visualRoles },
+                subhead: { type: "string", maxLength: exports.archetypeBudgets.subhead, description: "one supporting line under the title (cover, section, statement, closing, bigNumber context)" },
+                points: { type: "array", maxItems: exports.archetypeBudgets.points, items: { type: "string", maxLength: exports.archetypeBudgets.point }, description: "bullets or agenda items; only for bullets/agenda" },
+                stat: { type: "object", additionalProperties: false, required: ["value", "label"], properties: { value: { type: "string", maxLength: exports.archetypeBudgets.statValue, description: "the figure, e.g. 42% or 3.2M" }, unit: { type: "string", maxLength: exports.archetypeBudgets.statUnit }, label: { type: "string", maxLength: exports.archetypeBudgets.statLabel, description: "what the figure means" } } },
+                quote: { type: "object", additionalProperties: false, required: ["text"], properties: { text: { type: "string", maxLength: exports.archetypeBudgets.quote }, attribution: { type: "string", maxLength: exports.archetypeBudgets.attribution } } },
+                steps: { type: "array", minItems: 2, maxItems: exports.archetypeBudgets.steps, items: { type: "object", additionalProperties: false, required: ["label"], properties: { label: { type: "string", maxLength: exports.archetypeBudgets.stepLabel }, detail: { type: "string", maxLength: exports.archetypeBudgets.stepDetail } } } },
+                columns: { type: "array", minItems: 2, maxItems: exports.archetypeBudgets.columns, items: { type: "object", additionalProperties: false, required: ["heading", "points"], properties: { heading: { type: "string", maxLength: exports.archetypeBudgets.columnHeading }, points: { type: "array", maxItems: exports.archetypeBudgets.columnPoints, items: { type: "string", maxLength: exports.archetypeBudgets.point } } } } },
+                image: { type: "object", additionalProperties: false, required: ["subject"], properties: { subject: { type: "string", maxLength: exports.archetypeBudgets.imageSubject, description: "what the picture shows, IN ENGLISH, concrete and specific; no text in the image" }, treatment: { type: "string", enum: ["photo", "illustration", "abstract"] } } },
+                chart: { type: "object", additionalProperties: false, required: ["kind", "categories", "series"], properties: { kind: { type: "string", enum: ["bar", "line", "pie", "donut"] }, categories: { type: "array", maxItems: exports.archetypeBudgets.chartCategories, items: { type: "string" } }, series: { type: "array", minItems: 1, maxItems: exports.archetypeBudgets.chartSeries, items: { type: "object", additionalProperties: false, required: ["name", "values"], properties: { name: { type: "string" }, values: { type: "array", items: { type: "number" } } } } } } },
                 note: {
                   type: "string",
                   minLength: 100,
@@ -35476,27 +35663,169 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
     }
   });
 
-  // packages/aistudio/dist/deck.js
-  var require_deck = __commonJS({
-    "packages/aistudio/dist/deck.js"(exports) {
+  // packages/aistudio/dist/designSystem.js
+  var require_designSystem = __commonJS({
+    "packages/aistudio/dist/designSystem.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
-      exports.layoutDeck = layoutDeck;
-      var layout_1 = require_layout();
-      var quality_1 = require_quality();
-      var outline_1 = require_outline();
-      function layoutDeck(outline, theme, size2, opts) {
-        var _a5;
-        const themed = __spreadProps(__spreadValues({}, theme), { kicker: (_a5 = theme.kicker) != null ? _a5 : outline.title });
-        const pages = outline.pages.map((item, i) => {
-          const spec = (0, outline_1.outlineItemToSpec)(item, themed, __spreadProps(__spreadValues({}, opts), { index: i }));
-          const laid = (0, layout_1.layoutDesign)(spec, size2);
-          return __spreadValues(__spreadProps(__spreadValues({}, laid), {
-            name: item.title || `Page ${i + 1}`,
-            quality: (0, quality_1.qualityCheck)(__spreadProps(__spreadValues({}, laid), { size: size2 }))
-          }), item.note ? { note: item.note } : {});
+      exports.catalogEntryForSeed = catalogEntryForSeed;
+      exports.catalogEntryForMood = catalogEntryForMood;
+      exports.deriveDesignSystem = deriveDesignSystem;
+      exports.designSystemSlots = designSystemSlots;
+      var color_1 = require_dist2();
+      var themeCatalog_1 = require_themeCatalog();
+      var WHITE = { srgb: { r: 1, g: 1, b: 1, a: 1 } };
+      var BLACK = { srgb: { r: 0, g: 0, b: 0, a: 1 } };
+      var PAIRINGS = [
+        { heading: "Fraunces", body: "Nunito" },
+        { heading: "Playfair Display", body: "Source Sans 3" },
+        { heading: "DM Serif Display", body: "DM Sans" },
+        { heading: "Outfit", body: "Work Sans" },
+        { heading: "Merriweather", body: "Source Sans 3" },
+        { heading: "Plus Jakarta Sans", body: "Plus Jakarta Sans" },
+        { heading: "Lora", body: "Nunito" },
+        { heading: "Montserrat", body: "Inter" }
+      ];
+      function mix(a, b, t) {
+        const l = (x, y) => x + (y - x) * t;
+        return { srgb: { r: l(a.srgb.r, b.srgb.r), g: l(a.srgb.g, b.srgb.g), b: l(a.srgb.b, b.srgb.b), a: 1 } };
+      }
+      function withLightness(c, l, sMin = 0) {
+        const hsl = (0, color_1.rgbToHsl)(c);
+        return (0, color_1.hslToRgb)({ h: hsl.h, s: Math.max(hsl.s, sMin), l, a: 1 });
+      }
+      function inkFor(ground) {
+        const base = (0, color_1.contrastRatio)(WHITE, ground) >= (0, color_1.contrastRatio)(BLACK, ground) ? WHITE : BLACK;
+        return (0, color_1.fixToAA)(base, ground);
+      }
+      function mutedFor(ink, ground) {
+        let out = mix(ink, ground, 0.35);
+        if ((0, color_1.contrastRatio)(out, ground) < 4.5)
+          out = (0, color_1.fixToAA)(out, ground);
+        return out;
+      }
+      function accentFor(seed, ground, onDark) {
+        const hsl = (0, color_1.rgbToHsl)(seed);
+        let out = (0, color_1.hslToRgb)({
+          h: hsl.h,
+          s: Math.min(1, Math.max(hsl.s, 0.5)),
+          l: onDark ? Math.max(0.6, Math.min(0.75, hsl.l + 0.3)) : Math.min(0.5, Math.max(0.32, hsl.l)),
+          a: 1
         });
-        return { title: outline.title, pages };
+        if ((0, color_1.contrastRatio)(out, ground) < 3)
+          out = (0, color_1.fixToAA)(out, ground);
+        return out;
+      }
+      function catalogEntryForSeed(seed) {
+        const n = themeCatalog_1.themeCatalog.length;
+        const i = (Math.floor(seed) % n + n) % n;
+        return themeCatalog_1.themeCatalog[i];
+      }
+      var MOOD_WORDS = [
+        ["dark", ["dark", "night", "luxury", "premium", "black", "noir", "midnight", "moody", "cinematic"]],
+        ["tech", ["tech", "technology", "software", "data", "digital", "ai", "cloud", "startup", "engineering", "cyber", "platform", "saas"]],
+        ["bold", ["bold", "energy", "energetic", "launch", "vibrant", "loud", "punchy", "dynamic", "optimistic", "sport", "youth"]],
+        ["warm", ["warm", "friendly", "community", "human", "cozy", "hospitality", "food", "family", "care", "wellness", "school", "celebration", "joy", "festive"]],
+        ["editorial", ["editorial", "story", "magazine", "narrative", "culture", "literary", "heritage", "craft", "history", "art"]],
+        ["minimal", ["minimal", "minimalist", "clean", "quiet", "calm", "simple", "restrained", "understated", "serene", "elegant"]]
+      ];
+      function catalogEntryForMood(mood, seed) {
+        const words = new Set(mood.toLowerCase().split(/[^a-z]+/).filter(Boolean));
+        let best = null;
+        let bestHits = 0;
+        for (const [group, keys2] of MOOD_WORDS) {
+          const hits = keys2.reduce((n, k) => n + (words.has(k) ? 1 : 0), 0);
+          if (hits > bestHits) {
+            best = group;
+            bestHits = hits;
+          }
+        }
+        if (!best)
+          return catalogEntryForSeed(seed);
+        const pool = themeCatalog_1.themeCatalog.filter((e) => e.style === best);
+        if (!pool.length)
+          return catalogEntryForSeed(seed);
+        const i = (Math.floor(seed) % pool.length + pool.length) % pool.length;
+        return pool[i];
+      }
+      function deriveDesignSystem(theme, size2, opts = {}) {
+        var _a5, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
+        const width = Math.max(1, Math.round(size2.width));
+        const height = Math.max(1, Math.round(size2.height));
+        const short = Math.min(width, height);
+        let deep, primary, accent, tint, ink, paper;
+        const bgColor = (_b = (0, color_1.fromHex)((_a5 = theme.background.color) != null ? _a5 : "#1f2937")) != null ? _b : { srgb: { r: 0.12, g: 0.16, b: 0.22, a: 1 } };
+        const bg2 = theme.background.color2 ? (0, color_1.fromHex)(theme.background.color2) : null;
+        const brand = ((_c = opts.brandPalette) != null ? _c : []).map(color_1.fromHex).filter((c) => !!c);
+        if (opts.catalog) {
+          const [p, a, d, t, i, pp] = opts.catalog.colors.map((h) => {
+            var _a6;
+            return (_a6 = (0, color_1.fromHex)(h)) != null ? _a6 : bgColor;
+          });
+          primary = p;
+          accent = a;
+          deep = d;
+          tint = t;
+          ink = i;
+          paper = pp;
+        } else {
+          deep = bgColor;
+          primary = (_e = (_d = brand[0]) != null ? _d : bg2) != null ? _e : withLightness(bgColor, Math.min(0.48, (0, color_1.rgbToHsl)(bgColor).l + 0.18), 0.35);
+          accent = (_f = brand[1]) != null ? _f : withLightness(primary, 0.5, 0.55);
+          paper = mix(WHITE, primary, 0.045);
+          tint = mix(WHITE, primary, 0.13);
+          ink = mix(withLightness(primary, 0.12, 0.2), BLACK, 0.35);
+        }
+        const inkOnDeep = inkFor(deep);
+        const inkOnPaper = (0, color_1.contrastRatio)(ink, paper) >= 4.5 ? ink : (0, color_1.fixToAA)(ink, paper);
+        const colors = {
+          deep,
+          primary,
+          accent,
+          tint,
+          paper,
+          ink: inkOnPaper,
+          inkOnDeep,
+          mutedOnDeep: mutedFor(inkOnDeep, deep),
+          mutedOnPaper: mutedFor(inkOnPaper, paper),
+          accentOnPaper: accentFor(accent, paper, false),
+          accentOnDeep: accentFor(accent, deep, true)
+        };
+        const impactBackground = theme.background.kind === "gradient" && !opts.catalog ? {
+          type: "gradient",
+          gradient: "linear",
+          angle: (_g = theme.background.angle) != null ? _g : 145,
+          stops: [
+            { position: 0, color: deep },
+            { position: 1, color: primary }
+          ]
+        } : { type: "solid", color: deep };
+        const paperBackground = { type: "solid", color: paper };
+        const seeded = PAIRINGS[(((_h = opts.seed) != null ? _h : 0) % PAIRINGS.length + PAIRINGS.length) % PAIRINGS.length];
+        const fonts = {
+          heading: theme.fontHeading || ((_i = opts.catalog) == null ? void 0 : _i.fontHeading) || seeded.heading,
+          body: theme.fontBody || ((_j = opts.catalog) == null ? void 0 : _j.fontBody) || seeded.body
+        };
+        const unit = Math.max(4, Math.round(short * 0.012));
+        return {
+          size: { width, height },
+          unit,
+          margin: unit * 6,
+          gutter: unit * 2,
+          columns: 12,
+          radius: Math.round(unit * 0.75),
+          rule: Math.max(2, Math.round(unit * 0.35)),
+          colors,
+          fonts,
+          impactBackground,
+          paperBackground,
+          kicker: theme.kicker,
+          dir: (_k = opts.dir) != null ? _k : "ltr"
+        };
+      }
+      function designSystemSlots(ds) {
+        const c = ds.colors;
+        return [(0, color_1.toHex)(c.primary), (0, color_1.toHex)(c.accent), (0, color_1.toHex)(c.deep), (0, color_1.toHex)(c.tint), (0, color_1.toHex)(c.ink), (0, color_1.toHex)(c.paper)];
       }
     }
   });
@@ -35604,6 +35933,754 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
     }
   });
 
+  // packages/aistudio/dist/archetypes.js
+  var require_archetypes = __commonJS({
+    "packages/aistudio/dist/archetypes.js"(exports) {
+      "use strict";
+      Object.defineProperty(exports, "__esModule", { value: true });
+      exports.archetypeIsImpact = archetypeIsImpact;
+      exports.keepLastWordCompany = keepLastWordCompany;
+      exports.composeArchetypePage = composeArchetypePage;
+      var schema_1 = require_dist();
+      var deckStyle_1 = require_deckStyle();
+      var IMPACT = /* @__PURE__ */ new Set(["cover", "section", "statement", "quote", "closing"]);
+      function archetypeIsImpact(a) {
+        return IMPACT.has(a);
+      }
+      var T = {
+        coverTitle: 0.1,
+        coverSub: 0.036,
+        sectionTitle: 0.075,
+        statement: 0.068,
+        statementSub: 0.03,
+        numeral: 0.3,
+        unit: 0.09,
+        statLabel: 0.036,
+        title: 0.058,
+        point: 0.034,
+        agendaItem: 0.04,
+        colHead: 0.036,
+        stepNumber: 0.06,
+        stepLabel: 0.034,
+        detail: 0.028,
+        quote: 0.056,
+        attribution: 0.03,
+        kicker: 0.02,
+        pageNumber: 0.018,
+        caption: 0.03
+      };
+      var ADVANCE = { heading: 0.55, body: 0.5 };
+      var LIST_GUTTER_EM = 1.6;
+      function keepLastWordCompany(text2) {
+        if (text2.trim().split(/\s+/).length < 3)
+          return text2;
+        return text2.replace(/ +(\S+)\s*$/, "\xA0$1");
+      }
+      var Composer = class {
+        constructor(ds, item, ctx, impact) {
+          this.ds = ds;
+          this.item = item;
+          this.ctx = ctx;
+          this.impact = impact;
+          this.nodes = [];
+          this.prompts = {};
+          this.overfull = [];
+          this.slotSeq = 0;
+          this.W = ds.size.width;
+          this.H = ds.size.height;
+          this.m = ds.margin;
+          this.col = (this.W - 2 * this.m - (ds.columns - 1) * ds.gutter) / ds.columns;
+        }
+        // --- geometry ------------------------------------------------------------
+        /** The rect covering columns [from, from+n) of the 12-column grid, between
+         *  the vertical margins. */
+        span(from2, n) {
+          const x = this.m + from2 * (this.col + this.ds.gutter);
+          return { x, y: this.m, width: n * this.col + (n - 1) * this.ds.gutter, height: this.H - 2 * this.m };
+        }
+        /** Mirror a rect for right-to-left decks. Every placement goes through this
+         *  so RTL is a property of the system, not of each archetype. */
+        mirror(r) {
+          return this.ds.dir === "rtl" ? __spreadProps(__spreadValues({}, r), { x: this.W - r.x - r.width }) : r;
+        }
+        get align() {
+          return this.ds.dir === "rtl" ? "right" : "left";
+        }
+        get ground() {
+          return this.impact ? this.ds.colors.deep : this.ds.colors.paper;
+        }
+        get ink() {
+          return this.impact ? this.ds.colors.inkOnDeep : this.ds.colors.ink;
+        }
+        get muted() {
+          return this.impact ? this.ds.colors.mutedOnDeep : this.ds.colors.mutedOnPaper;
+        }
+        get accent() {
+          return this.impact ? this.ds.colors.accentOnDeep : this.ds.colors.accentOnPaper;
+        }
+        // --- measurement -----------------------------------------------------------
+        lines(text2, size2, width, role) {
+          const perLine = Math.max(1, Math.floor(width / (size2 * ADVANCE[role])));
+          let n = 0;
+          for (const seg of text2.split("\n"))
+            n += Math.max(1, Math.ceil(Array.from(seg).length / perLine));
+          return n;
+        }
+        /** The largest ladder size at which the paragraphs fit the region.
+         *  gutterEm is the list marker gutter, in ems, taken off the wrap width. */
+        fit(paragraphs, width, height, base, lineHeight, role, paraGap, gutterEm = 0) {
+          for (const size2 of (0, deckStyle_1.ladderFrom)(base, this.ds.size)) {
+            if (this.measure(paragraphs, width, size2, lineHeight, role, paraGap, gutterEm) <= height)
+              return size2;
+          }
+          const ladder = (0, deckStyle_1.ladderFrom)(base, this.ds.size);
+          return ladder[ladder.length - 1];
+        }
+        measure(paragraphs, width, size2, lineHeight, role, paraGap, gutterEm = 0) {
+          let h = 0;
+          paragraphs.forEach((p, i) => {
+            h += this.lines(p, size2, Math.max(1, width - gutterEm * size2), role) * size2 * lineHeight;
+            if (i < paragraphs.length - 1)
+              h += paraGap * size2;
+          });
+          return Math.ceil(h);
+        }
+        // --- primitives ------------------------------------------------------------
+        text(opts) {
+          var _a5, _b, _c, _d, _e, _f, _g;
+          const lineHeight = (_a5 = opts.lineHeight) != null ? _a5 : opts.role === "heading" ? 1.1 : 1.4;
+          const paraGap = (_b = opts.paraGap) != null ? _b : opts.role === "heading" ? 0.2 : 0.45;
+          const paragraphs = (opts.paragraphs.length ? opts.paragraphs : [""]).map((p) => opts.role === "heading" ? keepLastWordCompany(p) : p);
+          const gutterEm = opts.list ? LIST_GUTTER_EM : 0;
+          const size2 = (_c = opts.exactSize) != null ? _c : this.fit(paragraphs, opts.rect.width, opts.rect.height, opts.base, lineHeight, opts.role, paraGap, gutterEm);
+          const needed = this.measure(paragraphs, opts.rect.width, size2, lineHeight, opts.role, paraGap, gutterEm);
+          if (!opts.exactSize && needed > opts.rect.height)
+            this.overfull.push(opts.name);
+          const height = Math.min(opts.rect.height, needed);
+          const valign = (_d = opts.valign) != null ? _d : "top";
+          const boxHeight = valign === "top" ? height : opts.rect.height;
+          const r = this.mirror(__spreadProps(__spreadValues({}, opts.rect), { height: boxHeight }));
+          const align = (_e = opts.align) != null ? _e : this.align;
+          const style = {
+            fontFamily: opts.role === "heading" ? this.ds.fonts.heading : this.ds.fonts.body,
+            fontStyle: opts.bold ? "Bold" : "Regular",
+            fontSize: size2,
+            letterSpacing: opts.tracking ? opts.tracking * size2 : void 0,
+            fill: { type: "solid", color: structuredClone((_f = opts.color) != null ? _f : this.ink) }
+          };
+          const node2 = (0, schema_1.createNode)("text", {
+            name: opts.name,
+            transform: { x: r.x, y: r.y, scaleX: 1, scaleY: 1, rotation: 0 },
+            size: { width: r.width, height: r.height },
+            box: { mode: "fixed", width: r.width, height: r.height, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: (_g = opts.valign) != null ? _g : "top" },
+            content: paragraphs.map((p) => ({
+              runs: [{ text: p, style: structuredClone(style) }],
+              style: __spreadValues({ align, direction: "auto" }, opts.list ? { list: { type: opts.list, level: 0 } } : {})
+            }))
+          });
+          return { node: node2, height, size: size2 };
+        }
+        /** A stat as one paragraph of two runs: the figure at display scale and the
+         *  unit beside it at a third of that, sharing a baseline. */
+        numeral(rect, value, unit, color) {
+          const base = this.H * T.numeral;
+          const size2 = this.fit([value + (unit ? " " + unit : "")], rect.width, rect.height, base, 1, "heading", 0);
+          const r = this.mirror(rect);
+          const runStyle = (fontSize) => ({
+            fontFamily: this.ds.fonts.heading,
+            fontStyle: "Bold",
+            fontSize,
+            letterSpacing: -0.02 * fontSize,
+            fill: { type: "solid", color: structuredClone(color) }
+          });
+          const runs = [{ text: value, style: runStyle(size2) }];
+          if (unit)
+            runs.push({ text: " " + unit, style: runStyle(Math.round(size2 * (T.unit / T.numeral))) });
+          const node2 = (0, schema_1.createNode)("text", {
+            name: "Figure",
+            transform: { x: r.x, y: r.y, scaleX: 1, scaleY: 1, rotation: 0 },
+            size: { width: r.width, height: r.height },
+            box: { mode: "fixed", width: r.width, height: r.height, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "bottom" },
+            content: [{ runs, style: { align: this.align, direction: "auto" } }]
+          });
+          return { node: node2, height: Math.ceil(size2 * 1) };
+        }
+        rect(name, r0, fill, radius = 0, data) {
+          const r = this.mirror(r0);
+          return (0, schema_1.createNode)("shape", __spreadValues({
+            name,
+            shape: "rect",
+            transform: { x: r.x, y: r.y, scaleX: 1, scaleY: 1, rotation: 0 },
+            size: { width: r.width, height: r.height },
+            fills: [{ type: "solid", color: structuredClone(fill) }],
+            cornerRadius: radius
+          }, data ? { data } : {}));
+        }
+        /** The accent rule: the deck's one repeated mark. Short, above a heading. */
+        accentRule(x, y) {
+          const w = this.ds.unit * 8;
+          return this.rect("Accent", { x, y, width: w, height: this.ds.rule }, this.accent, Math.round(this.ds.rule / 2));
+        }
+        /** A picture region: the same neutral stand-in the editor materializes for
+         *  a picture slot, tagged so the image pipeline finds it by placeholder id
+         *  and replaces it wholesale when the picture lands. */
+        imageSlot(r, prompt, radius = 0) {
+          this.slotSeq += 1;
+          const id2 = `img-${this.ctx.index + 1}-${this.slotSeq}`;
+          this.prompts[id2] = prompt;
+          const fill = this.impact ? mix(this.ds.colors.deep, this.ds.colors.inkOnDeep, 0.1) : this.ds.colors.tint;
+          return this.rect("Image", r, fill, radius, { placeholderId: id2, aiImagePrompt: prompt });
+        }
+        /** What the picture should show, in the deck's treatment. Falls back to the
+         *  slide's own subject when the outline named no image, so a form that
+         *  needs a picture (cover, imageCaption) always gets a usable prompt. */
+        imagePrompt() {
+          var _a5;
+          const im = this.item.image;
+          const treatment = (_a5 = im == null ? void 0 : im.treatment) != null ? _a5 : "photo";
+          const subject = (im == null ? void 0 : im.subject) || this.item.title;
+          const style = treatment === "illustration" ? "flat editorial illustration, limited palette, no text" : treatment === "abstract" ? "abstract composition, soft forms, no text" : "clean professional photography, natural light, no text";
+          return `${subject}, ${style}`;
+        }
+        /** Reading-page furniture: the deck title small at the top, the page number
+         *  small at the bottom. Impact pages stay quiet. */
+        furniture(region) {
+          var _a5, _b;
+          const u = this.ds.unit;
+          const x0 = (_a5 = region == null ? void 0 : region.x) != null ? _a5 : this.m;
+          const w0 = (_b = region == null ? void 0 : region.width) != null ? _b : this.W - 2 * this.m;
+          if (!this.impact && this.ds.kicker) {
+            const kicker = this.text({
+              name: "Kicker",
+              rect: { x: x0, y: u * 2.5, width: w0, height: u * 3 },
+              paragraphs: [this.ds.kicker],
+              role: "body",
+              base: this.H * T.kicker,
+              color: this.muted,
+              exactSize: Math.round(this.H * T.kicker)
+            });
+            this.nodes.push(kicker.node);
+          }
+          if (this.item.archetype !== "cover") {
+            const n = this.text({
+              name: "Page number",
+              rect: { x: x0 + w0 - u * 8, y: this.H - u * 4.5, width: u * 8, height: u * 3 },
+              paragraphs: [String(this.ctx.index + 1)],
+              role: "body",
+              base: this.H * T.pageNumber,
+              color: this.muted,
+              align: this.ds.dir === "rtl" ? "left" : "right",
+              exactSize: Math.round(this.H * T.pageNumber)
+            });
+            this.nodes.push(n.node);
+          }
+        }
+        /** Measure-then-place a vertical cluster of text blocks inside a region,
+         *  centered when it is shorter than the region. Each block is measured at
+         *  the size it fits at, so the cluster's height is honest before anything
+         *  is placed. */
+        cluster(region, blocks, gapUnits = 2, center = true) {
+          const u = this.ds.unit;
+          const measured = blocks.map((b) => {
+            if (b.kind === "rule")
+              return { b, height: this.ds.rule, node: null };
+            const probe = b.make({ x: region.x, y: region.y, width: region.width, height: Math.max(u * 2, region.height * b.maxFrac) });
+            return { b, height: probe.height, node: null };
+          });
+          const total = measured.reduce((s, m) => s + m.height, 0) + gapUnits * u * (blocks.length - 1);
+          let y = region.y + (center ? Math.max(0, Math.round((region.height - total) / 2)) : 0);
+          for (const mrow of measured) {
+            if (mrow.b.kind === "rule") {
+              this.nodes.push(this.accentRule(region.x, y));
+            } else {
+              const made = mrow.b.make({ x: region.x, y, width: region.width, height: mrow.height });
+              this.nodes.push(made.node);
+            }
+            y += mrow.height + gapUnits * u;
+          }
+        }
+        // --- archetypes --------------------------------------------------------------
+        compose() {
+          var _a5;
+          const a = (_a5 = this.item.archetype) != null ? _a5 : "bullets";
+          switch (a) {
+            case "cover":
+              this.cover();
+              break;
+            case "section":
+              this.section();
+              break;
+            case "statement":
+              this.statement();
+              break;
+            case "bigNumber":
+              this.bigNumber();
+              break;
+            case "twoColumn":
+              this.columns(2);
+              break;
+            case "threeUp":
+              this.columns(3);
+              break;
+            case "process":
+              this.process();
+              break;
+            case "quote":
+              this.quote();
+              break;
+            case "imageCaption":
+              this.imageCaption();
+              break;
+            case "chart":
+              this.chart();
+              break;
+            case "closing":
+              this.closing();
+              break;
+            case "agenda":
+              this.agenda();
+              break;
+            default:
+              this.bullets();
+              break;
+          }
+          return {
+            background: structuredClone(this.impact ? this.ds.impactBackground : this.ds.paperBackground),
+            nodes: this.nodes,
+            imagePrompts: this.prompts,
+            impact: this.impact,
+            archetype: a,
+            overfull: Array.from(new Set(this.overfull))
+          };
+        }
+        titleBlock(base, bold = true) {
+          return {
+            kind: "text",
+            maxFrac: 0.5,
+            make: (r) => this.text({ name: "Title", rect: r, paragraphs: [this.item.title], role: "heading", base, bold, lineHeight: 1.08 })
+          };
+        }
+        subheadBlock(base, text2, color) {
+          return text2 ? [{ kind: "text", maxFrac: 0.3, make: (r) => this.text({ name: "Subhead", rect: r, paragraphs: [text2], role: "body", base, color: color != null ? color : this.muted, lineHeight: 1.35 }) }] : [];
+        }
+        cover() {
+          var _a5;
+          const hasImage = !!this.item.image;
+          const textCols = hasImage ? 6 : 8;
+          const region = this.span(0, textCols);
+          if (hasImage) {
+            const s = this.span(7, 5);
+            this.nodes.push(this.imageSlot({ x: s.x, y: 0, width: this.W - s.x, height: this.H }, this.imagePrompt()));
+          }
+          this.cluster(region, [
+            { kind: "rule" },
+            this.titleBlock(this.H * T.coverTitle),
+            ...this.subheadBlock(this.H * T.coverSub, (_a5 = this.item.subhead) != null ? _a5 : this.item.points[0])
+          ], 3);
+          this.furniture();
+        }
+        section() {
+          const hasImage = !!this.item.image;
+          if (hasImage) {
+            const s = this.span(8, 4);
+            this.nodes.push(this.imageSlot({ x: s.x, y: 0, width: this.W - s.x, height: this.H }, this.imagePrompt()));
+          }
+          const region = this.span(0, hasImage ? 7 : 8);
+          this.cluster(region, [
+            { kind: "rule" },
+            this.titleBlock(this.H * T.sectionTitle),
+            ...this.subheadBlock(this.H * T.statementSub, this.item.subhead)
+          ], 3);
+          this.furniture(hasImage ? { x: region.x, width: region.width } : void 0);
+        }
+        statement() {
+          this.cluster(this.span(0, 10), [
+            { kind: "rule" },
+            { kind: "text", maxFrac: 0.6, make: (r) => this.text({ name: "Statement", rect: r, paragraphs: [this.item.title], role: "heading", base: this.H * T.statement, bold: true, lineHeight: 1.12 }) },
+            ...this.subheadBlock(this.H * T.statementSub, this.item.subhead)
+          ], 3);
+          this.furniture();
+        }
+        bigNumber() {
+          const stat = this.item.stat;
+          const hasImage = !!this.item.image;
+          const left = this.span(0, hasImage ? 6 : 7);
+          const rightCols = hasImage ? this.span(7, 5) : this.span(8, 4);
+          const u = this.ds.unit;
+          const figureH = Math.round(this.H * 0.36);
+          const labelProbe = this.text({ name: "Label", rect: { x: left.x, y: 0, width: left.width, height: u * 12 }, paragraphs: [stat.label], role: "heading", base: this.H * T.statLabel, bold: true, lineHeight: 1.2 });
+          const blockH = u * 3 + figureH + u * 2 + labelProbe.height;
+          const areaTop = this.m + u * 4;
+          const top = areaTop + u * 3 + Math.max(0, Math.round((this.H - this.m - areaTop - blockH) / 2));
+          const figureRect = { x: left.x, y: top, width: left.width, height: figureH };
+          const fig = this.numeral(figureRect, stat.value, stat.unit, this.ds.colors.accentOnPaper);
+          this.nodes.push(this.accentRule(left.x, top - u * 3));
+          this.nodes.push(fig.node);
+          const labelY = top + figureRect.height + u * 2;
+          const label = this.text({ name: "Label", rect: { x: left.x, y: labelY, width: left.width, height: u * 12 }, paragraphs: [stat.label], role: "heading", base: this.H * T.statLabel, bold: true, lineHeight: 1.2 });
+          this.nodes.push(label.node);
+          if (hasImage) {
+            this.nodes.push(this.imageSlot({ x: rightCols.x, y: top, width: rightCols.width, height: labelY + label.height - top }, this.imagePrompt(), this.ds.radius * 2));
+            if (this.item.subhead) {
+              const ctxText = this.text({ name: "Context", rect: { x: left.x, y: labelY + label.height + u * 2, width: left.width, height: this.H - this.m - (labelY + label.height + u * 2) }, paragraphs: [this.item.subhead], role: "body", base: this.H * T.detail, color: this.muted });
+              this.nodes.push(ctxText.node);
+            }
+          } else if (this.item.subhead) {
+            const ctxText = this.text({ name: "Context", rect: { x: rightCols.x, y: top, width: rightCols.width, height: labelY + label.height - top }, paragraphs: [this.item.subhead], role: "body", base: this.H * T.caption, color: this.muted, valign: "bottom", lineHeight: 1.45 });
+            this.nodes.push(ctxText.node);
+          }
+          this.furniture();
+        }
+        bullets() {
+          const hasImage = !!this.item.image;
+          const imageLeading = hasImage && this.ctx.index % 2 === 1;
+          const textCols = hasImage ? 7 : 8;
+          const region = hasImage && imageLeading ? this.span(5, 7) : this.span(0, textCols);
+          const u = this.ds.unit;
+          const content = __spreadProps(__spreadValues({}, region), { y: this.m + u * 4, height: this.H - 2 * this.m - u * 4 });
+          if (hasImage) {
+            const s = imageLeading ? this.span(0, 4) : this.span(8, 4);
+            this.nodes.push(this.imageSlot({ x: s.x, y: content.y, width: s.width, height: content.height }, this.imagePrompt(), this.ds.radius * 2));
+          }
+          const points = this.item.points;
+          const variant = this.ctx.variant;
+          if (variant === "twoUp" && points.length >= 4 && !hasImage) {
+            const half = Math.ceil(points.length / 2);
+            const [l, r] = [this.span(0, 6), this.span(6, 6)];
+            const u2 = this.ds.unit;
+            const title = this.text({ name: "Title", rect: __spreadProps(__spreadValues({}, this.span(0, 12)), { y: content.y, height: this.H * 0.2 }), paragraphs: [this.item.title], role: "heading", base: this.H * T.title, bold: true, lineHeight: 1.08 });
+            const bodyTop = content.y + title.height + u2 * 4;
+            const avail = this.H - this.m - bodyTop;
+            const make = (span, pts, y02) => this.text({ name: "Points", rect: { x: span.x, y: y02, width: span.width - this.ds.gutter, height: avail }, paragraphs: pts, role: "body", base: this.H * T.point, lineHeight: 1.35, paraGap: 0.55, list: "bullet" });
+            const tallest = Math.max(make(l, points.slice(0, half), 0).height, make(r, points.slice(half), 0).height);
+            const y0 = bodyTop + Math.max(0, Math.round((avail - tallest) / 2));
+            const total = title.height + u2 * 4 + tallest;
+            const shift = Math.max(0, Math.round((content.height - total) / 2));
+            this.nodes.push(this.text({ name: "Title", rect: __spreadProps(__spreadValues({}, this.span(0, 12)), { y: content.y + shift, height: this.H * 0.2 }), paragraphs: [this.item.title], role: "heading", base: this.H * T.title, bold: true, lineHeight: 1.08 }).node);
+            this.nodes.push(make(l, points.slice(0, half), y0 - (bodyTop - (content.y + shift + title.height + u2 * 4))).node);
+            this.nodes.push(make(r, points.slice(half), y0 - (bodyTop - (content.y + shift + title.height + u2 * 4))).node);
+            this.furniture();
+            return;
+          }
+          const pointBase = variant === "large" ? this.H * T.agendaItem : this.H * T.point;
+          this.cluster(content, [
+            this.titleBlock(this.H * T.title),
+            { kind: "text", maxFrac: 0.7, make: (r) => this.text({ name: "Points", rect: r, paragraphs: points, role: "body", base: pointBase, lineHeight: 1.35, paraGap: 0.55, list: "bullet" }) }
+          ], 3, true);
+          this.furniture();
+        }
+        agenda() {
+          const u = this.ds.unit;
+          const content = { y: this.m + u * 4, height: this.H - 2 * this.m - u * 4 };
+          const left = __spreadValues(__spreadValues({}, this.span(0, 4)), content);
+          const right = __spreadValues(__spreadValues({}, this.span(5, 7)), content);
+          this.cluster(left, [{ kind: "rule" }, this.titleBlock(this.H * T.title)], 3);
+          this.cluster(right, [{ kind: "text", maxFrac: 1, make: (r) => this.text({ name: "Agenda", rect: r, paragraphs: this.item.points, role: "body", base: this.H * T.agendaItem, lineHeight: 1.35, paraGap: 0.7, list: "number" }) }], 0);
+          this.furniture();
+        }
+        columns(n) {
+          var _a5;
+          const cols = ((_a5 = this.item.columns) != null ? _a5 : []).slice(0, n);
+          const u = this.ds.unit;
+          const top = this.m + u * 4;
+          const title = this.text({ name: "Title", rect: __spreadProps(__spreadValues({}, this.span(0, 12)), { y: top, height: this.H * 0.2 }), paragraphs: [this.item.title], role: "heading", base: this.H * T.title, bold: true, lineHeight: 1.08 });
+          this.nodes.push(title.node);
+          const bodyTop = top + title.height + u * 4;
+          const bodyH = this.H - this.m - bodyTop;
+          const spans = n === 2 ? [this.span(0, 5), this.span(7, 5)] : [this.span(0, 4), this.span(4, 4), this.span(8, 4)];
+          const inners = cols.map((_, i) => n === 3 ? { x: spans[i].x, width: spans[i].width - this.ds.gutter } : spans[i]);
+          const build = (c, inner, y02) => {
+            const out = [];
+            out.push(this.accentRule(inner.x, y02));
+            const head = this.text({ name: "Heading", rect: { x: inner.x, y: y02 + u * 2.5, width: inner.width, height: u * 10 }, paragraphs: [c.heading], role: "heading", base: this.H * T.colHead, bold: true, lineHeight: 1.15 });
+            out.push(head.node);
+            let bottom = y02 + u * 2.5 + head.height;
+            const pts = c.points;
+            if (pts.length) {
+              const py = bottom + u * 2;
+              const body = this.text({ name: "Points", rect: { x: inner.x, y: py, width: inner.width, height: Math.max(u * 4, this.H - this.m - py) }, paragraphs: pts, role: "body", base: this.H * T.point * (n === 3 ? 0.92 : 1), lineHeight: 1.35, paraGap: 0.5, list: "bullet" });
+              out.push(body.node);
+              bottom = py + body.height;
+            }
+            return { nodes: out, height: bottom - y02 };
+          };
+          const tallest = Math.max(...cols.map((c, i) => build(c, inners[i], 0).height));
+          const y0 = bodyTop + Math.max(0, Math.round((bodyH - tallest) / 2));
+          if (n === 2) {
+            const gap = this.span(5, 2);
+            const x = gap.x + gap.width / 2 - this.ds.rule / 2;
+            this.nodes.push(this.rect("Divider", { x, y: y0, width: this.ds.rule, height: tallest }, mix(this.ds.colors.ink, this.ds.colors.paper, 0.8)));
+          }
+          cols.forEach((c, i) => this.nodes.push(...build(c, inners[i], y0).nodes));
+          this.furniture();
+        }
+        process() {
+          var _a5;
+          const steps = (_a5 = this.item.steps) != null ? _a5 : [];
+          const u = this.ds.unit;
+          const top = this.m + u * 4;
+          const title = this.text({ name: "Title", rect: __spreadProps(__spreadValues({}, this.span(0, 12)), { y: top, height: this.H * 0.2 }), paragraphs: [this.item.title], role: "heading", base: this.H * T.title, bold: true, lineHeight: 1.08 });
+          this.nodes.push(title.node);
+          const bodyTop = top + title.height + u * 5;
+          const n = steps.length;
+          if (n <= 4) {
+            const perCols = Math.floor(12 / n);
+            const numSize = Math.round(this.H * T.stepNumber);
+            const numBox = Math.round(numSize * 1.15);
+            const lineColor = mix(this.ds.colors.ink, this.ds.colors.paper, 0.8);
+            const build = (y0) => {
+              const out = [];
+              let bottom = y0;
+              const lineY = y0 + Math.round(numBox / 2) - Math.round(this.ds.rule / 2);
+              steps.forEach((st, i) => {
+                const s = this.span(i * perCols, perCols);
+                const inner = { x: s.x, width: s.width - this.ds.gutter };
+                out.push(this.text({ name: "Step", rect: { x: inner.x, y: y0, width: numBox, height: numBox }, paragraphs: [String(i + 1)], role: "heading", base: numSize, bold: true, color: this.ds.colors.accentOnPaper, exactSize: numSize, valign: "middle", align: "left", lineHeight: 1 }).node);
+                if (i < n - 1) {
+                  const next = this.span((i + 1) * perCols, perCols);
+                  const x0 = inner.x + numBox + u;
+                  const x1 = next.x - u;
+                  if (x1 > x0)
+                    out.push(this.rect("Sequence", { x: x0, y: lineY, width: x1 - x0, height: this.ds.rule }, lineColor));
+                }
+                const ly = y0 + numBox + u * 2;
+                const label = this.text({ name: "Label", rect: { x: inner.x, y: ly, width: inner.width, height: u * 8 }, paragraphs: [st.label], role: "heading", base: this.H * T.stepLabel, bold: true, lineHeight: 1.15 });
+                out.push(label.node);
+                let b = ly + label.height;
+                if (st.detail) {
+                  const dy = b + u;
+                  const det = this.text({ name: "Detail", rect: { x: inner.x, y: dy, width: inner.width, height: Math.max(u * 4, this.H - this.m - dy) }, paragraphs: [st.detail], role: "body", base: this.H * T.detail, color: this.muted, lineHeight: 1.4 });
+                  out.push(det.node);
+                  b = dy + det.height;
+                }
+                bottom = Math.max(bottom, b);
+              });
+              return { nodes: out, height: bottom - y0 };
+            };
+            const rowH = build(0).height;
+            const avail = this.H - this.m - bodyTop;
+            this.nodes.push(...build(bodyTop + Math.max(0, Math.round((avail - rowH) / 2))).nodes);
+          } else {
+            const items = steps.map((st) => `${st.label}${st.detail ? `: ${st.detail}` : ""}`);
+            this.nodes.push(this.text({ name: "Steps", rect: __spreadProps(__spreadValues({}, this.span(0, 10)), { y: bodyTop, height: this.H - this.m - bodyTop }), paragraphs: items, role: "body", base: this.H * T.point, lineHeight: 1.35, paraGap: 0.7, list: "number" }).node);
+          }
+          this.furniture();
+        }
+        quote() {
+          const q = this.item.quote;
+          const u = this.ds.unit;
+          const region = this.span(1, 10);
+          const markSize = Math.round(this.H * 0.2);
+          this.cluster(region, [
+            { kind: "text", maxFrac: 0.2, make: (r) => this.text({ name: "Mark", rect: __spreadProps(__spreadValues({}, r), { height: Math.round(markSize * 0.75) }), paragraphs: ["\u201C"], role: "heading", base: markSize, bold: true, color: this.accent, exactSize: markSize, lineHeight: 0.75 }) },
+            { kind: "text", maxFrac: 0.55, make: (r) => this.text({ name: "Quote", rect: r, paragraphs: [q.text], role: "heading", base: this.H * T.quote, lineHeight: 1.2 }) },
+            ...q.attribution ? [{ kind: "text", maxFrac: 0.15, make: (r) => this.text({ name: "Attribution", rect: r, paragraphs: [q.attribution], role: "body", base: this.H * T.attribution, color: this.muted }) }] : []
+          ], 2.5);
+          void u;
+          this.furniture();
+        }
+        imageCaption() {
+          var _a5;
+          const imageLeading = this.ctx.index % 2 === 0;
+          const imgCols = 7;
+          const s = imageLeading ? this.span(0, imgCols) : this.span(12 - imgCols, imgCols);
+          const imgRect = imageLeading ? { x: 0, y: 0, width: s.x + s.width - this.ds.gutter / 2, height: this.H } : { x: s.x - this.ds.gutter / 2, y: 0, width: this.W - s.x + this.ds.gutter / 2, height: this.H };
+          this.nodes.push(this.imageSlot(imgRect, this.imagePrompt()));
+          const textSpan = imageLeading ? this.span(8, 4) : this.span(0, 4);
+          const u = this.ds.unit;
+          this.cluster(__spreadProps(__spreadValues({}, textSpan), { y: this.m + u * 4, height: this.H - 2 * this.m - u * 4 }), [
+            { kind: "rule" },
+            this.titleBlock(this.H * T.title * 0.95),
+            ...this.subheadBlock(this.H * T.caption, (_a5 = this.item.subhead) != null ? _a5 : this.item.points[0])
+          ], 2.5);
+          this.furniture({ x: textSpan.x, width: textSpan.width });
+        }
+        chart() {
+          const c = this.item.chart;
+          const u = this.ds.unit;
+          const top = this.m + u * 4;
+          const title = this.text({ name: "Title", rect: __spreadProps(__spreadValues({}, this.span(0, 8)), { y: top, height: this.H * 0.18 }), paragraphs: [this.item.title], role: "heading", base: this.H * T.title, bold: true, lineHeight: 1.08 });
+          this.nodes.push(title.node);
+          let y = top + title.height + u * 1.5;
+          if (this.item.subhead) {
+            const take = this.text({ name: "Takeaway", rect: __spreadProps(__spreadValues({}, this.span(0, 8)), { y, height: u * 8 }), paragraphs: [this.item.subhead], role: "body", base: this.H * T.caption, color: this.muted });
+            this.nodes.push(take.node);
+            y += take.height + u * 3;
+          } else {
+            y += u * 2;
+          }
+          const r = this.mirror(__spreadProps(__spreadValues({}, this.span(0, 12)), { y, height: this.H - this.m - y }));
+          const palette = [this.ds.colors.accentOnPaper, this.ds.colors.primary, this.ds.colors.deep];
+          this.nodes.push((0, schema_1.createNode)("chart", {
+            name: "Chart",
+            chartType: c.kind,
+            categories: [...c.categories],
+            series: c.series.map((s, i) => ({ name: s.name, values: [...s.values], color: structuredClone(palette[i % palette.length]) })),
+            options: {},
+            transform: { x: r.x, y: r.y, scaleX: 1, scaleY: 1, rotation: 0 },
+            size: { width: r.width, height: r.height }
+          }));
+          this.furniture();
+        }
+        closing() {
+          var _a5;
+          const hasImage = !!this.item.image;
+          if (hasImage) {
+            const s = this.span(8, 4);
+            this.nodes.push(this.imageSlot({ x: s.x, y: 0, width: this.W - s.x, height: this.H }, this.imagePrompt()));
+          }
+          const region = this.span(0, hasImage ? 7 : 8);
+          this.cluster(region, [
+            { kind: "rule" },
+            this.titleBlock(this.H * T.sectionTitle),
+            ...this.subheadBlock(this.H * T.coverSub, (_a5 = this.item.subhead) != null ? _a5 : this.item.points[0], this.ink)
+          ], 3);
+          this.furniture(hasImage ? { x: region.x, width: region.width } : void 0);
+        }
+      };
+      function mix(a, b, t) {
+        const l = (x, y) => x + (y - x) * t;
+        return { srgb: { r: l(a.srgb.r, b.srgb.r), g: l(a.srgb.g, b.srgb.g), b: l(a.srgb.b, b.srgb.b), a: 1 } };
+      }
+      function composeArchetypePage(item, ds, ctx) {
+        var _a5;
+        const a = (_a5 = item.archetype) != null ? _a5 : "bullets";
+        return new Composer(ds, item, ctx, archetypeIsImpact(a)).compose();
+      }
+    }
+  });
+
+  // packages/aistudio/dist/measure.js
+  var require_measure = __commonJS({
+    "packages/aistudio/dist/measure.js"(exports) {
+      "use strict";
+      Object.defineProperty(exports, "__esModule", { value: true });
+      exports.sparseThreshold = void 0;
+      exports.measureDeck = measureDeck;
+      exports.planVariants = planVariants;
+      exports.toMeasurable = toMeasurable;
+      function boxOf(n) {
+        var _a5, _b, _c, _d;
+        const t = n.transform;
+        const s = n.size;
+        if (!t || !s)
+          return null;
+        return { x: (_a5 = t.x) != null ? _a5 : 0, y: (_b = t.y) != null ? _b : 0, w: (_c = s.width) != null ? _c : 0, h: (_d = s.height) != null ? _d : 0 };
+      }
+      function whitespaceShare(boxes, area) {
+        const cols = 48;
+        const rows = 27;
+        let empty = 0;
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const px = area.x + (c + 0.5) * (area.w / cols);
+            const py = area.y + (r + 0.5) * (area.h / rows);
+            let covered = false;
+            for (const b of boxes) {
+              if (px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h) {
+                covered = true;
+                break;
+              }
+            }
+            if (!covered)
+              empty++;
+          }
+        }
+        return empty / (cols * rows);
+      }
+      exports.sparseThreshold = 0.68;
+      function measureDeck(pages, size2, margin) {
+        const area = { x: margin, y: margin, w: size2.width - 2 * margin, h: size2.height - 2 * margin };
+        const reports = pages.map((p, i) => {
+          const boxes = p.nodes.filter((n) => n.name !== "Kicker" && n.name !== "Page number").map(boxOf).filter((b) => !!b);
+          return {
+            index: i,
+            archetype: p.archetype,
+            impact: p.impact,
+            overfull: [...p.overfull],
+            whitespace: Math.round(whitespaceShare(boxes, area) * 1e3) / 1e3,
+            issues: p.issues
+          };
+        });
+        const bulletShare = pages.length ? pages.filter((p) => p.archetype === "bullets").length / pages.length : 0;
+        const repetition = [];
+        for (let i = 0; i < pages.length; i++) {
+          const a = pages[i].archetype;
+          if (i >= 2 && pages[i - 1].archetype === a && pages[i - 2].archetype === a) {
+            repetition.push(i);
+          }
+        }
+        const shorten = reports.filter((r) => r.overfull.length > 0).map((r) => r.index);
+        return {
+          pages: reports,
+          bulletShare: Math.round(bulletShare * 100) / 100,
+          repetition,
+          shorten,
+          // Repetition and sparseness are the fixer's business and are remedied by
+          // variants before a caller sees this; what remains for a second pass is
+          // copy that did not fit, and any hard quality issue.
+          ok: shorten.length === 0 && reports.every((r) => r.issues.length === 0)
+        };
+      }
+      function planVariants(report, outline) {
+        var _a5, _b;
+        const out = {};
+        for (const r of report.pages) {
+          if (r.archetype !== "bullets")
+            continue;
+          const points = (_b = (_a5 = outline.pages[r.index]) == null ? void 0 : _a5.points.length) != null ? _b : 0;
+          if (report.repetition.includes(r.index) && points >= 4)
+            out[r.index] = "twoUp";
+          else if (points >= 5)
+            out[r.index] = "twoUp";
+          else if (!r.impact && r.whitespace > exports.sparseThreshold && points <= 3)
+            out[r.index] = "large";
+        }
+        return out;
+      }
+      function toMeasurable(page, issues) {
+        return { archetype: page.archetype, impact: page.impact, nodes: page.nodes, overfull: page.overfull, issues };
+      }
+    }
+  });
+
+  // packages/aistudio/dist/deck.js
+  var require_deck = __commonJS({
+    "packages/aistudio/dist/deck.js"(exports) {
+      "use strict";
+      Object.defineProperty(exports, "__esModule", { value: true });
+      exports.layoutDeck = layoutDeck;
+      var quality_1 = require_quality();
+      var designSystem_1 = require_designSystem();
+      var archetypes_1 = require_archetypes();
+      var measure_1 = require_measure();
+      function layoutDeck(outline, theme, size2, opts) {
+        var _a5;
+        const themed = __spreadProps(__spreadValues({}, theme), { kicker: (_a5 = theme.kicker) != null ? _a5 : outline.title });
+        const system = (0, designSystem_1.deriveDesignSystem)(themed, size2, opts);
+        const total = outline.pages.length;
+        const composeAll = (variants2) => outline.pages.map((item, i) => (0, archetypes_1.composeArchetypePage)(item, system, { index: i, total, variant: variants2[i] }));
+        const measure = (composed2) => (0, measure_1.measureDeck)(composed2.map((c) => (0, measure_1.toMeasurable)(c, (0, quality_1.qualityCheck)({ background: c.background, nodes: c.nodes, size: system.size }).issues)), system.size, system.margin);
+        let composed = composeAll({});
+        let report = measure(composed);
+        const variants = (0, measure_1.planVariants)(report, outline);
+        if (Object.keys(variants).length) {
+          composed = composeAll(variants);
+          report = measure(composed);
+        }
+        const pages = composed.map((c, i) => __spreadValues({
+          background: c.background,
+          nodes: c.nodes,
+          name: outline.pages[i].title || `Page ${i + 1}`,
+          quality: { ok: report.pages[i].issues.length === 0, issues: report.pages[i].issues },
+          archetype: c.archetype,
+          imagePrompts: c.imagePrompts
+        }, outline.pages[i].note ? { note: outline.pages[i].note } : {}));
+        return { title: outline.title, pages, system, report };
+      }
+    }
+  });
+
   // packages/aistudio/dist/reflow.js
   var require_reflow = __commonJS({
     "packages/aistudio/dist/reflow.js"(exports) {
@@ -35614,6 +36691,7 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
       var deckStyle_1 = require_deckStyle();
       var AVG_GLYPH_EM = 0.52;
       var LINE_HEIGHT = 1.3;
+      var LIST_GUTTER_EM = 1.6;
       function neededLines(paragraphs, fontSize, boxWidth) {
         const charsPerLine = Math.max(4, Math.floor(boxWidth / (AVG_GLYPH_EM * fontSize)));
         let lines = 0;
@@ -35626,8 +36704,11 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
       function availableLines(fontSize, boxHeight) {
         return Math.max(1, Math.floor(boxHeight / (LINE_HEIGHT * fontSize)));
       }
+      function wrapWidth(slot, fontSize) {
+        return Math.max(1, slot.rect.width - (slot.list ? LIST_GUTTER_EM * fontSize : 0));
+      }
       function fitsAt(slot, fontSize) {
-        return neededLines(slot.paragraphs, fontSize, slot.rect.width) <= availableLines(fontSize, slot.rect.height);
+        return neededLines(slot.paragraphs, fontSize, wrapWidth(slot, fontSize)) <= availableLines(fontSize, slot.rect.height);
       }
       function reflowPage(layout, slots, page) {
         var _a5;
@@ -35661,7 +36742,7 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
           }
           if (chosen === null) {
             verdicts[slot.placeholderId] = "overfull";
-          } else if (role === "content" && chosen === ladder[0] && neededLines(slot.paragraphs, chosen, slot.rect.width) * 3 < availableLines(chosen, slot.rect.height)) {
+          } else if (role === "content" && chosen === ladder[0] && neededLines(slot.paragraphs, chosen, wrapWidth(slot, chosen)) * 3 < availableLines(chosen, slot.rect.height)) {
             verdicts[slot.placeholderId] = "underfull";
           } else {
             verdicts[slot.placeholderId] = "fits";
@@ -35710,7 +36791,9 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
       exports.deckThemeFromRecord = deckThemeFromRecord;
       exports.deckThemeFromCatalog = deckThemeFromCatalog;
       exports.themeRecordFromCatalog = themeRecordFromCatalog;
+      exports.themeRecordFromDesignSystem = themeRecordFromDesignSystem;
       exports.composeDeckFile = composeDeckFile2;
+      exports.composeDeckFileWithReport = composeDeckFileWithReport2;
       var schema_1 = require_dist();
       var color_1 = require_dist2();
       var outline_1 = require_outline();
@@ -35721,6 +36804,8 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
       var deckStyle_1 = require_deckStyle();
       var reflow_1 = require_reflow();
       var themeGen_1 = require_themeGen();
+      var designSystem_1 = require_designSystem();
+      var measure_1 = require_measure();
       var themeCatalog_1 = require_themeCatalog();
       function deckThemeFromRecord(rec, kicker) {
         var _a5, _b, _c, _d;
@@ -35773,13 +36858,29 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
         const n = parseInt(hex3.slice(1), 16);
         return { srgb: { r: (n >> 16 & 255) / 255, g: (n >> 8 & 255) / 255, b: (n & 255) / 255, a: 1 } };
       }
+      function themeRecordFromDesignSystem(system, theme, mood) {
+        return themeRecordFromSlots((0, designSystem_1.designSystemSlots)(system), __spreadProps(__spreadValues({}, theme), { fontHeading: system.fonts.heading, fontBody: system.fonts.body }), mood);
+      }
+      function themeRecordFromSlots(slots, theme, mood) {
+        var _a5;
+        const name = mood ? mood.slice(0, 40) : void 0;
+        if (!slots) {
+          return (0, schema_1.themeFromPalette)("generated", [{ id: "generated-0", name: "primary", color: hexToColor((_a5 = theme.background.color) != null ? _a5 : "#1f2937") }], { name, fontHeading: theme.fontHeading, fontBody: theme.fontBody });
+        }
+        return (0, schema_1.themeFromPalette)("generated", slots.map((hex3, i) => ({ id: `generated-${i}`, name: themeGen_1.themeSlotNames[i], color: hexToColor(hex3) })), { name, fontHeading: theme.fontHeading, fontBody: theme.fontBody });
+      }
       function composeDeckFile2(input2) {
-        var _a5, _b, _c, _d, _e;
+        return composeDeckFileWithReport2(input2).file;
+      }
+      function composeDeckFileWithReport2(input2) {
+        var _a5, _b, _c, _d, _e, _f;
         const outline = (0, outline_1.normalizeOutline)(input2.outline);
         const width = Math.max(1, Math.round(input2.width));
         const height = Math.max(1, Math.round(input2.height));
         let theme;
         let record2 = null;
+        let catalog = null;
+        const seed = Array.from(outline.title).reduce((h, ch) => Math.imul(h, 31) + ch.charCodeAt(0) | 0, 7);
         if (input2.themeRecord) {
           record2 = input2.themeRecord;
           theme = deckThemeFromRecord(record2, outline.title);
@@ -35789,23 +36890,30 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
             throw new Error(`unknown themeId: ${input2.themeId}`);
           theme = deckThemeFromCatalog(entry, outline.title);
           record2 = themeRecordFromCatalog(entry);
+          catalog = entry;
         } else {
-          const seed = Array.from(outline.title).reduce((h, ch) => Math.imul(h, 31) + ch.charCodeAt(0) | 0, 7);
           theme = (0, theme_1.deckThemes)({ brandPalette: (_a5 = input2.brandPalette) != null ? _a5 : [], kicker: outline.title, count: 1, seed })[0];
+          if (!((_b = input2.brandPalette) != null ? _b : []).length)
+            catalog = (0, designSystem_1.catalogEntryForMood)(outline.theme, seed);
         }
         let pages;
         let masters;
         let layoutsOut;
-        if ((_c = (_b = input2.layoutSet) == null ? void 0 : _b.layouts) == null ? void 0 : _c.length) {
-          masters = structuredClone((_d = input2.layoutSet.masters) != null ? _d : []);
+        let system = null;
+        let report = null;
+        if ((_d = (_c = input2.layoutSet) == null ? void 0 : _c.layouts) == null ? void 0 : _d.length) {
+          masters = structuredClone((_e = input2.layoutSet.masters) != null ? _e : []);
           layoutsOut = structuredClone(input2.layoutSet.layouts);
           const layouts = layoutsOut;
           const byId = new Map(layouts.map((l) => [l.id, l]));
           const masterById = new Map((masters != null ? masters : []).map((m) => [m.id, m]));
           const selection = (0, layoutSchema_1.repairLayoutSelection)(null, outline.pages, layouts);
-          const themedBg = (0, layout_1.layoutDesign)({ layout: "centered", background: theme.background, blocks: [], dir: (_e = input2.dir) != null ? _e : "ltr" }, { width, height }).background;
+          const themedBg = (0, layout_1.layoutDesign)({ layout: "centered", background: theme.background, blocks: [], dir: (_f = input2.dir) != null ? _f : "ltr" }, { width, height }).background;
+          const overfullByPage = [];
           pages = outline.pages.map((item, i) => {
-            var _a6, _b2, _c2, _d2, _e2, _f, _g, _h;
+            var _a6, _b2, _c2, _d2, _e2, _f2, _g, _h;
+            const overfull = [];
+            overfullByPage.push(overfull);
             const layout = (_a6 = byId.get(selection[i])) != null ? _a6 : layouts[0];
             const master = masterById.get(layout.masterId);
             const treatment = (0, deckStyle_1.pageTreatment)(item.visualRole, theme.background);
@@ -35821,29 +36929,33 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
             }
             const sx = extentW > width && extentW > 0 ? width / extentW : 1;
             const sy = extentH > height && extentH > 0 ? height / extentH : 1;
-            const children = ((_f = layout.placeholders) != null ? _f : []).filter((ph) => ph.role === "title" || ph.role === "body" || ph.role === "content").map((ph) => {
+            const children = ((_f2 = layout.placeholders) != null ? _f2 : []).filter((ph) => ph.role === "title" || ph.role === "body" || ph.role === "content").map((ph) => {
               var _a7, _b3, _c3;
               const r = { x: ph.rect.x * sx, y: ph.rect.y * sy, width: ph.rect.width * sx, height: ph.rect.height * sy };
               const isTitle = ph.role === "title";
               const scale = (0, deckStyle_1.slotTypeScale)(ph.role, r, { width, height });
               const list = fill.lists[ph.id];
               const text2 = fill.texts[ph.id];
-              const paragraphs = list !== void 0 && list.length ? list.map((li) => `\u2022  ${li}`) : [text2 != null ? text2 : ""];
+              const isList = list !== void 0 && list.length > 0;
+              const paragraphs = isList ? list : [text2 != null ? text2 : ""];
               const fitted = (0, reflow_1.reflowPage)(layout, [{
                 nodeId: `probe-${ph.id}`,
                 placeholderId: ph.id,
                 rect: { width: r.width, height: r.height },
                 fontSize: scale.base,
-                paragraphs
+                paragraphs,
+                list: isList
               }], { width, height });
               const fontSize = (_b3 = (_a7 = fitted.adjustments[0]) == null ? void 0 : _a7.fontSize) != null ? _b3 : scale.base;
+              if (fitted.verdicts[ph.id] === "overfull")
+                overfull.push(ph.id);
               const runStyle = {
                 fontFamily: (_c3 = isTitle ? theme.fontHeading : theme.fontBody) != null ? _c3 : "system",
                 fontStyle: isTitle ? "Bold" : "Regular",
                 fontSize,
                 fill: { type: "solid", color: structuredClone(ink) }
               };
-              const paraStyle = { align: "left", direction: "auto" };
+              const paraStyle = __spreadValues({ align: "left", direction: "auto" }, isList ? { list: { type: "bullet", level: 0 } } : {});
               const content = paragraphs.map((line) => ({
                 runs: [{ text: line, style: structuredClone(runStyle) }],
                 style: structuredClone(paraStyle)
@@ -35855,7 +36967,10 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
                 // Middle-anchored: a slot is usually far taller than its text, and
                 // top-anchoring left every page's copy clinging to the ceiling
                 // above a field of empty background.
-                box: { mode: "fixed", width: r.width, height: r.height, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: isTitle ? "middle" : "top" },
+                // Both anchored to the middle of their slot. A middle title over a
+                // top-anchored body put them on different baselines and left the
+                // lower half of every reading page empty.
+                box: { mode: "fixed", width: r.width, height: r.height, autoFit: { enabled: false, min: 8, max: 512 }, verticalAlign: "middle" },
                 data: { placeholderId: ph.id },
                 content
               });
@@ -35892,8 +37007,20 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
               children
             }, item.note ? { notes: item.note } : {});
           });
+          report = (0, measure_1.measureDeck)(pages.map((pg, i) => {
+            var _a6;
+            return {
+              archetype: (_a6 = outline.pages[i].archetype) != null ? _a6 : "bullets",
+              impact: (0, deckStyle_1.pageTreatment)(outline.pages[i].visualRole, theme.background).impact,
+              nodes: pg.children,
+              overfull: overfullByPage[i],
+              issues: []
+            };
+          }), { width, height }, Math.round(Math.min(width, height) * 0.012) * 6);
         } else {
-          const deck = (0, deck_1.layoutDeck)(outline, theme, { width, height }, { dir: input2.dir });
+          const deck = (0, deck_1.layoutDeck)(outline, theme, { width, height }, { dir: input2.dir, catalog, brandPalette: input2.brandPalette, seed });
+          system = deck.system;
+          report = deck.report;
           pages = deck.pages.map((p, i) => __spreadValues({
             id: `api-page-${i + 1}`,
             name: p.name || `Page ${i + 1}`,
@@ -35914,9 +37041,12 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
           assets: [],
           fonts: []
         }, masters ? { masters } : {}), layoutsOut ? { layouts: layoutsOut } : {}), {
-          theme: record2 != null ? record2 : (0, themeGen_1.themeRecordFromDeckTheme)(theme, { name: outline.theme ? outline.theme.slice(0, 40) : void 0 })
+          // The file's theme record carries the very slots the pages were painted
+          // with, so the theme picker shows the deck's palette and a later swap can
+          // remap it precisely.
+          theme: record2 != null ? record2 : themeRecordFromSlots(system ? (0, designSystem_1.designSystemSlots)(system) : null, theme, outline.theme)
         });
-        return file2;
+        return { file: file2, report: report != null ? report : { pages: [], bulletShare: 0, repetition: [], shorten: [], ok: true } };
       }
     }
   });
@@ -35926,28 +37056,33 @@ Data columns: ${matrix.headers.join(", ")} (${matrix.rows.length} rows, from "${
     "packages/aistudio/dist/prompts.js"(exports) {
       "use strict";
       Object.defineProperty(exports, "__esModule", { value: true });
+      exports.copyToFormRule = exports.storyArcRule = exports.archetypeCatalogRule = void 0;
       exports.outlineSystemPrompt = outlineSystemPrompt;
       exports.outlineUserPrompt = outlineUserPrompt;
       exports.groundImagePrompt = groundImagePrompt;
       var outline_1 = require_outline();
       var promptRules_1 = require_promptRules();
       var TYPE_GUIDANCE = {
-        deck: "A presentation deck: a cover, an optional agenda, several content pages, an optional data or comparison page, and a closing/CTA page. Aim for a clear narrative arc.",
-        doc: "A multi-page document: a title page then sectioned pages, each a heading plus supporting points. Favor the 'content' visual role.",
-        "social-set": "A set of standalone social posts on one theme; each page is self-contained with its own punchy hook. Use 'cover' or 'quote' roles for impact.",
-        poster: "A single strong poster composition: one page, one bold message. Use the 'cover' role."
+        deck: "A presentation deck: a cover, a statement of the thesis, evidence pages in varied forms (bullets, twoColumn, threeUp, process, bigNumber, chart, imageCaption, quote), and a closing with a specific ask. Aim for a clear narrative arc.",
+        doc: "A multi-page document: a cover then sectioned pages, each a heading plus supporting points or a two-column layout. Favor 'bullets' and 'twoColumn'; skip agenda and section dividers.",
+        "social-set": "A set of standalone social posts on one theme; each page is self-contained with its own punchy hook. Use 'statement', 'quote', 'bigNumber' and 'imageCaption' for impact; every page gets an image intent.",
+        poster: "A single strong poster composition: one page, one bold message. Use the 'cover' archetype with an image intent."
       };
+      exports.archetypeCatalogRule = "Every page names an archetype, its compositional form: 'cover' (title + subhead); 'agenda' (title + 3-6 points naming the sections to come, in order; only for decks of 6 or more pages); 'section' (a divider: short title, optional subhead); 'statement' (ONE idea as the title, at most 14 words, optional subhead; no points); 'bigNumber' (stat.value + stat.label, optional subhead as context; the figure is the slide); 'bullets' (title + 3-5 points, each a complete thought under 90 characters); 'twoColumn' (title + exactly 2 columns, each heading + 2-4 points; for comparisons and before/after); 'threeUp' (title + exactly 3 columns, each heading + 1-3 points; for features, pillars, options); 'process' (title + 3-5 steps, each label + detail; ONLY for a real sequence); 'quote' (quote.text + attribution); 'imageCaption' (title + image.subject + subhead as caption; the picture carries the slide); 'chart' (title + chart with real numbers from the brief or attached material; never invent data); 'closing' (title + subhead as the call to action).";
+      exports.storyArcRule = "Plan a narrative arc before choosing forms: open with the cover, state the thesis as a 'statement' early, build with evidence, and end with a 'closing' that asks for something specific. Vary the forms: no more than 40 percent of pages may be 'bullets'; never place the same archetype on two adjacent pages except 'bullets' at most twice in a row; use 'bigNumber' whenever the brief or attached material contains a meaningful quantity; use 'section' dividers only for decks of 10 or more pages; give an 'image' intent to every 'cover', 'imageCaption', 'section' and 'closing' page and to about half of the rest, with a concrete English subject and consistent treatment across the deck.";
+      exports.copyToFormRule = "Write copy to fit the form: a title is a headline (under 60 characters), never a sentence with a full stop; points are parallel in structure and start with the same part of speech; a statement is one idea, not a summary; a stat.label says what the number means in plain words. Never write 'Slide 1', 'Introduction' or other structural labels as content.";
       function outlineSystemPrompt(designType, brandClause, pageCount, verbosity) {
         const count = pageCount && pageCount > 0 ? `Aim for about ${pageCount} pages. ` : "";
         return [
-          "You are an expert content strategist and presentation designer.",
-          `Plan the structure of this design as an editable outline. ${TYPE_GUIDANCE[designType]}`,
+          "You are a senior presentation designer and content strategist. You plan a deck the way a designer does: story first, then one compositional form per slide, then copy written to fit that form.",
+          `Plan this design as an editable outline. ${TYPE_GUIDANCE[designType]}`,
           `${count}Output ONLY a single JSON object, no prose, no markdown, no code fences.`,
           `Schema: ${JSON.stringify(outline_1.outlineJsonSchema)}.`,
-          "Each page has a short title, 0-6 concise key points (real final copy, not placeholders), a visualRole from the enum, and a note.",
+          exports.archetypeCatalogRule,
+          exports.storyArcRule,
+          exports.copyToFormRule,
           `The note is a REQUIRED speaker note for the presenter: 1-3 spoken-style sentences of plain text (no markdown, 100-${outline_1.maxNoteChars} characters) that add context, evidence, or delivery cues. It must never restate the slide's visible text. Never exceed the length limit; rephrase rather than clipping mid-sentence.`,
-          "Use 'cover' for the first page, 'closing' for the last when it fits, and pick roles that match each page's purpose.",
-          "Do NOT include any layout, colors, sizes, or positions - only titles, points, and roles.",
+          "Do NOT include any layout, colors, sizes, or positions. The archetype is the only visual decision you make; the composer owns geometry.",
           (0, promptRules_1.composeRules)((0, promptRules_1.settingsAuthorityRule)(), (0, promptRules_1.contentOnlyRule)(), (0, promptRules_1.verbosityRule)(verbosity), (0, promptRules_1.lengthLimitRule)(), (0, promptRules_1.scopedInstructionRule)()),
           brandClause
         ].filter(Boolean).join(" ");
@@ -36379,6 +37514,9 @@ ${cites.map((c, i) => `${i + 1}. ${c.name.trim()} - ${c.url.trim()}`).join("\n")
       __exportStar(require_deckStyle(), exports);
       __exportStar(require_reflow(), exports);
       __exportStar(require_deck(), exports);
+      __exportStar(require_designSystem(), exports);
+      __exportStar(require_archetypes(), exports);
+      __exportStar(require_measure(), exports);
       __exportStar(require_prompts(), exports);
       __exportStar(require_assistant(), exports);
       __exportStar(require_transform(), exports);
@@ -36420,4 +37558,5 @@ ${cites.map((c, i) => `${i + 1}. ${c.name.trim()} - ${c.url.trim()}`).join("\n")
   // scripts/composer-entry.mjs
   var import_dist = __toESM(require_dist3(), 1);
   globalThis.__composeDeckFile = (inputJson) => JSON.stringify((0, import_dist.composeDeckFile)(JSON.parse(inputJson)));
+  globalThis.__composeDeckFileWithReport = (inputJson) => JSON.stringify((0, import_dist.composeDeckFileWithReport)(JSON.parse(inputJson)));
 })();

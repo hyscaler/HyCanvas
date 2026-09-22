@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strings"
 
@@ -93,8 +94,12 @@ func aiFailure(err error) (status int, title, detail, code string) {
 		return http.StatusBadRequest, "Bad Request", "no configured provider can read images; add an image provider that supports vision, or switch to a provider that does", "ai_describe_image_unsupported"
 	case errors.Is(err, ai.ErrEditImageUnsupported):
 		return http.StatusBadRequest, "Bad Request", "your AI provider does not support image editing; switch to a provider with image editing (e.g. OpenAI) in AI settings", "ai_image_edit_unsupported"
+	case errors.Is(err, ai.ErrSecretRequired):
+		return http.StatusBadRequest, "Bad Request", "this provider signs its requests and needs a secret access key as well as the access key ID", "ai_secret_required"
 	case errors.Is(err, ai.ErrBaseURLRequired):
 		return http.StatusBadRequest, "Bad Request", "this provider needs a base URL; enter your endpoint URL in AI settings", "ai_base_url_required"
+	case errors.Is(err, ai.ErrKeyRequired):
+		return http.StatusBadRequest, "Bad Request", "enter the provider's API key to test the connection", "ai_key_required"
 	case errors.Is(err, ai.ErrKeyRequiredForProviderChange):
 		return http.StatusBadRequest, "Bad Request", "changing the provider requires the new provider's API key; enter it and save again", "ai_key_required_for_provider_change"
 	case errors.Is(err, ai.ErrBadRequest):
@@ -103,6 +108,9 @@ func aiFailure(err error) (status int, title, detail, code string) {
 		// The upstream status (attached by the ai package, body never echoed)
 		// separates the self-fixable failures: a rejected key, an exhausted
 		// account, a mistyped model, a rate limit.
+		if errors.Is(err, ai.ErrProviderUnreachable) {
+			return http.StatusBadGateway, "Bad Gateway", "could not reach the AI provider; check the base URL, and that the server can reach that host", "ai_provider_unreachable"
+		}
 		var up *ai.UpstreamError
 		upstream := 0
 		if errors.As(err, &up) {
@@ -113,7 +121,9 @@ func aiFailure(err error) (status int, title, detail, code string) {
 			return http.StatusBadGateway, "Bad Gateway", "the AI provider rejected the workspace API key; check the key in AI settings", "ai_provider_auth_failed"
 		case http.StatusPaymentRequired:
 			return http.StatusBadGateway, "Bad Gateway", "the AI provider account is out of credit; top up or switch providers in AI settings", "ai_provider_quota_exhausted"
-		case http.StatusNotFound:
+		// 405 is a base URL one path segment off (the host answers, but not
+		// on that route), which is the same fix as an unknown endpoint.
+		case http.StatusNotFound, http.StatusMethodNotAllowed:
 			return http.StatusBadGateway, "Bad Gateway", "the AI provider does not recognize the configured model or endpoint; check the model name and base URL in AI settings", "ai_provider_model_not_found"
 		case http.StatusTooManyRequests:
 			return http.StatusBadGateway, "Bad Gateway", "the AI provider rate-limited the request; wait a moment and try again", "ai_provider_rate_limited"
@@ -138,10 +148,16 @@ func aiProblem(w http.ResponseWriter, r *http.Request, err error) {
 		problemWithCode(w, r, status, title, detail, "ai_describe_image_unsupported")
 	case "ai_image_edit_unsupported":
 		problemWithCode(w, r, status, title, detail, "ai_image_edit_unsupported")
+	case "ai_secret_required":
+		problemWithCode(w, r, status, title, detail, "ai_secret_required")
 	case "ai_base_url_required":
 		problemWithCode(w, r, status, title, detail, "ai_base_url_required")
 	case "ai_key_required_for_provider_change":
 		problemWithCode(w, r, status, title, detail, "ai_key_required_for_provider_change")
+	case "ai_key_required":
+		problemWithCode(w, r, status, title, detail, "ai_key_required")
+	case "ai_provider_unreachable":
+		problemWithCode(w, r, status, title, detail, "ai_provider_unreachable")
 	case "ai_not_configured":
 		problemWithCode(w, r, status, title, detail, "ai_not_configured")
 	case "ai_provider_auth_failed":
@@ -188,22 +204,12 @@ func aiSetConfigHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFun
 			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "admin access required", "admin_access_required")
 			return
 		}
-		var body struct {
-			Provider   string `json:"provider"`
-			Model      string `json:"model"`
-			ImageModel string `json:"imageModel"`
-			// Pointer for PATCH semantics: absent preserves the stored URL,
-			// an empty string clears it (see ai.ConfigInput).
-			BaseURL *string `json:"baseUrl"`
-			APIKey  string  `json:"apiKey"`
-		}
+		var body aiConfigBody
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
-		cfg, err := svc.SetConfig(r.Context(), id, ai.ConfigInput{
-			Provider: body.Provider, Model: body.Model, ImageModel: body.ImageModel, BaseURL: body.BaseURL, APIKey: body.APIKey,
-		})
+		cfg, err := svc.SetConfig(r.Context(), id, body.input())
 		if err != nil {
 			aiProblem(w, r, err)
 			return
@@ -212,14 +218,50 @@ func aiSetConfigHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFun
 	}
 }
 
-// aiTestConfigHandler proves the stored config actually works, by making the
-// smallest possible real call to the provider.
+// aiConfigBody is the set-config payload, shared by the save and the
+// candidate test so the two read the same fields the same way.
+type aiConfigBody struct {
+	Provider   string `json:"provider"`
+	Model      string `json:"model"`
+	ImageModel string `json:"imageModel"`
+	// Pointer for PATCH semantics: absent preserves the stored URL,
+	// an empty string clears it (see ai.ConfigInput).
+	BaseURL *string `json:"baseUrl"`
+	APIKey  string  `json:"apiKey"`
+	// The second credential, for providers that sign their requests.
+	APISecret string `json:"apiSecret"`
+}
+
+func (b aiConfigBody) input() ai.ConfigInput {
+	return ai.ConfigInput{
+		Provider: b.Provider, Model: b.Model, ImageModel: b.ImageModel, BaseURL: b.BaseURL,
+		APIKey: b.APIKey, APISecret: b.APISecret,
+	}
+}
+
+// decodeCandidate reads an optional JSON body into dst. An empty body is not an
+// error: it asks for the stored config to be tested, as before #46.
+func decodeCandidate(r *http.Request, dst any) (present bool, err error) {
+	err = json.NewDecoder(r.Body).Decode(dst)
+	if errors.Is(err, io.EOF) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+// aiTestConfigHandler proves a config actually works, by making the smallest
+// possible real call to the provider.
 //
 // Saving a key only ever meant "a string is stored": a typo in the key, a
 // mistyped model or an exhausted account all looked identical to a working
 // setup, because nothing had asked the provider. Failures come back through
 // the shared classifier, so the reason is the specific one (rejected key, out
-// of credit, unknown model, rate limited) rather than a generic failure.
+// of credit, unknown model, unreachable host, rate limited) rather than a
+// generic failure.
+//
+// With a body, it tests that CANDIDATE and saves nothing (#46), so the form can
+// check new settings before they replace ones that work. Without one, it tests
+// the stored config, which is what the dashboard's status check asks for.
 func aiTestConfigHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
@@ -227,9 +269,20 @@ func aiTestConfigHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFu
 			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "admin access required", "admin_access_required")
 			return
 		}
-		// Deliberately tiny: this costs the workspace's own tokens, so it asks
-		// for the shortest useful reply rather than a real generation.
-		if _, err := svc.Text(r.Context(), id, "Reply with the single word: ok", ""); err != nil {
+		var body aiConfigBody
+		present, err := decodeCandidate(r, &body)
+		if err != nil {
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
+			return
+		}
+		if present && body.Provider != "" {
+			err = svc.TestConfig(r.Context(), id, body.input())
+		} else {
+			// Deliberately tiny: this costs the workspace's own tokens, so it
+			// asks for the shortest useful reply rather than a real generation.
+			_, err = svc.Text(r.Context(), id, "Reply with the single word: ok", "")
+		}
+		if err != nil {
 			aiProblem(w, r, err)
 			return
 		}
@@ -251,6 +304,40 @@ func aiDeleteConfigHandler(svc *ai.Service, acct *accounts.Service) http.Handler
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+// aiImageConfigBody is the image provider's payload, shared by its save and its
+// candidate test.
+type aiImageConfigBody struct {
+	Provider string `json:"provider"`
+	Model    string `json:"model"`
+	// Pointer for PATCH semantics, as on the main config.
+	BaseURL   *string `json:"baseUrl"`
+	APIKey    string  `json:"apiKey"`
+	APISecret string  `json:"apiSecret"`
+}
+
+func (b aiImageConfigBody) input() ai.ImageConfigInput {
+	return ai.ImageConfigInput{
+		Provider: b.Provider, Model: b.Model, BaseURL: b.BaseURL,
+		APIKey: b.APIKey, APISecret: b.APISecret,
+	}
+}
+
+// imageConfigProblem maps an image-config error to config-specific codes, for
+// the same reason the search config has its own: the generation-time messages
+// describe a FAILED CALL and read as nonsense when the call was a save or a
+// test. "Add a dedicated image provider in AI settings" is circular advice for
+// someone who is doing exactly that, and "invalid AI request" names no field.
+func imageConfigProblem(w http.ResponseWriter, r *http.Request, err error) {
+	switch {
+	case errors.Is(err, ai.ErrImageUnsupported):
+		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "that provider cannot generate images; choose one that can, such as OpenAI or Together AI", "image_provider_incapable")
+	case errors.Is(err, ai.ErrImageKeyRequired):
+		problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "the image provider needs its own API key; enter it and save again", "image_provider_key_required")
+	default:
+		aiProblem(w, r, err)
 	}
 }
 
@@ -280,34 +367,14 @@ func aiSetImageConfigHandler(svc *ai.Service, acct *accounts.Service) http.Handl
 			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "admin access required", "admin_access_required")
 			return
 		}
-		var body struct {
-			Provider string `json:"provider"`
-			Model    string `json:"model"`
-			// Pointer for PATCH semantics, as on the main config.
-			BaseURL *string `json:"baseUrl"`
-			APIKey  string  `json:"apiKey"`
-		}
+		var body aiImageConfigBody
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
 			return
 		}
-		cfg, err := svc.SetImageConfig(r.Context(), id, ai.ImageConfigInput{
-			Provider: body.Provider, Model: body.Model, BaseURL: body.BaseURL, APIKey: body.APIKey,
-		})
+		cfg, err := svc.SetImageConfig(r.Context(), id, body.input())
 		if err != nil {
-			// Config-specific codes, for the same reason the search config has
-			// its own: the generation-time messages describe a FAILED CALL and
-			// read as nonsense when the call was a save. "Add a dedicated image
-			// provider in AI settings" is circular advice for someone who is
-			// doing exactly that, and "invalid AI request" names no field.
-			switch {
-			case errors.Is(err, ai.ErrImageUnsupported):
-				problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "that provider cannot generate images; choose one that can, such as OpenAI or Together AI", "image_provider_incapable")
-			case errors.Is(err, ai.ErrImageKeyRequired):
-				problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "the image provider needs its own API key; enter it and save again", "image_provider_key_required")
-			default:
-				aiProblem(w, r, err)
-			}
+			imageConfigProblem(w, r, err)
 			return
 		}
 		writeJSON(w, http.StatusOK, cfg) // null when the provider was cleared
@@ -329,8 +396,9 @@ func aiDeleteImageConfigHandler(svc *ai.Service, acct *accounts.Service) http.Ha
 	}
 }
 
-// Checks the image provider's credentials without generating an image. Returns
-// {"verified":false} when the probe cannot conclude, which is not a failure.
+// Checks the image provider's credentials without generating an image: the
+// stored ones, or a candidate sent in the body. Returns {"verified":false} when
+// the probe cannot conclude, which is not a failure.
 func aiTestImageConfigHandler(svc *ai.Service, acct *accounts.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
@@ -338,9 +406,21 @@ func aiTestImageConfigHandler(svc *ai.Service, acct *accounts.Service) http.Hand
 			problemWithCode(w, r, http.StatusForbidden, "Forbidden", "admin access required", "admin_access_required")
 			return
 		}
-		check, err := svc.VerifyImageConfig(r.Context(), id)
+		var body aiImageConfigBody
+		present, err := decodeCandidate(r, &body)
 		if err != nil {
-			aiProblem(w, r, err)
+			problemWithCode(w, r, http.StatusBadRequest, "Bad Request", "invalid body", "invalid_body")
+			return
+		}
+		var check ai.ImageCheck
+		if present && body.Provider != "" {
+			// A candidate, tested before it is saved (#46); nothing is written.
+			check, err = svc.VerifyImageCandidate(r.Context(), id, body.input())
+		} else {
+			check, err = svc.VerifyImageConfig(r.Context(), id)
+		}
+		if err != nil {
+			imageConfigProblem(w, r, err)
 			return
 		}
 		writeJSON(w, http.StatusOK, check)

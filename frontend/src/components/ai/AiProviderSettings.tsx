@@ -19,6 +19,40 @@ import { useToast } from "@/components/ui/Toast";
 import { apiCodeMessage } from "@/lib/errors";
 import { confirmAction } from "@/lib/promptDialog";
 import { tr } from "@/lib/i18n";
+import { aiCapabilityGaps, newAiGaps, type AiGap } from "@/lib/aiCapabilityGaps";
+
+/** The field a failed connection test points at, so the form can mark it. */
+function fieldForCode(code: string | undefined): "key" | "model" | "baseUrl" | null {
+  switch (code) {
+    case "ai_provider_auth_failed":
+    case "ai_key_required":
+    case "ai_secret_required":
+    case "ai_key_required_for_provider_change":
+      return "key";
+    case "ai_provider_model_not_found":
+      return "model";
+    case "ai_provider_unreachable":
+    case "ai_base_url_required":
+      return "baseUrl";
+    default:
+      return null;
+  }
+}
+
+/** Literal keys, so the catalog check can see every one of them in use. */
+function gapLine(gap: AiGap): string {
+  switch (gap) {
+    case "image":
+      return tr("editor.ai_gap_image");
+    case "editImage":
+      return tr("editor.ai_gap_edit_image");
+    case "describeImage":
+      return tr("editor.ai_gap_describe_image");
+  }
+}
+
+/** A provider missing from the catalog is treated as capable, as the server does. */
+const PERMISSIVE_CAPS = { text: true, image: true, describeImage: true, editImage: true };
 
 export function AiProviderSettings({
   workspaceId,
@@ -36,7 +70,9 @@ export function AiProviderSettings({
   /** Writing the config is admin-only server-side. A member who cannot save
    *  sees what is connected instead of a form that would 403. */
   canEdit: boolean;
-  onSaved: (config: AiConfigView) => void;
+  /** `tested` is true when the saved values just passed a connection test,
+   *  so a caller that checks health after a save need not spend tokens again. */
+  onSaved: (config: AiConfigView, tested: boolean) => void;
   /** Called after the provider is reset, with no config left. */
   onReset?: () => void;
   /** Shown as a Cancel affordance when there is something to go back to. */
@@ -52,6 +88,10 @@ export function AiProviderSettings({
   const [imageModel, setImageModel] = useState(config?.imageModel ?? "");
   const [baseUrl, setBaseUrl] = useState(config?.baseUrl ?? "");
   const [apiKey, setApiKey] = useState("");
+  // The second credential, for a provider that signs its requests rather than
+  // sending a token. Never round-tripped: like the key, the server returns only
+  // whether one is stored.
+  const [apiSecret, setApiSecret] = useState("");
   const [searchProvider, setSearchProvider] = useState("");
   const [searchUrl, setSearchUrl] = useState("");
   const [searchKey, setSearchKey] = useState("");
@@ -82,7 +122,9 @@ export function AiProviderSettings({
   const [imgModel, setImgModel] = useState("");
   const [imgBaseUrl, setImgBaseUrl] = useState("");
   const [imgKey, setImgKey] = useState("");
+  const [imgSecret, setImgSecret] = useState("");
   const [imgHasKey, setImgHasKey] = useState(false);
+  const [imgHasSecret, setImgHasSecret] = useState(false);
   const [imgStoredProvider, setImgStoredProvider] = useState("");
   // The stored model and host, kept apart from the editable fields. Restoring
   // from the live values instead would restore what switching away had already
@@ -100,6 +142,12 @@ export function AiProviderSettings({
   const [imgCheck, setImgCheck] = useState<"idle" | "checking" | "ok" | "unverified" | "failed">("idle");
   const [imgCheckDetail, setImgCheckDetail] = useState("");
   const [saving, setSaving] = useState(false);
+  // The connection test's verdict on the settings as typed (#46). It carries
+  // the signature of the values it judged, so editing any field retires it
+  // rather than leaving a stale "works" or "failed" beside different values.
+  const [verdict, setVerdict] = useState<
+    { sig: string; state: "checking" | "ok" | "failed"; detail?: string; code?: string } | null
+  >(null);
   // A stored key is write-only: the server returns hasKey and never the key
   // itself. An empty box said nothing about whether one existed, so it shows a
   // masked stand-in until the user asks to replace it.
@@ -117,6 +165,7 @@ export function AiProviderSettings({
     setImageModel(config?.imageModel ?? "");
     setBaseUrl(config?.baseUrl ?? "");
     setApiKey("");
+    setApiSecret("");
     setReplacingKey(false);
   }
 
@@ -158,7 +207,9 @@ export function AiProviderSettings({
         setImgBaseUrl(cfg?.baseUrl ?? "");
         setImgStoredBaseUrl(cfg?.baseUrl ?? "");
         setImgHasKey(!!cfg?.hasKey);
+        setImgHasSecret(!!cfg?.hasSecret);
         setImgKey("");
+        setImgSecret("");
         setReplacingImgKey(false);
         setImgFor(workspaceId);
         setImgFailed(false);
@@ -175,6 +226,7 @@ export function AiProviderSettings({
 
   const selPreset = presets.find((p) => p.id === provider);
   const requiresBaseUrl = !!selPreset?.needsBaseUrl;
+  const requiresSecret = !!selPreset?.needsSecret;
   const sameProvider = provider === config?.provider;
   const modelHint = selPreset?.defaultModel ?? "";
   // Only image-capable providers may serve as the image provider; offering a
@@ -186,6 +238,38 @@ export function AiProviderSettings({
   const imgSameProvider = imgProvider === imgStoredProvider;
   const imgShowsStoredKey = imgSameProvider && imgHasKey && !replacingImgKey;
   const imgLabel = imgPreset?.label ?? imgProvider;
+
+  // The settings exactly as a save would send them. The connection test sends
+  // the same object, so what passed is what gets stored.
+  const mainCandidate = {
+    provider,
+    model: model || undefined,
+    imageModel: imageModel || undefined,
+    baseUrl: baseUrl.trim(),
+    apiKey: apiKey || undefined,
+    apiSecret: apiSecret || undefined,
+  };
+  const imgCandidate = imageLoaded && imgProvider
+    ? {
+        provider: imgProvider,
+        model: imgModel || undefined,
+        baseUrl: imgBaseUrl.trim(),
+        ...(imgKey.trim() ? { apiKey: imgKey.trim() } : {}),
+        ...(imgSecret.trim() ? { apiSecret: imgSecret.trim() } : {}),
+      }
+    : null;
+  const candidateSig = JSON.stringify([workspaceId, mainCandidate, imgCandidate]);
+  const shownVerdict = verdict && verdict.sig === candidateSig ? verdict : null;
+  const badField = shownVerdict?.state === "failed" ? fieldForCode(shownVerdict.code) : null;
+  const testing = shownVerdict?.state === "checking";
+
+  // What these settings leave unavailable, said where they are saved rather
+  // than discovered as a failed generation. Only judged once the image
+  // provider's record has loaded: before that, "no image provider" is a guess.
+  const gapsKnown = imageLoaded;
+  const imgCaps = (id: string) => (id ? presets.find((p) => p.id === id)?.capabilities ?? PERMISSIVE_CAPS : undefined);
+  const gaps = gapsKnown ? aiCapabilityGaps(selPreset?.capabilities, imgCaps(imgProvider)) : [];
+  const storedGaps = config ? aiCapabilityGaps(config.capabilities, imgCaps(imgStoredProvider)) : null;
 
   if (!canEdit) {
     return (
@@ -199,46 +283,118 @@ export function AiProviderSettings({
     );
   }
 
-  async function save() {
-    if (!workspaceId || saving) return;
+  // The checks that need no round trip. The server makes each of them too, but
+  // catching them here points at the field and costs no tokens.
+  function preflight(): boolean {
     const url = baseUrl.trim();
     // Endpoint-routed providers are unusable without their URL; the server
     // rejects the save too (ai_base_url_required), but catching it here points
     // at the field without a round trip.
     if (requiresBaseUrl && !url) {
       toast.error(tr("errors.api_ai_base_url_required"));
-      return;
+      return false;
+    }
+    // A signing provider needs both halves of its credential. The secret is
+    // only required when the key is being set: leaving both untouched keeps the
+    // stored pair.
+    if (requiresSecret && (apiKey.trim() || !(sameProvider && config?.hasKey)) && !apiSecret.trim()) {
+      toast.error(tr("errors.api_ai_secret_required"));
+      return false;
     }
     // A provider change must bring the new provider's key (the server rejects
     // it as ai_key_required_for_provider_change); say so before the round trip.
     if (!sameProvider && config?.hasKey && !apiKey.trim()) {
       toast.error(tr("errors.api_ai_key_required_for_provider_change"));
-      return;
+      return false;
     }
     // The image provider is a separate vendor with a separate key. The server
     // rejects a keyless one too, but its generic reason would not name which of
     // the two providers is short a key.
     if (imageLoaded && imgProvider && !imgKey.trim() && !(imgSameProvider && imgHasKey)) {
       toast.error(tr("editor.image_provider_key_required"));
-      return;
+      return false;
+    }
+    if (imageLoaded && imgProvider && !!imgPreset?.needsSecret &&
+        (imgKey.trim() || !(imgSameProvider && imgHasKey)) && !imgSecret.trim()) {
+      toast.error(tr("errors.api_ai_secret_required"));
+      return false;
     }
     if (imageLoaded && imgProvider && !!imgPreset?.needsBaseUrl && !imgBaseUrl.trim()) {
       toast.error(tr("editor.image_provider_base_url_required"));
-      return;
+      return false;
+    }
+    return true;
+  }
+
+  // Tests the settings as typed, main provider then image provider, and saves
+  // nothing. Resolves true only when everything that can be judged passed.
+  async function runTests(): Promise<boolean> {
+    if (!workspaceId) return false;
+    const ws = workspaceId;
+    const sig = candidateSig;
+    const main = mainCandidate;
+    const img = imgCandidate;
+    setVerdict({ sig, state: "checking" });
+    try {
+      await oc.testAiConfig(ws, main);
+    } catch (e) {
+      const body = e instanceof ApiError ? (e.body as { code?: string } | null) : null;
+      const coded = e instanceof ApiError ? apiCodeMessage(e.body) : null;
+      setVerdict({ sig, state: "failed", code: body?.code, detail: coded ?? tr("dashboard.the_provider_did_not_answer") });
+      return false;
+    }
+    if (img) {
+      setImgCheck("checking");
+      setImgCheckDetail("");
+      try {
+        const r = await oc.testAiImageConfig(ws, img);
+        setImgCheck(r.verified ? "ok" : "unverified");
+      } catch (e) {
+        const coded = e instanceof ApiError ? apiCodeMessage(e.body) : null;
+        setImgCheck("failed");
+        setImgCheckDetail(coded ?? tr("editor.the_image_provider_did_not_answer"));
+        setVerdict({ sig, state: "failed", code: "image", detail: tr("editor.image_provider_test_failed") });
+        return false;
+      }
+    }
+    setVerdict({ sig, state: "ok" });
+    return true;
+  }
+
+  async function testConnection() {
+    if (!workspaceId || saving || testing) return;
+    if (!preflight()) return;
+    await runTests();
+  }
+
+  /** Save, after the settings pass a connection test. `untested` is the
+   *  explicit "Save anyway" for an endpoint the server cannot reach right now
+   *  (a local model that is off, a VPN-only host). */
+  async function save(untested = false) {
+    if (!workspaceId || saving || testing) return;
+    if (!preflight()) return;
+    // Say what these settings leave out, once, when the save would introduce
+    // it. Skipped on "Save anyway": that follows a save already confirmed.
+    const added = untested ? [] : newAiGaps(gaps, storedGaps);
+    if (added.length) {
+      const ok = await confirmAction({
+        title: tr("editor.ai_gaps_title"),
+        message: [...added.map((g) => gapLine(g)), tr("editor.ai_gaps_confirm")].join("\n"),
+        confirmText: tr("editor.save_provider"),
+      });
+      if (!ok) return;
     }
     setSaving(true);
     try {
+      // Tested first (#46): a failing test saves nothing, so settings that do
+      // not work can never replace settings that do.
+      if (!untested && !(await runTests())) return;
       // baseUrl uses PATCH semantics server-side: a rendered field sends its
       // exact value, so emptying a visible field is an explicit clear, and the
       // server drops a stored URL on a provider change.
-      const c = await oc.setAiConfig(workspaceId, {
-        provider,
-        model: model || undefined,
-        imageModel: imageModel || undefined,
-        baseUrl: url,
-        apiKey: apiKey || undefined,
-      });
+      const c = await oc.setAiConfig(workspaceId, mainCandidate);
       setApiKey("");
+      setApiSecret("");
       // The optional web-search provider saves in the same gesture (provider
       // "" clears it), but ONLY once its stored value is known - otherwise an
       // early save would clear a provider the user never touched.
@@ -258,26 +414,25 @@ export function AiProviderSettings({
       // every save. Clearing a stored one still goes through, because then the
       // empty provider is a real instruction.
       if (imageLoaded && (imgProvider || imgStoredProvider)) {
-        const img = await oc.setAiImageConfig(workspaceId, {
-          provider: imgProvider,
-          model: imgModel || undefined,
-          baseUrl: imgBaseUrl.trim(),
-          ...(imgKey.trim() ? { apiKey: imgKey.trim() } : {}),
-        });
-        setImgCheck("idle"); // the key that passed may be the key just replaced
+        const img = await oc.setAiImageConfig(workspaceId, imgCandidate ?? { provider: "", baseUrl: "" });
         setImgStoredProvider(img?.provider ?? "");
         setImgStoredModel(img?.model ?? "");
         setImgStoredBaseUrl(img?.baseUrl ?? "");
         setImgHasKey(!!img?.hasKey);
+        setImgHasSecret(!!img?.hasSecret);
         setImgKey("");
+        setImgSecret("");
         setReplacingImgKey(false);
-        // Check it immediately, as the main provider does on save: the moment a
-        // key is entered is when a typo is cheapest to find and the person
-        // still has the real value to hand.
-        if (img?.hasKey) void checkImageProvider();
+        // A tested save already has its verdict, about exactly these values.
+        // An untested one gets checked now: the moment a key is entered is when
+        // a typo is cheapest to find and the person still has it to hand.
+        if (img?.hasKey && untested) void checkImageProvider();
       }
-      toast.success(tr("editor.ai_provider_saved"));
-      onSaved(c);
+      // "Not saved" is no longer true once an untested save lands, and it must
+      // not sit beside settings that are now stored.
+      if (untested) setVerdict(null);
+      toast.success(untested ? tr("editor.ai_provider_saved_untested") : tr("editor.ai_provider_saved"));
+      onSaved(c, !untested);
     } catch (e) {
       // Show the server's coded reason when it sent one (e.g. a rejected base
       // URL); the generic save error stays the fallback.
@@ -296,6 +451,9 @@ export function AiProviderSettings({
   const fieldCls = wide
     ? "h-11 w-full rounded-xl border border-neutral-200 bg-surface px-3.5 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
     : "w-full rounded-lg border border-neutral-200 bg-surface px-2.5 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100";
+  // A field the failed test points at. Red border only: the reason itself is
+  // spelled out beside the Save button, so color is never the only signal.
+  const invalid = (f: "key" | "model" | "baseUrl") => (badField === f ? " border-red-400 focus:border-red-500 focus:ring-red-100" : "");
   const labelCls = wide
     ? "flex min-w-0 flex-col gap-1.5 text-sm font-medium text-neutral-700"
     : "flex min-w-0 flex-col gap-1 text-[11px] font-medium text-neutral-500";
@@ -352,7 +510,9 @@ export function AiProviderSettings({
       setImgBaseUrl("");
       setImgStoredBaseUrl("");
       setImgKey("");
+      setImgSecret("");
       setImgHasKey(false);
+      setImgHasSecret(false);
       setReplacingImgKey(false);
       setImgCheck("idle");
       toast.success(tr("editor.ai_provider_reset"));
@@ -387,6 +547,8 @@ export function AiProviderSettings({
               // Same for the host: the server drops a stored URL on a provider
               // change, and the visible field must not put the old host back.
               setBaseUrl(stored ? config?.baseUrl ?? "" : "");
+              // A secret belongs to one vendor; never let it follow a switch.
+              setApiSecret("");
             }}
             className={fieldCls}
           >
@@ -404,7 +566,8 @@ export function AiProviderSettings({
             value={model}
             onChange={(e) => setModel(e.target.value)}
             placeholder={modelHint || tr("editor.model_optional")}
-            className={fieldCls}
+            aria-invalid={badField === "model" || undefined}
+            className={fieldCls + invalid("model")}
           />
         </label>
 
@@ -433,9 +596,27 @@ export function AiProviderSettings({
             value={baseUrl}
             onChange={(e) => setBaseUrl(e.target.value)}
             placeholder={selPreset?.baseUrl || tr("editor.base_url_https_v1")}
-            className={fieldCls}
+            aria-invalid={badField === "baseUrl" || undefined}
+            className={fieldCls + invalid("baseUrl")}
           />
         </label>
+
+        {requiresSecret && (
+          <label className={labelCls}>
+            {tr("editor.secret_access_key")}
+            <input
+              type="password"
+              value={apiSecret}
+              onChange={(e) => setApiSecret(e.target.value)}
+              placeholder={
+                sameProvider && config?.hasSecret && !apiKey.trim()
+                  ? tr("editor.api_key_leave_blank_to_keep")
+                  : tr("editor.secret_access_key")
+              }
+              className={fieldCls}
+            />
+          </label>
+        )}
 
         {/* Only the STORED provider has a stored key. Showing the masked
             stand-in after switching the select claimed a key existed for the
@@ -450,7 +631,7 @@ export function AiProviderSettings({
         {sameProvider && config?.hasKey && !replacingKey ? (
           <div className={labelCls}>
             <span>{tr("editor.api_key")}</span>
-            <span className={`${fieldCls} flex items-center justify-between gap-2`}>
+            <span className={`${fieldCls}${invalid("key")} flex items-center justify-between gap-2`}>
               <span className="truncate tracking-[0.2em] text-neutral-500" aria-label={tr("editor.a_key_is_stored")}>
                 {"\u2022".repeat(16)}
               </span>
@@ -474,7 +655,8 @@ export function AiProviderSettings({
               // belongs to; on a switched provider a key is required.
               placeholder={sameProvider && config?.hasKey ? tr("editor.api_key_leave_blank_to_keep") : tr("editor.api_key")}
               autoFocus={replacingKey}
-              className={fieldCls}
+              aria-invalid={badField === "key" || undefined}
+              className={fieldCls + invalid("key")}
             />
           </label>
         )}
@@ -574,6 +756,7 @@ export function AiProviderSettings({
                   setImgModel(stored ? imgStoredModel : "");
                   setImgBaseUrl(stored ? imgStoredBaseUrl : "");
                   setImgKey("");
+                  setImgSecret(""); // a secret belongs to one vendor
                   setReplacingImgKey(false);
                   setImgCheck("idle"); // the verdict was about the old provider
                 }}
@@ -599,6 +782,23 @@ export function AiProviderSettings({
                     className={fieldCls}
                   />
                 </label>
+
+                {!!imgPreset?.needsSecret && (
+                  <label className={labelCls}>
+                    {tr("editor.secret_access_key")}
+                    <input
+                      type="password"
+                      value={imgSecret}
+                      onChange={(e) => setImgSecret(e.target.value)}
+                      placeholder={
+                        imgSameProvider && imgHasSecret && !imgKey.trim()
+                          ? tr("editor.api_key_leave_blank_to_keep")
+                          : tr("editor.secret_access_key")
+                      }
+                      className={fieldCls}
+                    />
+                  </label>
+                )}
 
                 <label className={labelCls}>
                   {tr("editor.base_url")}
@@ -682,6 +882,39 @@ export function AiProviderSettings({
         </div>
       )}
 
+      {/* What the save is about to do, in words: features these settings
+          leave out, and the connection test's answer. Both sit directly above
+          the buttons, where the decision is made. */}
+      {gaps.length > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <p className="font-medium">{tr("editor.ai_gaps_notice")}</p>
+          <ul className="mt-1 list-disc ps-4">
+            {gaps.map((g) => <li key={g}>{gapLine(g)}</li>)}
+          </ul>
+        </div>
+      )}
+      {shownVerdict?.state === "ok" && (
+        <p role="status" className="flex items-center gap-2 text-xs text-emerald-700">
+          <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+          {tr("editor.connection_works", { provider: selPreset?.label ?? provider })}
+        </p>
+      )}
+      {shownVerdict?.state === "failed" && (
+        <div role="alert" className="flex flex-col gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+          <p><span className="font-medium">{tr("editor.connection_test_failed")}</span> {shownVerdict.detail}</p>
+          {/* The escape hatch for a host the server cannot reach right now. It
+              stays a quiet link: the default path is to fix the settings. */}
+          <button
+            type="button"
+            onClick={() => void save(true)}
+            disabled={saving}
+            className="self-start text-xs font-medium text-red-700 underline hover:text-red-800 disabled:opacity-40"
+          >
+            {tr("editor.save_anyway")}
+          </button>
+        </div>
+      )}
+
       {/* End-aligned: the form now spans the section, so the action sits at
           the page's end edge, level with the last column. justify-end follows
           the writing direction, so it mirrors correctly in RTL. */}
@@ -703,11 +936,18 @@ export function AiProviderSettings({
             <button onClick={onCancel} className="text-xs text-neutral-500 hover:underline">{tr("editor.cancel")}</button>
           )}
           <button
+            onClick={() => void testConnection()}
+            disabled={!workspaceId || saving || testing}
+            className="rounded-xl border border-neutral-200 px-4 py-2.5 text-sm font-medium text-neutral-700 transition hover:border-neutral-300 disabled:opacity-40"
+          >
+            {testing && !saving ? tr("editor.testing_connection") : tr("editor.test_connection")}
+          </button>
+          <button
             onClick={() => void save()}
-            disabled={!workspaceId || saving}
+            disabled={!workspaceId || saving || testing}
             className="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-brand-700 disabled:bg-neutral-200 disabled:text-neutral-400"
           >
-            {saving ? tr("editor.saving") : tr("editor.save_provider")}
+            {testing ? tr("editor.testing_connection") : saving ? tr("editor.saving") : tr("editor.save_provider")}
           </button>
         </div>
       ) : (
@@ -715,8 +955,11 @@ export function AiProviderSettings({
         // is the quiet way back underneath it. items-stretch matters: centring
         // would leave the block button sized to its text.
         <div className="mt-0.5 flex flex-col items-stretch gap-2">
-          <Button block onClick={() => void save()} disabled={!workspaceId || saving}>
-            {saving ? tr("editor.saving") : tr("editor.save_provider")}
+          <Button block onClick={() => void save()} disabled={!workspaceId || saving || testing}>
+            {testing ? tr("editor.testing_connection") : saving ? tr("editor.saving") : tr("editor.save_provider")}
+          </Button>
+          <Button block variant="secondary" onClick={() => void testConnection()} disabled={!workspaceId || saving || testing}>
+            {testing && !saving ? tr("editor.testing_connection") : tr("editor.test_connection")}
           </Button>
           {onCancel && (
             <button onClick={onCancel} className="text-xs text-neutral-500 hover:underline">{tr("editor.cancel")}</button>

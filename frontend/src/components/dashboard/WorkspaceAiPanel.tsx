@@ -193,10 +193,15 @@ export function WorkspaceAiPanel({ workspaceId, canEdit }: { workspaceId: string
             presets={presets}
             canEdit={canEdit}
             layout="wide"
-            // Verify immediately on save: the moment a key is entered is when
-            // a typo is cheapest to find and the user still has the value to
-            // hand.
-            onSaved={(c) => { setConfig(c); loadUsage(); void runTest(); }}
+            // A normal save was already tested with these exact values, so its
+            // verdict stands. "Save anyway" was not, so verify it now: the
+            // moment a key is entered is when a typo is cheapest to find.
+            onSaved={(c, tested) => {
+              setConfig(c);
+              loadUsage();
+              if (tested) setHealth({ ok: true });
+              else void runTest();
+            }}
             onReset={() => { setConfig(null); setHealth(null); loadUsage(); }}
           />
         </div>

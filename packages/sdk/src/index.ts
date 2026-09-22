@@ -433,6 +433,8 @@ export interface AiConfigView {
   imageModel: string | null;
   baseUrl: string | null;
   hasKey: boolean;
+  /** Whether the second credential is stored (signing providers only). */
+  hasSecret?: boolean;
   /** What the configured provider can do (gates image-dependent features). */
   capabilities: AiCapabilities;
 }
@@ -446,6 +448,8 @@ export interface AiImageConfigView {
   model: string | null;
   baseUrl: string | null;
   hasKey: boolean;
+  /** Whether the second credential is stored (signing providers only). */
+  hasSecret?: boolean;
   capabilities: AiCapabilities;
 }
 
@@ -457,6 +461,9 @@ export interface AiProviderPreset {
   defaultModel: string;
   defaultImageModel?: string;
   capabilities: AiCapabilities;
+  /** True when the provider needs a second credential beside the key (an AWS
+   *  secret access key, for Bedrock's request signing). */
+  needsSecret?: boolean;
   /** True when the user must supply the base URL (Azure/custom). */
   needsBaseUrl?: boolean;
 }
@@ -1840,7 +1847,7 @@ export class HyCanvasClient {
    *  provider change), an empty string clears it explicitly. Changing the
    *  provider while a key is stored requires `apiKey` for the new provider
    *  (400 `ai_key_required_for_provider_change` otherwise). */
-  setAiConfig(workspaceId: string, input: { provider: string; model?: string; imageModel?: string; baseUrl?: string; apiKey?: string }): Promise<AiConfigView> {
+  setAiConfig(workspaceId: string, input: { provider: string; model?: string; imageModel?: string; baseUrl?: string; apiKey?: string; apiSecret?: string }): Promise<AiConfigView> {
     return this.request("PUT", `/v1/workspaces/${workspaceId}/ai-config`, input);
   }
   /** The workspace's dedicated image provider, or null when images run on the
@@ -1854,7 +1861,7 @@ export class HyCanvasClient {
    *  setAiConfig; resolves to null when cleared. */
   setAiImageConfig(
     workspaceId: string,
-    input: { provider: string; model?: string; baseUrl?: string; apiKey?: string },
+    input: { provider: string; model?: string; baseUrl?: string; apiKey?: string; apiSecret?: string },
   ): Promise<AiImageConfigView | null> {
     return this.request("PUT", `/v1/workspaces/${workspaceId}/ai-image-config`, input);
   }
@@ -1863,9 +1870,16 @@ export class HyCanvasClient {
    *  every press. Resolves `{verified:true}` when the credential was accepted,
    *  `{verified:false}` when the probe could not conclude (a provider with no
    *  model listing, or Azure), and rejects when the key was refused. A wrong
-   *  model name is not covered and still surfaces on first generation. */
-  testAiImageConfig(workspaceId: string): Promise<{ verified: boolean }> {
-    return this.request("POST", `/v1/workspaces/${workspaceId}/ai-image-config/test`);
+   *  model name is not covered and still surfaces on first generation.
+   *
+   *  With `candidate`, the probe runs against those unsaved settings and
+   *  nothing is stored; an omitted key or secret means the stored one, as on a
+   *  save. Without it, the stored config is checked. */
+  testAiImageConfig(
+    workspaceId: string,
+    candidate?: { provider: string; model?: string; baseUrl?: string; apiKey?: string; apiSecret?: string },
+  ): Promise<{ verified: boolean }> {
+    return this.request("POST", `/v1/workspaces/${workspaceId}/ai-image-config/test`, candidate);
   }
   /** Remove the dedicated image provider; images return to the main one. */
   deleteAiImageConfig(workspaceId: string): Promise<void> {
@@ -1884,12 +1898,20 @@ export class HyCanvasClient {
   deleteAiConfig(workspaceId: string): Promise<void> {
     return this.request("DELETE", `/v1/workspaces/${workspaceId}/ai-config`);
   }
-  /** Prove the stored provider config actually works, with the smallest real
-   *  call the provider will accept. Resolves on success; rejects with the
-   *  classified problem (rejected key, out of credit, unknown model, rate
-   *  limited) otherwise. Costs the workspace a handful of its own tokens. */
-  testAiConfig(workspaceId: string): Promise<void> {
-    return this.request("POST", `/v1/workspaces/${workspaceId}/ai-config/test`);
+  /** Prove a provider config actually works, with the smallest real call the
+   *  provider will accept. Resolves on success; rejects with the classified
+   *  problem (rejected key, out of credit, unknown model, unreachable host,
+   *  rate limited) otherwise. Costs the workspace a handful of its own tokens.
+   *
+   *  With `candidate`, the call uses those unsaved settings and nothing is
+   *  stored, so new settings can be checked before they replace working ones;
+   *  an omitted key or secret means the stored one, as on a save. Without it,
+   *  the stored config is tested. */
+  testAiConfig(
+    workspaceId: string,
+    candidate?: { provider: string; model?: string; imageModel?: string; baseUrl?: string; apiKey?: string; apiSecret?: string },
+  ): Promise<void> {
+    return this.request("POST", `/v1/workspaces/${workspaceId}/ai-config/test`, candidate);
   }
   getAiUsage(workspaceId: string): Promise<{ tokensThisMonth: number }> {
     return this.request("GET", `/v1/workspaces/${workspaceId}/ai-usage`);
